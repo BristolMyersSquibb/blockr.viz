@@ -22,7 +22,9 @@ table_legacy_names <- function(from = c("table", "summarize", "summary")) {
       "excel_download", "html_download", "pptx_download",
       "filter_type", "filter_column", "filter_values", "filter_range",
       "filter_group_cols", "filter_group_vals", "filter_spread_col",
-      "filter_spread_from", "ctrl_target", "ctrl_table"
+      "filter_spread_from", "ctrl_target", "ctrl_table",
+      # The matrix flag before `look` (feat/table-rewrite boards).
+      "compact"
     ),
     summarize = c(
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
@@ -133,7 +135,11 @@ table_legacy_args <- function(args, from = NULL) {
           isTRUE(get("pptx_download"))) {
       out$download <- TRUE
     }
-    if (isTRUE(get("rotate_titles"))) out$compact <- TRUE
+    # The matrix look was a flag (`rotate_titles`, then `compact`) before it
+    # became one of the three looks.
+    if (isTRUE(get("rotate_titles")) || isTRUE(get("compact"))) {
+      out$look <- "compact"
+    }
     if (!is.null(get("value")) && is.null(out[["columns"]])) {
       out$columns <- get("value")
     }

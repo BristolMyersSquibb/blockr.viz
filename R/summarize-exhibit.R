@@ -80,6 +80,12 @@ static_summarize_table <- function(data, ...) {
       args = args,
       prep = prep,
       cells = cells,
+      # The cards look's text, beside the cell model it draws from
+      # (R/table-cards.R). The spreadsheet ignores it.
+      cards = if (identical(args$look, "cards") && is.null(prep$err)) {
+        table_cards_groups(cells, prep, data = data,
+                           scale_map = args$scale_map)
+      },
       title = resolve_block_title(args$title, data,
                                   auto = summarize_attr(data, "label"),
                                   args = targs),
@@ -192,6 +198,8 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
   # whole. Same call the painted page makes -- it draws every row too, and
   # the two targets must not disagree about what the table CONTAINS.
   args$expanded <- TRUE
+  # The look is the block's; this method draws the table look.
+  args$look <- NULL
   do.call(summarize_table, c(list(x$data), args))
 }
 

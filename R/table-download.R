@@ -201,6 +201,11 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
                 return(write_exhibit_html(p, file, title = e$title))
               }
               e <- exhibit()
+              if (!is.null(e$cards)) {
+                return(write_exhibit_html(e$cards, file, title = e$title,
+                                          subtitle = e$subtitle,
+                                          caption = dl_caption(e)))
+              }
               write_exhibit_html(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
                                  subtitle = e$subtitle, caption = dl_caption(e),
@@ -216,6 +221,11 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
               p <- pic()
               if (!is.null(p)) return(write_exhibit_pptx(p, file))
               e <- exhibit()
+              if (!is.null(e$cards)) {
+                return(write_exhibit_pptx(e$cards, file, title = e$title,
+                                          subtitle = e$subtitle,
+                                          caption = dl_caption(e)))
+              }
               write_exhibit_pptx(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
                                  subtitle = e$subtitle, caption = dl_caption(e))

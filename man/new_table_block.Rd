@@ -15,7 +15,7 @@ new_table_block(
   color = NULL,
   shadings = list(),
   digits = 2L,
-  compact = FALSE,
+  look = "table",
   facet_layout = "by_summary",
   sort_by = "value",
   sort_dir = "desc",
@@ -83,9 +83,15 @@ the stub column when the board's scale map has it, \code{""} = off.}
 
 \item{digits}{Records layout: decimals of numeric cells.}
 
-\item{compact}{The matrix look: rotated column titles, so a column is as
-wide as its cells, and square cells for \code{show = "tile"} summaries (a
-heatmap).}
+\item{look}{How the table is drawn: \code{"table"}, \code{"compact"} (the matrix
+look: rotated column titles, so a column is as wide as its cells, and
+square cells for \code{show = "tile"} summaries, a heatmap) or \code{"cards"} (one
+card per summary, one row of cards per row of the table: its label, its
+number in large type and the summary's glyph). Cards draw the groups
+layout (one row of cards per level of \code{by}, a single row without \code{by})
+and the records layout (one card per column); the variables layout has
+no card form and draws as a table. \code{spans} and \code{expr} summaries are left
+out of the cards. The old \code{compact = TRUE} reads as \code{look = "compact"}.}
 
 \item{facet_layout, sort_by, sort_dir, top_n, value_labels, axis, bar_width}{Groups layout: column order of faceted summaries, row order, a row cap,
 value labels beside the marks, the domain strip under glyph columns, and

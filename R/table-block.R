@@ -1219,7 +1219,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".33"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".34"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1472,6 +1472,22 @@ table_arguments <- function() {
         ),
         example = "groups",
         type = arg_enum(c("records", "groups", "variables"))
+      ),
+      look = new_arg_spec(
+        paste0(
+          "How the table is drawn. \"table\" (default); \"compact\": the ",
+          "matrix look, rotated column titles and square tile cells (a ",
+          "heatmap); \"cards\": one card per summary, one row of cards per ",
+          "row, each card the summary's label, its number in large type and ",
+          "its glyph (bar, box, point range, dumbbell, sparkline). Cards ",
+          "draw the groups layout (one row of cards per level of `by`, one ",
+          "row without `by`) and the records layout (one card per column, ",
+          "for a precomputed frame such as one with a change column). ",
+          "Comparisons and targets are computed upstream; cards add no ",
+          "summary keys. `spans` and `expr` summaries are not drawn as cards."
+        ),
+        example = "cards",
+        type = arg_enum(TABLE_LOOKS)
       )
     ),
     rec[c("rowname", "columns", "color", "shadings", "digits")],
@@ -1547,9 +1563,15 @@ table_guidance <- function() {
 #'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
 #' @param digits Records layout: decimals of numeric cells.
-#' @param compact The matrix look: rotated column titles, so a column is as
-#'   wide as its cells, and square cells for `show = "tile"` summaries (a
-#'   heatmap).
+#' @param look How the table is drawn: `"table"`, `"compact"` (the matrix
+#'   look: rotated column titles, so a column is as wide as its cells, and
+#'   square cells for `show = "tile"` summaries, a heatmap) or `"cards"` (one
+#'   card per summary, one row of cards per row of the table: its label, its
+#'   number in large type and the summary's glyph). Cards draw the groups
+#'   layout (one row of cards per level of `by`, a single row without `by`)
+#'   and the records layout (one card per column); the variables layout has
+#'   no card form and draws as a table. `spans` and `expr` summaries are left
+#'   out of the cards. The old `compact = TRUE` reads as `look = "compact"`.
 #' @param facet_layout,sort_by,sort_dir,top_n,value_labels,axis,bar_width
 #'   Groups layout: column order of faceted summaries, row order, a row cap,
 #'   value labels beside the marks, the domain strip under glyph columns, and
@@ -1604,7 +1626,7 @@ new_table_block <- function(layout = "records",
                             color = NULL,
                             shadings = list(),
                             digits = 2L,
-                            compact = FALSE,
+                            look = "table",
                             facet_layout = "by_summary",
                             sort_by = "value",
                             sort_dir = "desc",
@@ -1651,6 +1673,7 @@ new_table_block <- function(layout = "records",
 
   layout <- chr_state(layout) %||% "records"
   if (!layout %in% c("records", "groups", "variables")) layout <- "records"
+  look <- table_look(look)
   sections <- chr_vec_state(sections) %||% character()
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
   # back as list() (R/state-normalize.R). `color` only collapses the empty
@@ -1711,7 +1734,10 @@ new_table_block <- function(layout = "records",
             by = shiny::reactiveVal(by),
             summaries = shiny::reactiveVal(summaries),
             id = shiny::reactiveVal(id_col),
-            compact = shiny::reactiveVal(isTRUE(compact))
+            look = shiny::reactiveVal(look),
+            # The records engine draws cards only in the records layout: the
+            # variables layout has no card form.
+            layout = r_layout
           )
 
           # Only the active engine sees data. The other one parks: its
@@ -1760,7 +1786,7 @@ new_table_block <- function(layout = "records",
             sortable = sortable, collapsible = collapsible, search = search,
             download = download, title = title, subtitle = subtitle,
             caption = caption, ctrl_target = drill_target,
-            ctrl_table = drill_table, rotate_titles = compact,
+            ctrl_table = drill_table,
             shared = shared
           )
 
@@ -1774,7 +1800,7 @@ new_table_block <- function(layout = "records",
             value_labels = value_labels, bar_width = bar_width,
             download = download, title = title, subtitle = subtitle,
             caption = caption, drill = drill, script = script,
-            compact = compact,
+            look = look,
             values = script_values, ctrl_target = drill_target,
             ctrl_table = drill_table,
             filter_column = grp_sel$column, filter_values = grp_sel$values,
@@ -1803,6 +1829,14 @@ new_table_block <- function(layout = "records",
             table_layout_css(ns, r_layout())
           })
           shiny::outputOptions(output, "layout_css", suspendWhenHidden = FALSE)
+
+          # The cards' script and stylesheet, asked for the first time the
+          # table turns to cards (a table that starts in cards ships them
+          # with its UI). Never withdrawn: a dependency stays loaded.
+          output$cards_dep <- shiny::renderUI({
+            if (identical(shared$look(), "cards")) table_cards_dep()
+          })
+          shiny::outputOptions(output, "cards_dep", suspendWhenHidden = FALSE)
 
           # The groups engine reports failed custom summaries as conditions;
           # they count only while that layout is on.
@@ -1860,7 +1894,7 @@ new_table_block <- function(layout = "records",
               color = rs$color,
               shadings = rs$shadings,
               digits = rs$digits,
-              compact = shared$compact,
+              look = shared$look,
               facet_layout = gs$facet_layout,
               sort_by = gs$sort_by,
               sort_dir = gs$sort_dir,
@@ -1898,6 +1932,8 @@ new_table_block <- function(layout = "records",
           # rule (layout_css) takes over from here.
           table_layout_css(ns, layout),
           shiny::uiOutput(ns("layout_css")),
+          if (identical(look, "cards")) table_cards_dep(),
+          shiny::uiOutput(ns("cards_dep")),
           htmltools::tags$div(
             id = ns("variables_wrap"), class = "blockr-table-engine",
             table_variables_ui(ns("variables"))
@@ -1923,7 +1959,7 @@ new_table_block <- function(layout = "records",
       ),
       external_ctrl = c(
         "layout", "by", "rowname", "columns", "summaries", "id", "color",
-        "shadings", "digits", "compact", "facet_layout", "sort_by",
+        "shadings", "digits", "look", "facet_layout", "sort_by",
         "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
         "drill_target", "drill_table", "search", "sortable", "collapsible",
         "max_height", "download", "title", "subtitle", "caption",

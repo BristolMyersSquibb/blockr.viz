@@ -524,6 +524,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* An option that exists but does not apply here (the table's Cards look in
+   the variables layout): drawn, greyed, inert. */
+.blockr-settings.dd-popover .blockr-segmented__seg.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* Row head: label + remove button on one line above the control. */
 .dd-row-head {

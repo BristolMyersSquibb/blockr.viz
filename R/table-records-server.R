@@ -85,7 +85,31 @@ table_records_server <- function(id, data,
     r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
     r_search         <- shared$search %||% shiny::reactiveVal(isTRUE(search))
     r_download       <- shared$download %||% shiny::reactiveVal(isTRUE(download))
-    r_rotate_titles  <- shared$compact %||% shiny::reactiveVal(isTRUE(rotate_titles))
+    # The block's look (table / compact / cards). This engine's rotated
+    # titles are the compact look; its gear reads and writes them as such.
+    r_look <- shared$look %||%
+      shiny::reactiveVal(if (isTRUE(rotate_titles)) "compact" else "table")
+    r_rotate_titles <- function(v) {
+      if (missing(v)) return(identical(r_look(), "compact"))
+      r_look(if (isTRUE(v)) "compact" else "table")
+    }
+    # Cards draw the records layout only: the variables layout, which this
+    # engine also draws, has no card form.
+    r_layout <- shared$layout %||% function() "records"
+    cards_on <- function() {
+      identical(r_look(), "cards") && identical(r_layout(), "records")
+    }
+    # The card model rides on a flat payload; a structured or message table
+    # stays a table.
+    with_cards <- function(p, data, label_col, value_cols, digits, row_hex) {
+      if (!cards_on() || !identical(p$kind, "flat")) return(p)
+      p$look <- "cards"
+      p$cards <- cards_payload(table_cards_records(
+        data, label_col = label_col, value_cols = value_cols,
+        digits = digits, row_hex = row_hex
+      ))
+      p
+    }
     r_title    <- shared$title %||% shiny::reactiveVal(title)
     r_subtitle <- shared$subtitle %||% shiny::reactiveVal(subtitle)
     r_caption  <- shared$caption %||% shiny::reactiveVal(caption)
@@ -221,6 +245,8 @@ table_records_server <- function(id, data,
           upd(r_download, as_toggle(v))
         } else if (identical(p, "rotate_titles")) {
           upd(r_rotate_titles, as_toggle(v))
+        } else if (identical(p, "look")) {
+          upd(r_look, table_look(as.character(unlist(v))[1L]))
         } else if (identical(p, "ctrl_target")) {
           upd(r_ctrl_target, trimws(as.character(v %||% "")))
         } else if (identical(p, "ctrl_table")) {
@@ -357,7 +383,15 @@ table_records_server <- function(id, data,
         sortable = isTRUE(r_sortable()),
         # Rounded like the screen (see dt_download_control). A structured
         # frame shows its cells as they come, so it is not rounded.
-        digits = if (!dt_is_structured(d)) r_digits()
+        digits = if (!dt_is_structured(d)) r_digits(),
+        # The cards look downloads as cards (html, pptx); the spreadsheet
+        # keeps the values.
+        cards = if (cards_on() && !dt_is_structured(d)) {
+          cards_exhibit(table_cards_records(
+            d, label_col = r_rowname(), value_cols = r_value(),
+            digits = r_digits(), row_hex = row_hex_for(d)$hex
+          ))
+        }
       )
     }
 
@@ -474,6 +508,29 @@ table_records_server <- function(id, data,
     # categorical row-stub, matching the chart's legend.
     board_scale_map <- dd_board_scale_map()
 
+    # The rows' tint: `color` names the column whose scale-map colours tint
+    # the rows (the chart's color aesthetic applied to rows, "Color by").
+    # NULL (unset) = smart default, the row-stub column, map-bound only (an
+    # unbound, usually unique, rowname would rainbow every table); "" =
+    # explicitly off; a name = that column, with the chart's palette
+    # fallback when the map does not bind it.
+    row_hex_for <- function(d) {
+      rc <- r_color()
+      col <- if (is.null(rc)) {
+        r_rowname() %||% names(d)[1L]
+      } else if (nzchar(rc)) {
+        rc
+      }
+      hex <- if (is.null(col)) {
+        NULL
+      } else if (is.null(rc)) {
+        dd_row_hex(board_scale_map(), col, d)
+      } else {
+        dd_ident_hex(board_scale_map(), col, d)
+      }
+      list(col = col, hex = hex)
+    }
+
     # The ctrl config rides on the rendered <table> as data-attributes
     # (like every other gear-read state, see dt_table_attrs): stamped
     # post-hoc so the render helpers stay ctrl-agnostic. Reading the
@@ -516,6 +573,9 @@ table_records_server <- function(id, data,
           # the clearable auto content from exactly that (readGearState).
         )
         p$titles <- tl[!vapply(tl, is.null, logical(1L))]
+        # The block's look, for the gear's look selector: the payload says
+        # `look = "cards"` only while cards are drawn.
+        p$look_state <- r_look()
         p
       }
       # Filter state at build time, ISOLATED: the table body must never
@@ -555,8 +615,15 @@ table_records_server <- function(id, data,
         } else {
           NULL
         }
+        agg_hex <- if (is.null(arc_col)) {
+          NULL
+        } else if (is.null(arc)) {
+          dd_row_hex(board_scale_map(), arc_col, ad)
+        } else {
+          dd_ident_hex(board_scale_map(), arc_col, ad)
+        }
         return(tryCatch(
-          dt_payload_json(titled(dt_build_payload(
+          dt_payload_json(titled(with_cards(dt_build_payload(
             ad,
             stamp      = stamp_ctrl,
             # The displayed frame is a projection; the gear's pickers
@@ -577,13 +644,7 @@ table_records_server <- function(id, data,
             } else {
               character()
             },
-            row_hex    = if (is.null(arc_col)) {
-              NULL
-            } else if (is.null(arc)) {
-              dd_row_hex(board_scale_map(), arc_col, ad)
-            } else {
-              dd_ident_hex(board_scale_map(), arc_col, ad)
-            },
+            row_hex    = agg_hex,
             color      = arc_col,
             group      = r_group(), summaries = r_summaries(),
             digits     = r_digits(),
@@ -593,7 +654,7 @@ table_records_server <- function(id, data,
             download    = isTRUE(r_download()),
             rotate_titles = isTRUE(r_rotate_titles()),
             active     = act
-          ))),
+          ), ad, disp$label_col, disp$value_cols, r_digits(), agg_hex))),
           error = function(e) {
             dt_payload_json(list(kind = "html", html = as.character(
               shiny::tags$div(
@@ -605,18 +666,9 @@ table_records_server <- function(id, data,
           }
         ))
       }
-      # `color` names the column whose scale-map colors tint the rows
-      # (the chart's color aesthetic applied to rows -- "Color by").
-      # NULL (unset) = smart default: use the row-stub column. "" =
-      # explicitly off (gear "(none)"). A name = that column.
-      rc <- r_color()
-      rc_col <- if (is.null(rc)) {
-        r_rowname() %||% names(d)[1L]
-      } else if (nzchar(rc)) {
-        rc
-      } else {
-        NULL
-      }
+      tint <- row_hex_for(d)
+      rc_col <- tint$col
+      row_hex <- tint$hex
       # Contain any build-time failure (formatting/spread/colour) and
       # show it ON THE PAGE as a red in-block bar instead of letting it
       # escape -- reusing the `blockr-error` style of the framework's
@@ -625,7 +677,7 @@ table_records_server <- function(id, data,
       # motivation for the first-class side-effect-render seam that would
       # route this through server$conditions() automatically.)
       tryCatch(
-        dt_payload_json(titled(dt_build_payload(
+        dt_payload_json(titled(with_cards(dt_build_payload(
           d,
           stamp      = stamp_ctrl,
           label_col  = r_rowname(),
@@ -633,17 +685,7 @@ table_records_server <- function(id, data,
           shadings   = r_shadings(),
           drill      = r_drill(),
           digits     = r_digits(),
-          # Explicit "Color by" pick -> dd_ident_hex (scale map first,
-          # palette fallback when unbound: chart parity). Smart default
-          # (color NULL -> stub column) stays MAP-BOUND-ONLY: an unbound,
-          # usually unique, rowname would rainbow every table by default.
-          row_hex    = if (is.null(rc_col)) {
-            NULL
-          } else if (is.null(rc)) {
-            dd_row_hex(board_scale_map(), rc_col, d)
-          } else {
-            dd_ident_hex(board_scale_map(), rc_col, d)
-          },
+          row_hex    = row_hex,
           color      = rc_col,
           group      = r_group(), summaries = r_summaries(),
           sortable    = isTRUE(r_sortable()),
@@ -652,7 +694,7 @@ table_records_server <- function(id, data,
           download    = isTRUE(r_download()),
           rotate_titles = isTRUE(r_rotate_titles()),
           active     = act
-        ))),
+        ), d, r_rowname(), r_value(), r_digits(), row_hex))),
         error = function(e) {
           dt_payload_json(list(kind = "html", html = as.character(
             shiny::tags$div(

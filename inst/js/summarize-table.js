@@ -28,7 +28,9 @@
   /** @param {Element} root */
   function rows(root) {
     return Array.prototype.slice.call(
-      root.querySelectorAll("tbody tr.blockr-summarize-row")
+      // Table rows, or the rows of the cards look (table-cards.js), which
+      // carry the same classes and attributes.
+      root.querySelectorAll(".blockr-summarize-row")
     );
   }
 
@@ -339,7 +341,7 @@
       if (!btn || !root.contains(btn)) return;
       e.stopPropagation();
       e.preventDefault();
-      var row = btn.closest("tr.blockr-summarize-row");
+      var row = btn.closest(".blockr-summarize-row");
       if (!row) return;
       setOpen(row, row.classList.contains("collapsed"));
       applyVisibility(root);
@@ -366,7 +368,7 @@
   // Light the clicked row, then release it. One at a time: two lit rows would
   // read as two selections where only the last click counts.
   function summarizeFlash(root, tr) {
-    root.querySelectorAll("tr.summarize-flash").forEach(function (n) {
+    root.querySelectorAll(".summarize-flash").forEach(function (n) {
       n.classList.remove("summarize-flash");
     });
     tr.classList.add("summarize-flash");
@@ -439,7 +441,7 @@
     };
 
     root.addEventListener("click", function (e) {
-      var tr = e.target.closest("tr.blockr-summarize-row.is-pick");
+      var tr = e.target.closest(".blockr-summarize-row.is-pick");
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
       // Read per click: the gear turns the drill on and off through the
@@ -801,34 +803,72 @@
     return (c.kind === "box" ? g.bc[i] : g.c[i]) != null;
   }
 
+  /** A row's classes and data attributes: the table row's, and the card
+   *  row's in the cards look, so drill, search and collapse read one shape. */
+  function rowMeta(p, i) {
+    var expanded = !!p.expanded;
+    var parent = !!(p.parent_row && p.parent_row[i]);
+    var child = !!(p.level && p.level[i] > 0);
+    var cls = "blockr-summarize-row" +
+      (parent ? " is-parent blockr-indent-toggle" +
+        (expanded ? "" : " collapsed") : "") +
+      (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
+      (p.pick ? " is-pick" : "") +
+      (p.on && p.on[i] ? " is-on" : "");
+    var attrs = ' data-summarize-label="' + esc(p.label[i]) + '"' +
+      (parent && p.parent_key ? ' data-summarize-key="' +
+        esc(p.parent_key[i]) + '"' : "") +
+      (child && p.parent_key ? ' data-summarize-parent-key="' +
+        esc(p.parent_key[i]) + '"' : "") +
+      (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
+      ' data-summarize-level="' + (child ? p.level[i] : 0) +
+      '" data-summarize-ord="' + i + '"';
+    var btn = parent ? '<button class="blockr-indent-btn" type="button"' +
+      ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
+      '">' + CHEV + "</button>" : "";
+    return { cls: cls, attrs: attrs, parent: parent, child: child, btn: btn };
+  }
+
+  /** The mark of one cell, without its value label: the one emitter per
+   *  kind, shared by the table's cells and the cards' glyphs. "" for a
+   *  column that draws no mark (numbers, text, tiles). */
+  function glyphHtml(c, i) {
+    switch (c.kind) {
+      case "bar": return trackHtml(c.w[i], c.fill, c.sub && c.sub[i]);
+      case "barsplit": return splitHtml(c, i);
+      case "bardiv": return dvHtml(c.w[i], c.pos[i]);
+      case "box": return c.multi ? multiHtml(c, i) : boxHtml(c, i);
+      case "pointrange": return c.multi ? multiHtml(c, i) : prHtml(c, i);
+      case "pair": return c.multi ? multiHtml(c, i) : pairHtml(c, i);
+      case "interval": return ivHtml(c, i);
+      case "sparkline": return spHtml(c, i);
+      default: return "";
+    }
+  }
+
+  /** A column as a card draws it: the card prints the number above the
+   *  mark, so the mark drops its own value labels. */
+  function cardCol(c) {
+    if (!c) return c;
+    var g = {};
+    for (var k in c) g[k] = c[k];
+    g.slab = null;
+    g.ldisp = null;
+    g.dw = null;
+    return g;
+  }
+
   /** Assemble the whole tbody from the cell model. */
   function assembleBody(p) {
     var out = [];
-    var expanded = !!p.expanded;
     for (var i = 0; i < p.n; i++) {
-      var parent = !!(p.parent_row && p.parent_row[i]);
-      var child = !!(p.level && p.level[i] > 0);
-      var cls = "blockr-summarize-row" +
-        (parent ? " is-parent blockr-indent-toggle" +
-          (expanded ? "" : " collapsed") : "") +
-        (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
-        (p.pick ? " is-pick" : "") +
-        (p.on && p.on[i] ? " is-on" : "");
-      var row = '<tr class="' + cls + '" data-summarize-label="' +
-        esc(p.label[i]) + '"' +
-        (parent && p.parent_key ? ' data-summarize-key="' +
-          esc(p.parent_key[i]) + '"' : "") +
-        (child && p.parent_key ? ' data-summarize-parent-key="' +
-          esc(p.parent_key[i]) + '"' : "") +
-        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
-        ' data-summarize-level="' + (child ? p.level[i] : 0) +
-        '" data-summarize-ord="' + i + '">';
+      var rm = rowMeta(p, i);
+      var parent = rm.parent;
+      var child = rm.child;
+      var row = '<tr class="' + rm.cls + '"' + rm.attrs + ">";
       row += '<td class="blockr-summarize-label-col blockr-stub' +
         (parent ? " blockr-has-toggle" : "") + '"' +
-        (child ? ' style="padding-left:48px;"' : "") + ">" +
-        (parent ? '<button class="blockr-indent-btn" type="button"' +
-          ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
-          '">' + CHEV + "</button>" : "") +
+        (child ? ' style="padding-left:48px;"' : "") + ">" + rm.btn +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
@@ -847,33 +887,13 @@
             ">" + c.disp[i] +
             (c.pct ? ' <span class="blockr-summarize-pct">' + c.pct[i] + "</span>" : "") +
             "</td>";
-        } else if (c.kind === "barsplit") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(splitHtml(c, i), c, i) + "</td>";
-        } else if (c.kind === "bardiv") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(dvHtml(c.w[i], c.pos[i]), c, i) + "</td>";
-        } else if (c.kind === "box" || c.kind === "pointrange") {
-          var glyph = c.multi
-            ? multiHtml(c, i)
-            : (c.kind === "box" ? boxHtml(c, i) : prHtml(c, i));
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(glyph, c, i) + "</td>";
-        } else if (c.kind === "pair") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(c.multi ? multiHtml(c, i) : pairHtml(c, i), c, i) +
-            "</td>";
         } else if (c.kind === "interval") {
           row += '<td class="blockr-summarize-bar-col' +
             (c.lg ? " blockr-summarize-wide" : "") + '"' + dataV(c.v[i]) + ">" +
-            ivHtml(c, i) + "</td>";
-        } else if (c.kind === "sparkline") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(spHtml(c, i), c, i) + "</td>";
+            glyphHtml(c, i) + "</td>";
         } else {
           row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(trackHtml(c.w[i], c.fill, c.sub && c.sub[i]), c, i) +
-            "</td>";
+            barWrap(glyphHtml(c, i), c, i) + "</td>";
         }
       }
       out.push(row + "</tr>");
@@ -884,6 +904,47 @@
     }
     return out.join("");
   }
+
+  // ---------- the cards look ----------
+  // The payload's `cards` (R/table-cards.R), drawn by table-cards.js with
+  // this file's emitters and row attributes. That script loads only with a
+  // table in the cards look, so it may arrive after the payload: the table
+  // waits for it (the "blockr-table-cards-ready" event below).
+  function renderCards(root, p) {
+    var host = root.querySelector(".blockr-cards-host");
+    var TC = window.BlockrTableCards;
+    if (!host) return;
+    if (!TC) {
+      root._tcPending = true;
+      return;
+    }
+    root._tcPending = false;
+    var cols = (p.cols || []).map(cardCol);
+    TC.render(host, p.cards, {
+      glyph: function (k, i) { return cols[k] ? glyphHtml(cols[k], i) : ""; },
+      row: function (i) {
+        var rm = rowMeta(p, i);
+        return { cls: rm.cls, attrs: rm.attrs, pre: rm.btn };
+      }
+    });
+  }
+
+  document.addEventListener("blockr-table-cards-ready", function () {
+    document.querySelectorAll(".blockr-summarize-container").forEach(function (root) {
+      if (!root._tcPending || !root._summarizePayload) return;
+      renderCards(root, root._summarizePayload);
+      root._summarizeCache = null;
+      var input = root.querySelector("input.blockr-search");
+      if (input && input.value) runSearch(root);
+      else applyVisibility(root);
+    });
+  });
+
+  // A downloaded page draws its cards without a block: table-cards.js reads
+  // the glyphs from here.
+  window.BlockrSummarizeGlyphs = {
+    glyph: function (c, i) { return glyphHtml(cardCol(c), i); }
+  };
 
   /** The container's own settings, which its one-shot render does not
    *  follow: search box, drill column, ctrl_target, height. A key the
@@ -919,7 +980,8 @@
     if (root._summarizeBand) root._summarizeBand();
     var lg = root.querySelector(".blockr-summarize-legend");
     if (lg) {
-      if (!ch.legend) {
+      // Cards carry their legends themselves (table-cards.js).
+      if (!ch.legend || root._summarizeLook === "cards") {
         lg.style.display = "none";
         lg.innerHTML = "";
       } else {
@@ -982,8 +1044,17 @@
   function applyPayload(root, p) {
     var wrap = root.querySelector(".blockr-table-wrapper");
     if (!wrap) return;
+    var cards = p.kind !== "html" && p.look === "cards" && p.cards;
+    root._summarizeLook = cards ? "cards" : "table";
+    wrap.classList.toggle("tc-on", !!cards);
     if (p.kind === "html") {
       wrap.innerHTML = p.html;
+    } else if (cards) {
+      // The table stays, empty and hidden: the gear and the download menu
+      // read their state off its attributes.
+      wrap.innerHTML = p.head + '<div class="blockr-cards-host"></div>';
+      root._summarizePayload = p;
+      renderCards(root, p);
     } else {
       wrap.innerHTML = p.head;
       var tb = wrap.querySelector("tbody");
@@ -1218,8 +1289,11 @@
   // The chart's words, so the two trays read alike.
   var SORT_DIR_OPT = [{ value: "desc", label: "Descending" },
                       { value: "asc", label: "Ascending" }];
-  var COMPACT_OPT = [{ value: "off", label: "Off" },
-                     { value: "on", label: "Compact" }];
+  // The table block's three looks (R: TABLE_LOOKS). Cards need a row per
+  // group; the variables layout has none, and its gear greys them out.
+  var LOOK_OPT = [{ value: "table", label: "Table" },
+                  { value: "compact", label: "Compact" },
+                  { value: "cards", label: "Cards" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
                     { value: "off", label: "No search bar" }];
   // Header sorting off: the configured order is the exhibit. A visit table
@@ -1329,8 +1403,10 @@
     bar_width: { label: "Bar width", kind: "segmented",
                  options: BAR_WIDTH_OPT },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
-    // The matrix look: square cells, titles on their side.
-    compact:  { label: "Compact", kind: "segmented", options: COMPACT_OPT },
+    // The table, the matrix look (square cells, titles on their side) or
+    // cards. `hint` is set per render (summarizeSections) to name the
+    // summaries the cards leave out.
+    look:     { label: "Look", kind: "segmented", options: LOOK_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -2336,6 +2412,16 @@
     var pres = ["sort_by", "sort_dir"];
     var aggTitle = null;
 
+    // The cards look leaves out what a card cannot draw (R:
+    // CARDS_SKIP_TYPES), and says so under the look selector.
+    var skip = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
+      .filter(function (s) { return s && (s.type === "spans" || s.type === "expr"); })
+      .map(function (s) { return s.name || s.col || s.type; });
+    SUMMARIZE_ROLES.look.hint = (cfg.look === "cards" && skip.length)
+      ? "Not drawn as cards: " + skip.join(", ") +
+        ". The table look shows them."
+      : "";
+
     // The summarize-table mode: the column list IS the config. Grouping
     // (`by`) and facet below it; the flat mark mappings never render.
     if (Array.isArray(cfg.summaries) && cfg.summaries.length) {
@@ -2361,9 +2447,9 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
-             "sortable", "axis", "download", "compact", "bar_width"]
+             "sortable", "axis", "download", "look", "bar_width"]
           : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-             "axis", "download", "compact", "bar_width"],
+             "axis", "download", "look", "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
@@ -2919,10 +3005,13 @@
   /** The card for the cell under the pointer, or "" for none. */
   function cardHtml(td, t) {
     var root = td.closest(".blockr-summarize-container");
-    var tr = td.parentNode;
+    // A card's glyph names its column; a table cell is placed by its index.
+    var card = td.hasAttribute("data-k");
+    var tr = card ? td.closest("[data-summarize-ord]") : td.parentNode;
     var p = root && root._summarizePayload;
     var i = tr ? Number(tr.getAttribute("data-summarize-ord")) : NaN;
-    var c = (p && p.kind === "flat" && p.cols) ? p.cols[td.cellIndex - 1] : null;
+    var ci = card ? Number(td.getAttribute("data-k")) : td.cellIndex - 1;
+    var c = (p && p.kind === "flat" && p.cols) ? p.cols[ci] : null;
     if (!c || isNaN(i) || i >= p.n) {
       // No payload (a static page): the one-line text the cell carries.
       var own = closestIn(t, td, "[data-summarize-tip]");
@@ -3096,7 +3185,7 @@
     var tip = tipEl();
     if (!lane) {
       laneHighlight(null, null);
-      var td = t.closest("td.blockr-summarize-bar-col");
+      var td = t.closest("td.blockr-summarize-bar-col, .tc-glyph");
       var html = td && t.closest(".blockr-summarize-container") ? cardHtml(td, t) : "";
       if (!html) {
         tip.hidden = true;

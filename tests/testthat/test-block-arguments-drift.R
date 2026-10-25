@@ -37,7 +37,6 @@ registry_allowlist <- list(
     # (`download` included: whether a table can be taken away is a
     # dashboard-authoring choice, not something an intent describes).
     "max_height", "sortable", "collapsible", "search", "download",
-    "compact",
     # The prepare script and its control values, as on the chart: a general
     # escape hatch the assistant should not reach for where a summary would
     # do.

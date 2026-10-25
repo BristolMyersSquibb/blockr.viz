@@ -1761,9 +1761,18 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
            summarize_esc(prep$err), "</td></tr></tbody></table>"
          ))
   } else {
-    summarize_flat_payload(summarize_cells(prep, drill = drill, active = active,
-                                           cfg = cfg))
+    m <- summarize_cells(prep, drill = drill, active = active, cfg = cfg)
+    out <- summarize_flat_payload(m)
+    # The cards look draws from the same cell model; the payload adds the
+    # cards' text (R/table-cards.R).
+    if (identical(cfg$look, "cards")) {
+      out$cards <- cards_payload(table_cards_groups(
+        m, prep, data = data, scale_map = list(...)$scale_map
+      ))
+    }
+    out
   }
+  if (!is.null(cfg$look)) body$look <- cfg$look
   body$chrome <- summarize_drop_null(c(chrome, list(
     legend = summarize_legend_spec(prep),
     foot = summarize_foot_spec(prep, drill = drill, active = active)

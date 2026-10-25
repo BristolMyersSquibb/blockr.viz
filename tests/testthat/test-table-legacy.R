@@ -20,7 +20,7 @@ test_that("an old table payload restores with the new names", {
   expect_identical(p$layout, "records")
   expect_identical(p$rowname, "var")
   expect_identical(p$shadings[[1L]]$mode, "diverging")
-  expect_true(p$compact)
+  expect_identical(p$look, "compact")
   expect_null(p$max_height)
   expect_identical(p$drill_target, "vf")
   expect_identical(p$block_name, "Cor")

@@ -87,16 +87,21 @@ test_that("compact marks the table and the export carries the paint", {
   expect_true(all(c("RASH", ".bg:RASH", ".fg:RASH") %in% names(df)))
 })
 
-test_that("the block's compact switch is shared by both engines", {
-  b <- new_table_block(layout = "groups", by = "SUBJ", compact = TRUE,
+test_that("the block's look is shared by both engines", {
+  b <- new_table_block(layout = "groups", by = "SUBJ", look = "compact",
                        summaries = tile_summary(fill = "GRADE"))
   shiny::testServer(b$expr_server,
                     args = list(data = shiny::reactive(tile_fixture())), {
-    expect_true(session$returned$state$compact())
+    expect_identical(session$returned$state$look(), "compact")
     session$setInputs(`groups-summarize_table_block_action` = list(
-      action = "config", param = "compact", value = "off"
+      action = "config", param = "look", value = "table"
     ))
-    expect_false(session$returned$state$compact())
+    expect_identical(session$returned$state$look(), "table")
+    # The records engine's rotated titles are the compact look.
+    session$setInputs(`records-drilldown_table_block_action` = list(
+      action = "config", param = "rotate_titles", value = "on"
+    ))
+    expect_identical(session$returned$state$look(), "compact")
   })
 })
 

@@ -1187,6 +1187,19 @@
       options: TABLE_LAYOUTS,
       onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
     };
+    // A Table 1 (the variables layout) has no card form, and a finished
+    // table keeps the layout it came with.
+    var finished = !!spec.finished;
+    TABLE_ROLES.look.options = LOOK_OPT.map(function (o) {
+      var off = (o.value === "cards" && (current === "variables" || finished)) ||
+        (o.value === "compact" && finished);
+      return off ? {
+        value: o.value, label: o.label, disabled: true,
+        title: current === "variables"
+          ? "The variables layout has no card form"
+          : "A finished table keeps its own layout"
+      } : o;
+    });
     return spec;
   }
 
@@ -1221,8 +1234,11 @@
                          { value: "off", label: "No search bar" }];
   var DOWNLOAD_OPT    = [{ value: "on", label: "Download" },
                          { value: "off", label: "No download" }];
-  var ROTATE_OPT      = [{ value: "off", label: "Horizontal titles" },
-                         { value: "on", label: "Rotated titles" }];
+  // The table block's three looks (R: TABLE_LOOKS). withLayoutSwitch()
+  // greys out what the current layout cannot draw.
+  var LOOK_OPT        = [{ value: "table", label: "Table" },
+                         { value: "compact", label: "Compact" },
+                         { value: "cards", label: "Cards" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
     // "Filter on" matches the chart's drill picker label (one vocabulary).
     drill:      { label: "Filter on", kind: "column", colType: "any" },
@@ -1245,10 +1261,11 @@
     // format it can write (xlsx, html, pptx) -- a button for one, a menu for
     // several.
     download:    { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
-    // Matrix display mode: value-column titles stand upright and columns
-    // size on cell content — a wide subject x term matrix (AE heatmap)
-    // fits several times more columns per viewport.
-    rotate_titles: { label: "Column titles", kind: "segmented", options: ROTATE_OPT },
+    // The look: the table, the compact matrix (value-column titles stand
+    // upright and columns size on cell content, so a wide subject x term
+    // matrix fits several times more columns per viewport), or cards (one
+    // card per column, one row of cards per row).
+    look: { label: "Look", kind: "segmented", options: LOOK_OPT },
     // Table text (chart parity; three-tier contract, R side
     // R/title-template.R): null = auto — the title inherits the data frame's
     // label attribute; "" = explicitly none; other text renders with {...}
@@ -1287,10 +1304,11 @@
     var pres = [];
     if (hasCols) pres.push("digits");
     pres.push("sortable");
-    if (hasCols) pres.push("rotate_titles");   // flat tables only
+    pres.push("look");
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
     pres.push("search", "download");
-    var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
+    var spec = /** @type {Record<string, any>} */ ({ finished: !hasCols,
+                 requiredMap: [], optionalMap: [],
                  mapping: hasCols ? ["group"] : [],
                  summaries: hasCols,         // offer the summaries list whenever the box is on
                  aggregatable: hasCols,    // Variant A: Aggregation checkbox section
@@ -1417,7 +1435,9 @@
       collapsible: table.getAttribute("data-dt-collapsible") || "on",
       search:      table.getAttribute("data-dt-search") || "on",
       download:    table.getAttribute("data-dt-download") || "off",
-      rotate_titles: table.getAttribute("data-dt-rotate-titles") || "off",
+      // The look; the payload carries it (look_state), the rotated-titles
+      // attribute is the fallback for a table drawn without one.
+      look: (table.getAttribute("data-dt-rotate-titles") === "on") ? "compact" : "table",
       // External-control send (beta): target value filter block + dm table,
       // and the board's candidate targets ([{value,label}] JSON, stamped by R).
       ctrl_target: table.getAttribute("data-dt-ctrl-target") || "",
@@ -1447,6 +1467,7 @@
     tlState("title");
     tlState("subtitle");
     tlState("caption");
+    if (stored && stored.look_state) cfg.look = stored.look_state;
     return { cols: cols, cfg: cfg };
   }
 
@@ -1742,7 +1763,8 @@
    *   rowH: number,
    *   measured: boolean,
    *   winStart: number,
-   *   winEnd: number
+   *   winEnd: number,
+   *   cards: any
    * }} DtModel
    */
 
@@ -1860,6 +1882,44 @@
     return out + "</tr>";
   }
 
+  // The cards look: the rows of `view` (search applied) as rows of cards,
+  // drawn by table-cards.js, which loads only with a table in that look and
+  // may arrive after the payload (the "blockr-table-cards-ready" listener
+  // below draws then). Card rows carry data-i, the row classes and nothing
+  // else the table rows do not: the click, the highlight and the count read
+  // them alike.
+  /** @param {HTMLElement} root @param {DtModel} model */
+  function renderCards(root, model) {
+    var host = /** @type {HTMLElement | null} */ (
+      root.querySelector(".blockr-cards-host"));
+    var TC = /** @type {any} */ (window).BlockrTableCards;
+    if (!host) return;
+    if (!TC) {
+      /** @type {any} */ (root)._tcPending = true;
+      return;
+    }
+    /** @type {any} */ (root)._tcPending = false;
+    var cards = model.cards;
+    TC.render(host, cards, {
+      order: model.view.filter(function (i) { return i < cards.n; }),
+      row: function (/** @type {number} */ i) {
+        return {
+          cls: (model.nodrill.has(i) ? "dt-row-nodrill" : "") +
+            (model.activeSet.has(i) ? " dt-row-active" : ""),
+          attrs: ' data-i="' + i + '"'
+        };
+      }
+    });
+  }
+
+  document.addEventListener("blockr-table-cards-ready", function () {
+    document.querySelectorAll(".drilldown-table-container").forEach(function (el) {
+      var root = /** @type {HTMLElement} */ (el);
+      var m = getModel(root);
+      if (/** @type {any} */ (root)._tcPending && m && m.cards) renderCards(root, m);
+    });
+  });
+
   /** @param {number} h @param {number} ncols */
   function spacerRow(h, ncols) {
     return '<tr class="dt-vspacer" aria-hidden="true"><td colspan="' + ncols +
@@ -1871,6 +1931,10 @@
   // VIRT_MIN rows this renders everything (start=0, end=n, no spacers).
   /** @param {HTMLElement} root @param {DtModel} model */
   function renderWindow(root, model) {
+    if (model.cards) {
+      renderCards(root, model);
+      return;
+    }
     var table = /** @type {HTMLElement | null} */ (
       root.querySelector("table.blockr-table"));
     var tbody = table && /** @type {HTMLElement | null} */ (
@@ -1937,7 +2001,7 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         var m = getModel(root);
-        if (!m || m.view.length <= VIRT_MIN) return;
+        if (!m || m.cards || m.view.length <= VIRT_MIN) return;
         // Re-render once scrolling nears the rendered window's edge.
         var first = Math.floor(sc.scrollTop / m.rowH);
         var last = first + Math.ceil(sc.clientHeight / m.rowH);
@@ -1951,7 +2015,7 @@
 
   /** @param {HTMLElement} root @param {DtModel} model */
   function repaintActive(root, model) {
-    root.querySelectorAll("tbody tr[data-i]").forEach(function (r) {
+    root.querySelectorAll("tbody tr[data-i], .tc-row[data-i]").forEach(function (r) {
       var i = parseInt(r.getAttribute("data-i") || "", 10);
       if (!isNaN(i) && model.activeSet.has(i)) {
         r.classList.add("dt-row-active");
@@ -2045,8 +2109,9 @@
     if (!elemIdAttr) return;
     // Rebound after the guard so the closures below see a plain string.
     const elemId = elemIdAttr;
-    var tbody = /** @type {HTMLElement | null} */ (
-      table.querySelector("tbody"));
+    // The rows a click lands on: the table's, or the cards' (same data-i).
+    var tbody = /** @type {HTMLElement | null} */ (model.cards ?
+      root.querySelector(".blockr-cards-host") : table.querySelector("tbody"));
     if (!tbody) return;
     var grouped = model.groupIdx.length > 0;
     var single = !!model.onclickCol && !isNaN(model.onclickIdx);
@@ -2055,7 +2120,7 @@
 
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
-      var tr = t && t.closest("tr[data-i]");
+      var tr = t && t.closest("tr[data-i], .tc-row[data-i]");
       if (!tr) return;
       if (!window.Shiny || !Shiny.setInputValue) return;
       var i = parseInt(tr.getAttribute("data-i") || "", 10);
@@ -2182,7 +2247,13 @@
       return;
     }
     if (!p.head || !p.cols) return;
-    slot.innerHTML = p.head;
+    // The cards look (R/table-cards.R): the table stays, empty and hidden,
+    // for the gear and the drill to read their state off; the cards draw
+    // beside it from the same rows.
+    var cards = p.look === "cards" && /** @type {any} */ (p).cards;
+    slot.innerHTML = p.head + (cards ? '<div class="blockr-cards-host"></div>' : "");
+    var wrapEl = root.querySelector(".blockr-table-wrapper");
+    if (wrapEl) wrapEl.classList.toggle("tc-on", !!cards);
     var table = /** @type {HTMLElement | null} */ (
       slot.querySelector("table.blockr-table"));
     if (!table) return;
@@ -2208,7 +2279,8 @@
       rowH: 30,
       measured: false,
       winStart: 0,
-      winEnd: 0
+      winEnd: 0,
+      cards: cards || null
     };
     /** @type {any} */ (root)._dtModel = model;
 

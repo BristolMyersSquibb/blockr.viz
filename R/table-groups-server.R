@@ -57,7 +57,7 @@ table_groups_server <- function(id, data,
                                       filter_type = "categorical",
                                       filter_column = NULL,
                                       filter_values = NULL,
-                                      compact = FALSE,
+                                      look = "table",
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
@@ -145,9 +145,9 @@ table_groups_server <- function(id, data,
     r_sortable <- shared$sortable %||% shiny::reactiveVal(isTRUE(sortable))
     r_axis    <- shiny::reactiveVal(isTRUE(axis))
     r_value_labels <- shiny::reactiveVal(!isFALSE(value_labels))
-    # The matrix look (square cells, rotated titles), owned by the block and
-    # shared with the records engine's rotated titles.
-    r_compact <- shared$compact %||% shiny::reactiveVal(isTRUE(compact))
+    # The look (table, the compact matrix, cards), owned by the block and
+    # shared with the records engine.
+    r_look <- shared$look %||% shiny::reactiveVal(table_look(look))
     r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
     r_download <- shared$download %||% shiny::reactiveVal(isTRUE(download))
     r_title   <- shared$title %||% shiny::reactiveVal(title)
@@ -334,7 +334,7 @@ table_groups_server <- function(id, data,
           return()
         }
         if (!key %in% c("search", "sortable", "axis", "value_labels",
-                        "download", "compact") &&
+                        "download", "look") &&
               is.null(setters[[key]])) return()
         val <- act$value
         if (key %in% c("title", "subtitle", "caption")) {
@@ -359,8 +359,9 @@ table_groups_server <- function(id, data,
           r_value_labels(identical(as.character(val)[[1L]], "on"))
         } else if (identical(key, "download")) {
           r_download(identical(as.character(val)[[1L]], "on"))
-        } else if (identical(key, "compact")) {
-          r_compact(identical(as.character(val)[[1L]], "on"))
+        } else if (identical(key, "look")) {
+          v <- table_look(as.character(unlist(val))[1L])
+          if (!identical(shiny::isolate(r_look()), v)) r_look(v)
         } else if (identical(key, "top_n")) {
           n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
           setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -511,18 +512,19 @@ table_groups_server <- function(id, data,
       d <- tryCatch(ann_data(), error = function(e) NULL)
       shiny::req(is.data.frame(d))
       tt <- r_titles()
+      cards <- cards_frame(d, r_look(), r_by(), r_drill())
       p <- summarize_build_payload(
-        d,
+        cards$data,
         chrome = c(
           tt[setdiff(names(tt), "title_arg_values")],
           # The container's own settings, which the one-shot chrome
           # render does not follow. "" rather than NULL: the payload
           # drops NULLs, and an absent key means "leave as is".
-          list(search = isTRUE(r_search()), drill = r_drill() %||% "",
+          list(search = isTRUE(r_search()), drill = cards$drill %||% "",
                ctrl_target = r_ctrl_target() %||% "",
                max_height = r_max_height() %||% "")
         ),
-        drill = r_drill(),
+        drill = cards$drill,
         # Isolated: a click must not rebuild the body (the JS keeps the
         # highlight live), but any fresh build -- restore, config edit, new
         # data -- re-reads the then-current state, so the highlight
@@ -541,7 +543,8 @@ table_groups_server <- function(id, data,
           top_n = r_top_n(), search = r_search(),
           sortable = r_sortable(), axis = r_axis(),
           value_labels = r_value_labels(),
-          bar_width = r_bar_width(), compact = r_compact(),
+          bar_width = r_bar_width(),
+          compact = identical(r_look(), "compact"), look = r_look(),
           download = r_download(), drill = r_drill(),
           ctrl_target = r_ctrl_target(),
           ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
@@ -571,7 +574,7 @@ table_groups_server <- function(id, data,
         group = r_group(), value = r_value(), func = r_func(),
         id_var = r_id_var(), parent = r_parent(), color = r_color(),
         bar_mode = r_bar_mode(), facet = r_facet(),
-        summaries = r_summaries(), by = r_by(),
+        summaries = r_summaries(), by = cards$by,
         facet_layout = r_facet_layout(),
         cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
         sort_dir = r_sort_dir(), top_n = r_top_n(),
@@ -612,7 +615,8 @@ table_groups_server <- function(id, data,
     dl_picture <- function() {
       cap <- capture()
       if (is.null(cap)) {
-        return(dl_exhibit())
+        e <- dl_exhibit()
+        return(if (!is.null(e$cards)) cards_exhibit(e) else e)
       }
       download_footer_stamp(cap, data(), session)
     }
@@ -653,13 +657,14 @@ table_groups_server <- function(id, data,
     # (R/download-footer.R), for every format that writes the table
     # rather than the browser's picture.
     dl_exhibit <- function() {
-      d <- ann_data()
+      cards <- cards_frame(ann_data(), r_look(), r_by(), r_drill())
       e <- do.call(static_summarize_table, c(
-        list(d),
+        list(cards$data),
         list(
           group = r_group(), parent = r_parent(), color = r_color(),
           facet = r_facet(), func = r_func(), value = r_value(),
-          id_var = r_id_var(), summaries = r_summaries(), by = r_by(),
+          id_var = r_id_var(), summaries = r_summaries(), by = cards$by,
+          look = r_look(),
           facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
           cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
           sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
@@ -728,6 +733,9 @@ table_groups_server <- function(id, data,
       content = function(file) {
         dl_guard("web page", {
           e <- dl_exhibit()
+          # The cards look downloads as cards; the spreadsheet keeps the
+          # table's values.
+          if (!is.null(e$cards)) e <- cards_exhibit(e)
           write_exhibit_html(
             e, file,
             title = e$title, subtitle = e$subtitle, caption = e$caption

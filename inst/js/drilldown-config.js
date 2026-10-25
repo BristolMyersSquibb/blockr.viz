@@ -1679,7 +1679,10 @@
           !this._hasVal(this._cfg()[key]));
       };
       const setHelp = () => {
-        const picker = role.kind === 'column' || role.kind === 'columns';
+        // A segmented row shows its help only when the role carries one (the
+        // table block's look names what its cards leave out).
+        const picker = role.kind === 'column' || role.kind === 'columns' ||
+          (role.kind === 'segmented' && !!this._fieldHelp(key));
         if (!picker || (reversed && !usesMetric())) {
           helpEl.style.display = 'none'; return;
         }
@@ -2923,6 +2926,15 @@
       wrap.className = 'dd-pill-wrap';
       const cur = options.some((o) => o.value === current) ? current : options[0].value;
       const seg = Blockr.segmented(options, cur, onPick, label ? { label } : undefined);
+      // An option may be offered but not available here (`disabled`, with a
+      // `title` that says why): drawn, greyed, not clickable.
+      options.forEach((o, j) => {
+        const b = /** @type {HTMLButtonElement | undefined} */ (seg.el.children[j]);
+        if (o && /** @type {any} */ (o).disabled && b) {
+          b.disabled = true;
+          b.classList.add('is-disabled');
+        }
+      });
       wrap.appendChild(seg.el);
       parent.appendChild(wrap);
       return seg.el;

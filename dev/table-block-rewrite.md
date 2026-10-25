@@ -16,7 +16,7 @@ One block, `new_table_block()`, for every table blockr.viz draws. It replaces:
 | `new_table_block()` (flat table, in-block aggregation, annotated frames) | layout `"records"`, pass-through |
 | `new_summarize_table_block()` (one row per group, glyph cells) | layout `"groups"` |
 | `new_summary_table_block()` (Table 1, one row per variable) | layout `"variables"` |
-| `new_heatmap_block()` (matrix engine behind the AE heatmap) | layout `"groups"` + `compact = TRUE` |
+| `new_heatmap_block()` (matrix engine behind the AE heatmap) | layout `"groups"` + `look = "compact"` |
 | `new_gt_table_block()` | retired; gt can become a download format |
 
 Written in R first. blockx follows through the blockx-ready contract.
@@ -129,7 +129,7 @@ new_table_block(
   total         = FALSE,        # total row (groups) or column (variables)
   shadings      = list(),       # cell colour rules: list(list(mode, cols, domain))
   format        = "number",     # default number format, as chart and tile
-  compact       = FALSE,        # square cells, rotated titles, blank empties
+  look          = "table",      # "compact": square cells, rotated titles; "cards"
   value_labels  = TRUE,
   facet_layout  = "by_summary",
   sort_by       = "value",
@@ -190,7 +190,7 @@ list(
 | segment | `x`, `xend` | | `summaries$x`, `$xend` | `from`, `to` (pair) |
 | tooltip columns | `tooltip` | | `summaries$tooltip` | `fields` (spans) |
 | paint by another column | | | `summaries$fill` | `color` (heatmap), `source` (shading) |
-| matrix look | | | `compact` | `rotate_titles`; always on (heatmap) |
+| matrix look | | | `look = "compact"` | `rotate_titles`; always on (heatmap) |
 | number format | `format`, `unit` | `format`, `unit` | `format`, `summaries$format`, `$unit` | `digits` |
 | drill | `drill`, `drill_target`, `drill_table` | `ctrl_*` | as chart | `ctrl_*` |
 | click state | `selection` | `filter_*` | `selection` | `filter_*` |
@@ -211,7 +211,7 @@ block list.
 | table | `cell_color`, `row_color`, `color` | `shadings` |
 | table | `group`, `value`, `summaries` (in-block aggregation) | `layout = "groups"`, `by`, `summaries` |
 | table | `digits` | `format` |
-| table | `excel_download`, `html_download`, `pptx_download`; `rotate_titles` | `download`; `compact` |
+| table | `excel_download`, `html_download`, `pptx_download`; `rotate_titles`, `compact` | `download`; `look = "compact"` |
 | summarize | `group`, `value`, `func`, `parent`, block-level `color` / `facet` / `bar_mode` | one `simple` summary; `parent` becomes the outer `by`; `bar_mode` becomes `position` |
 | summarize | `id_var`; `values` | `id`; `script_values` |
 | summarize | summary keys `stat`, `lo`, `hi`, `from`, `to`, `fields` | `summary`, `ref_lo`, `ref_hi`, `x`, `xend`, `tooltip` |
@@ -393,8 +393,8 @@ Phase 4 (heatmap):
   column, levels in factor / numeric / sorted order) and `facet_order`
   (`"count"`, the default for tiles, or `"level"`). A tile facet takes up to
   300 levels (`LANE_MAX_TILE_LEVELS`); other marks keep 15.
-- `compact = TRUE` is shared by both engines: rotated titles, square cells,
-  open groups. Rows of a faceted tile matrix sort by their total.
+- `compact = TRUE` (now `look = "compact"`) is shared by both engines:
+  rotated titles, square cells, open groups. Rows of a faceted tile matrix sort by their total.
 - Downloads: xlsx carries `.bg:` / `.fg:` paint; the fallback picture draws
   squares and titles on their side.
 - Titles can name the first summary's `facet` and `fill`
@@ -411,6 +411,29 @@ Phase 4 (heatmap):
 R tests: all pass except `test-summarize-push` and `test-write-exhibit`,
 which fail on `main` too. JS tests: 449 of 450, the same one fails on
 `main`.
+
+Phase 5 (cards, branch `feat/table-cards`):
+
+- `look = "table" | "compact" | "cards"` replaces `compact`; `compact = TRUE`
+  and the old `rotate_titles = TRUE` read as `look = "compact"`
+  (`table_legacy_names()`).
+- Cards draw the groups layout (one card per summary, one row of cards per
+  level of `by`, one row without `by`) and the records layout (one card per
+  column). The variables layout and a structured input draw as a table; the
+  gear greys Cards out there. `spans` and `expr` summaries are left out and
+  the gear names them. A summary with a `facet` gives one card per level.
+- The card text comes from R (`R/table-cards.R`, on the payload as `cards`);
+  the glyphs are the summarize table's cells, drawn by its own emitters
+  (`glyphHtml()` in summarize-table.js), so a column of cards shares the
+  table column's scale. `inst/js/table-cards.js` lays them out and loads only
+  with a table in the cards look.
+- Card rows carry the table rows' classes and data attributes, so drill,
+  selection, search and collapse are the table look's code.
+- Downloads: xlsx the table's values, html the cards (the same JS, inlined),
+  pptx the browser picture or a painted fallback (`R/cards-exhibit.R`, which
+  reuses the summarize painter's glyph functions).
+- The tile block is gone; `blockr_deser.tile_block()` restores a saved tile
+  as a table block.
 
 ### Class migration (resolved)
 
