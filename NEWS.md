@@ -1,5 +1,18 @@
 # blockr.viz 0.3.0
 
+* Line charts follow the rules from the line chart review. A dense line
+  draws no dots; a line whose points are at least 12 px apart draws ringed
+  dots. Lines are 2 px. A hairline crosshair finds the date and one tooltip
+  lists every line, highest first, named by its level alone; nothing on the
+  plot changes as the cursor moves. A Date or date-time x is a time axis
+  whose ticks follow the zoom (years, months, days) and whose tooltip names
+  the period ("Q4 2014", "Dec 1986"); a brush or point click taken there
+  filters as a date. Gridlines are solid hairlines, and a line chart has no
+  x grid and no y axis line.
+* With one line per entity (`series`, a trajectory per subject), hover still
+  picks the nearest line, without the gradient area and the ring of dots.
+* `connect` defaults to `"straight"` for new charts. A saved chart keeps the
+  value it was saved with, so existing boards stay smoothed.
 * `new_chart_block()` has new argument names, chosen to stay stable on CRAN
   and to match blockr.ggplot and ggplot2. `x` and `y` are the screen axes for
   every type: a horizontal bar of counts is `y = "class"`, a horizontal bar

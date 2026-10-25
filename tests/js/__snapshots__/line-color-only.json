@@ -78,7 +78,15 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "line"
+        "type": "line",
+        "label": {
+         "show": false
+        },
+        "lineStyle": {
+         "color": "#6b7280",
+         "width": 1,
+         "type": "solid"
+        }
        },
        "confine": true,
        "formatter": "[fn]",
@@ -117,7 +125,11 @@
         },
         "axisLabel": {
          "color": "#6b7280",
-         "fontSize": 11
+         "fontSize": 11,
+         "hideOverlap": true
+        },
+        "axisTick": {
+         "show": false
         },
         "axisLine": {
          "lineStyle": {
@@ -125,10 +137,7 @@
          }
         },
         "splitLine": {
-         "lineStyle": {
-          "color": "#e5e7eb",
-          "type": "dashed"
-         }
+         "show": false
         },
         "scale": true
        },
@@ -157,15 +166,17 @@
          "color": "#6b7280",
          "fontSize": 11
         },
+        "axisTick": {
+         "show": false
+        },
         "axisLine": {
-         "lineStyle": {
-          "color": "#d1d5db"
-         }
+         "show": false
         },
         "splitLine": {
          "lineStyle": {
           "color": "#e5e7eb",
-          "type": "dashed"
+          "type": "solid",
+          "width": 1
          }
         },
         "scale": true
@@ -354,17 +365,26 @@
         "smoothMonotone": "x",
         "triggerLineEvent": true,
         "symbol": "circle",
-        "symbolSize": 4,
+        "symbolSize": 9,
+        "showSymbol": true,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
-         "width": 1.4,
-         "opacity": 1
+         "width": 2,
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
-         "disabled": true
+         "scale": false,
+         "focus": "none",
+         "lineStyle": {
+          "width": 2
+         }
         }
        },
        {
@@ -526,17 +546,26 @@
         "smoothMonotone": "x",
         "triggerLineEvent": true,
         "symbol": "circle",
-        "symbolSize": 4,
+        "symbolSize": 9,
+        "showSymbol": true,
         "itemStyle": {
          "color": "#E69F00",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
-         "width": 1.4,
-         "opacity": 1
+         "width": 2,
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
-         "disabled": true
+         "scale": false,
+         "focus": "none",
+         "lineStyle": {
+          "width": 2
+         }
         }
        },
        {
@@ -576,18 +605,18 @@
      },
      "probes": {
       "tooltip": [
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       "",
-       ""
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">27.4  (USUBJID: S01)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">22.4  (USUBJID: S04)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">29.4  (USUBJID: S05)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">24.4  (USUBJID: S08)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">31.4  (USUBJID: S09)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">26.4  (USUBJID: S12)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">28.4  (USUBJID: S03)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">21.4  (USUBJID: S02)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">30.4  (USUBJID: S07)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">23.4  (USUBJID: S06)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">32.4  (USUBJID: S11)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">25.4  (USUBJID: S10)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 15</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">29.2  (USUBJID: S01)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">24.2  (USUBJID: S04)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 15</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">26.2  (USUBJID: S08)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">NaN  (USUBJID: S05)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 15</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">33.2  (USUBJID: S09)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">28.2  (USUBJID: S12)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 17</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">30.2  (USUBJID: S03)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">23.2  (USUBJID: S02)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 17</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">32.2  (USUBJID: S07)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">25.2  (USUBJID: S06)</span></div>",
+       "<div class=\"dd-tt-head\"><span>Analysis Relative Day: 17</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">M</span><span class=\"dd-tt-value\">34.2  (USUBJID: S11)</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">F</span><span class=\"dd-tt-value\">NaN  (USUBJID: S10)</span></div>"
       ]
      }
     },

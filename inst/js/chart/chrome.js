@@ -306,7 +306,7 @@
         label: c.label || '',
         drill: c.drill || '',
         smoother: c.smoother || 'none',
-        connect: c.connect || 'monotone',
+        connect: c.connect || 'straight',
         identity_line: c.identity_line || 'off',
         // "" clears every line, so these are always sent.
         value_lines: c.value_lines == null ? '' : String(c.value_lines),

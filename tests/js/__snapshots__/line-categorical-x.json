@@ -61,7 +61,15 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "line"
+        "type": "line",
+        "label": {
+         "show": false
+        },
+        "lineStyle": {
+         "color": "#6b7280",
+         "width": 1,
+         "type": "solid"
+        }
        },
        "confine": true,
        "formatter": "[fn]",
@@ -108,16 +116,16 @@
          "__lines": 1,
          "formatter": "[fn]"
         },
+        "axisTick": {
+         "show": false
+        },
         "axisLine": {
          "lineStyle": {
           "color": "#d1d5db"
          }
         },
         "splitLine": {
-         "lineStyle": {
-          "color": "#e5e7eb",
-          "type": "dashed"
-         }
+         "show": false
         },
         "scale": true,
         "data": [
@@ -153,15 +161,17 @@
          "color": "#6b7280",
          "fontSize": 11
         },
+        "axisTick": {
+         "show": false
+        },
         "axisLine": {
-         "lineStyle": {
-          "color": "#d1d5db"
-         }
+         "show": false
         },
         "splitLine": {
          "lineStyle": {
           "color": "#e5e7eb",
-          "type": "dashed"
+          "type": "solid",
+          "width": 1
          }
         },
         "scale": true
@@ -207,15 +217,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -249,15 +264,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -291,15 +311,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -333,15 +358,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -375,15 +405,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -417,15 +452,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -459,15 +499,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -501,15 +546,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -543,15 +593,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -585,15 +640,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -627,15 +687,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -669,15 +734,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true
@@ -703,15 +773,20 @@
         "smooth": true,
         "smoothMonotone": "x",
         "triggerLineEvent": true,
-        "symbol": "circle",
-        "symbolSize": 4,
+        "symbol": "none",
+        "symbolSize": 9,
+        "showSymbol": false,
         "itemStyle": {
          "color": "#0072B2",
-         "cursor": "pointer"
+         "cursor": "pointer",
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5
         },
         "lineStyle": {
          "width": 1.4,
-         "opacity": 1
+         "opacity": 1,
+         "cap": "round",
+         "join": "round"
         },
         "emphasis": {
          "disabled": true

@@ -249,7 +249,11 @@
     if (drillState(cfg) === 'off' && option && Array.isArray(option.series)) {
       for (const s of option.series) {
         if (!s) continue;
-        s.emphasis = { disabled: true };
+        // A line's emphasis without focus or scaling is what draws its dot
+        // at the crosshair; it is no drill affordance, so it stays.
+        const crosshairDot = s.type === 'line' && s.emphasis &&
+          s.emphasis.focus === 'none' && s.emphasis.scale === false;
+        if (!crosshairDot) s.emphasis = { disabled: true };
         s.cursor = 'default';
         if (s.itemStyle) s.itemStyle.cursor = 'default';
         if (s.lineStyle) s.lineStyle.cursor = 'default';

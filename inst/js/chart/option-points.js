@@ -17,34 +17,64 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
-  const BASE_LINE_WIDTH = 1.4;
+  // A line chart of a few series draws 2px lines; one line per entity (a
+  // subject's trajectory) stays thin, so a crowd of them reads as a texture.
+  const BASE_LINE_WIDTH = 2;
+  const CROWD_LINE_WIDTH = 1.4;
   const BASE_SCATTER_SIZE = 6;
-  const BASE_LINE_MARKER = 4;
+  // A line's dots, ringed in the surface colour so they stay legible where
+  // lines cross. Drawn only while the points are at least SPARSE_DOT_PX
+  // apart on screen: there a dot marks a reading, closer it paints a second,
+  // knotted line. Without a width, at most SPARSE_DOT_N points.
+  const BASE_LINE_MARKER = 9;
+  const SPARSE_DOT_PX = 12;
+  const SPARSE_DOT_N = 40;
   // Rows an axis tooltip lists before "+n more".
   const TT_ROW_CAP = 12;
 
   /**
+   * Whether a panel's lines are sparse enough to carry dots.
+   * @param {any} panel @param {number} plotW the plot's width in px, 0 if unknown
+   */
+  const sparseLines = (panel, plotW) => {
+    let n = 0;
+    for (const s of panel.series) if (s.pts.length > n) n = s.pts.length;
+    if (!n) return false;
+    if (plotW > 0) return n < 2 || plotW / (n - 1) >= SPARSE_DOT_PX;
+    return n <= SPARSE_DOT_N;
+  };
+
+  /**
    * The scatter or line series of one panel, with their overlays.
    * @param {any} m the individual model @param {any} panel @param {any} look
+   * @param {number} [plotW] the plot's width in px
    */
-  const points = (m, panel, look) => {
-    const { cfg } = look;
+  const points = (m, panel, look, plotW = 0) => {
+    const { cfg, ink } = look;
     const isLine = m.isLine;
     const dm = cfg.dot_size_mult ?? 1.0;
     const lm = cfg.line_width_mult ?? 1.0;
-    const lineMarkerPx = m.symbol === 'none' ? BASE_LINE_MARKER : BASE_LINE_MARKER * dm;
-    // One select drives step and smoothing: monotone (the default),
-    // straight segments, or a step at the start, middle or end.
-    const connect = cfg.connect || 'monotone';
+    // One line per entity (a `series` column): the trajectory crowd.
+    const crowd = isLine && m.crowd;
+    const dots = isLine && !crowd && m.symbol !== 'none' && sparseLines(panel, plotW);
+    const lineMarkerPx = BASE_LINE_MARKER * dm;
+    const lineW = (crowd ? CROWD_LINE_WIDTH : BASE_LINE_WIDTH) * lm;
+    const surface = (ink && ink.surface) || '#ffffff';
+    // One select drives step and smoothing: straight segments (the default),
+    // monotone smoothing, or a step at the start, middle or end.
+    const connect = cfg.connect || 'straight';
     const stepMode = connect.indexOf('step-') === 0 ? connect.slice(5) : null;
     const smoothOn = isLine && connect === 'monotone';
     const smoother = cfg.smoother || 'none';
     const smootherSeries = cfg.smoother_series || null;
     const loCol = cfg.lo, hiCol = cfg.hi;
-    const encodeX = (/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v);
+    const encodeX = m.x.encode ||
+      ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v));
 
-    // Native emphasis is off on both: a line's hover highlight is the
-    // overlay, and a scatter's would strobe a dense cloud.
+    // A scatter's native emphasis is off: it would strobe a dense cloud. A
+    // line keeps it without scaling or focus, which is what draws one dot
+    // per line at the crosshair; the crowd's is off, its hover is the
+    // overlay.
     const mkSeries = (/** @type {any} */ name, /** @type {any[]} */ data, /** @type {string} */ clr) => ({
       type: isLine ? 'line' : 'scatter',
       name,
@@ -54,11 +84,16 @@
       smoothMonotone: smoothOn ? 'x' : undefined,
       // Clicks and hover on the line itself, not only on its symbols.
       triggerLineEvent: isLine ? true : undefined,
-      symbol: isLine ? m.symbol : 'circle',
+      symbol: isLine && crowd ? 'none' : 'circle',
       symbolSize: isLine ? lineMarkerPx : BASE_SCATTER_SIZE * dm,
-      itemStyle: { color: clr, cursor: 'pointer' },
-      lineStyle: isLine ? { width: BASE_LINE_WIDTH * lm, opacity: m.lineOpacity } : undefined,
-      emphasis: { disabled: true }
+      showSymbol: isLine ? dots : undefined,
+      itemStyle: isLine
+        ? { color: clr, cursor: 'pointer', borderColor: surface, borderWidth: 1.5 }
+        : { color: clr, cursor: 'pointer' },
+      lineStyle: isLine ? { width: lineW, opacity: m.lineOpacity, cap: 'round', join: 'round' } : undefined,
+      emphasis: (isLine && !crowd)
+        ? { scale: false, focus: 'none', lineStyle: { width: lineW } }
+        : { disabled: true }
     });
 
     // R fits the smoother per group, nested by facet level when faceted.
@@ -102,7 +137,7 @@
         }
       }
     }
-    return { series, stepMode, smoothOn, markerPx: 8 * dm, focusW: 2.5 * lm };
+    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm };
   };
 
   /**
@@ -129,28 +164,28 @@
   }];
 
   /**
-   * The line chart's tooltip: per x position, each line's value there,
-   * capped. While a line is hovered (`hover.si`): with one line per colour
-   * level, every line's row with that one marked (the colour-split card);
-   * with one line per series (a subject), that line's row only. Away from
-   * every line of a split chart, none.
+   * The line chart's tooltip, on a hairline crosshair: per x position, each
+   * line's value there, highest first, capped. A crowd of lines (one per
+   * entity) shows only the line nearest the cursor (`hover.si`), and
+   * nothing away from every line.
    * @param {any} m @param {any} look @param {{ si: number | null }} hover
    */
   const lineTooltip = (m, look, hover) => {
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ttSuffix = ttSuffixOf(m, look);
+    const ink = look.ink || {};
     return {
       trigger: 'axis',
-      axisPointer: { type: 'line' },
+      axisPointer: { type: 'line', label: { show: false },
+                     lineStyle: { color: ink.muted || '#6b7280', width: 1, type: 'solid' } },
       confine: true,
       formatter: (/** @type {any} */ ps) => {
         if (!Array.isArray(ps)) ps = [ps];
         let rows = ps.filter((/** @type {any} */ p) =>
           p && p.seriesType === 'line' && Array.isArray(p.value) && p.seriesName !== '__focus__');
         if (!rows.length) return '';
-        if (hover.si == null && m.seriesCount > 1) return '';
-        const byColor = !m.seriesCol && !!m.color && m.seriesCount > 1;
-        if (hover.si != null && !byColor) {
+        if (m.crowd) {
+          if (hover.si == null) return '';
           rows = rows.filter((/** @type {any} */ p) => p.seriesIndex === hover.si);
           if (!rows.length) return '';
         }
@@ -163,19 +198,16 @@
         });
         const head = m.x.cats
           ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
-          : title(m.x.col) + ': ' + NS.ddNum3(rows[0].value[0]);
-        // The hovered line first, so the cap never hides it.
-        if (byColor) {
-          rows.sort((/** @type {any} */ a, /** @type {any} */ b) =>
-            (b.seriesIndex === hover.si ? 1 : 0) - (a.seriesIndex === hover.si ? 1 : 0));
-        }
-        // A colour level is named with its column, as on a split bar.
-        const colorName = byColor ? NS.esc(title(m.color) || m.color) + ' ' : '';
+          : (m.x.type === 'time'
+            ? NS.axes.fmtXVal(rows[0].value[0], 'time', null, m.x.period)
+            : title(m.x.col) + ': ' + NS.ddNum3(rows[0].value[0]));
+        // Highest first, the order the lines stack in at the crosshair.
+        rows.sort((/** @type {any} */ a, /** @type {any} */ b) =>
+          (Number(b.value[1]) || 0) - (Number(a.value[1]) || 0));
         const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
-          const nm = m.splitCol ? colorName + NS.esc(p.seriesName) : NS.esc(title(m.y.col));
+          const nm = m.splitCol ? NS.esc(p.seriesName) : NS.esc(title(m.y.col));
           return NS.tipRow(nm, NS.ddNum3(p.value[1]) + ttSuffix(p.value),
-                           m.splitCol ? p.color : null,
-                           byColor ? p.seriesIndex === hover.si : null);
+                           m.splitCol ? p.color : null, null);
         });
         if (rows.length > TT_ROW_CAP) lines.push(NS.tipNote('+' + (rows.length - TT_ROW_CAP) + ' more'));
         return NS.tipHead(NS.esc(head)) + lines.join('');
@@ -215,7 +247,7 @@
         const headline = lvl || title(m.y.col) || 'Point';
         /** @type {Array<[string, any]>} */
         const pairs = [
-          [title(m.x.col) || 'X', NS.axes.fmtXVal(p.value[0], m.x.type, null)],
+          [title(m.x.col) || 'X', NS.axes.fmtXVal(p.value[0], m.x.type, null, m.x.period)],
           [title(m.y.col) || 'Y', NS.ddNum3(p.value[1])]
         ];
         if (lvl) pairs.push([title(m.splitCol) || 'Series', lvl]);

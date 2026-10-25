@@ -120,25 +120,53 @@ chart_filter_call <- function(conds) {
   )
 }
 
+# A value the browser sent for a column drawn on a time axis: there it is
+# milliseconds since 1970. Against a Date or date-time column it becomes the
+# literal call that reads back as that date (`as.Date("1986-07-01")`), so the
+# filter compares like with like and the shown code reads as a date. Any
+# other value, or column, passes through.
+chart_time_literal <- function(v, col) {
+  if (!is.numeric(v) || length(v) != 1L || is.na(v)) {
+    return(v)
+  }
+  if (inherits(col, "Date")) {
+    d <- as.Date(floor(v / 86400000), origin = "1970-01-01")
+    return(bquote(as.Date(.(format(d)))))
+  }
+  if (inherits(col, "POSIXt")) {
+    tz <- attr(col, "tzone")
+    tz <- if (length(tz) && nzchar(tz[[1L]])) tz[[1L]] else "UTC"
+    # The browser placed the column's wall-clock time as if it were UTC.
+    s <- format(as.POSIXct(v / 1000, origin = "1970-01-01", tz = "UTC"),
+                "%Y-%m-%d %H:%M:%S", tz = "UTC")
+    return(bquote(as.POSIXct(.(s), tz = .(tz))))
+  }
+  v
+}
+
 # A range filter's condition: x (and y, for a 2D brush) between its ends.
-chart_range_cond <- function(rng) {
+# `data` gives the columns' classes, for a range taken on a time axis.
+chart_range_cond <- function(rng, data = NULL) {
   if (is.null(rng) || is.null(rng$x_col) || is.null(rng$x_range)) {
     return(NULL)
   }
   xc <- rng$x_col
-  xr <- rng$x_range
+  xr <- as.list(rng$x_range)
   yr <- rng$y_range
+  if (is.data.frame(data) && xc %in% names(data)) {
+    xr <- lapply(xr, chart_time_literal, data[[xc]])
+  }
   if (!is.null(yr) && !is.null(rng$y_col)) {
     bquote(
       dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)) &
         dplyr::between(.data[[.(yc)]], .(ylo), .(yhi)),
-      list(xc = xc, yc = rng$y_col, xlo = xr[1], xhi = xr[2],
+      list(xc = xc, yc = rng$y_col, xlo = xr[[1L]], xhi = xr[[2L]],
            ylo = yr[1], yhi = yr[2])
     )
   } else {
     bquote(
       dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)),
-      list(xc = xc, xlo = xr[1], xhi = xr[2])
+      list(xc = xc, xlo = xr[[1L]], xhi = xr[[2L]])
     )
   }
 }

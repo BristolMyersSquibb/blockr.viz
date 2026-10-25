@@ -120,7 +120,7 @@
       bandMany = b.many;
       if (b.markLineIdx >= 0) mlTarget = b.markLineIdx;
     } else {
-      pts = parts.points(m, panel, look);
+      pts = parts.points(m, panel, look, width > X_INSET ? width - X_INSET : 0);
       series = pts.series;
     }
 
@@ -169,6 +169,11 @@
       }
     }
 
+    // Gridlines are solid hairlines. A line chart reads values off the y
+    // grid and dates off the crosshair, so it has no x grid and no y axis
+    // line.
+    const grid = { lineStyle: { color: ax.splitLineColor, type: 'solid', width: 1 } };
+    const isTime = m.x.type === 'time';
     /** @type {any} */
     const xAxis = {
       type: m.x.type,
@@ -176,9 +181,16 @@
       nameLocation: 'middle',
       nameGap: xlab && xlab.bottom ? xlab.bottom + 16 : 28,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: xlab ? xlab.axisLabel : { color: ax.labelColor, fontSize: ax.fontSize },
+      axisLabel: xlab ? xlab.axisLabel : {
+        color: ax.labelColor, fontSize: ax.fontSize, hideOverlap: true,
+        // A date axis labels years, then months, then days as it zooms in;
+        // never turned.
+        ...(isTime ? { formatter: { year: '{yyyy}', month: '{MMM}', day: '{d} {MMM}',
+                                    hour: '{HH}:{mm}', minute: '{HH}:{mm}' } } : {})
+      },
+      axisTick: { show: false },
       axisLine: { lineStyle: { color: ink.strong } },
-      splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
+      splitLine: isLine ? { show: false } : grid,
       scale: true
     };
     if (xCats) xAxis.data = xCats;
@@ -192,8 +204,9 @@
       nameRotate: 90,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLine: { lineStyle: { color: ink.strong } },
-      splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
+      axisTick: { show: false },
+      axisLine: isLine ? { show: false } : { lineStyle: { color: ink.strong } },
+      splitLine: grid,
       scale: true
     };
     if (m.y.cats) yAxis.data = m.y.cats;
@@ -212,15 +225,18 @@
     /** @type {{ veil?: string }} */
     const scrimState = {};
     if (isLine) for (const s of parts.lineOverlay(scrimState)) series.push(s);
-    // The line picker's registry: only for a crowd, a lone line has nothing
-    // to pick out.
-    const focus = (isLine && m.levels.length > 1) ? Object.assign(scrimState, {
+    // The line picker's registry: only for a crowd of lines, one per entity.
+    // A few lines are read off the crosshair's tooltip instead, so nothing
+    // on the plot changes as the cursor moves.
+    const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
       series, stepMode: pts.stepMode || null, smoothOn: pts.smoothOn,
       xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW
     }) : null;
 
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
+      // Dates are placed and labelled in UTC: R writes them without a zone.
+      ...(isTime ? { useUTC: true } : {}),
       textStyle: { fontFamily: ink.face },
       tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
       // A hidden legend: its selection model is what the chips toggle.
