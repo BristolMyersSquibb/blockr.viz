@@ -23,7 +23,8 @@
   // Config fields the option reads beside the model's.
   const OPTION_FIELDS = ['chart_type', 'bar_mode', 'orientation', 'value_labels', 'value_lines',
     'pct_of', 'waterfall_totals', 'connect_centers', 'drill', 'palette', 'scales', 'value',
-    'func', 'count_on', 'summary', 'whiskers', 'box_points', 'group', 'color', 'facet'];
+    'func', 'count_on', 'summary', 'whiskers', 'box_points', 'group', 'color', 'facet',
+    'format', 'unit'];
 
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;

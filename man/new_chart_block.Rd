@@ -19,6 +19,8 @@ new_chart_block(
   sort_by = NULL,
   sort_dir = NULL,
   value_labels = FALSE,
+  format = "number",
+  unit = "",
   tooltip = NULL,
   drill = NULL,
   line_width = 1,
@@ -113,6 +115,13 @@ column name. Ignored for scatter and line.}
 \item{value_labels}{\code{TRUE} writes each bar's value at its end. A stacked bar
 labels the total, a dodged bar every bar, a filled bar each segment's
 share. Labels that would overlap are left out. Bar and waterfall only.}
+
+\item{format, unit}{How the values are printed on the value axis, in
+tooltips and in value labels, as on the tile block: \code{format} is
+\code{"number"} (default; separators and smart decimals), \code{"compact"} (1.2K,
+3.4M) or \code{"percent"} (a fraction times 100, with "\%"). \code{unit} is free
+text after the number (\code{"CHF"}); the axis title carries it once.
+Applies to the aggregated types.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip.}
 

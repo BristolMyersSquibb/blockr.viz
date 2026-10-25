@@ -200,6 +200,33 @@
       ]
      },
      {
+      "role": "format",
+      "label": "Numbers",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "1,234.5",
+        "placeholder": null,
+        "options": [
+         "1,234.5",
+         "1.2K",
+         "12.3%"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "unit",
+      "label": "Unit",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. CHF"
+       }
+      ]
+     },
+     {
       "role": "count_on",
       "label": "Group counts",
       "controls": [

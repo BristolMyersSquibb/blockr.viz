@@ -125,6 +125,24 @@ chart_arguments <- function() {
       example = NULL,
       type = arg_string()
     ),
+    format = new_arg_spec(
+      paste0(
+        "How values are printed on the value axis, in tooltips and value ",
+        "labels (aggregated types): \"number\" (default), \"compact\" ",
+        "(1.2K, 3.4M) or \"percent\" (a fraction x100 with %). Same as the ",
+        "tile block's `format`."
+      ),
+      example = "compact",
+      type = arg_enum(c("number", "compact", "percent"))
+    ),
+    unit = new_arg_spec(
+      paste0(
+        "Free-text unit printed after values (e.g. \"CHF\", \"kg\"); the ",
+        "axis title carries it once. Never guessed from the data."
+      ),
+      example = "CHF",
+      type = arg_string()
+    ),
     tooltip = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",

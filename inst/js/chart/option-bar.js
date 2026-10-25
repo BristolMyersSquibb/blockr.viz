@@ -46,15 +46,17 @@
    * @param {any[]} series @param {any} valAxis
    * @param {{ax: any, vertical: boolean, stacked: boolean, percent: boolean,
    *          fraction: boolean, plotPx: number, bandPx: number,
-   *          measure: (s: string) => number, face: string}} o
+   *          measure: (s: string) => number, face: string,
+   *          vf?: ((v: any) => string) | null}} o
    * @returns {number}
    */
   const barValueLabels = (series, valAxis, o) => {
     const textW = o.measure;
     // `|| 0` folds a negative zero, which would print as "-0".
+    const vf = o.vf;
     const fmt = o.fraction
       ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
-      : (/** @type {number} */ v) => String(NS.ddNum(v || 0));
+      : (vf || ((/** @type {number} */ v) => String(NS.ddNum(v || 0))));
     /** @param {any} d */
     const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
     const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
@@ -265,15 +267,21 @@
     const showPercent = isPercent && colors.length > 0;
     const pctFunc = cfg.func === 'pct_distinct';
     const asFraction = showPercent || pctFunc;
+    // `format` / `unit` (format.js): the ticks in the format, the unit once
+    // in the axis title. A share keeps its own percent.
+    const vf = asFraction ? null : NS.valueFormat(cfg);
+    const tickFmt = asFraction ? null : NS.valueFormat(cfg, { unit: false });
     const valAxis = {
       type: 'value',
-      name: showPercent ? '% of group total' : (pctFunc ? pctName(cfg) : P.valueTitle),
+      name: showPercent ? '% of group total'
+        : (pctFunc ? pctName(cfg) : NS.unitTitle(P.valueTitle, cfg)),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: {
         color: ax.labelColor, fontSize: ax.fontSize,
-        ...(asFraction ? { formatter: (/** @type {number} */ v) => Math.round(v * 100) + '%' } : {})
+        ...(asFraction ? { formatter: (/** @type {number} */ v) => Math.round(v * 100) + '%' } : {}),
+        ...(tickFmt ? { formatter: tickFmt } : {})
       },
       ...(asFraction ? { max: 1 } : {}),
       axisLine: { lineStyle: { color: ink.strong } },
@@ -297,13 +305,13 @@
           plotPx: vertical ? 350 - 30 - 66 : (plotW ? plotW - gut.gridLeft - 5 : 0),
           bandPx: vertical ? (plotW ? (plotW - X_INSET) / Math.max(1, groups.length) : 0)
             : ROW_BAND,
-          measure, face: ink.face
+          measure, face: ink.face, vf
         })
       : 0;
     NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink);
 
-    const fmtRaw = (/** @type {number} */ n) =>
-      Number.isInteger(n) ? n : Math.round(n * 100) / 100;
+    const fmtRaw = vf || ((/** @type {number} */ n) =>
+      Number.isInteger(n) ? n : Math.round(n * 100) / 100);
     // A split bar's card lists every level of the hovered category, the
     // segment under the pointer marked. The item trigger is what says which
     // segment that is; the axis trigger only knows the category.
@@ -441,9 +449,10 @@
     const delta = [];
     let cum = 0;
     const labelsOn = cfg.value_labels === 'on' || cfg.value_labels === true;
+    const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const fmt = cfg.func === 'pct_distinct'
       ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
-      : (/** @type {number} */ v) => String(NS.ddNum(v || 0));
+      : (wvf || ((/** @type {number} */ v) => String(NS.ddNum(v || 0))));
     /** @param {number} v @param {boolean} up */
     const lab = (v, up) => labelsOn
       ? { label: { show: true, position: up ? 'top' : 'bottom', formatter: fmt(v) } } : {};
@@ -490,9 +499,11 @@
     };
     /** @type {any} */
     const valAxis = {
-      type: 'value', name: P.valueTitle, nameLocation: 'middle', nameGap: 45,
+      type: 'value', name: NS.unitTitle(P.valueTitle, cfg), nameLocation: 'middle',
+      nameGap: 45,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
+                   ...(wvf ? { formatter: NS.valueFormat(cfg, { unit: false }) } : {}) },
       axisLine: { lineStyle: { color: ink.strong } },
       splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } }
     };
@@ -534,7 +545,7 @@
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
             return NS.tipHead(esc(p.name)) + NS.tipRow(esc(P.aggLabel),
-              p.value == null ? '–' : NS.ddNum(p.value));
+              p.value == null ? '–' : (wvf ? wvf(p.value) : NS.ddNum(p.value)));
           }
         },
         legend: { show: false },

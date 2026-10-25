@@ -65,6 +65,12 @@
 #' @param value_labels `TRUE` writes each bar's value at its end. A stacked bar
 #'   labels the total, a dodged bar every bar, a filled bar each segment's
 #'   share. Labels that would overlap are left out. Bar and waterfall only.
+#' @param format,unit How the values are printed on the value axis, in
+#'   tooltips and in value labels, as on the tile block: `format` is
+#'   `"number"` (default; separators and smart decimals), `"compact"` (1.2K,
+#'   3.4M) or `"percent"` (a fraction times 100, with "%"). `unit` is free
+#'   text after the number (`"CHF"`); the axis title carries it once.
+#'   Applies to the aggregated types.
 #' @param tooltip Extra columns shown in each mark's tooltip.
 #' @param drill Column a click filters downstream on, `"auto"` for the type's
 #'   natural target, or `NULL` (default) for no filtering.
@@ -181,6 +187,8 @@ new_chart_block <- function(
     sort_by = NULL,
     sort_dir = NULL,
     value_labels = FALSE,
+    format = "number",
+    unit = "",
     tooltip = NULL,
     drill = NULL,
     line_width = 1,
@@ -348,6 +356,12 @@ new_chart_block <- function(
   summary <- chr_state(summary)
   whiskers <- chr_state(whiskers)
   script_values <- if (is.list(script_values)) script_values else list()
+  format <- as.character(unlist(format %||% "number"))[1L]
+  if (!format %in% c("number", "compact", "percent")) {
+    stop("`format` must be \"number\", \"compact\" or \"percent\".",
+         call. = FALSE)
+  }
+  unit <- as.character(unlist(unit %||% ""))[1L] %|NA|% ""
   bins <- suppressWarnings(as.numeric(unlist(bins))[1L])
   if (!isTRUE(bins >= 1)) bins <- 30
   # The module server below takes `id` (its own namespace id), which would
@@ -668,6 +682,10 @@ new_chart_block <- function(
         r_hi <- shiny::reactiveVal(ymax)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_bins <- shiny::reactiveVal(bins)
+        # Number format of the values (axis, tooltips, labels), as on the
+        # tile block.
+        r_format <- shiny::reactiveVal(format)
+        r_unit <- shiny::reactiveVal(unit)
         # Chart text. The public value is the template as written; the
         # internal one has its `{@arg}` slots renamed to what the resolver
         # and the gear know.
@@ -1126,7 +1144,7 @@ new_chart_block <- function(
               value = r_value(),
               func = if (is_hist()) "count" else r_func(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
-              bins = r_bins(),
+              bins = r_bins(), format = r_format(), unit = r_unit(),
               xend = r_xend(), series = present_role(r_series()),
               label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -1485,6 +1503,11 @@ new_chart_block <- function(
               if (!is.null(msg$sort_by))  upd(r_sort_by, nn(msg$sort_by))
               if (!is.null(msg$sort_dir)) upd(r_sort_dir, msg$sort_dir)
             }
+            if (!is.null(msg$format) &&
+                  msg$format %in% c("number", "compact", "percent")) {
+              upd(r_format, msg$format)
+            }
+            if (!is.null(msg$unit)) upd(r_unit, trimws(as.character(msg$unit)))
             if (!is.null(msg$bins)) {
               v <- suppressWarnings(as.numeric(msg$bins))
               if (isTRUE(v >= 1)) upd(r_bins, v)
@@ -2042,6 +2065,8 @@ new_chart_block <- function(
             sort_by = r_sort_by,
             sort_dir = r_sort_dir,
             value_labels = r_value_labels,
+            format = r_format,
+            unit = r_unit,
             tooltip = r_tt_fields,
             drill = r_drill,
             line_width = r_line_width_mult,
@@ -2128,13 +2153,14 @@ new_chart_block <- function(
       "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
       "waterfall_totals", "facet_cols", "title", "subtitle", "caption",
       "drill_target", "drill_table", "script", "script_values",
-      "selection"),
+      "selection", "unit"),
     # Everything is externally controllable (MCP, restore). `script` is
     # deliberately NOT on the AI surface: it is absent from the registry
     # argument spec, so the assistant never sees it.
     external_ctrl = c("type", "x", "y", "func", "color", "facet", "series",
       "xend", "label", "orientation", "position", "sort_by", "sort_dir",
-      "value_labels", "tooltip", "drill", "line_width", "point_size",
+      "value_labels", "format", "unit", "tooltip", "drill", "line_width",
+      "point_size",
       "connect", "y_lines", "x_lines", "ymin", "ymax", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",

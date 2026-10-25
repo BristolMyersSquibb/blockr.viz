@@ -216,9 +216,12 @@
     // A distribution reads by position and spread, so the value axis fits
     // the data rather than holding zero.
     const valAxis = {
-      type: 'value', scale: true, name: P.title(cfg.value), nameLocation: 'middle',
+      type: 'value', scale: true, name: NS.unitTitle(P.title(cfg.value), cfg),
+      nameLocation: 'middle',
       nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
+                   ...(NS.valueFormat(cfg, { unit: false })
+                     ? { formatter: NS.valueFormat(cfg, { unit: false }) } : {}) },
       axisLine: { lineStyle: { color: ink.strong } },
       ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {})
     };

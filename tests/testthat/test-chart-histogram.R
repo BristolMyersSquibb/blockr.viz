@@ -85,3 +85,33 @@ test_that("the gear's bins edit reaches state, and x survives the echo", {
     args = list(x = blk, data = list(data = hist_df))
   )
 })
+
+test_that("format and unit reach the browser and round-trip", {
+  blk <- new_chart_block(x = "g", y = "v", func = "sum", format = "compact",
+                         unit = "CHF")
+  payload <- blockr.core::blockr_ser(blk)$payload
+  expect_equal(payload$format, "compact")
+  expect_equal(payload$unit, "CHF")
+  expect_error(new_chart_block(format = "currency"), "must be")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      sent <- list()
+      root <- session$rootScope()
+      root$sendCustomMessage <- function(type, message) {
+        if (identical(type, "drilldown-data")) sent[[length(sent) + 1L]] <<- message
+      }
+      session$flushReact()
+      cfg <- sent[[length(sent)]]$config
+      expect_equal(cfg$format, "compact")
+      expect_equal(cfg$unit, "CHF")
+      session$makeScope("expr")$setInputs(drilldown_block_action = list(
+        action = "config", format = "percent", unit = " kg "
+      ))
+      session$flushReact()
+      expect_equal(session$returned$state$format(), "percent")
+      expect_equal(session$returned$state$unit(), "kg")
+    },
+    args = list(x = blk, data = list(data = hist_df))
+  )
+})

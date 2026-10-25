@@ -317,6 +317,8 @@
         band_size: c.band_size == null ? 45 : c.band_size,
         band_min_n: c.band_min_n == null ? 12 : c.band_min_n,
         bins: c.bins == null ? 30 : c.bins,
+        format: c.format || 'number',
+        unit: c.unit ?? '',
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',
         ref_lo: c.ref_lo || '',

@@ -373,6 +373,12 @@
     band_min_n: { label: 'Cut below n', kind: 'text', ph: 'e.g. 12' },
     // About this many bins: R takes readable breaks (pretty()) near it.
     bins: { label: 'Bins', kind: 'text', ph: 'e.g. 30' },
+    // How values print (format.js), the tile block's vocabulary.
+    format: { label: 'Numbers', kind: 'select',
+              options: [{ value: 'number', label: '1,234.5' },
+                        { value: 'compact', label: '1.2K' },
+                        { value: 'percent', label: '12.3%' }] },
+    unit: { label: 'Unit', kind: 'text', ph: 'e.g. CHF' },
     band_id: { label: 'Subject id', kind: 'column', colType: 'any',
                ph: 'id counted distinct (blank = rows)' },
     ref_hi: { label: 'Upper limit', kind: 'column', colType: 'num',
@@ -526,6 +532,8 @@
         { role: 'box_points', types: ['boxplot'] },
         // Across the value axis, whichever way the chart lies.
         { role: 'value_lines', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
+        { role: 'format', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
+        { role: 'unit', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         // Count labels: the axis surface applies to the category-axis charts
         // (bar and waterfall per group/step; boxplot per drawn box slot);
         // facet applies to any faceted family. Pie/treemap/radar have no
@@ -589,7 +597,7 @@
       requiredMap: ['x'],
       optionalMap: ['color', 'facet'],
       mapping: ['bins'],
-      presentation: ['bar_mode', 'value_labels', 'value_lines',
+      presentation: ['bar_mode', 'value_labels', 'value_lines', 'format', 'unit',
         'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },

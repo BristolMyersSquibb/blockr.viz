@@ -223,3 +223,18 @@ test('the option reads only the config fields the model and the option list', ()
     assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
   }
 });
+
+// -- format / unit (format.js) -------------------------------------------------
+
+test('format and unit: compact ticks, the unit in the title, values with it', () => {
+  const f = C.valueFormat({ format: 'compact', unit: 'CHF' });
+  assert.strictEqual(f(1234567), '1.2M CHF');
+  assert.strictEqual(f(950), '950 CHF');
+  assert.strictEqual(C.valueFormat({ format: 'percent' })(0.256), '25.6%');
+  assert.strictEqual(C.valueFormat({ format: 'number' }), null);
+  assert.strictEqual(C.valueFormat({ unit: 'CHF' }, { unit: false }), null);
+
+  const { opt } = build({ value: 'V', func: 'sum', format: 'compact', unit: 'CHF' });
+  assert.match(opt.xAxis.name, /\(CHF\)$/);
+  assert.strictEqual(opt.xAxis.axisLabel.formatter(2500), '2.5K');
+});
