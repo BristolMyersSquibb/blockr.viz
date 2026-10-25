@@ -1450,6 +1450,14 @@ table_arguments <- function() {
     "rows (a subject id), so a count reads as subjects with at least one ",
     "event."
   )
+  var <- pick(summary_table_arguments(), c(
+    stats = "stats", sections = "sections", add_overall = "total",
+    overall_label = "total_label", nest_hierarchies = "nest"
+  ))
+  for (nm in names(var)) {
+    var[[nm]]$description <- paste0("Variables layout: ",
+                                    var[[nm]]$description)
+  }
   do.call(new_arg_specs, c(
     list(
       layout = new_arg_spec(
@@ -1458,14 +1466,17 @@ table_arguments <- function() {
           "(listings, model output, correlation matrices, finished tables ",
           "from R code). \"groups\": one row per level of `by`, one column ",
           "per entry of `summaries` (counts, means, distributions as bars, ",
-          "boxes, sparklines)."
+          "boxes, sparklines). \"variables\": a Table 1 -- one row per ",
+          "statistic or level of each variable in `summaries`, one column ",
+          "per level of `by`."
         ),
         example = "groups",
-        type = arg_enum(c("records", "groups"))
+        type = arg_enum(c("records", "groups", "variables"))
       )
     ),
     rec[c("rowname", "columns", "color", "shadings", "digits")],
     grp,
+    var,
     rec[c("drill", "drill_target", "drill_table", "title", "subtitle",
           "caption")]
   ))
@@ -1510,13 +1521,17 @@ table_guidance <- function() {
 #' The block's data output is the input, filtered by the last row click when
 #' a drill is on. The table itself is display.
 #'
-#' @param layout What a row is: `"records"` (the input rows) or `"groups"`
-#'   (one row per level of `by`, one column per entry of `summaries`).
-#' @param by Grouping columns for the groups layout, outer first, at most two.
-#'   The outer one becomes an expandable parent row.
+#' @param layout What a row is: `"records"` (the input rows), `"groups"`
+#'   (one row per level of `by`, one column per entry of `summaries`) or
+#'   `"variables"` (a Table 1: one row per statistic or level of each
+#'   variable in `summaries`, one column per level of `by`).
+#' @param by Grouping columns, outer first, at most two. Groups layout: one
+#'   row per level, the outer one an expandable parent. Variables layout: one
+#'   column per level.
 #' @param rowname Records layout: the stub column (first column, row label).
 #' @param columns Records layout: columns to show; `NULL` shows all.
-#' @param summaries Groups layout: the table's columns, an ordered list of
+#' @param summaries Groups and variables layouts: the table's columns (or
+#'   variables), an ordered list of
 #'   typed summaries, each a `list(type = , ...)`. Types: `simple` (`func`,
 #'   `col`; show `"bar"`, `"number"` or `"dot"`), `dist` (`col`, `stat`; show
 #'   `"box"`, `"pointrange"` or `"text"`), `field`, `series`, `spans`, `pair`,
@@ -1550,6 +1565,10 @@ table_guidance <- function() {
 #' @param title,subtitle,caption Text above and below the table, as on
 #'   [new_chart_block()]: `NULL` = the input's own label, `""` = none, else a
 #'   template resolved against the data.
+#' @param stats,sections,total,total_label,nest Variables layout: the
+#'   statistics shown for numeric variables (keys of [summary_table()]'s
+#'   `stats`), outer row sections, a total column and its label, and nested
+#'   categorical hierarchies. See [summary_table()].
 #' @param script,script_values Groups layout: prepare script, as on
 #'   [new_chart_block()], and the values of its controls.
 #' @param selection Internal: what the last click selected. Saved with the
@@ -1601,6 +1620,11 @@ new_table_block <- function(layout = "records",
                             title = NULL,
                             subtitle = NULL,
                             caption = getOption("blockr.viz.default_caption"),
+                            stats = "mean_sd",
+                            sections = character(),
+                            total = FALSE,
+                            total_label = "Total",
+                            nest = FALSE,
                             script = NULL,
                             script_values = list(),
                             selection = NULL) {
@@ -1623,7 +1647,8 @@ new_table_block <- function(layout = "records",
   }
 
   layout <- chr_state(layout) %||% "records"
-  if (!layout %in% c("records", "groups")) layout <- "records"
+  if (!layout %in% c("records", "groups", "variables")) layout <- "records"
+  sections <- chr_vec_state(sections) %||% character()
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
   # back as list() (R/state-normalize.R). `color` only collapses the empty
   # list: "" is meaningful there (tint explicitly off).
@@ -1677,7 +1702,12 @@ new_table_block <- function(layout = "records",
             drill = shiny::reactiveVal(drill),
             max_height = shiny::reactiveVal(max_height),
             ctrl_target = shiny::reactiveVal(drill_target),
-            ctrl_table = shiny::reactiveVal(drill_table)
+            ctrl_table = shiny::reactiveVal(drill_table),
+            # The groups and variables layouts read the same variables and
+            # grouping: switching between them transposes the table.
+            by = shiny::reactiveVal(by),
+            summaries = shiny::reactiveVal(summaries),
+            id = shiny::reactiveVal(id_col)
           )
 
           # Only the active engine sees data. The other one parks: its
@@ -1688,11 +1718,30 @@ new_table_block <- function(layout = "records",
               data()
             })
           }
-          sel_for <- function(which) if (identical(layout, which)) selection
+          sel_for <- function(which) if (layout %in% which) selection
 
-          rec_sel <- sel_for("records")
+          var <- table_variables_server(
+            "variables", gate("variables"), shared = shared,
+            stats = stats, sections = sections, total = total,
+            total_label = total_label, nest = nest
+          )
+
+          # The records engine draws the records layout (the input rows) and
+          # the variables layout (the table summary_table() builds from them).
+          rec_data <- shiny::reactive({
+            lay <- r_layout()
+            shiny::req(lay %in% c("records", "variables"))
+            d <- data()
+            if (identical(lay, "variables")) {
+              args <- table_variables_args(var$config())
+              if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
+            }
+            d
+          })
+
+          rec_sel <- sel_for(c("records", "variables"))
           rec <- table_records_server(
-            "records", gate("records"),
+            "records", rec_data,
             rowname = rowname, value = columns, color = color,
             shadings = shadings, drill = drill, digits = digits,
             max_height = max_height,
@@ -1730,7 +1779,7 @@ new_table_block <- function(layout = "records",
               return()
             }
             v <- as.character(unlist(msg$value))[1L]
-            if (isTRUE(v %in% c("records", "groups")) &&
+            if (isTRUE(v %in% c("records", "groups", "variables")) &&
                   !identical(shiny::isolate(r_layout()), v)) {
               r_layout(v)
             }
@@ -1773,7 +1822,16 @@ new_table_block <- function(layout = "records",
 
           list(
             expr = shiny::reactive({
-              if (identical(r_layout(), "groups")) grp$expr() else rec$expr()
+              lay <- r_layout()
+              if (identical(lay, "groups")) return(grp$expr())
+              ex <- rec$expr()
+              if (identical(lay, "variables")) {
+                # The drill filter applies to the built table, as it did
+                # when a summary table block fed a table block.
+                built <- table_variables_call(var$config())
+                if (!is.null(built)) ex <- table_sub_data(ex, built)
+              }
+              ex
             }),
             cond = cond,
             state = list(
@@ -1805,6 +1863,11 @@ new_table_block <- function(layout = "records",
               title = shared$title,
               subtitle = shared$subtitle,
               caption = shared$caption,
+              stats = var$state$stats,
+              sections = var$state$sections,
+              total = var$state$total,
+              total_label = var$state$total_label,
+              nest = var$state$nest,
               script = gs$script,
               script_values = gs$values,
               selection = r_selection
@@ -1819,6 +1882,10 @@ new_table_block <- function(layout = "records",
           # rule (layout_css) takes over from here.
           table_layout_css(ns, layout),
           shiny::uiOutput(ns("layout_css")),
+          htmltools::tags$div(
+            id = ns("variables_wrap"), class = "blockr-table-engine",
+            table_variables_ui(ns("variables"))
+          ),
           htmltools::tags$div(
             id = ns("records_wrap"), class = "blockr-table-engine",
             table_records_ui(ns("records"))
@@ -1836,14 +1903,15 @@ new_table_block <- function(layout = "records",
         "by", "rowname", "columns", "summaries", "id", "color", "shadings",
         "top_n", "drill", "drill_target", "drill_table", "max_height",
         "title", "subtitle", "caption", "script", "script_values",
-        "selection"
+        "selection", "sections"
       ),
       external_ctrl = c(
         "layout", "by", "rowname", "columns", "summaries", "id", "color",
         "shadings", "digits", "compact", "facet_layout", "sort_by",
         "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
         "drill_target", "drill_table", "search", "sortable", "collapsible",
-        "max_height", "download", "title", "subtitle", "caption", "script",
+        "max_height", "download", "title", "subtitle", "caption",
+        "stats", "sections", "total", "total_label", "nest", "script",
         "script_values"
       ),
       expr_type = "bquoted",
@@ -1857,10 +1925,13 @@ new_table_block <- function(layout = "records",
 # Show one engine, hide the other. `!important` so the rule from the server
 # beats the static first-paint rule in the UI.
 table_layout_css <- function(ns, layout) {
-  off <- if (identical(layout, "groups")) "records" else "groups"
-  on <- setdiff(c("records", "groups"), off)
-  htmltools::tags$style(htmltools::HTML(sprintf(
-    "#%s{display:none!important}#%s{display:block!important}",
-    ns(paste0(off, "_wrap")), ns(paste0(on, "_wrap"))
+  on <- switch(layout, groups = "groups", variables = c("variables", "records"),
+               "records")
+  off <- setdiff(c("records", "groups", "variables"), on)
+  htmltools::tags$style(htmltools::HTML(paste0(
+    paste0("#", ns(paste0(off, "_wrap")), "{display:none!important}",
+           collapse = ""),
+    paste0("#", ns(paste0(on, "_wrap")), "{display:block!important}",
+           collapse = "")
   )))
 }

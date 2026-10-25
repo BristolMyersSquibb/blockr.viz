@@ -13,7 +13,6 @@ drift_blocks <- function() {
     chart         = list(args = chart_arguments,         ctor = new_chart_block),
     table         = list(args = table_arguments,         ctor = new_table_block),
     tile          = list(args = tile_arguments,          ctor = new_tile_block),
-    summary_table = list(args = summary_table_arguments, ctor = new_summary_table_block),
     gt_table      = list(args = gt_table_arguments,      ctor = new_gt_table_block)
   )
 }
@@ -52,7 +51,6 @@ registry_allowlist <- list(
     # is forced to "up"). Neither may be advertised to the AI.
     "overline", "good_when"
   ),
-  summary_table = character(),
   gt_table = character()
 )
 

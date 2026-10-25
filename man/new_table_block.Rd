@@ -6,6 +6,7 @@
 \usage{
 new_table_block(
   layout = "records",
+  ...,
   by = character(),
   rowname = NULL,
   columns = NULL,
@@ -33,24 +34,35 @@ new_table_block(
   title = NULL,
   subtitle = NULL,
   caption = getOption("blockr.viz.default_caption"),
+  stats = "mean_sd",
+  sections = character(),
+  total = FALSE,
+  total_label = "Total",
+  nest = FALSE,
   script = NULL,
   script_values = list(),
-  selection = NULL,
-  ...
+  selection = NULL
 )
 }
 \arguments{
-\item{layout}{What a row is: \code{"records"} (the input rows) or \code{"groups"}
-(one row per level of \code{by}, one column per entry of \code{summaries}).}
+\item{layout}{What a row is: \code{"records"} (the input rows), \code{"groups"}
+(one row per level of \code{by}, one column per entry of \code{summaries}) or
+\code{"variables"} (a Table 1: one row per statistic or level of each
+variable in \code{summaries}, one column per level of \code{by}).}
 
-\item{by}{Grouping columns for the groups layout, outer first, at most two.
-The outer one becomes an expandable parent row.}
+\item{...}{Old argument names (translated), and arguments forwarded to
+\code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+
+\item{by}{Grouping columns, outer first, at most two. Groups layout: one
+row per level, the outer one an expandable parent. Variables layout: one
+column per level.}
 
 \item{rowname}{Records layout: the stub column (first column, row label).}
 
 \item{columns}{Records layout: columns to show; \code{NULL} shows all.}
 
-\item{summaries}{Groups layout: the table's columns, an ordered list of
+\item{summaries}{Groups and variables layouts: the table's columns (or
+variables), an ordered list of
 typed summaries, each a \code{list(type = , ...)}. Types: \code{simple} (\code{func},
 \code{col}; show \code{"bar"}, \code{"number"} or \code{"dot"}), \code{dist} (\code{col}, \code{stat}; show
 \code{"box"}, \code{"pointrange"} or \code{"text"}), \code{field}, \code{series}, \code{spans}, \code{pair},
@@ -96,14 +108,16 @@ scrolls with its panel. A CSS length caps it.}
 \code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a
 template resolved against the data.}
 
+\item{stats, sections, total, total_label, nest}{Variables layout: the
+statistics shown for numeric variables (keys of \code{\link[=summary_table]{summary_table()}}'s
+\code{stats}), outer row sections, a total column and its label, and nested
+categorical hierarchies. See \code{\link[=summary_table]{summary_table()}}.}
+
 \item{script, script_values}{Groups layout: prepare script, as on
 \code{\link[=new_chart_block]{new_chart_block()}}, and the values of its controls.}
 
 \item{selection}{Internal: what the last click selected. Saved with the
 board so a restored table keeps its drill.}
-
-\item{...}{Old argument names (translated), and arguments forwarded to
-\code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
 \value{
 A blockr transform block of class \code{table_block}.

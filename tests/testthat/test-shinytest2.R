@@ -578,7 +578,7 @@ test_that("tile: a filter action filters the tile block's output", {
 test_that("summary_table gear: toggling 'overall' adds a Total column to the output", {
   skip_if_no_app()
 
-  scope <- "#board-block_summary-expr-summary_input"
+  scope <- "#board-block_summary-expr-variables-summary_input"
   before <- get_block_result("summary")
   expect_false("Total" %in% names(before))
 

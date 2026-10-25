@@ -2480,7 +2480,8 @@
       value: "groups",
       options: [
         { value: "records", label: "Records" },
-        { value: "groups", label: "Groups" }
+        { value: "groups", label: "Groups" },
+        { value: "variables", label: "Variables" }
       ],
       onPick: function (v) { sendConfig(elemId, "layout", v); }
     };

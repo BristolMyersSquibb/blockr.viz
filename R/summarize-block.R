@@ -17,6 +17,9 @@
 #' @export
 new_summarize_table_block <- function(...) {
   args <- table_legacy_args(list(...), from = "summarize")
+  # A restore hands over the saved ctor; the result is a table block and
+  # saves as one.
+  args[c("ctor", "ctor_pkg")] <- NULL
   do.call(new_table_block, args)
 }
 

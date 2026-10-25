@@ -14,7 +14,7 @@ table_formal_names <- function() {
 # Old names, by the block they belong to. Names that exist in both the old
 # and the new signature with the same meaning (rowname, shadings, drill,
 # digits, title, ...) are not listed: they need no translation.
-table_legacy_names <- function(from = c("table", "summarize")) {
+table_legacy_names <- function(from = c("table", "summarize", "summary")) {
   switch(
     match.arg(from),
     table = c(
@@ -28,6 +28,10 @@ table_legacy_names <- function(from = c("table", "summarize")) {
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
       "facet", "cols", "fields", "values", "ctrl_target", "ctrl_table",
       "filter_type", "filter_column", "filter_values"
+    ),
+    summary = c(
+      "vars", "add_overall", "overall_label", "indent_details",
+      "nest_hierarchies", "id_var"
     )
   )
 }
@@ -98,6 +102,22 @@ table_legacy_args <- function(args, from = NULL) {
   get <- function(x) args[[x]]
   drop <- function(out, x) out[setdiff(names(out), x)]
   out <- args
+
+  if (identical(from, "summary")) {
+    # The summary table (Table 1) block: its variables become summaries,
+    # its column split stays `by`.
+    out$layout <- "variables"
+    out$summaries <- table_vars_to_summaries(
+      list(), chr_vec_state(get("vars")) %||% character()
+    )
+    if (!is.null(get("add_overall"))) out$total <- isTRUE(get("add_overall"))
+    if (!is.null(get("overall_label"))) out$total_label <- get("overall_label")
+    if (!is.null(get("nest_hierarchies"))) {
+      out$nest <- isTRUE(get("nest_hierarchies"))
+    }
+    if (is.null(out[["id"]]) && !is.null(get("id_var"))) out$id <- get("id_var")
+    return(drop(out, old))
+  }
 
   if (identical(from, "table")) {
     # LEGACY colour args: a cell_color spec is one shadings rule, row_color

@@ -365,15 +365,31 @@ legacy handling in its own files (`R/table-args.R`) to keep the merge small.
 6. **One renderer.** Merge `table.js` and `summarize-table.js`.
 7. **blockx.**
 
-### Status (2026-10-25)
+### Status (2026-10-26)
 
-Phases 1 and 2 are done on `feat/table-rewrite`, not committed. Deviations
-from the sketch above: the records layout keeps a `columns` argument (the old
-`value`), `...` sits right after `layout` so old names cannot partially match
-new ones (`value` would match `value_labels`), and `digits` stays until
-phase 5. R tests: 837 of 839 pass; the two failures (`test-summarize-push`,
-`test-write-exhibit`) fail on `main` too. JS tests: 449 of 450, the same one
-fails on `main`.
+Phases 1 to 3 are done on `feat/table-rewrite`. Deviations from the sketch
+above:
+
+- The records layout keeps a `columns` argument (the old `value`).
+- `...` sits right after `layout`, so old names cannot partially match new
+  ones (`value` would match `value_labels`).
+- `digits` stays until phase 5.
+- The variables layout takes the Table 1 settings as their own arguments
+  (`stats`, `sections`, `total`, `total_label`, `nest`); its variables and
+  grouping are the shared `summaries`, `by` and `id`. A categorical variable
+  is stored as a count split by that variable (`simple` with `color`), the
+  closest existing summary type to the planned `share`.
+- The variables layout's settings are the former summary table widget,
+  shown above the table; the table is drawn by the records engine.
+- The variables layout's data output is the drilled Table 1 frame, as when a
+  summary table block fed a table block (`drill = "source"` resolves it to
+  source rows). The records and groups layouts output the drilled input.
+- `new_summary_table_block()` forwards to `layout = "variables"` and left the
+  registry.
+
+R tests: all pass except `test-summarize-push` and `test-write-exhibit`,
+which fail on `main` too. JS tests: 449 of 450, the same one fails on
+`main`.
 
 ### Class migration (resolved)
 

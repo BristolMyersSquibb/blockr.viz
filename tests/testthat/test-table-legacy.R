@@ -94,3 +94,68 @@ test_that("the layout switch moves the block between engines", {
     expect_identical(session$returned$state$layout(), "records")
   })
 })
+
+test_that("the old summary table constructor gives the variables layout", {
+  b <- new_summary_table_block(vars = c("AGE", "SEX"), by = "ARM",
+                               add_overall = TRUE, id_var = "USUBJID")
+  expect_s3_class(b, "table_block")
+  p <- blockr.core::blockr_ser(b)$payload
+  expect_identical(p$layout, "variables")
+  expect_identical(p$by, "ARM")
+  expect_true(p$total)
+  expect_identical(p$id, "USUBJID")
+  expect_identical(table_summaries_vars(p$summaries), c("AGE", "SEX"))
+  # The result saves as a table block, not under the old constructor.
+  ctor <- blockr.core::blockr_deser(blockr.core::blockr_ser(b)$constructor)
+  expect_identical(blockr.core::ctor_name(ctor), "new_table_block")
+})
+
+test_that("auto-made variable entries become dist summaries for numbers", {
+  sm <- table_vars_to_summaries(list(), c("AGE", "SEX"))
+  d <- data.frame(AGE = c(30, 40), SEX = c("F", "M"))
+  fixed <- table_fix_var_types(sm, d)
+  expect_identical(fixed[[1L]]$type, "dist")
+  expect_identical(fixed[[2L]]$type, "simple")
+  expect_identical(fixed[[2L]]$color, "SEX")
+})
+
+test_that("the variables layout builds Table 1 and the drill filters it", {
+  df <- data.frame(arm = c("A", "A", "B"), age = c(30, 40, 50),
+                   sex = c("F", "M", "F"))
+  b <- new_table_block(
+    layout = "variables", by = "arm",
+    summaries = list(list(type = "dist", col = "age", show = "box"),
+                     list(type = "simple", func = "count", show = "bar",
+                          color = "sex", name = "sex"))
+  )
+  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(df)), {
+    session$flushReact()
+    ex <- session$returned$expr()
+    expect_match(paste(deparse(ex), collapse = " "), "summary_table")
+    e <- new.env(parent = globalenv())
+    e$data <- df
+    e$. <- function(x) x
+    out <- eval(ex, envir = e)
+    expect_true(all(c(".variable", ".label") %in% names(out)))
+    expect_setequal(unique(out$.variable), c("age", "sex"))
+  })
+})
+
+test_that("groups and variables share the variables and the grouping", {
+  df <- data.frame(g = c("a", "a", "b"), x = c(1, 2, 3))
+  b <- new_table_block(
+    layout = "groups", by = "g",
+    summaries = list(list(type = "dist", col = "x", show = "box"))
+  )
+  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(df)), {
+    session$setInputs(`groups-summarize_table_block_action` = list(
+      action = "config", param = "layout", value = "variables"
+    ))
+    session$flushReact()
+    expect_identical(session$returned$state$layout(), "variables")
+    expect_identical(session$returned$state$by(), "g")
+    ex <- paste(deparse(session$returned$expr()), collapse = " ")
+    expect_match(ex, "vars = \"x\"", fixed = TRUE)
+    expect_match(ex, "by = \"g\"", fixed = TRUE)
+  })
+})

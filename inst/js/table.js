@@ -1166,16 +1166,25 @@
     }
   }
 
-  // The table block's "Rows are" switch (R/table-block.R): records or
-  // groups. The block's server reads it off this engine's action input.
+  // The table block's "Rows are" switch (R/table-block.R). The block's
+  // server reads it off this engine's action input.
+  var TABLE_LAYOUTS = [
+    { value: "records", label: "Records" },
+    { value: "groups", label: "Groups" },
+    { value: "variables", label: "Variables" }
+  ];
   /** @param {*} spec @param {string} current @param {string | null} elemId */
   function withLayoutSwitch(spec, current, elemId) {
+    // The records engine also draws the variables layout; that layout's
+    // settings widget sits beside it and is shown only then.
+    if (elemId) {
+      var blk = elemId.replace(/-records-drilldown_table_block$/, "");
+      var vw = document.getElementById(blk + "-variables_wrap");
+      if (vw && getComputedStyle(vw).display !== "none") current = "variables";
+    }
     spec.layoutSwitch = {
       value: current,
-      options: [
-        { value: "records", label: "Records" },
-        { value: "groups", label: "Groups" }
-      ],
+      options: TABLE_LAYOUTS,
       onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
     };
     return spec;

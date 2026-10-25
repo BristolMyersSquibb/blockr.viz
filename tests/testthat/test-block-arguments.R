@@ -11,19 +11,12 @@ arg_descriptions <- function(args) {
   vapply(args, blockr.core::arg_spec_description, character(1))
 }
 
-# summary_table + gt_table are pure descriptors whose surface must match the
+# gt_table is a pure descriptor whose surface must match the
 # constructor EXACTLY (this caught gt_table advertising a nonexistent
 # `indent_stat` and omitting `na_rep`).
 test_that("gt_table_arguments() names match new_gt_table_block() formals exactly", {
   ctor <- ctor_formals(new_gt_table_block)
   args <- gt_table_arguments()
-
-  expect_setequal(names(args), ctor)
-})
-
-test_that("summary_table_arguments() names match new_summary_table_block() formals exactly", {
-  ctor <- ctor_formals(new_summary_table_block)
-  args <- summary_table_arguments()
 
   expect_setequal(names(args), ctor)
 })
@@ -36,7 +29,6 @@ test_that("summary_table_arguments() names match new_summary_table_block() forma
 # mirror; we still require every descriptor to have a non-empty description.
 test_that("every *_arguments() descriptor is consistent with its constructor", {
   pairs <- list(
-    list(args = summary_table_arguments, ctor = new_summary_table_block),
     list(args = gt_table_arguments,      ctor = new_gt_table_block),
     list(args = tile_arguments,          ctor = new_tile_block),
     list(args = chart_arguments,         ctor = new_chart_block),
