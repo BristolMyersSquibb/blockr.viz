@@ -23,7 +23,7 @@ new_chart_block(
   drill = NULL,
   line_width = 1,
   point_size = 1,
-  connect = "monotone",
+  connect = "straight",
   y_lines = NULL,
   x_lines = NULL,
   ymin = NULL,
@@ -121,9 +121,10 @@ natural target, or \code{NULL} (default) for no filtering.}
 \item{line_width, point_size}{Line width and marker size relative to the
 default (1). Range 0.5 to 3.}
 
-\item{connect}{How a line connects its points: \code{"monotone"} (default,
-smoothed without overshoot), \code{"straight"}, \code{"step-start"},
-\code{"step-middle"} or \code{"step-end"}.}
+\item{connect}{How a line connects its points: \code{"straight"} (default),
+\code{"monotone"} (smoothed without overshoot), \code{"step-start"},
+\code{"step-middle"} or \code{"step-end"}. A saved chart keeps the value it was
+saved with.}
 
 \item{y_lines, x_lines}{Numbers at which dashed guide lines are drawn.
 \code{y_lines} run across the value axis (y on a scatter or line, the value

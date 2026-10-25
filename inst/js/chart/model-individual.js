@@ -45,12 +45,14 @@
    * @typedef {{ family: 'individual', empty: string | null, type: string,
    *             isLine: boolean, isScatter: boolean, isBand: boolean,
    *             x: { col: string, type: string, cats: string[] | null,
-   *                  order: Map<string, number> | null },
+   *                  order: Map<string, number> | null, encode?: (v: any) => any,
+   *                  period?: string | null },
    *             y: { col: string, type: string, cats: string[] | null },
    *             seriesCol: string | null, color: string | null, splitCol: string | null,
    *             facet: string | null, levels: string[], levelColors: string[],
    *             palette: string[], colorScale: any, seriesCount: number,
    *             lineOpacity: number, symbol: string, capMessage: string | null,
+   *             crowd: boolean,
    *             ttFields: string[], legend: any, byColor: boolean,
    *             nFacets: number, single: boolean, ix: any,
    *             panels: IndividualPanel[] }} IndividualModel
@@ -78,7 +80,7 @@
       y: { col: y, type: 'value', cats: null },
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
       palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
-      seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null,
+      seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       ttFields: [], legend: null, byColor: false,
       nFacets: 1, single: true, ix, panels: []
     };
@@ -113,12 +115,17 @@
       if (out.seriesCount > TRAJ_REDUCED_MAX) { out.lineOpacity = 0.15; out.symbol = 'none'; }
       else if (out.seriesCount > TRAJ_FULL_MAX) { out.lineOpacity = 0.35; out.symbol = 'none'; }
     }
+    // One line per entity (a subject, a store): hover picks the nearest line
+    // instead of listing every line at the crosshair.
+    out.crowd = isLine && !!seriesCol && out.seriesCount > 1;
 
     const colours = seriesColours(rows, ix, out, cfg);
     out.levelColors = levels.map((lv, i) => colours.of(lv, i));
     legendOf(rows, ix, out, colours.lookup);
 
-    const xType = NS.axes.axisTypeFor(columns, rows, x);
+    // A Date x is a time axis (a line over dates, a scatter against time);
+    // a Date y stays a category.
+    const xType = NS.axes.axisTypeFor(columns, rows, x, { temporal: true });
     const yType = NS.axes.axisTypeFor(columns, rows, y);
     const xCats = xType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
     const yCats = yType === 'category' ? NS.axes.orderedCategories(columns, rows, y) : null;
@@ -127,10 +134,13 @@
     const xOrder = xCats
       ? new Map(xCats.map((/** @type {any} */ c, /** @type {number} */ i) => [String(c), i]))
       : null;
-    out.x = { col: x, type: xType, cats: xCats, order: xOrder };
+    // A date arrives as an ISO string; a time axis positions it in ms.
+    const encodeX = (/** @type {any} */ v) => xType === 'category' ? String(v ?? '')
+      : (xType === 'time' ? NS.axes.timeValue(v) : Number(v));
+    out.x = { col: x, type: xType, cats: xCats, order: xOrder, encode: encodeX,
+              period: xType === 'time' ? NS.axes.timePeriod(rows, x) : null };
     out.y = { col: y, type: yType, cats: yCats };
 
-    const encodeX = (/** @type {any} */ v) => xType === 'category' ? String(v ?? '') : Number(v);
     const encodeY = (/** @type {any} */ v) => yType === 'category' ? String(v ?? '') : Number(v);
     const tt = out.ttFields;
     /** @param {any} r */
@@ -292,8 +302,9 @@
     const pool = (m.splitCol && seriesName != null)
       ? m.ix.get(panel.rows, m.splitCol, 'nz', String(seriesName)) : panel.rows;
     const xs = String(v[0]), ys = String(v[1]);
+    const enc = m.x.encode || ((/** @type {any} */ x) => x);
     return pool.filter((/** @type {any} */ r) =>
-      String(r[m.x.col]) === xs && String(r[m.y.col]) === ys);
+      String(enc(r[m.x.col])) === xs && String(r[m.y.col]) === ys);
   };
 
   /**
@@ -376,12 +387,13 @@
     /** @type {Set<string>} */
     const levels = new Set();
     const xc = cfg.x, yc = cfg.y;
+    const encX = m.x.encode || ((/** @type {any} */ x) => x);
     /** @type {Map<string, any[]> | null} */
     let rowIndex = null;
     if (drill && panel) {
       rowIndex = new Map();
       for (const r of panel.rows) {
-        const k = String(r[xc]) + '|||' + String(r[yc]);
+        const k = String(encX(r[xc])) + '|||' + String(r[yc]);
         const b = rowIndex.get(k);
         if (b) b.push(r); else rowIndex.set(k, [r]);
       }

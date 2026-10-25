@@ -27,6 +27,15 @@ dd_col_meta <- function(d) {
 
     if (!is.null(lbl) && nzchar(lbl)) res$label <- lbl
 
+    # A date or date-time column: a line or a scatter draws it on a time
+    # axis. Its `type` stays "categorical" (the values travel as ISO strings),
+    # so the gear's pickers offer it where they did.
+    if (inherits(vals, "Date")) {
+      res$temporal <- "date"
+    } else if (inherits(vals, "POSIXt")) {
+      res$temporal <- "datetime"
+    }
+
     # What the column is FOR (mark_column_kinds()). Roles that declare which
     # kinds they accept narrow their picker to matching columns -- but only
     # once SOMETHING in the frame is marked, so an unmarked board still offers

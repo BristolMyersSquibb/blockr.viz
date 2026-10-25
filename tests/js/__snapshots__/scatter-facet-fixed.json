@@ -136,7 +136,11 @@
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 11,
+        "hideOverlap": true
+       },
+       "axisTick": {
+        "show": false
        },
        "axisLine": {
         "lineStyle": {
@@ -146,7 +150,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -165,6 +170,9 @@
         "color": "#6b7280",
         "fontSize": 11
        },
+       "axisTick": {
+        "show": false
+       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -173,7 +181,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -358,7 +367,11 @@
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 11,
+        "hideOverlap": true
+       },
+       "axisTick": {
+        "show": false
        },
        "axisLine": {
         "lineStyle": {
@@ -368,7 +381,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -387,6 +401,9 @@
         "color": "#6b7280",
         "fontSize": 11
        },
+       "axisTick": {
+        "show": false
+       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -395,7 +412,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -655,7 +673,11 @@
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 11,
+        "hideOverlap": true
+       },
+       "axisTick": {
+        "show": false
        },
        "axisLine": {
         "lineStyle": {
@@ -665,7 +687,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -684,6 +707,9 @@
         "color": "#6b7280",
         "fontSize": 11
        },
+       "axisTick": {
+        "show": false
+       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -692,7 +718,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -976,7 +1003,11 @@
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 11,
+        "hideOverlap": true
+       },
+       "axisTick": {
+        "show": false
        },
        "axisLine": {
         "lineStyle": {
@@ -986,7 +1017,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true
@@ -1005,6 +1037,9 @@
         "color": "#6b7280",
         "fontSize": 11
        },
+       "axisTick": {
+        "show": false
+       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -1013,7 +1048,8 @@
        "splitLine": {
         "lineStyle": {
          "color": "#e5e7eb",
-         "type": "dashed"
+         "type": "solid",
+         "width": 1
         }
        },
        "scale": true

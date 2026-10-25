@@ -360,8 +360,9 @@
     },
 
     /**
-     * Fill the overlay with a line: thick, ringed dots, a gradient under
-     * it, the veil over the rest, in one setOption without animation.
+     * Fill the overlay with a line: the hovered one at full strength and a
+     * little wider, the veil fading the rest of the crowd, in one setOption
+     * without animation. No dots and no area: the line itself is the answer.
      * @this {any} @param {any} slot @param {any} chart @param {number} si
      */
     _promoteFocus(slot, chart, si) {
@@ -372,12 +373,8 @@
           !Array.isArray(s.data) || !s.data.length) return;
       slot.focusSi = si;
       const clr = (s.itemStyle && s.itemStyle.color) || null;
-      const hex = /^#([0-9a-f]{6})$/i.exec(String(clr || ''));
-      const n = hex ? parseInt(hex[1], 16) : null;
-      const rgba = (/** @type {number} */ a) => n == null ? 'rgba(0,0,0,0)'
-        : 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
-      // The veil and the dots' ring take the plot's own surface, read now,
-      // so a light/dark switch after the draw is followed.
+      // The veil takes the plot's own surface, read now, so a light/dark
+      // switch after the draw is followed.
       const bg = this._plotSurface(slot);
       f.veil = 'rgba(' + bg.join(',') + ',0.6)';
       chart.setOption({
@@ -389,15 +386,9 @@
           id: '__focus__', data: s.data, step: f.stepMode || undefined,
           smooth: f.smoothOn, smoothMonotone: f.smoothOn ? 'x' : undefined,
           showSymbol: false, lineStyle: { color: clr, width: f.focusW, opacity: 1 },
-          areaStyle: n == null ? undefined : {
-            origin: 'start',
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                     colorStops: [{ offset: 0.05, color: rgba(0.15) },
-                                  { offset: 0.95, color: rgba(0) }] }
-          }
+          areaStyle: null
         }, {
-          id: '__focus_dots__', data: s.data, symbol: 'circle', symbolSize: f.markerPx,
-          itemStyle: { color: clr, borderColor: 'rgb(' + bg.join(',') + ')', borderWidth: 2 }
+          id: '__focus_dots__', data: []
         }]
       });
     },

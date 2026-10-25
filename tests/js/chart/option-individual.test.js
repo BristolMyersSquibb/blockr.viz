@@ -78,14 +78,28 @@ test('the line tooltip follows the hovered line, and says nothing away from ever
   assert.doesNotMatch(html, /S01/);
 });
 
-test('a colour-split line card lists every level, the hovered one marked', () => {
+test('a colour-split line card lists every level at the crosshair, highest first', () => {
   const { po, opt } = build({ chart_type: 'line', color: 'ARM' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'A', value: [1, 3], color: '#111111' },
               { seriesType: 'line', seriesIndex: 1, seriesName: 'B', value: [1, 7], color: '#222222' }];
-  po.hover.si = 1;
+  // No line is picked on a colour split: the card does not depend on the
+  // cursor's distance to a line.
+  assert.strictEqual(po.focus, null);
   const html = opt.tooltip.formatter(ps);
-  assert.match(html, /is-hit.*Arm B/);
-  assert.match(html, /is-dim.*Arm A/);
+  assert.match(html, /B<\/span>.*A<\/span>/);
+  assert.doesNotMatch(html, /is-hit|is-dim|Arm B/);
+  assert.strictEqual(opt.tooltip.axisPointer.lineStyle.type, 'solid');
+});
+
+test('a crowd of lines (one per series) names only the line under the cursor', () => {
+  const { po, opt } = build({ chart_type: 'line', series: 'ID' });
+  const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'S1', value: [1, 3], color: '#111111' },
+              { seriesType: 'line', seriesIndex: 1, seriesName: 'S2', value: [1, 7], color: '#222222' }];
+  assert.strictEqual(opt.tooltip.formatter(ps), '');
+  po.hover.si = 0;
+  const html = opt.tooltip.formatter(ps);
+  assert.match(html, /S1/);
+  assert.doesNotMatch(html, /S2/);
 });
 
 test('the point tooltip: the level, x and y by title, then the tooltip fields', () => {
@@ -261,4 +275,38 @@ test('the option reads only the config fields it and the model list', () => {
     const extra = [...read].filter((k) => typeof k === 'string' && !allowed.has(k));
     assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
   }
+});
+
+test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the month', () => {
+  const columns = [{ name: 'MONTH', type: 'categorical', temporal: 'date' }, num('VAL'), cat('G')];
+  const rows = ['2020-01-01', '2020-02-01', '2020-03-01'].flatMap((d, i) =>
+    [{ MONTH: d, VAL: i, G: 'a' }, { MONTH: d, VAL: i + 5, G: 'b' }]);
+  const c = { chart_type: 'line', x: 'MONTH', y: 'VAL', color: 'G' };
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
+  assert.strictEqual(m.x.type, 'time');
+  assert.strictEqual(m.x.period, 'month');
+  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+                                     measure, widths: [600] });
+  const opt = o.panels[0].option;
+  assert.strictEqual(opt.useUTC, true);
+  assert.strictEqual(opt.xAxis[0].type, 'time');
+  assert.deepStrictEqual(plain(opt.series[0].data[0]), [Date.UTC(2020, 0, 1), 0]);
+  // Three points on a 600 px card are far apart: dots.
+  assert.strictEqual(opt.series[0].showSymbol, true);
+  const html = opt.tooltip.formatter([{ seriesType: 'line', seriesIndex: 1, seriesName: 'b',
+                                        value: [Date.UTC(2020, 1, 1), 6], color: '#222222' }]);
+  assert.match(html, /Feb 2020/);
+});
+
+test('a dense line has no dots; a gantt keeps a Date x a category', () => {
+  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const rows = Array.from({ length: 200 }, (_, i) =>
+    ({ D: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10), VAL: i }));
+  const c = { chart_type: 'line', x: 'D', y: 'VAL' };
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
+  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+                                     measure, widths: [600] });
+  assert.strictEqual(o.panels[0].option.series[0].showSymbol, false);
+  assert.strictEqual(m.x.period, 'day');
+  assert.strictEqual(C.axes.axisTypeFor(columns, rows, 'D'), 'category');
 });

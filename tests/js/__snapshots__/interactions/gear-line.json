@@ -180,8 +180,8 @@
         "value": "Monotone",
         "placeholder": null,
         "options": [
-         "Monotone",
          "Straight",
+         "Monotone",
          "Step at start",
          "Step at middle",
          "Step at end"

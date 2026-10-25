@@ -70,9 +70,10 @@
 #'   natural target, or `NULL` (default) for no filtering.
 #' @param line_width,point_size Line width and marker size relative to the
 #'   default (1). Range 0.5 to 3.
-#' @param connect How a line connects its points: `"monotone"` (default,
-#'   smoothed without overshoot), `"straight"`, `"step-start"`,
-#'   `"step-middle"` or `"step-end"`.
+#' @param connect How a line connects its points: `"straight"` (default),
+#'   `"monotone"` (smoothed without overshoot), `"step-start"`,
+#'   `"step-middle"` or `"step-end"`. A saved chart keeps the value it was
+#'   saved with.
 #' @param y_lines,x_lines Numbers at which dashed guide lines are drawn.
 #'   `y_lines` run across the value axis (y on a scatter or line, the value
 #'   axis of a bar or boxplot either way round); `x_lines` across a numeric x.
@@ -182,7 +183,7 @@ new_chart_block <- function(
     drill = NULL,
     line_width = 1,
     point_size = 1,
-    connect = "monotone",
+    connect = "straight",
     y_lines = NULL,
     x_lines = NULL,
     ymin = NULL,
@@ -1723,15 +1724,23 @@ new_chart_block <- function(
             if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
               return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
             }
+            # A point on a time axis comes back in ms; read it as a date.
+            d_now <- tryCatch(raw_data(), error = function(e) NULL)
+            xv <- pt$x_val
+            if (is.data.frame(d_now) && pt$x_col %in% names(d_now)) {
+              xv <- chart_time_literal(xv, d_now[[pt$x_col]])
+            }
             blockr.core::bbquote(
               dplyr::filter(.(data),
                 .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv)
               ),
               list(xc = pt$x_col, yc = pt$y_col,
-                xv = pt$x_val, yv = pt$y_val)
+                xv = xv, yv = pt$y_val)
             )
           } else if (ft == "range") {
-            rc <- chart_range_cond(r_filter_range())
+            rc <- chart_range_cond(
+              r_filter_range(), tryCatch(raw_data(), error = function(e) NULL)
+            )
             if (is.null(rc)) {
               return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
             }

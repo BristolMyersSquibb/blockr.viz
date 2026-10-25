@@ -367,10 +367,11 @@ chart_arguments <- function() {
     ),
     connect = new_arg_spec(
       paste0(
-        "How a line chart connects its points. \"monotone\" (default) draws ",
-        "smoothed lines with no overshoot; \"straight\" draws plain ",
-        "segments; \"step-start\", \"step-middle\", \"step-end\" hold the ",
-        "value between observations (dose levels, on/off states)."
+        "How a line chart connects its points. \"straight\" (default) draws ",
+        "plain segments; \"monotone\" draws smoothed lines with no ",
+        "overshoot (the usual look for lab values over time); ",
+        "\"step-start\", \"step-middle\", \"step-end\" hold the value ",
+        "between observations (dose levels, on/off states)."
       ),
       example = NULL,
       type = arg_enum(

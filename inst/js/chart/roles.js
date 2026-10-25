@@ -257,16 +257,16 @@
     // How the line connects its points (line charts only) -- one control that
     // replaces the old separate `step` + `smooth` selects, since they were two
     // ways of saying the same thing (how to get from point to point) and
-    // "straight" appeared in both. `monotone` (default) draws monotone-smoothed
-    // lines (smoothMonotone 'x': no overshoot, so the curve never implies values
-    // outside the measured range) at every density; `straight` draws plain
-    // segments; `step-start`/`step-middle`/`step-end` hold the value between
+    // "straight" appeared in both. `straight` (default) draws plain segments;
+    // `monotone` draws monotone-smoothed lines (smoothMonotone 'x': no
+    // overshoot, so the curve never implies values outside the measured
+    // range); `step-start`/`step-middle`/`step-end` hold the value between
     // observations and place the vertical jump along the interval (dose levels,
     // on/off states). Legacy boards that saved `step` + `smooth` map to this on
     // construction (see new_chart_block).
-    connect: { label: 'Line', kind: 'select', ph: 'Monotone',
-               options: [{ value: 'monotone',    label: 'Monotone' },
-                         { value: 'straight',    label: 'Straight' },
+    connect: { label: 'Line', kind: 'select', ph: 'Straight',
+               options: [{ value: 'straight',    label: 'Straight' },
+                         { value: 'monotone',    label: 'Monotone' },
                          { value: 'step-start',  label: 'Step at start' },
                          { value: 'step-middle', label: 'Step at middle' },
                          { value: 'step-end',    label: 'Step at end' }] },
