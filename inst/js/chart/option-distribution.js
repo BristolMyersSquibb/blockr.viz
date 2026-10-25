@@ -238,7 +238,8 @@
       ? seriesLevels.map((/** @type {any} */ _, /** @type {number} */ i) =>
           (i === 0 ? catAxis : { ...catAxis, show: false }))
       : catAxis;
-    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.value_lines, ink);
+    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.value_lines, ink,
+      cfg.value_line_names);
     return {
       xFit: (vertical && xlab) ? { labels: catLabels, inset: X_INSET, decimate: false,
                                    gutter: xlab.bottom, key: xlab.key, formatter: catFmt }

@@ -310,3 +310,42 @@ test('a dense line has no dots; a gantt keeps a Date x a category', () => {
   assert.strictEqual(m.x.period, 'day');
   assert.strictEqual(C.axes.axisTypeFor(columns, rows, 'D'), 'category');
 });
+
+// -- ymin/ymax bands, linetype, x_ranges, direct labels, area -----------------
+
+test('a line with two intervals draws two grey bands under the line', () => {
+  const { opt } = build({ chart_type: 'line', lo: ['LO', 'LO'], hi: ['HI', 'HI'] });
+  const bands = opt.series.filter((s) => s.type === 'custom' && s.z === 1);
+  assert.strictEqual(bands.length, 2);
+  assert.strictEqual(bands[0].itemStyle.color, C.INK_DEFAULT.muted);
+  // a scatter keeps error bars
+  const sc = build({ lo: 'LO', hi: 'HI' }).opt;
+  assert.ok(sc.series.some((s) => s.type === 'custom' && s.name === 'errbar'));
+});
+
+test('a linetype cuts a line into segments, the later levels dashed', () => {
+  const { opt } = build({ chart_type: 'line', linetype: 'VIS' });
+  const segs = opt.series.filter((s) => /^__seg_/.test(s.id || ''));
+  assert.strictEqual(segs.length, 2);
+  assert.strictEqual(segs[0].lineStyle.type, undefined);
+  assert.ok(Array.isArray(segs[1].lineStyle.type));
+});
+
+test('x_ranges shade x, direct labels name the lines and make room', () => {
+  const { opt } = build({ chart_type: 'line', color: 'ARM', direct_labels: 'on',
+                          x_ranges: [{ name: 'Run-in', from: 0, to: 5 }] });
+  const host = opt.series.find((s) => s.markArea);
+  assert.deepStrictEqual(plain(host.markArea.data[0]), [{ name: 'Run-in', xAxis: 0 }, { xAxis: 5 }]);
+  assert.ok(opt.series.filter((s) => s.endLabel && s.endLabel.show).length >= 2);
+  assert.ok(opt.grid.right > 5);
+});
+
+test('an area fills and stacks a colour split, from zero, without dots', () => {
+  const { opt } = build({ chart_type: 'area', color: 'ARM' });
+  const areas = opt.series.filter((s) => s.areaStyle);
+  assert.strictEqual(areas.length, 2);
+  assert.ok(areas.every((s) => s.stack === 'area' && s.showSymbol === false));
+  assert.strictEqual(typeof opt.yAxis[0].min, 'function');
+  const dodge = build({ chart_type: 'area', color: 'ARM', bar_mode: 'grouped' }).opt;
+  assert.ok(dodge.series.filter((s) => s.areaStyle).every((s) => !s.stack));
+});

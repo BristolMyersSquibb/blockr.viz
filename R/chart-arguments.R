@@ -16,7 +16,9 @@ chart_arguments <- function() {
         "set `x`, `y` and `func`): \"bar\", \"waterfall\", \"pie\", ",
         "\"treemap\", \"boxplot\", \"pointrange\", and \"histogram\" (set only ",
         "`x`, a numeric column, and `bins`). Individual (one mark per ",
-        "row; set `x` and `y`): \"scatter\", \"line\", \"band\". Timeline: ",
+        "row; set `x` and `y`): \"scatter\", \"line\", \"area\" (a line with ",
+        "its area filled, stacked across a colour split unless ",
+        "position=\"dodge\"), \"band\". Timeline: ",
         "\"gantt\" (set `x`, `xend` and `y`). Default \"bar\". Waterfall: ",
         "each step's value is a DELTA and bars float from the running total ",
         "(the step axis is in data order); reshape wide measures with ",
@@ -296,17 +298,45 @@ chart_arguments <- function() {
     ),
     ymin = new_arg_spec(
       paste0(
-        "Column holding the lower end of an interval per row, drawn with ",
-        "`ymax` as error bars on a scatter or a line (a forest plot is a ",
-        "scatter with ymin/ymax). Numeric."
+        "Column(s) holding the lower end of an interval per row, paired with ",
+        "`ymax`. On a line: a shaded band (a forecast interval, a min-max ",
+        "range); on a scatter: error bars (a forest plot). Several columns ",
+        "draw nested intervals, the first the outermost: ymin=[\"lo95\", ",
+        "\"lo80\"], ymax=[\"hi95\", \"hi80\"]. Numeric."
+      ),
+      example = NULL,
+      type = arg_array(arg_string())
+    ),
+    ymax = new_arg_spec(
+      "Column(s) holding the upper end of the interval(s). See `ymin`.",
+      example = NULL,
+      type = arg_array(arg_string())
+    ),
+    linetype = new_arg_spec(
+      paste0(
+        "Line/area only: column whose values set the dash. The first value ",
+        "is solid, the others dashed, e.g. a type column with \"actual\" and ",
+        "\"forecast\" draws the forecast dashed from the last actual point ",
+        "on. Not a colour: the line keeps its colour."
       ),
       example = NULL,
       type = arg_string()
     ),
-    ymax = new_arg_spec(
-      "Column holding the upper end of the interval. See `ymin`.",
-      example = NULL,
-      type = arg_string()
+    x_ranges = new_arg_spec(
+      paste0(
+        "Named stretches of x shaded behind the marks (scatter/line/area), ",
+        "as an object of name -> [from, to], e.g. {\"Recession\": ",
+        "[\"2008-01-01\", \"2009-06-30\"]}. Dates or numbers, matching x."
+      ),
+      example = NULL
+    ),
+    direct_labels = new_arg_spec(
+      paste0(
+        "Line/area only: true writes each line's name at its end, so the ",
+        "reader does not look up the legend. Use with a few lines."
+      ),
+      example = TRUE,
+      type = arg_boolean()
     ),
     ref_lo = new_arg_spec(
       paste0(
@@ -600,6 +630,10 @@ chart_guidance <- function() {
     "\n- \"distribution of X\" as bars, \"histogram of X\" ->",
     "type=\"histogram\", x=\"X\", bins=30. A click on a bin filters",
     "X to that bin's range.",
+    "\n- \"forecast with intervals\" (rows carrying history and forecast, a",
+    "type column and interval columns) -> type=\"line\", x=\"date\",",
+    "y=\"value\", ymin=[\"lo95\", \"lo80\"], ymax=[\"hi95\", \"hi80\"],",
+    "linetype=\"type\", x_lines=[the last observed date]",
     "\n- \"label bars with W\" -> label=\"W\"",
     "\n\nWhen picking `color`, check the data: if all visible rows share one",
     "value the colour channel is wasted; drop `color` or pick a column with",

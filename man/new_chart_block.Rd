@@ -30,6 +30,9 @@ new_chart_block(
   x_lines = NULL,
   ymin = NULL,
   ymax = NULL,
+  linetype = NULL,
+  x_ranges = NULL,
+  direct_labels = FALSE,
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -63,7 +66,9 @@ new_chart_block(
 }
 \arguments{
 \item{type}{Chart type: \code{"bar"}, \code{"histogram"}, \code{"waterfall"}, \code{"pie"},
-\code{"treemap"}, \code{"boxplot"}, \code{"pointrange"} (aggregated), \code{"scatter"}, \code{"line"},
+\code{"treemap"}, \code{"boxplot"}, \code{"pointrange"} (aggregated), \code{"scatter"},
+\code{"line"}, \code{"area"} (a line with its area filled, stacked with a colour
+split unless \code{position = "dodge"}),
 \code{"band"} (one mark per row), or \code{"gantt"} (intervals on lanes). A
 waterfall is a bar whose bars float from the running total. Boxplot and
 pointrange summarize the raw values within each category in the browser
@@ -121,7 +126,7 @@ tooltips and in value labels, as on the tile block: \code{format} is
 \code{"number"} (default; separators and smart decimals), \code{"compact"} (1.2K,
 3.4M) or \code{"percent"} (a fraction times 100, with "\%"). \code{unit} is free
 text after the number (\code{"CHF"}); the axis title carries it once.
-Applies to the aggregated types.}
+On scatter, line and area charts it applies to y.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip.}
 
@@ -141,7 +146,22 @@ saved with.}
 axis of a bar or boxplot either way round); \code{x_lines} across a numeric x.}
 
 \item{ymin, ymax}{Columns holding the lower and upper end of an interval per
-row, drawn as error bars on a scatter or a line.}
+row. On a line they draw a shaded band, on a scatter error bars. Several
+columns draw several intervals, the first the outermost: \verb{ymin = c("lo95", "lo80"), ymax = c("hi95", "hi80")} is a forecast fan. A single
+line's band is grey; with a colour split each band takes its line's
+colour.}
+
+\item{linetype}{Column whose values set a line's dash: the first value (in
+the order the rows carry them) is solid, the others dashed. A segment
+takes the style of the point it leads to, so a forecast is dashed from
+the last observed point on. Line and area.}
+
+\item{x_ranges}{Named stretches of x shaded behind the marks, a named list
+of \code{c(from, to)}: \code{list(Recession = c("2008-01-01", "2009-06-30"))}.
+Dates, date-times or numbers, matching x.}
+
+\item{direct_labels}{\code{TRUE} writes each line's name at its end. Line and
+area.}
 
 \item{smoother}{Trend line on a scatter: \code{"none"} (default), \code{"lm"} or
 \code{"loess"}, fit per colour or series group and per facet panel.}

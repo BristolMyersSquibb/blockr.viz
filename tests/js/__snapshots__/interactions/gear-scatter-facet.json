@@ -21,6 +21,7 @@
    "band",
    "*scatter",
    "line",
+   "area",
    "gantt"
   ],
   "sections": [
@@ -156,6 +157,79 @@
         "kind": "text",
         "value": "",
         "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "lo",
+      "label": "Interval low",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "(none)",
+        "placeholder": null,
+        "options": [
+         "(none)",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "hi",
+      "label": "Interval high",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "(none)",
+        "placeholder": null,
+        "options": [
+         "(none)",
+         "AVISITN",
+         "ADY",
+         "AVAL",
+         "ASTDY",
+         "AENDY",
+         "ANRHI",
+         "CHG",
+         "LO",
+         "HI"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "format",
+      "label": "Numbers",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "1,234.5",
+        "placeholder": null,
+        "options": [
+         "1,234.5",
+         "1.2K",
+         "12.3%"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "unit",
+      "label": "Unit",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. CHF"
        }
       ]
      },

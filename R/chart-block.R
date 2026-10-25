@@ -25,7 +25,9 @@
 #' them load unchanged.
 #'
 #' @param type Chart type: `"bar"`, `"histogram"`, `"waterfall"`, `"pie"`,
-#'   `"treemap"`, `"boxplot"`, `"pointrange"` (aggregated), `"scatter"`, `"line"`,
+#'   `"treemap"`, `"boxplot"`, `"pointrange"` (aggregated), `"scatter"`,
+#'   `"line"`, `"area"` (a line with its area filled, stacked with a colour
+#'   split unless `position = "dodge"`),
 #'   `"band"` (one mark per row), or `"gantt"` (intervals on lanes). A
 #'   waterfall is a bar whose bars float from the running total. Boxplot and
 #'   pointrange summarize the raw values within each category in the browser
@@ -70,7 +72,7 @@
 #'   `"number"` (default; separators and smart decimals), `"compact"` (1.2K,
 #'   3.4M) or `"percent"` (a fraction times 100, with "%"). `unit` is free
 #'   text after the number (`"CHF"`); the axis title carries it once.
-#'   Applies to the aggregated types.
+#'   On scatter, line and area charts it applies to y.
 #' @param tooltip Extra columns shown in each mark's tooltip.
 #' @param drill Column a click filters downstream on, `"auto"` for the type's
 #'   natural target, or `NULL` (default) for no filtering.
@@ -84,7 +86,20 @@
 #'   `y_lines` run across the value axis (y on a scatter or line, the value
 #'   axis of a bar or boxplot either way round); `x_lines` across a numeric x.
 #' @param ymin,ymax Columns holding the lower and upper end of an interval per
-#'   row, drawn as error bars on a scatter or a line.
+#'   row. On a line they draw a shaded band, on a scatter error bars. Several
+#'   columns draw several intervals, the first the outermost: `ymin =
+#'   c("lo95", "lo80"), ymax = c("hi95", "hi80")` is a forecast fan. A single
+#'   line's band is grey; with a colour split each band takes its line's
+#'   colour.
+#' @param linetype Column whose values set a line's dash: the first value (in
+#'   the order the rows carry them) is solid, the others dashed. A segment
+#'   takes the style of the point it leads to, so a forecast is dashed from
+#'   the last observed point on. Line and area.
+#' @param x_ranges Named stretches of x shaded behind the marks, a named list
+#'   of `c(from, to)`: `list(Recession = c("2008-01-01", "2009-06-30"))`.
+#'   Dates, date-times or numbers, matching x.
+#' @param direct_labels `TRUE` writes each line's name at its end. Line and
+#'   area.
 #' @param smoother Trend line on a scatter: `"none"` (default), `"lm"` or
 #'   `"loess"`, fit per colour or series group and per facet panel.
 #' @param identity_line `TRUE` draws a dashed y = x line on a scatter.
@@ -199,6 +214,9 @@ new_chart_block <- function(
     x_lines = NULL,
     ymin = NULL,
     ymax = NULL,
+    linetype = NULL,
+    x_ranges = NULL,
+    direct_labels = FALSE,
     smoother = "none",
     identity_line = FALSE,
     box_points = "none",
@@ -310,8 +328,16 @@ new_chart_block <- function(
   drill <- chr_state(drill)
   selection <- chart_selection_state(selection)
   sort_by <- chr_state(sort_by)
-  ymin <- chr_state(ymin)
-  ymax <- chr_state(ymax)
+  # Several columns are several intervals, the first the outermost.
+  ymin <- chr_vec_state(ymin)
+  ymax <- chr_vec_state(ymax)
+  if (length(ymin) != length(ymax)) {
+    stop("`ymin` and `ymax` must name the same number of columns.",
+         call. = FALSE)
+  }
+  linetype <- chr_state(linetype)
+  x_ranges <- chart_ranges_state(x_ranges)
+  direct_labels <- bool_state(direct_labels)
   connect <- match.arg(
     connect,
     c("monotone", "straight", "step-start", "step-middle", "step-end")
@@ -681,6 +707,9 @@ new_chart_block <- function(
         # Interval columns (error bars on a line or a scatter).
         r_lo <- shiny::reactiveVal(ymin)
         r_hi <- shiny::reactiveVal(ymax)
+        r_linetype <- shiny::reactiveVal(linetype)
+        r_x_ranges <- shiny::reactiveVal(x_ranges)
+        r_direct_labels <- shiny::reactiveVal(direct_labels)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_bins <- shiny::reactiveVal(bins)
         # Number format of the values (axis, tooltips, labels), as on the
@@ -756,6 +785,7 @@ new_chart_block <- function(
             r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi(),
+            r_linetype(),
             # Count-label id column: not a mapped aesthetic, but the browser
             # needs its values to count distinct ids per label group.
             r_count_col(),
@@ -1177,8 +1207,10 @@ new_chart_block <- function(
               value_labels = if (isTRUE(r_value_labels())) "on" else "off",
               line_width_mult = r_line_width_mult(),
               dot_size_mult = r_dot_size_mult(), connect = r_connect(),
-              value_lines = as.list(r_value_lines()),
-              x_lines = as.list(r_x_lines()),
+              value_lines = as.list(unname(r_value_lines())),
+              x_lines = as.list(unname(r_x_lines())),
+              value_line_names = as.list(names(r_value_lines())),
+              x_line_names = as.list(names(r_x_lines())),
               smoother = r_smoother(),
               # The gear's segmented control speaks "on"/"off"; the R state is
               # a logical (bool_state). Convert on the way OUT so the control
@@ -1265,7 +1297,11 @@ new_chart_block <- function(
               title_arg_values = r_titles_resolved()$title_arg_values,
               slot_choices = r_titles_resolved()$slot_choices,
               smoother_series = r_smoother_series(),
-              lo = r_lo(), hi = r_hi(),
+              # as.list(): a pair of intervals stays a JSON array.
+              lo = as.list(r_lo()), hi = as.list(r_hi()),
+              linetype = present_role(r_linetype()),
+              x_ranges = chart_ranges_json(r_x_ranges()),
+              direct_labels = if (isTRUE(r_direct_labels())) "on" else "off",
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
@@ -1595,8 +1631,12 @@ new_chart_block <- function(
             if (!is.null(msg$download)) {
               upd(r_download, identical(as.character(msg$download)[[1L]], "on"))
             }
-            if (!is.null(msg$lo))         upd(r_lo, nn(msg$lo))
-            if (!is.null(msg$hi))         upd(r_hi, nn(msg$hi))
+            if (!is.null(msg$lo)) upd(r_lo, chr_vec_state(nn(msg$lo)))
+            if (!is.null(msg$hi)) upd(r_hi, chr_vec_state(nn(msg$hi)))
+            if (!is.null(msg$linetype)) upd_healed(r_linetype, msg$linetype)
+            if (!is.null(msg$direct_labels)) {
+              upd(r_direct_labels, bool_state(msg$direct_labels))
+            }
             # Chart text: "" is a real value (explicitly no title -- it
             # suppresses the auto/data-label tier), so no nn(). null = auto
             # is preserved because JS sends null, which skips the guard.
@@ -2085,6 +2125,9 @@ new_chart_block <- function(
             x_lines = r_x_lines,
             ymin = r_lo,
             ymax = r_hi,
+            linetype = r_linetype,
+            x_ranges = r_x_ranges,
+            direct_labels = r_direct_labels,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2158,8 +2201,8 @@ new_chart_block <- function(
     # logicals are never empty.
     allow_empty_state = c("x", "y", "color", "facet", "series", "xend",
       "label", "orientation", "sort_by", "sort_dir", "tooltip", "drill",
-      "y_lines", "x_lines", "ymin", "ymax", "smoother", "identity_line",
-      "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
+      "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
+      "smoother", "identity_line", "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
       "waterfall_totals", "facet_cols", "title", "subtitle", "caption",
       "drill_target", "drill_table", "script", "script_values",
       "selection", "unit"),
@@ -2170,7 +2213,8 @@ new_chart_block <- function(
       "xend", "label", "orientation", "position", "sort_by", "sort_dir",
       "value_labels", "format", "unit", "tooltip", "drill", "line_width",
       "point_size",
-      "connect", "y_lines", "x_lines", "ymin", "ymax", "smoother",
+      "connect", "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
+      "direct_labels", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",
       "ref_lo", "ref_hi", "waterfall_totals", "bins", "show_n", "missing",

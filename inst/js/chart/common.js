@@ -20,7 +20,10 @@
   const NS = /** @type {any} */ (B.chart = B.chart || {});
 
   const AGGREGATED_TYPES = ['bar', 'histogram', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
-  const INDIVIDUAL_TYPES = ['scatter', 'line', 'band'];
+  const INDIVIDUAL_TYPES = ['scatter', 'line', 'area', 'band'];
+  // An area is a line with its area filled: everything a line does, it does.
+  /** @param {any} t */
+  const isLineType = (t) => t === 'line' || t === 'area';
   const TIMELINE_TYPES = ['gantt'];
   // Box and point range summarize raw values per group in the browser.
   const DISTRIBUTION_TYPES = ['boxplot', 'pointrange'];
@@ -278,7 +281,7 @@
   const PANEL_H_CAP = 4000;
 
   Object.assign(NS, {
-    AGGREGATED_TYPES, INDIVIDUAL_TYPES, TIMELINE_TYPES, DISTRIBUTION_TYPES, familyOf,
+    AGGREGATED_TYPES, INDIVIDUAL_TYPES, TIMELINE_TYPES, DISTRIBUTION_TYPES, familyOf, isLineType,
     INK_DEFAULT, readInk, esc, tipHead, tipRow, tipNote, TIP_SEP, rowTooltip, cardTooltip, ddNum, ddNum3,
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
     hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,

@@ -66,7 +66,7 @@
     // A double-click on a line chart resets the zoom, and cancels the line
     // click its two clicks queued.
     zr.on('dblclick', () => {
-      if (view.config.chart_type !== 'line') return;
+      if (!NS.isLineType(view.config.chart_type)) return;
       if (view._lineClickTimer) {
         clearTimeout(view._lineClickTimer);
         view._lineClickTimer = null;
@@ -92,7 +92,7 @@
     chart.on('click', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (params.componentType !== 'series') return;
-      const isLine = view.config.chart_type === 'line';
+      const isLine = NS.isLineType(view.config.chart_type);
       // A click in brush mode also fires a brush clear; ignore it for a
       // moment.
       view._suppressBrushClear = true;

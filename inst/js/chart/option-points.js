@@ -31,6 +31,24 @@
   const SPARSE_DOT_N = 40;
   // Rows an axis tooltip lists before "+n more".
   const TT_ROW_CAP = 12;
+  // The dash of each `linetype` level after the first, which is solid.
+  const DASHES = [[6, 4], [2, 3], [8, 3, 2, 3], [1, 2]];
+  // A band's fill: each nested interval adds this much, so the inner one
+  // reads darker.
+  const BAND_OPACITY = 0.14;
+  // A line's id when `linetype` splits it into segments: the tooltip folds
+  // the segments of one line back into one row.
+  const SEG_ID = /^__seg_(\d+)_/;
+
+  /** The interval column pairs, lo and hi, as arrays. @param {Record<string, any>} cfg */
+  const intervalPairs = (cfg) => {
+    const lo = [].concat(cfg.lo || []).filter(Boolean);
+    const hi = [].concat(cfg.hi || []).filter(Boolean);
+    /** @type {Array<[string, string]>} */
+    const out = [];
+    for (let i = 0; i < Math.min(lo.length, hi.length); i++) out.push([lo[i], hi[i]]);
+    return out;
+  };
 
   /**
    * Whether a panel's lines are sparse enough to carry dots.
@@ -56,7 +74,9 @@
     const lm = cfg.line_width_mult ?? 1.0;
     // One line per entity (a `series` column): the trajectory crowd.
     const crowd = isLine && m.crowd;
-    const dots = isLine && !crowd && m.symbol !== 'none' && sparseLines(panel, plotW);
+    // An area's fill already shows where the values are; dots would clutter it.
+    const dots = isLine && !crowd && cfg.chart_type !== 'area' &&
+      m.symbol !== 'none' && sparseLines(panel, plotW);
     const lineMarkerPx = BASE_LINE_MARKER * dm;
     const lineW = (crowd ? CROWD_LINE_WIDTH : BASE_LINE_WIDTH) * lm;
     const surface = (ink && ink.surface) || '#ffffff';
@@ -67,7 +87,13 @@
     const smoothOn = isLine && connect === 'monotone';
     const smoother = cfg.smoother || 'none';
     const smootherSeries = cfg.smoother_series || null;
-    const loCol = cfg.lo, hiCol = cfg.hi;
+    const pairs = intervalPairs(cfg);
+    const isArea = cfg.chart_type === 'area';
+    // A colour split stacks its areas, unless the layout says side by side.
+    const stackArea = isArea && m.splitCol && cfg.bar_mode !== 'grouped';
+    const ltCol = isLine && cfg.linetype ? cfg.linetype : null;
+    const directLabels = isLine && !crowd &&
+      (cfg.direct_labels === true || cfg.direct_labels === 'on');
     const encodeX = m.x.encode ||
       ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v));
 
@@ -93,8 +119,63 @@
       lineStyle: isLine ? { width: lineW, opacity: m.lineOpacity, cap: 'round', join: 'round' } : undefined,
       emphasis: (isLine && !crowd)
         ? { scale: false, focus: 'none', lineStyle: { width: lineW } }
-        : { disabled: true }
+        : { disabled: true },
+      ...(isArea ? { areaStyle: { opacity: stackArea ? 0.7 : 0.25 },
+                     ...(stackArea ? { stack: 'area' } : {}) } : {}),
+      ...(directLabels ? { endLabel: {
+        show: true, formatter: '{a}', distance: 6,
+        color: (ink && ink.muted) || '#4b5563', fontSize: (ink && ink.fontSize) || 11 } } : {})
     });
+
+    // `linetype`: the levels in the order the rows first carry them; the
+    // first is solid. A segment takes the level of the point it leads to,
+    // so a forecast is dashed from the last observed point on.
+    /** @type {string[]} */
+    const ltLevels = [];
+    if (ltCol) {
+      const seen = new Set();
+      for (const s of panel.series) {
+        for (const r of s.rows) {
+          const v = String(r[ltCol] ?? '');
+          if (!seen.has(v)) { seen.add(v); ltLevels.push(v); }
+        }
+      }
+    }
+    /** @param {any} s @param {number} si */
+    const lineSegments = (s, si) => {
+      const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
+      return ltLevels.map((L, k) => {
+        const data = s.pts.map((/** @type {any} */ p, /** @type {number} */ i) =>
+          (lv[i] === L || lv[i + 1] === L) ? p : [p[0], null]);
+        const sr = mkSeries(s.level, data, s.color);
+        sr.id = '__seg_' + si + '_' + k;
+        if (k > 0) {
+          sr.lineStyle = { ...sr.lineStyle, type: DASHES[(k - 1) % DASHES.length] };
+          // One end label per line, on its first segment.
+          delete sr.endLabel;
+        }
+        return sr;
+      }).filter((sr) => sr.data.some((/** @type {any} */ p) => p[1] != null));
+    };
+
+    // `ymin`/`ymax` on a line: one band per pair, the first the outermost.
+    // Grey for a single line; in the line's colour when colour splits them.
+    /** @param {any} s */
+    const lineBands = (s) => {
+      const clr = m.splitCol ? s.color : ((ink && ink.muted) || '#6b7280');
+      /** @type {any[]} */
+      const out = [];
+      for (const [loCol, hiCol] of pairs) {
+        const b = {
+          x: s.pts.map((/** @type {any} */ p) => p[0]),
+          lo: s.rows.map((/** @type {any} */ r) => r[loCol] == null ? null : Number(r[loCol])),
+          hi: s.rows.map((/** @type {any} */ r) => r[hiCol] == null ? null : Number(r[hiCol]))
+        };
+        const rib = parts.ribbon ? parts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY) : null;
+        if (rib) { rib.z = 1; out.push(rib); }
+      }
+      return out;
+    };
 
     // R fits the smoother per group, nested by facet level when faceted.
     const smootherLine = (/** @type {any} */ groupName) => {
@@ -114,8 +195,13 @@
 
     /** @type {any[]} */
     const series = [];
-    for (const s of panel.series) {
-      series.push(mkSeries(s.level, s.pts, s.color));
+    panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
+      if (isLine && pairs.length && s.rows.length) for (const b of lineBands(s)) series.push(b);
+      if (ltCol && ltLevels.length > 1) {
+        for (const sr of lineSegments(s, si)) series.push(sr);
+      } else {
+        series.push(mkSeries(s.level, s.pts, s.color));
+      }
       if (smoother !== 'none' && !isLine) {
         const ln = smootherLine(s.level);
         if (ln) {
@@ -126,18 +212,41 @@
           });
         }
       }
-      // Error bars, on a line and on a scatter (a forest plot is a scatter
-      // with lo/hi whiskers).
-      if (loCol && hiCol && s.src.length) {
-        const errPts = s.src
-          .filter((/** @type {any} */ r) => r[m.x.col] != null && r[loCol] != null && r[hiCol] != null)
-          .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), Number(r[loCol]), Number(r[hiCol])]);
-        if (errPts.length) {
-          series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, s.color, false));
+      // Error bars on a scatter (a forest plot is a scatter with ymin/ymax
+      // whiskers), one per pair.
+      if (!isLine && pairs.length && s.src.length) {
+        for (const [loCol, hiCol] of pairs) {
+          const errPts = s.src
+            .filter((/** @type {any} */ r) => r[m.x.col] != null && r[loCol] != null && r[hiCol] != null)
+            .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), Number(r[loCol]), Number(r[hiCol])]);
+          if (errPts.length) {
+            series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, s.color, false));
+          }
         }
       }
+    });
+
+    // `x_ranges`: named stretches of x, shaded behind the marks.
+    const ranges = Array.isArray(cfg.x_ranges) ? cfg.x_ranges : [];
+    const host = series.find((sr) => sr.type === 'line' || sr.type === 'scatter');
+    if (ranges.length && host) {
+      host.markArea = {
+        silent: true,
+        itemStyle: { color: (ink && ink.muted) || '#6b7280', opacity: 0.08 },
+        label: { position: 'insideTop', color: (ink && ink.muted) || '#6b7280',
+                 fontSize: (ink && ink.fontSize) || 11 },
+        data: ranges.map((/** @type {any} */ r) =>
+          [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }])
+      };
     }
-    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm };
+
+    // Room on the right for the end labels.
+    let labelPad = 0;
+    if (directLabels) {
+      for (const s of panel.series) labelPad = Math.max(labelPad, String(s.level ?? '').length);
+      labelPad = labelPad ? Math.min(160, labelPad * 6.5 + 12) : 0;
+    }
+    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
   };
 
   /**
@@ -174,6 +283,7 @@
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ttSuffix = ttSuffixOf(m, look);
     const ink = look.ink || {};
+    const vf = NS.valueFormat(look.cfg || {});
     return {
       trigger: 'axis',
       axisPointer: { type: 'line', label: { show: false },
@@ -189,13 +299,18 @@
           rows = rows.filter((/** @type {any} */ p) => p.seriesIndex === hover.si);
           if (!rows.length) return '';
         }
-        // One row per series, the first of replicates at one x.
+        // One row per line, the first of replicates at one x; the segments
+        // a `linetype` cuts a line into are one line.
         const seen = new Set();
         rows = rows.filter((/** @type {any} */ p) => {
-          if (seen.has(p.seriesIndex)) return false;
-          seen.add(p.seriesIndex);
+          if (p.value[1] == null) return false;
+          const seg = SEG_ID.exec(p.seriesId || '');
+          const key = seg ? 'seg' + seg[1] : 'i' + p.seriesIndex;
+          if (seen.has(key)) return false;
+          seen.add(key);
           return true;
         });
+        if (!rows.length) return '';
         const head = m.x.cats
           ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
           : (m.x.type === 'time'
@@ -206,7 +321,7 @@
           (Number(b.value[1]) || 0) - (Number(a.value[1]) || 0));
         const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
           const nm = m.splitCol ? NS.esc(p.seriesName) : NS.esc(title(m.y.col));
-          return NS.tipRow(nm, NS.ddNum3(p.value[1]) + ttSuffix(p.value),
+          return NS.tipRow(nm, (vf ? vf(p.value[1]) : NS.ddNum3(p.value[1])) + ttSuffix(p.value),
                            m.splitCol ? p.color : null, null);
         });
         if (rows.length > TT_ROW_CAP) lines.push(NS.tipNote('+' + (rows.length - TT_ROW_CAP) + ' more'));
@@ -240,6 +355,7 @@
    */
   const pointTooltip = (m, look) => {
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
+    const vf = NS.valueFormat(look.cfg || {});
     return {
       trigger: 'item', confine: true,
       formatter: (/** @type {any} */ p) => {
@@ -248,7 +364,7 @@
         /** @type {Array<[string, any]>} */
         const pairs = [
           [title(m.x.col) || 'X', NS.axes.fmtXVal(p.value[0], m.x.type, null, m.x.period)],
-          [title(m.y.col) || 'Y', NS.ddNum3(p.value[1])]
+          [title(m.y.col) || 'Y', vf ? vf(p.value[1]) : NS.ddNum3(p.value[1])]
         ];
         if (lvl) pairs.push([title(m.splitCol) || 'Series', lvl]);
         m.ttFields.forEach((/** @type {string} */ c, /** @type {number} */ i) => {

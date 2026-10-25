@@ -57,6 +57,10 @@
       'stroke="currentColor" stroke-width="1.4">' +
       '<rect x="4" y="5" width="8" height="6"/>' +
       '<path d="M4 8 h8 M8 2 v3 M8 11 v3 M6 2 h4 M6 14 h4"/></svg>',
+    area:
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
+      '<path d="M2 13 L2 9 L6 5 L10 8 L14 3 L14 13 Z" opacity="0.55"/>' +
+      '<path d="M2 9 L6 5 L10 8 L14 3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
     histogram:
       '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
       '<rect x="1.5" y="9" width="3" height="5"/><rect x="4.75" y="4" width="3" height="10"/>' +
@@ -229,7 +233,7 @@
     // Vertical / Horizontal; on the aggregated family it follows
     // `orientation` and is the only helper line, so it is named by its job.
     value_lines: { label: (/** @type {any} */ cfg) =>
-                     (cfg.chart_type === 'scatter' || cfg.chart_type === 'line'
+                     (cfg.chart_type === 'scatter' || NS.isLineType(cfg.chart_type)
                        ? 'Horizontal' : 'Reference lines'),
                    kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
@@ -385,8 +389,15 @@
               ph: 'column, e.g. ANRHI (blank = none)' },
     ref_lo: { label: 'Lower limit', kind: 'column', colType: 'num',
               ph: 'column, e.g. ANRLO (blank = none)' },
-    lo:       { label: 'Lo', kind: 'column', colType: 'num' },
-    hi:       { label: 'Hi', kind: 'column', colType: 'num' },
+    // `ymin` / `ymax`: error bars on a scatter, a band on a line.
+    lo:       { label: 'Interval low', kind: 'column', colType: 'num' },
+    hi:       { label: 'Interval high', kind: 'column', colType: 'num' },
+    // A column whose values set a line's dash (history solid, forecast
+    // dashed).
+    linetype: { label: 'Dash by', kind: 'column', colType: 'cat', kinds: ['group'] },
+    direct_labels: { label: 'Line names', kind: 'segmented',
+                     options: [{ value: 'on', label: 'At line end' },
+                               { value: 'off', label: 'Off' }] },
     line_width_mult: { label: 'Line width', kind: 'slider' },
     dot_size_mult:   { label: 'Dot size',   kind: 'slider' },
     // Chart text (three-tier contract, R side R/title-template.R): null =
@@ -550,7 +561,8 @@
       // on-mark text renderer. `tt_fields` surfaces extra columns on hover:
       // one row per mark (scatter) / per series at the hovered x (line), so
       // each value is unambiguous (unlike an aggregated bar, a group of rows).
-      optionalMap: ['series', 'color', 'facet', 'tt_fields'],
+      optionalMap: ['series', 'color', 'facet', 'tt_fields',
+        { role: 'linetype', types: ['line', 'area'] }],
       mapping: [],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
@@ -573,13 +585,17 @@
         // x_lines/value_lines are offered on line charts too: a normal-range
         // or threshold marker on a trajectory is the same need as on a scatter.
         { role: 'identity_line', types: ['scatter'] },
-        { role: 'x_lines', types: ['scatter', 'line'] },
-        { role: 'value_lines', types: ['scatter', 'line'] },
+        { role: 'x_lines', types: ['scatter', 'line', 'area'] },
+        { role: 'value_lines', types: ['scatter', 'line', 'area'] },
         // Line-connect mode (straight / monotone / step-*): line-only, so it
         // sits with the other line presentation options.
-        { role: 'connect', types: ['line'] },
-        { role: 'lo', types: ['line'] },
-        { role: 'hi', types: ['line'] },
+        { role: 'connect', types: ['line', 'area'] },
+        { role: 'lo', types: ['line', 'scatter'] },
+        { role: 'hi', types: ['line', 'scatter'] },
+        { role: 'direct_labels', types: ['line', 'area'] },
+        { role: 'bar_mode', types: ['area'] },
+        { role: 'format', types: ['scatter', 'line', 'area'] },
+        { role: 'unit', types: ['scatter', 'line', 'area'] },
         'line_width_mult', 'dot_size_mult',
         // Count labels: scatter/line have numeric axes, so only facet counts
         // apply here (the "axis" choice no-ops); shown for faceted charts.

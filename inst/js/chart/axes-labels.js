@@ -408,17 +408,22 @@
    * @param {any[]} series @param {any} valAxis @param {boolean} onX
    * @param {boolean} fraction the axis runs 0..1 while the reader types percent
    * @param {any} valueLines @param {{ text: string, muted: string }} ink
+   * @param {any} [names] a label per line (`y_lines = c(Target = 2)`); "" or
+   *   none prints the value
    */
-  const addValueLines = (series, valAxis, onX, fraction, valueLines, ink) => {
+  const addValueLines = (series, valAxis, onX, fraction, valueLines, ink, names) => {
     const raw = Array.isArray(valueLines) ? valueLines : [];
-    const typed = raw.map(Number).filter(Number.isFinite);
+    const nm = Array.isArray(names) ? names : [];
+    const keep = raw.map((v, i) => i).filter((i) => Number.isFinite(Number(raw[i])));
+    const typed = keep.map((i) => Number(raw[i]));
     const vals = typed.map((v) => (fraction ? v / 100 : v));
     if (!vals.length || !series.length) return;
     series[0].markLine = {
       silent: true, symbol: 'none',
       // onX: a horizontal chart, whose category axis is inverse.
       data: vals.map((v, i) => guideLine(v, onX, 1,
-        fraction ? NS.ddNum(typed[i]) + '%' : undefined, onX, ink))
+        nm[keep[i]] ? String(nm[keep[i]])
+          : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
     };
     // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on a
     // rounded edge would read as the frame, so the edge moves one step out.

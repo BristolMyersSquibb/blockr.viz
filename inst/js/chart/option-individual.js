@@ -26,7 +26,9 @@
   // Config fields the option reads beside the model's.
   const OPTION_FIELDS = ['chart_type', 'drill', 'dot_size_mult', 'line_width_mult', 'connect',
     'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
-    'band_series', 'band_refs', 'box_points'];
+    'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'direct_labels',
+    'value_line_names', 'x_line_names',
+    'format', 'unit', 'bar_mode'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -133,8 +135,11 @@
     const refData = [];
     const refX = Array.isArray(cfg.x_lines) ? cfg.x_lines : [];
     const refY = Array.isArray(cfg.value_lines) ? cfg.value_lines : [];
-    for (const v of refX) refData.push(NS.axes.guideLine(Number(v), true, lm, undefined, false, ink));
-    for (const v of refY) refData.push(NS.axes.guideLine(Number(v), false, lm, undefined, false, ink));
+    // A name in `x_lines` / `y_lines` labels its line.
+    const nmX = Array.isArray(cfg.x_line_names) ? cfg.x_line_names : [];
+    const nmY = Array.isArray(cfg.value_line_names) ? cfg.value_line_names : [];
+    refX.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), true, lm, nmX[i] || undefined, false, ink)));
+    refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, nmY[i] || undefined, false, ink)));
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink)) refData.push(r);
     const idRaw = cfg.identity_line;
     const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
@@ -198,12 +203,14 @@
     /** @type {any} */
     const yAxis = {
       type: m.y.type,
-      name: title(m.y.col),
+      name: NS.unitTitle(title(m.y.col), cfg),
       nameLocation: 'middle',
       nameGap: 46,
       nameRotate: 90,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
+      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
+                   ...(m.y.type === 'value' && NS.valueFormat(cfg, { unit: false })
+                     ? { formatter: NS.valueFormat(cfg, { unit: false }) } : {}) },
       axisTick: { show: false },
       axisLine: isLine ? { show: false } : { lineStyle: { color: ink.strong } },
       splitLine: grid,
@@ -212,6 +219,11 @@
     if (m.y.cats) yAxis.data = m.y.cats;
     if (idDom && m.y.type === 'value') { yAxis.min = idDom[0]; yAxis.max = idDom[1]; }
     if (ext) { yAxis.min = ext.lo; yAxis.max = ext.hi; }
+    // An area is measured from zero.
+    if (cfg.chart_type === 'area' && m.y.type === 'value' && yAxis.min == null) {
+      yAxis.scale = false;
+      yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
+    }
     // The veil's own 0..1 axes, in the same grid (line charts only).
     const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
 
@@ -241,7 +253,8 @@
       tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
       // A hidden legend: its selection model is what the chips toggle.
       legend: { show: false },
-      grid: { left: 66, right: 5, top: 30, bottom: 52 + (xlab ? xlab.bottom : 0) },
+      grid: { left: 66, right: 5 + ((pts && pts.labelPad) || 0), top: 30,
+              bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
       yAxis: isLine ? [yAxis, scrimAxis] : yAxis,
       toolbox: brushable ? brushToolbox() : (zoomable ? zoomToolbox() : undefined),

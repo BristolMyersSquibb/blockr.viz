@@ -308,7 +308,8 @@
           measure, face: ink.face, vf
         })
       : 0;
-    NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink);
+    NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink,
+      cfg.value_line_names);
 
     const fmtRaw = vf || ((/** @type {number} */ n) =>
       Number.isInteger(n) ? n : Math.round(n * 100) / 100);
@@ -529,7 +530,8 @@
       for (const d of delta) if (d && d.label) w = Math.max(w, measure(d.label.formatter));
       labelRight = Math.max(0, Math.ceil(w / 2 - 10));
     }
-    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink);
+    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink,
+      cfg.value_line_names);
     return {
       panelH: 350 + xlab.bottom,
       xFit: { labels: stepLabels, inset: X_INSET, decimate: false, gutter: xlab.bottom,

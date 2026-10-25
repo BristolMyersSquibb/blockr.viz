@@ -185,7 +185,7 @@
           if (this.config.chart_type === 'histogram') return 'Auto, the clicked bin';
           return fam === 'aggregated' ? 'Auto, the clicked group'
             : fam === 'timeline' ? 'Auto, the clicked lane'
-            : this.config.chart_type === 'line' ? 'Auto, the clicked series'
+            : NS.isLineType(this.config.chart_type) ? 'Auto, the clicked series'
             : 'Auto, the selected point';
         },
         title: 'Chart settings',
@@ -318,6 +318,8 @@
         band_min_n: c.band_min_n == null ? 12 : c.band_min_n,
         bins: c.bins == null ? 30 : c.bins,
         format: c.format || 'number',
+        linetype: c.linetype || '',
+        direct_labels: (c.direct_labels === 'on' || c.direct_labels === true) ? 'on' : 'off',
         unit: c.unit ?? '',
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',

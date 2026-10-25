@@ -21,7 +21,8 @@ CHART_AGGREGATED_TYPES <- c("bar", "waterfall", "pie", "treemap",
                             "boxplot", "pointrange")
 CHART_DISTRIBUTION_TYPES <- c("boxplot", "pointrange")
 CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
-                 "boxplot", "pointrange", "scatter", "line", "band", "gantt")
+                 "boxplot", "pointrange", "scatter", "line", "area", "band",
+                 "gantt")
 
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
@@ -213,6 +214,43 @@ chart_roles_public <- function(type, group, value, x, y, orientation, func,
   inferred <- chart_infer_orientation(type, out$x, out$y, func, is_num)
   out["orientation"] <- list(if (identical(inferred, orient)) NULL else orient)
   out
+}
+
+# x_ranges: a named list of c(from, to), as the caller writes it, or the
+# list of {name, from, to} the browser sends back. NULL when empty. Dates
+# travel as ISO strings, numbers as numbers.
+chart_ranges_state <- function(x_ranges) {
+  if (!is.list(x_ranges) || !length(x_ranges)) {
+    return(NULL)
+  }
+  nms <- names(x_ranges) %||% rep("", length(x_ranges))
+  out <- list()
+  for (i in seq_along(x_ranges)) {
+    r <- x_ranges[[i]]
+    if (is.list(r) && !is.null(r$from)) {
+      v <- list(r$from, r$to)
+      nm <- as.character(r$name %||% "")
+    } else {
+      if (length(r) != 2L) next
+      v <- if (inherits(r, c("Date", "POSIXt"))) as.list(format(r)) else as.list(r)
+      nm <- nms[[i]]
+    }
+    if (length(v) != 2L || any(vapply(v, is.null, logical(1L)))) next
+    key <- if (nzchar(nm)) nm else paste0("range", i)
+    out[[key]] <- unlist(v)
+  }
+  if (length(out)) out else NULL
+}
+
+# What the browser reads: [{name, from, to}].
+chart_ranges_json <- function(x_ranges) {
+  if (!length(x_ranges)) {
+    return(NULL)
+  }
+  unname(Map(function(nm, v) {
+    list(name = if (grepl("^range[0-9]+$", nm)) "" else nm,
+         from = v[[1L]], to = v[[2L]])
+  }, names(x_ranges), x_ranges))
 }
 
 # selection (public) <-> filter_type / filters / filter_range / filter_point

@@ -22,6 +22,7 @@
    "band",
    "scatter",
    "*line",
+   "area",
    "gantt"
   ],
   "sections": [
@@ -141,7 +142,8 @@
      {
       "add": [
        "Facet",
-       "Tooltip fields"
+       "Tooltip fields",
+       "Dash by"
       ]
      }
     ]
@@ -191,7 +193,7 @@
      },
      {
       "role": "lo",
-      "label": "Lo",
+      "label": "Interval low",
       "controls": [
        {
         "kind": "select",
@@ -214,7 +216,7 @@
      },
      {
       "role": "hi",
-      "label": "Hi",
+      "label": "Interval high",
       "controls": [
        {
         "kind": "select",
@@ -232,6 +234,43 @@
          "LO",
          "HI"
         ]
+       }
+      ]
+     },
+     {
+      "role": "direct_labels",
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "At line end",
+        "checked": true
+       }
+      ]
+     },
+     {
+      "role": "format",
+      "label": "Numbers",
+      "controls": [
+       {
+        "kind": "select",
+        "value": "1,234.5",
+        "placeholder": null,
+        "options": [
+         "1,234.5",
+         "1.2K",
+         "12.3%"
+        ]
+       }
+      ]
+     },
+     {
+      "role": "unit",
+      "label": "Unit",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. CHF"
        }
       ]
      },

@@ -121,6 +121,8 @@
       "band_min_n": 12,
       "bins": 30,
       "format": "number",
+      "linetype": "",
+      "direct_labels": "off",
       "unit": "",
       "band_id": "",
       "ref_hi": "",

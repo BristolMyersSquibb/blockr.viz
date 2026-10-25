@@ -88,19 +88,27 @@ Unchanged: `func`, `color`, `facet`, `series`, `xend`, `label`, `drill`,
   port in blockx (`shared/chart.ts`, `server/chart.ts`) are updated to the
   new names in the same piece of work.
 
-## New features
+## New features (built)
 
-- `ymin` / `ymax` on a line drawn as a shaded band, and several pairs
-  nesting (95 % outside 80 %) for a forecast fan.
+- `ymin` / `ymax` on a line draw a shaded band, several pairs nesting (95 %
+  outside 80 %) for a forecast fan. Grey for a single line, the line's
+  colour with a colour split. On a scatter they stay error bars.
 - `linetype`: a column whose values set the dash (history solid, forecast
-  dashed).
+  dashed from the last observed point on).
 - `x_ranges`: named shaded ranges on x (`list(Pandemic = c(...))`).
 - `direct_labels`: the series name at the end of each line.
 - `format`, `unit`: number format of the value axis, tooltip and labels, as
   on the tile block.
-- Names in `x_lines` / `y_lines` become the lines' labels.
-- `type = "histogram"` with `bins` (default 30, as in blockr.ggplot), and
-  `type = "area"`.
+- `type = "histogram"` with `bins` (default 30, as in blockr.ggplot): R cuts
+  x at `pretty()` breaks into a `<x>_bin` column, the browser draws a bar
+  with touching bars, a click on a bin filters x to its range.
+- `type = "area"`: a line with its area filled, stacked across a colour
+  split unless `position = "dodge"`.
+- Line rules from `feat/line-rules` (merged): crosshair tooltip, a time axis
+  for dates, no dots on dense lines, hairline grid, straight lines by
+  default.
+
+Not built: names in `x_lines` / `y_lines` as labels.
 
 ## Done means
 

@@ -90,15 +90,19 @@ num_vec_state <- function(x) {
 
   if (is.null(x)) return(NULL)
 
-  x <- unlist(x, use.names = FALSE)
+  # Names label the lines (`y_lines = c(Target = 2)`); a typed list has none.
+  x <- unlist(x)
 
   if (is.character(x)) {
     x <- unlist(strsplit(x, "[,;[:space:]]+"), use.names = FALSE)
     x <- x[nzchar(x)]
   }
 
+  nms <- names(x)
   x <- suppressWarnings(as.numeric(x))
+  names(x) <- nms
   x <- x[!is.na(x)]
+  if (!is.null(names(x)) && !any(nzchar(names(x)))) names(x) <- NULL
 
   if (!length(x)) NULL else x
 }

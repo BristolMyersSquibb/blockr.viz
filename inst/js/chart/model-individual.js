@@ -70,7 +70,7 @@
     const seriesCol = cfg.series || null;
     // The series is the splitter; without one, a series per colour level.
     const splitCol = seriesCol || color;
-    const isLine = ct === 'line';
+    const isLine = NS.isLineType(ct);
     const isBand = ct === 'band';
     /** @type {IndividualModel} */
     const out = {

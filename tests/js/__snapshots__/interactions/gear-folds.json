@@ -11,6 +11,7 @@
    "band",
    "scatter",
    "line",
+   "area",
    "gantt"
   ],
   "sections": [
@@ -276,6 +277,7 @@
    "band",
    "scatter",
    "line",
+   "area",
    "gantt"
   ],
   "sections": [

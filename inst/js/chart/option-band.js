@@ -261,5 +261,5 @@
     return out;
   };
 
-  Object.assign(parts, { band, bandExtent, bandRefLines });
+  Object.assign(parts, { band, bandExtent, bandRefLines, ribbon });
 })();

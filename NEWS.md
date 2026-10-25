@@ -1,5 +1,23 @@
 # blockr.viz 0.3.0
 
+* `type = "histogram"` cuts `x` into about `bins` bins (default 30) at
+  readable breaks and draws them as touching bars, empty bins included. A
+  click on a bin filters `x` to its range.
+* `type = "area"`: a line with its area filled, stacked across a colour
+  split unless `position = "dodge"`, measured from zero.
+* `ymin` / `ymax` on a line draw a shaded band, and several columns draw
+  nested bands, the first the outermost: `ymin = c("lo95", "lo80"), ymax =
+  c("hi95", "hi80")` is a forecast fan. A single line's band is grey. On a
+  scatter they stay error bars. A saved line chart with `lo` / `hi` now
+  draws a band instead of error bars.
+* `linetype` names a column whose values set a line's dash: the first value
+  is solid, the others dashed, from the last point of the solid part on.
+* `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
+  "2009-06-30"))`); `direct_labels = TRUE` writes each line's name at its
+  end.
+* `format` (`"number"`, `"compact"`, `"percent"`) and `unit` print the values
+  as the tile block does: the ticks in the format, the unit once in the axis
+  title, tooltips and value labels with both.
 * Line charts follow the rules from the line chart review. A dense line
   draws no dots; a line whose points are at least 12 px apart draws ringed
   dots. Lines are 2 px. A hairline crosshair finds the date and one tooltip
