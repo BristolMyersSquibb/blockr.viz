@@ -145,10 +145,11 @@
     return Number(v.toPrecision(3)).toLocaleString(undefined, { maximumFractionDigits: 4 });
   };
 
-  // Okabe-Ito, the fallback when the board theme sends no `palette`. Past
-  // its end every level is one grey: recycling would make level 8 read as
-  // level 1. Mirrored by dd_level_palette() in R/theme-palette.R.
-  const BLOCKR_PALETTE = ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'];
+  // blockr.theme's "Blockr" palette (Okabe-Ito without black and yellow), the
+  // fallback when the board theme sends no `palette`. Past its end every level
+  // is one grey: recycling would make level 7 read as level 1. Mirrored by
+  // dd_level_palette() in R/theme-palette.R.
+  const BLOCKR_PALETTE = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00'];
   const PALETTE_OVERFLOW = '#9AA0A6';
   /** @param {string[]} pal @param {number} i */
   const paletteAt = (pal, i) => (i < pal.length ? pal[i] : PALETTE_OVERFLOW);

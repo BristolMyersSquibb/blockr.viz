@@ -44,17 +44,17 @@
     },
     {
      "name": "MILD",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     },
     {
      "name": "MODERATE",
-     "color": "#F0E442",
+     "color": "#009E73",
      "off": false
     },
     {
      "name": "SEVERE",
-     "color": "#009E73",
+     "color": "#CC79A7",
      "off": false
     }
    ]
@@ -84,12 +84,11 @@
       "backgroundColor": "transparent",
       "color": [
        "#0072B2",
-       "#D55E00",
-       "#F0E442",
-       "#009E73",
-       "#56B4E9",
        "#E69F00",
-       "#CC79A7"
+       "#009E73",
+       "#CC79A7",
+       "#56B4E9",
+       "#D55E00"
       ],
       "textStyle": {
        "fontFamily": "\"Open Sans\", system-ui, sans-serif"

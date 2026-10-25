@@ -42,17 +42,17 @@
     },
     {
      "name": "High Dose",
-     "color": "#009E73",
+     "color": "#CC79A7",
      "off": false
     },
     {
      "name": "Low Dose",
-     "color": "#F0E442",
+     "color": "#009E73",
      "off": false
     },
     {
      "name": "Placebo",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     }
    ]
@@ -264,7 +264,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -306,7 +306,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -348,7 +348,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#009E73",
+         "color": "#CC79A7",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -390,7 +390,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -432,7 +432,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -474,7 +474,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#009E73",
+         "color": "#CC79A7",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -516,7 +516,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -558,7 +558,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -600,7 +600,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#009E73",
+         "color": "#CC79A7",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -642,7 +642,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -684,7 +684,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "cursor": "pointer"
         },
         "lineStyle": {
@@ -747,10 +747,10 @@
         "name": "High Dose",
         "data": [],
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#CC79A7"
         },
         "lineStyle": {
-         "color": "#009E73"
+         "color": "#CC79A7"
         },
         "showSymbol": false,
         "silent": true
@@ -760,10 +760,10 @@
         "name": "Low Dose",
         "data": [],
         "itemStyle": {
-         "color": "#F0E442"
+         "color": "#009E73"
         },
         "lineStyle": {
-         "color": "#F0E442"
+         "color": "#009E73"
         },
         "showSymbol": false,
         "silent": true
@@ -773,10 +773,10 @@
         "name": "Placebo",
         "data": [],
         "itemStyle": {
-         "color": "#D55E00"
+         "color": "#E69F00"
         },
         "lineStyle": {
-         "color": "#D55E00"
+         "color": "#E69F00"
         },
         "showSymbol": false,
         "silent": true

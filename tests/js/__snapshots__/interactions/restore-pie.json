@@ -42,7 +42,7 @@
             "value": 20,
             "n": 20,
             "itemStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 1
             }
            },
@@ -51,7 +51,7 @@
             "value": 18,
             "n": 18,
             "itemStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 0.2
             }
            },
@@ -60,7 +60,7 @@
             "value": 2,
             "n": 2,
             "itemStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.2
             }
            }

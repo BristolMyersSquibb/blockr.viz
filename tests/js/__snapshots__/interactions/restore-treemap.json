@@ -44,7 +44,7 @@
             "value": 303.4,
             "n": 10,
             "itemStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 0.3
             }
            },
@@ -53,7 +53,7 @@
             "value": 285.92,
             "n": 9,
             "itemStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 1
             }
            },
@@ -62,7 +62,7 @@
             "value": 283.29,
             "n": 9,
             "itemStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.3
             }
            },
@@ -80,7 +80,7 @@
             "value": 239.68,
             "n": 9,
             "itemStyle": {
-             "color": "#E69F00",
+             "color": "#D55E00",
              "opacity": 0.3
             }
            },
@@ -89,7 +89,7 @@
             "value": 98.07,
             "n": 3,
             "itemStyle": {
-             "color": "#CC79A7",
+             "color": "#9AA0A6",
              "opacity": 0.3
             }
            }

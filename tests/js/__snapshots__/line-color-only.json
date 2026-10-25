@@ -44,7 +44,7 @@
     },
     {
      "name": "F",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     }
    ]
@@ -528,7 +528,7 @@
         "symbol": "circle",
         "symbolSize": 4,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {

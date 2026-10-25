@@ -105,7 +105,7 @@ test('waterfall: a floating delta per step, totals restate the running sum', () 
 test('pie and treemap: a slice per group with a value, the board scale colours it', () => {
   const pie = build({ chart_type: 'pie', scales: { var: 'T', color: { Rash: '#123456' } } }).opt;
   assert.deepStrictEqual(plain(pie.series[0].data.map((d) => [d.name, d.value, d.itemStyle.color])),
-                         [['Rash', 3, '#123456'], ['Nausea', 1, '#D55E00'], ['Fever', 1, '#F0E442']]);
+                         [['Rash', 3, '#123456'], ['Nausea', 1, '#E69F00'], ['Fever', 1, '#009E73']]);
   const tm = build({ chart_type: 'treemap', value: 'V', func: 'sum' }).opt;
   // Nausea sums to -2 and drops out.
   assert.deepStrictEqual(plain(tm.series[0].data.map((d) => d.name)), ['Rash', 'Fever']);
@@ -150,7 +150,7 @@ test('a distribution without a numeric value draws nothing in its panel', () => 
 test('legend chips: colour levels; none for pie, treemap and waterfall', () => {
   const legend = (cfg) => plain(C.option.aggregatedLegend(build(cfg).m, { ...BASE, ...cfg }));
   assert.deepStrictEqual(legend({ color: 'SEV' }), { col: 'SEV', items: [
-    { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#D55E00' }] });
+    { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#E69F00' }] });
   assert.strictEqual(legend({ chart_type: 'pie', color: 'SEV' }), null);
   assert.strictEqual(legend({ chart_type: 'waterfall', color: 'SEV' }), null);
   assert.strictEqual(legend({}), null);

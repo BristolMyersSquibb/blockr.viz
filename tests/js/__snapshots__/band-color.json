@@ -388,17 +388,17 @@
     },
     {
      "name": "High Dose",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     },
     {
      "name": "Low Dose",
-     "color": "#F0E442",
+     "color": "#009E73",
      "off": false
     },
     {
      "name": "Placebo",
-     "color": "#009E73",
+     "color": "#CC79A7",
      "off": false
     }
    ]
@@ -518,7 +518,7 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#D55E00"
+         "color": "#E69F00"
         },
         "__bandItem": [
          0,
@@ -591,7 +591,7 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#D55E00"
+         "color": "#E69F00"
         },
         "lineStyle": {
          "color": "#ffffff",
@@ -659,11 +659,11 @@
         "z": 7,
         "triggerLineEvent": true,
         "itemStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#D55E00",
+         "color": "#E69F00",
          "width": 2.2
         },
         "emphasis": {
@@ -676,7 +676,7 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#F0E442"
+         "color": "#009E73"
         },
         "__bandItem": [
          0,
@@ -749,7 +749,7 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#F0E442"
+         "color": "#009E73"
         },
         "lineStyle": {
          "color": "#ffffff",
@@ -817,11 +817,11 @@
         "z": 7,
         "triggerLineEvent": true,
         "itemStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#F0E442",
+         "color": "#009E73",
          "width": 2.2
         },
         "emphasis": {
@@ -834,7 +834,7 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#CC79A7"
         },
         "__bandItem": [
          0,
@@ -907,7 +907,7 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#CC79A7"
         },
         "lineStyle": {
          "color": "#ffffff",
@@ -975,11 +975,11 @@
         "z": 7,
         "triggerLineEvent": true,
         "itemStyle": {
-         "color": "#009E73",
+         "color": "#CC79A7",
          "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#009E73",
+         "color": "#CC79A7",
          "width": 2.2
         },
         "emphasis": {
@@ -990,26 +990,26 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
-       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>"
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.9</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.3</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span>High Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">High Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span>Low Dose</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">28.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Low Dose</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">0</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">26.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">7.9091</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">15.8182</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.1</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>",
+       "<div class=\"dd-tt-head\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span>Placebo</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Relative Day</span><span class=\"dd-tt-value\">23.7273</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Planned Arm</span><span class=\"dd-tt-value\">Placebo</span></div>"
       ]
      }
     }

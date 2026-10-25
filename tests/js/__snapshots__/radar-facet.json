@@ -41,17 +41,17 @@
     },
     {
      "name": "MILD",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     },
     {
      "name": "MODERATE",
-     "color": "#F0E442",
+     "color": "#009E73",
      "off": false
     },
     {
      "name": "SEVERE",
-     "color": "#009E73",
+     "color": "#CC79A7",
      "off": false
     }
    ]
@@ -197,14 +197,14 @@
            2
           ],
           "itemStyle": {
-           "color": "#D55E00"
+           "color": "#E69F00"
           },
           "lineStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "width": 2
           },
           "areaStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 0.15
           }
          },
@@ -218,14 +218,14 @@
            1
           ],
           "itemStyle": {
-           "color": "#F0E442"
+           "color": "#009E73"
           },
           "lineStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "width": 2
           },
           "areaStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "opacity": 0.15
           }
          },
@@ -239,14 +239,14 @@
            2
           ],
           "itemStyle": {
-           "color": "#009E73"
+           "color": "#CC79A7"
           },
           "lineStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "width": 2
           },
           "areaStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "opacity": 0.15
           }
          }
@@ -308,16 +308,16 @@
            2
           ],
           "itemStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 0.15
           }
          },
@@ -331,16 +331,16 @@
            1
           ],
           "itemStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "opacity": 0.15
           }
          },
@@ -354,16 +354,16 @@
            2
           ],
           "itemStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "opacity": 0.15
           }
          }
@@ -495,40 +495,19 @@
            2
           ],
           "itemStyle": {
-           "color": "#D55E00"
+           "color": "#E69F00"
           },
           "lineStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "width": 2
           },
           "areaStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 0.15
           }
          },
          {
           "name": "MODERATE",
-          "value": [
-           2,
-           2,
-           2,
-           2,
-           2
-          ],
-          "itemStyle": {
-           "color": "#F0E442"
-          },
-          "lineStyle": {
-           "color": "#F0E442",
-           "width": 2
-          },
-          "areaStyle": {
-           "color": "#F0E442",
-           "opacity": 0.15
-          }
-         },
-         {
-          "name": "SEVERE",
           "value": [
            2,
            2,
@@ -545,6 +524,27 @@
           },
           "areaStyle": {
            "color": "#009E73",
+           "opacity": 0.15
+          }
+         },
+         {
+          "name": "SEVERE",
+          "value": [
+           2,
+           2,
+           2,
+           2,
+           2
+          ],
+          "itemStyle": {
+           "color": "#CC79A7"
+          },
+          "lineStyle": {
+           "color": "#CC79A7",
+           "width": 2
+          },
+          "areaStyle": {
+           "color": "#CC79A7",
            "opacity": 0.15
           }
          }
@@ -606,16 +606,16 @@
            2
           ],
           "itemStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#D55E00",
+           "color": "#E69F00",
            "opacity": 0.15
           }
          },
@@ -629,16 +629,16 @@
            2
           ],
           "itemStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#F0E442",
+           "color": "#009E73",
            "opacity": 0.15
           }
          },
@@ -652,16 +652,16 @@
            2
           ],
           "itemStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "opacity": 1
           },
           "lineStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "width": 2,
            "opacity": 1
           },
           "areaStyle": {
-           "color": "#009E73",
+           "color": "#CC79A7",
            "opacity": 0.15
           }
          }

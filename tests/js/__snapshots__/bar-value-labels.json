@@ -40,17 +40,17 @@
     },
     {
      "name": "MILD",
-     "color": "#D55E00",
+     "color": "#E69F00",
      "off": false
     },
     {
      "name": "MODERATE",
-     "color": "#F0E442",
+     "color": "#009E73",
      "off": false
     },
     {
      "name": "SEVERE",
-     "color": "#009E73",
+     "color": "#CC79A7",
      "off": false
     }
    ]
@@ -248,7 +248,7 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#D55E00"
+         "color": "#E69F00"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
@@ -324,7 +324,7 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#F0E442"
+         "color": "#009E73"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
@@ -386,7 +386,7 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#CC79A7"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
@@ -410,22 +410,22 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#D55E00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#F0E442\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>"
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>",
+       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row is-hit\"><span class=\"dd-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"dd-tt-label\">AESEV SEVERE</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#E69F00\"></span><span class=\"dd-tt-label\">AESEV MILD</span><span class=\"dd-tt-value\">10</span></div>",
+       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#0072B2\"></span><span class=\"dd-tt-label\">AESEV </span><span class=\"dd-tt-value\">1</span></div><div class=\"dd-tt-row is-dim\"><span class=\"dd-tt-sw\" style=\"background:#009E73\"></span><span class=\"dd-tt-label\">AESEV MODERATE</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-sep\"></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">9</span></div>"
       ],
       "seriesLabels": {
        "series0": [

@@ -59,12 +59,11 @@
       "backgroundColor": "transparent",
       "color": [
        "#0072B2",
-       "#D55E00",
-       "#F0E442",
-       "#009E73",
-       "#56B4E9",
        "#E69F00",
-       "#CC79A7"
+       "#009E73",
+       "#CC79A7",
+       "#56B4E9",
+       "#D55E00"
       ],
       "textStyle": {
        "fontFamily": "\"Open Sans\", system-ui, sans-serif"

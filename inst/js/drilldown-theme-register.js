@@ -8,7 +8,7 @@
   if (typeof window === 'undefined' || !window.echarts) return;
   if (typeof window.echarts.registerTheme !== 'function') return;
   window.echarts.registerTheme('blockr', {
-    color: ['#0072B2', '#D55E00', '#F0E442', '#009E73', '#56B4E9', '#E69F00', '#CC79A7'],
+    color: ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00'],
     backgroundColor: '#ffffff',
     textStyle: { color: '#333333', fontFamily: 'Open Sans' }
   });

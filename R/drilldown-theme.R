@@ -22,7 +22,7 @@ echart_theme_blockr_viz <- function() {
   echarts4r::e_theme_register(
     name = "blockr",
     theme = '{
-      "color": ["#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00", "#CC79A7"],
+      "color": ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"],
       "backgroundColor": "#ffffff",
       "textStyle": {"color": "#333333", "fontFamily": "Open Sans"}
     }'

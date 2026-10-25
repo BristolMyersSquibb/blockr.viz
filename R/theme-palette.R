@@ -16,8 +16,11 @@
 # colours. Now only the FALLBACK: an applied theme's `categorical` role wins,
 # and the resolved vector is sent to JS with the chart config so both sides
 # stay in step without hand-syncing.
+# The same six colours as blockr.theme's "Blockr" palette (Okabe-Ito without
+# black and yellow; the yellow is 1.3:1 on white), so a chart looks the same
+# with and without blockr.theme installed.
 DD_PALETTE_FALLBACK <- c(
-  "#0072B2", "#D55E00", "#F0E442", "#009E73", "#56B4E9", "#E69F00", "#CC79A7"
+  "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"
 )
 
 # Mirrors PALETTE_OVERFLOW / paletteAt() in inst/js/chart/common.js. Static

@@ -73,16 +73,16 @@
              2
             ],
             "itemStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 0.15
             },
             "lineStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "width": 2,
              "opacity": 0.15
             },
             "areaStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 0.04
             }
            },
@@ -96,16 +96,16 @@
              1
             ],
             "itemStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 0.15
             },
             "lineStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "width": 2,
              "opacity": 0.15
             },
             "areaStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 0.04
             }
            },
@@ -119,16 +119,16 @@
              2
             ],
             "itemStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.15
             },
             "lineStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "width": 2,
              "opacity": 0.15
             },
             "areaStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.04
             }
            }
@@ -181,16 +181,16 @@
              2
             ],
             "itemStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 1
             },
             "lineStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "width": 2,
              "opacity": 1
             },
             "areaStyle": {
-             "color": "#D55E00",
+             "color": "#E69F00",
              "opacity": 0.15
             }
            },
@@ -204,16 +204,16 @@
              2
             ],
             "itemStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 0.15
             },
             "lineStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "width": 2,
              "opacity": 0.15
             },
             "areaStyle": {
-             "color": "#F0E442",
+             "color": "#009E73",
              "opacity": 0.04
             }
            },
@@ -227,16 +227,16 @@
              2
             ],
             "itemStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.15
             },
             "lineStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "width": 2,
              "opacity": 0.15
             },
             "areaStyle": {
-             "color": "#009E73",
+             "color": "#CC79A7",
              "opacity": 0.04
             }
            }
