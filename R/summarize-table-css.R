@@ -869,6 +869,11 @@ summarize_table_css <- function() {
 .blockr-summarize-table tr.is-on {
   background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
 }
+/* A cell click claims the row and the cell column: that cell, one step
+   stronger than its row. */
+.blockr-summarize-table tr.is-on td.is-on-cell {
+  background: color-mix(in srgb, var(--blockr-summarize-fill) 22%, transparent);
+}
 /* Transient drill (a ctrl_target is set): the row is lit, held, released --
    there is nothing to un-set. A LAYER whose opacity fades, not the row's own
    background: the bars behind it are the data, and a background-image fade
