@@ -831,6 +831,28 @@ dd_group_filter_call <- function(cols, vals) {
   Reduce(function(a, b) bquote(.(a) & .(b)), conds)
 }
 
+#' A nested records table's drill as a filter on the input rows.
+#'
+#' table_nest() puts the k-th `by` column's value in `.group<k>_level`, so a
+#' header click on `.group1_level = "Placebo"` filters `by[1] == "Placebo"`.
+#' The "(Missing)" header (`missing = "level"`) claims the rows with no value.
+#' @param by The `by` columns, outer first.
+#' @param gc,gv The stored claim's columns and values.
+#' @noRd
+table_nest_drill_expr <- function(by, gc, gv) {
+  by <- as.character(unlist(by))
+  gc <- as.character(unlist(gc))
+  gv <- as.character(unlist(gv))
+  if (!length(gc) || length(gc) != length(gv)) {
+    return(summarize_drill_expr(list()))
+  }
+  k <- suppressWarnings(
+    as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc))
+  )
+  ok <- !is.na(k) & k <= length(by)
+  summarize_drill_expr(stats::setNames(as.list(gv[ok]), by[k[ok]]))
+}
+
 #' Say what a drill claim claims, in the source data's own words.
 #'
 #' Structured drill keys are identity columns, so the source terms are in the
@@ -843,9 +865,12 @@ dd_group_filter_call <- function(cols, vals) {
 #' Shared by the latched footer ("Filtered: ...") and the transient receipt
 #' ("Drilled down to ..."), so one click cannot be described two ways.
 #' @param gc,gv Aligned claim columns and values.
+#' @param group_names The columns the `.group<k>` levels stand for, outer
+#'   first (dt_group_names()). With them a header click reads "ARM = Placebo"
+#'   rather than "Placebo".
 #' @return A character vector of clause labels, outermost first.
 #' @noRd
-dt_claim_label <- function(gc, gv) {
+dt_claim_label <- function(gc, gv, group_names = character()) {
 
   gc <- as.character(unlist(gc))
   gv <- as.character(unlist(gv))
@@ -861,10 +886,29 @@ dt_claim_label <- function(gc, gv) {
   if (!is.na(vi) && !is.na(li)) {
     c(gv[glv], paste0(gv[vi], " = ", gv[li]))
   } else if (any(glv)) {
-    gv[glv]
+    k <- as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc[glv]))
+    nm <- group_names[k]
+    ifelse(!is.na(nm) & nzchar(nm), paste0(nm, " = ", gv[glv]), gv[glv])
   } else {
     paste0(gc, " = ", gv)
   }
+}
+
+#' The column each `.group<k>` level of an annotated frame stands for, read
+#' off the `.group<k>` column (table_nest() and summary_table() write the
+#' column name there). Empty where the frame has none.
+#' @noRd
+dt_group_names <- function(data) {
+  if (!is.data.frame(data) || !nrow(data)) return(character())
+  out <- character()
+  k <- 1L
+  while (paste0(".group", k) %in% names(data)) {
+    v <- as.character(data[[paste0(".group", k)]])
+    v <- v[!is.na(v) & nzchar(v)]
+    out[[k]] <- if (length(v)) v[[1L]] else ""
+    k <- k + 1L
+  }
+  out
 }
 
 #' Serialize the block's active drill-filter state for the `data-dt-active`
@@ -2117,14 +2161,12 @@ new_table_block <- function(layout = "records",
                 built <- table_variables_call(var$config())
                 if (!is.null(built)) ex <- table_sub_data(ex, built)
               } else if (length(shared$by())) {
-                built <- as.call(c(
-                  list(quote(blockr.viz::table_nest), quote(data)),
-                  list(by = shared$by(), rowname = rs$rowname()),
-                  if (identical(shared$missing(), "level")) {
-                    list(missing = "level")
-                  }
-                ))
-                ex <- table_sub_data(ex, built)
+                # Records under headers: the output is the input rows, as
+                # without `by`. A header click claims `.group<k>_level`,
+                # which is the k-th `by` column.
+                ex <- table_nest_drill_expr(shared$by(),
+                                            rs$filter_group_cols(),
+                                            rs$filter_group_vals())
               }
               ex
             }),

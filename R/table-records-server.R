@@ -510,7 +510,9 @@ table_records_server <- function(id, data,
       }
       if (!grouped_on && !single_on) return(NULL)
       text <- if (grouped_on) {
-        paste0("Filtered: ", paste0(dt_claim_label(gc, gv),
+        gn <- dt_group_names(tryCatch(shiny::isolate(ann_data()),
+                                      error = function(e) NULL))
+        paste0("Filtered: ", paste0(dt_claim_label(gc, gv, gn),
                                     collapse = " \u203a "))
       } else {
         paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))

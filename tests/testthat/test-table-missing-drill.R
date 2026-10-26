@@ -58,8 +58,10 @@ test_that("records layout: the (Missing) header of a nested table claims", {
     drill = "auto",
     selection = list(group_cols = ".group1_level", group_vals = "(Missing)")
   )
+  # The output is the input rows, as without `by`.
   res <- block_result(blk, d)
-  expect_identical(res$.label, c("s3", "s5"))
+  expect_identical(names(res), names(d))
+  expect_identical(res$id, c("s3", "s5"))
 })
 
 test_that("variables layout: (Missing) resolves to the NA source rows", {
@@ -144,4 +146,21 @@ test_that("a missing bar or (Missing) row sent to a filter block claims NA", {
   expect_identical(ids, "s2")
   # Ordinary values claim as before.
   expect_identical(dd_ctrl_claims(d, "", list(arm = "A"))[[1L]]$values, "A")
+})
+
+test_that("records layout: a nested header claim filters the input rows", {
+  d <- missing_df()
+  ex <- table_nest_drill_expr("arm", ".group1_level", "A")
+  expect_identical(eval(ex, list(data = d))$id, c("s1", "s2"))
+  ex <- table_nest_drill_expr(c("arm", "sex"),
+                              c(".group1_level", ".group2_level"),
+                              c("A", "(Missing)"))
+  expect_identical(eval(ex, list(data = d))$id, "s2")
+  expect_identical(eval(table_nest_drill_expr("arm", NULL, NULL),
+                        list(data = d)), d)
+  # The footer names the column the header stands for.
+  nest <- table_nest(d, by = "arm", rowname = "id")
+  expect_identical(dt_claim_label(".group1_level", "A", dt_group_names(nest)),
+                   "arm = A")
+  expect_identical(dt_claim_label(".group1_level", "A"), "A")
 })
