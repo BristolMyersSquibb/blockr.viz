@@ -55,6 +55,37 @@
 (() => {
   'use strict';
 
+  // The tray's groups (design system, "The gear tray"): every section of
+  // every block falls into one of these, in this order, so a user meets the
+  // same five in a table and in a chart. Blockr.trayNav (blockr.ui) draws
+  // them; without it the tray stays one long column.
+  const TRAY_GROUPS = [
+    ['data', 'Data'], ['sort', 'Sort'], ['format', 'Format'],
+    ['titles', 'Titles'], ['interact', 'Interaction']
+  ];
+  // Presentation, split into the subsections the grouped tray shows. A role
+  // missing here lands in Look.
+  /** @type {{ key: string, group: string, title: string, ord: number, roles: string[] }[]} */
+  const PRES_SUBSECTIONS = [
+    { key: 'order', group: 'sort', title: 'Order', ord: 0, roles: ['sort_by', 'sort_dir'] },
+    { key: 'shown', group: 'sort', title: 'Rows shown', ord: 10, roles: ['top_n', 'missing'] },
+    { key: 'look', group: 'format', title: 'Look', ord: 0,
+      roles: ['look', 'collapsible', 'orientation', 'bar_mode', 'facet_layout'] },
+    { key: 'numbers', group: 'format', title: 'Numbers', ord: 10, roles: ['format', 'unit', 'pct_of'] },
+    { key: 'bars', group: 'format', title: 'Bars', ord: 20,
+      roles: ['value_labels', 'axis', 'bar_width', 'baseline'] },
+    { key: 'marks', group: 'format', title: 'Marks', ord: 30,
+      roles: ['summary', 'whiskers', 'connect_centers', 'box_points', 'smoother',
+              'band_window', 'band_size', 'band_min_n', 'band_id', 'connect',
+              'lo', 'hi', 'line_width_mult', 'dot_size_mult'] },
+    { key: 'lines', group: 'format', title: 'Reference lines', ord: 40,
+      roles: ['value_lines', 'x_lines', 'identity_line', 'ref_hi', 'ref_lo'] },
+    { key: 'counts', group: 'format', title: 'Counts', ord: 50, roles: ['count_on', 'count_col'] },
+    { key: 'facets', group: 'format', title: 'Facets', ord: 60, roles: ['facet_scales', 'facet_cols'] },
+    { key: 'tools', group: 'interact', title: 'Reader tools', ord: 0,
+      roles: ['search', 'sortable', 'download'] }
+  ];
+
   class DrilldownConfig {
     /** @param {VizDrilldownHost} host */
     constructor(host) {
@@ -75,6 +106,14 @@
       this._atLayer = null;
       /** @type {((e: Event) => void) | null} */
       this._atScrollSync = null;
+      // The grouped tray: whether this render groups its sections, the
+      // group the next section joins and its place there, and the group the
+      // user last opened (kept for the session, like the open folds).
+      this._grouped = false;
+      this._grp = 'data';
+      this._ord = 0;
+      /** @type {string | null} */
+      this._group = null;
     }
 
     // Rebuild the popover from the host's CURRENT config/columns, dropping
@@ -414,6 +453,10 @@
       }
 
       pop.innerHTML = '';
+      this._grouped = spec.groups !== false && typeof Blockr !== 'undefined' &&
+        typeof Blockr.trayNav === 'function';
+      this._grp = 'data';
+      this._ord = 0;
 
       // a11y: the gear tray is a configuration dialog. The design system
       // gives the tray no visible heading ("The gear tray"), so the host's
@@ -494,6 +537,7 @@
       // { value, options: [{ value, label }], onPick(value), fields? }.
       // `fields` are roles the switch gates (the groups layout's `by`): they
       // follow it in the same section, each on a row of its own.
+      this._ord = 0;
       if (spec.layoutSwitch) {
         const ls = spec.layoutSwitch;
         const sec = this._sectionEl('Rows are');
@@ -522,6 +566,7 @@
       // column list): the engine provides the section chrome, the host
       // renders the body. Rendered ABOVE Mapping — the summaries ARE the
       // block's substance; grouping follows them.
+      this._ord = 10;
       for (const cs of (spec.customSections || [])) {
         const sec = this._sectionEl(cs.title);
         // The host owns the body's layout, so it takes the whole row.
@@ -551,6 +596,7 @@
       // extras (chart: value + func) sit here unless the host splits them
       // into a trailing aggTitle section, or owns them in the Aggregation
       // checkbox section (aggregatable hosts — the group lives there).
+      this._ord = 20;
       const mapNeeded = spec.requiredMap.length || shownOpt.length ||
         remaining.length || (!spec.aggregatable && mapExtra.length);
       if (mapNeeded) {
@@ -582,7 +628,7 @@
       // order (Aggregation → Drill-down → Coloring → Row color), so every
       // block's gear reads the same top-to-bottom: what it shows, how it
       // looks, what it can do.
-      this._renderSection('Presentation', spec.presentation);
+      this._renderPresentation(spec.presentation);
 
       // COLOR (before the optional sections, so every tray ends with
       // Titles, the folds, then the prepare script) — a PLAIN section (deliberately NOT a checkbox capability:
@@ -594,6 +640,8 @@
       //   shadings — true renders the repeatable VALUE-encoding rules
       //     ("Shade cells [mode] on [cols]") via shadingsList()/
       //     onShadingsChange() (table only; a tile has no cell matrix).
+      this._grp = 'format';
+      this._ord = 5;
       if (spec.colorSection) {
         const sec = this._sectionEl('Color');
         this._renderRole(sec, spec.colorSection.colorKey);
@@ -605,6 +653,8 @@
       // Titles — chart/table text (title, subtitle, caption). Its own titled
       // section so the free-text rows don't read as layout options; hosts
       // opt in via spec.titles.
+      this._grp = 'titles';
+      this._ord = 0;
       if (spec.titles && spec.titles.length) {
         this._renderTitles(spec.titles);
       }
@@ -616,6 +666,8 @@
       // summaries reduce the whole frame to a single totals row (grand totals);
       // with a group, one row per group level. The group picker (mapExtra) and
       // the repeatable summaries list both render inside this section.
+      this._grp = 'data';
+      this._ord = 25;
       if (spec.aggregatable) {
         const hasMetrics = !!(cfg.summaries && cfg.summaries.length);
         // spec.aggSeedsFromGroup === false (the tile): the group is a MAPPING
@@ -659,6 +711,8 @@
       // the filter-column picker; unchecking clears it. The external-control
       // send (spec.ctrlSection) nests INSIDE the open section: it rides on the
       // drill's clicks, so without drill there is nothing to send.
+      this._grp = 'interact';
+      this._ord = 10;
       if (spec.drillToggle) {
         this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle,
           spec.drillDefault,
@@ -673,9 +727,13 @@
       // The external-control send nests inside here too (see above).
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
+      this._grp = 'data';
+      this._ord = 90;
       this._renderScriptSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
+
+      if (this._grouped) this._groupSections(pop);
 
       // Rebuild done, content height is back — restore the scroll position
       // captured before the wipe (see above).
@@ -832,7 +890,7 @@
           onToggle: (on) => { this._setSecOpen('titles', on); this._rerender(); }
         }
       });
-      if (!open) return;
+      if (!open && !this._grouped) return;
       sec.classList.add('dd-section--titles');
       for (const key of keys) this._renderTitleRow(sec, key);
     }
@@ -1334,8 +1392,14 @@
      *   when checked.
      */
     _sectionEl(titleText, opts = {}) {
+      // In the grouped tray a group is a page of its own, so nothing in it
+      // folds: a fold's section is drawn open, its title plain.
+      if (this._grouped && opts.fold) opts = Object.assign({}, opts, { fold: undefined });
       const sec = document.createElement('div');
       sec.className = 'dd-section';
+      sec.dataset.ddGroup = this._grp;
+      sec.dataset.ddOrder = String(this._ord);
+      sec.dataset.ddTitle = titleText || '';
       const h = document.createElement('div');
       h.className = 'dd-section-title';
       if (opts.toggle) {
@@ -1453,7 +1517,7 @@
           onToggle: (o) => { this._setSecOpen(foldKey, o); this._rerender(); }
         }
       });
-      return open ? sec : null;
+      return (open || this._grouped) ? sec : null;
     }
 
     // The checkbox that switches an optional section's feature on: the first
@@ -1587,6 +1651,70 @@
         const required = this.h.entryRequired ? this.h.entryRequired(e.role) : false;
         this._renderRole(container, e.role, { required });
       }
+    }
+
+    // Presentation: one section in the plain tray; in the grouped tray its
+    // roles split into the subsections of PRES_SUBSECTIONS, each joining its
+    // group (Sort, Format or Interaction).
+    /** @param {any[]} entries */
+    _renderPresentation(entries) {
+      if (!this._grouped) { this._renderSection('Presentation', entries); return; }
+      const list = this._filterEntries(entries || []);
+      const look = PRES_SUBSECTIONS.find(sub => sub.key === 'look');
+      /** @type {Map<any, any[]>} */
+      const buckets = new Map();
+      for (const e of list) {
+        const sub = PRES_SUBSECTIONS.find(x => x.roles.includes(e.role)) || look;
+        if (!buckets.has(sub)) buckets.set(sub, []);
+        /** @type {any[]} */ (buckets.get(sub)).push(e);
+      }
+      for (const sub of PRES_SUBSECTIONS) {
+        const items = buckets.get(sub);
+        if (!items) continue;
+        this._grp = sub.group;
+        this._ord = sub.ord;
+        this._renderEntries(this._sectionEl(sub.title), items);
+      }
+    }
+
+    // Hand the rendered sections to Blockr.trayNav, sorted into the five
+    // groups. Anything drawn straight into the tray (the chart's type tiles,
+    // the finished-table badge) becomes an untitled section at the top of
+    // Data first.
+    /** @param {HTMLElement} pop */
+    _groupSections(pop) {
+      const trayNav = Blockr.trayNav;
+      if (!trayNav) return;
+      let i = 0;
+      for (const ch of Array.from(pop.children)) {
+        if (!(ch instanceof HTMLElement) || ch.classList.contains('dd-section')) continue;
+        const s = document.createElement('div');
+        s.className = 'dd-section dd-section--custom';
+        s.dataset.ddGroup = 'data';
+        s.dataset.ddOrder = String(-10 + i++);
+        s.dataset.ddTitle = ch.classList.contains('dd-popover-types') ? 'Chart type' : '';
+        pop.insertBefore(s, ch);
+        s.appendChild(ch);
+      }
+      const secs = /** @type {HTMLElement[]} */ (Array.from(pop.children))
+        .filter(el => el.classList.contains('dd-section'));
+      const groups = TRAY_GROUPS.map(([key, title]) => ({
+        key, title,
+        sections: secs.map((el, idx) => ({ el, idx }))
+          .filter(o => o.el.dataset.ddGroup === key)
+          .sort((a, b) => (Number(a.el.dataset.ddOrder) - Number(b.el.dataset.ddOrder)) || (a.idx - b.idx))
+          .map(o => ({
+            el: o.el,
+            title: o.el.dataset.ddTitle || '',
+            titleEl: /** @type {HTMLElement | null} */ (o.el.querySelector(':scope > .dd-section-title'))
+          }))
+      }));
+      const nav = trayNav(groups, {
+        current: this._group || undefined,
+        onPick: (k) => { this._group = k; }
+      });
+      pop.appendChild(nav.el);
+      this._group = nav.current();
     }
 
     /** @param {string} titleText @param {any[]} entries */

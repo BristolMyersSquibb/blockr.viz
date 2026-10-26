@@ -233,6 +233,16 @@ interface BlockrNamespace {
     gear: HTMLButtonElement,
     opts?: { label?: string }
   ): { set(open: boolean): void; toggle(): void; isOpen(): boolean };
+  /** Groups for a long gear tray (blockr.ui's blockr-ui.js); absent on an
+      older blockr.ui, where the tray stays one column. */
+  trayNav?(
+    groups: {
+      key: string;
+      title: string;
+      sections: { el: HTMLElement; title: string; titleEl?: HTMLElement | null }[];
+    }[],
+    opts?: { current?: string; onPick?: (key: string) => void; label?: string }
+  ): { el: HTMLDivElement; show(key: string): void; current(): string };
   /** Shared aggregation vocabulary (drilldown-agg.js). */
   DrilldownAgg?: VizDrilldownAgg;
   /** Design-system checkbox factory (blockr.ui's blockr-ui.js). */

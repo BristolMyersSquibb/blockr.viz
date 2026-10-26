@@ -441,11 +441,19 @@ test('the groups gear is Rows are with Group by, then Columns, then the rest', a
   const t = open('three');
   const band = openGear(t);
   const titles = titlesOf(band);
-  assert.deepEqual(titles.slice(0, 3), ['Rows are', 'Columns', 'Presentation']);
-  // The folds print their state after the title ("Titles None").
-  ['Titles', 'Drill-down', 'Prepare script'].forEach((w, k) => {
-    assert.ok(titles[3 + k].startsWith(w), titles[3 + k]);
-  });
+  // Five groups; Data opens first, with the layout switch, the column list
+  // and the prepare script. Presentation is split into Sort, Format and
+  // Interaction's subsections.
+  const tabs = Array.from(band.querySelectorAll('.blockr-tray-nav__tab')).map((e) => e.textContent);
+  assert.deepEqual(tabs, ['Data', 'Sort', 'Format', 'Titles', 'Interaction']);
+  const inGroup = (g) => Array.from(band.querySelectorAll('.dd-section'))
+    .filter((e) => e.dataset.trayGroup === g).map((e) => e.dataset.ddTitle);
+  assert.deepEqual(inGroup('data'), ['Rows are', 'Columns', 'Prepare script']);
+  assert.deepEqual(inGroup('sort'), ['Order', 'Rows shown']);
+  assert.deepEqual(inGroup('format'), ['Look', 'Numbers', 'Bars']);
+  assert.deepEqual(inGroup('titles'), ['Titles']);
+  assert.deepEqual(inGroup('interact'), ['Reader tools', 'Drill-down']);
+  assert.equal(titles.includes('Presentation'), false, 'no Presentation section');
   assert.equal(titles.includes('Mapping'), false, 'no Mapping section');
   const layout = band.querySelector('.dd-section--layout');
   assert.ok(layout.querySelector('.dd-role-by'), 'Group by sits under the switch');
