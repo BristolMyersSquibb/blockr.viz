@@ -152,12 +152,13 @@
    * `legend: "marks"` on a stacked or 100% bar: each series' name at the middle
    * of its segment, beside the last bar (vertical) or above the first bar
    * (horizontal). One label-only series per segment, so a bar's own labels
-   * (values, totals) keep their place. The names of segments that would
-   * collide are pushed apart. Appends to `series`; returns the px a vertical
+   * (values, totals) keep their place. Names of thin segments are spread a
+   * line apart, in segment order. Appends to `series`; returns the px a vertical
    * grid needs on its right for the longest name.
    * @param {any[]} series the bar series, one per level
    * @param {{ vertical: boolean, groups: string[], bandPx: number, barPx: number,
-   *           measure: (s: string) => number, ink: any }} o
+   *           valuePx: number, measure: (s: string) => number, ink: any }} o
+   *   `valuePx`: the value axis's length in px, to keep names a line apart
    * @returns {number}
    */
   const stackNames = (series, o) => {
@@ -170,7 +171,17 @@
     let gi = o.vertical ? n - 1 : 0;
     while (gi >= 0 && gi < n && !filled(gi)) gi += o.vertical ? -1 : 1;
     if (gi < 0 || gi >= n) return 0;
-    let pos = 0, neg = 0, widest = 0;
+    // The value axis's reach, as ECharts scales it from the tallest stack.
+    let top = 0;
+    for (let g = 0; g < n; g++) {
+      let s = 0;
+      for (const sr of series) { const v = Number(valOf(sr.data[g])); if (Number.isFinite(v) && v > 0) s += v; }
+      top = Math.max(top, s);
+    }
+    const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
+    /** @type {Array<{ si: number, name: string, at: number, w: number }>} */
+    const items = [];
+    let pos = 0, neg = 0;
     series.forEach((s, si) => {
       const v = Number(valOf(s.data[gi]));
       if (valOf(s.data[gi]) == null || !Number.isFinite(v) || v === 0) return;
@@ -179,15 +190,41 @@
       const name = String(s.name);
       // A missing level has no name to write.
       if (!name) return;
-      widest = Math.max(widest, o.measure(name));
-      const mark = o.vertical
-        ? NS.nameMark('__legend_' + si, name, [o.groups[gi], mid], 'right', o.ink,
-                      { distance: o.barPx / 2 + 6 })
-        : NS.nameMark('__legend_' + si, name, [mid, o.groups[gi]], 'top', o.ink,
-                      { distance: o.barPx / 2 + 3 });
-      mark.labelLayout = { moveOverlap: o.vertical ? 'shiftY' : 'shiftX' };
-      series.push(mark);
+      items.push({ si, name, at: mid, w: o.measure(name) });
     });
+    // Thin segments put their names closer than a line: spread them, top
+    // down (or left to right lying down), each at least a line (a name's
+    // width) from the next, and the whole run lifted (or moved left) where it
+    // would leave the axis. The order stays the order of the segments.
+    if (perPx) {
+      const fs = (o.ink && o.ink.fontSize) || 12;
+      if (o.vertical) {
+        items.sort((x, y) => y.at - x.at);
+        const gap = (fs + 3) * perPx;
+        for (let k = 1; k < items.length; k++) items[k].at = Math.min(items[k].at, items[k - 1].at - gap);
+        const low = items.length ? items[items.length - 1].at : 0;
+        if (low < gap / 2) for (const it of items) it.at += gap / 2 - low;
+      } else {
+        items.sort((x, y) => x.at - y.at);
+        for (let k = 1; k < items.length; k++) {
+          const gap = ((items[k - 1].w + items[k].w) / 2 + 8) * perPx;
+          items[k].at = Math.max(items[k].at, items[k - 1].at + gap);
+        }
+        const high = items.length ? items[items.length - 1].at + items[items.length - 1].w / 2 * perPx : 0;
+        if (high > top) for (const it of items) it.at -= high - top;
+      }
+    }
+    let widest = 0;
+    // Back in series order: one label series per level, as the bars.
+    items.sort((x, y) => x.si - y.si);
+    for (const it of items) {
+      widest = Math.max(widest, it.w);
+      series.push(o.vertical
+        ? NS.nameMark('__legend_' + it.si, it.name, [o.groups[gi], it.at], 'right', o.ink,
+                      { distance: o.barPx / 2 + 6 })
+        : NS.nameMark('__legend_' + it.si, it.name, [it.at, o.groups[gi]], 'top', o.ink,
+                      { distance: o.barPx / 2 + 3 }));
+    }
     if (!o.vertical) return 0;
     // The label starts beside the bar and may reach past the plot.
     return Math.max(0, Math.ceil(widest + 6 + o.barPx / 2 + 4 - o.bandPx / 2));
@@ -380,7 +417,8 @@
         : (hCapped ? NS.PANEL_H_CAP / Math.max(1, groups.length) : ROW_BAND);
       const barPx = vertical ? (bandPx ? Math.min(BAR_MAX, 0.6 * bandPx) : BAR_MAX / 2)
         : Math.min(BAR_MAX, 0.6 * bandPx);
-      namesRight = stackNames(series, { vertical, groups, bandPx, barPx, measure, ink });
+      const valuePx = vertical ? 350 - 30 - 66 : (plotW ? plotW - gut.gridLeft - 5 : 0);
+      namesRight = stackNames(series, { vertical, groups, bandPx, barPx, valuePx, measure, ink });
     }
 
     const fmtRaw = vf || ((/** @type {number} */ n) =>

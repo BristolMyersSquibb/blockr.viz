@@ -207,10 +207,30 @@ test('marks on a vertical stack: a name at each segment of the last bar', () => 
   assert.deepStrictEqual(plain(names.map((s) => [s.label.formatter, s.data[0]])),
                          [['HIGH', ['a', 2]], ['LOW', ['a', 5]]]);
   assert.strictEqual(names[0].label.position, 'right');
-  assert.deepStrictEqual(plain(names[0].labelLayout), { moveOverlap: 'shiftY' });
   assert.ok(opt.grid.right >= 10);
   // The bars themselves are untouched.
   assert.deepStrictEqual(plain(opt.series.slice(0, 2).map((s) => s.name)), ['HIGH', 'LOW']);
+});
+
+test('marks on a stack spread the names of thin segments a line apart', () => {
+  const rows = [];
+  const add = (t, sev, n) => { for (let i = 0; i < n; i++) rows.push({ T: t, SEV: sev, V: 1, ID: t + sev + i, ARM: 'A' }); };
+  add('a', 'HIGH', 40); add('a', 'LOW', 40); add('a', 'MID', 1);
+  add('b', 'HIGH', 1); add('b', 'LOW', 1); add('b', 'MID', 1);
+  const c = { ...BASE, chart_type: 'bar', group: 'T', value: '.count', func: 'count', color: 'SEV',
+              sort_by: 'alpha', sort_dir: 'asc', orientation: 'vertical', legend: 'marks' };
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+  const opt = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+                                       measure, widths: [600] }).panels[0].option;
+  const at = plain(opt.series.filter((s) => String(s.id || '').startsWith('__legend_'))
+    .map((s) => [s.label.formatter, s.data[0][1]]));
+  // The last bar, b, has three segments of 1: their middles 0.5, 1.5, 2.5
+  // sit closer than a line on an axis up to 81, so they spread, top down.
+  assert.strictEqual(at.length, 3);
+  const ys = at.map((x) => x[1]).sort((p, q) => q - p);
+  const line = (12 + 3) * 81 / (350 - 30 - 66);
+  for (let k = 1; k < ys.length; k++) assert.ok(ys[k - 1] - ys[k] >= line - 1e-9);
+  assert.ok(Math.min(...ys) >= line / 2 - 1e-9);
 });
 
 test('marks on a horizontal stack: names above the first bar, at each centre', () => {
