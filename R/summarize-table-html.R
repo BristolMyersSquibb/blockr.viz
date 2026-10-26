@@ -67,6 +67,11 @@
 #' @param expanded Open every nested row. `FALSE` (default) is the dashboard's
 #'   collapsed-to-parents view; an EXPORT sets it, having nobody to click the
 #'   chevron.
+#' @param pct_of,missing As in [new_table_block()]: the base of a count's
+#'   percentage and what a missing grouping value becomes.
+#' @param prep A [summarize_prepare()] result to draw instead of preparing
+#'   one from the arguments. An exhibit passes its own, so its web page shows
+#'   the numbers its other formats show.
 #'
 #' @return An [htmltools::tagList()].
 #' @examplesIf interactive()
@@ -83,15 +88,17 @@ summarize_table <- function(data, group = NULL, value = ".count",
                             bar_width = "fit", title = NULL,
                             subtitle = NULL, caption = NULL, drill = NULL,
                             scale_map = NULL, elem_id = NULL, active = NULL,
-                            expanded = FALSE, subject = NULL) {
-  prep <- summarize_prepare(
+                            expanded = FALSE, subject = NULL,
+                            pct_of = "facet", missing = "drop",
+                            prep = NULL) {
+  prep <- prep %||% summarize_prepare(
     data, group = group, value = value, func = func, id_var = id_var,
     summaries = summaries, by = by,
     facet_layout = facet_layout,
     parent = parent, color = color, bar_mode = bar_mode, facet = facet,
     cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
-    subject = subject
+    subject = subject, pct_of = pct_of, missing = missing
   )
 
   # The three display slots follow the chart / table contract: NULL = auto
@@ -118,7 +125,7 @@ summarize_table <- function(data, group = NULL, value = ".count",
     bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
     sortable = sortable, axis = axis, value_labels = value_labels,
-    bar_width = bar_width, drill = drill,
+    bar_width = bar_width, drill = drill, pct_of = pct_of, missing = missing,
     titles = list(
       title = title, subtitle = subtitle, caption = caption,
       title_state = title_raw, subtitle_state = subtitle_raw,
