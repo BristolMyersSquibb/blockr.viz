@@ -404,8 +404,8 @@
     const taken = new Set();
     for (const sel of selected) {
       const drawn = allSeries[sel.seriesIndex];
-      // A name written on the marks is no point of the data.
-      if (drawn && typeof drawn.id === 'string' && drawn.id.indexOf('__legend_') === 0) continue;
+      // A name or a label written on the marks is no point of the data.
+      if (drawn && typeof drawn.id === 'string' && /^__(legend|label)_/.test(drawn.id)) continue;
       const sData = drawn && drawn.data;
       if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
       const pt = sData[sel.dataIndex];

@@ -27,7 +27,7 @@
   const OPTION_FIELDS = ['chart_type', 'drill', 'dot_size_mult', 'line_width_mult', 'connect',
     'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
     'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'legend', 'direct_labels',
-    'value_line_names', 'x_line_names',
+    'value_line_names', 'x_line_names', 'label',
     'format', 'unit', 'bar_mode', 'title_resolved'];
 
   // The canvas height, before turned x labels add their gutter.

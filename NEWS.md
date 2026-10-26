@@ -13,7 +13,12 @@
 * `linetype` names a column whose values set a line's dash: the first value
   is solid, the others dashed, from the last point of the solid part on.
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
-  "2009-06-30"))`).
+  "2009-06-30"))`). The gear edits them as one line, "Shaded":
+  `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.
+* `label` on a scatter, line or area writes the column's value beside each
+  point that has one, and the gear offers it under "Add mapping".
+* `{@type}` in a title, subtitle or caption opens a menu of chart types,
+  narrowed by a list (`{@type in line, scatter}`).
 * `legend` places the colour legend: `"bottom"` (default), `"top"`, `"marks"`
   or `"none"`. `"marks"` writes the names on the marks (at a line's or an
   area's end, beside the last bar of a stack, at a scatter group's centre,

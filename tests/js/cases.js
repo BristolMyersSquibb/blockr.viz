@@ -149,6 +149,9 @@ const individual = [
                            tt_fields: ['USUBJID', 'AVISIT', 'AVAL'] }),
   c('scatter-categorical-x', { chart_type: 'scatter', x: 'AVISIT', y: 'AVAL', drill: 'auto' }),
   c('scatter-drill-off', { chart_type: 'scatter', ...LAB, color: 'ARM', drill: '' }),
+  // AETERM is missing on some rows: those points carry no text.
+  c('scatter-label', { chart_type: 'scatter', ...LAB, color: 'ARM', label: 'AETERM' }),
+  c('line-label', { chart_type: 'line', ...LAB, series: 'USUBJID', label: 'AETERM' }),
   c('line', { chart_type: 'line', ...LAB, series: 'USUBJID' }),
   c('line-series-color', { chart_type: 'line', ...LAB, series: 'USUBJID', color: 'ARM' }),
   c('line-categorical-x', { chart_type: 'line', x: 'AVISIT', y: 'AVAL', series: 'USUBJID',

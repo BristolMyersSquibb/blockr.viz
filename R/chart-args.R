@@ -224,6 +224,9 @@ chart_roles_public <- function(type, group, value, x, y, orientation, func,
 # list of {name, from, to} the browser sends back. NULL when empty. Dates
 # travel as ISO strings, numbers as numbers.
 chart_ranges_state <- function(x_ranges) {
+  if (is.data.frame(x_ranges)) {
+    x_ranges <- lapply(seq_len(nrow(x_ranges)), function(i) as.list(x_ranges[i, ]))
+  }
   if (!is.list(x_ranges) || !length(x_ranges)) {
     return(NULL)
   }

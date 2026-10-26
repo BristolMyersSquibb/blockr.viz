@@ -328,6 +328,8 @@
         // "" clears every line, so these are always sent.
         value_lines: c.value_lines == null ? '' : String(c.value_lines),
         x_lines: c.x_lines == null ? '' : String(c.x_lines),
+        // [] clears every range, so this is always sent.
+        x_ranges: Array.isArray(c.x_ranges) ? c.x_ranges : [],
         box_points: c.box_points || 'none',
         connect_centers: (c.connect_centers === 'on' || c.connect_centers === true) ? 'on' : 'off',
         // band_series / band_refs are R's output, never sent back.

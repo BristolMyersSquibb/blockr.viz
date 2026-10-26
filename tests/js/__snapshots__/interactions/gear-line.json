@@ -143,6 +143,7 @@
       "add": [
        "Facet",
        "Tooltip fields",
+       "Label",
        "Dash by"
       ]
      }
@@ -170,6 +171,17 @@
         "kind": "text",
         "value": "",
         "placeholder": "e.g. 2 or 1, 4"
+       }
+      ]
+     },
+     {
+      "role": "x_ranges",
+      "label": "Shaded",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. Recession: 2008-01-01 to 2009-06-30"
        }
       ]
      },

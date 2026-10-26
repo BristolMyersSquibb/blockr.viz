@@ -64,6 +64,29 @@
   };
 
   /**
+   * A `labelLayout` that moves a label up or down, a line at a time, until it
+   * covers no label placed before it. ECharts' own `moveOverlap` leaves
+   * scatter labels where they are. Each label is measured from where it rests
+   * beside its point, so a resize lays them out again from scratch.
+   * @param {string} position 'right' or 'top' @param {number} distance
+   */
+  const labelSpacer = (position, distance) => {
+    /** @type {Array<{x: number, y: number, width: number, height: number}>} */
+    let placed = [];
+    return (/** @type {any} */ p) => {
+      if (p.dataIndex === 0) placed = [];
+      const l = p.labelRect, s = p.rect, h = l.height;
+      const y = position === 'top' ? s.y - distance - h : s.y + s.height / 2 - h / 2;
+      const hit = (/** @type {number} */ dy) => placed.some((q) =>
+        l.x < q.x + q.width && q.x < l.x + l.width && y + dy < q.y + q.height && q.y < y + dy + h);
+      let dy = 0;
+      for (let k = 1; k <= 12 && hit(dy); k++) dy = (k % 2 ? -1 : 1) * Math.ceil(k / 2) * h;
+      placed.push({ x: l.x, y: y + dy, width: l.width, height: h });
+      return { dy };
+    };
+  };
+
+  /**
    * The scatter or line series of one panel, with their overlays.
    * @param {any} m the individual model @param {any} panel @param {any} look
    * @param {number} [plotW] the plot's width in px
@@ -248,6 +271,40 @@
         data: ranges.map((/** @type {any} */ r) =>
           [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }])
       };
+    }
+
+    // `label`: the column's value written beside each point that has one, so
+    // a few named points stand out of a cloud. One label-only series per
+    // panel, over the points, with a halo to read on them; its id keeps the
+    // highlight patch and the brush off it.
+    const labelCol = cfg.label || null;
+    if (labelCol) {
+      /** @type {any[]} */
+      const data = [];
+      for (const s of panel.series) {
+        s.rows.forEach((/** @type {any} */ r, /** @type {number} */ i) => {
+          const v = r[labelCol];
+          const p = s.pts[i];
+          if (!NS.hasVal(v) || v === 'NA' || !p || p[0] == null || p[1] == null) return;
+          data.push([p[0], p[1], String(v)]);
+        });
+      }
+      if (data.length) {
+        const position = isLine ? 'top' : 'right';
+        const distance = isLine ? lineMarkerPx / 2 + 2 : (BASE_SCATTER_SIZE * dm) / 2 + 3;
+        series.push({
+          id: '__label__', type: 'scatter', data, silent: true,
+          symbolSize: 0, z: 11, legendHoverLink: false, animation: false,
+          tooltip: { show: false }, emphasis: { disabled: true },
+          label: {
+            show: true, position, distance,
+            formatter: (/** @type {any} */ prm) => prm.value[2],
+            color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12,
+            textBorderColor: surface, textBorderWidth: 3
+          },
+          labelLayout: labelSpacer(position, distance)
+        });
+      }
     }
 
     // The name of each colour group at the centre of mass of its points. A

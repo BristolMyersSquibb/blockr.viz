@@ -268,6 +268,14 @@ scenario('line', { chart_type: 'line', ...LAB, series: 'USUBJID' }, [
   wait(150)
 ]);
 
+// Shaded stretches of x: the field shows them as one line, and a typed line
+// draws and reaches R as [{name, from, to}].
+scenario('ranges', { chart_type: 'line', ...LAB, x_ranges: [{ name: 'Early', from: 1, to: 10 }] }, [
+  gearOpen(),
+  text('x_ranges', 'Early: 1 to 10; Late: 20 to 30; 40 to 45; junk'),
+  text('x_ranges', '')
+]);
+
 scenario('band', { chart_type: 'band', ...LAB, color: 'ARM', band_series: I.F.band_series.color,
                    whiskers: 'p10_p90' }, [
   gearOpen(),
@@ -328,3 +336,27 @@ scenario('await-data', { chart_type: 'bar', ...AE }, [
   ['R sends the rows with ARM', (c) => c.send({ ...c.block.config },
     { dataRev: 2 })]
 ], { data: { AETERM: I.F.data.AETERM, AESEV: I.F.data.AESEV } });
+
+test('typed shaded ranges are drawn at once, and read back as typed', () => {
+  const assert = require('node:assert');
+  const c = I.open({ ...R, chart_type: 'line', ...LAB });
+  try {
+    c.block.gearBtn.click();
+    const inp = I.roleRow(c.block, 'x_ranges').querySelector('input.blockr-text-input');
+    I.typeText(c.env, inp, 'Early: 1 to 10; 20 to 30');
+    const opt = c.chart(0).getOption();
+    const host = opt.series.find((s) => s.markArea);
+    assert.ok(host, 'no series carries the shaded ranges');
+    // The window's arrays are another realm's: compared as JSON.
+    const js = (v) => JSON.stringify(v);
+    assert.strictEqual(js(host.markArea.data.map((d) => [d[0].name, d[0].xAxis, d[1].xAxis])),
+                       js([['Early', 1, 10], ['', 20, 30]]));
+    const { rangesText, parseRanges } = c.env.win.Blockr.chart.roles;
+    assert.strictEqual(rangesText(parseRanges('SNB floor: 2011-09-06 to 2015-01-15; 1 to 2')),
+                       'SNB floor: 2011-09-06 to 2015-01-15; 1 to 2');
+    assert.strictEqual(js(parseRanges('At 10:30: 2020-01-01 10:30 to 2020-01-02')),
+                       js([{ name: 'At 10:30', from: '2020-01-01 10:30', to: '2020-01-02' }]));
+  } finally {
+    c.close();
+  }
+});

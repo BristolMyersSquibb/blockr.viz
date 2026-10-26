@@ -1595,6 +1595,10 @@ new_chart_block <- function(
             if (!is.null(msg$x_lines)) {
               upd(r_x_lines, num_vec_state(msg$x_lines))
             }
+            # Shaded ranges as [{name, from, to}]; [] clears them.
+            if (!is.null(msg$x_ranges)) {
+              upd(r_x_ranges, chart_ranges_state(msg$x_ranges))
+            }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$summary))    upd(r_summary, msg$summary)
             if (!is.null(msg$whiskers))   upd(r_whiskers, msg$whiskers)

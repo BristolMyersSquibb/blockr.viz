@@ -96,6 +96,39 @@
       '<rect x="3" y="10.6" width="6" height="2.6" rx="1"/></svg>'
   };
 
+  // `x_ranges` as one line of text, for the gear's text field:
+  // "Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30".
+  // A name is optional; a bound that reads as a number becomes one.
+  /** @param {any} v @returns {string} */
+  const rangesText = (v) => {
+    if (!Array.isArray(v)) return v == null ? '' : String(v);
+    return v.filter((r) => r && r.from != null && r.to != null)
+      .map((r) => (r.name ? r.name + ': ' : '') + r.from + ' to ' + r.to)
+      .join('; ');
+  };
+  /** @param {string} text @returns {Array<{name: string, from: any, to: any}>} */
+  const parseRanges = (text) => {
+    /** @param {string} b */
+    const bound = (b) => {
+      const t = b.trim();
+      return t !== '' && Number.isFinite(Number(t)) ? Number(t) : t;
+    };
+    const out = [];
+    for (const raw of String(text ?? '').split(';')) {
+      const part = raw.trim();
+      if (!part) continue;
+      // "name: from to to". The colon needs a space after it, so a time of
+      // day ("10:30") is no name.
+      const m = /^(.*?):\s+(.*)$/.exec(part);
+      const span = (m ? m[2] : part).split(/\s+to\s+/i);
+      if (span.length !== 2) continue;
+      const from = bound(span[0]), to = bound(span[1]);
+      if (from === '' || to === '') continue;
+      out.push({ name: m ? m[1].trim() : '', from, to });
+    }
+    return out;
+  };
+
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before this file.
@@ -236,6 +269,11 @@
                      (cfg.chart_type === 'scatter' || NS.isLineType(cfg.chart_type)
                        ? 'Horizontal' : 'Reference lines'),
                    kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
+    // Named stretches of x, shaded behind the marks. The browser holds
+    // [{name, from, to}]; the field edits it as one line (rangesText).
+    x_ranges: { label: 'Shaded', kind: 'text',
+                ph: 'e.g. Recession: 2008-01-01 to 2009-06-30',
+                toText: rangesText, fromText: parseRanges },
     // Boxplot observation overlay. "none" = box only; "outliers" = only the
     // points beyond the whisker extent. (A former "all" strip was dropped:
     // on a category axis every point sat on the box's centre line, an opaque
@@ -565,11 +603,12 @@
     },
     individual: {
       requiredMap: ['x', 'y'],
-      // `label` is timeline-only (gantt on-bar text); scatter/line have no
-      // on-mark text renderer. `tt_fields` surfaces extra columns on hover:
+      // `label` writes a column's value beside each point that has one
+      // (option-points.js). `tt_fields` surfaces extra columns on hover:
       // one row per mark (scatter) / per series at the hovered x (line), so
       // each value is unambiguous (unlike an aggregated bar, a group of rows).
       optionalMap: ['series', 'color', 'facet', 'tt_fields',
+        { role: 'label', types: ['scatter', 'line', 'area'] },
         { role: 'linetype', types: ['line', 'area'] }],
       mapping: [],
       presentation: [
@@ -595,6 +634,7 @@
         { role: 'identity_line', types: ['scatter'] },
         { role: 'x_lines', types: ['scatter', 'line', 'area'] },
         { role: 'value_lines', types: ['scatter', 'line', 'area'] },
+        { role: 'x_ranges', types: ['scatter', 'line', 'area'] },
         // Line-connect mode (straight / monotone / step-*): line-only, so it
         // sits with the other line presentation options.
         { role: 'connect', types: ['line', 'area'] },
@@ -644,5 +684,5 @@
     Object.values(ROLES).map(r => /** @type {any} */ (r).pairedWith).filter(Boolean));
 
   NS.roles = { ROLES, FAMILY_ROLES, DD_SECONDARY, TYPE_ICONS, SUMMARY_STATS, WHISKER_STATS,
-               statMeta, DAgg };
+               statMeta, DAgg, rangesText, parseRanges };
 })();

@@ -2463,7 +2463,10 @@
         // Untouched, nothing commits and null (auto) survives.
         const autoVal = (cfg[key] == null && typeof role.autoValue === 'function')
           ? String(role.autoValue(cfg) || '') : '';
-        inp.value = (cfg[key] == null) ? autoVal : String(cfg[key]);
+        // `toText` / `fromText` (optional role hooks): a value that is not
+        // a string (the chart's shaded ranges) is edited as one line.
+        inp.value = (cfg[key] == null) ? autoVal
+          : (typeof role.toText === 'function' ? role.toText(cfg[key]) : String(cfg[key]));
         if (role.ph) inp.placeholder = role.ph;
         const wrap = document.createElement('div');
         wrap.className = 'dd-text-wrap';
@@ -2509,7 +2512,7 @@
           if (inp.value === committed) return;
           committed = inp.value;
           everCommitted = true;
-          cfg[key] = inp.value;
+          cfg[key] = typeof role.fromText === 'function' ? role.fromText(inp.value) : inp.value;
           cb();
           this.h.onChange(key);
           syncChip();
@@ -2657,6 +2660,16 @@
       // A list written in the sentence (`{@func in mean, median}`) narrows
       // the menu. Keyed by the name the sentence used.
       const listed = this._slotChoices(key);
+      // The chart type has no role: the gear's type picker writes it. The
+      // word offers the types that picker offers.
+      if (this._isTypeSlot(key)) {
+        const cur = this._cfg()[this.h.typeKey];
+        const all = this._typeOptions();
+        return {
+          options: listed ? this._narrowToChoices(all, listed, cur) : all,
+          selected: cur
+        };
+      }
       key = this._slotCfgKey(key);
       const role = this._role(key);
       if (!role) return null;
@@ -2708,6 +2721,27 @@
         };
       }
       return null;
+    }
+
+    /** Is this word the type the type picker writes (`{@type}`)?
+     * @param {string} key */
+    _isTypeSlot(key) {
+      const tk = this.h.typeKey;
+      return !!tk && !this.h.roles[tk] && this._slotCfgKey(key) === tk &&
+        Array.isArray(this.h.typeGroups) && this.h.typeGroups.length > 0;
+    }
+
+    /** The types the gear's picker offers, and the current one.
+     * @returns {string[]} */
+    _typeOptions() {
+      /** @type {string[]} */
+      const out = [];
+      for (const g of this.h.typeGroups || []) {
+        for (const t of g.types || []) if (!out.includes(t)) out.push(t);
+      }
+      const cur = this._cfg()[this.h.typeKey];
+      if (cur && !out.includes(cur)) out.push(cur);
+      return out;
     }
 
     /** The choices the sentence lists for a word, or null.
@@ -2815,6 +2849,12 @@
      * @param {string} key @param {string} val
      */
     _setRoleValue(key, val) {
+      // A type picked from the sentence switches as the gear's tile does,
+      // carrying the mapping across a family change.
+      if (this._isTypeSlot(key)) {
+        if (val && val !== this._cfg()[this.h.typeKey]) this._onType(val);
+        return;
+      }
       key = this._slotCfgKey(key);
       const role = this._role(key);
       if (!role) return;
@@ -3177,6 +3217,7 @@
     /** @param {string} key */
     label(key) {
       const ddc = this.h.ddc();
+      if (ddc && ddc._isTypeSlot && ddc._isTypeSlot(key)) return 'Type';
       const role = ddc && ddc._role ? ddc._role(key) : null;
       if (!role || !role.label) return '';
       return (typeof role.label === 'function') ? role.label(this.h.config()) : role.label;

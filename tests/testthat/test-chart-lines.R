@@ -114,3 +114,35 @@ test_that("a name in y_lines / x_lines labels its line", {
   expect_equal(unlist(cfg$value_line_names), c("Target", ""))
   expect_length(cfg$x_line_names, 0L)
 })
+
+test_that("the gear writes and clears x_ranges", {
+  blk <- new_chart_block(
+    type = "line", x = "d", y = "v",
+    x_ranges = list(Forecast = c("2024-01-04", "2024-01-06"))
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      act <- function(...) {
+        session$makeScope("expr")$setInputs(drilldown_block_action = list(
+          action = "config", chart_type = "line", x = "d", y = "v", ...
+        ))
+        session$flushReact()
+      }
+      st <- session$returned$state
+      act(x_ranges = list(
+        list(name = "Early", from = "2024-01-01", to = "2024-01-02"),
+        list(name = "", from = 3, to = 4)
+      ))
+      expect_equal(st$x_ranges(), list(Early = c("2024-01-01", "2024-01-02"),
+                                       range2 = c(3, 4)))
+      # A message without the field keeps the ranges.
+      act(legend = "top")
+      expect_named(st$x_ranges(), c("Early", "range2"))
+      act(x_ranges = list())
+      expect_null(st$x_ranges())
+    },
+    args = list(x = blk, data = list(data = line_df))
+  )
+})

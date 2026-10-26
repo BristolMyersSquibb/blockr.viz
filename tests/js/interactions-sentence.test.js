@@ -292,3 +292,51 @@ test('a min-only number word does not pollute the sentence while valid', () => {
     c.close();
   }
 });
+
+// `{@type in line, scatter}`: the type has no role (the gear's tile picker
+// writes it), so its word lists the types and a pick switches the chart as
+// a tile would.
+test('the type word opens the types it lists', () => {
+  const typeConfig = {
+    chart_type: 'line', x: 'ADY', y: 'AVAL', drill: 'auto',
+    subtitle_resolved: 'AVAL as a line',
+    subtitle_parts: [{ text: 'AVAL as a ' }, { text: 'line', arg: 'chart_type' }],
+    slot_choices: { chart_type: ['line', 'scatter'] },
+    sentence_args: ['chart_type']
+  };
+  const c = I.open(typeConfig);
+  try {
+    const w = c.block.subtitleEl.querySelector('.blockr-slot');
+    w.click();
+    const m = menu(c);
+    assert.strictEqual(m.title, 'Type');
+    assert.deepStrictEqual(m.options, ['*line', 'scatter']);
+    const o = Array.from(openMenu(c.env).querySelectorAll('.blockr-select__option'))
+      .find((x) => x.getAttribute('data-value') === 'scatter');
+    o.click();
+    assert.strictEqual(c.block.config.chart_type, 'scatter');
+    const sent = c.env.inputs().filter((i) => i.value && i.value.action === 'config').pop();
+    assert.strictEqual(sent.value.chart_type, 'scatter');
+    assert.strictEqual(sent.value.x, 'ADY');
+    assert.strictEqual(sent.value.y, 'AVAL');
+  } finally {
+    c.close();
+  }
+});
+
+// Without a list the word offers what the gear's type picker offers.
+test('a type word without a list offers every type the gear offers', () => {
+  const c = I.open({
+    chart_type: 'bar', group: 'AETERM', drill: 'auto',
+    subtitle_resolved: 'bar', subtitle_parts: [{ text: 'bar', arg: 'chart_type' }]
+  });
+  try {
+    c.block.subtitleEl.querySelector('.blockr-slot').click();
+    const opts = menu(c).options;
+    assert.ok(opts.includes('*bar'));
+    assert.ok(opts.includes('scatter') && opts.includes('line') && opts.includes('gantt'));
+    assert.ok(!opts.includes('radar') && !opts.includes('waterfall'));
+  } finally {
+    c.close();
+  }
+});
