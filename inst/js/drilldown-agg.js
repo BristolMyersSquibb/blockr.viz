@@ -200,7 +200,8 @@
     // The roles the pct_distinct denominator is taken within. Placeholders for
     // an unmapped role MUST match the ones the cells use below ('Total' for
     // group, '__all__' for facet/color), or a cell's key never finds its
-    // denominator and every percentage comes out null.
+    // denominator and every percentage comes out null. A name that is no role
+    // ('total') keys every row '__all__': one denominator for all the rows.
     const pctRoles = (Array.isArray(pct_of) ? pct_of
       : (pct_of ? [pct_of] : ['facet'])).map(String);
     const coords = (/** @type {any} */ row) => ({

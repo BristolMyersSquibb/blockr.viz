@@ -421,9 +421,13 @@
     band_min_n: { label: 'Cut below n', kind: 'text', ph: 'e.g. 12' },
     // About this many bins: R takes readable breaks (pretty()) near it.
     bins: { label: 'Bins', kind: 'number', min: 1, max: 200, step: 1 },
-    // How values print (format.js), the tile block's vocabulary.
+    // How values print (format.js): the tile block's names, or a fixed
+    // number of decimals as on the table block.
     format: { label: 'Numbers', kind: 'select',
-              options: [{ value: 'number', label: '1,234.5' },
+              options: [{ value: 'number', label: 'Auto' },
+                        { value: '0', label: '1,235' },
+                        { value: '1', label: '1,234.6' },
+                        { value: '2', label: '1,234.57' },
                         { value: 'compact', label: '1.2K' },
                         { value: 'percent', label: '12.3%' }] },
     unit: { label: 'Unit', kind: 'text', ph: 'e.g. CHF' },
@@ -517,8 +521,9 @@
   // Which roles a pct_distinct denominator is taken WITHIN. The chart cannot
   // infer this: it would have to know whether a column is a population split
   // (arm, sex, country) or an event attribute (grade), and dividing grade-2
-  // subjects by subjects-with-grade-2 is circular. Only the three mapped roles
-  // are offered, because a cell knows no other coordinate.
+  // subjects by subjects-with-grade-2 is circular. The three mapped roles are
+  // offered, because a cell knows no other coordinate, and "total": the whole
+  // chart, every panel, as one denominator (the table block's word).
   // A single role here, not a combination: the gear has no multi-select kind,
   // and no case so far needs one (facet+group is the cell itself, i.e. always
   // 100%). The ENGINE takes a vector, so widening this to combinations later
@@ -528,7 +533,8 @@
     when: (/** @type {any} */ cfg) => cfg.func === 'pct_distinct',
     options: [{ value: 'facet', label: 'Facet' },
               { value: 'group', label: 'Group' },
-              { value: 'color', label: 'Colour' }]
+              { value: 'color', label: 'Colour' },
+              { value: 'total', label: 'Whole chart' }]
   });
 
   ROLES.na_group = /** @type {any} */ ({

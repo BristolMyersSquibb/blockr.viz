@@ -36,6 +36,20 @@ chr_state <- function(x) {
 
 # A multi-value slot (tooltip fields, waterfall totals, ...): NULL or a
 # character vector. Empty stays NULL so "unset" and "set to nothing" agree.
+# A chart's `format`: "number", "compact", "percent", or a whole number of
+# decimals (0 to 6, as an integer). NULL for anything else.
+chart_format_state <- function(x) {
+  x <- unlist(x, use.names = FALSE)
+  if (!length(x) || is.na(x[[1L]])) return(NULL)
+  x <- x[[1L]]
+  if (is.character(x) && x %in% c("number", "compact", "percent")) return(x)
+  d <- suppressWarnings(as.numeric(x))
+  if (length(d) == 1L && !is.na(d) && d == round(d) && d >= 0 && d <= 6) {
+    return(as.integer(d))
+  }
+  NULL
+}
+
 chr_vec_state <- function(x) {
   if (is.null(x)) return(NULL)
   x <- as.character(unlist(x, use.names = FALSE))

@@ -237,10 +237,13 @@
       "controls": [
        {
         "kind": "select",
-        "value": "1,234.5",
+        "value": "Auto",
         "placeholder": null,
         "options": [
-         "1,234.5",
+         "Auto",
+         "1,235",
+         "1,234.6",
+         "1,234.57",
          "1.2K",
          "12.3%"
         ]

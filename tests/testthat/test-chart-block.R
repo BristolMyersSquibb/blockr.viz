@@ -717,7 +717,7 @@ test_that("a gear edit of na_group reaches state too", {
   )
 })
 
-test_that("pct_of round-trips, and refuses anything that is not a role", {
+test_that("pct_of round-trips, and refuses anything that is not a role or total", {
   blk <- new_chart_block(
     x = "USUBJID",
     y = "COUNTRY",
@@ -730,7 +730,7 @@ test_that("pct_of round-trips, and refuses anything that is not a role", {
   # A cell knows only the roles it is mapped on, so a bare column name has no
   # meaning here and is refused at construction rather than at render.
   expect_error(new_chart_block(pct_of = "COUNTRY"),
-               "facet, category or color")
+               "facet, category, color or total")
 })
 
 test_that("a chart captions itself with the filter trail its data carries", {

@@ -31,8 +31,10 @@ CHART_LEGENDS <- c("bottom", "top", "marks", "none")
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
-# pct_of values: the category role is `group` internally
-CHART_PCT_OF <- c(facet = "facet", category = "group", color = "color")
+# pct_of values: the category role is `group` internally; "total" is no
+# role, so the whole chart is one denominator.
+CHART_PCT_OF <- c(facet = "facet", category = "group", color = "color",
+                  total = "total")
 
 chart_position_internal <- function(position) {
   unname(CHART_POSITIONS[position %||% "stack"]) %|NA|% "stacked"

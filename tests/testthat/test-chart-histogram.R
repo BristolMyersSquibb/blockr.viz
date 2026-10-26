@@ -119,3 +119,62 @@ test_that("format and unit reach the browser and round-trip", {
     args = list(x = blk, data = list(data = hist_df))
   )
 })
+
+test_that("format takes a whole number of decimals, as the table block", {
+  blk <- new_chart_block(x = "g", y = "v", func = "sum", format = 2)
+  expect_identical(blockr.core::blockr_ser(blk)$payload$format, 2L)
+  expect_identical(blockr.core::blockr_ser(new_chart_block(format = "1"))$payload$format, 1L)
+  expect_error(new_chart_block(format = 1.5), "whole number")
+  expect_error(new_chart_block(format = 7), "whole number")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      sent <- list()
+      root <- session$rootScope()
+      root$sendCustomMessage <- function(type, message) {
+        if (identical(type, "drilldown-data")) sent[[length(sent) + 1L]] <<- message
+      }
+      session$flushReact()
+      # The browser gets the gear's value, text.
+      expect_identical(sent[[length(sent)]]$config$format, "2")
+      act <- function(f) {
+        session$makeScope("expr")$setInputs(drilldown_block_action = list(
+          action = "config", format = f
+        ))
+        session$flushReact()
+      }
+      act("0")
+      expect_identical(session$returned$state$format(), 0L)
+      act("compact")
+      expect_identical(session$returned$state$format(), "compact")
+      act("junk")
+      expect_identical(session$returned$state$format(), "compact")
+    },
+    args = list(x = blk, data = list(data = hist_df))
+  )
+})
+
+test_that("pct_of takes \"total\", the whole chart", {
+  blk <- new_chart_block(x = "g", y = "v", func = "pct_distinct",
+                         pct_of = "total")
+  expect_identical(blockr.core::blockr_ser(blk)$payload$pct_of, "total")
+  expect_error(new_chart_block(pct_of = "everything"), "facet, category, color or total")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      sent <- list()
+      root <- session$rootScope()
+      root$sendCustomMessage <- function(type, message) {
+        if (identical(type, "drilldown-data")) sent[[length(sent) + 1L]] <<- message
+      }
+      session$flushReact()
+      expect_identical(sent[[length(sent)]]$config$pct_of, "total")
+      session$makeScope("expr")$setInputs(drilldown_block_action = list(
+        action = "config", pct_of = "group"
+      ))
+      session$flushReact()
+      expect_identical(session$returned$state$pct_of(), "category")
+    },
+    args = list(x = blk, data = list(data = hist_df))
+  )
+})

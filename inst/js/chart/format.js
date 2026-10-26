@@ -3,7 +3,8 @@
  * Chart block: the number format of a chart's values (`format`, `unit`),
  * the same vocabulary as the tile block. "number" prints separators and
  * smart decimals, "compact" 1.2K / 3.4M / 5.6B, "percent" a fraction x100
- * with "%". `unit` is free text printed after the number ("CHF").
+ * with "%", a whole number (0 to 6, or its text) that many decimals, as on
+ * the table block. `unit` is free text printed after the number ("CHF").
  *
  * A chart with format "number" and no unit keeps its own formatting:
  * valueFormat() then returns null and the callers fall back to it.
@@ -47,19 +48,30 @@
     (v || 0).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
   /**
+   * The decimals a `format` fixes (2 or "2"), or null.
+   * @param {any} format @returns {number | null}
+   */
+  const fixedDigits = (format) => {
+    if (format == null || format === '' || typeof format === 'boolean') return null;
+    const d = Number(format);
+    return Number.isInteger(d) && d >= 0 && d <= 6 ? d : null;
+  };
+
+  /**
    * The formatter for a chart's values, or null to keep the chart's own.
    * `unit: false` leaves the unit off (axis ticks: the axis title carries
    * it once).
    * `digits`: "number" prints that many decimals (sharedDigits()), and
-   * then always returns a formatter.
+   * then always returns a formatter. A fixed number of decimals wins.
    * @param {Record<string, any>} cfg @param {{ unit?: boolean, digits?: number }} [opts]
    * @returns {((v: any) => string) | null}
    */
   const valueFormat = (cfg, opts = {}) => {
-    const format = cfg.format || 'number';
+    const fixed = fixedDigits(cfg.format);
+    const format = fixed != null ? 'number' : (cfg.format || 'number');
     const unit = cfg.unit ? String(cfg.unit) : '';
     const withUnit = opts.unit !== false && unit !== '';
-    const digits = opts.digits;
+    const digits = fixed != null ? fixed : opts.digits;
     if (format === 'number' && !withUnit && digits == null) return null;
     /** @type {(v: number) => string} */
     const base = format === 'percent'
@@ -102,6 +114,7 @@
 
   NS.valueFormat = valueFormat;
   NS.sharedDigits = sharedDigits;
+  NS.fixedDigits = fixedDigits;
   NS.unitTitle = unitTitle;
   NS.axisName = axisName;
 })();

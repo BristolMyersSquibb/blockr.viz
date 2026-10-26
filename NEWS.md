@@ -21,6 +21,12 @@
   agree on one: at a bar's end, inside a stack's segments where it fits, in
   place of a slice's name. Waterfall, histogram, boxplot, pointrange and
   radar do not draw it.
+* `format` also takes a whole number of decimals from 0 to 6 (`format = 2`
+  prints 4.36 on the axis, in tooltips and value labels), as on the table
+  block. The gear's "Numbers" select offers Auto, 0, 1 and 2 decimals beside
+  compact and percent.
+* `pct_of = "total"` takes a `pct_distinct` denominator over the whole
+  chart, all panels together. `"facet"` stays the default.
 * The gear has a "Totals" row on a waterfall (`waterfall_totals`, picked
   from the steps), "Interval low / high" on an area (`ymin` / `ymax`) and
   "Group counts" on a histogram (`show_n`).

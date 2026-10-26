@@ -73,8 +73,10 @@
 #' @param format,unit How the values are printed on the value axis, in
 #'   tooltips and in value labels, as on the tile block: `format` is
 #'   `"number"` (default; separators and smart decimals), `"compact"` (1.2K,
-#'   3.4M) or `"percent"` (a fraction times 100, with "%"). `unit` is free
-#'   text after the number (`"CHF"`); the axis title carries it once.
+#'   3.4M), `"percent"` (a fraction times 100, with "%") or a whole number
+#'   of decimals from 0 to 6 (`2` prints 4.36), as on the table block.
+#'   `unit` is free text after the number (`"CHF"`); the axis title carries
+#'   it once.
 #'   On scatter, line and area charts it applies to y.
 #' @param tooltip Extra columns shown in each mark's tooltip.
 #' @param drill Column a click filters downstream on, `"auto"` for the type's
@@ -144,7 +146,8 @@
 #'   them their own category, `"drop"` removes them from the categories but
 #'   keeps them in the panel, so they still count toward `pct_distinct`.
 #' @param pct_of The role whose levels a `pct_distinct` denominator is taken
-#'   within: `"facet"` (default), `"category"` or `"color"`.
+#'   within: `"facet"` (default), `"category"` or `"color"`, or `"total"`,
+#'   the whole chart across all panels.
 #' @param facet_scales `"fixed"` (default) shares one scale across the panels,
 #'   `"free"` lets each panel size itself, `"free_y"` frees y only (scatter,
 #'   line and band).
@@ -380,7 +383,7 @@ new_chart_block <- function(
   pct_of <- chr_vec_state(pct_of) %||% "facet"
   bad <- setdiff(pct_of, names(CHART_PCT_OF))
   if (length(bad)) {
-    stop("`pct_of` must name mapped roles: facet, category or color. Got ",
+    stop("`pct_of` must be facet, category, color or total. Got ",
          paste0("\"", bad, "\"", collapse = ", "), ".", call. = FALSE)
   }
   facet_scales <- match.arg(
@@ -405,10 +408,10 @@ new_chart_block <- function(
   summary <- chr_state(summary)
   whiskers <- chr_state(whiskers)
   script_values <- if (is.list(script_values)) script_values else list()
-  format <- as.character(unlist(format %||% "number"))[1L]
-  if (!format %in% c("number", "compact", "percent")) {
-    stop("`format` must be \"number\", \"compact\" or \"percent\".",
-         call. = FALSE)
+  format <- chart_format_state(format %||% "number")
+  if (is.null(format)) {
+    stop("`format` must be \"number\", \"compact\", \"percent\" or a ",
+         "whole number of decimals from 0 to 6.", call. = FALSE)
   }
   unit <- as.character(unlist(unit %||% ""))[1L] %|NA|% ""
   bins <- suppressWarnings(as.numeric(unlist(bins))[1L])
@@ -1201,7 +1204,9 @@ new_chart_block <- function(
               value = r_value(),
               func = if (is_hist()) "count" else r_func(),
               chart_type = r_chart_type(), x = r_x(), y = r_y(),
-              bins = r_bins(), format = r_format(), unit = r_unit(),
+              # A number of decimals travels as text, the gear's value.
+              bins = r_bins(), format = as.character(r_format()),
+              unit = r_unit(),
               xend = r_xend(), series = present_role(r_series()),
               label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -1568,9 +1573,9 @@ new_chart_block <- function(
               if (!is.null(msg$sort_by))  upd(r_sort_by, nn(msg$sort_by))
               if (!is.null(msg$sort_dir)) upd(r_sort_dir, msg$sort_dir)
             }
-            if (!is.null(msg$format) &&
-                  msg$format %in% c("number", "compact", "percent")) {
-              upd(r_format, msg$format)
+            if (!is.null(msg$format)) {
+              v <- chart_format_state(msg$format)
+              if (!is.null(v)) upd(r_format, v)
             }
             if (!is.null(msg$unit)) upd(r_unit, trimws(as.character(msg$unit)))
             if (!is.null(msg$bins)) {

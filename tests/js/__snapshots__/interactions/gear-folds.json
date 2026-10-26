@@ -159,7 +159,7 @@
       "controls": [
        {
         "kind": "select",
-        "value": "1,234.5",
+        "value": "Auto",
         "placeholder": null
        }
       ]
@@ -426,7 +426,7 @@
       "controls": [
        {
         "kind": "select",
-        "value": "1,234.5",
+        "value": "Auto",
         "placeholder": null
        }
       ]

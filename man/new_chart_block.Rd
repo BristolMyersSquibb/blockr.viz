@@ -127,8 +127,10 @@ share. Labels that would overlap are left out. Bar and waterfall only.}
 \item{format, unit}{How the values are printed on the value axis, in
 tooltips and in value labels, as on the tile block: \code{format} is
 \code{"number"} (default; separators and smart decimals), \code{"compact"} (1.2K,
-3.4M) or \code{"percent"} (a fraction times 100, with "\%"). \code{unit} is free
-text after the number (\code{"CHF"}); the axis title carries it once.
+3.4M), \code{"percent"} (a fraction times 100, with "\%") or a whole number
+of decimals from 0 to 6 (\code{2} prints 4.36), as on the table block.
+\code{unit} is free text after the number (\code{"CHF"}); the axis title carries
+it once.
 On scatter, line and area charts it applies to y.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip.}
@@ -220,7 +222,8 @@ them their own category, \code{"drop"} removes them from the categories but
 keeps them in the panel, so they still count toward \code{pct_distinct}.}
 
 \item{pct_of}{The role whose levels a \code{pct_distinct} denominator is taken
-within: \code{"facet"} (default), \code{"category"} or \code{"color"}.}
+within: \code{"facet"} (default), \code{"category"} or \code{"color"}, or \code{"total"},
+the whole chart across all panels.}
 
 \item{facet_scales}{\code{"fixed"} (default) shares one scale across the panels,
 \code{"free"} lets each panel size itself, \code{"free_y"} frees y only (scatter,

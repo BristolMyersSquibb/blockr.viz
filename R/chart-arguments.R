@@ -133,12 +133,13 @@ chart_arguments <- function() {
     format = new_arg_spec(
       paste0(
         "How values are printed on the value axis, in tooltips and value ",
-        "labels (aggregated types): \"number\" (default), \"compact\" ",
-        "(1.2K, 3.4M) or \"percent\" (a fraction x100 with %). Same as the ",
-        "tile block's `format`."
+        "labels: \"number\" (default, smart decimals), \"compact\" ",
+        "(1.2K, 3.4M), \"percent\" (a fraction x100 with %) or a whole ",
+        "number of decimals from 0 to 6 (2 prints 4.36). Same as the table ",
+        "block's `format`."
       ),
       example = "compact",
-      type = arg_enum(c("number", "compact", "percent"))
+      type = arg_string()
     ),
     unit = new_arg_spec(
       paste0(
@@ -385,7 +386,8 @@ chart_arguments <- function() {
     pct_of = new_arg_spec(
       paste0(
         "Which mapped role a func=\"pct_distinct\" denominator is taken ",
-        "WITHIN: \"facet\" (default), \"category\" or \"color\". It cannot ",
+        "WITHIN: \"facet\" (default), \"category\" or \"color\", or ",
+        "\"total\" for the whole chart across all panels. It cannot ",
         "be inferred: the chart would have to know whether a column is a ",
         "POPULATION split (arm, sex, country, where a per-level denominator ",
         "is meaningful) or an EVENT attribute (a grade, where the ",
