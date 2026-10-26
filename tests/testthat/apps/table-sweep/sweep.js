@@ -252,13 +252,50 @@
     push({ block: id, where: "gear", what: "gear", label: txt(gear), effect: "ok" });
     await unfold(pop, id, true);
     const seen = new Set();
+    // The grouped tray (blockr.ui's Blockr.trayNav) shows one group at a
+    // time. Its index and tabs are swept once each: a click must show
+    // another group. Controls are then taken group by group.
+    const navSel = ".blockr-tray-nav__group, .blockr-tray-nav__tab";
+    const groupNames = () => [...new Set([...(gearPopover() || document).querySelectorAll(navSel)]
+      .filter(vis).map(txt))];
+    const showGroup = async (name) => {
+      const b = [...(gearPopover() || document).querySelectorAll(navSel)].filter(vis).find((x) => txt(x) === name);
+      if (!b || b.classList.contains("is-current")) return false;
+      b.click();
+      await sleep(150);
+      return true;
+    };
+    for (const name of groupNames()) {
+      const p0 = gearPopover();
+      const pane = p0 && p0.querySelector(".blockr-tray-nav__pane");
+      const sig0 = pane ? [...pane.children].filter(vis).map(txt).join("|") : "";
+      const moved = await showGroup(name);
+      const sig1 = pane ? [...pane.children].filter(vis).map(txt).join("|") : "";
+      if (moved) push({ block: id, where: "gear", what: "group", label: name, effect: sig1 !== sig0 ? "ok" : "DEAD" });
+    }
     for (let guard = 0; guard < 200; guard++) {
       pop = await openGear(root);
       if (!pop) break;
       await unfold(pop, id, false);
-      const ctrls = [...pop.querySelectorAll(CTRL_SEL)].filter((c) => shown(c) && !isLayoutSeg(c));
-      const keyed = ctrls.map((c, i) => [keyOf(c, i), c]);
-      const next = keyed.find(([k]) => !seen.has(k));
+      const unseen = () => {
+        const ctrls = [...pop.querySelectorAll(CTRL_SEL)]
+          .filter((c) => shown(c) && !isLayoutSeg(c) && !c.closest(".blockr-tray-nav__index, .blockr-tray-nav__tabs"));
+        return { ctrls, keyed: ctrls.map((c, i) => [keyOf(c, i), c]) };
+      };
+      let { ctrls, keyed } = unseen();
+      let next = keyed.find(([k]) => !seen.has(k));
+      // Nothing new in the group on show: try the others, in order. A gear
+      // rebuilt from scratch opens on its first group again, so every pass
+      // looks through all of them.
+      const groupsLeft = groupNames();
+      while (!next && groupsLeft.length) {
+        await showGroup(groupsLeft.shift());
+        pop = gearPopover();
+        if (!pop) break;
+        await unfold(pop, id, false);
+        ({ ctrls, keyed } = unseen());
+        next = keyed.find(([k]) => !seen.has(k));
+      }
       state.log.push(`${id} gear: ${ctrls.length} visible of ${pop.querySelectorAll(CTRL_SEL).length}, next ${next ? next[0] : "none"}`);
       if (!next) break;
       const [key, c] = next;
