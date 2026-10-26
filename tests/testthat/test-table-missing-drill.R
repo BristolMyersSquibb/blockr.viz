@@ -164,3 +164,26 @@ test_that("records layout: a nested header claim filters the input rows", {
                    "arm = A")
   expect_identical(dt_claim_label(".group1_level", "A"), "A")
 })
+
+test_that("records layout: a nested row claims its group and its drill value", {
+  d <- missing_df()
+  nest <- table_nest(d, by = "arm", rowname = "id")
+  v <- annotated_structure_view(nest)
+  keys <- dd_row_drill_attrs(v$data, v$section_cols, drill_col = "sex")$keys
+  # s1 under A, sex F; s2 has no sex and claims nothing.
+  expect_match(keys[[1L]], '"column":".group1_level","value":"A"', fixed = TRUE)
+  expect_match(keys[[1L]], '"column":"sex","value":"F"', fixed = TRUE)
+  expect_identical(keys[[2L]], "")
+  # The rowname moved to `.label` and still drills under its own name.
+  keys <- dd_row_drill_attrs(v$data, v$section_cols, drill_col = "id")$keys
+  expect_match(keys[[1L]], '"column":"id","value":"s1"', fixed = TRUE)
+  # A mode is not a column: rows stay inert, headers drill.
+  expect_true(all(!nzchar(
+    dd_row_drill_attrs(v$data, v$section_cols, drill_col = "auto")$keys)))
+
+  ex <- table_nest_drill_expr("arm", c(".group1_level", "sex"), c("A", "F"))
+  expect_identical(eval(ex, list(data = d))$id, "s1")
+  expect_identical(dt_claim_label(c(".group1_level", "sex"), c("A", "F"),
+                                  dt_group_names(nest)),
+                   c("arm = A", "sex = F"))
+})

@@ -770,13 +770,38 @@ annotated_structure_view <- function(data) {
 #' (.dt-row-nodrill). The drilled output is a pure SUBSET of the annotated
 #' df; downstream consumers read the identity columns themselves (no
 #' synthetic "spread" column is added).
+#'
+#' A third shape is a records table nested by `by` (table_nest()) with a
+#' drill COLUMN (`drill_col`, a real column of the input): each row claims its
+#' enclosing groups and its own value in that column, "ARM = Low dose, SEX =
+#' M". The rowname column lives on `.label` there (`nest_rowname`
+#' attribute). A row whose value is missing claims nothing, as in a flat
+#' table.
 #' @noRd
-dd_row_drill_attrs <- function(data, section_cols) {
+dd_row_drill_attrs <- function(data, section_cols, drill_col = NULL) {
   n <- nrow(data)
   group_cols <- intersect(section_cols,
                           grep("^\\.group\\d+_level$", names(data), value = TRUE))
   has_leaf <- all(c(".variable", ".variable_level") %in% names(data))
   has_fil <- ".filter" %in% names(data)
+
+  # The nested records' column drill.
+  col_vals <- dd_nest_drill_values(data, drill_col)
+  if (!has_leaf && !has_fil && !is.null(col_vals)) {
+    keys <- character(n)
+    for (i in which(!is.na(col_vals))) {
+      pairs <- list()
+      for (sc in group_cols) {
+        val <- as.character(data[[sc]][i])
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = sc, value = val)
+      }
+      pairs[[length(pairs) + 1L]] <- list(column = drill_col,
+                                           value = col_vals[i])
+      keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+    }
+    return(list(keys = keys))
+  }
 
   chr <- function(col) if (col %in% names(data)) as.character(data[[col]]) else rep(NA_character_, n)
   v_var <- chr(".variable")
@@ -816,6 +841,23 @@ dd_row_drill_attrs <- function(data, section_cols) {
     keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
   }
   list(keys = keys)
+}
+
+#' The values a nested records row claims for the drill column: the column
+#' itself, or `.label` when the drill column is the rowname table_nest() moved
+#' there. NULL when `drill_col` is a mode ("auto", "source") or names nothing
+#' in the frame.
+#' @noRd
+dd_nest_drill_values <- function(data, drill_col) {
+  if (is.null(drill_col) || !nzchar(drill_col) || startsWith(drill_col, ".")) {
+    return(NULL)
+  }
+  if (drill_col %in% names(data)) return(as.character(data[[drill_col]]))
+  if (identical(attr(data, "nest_rowname", exact = TRUE), drill_col) &&
+        ".label" %in% names(data)) {
+    return(as.character(data[[".label"]]))
+  }
+  NULL
 }
 
 #' Per-header-row structured-drill attributes for section level `L`.
@@ -876,7 +918,8 @@ html_is_nest <- function(data, section_cols, styling_cols) {
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
                              styling_cols = character(), collapsible = TRUE,
-                             drill_keys = FALSE, nest = FALSE) {
+                             drill_keys = FALSE, nest = FALSE,
+                             drill_col = NULL) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -1080,7 +1123,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # rows (stat rows -- no identity claim) additionally render
   # `dt-row-nodrill`: no pointer, no hover highlight, click is a no-op.
   row_drill <- if (isTRUE(drill_keys)) {
-    a <- dd_row_drill_attrs(data, section_cols)
+    a <- dd_row_drill_attrs(data, section_cols, drill_col = drill_col)
     nodrill <- !nzchar(a$keys)
     row_class[nodrill] <- paste(row_class[nodrill], "dt-row-nodrill")
     dd_attr_chunk("dd-keys", a$keys)

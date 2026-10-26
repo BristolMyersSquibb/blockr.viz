@@ -106,10 +106,13 @@ drill_paths <- list(
   list(view = "rec", a = "S-003", b = "S-001",
        want_a = adsl[adsl$SEX %in% "M", ], foot_a = "SEX = M",
        want_b = adsl[adsl$SEX %in% "F", ], foot_b = "SEX = F"),
-  list(view = "nest", a = "Low dose", b = "High dose",
-       cell = ".blockr-section-value",
+  # A header claims its group; a row its group and its value in the drill
+  # column (drill = "SEX").
+  list(view = "nest", a = "Low dose", b = "S-033",
+       cell = ".blockr-section-value", cell_b = NULL,
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
-       want_b = adsl[adsl$ARM == "High dose", ], foot_b = "ARM = High dose"),
+       want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
+       foot_b = "ARM = Low dose, SEX = M"),
   list(view = "rcards", a = "Low dose", b = "High dose",
        none = drill_arm_frame,
        want_a = drill_arm_frame[2, ], foot_a = "Arm = Low dose",
@@ -179,8 +182,9 @@ for (p in drill_paths) local({
                 label = "listing after the second click")
 
     # A click on another key replaces the first.
+    cell_b <- if ("cell_b" %in% names(p)) p$cell_b else p$cell
     drill_click(app, id, p$a, p$cell)
-    drill_click(app, id, p$b, p$cell)
+    drill_click(app, id, p$b, cell_b)
     s <- drill_state(app, id)
     expect_identical(s$active, p$b)
     expect_identical(s$footer, paste("Filtered:", p$foot_b))

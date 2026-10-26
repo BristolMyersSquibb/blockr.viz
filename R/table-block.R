@@ -225,7 +225,8 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible,
-                            drill_keys = drill_on, nest = nest)
+                            drill_keys = drill_on, nest = nest,
+                            drill_col = if (drill_on) drill)
 
   table_tag <- dt_fixed_table_tag(
     thead, tbody,
@@ -835,6 +836,7 @@ dd_group_filter_call <- function(cols, vals) {
 #'
 #' table_nest() puts the k-th `by` column's value in `.group<k>_level`, so a
 #' header click on `.group1_level = "Placebo"` filters `by[1] == "Placebo"`.
+#' A row click adds its value in the drill column, which is a real column.
 #' The "(Missing)" header (`missing = "level"`) claims the rows with no value.
 #' @param by The `by` columns, outer first.
 #' @param gc,gv The stored claim's columns and values.
@@ -849,8 +851,13 @@ table_nest_drill_expr <- function(by, gc, gv) {
   k <- suppressWarnings(
     as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc))
   )
-  ok <- !is.na(k) & k <= length(by)
-  summarize_drill_expr(stats::setNames(as.list(gv[ok]), by[k[ok]]))
+  grp <- !is.na(k) & k <= length(by)
+  # A row claims its groups and its value in the drill column, a real column.
+  real <- is.na(k) & !startsWith(gc, ".")
+  cols <- gc
+  cols[grp] <- by[k[grp]]
+  keep <- grp | real
+  summarize_drill_expr(stats::setNames(as.list(gv[keep]), cols[keep]))
 }
 
 #' Say what a drill claim claims, in the source data's own words.
@@ -888,7 +895,9 @@ dt_claim_label <- function(gc, gv, group_names = character()) {
   } else if (any(glv)) {
     k <- as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc[glv]))
     nm <- group_names[k]
-    ifelse(!is.na(nm) & nzchar(nm), paste0(nm, " = ", gv[glv]), gv[glv])
+    real <- !glv & !startsWith(gc, ".")
+    c(ifelse(!is.na(nm) & nzchar(nm), paste0(nm, " = ", gv[glv]), gv[glv]),
+      if (any(real)) paste0(gc[real], " = ", gv[real]))
   } else {
     paste0(gc, " = ", gv)
   }
