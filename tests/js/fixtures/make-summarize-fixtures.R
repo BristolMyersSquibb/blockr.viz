@@ -53,7 +53,9 @@ record <- function(blk, edits = list()) {
       session$flushReact()
       expr <- session$makeScope("expr")
       for (e in edits) {
-        expr$setInputs(summarize_table_block_action = list(
+        # The table block's groups engine (R/table-groups-server.R) reads
+        # its gear edits under the "groups" namespace.
+        expr$setInputs(`groups-summarize_table_block_action` = list(
           action = "config", param = e$param, value = e$value
         ))
         session$flushReact()
@@ -126,6 +128,18 @@ cases <- list(
       list(param = "ctrl_target", value = ""),
       list(param = "drill", value = NULL),
       list(param = "search", value = "on")
+    )
+  ),
+  # One pick in each of the gear's segmented controls, in the order the
+  # selection test clicks them: the payload after each is the server's echo.
+  segments = record(
+    block(by = "TERM", summaries = list(count_bar)),
+    edits = list(
+      list(param = "sort_dir", value = "asc"),
+      list(param = "pct_of", value = "total"),
+      list(param = "missing", value = "level"),
+      list(param = "bar_width", value = "wide"),
+      list(param = "look", value = "compact")
     )
   )
 )

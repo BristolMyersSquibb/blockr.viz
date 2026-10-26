@@ -298,3 +298,51 @@ test('a gear edit is sent as a config action', async () => {
   assert.ok(t.isOpen());
   await t.close();
 });
+
+test('a segment pick switches the selection once, and the echo keeps it', async () => {
+  const t = open('segments');
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  // The group a pick is made in, found by its options' labels.
+  const group = (labels) => Array.from(t.band().querySelectorAll('.blockr-segmented'))
+    .find((g) => g.textContent === labels);
+  const picked = (g) => Array.from(g.children)
+    .filter((b) => b.classList.contains('is-selected') &&
+      b.getAttribute('aria-checked') === 'true')
+    .map((b) => b.textContent);
+  // In the order the fixture's edits arrive: payload i + 1 is the server's
+  // answer to pick i.
+  const picks = [
+    ['DescendingAscending', 'Ascending'],
+    ['ColumnTable', 'Table'],
+    ['DropShow', 'Show'],
+    ['NarrowMediumWideFit', 'Wide'],
+    ['TableCompactCards', 'Compact']
+  ];
+  picks.forEach(([labels, want], i) => {
+    const g = group(labels);
+    assert.ok(g, 'the gear has the ' + labels + ' control');
+    const seg = Array.from(g.children).find((b) => b.textContent === want);
+    // The selection at each point the browser could paint between: before
+    // the click, after it, after its timers, after the echo, after its
+    // timers. Looked up afresh each time, so a rebuilt gear counts too.
+    const now = () => { const x = group(labels); return x ? picked(x) : ['(gone)']; };
+    const seen = [now()];
+    click(seg);
+    seen.push(now());
+    t.flush();
+    seen.push(now());
+    t.push(i + 1);
+    seen.push(now());
+    t.flush();
+    seen.push(now());
+    const changes = seen.filter((s, k) => k > 0 &&
+      s.join() !== seen[k - 1].join()).length;
+    assert.equal(changes, 1, labels + ': ' + JSON.stringify(seen));
+    assert.deepEqual(seen.at(-1), [want]);
+    // assert.ok: on a failure, assert.equal would print two happy-dom nodes,
+    // which walks the whole document and never finishes.
+    assert.ok(group(labels) === g, labels + ': the control is the same node');
+  });
+  assert.ok(t.isOpen());
+  await t.close();
+});
