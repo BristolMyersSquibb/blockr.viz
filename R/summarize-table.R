@@ -89,6 +89,12 @@ summarize_agg_first <- function(x) {
 # total). Returns a data frame of the keys plus `.v`.
 #' @noRd
 summarize_aggregate <- function(data, keys, func, value, id_var) {
+  func <- func %||% "count"
+  if (length(keys) && func %in% c("count", "count_distinct") &&
+        (identical(func, "count") || isTRUE(id_var %in% names(data)))) {
+    return(summarize_count_by(data, keys,
+                              if (identical(func, "count_distinct")) id_var))
+  }
   ex <- summarize_agg_expr(func, value, id_var)
   if (!length(keys)) {
     out <- dplyr::summarise(data, .v = !!ex)
@@ -98,6 +104,34 @@ summarize_aggregate <- function(data, keys, func, value, id_var) {
   }
   out <- as.data.frame(out, check.names = FALSE)
   out$.v <- as.numeric(out$.v)
+  out
+}
+
+# summarize_aggregate()'s counts without dplyr: rows per key combination, or
+# distinct values of `id_var` per combination (a missing id counts as one
+# value, as in dplyr::n_distinct()). A faceted table aggregates once per
+# facet level and row level, so the heatmap's 25 terms are 50 calls, and
+# group_by() + summarise() costs about 1 ms each before any work. Keys are
+# joined as summarize_match_col() joins them, which is how every caller
+# reads the result; rows come in first-appearance order.
+#' @noRd
+summarize_count_by <- function(data, keys, id_var = NULL) {
+  k <- do.call(paste, c(lapply(keys, function(x) as.character(data[[x]])),
+                        list(sep = "\r")))
+  first <- which(!duplicated(k))
+  ki <- match(k, k[first])
+  n <- if (is.null(id_var)) {
+    tabulate(ki, nbins = length(first))
+  } else {
+    id <- data[[id_var]]
+    ii <- match(id, unique(id))
+    pair <- !duplicated(cbind(ki, ii))
+    tabulate(ki[pair], nbins = length(first))
+  }
+  out <- data[first, keys, drop = FALSE]
+  rownames(out) <- NULL
+  out <- as.data.frame(out, check.names = FALSE)
+  out$.v <- as.numeric(n)
   out
 }
 
