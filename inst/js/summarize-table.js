@@ -2998,7 +2998,12 @@
       relayout = false;
       if (window.blockrTableGearPending) delete window.blockrTableGearPending[elemId];
       if (d.layout !== "groups") {
-        if (pop.classList.contains("blockr-settings--open")) closePop();
+        // Closed once this container is off screen (table.js,
+        // closeWhenHidden): earlier, the table would jump for a few frames.
+        if (pop.classList.contains("blockr-settings--open")) {
+          var cwh = window.blockrCloseWhenHidden;
+          if (cwh) cwh(root, closePop); else closePop();
+        }
         return;
       }
       if (!d.gearOpen) return;

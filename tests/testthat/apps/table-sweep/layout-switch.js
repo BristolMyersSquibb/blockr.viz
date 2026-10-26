@@ -9,6 +9,9 @@
 // screen, the number of visible gear buttons and open gear trays in the
 // block, the chosen layout tile in the open tray (null without
 // one), and whether that tray holds the Table 1 settings and the input badge.
+// A pick adds {gaps, blanks, samples}: from the click until the block has
+// settled, sampled every 8 ms, how often the block showed no open tray, and
+// how often it showed no table.
 (function () {
   if (window.blockrLayout) return;
 
@@ -40,6 +43,7 @@
   }
 
   const gears = (r) => [...r.querySelectorAll(".blockr-gear-btn")].filter(vis);
+  const tables = (r) => [...r.querySelectorAll("table")].filter(vis);
   const trays = (r) => [...r.querySelectorAll(".blockr-settings--open")].filter(vis);
   const segs = (tray) => [...tray.querySelectorAll(".dd-section--layout [role=radio]")]
     .filter((s) => LAYOUTS.includes(val(s)));
@@ -97,12 +101,23 @@
     if (!tray) return Object.assign(read(id), { clicked: false });
     const s = segs(tray).find((x) => val(x) === name.toLowerCase());
     if (!s) return Object.assign(read(id), { clicked: false });
+    const r = root(id);
+    let gaps = 0, blanks = 0, samples = 0, sampling = true;
+    const sample = () => {
+      if (!sampling) return;
+      samples++;
+      if (trays(r).length !== 1) gaps++;
+      if (!tables(r).length) blanks++;
+      setTimeout(sample, 8);
+    };
     s.click();
+    sample();
     const want = name.toLowerCase();
     const t0 = Date.now();
     while (Date.now() - t0 < max && shown(id) !== want) await sleep(150);
     await settle();
-    return Object.assign(read(id), { clicked: true });
+    sampling = false;
+    return Object.assign(read(id), { clicked: true, gaps, blanks, samples });
   }
 
   async function reopen(id) {

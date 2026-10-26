@@ -442,7 +442,7 @@ summarize_table_dep <- memoise0(function() {
     drilldown_table_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-summarize",
-      version = paste0(utils::packageVersion("blockr.viz"), ".27"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".28"),
       src = system.file("js", package = "blockr.viz"),
       script = "summarize-table.js"
     )

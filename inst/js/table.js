@@ -1776,16 +1776,24 @@
     // the block was open. The new layout's table arrives after the switch,
     // so an open gear redraws once more when it does (root._dtAfterPayload).
     var relayout = false;
+    // Until the new layout's table arrives, the tray keeps the height it had,
+    // so it does not shrink to the old table's gear and grow back.
+    var holdHeight = function (/** @type {number} */ h) {
+      pop.style.minHeight = h ? h + "px" : "";
+      if (h) setTimeout(function () { pop.style.minHeight = ""; }, 3000);
+    };
     document.addEventListener("blockr-table-layout", function (e) {
       var d = /** @type {CustomEvent} */ (e).detail;
       if (!d || d.id !== elemId || !root.isConnected) return;
       relayout = false;
       delete gearPending[elemId];
-      if (d.layout === "groups") { closePop(); return; }
+      if (d.layout === "groups") { closeWhenHidden(root, closePop); return; }
       if (!d.gearOpen) return;
+      var held = pop.classList.contains("blockr-settings--open") ? pop.offsetHeight : 0;
       refreshState();
       engine.refresh();
       openPop();
+      holdHeight(held);
       relayout = true;
     });
     /** @type {any} */ (root)._dtAfterPayload = function () {
@@ -1793,6 +1801,7 @@
       relayout = false;
       refreshState();
       engine.refresh();
+      holdHeight(0);
     };
 
     root.insertBefore(header, root.firstChild);
@@ -2316,6 +2325,97 @@
     return band;
   }
 
+  // A layout switch shows the other engine's container (the server's
+  // layout_css). The first time, that container is still empty: the server
+  // draws an engine's table only once its output is on screen. Until the new
+  // container has its table, and its tray if a gear was open, the old one
+  // stays on screen and the new one is laid out out of sight (hidden, out of
+  // the flow, so Shiny still renders into it); the block never shows
+  // nothing. Inline !important outranks the server's rule; it comes off when
+  // the new view is ready, or after two seconds.
+  /** @param {string[]} ids @param {string} layout @param {boolean} open */
+  function bridgeSwitch(ids, layout, open) {
+    /** @type {HTMLElement | null} */
+    var box = null;
+    for (var i = 0; i < ids.length && !box; i++) {
+      var sel = (window.CSS && CSS.escape) ? CSS.escape(ids[i]) : ids[i];
+      var c = document.querySelector('[data-dt-elem-id="' + sel + '"], [data-summarize-elem-id="' + sel + '"]');
+      var w = c && c.closest(".blockr-table-engine");
+      if (w) box = /** @type {HTMLElement | null} */ (w.parentElement);
+    }
+    if (!box) return;
+    var wraps = /** @type {HTMLElement[]} */ (Array.prototype.slice.call(
+      box.querySelectorAll(":scope > .blockr-table-engine")));
+    var kind = function (/** @type {HTMLElement} */ w) {
+      var m = /(records|groups|variables)_wrap$/.exec(w.id);
+      return m ? m[1] : "";
+    };
+    var shown = wraps.filter(function (w) { return !!w.offsetParent; });
+    if (!shown.length) return;
+    var engine = wraps.filter(function (w) {
+      return kind(w) === (layout === "groups" ? "groups" : "records");
+    })[0];
+    if (!engine) return;
+    var ready = function () {
+      return !!engine.querySelector("table") &&
+        (!open || !!engine.querySelector(".blockr-settings--open"));
+    };
+    if (ready()) return;
+    var hold = box;
+    var pos = hold.style.position;
+    if (getComputedStyle(hold).position === "static") hold.style.position = "relative";
+    var off = ["position", "visibility", "top", "left", "right", "pointer-events"];
+    wraps.forEach(function (w) {
+      if (shown.indexOf(w) >= 0) {
+        w.style.setProperty("display", "block", "important");
+      } else if (w === engine) {
+        w.style.setProperty("display", "block", "important");
+        w.style.setProperty("position", "absolute");
+        w.style.setProperty("visibility", "hidden");
+        w.style.setProperty("top", "0");
+        w.style.setProperty("left", "0");
+        w.style.setProperty("right", "0");
+        w.style.setProperty("pointer-events", "none");
+      } else {
+        w.style.setProperty("display", "none", "important");
+      }
+    });
+    var t0 = Date.now();
+    var check = function () {
+      if (ready() || Date.now() - t0 > 2000) {
+        wraps.forEach(function (w) {
+          w.style.removeProperty("display");
+          off.forEach(function (k) { w.style.removeProperty(k); });
+        });
+        hold.style.position = pos;
+        return;
+      }
+      setTimeout(check, 16);
+    };
+    setTimeout(check, 16);
+  }
+
+  // A layout switch hands the gear to the other engine. The server shows
+  // the other engine's container a moment after the layout message, so the
+  // tray closes only once its own container is off screen: closed earlier,
+  // the table would jump up for a few frames and back down. Gives up after
+  // three seconds.
+  /** @param {HTMLElement} root @param {() => void} close */
+  function closeWhenHidden(root, close) {
+    var t0 = Date.now();
+    var check = function () {
+      if (!root.isConnected || !root.offsetParent || Date.now() - t0 > 3000) {
+        close();
+        return;
+      }
+      // A timer, not requestAnimationFrame: a tab in the background runs
+      // no frames, and the tray would stay open behind the scenes.
+      setTimeout(check, 16);
+    };
+    check();
+  }
+  /** @type {any} */ (window).blockrCloseWhenHidden = closeWhenHidden;
+
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyTitles(root, p) {
     // No `titles` field at all: the sender paints its own band (the composer
@@ -2546,6 +2646,7 @@
           var pop = document.querySelector('[data-dd-pop-for="' + sel + '"]');
           return !!pop && pop.classList.contains("blockr-settings--open");
         });
+        bridgeSwitch(ids, msg.layout, open);
         ids.forEach(function (id) {
           layoutOf[id] = msg.layout;
           gearPending[id] = open;

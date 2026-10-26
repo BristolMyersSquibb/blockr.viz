@@ -9,6 +9,9 @@
 #   (c) closing and reopening the gear shows the same (after every second
 #       pick; the other picks go to the gear the switch left open)
 #   (d) the block's state (`layout`) is the pick
+#   (e) from the click until it settles, the block always shows one open
+#       tray and a table: the gear does not vanish and the table does not
+#       jump up for a few frames while the engines swap
 #
 # Each block starts in one layout (Listing: records, Groups: groups, Table 1:
 # variables). It runs a fixed sequence, then for each layout a seeded walk of
@@ -75,6 +78,10 @@ test_that("one click on a layout tile switches, and the gear follows", {
       },
       if (!identical(saved(id), want)) {
         sprintf("(d) state is %s", saved(id) %||% "NULL")
+      },
+      if (isTRUE(after$gaps > 0L) || isTRUE(after$blanks > 0L)) {
+        sprintf("(e) of %d samples, %d without one open tray, %d without a table",
+                after$samples, after$gaps, after$blanks)
       }
     )
     if (length(bad)) {
