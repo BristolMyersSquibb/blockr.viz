@@ -361,7 +361,6 @@
 .dd-table-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
-  font-style: italic;
   padding: 4px 2px 0;
   white-space: pre-line;
 }
