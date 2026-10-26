@@ -28,6 +28,12 @@ const OUTLINES = {
                              ctrl_target: 'flt_ae', ctrl_table: 'adae' },
   'bar-ctrl-missing-target': { chart_type: 'bar', ...AE, ctrl_target: 'gone', ctrl_choices: [] },
   waterfall: { chart_type: 'waterfall', group: 'AVISIT', value: 'CHG', func: 'sum', drill: 'auto' },
+  'waterfall-totals': { chart_type: 'waterfall', group: 'AVISIT', value: 'CHG', func: 'sum',
+                        waterfall_totals: ['Week 12'], drill: 'auto' },
+  'histogram-counts': { chart_type: 'histogram', x: 'AVAL', group: 'AVISIT', value: '.count',
+                        func: 'count', count_on: 'axis', drill: 'auto' },
+  'area-interval': { chart_type: 'area', ...LAB, lo: 'LO', hi: 'HI' },
+  'bar-label': { chart_type: 'bar', ...AE, label: 'AESEV' },
   pie: { chart_type: 'pie', group: 'AESEV', drill: 'auto' },
   treemap: { chart_type: 'treemap', group: 'AETERM', value: 'AVAL', func: 'sum', drill: 'auto' },
   radar: { chart_type: 'radar', group: 'AVISIT', color: 'ARM', value: 'AVAL', func: 'mean',
@@ -356,6 +362,26 @@ test('typed shaded ranges are drawn at once, and read back as typed', () => {
                        'SNB floor: 2011-09-06 to 2015-01-15; 1 to 2');
     assert.strictEqual(js(parseRanges('At 10:30: 2020-01-01 10:30 to 2020-01-02')),
                        js([{ name: 'At 10:30', from: '2020-01-01 10:30', to: '2020-01-02' }]));
+  } finally {
+    c.close();
+  }
+});
+
+test('waterfall totals: the group\'s values to pick from, the pick reaches R', () => {
+  const assert = require('node:assert');
+  const c = I.open({ ...R, chart_type: 'waterfall', group: 'AVISIT', value: 'CHG', func: 'sum',
+                     drill: 'auto' });
+  try {
+    c.block.gearBtn.click();
+    const row = I.roleRow(c.block, 'waterfall_totals');
+    const offered = I.selectOptions(c.env, row);
+    assert.ok(offered.length >= 2, `offers ${offered}`);
+    const m = c.mark();
+    I.pickSelect(c.env, row, offered[offered.length - 1]);
+    const sent = c.since(m).inputs.filter((i) => /_action$/.test(i.name)).map((i) => i.value);
+    assert.ok(sent.length, 'nothing sent');
+    assert.strictEqual(JSON.stringify(sent[sent.length - 1].waterfall_totals),
+                       JSON.stringify([offered[offered.length - 1]]));
   } finally {
     c.close();
   }

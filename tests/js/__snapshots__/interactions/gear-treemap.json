@@ -96,7 +96,8 @@
      },
      {
       "add": [
-       "Facet"
+       "Facet",
+       "Label"
       ]
      }
     ]

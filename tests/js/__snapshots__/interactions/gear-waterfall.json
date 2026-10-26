@@ -154,6 +154,24 @@
       ]
      },
      {
+      "role": "waterfall_totals",
+      "label": "Totals",
+      "controls": [
+       {
+        "kind": "multi",
+        "value": [],
+        "placeholder": "None",
+        "options": [
+         "Baseline",
+         "Week 2",
+         "Week 4",
+         "Week 8",
+         "Week 12"
+        ]
+       }
+      ]
+     },
+     {
       "role": "value_lines",
       "label": "Reference lines",
       "controls": [

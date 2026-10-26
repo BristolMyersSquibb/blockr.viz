@@ -67,14 +67,22 @@
    * A `labelLayout` that moves a label up or down, a line at a time, until it
    * covers no label placed before it. ECharts' own `moveOverlap` leaves
    * scatter labels where they are. Each label is measured from where it rests
-   * beside its point, so a resize lays them out again from scratch.
-   * @param {string} position 'right' or 'top' @param {number} distance
+   * beside its point, so a resize lays them out again from scratch. One
+   * spacer may serve several series, and spacers given the same `room`
+   * place their labels around each other (point labels and the names of
+   * colour groups): a label that comes before the last one seen starts a new
+   * layout pass.
+   * @param {string} position 'right', 'top' or 'inside' @param {number} distance
+   * @param {{ placed: any[], lastS: number, lastD: number }} [room]
    */
-  const labelSpacer = (position, distance) => {
-    /** @type {Array<{x: number, y: number, width: number, height: number}>} */
-    let placed = [];
+  const labelSpacer = (position, distance, room) => {
+    const r = room || { placed: [], lastS: -1, lastD: -1 };
     return (/** @type {any} */ p) => {
-      if (p.dataIndex === 0) placed = [];
+      const si = p.seriesIndex ?? 0;
+      if (si < r.lastS || (si === r.lastS && p.dataIndex <= r.lastD)) r.placed = [];
+      r.lastS = si;
+      r.lastD = p.dataIndex;
+      const placed = r.placed;
       const l = p.labelRect, s = p.rect, h = l.height;
       const y = position === 'top' ? s.y - distance - h : s.y + s.height / 2 - h / 2;
       const hit = (/** @type {number} */ dy) => placed.some((q) =>
@@ -278,6 +286,8 @@
     // panel, over the points, with a halo to read on them; its id keeps the
     // highlight patch and the brush off it.
     const labelCol = cfg.label || null;
+    // Point labels and group names keep out of each other's way.
+    const room = { placed: [], lastS: -1, lastD: -1 };
     if (labelCol) {
       /** @type {any[]} */
       const data = [];
@@ -302,19 +312,22 @@
             color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12,
             textBorderColor: surface, textBorderWidth: 3
           },
-          labelLayout: labelSpacer(position, distance)
+          labelLayout: labelSpacer(position, distance, room)
         });
       }
     }
 
     // The name of each colour group at the centre of mass of its points. A
     // label-only series per group, over the points, with a halo to read on them.
+    // Names of clouds that sit close are moved apart a line at a time, by one
+    // spacer the groups share.
     if (cloudLabels) {
+      const spacer = labelSpacer('inside', 0, room);
       panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
         const c = NS.cloudCentre(s.pts);
         if (!c || s.level == null || s.level === '') return;
         const mark = NS.nameMark('__legend_' + si, String(s.level), c, 'inside', ink);
-        mark.labelLayout = { moveOverlap: 'shiftY' };
+        mark.labelLayout = spacer;
         series.push(mark);
       });
     }
@@ -455,6 +468,6 @@
     };
   };
 
-  Object.assign(parts, { points, lineOverlay, lineTooltip, pointTooltip,
+  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip,
                          BASE_LINE_WIDTH, BASE_SCATTER_SIZE });
 })();

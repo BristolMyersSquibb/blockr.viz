@@ -16,13 +16,22 @@
   "2009-06-30"))`). The gear edits them as one line, "Shaded":
   `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.
 * `label` on a scatter, line or area writes the column's value beside each
-  point that has one, and the gear offers it under "Add mapping".
+  point that has one, and the gear offers it under "Add mapping". On a bar,
+  pie or treemap it writes the value on each bar, slice or tile whose rows
+  agree on one: at a bar's end, inside a stack's segments where it fits, in
+  place of a slice's name. Waterfall, histogram, boxplot, pointrange and
+  radar do not draw it.
+* The gear has a "Totals" row on a waterfall (`waterfall_totals`, picked
+  from the steps), "Interval low / high" on an area (`ymin` / `ymax`) and
+  "Group counts" on a histogram (`show_n`).
 * `{@type}` in a title, subtitle or caption opens a menu of chart types,
   narrowed by a list (`{@type in line, scatter}`).
 * `legend` places the colour legend: `"bottom"` (default), `"top"`, `"marks"`
   or `"none"`. `"marks"` writes the names on the marks (at a line's or an
   area's end, beside the last bar of a stack, at a scatter group's centre,
   on a pie slice); dodged bars, histograms and boxplots keep the legend.
+  Names of scatter groups whose centres sit close are moved apart a line at
+  a time.
   The legend is left-aligned, its swatch has the mark's shape (a line, a
   dot or a square), and it has a title only when the colour column has a
   label. `direct_labels = TRUE`, from earlier builds of 0.3.0, is read as

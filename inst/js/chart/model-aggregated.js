@@ -23,7 +23,7 @@
   // Config fields the model reads; a change to any other field reuses it.
   const MODEL_FIELDS = ['chart_type', 'group', 'color', 'facet', 'value', 'func', 'na_group',
     'pct_of', 'sort_by', 'sort_dir', 'baseline', 'facet_scales', 'scales', 'count_on',
-    'count_col', 'tt_fields', 'summary', 'whiskers', 'box_points'];
+    'count_col', 'tt_fields', 'summary', 'whiskers', 'box_points', 'label'];
 
   // A colour-split distribution slot is `group + SEP + level`: ECharts
   // dedupes a category axis by value, so the bare group would collapse the
@@ -183,6 +183,33 @@
   };
 
   /**
+   * `label` on a bar, slice or tile: per facet, group and colour level, the
+   * one value the cell's rows carry. Rows that disagree leave the cell
+   * without a label (null); missing values do not count. Pie and treemap
+   * draw one mark per group, so `byColor` false keys every row '__all__'.
+   * @param {any[]} rows @param {Record<string, any>} cfg @param {boolean} byColor
+   * @returns {Map<string, string | null>} keyed facet|||group|||color
+   */
+  const markLabels = (rows, cfg, byColor) => {
+    const col = cfg.label, groupCol = cfg.group, facetCol = cfg.facet;
+    const colorCol = byColor ? cfg.color : null;
+    /** @type {Map<string, string | null>} */
+    const out = new Map();
+    for (const r of rows) {
+      const v = r[col];
+      if (v == null || v === '' || v === 'NA') continue;
+      const key = (facetCol ? String(r[facetCol] ?? '') : '__all__') + '|||' +
+        (groupCol ? String(r[groupCol] ?? '') : 'Total') + '|||' +
+        (colorCol ? String(r[colorCol] ?? '') : '__all__');
+      const t = String(v);
+      const cur = out.get(key);
+      if (cur === undefined) out.set(key, t);
+      else if (cur !== null && cur !== t) out.set(key, null);
+    }
+    return out;
+  };
+
+  /**
    * The category slots of a distribution panel and what each one draws.
    * One slot per group, or per (group, level) when colour splits the
    * marks, group-major. An empty (group, level) slot is dropped unless a
@@ -253,7 +280,8 @@
    *             levels: string[], split: boolean, distribution: boolean,
    *             noValue: boolean, sharedMax: number | null, ttFields: string[],
    *             facet: string | null, nFacets: number, single: boolean,
-   *             ix: any, panels: AggregatedPanel[], histogram: boolean }} AggregatedModel
+   *             ix: any, panels: AggregatedPanel[], histogram: boolean,
+   *             markLabels: Map<string, string | null> | null }} AggregatedModel
    */
 
   /**
@@ -272,7 +300,7 @@
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
       distribution, noValue: distribution && (!value || value === '.count'),
       sharedMax: null, ttFields: [], facet: facet || null, nFacets: 1, single: true,
-      ix, panels: [], histogram: cfg.chart_type === 'histogram'
+      ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null
     };
     const agg = DAgg().aggregate(rows, { group, color, facet, value, func, na_group, pct_of });
     if (agg.length === 0) {
@@ -303,6 +331,12 @@
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? barTtFields(cfg) : [];
+    // On-mark text: a bar (not a waterfall step or a histogram bin), a
+    // slice, a tile.
+    if (cfg.label && ((ct === 'bar' && !out.cumulative && !out.histogram) ||
+                      ct === 'pie' || ct === 'treemap')) {
+      out.markLabels = markLabels(rows, cfg, ct === 'bar');
+    }
     const ttRep = out.ttFields.length ? ttRepValues(rows, cfg, out.ttFields) : null;
     const countAxis = isBar && NS.countOn(cfg, 'axis');
     const labels = model.facetLabels(rows, cfg, facets);
@@ -340,6 +374,13 @@
   /** The cells of one group in a panel. @param {AggregatedModel} m
    *  @param {AggregatedPanel} panel @param {string} g @returns {any[]} */
   const cellsOf = (m, panel, g) => m.ix.get(panel.cells, 'group', 'raw', g);
+
+  /** The `label` text of a bar, slice or tile, or null.
+   *  @param {AggregatedModel} m @param {AggregatedPanel} panel @param {string} g
+   *  @param {string | null} [c] @returns {string | null} */
+  const labelOf = (m, panel, g, c) => (m.markLabels
+    ? (m.markLabels.get(panel.facet + '|||' + g + '|||' + (c == null ? '__all__' : c)) ?? null)
+    : null);
 
   // -- Marks, keys and clicks ---------------------------------------------------
 
@@ -427,7 +468,7 @@
     return NS.keys.fromKeys(keys);
   };
 
-  Object.assign(model, { aggregated, summarizeStat, orderGroups, isCumulative, cellOf, cellsOf,
+  Object.assign(model, { aggregated, summarizeStat, orderGroups, isCumulative, cellOf, cellsOf, labelOf,
                          colourSplitsMark, aggregatedKeys, aggregatedMarkAt, aggregatedClick,
                          rowsUnder, BOX_CAT_SEP });
 })();

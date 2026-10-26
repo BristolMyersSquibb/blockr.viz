@@ -50,8 +50,11 @@
 #'   `color`.
 #' @param xend Interval end column (gantt only). Rows without an end are drawn
 #'   as a dot at `x`.
-#' @param label Column written on each mark. For pie and treemap the slice
-#'   column is used when unset.
+#' @param label Column written on the marks: beside each point (scatter,
+#'   line, area), on each bar, slice or tile (bar, pie, treemap) and on each
+#'   gantt bar. A bar, slice or tile shows the value only when its rows agree
+#'   on one. Not drawn on waterfall, histogram, boxplot, pointrange, radar or
+#'   band.
 #' @param orientation `NULL` (default) infers which way a bar, boxplot or
 #'   pointrange lies (see Details). Set `"horizontal"` (categories on y) or
 #'   `"vertical"` (categories on x) only when both columns are non-numeric,
@@ -1647,6 +1650,10 @@ new_chart_block <- function(
             }
             if (!is.null(msg$ref_hi))  upd(r_ref_hi, nn(msg$ref_hi))
             if (!is.null(msg$ref_lo))  upd(r_ref_lo, nn(msg$ref_lo))
+            # The steps drawn as totals; [] clears them.
+            if (!is.null(msg$waterfall_totals)) {
+              upd(r_waterfall_totals, chr_vec_state(msg$waterfall_totals))
+            }
             if (!is.null(msg$count_on))   upd(r_count_on, msg$count_on)
             if (!is.null(msg$na_group))   upd(r_na_group, msg$na_group)
             if (!is.null(msg$pct_of))     upd(r_pct_of, msg$pct_of)

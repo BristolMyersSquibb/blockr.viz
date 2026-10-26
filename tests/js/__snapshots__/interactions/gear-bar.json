@@ -119,7 +119,8 @@
      {
       "add": [
        "Facet",
-       "Tooltip fields"
+       "Tooltip fields",
+       "Label"
       ]
      }
     ]

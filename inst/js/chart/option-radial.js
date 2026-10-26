@@ -16,8 +16,8 @@
 
   /**
    * A slice or tile per group: the group's total over its cells and the
-   * rows behind it, in the board scale's colour or the palette's. Groups
-   * with nothing to show drop out.
+   * rows behind it, in the board scale's colour or the palette's, and its
+   * `label` text where there is one. Groups with nothing to show drop out.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    */
   const groupTotals = (m, panel, cfg) => {
@@ -27,7 +27,8 @@
       const cells = NS.model.cellsOf(m, panel, g);
       const total = cells.reduce((/** @type {number} */ s, /** @type {any} */ a) => s + (a.value ?? 0), 0);
       const n = cells.reduce((/** @type {number} */ s, /** @type {any} */ a) => s + (a.n || 0), 0);
-      return { name: g, value: total, n,
+      const text = NS.model.labelOf(m, panel, g);
+      return { name: g, value: total, n, ...(text != null ? { text } : {}),
                itemStyle: { color: (gScale && gScale.color && gScale.color[g]) ||
                  NS.paletteAt(palette, i) } };
     }).filter((/** @type {any} */ d) => d.value > 0);
@@ -37,6 +38,7 @@
   const pie = (m, panel, look) => {
     const { cfg, ink } = look;
     const P = parts.common(look);
+    const data = groupTotals(m, panel, cfg);
     return {
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
@@ -44,8 +46,13 @@
         tooltip: { trigger: 'item', confine: true,
                    formatter: (/** @type {any} */ p) => NS.rowTooltip(p.name,
                      P.aggPairs(p.value, p.data && p.data.n, p.percent), p.color) },
-        series: [{ type: 'pie', radius: ['30%', '70%'], data: groupTotals(m, panel, cfg),
-                   label: { show: true, fontSize: ink.fontSize, formatter: '{b}' },
+        series: [{ type: 'pie', radius: ['30%', '70%'], data,
+                   // The slice's `label` text, else its name.
+                   label: { show: true, fontSize: ink.fontSize,
+                            formatter: data.some((/** @type {any} */ d) => d.text != null)
+                              ? (/** @type {any} */ p) =>
+                                  (p.data && p.data.text != null ? p.data.text : p.name)
+                              : '{b}' },
                    emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }]
       }
     };
@@ -66,7 +73,9 @@
           type: 'treemap', data: groupTotals(m, panel, cfg), left: 10, right: 10, top: 2,
           bottom: 2, roam: false, nodeClick: false, breadcrumb: { show: false },
           label: { show: true, fontSize: ink.fontSize,
-                   formatter: (/** @type {any} */ p) => p.name + '\n' + NS.ddNum(Number(p.value)) },
+                   formatter: (/** @type {any} */ p) =>
+                     (p.data && p.data.text != null ? p.data.text : p.name) + '\n' +
+                     NS.ddNum(Number(p.value)) },
           itemStyle: { borderColor: ink.surface, borderWidth: 2, gapWidth: 2 },
           emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } }
         }]

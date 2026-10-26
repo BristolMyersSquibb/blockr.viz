@@ -161,7 +161,8 @@
      {
       "add": [
        "Color",
-       "Tooltip fields"
+       "Tooltip fields",
+       "Label"
       ]
      }
     ]

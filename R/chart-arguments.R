@@ -120,9 +120,12 @@ chart_arguments <- function() {
     label = new_arg_spec(
       paste0(
         "Column written as on-mark text. Optional; default null = no ",
-        "on-mark text. For pie/treemap, null falls back to the slice ",
-        "column (a label-less pie is unusable). Label only: does not ",
-        "affect colour, series, or drill."
+        "on-mark text. Scatter, line and area write it beside each point ",
+        "that has a value; bar, pie and treemap write it on each bar, ",
+        "slice or tile whose rows agree on one value (pie and treemap ",
+        "write the slice name otherwise); gantt on each bar. Not drawn on ",
+        "waterfall, histogram, boxplot, pointrange, radar or band. Label ",
+        "only: does not affect colour, series, or drill."
       ),
       example = NULL,
       type = arg_string()

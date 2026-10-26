@@ -147,6 +147,105 @@
     return Math.max(0, Math.ceil(w + 8 - room));
   };
 
+  /**
+   * `label` on a bar (model labelOf). A plain or grouped bar writes the text
+   * at its end, before its value when values show too. A stack or a 100% bar
+   * writes it inside each segment it fits in, from a label-only series, so
+   * a stack's totals keep their place; with percent values on, the segment's
+   * share follows the text. Mutates `series` and `valAxis`; returns the px a
+   * grid needs on its right.
+   * @param {any[]} series the bar series, one per colour level (or one)
+   * @param {any} valAxis
+   * @param {{ textAt: (si: number, gi: number) => string | null, groups: string[],
+   *           nBars: number, vertical: boolean, stack: boolean, percent: boolean,
+   *           valueLabels: boolean, valuePx: number, bandPx: number, ax: any,
+   *           face: string, measure: (s: string) => number }} o
+   * @returns {number}
+   */
+  const barMarkLabels = (series, valAxis, o) => {
+    /** @param {any} d */
+    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
+    const bars = series.slice(0, o.nBars);
+    const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
+
+    if (o.stack) {
+      // The value axis's reach, as ECharts scales it from the tallest stack.
+      let top = 0;
+      for (let gi = 0; gi < o.groups.length; gi++) {
+        let sum = 0;
+        for (const s of bars) { const v = Number(valOf(s.data[gi])); if (Number.isFinite(v) && v > 0) sum += v; }
+        top = Math.max(top, sum);
+      }
+      const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
+      const barW = Math.min(BAR_MAX, 0.6 * (o.bandPx || BAR_MAX / 0.6));
+      /** @type {any[]} */
+      const data = [];
+      for (let gi = 0; gi < o.groups.length; gi++) {
+        let pos = 0, neg = 0;
+        bars.forEach((s, si) => {
+          const d = s.data[gi];
+          const v = Number(valOf(d));
+          if (valOf(d) == null || !Number.isFinite(v) || v === 0) return;
+          const mid = v >= 0 ? pos + v / 2 : neg + v / 2;
+          if (v >= 0) pos += v; else neg += v;
+          const t = o.textAt(si, gi);
+          if (t == null) return;
+          const shown = (o.percent && o.valueLabels) ? t + ' · ' + Math.round(v * 100) + '%' : t;
+          const w = o.measure(shown);
+          const len = perPx ? Math.abs(v) / perPx : Infinity;
+          const fits = o.vertical ? len >= o.ax.fontSize + 4 && barW >= w + 4 : len >= w + 6;
+          if (!fits) return;
+          // The share now rides with the text.
+          if (o.percent && o.valueLabels) {
+            s.data[gi] = { ...((typeof d === 'object') ? d : { value: d }), label: { show: false } };
+          }
+          data.push(o.vertical ? [o.groups[gi], mid, shown] : [mid, o.groups[gi], shown]);
+        });
+      }
+      if (data.length) {
+        series.push({
+          id: '__label__', type: 'scatter', data, silent: true, symbolSize: 0, z: 11,
+          legendHoverLink: false, animation: false, tooltip: { show: false },
+          emphasis: { disabled: true },
+          label: { show: true, position: 'inside', ...style, color: '#fff',
+                   formatter: (/** @type {any} */ p) => p.value[2] },
+          labelLayout: { hideOverlap: true }
+        });
+      }
+      return 0;
+    }
+
+    /** @type {Array<{ v: number, text: string }>} */
+    const ends = [];
+    bars.forEach((s, si) => {
+      const texts = o.groups.map((_, gi) => o.textAt(si, gi));
+      if (!texts.some((t) => t != null)) return;
+      const vf = (o.valueLabels && s.label && typeof s.label.formatter === 'function')
+        ? s.label.formatter : null;
+      /** @param {any} p */
+      const formatter = (p) => {
+        const t = texts[p.dataIndex];
+        const v = vf ? vf(p) : '';
+        return t != null && v ? t + ' · ' + v : (t != null ? t : v);
+      };
+      s.label = { position: 'outside', distance: 4, ...style, ...(s.label || {}), show: true, formatter };
+      s.labelLayout = { hideOverlap: true };
+      s.data.forEach((/** @type {any} */ d, /** @type {number} */ gi) => {
+        const v = valOf(d);
+        if (v != null) ends.push({ v: Number(v), text: formatter({ value: v, dataIndex: gi }) });
+      });
+    });
+    if (!ends.length) return 0;
+    const hasPos = ends.some((e) => e.v > 0);
+    const hasNeg = ends.some((e) => e.v < 0);
+    valAxis.boundaryGap = [hasNeg ? '12%' : 0, hasPos ? '12%' : 0];
+    let w = 0;
+    for (const e of ends) if (o.vertical || e.v > 0) w = Math.max(w, o.measure(e.text));
+    if (o.vertical) return Math.max(0, Math.ceil(w / 2 - 10));
+    if (!hasPos) return 0;
+    const room = valAxis.max === 1 ? 0 : 0.107 * o.valuePx;
+    return Math.max(0, Math.ceil(w + 8 - room));
+  };
 
   /**
    * `legend: "marks"` on a stacked or 100% bar: each series' name at the middle
@@ -405,6 +504,17 @@
           measure, face: ink.face, cfg
         })
       : 0;
+    const markRight = m.markLabels
+      ? barMarkLabels(series, valAxis, {
+          textAt: (si, gi) => NS.model.labelOf(m, panel, groups[gi], colors.length ? colors[si] : null),
+          groups, nBars: Math.max(1, colors.length), vertical,
+          stack: !isGrouped && colors.length > 0, percent: showPercent, valueLabels: valueLabelsOn,
+          valuePx: vertical ? 350 - 30 - 66 : (plotW ? plotW - gut.gridLeft - 5 : 0),
+          bandPx: vertical ? (plotW ? (plotW - X_INSET) / Math.max(1, groups.length) : 0)
+            : (hCapped ? NS.PANEL_H_CAP / Math.max(1, groups.length) : ROW_BAND),
+          ax, face: ink.face, measure
+        })
+      : 0;
     NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink,
       cfg.value_line_names);
     // `legend: "marks"`: the level names on the stack's segments. After the
@@ -524,8 +634,10 @@
         tooltip,
         legend: legendOn ? { show: false, data: colors } : undefined,
         grid: vertical
-          ? { left: 55, right: 10 + Math.max(labelRight, namesRight), top: 30, bottom: bottomBase }
-          : { left: gut.gridLeft, right: 5 + labelRight, top: 30, bottom: bottomBase },
+          ? { left: 55, right: 10 + Math.max(labelRight, markRight, namesRight), top: 30,
+              bottom: bottomBase }
+          : { left: gut.gridLeft, right: 5 + Math.max(labelRight, markRight), top: 30,
+              bottom: bottomBase },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,
         series

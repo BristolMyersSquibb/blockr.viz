@@ -158,6 +158,12 @@
         roles: R.ROLES,
         config: () => this.config,
         columns: () => this.columns,
+        // A column's values in the rows, first seen first (the waterfall
+        // totals' choices). Capped: a list longer than that picks nothing.
+        levels: (/** @type {string} */ col) => (this.data && this._ix
+          ? this._ix.levels(this.data, col, 'nz').filter((/** @type {string} */ v) => v !== '')
+            .slice(0, 500)
+          : []),
         context: () => this._family(),
         currentType: () => this.config.chart_type,
         sections: () => this._sectionsSpec(),
@@ -319,6 +325,9 @@
         na_group: c.na_group || 'level',
         pct_of: c.pct_of || 'facet',
         baseline: c.baseline || 'zero',
+        // [] clears the totals, so this is always sent.
+        waterfall_totals: Array.isArray(c.waterfall_totals) ? c.waterfall_totals.map(String)
+          : (c.waterfall_totals == null || c.waterfall_totals === '' ? [] : [String(c.waterfall_totals)]),
         series: c.series || '',
         label: c.label || '',
         drill: c.drill || '',

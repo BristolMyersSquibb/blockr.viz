@@ -2592,7 +2592,11 @@
         // Multi-select over a fixed option list (a prepare script's
         // `factor(c("a","b"), lv)`). The column multi-picker above is the same
         // primitive fed from the data; this one takes the role's own options,
-        // which is the only difference between them.
+        // which is the only difference between them. `options` may be a
+        // function of the config and the host (the chart's waterfall totals
+        // list the group's values).
+        const choices = typeof role.options === 'function'
+          ? (role.options(cfg, this.h) || []) : (role.options || []);
         const sel = Array.isArray(cfg[key]) ? cfg[key].slice() :
           (this._hasVal(cfg[key]) ? [String(cfg[key])] : []);
         const wrap = document.createElement('div');
@@ -2602,13 +2606,13 @@
         };
         if (typeof Blockr !== 'undefined' && Blockr.Select && Blockr.Select.multi) {
           this._selects[key] = Blockr.Select.multi(wrap, { bordered: true,
-            options: role.options || [], selected: sel,
+            options: choices, selected: sel,
             placeholder: role.placeholder || 'None', onChange: onSel
           });
         } else {
           const sl = document.createElement('select');
           sl.className = 'dd-cfg-select'; sl.multiple = true;
-          for (const o of (role.options || [])) {
+          for (const o of choices) {
             const val = (typeof o === 'object' && o) ? o.value : o;
             const op = document.createElement('option');
             op.value = val;

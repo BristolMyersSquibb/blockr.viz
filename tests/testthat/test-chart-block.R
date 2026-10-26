@@ -947,3 +947,30 @@ test_that("an unchanged payload is not serialized or pushed a second time", {
     args = list(x = blk, data = list(data = dat))
   )
 })
+
+test_that("the gear writes and clears waterfall_totals", {
+  df <- data.frame(step = c("Start", "In", "Out", "End"), v = c(10, 5, -3, 0))
+  blk <- new_chart_block(type = "waterfall", x = "step", y = "v", func = "sum")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      act <- function(...) {
+        session$makeScope("expr")$setInputs(drilldown_block_action = list(
+          action = "config", chart_type = "waterfall", group = "step",
+          value = "v", func = "sum", ...
+        ))
+        session$flushReact()
+      }
+      st <- session$returned$state
+      act(waterfall_totals = list("End"))
+      expect_equal(st$waterfall_totals(), "End")
+      # A message without the field keeps the totals.
+      act(legend = "top")
+      expect_equal(st$waterfall_totals(), "End")
+      act(waterfall_totals = list())
+      expect_null(st$waterfall_totals())
+    },
+    args = list(x = blk, data = list(data = df))
+  )
+})

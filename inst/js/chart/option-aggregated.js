@@ -160,7 +160,8 @@
 
     const series = (current.series || []).map((/** @type {any} */ s) => {
       // A name written on the marks is no mark of the data.
-      if (typeof s.id === 'string' && s.id.indexOf('__legend_') === 0) return {};
+      if (typeof s.id === 'string' &&
+          (s.id.indexOf('__legend_') === 0 || s.id === '__label__')) return {};
       if (s.type === 'pie' || s.type === 'treemap') {
         const dim = s.type === 'pie' ? 0.2 : 0.3;
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d

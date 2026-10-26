@@ -242,6 +242,12 @@
     baseline: { label: 'Bars', kind: 'segmented',
                 options: [{ value: 'zero', label: 'Standard' },
                           { value: 'cumulative', label: 'Waterfall' }] },
+    // The steps of a waterfall drawn as totals (from zero to the running
+    // total), picked from the values of the group column.
+    waterfall_totals: { label: 'Totals', kind: 'multi', placeholder: 'None',
+                        options: (/** @type {any} */ cfg, /** @type {any} */ h) =>
+                          (cfg.group && h && typeof h.levels === 'function'
+                            ? h.levels(cfg.group) : []) },
     smoother: { label: 'Smoother', kind: 'select', options: ['none', 'lm', 'loess'] },
     // Helper lines. `identity_line` is the computed diagonal; x_lines /
     // value_lines are fixed positions the user types. All three draw a dashed guide, so the
@@ -427,7 +433,7 @@
               ph: 'column, e.g. ANRHI (blank = none)' },
     ref_lo: { label: 'Lower limit', kind: 'column', colType: 'num',
               ph: 'column, e.g. ANRLO (blank = none)' },
-    // `ymin` / `ymax`: error bars on a scatter, a band on a line.
+    // `ymin` / `ymax`: error bars on a scatter, a band on a line or area.
     lo:       { label: 'Interval low', kind: 'column', colType: 'num' },
     hi:       { label: 'Interval high', kind: 'column', colType: 'num' },
     // A column whose values set a line's dash (history solid, forecast
@@ -544,9 +550,9 @@
   const FAMILY_ROLES = {
     aggregated: {
       requiredMap: ['group'],
-      // `label` (on-mark text) is timeline-only: only the gantt custom
-      // renderer consumes it. Not offered here — pie/treemap label their
-      // marks by group automatically. `color` is offered only where the
+      // `label` writes a column's value on a bar, slice or tile, where the
+      // rows behind it agree on one value (model-aggregated.js markLabels).
+      // `color` is offered only where the
       // renderer consumes it: pie/treemap/waterfall draw ONE measure per
       // group (their builders sum across color cells — the mapping would be
       // inert and misleading).
@@ -559,7 +565,8 @@
         // for a real aggregation it is a representative, not a per-row value.
         // Offered only on bar because only the bar tooltip formatter consumes
         // it (pie/treemap/boxplot/radar/waterfall have their own).
-        { role: 'tt_fields', types: ['bar'] }
+        { role: 'tt_fields', types: ['bar'] },
+        { role: 'label', types: ['bar', 'pie', 'treemap'] }
       ],
       // Missing group sits next to Group: it decides whether rows without a
       // group are counted as their own category. Bar only, like the percent
@@ -580,6 +587,7 @@
         { role: 'legend', types: ['bar', 'boxplot', 'pointrange', 'radar'] },
         { role: 'value_labels', types: ['bar', 'waterfall'] },
         { role: 'baseline', types: ['bar'] },
+        { role: 'waterfall_totals', types: ['waterfall'] },
         // Distribution statistics: the shared interval pick (box body /
         // point-range interval), the box's outer whisker rule, and the
         // point-range center line. See SUMMARY_STATS.
@@ -638,8 +646,8 @@
         // Line-connect mode (straight / monotone / step-*): line-only, so it
         // sits with the other line presentation options.
         { role: 'connect', types: ['line', 'area'] },
-        { role: 'lo', types: ['line', 'scatter'] },
-        { role: 'hi', types: ['line', 'scatter'] },
+        { role: 'lo', types: ['line', 'scatter', 'area'] },
+        { role: 'hi', types: ['line', 'scatter', 'area'] },
         { role: 'bar_mode', types: ['area'] },
         'legend',
         { role: 'format', types: ['scatter', 'line', 'area'] },
@@ -661,8 +669,9 @@
       requiredMap: ['x'],
       optionalMap: ['color', 'facet'],
       mapping: ['bins'],
+      // Group counts: per bin on the category axis, per panel on facets.
       presentation: ['bar_mode', 'legend', 'value_labels', 'value_lines', 'format', 'unit',
-        'facet_scales', 'facet_cols', 'download'],
+        'count_on', 'count_col', 'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },
     timeline: {

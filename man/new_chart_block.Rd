@@ -98,8 +98,11 @@ line or point group per value; per-bar label on a gantt). Independent of
 \item{xend}{Interval end column (gantt only). Rows without an end are drawn
 as a dot at \code{x}.}
 
-\item{label}{Column written on each mark. For pie and treemap the slice
-column is used when unset.}
+\item{label}{Column written on the marks: beside each point (scatter,
+line, area), on each bar, slice or tile (bar, pie, treemap) and on each
+gantt bar. A bar, slice or tile shows the value only when its rows agree
+on one. Not drawn on waterfall, histogram, boxplot, pointrange, radar or
+band.}
 
 \item{orientation}{\code{NULL} (default) infers which way a bar, boxplot or
 pointrange lies (see Details). Set \code{"horizontal"} (categories on y) or

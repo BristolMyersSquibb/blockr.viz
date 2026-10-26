@@ -87,7 +87,8 @@
       "add": [
        "Color",
        "Facet",
-       "Tooltip fields"
+       "Tooltip fields",
+       "Label"
       ]
      }
     ]
