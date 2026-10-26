@@ -11,7 +11,9 @@
 #   (d) the block's state (`layout`) is the pick
 #   (e) from the click until it settles, the block always shows one open
 #       tray and a table: the gear does not vanish and the table does not
-#       jump up for a few frames while the engines swap
+#       jump up for a few frames while the engines swap; and a scrolled
+#       panel keeps its scroll (the first picks run scrolled down 200px,
+#       the first visit to each engine among them)
 #
 # Each block starts in one layout (Listing: records, Groups: groups, Table 1:
 # variables). It runs a fixed sequence, then for each layout a seeded walk of
@@ -82,7 +84,8 @@ test_that("one click on a layout tile switches, and the gear follows", {
       if (isTRUE(after$gaps > 0L) || isTRUE(after$blanks > 0L)) {
         sprintf("(e) of %d samples, %d without one open tray, %d without a table",
                 after$samples, after$gaps, after$blanks)
-      }
+      },
+      if (isTRUE(after$scrollLost)) "(e) the panel lost its scroll"
     )
     if (length(bad)) {
       fails <<- c(fails, sprintf("%s, %s, pick %s: %s", id, step, pick,
@@ -139,6 +142,7 @@ test_that("one click on a layout tile switches, and the gear follows", {
                      tolower(b$start))
     expect_identical(saved(b$id), tolower(b$start))
     js(sprintf("blockrLayout.openGear('%s')", b$id))
+    js(sprintf("blockrLayout.scroll('%s', 200)", b$id))
 
     # The sequence that showed the bug, from the groups layout.
     run(b$id, "Groups", "to start")

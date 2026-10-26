@@ -11,7 +11,9 @@
 // one), and whether that tray holds the Table 1 settings and the input badge.
 // A pick adds {gaps, blanks, samples}: from the click until the block has
 // settled, sampled every 8 ms, how often the block showed no open tray, and
-// how often it showed no table.
+// how often it showed no table; and `scrollLost`, whether a scrolled panel
+// lost its scroll although the new layout is tall enough to keep it.
+//   blockrLayout.scroll(id, px)  scroll the block's dock panel
 (function () {
   if (window.blockrLayout) return;
 
@@ -102,6 +104,8 @@
     const s = segs(tray).find((x) => val(x) === name.toLowerCase());
     if (!s) return Object.assign(read(id), { clicked: false });
     const r = root(id);
+    const sc = scroller(r);
+    const scroll0 = sc ? sc.scrollTop : 0;
     let gaps = 0, blanks = 0, samples = 0, sampling = true;
     const sample = () => {
       if (!sampling) return;
@@ -117,7 +121,23 @@
     while (Date.now() - t0 < max && shown(id) !== want) await sleep(150);
     await settle();
     sampling = false;
-    return Object.assign(read(id), { clicked: true, gaps, blanks, samples });
+    const room = sc ? sc.scrollHeight - sc.clientHeight : 0;
+    const scrollLost = !!sc && scroll0 > 0 && room >= scroll0 && sc.scrollTop < scroll0 - 1;
+    return Object.assign(read(id), { clicked: true, gaps, blanks, samples, scrollLost });
+  }
+
+  // The dock panel that scrolls the block.
+  function scroller(r) {
+    for (let e = r; e; e = e.parentElement) {
+      if (e.scrollHeight > e.clientHeight && /auto|scroll/.test(getComputedStyle(e).overflowY)) return e;
+    }
+    return null;
+  }
+  async function scroll(id, px) {
+    const sc = scroller(root(id));
+    if (sc) sc.scrollTop = px;
+    await sleep(200);
+    return sc ? sc.scrollTop : null;
   }
 
   async function reopen(id) {
@@ -128,5 +148,5 @@
     return Object.assign(read(id), { closedOpen: closed.open });
   }
 
-  window.blockrLayout = { read, pick, reopen, show, openGear, closeGear };
+  window.blockrLayout = { read, pick, reopen, show, openGear, closeGear, scroll };
 })();
