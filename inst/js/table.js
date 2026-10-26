@@ -1265,7 +1265,10 @@
       value: current,
       options: tableLayouts(),
       hint: layoutHint(current, hintBy),
-      onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
+      onPick: function (/** @type {string} */ v) {
+        if (elemId) /** @type {any} */ (window).blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
     };
     spec.mapping = [];
     // A Table 1 (the variables layout) has no card form, and a finished
@@ -2333,16 +2336,65 @@
   // the flow, so Shiny still renders into it); the block never shows
   // nothing. Inline !important outranks the server's rule; it comes off when
   // the new view is ready, or after two seconds.
-  /** @param {string[]} ids @param {string} layout @param {boolean} open */
-  function bridgeSwitch(ids, layout, open) {
-    /** @type {HTMLElement | null} */
-    var box = null;
-    for (var i = 0; i < ids.length && !box; i++) {
+  // The element that holds a block's three engine containers.
+  /** @param {string[]} ids @returns {HTMLElement | null} */
+  function engineBox(ids) {
+    for (var i = 0; i < ids.length; i++) {
       var sel = (window.CSS && CSS.escape) ? CSS.escape(ids[i]) : ids[i];
       var c = document.querySelector('[data-dt-elem-id="' + sel + '"], [data-summarize-elem-id="' + sel + '"]');
       var w = c && c.closest(".blockr-table-engine");
-      if (w) box = /** @type {HTMLElement | null} */ (w.parentElement);
+      if (w) return /** @type {HTMLElement | null} */ (w.parentElement);
     }
+    return null;
+  }
+
+  // While the engines swap, the block can be shorter for a moment (the
+  // records engine draws the new layout's table before the layout message,
+  // a tray is redrawn), and a scrolled panel would clamp its scroll and keep
+  // it there. From the click on a layout tile, the block keeps its height
+  // until the server is idle and its content has not changed for 300 ms, at
+  // most five seconds. One hold per block: a second call extends it.
+  /** @param {HTMLElement} box */
+  function holdBlockHeight(box) {
+    var held = /** @type {any} */ (box)._dtHold;
+    if (held) { held.extend(); return; }
+    var h0 = box.offsetHeight;
+    if (!h0) return;
+    var prev = box.style.minHeight;
+    box.style.minHeight = h0 + "px";
+    var t0 = Date.now(), since = t0, last = -1;
+    var natural = function () {
+      var sum = 0;
+      Array.prototype.forEach.call(box.children, function (/** @type {HTMLElement} */ c) {
+        if (c.offsetParent) sum += c.offsetHeight;
+      });
+      return sum;
+    };
+    /** @type {any} */ (box)._dtHold = {
+      extend: function () { t0 = Date.now(); since = t0; }
+    };
+    var check = function () {
+      var n = natural(), now = Date.now();
+      if (n !== last) { last = n; since = now; }
+      if (document.documentElement.classList.contains("shiny-busy")) since = now;
+      if ((now - since > 300 && now - t0 > 300) || now - t0 > 5000) {
+        box.style.minHeight = prev;
+        delete /** @type {any} */ (box)._dtHold;
+        return;
+      }
+      setTimeout(check, 50);
+    };
+    setTimeout(check, 50);
+  }
+  // For the groups engine's switch (summarize-table.js).
+  /** @type {any} */ (window).blockrTableHold = function (/** @type {string} */ id) {
+    var box = engineBox([id]);
+    if (box) holdBlockHeight(box);
+  };
+
+  /** @param {string[]} ids @param {string} layout @param {boolean} open */
+  function bridgeSwitch(ids, layout, open) {
+    var box = engineBox(ids);
     if (!box) return;
     var wraps = /** @type {HTMLElement[]} */ (Array.prototype.slice.call(
       box.querySelectorAll(":scope > .blockr-table-engine")));
@@ -2646,6 +2698,8 @@
           var pop = document.querySelector('[data-dd-pop-for="' + sel + '"]');
           return !!pop && pop.classList.contains("blockr-settings--open");
         });
+        var box = engineBox(ids);
+        if (box) holdBlockHeight(box);
         bridgeSwitch(ids, msg.layout, open);
         ids.forEach(function (id) {
           layoutOf[id] = msg.layout;

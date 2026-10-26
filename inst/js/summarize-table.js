@@ -2687,7 +2687,11 @@
       ],
       hint: who.strong ? ["One row per ", who, ", each column a summary."]
         : ["One row for all rows, each column a summary."],
-      onPick: function (v) { sendConfig(elemId, "layout", v); }
+      onPick: function (v) {
+        // The block keeps its height while the engines swap (table.js).
+        if (window.blockrTableHold) window.blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
     };
     spec.mapping = [];
     return spec;
