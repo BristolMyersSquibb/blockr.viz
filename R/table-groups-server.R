@@ -50,7 +50,7 @@ table_groups_server <- function(id, data,
                                       filter_values = NULL,
                                       look = "table",
                                       pct_of = "facet",
-                                      missing = "drop",
+                                      missing = "level",
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
@@ -102,7 +102,7 @@ table_groups_server <- function(id, data,
     # A count's percentage base and what a missing group value is: shared
     # with the variables layout.
     r_pct_of <- shared$pct_of %||% shiny::reactiveVal(pct_of %||% "facet")
-    r_missing <- shared$missing %||% shiny::reactiveVal(missing %||% "drop")
+    r_missing <- shared$missing %||% shiny::reactiveVal(missing %||% "level")
     r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
     r_download <- shared$download %||% shiny::reactiveVal(isTRUE(download))
     r_title   <- shared$title %||% shiny::reactiveVal(title)

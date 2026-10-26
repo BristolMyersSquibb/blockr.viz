@@ -13,7 +13,7 @@ new_table_block(
   summaries = list(),
   id = NULL,
   pct_of = "facet",
-  missing = "drop",
+  missing = "level",
   color = NULL,
   shadings = list(),
   format = "number",
@@ -89,8 +89,11 @@ subjects itself, with \code{func = "count_distinct"} and \code{col}.}
 subjects of the column's own facet level) or \code{"total"} (the table).}
 
 \item{missing}{Missing values of a grouping, colour or facet column, and
-of a Table 1 variable: \code{"drop"} (no row or level of their own) or
-\code{"level"} (shown as "(Missing)").}
+of a Table 1 variable: \code{"level"} (default; shown as "(Missing)", and a
+click on that row gives the rows with no value) or \code{"drop"} (no row or
+level of their own). The records layout keeps every row: \code{"level"} heads
+the rows without a \code{by} value "(Missing)", \code{"drop"} leaves that header
+blank. As on \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{color}{Records layout: column whose colours tint the rows. \code{NULL} =
 the stub column when the board's scale map has it, \code{""} = off.}

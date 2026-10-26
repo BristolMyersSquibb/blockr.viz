@@ -100,3 +100,22 @@ test_that("the variables layout's code matches its screen", {
                    do.call(summary_table, c(list(d),
                                             table_variables_args(cfg))))
 })
+
+test_that("missing defaults to level; a saved drop stays drop", {
+  ser <- function(b) blockr.core::blockr_ser(b)$payload
+  expect_identical(ser(new_table_block())$missing, "level")
+  expect_identical(ser(new_table_block(missing = "drop"))$missing, "drop")
+  # A board saved by the new table block stores its choice, so a restore
+  # keeps "drop".
+  saved <- blockr.core::blockr_ser(new_table_block(layout = "groups",
+                                                    by = "arm",
+                                                    missing = "drop"))
+  back <- blockr.core::blockr_deser(saved)
+  expect_identical(ser(back)$missing, "drop")
+  # A summarize table saved before `missing` existed takes the new default.
+  old <- blockr_deser.summarize_table_block(
+    structure(list(), class = "summarize_table_block"),
+    list(payload = list(group = "arm", func = "count"))
+  )
+  expect_identical(ser(old)$missing, "level")
+})

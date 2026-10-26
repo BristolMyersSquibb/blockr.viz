@@ -146,7 +146,7 @@ table_variables_server <- function(id, data, shared,
       total_label = r_total_label(),
       nest = r_nest(),
       id = shared$id(),
-      missing = if (!is.null(shared$missing)) shared$missing() else "drop"
+      missing = if (!is.null(shared$missing)) shared$missing() else "level"
     ))
 
     # The widget's own state shape (the summary table block's).

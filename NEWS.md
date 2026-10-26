@@ -17,6 +17,12 @@
   keeps a numeric variable numeric when it has missing values, and a nested
   records table names its missing group "(Missing)", a header a drill can
   claim.
+* The table block's `missing` defaults to `"level"`, as on the chart block:
+  missing values of a grouping, colour or facet column show as "(Missing)"
+  unless the author drops them. A board saved by the new table block stored
+  its `missing` and keeps it. Boards saved by the old table, summarize table
+  and summary table blocks had no `missing`; they now show "(Missing)" rows
+  and columns where their data has missing values.
 
 # blockr.viz 0.2.210
 

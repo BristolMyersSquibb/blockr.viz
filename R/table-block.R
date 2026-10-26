@@ -1519,11 +1519,12 @@ table_arguments <- function() {
       missing = new_arg_spec(
         paste0(
           "Missing values of a grouping, colour or facet column (and of a ",
-          "Table 1 variable): \"drop\" (default) gives them no row or ",
-          "level, \"level\" shows them as \"(Missing)\"."
+          "Table 1 variable): \"level\" (default) shows them as ",
+          "\"(Missing)\", a row a click can filter on; \"drop\" gives them ",
+          "no row or level. Same as the chart block's `missing`."
         ),
-        example = "level",
-        type = arg_enum(c("drop", "level"))
+        example = "drop",
+        type = arg_enum(c("level", "drop"))
       ),
       format = new_arg_spec(
         paste0(
@@ -1687,8 +1688,8 @@ table_guidance <- function() {
     "simple count_distinct with col = USUBJID. Variables layout: ",
     "`id` = USUBJID. ",
     "`pct_of` = \"facet\" (default) takes a count's percentage over its ",
-    "arm; \"total\" over the table. `missing` = \"level\" shows missing ",
-    "groups as \"(Missing)\".\n",
+    "arm; \"total\" over the table. `missing` = \"level\" (default) shows ",
+    "missing groups as \"(Missing)\"; \"drop\" leaves them out.\n",
     "`drill` makes a row click filter downstream blocks; `drill_target` ",
     "sends the click to a filter block instead. Do NOT set `top_n` for an ",
     "interactive board (the table scrolls); it is for report exhibits.\n",
@@ -1743,8 +1744,11 @@ table_guidance <- function() {
 #' @param pct_of The base of a count's percentage: `"facet"` (the rows or
 #'   subjects of the column's own facet level) or `"total"` (the table).
 #' @param missing Missing values of a grouping, colour or facet column, and
-#'   of a Table 1 variable: `"drop"` (no row or level of their own) or
-#'   `"level"` (shown as "(Missing)").
+#'   of a Table 1 variable: `"level"` (default; shown as "(Missing)", and a
+#'   click on that row gives the rows with no value) or `"drop"` (no row or
+#'   level of their own). The records layout keeps every row: `"level"` heads
+#'   the rows without a `by` value "(Missing)", `"drop"` leaves that header
+#'   blank. As on [new_chart_block()].
 #' @param color Records layout: column whose colours tint the rows. `NULL` =
 #'   the stub column when the board's scale map has it, `""` = off.
 #' @param shadings Records layout: cell colour rules, a list of
@@ -1819,7 +1823,7 @@ new_table_block <- function(layout = "records",
                             summaries = list(),
                             id = NULL,
                             pct_of = "facet",
-                            missing = "drop",
+                            missing = "level",
                             color = NULL,
                             shadings = list(),
                             format = "number",
@@ -1874,8 +1878,8 @@ new_table_block <- function(layout = "records",
   look <- table_look(look)
   pct_of <- chr_state(pct_of) %||% "facet"
   if (!pct_of %in% c("facet", "total")) pct_of <- "facet"
-  missing <- chr_state(missing) %||% "drop"
-  if (!missing %in% c("drop", "level")) missing <- "drop"
+  missing <- chr_state(missing) %||% "level"
+  if (!missing %in% c("drop", "level")) missing <- "level"
   # Alphabetical order was "label" before it took the chart's "alpha".
   sort_by <- summarize_sort_by(sort_by)
   # Number format of the records layout's cells, the chart's set:
