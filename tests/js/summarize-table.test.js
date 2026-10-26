@@ -302,11 +302,12 @@ test('a gear edit is sent as a config action', async () => {
 test('a segment pick switches the selection once, and the echo keeps it', async () => {
   const t = open('segments');
   click(t.doc.querySelector('.blockr-gear-btn'));
-  // The group a pick is made in, found by its options' labels.
-  const group = (labels) => Array.from(t.band().querySelectorAll('.blockr-segmented'))
+  // The group a pick is made in, found by its options' labels: a segmented
+  // control, or a row of tiles (Look).
+  const group = (labels) => Array.from(t.band().querySelectorAll('.blockr-segmented, .dd-layout-tiles'))
     .find((g) => g.textContent === labels);
   const picked = (g) => Array.from(g.children)
-    .filter((b) => b.classList.contains('is-selected') &&
+    .filter((b) => (b.classList.contains('is-selected') || b.classList.contains('dd-layout-tile--on')) &&
       b.getAttribute('aria-checked') === 'true')
     .map((b) => b.textContent);
   // In the order the fixture's edits arrive: payload i + 1 is the server's
@@ -358,10 +359,10 @@ test('without a grouping the table is one Total row with nothing to sort, search
   click(t.doc.querySelector('.blockr-gear-btn'));
   const band = t.band();
   const row = Array.from(band.querySelectorAll('.dd-form-row'))
-    .find((r) => /Group by/.test(r.textContent));
-  assert.ok(row, 'the gear has a Group by row');
+    .find((r) => /One row per/.test(r.textContent));
+  assert.ok(row, 'the gear has a One row per row');
   assert.equal(band.querySelectorAll('.dd-role-required-empty').length, 0,
-    'Group by is optional: not marked as missing');
+    'One row per is optional: not marked as missing');
   assert.equal(/\*/.test(row.textContent), false, 'no required asterisk');
   assert.equal(/Drill-down/.test(band.textContent), false, 'no drill section');
   assert.equal(/Header sorting/.test(band.textContent), false);
@@ -401,7 +402,7 @@ const lastSummaries = (t) => {
 // The table block's server pushes its layout to both engines (table.js,
 // "blockr-viz-table-layout"); the switch draws from the push, so a click on
 // any segment but the layout on screen sends it, however often it is clicked.
-test('the Rows are switch follows the pushed layout, and every click on another layout sends', async () => {
+test('the layout tiles follow the pushed layout, and every click on another layout sends', async () => {
   const t = open('three');
   const push = (layout) => t.win.__handlers['blockr-viz-table-layout'](
     { ids: ['x-records-drilldown_table_block', t.id], layout });
@@ -413,9 +414,9 @@ test('the Rows are switch follows the pushed layout, and every click on another 
 
   push('groups');
   openGear(t);
-  assert.deepEqual(selected(), ['Groups']);
+  assert.deepEqual(selected(), ['Per group']);
   // Groups -> Variables: the records engine takes over, this gear closes.
-  pick('Variables');
+  pick('Per variable');
   assert.deepEqual(sent(), ['variables']);
   push('variables');
   assert.equal(t.isOpen(), false, 'the groups gear closes');
@@ -423,21 +424,21 @@ test('the Rows are switch follows the pushed layout, and every click on another 
   t.band().classList.add('blockr-settings--open');
   push('groups');
   assert.equal(t.isOpen(), true);
-  assert.deepEqual(selected(), ['Groups']);
+  assert.deepEqual(selected(), ['Per group']);
   // The click before the switch went to Variables; one click on it sends.
-  pick('Variables');
+  pick('Per variable');
   assert.deepEqual(sent(), ['variables', 'variables']);
   push('variables');
   // A layout pushed while the gear is closed is what it opens on.
   push('records');
   openGear(t);
-  assert.deepEqual(selected(), ['Records']);
-  pick('Groups');
+  assert.deepEqual(selected(), ['List']);
+  pick('Per group');
   assert.deepEqual(sent(), ['variables', 'variables', 'groups']);
   await t.close();
 });
 
-test('the groups gear is Rows are with Group by, then Columns, then the rest', async () => {
+test('the groups gear is Table with One row per, then Columns, then the rest', async () => {
   const t = open('three');
   const band = openGear(t);
   const titles = titlesOf(band);
@@ -448,7 +449,7 @@ test('the groups gear is Rows are with Group by, then Columns, then the rest', a
   assert.deepEqual(tabs, ['Data', 'Sort', 'Format', 'Titles', 'Interaction']);
   const inGroup = (g) => Array.from(band.querySelectorAll('.dd-section'))
     .filter((e) => e.dataset.trayGroup === g).map((e) => e.dataset.ddTitle);
-  assert.deepEqual(inGroup('data'), ['Rows are', 'Columns', 'Prepare script']);
+  assert.deepEqual(inGroup('data'), ['Table', 'Columns', 'Prepare script']);
   assert.deepEqual(inGroup('sort'), ['Order', 'Rows shown']);
   assert.deepEqual(inGroup('format'), ['Look', 'Numbers', 'Bars']);
   assert.deepEqual(inGroup('titles'), ['Titles']);
@@ -456,7 +457,12 @@ test('the groups gear is Rows are with Group by, then Columns, then the rest', a
   assert.equal(titles.includes('Presentation'), false, 'no Presentation section');
   assert.equal(titles.includes('Mapping'), false, 'no Mapping section');
   const layout = band.querySelector('.dd-section--layout');
-  assert.ok(layout.querySelector('.dd-role-by'), 'Group by sits under the switch');
+  const tiles = Array.from(layout.querySelectorAll('.dd-layout-tile'));
+  assert.deepEqual(tiles.map((b) => b.textContent.trim()), ['List', 'Per group', 'Per variable']);
+  assert.ok(tiles.every((b) => b.querySelector('.dd-layout-tile-face svg')), 'each tile has its drawing');
+  assert.match(layout.querySelector('.dd-layout-hint').textContent,
+    /^One row (per .+|for all rows), each column a summary\.$/);
+  assert.ok(layout.querySelector('.dd-role-by'), 'One row per sits under the tiles');
   assert.equal(band.querySelectorAll('.dd-role-by').length, 1, 'one grouping');
   assert.equal(/Adding columns/.test(band.textContent), false, 'no mode hint');
   for (const gone of ['group', 'parent', 'func', 'value', 'id_var', 'fields', 'bar_mode', 'color', 'facet']) {

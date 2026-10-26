@@ -1173,7 +1173,7 @@
   // The table block's layout by engine element id: the server pushes it on
   // every change ("blockr-viz-table-layout", R/table-block.R), to this engine
   // and to the groups engine (summarize-table.js reads the same object). The
-  // "Rows are" switch in either gear draws from it, never from its own last
+  // layout switch in either gear draws from it, never from its own last
   // click: a stale highlight on the wanted segment would swallow the click.
   /** @type {Record<string, string>} */
   var layoutOf = /** @type {any} */ (window).blockrTableLayouts =
@@ -1186,15 +1186,42 @@
   var gearPending = /** @type {any} */ (window).blockrTableGearPending =
     /** @type {any} */ (window).blockrTableGearPending || {};
 
-  // The table block's "Rows are" switch (R/table-block.R). The block's
-  // server reads it off this engine's action input.
-  var TABLE_LAYOUTS = [
-    { value: "records", label: "Records" },
-    { value: "groups", label: "Groups" },
-    { value: "variables", label: "Variables" }
-  ];
-  /** @param {*} spec @param {string} current @param {string | null} elemId */
-  function withLayoutSwitch(spec, current, elemId) {
+  // The table block's layout switch (R/table-block.R): three tiles, List,
+  // Per group and Per variable, defined with the gear engine
+  // (drilldown-config.js). The block's server reads the pick off this
+  // engine's action input.
+  /** @returns {Array<{value: string, label: string, icon?: string}>} */
+  function tableLayouts() {
+    return (typeof Blockr !== "undefined" && Blockr.TABLE_LAYOUTS) || [
+      { value: "records", label: "List" },
+      { value: "groups", label: "Per group" },
+      { value: "variables", label: "Per variable" }
+    ];
+  }
+
+  // What the chosen layout gives, in a line under the tiles: text parts, a
+  // { strong } part a column name. `by` is the layout's grouping.
+  /** @param {string} layout @param {string[]} by @returns {Array<string | {strong: string}>} */
+  function layoutHint(layout, by) {
+    var b = (by || []).filter(Boolean);
+    var who = { strong: b.join(" and ") };
+    if (layout === "records") {
+      return b.length ? ["Each input row as it is, nested under each ", who, "."]
+        : ["Each input row as it is."];
+    }
+    if (layout === "groups") {
+      return b.length ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."];
+    }
+    return b.length ? ["One row per statistic of each variable, one column per ", who, "."]
+      : ["One row per statistic of each variable."];
+  }
+
+  /** @param {*} spec @param {string} current @param {string | null} elemId @param {string[]} [by] */
+  function withLayoutSwitch(spec, current, elemId, by) {
+    // The hint's grouping: the records layout's `by`, or the variables
+    // layout's own (its settings widget).
+    var hintBy = by || [];
     // The records engine also draws the variables layout; that layout's
     // settings widget sits beside it and is shown only then.
     if (elemId) {
@@ -1214,10 +1241,11 @@
         // section, and the widget's own card (with its gear) stays hidden.
         var host = vw.querySelector(".summary-table-block-container");
         var stb = host && host._block;
+        if (stb && stb._state && stb._state.by) hintBy = stb._state.by;
         if (stb && stb.grid) {
           stb.card.classList.add("stb-card--in-gear");
           spec.customSections = (spec.customSections || []).concat([{
-            title: "Table 1",
+            title: "Variables",
             render: function (/** @type {HTMLElement} */ sec) {
               var body = document.createElement("div");
               body.className = "stb-in-gear";
@@ -1232,9 +1260,11 @@
     // What a row is sits under the switch, as in the groups gear: the
     // grouping, the row names and the columns.
     spec.layoutSwitch = {
+      title: "Table",
       fields: spec.mapping || [],
       value: current,
-      options: TABLE_LAYOUTS,
+      options: tableLayouts(),
+      hint: layoutHint(current, hintBy),
       onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
     };
     spec.mapping = [];
@@ -1245,7 +1275,7 @@
       var off = (o.value === "cards" && (current === "variables" || finished)) ||
         (o.value === "compact" && finished);
       return off ? {
-        value: o.value, label: o.label, disabled: true,
+        value: o.value, label: o.label, icon: o.icon, disabled: true,
         title: current === "variables"
           ? "The variables layout has no card form"
           : "A finished table keeps its own layout"
@@ -1288,7 +1318,7 @@
                          { value: "off", label: "No download" }];
   // The table block's three looks (R: TABLE_LOOKS). withLayoutSwitch()
   // greys out what the current layout cannot draw.
-  var LOOK_OPT        = [{ value: "table", label: "Table" },
+  var LOOK_OPT        = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
                          { value: "compact", label: "Compact" },
                          { value: "cards", label: "Cards" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
@@ -1361,9 +1391,10 @@
                 } }
   });
   // The summarize word, as in the groups layout and dplyr's `.by`.
-  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Group by" });
+  // The records layout's grouping nests the rows under a header per group.
+  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Nest by" });
   // The records and variables layouts' gear, in the groups gear's order:
-  // Rows are (with what a row is), Presentation, Color, Titles, Drill-down,
+  // Table (the layout tiles and their grouping), Presentation, Color, Titles, Drill-down,
   // Prepare script. `hasCols` is false for a structured frame (a Table 1, a
   // nested table, a finished input): its cells are not picked by column, so
   // Color leaves. A control shows only where it changes the table.
@@ -1651,13 +1682,13 @@
       sections: function () {
         return withLayoutSwitch(
           tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
-          "records", elemId
+          "records", elemId, cfg.group
         );
       },
       sectionsForFamily: function () {
         return withLayoutSwitch(
           tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
-          "records", elemId
+          "records", elemId, cfg.group
         );
       },
       // Paired-tail roles (e.g. func behind value) are rendered inside their

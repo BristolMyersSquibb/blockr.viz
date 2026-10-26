@@ -210,17 +210,16 @@
 
   // Custom checkboxes hide the native input; its label is what one clicks.
   const shown = (c) => vis(c) || (c.type === "checkbox" && vis(c.closest("label, .blockr-checkbox")));
-  const LAYOUTS = ["Records", "Groups", "Variables"];
-  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" &&
-    [...c.parentElement.querySelectorAll("[role=radio]")].map(txt).filter((t) => LAYOUTS.includes(t)).length >= 2;
+  // The layout tiles (List, Per group, Per variable).
+  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" && !!c.closest(".dd-layout-tiles");
   const keyOf = (c, i) => (c.type === "checkbox" ? "checkbox|" + txt(c.closest("label, .blockr-checkbox") || c) : ctrlKey(c, i));
 
-  // "Rows are": each other layout must draw something else, and its gear
+  // The layout tiles: each other layout must draw something else, and its gear
   // must be able to switch back.
   async function sweepLayouts(root, id) {
     let pop = await openGear(root);
     const segs = pop ? [...pop.querySelectorAll("[role=radio]")].filter((c) => vis(c) && isLayoutSeg(c)) : [];
-    const cur = segs.map((s) => (s.classList.contains("is-selected") ? txt(s) : null)).find(Boolean);
+    const cur = segs.map((s) => (s.getAttribute("aria-checked") === "true" ? txt(s) : null)).find(Boolean);
     for (const name of segs.map(txt).filter((t) => t !== cur)) {
       pop = await openGear(root);
       const s = pop && [...pop.querySelectorAll("[role=radio]")].filter(vis).find((x) => txt(x) === name && isLayoutSeg(x));

@@ -1370,7 +1370,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".37"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".39"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -2231,7 +2231,7 @@ new_table_block <- function(layout = "records",
           output$layout_css <- shiny::renderUI({
             table_layout_css(ns, r_layout())
           })
-          # Both engines' "Rows are" switches draw the layout from this push,
+          # Both engines' layout switches draw the layout from this push,
           # never from their own last click (table.js, layoutOf).
           shiny::observe({
             session$sendCustomMessage("blockr-viz-table-layout", list(

@@ -22,7 +22,7 @@ summary_table_block_dep <- memoise0(function() {
   htmltools::tagList(
     htmltools::htmlDependency(
       name = "summary-table-block-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".4"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".5"),
       src = system.file("js", package = "blockr.viz"),
       script = "summary-table-block.js"
     ),

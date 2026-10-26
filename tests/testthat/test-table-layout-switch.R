@@ -1,4 +1,4 @@
-# The table block's "Rows are" switch, clicked around in a browser on the
+# The table block's layout tiles, clicked around in a browser on the
 # sweep board (apps/table-sweep, probe in layout-switch.js). After every
 # pick:
 #
@@ -23,7 +23,7 @@ run_layout_switch <-
   requireNamespace("pkgload", quietly = TRUE) &&
   chromote_works()
 
-test_that("one click on \"Rows are\" switches, and the gear follows", {
+test_that("one click on a layout tile switches, and the gear follows", {
   skip_if_not(run_layout_switch, "no headless browser, or under R CMD check")
   Sys.setenv(NOT_CRAN = "true")
   withr::local_envvar(BLOCKR_VIZ_SRC = normalizePath(test_path("..", "..")))

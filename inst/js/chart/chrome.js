@@ -169,7 +169,8 @@
         secondary: R.DD_SECONDARY,
         typeKey: 'chart_type',
         typeTiles: true,
-        typeIcon: (/** @type {string} */ t) => R.TYPE_ICONS[t] || '',
+        // The drawings are the package's tile icons (drilldown-config.js).
+        typeIcon: (/** @type {string} */ t) => (Blockr.TILE_ICONS || {})[t] || '',
         // Presentation only: waterfall is a bar option, band lists under
         // Aggregated and gantt under Individual by how they treat rows.
         typeGroups: [

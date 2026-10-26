@@ -1,4 +1,4 @@
-// "Rows are" switch probe for test-table-layout-switch.R. Needs sweep.js
+// Layout switch probe for test-table-layout-switch.R. Needs sweep.js
 // (blockrSweep.view / tab) loaded first.
 //
 //   blockrLayout.read(id)        what block `id` shows and its gears say
@@ -7,7 +7,7 @@
 //
 // A read is {shown, gears, open, selected, table1, badge}: the layout on
 // screen, the number of visible gear buttons and open gear trays in the
-// block, the highlighted "Rows are" segment in the open tray (null without
+// block, the chosen layout tile in the open tray (null without
 // one), and whether that tray holds the Table 1 settings and the input badge.
 (function () {
   if (window.blockrLayout) return;
@@ -20,7 +20,9 @@
     return r.width > 0 && r.height > 0;
   };
   const txt = (e) => ((e && e.textContent) || "").replace(/\s+/g, " ").trim();
-  const LAYOUTS = ["Records", "Groups", "Variables"];
+  // Tiles by value; a name in pick() is the value in any case.
+  const LAYOUTS = ["records", "groups", "variables"];
+  const val = (e) => (e && e.getAttribute("data-value")) || "";
 
   const root = (id) => document.querySelector(
     ['.card', '.blockr-block-card'].map((c) => c + '[id$="-block_handle-' + id + '"]').join(", "));
@@ -40,7 +42,7 @@
   const gears = (r) => [...r.querySelectorAll(".blockr-gear-btn")].filter(vis);
   const trays = (r) => [...r.querySelectorAll(".blockr-settings--open")].filter(vis);
   const segs = (tray) => [...tray.querySelectorAll(".dd-section--layout [role=radio]")]
-    .filter((s) => LAYOUTS.includes(txt(s)));
+    .filter((s) => LAYOUTS.includes(val(s)));
 
   function read(id) {
     const r = root(id);
@@ -48,7 +50,7 @@
     let selected = null, table1 = false, badge = false;
     if (t.length === 1) {
       const on = segs(t[0]).filter((s) => s.getAttribute("aria-checked") === "true");
-      selected = on.length === 1 ? txt(on[0]).toLowerCase() : on.map(txt).join("+") || null;
+      selected = on.length === 1 ? val(on[0]) : on.map(val).join("+") || null;
       table1 = !!t[0].querySelector(".stb-in-gear .stb-grid, .stb-in-gear > *");
       badge = !!t[0].querySelector(".dd-input-badge");
     }
@@ -93,7 +95,7 @@
   async function pick(id, name, max = 8000) {
     const tray = await openGear(id);
     if (!tray) return Object.assign(read(id), { clicked: false });
-    const s = segs(tray).find((x) => txt(x) === name);
+    const s = segs(tray).find((x) => val(x) === name.toLowerCase());
     if (!s) return Object.assign(read(id), { clicked: false });
     s.click();
     const want = name.toLowerCase();

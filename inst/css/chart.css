@@ -482,6 +482,9 @@
 .blockr-settings.dd-popover .dd-section > .dd-add-wrap,
 .blockr-settings.dd-popover .dd-section > .dd-script-row,
 .blockr-settings.dd-popover .dd-section > .dd-drill-hint,
+.blockr-settings.dd-popover .dd-section > .dd-layout-tiles,
+.blockr-settings.dd-popover .dd-section > .dd-layout-hint,
+.blockr-settings.dd-popover .dd-section > .dd-form-row.dd-role-tiles,
 .blockr-settings.dd-popover .dd-section--titles > .dd-form-row,
 .blockr-settings.dd-popover .dd-section--custom > * {
   grid-column: 1 / -1;
@@ -562,7 +565,8 @@
 }
 .dd-row-controls > .dd-picker-wrap,
 .dd-row-controls > .dd-pill-wrap,
-.dd-row-controls > .dd-slider-wrap { flex: 1 1 0; min-width: 0; }
+.dd-row-controls > .dd-slider-wrap,
+.dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
 /* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
 .dd-pair-connector {
   align-self: center;
@@ -741,75 +745,103 @@
   font-weight: var(--blockr-font-weight-medium, 500);
 }
 
-/* ===== Type picker as icon tile grid (typeTiles, proposal B) =====
-   Uniform icon-over-label tiles in an auto-fill grid — wraps into even
-   rows at any width; per-family micro-headings when a host has several
-   type groups. */
+/* ===== Picker tiles =====
+   One tile for every picker that shows drawings: the chart type (.dd-type-tile,
+   with per-family micro-headings) and the table block's layout and look
+   (.dd-layout-tile, drilldown-config.js _buildTiles). The drawing (48 x 32,
+   Blockr.TILE_ICONS) sits over the name inside one frame, in an auto-fill
+   grid that wraps into even rows at any width. The drawing is currentColor,
+   so the tile's state colours it: muted at rest, default on hover, the
+   accent tint when chosen, the disabled ink when not available. */
 .dd-popover-types-tiles {
   display: block;
 }
 .dd-type-grid-label {
   margin-bottom: 5px;
 }
-.dd-type-grid {
+.dd-type-grid,
+.dd-layout-tiles {
   display: grid;
-  /* 72px fits the longest labels without truncation. */
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  /* 76px fits the longest label ("Per variable") without truncation and
+     still puts four tiles on a row in a 360px panel. */
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: 6px;
 }
+.dd-layout-tiles { grid-column: 1 / -1; }
 .dd-type-group-head {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-medium, 500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--blockr-grey-400, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
   margin: 8px 0 4px;
 }
 .dd-type-group-head:first-child {
   margin-top: 0;
 }
-.dd-type-tile {
+.dd-type-tile,
+.dd-layout-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 9px 4px 7px;
-  background: #fff;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 4px 6px;
+  background: var(--blockr-color-bg-surface, #fff);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
   border-radius: var(--blockr-radius-md, 6px);
+  font: inherit;
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-500, #6b7280);
+  color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
-  text-transform: capitalize;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.dd-type-tile:hover {
-  background: var(--blockr-grey-50, #f9fafb);
-  border-color: var(--blockr-grey-300, #d1d5db);
+.dd-type-tile { text-transform: capitalize; }
+.dd-type-tile:hover,
+.dd-layout-tile:hover {
+  background: var(--blockr-color-bg-hover, #f3f4f6);
+  border-color: var(--blockr-color-border-strong, #d1d5db);
+  color: var(--blockr-color-text-default, #111827);
 }
-.dd-type-tile.dd-type-active {
-  background: #eff6ff;
-  border-color: var(--blockr-color-primary, #2563eb);
-  color: var(--blockr-color-primary, #2563eb);
+.dd-type-tile.dd-type-active,
+.dd-layout-tile--on {
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
   font-weight: var(--blockr-font-weight-medium, 500);
 }
-.dd-type-tile-icon svg {
+.dd-type-tile.dd-type-active:hover,
+.dd-layout-tile--on:hover {
+  background: var(--blockr-color-bg-accent-subtle-hover, #dbeafe);
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
+}
+.dd-layout-tile.is-disabled,
+.dd-layout-tile.is-disabled:hover {
+  background: var(--blockr-color-bg-surface, #fff);
+  border-color: var(--blockr-color-border-default, #e5e7eb);
+  color: var(--blockr-color-text-disabled, #9ca3af);
+  cursor: not-allowed;
+}
+.dd-type-tile-icon,
+.dd-layout-tile-face { display: block; }
+.dd-type-tile-icon svg,
+.dd-layout-tile-face svg {
   display: block;
-  opacity: 0.5;
+  width: 48px;
+  height: 32px;
 }
-.dd-type-tile.dd-type-active .dd-type-tile-icon svg {
-  opacity: 0.9;
-}
-.dd-type-tile-label {
+.dd-type-tile-label,
+.dd-layout-tile-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
 }
-.dd-popover .dd-type-tile:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
-  border-radius: var(--blockr-radius-md, 6px);
+.dd-popover .dd-type-tile:focus-visible,
+.dd-layout-tile:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
 }
 
 /* ===== Chart grid (faceting) ===== */
@@ -1518,3 +1550,13 @@
 .blockr-busy .blockr-table-wrapper {
   opacity: 0.45;
 }
+
+/* The table block's layout switch: the picker tiles above, and a line under
+   them that says what the chosen layout gives. */
+.dd-layout-hint {
+  grid-column: 1 / -1;
+  margin: -8px 0 0;          /* 16px row gap - 8 = 8px under the tiles */
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }

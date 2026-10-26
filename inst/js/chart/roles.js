@@ -35,59 +35,6 @@
   const statMeta = (stat) =>
     WHISKER_STATS.find(s => s.value === stat) || WHISKER_STATS[0];
 
-  // Subtle inline chart-type glyphs for the tile picker (design-system
-  // type-picker proposal B; hand-drawn 14px, currentColor, dimmed via CSS
-  // so the text label stays primary — no icon-font dependency).
-  /** @type {Record<string, string>} */
-  const TYPE_ICONS = {
-    bar:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
-      '<rect x="2" y="8" width="3" height="6"/><rect x="6.5" y="4" width="3" height="10"/>' +
-      '<rect x="11" y="10" width="3" height="4"/></svg>',
-    pie:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.4">' +
-      '<circle cx="8" cy="8" r="6"/><path d="M8 8 V2 M8 8 L13 11"/></svg>',
-    treemap:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
-      '<rect x="2" y="2" width="7" height="12" rx="1"/><rect x="10" y="2" width="4" height="6" rx="1"/>' +
-      '<rect x="10" y="9" width="4" height="5" rx="1"/></svg>',
-    boxplot:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.4">' +
-      '<rect x="4" y="5" width="8" height="6"/>' +
-      '<path d="M4 8 h8 M8 2 v3 M8 11 v3 M6 2 h4 M6 14 h4"/></svg>',
-    pointrange:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.4">' +
-      '<path d="M5 3 v10 M3.5 3 h3 M3.5 13 h3 M11 5.5 v7 M9.5 5.5 h3 M9.5 12.5 h3"/>' +
-      '<circle cx="5" cy="8" r="1.7" fill="currentColor" stroke="none"/>' +
-      '<circle cx="11" cy="9" r="1.7" fill="currentColor" stroke="none"/></svg>',
-    radar:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.2">' +
-      '<path d="M8 2 L14 6.5 L11.7 13.5 L4.3 13.5 L2 6.5 Z"/>' +
-      '<path d="M8 8 L8 2 M8 8 L14 6.5 M8 8 L11.7 13.5 M8 8 L4.3 13.5 M8 8 L2 6.5"/></svg>',
-    scatter:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
-      '<circle cx="4" cy="11" r="1.6"/><circle cx="8" cy="6" r="1.6"/>' +
-      '<circle cx="12" cy="9" r="1.6"/><circle cx="13" cy="3" r="1.6"/></svg>',
-    line:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round">' +
-      '<path d="M2 12 L6 7 L10 9 L14 3"/></svg>',
-    band:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">' +
-      '<path d="M2 5 L6 3.5 L10 6 L14 4" opacity="0.55"/>' +
-      '<path d="M2 11 L6 9.5 L10 12 L14 10.5" opacity="0.55"/>' +
-      '<path d="M2 8 L6 6.5 L10 9 L14 7.2" stroke-width="1.8"/></svg>',
-    gantt:
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">' +
-      '<rect x="2" y="3" width="8" height="2.6" rx="1"/><rect x="5" y="6.8" width="9" height="2.6" rx="1"/>' +
-      '<rect x="3" y="10.6" width="6" height="2.6" rx="1"/></svg>'
-  };
-
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before this file.
@@ -594,6 +541,6 @@
   const DD_SECONDARY = new Set(
     Object.values(ROLES).map(r => /** @type {any} */ (r).pairedWith).filter(Boolean));
 
-  NS.roles = { ROLES, FAMILY_ROLES, DD_SECONDARY, TYPE_ICONS, SUMMARY_STATS, WHISKER_STATS,
+  NS.roles = { ROLES, FAMILY_ROLES, DD_SECONDARY, SUMMARY_STATS, WHISKER_STATS,
                statMeta, DAgg };
 })();

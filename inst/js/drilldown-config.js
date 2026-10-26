@@ -351,6 +351,14 @@
         role.options.every((/** @type {any} */ o) => o.value === 'on' || o.value === 'off');
     }
 
+    // A segmented role whose options all carry a drawing (`icon`) draws as
+    // tiles, on a row of its own (the table block's Look).
+    /** @param {any} role */
+    _isTileRole(role) {
+      return !!role && role.kind === 'segmented' && Array.isArray(role.options) &&
+        role.options.every((/** @type {any} */ o) => !!o.icon);
+    }
+
     /** @param {string} key @param {*} val */
     _rememberRole(key, val) {
       const role = this._role(key);
@@ -537,15 +545,35 @@
       // { value, options: [{ value, label }], onPick(value), fields? }.
       // `fields` are roles the switch gates (the groups layout's `by`): they
       // follow it in the same section, each on a row of its own.
+      // `title` names the section; `hint` (a list of text parts, a part
+      // { strong } drawn bold) says what the chosen layout gives. Options
+      // with an `icon` draw as tiles: a drawing of the table, the name below.
       this._ord = 0;
       if (spec.layoutSwitch) {
         const ls = spec.layoutSwitch;
-        const sec = this._sectionEl('Rows are');
+        const sec = this._sectionEl(ls.title || 'Rows are');
         sec.classList.add('dd-section--layout');
         // The segmented control ignores a click on the selected segment.
         // ls.value is the layout when the tray was drawn and may be stale
         // by the time of the click, so it is no guard.
-        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        if (ls.options.every((/** @type {any} */ o) => o.icon)) {
+          this._buildTiles(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        } else {
+          this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        }
+        if (ls.hint && ls.hint.length) {
+          const h = document.createElement('div');
+          h.className = 'dd-layout-hint';
+          for (const part of ls.hint) {
+            if (typeof part === 'string') h.appendChild(document.createTextNode(part));
+            else {
+              const b = document.createElement('strong');
+              b.textContent = part.strong;
+              h.appendChild(b);
+            }
+          }
+          sec.appendChild(h);
+        }
         for (const key of (ls.fields || [])) this._renderRole(sec, key);
       }
 
@@ -1753,7 +1781,7 @@
         !this._hasVal(this._cfg()[key]);
       row.className = 'dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '') + (opts.band ? ' dd-band-row' : '') +
-        (unset ? ' dd-role-unset' : '');
+        (unset ? ' dd-role-unset' : '') + (this._isTileRole(role) ? ' dd-role-tiles' : '');
 
       // Boolean option -> a single self-describing checkbox row: the checkbox
       // label carries the affirmative meaning (the on-option label), so the
@@ -2575,6 +2603,10 @@
           wrap.className = 'dd-pill-wrap';
           wrap.appendChild(box.el);
           parent.appendChild(wrap);
+        } else if (this._isTileRole(role)) {
+          this._buildTiles(parent, role.options, cur, (/** @type {string} */ val) => {
+            cfg[key] = val; cb(); this.h.onChange(key);
+          });
         } else {
           this._buildPill(parent, role.options, cur, (/** @type {string} */ val) => {
             cfg[key] = val; cb(); this.h.onChange(key);
@@ -3054,6 +3086,70 @@
       parent.appendChild(wrap);
     }
 
+    // A row of tiles, one per option: the option's drawing (`icon`, an SVG
+    // string, usually one of TILE_ICONS) over its name. Like the segmented
+    // control, a click on the chosen tile does nothing. An option offered but
+    // not available here (`disabled`, `title` says why) is drawn greyed and
+    // skipped by the arrow keys.
+    /**
+     * @param {HTMLElement} parent
+     * @param {Array<{ value: string, label: string, icon: string, disabled?: boolean, title?: string }>} options
+     * @param {string} current @param {(v: string) => void} onPick
+     */
+    _buildTiles(parent, options, current, onPick) {
+      const row = document.createElement('div');
+      row.className = 'dd-layout-tiles';
+      row.setAttribute('role', 'radiogroup');
+      /** @type {HTMLButtonElement[]} */
+      const btns = [];
+      const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
+        b.classList.toggle('dd-layout-tile--on', j === i);
+        b.setAttribute('aria-checked', j === i ? 'true' : 'false');
+        b.tabIndex = j === i ? 0 : -1;
+      });
+      options.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dd-layout-tile';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('data-value', o.value);
+        const face = document.createElement('span');
+        face.className = 'dd-layout-tile-face';
+        face.innerHTML = o.icon;
+        const name = document.createElement('span');
+        name.className = 'dd-layout-tile-name';
+        name.textContent = o.label;
+        b.append(face, name);
+        if (o.disabled) {
+          b.setAttribute('aria-disabled', 'true');
+          b.classList.add('is-disabled');
+          if (o.title) b.setAttribute('data-blockr-tooltip', o.title);
+        }
+        b.addEventListener('click', () => {
+          if (o.disabled || b.classList.contains('dd-layout-tile--on')) return;
+          select(i);
+          onPick(o.value);
+        });
+        b.addEventListener('keydown', (e) => {
+          const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
+            : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+          if (!step) return;
+          e.preventDefault();
+          let j = i;
+          do { j = (j + step + btns.length) % btns.length; } while (j !== i && options[j].disabled);
+          const next = btns[j];
+          next.focus();
+          next.click();
+        });
+        btns.push(b);
+        row.appendChild(b);
+      });
+      const cur = options.findIndex((o) => o.value === current);
+      select(cur < 0 ? 0 : cur);
+      parent.appendChild(row);
+      return row;
+    }
+
     // A fixed choice of two or three short values, all in view: blockr.ui's
     // segmented control, at the field height.
     /**
@@ -3497,6 +3593,111 @@
   const ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
+  // The picker tiles' drawings, one language for every tile in the package
+  // (_scratch/icon-language): a 48 x 32 box drawn at 48 x 32 px, marks inside
+  // a 4px inset, everything in currentColor so the tile's state colours it.
+  // Inks: solid marks; words and sub-marks at half; areas, boxes and the
+  // table header band as a 20% tint; row rules and grids as a faint line.
+  // Lines and outlines 1.5px with round ends, sub-marks 1px.
+  const TILE_ICONS = (() => {
+    /** @type {Record<string, string>} */
+    const INK = {
+      m: 'fill="currentColor"',
+      w: 'fill="currentColor" fill-opacity=".5"',
+      t: 'fill="currentColor" fill-opacity=".2"',
+      ln: 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"',
+      sub: 'fill="none" stroke="currentColor" stroke-opacity=".5"',
+      rule: 'fill="none" stroke="currentColor" stroke-opacity=".2"'
+    };
+    /** @param {number} x @param {number} y @param {number} w @param {number} h @param {string} k @param {number} [rx] */
+    const R = (x, y, w, h, k, rx) =>
+      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (rx == null ? 1 : rx) + '" ' + INK[k] + '/>';
+    /** @param {number} x @param {number} y @param {number} r @param {string} [k] */
+    const C = (x, y, r, k) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" ' + INK[k || 'm'] + '/>';
+    /** @param {string} d @param {string} k */
+    const P = (d, k) => '<path d="' + d + '" ' + INK[k] + '/>';
+    // A bar on the baseline: rounded top, square foot.
+    /** @param {number} x @param {number} y @param {number} w @param {number} h */
+    const B = (x, y, w, h) => P('M' + x + ' ' + (y + h) + 'V' + (y + 1) + 'a1 1 0 0 1 1-1h' + (w - 2) +
+      'a1 1 0 0 1 1 1V' + (y + h) + 'Z', 'm');
+    const BASE = P('M4 28.5H44', 'sub');
+    /** @param {number} [h] */
+    const HEAD = (h) => R(4, 4, 40, h || 5, 't', 1.5);
+    /** @param {number[]} xs @param {number[]} ws @param {number} y @param {string} k */
+    const words = (xs, ws, y, k) => ws.map((w, i) => R(xs[i], y, w, 2, k)).join('');
+    const C4 = [7, 18, 28, 37];
+    const RADAR = 'M24 5.2L30.85 13.77L29.64 23.77L20.47 20.85L16.01 13.4Z';
+
+    /** @type {Record<string, string>} */
+    const D = {
+      bar: B(7, 14, 8, 14) + B(20, 6, 8, 22) + B(33, 18, 8, 10) + BASE,
+      histogram: [[8, 7], [14, 14], [20, 22], [26, 17], [32, 10], [38, 4]]
+        .map(([x, h]) => R(x, 28 - h, 5, h, 'm', 0)).join('') + BASE,
+      waterfall: P('M13 14.5H16M23 8.5H26M33 16.5H36', 'sub') + B(6, 14, 7, 14) +
+        R(16, 8, 7, 6, 'm') + R(26, 8, 7, 9, 'w') + B(36, 17, 7, 11) + BASE,
+      pie: C(24, 16, 12, 't') + C(24, 16, 12, 'ln') + P('M24 16V4A12 12 0 0 1 34.39 22Z', 'm'),
+      treemap: R(6, 4, 18, 24, 'm') + R(26, 4, 16, 13, 'm') + R(26, 19, 7, 9, 'm') + R(35, 19, 7, 9, 'm'),
+      boxplot: [[15, 6, 11, 21, 26, 16], [33, 10, 14, 23, 27, 18]].map(([x, w0, q1, q3, w1, md]) =>
+        P('M' + x + ' ' + w0 + 'V' + q1 + 'M' + x + ' ' + q3 + 'V' + w1, 'sub') +
+        R(x - 5, q1, 10, q3 - q1, 't', 0) + R(x - 5, q1, 10, q3 - q1, 'ln', 0) +
+        P('M' + (x - 5) + ' ' + md + 'H' + (x + 5), 'ln')).join(''),
+      pointrange: P('M12 10V26M24 6V20M36 9V22', 'ln') + C(12, 18, 2.5) + C(24, 12, 2.5) + C(36, 15, 2.5),
+      radar: P('M24 4L35.41 12.29L31.05 25.71L16.95 25.71L12.59 12.29Z', 'rule') +
+        P('M24 16L24 4M24 16L35.41 12.29M24 16L31.05 25.71M24 16L16.95 25.71M24 16L12.59 12.29', 'rule') +
+        P(RADAR, 't') + P(RADAR, 'ln'),
+      scatter: [[8, 24], [14, 20], [22, 23], [30, 18], [38, 20], [11, 15], [19, 12], [27, 9], [34, 11], [41, 5]]
+        .map(([x, y]) => C(x, y, 2)).join(''),
+      line: P('M4 24L12 18L20 21L28 11L36 14L44 6', 'ln'),
+      area: P('M4 28V20L12 15L20 18L28 9L36 12L44 6V28Z', 't') + P('M4 20L12 15L20 18L28 9L36 12L44 6', 'ln') + BASE,
+      band: P('M4 14L12 10L20 13L28 5L36 8L44 4V16L36 20L28 17L20 25L12 22L4 26Z', 't') +
+        P('M4 20L12 16L20 19L28 11L36 14L44 10', 'ln'),
+      gantt: R(6, 5, 18, 5, 'm') + R(14, 13.5, 20, 5, 'm') + R(24, 22, 18, 5, 'm'),
+
+      // The table block: what a row is ...
+      records: HEAD() + words(C4, [7, 6, 6, 5], 5.5, 'm') +
+        /** @type {Array<[number, number[]]>} */ ([[12, [8, 5, 6, 4]], [16.5, [7, 6, 5, 5]], [21, [9, 4, 6, 4]], [25.5, [6, 5, 6, 5]]])
+          .map(([y, ws]) => words(C4, ws, y, 'w')).join(''),
+      groups: HEAD() + words([7, 20, 34], [8, 6, 6], 5.5, 'm') +
+        [[13.5, 8, 12, 0], [19.5, 9, 7, 1], [25.5, 7, 9, -1]].map(([c, lw, bw, o]) =>
+          R(7, c - 1, lw, 2, 'w') + R(20, c - 1.5, bw, 3, 'm') +
+          P('M' + (34 + o) + ' ' + c + 'H' + (43 + o), 'sub') +
+          R(36.5 + o, c - 2, 4, 4, 't', 0) + R(36.5 + o, c - 2, 4, 4, 'sub', 0)).join(''),
+      variables: HEAD() + words([24, 32, 40], [4, 4, 4], 5.5, 'm') +
+        /** @type {Array<[number, number, number[]]>} */ ([[11, 12, [14, 17]], [20.5, 9, [23.5, 26.5]]])
+          .map(([y, nw, ss]) => R(7, y, nw, 2, 'm') +
+            ss.map((sy, i) => R(10, sy, i ? 5 : 7, 2, 'w') + words([24, 32, 40], [4, 4, 4], sy, 'w')).join('')).join(''),
+
+      // ... and how it looks.
+      look_table: HEAD() + words(C4, [7, 6, 6, 5], 5.5, 'm') + P('M4 16H44M4 22H44', 'rule') +
+        /** @type {Array<[number, number[]]>} */ ([[12.5, [8, 5, 6, 4]], [18.5, [7, 6, 5, 5]], [24.5, [9, 4, 6, 4]]])
+          .map(([y, ws]) => words(C4, ws, y, 'w')).join(''),
+      look_compact: HEAD(4) + words([6, 15, 24, 33], [7, 6, 6, 5], 5, 'm') +
+        [10, 13, 16, 19, 22, 25].map((y, j) =>
+          words([6, 15, 24, 33], [8, 5, 6, 4].map((w) => w - (j % 2)), y, 'w')).join(''),
+      look_cards: [[4.5, 4.5], [25.5, 4.5], [4.5, 17], [25.5, 17]].map(([x, y], i) =>
+        R(x, y, 18, 10.5, 'sub', 2) + R(x + 3, y + 2.5, [8, 6, 9, 7][i], 2, 'w') +
+        R(x + 3, y + 6, [10, 8, 11, 9][i], 2.5, 'm')).join('')
+    };
+    /** @type {Record<string, string>} */
+    const out = {};
+    for (const k of Object.keys(D)) {
+      out[k] = '<svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true">' + D[k] + '</svg>';
+    }
+    return out;
+  })();
+  ns.TILE_ICONS = TILE_ICONS;
+  // The table block's three layouts, for its two gears (table.js for
+  // records and variables, summarize-table.js for groups), and its looks.
+  ns.TABLE_LAYOUTS = [
+    { value: 'records', label: 'List', icon: TILE_ICONS.records },
+    { value: 'groups', label: 'Per group', icon: TILE_ICONS.groups },
+    { value: 'variables', label: 'Per variable', icon: TILE_ICONS.variables }
+  ];
+  ns.TABLE_LOOKS = [
+    { value: 'table', label: 'Table', icon: TILE_ICONS.look_table },
+    { value: 'compact', label: 'Compact', icon: TILE_ICONS.look_compact },
+    { value: 'cards', label: 'Cards', icon: TILE_ICONS.look_cards }
+  ];
   ns.DrilldownConfig = DrilldownConfig;
   ns.SentenceSlots = SentenceSlots;
   window.DrilldownConfig = DrilldownConfig;

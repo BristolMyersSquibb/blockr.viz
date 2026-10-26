@@ -56,7 +56,7 @@ test('the records gear: Data, Format, Titles, Interaction', async () => {
   assert.deepEqual(tabs, ['Data', 'Format', 'Titles', 'Interaction']);
   const inGroup = (g) => Array.from(band.querySelectorAll('.dd-section'))
     .filter((e) => e.dataset.trayGroup === g).map((e) => e.dataset.ddTitle);
-  assert.deepEqual(inGroup('data'), ['Rows are', 'Prepare script']);
+  assert.deepEqual(inGroup('data'), ['Table', 'Prepare script']);
   assert.deepEqual(inGroup('format'), ['Look', 'Color', 'Numbers']);
   assert.deepEqual(inGroup('interact'), ['Reader tools', 'Drill-down']);
   assert.equal(titles.includes('Presentation'), false, 'no Presentation section');
