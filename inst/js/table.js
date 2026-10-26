@@ -1275,7 +1275,7 @@
       var off = (o.value === "cards" && (current === "variables" || finished)) ||
         (o.value === "compact" && finished);
       return off ? {
-        value: o.value, label: o.label, disabled: true,
+        value: o.value, label: o.label, icon: o.icon, disabled: true,
         title: current === "variables"
           ? "The variables layout has no card form"
           : "A finished table keeps its own layout"
@@ -1318,7 +1318,7 @@
                          { value: "off", label: "No download" }];
   // The table block's three looks (R: TABLE_LOOKS). withLayoutSwitch()
   // greys out what the current layout cannot draw.
-  var LOOK_OPT        = [{ value: "table", label: "Table" },
+  var LOOK_OPT        = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
                          { value: "compact", label: "Compact" },
                          { value: "cards", label: "Cards" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {

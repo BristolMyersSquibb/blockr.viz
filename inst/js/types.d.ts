@@ -227,6 +227,10 @@ interface BlockrNamespace {
   DrilldownConfig: typeof VizDrilldownConfig;
   /** The table block's layouts: value, name and drawing (drilldown-config.js). */
   TABLE_LAYOUTS?: Array<{ value: string; label: string; icon: string }>;
+  /** The table block's looks, as TABLE_LAYOUTS. */
+  TABLE_LOOKS?: Array<{ value: string; label: string; icon: string }>;
+  /** The picker tiles' drawings, by chart type, layout and look (drilldown-config.js). */
+  TILE_ICONS?: Record<string, string>;
   /** The block's sentence painter (defined in this package). */
   SentenceSlots: typeof VizSentenceSlots;
   /** The gear tray behaviour (blockr.ui's blockr-ui.js). */

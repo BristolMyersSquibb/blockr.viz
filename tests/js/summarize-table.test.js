@@ -302,11 +302,12 @@ test('a gear edit is sent as a config action', async () => {
 test('a segment pick switches the selection once, and the echo keeps it', async () => {
   const t = open('segments');
   click(t.doc.querySelector('.blockr-gear-btn'));
-  // The group a pick is made in, found by its options' labels.
-  const group = (labels) => Array.from(t.band().querySelectorAll('.blockr-segmented'))
+  // The group a pick is made in, found by its options' labels: a segmented
+  // control, or a row of tiles (Look).
+  const group = (labels) => Array.from(t.band().querySelectorAll('.blockr-segmented, .dd-layout-tiles'))
     .find((g) => g.textContent === labels);
   const picked = (g) => Array.from(g.children)
-    .filter((b) => b.classList.contains('is-selected') &&
+    .filter((b) => (b.classList.contains('is-selected') || b.classList.contains('dd-layout-tile--on')) &&
       b.getAttribute('aria-checked') === 'true')
     .map((b) => b.textContent);
   // In the order the fixture's edits arrive: payload i + 1 is the server's

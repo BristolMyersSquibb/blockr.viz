@@ -1382,7 +1382,7 @@
                       { value: "asc", label: "Ascending" }];
   // The table block's three looks (R: TABLE_LOOKS). Cards need a row per
   // group; the variables layout has none, and its gear greys them out.
-  var LOOK_OPT = [{ value: "table", label: "Table" },
+  var LOOK_OPT = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
                   { value: "compact", label: "Compact" },
                   { value: "cards", label: "Cards" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
