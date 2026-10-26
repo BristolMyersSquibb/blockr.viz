@@ -346,3 +346,162 @@ test('a segment pick switches the selection once, and the echo keeps it', async 
   assert.ok(t.isOpen());
   await t.close();
 });
+
+test('without a grouping the table is one Total row with nothing to sort, search or drill', async () => {
+  const t = open('no_by');
+  assert.deepEqual(t.labels(), ['Total']);
+  assert.equal(t.search().style.display, 'none');
+  assert.equal(t.root.hasAttribute('data-summarize-drill'), false);
+  assert.equal(t.doc.querySelectorAll('th.blockr-sortable').length, 0);
+  assert.deepEqual(clickRowActions(t), []);
+
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  const band = t.band();
+  const row = Array.from(band.querySelectorAll('.dd-form-row'))
+    .find((r) => /Group by/.test(r.textContent));
+  assert.ok(row, 'the gear has a Group by row');
+  assert.equal(band.querySelectorAll('.dd-role-required-empty').length, 0,
+    'Group by is optional: not marked as missing');
+  assert.equal(/\*/.test(row.textContent), false, 'no required asterisk');
+  assert.equal(/Drill-down/.test(band.textContent), false, 'no drill section');
+  assert.equal(/Header sorting/.test(band.textContent), false);
+  assert.equal(/Search/.test(band.textContent), false);
+
+  // A grouping picked: one row per term, the search box back.
+  t.push(1);
+  assert.equal(t.labels().length, 4);
+  assert.equal(t.search().style.display, '');
+  await t.close();
+});
+
+function clickRowActions(t) {
+  const before = t.actions().length;
+  click(t.rows()[0]);
+  return t.actions().slice(before);
+}
+
+// ---- the groups gear: one grouping, one column list ------------------------
+
+/** Open the gear of a case and return its band. */
+function openGear(t) {
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  return t.band();
+}
+const titlesOf = (band) => Array.from(band.querySelectorAll('.dd-section-title'))
+  .map((e) => e.textContent.trim());
+const sumRows = (band) => Array.from(band.querySelectorAll('.lane-sum-row'));
+const lineOf = (row) => row.querySelector('.lane-sum-line').textContent.trim();
+const labelsIn = (el) => Array.from(el.querySelectorAll('.blockr-label'))
+  .map((e) => e.textContent.trim());
+const lastSummaries = (t) => {
+  const a = t.actions().filter((x) => x.param === 'summaries');
+  return a.length ? a[a.length - 1].value : null;
+};
+
+test('the groups gear is Rows are with Group by, then Columns, then the rest', async () => {
+  const t = open('three');
+  const band = openGear(t);
+  const titles = titlesOf(band);
+  assert.deepEqual(titles.slice(0, 3), ['Rows are', 'Columns', 'Presentation']);
+  // The folds print their state after the title ("Titles None").
+  ['Titles', 'Drill-down', 'Prepare script'].forEach((w, k) => {
+    assert.ok(titles[3 + k].startsWith(w), titles[3 + k]);
+  });
+  assert.equal(titles.includes('Mapping'), false, 'no Mapping section');
+  const layout = band.querySelector('.dd-section--layout');
+  assert.ok(layout.querySelector('.dd-role-by'), 'Group by sits under the switch');
+  assert.equal(band.querySelectorAll('.dd-role-by').length, 1, 'one grouping');
+  assert.equal(/Adding columns/.test(band.textContent), false, 'no mode hint');
+  for (const gone of ['group', 'parent', 'func', 'value', 'id_var', 'fields', 'bar_mode', 'color', 'facet']) {
+    assert.equal(band.querySelectorAll('.dd-role-' + gone).length, 0, gone + ' has no gear row');
+  }
+  await t.close();
+});
+
+test('a new groups table opens on its one count column', async () => {
+  const t = open('fresh');
+  const band = openGear(t);
+  const rows = sumRows(band);
+  assert.equal(rows.length, 1);
+  assert.ok(rows[0].classList.contains('is-open'), 'the column is open');
+  assert.equal(lineOf(rows[0]), 'Count of rows');
+  const body = rows[0].querySelector('.lane-sum-body');
+  assert.deepEqual(labelsIn(body), ['Name', 'Aggregate', 'Show']);
+  assert.equal(body.querySelector('input.blockr-text-input').value, 'Count');
+  const segs = Array.from(body.querySelectorAll('.blockr-segmented__seg'));
+  assert.deepEqual(segs.map((b) => b.textContent), ['Bar', 'Number', 'Dot'],
+    'the tile is the compact look\'s mark');
+  assert.equal(body.querySelector('.blockr-segmented__seg.is-selected').textContent, 'Bar');
+  assert.deepEqual(Array.from(body.querySelectorAll('.lane-sum-offer')).map((b) => b.textContent),
+    ['+ Color', '+ Facet']);
+  const rm = rows[0].querySelector('.lane-sum-rm');
+  assert.ok(rm.disabled, 'the last column cannot be removed');
+  assert.equal(rm.getAttribute('aria-label'), 'A table needs one column');
+
+  // An offer sets the mapping and turns into its field.
+  click(Array.from(body.querySelectorAll('.lane-sum-offer'))[0]);
+  assert.ok(lastSummaries(t)[0].color, 'a colour split is set');
+  assert.ok(labelsIn(sumRows(band)[0]).includes('Color'));
+
+  // Show: Number sends the list with the column drawn as a number, and the
+  // column stays open. A number takes no colour split, so its offer leaves.
+  const num = Array.from(sumRows(band)[0].querySelectorAll('.blockr-segmented__seg'))
+    .find((b) => b.textContent === 'Number');
+  click(num);
+  assert.equal(lastSummaries(t)[0].show, 'number');
+  assert.ok(sumRows(band)[0].classList.contains('is-open'));
+  await t.close();
+});
+
+test('with three columns every row is one closed line', async () => {
+  const t = open('three');
+  const band = openGear(t);
+  let rows = sumRows(band);
+  assert.equal(rows.length, 3);
+  assert.equal(band.querySelectorAll('.lane-sum-row.is-open').length, 0);
+  assert.deepEqual(rows.map(lineOf),
+    ['Count of rows, split by SEV', 'Value distribution of AVAL', 'Mean of AVAL']);
+  assert.ok(rows.every((r) => !r.querySelector('.lane-sum-rm').disabled));
+
+  // A click opens one row and sends nothing.
+  const before = t.actions().length;
+  click(rows[1].querySelector('.lane-sum-toggle'));
+  rows = sumRows(band);
+  assert.ok(rows[1].classList.contains('is-open'));
+  assert.equal(rows[1].querySelector('.lane-sum-toggle').getAttribute('aria-expanded'), 'true');
+  assert.equal(t.actions().length, before);
+  // A distribution's marks are three: the segmented control.
+  assert.deepEqual(Array.from(rows[1].querySelectorAll('.blockr-segmented__seg'))
+    .map((b) => b.textContent), ['Dot range', 'Box', 'Text']);
+
+  // Alt+Down moves the column, and the keyboard stays on it.
+  const toggle = rows[0].querySelector('.lane-sum-toggle');
+  toggle.dispatchEvent(new t.win.KeyboardEvent('keydown',
+    { key: 'ArrowDown', altKey: true, bubbles: true }));
+  assert.deepEqual(lastSummaries(t).map((s) => s.type), ['dist', 'simple', 'simple']);
+  assert.equal(t.doc.activeElement, sumRows(band)[1].querySelector('.lane-sum-toggle'));
+
+  // Remove: the list goes with one column less.
+  click(sumRows(band)[2].querySelector('.lane-sum-rm'));
+  assert.equal(lastSummaries(t).length, 2);
+  assert.equal(sumRows(band).length, 2);
+  await t.close();
+});
+
+test('an old ranked-bar summarize table opens as one column of the list', async () => {
+  const t = open('legacy');
+  // parent then group: SOC rows with TERM rows under them.
+  assert.ok(t.labels().includes('SOC A'));
+  const band = openGear(t);
+  const tags = Array.from(band.querySelectorAll('.dd-role-by .blockr-select__tag'))
+    .map((e) => e.textContent.trim());
+  assert.deepEqual(tags, ['SOC', 'TERM']);
+  const rows = sumRows(band);
+  assert.equal(rows.length, 1);
+  assert.ok(rows[0].classList.contains('is-open'));
+  assert.equal(lineOf(rows[0]), 'Count distinct USUBJID, split by SEV');
+  const split = Array.from(rows[0].querySelectorAll('.blockr-segmented__seg.is-selected'))
+    .map((b) => b.textContent);
+  assert.deepEqual(split, ['Bar', 'Grouped'], 'bar_mode = "grouped" is the split\'s position');
+  await t.close();
+});

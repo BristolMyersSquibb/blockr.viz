@@ -38,10 +38,6 @@ CARDS_SKIP_TYPES <- c("spans", "expr")
 # says how many it left out. Cards are for a handful of numbers.
 CARDS_MAX_ROWS <- 60L
 
-# The synthetic group a cards table without `by` uses: one row, the whole
-# input. Never shown (the single row has no row head) and never drilled on.
-CARDS_ALL_COL <- ".cards_all"
-
 #' A card's number: one precision per column, thousands separated.
 #' @noRd
 cards_num <- function(x, dig = NA_integer_) {
@@ -87,7 +83,7 @@ table_cards_groups <- function(m, prep, data = NULL, scale_map = NULL) {
     n = n,
     # The single row of an ungrouped table needs no row head, and its cards
     # carry their own labels.
-    multi = n > 1L || !identical(prep$group, CARDS_ALL_COL),
+    multi = n > 1L || !isTRUE(prep$all),
     label = as.character(rows$.label),
     hex = cards_row_hex(rows, prep, data, scale_map),
     cols = cols,
@@ -337,14 +333,6 @@ cards_payload <- function(model) {
   ))
 }
 
-#' Add the synthetic one-level group a cards table without `by` draws from.
-#' @noRd
-cards_all_data <- function(data) {
-  if (!is.data.frame(data)) return(data)
-  data[[CARDS_ALL_COL]] <- rep("All", nrow(data))
-  data
-}
-
 #' The cards stylesheet and script. Loaded only by a table in the cards look:
 #' the block's UI asks for it then, and a switch to cards asks for it through
 #' a uiOutput (new_table_block()).
@@ -358,15 +346,3 @@ table_cards_dep <- memoise0(function() {
     stylesheet = "css/table-cards.css"
   )
 })
-
-#' What the groups engine builds a cards table from. Without `by` the cards
-#' draw one row, the whole input, through a synthetic group that has nothing
-#' to drill on; every other case passes through.
-#' @noRd
-cards_frame <- function(data, look, by, drill) {
-  if (identical(look, "cards") && !length(by) && is.data.frame(data)) {
-    return(list(data = cards_all_data(data), by = CARDS_ALL_COL,
-                drill = NULL))
-  }
-  list(data = data, by = by, drill = drill)
-}

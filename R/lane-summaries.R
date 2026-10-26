@@ -179,7 +179,7 @@ lane_internal_summary <- function(s) {
 #' first broken row (a config error must say which row, not throw a stack
 #' trace).
 #' @noRd
-lane_norm_summaries <- function(summaries) {
+lane_norm_summaries <- function(summaries, data = NULL) {
   if (!is.list(summaries)) return(list(err = "`summaries` must be a list"))
   out <- vector("list", length(summaries))
   for (i in seq_along(summaries)) {
@@ -314,7 +314,7 @@ lane_norm_summaries <- function(summaries) {
       s$ref <- if (is.finite(ref)) ref
       s$dash <- summarize_chr1(s$dash)
     }
-    s$name <- summarize_chr1(s$name) %||% lane_summary_auto_name(s)
+    s$name <- summarize_chr1(s$name) %||% lane_summary_auto_name(s, data)
     out[[i]] <- s
   }
   out
@@ -406,19 +406,36 @@ lane_dist_centre_stat <- function(s) {
   "median_q1_q3"
 }
 
+# The header of an unnamed column. A data column reads as its variable
+# label where it has one ("Mean Start Day", not "Mean ASTDY"), else its
+# name, as the single ranked bar headed its column.
 #' @noRd
-lane_summary_auto_name <- function(s) {
+lane_summary_auto_name <- function(s, data = NULL) {
+  nm <- function(col) {
+    col <- summarize_chr1(col)
+    if (is.null(col) || !is.data.frame(data) || !col %in% names(data)) {
+      return(col)
+    }
+    summarize_col_name(data, col)
+  }
   switch(s$type,
     simple = {
       f <- summarize_chr1(s$func) %||% "count"
-      if (identical(f, "count")) "Rows" else
-        paste0(AGG_WORDS[[f]] %||% f, " ", summarize_chr1(s$col))
+      # As is: the column is the value, so it names the column.
+      if (identical(f, "count")) {
+        "Rows"
+      } else if (identical(f, "identity")) {
+        nm(s$col) %||% "Value"
+      } else {
+        w <- unname(AGG_WORDS[f])
+        paste0(if (is.na(w)) f else w, " ", nm(s$col))
+      }
     },
-    dist = summarize_chr1(s$col),
-    field = summarize_chr1(s$col),
-    series = summarize_chr1(s$col),
-    spans = paste0(summarize_chr1(s$x), " \u2192 ", summarize_chr1(s$xend)),
-    pair = paste0(summarize_chr1(s$from), " \u2192 ", summarize_chr1(s$to)),
+    dist = nm(s$col),
+    field = nm(s$col),
+    series = nm(s$col),
+    spans = paste0(nm(s$x), " \u2192 ", nm(s$xend)),
+    pair = paste0(nm(s$from), " \u2192 ", nm(s$to)),
     expr = "Value",
     custom = "Value",
     "Value"
@@ -444,6 +461,19 @@ lane_field_join <- function(x) {
                   ", +", n - LANE_FIELD_JOIN, " more"))
   }
   paste(u, collapse = ", ")
+}
+
+# The synthetic group a groups table without `by` draws from: one row over
+# the whole input. Its row reads "Total", the variables layout's word for the
+# column over all rows (`total_label`).
+GROUPS_ALL_COL <- ".all"
+GROUPS_ALL_LABEL <- "Total"
+
+#' Add the one-level group of a groups table without `by`.
+#' @noRd
+groups_all_data <- function(data) {
+  data[[GROUPS_ALL_COL]] <- rep(GROUPS_ALL_LABEL, nrow(data))
+  data
 }
 
 #' The generic preparer: group_by(by) plus the summaries list.
@@ -475,7 +505,14 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 
   by <- as.character(by %||% character())
   by <- by[nzchar(by)]
-  if (!length(by)) return(bad("Pick a Group by column in the gear"))
+  # Without `by` the table is one row over all input rows: a synthetic
+  # one-level group (GROUPS_ALL_COL) that has no header, no sort and no
+  # drill. `all` on the result tells the renderers.
+  all <- !length(by)
+  if (all) {
+    data <- groups_all_data(data)
+    by <- GROUPS_ALL_COL
+  }
   if (length(by) > 2L) {
     return(bad("Group by supports at most two columns (outer, inner)"))
   }
@@ -497,7 +534,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   # so a colour level only such rows carry gets no slot and no legend key.
   drawn <- stats::complete.cases(data[keys])
 
-  summaries <- lane_norm_summaries(summaries)
+  summaries <- lane_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(bad(summaries$err))
   if (!length(summaries)) return(bad("Add at least one summary column"))
 
@@ -626,7 +663,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   skel <- skel[stats::complete.cases(skel), , drop = FALSE]
   # Nothing left to draw: no rows at all, or every row without a group (a
   # population join with no events in it, or a prepare script that cleared
-  # every term). The ranked-bar surface says the same.
+  # every term).
   if (!nrow(skel)) return(bad("No rows to display"))
   skel <- skel[do.call(order, unname(as.list(skel))), , drop = FALSE]
   leaf <- data.frame(.label = as.character(skel[[group]]),
@@ -831,9 +868,12 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # A count's N: the subjects (count distinct) or rows (count) in this
       # copy's slice -- the whole data for an unfaceted column, one level's
       # rows for a facet copy. Over the full slice, so rows without a group
-      # (the population join's) are in it: the same N the ranked-bar
-      # surface's facets print (summarize_denom()).
-      if (identical(s$type, "simple") &&
+      # (the population join's) are in it (summarize_denom()).
+      # On the one row of a table without `by` the count is its own N, so
+      # its share would read 100%; a colour split keeps its shares.
+      same_n <- all && is.null(s$.color) &&
+        !(pct_total && !is.null(cp$level))
+      if (identical(s$type, "simple") && !same_n &&
             summarize_has_pct(summarize_chr1(s$func) %||% "count")) {
         cp$den <- summarize_denom(if (pct_total) data else cp$slice,
                                   summarize_chr1(s$func) %||% "count",
@@ -889,15 +929,35 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   }
 
   # `.v` = the FIRST summary's primary value (its sort key): rank order
-  # follows the leading column unless sort_by picks another.
-  primary_col <- lane_primary_col(s_primary$s, s_primary$sid)
-  leaf$.v <- lane_primary_value(leaf, s_primary$s, primary_col)
-  if (!is.null(par_rows)) {
-    par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
+  # follows the leading column unless sort_by picks another. A faceted
+  # column ranks by its value over all its levels together, as the single
+  # ranked bar did: by its first level, a row with nothing in that level
+  # would sink however large its other levels are. One more pass of the
+  # builder over all rows gives that value; its columns are dropped again.
+  ps <- s_primary$s
+  pooled <- length(ps$.flevels) && is.null(ps$.custom) &&
+    is.null(ps$.failed) && !identical(ps$show, "tile")
+  if (pooled) {
+    sid0 <- ".sP"
+    # The colour split adds nothing to the pooled value, so it is left out.
+    ps0 <- ps[setdiff(names(ps), c("color", ".color"))]
+    pool <- function(t, tkeys, parent_row = FALSE) {
+      t0 <- fill(t, tkeys, data, ps0, sid0, parent_row = parent_row)
+      lane_primary_value(t0, ps0, lane_primary_col(ps0, sid0))
+    }
+    leaf$.v <- pool(leaf, keys)
+    if (!is.null(par_rows)) {
+      par_rows$.v <- pool(par_rows, parent, parent_row = TRUE)
+    }
+  } else {
+    primary_col <- lane_primary_col(s_primary$s, s_primary$sid)
+    leaf$.v <- lane_primary_value(leaf, s_primary$s, primary_col)
+    if (!is.null(par_rows)) {
+      par_rows$.v <- lane_primary_value(par_rows, s_primary$s, primary_col)
+    }
   }
   # A faceted tile column is a matrix row: its sort key is the row's total
   # across the copies (a subject's AE burden), not its first term's count.
-  ps <- s_primary$s
   if (identical(ps$show, "tile") && length(ps$.flevels)) {
     stem <- sub("f[0-9]+$", "", s_primary$sid)
     vcols <- paste0(stem, "f", seq_along(ps$.flevels), "_v")
@@ -1008,14 +1068,15 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     group_label = summarize_group_label(data, group, parent),
     series = series_lv,
     palette = pal, facet_levels = facet_levels,
-    denoms = c(all = nrow(data)), group = group, parent = parent,
+    denoms = c(all = summarize_n_rows(data)), group = group, parent = parent,
     color = lead_group$column, color_groups = color_groups,
     facet = shared_facet,
     folded = asm$folded, fold_max = asm$fold_max,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
     facet_spans = facet_spans,
-    failed = unlist(lapply(plan, function(p) p$failed))
+    failed = unlist(lapply(plan, function(p) p$failed)),
+    all = all
   )
 }
 
@@ -1093,8 +1154,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  summarize_has_pct(summarize_chr1(s$func) %||% "count"))
   # A count with an N (see lane_prepare_summaries): the header's second line
   # says N, the value reads "8 (12%)", and a bar's length is the percentage,
-  # so arms of different size compare on one scale. The ranked-bar
-  # surface's faceted columns, for the column list.
+  # so arms of different size compare on one scale.
   den <- cp$den
   pct <- is.numeric(den) && length(den) == 1L && is.finite(den) && den > 0
   if (pct) {
@@ -1969,6 +2029,8 @@ lane_custom_cells <- function(slice, tkeys, s) {
 #' stands in for would write, so the plan reads them unchanged.
 #' @noRd
 lane_custom_fill <- function(target, tkeys, slice, s, sid) {
+  # The user's function sees the input's columns, not the row tag.
+  slice[[SUMMARIZE_ROW_ID]] <- NULL
   cu <- s$.custom
   cells <- lane_custom_cells(slice, tkeys, s)
   n <- nrow(target)

@@ -456,6 +456,25 @@ Cards look (branch `feat/table-cards`, fast-forwarded into `feat/table-rewrite`)
 - The tile block is gone; `blockr_deser.tile_block()` restores a saved tile
   as a table block.
 
+Groups without `by` (branch `feat/table-groups-no-by`):
+
+- `by` is optional in the groups layout. Without it the table is one row
+  over all input rows, in every look. `lane_prepare_summaries()` groups by a
+  synthetic column (`GROUPS_ALL_COL`) whose one level reads "Total", the
+  variables layout's `total_label`, and marks the result `all = TRUE`. The
+  cards look's own synthetic group (`cards_frame()`) is gone.
+- The one row has a blank row header, no header sorting, no drill, and the
+  search box hides. A plain count drops its percentage (always 100%).
+- The gear shows "Group by" as an ordinary mapping row ("all rows" when
+  empty), with no asterisk or amber. Sort, order, search, header sorting and
+  the drill section leave while it is empty. Removing `by` clears a drill
+  selection.
+- A groups table with no summaries starts with one count, "Rows"
+  (`table_groups_seed()`), at construction and on a switch from another
+  layout, so Records -> Groups shows a one-row table.
+- Downloads and `report_call()` need no change: they go through the same
+  preparer.
+
 Phase 5 (vocabulary):
 
 - Summary entries are saved, edited and documented under public keys, the
@@ -487,6 +506,34 @@ Phase 5 (vocabulary):
 - Not renamed: the pair's `ref`, `dash`, `band` (series), the custom
   function's result columns (`from`, `to`, `lo`, ...), `facet_layout`.
   Per-summary `format` / `unit` are not implemented.
+
+### One column list in the groups gear (branch `feat/groups-one-list`)
+
+The groups layout has one data model, `by` + `summaries`. The single ranked
+bar (block-level `group`, `parent`, `func`, `value`, `id_var`, `color`,
+`facet`, `bar_mode`, `cols`, `fields`) is gone from the gear, the server and
+`summarize_prepare()`. Mockup and decision:
+`_scratch/blockx/groups-gear-mockup/index.html`, option B.
+
+- Gear: Rows are, with Group by under the switch; Columns (the list); then
+  Presentation, Titles, Drill-down, Prepare script. No Mapping section.
+- A new groups table starts with one column, `table_groups_seed()`: a count
+  drawn as a bar, named "Count". The gear opens on it while the table has one
+  column. The last column cannot be removed.
+- Old boards: `table_legacy_args(from = "summarize")` maps the ranked bar to
+  `by = c(parent, group)` and one simple bar summary (`func`, `col` = `value`,
+  or `id_var` for a distinct count, `color`, `facet`, `bar_mode` as
+  `position`), plus a count number column for `cols = "n"` and field columns
+  for `fields` under `func = "identity"`. `compare` (gone since 87616f6) is
+  dropped. `static_summarize_table()` and `summarize_table()` still take the
+  old arguments through the same table.
+- Brought in line with the ranked bar, for new tables too: a faceted column
+  ranks rows by its value over all levels (a tile matrix keeps its row
+  total); a count's percent base counts each input row once when pooled
+  groups copy rows; an unnamed column's header reads the variable label
+  ("Mean Start Day").
+- Kept: a `by` column missing from the data is an error, where a missing
+  `parent` used to be dropped.
 
 ### Class migration (resolved)
 

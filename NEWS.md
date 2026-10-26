@@ -5,6 +5,17 @@
 
 # blockr.viz 0.2.210
 
+* The table block's groups layout has one way to say what its columns are:
+  the column list. The gear's Mapping section (Group, Aggregate, Add
+  mapping) and the single ranked bar behind it are gone. Group by sits under
+  the "Rows are" switch. A new groups table starts with one open "Count"
+  column. Boards saved with the old summarize table's bar restore as that
+  list: `group` and `parent` become `by`, and `func`, `value`, `id_var`,
+  `color`, `facet` and `bar_mode` become the column's own settings.
+* In the groups layout a faceted column ranks the rows by its value over all
+  levels, not by its first level. A count's percent over pooled groups
+  counts each input row once. An unnamed column is headed by its variable's
+  label ("Mean Start Day", not "Mean ASTDY").
 * A summarize table grouped by two `by` columns lists the inner column flat
   when the outer one has no value in any row. A prepare script can blank the
   outer column behind a flag (`soc <- FALSE`, `AEBODSYS = if (soc) AEBODSYS

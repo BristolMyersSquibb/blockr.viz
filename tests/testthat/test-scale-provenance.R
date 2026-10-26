@@ -58,8 +58,12 @@ test_that("the summarize table colors follow provenance too", {
   d$AENDY <- c(5, 6, 7, 8)
 
   # The colour-split bar path.
-  p <- summarize_prepare(d, group = "VISIT", func = "count", color = "color",
-                         scale_map = sex_map)
+  p <- summarize_prepare(
+    d, by = "VISIT",
+    summaries = list(list(type = "simple", func = "count", show = "bar",
+                          color = "color")),
+    scale_map = sex_map
+  )
   expect_equal(unname(p$palette[c("F", "M", "U")]),
                c("#0072B2", "#E69F00", "#999999"))
 

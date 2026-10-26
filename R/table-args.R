@@ -29,7 +29,10 @@ table_legacy_names <- function(from = c("table", "summarize", "summary")) {
     summarize = c(
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
       "facet", "cols", "fields", "values", "ctrl_target", "ctrl_table",
-      "filter_type", "filter_column", "filter_values"
+      "filter_type", "filter_column", "filter_values",
+      # The facet comparison went in August 2026 (87616f6); a board saved
+      # before carries the slot, always empty.
+      "compare"
     ),
     summary = c(
       "vars", "add_overall", "overall_label", "indent_details",
@@ -65,15 +68,29 @@ table_agg_to_summaries <- function(summaries) {
   out
 }
 
-# The old summarize table's ranked-bar surface (no `summaries`) as typed
-# summaries: the measure as one bar column with its colour split, plus the
-# opt-in count column and the extra fields.
-table_ranked_to_summaries <- function(value, func, color, facet, cols, fields) {
+# The old summarize table's ranked bar (no `summaries`) as typed summaries:
+# the measure as one bar column with its colour split and facet, plus the
+# opt-in count column and the extra fields. A distinct count counted
+# `id_var`, which is the summary's column now. The fields were drawn only
+# beside the as-is measure (one underlying row per group); under any other
+# measure the bar ignored them, so they map to nothing. The opt-in "%"
+# column maps to nothing either: the bar's own label carries the percent.
+table_ranked_to_summaries <- function(value, func, color, facet, cols, fields,
+                                      id_var = NULL) {
   func <- func %||% "count"
+  if (!func %in% c("count", "count_distinct", "sum", "mean", "median", "min",
+                   "max", "identity")) {
+    func <- "count"
+  }
+  value <- if (length(value) && !identical(value, ".count")) value
+  col <- switch(func,
+    count = NULL,
+    count_distinct = id_var %||% value,
+    value
+  )
   bar <- c(
     list(type = "simple", func = func),
-    if (!identical(func, "count") && length(value) &&
-          !identical(value, ".count")) list(col = value),
+    if (length(col)) list(col = col),
     list(show = "bar"),
     if (length(color)) list(color = color),
     if (length(facet)) list(facet = facet)
@@ -81,9 +98,11 @@ table_ranked_to_summaries <- function(value, func, color, facet, cols, fields) {
   extra_n <- if ("n" %in% cols && !identical(func, "count")) {
     list(list(type = "simple", func = "count", show = "number"))
   }
-  extra_fields <- lapply(as.character(fields %||% character()), function(f) {
-    list(type = "field", col = f)
-  })
+  extra_fields <- if (identical(func, "identity")) {
+    lapply(as.character(fields %||% character()), function(f) {
+      list(type = "field", col = f)
+    })
+  }
   c(list(bar), extra_n, extra_fields)
 }
 
@@ -169,7 +188,8 @@ table_legacy_args <- function(args, from = NULL) {
     # The summarize table. With summaries, `group` / `parent` are the
     # grouping of a board saved before `by` existed; the table-level colour
     # and facet fan down onto the summaries. Without summaries it is the
-    # ranked-bar surface, which is one bar summary now.
+    # ranked bar, which is one bar summary now: `parent` the outer `by`,
+    # `func` / `value` / `id_var` the summary's, `bar_mode` its `position`.
     summaries <- if (is.list(out[["summaries"]])) out[["summaries"]] else list()
     by <- chr_vec_state(out[["by"]])
     parent <- chr_state(get("parent"))
@@ -188,10 +208,13 @@ table_legacy_args <- function(args, from = NULL) {
           }
         }
       }
-    } else if (length(by)) {
+    } else {
+      # Without a group the bar drew nothing; its measure now draws one
+      # Total row.
       summaries <- table_ranked_to_summaries(
         chr_state(get("value")), chr_state(get("func")), color, facet,
-        chr_vec_state(get("cols")), chr_vec_state(get("fields"))
+        chr_vec_state(get("cols")), chr_vec_state(get("fields")),
+        id_var = chr_state(get("id_var"))
       )
     }
     # The block-level split layout is each colour split's `position` now.
@@ -273,6 +296,7 @@ blockr_deser.table_block <- function(x, data, ...) {
 blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
   payload <- table_legacy_args(data[["payload"]], from = "summarize")
+  payload$layout <- "groups"
   do.call(
     new_table_block,
     c(payload, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))

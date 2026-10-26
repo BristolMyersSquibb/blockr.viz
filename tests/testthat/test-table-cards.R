@@ -30,10 +30,9 @@ cards_summaries <- function() {
 }
 
 cards_payload_of <- function(data, by = "ARM", ...) {
-  f <- cards_frame(data, "cards", by, NULL)
   summarize_build_payload(
-    f$data, cfg = list(look = "cards"), drill = f$drill,
-    summaries = cards_summaries(), by = f$by, sort_by = "label",
+    data, cfg = list(look = "cards"),
+    summaries = cards_summaries(), by = by, sort_by = "label",
     sort_dir = "asc", ...
   )
 }
@@ -102,9 +101,8 @@ test_that("the groups payload carries one card per drawable summary", {
 })
 
 test_that("a summary with a facet draws one card per level", {
-  f <- cards_frame(cards_df(), "cards", "ARM", NULL)
   p <- summarize_build_payload(
-    f$data, cfg = list(look = "cards"), by = "ARM",
+    cards_df(), cfg = list(look = "cards"), by = "ARM",
     summaries = list(list(type = "simple", name = "Rows", func = "count",
                           facet = "SEV", show = "bar"))
   )
@@ -115,9 +113,8 @@ test_that("a summary with a facet draws one card per level", {
 test_that("a faceted count's head names the count scale, not the share", {
   # The bar is drawn as a share of its level's N; the card's number is the
   # count, so the head reads in counts.
-  f <- cards_frame(cards_df(), "cards", "ARM", NULL)
   p <- summarize_build_payload(
-    f$data, cfg = list(look = "cards"), by = "ARM",
+    cards_df(), cfg = list(look = "cards"), by = "ARM",
     summaries = list(list(type = "simple", name = "Rows", func = "count",
                           facet = "SEV", show = "bar"))
   )
@@ -128,16 +125,11 @@ test_that("a faceted count's head names the count scale, not the share", {
 })
 
 test_that("without `by` the cards draw one row and no drill", {
-  f <- cards_frame(cards_df(), "cards", character(), "ARM")
-  expect_null(f$drill)
-  p <- cards_payload_of(cards_df(), by = character())
+  p <- cards_payload_of(cards_df(), by = character(), drill = "ARM")
   expect_identical(p$cards$n, 1L)
   expect_false(p$cards$multi)
   expect_identical(as.character(p$cards$cols[[1L]]$main), "6")
   expect_false(isTRUE(p$pick))
-  # The table look keeps its message: only the cards draw ungrouped.
-  expect_identical(cards_frame(cards_df(), "table", character(), NULL)$by,
-                   character())
 })
 
 test_that("the table look's payload carries no cards", {

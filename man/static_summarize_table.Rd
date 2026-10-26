@@ -10,15 +10,17 @@ static_summarize_table(data, ...)
 \item{data}{A data frame (or \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible object), the
 table's input.}
 
-\item{...}{The block's own vocabulary, as in
-\code{\link[=new_summarize_table_block]{new_summarize_table_block()}} (\code{by},
-\code{summaries}, \code{group}, \code{color}, \code{facet}, \code{sort_by}, \code{top_n}, \code{title}, ...).}
+\item{...}{The groups layout's arguments, as in \code{\link[=new_table_block]{new_table_block()}}
+(\code{by}, \code{summaries}, \code{sort_by}, \code{top_n}, \code{title}, ...). The single ranked
+bar's arguments (\code{group}, \code{func}, \code{value}, \code{color}, \code{facet}, ...) are
+read as the column list they map to.}
 }
 \value{
 An object of class \code{summarize_exhibit}.
 }
 \description{
-The summarize table (\code{new_summarize_table_block()}) rebuilt outside Shiny,
+The groups layout of the table block (\code{new_table_block(layout = "groups")})
+rebuilt outside Shiny,
 as an object a report, a deck or a download can render. The block draws the
 table by pushing a cell model to the browser, so its result is only the
 data; this is what puts the table itself into a document.

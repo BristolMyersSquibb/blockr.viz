@@ -621,10 +621,14 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
     summarize_drill_filters(active$col, active$vals)
   )
+  # The one row of a table without `by` has no group to drill on and
+  # nothing to sort against.
+  if (isTRUE(prep$all)) drill <- NULL
 
   list(
     n = n,
-    thead = summarize_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE),
+    thead = summarize_thead(prep, sortable = !isTRUE(prep$all) &&
+                              isTRUE(cfg$sortable %||% TRUE),
                             cols = cols, axis = isTRUE(cfg$axis %||% TRUE)),
     tfoot = summarize_tfoot(prep, cols = cols,
                             axis = isTRUE(cfg$axis %||% TRUE)),
