@@ -19,8 +19,9 @@
   as the tile block does: the ticks in the format, the unit once in the axis
   title, tooltips and value labels with both.
 * Line charts follow the rules from the line chart review. A dense line
-  draws no dots; a line whose points are at least 12 px apart draws ringed
-  dots. Lines are 2 px. A hairline crosshair finds the date and one tooltip
+  draws no dots; a line whose points are at least 24 px apart draws ringed
+  dots. A resize or a new filter moves the lines and the dots together,
+  without animation. Lines are 2 px. A hairline crosshair finds the date and one tooltip
   lists every line, highest first, named by its level alone; nothing on the
   plot changes as the cursor moves. A Date or date-time x is a time axis
   whose ticks follow the zoom (years, months, days) and whose tooltip names
@@ -53,6 +54,19 @@
   brushes on drag as before.
 * The fallback palette, used without blockr.theme, is blockr.theme's
   "Blockr" palette. The old fallback's yellow was unreadable on white.
+* The filter line under the chart's caption shows only while a filter is
+  set; "No filter active" is gone. There is no Reset button: a second click
+  on the selected mark, or a click on empty plot space, clears the
+  selection.
+* Captions are upright, on the chart and the table. Text on the chart canvas
+  is 12px (blockr.ui's `--blockr-mark-font-size`; the fallback follows).
+* An axis is named by the column's label and the unit, "Growth (%)"; a
+  column without a label by the unit alone, else by its name. It has no name
+  when the chart's title already contains it.
+* Value labels on bars share one number of decimals (1.70 next to 2.14). An
+  unnamed `y_lines` line at 0 has no label: the axis prints 0.
+* A histogram's bins carry x's label, so the filter line reads "price =
+  1000-1500".
 
 # blockr.viz 0.2.210
 
