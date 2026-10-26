@@ -3,7 +3,8 @@
 `new_chart_block()` and `new_table_block()` share these argument names. A
 shared name means the same thing in both blocks, takes the same values and has
 the same default, unless the table below says otherwise. Checked against
-`fix/chart-gear-gaps` (chart) and `feat/table-rewrite` (table), 2026-10-26.
+`fix/chart-gear-gaps` (chart) and `feat/table-rewrite` (table), 2026-10-26,
+with the format and missing-claim rules agreed afterwards.
 
 The table's `summaries` entries reuse chart names too; they are listed in the
 second table.
@@ -14,9 +15,9 @@ second table.
 |---|---|---|---|---|
 | `id` | A column counted distinct instead of rows (a subject id) | column name | `NULL` (rows) | Chart: the band and the N labels (`show_n`). Table: the variables layout; in the groups layout a summary counts subjects with `func = "count_distinct"`. |
 | `pct_of` | The base of a percentage | chart `"facet"`, `"category"`, `"color"`, `"total"`; table `"facet"`, `"total"` | `"facet"` | `"facet"` and `"total"` mean the same. The table has no category or colour base. Chart: the base of `func = "pct_distinct"`; table: of a count's percentage. |
-| `missing` | Missing values of a category, colour or facet column (and of a Table 1 variable) | `"level"`, `"drop"` | `"level"` | `"level"` shows them as "(Missing)"; a click on that row or bar gives the rows with no value. `"drop"`: the chart keeps the rows in the panel (they still count toward `pct_distinct`); the table gives them no row. The table's records layout keeps every row and only names the header. |
-| `format` | How numbers print | `"number"`, `"compact"` (1.2K, 3.4M), `"percent"` (a fraction x100 with %), a whole number of decimals 0 to 6 | `"number"` | Chart: the value axis, tooltips and value labels. Table: the records layout's cells, cards and downloads; the groups and variables layouts format their cells themselves. `"number"`: chart smart decimals, table up to two decimals. A number of decimals: the chart prints exactly that many (`2`: 4.30), the table drops trailing zeros (4.3). |
-| `unit` | Free-text unit of the numbers ("CHF") | text | `""` | Chart: the axis title once, and after each value in tooltips and value labels. Table: the headers of the numeric columns once ("Revenue (CHF)"), and after the number on a card. |
+| `missing` | Missing values of a category, colour or facet column (and of a Table 1 variable) | `"level"`, `"drop"` | `"level"` | `"level"` shows them as "(Missing)"; a click on that row or bar gives the rows with no value, also when it is sent to a filter block (`drill_target`: the claim carries the value filter's `"<NA>"` token, or the subjects behind those rows). `"drop"`: the chart keeps the rows in the panel (they still count toward `pct_distinct`); the table gives them no row. The table's records layout keeps every row and only names the header. |
+| `format` | How numbers print | `"number"` (up to two decimals, trailing zeros dropped; a value that would round to 0 keeps two significant digits, 0.0034), `"compact"` (1.2K, 3.4M), `"percent"` (a fraction x100 with %), a whole number of decimals 0 to 6, printed exactly (`2`: 4.30) | `"number"` | Where it applies. Chart: the value axis, tooltips and value labels. Table: the records layout's cells, the groups layout's number cells and the value labels beside its bars, cards and downloads; the variables layout (Table 1) keeps its statistics' own formats. |
+| `unit` | Free-text unit of the numbers ("CHF") | text | `""` | Chart: the axis title once, and after each value in tooltips and value labels. Table: once in the headers ("Revenue (CHF)") of the records layout's numeric columns and of the groups layout's columns that are not counts, and after the number on a card. |
 | `sort_by` | Order of the categories (chart) or rows (table) | `"value"`, `"data"` (the data's order), `"alpha"` (alphabetical), a column name (each category's minimum of it) | chart by type (`"value"` for bar, pie, treemap; `"data"` for boxplot, pointrange; `"onset"` for gantt); table `"value"` | Chart also `"onset"` (gantt). Table also a summary's name or a facet level. The table reads its old `"label"` as `"alpha"`. |
 | `sort_dir` | Direction of `sort_by` | `"asc"`, `"desc"` | chart by type; table `"desc"` | |
 | `value_labels` | Print each value beside its mark | `TRUE`, `FALSE` | chart `FALSE`, table `TRUE` | Different on purpose: a bar chart reads off its axis, a table's bars have no axis to read from. |
