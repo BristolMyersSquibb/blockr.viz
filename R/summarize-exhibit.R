@@ -200,6 +200,9 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
   args$expanded <- TRUE
   # The look is the block's; this method draws the table look.
   args$look <- NULL
+  # The table the exhibit already prepared, so the web page carries the
+  # numbers the spreadsheet and the slides carry.
+  args$prep <- x$prep
   do.call(summarize_table, c(list(x$data), args))
 }
 
