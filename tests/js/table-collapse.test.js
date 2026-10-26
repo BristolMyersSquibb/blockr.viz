@@ -13,7 +13,7 @@ function open() {
   win.eval(h.PRELUDE);
   win.document.body.innerHTML = `
     <div class="drilldown-table-container" data-dt-gear="0">
-      <table class="blockr-table">
+      <table class="blockr-table" data-dt-structured="1">
         <thead>
           <tr>
             <th class="blockr-stub-header">Row</th>
