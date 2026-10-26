@@ -39,6 +39,46 @@ test_that("an old table with in-block aggregation restores as groups", {
   expect_identical(p$summaries[[1L]]$col, "revenue")
 })
 
+test_that("a saved records board with in-block aggregation restores as groups", {
+  s0 <- blockr.core::blockr_ser(new_table_block())
+  saved <- function(group) {
+    list(
+      object = s0$object,
+      payload = list(
+        rowname = NULL, value = NULL, group = group,
+        summaries = list(list(func = "count", cols = list()),
+                         list(func = "mean", cols = list("revenue"))),
+        drill = "auto", digits = 1L, title = "Sales", block_name = "Agg"
+      ),
+      constructor = s0$constructor
+    )
+  }
+  b <- blockr.core::blockr_deser(saved("region"))
+  p <- blockr.core::blockr_ser(b)$payload
+  expect_identical(p$layout, "groups")
+  expect_identical(p$by, "region")
+  expect_identical(vapply(p$summaries, `[[`, "", "func"), c("count", "mean"))
+  expect_identical(p$summaries[[2L]]$col, "revenue")
+  expect_identical(p$title, "Sales")
+  expect_identical(p$format, 1L)
+  expect_false(any(c("group", "value", "digits") %in% names(p)))
+
+  # It draws in the groups engine: one row per region.
+  df <- data.frame(region = c("N", "S", "N"), revenue = c(1, 2, 3))
+  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(df)), {
+    session$flushReact()
+    expect_identical(session$returned$state$layout(), "groups")
+    out <- eval_block_expr(session$returned$expr(), df)
+    expect_identical(nrow(out), 3L)
+  })
+
+  # Aggregation without a group was one grand-total row: groups, no `by`.
+  p0 <- blockr.core::blockr_ser(blockr.core::blockr_deser(saved(NULL)))$payload
+  expect_identical(p0$layout, "groups")
+  expect_length(p0$by, 0L)
+  expect_identical(vapply(p0$summaries, `[[`, "", "func"), c("count", "mean"))
+})
+
 test_that("an old argument name never lands on a new one by partial match", {
   # `value` was the old table's column list; `value_labels` is new.
   p <- blockr.core::blockr_ser(new_table_block(value = c("a", "b")))$payload

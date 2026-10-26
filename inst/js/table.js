@@ -1124,6 +1124,10 @@
       /** @type {any} */
       var af = null;
       try { af = JSON.parse(activeJson); } catch (e) { af = null; }
+      // The column half of a restored structured click: mark its column.
+      if (af && structured && af.col_filters && af.col_filters.length) {
+        markCol(af.col_filters);
+      }
       if (af && structured && af.filters && af.filters.length) {
         // Structured rows/headers self-describe via data-dd-keys: the active
         // element is the one whose keys equal the restored filter set.
@@ -1225,11 +1229,15 @@
         }
       }
     }
+    // What a row is sits under the switch, as in the groups gear: the
+    // grouping, the row names and the columns.
     spec.layoutSwitch = {
+      fields: spec.mapping || [],
       value: current,
       options: TABLE_LAYOUTS,
       onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
     };
+    spec.mapping = [];
     // A Table 1 (the variables layout) has no card form, and a finished
     // table keeps the layout it came with.
     var finished = !!spec.finished;
@@ -1269,8 +1277,9 @@
   // sendConfig(key, value) round-trips directly.
   // Click-through toggle options: the pill states what the CURRENT setting means
   // (not a bare On/Off) — see blockr.docs design-system/components/blockr-row.md.
-  var SORTABLE_OPT    = [{ value: "on", label: "Sortable" },
-                         { value: "off", label: "Not sortable" }];
+  // The groups gear's words (summarize-table.js), so the trays read alike.
+  var SORTABLE_OPT    = [{ value: "on", label: "Header sorting" },
+                         { value: "off", label: "No header sorting" }];
   var COLLAPSIBLE_OPT = [{ value: "on", label: "Collapsible" },
                          { value: "off", label: "Not collapsible" }];
   var SEARCH_OPT      = [{ value: "on", label: "Search bar" },
@@ -1304,10 +1313,22 @@
                             { value: "compact", label: "1.2K" },
                             { value: "percent", label: "12.3%" }] },
     unit:       { label: "Unit",       kind: "text", ph: "e.g. CHF" },
+    // The records layout's rows: the stub column and the columns beside it
+    // (R: `rowname`, `columns`). Empty is the default: the first column,
+    // and every other column.
+    rowname:    { label: "Row names", kind: "column", colType: "any",
+                  placeholder: "First column" },
+    columns:    { label: "Columns", kind: "columns", colType: "any",
+                  placeholder: "All columns" },
+    // What a missing `by` value is, in the words of the groups gear
+    // (summarize-table.js): shared by the three layouts.
+    missing:    { label: "Missing", kind: "segmented", options: [
+                  { value: "drop", label: "Drop" }, { value: "level", label: "Show" }
+                ] },
     // Display toggles (column-free): click-through pills labelled by meaning.
     // Keys match the R config params so onChange(key) round-trips to the block
     // reactiveVals; the row label names the dimension, the pill the state.
-    sortable:    { label: "Sorting",  kind: "segmented", options: SORTABLE_OPT },
+    sortable:    { label: "Header sorting", kind: "segmented", options: SORTABLE_OPT },
     collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
     search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
     // One row, not one per format: "may the reader take this table away" is a
@@ -1341,71 +1362,51 @@
   });
   // The summarize word, as in the groups layout and dplyr's `.by`.
   TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Group by" });
-  // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
-  // checkbox capability section (off by default, revealing their controls when
-  // checked); Presentation keeps only the always-on display options (decimals,
-  // sorting, search, export). `hasCols` is false for a structured ("Table 1")
-  // frame — there the column-based capabilities are no-ops, so only the display
-  // toggles show (and Collapsible, which needs sections).
+  // The records and variables layouts' gear, in the groups gear's order:
+  // Rows are (with what a row is), Presentation, Color, Titles, Drill-down,
+  // Prepare script. `hasCols` is false for a structured frame (a Table 1, a
+  // nested table, a finished input): its cells are not picked by column, so
+  // Color leaves. A control shows only where it changes the table.
   /** @param {Record<string, any>} cfg @param {boolean} hasCols @param {string} [stubCol] */
   function tableSections(cfg, hasCols, stubCol) {
-    // Aggregation lives under the "Aggregation" header: `group` is always
-    // offered; the repeatable summaries list (spec.summaries) appears once a group
-    // is set. `value`/`func` are no longer standalone roles here — the
-    // summaries list owns them.
-    // byMode (the table block's records layout): "Group by" sets `by`,
-    // which nests the rows; aggregation is the groups layout's job.
+    // The records layout inside the table block: the payload carries the
+    // rows' own settings (rows_state), and "Group by" is the block's `by`.
+    var rows = (cfg && cfg.rows) || null;
     var byMode = !!(cfg && cfg.byMode);
-    var hasGroup = !byMode && hasCols && cfg && cfg.group && cfg.group.length > 0;
-    // Aggregation is "on" when a value is carried (checking the box seeds a
-    // count). Grand totals = on with no group -> a single totals row.
-    var aggOn = !byMode && hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
+    var nested = byMode && cfg.group && cfg.group.length > 0;
+    var variables = !!(cfg && cfg.variablesLayout);
+    // Numbers the format changes: a flat table's columns, or a nested
+    // table's number cells.
+    var numbers = hasCols || (nested && !!rows && !!rows.numbers);
     var pres = [];
-    if (hasCols) pres.push("format", "unit");
-    pres.push("sortable");
-    pres.push("look");
-    if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
+    if (numbers) pres.push("format", "unit");
+    pres.push("sortable", "look");
+    // Collapsing needs header rows: a nested table or a Table 1.
+    if (!hasCols) pres.push("collapsible");
+    // A missing `by` value is a header of its own or dropped: nesting and
+    // Table 1 only.
+    if (nested || variables) pres.push("missing");
     pres.push("search", "download");
-    var spec = /** @type {Record<string, any>} */ ({ finished: !hasCols,
-                 requiredMap: [], optionalMap: [],
-                 mapping: (hasCols || byMode) ? ["group"] : [],
-                 summaries: hasCols && !byMode,    // offer the summaries list whenever the box is on
-                 aggregatable: hasCols && !byMode, // Variant A: Aggregation checkbox section
-                 // Empty cols on a numeric aggregation = all numeric columns
-                 // (override rule, dd_metric_plan) — placeholder promises it.
-                 metricsDefaultAll: true,
-                 // Drill-down checkbox section only for a raw (non-aggregated)
-                 // table; a grouped table drills on its group keys, and a
-                 // totals row (aggregating, no group) has nothing to drill.
-                 drillToggle: (hasCols && !hasGroup && !aggOn) ? "drill" : null,
-                 // Checking the box pre-fills the filter column with the
-                 // rowname/stub column (the row's identity — the natural
-                 // click target), so drill works in one click; the picker
-                 // stays for re-aiming (e.g. AETERM instead of USUBJID).
-                 drillDefault: stubCol || "",
-                 // The picker-less variants (structured / aggregated) take a
-                 // MODE rather than a column, so they can offer "hand over
-                 // the source records instead". A flat table has a column to
-                 // choose and no mode, so it never sees this.
-                 drillSourceOption: (!hasCols || hasGroup),
-                 // COLOR — one plain section (no checkbox: its activation
-                 // lives in the picks): "Color by" identity tint + the
-                 // repeatable "Shade cells" value-encoding rules.
-                 colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
-                 // External-control send (beta) — available on every table:
-                 // the structured ("Table 1") frame is the prime sender (its
-                 // drilled output carries the ARD identity the claim reads).
-                 ctrlSection: true,
-                 presentation: pres,
-                 // Table text (title / subtitle / caption) — applies to every
-                 // table, structured included (a "Table 1" wants its title
-                 // most of all).
-                 titles: ["title", "subtitle", "caption"] });
     // A finished input (gtsummary, composer, annotated frame) has no
-    // pickable columns, so aggregation / drill / colour don't apply. A badge
-    // says so; the tooltip carries the why. withLayoutSwitch() drops it in
-    // the variables layout, whose table the block builds itself.
-    if (!hasCols) {
+    // columns to pick and nothing to nest: it is shown as it came.
+    var finished = !hasCols && !nested && !variables;
+    var spec = /** @type {Record<string, any>} */ ({
+      finished: finished,
+      requiredMap: [], optionalMap: [],
+      mapping: (byMode && !finished) ? ["group", "rowname", "columns"] : [],
+      // Drill-down: a flat table picks the column a click filters on, the
+      // row's own column by default.
+      drillToggle: hasCols ? "drill" : null,
+      drillDefault: stubCol || "",
+      drillSourceOption: !hasCols,
+      colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
+      ctrlSection: true,
+      presentation: pres,
+      titles: ["title", "subtitle", "caption"]
+    });
+    // A finished input (gtsummary, composer, annotated frame) has no
+    // pickable columns. A badge says so; the tooltip carries the why.
+    if (spec.finished) {
       spec.badge = "Finished table";
       spec.badgeTitle = "The input is already a table (from gtsummary, a " +
         "table composer or an annotated data frame) and is shown as it is. " +
@@ -1452,14 +1453,8 @@
     var onClick = table.getAttribute("data-dt-onclick-col");
     /** @type {Record<string, any>} */
     var cfg = {
-      // Aggregation config: group (comma-joined -> array), and a summaries list
-      // (JSON array of {func, cols}) parsed off the table element.
-      group: (table.getAttribute("data-dt-group") || "")
-        .split(",").filter(function (n) { return !!n; }),
-      summaries: (function () {
-        try { return JSON.parse(table.getAttribute("data-dt-summaries") || "[]"); }
-        catch (e) { return []; }
-      })(),
+      // "Group by": the block's `by`, read off the payload below.
+      group: [],
       // Drill state. Raw table: the filter column (data-dt-onclick-col).
       // Grouped/aggregated table: the keys drill is a boolean — ON iff the
       // renderer wired the group-cols (data-dt-group-cols is emitted only
@@ -1537,6 +1532,28 @@
       cfg.byMode = true;
       cfg.group = [].concat(stored.by_state || []);
       try { byCols = JSON.parse(stored.by_choices) || []; } catch (e) { byCols = []; }
+    }
+    // The rows' settings (records: row names, columns, missing; variables:
+    // missing), which a nested table or a Table 1 does not show as columns.
+    var rs = stored && stored.rows_state;
+    if (rs) {
+      cfg.rows = rs;
+      cfg.rowname = rs.rowname || "";
+      cfg.columns = [].concat(rs.columns || []);
+      if (rs.missing) cfg.missing = rs.missing;
+      if (!cfg.byMode) cfg.variablesLayout = true;
+    }
+    // The block's prepare script: its text, the controls it declares, its
+    // error, and each control's value (sv_<name>), where the engine's script
+    // roles read them. Absent outside the table block, which hides the
+    // section.
+    var prep = stored && stored.prep;
+    if (prep) {
+      cfg.script = prep.script == null ? "" : prep.script;
+      cfg.script_inputs = prep.script_inputs || [];
+      cfg.script_error = prep.script_error || null;
+      var sv = prep.script_values || {};
+      Object.keys(sv).forEach(function (k) { cfg[k] = sv[k]; });
     }
     return { cols: cols, cfg: cfg, byCols: byCols };
   }
@@ -1642,20 +1659,14 @@
       secondary: new Set(Object.keys(TABLE_ROLES)
         .map(function (k) { return TABLE_ROLES[k].pairedWith; })
         .filter(Boolean)),
-      // The table's mapping section is purely the aggregation step (group +
-      // aggregate), so name it "Aggregation" — clearer than "Mapping" that it
-      // transforms the data before display.
-      mappingTitle: function () { return cfg.byMode ? "Mapping" : "Aggregation"; },
+      mappingTitle: function () { return "Mapping"; },
       typeKey: null,
       typeGroups: null,
       familyFor: null,
       entryRequired: function () { return false; },
       drillAutoLabel: null,
-      // Grouped table: the drill target is the group keys — structurally
-      // determined, so the section is a picker-less checkbox (same as the
-      // tile). Raw table: null — its drill is the drillToggle column picker
-      // (a raw row is multi-column; the target is a genuine choice). No
-      // columns (annotated frame) or grand totals: null (section hidden).
+      // A flat table: null, its drill is the drillToggle column picker (a
+      // raw row is multi-column; the target is a genuine choice).
       drillHint: function () {
         // Structured (annotated) table: the drill target is the row's own
         // identity columns -- structurally determined, so the section is the
@@ -1666,24 +1677,10 @@
             "subset of this table \u2014 the identity columns carry the " +
             "selection, so a downstream block can read them directly.";
         }
-        var hasGroup = cfg.group && cfg.group.length > 0;
-        if (!hasCols() || !hasGroup) return null;
-        return "Clicking a row filters downstream on the group key" +
-          (cfg.group.length > 1 ? "s" : "") + " (" + cfg.group.join(", ") + ").";
+        return null;
       },
       title: "Table settings",
-      // Repeatable aggregation list: the engine renders one "[agg] of [cols]"
-      // row per value. A grouped table always shows at least a count, so an
-      // empty list surfaces as a single count row.
-      metricsList: function () {
-        return (cfg.summaries && cfg.summaries.length)
-          ? cfg.summaries : [{ func: "count", cols: [] }];
-      },
-      onMetricsChange: function (/** @type {any[]} */ ms) {
-        cfg.summaries = ms;
-        sendConfig(elemId, "summaries", JSON.stringify(ms));
-      },
-      // Repeatable "Shade cells" rules — same JSON transport as summaries.
+      // Repeatable "Shade cells" rules, sent as one JSON string.
       // No floor row: an empty list IS "no shading".
       shadingsList: function () { return cfg.shadings || []; },
       onShadingsChange: function (/** @type {any[]} */ ss) {

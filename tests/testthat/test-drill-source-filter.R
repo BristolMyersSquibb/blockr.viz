@@ -135,3 +135,13 @@ test_that("`.filter` is a reserved annotation column", {
   # Or the predicate renders as a data cell, in every table that carries one.
   expect_true(".filter" %in% annotation_cols_in(data.frame(.filter = "x")))
 })
+
+test_that("drill_source(unclaimed = \"all\") passes the source when nothing is claimed", {
+  src <- data.frame(SEX = c("F", "M", "F"))
+  tbl <- summary_table(src, vars = "SEX")
+  expect_equal(nrow(drill_source(tbl)), 0L)
+  expect_identical(drill_source(tbl, unclaimed = "all"), src)
+  # A claim still narrows.
+  hit <- tbl[tbl$.variable_level %in% "F", , drop = FALSE]
+  expect_equal(nrow(drill_source(hit, unclaimed = "all")), 2L)
+})

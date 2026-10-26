@@ -595,7 +595,7 @@ test_that("delta CSS draws the clinical table style", {
   # Never under a :has() scope: with the descendant `path` it made every DOM
   # insertion restyle the whole page.
   has_scoped <- html_table_delta_css(
-    scope = ".blockr-html-table-container:has(.blockr-table[data-dt-structured=\"1\"])"
+    scope = ".drilldown-table-container:has(.blockr-table[data-dt-structured=\"1\"])"
   )
   expect_false(grepl(" path {", has_scoped, fixed = TRUE))
 

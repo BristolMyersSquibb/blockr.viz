@@ -282,6 +282,8 @@ table_variables_ui <- function(id) {
 #' @param missing Rows whose `by` value is missing: `"drop"` (default) keeps
 #'   them under a header without a value, `"level"` under a "(Missing)"
 #'   header, which a drill can claim like any other group.
+#' @param columns The columns shown beside the row names, in order. `NULL`
+#'   (default): every other column.
 #' @return An annotated data frame (`.group1`, `.group1_level`, ..., `.label`,
 #'   then the remaining columns).
 #' @examples
@@ -289,7 +291,8 @@ table_variables_ui <- function(id) {
 #'                 n = 1:3)
 #' table_nest(d, by = "species", rowname = "island")
 #' @export
-table_nest <- function(data, by, rowname = NULL, missing = "drop") {
+table_nest <- function(data, by, rowname = NULL, missing = "drop",
+                       columns = NULL) {
   data <- as.data.frame(data)
   by <- intersect(as.character(unlist(by)), names(data))
   if (!length(by)) return(data)
@@ -316,9 +319,13 @@ table_nest <- function(data, by, rowname = NULL, missing = "drop") {
   }
   out[[".label"]] <- as.character(data[[rowname]])
   keep <- setdiff(rest, rowname)
+  columns <- as.character(unlist(columns %||% character()))
+  if (length(columns)) keep <- intersect(columns, keep)
   res <- as.data.frame(out, stringsAsFactors = FALSE)
   for (cl in keep) res[[cl]] <- data[[cl]]
   rownames(res) <- NULL
+  # The input column behind `.label`, for a row drill on it.
+  attr(res, "nest_rowname") <- rowname
   res
 }
 

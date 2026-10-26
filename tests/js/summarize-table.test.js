@@ -465,6 +465,27 @@ test('the groups gear is Rows are with Group by, then Columns, then the rest', a
   await t.close();
 });
 
+test('Top caps the rows after Sort and Order, and leaves without a grouping', async () => {
+  const t = open('three');
+  const band = openGear(t);
+  const keys = Array.from(band.querySelectorAll('.dd-form-row'))
+    .map((r) => (r.className.match(/dd-role-(\w+)/) || [])[1]).filter(Boolean);
+  const at = keys.indexOf('top_n');
+  assert.ok(at > 0, 'Top is in the gear');
+  assert.deepEqual(keys.slice(at - 2, at + 1), ['sort_by', 'sort_dir', 'top_n']);
+  const inp = band.querySelector('.dd-role-top_n input[type=number]');
+  assert.equal(inp.value, '', 'empty: every row');
+  inp.value = '2';
+  inp.dispatchEvent(new t.win.Event('change', { bubbles: true }));
+  const sent = t.actions().filter((a) => a.param === 'top_n').pop();
+  assert.equal(sent.value, 2);
+  await t.close();
+
+  const t0 = open('no_by');
+  assert.equal(openGear(t0).querySelectorAll('.dd-role-top_n').length, 0);
+  await t0.close();
+});
+
 test('a new groups table opens on its one count column', async () => {
   const t = open('fresh');
   const band = openGear(t);

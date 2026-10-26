@@ -58,8 +58,10 @@ test_that("records layout: the (Missing) header of a nested table claims", {
     drill = "auto",
     selection = list(group_cols = ".group1_level", group_vals = "(Missing)")
   )
+  # The output is the input rows, as without `by`.
   res <- block_result(blk, d)
-  expect_identical(res$.label, c("s3", "s5"))
+  expect_identical(names(res), names(d))
+  expect_identical(res$id, c("s3", "s5"))
 })
 
 test_that("variables layout: (Missing) resolves to the NA source rows", {
@@ -144,4 +146,63 @@ test_that("a missing bar or (Missing) row sent to a filter block claims NA", {
   expect_identical(ids, "s2")
   # Ordinary values claim as before.
   expect_identical(dd_ctrl_claims(d, "", list(arm = "A"))[[1L]]$values, "A")
+})
+
+test_that("records layout: a nested header claim filters the input rows", {
+  d <- missing_df()
+  ex <- table_nest_drill_expr("arm", ".group1_level", "A")
+  expect_identical(eval(ex, list(data = d))$id, c("s1", "s2"))
+  ex <- table_nest_drill_expr(c("arm", "sex"),
+                              c(".group1_level", ".group2_level"),
+                              c("A", "(Missing)"))
+  expect_identical(eval(ex, list(data = d))$id, "s2")
+  expect_identical(eval(table_nest_drill_expr("arm", NULL, NULL),
+                        list(data = d)), d)
+  # The footer names the column the header stands for.
+  nest <- table_nest(d, by = "arm", rowname = "id")
+  expect_identical(dt_claim_label(".group1_level", "A", dt_group_names(nest)),
+                   "arm = A")
+  expect_identical(dt_claim_label(".group1_level", "A"), "A")
+})
+
+test_that("records layout: a nested row claims its group and its drill value", {
+  d <- missing_df()
+  nest <- table_nest(d, by = "arm", rowname = "id")
+  v <- annotated_structure_view(nest)
+  keys <- dd_row_drill_attrs(v$data, v$section_cols, drill_col = "sex")$keys
+  # s1 under A, sex F; s2 has no sex and claims nothing.
+  expect_match(keys[[1L]], '"column":".group1_level","value":"A"', fixed = TRUE)
+  expect_match(keys[[1L]], '"column":"sex","value":"F"', fixed = TRUE)
+  expect_identical(keys[[2L]], "")
+  # The rowname moved to `.label` and still drills under its own name.
+  keys <- dd_row_drill_attrs(v$data, v$section_cols, drill_col = "id")$keys
+  expect_match(keys[[1L]], '"column":"id","value":"s1"', fixed = TRUE)
+  # A mode is not a column: rows stay inert, headers drill.
+  expect_true(all(!nzchar(
+    dd_row_drill_attrs(v$data, v$section_cols, drill_col = "auto")$keys)))
+
+  ex <- table_nest_drill_expr("arm", c(".group1_level", "sex"), c("A", "F"))
+  expect_identical(eval(ex, list(data = d))$id, "s1")
+  expect_identical(dt_claim_label(c(".group1_level", "sex"), c("A", "F"),
+                                  dt_group_names(nest)),
+                   c("arm = A", "sex = F"))
+})
+
+test_that("variables layout: a cell claims its row and its arm", {
+  d <- missing_df()
+  tbl <- summary_table(d, vars = "sex", by = "arm", add_overall = TRUE)
+  keys <- annotated_column_keys(tbl)
+  # Each arm column names its arm; the Total column claims nothing.
+  expect_identical(keys[["A"]], list(list(column = "arm", values = "A")))
+  expect_null(keys[["Total"]])
+  ck <- list(list(column = "arm", values = list("A")))
+  expect_identical(dd_col_keys_label(ck), "arm = A")
+  hit <- tbl[tbl$.variable_level %in% "F", , drop = FALSE]
+  ex <- dd_col_keys_filter(quote(blockr.viz::drill_source(hit)), ck)
+  expect_identical(eval(ex, list(hit = hit))$id, "s1")
+  # Saved with the selection and stamped for the restore.
+  json <- dd_active_filter_json(list(gcols = ".variable_level", gvals = "F",
+                                     ckeys = ck))
+  expect_match(json, '"col_filters":[{"column":"arm","values":["A"]}]',
+               fixed = TRUE)
 })

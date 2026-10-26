@@ -162,12 +162,22 @@ test_that("a Table 1's statistics start under their variable's name", {
   expect_no_match(html, "padding-left:calc(", fixed = TRUE)
 })
 
-test_that("the records layout nests by `by`", {
+test_that("the records layout nests by `by` and outputs the input rows", {
   d <- data.frame(species = c("a", "a", "b"), island = c("x", "y", "x"),
                   n = 1:3)
   b <- new_table_block(by = "species", rowname = "island")
   shiny::testServer(b$expr_server, args = list(data = shiny::reactive(d)), {
-    ex <- paste(deparse(session$returned$expr()), collapse = " ")
-    expect_match(ex, "blockr.viz::table_nest", fixed = TRUE)
+    # The nesting is display; the code passes the rows on.
+    ex <- session$returned$expr()
+    expect_no_match(paste(deparse(ex), collapse = " "), "table_nest",
+                    fixed = TRUE)
+    expect_identical(eval(ex, list(data = d)), d)
+  })
+  b <- new_table_block(by = "species", rowname = "island",
+                       selection = list(group_cols = ".group1_level",
+                                        group_vals = "a"))
+  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(d)), {
+    ex <- session$returned$expr()
+    expect_identical(eval(ex, list(data = d)), d[d$species == "a", ])
   })
 })

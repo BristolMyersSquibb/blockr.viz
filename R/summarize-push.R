@@ -621,11 +621,30 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   for (i in seq_along(cols)) {
     cols[[i]]$tt <- summarize_tip_meta(plan[[i]])
   }
+  # What a click on a cell adds to the row's claim: a facet column its level,
+  # a colour split the level of the segment hit (the drill, below).
+  for (i in seq_along(cols)) {
+    pl <- plan[[i]]
+    if (!is.null(pl$flevel) && !is.null(pl$fcol)) {
+      cols[[i]]$fkey <- list(column = pl$fcol, value = as.character(pl$flevel))
+    }
+    if (identical(cols[[i]]$kind, "barsplit") && !is.null(pl$ccol)) {
+      cols[[i]]$scol <- pl$ccol
+    }
+  }
 
+  # A stored click is the row's path, plus what a cell added. The row lights
+  # from its path; the cell part goes to the client, which marks the cell.
+  path <- c(summarize_chr1(prep$parent), summarize_chr1(prep$group))
+  filters <- summarize_drill_filters(active$col, active$vals)
+  on_path <- names(filters) %in% path
   on <- summarize_drill_on(
     rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
-    summarize_drill_filters(active$col, active$vals)
+    filters[on_path]
   )
+  on_cell <- if (any(on) && any(!on_path)) {
+    lapply(filters[!on_path], function(v) as.character(v)[[1L]])
+  }
   # The one row of a table without `by` has no group to drill on and
   # nothing to sort against.
   if (isTRUE(prep$all)) drill <- NULL
@@ -651,6 +670,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
     on = on,
+    on_cell = on_cell,
     pick = !is.null(drill),
     # The columns a row click claims, outer -> inner: a parent row claims the
     # first, a child row both (R/summarize-drill.R).
@@ -1192,7 +1212,9 @@ summarize_split_html <- function(c) {
     lab <- if (!grouped && !is.null(c$slab)) c$slab[[j]] else rep("", n)
     body <- paste0(
       "<div class=\"blockr-summarize-fill", ifelse(nzchar(lab), " has-lab", ""),
-      "\" style=\"width:",
+      # The segment's index: a click on a colour segment claims its level
+      # (summarize-table.js reads it), so the static markup carries it too.
+      "\" data-seg=\"", j - 1L, "\" style=\"width:",
       summarize_fmt_w(c$seg[[j]]),
       "%;background:", c$fills[[j]], "\" data-summarize-tip=\"",
       summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\">",
@@ -1575,6 +1597,9 @@ summarize_flat_payload <- function(m) {
   arr_if <- function(x) if (any(x, na.rm = TRUE)) arr(x) else NULL
   one <- function(c) {
     out <- list(kind = c$kind)
+    # What a click on this column's cell adds to the row's claim.
+    out$fkey <- c$fkey
+    out$scol <- c$scol
     if (identical(c$kind, "tile")) {
       out$bg <- arr(c$bg)
       out$fg <- arr(c$fg)
@@ -1728,6 +1753,7 @@ summarize_flat_payload <- function(m) {
     level = if (any(m$level > 0L)) arr(m$level) else NULL,
     parent_row = arr_if(m$parent_row),
     on = arr_if(m$on),
+    on_cell = m$on_cell,
     pick = isTRUE(m$pick),
     path = if (isTRUE(m$pick)) arr(as.character(m$path)) else NULL,
     cols = lapply(m$cols, one),

@@ -1147,7 +1147,8 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
     paste0(s$name, " \u00b7 N = ", cp$pop)
   }
   base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
-               flevel = cp$level, sname = s$name, meas = s$name,
+               flevel = cp$level, fcol = cp$fcol, sname = s$name,
+               meas = s$name,
                # a count with nothing in it is an empty column
                # (summarize_drop_empty_facets)
                zero_empty = identical(s$type, "simple") &&
@@ -1202,6 +1203,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
                    cvar = summarize_col_name(data, s$.color),
+                   ccol = s$.color,
                    mode = local({
                      additive <- is.null(s$.custom) && summarize_additive(
                        summarize_chr1(s$func) %||% "count"

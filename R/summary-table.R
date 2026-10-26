@@ -486,6 +486,20 @@ summary_table <- function(data,
   # reads a "(Missing)" claim as those.
   attr(out, "source_data") <- data
 
+  # Which arm each column is, so a click on a cell claims its row and its
+  # arm (annotated_column_keys()). The overall column is every row and
+  # claims nothing.
+  by1 <- as.character(unlist(by))
+  if (length(by1) == 1L && by1 %in% names(input)) {
+    lv <- intersect(names(out), unique(as.character(input[[by1]])))
+    lv <- setdiff(lv, if (isTRUE(add_overall)) overall_label)
+    if (length(lv)) {
+      attr(out, "column_keys") <- stats::setNames(
+        lapply(lv, function(l) list(list(column = by1, values = l))), lv
+      )
+    }
+  }
+
   out
 }
 

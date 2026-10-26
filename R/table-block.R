@@ -165,6 +165,37 @@ dt_is_structured <- function(data) {
             names(data)))
 }
 
+#' Numeric cells of a structured frame, printed in the block's number format
+#' with the unit in their header. A nested tidy frame (table_nest()) keeps
+#' its numbers as numbers; a Table 1 or a converted finished table holds text
+#' cells and passes unchanged.
+#' @noRd
+dt_structured_numbers <- function(data, data_cols, digits = "number",
+                                  unit = NULL) {
+  num <- data_cols[vapply(data[data_cols], is.numeric, logical(1L))]
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  for (cn in num) {
+    x <- data[[cn]]
+    lbl <- dt_col_label(x, cn) %||% cn
+    out <- rep(NA_character_, length(x))
+    ok <- !is.na(x)
+    out[ok] <- dt_format_num(x[ok], digits)
+    attributes(out) <- attributes(x)[setdiff(names(attributes(x)),
+                                             c("class", "levels"))]
+    if (!is.null(unit)) attr(out, "label") <- paste0(lbl, " (", unit, ")")
+    data[[cn]] <- out
+  }
+  data
+}
+
+#' Do a frame's cells hold numbers the number format can change?
+#' @noRd
+dt_has_number_cells <- function(data) {
+  if (!is.data.frame(data)) return(FALSE)
+  cols <- names(data)[!startsWith(names(data), ".")]
+  any(vapply(data[cols], is.numeric, logical(1L)))
+}
+
 #' Build the structured ("Table 1") `<table>` for the interactive table-block.
 #'
 #' Builds the section-aware `<tbody>` and multi-level `<thead>` with
@@ -190,6 +221,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # stays out of the data cells or it leaks in as a literal em-dash column.
   data_cols    <- setdiff(names(data),
                           c(view$reserved_cols, stub_col, styling_cols))
+  data <- dt_structured_numbers(data, data_cols, digits, toggles$unit)
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
     # Structured frames carry no gear-picked mappings, so only two states
@@ -225,7 +257,8 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible,
-                            drill_keys = drill_on, nest = nest)
+                            drill_keys = drill_on, nest = nest,
+                            drill_col = if (drill_on) drill)
 
   table_tag <- dt_fixed_table_tag(
     thead, tbody,
@@ -831,6 +864,34 @@ dd_group_filter_call <- function(cols, vals) {
   Reduce(function(a, b) bquote(.(a) & .(b)), conds)
 }
 
+#' A nested records table's drill as a filter on the input rows.
+#'
+#' table_nest() puts the k-th `by` column's value in `.group<k>_level`, so a
+#' header click on `.group1_level = "Placebo"` filters `by[1] == "Placebo"`.
+#' A row click adds its value in the drill column, which is a real column.
+#' The "(Missing)" header (`missing = "level"`) claims the rows with no value.
+#' @param by The `by` columns, outer first.
+#' @param gc,gv The stored claim's columns and values.
+#' @noRd
+table_nest_drill_expr <- function(by, gc, gv) {
+  by <- as.character(unlist(by))
+  gc <- as.character(unlist(gc))
+  gv <- as.character(unlist(gv))
+  if (!length(gc) || length(gc) != length(gv)) {
+    return(summarize_drill_expr(list()))
+  }
+  k <- suppressWarnings(
+    as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc))
+  )
+  grp <- !is.na(k) & k <= length(by)
+  # A row claims its groups and its value in the drill column, a real column.
+  real <- is.na(k) & !startsWith(gc, ".")
+  cols <- gc
+  cols[grp] <- by[k[grp]]
+  keep <- grp | real
+  summarize_drill_expr(stats::setNames(as.list(gv[keep]), cols[keep]))
+}
+
 #' Say what a drill claim claims, in the source data's own words.
 #'
 #' Structured drill keys are identity columns, so the source terms are in the
@@ -843,9 +904,12 @@ dd_group_filter_call <- function(cols, vals) {
 #' Shared by the latched footer ("Filtered: ...") and the transient receipt
 #' ("Drilled down to ..."), so one click cannot be described two ways.
 #' @param gc,gv Aligned claim columns and values.
+#' @param group_names The columns the `.group<k>` levels stand for, outer
+#'   first (dt_group_names()). With them a header click reads "ARM = Placebo"
+#'   rather than "Placebo".
 #' @return A character vector of clause labels, outermost first.
 #' @noRd
-dt_claim_label <- function(gc, gv) {
+dt_claim_label <- function(gc, gv, group_names = character()) {
 
   gc <- as.character(unlist(gc))
   gv <- as.character(unlist(gv))
@@ -861,10 +925,71 @@ dt_claim_label <- function(gc, gv) {
   if (!is.na(vi) && !is.na(li)) {
     c(gv[glv], paste0(gv[vi], " = ", gv[li]))
   } else if (any(glv)) {
-    gv[glv]
+    k <- as.integer(sub("^\\.group([0-9]+)_level$", "\\1", gc[glv]))
+    nm <- group_names[k]
+    real <- !glv & !startsWith(gc, ".")
+    c(ifelse(!is.na(nm) & nzchar(nm), paste0(nm, " = ", gv[glv]), gv[glv]),
+      if (any(real)) paste0(gc[real], " = ", gv[real]))
   } else {
     paste0(gc, " = ", gv)
   }
+}
+
+#' The column each `.group<k>` level of an annotated frame stands for, read
+#' off the `.group<k>` column (table_nest() and summary_table() write the
+#' column name there). Empty where the frame has none.
+#' @noRd
+dt_group_names <- function(data) {
+  if (!is.data.frame(data) || !nrow(data)) return(character())
+  out <- character()
+  k <- 1L
+  while (paste0(".group", k) %in% names(data)) {
+    v <- as.character(data[[paste0(".group", k)]])
+    v <- v[!is.na(v) & nzchar(v)]
+    out[[k]] <- if (length(v)) v[[1L]] else ""
+    k <- k + 1L
+  }
+  out
+}
+
+#' The column half of a structured drill, as stored: a list of
+#' `list(column = , values = )`, from the click or from a saved board (where
+#' `values` may come back as a list). NULL when there is none.
+#' @noRd
+dd_col_keys_state <- function(x) {
+  if (!is.list(x) || !length(x)) return(NULL)
+  out <- lapply(x, function(k) {
+    if (!is.list(k)) return(NULL)
+    cl <- as.character(unlist(k[["column"]]))
+    vl <- as.character(unlist(k[["values"]]))
+    if (length(cl) != 1L || !nzchar(cl) || !length(vl)) return(NULL)
+    list(column = cl, values = vl)
+  })
+  out <- Filter(Negate(is.null), out)
+  if (length(out)) out
+}
+
+#' "ARM = Low dose" for each column claim.
+#' @noRd
+dd_col_keys_label <- function(ck) {
+  ck <- dd_col_keys_state(ck)
+  vapply(ck %||% list(), function(k) {
+    paste0(k$column, " = ", paste(k$values, collapse = ", "))
+  }, character(1L))
+}
+
+#' AND a column claim onto an expression that yields source rows:
+#' `dplyr::filter(<ex>, ARM %in% "Low dose")`. "(Missing)" claims the rows
+#' with no value (summarize_drill_expr()).
+#' @noRd
+dd_col_keys_filter <- function(ex, ck) {
+  ck <- dd_col_keys_state(ck)
+  if (!length(ck)) return(ex)
+  f <- stats::setNames(lapply(ck, `[[`, "values"),
+                       vapply(ck, `[[`, "", "column"))
+  out <- summarize_drill_expr(f)
+  out[[2L]] <- ex
+  out
 }
 
 #' Serialize the block's active drill-filter state for the `data-dt-active`
@@ -877,12 +1002,24 @@ dd_active_filter_json <- function(active) {
   if (is.null(active)) return(NULL)
   gcols <- as.character(unlist(active$gcols %||% character()))
   gvals <- as.character(unlist(active$gvals %||% character()))
+  ck <- dd_col_keys_state(active$ckeys)
+  # The column half rides along: table.js marks that column.
+  col_filters <- if (length(ck)) {
+    lapply(ck, function(k) list(column = jsonlite::unbox(k$column),
+                                values = k$values))
+  }
   if (length(gcols) && length(gcols) == length(gvals)) {
     return(as.character(jsonlite::toJSON(
-      list(filters = unname(Map(
-        function(cl, vl) list(column = cl, value = vl), gcols, gvals
-      ))),
-      auto_unbox = TRUE
+      c(list(filters = unname(Map(
+        function(cl, vl) list(column = jsonlite::unbox(cl),
+                              value = jsonlite::unbox(vl)),
+        gcols, gvals
+      ))), if (length(col_filters)) list(col_filters = col_filters))
+    )))
+  }
+  if (length(col_filters)) {
+    return(as.character(jsonlite::toJSON(
+      list(filters = list(), col_filters = col_filters)
     )))
   }
   col  <- active$col
@@ -1081,10 +1218,15 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
       #      server, so this is flash-free on first paint and every re-render.
       #   2. `.drilldown-table-structured` -- the class table.js promotes; a
       #      fallback for browsers without :has() (styles after promotion).
+      # Scope 1 hangs off `.drilldown-table-container`, the class only this
+      # chrome's container carries. The groups and cards containers share
+      # `.blockr-html-table-container`, and every DOM change inside one made
+      # Chrome re-check the :has() and restyle the whole table under it:
+      # 6600 elements per pass on the AE heatmap, several passes per edit.
       htmltools::tags$style(htmltools::HTML(paste0(
         html_table_delta_css(
           scope = paste0(
-            ".blockr-html-table-container",
+            ".drilldown-table-container",
             ":has(.blockr-table[data-dt-structured=\"1\"])"
           )
         ),
@@ -1228,7 +1370,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".36"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1729,7 +1871,8 @@ table_guidance <- function() {
 #' @param rowname Records layout: the stub column (first column, row label).
 #'   With `by` set, the rows sit under one collapsible header per level of
 #'   `by` ([table_nest()]).
-#' @param columns Records layout: columns to show; `NULL` shows all.
+#' @param columns Records layout: the columns shown beside the row names, in
+#'   order; `NULL` shows all.
 #' @param summaries Groups and variables layouts: the table's columns (or
 #'   variables), an ordered list of typed summaries, each a
 #'   `list(type = , ...)`. Types: `simple` (`func`, `col`; show `"bar"`,
@@ -1804,8 +1947,11 @@ table_guidance <- function() {
 #'   statistics shown for numeric variables (keys of [summary_table()]'s
 #'   `stats`), outer row sections, a total column and its label, and nested
 #'   categorical hierarchies. See [summary_table()].
-#' @param script,script_values Groups layout: prepare script, as on
-#'   [new_chart_block()], and the values of its controls.
+#' @param script,script_values Prepare script, as on [new_chart_block()]:
+#'   R code run on the input before any layout builds its table, and the
+#'   values of its controls. In the records and variables layouts a click
+#'   filters the rows the script returned; in the groups layout it filters
+#'   the input rows before the script, as on the chart.
 #' @param selection Internal: what the last click selected. Saved with the
 #'   board so a restored table keeps its drill.
 #' @param ... Old argument names (translated), and arguments forwarded to
@@ -1946,6 +2092,9 @@ new_table_block <- function(layout = "records",
 
           r_layout <- shiny::reactiveVal(layout)
 
+          # The prepare script runs before every layout (R/table-prepare.R).
+          prep <- table_prepare(data, script, script_values)
+
           # Settings both layouts share. The block owns them, so a layout
           # switch keeps them.
           shared <- list(
@@ -1974,7 +2123,10 @@ new_table_block <- function(layout = "records",
             layout = r_layout,
             # The input before nesting: the records gear offers its columns
             # for "Group by".
-            input = data
+            input = prep$data,
+            # The prepare script, for the records gear (the groups engine
+            # takes it as `prep`).
+            prep = prep
           )
 
           # Only the active engine sees data. The other one parks: its
@@ -1982,7 +2134,7 @@ new_table_block <- function(layout = "records",
           gate <- function(which) {
             shiny::reactive({
               shiny::req(identical(r_layout(), which))
-              data()
+              prep$data()
             })
           }
           sel_for <- function(which) if (layout %in% which) selection
@@ -1998,14 +2150,15 @@ new_table_block <- function(layout = "records",
           rec_data <- shiny::reactive({
             lay <- r_layout()
             shiny::req(lay %in% c("records", "variables"))
-            d <- data()
+            d <- prep$data()
             if (identical(lay, "variables")) {
               args <- table_variables_args(var$config())
               if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
             } else if (length(shared$by()) && is.data.frame(d)) {
               # Records under headers: the tidy frame nested by `by`.
               d <- table_nest(d, shared$by(), rec_rowname(),
-                              missing = shared$missing())
+                              missing = shared$missing(),
+                              columns = rec$state$value())
             }
             d
           })
@@ -2021,6 +2174,7 @@ new_table_block <- function(layout = "records",
             filter_column = rec_sel$column, filter_values = rec_sel$values,
             filter_group_cols = rec_sel$group_cols,
             filter_group_vals = rec_sel$group_vals,
+            filter_col_keys = rec_sel$col_keys,
             sortable = sortable, collapsible = collapsible, search = search,
             download = download, title = title, subtitle = subtitle,
             caption = caption, ctrl_target = drill_target,
@@ -2037,9 +2191,9 @@ new_table_block <- function(layout = "records",
             search = search, sortable = sortable, axis = axis,
             value_labels = value_labels, bar_width = bar_width,
             download = download, title = title, subtitle = subtitle,
-            caption = caption, drill = drill, script = script,
+            caption = caption, drill = drill, prep = prep,
             look = look,
-            values = script_values, ctrl_target = drill_target,
+            ctrl_target = drill_target,
             ctrl_table = drill_table,
             filter_column = grp_sel$column, filter_values = grp_sel$values,
             shared = shared
@@ -2062,8 +2216,15 @@ new_table_block <- function(layout = "records",
               r_layout(v)
             }
           }
-          shiny::observeEvent(input[["records-drilldown_table_block_action"]],
-                              set_layout(input[["records-drilldown_table_block_action"]]))
+          # The records engine leaves the prepare script to the block.
+          shiny::observeEvent(input[["records-drilldown_table_block_action"]], {
+            msg <- input[["records-drilldown_table_block_action"]]
+            set_layout(msg)
+            if (identical(msg$action %||% "config", "config") &&
+                  is.character(msg$param)) {
+              prep$config(msg$param[[1L]], msg$value)
+            }
+          })
           shiny::observeEvent(input[["groups-summarize_table_block_action"]],
                               set_layout(input[["groups-summarize_table_block_action"]]))
 
@@ -2108,7 +2269,8 @@ new_table_block <- function(layout = "records",
             } else {
               list(column = rs$filter_column(), values = rs$filter_values(),
                    group_cols = rs$filter_group_cols(),
-                   group_vals = rs$filter_group_vals())
+                   group_vals = rs$filter_group_vals(),
+                   col_keys = rs$filter_col_keys())
             }
             sel <- sel[!vapply(sel, function(x) is.null(x) || !length(x),
                                logical(1L))]
@@ -2124,18 +2286,21 @@ new_table_block <- function(layout = "records",
                 # The drill filter applies to the built table, as it did
                 # when a summary table block fed a table block.
                 built <- table_variables_call(var$config())
-                if (!is.null(built)) ex <- table_sub_data(ex, built)
+                if (!is.null(built)) {
+                  built[[2L]] <- quote(.(data))
+                  ex <- table_sub_data(ex, built)
+                }
               } else if (length(shared$by())) {
-                built <- as.call(c(
-                  list(quote(blockr.viz::table_nest), quote(data)),
-                  list(by = shared$by(), rowname = rs$rowname()),
-                  if (identical(shared$missing(), "level")) {
-                    list(missing = "level")
-                  }
-                ))
-                ex <- table_sub_data(ex, built)
+                # Records under headers: the output is the input rows, as
+                # without `by`. A header click claims `.group<k>_level`,
+                # which is the k-th `by` column. The nesting, `missing` and
+                # `columns` shape only what the table shows.
+                ex <- table_nest_drill_expr(shared$by(),
+                                            rs$filter_group_cols(),
+                                            rs$filter_group_vals())
               }
-              ex
+              # The script feeds the table; the click filters what it shows.
+              prep$wrap_after(ex)
             }),
             cond = cond,
             state = list(
@@ -2175,8 +2340,8 @@ new_table_block <- function(layout = "records",
               total = var$state$total,
               total_label = var$state$total_label,
               nest = var$state$nest,
-              script = gs$script,
-              script_values = gs$values,
+              script = prep$script,
+              script_values = prep$values,
               selection = r_selection
             )
           )

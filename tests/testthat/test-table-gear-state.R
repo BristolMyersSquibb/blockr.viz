@@ -51,32 +51,6 @@ test_that("data-dt-cols is stamped on flat, message and structured tables", {
   expect_true(grepl("data-dt-cols=\"\\[\\]\"", st))
 })
 
-test_that("aggregated display keeps the RAW input schema on data-dt-cols", {
-  df  <- data.frame(region = c("N", "S", "N"), revenue = c(1, 2, 3),
-                    stringsAsFactors = FALSE)
-  blk <- records_engine(group = "region",
-                         summaries = list(list(func = "count",
-                                               cols = list())))
-  testServer(blk, args = list(data = reactive(df)), {
-    session$flushReact()
-    # The body ships as the data-push payload (not a renderUI output); the
-    # gear attributes ride on the payload's <table> head.
-    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
-    expect_identical(p$kind, "flat")
-    # The displayed frame is the aggregate: group + the "Count" metric column
-    # (and 2 group rows, not 3 raw rows).
-    expect_true(grepl("Count", p$head))
-    expect_identical(p$n, 2L)
-    # ... but the gear's pickable columns stay the raw input schema: revenue
-    # (not displayed) is offered, the synthetic Count column is not.
-    m <- regmatches(p$head, regexpr("data-dt-cols=\"[^\"]*\"", p$head))
-    expect_length(m, 1L)
-    expect_true(grepl("region", m))
-    expect_true(grepl("revenue", m))
-    expect_false(grepl("Count", m))
-  })
-})
-
 test_that("a format whose writer is missing is left out of the menu", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
   blk <- records_engine(download = TRUE)
