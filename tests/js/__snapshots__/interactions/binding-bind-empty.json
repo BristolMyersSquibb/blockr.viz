@@ -18,16 +18,16 @@
      false,
      [
       [
-       "div.blockr-gear-header",
+       "div.blockr-gear-header.vz-head",
        false,
        [
         [
-         "div.dd-chart-titles",
+         "div.dd-chart-titles.vz-head__titles",
          true,
          null
         ],
         [
-         "div.dd-chart-dl-host.dd-chart-dl",
+         "div.vz-head__tools",
          false,
          null
         ],
@@ -35,16 +35,16 @@
          "button.blockr-gear-btn",
          false,
          null
+        ],
+        [
+         "div.blockr-settings.blockr-settings--beak.dd-popover",
+         false,
+         null
         ]
        ]
       ],
       [
        "div.blockr-busy-line",
-       false,
-       []
-      ],
-      [
-       "div.blockr-settings.blockr-settings--beak.dd-popover",
        false,
        []
       ],

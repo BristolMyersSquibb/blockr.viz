@@ -14,24 +14,24 @@
     {
      "div.dd-card": [
       {
-       "div.blockr-gear-header": [
+       "div.blockr-gear-header.vz-head": [
         {
-         "div.dd-chart-titles": null,
+         "div.dd-chart-titles.vz-head__titles": null,
          "hidden": true
         },
         {
-         "div.dd-chart-dl-host.dd-chart-dl": null
+         "div.vz-head__tools": null
         },
         {
          "button.blockr-gear-btn": null
+        },
+        {
+         "div.blockr-settings.blockr-settings--beak.dd-popover": null
         }
        ]
       },
       {
        "div.blockr-busy-line": null
-      },
-      {
-       "div.blockr-settings.blockr-settings--beak.dd-popover": null
       },
       {
        "div.dd-mapping-band": null,
