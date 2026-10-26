@@ -1856,6 +1856,8 @@ new_table_block <- function(layout = "records",
   if (!pct_of %in% c("facet", "total")) pct_of <- "facet"
   missing <- chr_state(missing) %||% "drop"
   if (!missing %in% c("drop", "level")) missing <- "drop"
+  # Alphabetical order was "label" before it took the chart's "alpha".
+  sort_by <- summarize_sort_by(sort_by)
   # Number format of the records layout's cells: "number" (up to two
   # decimals) or a whole number of decimals.
   digits <- table_format_digits(format)

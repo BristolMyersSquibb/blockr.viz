@@ -16,8 +16,9 @@
 #'   typed summaries (see [new_table_block()]), and the grouping (outer ->
 #'   inner, at most two). Empty `summaries` counts rows.
 #' @param sort_by,sort_dir Server-side ordering. `sort_by` is `"value"`,
-#'   `"data"` (the data's own order), `"label"`, a summary column name or a
-#'   facet level name; `sort_dir` is `"desc"` or `"asc"`.
+#'   `"data"` (the data's own order), `"alpha"` (alphabetical; `"label"` is
+#'   read as this), a summary column name or a facet level name; `sort_dir`
+#'   is `"desc"` or `"asc"`.
 #' @param top_n Optional cap. Off by default -- the table scrolls instead.
 #'   When set, the rows below the cut are reported in a visible fold row.
 #' @param max_height `NULL` (default): the table runs its full length and
@@ -97,7 +98,7 @@ summarize_table <- function(data, summaries = list(), by = NULL,
   # input columns. Read back by summarize-table.js off the rendered <table>.
   cfg <- list(
     summaries = summaries, by = by, facet_layout = facet_layout,
-    sort_by = sort_by,
+    sort_by = summarize_sort_by(sort_by),
     sort_dir = sort_dir, top_n = top_n, search = search,
     sortable = sortable, axis = axis, value_labels = value_labels,
     bar_width = bar_width, drill = drill, pct_of = pct_of, missing = missing,

@@ -161,9 +161,11 @@ test_that("sort, top_n and the fold carry over to the list", {
   expect_true(all(diff(got) >= 0))
   expect_identical(names(got), c("Cough", "Itch"))
   expect_identical(prep$folded, 1L)
-  # By label, descending: the name order backwards.
+  # By name, descending: the name order backwards. The old keyword "label"
+  # restores as the chart's "alpha".
   bl <- restore_ranked(group = "TERM", func = "count", sort_by = "label",
                        sort_dir = "desc")
+  expect_identical(blockr.core::blockr_ser(bl)$payload$sort_by, "alpha")
   expect_identical(names(values_of(drawn(bl, d))), c("Rash", "Itch", "Cough"))
 })
 

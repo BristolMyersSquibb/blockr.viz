@@ -32,7 +32,7 @@ cards_summaries <- function() {
 cards_payload_of <- function(data, by = "ARM", ...) {
   summarize_build_payload(
     data, cfg = list(look = "cards"),
-    summaries = cards_summaries(), by = by, sort_by = "label",
+    summaries = cards_summaries(), by = by, sort_by = "alpha",
     sort_dir = "asc", ...
   )
 }

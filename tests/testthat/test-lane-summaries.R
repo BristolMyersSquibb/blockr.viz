@@ -763,7 +763,7 @@ test_that("sort_by data honors factor levels, else first appearance", {
   expect_identical(p$rows$.label, rev(visits))
   # Alphabetical is what this exists to avoid.
   p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
-                              sort_by = "label", sort_dir = "asc")
+                              sort_by = "alpha", sort_dir = "asc")
   expect_identical(p$rows$.label, c("Baseline", "Week 10", "Week 2"))
 
   # No factor: the order the rows arrive in (ADaM is visit-sorted).

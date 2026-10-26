@@ -2542,7 +2542,7 @@
       // first-appearance in the rows (chart parity: "Data order"). A visit
       // or dose-group table reads wrong alphabetically.
       { value: "data", label: "Data order" },
-      { value: "label", label: "Name" }
+      { value: "alpha", label: "A\u2013Z" }
     ].concat(sumNames)
       .concat(levels.map(function (lv) { return { value: lv, label: lv }; }))
       // Numeric columns of the input (the engine expands "#num"): the row's

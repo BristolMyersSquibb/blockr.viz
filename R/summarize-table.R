@@ -291,11 +291,19 @@ summarize_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
   plan[!empty]
 }
 
+# `sort_by` as one string. "label" is the old name of "alpha" (alphabetical),
+# renamed to the chart's word.
+#' @noRd
+summarize_sort_by <- function(sort_by) {
+  sb <- summarize_chr1(sort_by) %||% "value"
+  if (identical(sb, "label")) "alpha" else sb
+}
+
 # `sort_by` is either a plan-independent keyword or a facet level name.
 #' @noRd
 summarize_sort_key <- function(sort_by, plan) {
-  sb <- summarize_chr1(sort_by) %||% "value"
-  if (identical(sb, "label")) return(".label")
+  sb <- summarize_sort_by(sort_by)
+  if (identical(sb, "alpha")) return(".label")
   if (identical(sb, "data")) return(".ord")
   if (identical(sb, "value")) return(".v")
   hit <- vapply(plan, function(p) identical(p$label, sb), logical(1L))
@@ -329,7 +337,7 @@ summarize_min_ord <- function(data, keycol, sortcol, labels) {
 summarize_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
                                    parent) {
   key <- summarize_sort_key(sort_by, plan)
-  sb <- summarize_chr1(sort_by) %||% "value"
+  sb <- summarize_sort_by(sort_by)
   # Ordering by the row NAME when that name is a number: compare the
   # numbers. `.label` is the display string, and as text "10" sorts before
   # "2".
@@ -345,7 +353,7 @@ summarize_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
       if (!is.null(leaf$.labn)) key <- ".labn"
     }
   }
-  if (identical(key, ".v") && !sb %in% c("value", "label", "data") &&
+  if (identical(key, ".v") && !sb %in% c("value", "alpha", "data") &&
         sb %in% names(data)) {
     leaf$.ord <- summarize_min_ord(data, group, sb, leaf$.label)
     if (!is.null(par_rows)) {

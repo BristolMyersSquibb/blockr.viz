@@ -2,6 +2,8 @@
 
 * The picker block is gone. Bind chart and table mappings to the source
   columns directly and put a group switch in the board's filter.
+* The table block orders rows alphabetically with `sort_by = "alpha"`, as
+  the chart block does. The old value `"label"` is read as `"alpha"`.
 
 # blockr.viz 0.2.210
 

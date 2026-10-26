@@ -47,8 +47,8 @@ summarize_arguments <- function() {
         "Ordering: value (the first column's value), data (the data's ",
         "own order -- factor levels, else first appearance in the rows: ",
         "use it for visits and dose groups, which read wrong ",
-        "alphabetically), label (alphabetical), a summary column name, or ",
-        "a facet level name."
+        "alphabetically), alpha (alphabetical), a summary column name, or ",
+        "a facet level name. \"label\" is read as \"alpha\"."
       ),
       example = "value",
       type = arg_string()
