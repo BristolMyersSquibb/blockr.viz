@@ -219,15 +219,20 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
     col_keys = col_keys,
     collapsible = collapsible
   )
+  nest <- html_is_nest(data, section_cols, styling_cols)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
                             collapsible = collapsible,
-                            drill_keys = drill_on)
+                            drill_keys = drill_on, nest = nest)
 
   table_tag <- dt_fixed_table_tag(
     thead, tbody,
     structured_colgroup(data, data_cols, stub_col, wrap_names = wrap_titles)
   )
+  if (nest) {
+    table_tag <- htmltools::tagAppendAttributes(table_tag,
+                                                class = "blockr-table-nest")
+  }
   # The chrome may have been rendered before the data existed, in which case it
   # carries no `drilldown-table-structured` class. This marker lets table.js
   # promote it onto the container at wire time.

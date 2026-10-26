@@ -105,9 +105,10 @@ html_table <- function(data,
     sortable = sortable,
     collapsible = collapsible
   )
+  nest <- html_is_nest(data, section_cols, styling_cols)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
-                            collapsible = collapsible)
+                            collapsible = collapsible, nest = nest)
 
   # Use the same class names the canonical blockr.ui preview uses so the
   # shared table_preview_css() rules (typography, padding, hover, sort icons)
@@ -116,6 +117,10 @@ html_table <- function(data,
     thead, tbody,
     structured_colgroup(data, data_cols, stub_col)
   )
+  if (nest) {
+    table_tag <- htmltools::tagAppendAttributes(table_tag,
+                                                class = "blockr-table-nest")
+  }
 
   scroll_style <- if (!is.null(max_height)) {
     paste0("max-height:", max_height, ";overflow:auto;")
@@ -860,10 +865,25 @@ dd_attr_chunk <- function(name, json) {
   )
 }
 
+# A nest: rows under `.group` headers with no indent of their own, what
+# table_nest() makes of a tidy frame. Its rows start where their header's
+# name starts, and the header's chevron hangs to the left of that edge. A
+# Table 1 (variable blocks, indented statistics) keeps its own steps.
+#' @noRd
+html_is_nest <- function(data, section_cols, styling_cols) {
+  if (!length(section_cols) ||
+      !all(grepl("^\\.group\\d+_level$", section_cols))) {
+    return(FALSE)
+  }
+  if (!".indent" %in% styling_cols) return(TRUE)
+  n <- suppressWarnings(as.integer(data[[".indent"]]))
+  all(is.na(n) | n <= 0L)
+}
+
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
                              styling_cols = character(), collapsible = TRUE,
-                             drill_keys = FALSE) {
+                             drill_keys = FALSE, nest = FALSE) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -953,6 +973,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       "<tr class=\"blockr-section-header\" data-level=\"", L, "\"",
       hdr_drill, ">",
       "<td class=\"blockr-section-cell level-", L,
+      if (isTRUE(nest)) " blockr-section-nest",
       "\" colspan=\"", ncol_total, "\">",
       btn_open, chev, prefix,
       "<span class=\"blockr-section-value\">", esc(path_mat[, L]),
@@ -1003,8 +1024,11 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
-    stub_style <- ifelse(row_indent > 0L,
-      paste0(" style=\"padding-left:calc(", 24L + row_indent * indent_px,
+    # A nest's rows sit under the innermost header's name: one step per
+    # level below the first.
+    pad_indent <- if (isTRUE(nest)) rep(k - 1L, n_rows) else row_indent
+    stub_style <- ifelse(pad_indent > 0L,
+      paste0(" style=\"padding-left:calc(", 24L + pad_indent * indent_px,
              "px + var(--blockr-card-inset, 0px));\""),
       "")
     # Parent rows get a chevron toggle button before the label; the JS attaches
@@ -1316,6 +1340,9 @@ input.blockr-search:focus {
    chevron sits in the gutter the group chevrons use, so the title starts on
    the group headings' text edge (12px padding + 12px chevron + 9px gap). Only
    the chevron is the button; without a title it carries \"All\". */
+.blockr-html-table-container .blockr-table-nest thead th.blockr-stub-header.dt-has-foldall {
+  padding-left: calc(3px + var(--blockr-card-inset, 0px));
+}
 .blockr-html-table-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
@@ -1494,6 +1521,21 @@ input.blockr-search:focus {
 }
 .blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-btn {
   padding-left: 72px;
+}
+/* A nest (html_is_nest()): each heading's name starts where its rows start
+   (24px, one 16px step per level), the 12px chevron and 9px gap hanging to
+   the left of it. */
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest .blockr-section-btn {
+  padding-left: 3px;
+}
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-2 .blockr-section-btn {
+  padding-left: 19px;
+}
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-3 .blockr-section-btn {
+  padding-left: 35px;
+}
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-4 .blockr-section-btn {
+  padding-left: 51px;
 }
 .blockr-html-table-container .blockr-section-value {
   font-weight: var(--blockr-font-weight-semibold, 600);
