@@ -1199,6 +1199,17 @@
     }
   }
 
+  // A compact matrix is as wide as its cells, so its picture is too: the
+  // host drops to the width its content asks for, never past `width`. Without
+  // this a narrow heatmap sat at the left of a panel-wide white picture.
+  function narrowToContent(host, root, width) {
+    if (!root.querySelector("table[data-summarize-compact]")) return;
+    host.style.width = "max-content";
+    var need = Math.ceil(host.offsetWidth);
+    // No layout (a DOM without one measures 0): keep the given width.
+    host.style.width = (need > 0 ? Math.min(width, need) : width) + "px";
+  }
+
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
    * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
    * (R: capture_page_box()) it also carries `pages` when the table is too
@@ -1223,6 +1234,7 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        narrowToContent(host, root, width);
         widenToContent(host, root);
         var w = Math.ceil(root.offsetWidth);
         var h = Math.ceil(root.offsetHeight);
