@@ -83,9 +83,9 @@ test_that("missing = level shows a missing group as its own row", {
 })
 
 test_that("format replaces digits", {
-  expect_identical(table_format_digits("number"), 2L)
-  expect_identical(table_format_digits(0), 0L)
-  expect_identical(table_format_digits("1"), 1L)
+  expect_identical(table_format_state("number"), "number")
+  expect_identical(table_format_state(0), 0L)
+  expect_identical(table_format_state("1"), 1L)
   p <- blockr.core::blockr_ser(new_table_block(digits = 0L))$payload
   expect_identical(p$format, 0L)
   expect_false("digits" %in% names(p))
