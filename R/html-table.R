@@ -865,19 +865,12 @@ dd_attr_chunk <- function(name, json) {
   )
 }
 
-# A nest: rows under `.group` headers with no indent of their own, what
-# table_nest() makes of a tidy frame. Its rows start where their header's
-# name starts, and the header's chevron hangs to the left of that edge. A
-# Table 1 (variable blocks, indented statistics) keeps its own steps.
+# A table with section headers: records nested by table_nest(), a Table 1's
+# variable blocks. Each header's name starts where the rows under it start,
+# and its chevron hangs to the left of that edge.
 #' @noRd
 html_is_nest <- function(data, section_cols, styling_cols) {
-  if (!length(section_cols) ||
-      !all(grepl("^\\.group\\d+_level$", section_cols))) {
-    return(FALSE)
-  }
-  if (!".indent" %in% styling_cols) return(TRUE)
-  n <- suppressWarnings(as.integer(data[[".indent"]]))
-  all(is.na(n) | n <= 0L)
+  length(section_cols) > 0L
 }
 
 #' @noRd
@@ -940,8 +933,13 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # Section-header rows: one HTML string per (row, level), blanked on rows
   # where level L does not restart (L < diff_from, or no change at all).
   # When collapsing is off the section header is a static label -- no chevron, no
-  # button affordance (wireCollapse also bails via data-dt-collapsible=0).
-  chev     <- if (isTRUE(collapsible)) as.character(section_chevron_svg()) else ""
+  # button affordance (wireCollapse also bails via data-dt-collapsible=0). An
+  # empty chevron-sized span keeps the name on the rows' text edge.
+  chev <- if (isTRUE(collapsible)) {
+    as.character(section_chevron_svg())
+  } else {
+    "<span class=\"blockr-chev\" aria-hidden=\"true\"></span>"
+  }
   btn_open <- if (isTRUE(collapsible)) {
     "<button class=\"blockr-section-btn\" type=\"button\" aria-expanded=\"true\">"
   } else {
@@ -1024,9 +1022,11 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
-    # A nest's rows sit under the innermost header's name: one step per
-    # level below the first.
-    pad_indent <- if (isTRUE(nest)) rep(k - 1L, n_rows) else row_indent
+    # Rows start under the innermost header's name, one step per header
+    # level below the first; a row's own indent steps in from the
+    # shallowest row's (a Table 1's statistics sit at indent 1).
+    pad_indent <- row_indent - if (n_rows) min(row_indent) else 0L
+    if (isTRUE(nest)) pad_indent <- pad_indent + (k - 1L)
     stub_style <- ifelse(pad_indent > 0L,
       paste0(" style=\"padding-left:calc(", 24L + pad_indent * indent_px,
              "px + var(--blockr-card-inset, 0px));\""),
@@ -1337,10 +1337,10 @@ input.blockr-search:focus {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
 /* Fold all (table.js adds it when the table folds and has groups): the
-   chevron sits in the gutter the group chevrons use, so the title starts on
-   the group headings' text edge (12px padding + 12px chevron + 9px gap). Only
+   chevron hangs to the left, so the title starts on the rows' 24px text edge
+   (3px padding + 12px chevron + 9px gap), as the group headings do. Only
    the chevron is the button; without a title it carries \"All\". */
-.blockr-html-table-container .blockr-table-nest thead th.blockr-stub-header.dt-has-foldall {
+.blockr-html-table-container thead th.blockr-stub-header.dt-has-foldall {
   padding-left: calc(3px + var(--blockr-card-inset, 0px));
 }
 .blockr-html-table-container .dt-foldall-wrap {
@@ -1513,18 +1513,9 @@ input.blockr-search:focus {
 }
 /* Collapsing disabled: the section label is a static span, not a control. */
 .blockr-html-table-container .blockr-section-btn-static { cursor: default; }
-.blockr-html-table-container .blockr-section-cell.level-2 .blockr-section-btn {
-  padding-left: 36px;
-}
-.blockr-html-table-container .blockr-section-cell.level-3 .blockr-section-btn {
-  padding-left: 54px;
-}
-.blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-btn {
-  padding-left: 72px;
-}
-/* A nest (html_is_nest()): each heading's name starts where its rows start
-   (24px, one 16px step per level), the 12px chevron and 9px gap hanging to
-   the left of it. */
+/* Section headers (html_is_nest()): each heading's name starts where its
+   rows start (24px, one 16px step per level), the 12px chevron and 9px gap
+   hanging to the left of it. */
 .blockr-html-table-container .blockr-section-cell.blockr-section-nest .blockr-section-btn {
   padding-left: 3px;
 }
