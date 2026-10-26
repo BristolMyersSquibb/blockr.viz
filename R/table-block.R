@@ -165,6 +165,37 @@ dt_is_structured <- function(data) {
             names(data)))
 }
 
+#' Numeric cells of a structured frame, printed in the block's number format
+#' with the unit in their header. A nested tidy frame (table_nest()) keeps
+#' its numbers as numbers; a Table 1 or a converted finished table holds text
+#' cells and passes unchanged.
+#' @noRd
+dt_structured_numbers <- function(data, data_cols, digits = "number",
+                                  unit = NULL) {
+  num <- data_cols[vapply(data[data_cols], is.numeric, logical(1L))]
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  for (cn in num) {
+    x <- data[[cn]]
+    lbl <- dt_col_label(x, cn) %||% cn
+    out <- rep(NA_character_, length(x))
+    ok <- !is.na(x)
+    out[ok] <- dt_format_num(x[ok], digits)
+    attributes(out) <- attributes(x)[setdiff(names(attributes(x)),
+                                             c("class", "levels"))]
+    if (!is.null(unit)) attr(out, "label") <- paste0(lbl, " (", unit, ")")
+    data[[cn]] <- out
+  }
+  data
+}
+
+#' Do a frame's cells hold numbers the number format can change?
+#' @noRd
+dt_has_number_cells <- function(data) {
+  if (!is.data.frame(data)) return(FALSE)
+  cols <- names(data)[!startsWith(names(data), ".")]
+  any(vapply(data[cols], is.numeric, logical(1L)))
+}
+
 #' Build the structured ("Table 1") `<table>` for the interactive table-block.
 #'
 #' Builds the section-aware `<tbody>` and multi-level `<thead>` with
@@ -190,6 +221,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
   # stays out of the data cells or it leaks in as a literal em-dash column.
   data_cols    <- setdiff(names(data),
                           c(view$reserved_cols, stub_col, styling_cols))
+  data <- dt_structured_numbers(data, data_cols, digits, toggles$unit)
 
   if (length(data_cols) == 0L || nrow(data) == 0L) {
     # Structured frames carry no gear-picked mappings, so only two states
@@ -1729,7 +1761,8 @@ table_guidance <- function() {
 #' @param rowname Records layout: the stub column (first column, row label).
 #'   With `by` set, the rows sit under one collapsible header per level of
 #'   `by` ([table_nest()]).
-#' @param columns Records layout: columns to show; `NULL` shows all.
+#' @param columns Records layout: the columns shown beside the row names, in
+#'   order; `NULL` shows all.
 #' @param summaries Groups and variables layouts: the table's columns (or
 #'   variables), an ordered list of typed summaries, each a
 #'   `list(type = , ...)`. Types: `simple` (`func`, `col`; show `"bar"`,
@@ -1804,8 +1837,11 @@ table_guidance <- function() {
 #'   statistics shown for numeric variables (keys of [summary_table()]'s
 #'   `stats`), outer row sections, a total column and its label, and nested
 #'   categorical hierarchies. See [summary_table()].
-#' @param script,script_values Groups layout: prepare script, as on
-#'   [new_chart_block()], and the values of its controls.
+#' @param script,script_values Prepare script, as on [new_chart_block()]:
+#'   R code run on the input before any layout builds its table, and the
+#'   values of its controls. In the records and variables layouts a click
+#'   filters the rows the script returned; in the groups layout it filters
+#'   the input rows before the script, as on the chart.
 #' @param selection Internal: what the last click selected. Saved with the
 #'   board so a restored table keeps its drill.
 #' @param ... Old argument names (translated), and arguments forwarded to
@@ -1946,6 +1982,9 @@ new_table_block <- function(layout = "records",
 
           r_layout <- shiny::reactiveVal(layout)
 
+          # The prepare script runs before every layout (R/table-prepare.R).
+          prep <- table_prepare(data, script, script_values)
+
           # Settings both layouts share. The block owns them, so a layout
           # switch keeps them.
           shared <- list(
@@ -1974,7 +2013,10 @@ new_table_block <- function(layout = "records",
             layout = r_layout,
             # The input before nesting: the records gear offers its columns
             # for "Group by".
-            input = data
+            input = prep$data,
+            # The prepare script, for the records gear (the groups engine
+            # takes it as `prep`).
+            prep = prep
           )
 
           # Only the active engine sees data. The other one parks: its
@@ -1982,7 +2024,7 @@ new_table_block <- function(layout = "records",
           gate <- function(which) {
             shiny::reactive({
               shiny::req(identical(r_layout(), which))
-              data()
+              prep$data()
             })
           }
           sel_for <- function(which) if (layout %in% which) selection
@@ -1998,14 +2040,15 @@ new_table_block <- function(layout = "records",
           rec_data <- shiny::reactive({
             lay <- r_layout()
             shiny::req(lay %in% c("records", "variables"))
-            d <- data()
+            d <- prep$data()
             if (identical(lay, "variables")) {
               args <- table_variables_args(var$config())
               if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
             } else if (length(shared$by()) && is.data.frame(d)) {
               # Records under headers: the tidy frame nested by `by`.
               d <- table_nest(d, shared$by(), rec_rowname(),
-                              missing = shared$missing())
+                              missing = shared$missing(),
+                              columns = rec$state$value())
             }
             d
           })
@@ -2037,9 +2080,9 @@ new_table_block <- function(layout = "records",
             search = search, sortable = sortable, axis = axis,
             value_labels = value_labels, bar_width = bar_width,
             download = download, title = title, subtitle = subtitle,
-            caption = caption, drill = drill, script = script,
+            caption = caption, drill = drill, prep = prep,
             look = look,
-            values = script_values, ctrl_target = drill_target,
+            ctrl_target = drill_target,
             ctrl_table = drill_table,
             filter_column = grp_sel$column, filter_values = grp_sel$values,
             shared = shared
@@ -2062,8 +2105,15 @@ new_table_block <- function(layout = "records",
               r_layout(v)
             }
           }
-          shiny::observeEvent(input[["records-drilldown_table_block_action"]],
-                              set_layout(input[["records-drilldown_table_block_action"]]))
+          # The records engine leaves the prepare script to the block.
+          shiny::observeEvent(input[["records-drilldown_table_block_action"]], {
+            msg <- input[["records-drilldown_table_block_action"]]
+            set_layout(msg)
+            if (identical(msg$action %||% "config", "config") &&
+                  is.character(msg$param)) {
+              prep$config(msg$param[[1L]], msg$value)
+            }
+          })
           shiny::observeEvent(input[["groups-summarize_table_block_action"]],
                               set_layout(input[["groups-summarize_table_block_action"]]))
 
@@ -2124,18 +2174,23 @@ new_table_block <- function(layout = "records",
                 # The drill filter applies to the built table, as it did
                 # when a summary table block fed a table block.
                 built <- table_variables_call(var$config())
-                if (!is.null(built)) ex <- table_sub_data(ex, built)
+                if (!is.null(built)) {
+                  built[[2L]] <- quote(.(data))
+                  ex <- table_sub_data(ex, built)
+                }
               } else if (length(shared$by())) {
                 built <- as.call(c(
-                  list(quote(blockr.viz::table_nest), quote(data)),
+                  list(quote(blockr.viz::table_nest), quote(.(data))),
                   list(by = shared$by(), rowname = rs$rowname()),
                   if (identical(shared$missing(), "level")) {
                     list(missing = "level")
-                  }
+                  },
+                  if (length(rs$value())) list(columns = rs$value())
                 ))
                 ex <- table_sub_data(ex, built)
               }
-              ex
+              # The script feeds the table; the click filters what it shows.
+              prep$wrap_after(ex)
             }),
             cond = cond,
             state = list(
@@ -2175,8 +2230,8 @@ new_table_block <- function(layout = "records",
               total = var$state$total,
               total_label = var$state$total_label,
               nest = var$state$nest,
-              script = gs$script,
-              script_values = gs$values,
+              script = prep$script,
+              script_values = prep$values,
               selection = r_selection
             )
           )

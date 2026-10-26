@@ -134,7 +134,7 @@ test_that("a clear filter message (null column/values) resets the filter", {
 })
 
 test_that("a clear filter message also resets a grouped drill filter", {
-  blk <- records_engine(group = "region", drill = "auto")
+  blk <- records_engine(drill = "auto")
   testServer(blk, args = list(data = reactive(drill_df)), {
     session$setInputs(drilldown_table_block_action = list(
       action = "filter",

@@ -64,7 +64,8 @@ over all input rows. Variables layout: one column per level.}
 With \code{by} set, the rows sit under one collapsible header per level of
 \code{by} (\code{\link[=table_nest]{table_nest()}}).}
 
-\item{columns}{Records layout: columns to show; \code{NULL} shows all.}
+\item{columns}{Records layout: the columns shown beside the row names, in
+order; \code{NULL} shows all.}
 
 \item{summaries}{Groups and variables layouts: the table's columns (or
 variables), an ordered list of typed summaries, each a
@@ -155,8 +156,11 @@ statistics shown for numeric variables (keys of \code{\link[=summary_table]{summ
 \code{stats}), outer row sections, a total column and its label, and nested
 categorical hierarchies. See \code{\link[=summary_table]{summary_table()}}.}
 
-\item{script, script_values}{Groups layout: prepare script, as on
-\code{\link[=new_chart_block]{new_chart_block()}}, and the values of its controls.}
+\item{script, script_values}{Prepare script, as on \code{\link[=new_chart_block]{new_chart_block()}}:
+R code run on the input before any layout builds its table, and the
+values of its controls. In the records and variables layouts a click
+filters the rows the script returned; in the groups layout it filters
+the input rows before the script, as on the chart.}
 
 \item{selection}{Internal: what the last click selected. Saved with the
 board so a restored table keeps its drill.}

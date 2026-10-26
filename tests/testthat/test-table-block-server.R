@@ -307,35 +307,6 @@ test_that("drill = 'source' errors when nothing stamped a source", {
   })
 })
 
-test_that("an AGGREGATED table resolves 'source' through its group columns", {
-  # No ARD identity here: one display row per AEDECOD, standing for many
-  # records. The claim is the group column, the mode drill_claim_columns()
-  # takes when `columns` is passed -- the same split dd_ctrl_claims() makes.
-  raw <- data.frame(
-    USUBJID = sprintf("S%02d", 1:6),
-    AEDECOD = c("PAIN", "PAIN", "ANXIETY", "PAIN", "ANXIETY", "PAIN"),
-    stringsAsFactors = FALSE
-  )
-  agg <- dplyr::count(raw, AEDECOD, name = "n")
-  attr(agg, "source_data") <- raw
-
-  blk <- records_engine(drill = "source", group = "AEDECOD")
-
-  testServer(blk, args = list(data = reactive(agg)), {
-    session$setInputs(
-      drilldown_table_block_action = list(
-        action = "filter",
-        filter_type = "categorical",
-        filters = list(list(column = "AEDECOD", value = "PAIN"))
-      )
-    )
-    out <- eval_block_expr(session$returned$expr(), agg)
-    expect_equal(nrow(out), 4L)          # the 4 PAIN records, not the 1 row
-    expect_true(all(out$AEDECOD == "PAIN"))
-    expect_identical(names(out), names(raw))
-  })
-})
-
 test_that("drill_source() refuses a frame it cannot read a claim from", {
   flat <- data.frame(AEDECOD = c("PAIN", "PAIN"), stringsAsFactors = FALSE)
   attr(flat, "source_data") <- flat

@@ -1317,8 +1317,9 @@
   // One toggle, every format the machine can write: "can people take this
   // table away" is one decision, and which file the reader wants is theirs.
   // (The table block settled this the same way.)
-  var DOWNLOAD_OPT = [{ value: "on", label: "Downloads" },
-                      { value: "off", label: "No downloads" }];
+  // The records gear's words (table.js), so the trays read alike.
+  var DOWNLOAD_OPT = [{ value: "on", label: "Download" },
+                      { value: "off", label: "No download" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
   // (R/lane-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
@@ -1387,6 +1388,10 @@
     // Presentation.
     sort_by:  { label: "Sort", kind: "select", options: [] },
     sort_dir: { label: "Order", kind: "segmented", options: SORT_DIR_OPT },
+    // A row cap (R: `top_n`): the first rows in the sort order, the rest
+    // folded into one "Other" row. Empty shows every row.
+    top_n:    { label: "Top", kind: "number", min: 1, step: 1,
+                placeholder: "All rows" },
     search:   { label: "Search", kind: "segmented", options: SEARCH_OPT },
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
@@ -2460,15 +2465,16 @@
     // sort, search or drill, so those controls leave.
     var grouped = Array.isArray(cfg.by) && cfg.by.length > 0;
     var pres = fcols.length === 1
-      ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "format",
+      ? ["sort_by", "sort_dir", "top_n", "facet_layout", "value_labels", "format",
          "unit", "search", "sortable", "axis", "pct_of", "missing",
          "download", "look", "bar_width"]
-      : ["sort_by", "sort_dir", "value_labels", "format", "unit", "search",
+      : ["sort_by", "sort_dir", "top_n", "value_labels", "format", "unit", "search",
          "sortable", "axis", "pct_of", "missing", "download", "look",
          "bar_width"];
     if (!grouped) {
       pres = pres.filter(function (k) {
-        return ["sort_by", "sort_dir", "search", "sortable"].indexOf(k) === -1;
+        return ["sort_by", "sort_dir", "top_n", "search",
+                "sortable"].indexOf(k) === -1;
       });
     }
     return {
