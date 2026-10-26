@@ -177,9 +177,10 @@ table_legacy_args <- function(args, from = NULL) {
         list(list(type = "simple", func = "count", show = "number"))
       }
     } else if (table_is_agg_summaries(out[["summaries"]])) {
-      # Aggregation without a group: one grand-total row. The groups layout
-      # needs a group, so the totals show as the input rows instead.
-      out$summaries <- list()
+      # Aggregation without a group: one grand-total row, which is the
+      # groups layout without `by`.
+      out$layout <- "groups"
+      out$summaries <- table_agg_to_summaries(out[["summaries"]])
     }
     sel <- list(
       column = chr_state(get("filter_column")),

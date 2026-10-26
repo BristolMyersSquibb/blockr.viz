@@ -27,6 +27,8 @@ adsl <- data.frame(
   stringsAsFactors = FALSE
 )
 adsl$AGEGR1 <- ifelse(adsl$AGE < 65, "<65", ifelse(adsl$AGE <= 80, "65-80", ">80"))
+# A few unknown races, so the variables layout's "Missing" has rows to show.
+adsl$RACE[c(5, 50)] <- NA
 
 terms <- data.frame(
   AEDECOD = c("Headache", "Dizziness", "Nausea", "Vomiting", "Rash",
@@ -69,6 +71,9 @@ arm_frame <- data.frame(
 iris_sum <- aggregate(cbind(Sepal.Length, Petal.Length) ~ Species,
                       data = iris, FUN = function(x) round(mean(x), 2))
 iris_sum$Size <- c("small", "medium", "large")
+# A row without a group, so the nested table's "Missing" has a row to place.
+iris_sum <- rbind(iris_sum, data.frame(Species = "hybrid", Sepal.Length = 6.1,
+                                       Petal.Length = 4.4, Size = NA))
 
 cor_mat <- as.data.frame(round(stats::cor(mtcars[, 1:7]), 2))
 cor_mat <- cbind(var = rownames(cor_mat), cor_mat)

@@ -15,3 +15,12 @@ groups_engine <- function(...) {
     do.call(blockr.viz:::table_groups_server, c(list(id, data), args))
   }
 }
+
+# Evaluate a block's bbquote()'d expression on `data`: bind `data` and
+# unwrap the `.()` placeholder, as the board does.
+eval_block_expr <- function(ex, data) {
+  e <- new.env(parent = globalenv())
+  e$data <- data
+  e$. <- function(x) x
+  eval(ex, envir = e)
+}

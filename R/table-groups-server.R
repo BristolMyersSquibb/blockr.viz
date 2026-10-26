@@ -30,12 +30,11 @@ table_groups_server <- function(id, data,
                                         "blockr.viz.default_caption"
                                       ),
                                       drill = NULL,
-                                      # The prepare step, as on the chart block:
-                                      # R code run on the incoming rows before
-                                      # the table is built; its top assignments
-                                      # become controls on the card.
-                                      script = NULL,
-                                      values = list(),
+                                      # The block's prepare step
+                                      # (table_prepare()): its controls, the
+                                      # gear's script fields and the output
+                                      # expression's wrap.
+                                      prep = NULL,
                                       ctrl_target = "",
                                       ctrl_table = "",
                                       # Runtime filter transport (NOT
@@ -71,8 +70,6 @@ table_groups_server <- function(id, data,
   # (R/summarize-drill.R). A board saved before holds one column.
   filter_column <- chr_vec_state(filter_column)
   filter_values <- null_state(filter_values)
-  script <- cb_script_text(script)
-  values <- if (is.list(values)) values else list()
   # LEGACY: the old default. Every board saved before the table scrolled with
   # its panel carries it, not a choice anyone made.
   max_height <- chr_state(max_height)
@@ -146,38 +143,11 @@ table_groups_server <- function(id, data,
       if (is.data.frame(d)) d else as_annotated_df(d)
     })
 
-    # --- prepare script ------------------------------------------------
-    # The chart block's step (R/prepare-apply.R), as the heatmap uses it:
-    # the script runs on the input and the table is built from what it
-    # returns. Specs keep their last good value while the data is
-    # momentarily gone, or a hidden panel would flip the compiled script.
-    r_script <- shiny::reactiveVal(script)
-    r_values <- shiny::reactiveVal(values)
-    r_parsed <- shiny::reactive(cb_parse(r_script()))
-    last_specs <- new.env(parent = emptyenv())
-    last_specs$value <- list()
-    r_specs <- shiny::reactive({
-      d <- tryCatch(raw_ann(), error = function(e) NULL)
-      parsed <- r_parsed()
-      if (is.null(d) && length(last_specs$value)) {
-        return(last_specs$value)
-      }
-      out <- cb_specs(parsed, d)
-      if (!identical(out, last_specs$value)) last_specs$value <- out
-      last_specs$value
-    })
-    r_prepared <- shiny::reactive({
-      dd_prepare_run(raw_ann(), r_parsed(), r_specs(), r_values())
-    })
-    # What the table is built from. A failed script leaves an empty frame
-    # with the input's columns, so the error reaches the card and the
-    # gear instead of a blank block.
-    ann_data <- shiny::reactive({
-      prep <- r_prepared()
-      if (is.null(prep$error)) return(prep$data)
-      d <- tryCatch(raw_ann(), error = function(e) NULL)
-      if (is.data.frame(d)) d[0, , drop = FALSE] else NULL
-    })
+    # The prepare step runs at the block (R/table-prepare.R): `data` is
+    # already what the script returned. A standalone engine has none.
+    r_specs <- if (is.null(prep)) function() list() else prep$specs
+    r_values <- if (is.null(prep)) function() list() else prep$values
+    ann_data <- raw_ann
 
     # Auto-tier title sources: the input's own display attributes.
     r_data_titles <- shiny::reactive({
@@ -278,18 +248,8 @@ table_groups_server <- function(id, data,
       if (identical(act$action, "config")) {
         key <- as.character(act$param %||% "")[1L]
         if (!nzchar(key)) return()
-        if (identical(key, "script")) {
-          # Committed on blur or Apply, never per keystroke.
-          r_script(cb_script_text(as.character(act$value %||% "")))
-          return()
-        }
-        if (startsWith(key, "sv_")) {
-          # A script value, read against the declared type.
-          sv <- dd_script_values(stats::setNames(list(act$value), key),
-                                 r_specs(), r_values())
-          if (!identical(sv, r_values())) r_values(sv)
-          return()
-        }
+        # The script and its values are the block's (table_prepare()).
+        if (!is.null(prep) && prep$config(key, act$value)) return()
         if (!key %in% c("search", "sortable", "axis", "value_labels",
                         "download", "look", "pct_of", "missing", "format",
                         "unit") &&
@@ -517,7 +477,7 @@ table_groups_server <- function(id, data,
         active = shiny::isolate(
           list(col = r_filter_column(), vals = r_filter_values())
         ),
-        cfg = list(
+        cfg = c(list(
           summaries = r_summaries(), by = r_by(),
           facet_layout = r_facet_layout(),
           sort_by = r_sort_by(), sort_dir = r_sort_dir(),
@@ -544,16 +504,13 @@ table_groups_server <- function(id, data,
           capture_export = TRUE,
           capture_ratio = canvas_capture_ratio(),
           capture_page = capture_page_box(),
+          sentence_args = as.list(tt$sentence_args)
+          ),
           # The prepare script: its text for the gear's editor, what it
-          # declared (the controls, in the gear engine's vocabulary),
-          # its error, and each control's current value (sv_*).
-          script = r_script() %||% "",
-          script_inputs = dd_script_roles(r_specs()),
-          script_error = r_prepared()$error,
-          sentence_args = as.list(tt$sentence_args),
-          # Named sv_<name>; summarize-table.js spreads them onto the gear's
-          # config, where the engine's script roles read them.
-          script_values = dd_script_cfg(r_specs(), r_values())
+          # declared (the controls, in the gear engine's vocabulary), its
+          # error, and each control's current value (sv_*, which
+          # summarize-table.js spreads onto the gear's config).
+          if (!is.null(prep)) prep$gear()
         ),
         summaries = r_summaries(), by = r_by(),
         facet_layout = r_facet_layout(), sort_by = r_sort_by(),
@@ -781,8 +738,7 @@ table_groups_server <- function(id, data,
         # The prepare script wraps the filter (chart parity): a click
         # filters the source rows, and downstream receives what the table
         # was built from, filtered.
-        sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
-        if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+        if (is.null(prep)) ex else prep$wrap_around(ex)
       }),
       # Failed custom summaries, as blockr conditions (set in build_json).
       cond = cond,
@@ -801,8 +757,7 @@ table_groups_server <- function(id, data,
         title = r_title, subtitle = r_subtitle, caption = r_caption,
         drill = r_drill, ctrl_target = r_ctrl_target,
         ctrl_table = r_ctrl_table, filter_type = r_filter_type,
-        filter_column = r_filter_column, filter_values = r_filter_values,
-        script = r_script, values = r_values
+        filter_column = r_filter_column, filter_values = r_filter_values
       )
     )
   })

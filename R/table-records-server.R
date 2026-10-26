@@ -15,8 +15,6 @@
 table_records_server <- function(id, data,
                                  rowname = NULL,
                                  value = NULL,
-                                 group = NULL,
-                                 summaries = list(),
                                  color = NULL,
                                  shadings = list(),
                                  drill = NULL,
@@ -43,10 +41,10 @@ table_records_server <- function(id, data,
   # character; the color slot only collapses the empty list, because "" is
   # meaningful there (explicitly off, as against NULL = smart default).
   rowname <- chr_state(rowname)
-  value <- chr_state(value)
+  # The columns shown, in order; NULL = all.
+  value <- chr_vec_state(value)
   drill <- chr_state(drill)
   filter_column <- chr_state(filter_column)
-  group <- chr_vec_state(group)
   filter_group_cols <- chr_vec_state(filter_group_cols)
   color <- null_state(color)
   filter_values <- null_state(filter_values)
@@ -62,8 +60,6 @@ table_records_server <- function(id, data,
 
     r_rowname    <- shiny::reactiveVal(rowname)
     r_value     <- shiny::reactiveVal(value)
-    r_group      <- shiny::reactiveVal(as.character(group))
-    r_summaries    <- shiny::reactiveVal(dd_parse_summaries(summaries))
     # `color` = identity tint column (NULL = smart default by rowname,
     # "" = explicitly off); `shadings` = value-encoding rules list.
     r_color    <- shiny::reactiveVal(color)
@@ -101,11 +97,12 @@ table_records_server <- function(id, data,
     # engine also draws, has no card form.
     r_layout <- shared$layout %||% function() "records"
     # In the table block's records layout, the gear's "Group by" sets the
-    # block's `by` (rows nested under one header per level). Standalone,
-    # it is this engine's own display aggregation.
+    # block's `by` (rows nested under one header per level). Aggregating is
+    # the groups layout's job.
     by_mode <- function() {
       !is.null(shared$by) && identical(r_layout(), "records")
     }
+    r_missing <- shared$missing %||% shiny::reactiveVal("level")
     cards_on <- function() {
       identical(r_look(), "cards") && identical(r_layout(), "records")
     }
@@ -239,14 +236,18 @@ table_records_server <- function(id, data,
         } else if (identical(p, "drill")) {
           upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
         } else if (identical(p, "group")) {
-          if (by_mode()) {
-            upd(shared$by, as.character(unlist(v)))
-          } else {
-            upd(r_group, as.character(unlist(v)))
+          if (!is.null(shared$by)) {
+            g <- as.character(unlist(v))
+            upd(shared$by, g[!is.na(g) & nzchar(g)])
           }
-        } else if (identical(p, "summaries")) {
-          # JS sends the whole summaries list as a JSON string on any edit.
-          upd(r_summaries, dd_parse_summaries(v))
+        } else if (identical(p, "rowname")) {
+          upd(r_rowname, chr_state(if (identical(v, "(none)")) NULL else v))
+        } else if (identical(p, "columns")) {
+          cl <- as.character(unlist(v))
+          upd(r_value, chr_vec_state(cl[!is.na(cl) & nzchar(cl)]))
+        } else if (identical(p, "missing")) {
+          m <- as.character(unlist(v))[1L]
+          if (isTRUE(m %in% c("drop", "level"))) upd(r_missing, m)
         } else if (identical(p, "format")) {
           upd(r_digits, table_format_state(v))
         } else if (identical(p, "digits")) {
@@ -386,8 +387,7 @@ table_records_server <- function(id, data,
       list(
         # The unit heads the numeric columns, as on screen.
         data = dt_unit_labels(
-          dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
-                           r_summaries(), r_shadings()),
+          dt_exhibit_frame(d, r_rowname(), r_value(), shadings = r_shadings()),
           r_unit()
         ),
         # The export frame is built anew and has lost the input's
@@ -599,6 +599,22 @@ table_records_server <- function(id, data,
         if (by_mode()) {
           p$by_state <- as.list(as.character(shared$by()))
           p$by_choices <- dt_gear_cols_json(shared$input())
+          # The rows' own settings, which a nested table no longer shows
+          # as columns: the stub, the columns, what a missing group is,
+          # and whether any cell is a number the format can change.
+          p$rows_state <- list(
+            rowname = r_rowname() %||% "",
+            columns = as.list(as.character(r_value() %||% character())),
+            missing = r_missing(),
+            numbers = dt_has_number_cells(shared$input())
+          )
+        } else if (identical(r_layout(), "variables")) {
+          p$rows_state <- list(missing = r_missing())
+        }
+        # The block's prepare script, for the gear's last section.
+        # NULLs dropped: this payload's JSON writes NULL as {}.
+        if (!is.null(shared$prep)) {
+          p$prep <- Filter(Negate(is.null), shared$prep$gear())
         }
         p
       }
@@ -611,86 +627,6 @@ table_records_server <- function(id, data,
         col   = r_filter_column(),  vals  = r_filter_values(),
         gcols = r_filter_group_cols(), gvals = r_filter_group_vals()
       ))
-      # Aggregation is a DISPLAY projection: when `group` is set, draw the
-      # summarised frame (one row per group + a measure). The block's data
-      # output stays the raw input filtered by the click (see `expr`), and
-      # a row click drills on the group keys. No group -> the raw table,
-      # exactly as before.
-      # The projection itself lives in dt_display_frame(), shared with the
-      # downloads (dt_exhibit_frame), so both see the same frame.
-      disp <- dt_display_frame(d, group = r_group(),
-                               summaries = r_summaries())
-      agg <- disp$agg
-      if (isTRUE(agg$aggregated)) {
-        gl <- length(agg$group)
-        ad <- disp$data
-        # COLOR applies to the AGGREGATED frame too: shadings resolve
-        # against the displayed (aggregated) columns, and "Color by"
-        # tints rows whose color column survived the aggregation (a
-        # group key; a non-grouped column has no per-row value here and
-        # silently yields no tint). Smart default (color NULL) = the
-        # first group key, map-bound-only; explicit pick = chart-parity
-        # palette fallback (dd_ident_hex).
-        arc <- r_color()
-        arc_col <- if (is.null(arc)) {
-          if (gl) agg$group[1L] else NULL
-        } else if (nzchar(arc)) {
-          arc
-        } else {
-          NULL
-        }
-        agg_hex <- if (is.null(arc_col)) {
-          NULL
-        } else if (is.null(arc)) {
-          dd_row_hex(board_scale_map(), arc_col, ad)
-        } else {
-          dd_ident_hex(board_scale_map(), arc_col, ad)
-        }
-        return(tryCatch(
-          dt_payload_json(titled(with_cards(dt_build_payload(
-            ad,
-            stamp      = stamp_ctrl,
-            # The displayed frame is a projection; the gear's pickers
-            # must keep offering the RAW input schema (group / value /
-            # drill choices act on `d`, not on the aggregate).
-            gear_cols  = dt_gear_cols_json(d),
-            label_col  = disp$label_col,
-            value_cols = disp$value_cols,
-            shadings   = r_shadings(),
-            drill      = NULL,
-            # Group-keys drill is OPT-IN (checkbox default off, like every
-            # drill): the keys wire up only when `drill` is set -- "auto"
-            # from the gear checkbox, or any truthy legacy value from a
-            # saved board. Empty group_cols -> no row click wiring.
-            # (Empty anyway for grand totals -- nothing to key on.)
-            group_cols = if (!is.null(r_drill()) && nzchar(r_drill())) {
-              agg$group
-            } else {
-              character()
-            },
-            row_hex    = agg_hex,
-            color      = arc_col,
-            group      = r_group(), summaries = r_summaries(),
-            digits     = r_digits(),
-            unit       = r_unit(),
-            sortable    = isTRUE(r_sortable()),
-            collapsible = isTRUE(r_collapsible()),
-            search      = isTRUE(r_search()),
-            download    = isTRUE(r_download()),
-            rotate_titles = isTRUE(r_rotate_titles()),
-            active     = act
-          ), ad, disp$label_col, disp$value_cols, r_digits(), agg_hex))),
-          error = function(e) {
-            dt_payload_json(list(kind = "html", html = as.character(
-              shiny::tags$div(
-                class = "blockr-error", role = "alert",
-                paste0("Table could not be rendered: ",
-                       conditionMessage(e))
-              )
-            )))
-          }
-        ))
-      }
       tint <- row_hex_for(d)
       rc_col <- tint$col
       row_hex <- tint$hex
@@ -713,7 +649,6 @@ table_records_server <- function(id, data,
           unit       = r_unit(),
           row_hex    = row_hex,
           color      = rc_col,
-          group      = r_group(), summaries = r_summaries(),
           sortable    = isTRUE(r_sortable()),
           collapsible = isTRUE(r_collapsible()),
           search      = isTRUE(r_search()),
@@ -766,7 +701,7 @@ table_records_server <- function(id, data,
       d <- tryCatch(ann_data(), error = function(e) NULL)
       if (!is.data.frame(d)) return(FALSE)
       if ("source" %in% names(d)) return(FALSE)
-      dt_is_structured(d) || length(r_group()) > 0L
+      dt_is_structured(d)
     })
 
     list(
@@ -843,8 +778,6 @@ table_records_server <- function(id, data,
       state = list(
         rowname       = r_rowname,
         value         = r_value,
-        group         = r_group,
-        summaries       = r_summaries,
         color         = r_color,
         shadings      = r_shadings,
         # LEGACY formals (mapped into color/shadings on construction):

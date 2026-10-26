@@ -535,6 +535,37 @@ bar (block-level `group`, `parent`, `func`, `value`, `id_var`, `color`,
 - Kept: a `by` column missing from the data is an error, where a missing
   `parent` used to be dropped.
 
+### Gear gaps (branch `feat/table-gear-gaps`)
+
+Every argument a user changes has a control in each layout where it changes
+the table. All three gears read: Rows are (with what a row is), Columns or
+Table 1, Presentation, Color, Titles, Drill-down, Prepare script.
+
+| Argument | Records | Groups | Variables |
+|---|---|---|---|
+| `rowname` | "Row names", under Rows are | - | - |
+| `columns` | "Columns", under Rows are; also limits a nested table | - | - |
+| `format`, `unit` | flat and nested (number cells of a nested frame) | yes | - (Table 1 cells are text) |
+| `color`, `shadings` | flat only | - (per summary) | - |
+| `missing` | with `by` set | yes | yes |
+| `collapsible` | with `by` set | - (not wired) | yes |
+| `top_n` | - | "Top", after Sort and Order | - |
+| `id` | - | - (no effect: a distinct count names its column) | "Count distinct by" |
+| `script` | yes | yes | yes |
+| `max_height` | code only | code only | code only |
+
+- The prepare script runs at the block (`table_prepare()`,
+  R/table-prepare.R), before every layout. In records and variables a click
+  filters the rows the script returned; in groups it filters the input
+  before the script, as on the chart.
+- The records engine's in-block aggregation (`group` + `summaries` of
+  `{func, cols}`) is gone from the engine, its payload and table.js. Old
+  boards restore as the groups layout (`table_legacy_args()`); aggregation
+  without a group restores as groups without `by`.
+- A records table with `by` no longer reads as "Finished table".
+- The records engine keeps every column of `columns` (it kept the first).
+- Toggle labels match across gears: "Header sorting", "Download".
+
 ### Class migration (resolved)
 
 Resolved by BristolMyersSquibb/blockr.core#379 (PR #384, on `main`): a
