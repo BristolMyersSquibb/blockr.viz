@@ -1210,23 +1210,38 @@
   outline-offset: var(--blockr-focus-offset, 2px);
 }
 
-/* ===== Header row =====
-   Title and sentence on the left, the tools on the right: the download
-   (blockr.ui's tool_button, or its action_menu), the aggregation pill and
-   the gear. */
-.dd-card .blockr-gear-header {
-  gap: 4px;
-  /* The title sits on the left of this row (chart/chrome.js). Top-aligned, so a
-     sentence that wraps grows downward and the icons stay put at the top
-     right, where every other block keeps them. */
-  align-items: flex-start;
+/* ===== Header =====
+   Titles, tools (the download), gear and settings tray, placed by state.
+   Closed: one row, title and subtitle on the left, download and gear on the
+   right. Open: the gear alone on top, the tray under it (blockr.ui draws its
+   beak 8px in from the right end, under the gear), then the titles and the
+   download. The table block uses the same classes and rules (table.css). */
+.vz-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "titles tools gear";
+  column-gap: 4px;
+  /* Top-aligned, so a sentence that wraps grows downward and the icons stay
+     at the top right. */
+  align-items: start;
 }
+.vz-head > .vz-head__titles { grid-area: titles; min-width: 0; }
+.vz-head > .vz-head__tools {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vz-head > .vz-head__tools:empty { display: none; }
+.vz-head > .blockr-gear-btn { grid-area: gear; }
+.vz-head > .blockr-settings { grid-area: tray; }
+.vz-head.vz-head--open {
+  grid-template-areas: ". . gear" "tray tray tray" "titles tools tools";
+}
+.vz-head.vz-head--open > .vz-head__tools { justify-self: end; }
+.vz-head.vz-head--open > .blockr-settings { margin: 8px 0 10px; }
 
-/* The title takes the row's width; the icons take what they need. A long
-   sentence wraps before it reaches them rather than pushing them down. */
-.dd-card .blockr-gear-header .dd-chart-titles {
-  flex: 1 1 auto;
-  min-width: 0;
+.dd-card .vz-head > .dd-chart-titles {
   padding: 2px 8px 0 2px;
 }
 

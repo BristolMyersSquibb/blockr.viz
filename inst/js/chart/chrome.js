@@ -2,8 +2,8 @@
 /**
  * Chart block: everything around the canvases.
  *
- * The card (gear header, settings band, title band, panel grid, legend
- * band, caption, footer), the gear host for drilldown-config.js, the titles
+ * The card (header with titles, tools, gear and settings tray; panel grid,
+ * legend band, caption, footer), the gear host for drilldown-config.js, the titles
  * and their sentence words, the shared legend band, and the status footer.
  * These are methods of the chart view (view.js copies them onto its
  * prototype); they read the view's state and decide nothing about the
@@ -38,8 +38,28 @@
       this.card.className = 'dd-card';
       this.el.appendChild(this.card);
 
+      // The header holds the titles, the tools (download), the gear and the
+      // settings tray. chart.css places them by state: closed, one row with
+      // the titles on the left and the tools and gear on the right; open,
+      // the gear alone on top, the tray under it, then the titles and tools.
       const gearHeader = document.createElement('div');
-      gearHeader.className = 'blockr-gear-header';
+      gearHeader.className = 'blockr-gear-header vz-head';
+
+      // Titles are HTML, once above a facet grid.
+      this.titleWrap = document.createElement('div');
+      this.titleWrap.className = 'dd-chart-titles vz-head__titles';
+      this.titleEl = document.createElement('div');
+      this.titleEl.className = 'dd-chart-title';
+      this.subtitleEl = document.createElement('div');
+      this.subtitleEl.className = 'dd-chart-subtitle';
+      this.titleWrap.appendChild(this.titleEl);
+      this.titleWrap.appendChild(this.subtitleEl);
+      gearHeader.appendChild(this.titleWrap);
+
+      const tools = document.createElement('div');
+      tools.className = 'vz-head__tools';
+      gearHeader.appendChild(tools);
+
       this.gearBtn = document.createElement('button');
       this.gearBtn.type = 'button';
       this.gearBtn.className = 'blockr-gear-btn';
@@ -55,10 +75,10 @@
       });
       // The download control is R's (download links are server-driven); the
       // card only decides where it sits.
-      this._hoistDownload(gearHeader);
+      this._hoistDownload(tools);
       // With capture_export, opening the download menu composes the picture
       // and sends it to R, so it is there by the time a format is picked.
-      gearHeader.addEventListener('click', (/** @type {Event} */ e) => {
+      tools.addEventListener('click', (/** @type {Event} */ e) => {
         const t = /** @type {Element} */ (e.target);
         if (!this.config || !this.config.capture_export || !t.closest) return;
         const host = t.closest('.blockr-action-menu__trigger, .dd-chart-dl .blockr-tool');
@@ -66,6 +86,12 @@
       }, true);
       this.gearHeader = gearHeader;
       gearHeader.appendChild(this.gearBtn);
+
+      // The settings tray: in flow, so it pushes the titles and the chart
+      // down while open.
+      this.popoverEl = document.createElement('div');
+      this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
+      gearHeader.appendChild(this.popoverEl);
       this.card.appendChild(gearHeader);
 
       // The busy cue's line (busy-cue.js writes it).
@@ -74,30 +100,10 @@
       busyLine.setAttribute('aria-live', 'polite');
       this.card.appendChild(busyLine);
 
-      // The settings band: in flow, between the header and the chart.
-      this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
-      this.card.appendChild(this.popoverEl);
-
-      // The prepare script's control strip, under the header.
+      // The prepare script's control strip, under the titles.
       const band = this._bandEl();
       if (band) this.card.appendChild(band);
-      if (this._popoverOpen) {
-        this.popoverEl.classList.add('blockr-settings--open');
-        this.gearBtn.classList.add('blockr-gear-active');
-        this.gearBtn.setAttribute('aria-expanded', 'true');
-      }
-
-      // Titles are HTML, once above a facet grid, on the header's left.
-      this.titleWrap = document.createElement('div');
-      this.titleWrap.className = 'dd-chart-titles';
-      this.titleEl = document.createElement('div');
-      this.titleEl.className = 'dd-chart-title';
-      this.subtitleEl = document.createElement('div');
-      this.subtitleEl.className = 'dd-chart-subtitle';
-      this.titleWrap.appendChild(this.titleEl);
-      this.titleWrap.appendChild(this.subtitleEl);
-      gearHeader.insertBefore(this.titleWrap, gearHeader.firstChild);
+      if (this._popoverOpen) this._setOpenState(true);
 
       this.chartGrid = document.createElement('div');
       this.chartGrid.className = 'dd-chart-grid';
@@ -121,16 +127,16 @@
     },
 
     // R renders the download host beside the chart element; it moves into
-    // the gear header.
-    /** @this {any} @param {HTMLElement} gearHeader */
-    _hoistDownload(gearHeader) {
+    // the header's tools.
+    /** @this {any} @param {HTMLElement} tools */
+    _hoistDownload(tools) {
       const host = this.el && this.el.parentElement
         ? /** @type {HTMLElement | null} */ (this.el.parentElement.querySelector('.dd-chart-dl-host'))
         : null;
       if (!host) return;
       host.style.display = '';
       host.classList.add('dd-chart-dl');
-      gearHeader.appendChild(host);
+      tools.appendChild(host);
     },
 
     // The prepare script's strip: in the card once moved there, else the
@@ -255,20 +261,38 @@
     _togglePopover() { this._popoverOpen ? this._closePopover() : this._openPopover(); },
     /** @this {any} */
     _openPopover() {
-      this.popoverEl.classList.add('blockr-settings--open');
       this._popoverOpen = true;
-      this.gearBtn.classList.add('blockr-gear-active');
-      this.gearBtn.setAttribute('aria-expanded', 'true');
+      this._setOpenState(true);
       // The band is in flow, so the chart has less room now.
       this._resizeCharts();
     },
     /** @this {any} */
     _closePopover() {
-      this.popoverEl.classList.remove('blockr-settings--open');
       this._popoverOpen = false;
-      this.gearBtn.classList.remove('blockr-gear-active');
-      this.gearBtn.setAttribute('aria-expanded', 'false');
+      this._setOpenState(false);
       this._resizeCharts();
+    },
+    // The tray, the gear and the header's layout follow the open state.
+    /** @this {any} @param {boolean} on */
+    _setOpenState(on) {
+      this.popoverEl.classList.toggle('blockr-settings--open', on);
+      if (this.gearHeader) this.gearHeader.classList.toggle('vz-head--open', on);
+      this.gearBtn.classList.toggle('blockr-gear-active', on);
+      this.gearBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      this._trayLayer(on);
+    },
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear.
+    /** @this {any} @param {boolean} on */
+    _trayLayer(on) {
+      if (this._trayLayerH) { this._trayLayerH.remove(); this._trayLayerH = null; }
+      if (!on || typeof Blockr === 'undefined' || !Blockr.layer) return;
+      this._trayLayerH = Blockr.layer(this.popoverEl, {
+        from: this.gearBtn,
+        inPage: true,
+        escape: () => { this._closePopover(); this.gearBtn.focus(); }
+      });
     },
 
     // What R gets after a gear edit: every setting, verbatim where null and
