@@ -1081,10 +1081,15 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
       #      server, so this is flash-free on first paint and every re-render.
       #   2. `.drilldown-table-structured` -- the class table.js promotes; a
       #      fallback for browsers without :has() (styles after promotion).
+      # Scope 1 hangs off `.drilldown-table-container`, the class only this
+      # chrome's container carries. The groups and cards containers share
+      # `.blockr-html-table-container`, and every DOM change inside one made
+      # Chrome re-check the :has() and restyle the whole table under it:
+      # 6600 elements per pass on the AE heatmap, several passes per edit.
       htmltools::tags$style(htmltools::HTML(paste0(
         html_table_delta_css(
           scope = paste0(
-            ".blockr-html-table-container",
+            ".drilldown-table-container",
             ":has(.blockr-table[data-dt-structured=\"1\"])"
           )
         ),
