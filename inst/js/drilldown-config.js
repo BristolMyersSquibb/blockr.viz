@@ -2676,14 +2676,17 @@
           selected: this._hasVal(cfg[key]) ? cfg[key] : (required ? '' : '(none)')
         };
       }
-      if (role.kind === 'select') {
+      // A segmented role (the gear's button row: stacking, order) is a
+      // short list too. Its on/off kind never gets here: _slotFlag makes the
+      // word the switch.
+      if (role.kind === 'select' || role.kind === 'segmented') {
         let options = this._selectOptionsFor(key);
         if (listed) options = this._narrowToChoices(options, listed, cfg[key]);
         const first = (typeof options[0] === 'object' && options[0])
           ? options[0].value : options[0];
         return {
           options: options,
-          selected: this._hasVal(cfg[key]) ? cfg[key] : first
+          selected: this._hasVal(cfg[key]) ? cfg[key] : (role.dflt || first)
         };
       }
       // A number word is typed over (SentenceSlots._edit); this list is what

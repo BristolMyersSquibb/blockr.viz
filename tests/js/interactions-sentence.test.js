@@ -131,6 +131,20 @@ test('sentence words and offers', () => {
   I.snap('sentence-slots', r);
 });
 
+// A segmented setting in the sentence ("stacked") opens its options as a
+// list, as the gear's button row would offer them.
+test('a segmented word opens its list', () => {
+  const cfg = {
+    chart_type: 'bar', ...AE, color: 'AESEV', bar_mode: 'stacked',
+    subtitle_resolved: 'stacked',
+    subtitle_parts: [{ text: 'stacked', arg: 'bar_mode' }],
+    sentence_args: ['bar_mode']
+  };
+  const r = I.runSteps(cfg, [word('stacked'), pick('grouped')],
+                       { extra: (c) => ({ menu: menu(c) }) });
+  I.snap('sentence-segmented', r);
+});
+
 // A number word is typed over, not a list: its range beside the field, the
 // arrows stepping it, and a value outside the range held at the nearest end.
 test('a number word is typed over, held inside its range', () => {
