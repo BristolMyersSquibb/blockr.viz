@@ -2716,8 +2716,13 @@
       stash: {}
     };
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -2934,10 +2939,12 @@
 
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.setAttribute("aria-expanded", "true");
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.setAttribute("aria-expanded", "false");
       // Back to the server's state for everything the gear held.
       if (root._summarizeBand) root._summarizeBand();
@@ -2999,19 +3006,22 @@
     };
 
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    root.insertBefore(band, pop.nextSibling);
-    // The title band stays with the table, under the tray: the settings
-    // never sit between a title and what it names.
+    header.appendChild(pop);
+    root.insertBefore(band, header.nextSibling);
+    // The title band joins the header, on its left; open, it sits under the
+    // tray with the tools (chart.css .vz-head--open).
+    var titles = root.querySelector(".dd-table-titles");
+    if (titles) {
+      titles.classList.add("vz-head__titles");
+      header.insertBefore(titles, header.firstChild);
+    }
     bindCapture(root, header);
-    // One control row, chart / table parity: the search box MOVES UP into the
-    // gear row and sits LEFT of the gear, which keeps its canonical top-right
-    // spot (the cross-block anchor). The emptied chrome row is hidden so it
-    // leaves no stray padded border. The legend is NOT in this row -- it has
-    // its own row below, so it can never push the search box around.
+    // The search box MOVES UP into the header's tools, left of the gear. The
+    // emptied chrome row is hidden so it leaves no stray padded border. The
+    // legend has its own row below.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = root.querySelector(".blockr-html-table-header");
       if (hdrRow) hdrRow.style.display = "none";
     }

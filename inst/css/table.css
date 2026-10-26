@@ -375,6 +375,17 @@
 :is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
   gap: 6px;
 }
+/* Layout E (chart.css .vz-head): the title band sits in the header, on its
+   left, laid out as the chart's. It wraps before the tools, and in the
+   header it has no hairline under it, as the chart's has none. */
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head > .dd-table-titles {
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head {
+  margin-bottom: 6px;
+}
 
 
 /* Wrapping column titles. The width estimator measures a header by its

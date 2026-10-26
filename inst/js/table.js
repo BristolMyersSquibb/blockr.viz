@@ -1606,8 +1606,14 @@
     // no-column case too.
     function hasCols() { return cols.length > 0; }
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state. Closed, one
+    // row; open, the gear alone on top, the tray, then titles and tools.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -1709,12 +1715,14 @@
     // panel, not a menu; the gear is the only toggle.
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.classList.add("blockr-gear-active");
       btn.setAttribute("aria-expanded", "true");
       bandOpen[elemId] = true;
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.classList.remove("blockr-gear-active");
       btn.setAttribute("aria-expanded", "false");
       bandOpen[elemId] = false;
@@ -1757,16 +1765,15 @@
     };
 
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    // One control row, chart-style: the chrome's search + download MOVE UP
-    // into the gear row, sitting LEFT of the gear. The gear itself stays in
-    // its canonical top-right spot (the cross-block anchor — every block
-    // puts its gear there), which is why the toolbar comes to the gear and
-    // not the other way around. The vacated chrome header row would leave a
-    // stray padded border, so it is hidden once emptied.
+    header.appendChild(pop);
+    // The title band joins the header, on its left (applyTitles fills it).
+    header.insertBefore(titlesBand(root), header.firstChild);
+    // The chrome's search + download MOVE UP into the header's tools, left
+    // of the gear, which keeps its top-right spot. The vacated chrome header
+    // row would leave a stray padded border, so it is hidden once emptied.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = /** @type {HTMLElement | null} */ (
         root.querySelector(".blockr-html-table-header"));
       if (hdrRow) hdrRow.style.display = "none";
@@ -2259,6 +2266,25 @@
   // ensured lazily around the scroll wrapper so the chrome — which outlives
   // payloads — needs no rebuild. Hidden while empty: a title-less table is
   // pixel-identical to before. textContent, never innerHTML.
+  // The title and subtitle band: the container's own, or a new one, hidden
+  // until applyTitles has text for it.
+  /** @param {HTMLElement} root @returns {HTMLElement} */
+  function titlesBand(root) {
+    var band = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dd-table-titles"));
+    if (band) { band.classList.add("vz-head__titles"); return band; }
+    band = document.createElement("div");
+    band.className = "dd-table-titles vz-head__titles";
+    band.style.display = "none";
+    var te = document.createElement("div");
+    te.className = "dd-table-title";
+    var se = document.createElement("div");
+    se.className = "dd-table-subtitle";
+    band.appendChild(te);
+    band.appendChild(se);
+    return band;
+  }
+
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyTitles(root, p) {
     // No `titles` field at all: the sender paints its own band (the composer
@@ -2269,19 +2295,8 @@
       root.querySelector(".blockr-table-wrapper"));
     if (!wrap || !wrap.parentNode) return;
     var tl = /** @type {any} */ (p).titles || {};
-    var band = /** @type {HTMLElement | null} */ (
-      root.querySelector(".dd-table-titles"));
-    if (!band) {
-      band = document.createElement("div");
-      band.className = "dd-table-titles";
-      var te = document.createElement("div");
-      te.className = "dd-table-title";
-      var se = document.createElement("div");
-      se.className = "dd-table-subtitle";
-      band.appendChild(te);
-      band.appendChild(se);
-      wrap.parentNode.insertBefore(band, wrap);
-    }
+    var band = titlesBand(root);
+    if (!band.parentNode) wrap.parentNode.insertBefore(band, wrap);
     var capEl = /** @type {HTMLElement | null} */ (
       root.querySelector(".dd-table-caption"));
     if (!capEl) {
