@@ -72,13 +72,14 @@ test_that("gt_table renders a tibble with only .indent (no .label/.section)", {
   expect_true(grepl(">stub<", html))
 })
 
-test_that("the package loads and registers the gt block without gt", {
+test_that("the gt block constructs without gt and is off the block list", {
   # The regression this pins: `register_block()` constructs every block it
   # registers, so a gt check in the constructor took blockr.viz's .onLoad
   # down on a machine without gt -- which is exactly the machine that moved
   # gt to Suggests in the first place.
   expect_no_error(new_gt_table_block())
-  expect_true(any(grepl("gt_table", blockr.core::list_blocks())))
+  # Superseded by the table block: kept for saved boards, not offered.
+  expect_false(any(grepl("gt_table", blockr.core::list_blocks())))
 
   # The check lives at render time instead.
   local_mocked_bindings(require_gt = function() stop("no gt", call. = FALSE))

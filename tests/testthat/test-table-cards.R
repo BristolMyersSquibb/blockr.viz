@@ -20,8 +20,8 @@ cards_summaries <- function() {
     list(type = "simple", name = "Events", func = "count", color = "SEV",
          show = "bar"),
     list(type = "dist", name = "Age", col = "AGE", style = "box",
-         stat = "median_q1_q3"),
-    list(type = "pair", name = "SBP", from = "BASE", to = "AVAL"),
+         summary = "median_q1_q3"),
+    list(type = "pair", name = "SBP", x = "BASE", xend = "AVAL"),
     list(type = "series", name = "Trend", x = "WK", col = "AGE"),
     list(type = "simple", name = "N", func = "count", show = "number"),
     list(type = "spans", name = "Spans", x = "WK", xend = "WK"),
@@ -110,6 +110,21 @@ test_that("a summary with a facet draws one card per level", {
   )
   expect_identical(vapply(p$cards$cols, `[[`, "", "label"),
                    c("Rows · mild", "Rows · severe"))
+})
+
+test_that("a faceted count's head names the count scale, not the share", {
+  # The bar is drawn as a share of its level's N; the card's number is the
+  # count, so the head reads in counts.
+  f <- cards_frame(cards_df(), "cards", "ARM", NULL)
+  p <- summarize_build_payload(
+    f$data, cfg = list(look = "cards"), by = "ARM",
+    summaries = list(list(type = "simple", name = "Rows", func = "count",
+                          facet = "SEV", show = "bar"))
+  )
+  rng <- vapply(p$cards$cols, `[[`, "", "range")
+  expect_false(any(grepl("%", rng, fixed = TRUE)))
+  # mild: 4 rows, at most 2 per arm.
+  expect_identical(rng[[1L]], "0 to 2")
 })
 
 test_that("without `by` the cards draw one row and no drill", {

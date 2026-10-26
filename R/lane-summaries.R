@@ -97,6 +97,82 @@ lane_tile_ramp <- function(n) {
   grDevices::colorRampPalette(c("#cdd9f7", "#7fa2ee", "#2f5bd3"))(n)
 }
 
+# --- public and internal summary keys ----------------------------------------
+#
+# A summary entry is saved, edited in the gear and documented under its
+# PUBLIC keys, the chart block's vocabulary (dev/table-block-rewrite.md):
+#
+#   dist   summary, whiskers     (the inner and outer range of the glyph;
+#                                 `summary` is also a text column's statistic)
+#   pair   x, xend, x_func, xend_func, ref_lo, ref_hi
+#   spans  tooltip               (extra tooltip columns)
+#   simple position              (a colour split: "stack", "dodge", "fill")
+#
+# The engine below reads its own INTERNAL names (inner / outer / stat, from /
+# to / from_func / to_func / lo / hi, fields), as it always has. One pair of
+# functions crosses between the two, so a saved board, the gear and the code
+# here each see the names they were written against.
+
+LANE_PUBLIC_KEYS <- list(
+  pair = c(x = "from", xend = "to", x_func = "from_func",
+           xend_func = "to_func", ref_lo = "lo", ref_hi = "hi"),
+  spans = c(tooltip = "fields")
+)
+
+LANE_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
+
+#' A summary entry under its public keys: what state and the gear hold.
+#' Entries written with the old keys (boards saved before the table rewrite,
+#' code calling the summarize table) come out the same.
+#' @noRd
+lane_public_summary <- function(s) {
+  if (!is.list(s)) return(s)
+  type <- summarize_chr1(s[["type"]]) %||% "simple"
+  take <- function(new, old) {
+    v <- s[[new]] %||% s[[old]]
+    s[[old]] <<- NULL
+    if (!is.null(v)) s[[new]] <<- v
+  }
+  if (identical(type, "dist")) {
+    v <- s[["summary"]] %||% s[["inner"]] %||% s[["stat"]]
+    s[c("inner", "stat")] <- NULL
+    if (!is.null(v)) s[["summary"]] <- v
+    take("whiskers", "outer")
+  }
+  map <- LANE_PUBLIC_KEYS[[type]]
+  for (new in names(map)) take(new, map[[new]])
+  pos <- summarize_chr1(s[["position"]])
+  if (!is.null(pos) && pos %in% LANE_POSITIONS) {
+    s[["position"]] <- names(LANE_POSITIONS)[match(pos, LANE_POSITIONS)]
+  }
+  s
+}
+
+#' A summary entry under the engine's internal keys. Run first thing in
+#' lane_norm_summaries(); internal names already present win.
+#' @noRd
+lane_internal_summary <- function(s) {
+  if (!is.list(s)) return(s)
+  type <- summarize_chr1(s[["type"]]) %||% "simple"
+  if (identical(type, "dist")) {
+    sm <- s[["summary"]]
+    if (!is.null(sm)) {
+      if (identical(summarize_chr1(s[["show"]]), "text")) {
+        s[["stat"]] <- s[["stat"]] %||% sm
+      } else {
+        s[["inner"]] <- s[["inner"]] %||% sm
+      }
+    }
+    if (!is.null(s[["whiskers"]])) s[["outer"]] <- s[["outer"]] %||% s[["whiskers"]]
+  }
+  map <- LANE_PUBLIC_KEYS[[type]]
+  for (new in names(map)) {
+    old <- map[[new]]
+    if (!is.null(s[[new]]) && is.null(s[[old]])) s[[old]] <- s[[new]]
+  }
+  s
+}
+
 #' Normalize a summaries list: known types, per-type required fields,
 #' `show` within the type's set, the optional `color` / `facet` mappings,
 #' an auto `name`. Returns the normalized list, or `list(err =)` naming the
@@ -118,6 +194,7 @@ lane_norm_summaries <- function(summaries) {
     s <- s[!vapply(s, function(v) {
       is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
     }, logical(1L))]
+    s <- lane_internal_summary(s)
     type <- summarize_chr1(s$type) %||% "simple"
     if (!type %in% names(LANE_ROW_TYPES)) {
       return(list(err = paste0("Summary ", i, ": unknown type \"", type,
@@ -153,6 +230,14 @@ lane_norm_summaries <- function(summaries) {
 
     s$type <- type
     s$show <- show
+    # The colour split's layout, the chart's `position`: stacked segments,
+    # bars side by side, or each row as 100%. Unset = decided by the measure.
+    pos <- summarize_chr1(s[["position"]])
+    s$.mode <- if (!is.null(pos) && pos %in% names(LANE_POSITIONS)) {
+      LANE_POSITIONS[[pos]]
+    } else if (!is.null(pos) && pos %in% LANE_POSITIONS) {
+      pos
+    }
     # The tile: a square cell showing the value, painted by the worst level
     # of `fill` (or, without one, by the value itself). Its facet levels
     # order by row count unless asked otherwise: an AE heatmap reads the
@@ -382,8 +467,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                    color = NULL,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
-                                   subject = NULL) {
+                                   subject = NULL, pct_of = "facet") {
   bad <- function(msg) list(err = msg)
+  # A count's percentage base: each facet copy's own rows ("facet", one
+  # level's N) or the whole table ("total").
+  pct_total <- identical(summarize_chr1(pct_of), "total")
 
   by <- as.character(by %||% character())
   by <- by[nzchar(by)]
@@ -747,7 +835,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # surface's facets print (summarize_denom()).
       if (identical(s$type, "simple") &&
             summarize_has_pct(summarize_chr1(s$func) %||% "count")) {
-        cp$den <- summarize_denom(cp$slice, summarize_chr1(s$func) %||% "count",
+        cp$den <- summarize_denom(if (pct_total) data else cp$slice,
+                                  summarize_chr1(s$func) %||% "count",
                                   summarize_chr1(s$col))
       }
       # Every facet copy says its level's N, whatever the column shows: the
@@ -1049,13 +1138,18 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
       c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
                    prefix = paste0(sid, "_S_"), series = s$.levels,
                    cvar = summarize_col_name(data, s$.color),
-                   mode = if (is.null(s$.custom) && summarize_additive(
-                     summarize_chr1(s$func) %||% "count"
-                   )) {
-                     "stacked"
-                   } else {
-                     "grouped"
-                   },
+                   mode = local({
+                     additive <- is.null(s$.custom) && summarize_additive(
+                       summarize_chr1(s$func) %||% "count"
+                     )
+                     # Parts of a mean do not add up to it: such a split
+                     # sits side by side whatever is asked for.
+                     if (!additive) {
+                       "grouped"
+                     } else {
+                       s$.mode %||% "stacked"
+                     }
+                   }),
                    show_val = TRUE,
                    denom = if (pct) den,
                    fills = unname(summarize_level_colors(

@@ -1402,6 +1402,14 @@
     value_labels: { label: "Values", kind: "segmented", options: VALUES_OPT },
     bar_width: { label: "Bar width", kind: "segmented",
                  options: BAR_WIDTH_OPT },
+    // A count's percentage base and missing groups (the table block's
+    // `pct_of` / `missing`).
+    pct_of: { label: "Percent of", kind: "segmented", options: [
+      { value: "facet", label: "Column" }, { value: "total", label: "Table" }
+    ] },
+    missing: { label: "Missing", kind: "segmented", options: [
+      { value: "drop", label: "Drop" }, { value: "level", label: "Show" }
+    ] },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // The table, the matrix look (square cells, titles on their side) or
     // cards. `hint` is set per render (summarizeSections) to name the
@@ -1486,10 +1494,15 @@
   var NONE_OPT = { value: "none", label: "(none)" };
   var RANGE_OPT = [NONE_OPT].concat(LANE_STATS);
   var OUTER_OPT = [NONE_OPT].concat(LANE_WHISKERS);
-  function distInner(s) { return s.inner || s.stat || "median_q1_q3"; }
+  // Public keys (R/lane-summaries.R): `summary` is the inner range (and a
+  // text column's statistic), `whiskers` the outer one. The old names are
+  // read too, for an entry written before the rename.
+  function distInner(s) {
+    return s.summary || s.inner || s.stat || "median_q1_q3";
+  }
   function distOuter(s) {
-    if (s.outer) return s.outer;
     if (s.whiskers) return s.whiskers;
+    if (s.outer) return s.outer;
     return s.show === "pointrange" ? "none" : "tukey";
   }
   function rangeWord(v) { return v === "none" ? "" : v; }
@@ -1562,7 +1575,7 @@
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
       case "dist": {
         if (s.show === "text") {
-          return (s.stat || "median_q1_q3") + "(" + (s.col || "?") + ") · text";
+          return distInner(s) + "(" + (s.col || "?") + ") · text";
         }
         // The pieces in the order they are drawn, then the style.
         var pieces = [rangeWord(distInner(s)), rangeWord(distOuter(s))]
@@ -1577,11 +1590,11 @@
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
         (s.label ? ", label " + s.label : "") +
         (s.size === "lg" ? ", wide" : "");
-      case "pair": return (s.from_func && s.from_func !== "identity" ?
-          s.from_func + "(" + (s.from || "?") + ")" : (s.from || "?")) +
-        " → " + (s.to_func || "max") + "(" + (s.to || "?") + ")" +
-        (s.lo != null && s.lo !== "" || s.hi != null && s.hi !== "" ?
-          ", range " + (s.lo == null ? "" : s.lo) + "–" + (s.hi == null ? "" : s.hi) : "") +
+      case "pair": return (s.x_func && s.x_func !== "identity" ?
+          s.x_func + "(" + (s.x || "?") + ")" : (s.x || "?")) +
+        " → " + (s.xend_func || "max") + "(" + (s.xend || "?") + ")" +
+        (s.ref_lo != null && s.ref_lo !== "" || s.ref_hi != null && s.ref_hi !== "" ?
+          ", range " + (s.ref_lo == null ? "" : s.ref_lo) + "–" + (s.ref_hi == null ? "" : s.ref_hi) : "") +
         (s.ref != null && s.ref !== "" ? ", ref " + s.ref : "") +
         (s.dash ? ", dashed by " + s.dash : "");
       case "expr": return s.expr || "";
@@ -1617,10 +1630,10 @@
       case "series": return (s.col || "?") + " over " + (s.x || "?");
       case "spans": return "Events, " + (s.x || "?") + " to " + (s.xend || "?");
       case "pair": {
-        var a = s.from_func && s.from_func !== "identity"
-          ? fw(s.from_func) + " " + (s.from || "?") : (s.from || "?");
-        var b = (s.to_func || "max") === "identity" ? (s.to || "?")
-          : fw(s.to_func || "max").toLowerCase() + " " + (s.to || "?");
+        var a = s.x_func && s.x_func !== "identity"
+          ? fw(s.x_func) + " " + (s.x || "?") : (s.x || "?");
+        var b = (s.xend_func || "max") === "identity" ? (s.xend || "?")
+          : fw(s.xend_func || "max").toLowerCase() + " " + (s.xend || "?");
         return a + " to " + b;
       }
       case "expr": return s.expr || "";
@@ -1669,8 +1682,8 @@
       }
       case "pair":
         return "\\(d) d |>\n  dplyr::summarise(\n    from = " +
-          agg(s.from_func || "identity", s.from || "") + ",\n    to = " +
-          agg(s.to_func || "max", s.to || "") + by + "\n  )";
+          agg(s.x_func || "identity", s.x || "") + ",\n    to = " +
+          agg(s.xend_func || "max", s.xend || "") + by + "\n  )";
       case "dist": {
         var v = s.col || "";
         // Quartiles and the range: the presets' whisker rules (Tukey, the
@@ -1985,6 +1998,18 @@
               s.func === "count_distinct" ? "any" : "num",
               s.col, function (v) { s.col = v; commit(); ctx.rerender(); });
           }
+          // A colour-split bar's layout, the chart's `position`.
+          if (s.color && (s.show || "bar") === "bar") {
+            segCtl(body, "Split", [
+              { value: "stack", label: "Stacked" },
+              { value: "dodge", label: "Side by side" },
+              { value: "fill", label: "100%" }
+            ], s.position || "stack", function (v) {
+              s.position = v;
+              commit();
+              ctx.rerender();
+            });
+          }
         } else if (t === "dist") {
           selectCtl(body, "Value", "num", s.col, function (v) {
             s.col = v;
@@ -1997,12 +2022,21 @@
           // dot live -- so the list never needs a mark per shape.
           if (s.show !== "text") {
             selectCtl(body, "Inner range", RANGE_OPT, distInner(s),
-              function (v) { s.inner = v; commit(); ctx.rerender(); });
+              function (v) {
+                s.summary = v; delete s.inner; delete s.stat;
+                commit(); ctx.rerender();
+              });
             selectCtl(body, "Outer range", OUTER_OPT, distOuter(s),
-              function (v) { s.outer = v; commit(); ctx.rerender(); });
+              function (v) {
+                s.whiskers = v; delete s.outer;
+                commit(); ctx.rerender();
+              });
           } else {
-            selectCtl(body, "Statistic", LANE_STATS, s.stat || "median_q1_q3",
-              function (v) { s.stat = v; commit(); ctx.rerender(); });
+            selectCtl(body, "Statistic", LANE_STATS, distInner(s),
+              function (v) {
+                s.summary = v; delete s.inner; delete s.stat;
+                commit(); ctx.rerender();
+              });
           }
         } else if (t === "field") {
           selectCtl(body, "Column", "any", s.col, function (v) {
@@ -2062,8 +2096,8 @@
             commit();
             ctx.rerender();
           });
-          multiCtl(body, "Tooltip fields", s.fields, function (vals) {
-            s.fields = vals;
+          multiCtl(body, "Tooltip fields", s.tooltip, function (vals) {
+            s.tooltip = vals;
             commit();
             ctx.rerender();
           });
@@ -2086,19 +2120,19 @@
             { value: "min", label: "Min" },
             { value: "max", label: "Max" }
           ];
-          selectCtl(body, "From ◇", "num", s.from, function (v) {
-            s.from = v; commit(); ctx.rerender();
+          selectCtl(body, "From ◇", "num", s.x, function (v) {
+            s.x = v; commit(); ctx.rerender();
           });
           selectCtl(body, "From function", PAIR_FUNCS,
-            s.from_func || "identity",
-            function (v) { s.from_func = v; commit(); ctx.rerender(); });
-          selectCtl(body, "To ●", "num", s.to, function (v) {
-            s.to = v; commit(); ctx.rerender();
+            s.x_func || "identity",
+            function (v) { s.x_func = v; commit(); ctx.rerender(); });
+          selectCtl(body, "To ●", "num", s.xend, function (v) {
+            s.xend = v; commit(); ctx.rerender();
           });
-          selectCtl(body, "To function", PAIR_FUNCS, s.to_func || "max",
-            function (v) { s.to_func = v; commit(); ctx.rerender(); });
-          [["lo", "Range low", "number or column"],
-           ["hi", "Range high", "number or column"],
+          selectCtl(body, "To function", PAIR_FUNCS, s.xend_func || "max",
+            function (v) { s.xend_func = v; commit(); ctx.rerender(); });
+          [["ref_lo", "Range low", "number or column"],
+           ["ref_hi", "Range high", "number or column"],
            ["ref", "Reference line", "e.g. 20"]].forEach(function (d) {
             var tc = document.createElement("div");
             tc.className = "lane-sum-ctl";
@@ -2325,10 +2359,10 @@
         ns.xend = firstCol(cols, "num", [ns.x]);
       }
       if (t === "pair") {
-        ns.from = firstCol(cols, "num");
-        ns.to = firstCol(cols, "num", [ns.from]) || ns.from;
-        ns.from_func = "identity";
-        ns.to_func = "max";
+        ns.x = firstCol(cols, "num");
+        ns.xend = firstCol(cols, "num", [ns.x]) || ns.x;
+        ns.x_func = "identity";
+        ns.xend_func = "max";
       }
       return ns;
     };
@@ -2447,9 +2481,10 @@
         }] : [],
         presentation: fcols.length === 1
           ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
-             "sortable", "axis", "download", "look", "bar_width"]
+             "sortable", "axis", "pct_of", "missing", "download", "look",
+             "bar_width"]
           : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-             "axis", "download", "look", "bar_width"],
+             "axis", "pct_of", "missing", "download", "look", "bar_width"],
         drillToggle: "drill",
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),

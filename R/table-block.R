@@ -1425,30 +1425,17 @@ table_arguments <- function() {
   }
   rec <- pick(table_records_arguments(), c(
     rowname = "rowname", value = "columns", color = "color",
-    shadings = "shadings", drill = "drill", digits = "digits",
+    shadings = "shadings", drill = "drill",
     ctrl_target = "drill_target", ctrl_table = "drill_table",
     title = "title", subtitle = "subtitle", caption = "caption"
   ))
   grp <- pick(summarize_arguments(), c(
-    by = "by", summaries = "summaries", id_var = "id",
     facet_layout = "facet_layout", sort_by = "sort_by",
     sort_dir = "sort_dir", top_n = "top_n", axis = "axis",
     value_labels = "value_labels", bar_width = "bar_width"
   ))
   rec$columns$description <- paste0(
     "Records layout: the columns to show, in order. Empty = all columns."
-  )
-  grp$summaries$description <- paste0(
-    "Groups layout only. ", grp$summaries$description
-  )
-  grp$by$description <- paste0(
-    "Groups layout: the grouping columns, outer to inner (at most two). ",
-    "One row per level; the outer column becomes an expandable parent."
-  )
-  grp$id$description <- paste0(
-    "Groups layout: a column whose distinct values are counted instead of ",
-    "rows (a subject id), so a count reads as subjects with at least one ",
-    "event."
   )
   var <- pick(summary_table_arguments(), c(
     stats = "stats", sections = "sections", add_overall = "total",
@@ -1464,11 +1451,12 @@ table_arguments <- function() {
         paste0(
           "What one row is. \"records\": the input rows as they are ",
           "(listings, model output, correlation matrices, finished tables ",
-          "from R code). \"groups\": one row per level of `by`, one column ",
-          "per entry of `summaries` (counts, means, distributions as bars, ",
-          "boxes, sparklines). \"variables\": a Table 1 -- one row per ",
-          "statistic or level of each variable in `summaries`, one column ",
-          "per level of `by`."
+          "from R code; with `by`, nested under one header per level). ",
+          "\"groups\": one row per level of `by`, one column per entry of ",
+          "`summaries` (counts, means, distributions as bars, boxes, ",
+          "sparklines, heatmap tiles). \"variables\": a Table 1 -- one row ",
+          "per statistic or level of each variable in `summaries`, one ",
+          "column per level of `by`."
         ),
         example = "groups",
         type = arg_enum(c("records", "groups", "variables"))
@@ -1488,9 +1476,56 @@ table_arguments <- function() {
         ),
         example = "cards",
         type = arg_enum(TABLE_LOOKS)
+      ),
+      by = new_arg_spec(
+        paste0(
+          "Grouping columns, outer to inner (at most two). Groups layout: ",
+          "one row per level, the outer column an expandable parent. ",
+          "Variables layout: one column per level. Records layout: rows ",
+          "nested under one header per level."
+        ),
+        example = list("TRT01A"),
+        type = arg_array(arg_string())
+      ),
+      summaries = table_summaries_spec(),
+      id = new_arg_spec(
+        paste0(
+          "A column whose distinct values are counted instead of rows (a ",
+          "subject id), so a count reads as subjects with at least one ",
+          "event, and percentages are of subjects."
+        ),
+        example = "USUBJID",
+        type = arg_string()
+      ),
+      pct_of = new_arg_spec(
+        paste0(
+          "The base of a count's percentage: \"facet\" (default) the rows ",
+          "or subjects of the column's own facet level, so arms of ",
+          "different size compare; \"total\" the whole table."
+        ),
+        example = "facet",
+        type = arg_enum(c("facet", "total"))
+      ),
+      missing = new_arg_spec(
+        paste0(
+          "Missing values of a grouping, colour or facet column (and of a ",
+          "Table 1 variable): \"drop\" (default) gives them no row or ",
+          "level, \"level\" shows them as \"(Missing)\"."
+        ),
+        example = "level",
+        type = arg_enum(c("drop", "level"))
+      ),
+      format = new_arg_spec(
+        paste0(
+          "Records layout: number format of the cells. \"number\" (default, ",
+          "up to two decimals) or a whole number of decimals, e.g. 0 for ",
+          "counts."
+        ),
+        example = "number",
+        type = arg_string()
       )
     ),
-    rec[c("rowname", "columns", "color", "shadings", "digits")],
+    rec[c("rowname", "columns", "color", "shadings")],
     grp,
     var,
     rec[c("drill", "drill_target", "drill_table", "title", "subtitle",
@@ -1498,31 +1533,137 @@ table_arguments <- function() {
   ))
 }
 
+#' The `summaries` argument spec of the table block, under the public keys
+#' (R/lane-summaries.R).
+#' @noRd
+table_summaries_spec <- function() {
+  funcs <- c("identity", "mean", "median", "min", "max")
+  new_arg_spec(
+    paste0(
+      "Groups and variables layouts: the summaries, one object per table ",
+      "column (groups) or variable (variables). Each object has a type:\n",
+      "- simple: func (count, count_distinct, sum, mean, median, min, max, ",
+      "identity) of col; show = bar, number, dot or tile. color = a ",
+      "categorical column splits the cell (a bar into segments; position = ",
+      "stack, dodge or fill). tile: a square cell for heatmaps, painted by ",
+      "the worst level of fill (a column) or by its value; with facet, one ",
+      "column per level, most frequent first (facet_order = count or ",
+      "level).\n",
+      "- dist: the distribution of col; show = box, pointrange or text. ",
+      "summary = the inner range (median_q1_q3, mean_sd, mean_se, ",
+      "mean_ci95, ...; for text the printed statistic), whiskers = the outer ",
+      "range (tukey, min_max, p5_p95, ...), style = dot or box.\n",
+      "- field: col, the group's distinct values joined (a group fact).\n",
+      "- series: col over x, a sparkline; optional band = [low, high] ",
+      "columns and ref = mean, mean_sd or median_iqr.\n",
+      "- spans: x to xend, a swimlane; optional color, label (the event ",
+      "column headlining each segment's tooltip), tooltip (extra tooltip ",
+      "columns), size = md or lg.\n",
+      "- pair: a dumbbell from x to xend, each summarised by x_func / ",
+      "xend_func (identity, mean, median, min, max; defaults identity and ",
+      "max); optional ref_lo / ref_hi = a number or a column for a shaded ",
+      "reference range (an xend outside it is drawn open), ref = a number ",
+      "for a dashed line, dash = a column whose non-first levels draw ",
+      "dashed.\n",
+      "- expr: free R code over the group's rows, text.\n",
+      "- custom: fn = a function of the rows, `\\(d) ...`, returning a ",
+      "data frame whose columns say what they are (value; from, to; lo, ",
+      "q1, mid, q3, hi; text); keep the grouping, use dplyr verbs.\n",
+      "Every object takes name (the header), show, color and facet (a ",
+      "categorical column: the column repeats once per level on one ",
+      "scale). Colour and facet are per column. In the variables layout a ",
+      "dist names a numeric variable and a simple count split by color a ",
+      "categorical one."
+    ),
+    example = list(
+      list(type = "simple", name = "Subjects", func = "count_distinct",
+           col = "USUBJID", show = "bar"),
+      list(type = "dist", name = "Duration", col = "DUR",
+           summary = "median_q1_q3", show = "box"),
+      list(type = "field", name = "Arm", col = "TRT01A")
+    ),
+    type = arg_array(arg_object(
+      type = arg_enum(c("simple", "dist", "field", "series", "spans",
+                        "pair", "expr", "custom")),
+      name = arg_string(required = FALSE),
+      show = arg_string(required = FALSE),
+      func = arg_string(required = FALSE),
+      col = arg_string(required = FALSE),
+      summary = arg_string(required = FALSE),
+      whiskers = arg_string(required = FALSE),
+      style = arg_enum(c("dot", "box"), required = FALSE),
+      color = arg_string(required = FALSE),
+      position = arg_enum(c("stack", "dodge", "fill"), required = FALSE),
+      facet = arg_string(required = FALSE),
+      facet_order = arg_enum(c("count", "level"), required = FALSE),
+      fill = arg_string(required = FALSE),
+      x = arg_string(required = FALSE),
+      xend = arg_string(required = FALSE),
+      x_func = arg_enum(funcs, required = FALSE),
+      xend_func = arg_enum(funcs, required = FALSE),
+      ref_lo = arg_string(required = FALSE),
+      ref_hi = arg_string(required = FALSE),
+      band = arg_array(arg_string(), required = FALSE),
+      ref = arg_string(required = FALSE),
+      dash = arg_string(required = FALSE),
+      label = arg_string(required = FALSE),
+      tooltip = arg_array(arg_string(), required = FALSE),
+      size = arg_enum(c("md", "lg"), required = FALSE),
+      expr = arg_string(required = FALSE),
+      fn = arg_string(required = FALSE),
+      denom = arg_string(required = FALSE)
+    ))
+  )
+}
+
 
 #' Construction guidance for the drill-down table block
 #' @noRd
 table_guidance <- function() {
-  paste(
-    "Interactive table (sticky header, client-side sort and search) that can",
-    "also act as a click-to-filter control \u2014 the tabular sibling of the",
-    "drill-down chart. Two optional capabilities, both off by default:",
-    "\n- Coloring: set `cell_color` to a `drilldown_table_color()` spec to give",
-    "numeric cells a value-to-background scale (diverging for correlation,",
-    "sequential for heatmaps). Presentational only.",
-    "\n- Drill-down: set `drill` to a column; clicking a row emits a",
-    "categorical filter on that column's value, so downstream blocks filter",
-    "\u2014 the same filter contract as the drill-down chart.",
-    "\n- Aggregation: set `group` (one or more columns) to collapse the table",
-    "in place, one row per group. `summaries` is a list of `{func, cols}`",
-    "(count / count_distinct / mean / median / sum / min / max), one entry per",
-    "aggregation, so mean(AGE) and sum(DOSE) is two entries. Display-only: a",
-    "row click drills to that group's raw rows, and downstream still receives",
-    "the raw (filtered) data. Leave `group` empty for a plain row-level table.",
-    "\n`rowname`/`value` pick the row-stub and body",
-    "columns: set `value` to EXACTLY the columns the user names (e.g.",
-    "\"Revenue and Profit\" -> value = [\"Revenue\", \"Profit\"]); leave",
-    "them null only when the user does not name specific columns (defaults to",
-    "the first column plus the rest)."
+  paste0(
+    "The table block draws every table. `layout` says what one row is:\n",
+    "- \"records\": the input rows as they are -- listings, model output, ",
+    "a correlation matrix, or a finished table built in R (a frame from ",
+    "dplyr, summary_table(), gtsummary converted with as_annotated_df()). ",
+    "`rowname` picks the stub column; `columns` EXACTLY the columns the ",
+    "user names (\"Revenue and Profit\" -> columns = [\"Revenue\", ",
+    "\"Profit\"]), empty for all. `by` nests the rows under one header per ",
+    "level. `shadings` colours numeric cells (diverging for a correlation ",
+    "matrix, sequential for magnitudes); `format` is \"number\" or a number ",
+    "of decimals.\n",
+    "- \"groups\": one row per level of `by` (at most two, outer first; the ",
+    "outer is an expandable parent), one column per entry of `summaries`. ",
+    "Use it when one row is one category: most frequent adverse events ",
+    "(simple count_distinct of USUBJID, show = bar), duration by term ",
+    "(dist, show = box), an episode swimlane per subject (spans), a lab ",
+    "trajectory (series), baseline to peak (pair). `color` on a summary ",
+    "splits its cell (severity); `facet` repeats it per level (treatment ",
+    "arm) on one scale; both are per column, never table-wide.\n",
+    "- \"variables\": a Table 1. One row per statistic or level of each ",
+    "variable in `summaries` (a dist for a numeric variable, a simple count ",
+    "split by color for a categorical one), one column per level of `by`. ",
+    "`stats` picks the numeric statistics (mean_sd, median_q1_q3, n_pct, ",
+    "min_max, ...), `total` adds a Total column, `sections` is an OUTER ",
+    "column that contains the variables (SOC over preferred term: ",
+    "sections = [\"AEBODSYS\"], the term as the variable).\n",
+    "A heatmap is the groups layout with look = \"compact\": by = [arm, ",
+    "subject], one simple count with show = \"tile\", facet = the term, ",
+    "fill = the grade (painted by the worst level). look = \"cards\" draws ",
+    "one card per summary.\n",
+    "Counting: set `id` (USUBJID) only when the user asks for subjects or ",
+    "patients rather than events, never for one-row-per-subject data. ",
+    "`pct_of` = \"facet\" (default) takes a count's percentage over its ",
+    "arm; \"total\" over the table. `missing` = \"level\" shows missing ",
+    "groups as \"(Missing)\".\n",
+    "`drill` makes a row click filter downstream blocks; `drill_target` ",
+    "sends the click to a filter block instead. Do NOT set `top_n` for an ",
+    "interactive board (the table scrolls); it is for report exhibits.\n",
+    "Map common requests: \"demographics by arm\" -> layout = \"variables\", ",
+    "by = [\"TRT01A\"], summaries = AGE (dist), SEX and RACE (simple count ",
+    "split by color), total = TRUE. \"most frequent AEs per arm\" -> layout ",
+    "= \"groups\", by = [\"AEDECOD\"], id = \"USUBJID\", summaries = ",
+    "[simple count_distinct of USUBJID, facet = \"TRT01A\"]. For vertical ",
+    "columns, lines or two measures on axes, use the chart block."
   )
 }
 
@@ -1549,20 +1690,33 @@ table_guidance <- function() {
 #'   `by` ([table_nest()]).
 #' @param columns Records layout: columns to show; `NULL` shows all.
 #' @param summaries Groups and variables layouts: the table's columns (or
-#'   variables), an ordered list of
-#'   typed summaries, each a `list(type = , ...)`. Types: `simple` (`func`,
-#'   `col`; show `"bar"`, `"number"` or `"dot"`), `dist` (`col`, `stat`; show
-#'   `"box"`, `"pointrange"` or `"text"`), `field`, `series`, `spans`, `pair`,
-#'   `expr`. Each takes `name`, `show`, and its own `color` and `facet`.
-#' @param id Groups layout: a column whose distinct values are counted
-#'   instead of rows (a subject identifier, so a count reads as "subjects
-#'   with at least one event").
+#'   variables), an ordered list of typed summaries, each a
+#'   `list(type = , ...)`. Types: `simple` (`func`, `col`; show `"bar"`,
+#'   `"number"`, `"dot"` or `"tile"`; a `color` split with `position` =
+#'   `"stack"`, `"dodge"` or `"fill"`; a tile's `fill` and `facet_order`),
+#'   `dist` (`col`, `summary`, `whiskers`, `style`; show `"box"`,
+#'   `"pointrange"` or `"text"`), `field` (`col`), `series` (`x`, `col`,
+#'   `band`, `ref`), `spans` (`x`, `xend`, `label`, `tooltip`, `size`),
+#'   `pair` (`x`, `xend`, `x_func`, `xend_func`, `ref_lo`, `ref_hi`, `ref`,
+#'   `dash`), `expr` and `custom`. Each takes `name`, `show`, and its own
+#'   `color` and `facet`. Entries written with the summarize table's keys
+#'   (`stat`, `from` / `to`, `lo` / `hi`, `fields`) are read as these.
+#' @param id A column whose distinct values are counted instead of rows (a
+#'   subject identifier, so a count reads as "subjects with at least one
+#'   event").
+#' @param pct_of The base of a count's percentage: `"facet"` (the rows or
+#'   subjects of the column's own facet level) or `"total"` (the table).
+#' @param missing Missing values of a grouping, colour or facet column, and
+#'   of a Table 1 variable: `"drop"` (no row or level of their own) or
+#'   `"level"` (shown as "(Missing)").
 #' @param color Records layout: column whose colours tint the rows. `NULL` =
 #'   the stub column when the board's scale map has it, `""` = off.
 #' @param shadings Records layout: cell colour rules, a list of
 #'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
-#' @param digits Records layout: decimals of numeric cells.
+#' @param format Records layout: number format of the cells, `"number"` (up
+#'   to two decimals) or a whole number of decimals. The old `digits`
+#'   argument reads as this.
 #' @param look How the table is drawn: `"table"`, `"compact"` (the matrix
 #'   look: rotated column titles, so a column is as wide as its cells, and
 #'   square cells for `show = "tile"` summaries, a heatmap) or `"cards"` (one
@@ -1623,9 +1777,11 @@ new_table_block <- function(layout = "records",
                             columns = NULL,
                             summaries = list(),
                             id = NULL,
+                            pct_of = "facet",
+                            missing = "drop",
                             color = NULL,
                             shadings = list(),
-                            digits = 2L,
+                            format = "number",
                             look = "table",
                             facet_layout = "by_summary",
                             sort_by = "value",
@@ -1674,6 +1830,13 @@ new_table_block <- function(layout = "records",
   layout <- chr_state(layout) %||% "records"
   if (!layout %in% c("records", "groups", "variables")) layout <- "records"
   look <- table_look(look)
+  pct_of <- chr_state(pct_of) %||% "facet"
+  if (!pct_of %in% c("facet", "total")) pct_of <- "facet"
+  missing <- chr_state(missing) %||% "drop"
+  if (!missing %in% c("drop", "level")) missing <- "drop"
+  # Number format of the records layout's cells: "number" (up to two
+  # decimals) or a whole number of decimals.
+  digits <- table_format_digits(format)
   sections <- chr_vec_state(sections) %||% character()
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
   # back as list() (R/state-normalize.R). `color` only collapses the empty
@@ -1684,6 +1847,9 @@ new_table_block <- function(layout = "records",
   color <- null_state(color)
   top_n <- null_state(top_n)
   summaries <- if (is.list(summaries)) summaries else list()
+  # Old summary keys (stat, from / to, lo / hi, fields, ...) read as the
+  # public ones (R/lane-summaries.R).
+  summaries <- lapply(summaries, lane_public_summary)
   shadings <- if (is.list(shadings)) shadings else list()
   script_values <- if (is.list(script_values)) script_values else list()
   # `id` is also the module id inside the server; keep the column apart.
@@ -1735,6 +1901,8 @@ new_table_block <- function(layout = "records",
             summaries = shiny::reactiveVal(summaries),
             id = shiny::reactiveVal(id_col),
             look = shiny::reactiveVal(look),
+            pct_of = shiny::reactiveVal(pct_of),
+            missing = shiny::reactiveVal(missing),
             # The records engine draws cards only in the records layout: the
             # variables layout has no card form.
             layout = r_layout
@@ -1763,7 +1931,13 @@ new_table_block <- function(layout = "records",
             shiny::req(lay %in% c("records", "variables"))
             d <- data()
             if (identical(lay, "variables")) {
-              args <- table_variables_args(var$config())
+              cfg <- var$config()
+              args <- table_variables_args(cfg)
+              if (!is.null(args) && identical(cfg$missing, "level")) {
+                d <- table_missing_levels(
+                  d, unique(c(args$vars, args$by, args$sections))
+                )
+              }
               if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
             } else if (length(shared$by()) && is.data.frame(d)) {
               # Records under headers: the tidy frame nested by `by`.
@@ -1893,7 +2067,9 @@ new_table_block <- function(layout = "records",
               id = gs$id_var,
               color = rs$color,
               shadings = rs$shadings,
-              digits = rs$digits,
+              format = rs$digits,
+              pct_of = shared$pct_of,
+              missing = shared$missing,
               look = shared$look,
               facet_layout = gs$facet_layout,
               sort_by = gs$sort_by,
@@ -1959,7 +2135,8 @@ new_table_block <- function(layout = "records",
       ),
       external_ctrl = c(
         "layout", "by", "rowname", "columns", "summaries", "id", "color",
-        "shadings", "digits", "look", "facet_layout", "sort_by",
+        "shadings", "format", "pct_of", "missing", "look", "facet_layout",
+        "sort_by",
         "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
         "drill_target", "drill_table", "search", "sortable", "collapsible",
         "max_height", "download", "title", "subtitle", "caption",

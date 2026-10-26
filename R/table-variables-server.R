@@ -96,7 +96,20 @@ table_variables_args <- function(cfg) {
 table_variables_call <- function(cfg) {
   args <- table_variables_args(cfg)
   if (is.null(args)) return(NULL)
-  as.call(c(list(quote(blockr.viz::summary_table), quote(data)), args))
+  input <- quote(data)
+  if (identical(cfg$missing, "level")) {
+    # Missing values as their own level, in plain dplyr so the emitted code
+    # stands alone.
+    cols <- unique(c(args$vars, args$by, args$sections))
+    input <- bquote(dplyr::mutate(
+      data,
+      dplyr::across(
+        dplyr::any_of(.(cols)),
+        ~ dplyr::coalesce(as.character(.x), "(Missing)")
+      )
+    ))
+  }
+  as.call(c(list(quote(blockr.viz::summary_table), input), args))
 }
 
 # Replace every `.(data)` placeholder in a bquoted block expression with
@@ -144,7 +157,8 @@ table_variables_server <- function(id, data, shared,
       total = r_total(),
       total_label = r_total_label(),
       nest = r_nest(),
-      id = shared$id()
+      id = shared$id(),
+      missing = if (!is.null(shared$missing)) shared$missing() else "drop"
     ))
 
     # The widget's own state shape (the summary table block's).
@@ -312,4 +326,36 @@ table_nest <- function(data, by, rowname = NULL) {
   for (cl in keep) res[[cl]] <- data[[cl]]
   rownames(res) <- NULL
   res
+}
+
+# Missing values of the given columns as a level of their own, "(Missing)":
+# `missing = "level"` in the groups and variables layouts. Factors get the
+# level appended; other columns turn character.
+table_missing_levels <- function(data, cols) {
+  cols <- intersect(unique(as.character(cols)), names(data))
+  for (cl in cols) {
+    x <- data[[cl]]
+    if (!anyNA(x)) next
+    if (is.factor(x)) {
+      levels(x) <- c(levels(x), "(Missing)")
+      x[is.na(x)] <- "(Missing)"
+    } else {
+      x <- as.character(x)
+      x[is.na(x)] <- "(Missing)"
+    }
+    data[[cl]] <- x
+  }
+  data
+}
+
+# Number format to decimals: "number" (the default) is up to two decimals,
+# a whole number is that many. Anything else reads as the default.
+table_format_digits <- function(format) {
+  if (is.numeric(format) && length(format) == 1L && is.finite(format)) {
+    return(as.integer(max(0, min(10, round(format)))))
+  }
+  f <- as.character(unlist(format %||% "number"))[1L]
+  n <- suppressWarnings(as.integer(f))
+  if (!is.na(n)) return(as.integer(max(0L, min(10L, n))))
+  2L
 }

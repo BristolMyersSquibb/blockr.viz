@@ -222,7 +222,8 @@ report_call.table_block <- function(x, var, ...) {
   spec <- if (groups) {
     list(by = NULL, summaries = NULL, id = NULL,
          facet_layout = "by_summary", sort_by = "value", sort_dir = "desc",
-         top_n = NULL, axis = TRUE, value_labels = TRUE)
+         top_n = NULL, axis = TRUE, value_labels = TRUE,
+         pct_of = "facet", missing = "drop")
   } else {
     list(rowname = NULL, columns = NULL, shadings = NULL, digits = 2L)
   }

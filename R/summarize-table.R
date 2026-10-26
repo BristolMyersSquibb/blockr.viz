@@ -217,11 +217,28 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
                               cols = NULL, fields = NULL, sort_by = "value",
                               sort_dir = "desc", top_n = NULL, scale_map = NULL,
                               summaries = list(), by = NULL,
-                              facet_layout = "by_summary", subject = NULL) {
+                              facet_layout = "by_summary", subject = NULL,
+                              pct_of = "facet", missing = "drop") {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
   if (!nrow(data)) return(bad("No rows to display"))
+
+  # Missing values of a grouping, colour or facet column: no group of their
+  # own ("drop", the rows count toward the N but draw nothing) or a level
+  # called "(Missing)" ("level").
+  if (identical(summarize_chr1(missing), "level")) {
+    data <- table_missing_levels(data, c(
+      summarize_chr1(group), summarize_chr1(parent), summarize_chr1(color),
+      summarize_chr1(facet), as.character(unlist(by)),
+      if (is.list(summaries)) {
+        unlist(lapply(summaries, function(s) {
+          if (is.list(s)) c(summarize_chr1(s[["color"]]),
+                            summarize_chr1(s[["facet"]]))
+        }))
+      }
+    ))
+  }
 
   # One copy of each group's rows for every column the table splits by that
   # carries a group definition (expand_groups()): rows, parents, colour and
@@ -255,7 +272,7 @@ summarize_prepare <- function(data, group = NULL, value = ".count",
       color = summarize_chr1(color),
       sort_by = sort_by,
       sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
-      subject = subject
+      subject = subject, pct_of = pct_of
     ))
   }
 

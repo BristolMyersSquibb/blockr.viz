@@ -18,7 +18,7 @@ table_legacy_names <- function(from = c("table", "summarize", "summary")) {
   switch(
     match.arg(from),
     table = c(
-      "value", "group", "cell_color", "row_color", "rotate_titles",
+      "value", "group", "cell_color", "row_color", "rotate_titles", "digits",
       "excel_download", "html_download", "pptx_download",
       "filter_type", "filter_column", "filter_values", "filter_range",
       "filter_group_cols", "filter_group_vals", "filter_spread_col",
@@ -140,6 +140,8 @@ table_legacy_args <- function(args, from = NULL) {
     if (isTRUE(get("rotate_titles")) || isTRUE(get("compact"))) {
       out$look <- "compact"
     }
+    # `digits` is the number format now.
+    if (!is.null(get("digits"))) out$format <- get("digits")
     if (!is.null(get("value")) && is.null(out[["columns"]])) {
       out$columns <- get("value")
     }
@@ -192,9 +194,21 @@ table_legacy_args <- function(args, from = NULL) {
         chr_vec_state(get("cols")), chr_vec_state(get("fields"))
       )
     }
+    # The block-level split layout is each colour split's `position` now.
+    bm <- chr_state(get("bar_mode"))
+    if (!is.null(bm) && bm %in% LANE_POSITIONS) {
+      pos <- names(LANE_POSITIONS)[match(bm, LANE_POSITIONS)]
+      summaries <- lapply(summaries, function(x) {
+        if (is.list(x) && identical(x[["type"]], "simple") &&
+              !is.null(x[["color"]]) && is.null(x[["position"]])) {
+          x[["position"]] <- pos
+        }
+        x
+      })
+    }
     out$layout <- "groups"
     out$by <- by
-    out$summaries <- summaries
+    out$summaries <- lapply(summaries, lane_public_summary)
     if (is.null(out[["id"]]) && !is.null(get("id_var"))) out$id <- get("id_var")
     if (!length(out[["script_values"]]) && length(get("values"))) {
       out$script_values <- get("values")

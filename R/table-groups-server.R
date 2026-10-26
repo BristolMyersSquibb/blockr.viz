@@ -58,6 +58,8 @@ table_groups_server <- function(id, data,
                                       filter_column = NULL,
                                       filter_values = NULL,
                                       look = "table",
+                                      pct_of = "facet",
+                                      missing = "drop",
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
@@ -148,6 +150,10 @@ table_groups_server <- function(id, data,
     # The look (table, the compact matrix, cards), owned by the block and
     # shared with the records engine.
     r_look <- shared$look %||% shiny::reactiveVal(table_look(look))
+    # A count's percentage base and what a missing group value is: shared
+    # with the variables layout.
+    r_pct_of <- shared$pct_of %||% shiny::reactiveVal(pct_of %||% "facet")
+    r_missing <- shared$missing %||% shiny::reactiveVal(missing %||% "drop")
     r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
     r_download <- shared$download %||% shiny::reactiveVal(isTRUE(download))
     r_title   <- shared$title %||% shiny::reactiveVal(title)
@@ -334,7 +340,7 @@ table_groups_server <- function(id, data,
           return()
         }
         if (!key %in% c("search", "sortable", "axis", "value_labels",
-                        "download", "look") &&
+                        "download", "look", "pct_of", "missing") &&
               is.null(setters[[key]])) return()
         val <- act$value
         if (key %in% c("title", "subtitle", "caption")) {
@@ -343,7 +349,7 @@ table_groups_server <- function(id, data,
         } else if (identical(key, "summaries")) {
           # The whole column list travels as one JSON array; an empty
           # list switches back to the single-mark path.
-          setters[[key]](if (is.list(val)) val else list())
+          setters[[key]](if (is.list(val)) lapply(val, lane_public_summary) else list())
         } else if (key %in% c("cols", "fields", "by")) {
           setters[[key]](as.character(unlist(val %||% character())))
         } else if (key %in% c("ctrl_target", "ctrl_table")) {
@@ -362,6 +368,12 @@ table_groups_server <- function(id, data,
         } else if (identical(key, "look")) {
           v <- table_look(as.character(unlist(val))[1L])
           if (!identical(shiny::isolate(r_look()), v)) r_look(v)
+        } else if (identical(key, "pct_of")) {
+          v <- as.character(unlist(val))[1L]
+          if (isTRUE(v %in% c("facet", "total"))) r_pct_of(v)
+        } else if (identical(key, "missing")) {
+          v <- as.character(unlist(val))[1L]
+          if (isTRUE(v %in% c("drop", "level"))) r_missing(v)
         } else if (identical(key, "top_n")) {
           n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
           setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -546,6 +558,7 @@ table_groups_server <- function(id, data,
           bar_width = r_bar_width(),
           compact = identical(r_look(), "compact"), look = r_look(),
           download = r_download(), drill = r_drill(),
+          pct_of = r_pct_of(), missing = r_missing(),
           ctrl_target = r_ctrl_target(),
           ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
           titles = c(
@@ -578,6 +591,7 @@ table_groups_server <- function(id, data,
         facet_layout = r_facet_layout(),
         cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
         sort_dir = r_sort_dir(), top_n = r_top_n(),
+        pct_of = r_pct_of(), missing = r_missing(),
         scale_map = board_scale_map(),
         subject = dd_ctrl_subject(session)
       )
@@ -668,6 +682,7 @@ table_groups_server <- function(id, data,
           facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
           cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
           sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
+          pct_of = r_pct_of(), missing = r_missing(),
           value_labels = r_value_labels(),
           sortable = r_sortable(), bar_width = r_bar_width(),
           title = r_title(), subtitle = r_subtitle(),

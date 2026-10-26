@@ -100,7 +100,7 @@ test_that("block state round-trips constructor args", {
     {
       session$flushReact()
       expect_equal(session$returned$state$drill(), "USUBJID")
-      expect_equal(session$returned$state$digits(), 2L)
+      expect_equal(session$returned$state$format(), 2L)
       # The old filter formals are gone; no click means no selection.
       expect_null(session$returned$state$selection())
       expect_false("filter_type" %in% names(session$returned$state))
@@ -109,7 +109,7 @@ test_that("block state round-trips constructor args", {
   )
 })
 
-test_that("cogwheel config actions update color, shadings, drill, digits", {
+test_that("cogwheel config actions update color, shadings, drill, format", {
   # Legacy ctor args map into the unified vocabulary: a cell_color spec
   # becomes one `shadings` rule; row_color becomes `color`.
   blk <- new_table_block(
@@ -162,7 +162,7 @@ test_that("cogwheel config actions update color, shadings, drill, digits", {
       ))
       session$flushReact()
       expect_equal(session$returned$state$drill(), "parameter")
-      expect_equal(session$returned$state$digits(), 0L)
+      expect_equal(session$returned$state$format(), 0L)
     },
     args = list(x = blk, data = list(data = function() df))
   )

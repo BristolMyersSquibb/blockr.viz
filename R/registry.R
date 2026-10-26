@@ -23,20 +23,20 @@ register_viz_blocks <- function() {
   #   - new_html_table_block / new_drilldown_table_block -> new_table_block
   #     (renders flat + structured input via the html_table() builders)
   #   - new_drilldown_chart_block -> new_chart_block
+  #   - new_gt_table_block     -> new_table_block (2026-10, table rewrite):
+  #                               the constructor stays for saved boards,
+  #                               off the block list
   # See dev/table-and-chart-architecture.md.
   blockr.core::register_blocks(
     c(
-      "new_gt_table_block",
       "new_chart_block",
       "new_table_block"
     ),
     name = c(
-      "gt Table",
       "Chart",
       "Table"
     ),
     description = c(
-      "Render wide-format tables (from summary_table) as styled gt tables \u2014 static / print / CSR output.",
       "Configurable chart with click-to-filter drill-down",
       "Interactive table: the input rows (cell colouring, finished tables from R code) or one row per group with a column per summary (count/mean bars, box / point-range distributions, swimlanes, sparklines, text stats), or a Table 1 with one row per statistic of each variable and a column per group, with search, sort and click-to-filter drill-down. Drawn as a table, a compact matrix, or KPI cards (one card per summary: its number in large type and its glyph)"
     ),
@@ -47,25 +47,20 @@ register_viz_blocks <- function() {
     # ("plot"), the table tabular display ("table"). summary_table stays
     # "transform": it is a shaper whose output feeds the renderers.
     category = c(
-      "table",
       "plot",
       "table"
     ),
     icon = c(
-      "table",
       "funnel",
       "table"
     ),
     arguments = list(
-      gt_table_arguments(),
       chart_arguments(),
       table_arguments()
     ),
     guidance = c(
-      gt_table_guidance(),
       chart_guidance(),
-      paste(table_guidance(), summarize_guidance(), summary_table_guidance(),
-            sep = "\n\n")
+      table_guidance()
     ),
     package = utils::packageName(),
     overwrite = TRUE

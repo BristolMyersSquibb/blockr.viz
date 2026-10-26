@@ -184,11 +184,22 @@ cards_groups_col <- function(p, c, k, rows, prep) {
   glyph <- kind %in% c("bar", "barsplit", "bardiv", "box", "pointrange",
                        "pair", "sparkline")
   range <- if (glyph && !is.null(dom) && !isTRUE(dom$date)) {
+    d0 <- dom$d0
+    d1 <- dom$d1
     unit <- if (isTRUE(dom$pct)) "%" else ""
+    # A count drawn as a share of its N (a faceted count): the card's number
+    # is the count, so the head names the count scale, not the percentage.
+    den <- p$val_denom
+    if (isTRUE(dom$pct) && is.numeric(den) && length(den) == 1L &&
+          is.finite(den) && den > 0 && !identical(p$mode, "percent")) {
+      d0 <- d0 * den / 100
+      d1 <- d1 * den / 100
+      unit <- ""
+    }
     # The column's domain in two significant digits: the cards have no
     # axis, so the head says what the marks are drawn against.
-    paste0(lane_fmt(signif(dom$d0, 2L)), unit, " to ",
-           lane_fmt(signif(dom$d1, 2L)), unit)
+    paste0(lane_fmt(signif(d0, 2L)), unit, " to ",
+           lane_fmt(signif(d1, 2L)), unit)
   }
   legend <- if (identical(kind, "barsplit")) {
     cards_legend(c$names, c$fills)

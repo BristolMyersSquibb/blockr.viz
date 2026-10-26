@@ -373,7 +373,7 @@ above:
 - The records layout keeps a `columns` argument (the old `value`).
 - `...` sits right after `layout`, so old names cannot partially match new
   ones (`value` would match `value_labels`).
-- `digits` stays until phase 5.
+- `digits` became `format` in phase 5.
 - The variables layout takes the Table 1 settings as their own arguments
   (`stats`, `sections`, `total`, `total_label`, `nest`); its variables and
   grouping are the shared `summaries`, `by` and `id`. A categorical variable
@@ -412,7 +412,7 @@ R tests: all pass except `test-summarize-push` and `test-write-exhibit`,
 which fail on `main` too. JS tests: 449 of 450, the same one fails on
 `main`.
 
-Phase 5 (cards, branch `feat/table-cards`):
+Cards look (branch `feat/table-cards`, fast-forwarded into `feat/table-rewrite`):
 
 - `look = "table" | "compact" | "cards"` replaces `compact`; `compact = TRUE`
   and the old `rotate_titles = TRUE` read as `look = "compact"`
@@ -434,6 +434,38 @@ Phase 5 (cards, branch `feat/table-cards`):
   reuses the summarize painter's glyph functions).
 - The tile block is gone; `blockr_deser.tile_block()` restores a saved tile
   as a table block.
+
+Phase 5 (vocabulary):
+
+- Summary entries are saved, edited and documented under public keys, the
+  chart block's names: dist `summary` (inner range, and a text column's
+  statistic), `whiskers`, `style`; pair `x`, `xend`, `x_func`, `xend_func`,
+  `ref_lo`, `ref_hi`; spans `tooltip`; simple `position` (`"stack"`,
+  `"dodge"`, `"fill"`) for a colour split. `lane_public_summary()` turns old
+  keys into these (constructor, gear edits, legacy translation);
+  `lane_internal_summary()` maps them back to the engine's own fields at the
+  top of `lane_norm_summaries()`, so the engine code is unchanged. The gear
+  writes the public keys.
+- Block-level `bar_mode` of an old summarize table becomes `position` on its
+  colour-split summaries.
+- `format` replaces `digits`: `"number"` (up to two decimals) or a whole
+  number of decimals. Saved state holds the decimals. `"percent"` and
+  `"compact"` (the chart's and tile's other values) are not implemented.
+- `pct_of`: `"facet"` (default, a count's share of its facet level's N) or
+  `"total"`. `missing`: `"drop"` (default, today's behaviour) or `"level"`
+  (`"(Missing)"` as a level of grouping, colour and facet columns, and of
+  Table 1 variables; the variables layout's emitted code does the same in
+  dplyr). Both are shared by the groups and variables layouts and are in
+  the groups gear. A drill on a "(Missing)" row does not resolve to the NA
+  rows yet.
+- Registry: one `table_arguments()` with its own `summaries` spec and one
+  `table_guidance()`; the chart and the table are the only registered
+  blocks. `new_gt_table_block()` left the registry (kept for saved boards).
+- Cards: a faceted count's card head names the count range, not the
+  percentage scale the bar is drawn on.
+- Not renamed: the pair's `ref`, `dash`, `band` (series), the custom
+  function's result columns (`from`, `to`, `lo`, ...), `facet_layout`.
+  Per-summary `format` / `unit` are not implemented.
 
 ### Class migration (resolved)
 

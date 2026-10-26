@@ -2,7 +2,7 @@
 % Please edit documentation in R/gt-table-block.R
 \name{new_gt_table_block}
 \alias{new_gt_table_block}
-\title{gt Table Block}
+\title{gt Table Block (superseded)}
 \usage{
 new_gt_table_block(
   title = "",
@@ -31,11 +31,15 @@ new_gt_table_block(
 A blockr transform block of class \code{gt_table_block}.
 }
 \description{
+Superseded by \code{\link[=new_table_block]{new_table_block()}}, which draws the same tables and
+downloads them; this block is no longer offered in the block list and is
+kept so saved boards load.
+}
+\details{
 Blockr transform block wrapping \code{\link[=gt_table]{gt_table()}}. Accepts the output of
 \code{\link[=summary_table]{summary_table()}} (or any block following the wide-dotted-column
 convention) and renders it as a styled gt table.
-}
-\details{
+
 Column headers come from \code{attr(col, "label")} on the data columns,
 which gt reads natively. Upstream blocks set these labels (for
 instance, \code{\link[=summary_table]{summary_table()}} writes the per-column subject count

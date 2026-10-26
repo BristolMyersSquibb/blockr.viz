@@ -415,7 +415,11 @@ gt_gear_css <- function() {
   )
 }
 
-#' gt Table Block
+#' gt Table Block (superseded)
+#'
+#' Superseded by [new_table_block()], which draws the same tables and
+#' downloads them; this block is no longer offered in the block list and is
+#' kept so saved boards load.
 #'
 #' Blockr transform block wrapping [gt_table()]. Accepts the output of
 #' [summary_table()] (or any block following the wide-dotted-column

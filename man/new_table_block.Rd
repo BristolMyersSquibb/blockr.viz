@@ -12,9 +12,11 @@ new_table_block(
   columns = NULL,
   summaries = list(),
   id = NULL,
+  pct_of = "facet",
+  missing = "drop",
   color = NULL,
   shadings = list(),
-  digits = 2L,
+  format = "number",
   look = "table",
   facet_layout = "by_summary",
   sort_by = "value",
@@ -64,15 +66,28 @@ With \code{by} set, the rows sit under one collapsible header per level of
 \item{columns}{Records layout: columns to show; \code{NULL} shows all.}
 
 \item{summaries}{Groups and variables layouts: the table's columns (or
-variables), an ordered list of
-typed summaries, each a \code{list(type = , ...)}. Types: \code{simple} (\code{func},
-\code{col}; show \code{"bar"}, \code{"number"} or \code{"dot"}), \code{dist} (\code{col}, \code{stat}; show
-\code{"box"}, \code{"pointrange"} or \code{"text"}), \code{field}, \code{series}, \code{spans}, \code{pair},
-\code{expr}. Each takes \code{name}, \code{show}, and its own \code{color} and \code{facet}.}
+variables), an ordered list of typed summaries, each a
+\code{list(type = , ...)}. Types: \code{simple} (\code{func}, \code{col}; show \code{"bar"},
+\code{"number"}, \code{"dot"} or \code{"tile"}; a \code{color} split with \code{position} =
+\code{"stack"}, \code{"dodge"} or \code{"fill"}; a tile's \code{fill} and \code{facet_order}),
+\code{dist} (\code{col}, \code{summary}, \code{whiskers}, \code{style}; show \code{"box"},
+\code{"pointrange"} or \code{"text"}), \code{field} (\code{col}), \code{series} (\code{x}, \code{col},
+\code{band}, \code{ref}), \code{spans} (\code{x}, \code{xend}, \code{label}, \code{tooltip}, \code{size}),
+\code{pair} (\code{x}, \code{xend}, \code{x_func}, \code{xend_func}, \code{ref_lo}, \code{ref_hi}, \code{ref},
+\code{dash}), \code{expr} and \code{custom}. Each takes \code{name}, \code{show}, and its own
+\code{color} and \code{facet}. Entries written with the summarize table's keys
+(\code{stat}, \code{from} / \code{to}, \code{lo} / \code{hi}, \code{fields}) are read as these.}
 
-\item{id}{Groups layout: a column whose distinct values are counted
-instead of rows (a subject identifier, so a count reads as "subjects
-with at least one event").}
+\item{id}{A column whose distinct values are counted instead of rows (a
+subject identifier, so a count reads as "subjects with at least one
+event").}
+
+\item{pct_of}{The base of a count's percentage: \code{"facet"} (the rows or
+subjects of the column's own facet level) or \code{"total"} (the table).}
+
+\item{missing}{Missing values of a grouping, colour or facet column, and
+of a Table 1 variable: \code{"drop"} (no row or level of their own) or
+\code{"level"} (shown as "(Missing)").}
 
 \item{color}{Records layout: column whose colours tint the rows. \code{NULL} =
 the stub column when the board's scale map has it, \code{""} = off.}
@@ -81,7 +96,9 @@ the stub column when the board's scale map has it, \code{""} = off.}
 \code{list(mode, cols, domain)} with \code{mode} one of \code{"sequential"},
 \code{"diverging"}, \code{"bar"}.}
 
-\item{digits}{Records layout: decimals of numeric cells.}
+\item{format}{Records layout: number format of the cells, \code{"number"} (up
+to two decimals) or a whole number of decimals. The old \code{digits}
+argument reads as this.}
 
 \item{look}{How the table is drawn: \code{"table"}, \code{"compact"} (the matrix
 look: rotated column titles, so a column is as wide as its cells, and
