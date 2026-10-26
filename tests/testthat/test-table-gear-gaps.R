@@ -43,14 +43,20 @@ test_that("a nested table takes the columns, the format and missing", {
     st <- session$returned$state
     rec_edit(session, "columns", list("Petal"))
     rec_edit(session, "missing", "drop")
+    expect_identical(st$columns(), "Petal")
     expect_identical(st$missing(), "drop")
+    # The output stays the input rows (a header click filters them); the
+    # columns and missing shape only what the nested table shows.
     out <- eval_block_expr(session$returned$expr(), sizes)
-    expect_identical(setdiff(names(out), grep("^\\.", names(out), value = TRUE)),
-                     "Petal")
+    expect_identical(names(out), names(sizes))
     rec_edit(session, "missing", "level")
-    out <- eval_block_expr(session$returned$expr(), sizes)
-    expect_true(MISSING_LEVEL %in% out$.group1_level)
+    expect_identical(st$missing(), "level")
   })
+  shown <- table_nest(sizes, "Size", "Species", columns = "Petal")
+  expect_identical(setdiff(names(shown), grep("^\\.", names(shown), value = TRUE)),
+                   "Petal")
+  shown <- table_nest(sizes, "Size", "Species", missing = "level")
+  expect_true(MISSING_LEVEL %in% shown$.group1_level)
 })
 
 test_that("a structured frame prints its number cells in the block's format", {

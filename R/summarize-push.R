@@ -1212,7 +1212,9 @@ summarize_split_html <- function(c) {
     lab <- if (!grouped && !is.null(c$slab)) c$slab[[j]] else rep("", n)
     body <- paste0(
       "<div class=\"blockr-summarize-fill", ifelse(nzchar(lab), " has-lab", ""),
-      "\" style=\"width:",
+      # The segment's index: a click on a colour segment claims its level
+      # (summarize-table.js reads it), so the static markup carries it too.
+      "\" data-seg=\"", j - 1L, "\" style=\"width:",
       summarize_fmt_w(c$seg[[j]]),
       "%;background:", c$fills[[j]], "\" data-summarize-tip=\"",
       summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\">",
