@@ -265,7 +265,8 @@
       const role = c.getAttribute("role");
       const what = c.type === "checkbox" ? "checkbox" : role === "radio" ? "segment" :
         role === "combobox" || c.classList.contains("blockr-select__search") ? "select" :
-        c.tagName === "INPUT" ? "input" : c.classList.contains("dd-section-title--fold") ? "section" : "button";
+        c.tagName === "INPUT" || c.tagName === "TEXTAREA" ? "input" :
+        c.classList.contains("dd-section-title--fold") ? "section" : "button";
       if (c.disabled || c.getAttribute("aria-disabled") === "true") {
         push({ block: id, where: "gear", what, label, effect: "disabled" });
         continue;
@@ -276,7 +277,9 @@
         continue;
       }
       if (what === "segment" && c.classList.contains("is-selected")) continue;
-      if (c.tagName === "INPUT" && (c.type === "number" || c.type === "text") && what !== "select") {
+      // Free text (a title, a prepare script) has no pick to probe.
+      if ((c.tagName === "TEXTAREA" || (c.tagName === "INPUT" && (c.type === "number" || c.type === "text"))) &&
+          what !== "select") {
         push({ block: id, where: "gear", what, label: label || c.placeholder || "", effect: "skipped" });
         continue;
       }
