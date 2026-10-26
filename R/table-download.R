@@ -91,7 +91,7 @@ dl_tool <- function(ns, spec) {
 #'
 #' Registers the download handlers for every format this machine can write and
 #' returns the slot to drop on the table's toolbar (`dt_chrome()`'s
-#' `download_slot`, which [drilldown_table()] takes as `download_slot`). Each
+#' `download_slot`, which [interactive_table()] takes as `download`). Each
 #' format writes the SAME frame the table shows, through that format's own
 #' writer: [write_annotated_xlsx()] for the spreadsheet,
 #' [write_exhibit_html()] for a self-contained page, [write_exhibit_pptx()]
