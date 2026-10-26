@@ -28,6 +28,10 @@
   choice and keep it. An old table board keeps downloads off when it stored
   its per-format download flags all off; one saved before those flags
   existed now offers downloads.
+* A table summary's `summary` and `whiskers` are typed in the block's
+  argument specs: the chart's statistics (`median_q1_q3`, `mean_sd`, ...,
+  `whiskers` also `tukey`), plus `mean_ci95` and `"none"`, which only the
+  table draws.
 
 # blockr.viz 0.2.210
 
