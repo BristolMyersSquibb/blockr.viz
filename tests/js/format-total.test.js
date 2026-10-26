@@ -12,14 +12,33 @@ test('a whole number of decimals prints that many, from a number or its text', (
   assert.strictEqual(C.valueFormat({ format: 2 })(4.3587), '4.36');
   assert.strictEqual(C.valueFormat({ format: '0' })(1234.5), (1235).toLocaleString());
   assert.strictEqual(C.valueFormat({ format: '1', unit: 'CHF' })(2), '2.0\u00a0CHF');
-  // Fixed decimals win over the shared decimals of value labels.
-  assert.strictEqual(C.valueFormat({ format: 2 }, { digits: 4 })(1.5), '1.50');
+  assert.strictEqual(C.valueFormat({ format: 2 })(1.5), '1.50');
   // The named formats are unchanged, and junk is no number of decimals.
   assert.strictEqual(C.valueFormat({ format: 'number' }), null);
   assert.strictEqual(C.valueFormat({ format: 'compact' })(1500), '1.5K');
   assert.strictEqual(C.fixedDigits('7'), null);
   assert.strictEqual(C.fixedDigits('1.5'), null);
   assert.strictEqual(C.fixedDigits(''), null);
+});
+
+test('"number" prints up to two decimals, as the table block', () => {
+  // The cases of dt_format_num() in the table's tests.
+  assert.strictEqual(C.ddNum(4.3587), '4.36');
+  assert.strictEqual(C.ddNum(1.5), '1.5');
+  assert.strictEqual(C.ddNum(4.3), '4.3');
+  assert.strictEqual(C.ddNum(2.004), '2');
+  assert.strictEqual(C.ddNum(0.0034), '0.0034');
+  assert.strictEqual(C.ddNum(-0.003456), '-0.0035');
+  assert.strictEqual(C.ddNum(0.005), '0.01');
+  assert.strictEqual(C.ddNum(1234.567), (1234.57).toLocaleString());
+  assert.strictEqual(C.ddNum(12), '12');
+  // Raw observations: three significant digits, then the same rule.
+  assert.strictEqual(C.ddNum3(123.456), '123');
+  assert.strictEqual(C.ddNum3(0.0123456), '0.01');
+  assert.strictEqual(C.ddNum3(0.00123456), '0.0012');
+  // With a unit: the same number, then the unit.
+  assert.strictEqual(C.valueFormat({ unit: '%' })(4.3587), '4.36\u00a0%');
+  assert.strictEqual(C.valueFormat({ format: 'compact' })(0.0034), '0.0034');
 });
 
 test('bar value labels and ticks follow the fixed decimals', () => {

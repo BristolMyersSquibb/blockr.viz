@@ -135,19 +135,23 @@
   };
 
   // Display formatting only; data keeps full precision so a click filter
-  // round-trips. Six significant digits.
+  // round-trips. The "number" format, as the table block's
+  // (dt_format_num() in R/table-push.R): up to two decimals, trailing zeros
+  // dropped, and a value that would round to 0 keeps two significant
+  // digits (0.0034).
   /** @param {any} v */
   const ddNum = (v) => {
     if (typeof v !== 'number' || !isFinite(v)) return v;
     if (Number.isInteger(v)) return v.toLocaleString();
-    return Number(v.toPrecision(6)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+    if (Math.abs(v) < 0.005) return v.toLocaleString(undefined, { maximumSignificantDigits: 2 });
+    return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
   };
-  // Three significant digits, for raw observations glanced at on hover.
+  // Raw observations glanced at on hover: three significant digits at
+  // most, then as ddNum().
   /** @param {any} v */
   const ddNum3 = (v) => {
     if (typeof v !== 'number' || !isFinite(v)) return v;
-    if (Number.isInteger(v)) return v.toLocaleString();
-    return Number(v.toPrecision(3)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+    return ddNum(Number(v.toPrecision(3)));
   };
 
   // blockr.theme's "Blockr" palette (Okabe-Ito without black and yellow), the

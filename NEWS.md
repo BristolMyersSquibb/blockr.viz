@@ -25,6 +25,10 @@
   prints 4.36 on the axis, in tooltips and value labels), as on the table
   block. The gear's "Numbers" select offers Auto, 0, 1 and 2 decimals beside
   compact and percent.
+* `format = "number"` prints up to two decimals, trailing zeros dropped, and
+  a value that would round to 0 keeps two significant digits (0.0034), as
+  the table block. It printed up to four before ("4.3587 %"). Bar value
+  labels print each value on its own (1.7 next to 2.14).
 * `pct_of = "total"` takes a `pct_distinct` denominator over the whole
   chart, all panels together. `"facet"` stays the default.
 * The gear has a "Totals" row on a waterfall (`waterfall_totals`, picked
@@ -90,8 +94,7 @@
 * An axis is named by the column's label and the unit, "Growth (%)"; a
   column without a label by the unit alone, else by its name. It has no name
   when the chart's title already contains it.
-* Value labels on bars share one number of decimals (1.70 next to 2.14). An
-  unnamed `y_lines` line at 0 has no label: the axis prints 0.
+* An unnamed `y_lines` line at 0 has no label: the axis prints 0.
 * A histogram's bins carry x's label, so the filter line reads "price =
   1000-1500".
 

@@ -54,21 +54,7 @@
     const textW = o.measure;
     /** @param {any} d */
     const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
-    // One number of decimals for every label the chart prints: the bars'
-    // own values, and a stack's totals.
-    /** @type {number[]} */
-    const printed = [];
-    if (o.stacked) {
-      const n = series.length ? series[0].data.length : 0;
-      for (let gi = 0; gi < n; gi++) {
-        let tot = 0;
-        for (const s of series) { const v = valOf(s.data[gi]); if (v != null) tot += Number(v); }
-        printed.push(tot);
-      }
-    } else {
-      for (const s of series) for (const d of s.data) { const v = valOf(d); if (v != null) printed.push(Number(v)); }
-    }
-    const vf = NS.valueFormat(o.cfg, { digits: NS.sharedDigits(printed) });
+    const vf = NS.valueFormat(o.cfg);
     // `|| 0` folds a negative zero, which would print as "-0".
     const fmt = o.fraction
       ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'

@@ -2,9 +2,9 @@
 /**
  * Chart block: the number format of a chart's values (`format`, `unit`),
  * the same vocabulary as the tile block. "number" prints separators and
- * smart decimals, "compact" 1.2K / 3.4M / 5.6B, "percent" a fraction x100
- * with "%", a whole number (0 to 6, or its text) that many decimals, as on
- * the table block. `unit` is free text printed after the number ("CHF").
+ * up to two decimals (NS.ddNum), "compact" 1.2K / 3.4M / 5.6B, "percent" a
+ * fraction x100 with "%", a whole number (0 to 6, or its text) exactly that
+ * many decimals. Each prints as on the table block. `unit` is free text printed after the number ("CHF").
  *
  * A chart with format "number" and no unit keeps its own formatting:
  * valueFormat() then returns null and the callers fall back to it.
@@ -26,23 +26,6 @@
     return String(NS.ddNum(v));
   };
 
-  /**
-   * The decimals that print every value as ddNum() would, at most 4: one
-   * count for a set of labels, so 1.7 next to 2.14 reads 1.70.
-   * @param {number[]} values @returns {number}
-   */
-  const sharedDigits = (values) => {
-    let d = 0;
-    for (const v of values) {
-      if (!Number.isFinite(v) || Number.isInteger(v)) continue;
-      const s = String(Number(v.toPrecision(6)));
-      if (s.includes('e')) continue;
-      const i = s.indexOf('.');
-      if (i >= 0) d = Math.max(d, s.length - i - 1);
-    }
-    return Math.min(d, 4);
-  };
-
   /** @param {number} v @param {number} digits */
   const fixedNum = (v, digits) =>
     (v || 0).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -61,9 +44,7 @@
    * The formatter for a chart's values, or null to keep the chart's own.
    * `unit: false` leaves the unit off (axis ticks: the axis title carries
    * it once).
-   * `digits`: "number" prints that many decimals (sharedDigits()), and
-   * then always returns a formatter. A fixed number of decimals wins.
-   * @param {Record<string, any>} cfg @param {{ unit?: boolean, digits?: number }} [opts]
+   * @param {Record<string, any>} cfg @param {{ unit?: boolean }} [opts]
    * @returns {((v: any) => string) | null}
    */
   const valueFormat = (cfg, opts = {}) => {
@@ -71,14 +52,13 @@
     const format = fixed != null ? 'number' : (cfg.format || 'number');
     const unit = cfg.unit ? String(cfg.unit) : '';
     const withUnit = opts.unit !== false && unit !== '';
-    const digits = fixed != null ? fixed : opts.digits;
-    if (format === 'number' && !withUnit && digits == null) return null;
+    if (format === 'number' && !withUnit && fixed == null) return null;
     /** @type {(v: number) => string} */
     const base = format === 'percent'
       // `|| 0` folds a negative zero.
       ? (v) => (Math.round(v * 1000) / 10 || 0) + '%'
       : format === 'compact' ? compact
-        : digits != null ? (v) => fixedNum(v, digits) : (v) => String(NS.ddNum(v));
+        : fixed != null ? (v) => fixedNum(v, fixed) : (v) => String(NS.ddNum(v));
     return (v) => {
       const n = Number(v);
       if (v == null || !isFinite(n)) return '';
@@ -113,7 +93,6 @@
   };
 
   NS.valueFormat = valueFormat;
-  NS.sharedDigits = sharedDigits;
   NS.fixedDigits = fixedDigits;
   NS.unitTitle = unitTitle;
   NS.axisName = axisName;

@@ -126,9 +126,11 @@ share. Labels that would overlap are left out. Bar and waterfall only.}
 
 \item{format, unit}{How the values are printed on the value axis, in
 tooltips and in value labels, as on the tile block: \code{format} is
-\code{"number"} (default; separators and smart decimals), \code{"compact"} (1.2K,
-3.4M), \code{"percent"} (a fraction times 100, with "\%") or a whole number
-of decimals from 0 to 6 (\code{2} prints 4.36), as on the table block.
+\code{"number"} (default; separators and up to two decimals, trailing zeros
+dropped, and a value that would round to 0 keeps two significant
+digits: 0.0034), \code{"compact"} (1.2K, 3.4M), \code{"percent"} (a fraction
+times 100, with "\%") or a whole number of decimals from 0 to 6, printed
+exactly (\code{2} prints 4.30). Each prints as on the table block.
 \code{unit} is free text after the number (\code{"CHF"}); the axis title carries
 it once.
 On scatter, line and area charts it applies to y.}

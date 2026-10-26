@@ -248,13 +248,12 @@ test('the axis name: label and unit, the unit alone, none when the title says it
   assert.strictEqual(C.axisName('Count', '.count', { title_resolved: 'Adverse events' }), 'Count');
 });
 
-test('value labels share one number of decimals; a line at 0 has no label', () => {
-  assert.strictEqual(C.sharedDigits([2.14, 1.7, 1.9, 2]), 2);
-  assert.strictEqual(C.sharedDigits([3, 12]), 0);
-  assert.strictEqual(C.sharedDigits([1 / 3]), 4);
+test('value labels print each value on its own; a line at 0 has no label', () => {
   const { opt } = build({ value: 'V', func: 'sum', value_labels: 'on', value_lines: [0, 2] });
-  const lbl = opt.series[0].label.formatter({ value: 1.5 });
-  assert.match(lbl, /^\d+(\.\d+)?$/);
+  const lbl = opt.series[0].label.formatter;
+  assert.strictEqual(lbl({ value: 1.5 }), '1.5');
+  assert.strictEqual(lbl({ value: 2.14 }), '2.14');
+  assert.strictEqual(lbl({ value: 4.3587 }), '4.36');
   const lines = opt.series[0].markLine.data;
   assert.strictEqual(lines[0].label.show, false);
   assert.strictEqual(lines[1].label.show, true);
