@@ -554,7 +554,7 @@ chart_arguments <- function() {
         "define what the chart IS. Unset = auto (the input data's subtitle ",
         "attribute when present); \"\" = explicitly none."
       ),
-      example = "{@func} of {label(@y)} by {@x}[, coloured by {@color}]",
+      example = "{@func} of {label(@y)} by {label(@x)}[, coloured by {label(@color)}]",
       type = arg_string()
     ),
     caption = new_arg_spec(

@@ -117,7 +117,7 @@
       },
       "xAxis": {
        "type": "value",
-       "name": "% of ARM",
+       "name": "% of Planned Arm",
        "nameLocation": "middle",
        "nameGap": 30,
        "nameTextStyle": {

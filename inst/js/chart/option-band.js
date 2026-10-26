@@ -248,11 +248,12 @@
 
   /**
    * The reference limits R reduced from their columns, as markLine data:
-   * named with the column and, when it varies, the range it came from. A
-   * limit outside the frame is pinned to the edge and says which way.
+   * named with the column's title and, when it varies, the range it came
+   * from. A limit outside the frame is pinned to the edge and says which way.
    * @param {any} cfg @param {{ lo: number, hi: number } | null} ext @param {any} ink
+   * @param {VizColumn[]} [columns]
    */
-  const bandRefLines = (cfg, ext, ink) => {
+  const bandRefLines = (cfg, ext, ink, columns) => {
     const bandRefs = cfg.band_refs || null;
     const lm = cfg.line_width_mult ?? 1.0;
     /** @type {any[]} */
@@ -262,7 +263,8 @@
       const r = bandRefs[k];
       if (!r || !Number.isFinite(Number(r.value))) continue;
       const v = Number(r.value);
-      const base = r.col + ' ' + NS.ddNum3(v) + (Number(r.n_distinct) > 1
+      const name = NS.axes.axisTitle(columns || [], r.col);
+      const base = name + ' ' + NS.ddNum3(v) + (Number(r.n_distinct) > 1
         ? ' (' + NS.ddNum3(Number(r.lo)) + '–' + NS.ddNum3(Number(r.hi)) + ')' : '');
       let at = v, off = '';
       if (ext && v > ext.hi) { at = ext.hi; off = ' ↑ off scale'; }

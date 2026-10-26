@@ -488,7 +488,7 @@
        {
         "kind": "text",
         "value": "Count of rows by Reported Term",
-        "placeholder": "e.g. {func} of {label(@y)}[, by {@color}]"
+        "placeholder": "e.g. {@func} of {label(@y)}[, by {label(@color)}]"
        }
       ],
       "help": [

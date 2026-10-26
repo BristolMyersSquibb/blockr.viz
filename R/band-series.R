@@ -328,28 +328,32 @@ band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
   if (is.null(data) || nrow(data) == 0L) {
     return("This block received no rows.")
   }
+  # A missing column has no label to show, so it is named.
   for (col in c(x_col, y_col)) {
     if (!col %in% names(data)) {
       return(sprintf("Column \"%s\" is not in the data.", col))
     }
   }
+  # The others name the column as the chart does: its label, else its name.
+  x_lab <- title_column_label(data, x_col)
+  y_lab <- title_column_label(data, y_col)
   if (!is.numeric(data[[x_col]])) {
     return(sprintf(
       "Timeline \"%s\" is not numeric \u2014 a band slides a window along a continuous axis, so it needs a numeric column (e.g. ADY).",
-      x_col))
+      x_lab))
   }
   if (!is.numeric(data[[y_col]])) {
-    return(sprintf("Value \"%s\" is not numeric.", y_col))
+    return(sprintf("Value \"%s\" is not numeric.", y_lab))
   }
   ok <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
   if (!any(ok)) {
-    return(sprintf("Every row is missing \"%s\" or \"%s\".", x_col, y_col))
+    return(sprintf("Every row is missing \"%s\" or \"%s\".", x_lab, y_lab))
   }
   d <- data[ok, , drop = FALSE]
   if (length(unique(d[[x_col]])) < 2L) {
     return(sprintf(
       "\"%s\" has only one distinct value, so there is no range to slide a window along.",
-      x_col))
+      x_lab))
   }
   by_id <- !is.null(id_col) && id_col %in% names(d)
   n <- if (by_id) length(unique(d[[id_col]])) else nrow(d)

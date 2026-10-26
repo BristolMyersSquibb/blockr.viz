@@ -304,7 +304,7 @@ new_chart_block <- function(
   if (!is.null(dots$expose)) {
     warning(
       "new_chart_block(): `expose` is retired. Name the setting in ",
-      "`subtitle` instead, e.g. \"[, coloured by {@color}]\".",
+      "`subtitle` instead, e.g. \"[, coloured by {label(@color)}]\".",
       call. = FALSE
     )
   }

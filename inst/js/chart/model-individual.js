@@ -105,8 +105,9 @@
                             columns, splitCol)
       : [];
     if (isLine && levels.length > TRAJ_HARD_CAP) {
+      const what = splitCol ? NS.axes.axisTitle(columns, splitCol) : 'series';
       out.capMessage = `Showing first ${TRAJ_HARD_CAP} of ${levels.length} series` +
-        ' (' + (splitCol || 'series') + ') — filter upstream to narrow.';
+        ' (' + what + ') — filter upstream to narrow.';
       levels = levels.slice(0, TRAJ_HARD_CAP);
     }
     out.levels = levels;
