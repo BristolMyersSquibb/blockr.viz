@@ -3001,10 +3001,8 @@
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
     root.insertBefore(band, pop.nextSibling);
-    // The title band moves into the gear row, on its left: the chart's header
-    // (chart/chrome.js _buildDOM). The settings band then opens below the title.
-    var titles = root.querySelector(".dd-table-titles");
-    if (titles) header.insertBefore(titles, header.firstChild);
+    // The title band stays with the table, under the tray: the settings
+    // never sit between a title and what it names.
     bindCapture(root, header);
     // One control row, chart / table parity: the search box MOVES UP into the
     // gear row and sits LEFT of the gear, which keeps its canonical top-right

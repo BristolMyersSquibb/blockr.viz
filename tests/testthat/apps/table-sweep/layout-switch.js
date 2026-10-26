@@ -22,7 +22,8 @@
   const txt = (e) => ((e && e.textContent) || "").replace(/\s+/g, " ").trim();
   const LAYOUTS = ["Records", "Groups", "Variables"];
 
-  const root = (id) => document.querySelector('.card[id$="-block_handle-' + id + '"]');
+  const root = (id) => document.querySelector(
+    ['.card', '.blockr-block-card'].map((c) => c + '[id$="-block_handle-' + id + '"]').join(", "));
   const wrap = (r, w) => r && r.querySelector('[id$="-' + w + '_wrap"]');
   const shownOn = (e) => !!e && getComputedStyle(e).display !== "none";
 
