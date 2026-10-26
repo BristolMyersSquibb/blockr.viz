@@ -14,5 +14,7 @@
 # tile server closures -- declared so R CMD check does not flag them as
 # undefined global variables.
 utils::globalVariables(c(
-  ".", "val", "xv", "yv", "xlo", "xhi", "ylo", "yhi"
+  ".", "val", "xv", "yv", "xlo", "xhi", "ylo", "yhi",
+  # bbquote() placeholders in chart_filter_call()
+  "data", ".."
 ))

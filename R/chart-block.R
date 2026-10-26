@@ -1231,8 +1231,10 @@ new_chart_block <- function(
               # a gear disagreeing with the canvas is worse than either alone.
               # Same idea as _ensureDistributionMetric resolving `summary` into
               # the config JS-side.
-              whiskers = r_whiskers() %||%
-                (if (identical(r_chart_type(), "band")) "p10_p90" else "tukey"),
+              # Only for the types that draw whiskers: a resolved value on
+              # any other type would come back as a pick after a switch.
+              whiskers = r_whiskers() %||% switch(r_chart_type() %||% "",
+                band = "p10_p90", boxplot = "tukey", NULL),
               connect_centers = if (isTRUE(r_connect_centers())) "on" else "off",
               # Distribution band. `band_series` carries the computed band
               # itself (the JS side draws it, it does not derive it -- same
@@ -1822,9 +1824,10 @@ new_chart_block <- function(
         # group's members (dd_group_filters_members()).
         filter_members <- dd_group_filters_members(r_filters, raw_data)
 
-        # The click filter's columns AND together (chart_filter_conds()); a
-        # range ANDs with the facet panel it was taken in.
-        build_filter_expr <- function() {
+        # The click filter's conditions, AND-ed (chart_filter_conds()), and
+        # the columns each reads; a range ANDs with the facet panel it was
+        # taken in. No conditions is `filter(.(data), TRUE)`.
+        filter_parts <- function() {
           ft <- r_filter_type()
           filters <- r_filters()
           # A click on a histogram's bins is a range on `x`: the bin column
@@ -1842,13 +1845,16 @@ new_chart_block <- function(
             },
             if (!is.null(bin_cond)) list(bin_cond)
           )
-
+          # each condition's columns, in the same order: a bin reads `x`
+          cols <- c(as.list(names(filters)),
+                    if (!is.null(bin_cond)) list(r_x_pub()))
+          none <- list(conds = list(), cols = list())
           if (ft == "categorical") {
-            chart_filter_call(conds)
+            list(conds = as.list(conds), cols = cols)
           } else if (ft == "point") {
             pt <- r_filter_point()
             if (is.null(pt) || is.null(pt$x_col) || is.null(pt$y_col)) {
-              return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
+              return(none)
             }
             # A point on a time axis comes back in ms; read it as a date.
             d_now <- tryCatch(raw_data(), error = function(e) NULL)
@@ -1856,23 +1862,23 @@ new_chart_block <- function(
             if (is.data.frame(d_now) && pt$x_col %in% names(d_now)) {
               xv <- chart_time_literal(xv, d_now[[pt$x_col]])
             }
-            blockr.core::bbquote(
-              dplyr::filter(.(data),
-                .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv)
-              ),
-              list(xc = pt$x_col, yc = pt$y_col,
-                xv = xv, yv = pt$y_val)
+            cond <- bquote(
+              .data[[.(xc)]] == .(xv) & .data[[.(yc)]] == .(yv),
+              list(xc = pt$x_col, yc = pt$y_col, xv = xv, yv = pt$y_val)
             )
+            list(conds = list(cond), cols = list(c(pt$x_col, pt$y_col)))
           } else if (ft == "range") {
+            rng <- r_filter_range()
             rc <- chart_range_cond(
-              r_filter_range(), tryCatch(raw_data(), error = function(e) NULL)
+              rng, tryCatch(raw_data(), error = function(e) NULL)
             )
             if (is.null(rc)) {
-              return(blockr.core::bbquote(dplyr::filter(.(data), TRUE)))
+              return(none)
             }
-            chart_filter_call(c(list(rc), conds))
+            rcols <- c(rng$x_col, if (!is.null(rng$y_range)) rng$y_col)
+            list(conds = c(list(rc), conds), cols = c(list(rcols), cols))
           } else {
-            blockr.core::bbquote(dplyr::filter(.(data), TRUE))
+            none
           }
         }
 
@@ -2077,14 +2083,23 @@ new_chart_block <- function(
             # renderer does, so downstream receives the same plain frame the
             # chart draws. NULL input (no upstream yet) stays unwrapped.
             coerce <- !is.null(d) && !is.data.frame(d)
-            ex <- build_filter_expr()
-            if (coerce) ex <- wrap_plain_df_input(ex)
             # The prepare script wraps the filter, so the click filter still
             # applies to the SOURCE rows: a mark is identified by an upstream
             # column, which the script is free not to keep. Downstream then
-            # receives what the chart draws, filtered.
+            # receives what the chart draws, filtered. A condition on a column
+            # only the script makes is filtered after it (dd_drill_post()).
+            parts <- filter_parts()
             sx <- cb_expr(r_parsed(), r_specs(), r_values(), slot = TRUE)
+            src <- if (!is.null(sx) && length(parts$conds)) {
+              tryCatch(names(raw_data()), error = function(e) NULL)
+            }
+            post <- dd_drill_post(parts$cols, src)
+            ex <- chart_filter_call(parts$conds[!post])
+            if (coerce) ex <- wrap_plain_df_input(ex)
             out <- if (is.null(sx)) ex else dd_splice_slot(sx, ex)
+            if (any(post)) {
+              out <- dd_splice_slot(chart_filter_call(parts$conds[post]), out)
+            }
             # Hand back the SAME object when the emitted code has not changed.
             # blockr.core skips a re-evaluation on object identity
             # (same_ref, block-server.R), and this reactive reads `data()`

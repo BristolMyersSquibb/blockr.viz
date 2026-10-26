@@ -337,6 +337,41 @@ test_that("the filter trail survives a script that regroups", {
 })
 
 
+test_that("the provenance survives a script that aggregates or merges", {
+  d <- data.frame(USUBJID = c("1", "1", "2"), AETOXGR = c(1, 3, 2))
+  attr(d, "blockr_filters") <- c(global = "SEX = F")
+  attr(d, "blockr_provenance") <- list(dataset = "adae", note = "cut 1")
+  run <- function(...) {
+    ps <- parsed_of(script_of(...), d)
+    out <- dd_prepare_run(d, ps$parsed, ps$specs, list())
+    expect_null(out$error)
+    out$data
+  }
+
+  sm <- run(
+    "data |>",
+    "  dplyr::group_by(USUBJID) |>",
+    "  dplyr::summarise(worst = max(AETOXGR))"
+  )
+  expect_identical(attr(sm, "blockr_provenance"),
+                   list(dataset = "adae", note = "cut 1"))
+  expect_identical(dl_dataset(sm), "adae")
+
+  mg <- run("merge(data, data.frame(USUBJID = c(\"1\", \"2\"), ARM = c(\"A\", \"B\")))")
+  expect_identical(attr(mg, "blockr_provenance"),
+                   list(dataset = "adae", note = "cut 1"))
+  expect_identical(attr(mg, "blockr_filters"), c(global = "SEX = F"))
+
+  # A script that sets its own provenance keeps it.
+  own <- run(
+    "out <- dplyr::summarise(data, n = dplyr::n())",
+    "attr(out, \"blockr_provenance\") <- list(dataset = \"mine\")",
+    "out"
+  )
+  expect_identical(attr(own, "blockr_provenance"), list(dataset = "mine"))
+})
+
+
 test_that("column labels survive a script that filters with base `[`", {
   d <- data.frame(AVISIT = c("WEEK 1", "UNSCHEDULED"), AVAL = c(1, 2))
   attr(d$AVISIT, "label") <- "Analysis Visit"
@@ -354,4 +389,39 @@ test_that("column labels survive a script that filters with base `[`", {
   expect_identical(attr(out$data$AVISIT, "label"), "Analysis Visit")
   # A label the script sets is its own.
   expect_identical(attr(out$data$AVAL, "label"), "Result")
+})
+
+
+test_that("a click on a column the script makes filters after the script", {
+  d <- data.frame(USUBJID = c("1", "2", "3", "4"), AGE = c(30, 50, 70, 40),
+                  SEX = c("F", "F", "M", "M"))
+  # A restored click on the script's AGEGR and the upstream SEX: AGEGR used
+  # to be filtered on the source rows, which have no AGEGR.
+  blk <- new_chart_block(
+    chart_type = "bar", group = "AGEGR", color = "SEX",
+    script = 'dplyr::mutate(data, AGEGR = ifelse(AGE < 45, "young", "old"))',
+    filters = list(AGEGR = "young", SEX = "M"), filter_type = "categorical"
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      ex <- do.call(bquote, list(session$returned$expr(),
+                                 list(data = quote(d))))
+      out <- eval(ex, list(d = d))
+      expect_identical(out$USUBJID, "4")
+      # SEX, an upstream column, still filters the source rows.
+      expect_match(paste(deparse(ex), collapse = ""),
+                   "mutate(dplyr::filter(d, .data[[\"SEX\"]]", fixed = TRUE)
+    },
+    args = list(x = blk, data = list(data = function() d))
+  )
+})
+
+test_that("dd_drill_post sends only script-made columns after the script", {
+  cols <- list("SEX", "AGEGR", c("AGE", "AGEGR"))
+  expect_identical(dd_drill_post(cols, c("USUBJID", "AGE", "SEX")),
+                   c(FALSE, TRUE, TRUE))
+  expect_identical(dd_drill_post(cols, NULL), c(FALSE, FALSE, FALSE))
+  expect_identical(dd_drill_post(list(), c("SEX")), logical())
 })

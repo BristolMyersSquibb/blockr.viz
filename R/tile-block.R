@@ -464,7 +464,7 @@ tile_block_dep <- memoise0(function() {
     drilldown_shared_dep(),
     htmltools::htmlDependency(
       name = "tile-block",
-      version = paste0(utils::packageVersion("blockr.viz"), ".13"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".14"),
       src = system.file(package = "blockr.viz"),
       script = "js/tile-block.js",
       stylesheet = "css/tile-block.css"

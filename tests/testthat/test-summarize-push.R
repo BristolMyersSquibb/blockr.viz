@@ -679,6 +679,21 @@ test_that("a coloured pair column draws one dumbbell per level", {
                             "[^>]*>.*?blockr-summarize-barval"))
 })
 
+test_that("a pair's tip ships as text and is escaped once, in the cell", {
+  ae <- push_fixture()
+  # TERM's first level is "T <1> & co".
+  prep <- summarize_prepare(ae, by = "SOC", summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "mean", color = "TERM")
+  ))
+  m <- summarize_cells(prep)
+  c1 <- m$cols[[1]]
+  expect_match(c1$lv[[1]]$tip[[1]], "^T <1> & co \u00b7 ")
+  html <- summarize_cells_html(m)
+  expect_match(html, "data-summarize-tip=\"T &lt;1&gt; &amp; co", fixed = TRUE)
+  expect_no_match(html, "&amp;amp;", fixed = TRUE)
+})
+
 test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
@@ -802,26 +817,72 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
   }
 })
 
-test_that("a nested pair's parent row summarises its own rows", {
+test_that("a nested pair's parent row is the mean of its rows' ends", {
   ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = list(
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "mean")
+  # Baseline to peak per subject, read at the arm: the mean of the subjects'
+  # baselines to the mean of their peaks, not the first subject's baseline to
+  # the arm's single highest value.
+  prep <- summarize_prepare(ae, by = c("ARM", "USUBJID"), summaries = list(
+    list(type = "pair", from = "AVAL", to = "DUR", lo = "LO", hi = "HI")
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]
   rows <- prep$rows
-  # Over the SOC's own rows, not the mean of its terms' means (SOC A has
-  # terms of 16 and 12 rows, so the two differ).
-  par <- rows[is.na(rows$.parent), , drop = FALSE]
-  expect_identical(par$.label, c("SOC A", "SOC B"))
+  par <- rows[rows$.is_parent, , drop = FALSE]
+  expect_setequal(par$.label, c("Placebo", "Active"))
   for (k in seq_len(nrow(par))) {
-    soc <- par$.label[[k]]
-    expect_equal(par[[p$cols[["a"]]]][[k]], mean(ae$SDY[ae$SOC == soc]),
-                 info = soc)
-    expect_equal(par[[p$cols[["b"]]]][[k]], mean(ae$EDY[ae$SOC == soc]),
-                 info = soc)
+    arm <- par$.label[[k]]
+    d <- ae[ae$ARM == arm, , drop = FALSE]
+    subj <- unique(d$USUBJID)
+    base <- vapply(subj, function(u) d$AVAL[d$USUBJID == u][[1]], numeric(1))
+    peak <- vapply(subj, function(u) max(d$DUR[d$USUBJID == u]), numeric(1))
+    lo <- vapply(subj, function(u) mean(d$LO[d$USUBJID == u]), numeric(1))
+    expect_equal(par[[p$cols[["a"]]]][[k]], mean(base), info = arm)
+    expect_equal(par[[p$cols[["b"]]]][[k]], mean(peak), info = arm)
+    expect_equal(par[[p$cols[["lo"]]]][[k]], mean(lo), info = arm)
+    expect_identical(par[[p$ncol]][[k]], length(subj), info = arm)
   }
+  # The leaf rows keep the row's own functions and carry no count.
+  leaf <- rows[!rows$.is_parent, , drop = FALSE]
+  s1 <- leaf[leaf$.parent == "Placebo" & leaf$.label == "S001", , drop = FALSE]
+  d1 <- ae[ae$ARM == "Placebo" & ae$USUBJID == "S001", , drop = FALSE]
+  expect_equal(s1[[p$cols[["a"]]]], d1$AVAL[[1]])
+  expect_equal(s1[[p$cols[["b"]]]], max(d1$DUR))
+  expect_true(all(is.na(leaf[[p$ncol]])))
+
+  # The card says what the parent's ends are.
+  c1 <- summarize_cells(prep)$cols[[1]]
+  n_par <- par[[p$ncol]]
+  expect_match(c1$tip[rows$.is_parent], "mean of [0-9]+ rows$")
+  expect_match(c1$tip[rows$.is_parent][[1]],
+               paste0(" \u00b7 mean of ", n_par[[1]], " rows$"))
+  expect_false(any(grepl("mean of", c1$tip[!rows$.is_parent])))
+})
+
+test_that("a colour-split nested pair averages each level's rows", {
+  ae <- push_fixture()
+  prep <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = list(
+    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
+         to_func = "max", color = "SEV")
+  ))
+  expect_null(prep$err)
+  p <- prep$plan[[1]]
+  rows <- prep$rows
+  par <- rows[rows$.is_parent, , drop = FALSE]
+  for (j in seq_along(p$levels)) {
+    cn <- p$lcols[[j]]
+    for (k in seq_len(nrow(par))) {
+      d <- ae[ae$SOC == par$.label[[k]] & ae$SEV == p$levels[[j]], ,
+              drop = FALSE]
+      terms <- unique(d$TERM)
+      to <- vapply(terms, function(t) max(d$EDY[d$TERM == t]), numeric(1))
+      expect_equal(par[[cn[["b"]]]][[k]], mean(to))
+      expect_identical(par[[p$lncol[[j]]]][[k]], length(terms))
+    }
+  }
+  c1 <- summarize_cells(prep)$cols[[1]]
+  expect_true(isTRUE(c1$multi))
+  expect_match(c1$lv[[1]]$tip[rows$.is_parent], "mean of [0-9]+ rows$")
 })
 
 test_that("a zero draws an empty track, a small value still shows", {

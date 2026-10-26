@@ -401,12 +401,9 @@
     );
     if (rendered) return bindFoldAll(rendered);
 
-    var ths = table.querySelectorAll("thead th.blockr-stub-header");
-    var first = /** @type {HTMLElement | null} */ (ths.length ? ths[0] : null);
-    var firstTitle = first ? (first.textContent || "").trim() : "";
-    var multiBlankStub = ths.length > 1 && !firstTitle;
+    // Always the top stub header, titled or blank, never a lower row label.
     var th = /** @type {HTMLElement | null} */ (
-      multiBlankStub ? first : (ths.length === 1 ? ths[0] : null)
+      table.querySelector("thead th.blockr-stub-header")
     );
     if (!th) return null;
     var existing = /** @type {HTMLButtonElement | null} */ (
@@ -1586,18 +1583,30 @@
 
     // The band is in flow: opening is a class toggle, no positioning, no
     // scroll/resize listeners, and no outside-click dismissal — it is a
-    // panel, not a menu; the gear is the only toggle.
+    // panel, not a menu; the gear toggles it. Open, it is a layer in the
+    // page (Blockr.layer), as the heatmap's gear tray: Escape in the band or
+    // on the gear closes it and focuses the gear.
+    /** @type {{ remove: () => void } | null} */
+    var layer = null;
     function openPop() {
       pop.classList.add("blockr-settings--open");
       btn.classList.add("blockr-gear-active");
       btn.setAttribute("aria-expanded", "true");
       bandOpen[elemId] = true;
+      if (!layer && typeof Blockr !== "undefined" && Blockr.layer) {
+        layer = Blockr.layer(pop, {
+          from: btn,
+          inPage: true,
+          escape: function () { closePop(); btn.focus(); }
+        });
+      }
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
       btn.classList.remove("blockr-gear-active");
       btn.setAttribute("aria-expanded", "false");
       bandOpen[elemId] = false;
+      if (layer) { layer.remove(); layer = null; }
     }
     btn.addEventListener("click", function (e) {
       e.stopPropagation();

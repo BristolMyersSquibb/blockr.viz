@@ -110,3 +110,19 @@ test('a chart R has already spoken about is not watched', () => {
   assert.ok(!busy(el));
   env.close();
 });
+
+test('an empty state ends the cue', () => {
+  const env = h.createEnv();
+  const { el, id } = h.mount(env);
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
+  env.flushTimers(500);
+
+  env.handlers['blockr-busy']({ id, label: 'drawing' });
+  env.flushTimers(301);
+  assert.ok(busy(el));
+  h.send(env, id, { columns: F.columns, data: { AETERM: [] }, config, dataRev: 2 });
+  env.flushTimers(500);
+  assert.ok(!el.querySelector('canvas'), 'the empty state draws no canvas');
+  assert.ok(!busy(el), 'the empty state ends the cue');
+  env.close();
+});

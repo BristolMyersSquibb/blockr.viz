@@ -73,12 +73,14 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
   }
 
   # A script that aggregates or regroups (summarise(), group_by() and
-  # slice_max(), merge()) returns a frame without the input's filter trail,
-  # and the caption's `{filters}` reads the prepared frame. The filters
-  # upstream still applied to it, so the trail is carried across. A script
-  # that sets its own trail keeps it.
-  if (is.null(attr(out, "blockr_filters", exact = TRUE))) {
-    attr(out, "blockr_filters") <- attr(data, "blockr_filters", exact = TRUE)
+  # slice_max(), merge()) returns a frame without the input's filter trail
+  # and provenance, and the caption's `{filters}`, the footer's `{dataset}`
+  # and the download names read the prepared frame. Both still describe it,
+  # so they are carried across. A script that sets its own keeps it.
+  for (a in c("blockr_filters", "blockr_provenance")) {
+    if (is.null(attr(out, a, exact = TRUE))) {
+      attr(out, a) <- attr(data, a, exact = TRUE)
+    }
   }
 
   # Base `[` on a data.frame strips every column's attributes, so a script
@@ -96,13 +98,35 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
 }
 
 
+#' Which click-filter conditions run after the prepare script
+#'
+#' A click filter wraps into the script's `.(data)` slot, so it filters the
+#' source rows. A condition on a column only the script makes (a group the
+#' script derives) cannot run there; it goes after the script instead.
+#'
+#' @param cols A list, per condition the column names it reads.
+#' @param src_cols The upstream's column names; NULL (not seen yet) keeps
+#'   every condition before the script.
+#' @return A logical vector, TRUE for a condition to filter after the script.
+#' @noRd
+dd_drill_post <- function(cols, src_cols = NULL) {
+  if (is.null(src_cols)) {
+    return(rep(FALSE, length(cols)))
+  }
+  vapply(cols, function(cc) !all(cc %in% src_cols), logical(1L))
+}
+
+
 #' Splice an expression into every `.(data)` slot of another
 #'
 #' The block's expression is the click filter with the script wrapped around
 #' it, so the drill filter still applies to the SOURCE rows: a click identifies
 #' a mark by a column the upstream data has, and the script may well not keep
 #' that column. Composing them means the script's `.(data)` marker is replaced
-#' by the whole filter call, which carries the one remaining marker.
+#' by the whole filter call, which carries the one remaining marker. A click
+#' on a column the script itself makes cannot filter the source rows; the
+#' chart and the summarize table filter that one after the script
+#' (dd_drill_post()).
 #'
 #' @param e The outer expression (the compiled script).
 #' @param repl The expression to splice in (the filter call).

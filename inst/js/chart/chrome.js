@@ -86,6 +86,7 @@
         this.popoverEl.classList.add('blockr-settings--open');
         this.gearBtn.classList.add('blockr-gear-active');
         this.gearBtn.setAttribute('aria-expanded', 'true');
+        this._trayLayer(true);
       }
 
       // Titles are HTML, once above a facet grid, on the header's left.
@@ -264,6 +265,7 @@
       this._popoverOpen = true;
       this.gearBtn.classList.add('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'true');
+      this._trayLayer(true);
       // The band is in flow, so the chart has less room now.
       this._resizeCharts();
     },
@@ -273,7 +275,21 @@
       this._popoverOpen = false;
       this.gearBtn.classList.remove('blockr-gear-active');
       this.gearBtn.setAttribute('aria-expanded', 'false');
+      this._trayLayer(false);
       this._resizeCharts();
+    },
+    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
+    // gear tray: Escape in the band or on the gear closes it and focuses the
+    // gear.
+    /** @this {any} @param {boolean} on */
+    _trayLayer(on) {
+      if (this._trayLayerH) { this._trayLayerH.remove(); this._trayLayerH = null; }
+      if (!on || typeof Blockr === 'undefined' || !Blockr.layer) return;
+      this._trayLayerH = Blockr.layer(this.popoverEl, {
+        from: this.gearBtn,
+        inPage: true,
+        escape: () => { this._closePopover(); this.gearBtn.focus(); }
+      });
     },
 
     // What R gets after a gear edit: every setting, verbatim where null and
@@ -312,6 +328,7 @@
         value_lines: c.value_lines == null ? '' : String(c.value_lines),
         x_lines: c.x_lines == null ? '' : String(c.x_lines),
         box_points: c.box_points || 'none',
+        connect_centers: (c.connect_centers === 'on' || c.connect_centers === true) ? 'on' : 'off',
         // band_series / band_refs are R's output, never sent back.
         band_window: c.band_window || 'adaptive',
         band_size: c.band_size == null ? 45 : c.band_size,
@@ -340,6 +357,11 @@
         ctrl_table: c.ctrl_table || '',
         script: c.script == null ? '' : String(c.script)
       };
+      // The distribution picks, only on the types whose gear offers them; R
+      // keeps its own state (and its per-type default) otherwise.
+      const t = c.chart_type;
+      if (c.summary && (NS.DISTRIBUTION_TYPES.includes(t) || t === 'band')) msg.summary = c.summary;
+      if (c.whiskers && (t === 'boxplot' || t === 'band')) msg.whiskers = c.whiskers;
       // Script control values; an emptied multi-select ships as "" so R can
       // tell it from no value at all.
       for (const spec of (c.script_inputs || [])) {

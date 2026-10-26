@@ -158,16 +158,18 @@ knit_print.summarize_exhibit <- function(x, ...) {
 }
 
 #' @export
-html_exhibit.summarize_exhibit <- function(x, title = NULL, caption = NULL,
+html_exhibit.summarize_exhibit <- function(x, title = NULL, subtitle = NULL,
+                                           caption = NULL,
                                            max_height = NULL,
                                            default_expanded = NULL, ...) {
   args <- x$args
-  extra <- list(...)
-  subtitle <- extra[["subtitle"]]
 
   args$title <- if (is.null(title)) x$title else title
   args$subtitle <- if (is.null(subtitle)) x$subtitle else subtitle
   args$caption <- if (is.null(caption)) x$caption else caption
+  # The exhibit resolved them, and a caller's text (a caption with the
+  # download footer appended) is final.
+  args$resolve_titles <- FALSE
   # A printed exhibit is not a scroll box: the page or the slide gives it the
   # room, so the block's own max_height does not travel with it.
   args$max_height <- max_height
@@ -355,6 +357,12 @@ report_call.summarize_table_block <- function(x, var, ...) {
     v <- state(nm)
     if (!is.null(v)) args[[nm]] <- as.character(v)[1L]
   }
+
+  # The Big N counts the subject column the board's `study_roles` option
+  # names, as on screen and in the downloads. Read from the session the
+  # document is built in; outside one there is none.
+  subject <- shiny::isolate(dd_ctrl_subject())
+  if (!is.null(subject)) args$subject <- subject
 
   as.call(c(
     list(call("::", as.name("blockr.viz"),

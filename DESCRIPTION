@@ -19,14 +19,18 @@ Depends:
     R (>= 4.1.0)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
 Imports:
     blockr.core,
     blockr.ui,
     dplyr,
     echarts4r,
+    graphics,
     grDevices,
     htmltools,
     jsonlite,
+    png,
+    ragg,
     rlang,
     shiny,
     stats,
@@ -53,8 +57,6 @@ Suggests:
     knitr,
     officer,
     openxlsx,
-    png,
-    ragg,
     rmarkdown,
     safetyData,
     shinytest2,

@@ -30,7 +30,7 @@ hmb_levels <- function(x) {
 #'   `list(label, n)` in row order.
 #' @noRd
 heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
-  if (!is.data.frame(data) || nrow(data) == 0L) {
+  if (!is.data.frame(data)) {
     return(list(err = "No data", err_kind = "empty"))
   }
   if (is.null(row) || !length(row) || !nzchar(row[1L]) ||
@@ -52,6 +52,11 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
                  color[1L] %in% names(data)) color[1L]
   group <- if (!is.null(group) && length(group) && nzchar(group[1L]) &&
                  group[1L] %in% names(data)) group[1L]
+  # Checked after the columns, so `no_rows` means a valid but empty matrix.
+  if (nrow(data) == 0L) {
+    return(list(err = "No data", err_kind = "empty", no_rows = TRUE,
+                row_col = row, group_col = group))
+  }
 
   # Grouped by a column carrying a group definition: one copy of each
   # group's rows (expand_groups()), so a subject in two groups gets a row in
@@ -66,7 +71,10 @@ heatmap_prep <- function(data, row, col, color = NULL, group = NULL) {
   rid <- as.character(data[[row]])
   trm <- as.character(data[[col]])
   keep0 <- !is.na(rid) & nzchar(rid) & !is.na(trm) & nzchar(trm)
-  if (!any(keep0)) return(list(err = "No data", err_kind = "empty"))
+  if (!any(keep0)) {
+    return(list(err = "No data", err_kind = "empty", no_rows = TRUE,
+                row_col = row, group_col = group))
+  }
   rkey <- if (split_rows) {
     paste(as.character(data[[group]]), rid, sep = "\037")
   } else {
@@ -163,7 +171,9 @@ hmb_label <- function(data, col) {
 #' @param data Long event rows, one per event.
 #' @param row,col,color,group As in [new_heatmap_block()]. `color` does not
 #'   change the counts; it is accepted so the call mirrors the block's.
-#' @return A data frame. Cells with no event hold 0.
+#' @return A data frame. Cells with no event hold 0. Data with no rows, or
+#'   none with both a row and a column value, gives a frame with the row and
+#'   group columns and no rows.
 #' @examples
 #' d <- data.frame(USUBJID = c("s1", "s1", "s2"),
 #'                 AEDECOD = c("RASH", "RASH", "NAUSEA"))
@@ -171,10 +181,17 @@ hmb_label <- function(data, col) {
 #' @export
 heatmap_matrix <- function(data, row, col, color = NULL, group = NULL) {
   p <- heatmap_prep(data, row, col, color, group)
-  if (!is.null(p$err)) {
+  if (isTRUE(p$no_rows)) {
+    # An upstream filter that matches nothing is a normal state.
+    cols <- c(p$row_col, p$group_col)
+    out <- stats::setNames(
+      data.frame(rep(list(character()), length(cols))), cols
+    )
+  } else if (!is.null(p$err)) {
     stop(p$err, call. = FALSE)
+  } else {
+    out <- hmb_matrix_frame(p, empty = 0L)
   }
-  out <- hmb_matrix_frame(p, empty = 0L)
   for (nm in intersect(c(p$row_col, p$group_col), names(data))) {
     lab <- attr(data[[nm]], "label", exact = TRUE)
     if (!is.null(lab)) attr(out[[nm]], "label") <- lab
@@ -340,7 +357,8 @@ hmb_cols_json <- function(data) {
 #' arrived. `titles$resolved` and the script half fill in once it has.
 #' @noRd
 hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
-                         cell_numbers = TRUE, download = FALSE, target = "",
+                         cell_numbers = TRUE, download = FALSE,
+                         ctrl = list(),
                          locked_roles = character(),
                          titles = list(), script = list()) {
   res <- titles$resolved
@@ -351,9 +369,11 @@ hmb_cfg_json <- function(row = NULL, col = NULL, color = NULL, group = NULL,
     group = group %||% "",
     cell_numbers = if (isTRUE(cell_numbers)) "on" else "off",
     download = if (isTRUE(download)) "on" else "off",
-    # The board's drill filter, resolved (ctrl_auto_target()); "" = none,
-    # and the rows do not take clicks.
-    ctrl_target = target %||% "",
+    # The gear's "Send to filter" section: the target as set ("auto", a
+    # block id, "" = off), the dm table, and the board's candidates.
+    ctrl_target = ctrl$target %||% "",
+    ctrl_table = ctrl$table %||% "",
+    ctrl_choices = ctrl$choices %||% list(),
     locked_roles = I(hmb_locked_roles(locked_roles)),
     # The three-tier text: NULL (auto) travels as JSON null.
     title = titles$title, subtitle = titles$subtitle,

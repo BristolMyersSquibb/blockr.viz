@@ -121,6 +121,38 @@ test_that("config message updates summary, whiskers and connect_centers", {
   )
 })
 
+test_that("an unset whisker rule is resolved only for the types that draw it", {
+  # The gear sends whiskers back on boxplot and band. A resolved "tukey" on a
+  # bar would come back as a pick after a switch to band, pinning the band
+  # to Tukey instead of its own p10_p90 default.
+  whiskers_sent <- function(type) {
+    blk <- new_chart_block(chart_type = type, group = "g", value = "v")
+    out <- "unset"
+    shiny::testServer(
+      blockr.core:::get_s3_method("block_server", blk),
+      {
+        sent <- new.env(parent = emptyenv())
+        sent$msgs <- list()
+        root <- session$rootScope()
+        root$sendCustomMessage <- function(msg_type, message) {
+          if (identical(msg_type, "drilldown-data")) {
+            sent$msgs <- c(sent$msgs, list(message))
+          }
+          invisible(NULL)
+        }
+        session$flushReact()
+        out <<- sent$msgs[[length(sent$msgs)]]$config["whiskers"]
+      },
+      args = list(x = blk, data = list(data = function() {
+        data.frame(g = c("a", "a", "b"), v = c(1, 2, 3))
+      }))
+    )
+    out
+  }
+  expect_equal(whiskers_sent("boxplot"), list(whiskers = "tukey"))
+  expect_equal(whiskers_sent("bar"), list(whiskers = NULL))
+})
+
 test_that("pointrange export stays the drill-filtered raw rows", {
   # The distribution marks summarize ON SCREEN only; the block's expr is
   # still just the click filter, so with no drill the raw rows pass through.

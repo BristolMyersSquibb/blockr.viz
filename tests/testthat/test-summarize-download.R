@@ -99,6 +99,26 @@ test_that("the HTML download does not re-resolve subtitle templates", {
   expect_false(grepl(">By:<", txt, fixed = TRUE))
 })
 
+test_that("the HTML download keeps the brackets of the download footer", {
+  ex <- dl_exhibit()
+  # What the block does: the footer goes onto the resolved caption.
+  ex$caption <- "Internal use [draft]"
+  f <- withr::local_tempfile(fileext = ".html")
+  write_exhibit_html(ex, f, title = ex$title, caption = ex$caption)
+
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  expect_true(grepl("<div class=\"dd-table-caption\">Internal use [draft]</div>",
+                    txt, fixed = TRUE))
+  # A direct call still reads its caption as a template.
+  h <- as.character(summarize_table(
+    dl_frame(), by = "grp", caption = "Internal use [draft]",
+    summaries = list(list(type = "simple", func = "count", show = "bar"))
+  ))
+  expect_true(grepl("<div class=\"dd-table-caption\">Internal use draft</div>",
+                    h, fixed = TRUE))
+})
+
 test_that("a dependency that cannot be inlined is refused, not shipped broken", {
   tags <- htmltools::tagList(
     htmltools::tags$div("x"),
@@ -135,4 +155,40 @@ test_that("the block carries the download toggle through state", {
   # Every constructor formal needs a state entry, or the value is lost on
   # save / restore.
   expect_true("download" %in% names(formals(new_summarize_table_block)))
+})
+
+test_that("a new table drops the picture the browser took of the old one", {
+  skip_if_not(summarize_paint_ready())
+  f <- withr::local_tempfile(fileext = ".png")
+  grDevices::png(f, width = 7, height = 5)
+  graphics::par(mar = c(0, 0, 0, 0))
+  graphics::plot.new()
+  grDevices::dev.off()
+  shot <- readBin(f, "raw", file.size(f))
+  url <- paste0("data:image/png;base64,", jsonlite::base64_enc(shot))
+
+  blk <- new_summarize_table_block(
+    by = "grp", download = TRUE,
+    summaries = list(list(type = "simple", func = "count", show = "bar"))
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      scope <- session$makeScope("expr")
+      session$flushReact()
+      scope$setInputs(summarize_table_block_capture = list(
+        png = url, width = 7, height = 5
+      ))
+      session$flushReact()
+      # The picture the browser took is what the image download writes ...
+      expect_identical(readBin(scope$output$dl_png, "raw", 1e6), shot)
+      scope$setInputs(summarize_table_block_action = list(
+        action = "config", param = "sort_dir", value = "asc"
+      ))
+      session$flushReact()
+      # ... until the table changes: then the current table is painted.
+      expect_false(identical(readBin(scope$output$dl_png, "raw", 1e6), shot))
+    },
+    args = list(x = blk, data = list(data = function() dl_frame()))
+  )
 })

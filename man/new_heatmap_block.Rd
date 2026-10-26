@@ -47,8 +47,8 @@ it restores it as the script's \code{top_n} value.}
 \item{cell_numbers}{Show the count in each cell (default \code{TRUE}). Off,
 the matrix reads as a pure color heatmap.}
 
-\item{drill}{LEGACY. A row click always goes to the board's drill filter,
-when the board has one (see \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}).}
+\item{drill}{LEGACY. A row click goes to \code{ctrl_target}. A board saved
+with it set and an empty \code{ctrl_target} sends to \code{"auto"}.}
 
 \item{download}{Logical (default \code{FALSE}), exposed in the gear: the
 header row grows the shared download tool -- the matrix (row identity,
@@ -58,8 +58,17 @@ group, count columns) written as xlsx / html / pptx.}
 
 \item{max_height}{LEGACY. The matrix scrolls with its panel.}
 
-\item{ctrl_target, ctrl_table}{LEGACY. The target is found by the board,
-see \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}.}
+\item{ctrl_target}{Character(1), beta. Where a row click is sent: the block
+id of a value filter block on the same board, or \code{"auto"} for the
+board's drill filter (the one \code{blockr.dm::new_drill_filter_block()},
+else the one value filter block, see \code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). \code{NULL}
+(default) means \code{"auto"}; \code{""} sends nothing. The gear's "Send to
+filter" section writes it, as for the chart, table, tile and summarize
+table.}
+
+\item{ctrl_table}{Character(1), beta. Only with \code{ctrl_target}: the table
+in the target's dm the clicked row applies to. Empty for a value filter
+fed a plain data frame.}
 
 \item{title, subtitle, caption}{Text above and below the matrix, as in
 \code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a
