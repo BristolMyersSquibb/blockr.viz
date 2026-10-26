@@ -33,7 +33,6 @@ Imports:
     stats,
     tibble,
     tidyr,
-    tools,
     utils
 Suggests:
     base64enc,

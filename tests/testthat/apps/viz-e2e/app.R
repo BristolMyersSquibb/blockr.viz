@@ -8,7 +8,7 @@ viz_data <- data.frame(
   product = c("A", "B", "A", "B", "A", "A"),
   revenue = c(100, 50, 80, 40, 60, 30),
   profit  = c(10, 5, 8, 4, 6, 3),
-  growth  = c(0.12, -0.04, 0.20, -0.10, 0.08, 0.00), # deltas for the tile
+  growth  = c(0.12, -0.04, 0.20, -0.10, 0.08, 0.00),
   # Unique high-precision values: displayed rounded (digits = 2), so a drill
   # on this column only works if the click emits the RAW value (data-raw).
   ratio   = c(0.123456, 0.234567, 0.345678, 0.456789, 0.567891, 0.678912),
@@ -120,21 +120,15 @@ serve(
         value       = "count",
         func        = "sum"
       ),
-      # KPI tile matrix, click-to-filter drill on the group.
-      tile = new_tile_block(
-        value = "revenue",
-        group = "region",
-        drill = TRUE
-      ),
-      # Tile in table (matrix) layout with a delta-styled secondary: covers
-      # the cell-coloring render and a real matrix-row drill click.
-      tile_x = new_tile_block(
-        value     = "revenue",
-        group     = "region",
-        secondary = "growth",
-        style     = "delta",
-        layout    = "table",
-        drill     = TRUE
+      # The table block's cards look: one row of cards per region, a click
+      # on a row of cards drills on it.
+      cards = new_table_block(
+        layout = "groups", by = "region", look = "cards", drill = "region",
+        summaries = list(
+          list(type = "simple", func = "sum", col = "revenue", show = "bar",
+               name = "Revenue"),
+          list(type = "dist", col = "profit", style = "box", name = "Profit")
+        )
       ),
       # Numeric-column drill: the display rounds ratio to 2 digits, the
       # click must filter on the raw value (drill value fidelity).
@@ -154,12 +148,13 @@ serve(
         filter_column = "region",
         filter_values = list("North")
       ),
-      tile_restored = new_tile_block(
-        value         = "revenue",
-        group         = "region",
-        drill         = TRUE,
-        filter_column = "region",
-        filter_values = list("South")
+      cards_restored = new_table_block(
+        layout = "groups", by = "region", look = "cards", drill = "region",
+        summaries = list(
+          list(type = "simple", func = "sum", col = "revenue", show = "bar",
+               name = "Revenue")
+        ),
+        selection = list(column = "region", values = list("South"))
       ),
       chart_restored = new_chart_block(
         chart_type    = "bar",
@@ -191,11 +186,10 @@ serve(
       new_link("data", "chart_facet", "data"),
       new_link("data", "chart_box_split", "data"),
       new_link("many", "chart_many", "data"),
-      new_link("data", "tile", "data"),
-      new_link("data", "tile_x", "data"),
+      new_link("data", "cards", "data"),
       new_link("data", "table_num", "data"),
       new_link("data", "table_restored", "data"),
-      new_link("data", "tile_restored", "data"),
+      new_link("data", "cards_restored", "data"),
       new_link("data", "chart_restored", "data"),
       new_link("table", "table_ds", "data"),
       new_link("data", "summary", "data"),

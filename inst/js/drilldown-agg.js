@@ -32,7 +32,7 @@
  *     compares the numbers against the R engine).
  *
  * Exposed as Blockr.DrilldownAgg (and window.DrilldownAgg). Must load before
- * the chart scripts (chart/) / table.js / tile-block.js.
+ * the chart scripts (chart/) and table.js.
  */
 (() => {
   'use strict';

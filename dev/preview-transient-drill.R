@@ -132,13 +132,15 @@ serve(
         row = "USUBJID", col = "AEDECOD", color = "AETOXGR",
         drill = TRUE, ctrl_target = "vf",
         block_name = "AE heatmap (sends)"),
-      # Rank (summarize table) and tile: the fourth and fifth rendering paths.
+      # Rank (summarize table) and cards: the fourth and fifth rendering paths.
       rk = new_summarize_table_block(group = "AEDECOD", drill = "AEDECOD",
                                      ctrl_target = "vf",
                                      block_name = "AE terms (sends)"),
-      tk = new_tile_block(value = "AGE", group = "ARM", drill = TRUE,
-                          ctrl_target = "vf",
-                          block_name = "Arms (sends)"),
+      tk = new_table_block(layout = "groups", by = "ARM", look = "cards",
+                           summaries = list(list(type = "dist", col = "AGE",
+                                                 style = "box")),
+                           drill = "ARM", drill_target = "vf",
+                           block_name = "Arms (sends)"),
       vf = new_drill_filter_block(),
       cohort = new_table_block(block_name = "Cohort"),
       # A table whose data a drill never touches. It is here to answer one

@@ -16,7 +16,7 @@ viz_block_css_dep <- memoise0(function() {
 
 #' The shared drilldown JS — the aggregation vocabulary (drilldown-agg.js)
 #' and the gear-popover config engine (drilldown-config.js) consumed by the
-#' chart, table AND tile. ONE dependency with ONE version counter, so an
+#' chart and the table. ONE dependency with ONE version counter, so an
 #' engine edit is a single bump and a stale copy can never shadow a fresh
 #' one on a mixed dashboard (the former three-copies-in-three-deps setup
 #' required bumping chart-js, blockr-viz-table and tile-block in lockstep).

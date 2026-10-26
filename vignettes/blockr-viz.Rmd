@@ -28,7 +28,7 @@ Blocks come in two kinds.
   (`summarize`, `filter`, `pivot_wider`) from blockr.dplyr. Model fitting and
   `broom` adapters are in blockr.stats.
 - Noun blocks render: they take a data frame and draw it (`chart`, `table`,
-  `tile`, `gt`).
+  `gt`).
 
 Two rules follow. A verb-named block returns a data frame; a noun-named block
 draws. And a renderer only ever receives a rectangular data frame, tidy or wide.
@@ -46,7 +46,7 @@ right, and a renderer receives a rectangular data frame.
 | Reshape | tidy to a wide display grid | wide df | dplyr `pivot_wider` |
 | Fit | fit a statistical model | model object | `model` |
 | Adapt | model to tidy df | tidy df | `broom` (tidy, glance, augment) |
-| Render | df to pixels | UI | `table`, `chart`, `tile`, `gt` |
+| Render | df to pixels | UI | `table`, `chart`, `gt` |
 
 Example pipelines:
 
@@ -69,9 +69,9 @@ static renderer for print or report output.
 |---|---|---|
 | table | `new_table_block()` | `new_gt_table_block()` |
 | chart | `new_chart_block()` (ECharts) | `ggplot` (separate package) |
-| number / spark / ring | `new_tile_block()` | — |
+| KPI cards | `new_table_block(look = "cards")` | the cards, as html or a slide |
 
-Dashboards use `table`, `chart`, and `tile`; print output uses `gt`. blockr.viz
+Dashboards use `table` and `chart`; print output uses `gt`. blockr.viz
 provides the interactive renderers and a convention-aware `gt` adapter; the
 `ggplot` static renderer lives with its own package.
 

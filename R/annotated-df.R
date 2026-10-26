@@ -177,7 +177,7 @@ reject_long_form <- function(data) {
 #' @param ... Passed on to [as_annotated_df()].
 #'
 #' @return A data frame without the reserved annotation columns.
-#' @seealso [as_annotated_df()], [new_chart_block()], [new_tile_block()]
+#' @seealso [as_annotated_df()], [new_chart_block()], [new_table_block()]
 #' @export
 as_plain_df <- function(x, ...) {
   x <- as_annotated_df(x, ...)

@@ -1,4 +1,4 @@
-# Differentiated empty / error states across the table and tile renderers
+# Differentiated empty / error states of the table renderer
 # (chart parity: the chart already distinguishes "no data", "mapped column not
 # in data" and "pick a role" -- these pin the same three states server-side).
 
@@ -55,29 +55,4 @@ test_that("structured table: no data columns says so", {
   d <- data.frame(.label = c("Age", "Sex"), stringsAsFactors = FALSE)
   h <- render(drilldown_table(d))
   expect_match(h, "No value columns to display")
-})
-
-# --- tile --------------------------------------------------------------
-
-test_that("tile: unconfigured value prompts a gear pick", {
-  h <- render(blockr.viz:::tile_html(iris, value = character()))
-  expect_match(h, "Pick a Value column in the gear")
-})
-
-test_that("tile: value column renamed upstream names it + hint", {
-  h <- render(blockr.viz:::tile_html(iris, value = "gone"))
-  expect_match(h, "Mapped column not in data: Value = \"gone\"")
-  expect_match(h, "re-pick it in the gear")
-})
-
-test_that("tile: 0 rows with a valid mapping says no rows", {
-  h <- render(blockr.viz:::tile_html(iris[0, ], value = "Sepal.Length"))
-  expect_match(h, "No rows to display")
-  expect_no_match(h, "re-pick it in the gear")
-})
-
-test_that("tile: valid mapping + rows renders cards, no empty state", {
-  h <- render(blockr.viz:::tile_html(head(iris), value = "Sepal.Length"))
-  expect_no_match(h, "is-empty")
-  expect_match(h, "tk-card")
 })

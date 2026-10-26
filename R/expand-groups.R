@@ -295,30 +295,3 @@ dd_group_filters_members <- function(r_filters, r_data,
     cur$members
   }
 }
-
-# The same for a block whose click filter is one column and its values (the
-# table and tile blocks). Returns a function `(col, vals)` giving the member
-# vector to filter on, or NULL when the click needs no translation.
-dd_group_filter_members <- function(r_column, r_values, r_data,
-                                    r_active = function() TRUE) {
-  as_filters <- function(col, vals) {
-    col <- as.character(unlist(col))
-    vals <- as.character(unlist(vals))
-    if (length(col) != 1L || !length(vals)) {
-      return(NULL)
-    }
-    stats::setNames(list(vals), col)
-  }
-  members <- dd_group_filters_members(
-    function() as_filters(r_column(), r_values()),
-    r_data,
-    r_active
-  )
-  function(col, vals) {
-    f <- as_filters(col, vals)
-    if (is.null(f)) {
-      return(NULL)
-    }
-    members(f)[[names(f)]]
-  }
-}

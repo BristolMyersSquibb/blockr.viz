@@ -7,18 +7,20 @@
 \method{blockr_deser}{tile_block}(x, data, ...)
 }
 \arguments{
-\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_ser]{blockr.core::blockr_deser()}}.}
+\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
-Restores boards saved before the tile gained in-block aggregation, and
-before the drill-filter state took the shared transport names. The
-grouping column was \code{by} (now \code{group}, the dplyr::group_by column shared with
-the table), and per-measure display overrides rode on \code{measures} (dropped --
-multi-measure tiles are now homogeneous). The click-filter state was
-\code{filter_col} / \code{filter_value} (now \code{filter_column} / \code{filter_values}, the
-names the chart and table share; the old scalar value coerces to the
-plural list shape). Rename \code{by} -> \code{group}, drop \code{measures}, rename the
-filter fields; current payloads pass straight through.
+The tile block is gone: a tile is a table block in the cards look
+(\code{new_table_block(look = "cards")}). A board saved with a tile restores as
+a table block. A tile that aggregated in place (\code{summaries}, with or
+without a \code{group}) becomes the groups layout in the cards look, one card
+per summary and one row of cards per group (one row without a group); its
+drill and click state carry over. Any other tile read a precomputed frame:
+a wide one (several \code{value} columns, no \code{name}) becomes the records layout
+in the cards look, one card per column; the long tile frame (\code{name} /
+\code{value} / \code{secondary}) becomes a plain records table. Settings the table
+has no counterpart for (\code{format}, \code{unit}, \code{secondary}, \code{style}, ...) are
+dropped with a warning. The board saves as a table block from then on.
 }
 \details{
 Drop this method when backwards compatibility is no longer needed.

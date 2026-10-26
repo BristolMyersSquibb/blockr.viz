@@ -1,8 +1,8 @@
 # The unified input contract across the renderer blocks (chart / table /
-# tile / gt): ONE definition of "acceptable input" (a data frame or an
+# gt): ONE definition of "acceptable input" (a data frame or an
 # object with a real as_annotated_df() method) behind every block's
 # dat_valid, and as_plain_df() -- coerce + drop the reserved annotation
-# columns -- behind the chart / tile, whose renderers chart a structured
+# columns -- behind the chart, whose renderer chart a structured
 # frame's DATA columns. Plain-data-frame inputs keep their exact
 # pre-contract emitted expr (byte-identical), asserted by goldens below.
 
@@ -85,8 +85,7 @@ test_that("as_plain_df drops the reserved annotation columns only", {
 test_that("every renderer block's dat_valid enforces the shared contract", {
   blocks <- list(
     chart = new_chart_block(),
-    table = new_table_block(),
-    tile  = new_tile_block()
+    table = new_table_block()
   )
   # gt is a Suggests; the renderer only exists where it is installed.
   if (requireNamespace("gt", quietly = TRUE)) {
@@ -194,43 +193,5 @@ test_that("chart mapped to a coercion-dropped column still emits a valid expr", 
                  fixed = TRUE)
     out <- eval_block_expr(ex, obj)
     expect_s3_class(out, "data.frame")
-  })
-})
-
-# --- tile: same two behaviors ----------------------------------------------
-
-test_that("tile expr is byte-identical for plain data frames", {
-  df <- data.frame(region = c("A", "B"), revenue = c(1, 2),
-                   stringsAsFactors = FALSE)
-  blk <- new_tile_block(value = "revenue")
-
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
-    expect_identical(
-      deparse(session$returned$expr()),
-      "dplyr::filter(.(data), TRUE)"
-    )
-    expect_equal(eval_block_expr(session$returned$expr(), df), df)
-
-    session$setInputs(tile_block_action = list(
-      action = "filter", column = "region", values = list("A")
-    ))
-    expect_identical(
-      deparse(session$returned$expr()),
-      "dplyr::filter(.(data), .data[[\"region\"]] == \"A\")"
-    )
-  })
-})
-
-test_that("tile expr coerces a table-producing input to the plain df", {
-  blk <- new_tile_block(value = "n")
-  obj <- new_contract_composed(ann_df)
-
-  testServer(blk$expr_server, args = list(data = reactive(obj)), {
-    ex <- session$returned$expr()
-    expect_match(paste(deparse(ex), collapse = " "),
-                 "blockr.viz::as_plain_df", fixed = TRUE)
-    out <- eval_block_expr(ex, obj)
-    expect_s3_class(out, "data.frame")
-    expect_identical(names(out), c(".keepme", "grp", "n"))
   })
 })

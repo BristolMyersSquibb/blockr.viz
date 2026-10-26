@@ -1,6 +1,6 @@
 # Settings-band + checkbox pilot demo (design-system: blockr.ui/dev/
 # gear-panel-proposals.html variant B + boolean-controls-proposals.html).
-# One plain board with the four blockr.viz blocks: chart, table, tile,
+# One plain board with the four blockr.viz blocks: chart, table (also as cards),
 # summary table. Click any gear: it expands an in-flow, full-width settings
 # band (standard controls; on/off options are checkboxes).
 #
@@ -23,13 +23,13 @@ board <- blockr.core::new_board(
     data    = blockr.core::new_dataset_block("penguins", package = "palmerpenguins"),
     chart   = new_chart_block(),
     table   = new_table_block(),
-    tile    = new_tile_block(),
+    cards   = new_table_block(layout = "groups", look = "cards"),
     summary = new_summary_table_block()
   ),
   links = c(
     blockr.core::new_link("data", "chart", "data"),
     blockr.core::new_link("data", "table", "data"),
-    blockr.core::new_link("data", "tile", "data"),
+    blockr.core::new_link("data", "cards", "data"),
     blockr.core::new_link("data", "summary", "data")
   )
 )

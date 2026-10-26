@@ -12,7 +12,6 @@ drift_blocks <- function() {
   list(
     chart         = list(args = chart_arguments,         ctor = new_chart_block),
     table         = list(args = table_arguments,         ctor = new_table_block),
-    tile          = list(args = tile_arguments,          ctor = new_tile_block),
     gt_table      = list(args = gt_table_arguments,      ctor = new_gt_table_block)
   )
 }
@@ -41,14 +40,6 @@ registry_allowlist <- list(
     # escape hatch the assistant should not reach for where a summary would
     # do.
     "script", "script_values"
-  ),
-  tile = c(
-    # Runtime filter transport (see the table's filter_* above).
-    "filter_column", "filter_values",
-    # LEGACY, ctor-only for saved-board restore: `overline` lost its gear
-    # control (duplicated the Name slot); `good_when` is ignored (polarity
-    # is forced to "up"). Neither may be advertised to the AI.
-    "overline", "good_when"
   ),
   gt_table = character()
 )
