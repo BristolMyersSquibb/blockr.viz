@@ -163,7 +163,7 @@ table_legacy_args <- function(args, from = NULL) {
       out$look <- "compact"
     }
     # `digits` is the number format now.
-    if (!is.null(get("digits"))) out$format <- get("digits")
+    if (!is.null(get("digits"))) out$format <- table_digits_format(get("digits"))
     if (!is.null(get("value")) && is.null(out[["columns"]])) {
       out$columns <- get("value")
     }

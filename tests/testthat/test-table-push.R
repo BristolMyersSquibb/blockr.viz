@@ -49,8 +49,8 @@ test_that("payload and dt_table_tag agree on displays and cell markup", {
     val = c(1.25, 2),
     stringsAsFactors = FALSE
   )
-  p   <- dt_build_payload(df, label_col = "grp", digits = 2L)
-  tag <- dt_table_tag(df, label_col = "grp", digits = 2L)
+  p   <- dt_build_payload(df, label_col = "grp")
+  tag <- dt_table_tag(df, label_col = "grp")
   html <- as.character(tag)
 
   # Every payload display string appears verbatim in the rendered cells.

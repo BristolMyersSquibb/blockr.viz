@@ -352,6 +352,13 @@ table_missing_levels <- function(data, cols) {
 # 3.4M, 5.6B), "percent" (a fraction x100 with "%") or a whole number of
 # decimals, as an integer from 0 to 6. A number outside 0 to 6 is clamped
 # (an old `digits = 8` reads as 6); anything else reads as "number".
+# An old `digits = d` ("up to d decimals") as a format: 2, the old default,
+# is "number"; any other number is that many decimals, now printed exactly.
+table_digits_format <- function(digits) {
+  f <- table_format_state(digits)
+  if (identical(f, 2L)) "number" else f
+}
+
 table_format_state <- function(format) {
   f <- unlist(format, use.names = FALSE)
   if (!length(f) || is.na(f[[1L]])) return("number")

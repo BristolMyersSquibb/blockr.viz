@@ -246,9 +246,11 @@ table_records_server <- function(id, data,
         } else if (identical(p, "summaries")) {
           # JS sends the whole summaries list as a JSON string on any edit.
           upd(r_summaries, dd_parse_summaries(v))
-        } else if (p %in% c("format", "digits")) {
-          # "digits" is the gear's old key for a number of decimals.
+        } else if (identical(p, "format")) {
           upd(r_digits, table_format_state(v))
+        } else if (identical(p, "digits")) {
+          # The gear's old key for a number of decimals.
+          upd(r_digits, table_digits_format(v))
         } else if (identical(p, "unit")) {
           u <- as.character(unlist(v))
           upd(r_unit, if (length(u) && !is.na(u[[1L]])) trimws(u[[1L]]) else "")

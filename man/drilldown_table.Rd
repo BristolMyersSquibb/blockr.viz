@@ -11,7 +11,7 @@ drilldown_table(
   color = NULL,
   drill = NULL,
   elem_id = NULL,
-  digits = 2L,
+  digits = "number",
   max_height = "600px",
   row_hex = NULL,
   row_color = NULL,
@@ -36,7 +36,9 @@ row emits a categorical filter on that column's value.}
 \item{elem_id}{Shiny namespaced id used to build the \verb{_action}
 input name. Required for \code{drill} to do anything.}
 
-\item{digits}{Rounding for numeric display. Default \code{2}.}
+\item{digits}{Number format of numeric cells, as \code{format} on
+\code{\link[=new_table_block]{new_table_block()}}: \code{"number"} (default), \code{"compact"}, \code{"percent"}
+or a number of decimals, printed exactly.}
 
 \item{max_height}{CSS max-height of the scroll container.}
 

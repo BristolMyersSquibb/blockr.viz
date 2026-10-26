@@ -148,7 +148,7 @@ test_that("the records model draws each column as a plain number", {
   expect_identical(m$label, c("P", "X"))
   expect_identical(vapply(m$cols, `[[`, "", "label"),
                    c("N", "Change", "Note"))
-  expect_identical(m$cols[[1L]]$main, c("1,200", "96"))
+  expect_identical(m$cols[[1L]]$main, c("1,200.0", "96.0"))
   expect_identical(m$cols[[2L]]$main, c("−1.2", "0.5"))
   expect_true(m$cols[[3L]]$text)
   expect_identical(m$cols[[3L]]$main, c("a", ""))

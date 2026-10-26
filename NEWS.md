@@ -11,6 +11,11 @@
   the records layout's cells, cards and downloads; the gear's "Numbers"
   select and "Unit" field set them. Excel keeps the values as numbers and
   shows them in the same format.
+* A fixed number of decimals prints exactly that many (`format = 2` gives
+  4.30), so a column lines up; Excel formats every numeric column with it.
+  `"number"` prints up to two decimals, and a value that would round to 0
+  keeps two significant digits (0.0034). An old `digits = 2`, the old
+  default, reads as `"number"`.
 * A click on the "(Missing)" row of a table with `missing = "level"` gives
   the rows whose value is missing, in every layout. Before, it gave none.
   `summary_table()` and `table_nest()` take `missing`: the variables layout

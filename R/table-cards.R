@@ -269,7 +269,7 @@ cards_row_hex <- function(rows, prep, data, scale_map) {
 #' @param row_hex Per-row colour strip, or `NULL`.
 #' @noRd
 table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
-                                digits = 2L, unit = NULL, row_hex = NULL) {
+                                digits = "number", unit = NULL, row_hex = NULL) {
   unit <- chr_state(trimws(as.character(unlist(unit))))
   if (is.null(label_col) || !label_col %in% names(data)) {
     label_col <- names(data)[1L]

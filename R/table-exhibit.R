@@ -190,7 +190,9 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
                           shadings = list(), format = "number", unit = NULL,
                           title = NULL, subtitle = NULL, caption = NULL,
                           digits = NULL) {
-  if (!is.null(digits) && missing(format)) format <- digits
+  if (!is.null(digits) && missing(format)) {
+    format <- table_digits_format(digits)
+  }
   data <- as_annotated_df(data)
   auto <- input_display_attrs(data)
   out <- dt_exhibit_frame(data, rowname, value,

@@ -30,14 +30,14 @@ table.}
 
 \item{sheet}{Worksheet name.}
 
-\item{digits}{Optional number of decimals to SHOW. Numeric data columns
-that hold fractions get the cell number format \code{"0.00"} (for
-\code{digits = 2}): the cell keeps the full value, so Excel computes on it,
-and displays it rounded. Whole-number columns keep the general format.
-\code{NULL} (default) writes every number in the general format. The table
-block passes its own \code{format} here, so \code{"number"} (two decimals),
-\code{"compact"} (1.2K, 3.4M) and \code{"percent"} (12.3\%) are taken too; those
-two format every numeric column.}
+\item{digits}{Optional number format, the table block's \code{format}. A number
+of decimals gives every numeric data column that cell number format
+(\code{"0.00"} for \code{digits = 2}, so 3 shows as 3.00): the cell keeps the full
+value, so Excel computes on it, and displays it rounded. \code{"number"}
+shows two decimals on columns that hold fractions and leaves
+whole-number columns in the general format. \code{"compact"} (1.2K, 3.4M) and
+\code{"percent"} (12.3\%) format every numeric column. \code{NULL} (default) writes
+every number in the general format.}
 }
 \value{
 \code{file}, invisibly.

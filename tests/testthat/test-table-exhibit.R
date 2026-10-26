@@ -153,19 +153,24 @@ test_that("exports format numbers like the screen (#37)", {
   attr(d$times_more, "label") <- "Times more"
   out <- dt_format_digits(d, 2L)
   expect_identical(as.character(out$times_more), "3.81")
+  # A fixed number of decimals prints exactly that many, so a column lines up.
+  expect_identical(out$ci_low, "2.70")
+  expect_identical(out$n, "12.00")
+  # "number" drops trailing zeros.
+  out <- dt_format_digits(d, "number")
   expect_identical(out$ci_low, "2.7")
   expect_identical(out$n, "12")
   expect_identical(attr(out$times_more, "label"), "Times more")
   # the screen's own formatter, cell for cell
   b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = 2L)
   expect_identical(b$cells[[1]]$disp, "3.81")
-  expect_identical(b$cells[[2]]$disp, "2.7")
+  expect_identical(b$cells[[2]]$disp, "2.70")
 
   # NA stays missing, a numeric stub is left alone, NULL is a no-op
   d2 <- data.frame(id = c(1.234, 2), v = c(NA, 1.005))
   out2 <- dt_format_digits(d2, 1L)
   expect_identical(out2$id, d2$id)
-  expect_identical(out2$v, c(NA, "1"))
+  expect_identical(out2$v, c(NA, "1.0"))
   expect_identical(dt_format_digits(d2, NULL), d2)
 })
 
@@ -179,7 +184,12 @@ test_that("Excel keeps the full value under a rounding number format (#37)", {
   fmts <- xlsx_num_formats(f)
   expect_identical(fmts[["2"]], "0.00")
   expect_identical(fmts[["3"]], "0.00")
-  # a count column keeps the general format (3, not 3.00)
+  # fixed decimals reach a count column too (3.00), as on screen
+  expect_identical(fmts[["4"]], "0.00")
+  # "number" leaves a count column in the general format (3, not 3.00)
+  write_annotated_xlsx(coef_frame(), f, digits = "number")
+  fmts <- xlsx_num_formats(f)
+  expect_identical(fmts[["3"]], "0.00")
   expect_null(fmts[["4"]])
 
   # the format survives the paint stacked over it
@@ -310,4 +320,28 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   fmts <- vapply(wb$styleObjects, function(s) s$style$numFmt$formatCode %||% "",
                  character(1L))
   expect_true("0.0%" %in% fmts)
+})
+
+test_that("fixed decimals print exactly, number keeps small values", {
+  expect_identical(dt_format_num(c(4.3, 3), 2L), c("4.30", "3.00"))
+  expect_identical(dt_format_num(c(4.3587, 0.0034, -0.00012, 0), "number"),
+                   c("4.36", "0.0034", "-0.00012", "0"))
+  expect_identical(dt_format_num(0.0034, "compact"), "0.0034")
+  # An old `digits = 2` ("up to two decimals") reads as "number".
+  expect_identical(table_digits_format(2L), "number")
+  expect_identical(table_digits_format(1L), 1L)
+  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
+  expect_identical(p$format, "number")
+})
+
+test_that("fixed decimals print exactly, number keeps small values", {
+  expect_identical(dt_format_num(c(4.3, 3), 2L), c("4.30", "3.00"))
+  expect_identical(dt_format_num(c(4.3587, 0.0034, -0.00012, 0), "number"),
+                   c("4.36", "0.0034", "-0.00012", "0"))
+  expect_identical(dt_format_num(0.0034, "compact"), "0.0034")
+  # An old `digits = 2` ("up to two decimals") reads as "number".
+  expect_identical(table_digits_format(2L), "number")
+  expect_identical(table_digits_format(1L), 1L)
+  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
+  expect_identical(p$format, "number")
 })

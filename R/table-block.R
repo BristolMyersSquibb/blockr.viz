@@ -22,7 +22,9 @@
 #'   row emits a categorical filter on that column's value.
 #' @param elem_id Shiny namespaced id used to build the `_action`
 #'   input name. Required for `drill` to do anything.
-#' @param digits Rounding for numeric display. Default `2`.
+#' @param digits Number format of numeric cells, as `format` on
+#'   [new_table_block()]: `"number"` (default), `"compact"`, `"percent"`
+#'   or a number of decimals, printed exactly.
 #' @param max_height CSS max-height of the scroll container.
 #' @param row_hex,row_color Optional per-row colouring. `row_color` names a
 #'   column whose values drive a row background scale; `row_hex` supplies
@@ -62,7 +64,7 @@ drilldown_table <- function(data,
                             color = NULL,
                             drill = NULL,
                             elem_id = NULL,
-                            digits = 2L,
+                            digits = "number",
                             max_height = "600px",
                             row_hex = NULL,
                             row_color = NULL,
@@ -100,7 +102,7 @@ drilldown_table <- function(data,
 #' `dt_result` (chrome) / `dt_table` (this) output split.
 #' @noRd
 dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
-                         shadings = list(), drill = NULL, digits = 2L,
+                         shadings = list(), drill = NULL, digits = "number",
                          row_hex = NULL, color = NULL,
                          sortable = TRUE, collapsible = TRUE, search = TRUE,
                          download = FALSE, rotate_titles = FALSE,
