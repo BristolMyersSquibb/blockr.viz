@@ -494,14 +494,34 @@
       // { value, options: [{ value, label }], onPick(value), fields? }.
       // `fields` are roles the switch gates (the groups layout's `by`): they
       // follow it in the same section, each on a row of its own.
+      // `title` names the section; `hint` (a list of text parts, a part
+      // { strong } drawn bold) says what the chosen layout gives. Options
+      // with an `icon` draw as tiles: a drawing of the table, the name below.
       if (spec.layoutSwitch) {
         const ls = spec.layoutSwitch;
-        const sec = this._sectionEl('Rows are');
+        const sec = this._sectionEl(ls.title || 'Rows are');
         sec.classList.add('dd-section--layout');
         // The segmented control ignores a click on the selected segment.
         // ls.value is the layout when the tray was drawn and may be stale
         // by the time of the click, so it is no guard.
-        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        if (ls.options.every((/** @type {any} */ o) => o.icon)) {
+          this._buildTiles(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        } else {
+          this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        }
+        if (ls.hint && ls.hint.length) {
+          const h = document.createElement('div');
+          h.className = 'dd-layout-hint';
+          for (const part of ls.hint) {
+            if (typeof part === 'string') h.appendChild(document.createTextNode(part));
+            else {
+              const b = document.createElement('strong');
+              b.textContent = part.strong;
+              h.appendChild(b);
+            }
+          }
+          sec.appendChild(h);
+        }
         for (const key of (ls.fields || [])) this._renderRole(sec, key);
       }
 
@@ -2918,6 +2938,61 @@
       parent.appendChild(wrap);
     }
 
+    // A row of tiles, one per option: the option's drawing (`icon`, an SVG
+    // string the host owns) over its name. Like the segmented control, a
+    // click on the chosen tile does nothing.
+    /**
+     * @param {HTMLElement} parent
+     * @param {Array<{ value: string, label: string, icon: string }>} options
+     * @param {string} current @param {(v: string) => void} onPick
+     */
+    _buildTiles(parent, options, current, onPick) {
+      const row = document.createElement('div');
+      row.className = 'dd-layout-tiles';
+      row.setAttribute('role', 'radiogroup');
+      /** @type {HTMLButtonElement[]} */
+      const btns = [];
+      const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
+        b.classList.toggle('dd-layout-tile--on', j === i);
+        b.setAttribute('aria-checked', j === i ? 'true' : 'false');
+        b.tabIndex = j === i ? 0 : -1;
+      });
+      options.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dd-layout-tile';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('data-value', o.value);
+        const face = document.createElement('span');
+        face.className = 'dd-layout-tile-face';
+        face.innerHTML = o.icon;
+        const name = document.createElement('span');
+        name.className = 'dd-layout-tile-name';
+        name.textContent = o.label;
+        b.append(face, name);
+        b.addEventListener('click', () => {
+          if (b.classList.contains('dd-layout-tile--on')) return;
+          select(i);
+          onPick(o.value);
+        });
+        b.addEventListener('keydown', (e) => {
+          const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
+            : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+          if (!step) return;
+          e.preventDefault();
+          const next = btns[(i + step + btns.length) % btns.length];
+          next.focus();
+          next.click();
+        });
+        btns.push(b);
+        row.appendChild(b);
+      });
+      const cur = options.findIndex((o) => o.value === current);
+      select(cur < 0 ? 0 : cur);
+      parent.appendChild(row);
+      return row;
+    }
+
     // A fixed choice of two or three short values, all in view: blockr.ui's
     // segmented control, at the field height.
     /**
@@ -3361,6 +3436,18 @@
   const ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
+  // The table block's three layouts, for its two gears (table.js for
+  // records and variables, summarize-table.js for groups). Each drawing is
+  // a sketch of the table the layout gives, in currentColor, without a
+  // frame: the tile is the frame.
+  ns.TABLE_LAYOUTS = [
+    { value: 'records', label: 'List',
+      icon: '<svg viewBox="0 0 60 40" fill="none" aria-hidden="true"><rect x="0" y="0" width="60" height="8" rx="2" fill="currentColor" fill-opacity=".13"/><rect x="5" y="3" width="8" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="19" y="3" width="6" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="33" y="3" width="9" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="47" y="3" width="7" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><path d="M0.5 8.5H60" stroke="currentColor" stroke-opacity="0.35"/><path d="M0.5 16H60" stroke="currentColor" stroke-opacity="0.18"/><path d="M0.5 23.5H60" stroke="currentColor" stroke-opacity="0.18"/><path d="M0.5 31H60" stroke="currentColor" stroke-opacity="0.18"/><rect x="5" y="11.25" width="9" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="19" y="11.25" width="5" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="33" y="11.25" width="7" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="47" y="11.25" width="6" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="5" y="18.75" width="8" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="19" y="18.75" width="6" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="33" y="18.75" width="6" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="47" y="18.75" width="8" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="5" y="26.25" width="10" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="19" y="26.25" width="4" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="33" y="26.25" width="7" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="47" y="26.25" width="5" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="5" y="33.75" width="7" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="19" y="33.75" width="6" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="33" y="33.75" width="8" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/><rect x="47" y="33.75" width="6" height="2" rx="0.8" fill="currentColor" fill-opacity="0.65"/></svg>' },
+    { value: 'groups', label: 'Per group',
+      icon: '<svg viewBox="0 0 60 40" fill="none" aria-hidden="true"><rect x="0" y="0" width="60" height="8" rx="2" fill="currentColor" fill-opacity=".13"/><rect x="5" y="3" width="9" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="21" y="3" width="10" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="43" y="3" width="10" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><path d="M0.5 8.5H60" stroke="currentColor" stroke-opacity="0.35"/><path d="M0.5 19H60" stroke="currentColor" stroke-opacity="0.18"/><path d="M0.5 29.5H60" stroke="currentColor" stroke-opacity="0.18"/><rect x="5" y="12.65" width="10" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.75"/><rect x="21" y="11.25" width="18" height="5" rx="1" fill="currentColor" fill-opacity="0.8"/><path d="M43 13.75H46.5M52 13.75H56" stroke="currentColor" stroke-opacity=".8"/><rect x="46.5" y="11" width="5.5" height="5.5" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-opacity=".9"/><path d="M49 11V16.5" stroke="currentColor"/><rect x="5" y="23.15" width="13" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.75"/><rect x="21" y="21.75" width="8" height="5" rx="1" fill="currentColor" fill-opacity="0.8"/><path d="M44 24.25H47M51.5 24.25H55" stroke="currentColor" stroke-opacity=".8"/><rect x="47" y="21.5" width="4.5" height="5.5" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-opacity=".9"/><path d="M49.5 21.5V27" stroke="currentColor"/><rect x="5" y="33.65" width="9" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.75"/><rect x="21" y="32.25" width="13" height="5" rx="1" fill="currentColor" fill-opacity="0.8"/><path d="M46 34.75H49M54.5 34.75H57" stroke="currentColor" stroke-opacity=".8"/><rect x="49" y="32" width="5.5" height="5.5" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-opacity=".9"/><path d="M52 32V37.5" stroke="currentColor"/></svg>' },
+    { value: 'variables', label: 'Per variable',
+      icon: '<svg viewBox="0 0 60 40" fill="none" aria-hidden="true"><rect x="0" y="0" width="60" height="8" rx="2" fill="currentColor" fill-opacity=".13"/><rect x="30" y="3" width="6" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="41" y="3" width="6" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><rect x="52" y="3" width="6" height="2.2" rx="0.8" fill="currentColor" fill-opacity="0.85"/><path d="M0.5 8.5H60" stroke="currentColor" stroke-opacity="0.35"/><rect x="5" y="11" width="14" height="2.4" rx="0.8" fill="currentColor" fill-opacity="0.9"/><rect x="8" y="15.6" width="10" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.55"/><rect x="30" y="15.6" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="41" y="15.6" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="52" y="15.6" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="8" y="19.4" width="12" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.55"/><rect x="30" y="19.4" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="41" y="19.4" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="52" y="19.4" width="6" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><path d="M0.5 23.5H60" stroke="currentColor" stroke-opacity="0.18"/><rect x="5" y="26.2" width="9" height="2.4" rx="0.8" fill="currentColor" fill-opacity="0.9"/><rect x="8" y="30.6" width="7" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.55"/><rect x="31" y="30.6" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="42" y="30.6" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="53" y="30.6" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="8" y="34.4" width="10" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.55"/><rect x="31" y="34.4" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="42" y="34.4" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/><rect x="53" y="34.4" width="5" height="1.8" rx="0.8" fill="currentColor" fill-opacity="0.7"/></svg>' }
+  ];
   ns.DrilldownConfig = DrilldownConfig;
   ns.SentenceSlots = SentenceSlots;
   window.DrilldownConfig = DrilldownConfig;

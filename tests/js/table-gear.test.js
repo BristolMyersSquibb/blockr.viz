@@ -47,11 +47,11 @@ const segment = (band, key, label) => Array.from(
   band.querySelectorAll('.dd-role-' + key + ' [role=radio]'))
   .find((b) => b.textContent.trim() === label);
 
-test('the records gear reads Rows are, Presentation, Color, then the folds', async () => {
+test('the records gear reads Table, Presentation, Color, then the folds', async () => {
   const t = open('flat');
   const band = t.band();
   const titles = titlesOf(band);
-  assert.deepEqual(titles.slice(0, 3), ['Rows are', 'Presentation', 'Color']);
+  assert.deepEqual(titles.slice(0, 3), ['Table', 'Presentation', 'Color']);
   ['Titles', 'Drill-down', 'Prepare script'].forEach((w, k) => {
     assert.ok(titles[3 + k].startsWith(w), titles[3 + k]);
   });

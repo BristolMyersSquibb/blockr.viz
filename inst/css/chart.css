@@ -482,6 +482,8 @@
 .blockr-settings.dd-popover .dd-section > .dd-add-wrap,
 .blockr-settings.dd-popover .dd-section > .dd-script-row,
 .blockr-settings.dd-popover .dd-section > .dd-drill-hint,
+.blockr-settings.dd-popover .dd-section > .dd-layout-tiles,
+.blockr-settings.dd-popover .dd-section > .dd-layout-hint,
 .blockr-settings.dd-popover .dd-section--titles > .dd-form-row,
 .blockr-settings.dd-popover .dd-section--custom > * {
   grid-column: 1 / -1;
@@ -1503,3 +1505,62 @@
 .blockr-busy .blockr-table-wrapper {
   opacity: 0.45;
 }
+
+/* The table block's layout switch: a tile per layout, the drawing of the
+   table it gives over its name (drilldown-config.js _buildTiles). The tile
+   is the drawing's frame; tiles stay at most 104px wide in a wide panel. */
+.dd-layout-tiles {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 104px));
+  gap: 8px;
+}
+.dd-layout-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  text-align: center;
+  cursor: pointer;
+}
+.dd-layout-tile-face {
+  display: block;
+  padding: 9px 10px;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-surface, #fff);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dd-layout-tile-face svg { display: block; width: 100%; height: auto; }
+.dd-layout-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-layout-tile:hover { color: var(--blockr-color-text-default, #111827); }
+.dd-layout-tile:hover .dd-layout-tile-face { border-color: var(--blockr-color-border-strong, #d1d5db); }
+.dd-layout-tile--on,
+.dd-layout-tile--on:hover {
+  color: var(--blockr-color-text-accent, #2563eb);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+.dd-layout-tile--on .dd-layout-tile-face,
+.dd-layout-tile--on:hover .dd-layout-tile-face {
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: inset 0 0 0 1px var(--blockr-color-border-accent, #2563eb);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+}
+.dd-layout-tile:focus-visible { outline: none; }
+.dd-layout-tile:focus-visible .dd-layout-tile-face {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+}
+.dd-layout-hint {
+  grid-column: 1 / -1;
+  margin: -8px 0 0;          /* 16px row gap - 8 = 8px under the tiles */
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }

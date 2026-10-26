@@ -1460,7 +1460,7 @@
     // row over all input rows, so the placeholder says that. A change
     // re-renders the gear: sorting, search and drill show only with a
     // grouping.
-    by:     { label: "Group by", kind: "columns", colType: "cat",
+    by:     { label: "One row per", kind: "columns", colType: "cat",
               placeholder: "One Total row", rerender: true },
     // Words of the sentence only, never rows of the gear: a title can name
     // the outer grouping column and the first column's colour and facet
@@ -2571,7 +2571,7 @@
       requiredMap: [],
       // Colour and facet are the COLUMN's mappings, set in the column list.
       // Only the grouping is the whole table's, optional. Under the layout
-      // switch it moves into the "Rows are" section (withLayoutSwitch()).
+      // switch it moves into the Table section (withLayoutSwitch()).
       optionalMap: [],
       mapping: ["by"],
       aggTitle: null,
@@ -2653,23 +2653,30 @@
     return { cfg: cfg, cols: cols };
   }
 
-  // The table block's "Rows are" switch (R/table-block.R): records or
+  // The table block's layout switch (R/table-block.R): records or
   // groups. The block's server reads it off this engine's action input.
   // The grouping is what the switch decides a row is, so it sits under the
   // switch, in the same section, rather than in a Mapping section of its
   // own (design system: a mode selector gates the fields below it).
   // The value is the block's layout as the server last pushed it
   // (table.js, window.blockrTableLayouts), not this gear's last click.
-  function withLayoutSwitch(spec, elemId) {
+  function withLayoutSwitch(spec, elemId, cfg) {
     var pushed = window.blockrTableLayouts && window.blockrTableLayouts[elemId];
+    var by = (cfg && cfg.by) || [];
+    var who = { strong: [].concat(by).filter(Boolean).join(" and ") };
     spec.layoutSwitch = {
+      title: "Table",
       fields: spec.mapping || [],
       value: pushed || "groups",
-      options: [
-        { value: "records", label: "Records" },
-        { value: "groups", label: "Groups" },
-        { value: "variables", label: "Variables" }
+      // List, Per group, Per variable, with their drawings
+      // (drilldown-config.js).
+      options: (window.Blockr && Blockr.TABLE_LAYOUTS) || [
+        { value: "records", label: "List" },
+        { value: "groups", label: "Per group" },
+        { value: "variables", label: "Per variable" }
       ],
+      hint: who.strong ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."],
       onPick: function (v) { sendConfig(elemId, "layout", v); }
     };
     spec.mapping = [];
@@ -2756,10 +2763,10 @@
       context: function () { return "all"; },
       currentType: function () { return null; },
       sections: function () {
-        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
       },
       sectionsForFamily: function () {
-        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
       },
       secondary: new Set(),
       // Outside the table block (no layout switch) the grouping keeps the

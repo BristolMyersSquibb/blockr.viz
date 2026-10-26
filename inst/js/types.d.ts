@@ -225,6 +225,8 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** The table block's layouts: value, name and drawing (drilldown-config.js). */
+  TABLE_LAYOUTS?: Array<{ value: string; label: string; icon: string }>;
   /** The block's sentence painter (defined in this package). */
   SentenceSlots: typeof VizSentenceSlots;
   /** The gear tray behaviour (blockr.ui's blockr-ui.js). */

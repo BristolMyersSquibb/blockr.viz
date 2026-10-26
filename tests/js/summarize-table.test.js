@@ -358,10 +358,10 @@ test('without a grouping the table is one Total row with nothing to sort, search
   click(t.doc.querySelector('.blockr-gear-btn'));
   const band = t.band();
   const row = Array.from(band.querySelectorAll('.dd-form-row'))
-    .find((r) => /Group by/.test(r.textContent));
-  assert.ok(row, 'the gear has a Group by row');
+    .find((r) => /One row per/.test(r.textContent));
+  assert.ok(row, 'the gear has a One row per row');
   assert.equal(band.querySelectorAll('.dd-role-required-empty').length, 0,
-    'Group by is optional: not marked as missing');
+    'One row per is optional: not marked as missing');
   assert.equal(/\*/.test(row.textContent), false, 'no required asterisk');
   assert.equal(/Drill-down/.test(band.textContent), false, 'no drill section');
   assert.equal(/Header sorting/.test(band.textContent), false);
@@ -401,7 +401,7 @@ const lastSummaries = (t) => {
 // The table block's server pushes its layout to both engines (table.js,
 // "blockr-viz-table-layout"); the switch draws from the push, so a click on
 // any segment but the layout on screen sends it, however often it is clicked.
-test('the Rows are switch follows the pushed layout, and every click on another layout sends', async () => {
+test('the layout tiles follow the pushed layout, and every click on another layout sends', async () => {
   const t = open('three');
   const push = (layout) => t.win.__handlers['blockr-viz-table-layout'](
     { ids: ['x-records-drilldown_table_block', t.id], layout });
@@ -413,9 +413,9 @@ test('the Rows are switch follows the pushed layout, and every click on another 
 
   push('groups');
   openGear(t);
-  assert.deepEqual(selected(), ['Groups']);
+  assert.deepEqual(selected(), ['Per group']);
   // Groups -> Variables: the records engine takes over, this gear closes.
-  pick('Variables');
+  pick('Per variable');
   assert.deepEqual(sent(), ['variables']);
   push('variables');
   assert.equal(t.isOpen(), false, 'the groups gear closes');
@@ -423,32 +423,37 @@ test('the Rows are switch follows the pushed layout, and every click on another 
   t.band().classList.add('blockr-settings--open');
   push('groups');
   assert.equal(t.isOpen(), true);
-  assert.deepEqual(selected(), ['Groups']);
+  assert.deepEqual(selected(), ['Per group']);
   // The click before the switch went to Variables; one click on it sends.
-  pick('Variables');
+  pick('Per variable');
   assert.deepEqual(sent(), ['variables', 'variables']);
   push('variables');
   // A layout pushed while the gear is closed is what it opens on.
   push('records');
   openGear(t);
-  assert.deepEqual(selected(), ['Records']);
-  pick('Groups');
+  assert.deepEqual(selected(), ['List']);
+  pick('Per group');
   assert.deepEqual(sent(), ['variables', 'variables', 'groups']);
   await t.close();
 });
 
-test('the groups gear is Rows are with Group by, then Columns, then the rest', async () => {
+test('the groups gear is Table with One row per, then Columns, then the rest', async () => {
   const t = open('three');
   const band = openGear(t);
   const titles = titlesOf(band);
-  assert.deepEqual(titles.slice(0, 3), ['Rows are', 'Columns', 'Presentation']);
+  assert.deepEqual(titles.slice(0, 3), ['Table', 'Columns', 'Presentation']);
   // The folds print their state after the title ("Titles None").
   ['Titles', 'Drill-down', 'Prepare script'].forEach((w, k) => {
     assert.ok(titles[3 + k].startsWith(w), titles[3 + k]);
   });
   assert.equal(titles.includes('Mapping'), false, 'no Mapping section');
   const layout = band.querySelector('.dd-section--layout');
-  assert.ok(layout.querySelector('.dd-role-by'), 'Group by sits under the switch');
+  const tiles = Array.from(layout.querySelectorAll('.dd-layout-tile'));
+  assert.deepEqual(tiles.map((b) => b.textContent.trim()), ['List', 'Per group', 'Per variable']);
+  assert.ok(tiles.every((b) => b.querySelector('.dd-layout-tile-face svg')), 'each tile has its drawing');
+  assert.match(layout.querySelector('.dd-layout-hint').textContent,
+    /^One row (per .+|for all rows), each column a summary\.$/);
+  assert.ok(layout.querySelector('.dd-role-by'), 'One row per sits under the tiles');
   assert.equal(band.querySelectorAll('.dd-role-by').length, 1, 'one grouping');
   assert.equal(/Adding columns/.test(band.textContent), false, 'no mode hint');
   for (const gone of ['group', 'parent', 'func', 'value', 'id_var', 'fields', 'bar_mode', 'color', 'facet']) {

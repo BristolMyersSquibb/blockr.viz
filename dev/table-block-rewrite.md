@@ -213,7 +213,13 @@ variable rows. Each gets one label, the same in every layout:
 - Labels only: `by` and `sections` stay two arguments. Folding `sections`
   into `by`, with the layout placing each column, was considered and left
   out because it changes saved boards.
-- The "Rows are" switch keeps Records / Groups / Variables.
+- The layout switch is a section "Table" with three tiles, each a drawing
+  of the table it gives over its name: List (records), Per group (groups),
+  Per variable (variables). A line under the tiles says what the chosen
+  layout gives. The grouping is named for what it does there: "Nest by",
+  "One row per", "One column per". Tiles and drawings: `TABLE_LAYOUTS` and
+  `_buildTiles()` in `drilldown-config.js`; mockup in
+  `_scratch/rows-are/index.html` (monorepo).
 - Labels to change: `inst/js/drilldown-agg.js` (`Group`),
   `inst/js/summary-table-block.js` (`Split by`, `Group by`).
 - Decision page with mockups: `_scratch/table-grouping/index.html`.
