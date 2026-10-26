@@ -165,17 +165,17 @@
       this._varsWrap = varsWrap;
       this._setVarsAttention();
 
-      // Split by (max 2)
+      // Group by (max 2): one column per level
       const byWrap = document.createElement('div');
       byWrap.className = 'stb-field stb-field--full';
       const byLabel = document.createElement('label');
       byLabel.className = 'blockr-label';
-      byLabel.textContent = 'Split by';
+      byLabel.textContent = 'Group by';
       byWrap.appendChild(byLabel);
       this._selects.by = BSelect.multi(byWrap, {
         options: [],
         selected: [],
-        placeholder: 'Column dimension (up to 2)\u2026',
+        placeholder: 'One column per level (up to 2)\u2026',
         onChange: (selected) => {
           const sel = (selected || []).slice(0, 2);
           if ((selected || []).length > 2) {
@@ -423,13 +423,13 @@
 
       const label = document.createElement('span');
       label.className = 'blockr-label';
-      label.textContent = 'Group by';
+      label.textContent = 'Section by';
       label.style.display = 'block';
       label.style.marginBottom = '4px';
       wrap.appendChild(label);
 
       const hint = document.createElement('span');
-      hint.textContent = 'Outer row hierarchy above the summarized variables';
+      hint.textContent = 'Header rows above the summarized variables';
       hint.style.fontSize = '0.75rem';
       hint.style.color = '#9ca3af';
       hint.style.display = 'block';

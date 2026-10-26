@@ -197,6 +197,27 @@ list(
 | prepare step | `script`, `script_values` | | same | `script`, `values` |
 | text | `title`, `subtitle`, `caption` | `caption` | same | same |
 
+### Gear labels for grouping (decided 2026-10-26)
+
+`by` and `sections` are both group-by columns, as in dplyr's
+`summarize(.by = c(island, species))`. They differ only in where their levels
+go: `by` gives the rows in groups, the columns in variables and the
+collapsible row groups in records; `sections` gives header rows above the
+variable rows. Each gets one label, the same in every layout:
+
+| Argument | Label | Today |
+|---|---|---|
+| `by` | "Group by", with a hint in variables: one column per level | "Group" (records), "Group by" (groups), "Split by" (variables) |
+| `sections` | "Section by", next to the "Sections: Collapsible" toggle | "Group by" (variables) |
+
+- Labels only: `by` and `sections` stay two arguments. Folding `sections`
+  into `by`, with the layout placing each column, was considered and left
+  out because it changes saved boards.
+- The "Rows are" switch keeps Records / Groups / Variables.
+- Labels to change: `inst/js/drilldown-agg.js` (`Group`),
+  `inst/js/summary-table-block.js` (`Split by`, `Group by`).
+- Decision page with mockups: `_scratch/table-grouping/index.html`.
+
 ### Old boards
 
 As for the chart: the constructor has no deprecated formals. A
