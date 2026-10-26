@@ -51,6 +51,8 @@ table_groups_server <- function(id, data,
                                       look = "table",
                                       pct_of = "facet",
                                       missing = "level",
+                                      format = "number",
+                                      unit = "",
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
@@ -103,6 +105,11 @@ table_groups_server <- function(id, data,
     # with the variables layout.
     r_pct_of <- shared$pct_of %||% shiny::reactiveVal(pct_of %||% "facet")
     r_missing <- shared$missing %||% shiny::reactiveVal(missing %||% "level")
+    # How the number cells and value labels print, and their unit: shared
+    # with the records engine.
+    r_format <- shared$format %||%
+      shiny::reactiveVal(table_format_state(format))
+    r_unit <- shared$unit %||% shiny::reactiveVal(unit %||% "")
     r_bar_width <- shiny::reactiveVal(summarize_bar_width(bar_width))
     r_download <- shared$download %||% shiny::reactiveVal(isTRUE(download))
     r_title   <- shared$title %||% shiny::reactiveVal(title)
@@ -284,7 +291,8 @@ table_groups_server <- function(id, data,
           return()
         }
         if (!key %in% c("search", "sortable", "axis", "value_labels",
-                        "download", "look", "pct_of", "missing") &&
+                        "download", "look", "pct_of", "missing", "format",
+                        "unit") &&
               is.null(setters[[key]])) return()
         val <- act$value
         if (key %in% c("title", "subtitle", "caption")) {
@@ -328,6 +336,12 @@ table_groups_server <- function(id, data,
         } else if (identical(key, "missing")) {
           v <- as.character(unlist(val))[1L]
           if (isTRUE(v %in% c("drop", "level"))) r_missing(v)
+        } else if (identical(key, "format")) {
+          v <- table_format_state(val)
+          if (!identical(shiny::isolate(r_format()), v)) r_format(v)
+        } else if (identical(key, "unit")) {
+          u <- as.character(unlist(val))
+          r_unit(if (length(u) && !is.na(u[[1L]])) trimws(u[[1L]]) else "")
         } else if (identical(key, "top_n")) {
           n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
           setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
@@ -514,6 +528,8 @@ table_groups_server <- function(id, data,
           compact = identical(r_look(), "compact"), look = r_look(),
           download = r_download(), drill = r_drill(),
           pct_of = r_pct_of(), missing = r_missing(),
+          # A number of decimals travels as text, the gear's value.
+          format = as.character(r_format()), unit = r_unit(),
           ctrl_target = r_ctrl_target(),
           ctrl_choices = dd_ctrl_choices_list(r_ctrl_choices()),
           titles = c(
@@ -543,6 +559,7 @@ table_groups_server <- function(id, data,
         facet_layout = r_facet_layout(), sort_by = r_sort_by(),
         sort_dir = r_sort_dir(), top_n = r_top_n(),
         pct_of = r_pct_of(), missing = r_missing(),
+        format = r_format(), unit = r_unit(),
         scale_map = board_scale_map(),
         subject = dd_ctrl_subject(session)
       )
@@ -630,6 +647,7 @@ table_groups_server <- function(id, data,
           facet_layout = r_facet_layout(), sort_by = r_sort_by(),
           sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
           pct_of = r_pct_of(), missing = r_missing(),
+          format = r_format(), unit = r_unit(),
           value_labels = r_value_labels(),
           sortable = r_sortable(), bar_width = r_bar_width(),
           title = r_title(), subtitle = r_subtitle(),

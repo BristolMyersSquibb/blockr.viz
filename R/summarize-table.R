@@ -230,7 +230,8 @@ summarize_prepare <- function(data, summaries = list(), by = NULL,
                               facet_layout = "by_summary", sort_by = "value",
                               sort_dir = "desc", top_n = NULL,
                               scale_map = NULL, subject = NULL,
-                              pct_of = "facet", missing = "drop") {
+                              pct_of = "facet", missing = "drop",
+                              format = NULL, unit = NULL) {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
@@ -263,12 +264,41 @@ summarize_prepare <- function(data, summaries = list(), by = NULL,
   }
   data <- expand_role_groups(data, c(by, split_cols))
 
-  lane_prepare_summaries(
+  prep <- lane_prepare_summaries(
     data, by, summaries,
     facet_layout = summarize_chr1(facet_layout) %||% "by_summary",
     sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
     scale_map = scale_map, subject = subject, pct_of = pct_of
   )
+  summarize_number_format(prep, format, unit)
+}
+
+# The table's `format` and `unit` on a prepared groups table. `format` NULL
+# keeps the engine's own number formatting (summarize_num_parts()); else the
+# number cells, the value labels beside bars and the cards print through
+# dt_format_num(). `unit` heads the columns whose values are in the data's
+# unit (`unit_ok`: a simple summary that is not a count), after the summary's
+# name, as the records layout heads its numeric columns.
+#' @noRd
+summarize_number_format <- function(prep, format = NULL, unit = NULL) {
+  if (!is.null(prep$err)) return(prep)
+  if (!is.null(format)) prep$format <- table_format_state(format)
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  if (!is.null(unit)) {
+    prep$unit <- unit
+    with_unit <- function(x) paste0(x, " (", unit, ")")
+    prep$plan <- lapply(prep$plan, function(p) {
+      if (!isTRUE(p$unit_ok)) return(p)
+      if (is.null(p$flevel)) {
+        p$label <- with_unit(p$label)
+      } else if (!is.null(p$sub_label) && !is.null(p$sname)) {
+        p$sub_label <- sub(p$sname, with_unit(p$sname), p$sub_label,
+                           fixed = TRUE)
+      }
+      p
+    })
+  }
+  prep
 }
 
 # Facet columns with nothing to draw, left out: the chart draws no panel for a

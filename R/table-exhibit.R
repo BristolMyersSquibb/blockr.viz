@@ -234,7 +234,7 @@ report_call.table_block <- function(x, var, ...) {
     list(by = NULL, summaries = NULL, id = NULL,
          facet_layout = "by_summary", sort_by = "value", sort_dir = "desc",
          top_n = NULL, axis = TRUE, value_labels = TRUE,
-         pct_of = "facet", missing = "drop")
+         pct_of = "facet", missing = "drop", format = NULL, unit = NULL)
   } else {
     list(rowname = NULL, columns = NULL, shadings = NULL, format = "number",
          unit = NULL)

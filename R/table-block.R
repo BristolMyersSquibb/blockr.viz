@@ -1530,20 +1530,22 @@ table_arguments <- function() {
       ),
       format = new_arg_spec(
         paste0(
-          "Records layout: how numbers print in the cells, on cards and in ",
-          "downloads: \"number\" (default, up to two decimals), ",
-          "\"compact\" (1.2K, 3.4M), \"percent\" (a fraction x100 with %) ",
-          "or a whole number of decimals from 0 to 6, e.g. 0 for counts. ",
-          "Same as the chart block's `format`."
+          "How numbers print in the records and groups layouts (cells, value ",
+          "labels, cards, downloads; not the variables layout): \"number\" ",
+          "(default, up to two decimals), \"compact\" (1.2K, 3.4M), ",
+          "\"percent\" (a fraction x100 with %) or a whole number of ",
+          "decimals from 0 to 6, printed exactly, e.g. 0 for counts. Same as ",
+          "the chart block's `format`."
         ),
         example = "number",
         type = arg_string()
       ),
       unit = new_arg_spec(
         paste0(
-          "Records layout: free-text unit of the numbers (e.g. \"CHF\", ",
-          "\"kg\"); the numeric column headers carry it once, a card ",
-          "prints it after the number. Never guessed from the data."
+          "Free-text unit of the numbers (e.g. \"CHF\", \"kg\"); the ",
+          "headers of the records layout's numeric columns and of the groups ",
+          "layout's columns that are not counts carry it once, a card prints ",
+          "it after the number. Never guessed from the data."
         ),
         example = "CHF",
         type = arg_string()
@@ -1758,14 +1760,18 @@ table_guidance <- function() {
 #' @param shadings Records layout: cell colour rules, a list of
 #'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
-#' @param format,unit Records layout: how the numbers print, in the cells, on
-#'   cards and in the downloads, as on [new_chart_block()]. `format` is
-#'   `"number"` (default; up to two decimals), `"compact"` (1.2K, 3.4M),
-#'   `"percent"` (a fraction times 100, with "%") or a whole number of
-#'   decimals from 0 to 6 (trailing zeros dropped). `unit` is free text
-#'   (`"CHF"`): the headers of the numeric columns carry it, "Revenue (CHF)",
-#'   and a card prints it after its number. The old `digits` argument reads
-#'   as `format`.
+#' @param format,unit How the numbers print, as on [new_chart_block()]: in the
+#'   records layout's cells, the groups layout's number cells and the value
+#'   labels beside its bars, on cards and in the downloads. The variables
+#'   layout (Table 1) keeps its statistics' own formats. `format` is
+#'   `"number"` (default; up to two decimals, trailing zeros dropped, a value
+#'   that would round to 0 keeps two significant digits), `"compact"` (1.2K,
+#'   3.4M), `"percent"` (a fraction times 100, with "%") or a whole number of
+#'   decimals from 0 to 6, printed exactly (`2`: 4.30). `unit` is free text
+#'   (`"CHF"`): it heads the numeric columns of the records layout and the
+#'   groups layout's columns that are not counts, "Revenue (CHF)", and a
+#'   card prints it after its number. The old `digits` argument reads as
+#'   `format`.
 #' @param look How the table is drawn: `"table"`, `"compact"` (the matrix
 #'   look: rotated column titles, so a column is as wide as its cells, and
 #'   square cells for `show = "tile"` summaries, a heatmap) or `"cards"` (one
@@ -1961,6 +1967,7 @@ new_table_block <- function(layout = "records",
             look = shiny::reactiveVal(look),
             pct_of = shiny::reactiveVal(pct_of),
             missing = shiny::reactiveVal(missing),
+            format = shiny::reactiveVal(format),
             unit = shiny::reactiveVal(unit),
             # The records engine draws cards only in the records layout: the
             # variables layout has no card form.

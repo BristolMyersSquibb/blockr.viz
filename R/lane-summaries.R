@@ -1151,7 +1151,11 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                # a count with nothing in it is an empty column
                # (summarize_drop_empty_facets)
                zero_empty = identical(s$type, "simple") &&
-                 summarize_has_pct(summarize_chr1(s$func) %||% "count"))
+                 summarize_has_pct(summarize_chr1(s$func) %||% "count"),
+               # Its values are in the data's unit (a sum, mean, ...), not a
+               # count: the table's `unit` heads it.
+               unit_ok = identical(s$type, "simple") &&
+                 !summarize_has_pct(summarize_chr1(s$func) %||% "count"))
   # A count with an N (see lane_prepare_summaries): the header's second line
   # says N, the value reads "8 (12%)", and a bar's length is the percentage,
   # so arms of different size compare on one scale.

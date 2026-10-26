@@ -16,6 +16,10 @@
   `"number"` prints up to two decimals, and a value that would round to 0
   keeps two significant digits (0.0034). An old `digits = 2`, the old
   default, reads as `"number"`.
+* `format` and `unit` reach the groups layout too: its number cells, the
+  value labels beside its bars and its cards. `unit` heads the columns that
+  are not counts. The variables layout (Table 1) keeps its statistics' own
+  formats. The groups gear has the same "Numbers" and "Unit" controls.
 * A click on the "(Missing)" row of a table with `missing = "level"` gives
   the rows whose value is missing, in every layout. Before, it gave none.
   `summary_table()` and `table_nest()` take `missing`: the variables layout

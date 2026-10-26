@@ -164,7 +164,19 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     } else {
       get(p$key)
     }
-    main <- cards_num(v, summarize_val_digits(v))
+    main <- if (is.null(prep$format)) {
+      cards_num(v, summarize_val_digits(v))
+    } else {
+      out <- rep("", n)
+      ok <- !is.na(v)
+      out[ok] <- sub("^-", "\u2212", dt_format_num(v[ok], prep$format,
+                                                    big.mark = ","))
+      out
+    }
+    # The unit after the number, as on a records card.
+    if (!is.null(prep$unit) && isTRUE(p$unit_ok)) {
+      main <- ifelse(nzchar(main), paste(main, prep$unit), main)
+    }
     # A count against an N prints its share in the table ("72 (28%)"): the
     # card keeps it as the grey line.
     den <- p$val_denom

@@ -80,7 +80,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     parts <- summarize_num_parts(vraw, denom = p$val_denom,
                                  combined = !is.null(p$val_denom),
                                  signed = signed,
-                                 fmt = if (!is.na(dig)) {
+                                 fmt = if (!is.null(prep$format)) {
+                                   function(v) dt_format_num(v, prep$format)
+                                 } else if (!is.na(dig)) {
                                    function(v) summarize_val_str(v, dig)
                                  })
     # formatC pads "fg" output to a common width; harmless in a collapsing
@@ -605,7 +607,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       parts <- summarize_num_parts(v, denom = p$denom,
                                    combined = isTRUE(p$combined),
                                    signed = isTRUE(p$signed),
-                                   pct_only = isTRUE(p$pct_only))
+                                   pct_only = isTRUE(p$pct_only),
+                                   fmt = if (!is.null(prep$format)) {
+                                     function(x) dt_format_num(x, prep$format)
+                                   })
       c(list(kind = "num", v = sortv(v)), parts)
     }
   })

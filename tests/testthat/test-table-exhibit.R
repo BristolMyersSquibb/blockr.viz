@@ -345,3 +345,28 @@ test_that("fixed decimals print exactly, number keeps small values", {
   p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
   expect_identical(p$format, "number")
 })
+
+test_that("format and unit reach the groups layout's number cells and labels", {
+  d <- data.frame(g = c("a", "a", "b"), x = c(1.234, 1500, 0.0021))
+  S <- list(list(type = "simple", func = "mean", col = "x", show = "number"),
+            list(type = "simple", func = "sum", col = "x", show = "bar"),
+            list(type = "simple", func = "count", show = "number"))
+  p <- summarize_prepare(d, by = "g", summaries = S, format = "compact",
+                         unit = "CHF")
+  # The unit heads the columns in the data's unit, not the count.
+  labs <- vapply(p$plan, function(q) q$label, "")
+  expect_match(labs[[1L]], "(CHF)", fixed = TRUE)
+  expect_match(labs[[2L]], "(CHF)", fixed = TRUE)
+  expect_false(grepl("CHF", labs[[3L]]))
+  m <- summarize_cells(p, cfg = list(value_labels = TRUE))
+  expect_identical(m$cols[[1L]]$disp, c("750.62", "0.0021"))
+  # The value label beside the bar.
+  expect_identical(m$cols[[2L]]$disp, c("1.5K", "0.0021"))
+  # Cards: the unit after the number, the label without it.
+  cards <- table_cards_groups(m, p)
+  expect_identical(cards$cols[[1L]]$main, c("750.62 CHF", "0.0021 CHF"))
+  expect_false(grepl("CHF", cards$cols[[1L]]$label))
+  # Without a format the engine keeps its own digits.
+  p0 <- summarize_prepare(d, by = "g", summaries = S)
+  expect_null(p0$format)
+})

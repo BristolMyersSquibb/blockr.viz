@@ -70,7 +70,8 @@ table_records_server <- function(id, data,
     r_shadings <- shiny::reactiveVal(dd_parse_shadings(shadings))
     r_drill      <- shared$drill %||% shiny::reactiveVal(drill)
     # The number format (table_format_state()) and its unit.
-    r_digits        <- shiny::reactiveVal(table_format_state(digits))
+    r_digits        <- shared$format %||%
+      shiny::reactiveVal(table_format_state(digits))
     r_unit          <- shared$unit %||% shiny::reactiveVal(unit)
     r_max_height    <- shared$max_height %||% shiny::reactiveVal(max_height)
     r_filter_column <- shiny::reactiveVal(filter_column)

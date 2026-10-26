@@ -1403,6 +1403,18 @@
     missing: { label: "Missing", kind: "segmented", options: [
       { value: "drop", label: "Drop" }, { value: "level", label: "Show" }
     ] },
+    // How the number cells and value labels print, and their unit: the
+    // records gear's control (table.js), shared through the block.
+    format: { label: "Numbers", kind: "select",
+              options: [{ value: "number", label: "Auto" },
+                        { value: "0", label: "1235" },
+                        { value: "1", label: "1234.6" },
+                        { value: "2", label: "1234.57" },
+                        { value: "3", label: "1234.568" },
+                        { value: "4", label: "1234.5679" },
+                        { value: "compact", label: "1.2K" },
+                        { value: "percent", label: "12.3%" }] },
+    unit: { label: "Unit", kind: "text", ph: "e.g. CHF" },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
     // The table, the matrix look (square cells, titles on their side) or
     // cards. `hint` is set per render (summarizeSections) to name the
@@ -2447,11 +2459,12 @@
     // sort, search or drill, so those controls leave.
     var grouped = Array.isArray(cfg.by) && cfg.by.length > 0;
     var pres = fcols.length === 1
-      ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
+      ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "format",
+         "unit", "search", "sortable", "axis", "pct_of", "missing",
+         "download", "look", "bar_width"]
+      : ["sort_by", "sort_dir", "value_labels", "format", "unit", "search",
          "sortable", "axis", "pct_of", "missing", "download", "look",
-         "bar_width"]
-      : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-         "axis", "pct_of", "missing", "download", "look", "bar_width"];
+         "bar_width"];
     if (!grouped) {
       pres = pres.filter(function (k) {
         return ["sort_by", "sort_dir", "search", "sortable"].indexOf(k) === -1;

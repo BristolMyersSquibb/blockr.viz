@@ -102,14 +102,18 @@ the stub column when the board's scale map has it, \code{""} = off.}
 \code{list(mode, cols, domain)} with \code{mode} one of \code{"sequential"},
 \code{"diverging"}, \code{"bar"}.}
 
-\item{format, unit}{Records layout: how the numbers print, in the cells, on
-cards and in the downloads, as on \code{\link[=new_chart_block]{new_chart_block()}}. \code{format} is
-\code{"number"} (default; up to two decimals), \code{"compact"} (1.2K, 3.4M),
-\code{"percent"} (a fraction times 100, with "\%") or a whole number of
-decimals from 0 to 6 (trailing zeros dropped). \code{unit} is free text
-(\code{"CHF"}): the headers of the numeric columns carry it, "Revenue (CHF)",
-and a card prints it after its number. The old \code{digits} argument reads
-as \code{format}.}
+\item{format, unit}{How the numbers print, as on \code{\link[=new_chart_block]{new_chart_block()}}: in the
+records layout's cells, the groups layout's number cells and the value
+labels beside its bars, on cards and in the downloads. The variables
+layout (Table 1) keeps its statistics' own formats. \code{format} is
+\code{"number"} (default; up to two decimals, trailing zeros dropped, a value
+that would round to 0 keeps two significant digits), \code{"compact"} (1.2K,
+3.4M), \code{"percent"} (a fraction times 100, with "\%") or a whole number of
+decimals from 0 to 6, printed exactly (\code{2}: 4.30). \code{unit} is free text
+(\code{"CHF"}): it heads the numeric columns of the records layout and the
+groups layout's columns that are not counts, "Revenue (CHF)", and a
+card prints it after its number. The old \code{digits} argument reads as
+\code{format}.}
 
 \item{look}{How the table is drawn: \code{"table"}, \code{"compact"} (the matrix
 look: rotated column titles, so a column is as wide as its cells, and
