@@ -66,6 +66,15 @@ test('a line: the zoom toolbox, the veil\'s axes, the hover overlay, a picker fo
   assert.strictEqual(build({ chart_type: 'line' }).po.focus, null);
 });
 
+test('layout changes snap: no update animation, the first draw keeps its own', () => {
+  for (const chart_type of ['line', 'scatter']) {
+    const { opt } = build({ chart_type });
+    assert.strictEqual(opt.animationDurationUpdate, 0);
+    assert.notStrictEqual(opt.animation, false);
+    assert.strictEqual(opt.animationDuration, undefined);
+  }
+});
+
 test('the line tooltip follows the hovered line, and says nothing away from every line', () => {
   const { po, opt } = build({ chart_type: 'line', series: 'ID' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'S01', value: [1, 3], color: '#111111' },

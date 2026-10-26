@@ -253,6 +253,11 @@
       // Dates are placed and labelled in UTC: R writes them without a zone.
       ...(isTime ? { useUTC: true } : {}),
       textStyle: { fontFamily: ink.face },
+      // The first draw animates. Every later change of the same chart (a
+      // resize, the x label re-fit that follows it, a new filter) snaps:
+      // the re-fit patches the option with a merge, and ECharts morphs the
+      // lines on that while the dots on top of them jump to the new layout.
+      animationDurationUpdate: 0,
       tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
       // A hidden legend: its selection model is what the chips toggle.
       legend: { show: false },

@@ -59,6 +59,7 @@
       "textStyle": {
        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
       },
+      "animationDurationUpdate": 0,
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
