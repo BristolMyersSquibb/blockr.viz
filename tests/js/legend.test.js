@@ -188,27 +188,29 @@ const build = (cfg) => {
   return { m, c, plan: C.legendPlan(m, c), opt: o.panels[0].option };
 };
 
-test('marks on a vertical stack: a name at each segment of the last bar', () => {
+test('marks on a vertical stack whose last bar lacks a level keep the legend', () => {
+  // The last bar, c, holds LOW only: HIGH would have no name.
   const { plan, opt } = build({ orientation: 'vertical', legend: 'marks' });
+  assert.strictEqual(plan.marks, null);
+  assert.strictEqual(plan.band, true);
+  assert.strictEqual(plan.position, 'bottom');
+  assert.deepStrictEqual(plain(opt.series.filter((s) => String(s.id || '').startsWith('__legend_'))), []);
+});
+
+test('marks on a vertical stack: a name at each segment of the last bar', () => {
+  const { plan, opt } = build({ orientation: 'vertical', legend: 'marks',
+                                sort_by: 'alpha', sort_dir: 'desc' });
   assert.strictEqual(plan.marks, 'stack');
   assert.strictEqual(plan.band, false);
+  // Now the last bar is a: HIGH 4 then LOW 2 (series order HIGH, LOW).
   const names = opt.series.filter((s) => String(s.id || '').startsWith('__legend_'));
-  // The last bar, c, holds LOW only: 5, so its segment's middle is 2.5.
-  assert.deepStrictEqual(plain(names.map((s) => [s.label.formatter, s.data[0]])), [['LOW', ['c', 2.5]]]);
+  assert.deepStrictEqual(plain(names.map((s) => [s.label.formatter, s.data[0]])),
+                         [['HIGH', ['a', 2]], ['LOW', ['a', 5]]]);
   assert.strictEqual(names[0].label.position, 'right');
   assert.deepStrictEqual(plain(names[0].labelLayout), { moveOverlap: 'shiftY' });
   assert.ok(opt.grid.right >= 10);
   // The bars themselves are untouched.
   assert.deepStrictEqual(plain(opt.series.slice(0, 2).map((s) => s.name)), ['HIGH', 'LOW']);
-});
-
-test('marks on a vertical stack stack the middles of a bar with two segments', () => {
-  const { opt } = build({ orientation: 'vertical', legend: 'marks',
-                          sort_by: 'alpha', sort_dir: 'desc' });
-  // Now the last bar is a: HIGH 4 then LOW 2 (series order HIGH, LOW).
-  const names = opt.series.filter((s) => String(s.id || '').startsWith('__legend_'));
-  assert.deepStrictEqual(plain(names.map((s) => [s.label.formatter, s.data[0]])),
-                         [['HIGH', ['a', 2]], ['LOW', ['a', 5]]]);
 });
 
 test('marks on a horizontal stack: names above the first bar, at each centre', () => {
@@ -245,11 +247,28 @@ test('marks fall back to the band, at the bottom, even when the setting was top'
   r.env.close();
 });
 
+// Every term with both grades: the last bar carries each level.
+const CROSS = {
+  data: { T: ['a', 'a', 'b', 'b', 'b'], G: ['HIGH', 'LOW', 'HIGH', 'LOW', 'LOW'] },
+  columns: [{ name: 'T', type: 'categorical', n_unique: 2 }, { name: 'G', type: 'categorical', n_unique: 2 }]
+};
+
 test('marks through the view on a stacked bar hide the band', () => {
+  const r = h.draw({ ...BASE, chart_type: 'bar', group: 'T', color: 'G', orientation: 'vertical',
+                     legend: 'marks' }, CROSS.data, CROSS.columns, { keepOpen: true });
+  try {
+    assert.strictEqual(band(r), null);
+    assert.deepStrictEqual(plain(markNames(lastOption(r))), ['HIGH', 'LOW']);
+  } finally { r.env.close(); }
+});
+
+test('marks through the view keep the band where the last bar lacks a level', () => {
+  // No adverse event term in the fixture has every grade.
   const r = draw({ chart_type: 'bar', ...AE, color: 'AESEV', orientation: 'vertical', legend: 'marks' });
-  assert.strictEqual(band(r), null);
-  assert.ok(markNames(lastOption(r)).length >= 1);
-  r.env.close();
+  try {
+    assert.ok(band(r));
+    assert.deepStrictEqual(plain(markNames(lastOption(r))), []);
+  } finally { r.env.close(); }
 });
 
 test('marks on a point range write the levels over the points', () => {

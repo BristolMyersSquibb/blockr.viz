@@ -328,12 +328,32 @@
       if (m.type === 'pie' || m.type === 'treemap') return 'slices';
       if (m.type === 'bar' && !m.histogram && !m.cumulative && m.colors.length &&
           (cfg.bar_mode || 'stacked') !== 'grouped') {
-        return cfg.orientation === 'vertical' ? 'stack' : 'stack-h';
+        const vertical = cfg.orientation === 'vertical';
+        // The names sit on one bar (the last, or the first lying down); a
+        // level that bar lacks would have no name, so the legend stays.
+        return stackCovers(m, vertical) ? (vertical ? 'stack' : 'stack-h') : null;
       }
       if (m.type === 'pointrange' && m.split) return 'centroid';
     }
     return null;
   };
+
+  /**
+   * Does the bar the names go on (the last with a segment, or the first lying
+   * down) carry every level, in every panel?
+   * @param {any} m the aggregated model @param {boolean} vertical
+   */
+  const stackCovers = (m, vertical) => (m.panels || []).every((/** @type {any} */ p) => {
+    /** @param {any} g */
+    const segs = (g) => (p.cells || []).filter((/** @type {any} */ a) =>
+      String(a.group) === String(g) && a.value != null && Number(a.value) !== 0);
+    const order = vertical ? [...p.groups].reverse() : p.groups;
+    const g = order.find((/** @type {any} */ x) => segs(x).length);
+    if (g == null) return true;
+    const there = new Set(segs(g).map((/** @type {any} */ a) => String(a.color)));
+    return m.colors.filter((/** @type {any} */ c) => c !== '' && c != null)
+      .every((/** @type {any} */ c) => there.has(String(c)));
+  });
 
   /**
    * The swatch of a legend chip, by the chart's mark: a short line for lines,
