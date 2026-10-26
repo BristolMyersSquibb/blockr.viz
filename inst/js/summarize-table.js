@@ -857,11 +857,9 @@
     for (var i = 0; i < p.n; i++) {
       var rm = rowMeta(p, i);
       var parent = rm.parent;
-      var child = rm.child;
       var row = '<tr class="' + rm.cls + '"' + rm.attrs + ">";
       row += '<td class="blockr-summarize-label-col blockr-stub' +
-        (parent ? " blockr-has-toggle" : "") + '"' +
-        (child ? ' style="padding-left:48px;"' : "") + ">" + rm.btn +
+        (parent ? " blockr-has-toggle" : "") + '">' + rm.btn +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];

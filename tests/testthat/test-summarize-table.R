@@ -438,6 +438,9 @@ test_that("the HTML marks nested and split shapes distinctly", {
   expect_match(nested, "blockr-chev")
   expect_match(nested, "blockr-indent-toggle collapsed")
   expect_match(nested, "is-sub")   # child bars are the subordinate step
+  # Child labels start on their parent's name: no padding of their own.
+  expect_match(nested, "is-child", fixed = TRUE)
+  expect_no_match(nested, "padding-left:48px", fixed = TRUE)
 
   side <- list(bar_col(color = "SEV", position = "dodge"))
   grouped <- html(by = "TERM", summaries = side)
