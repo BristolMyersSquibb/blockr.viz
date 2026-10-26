@@ -1272,7 +1272,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   grid-template-areas: "titles tools gear";
-  column-gap: 4px;
+  column-gap: 6px;
   /* Top-aligned, so a sentence that wraps grows downward and the icons stay
      at the top right. */
   align-items: start;
@@ -1282,7 +1282,7 @@
   grid-area: tools;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .vz-head > .vz-head__tools:empty { display: none; }
 .vz-head > .blockr-gear-btn { grid-area: gear; }
