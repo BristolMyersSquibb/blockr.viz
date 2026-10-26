@@ -2016,10 +2016,11 @@
         inp.addEventListener("change", function () { onCommit(inp.value); });
       }
     }
-    // What the column draws: the segmented control for two or three marks,
-    // a select past that (design system, "Which control for which
-    // decision"). A tile is the compact look's mark, offered there and on a
-    // column that already draws one.
+    // What the column draws: a tile per mark, each a drawing of the column
+    // (Blockr.SHOW_TILE_ICONS). Without the drawings (an older engine, or a
+    // custom column's "auto"), the segmented control for two or three marks
+    // and a select past that. A tile is the compact look's mark, offered
+    // there and on a column that already draws one.
     function showCtl(parent, s, t) {
       var shows = ((SUMMARY_TYPES[t] || {}).shows || []).filter(function (sh) {
         return sh !== "tile" || cfg.look === "compact" || s.show === "tile";
@@ -2043,6 +2044,15 @@
         }
         edit();
       };
+      var icons = B && B.SHOW_TILE_ICONS;
+      if (B && B.buildTiles && icons &&
+          opts.every(function (o) { return !!icons[o.value]; })) {
+        var f = field(parent, "Show", { wide: true });
+        B.buildTiles(f, opts.map(function (o) {
+          return { value: o.value, label: o.label, icon: icons[o.value] };
+        }), cur, apply);
+        return;
+      }
       if (opts.length <= 3) segCtl(parent, "Show", opts, cur, apply);
       else selectCtl(parent, "Show", opts, cur, apply);
     }

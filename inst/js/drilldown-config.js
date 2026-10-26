@@ -86,6 +86,71 @@
       roles: ['search', 'sortable', 'download'] }
   ];
 
+  // Picker tiles (design: _scratch/icon-language), edge to edge: a drawing
+  // over its name, in an auto-fill grid. Like the segmented control, a click
+  // on the chosen tile does nothing. An option offered but not available
+  // here (`disabled`, `title` says why) is drawn greyed and skipped by the
+  // arrow keys. Exposed as Blockr.buildTiles for the summary column editor.
+  /**
+   * @param {HTMLElement} parent
+   * @param {Array<{ value: string, label: string, icon: string, disabled?: boolean, title?: string }>} options
+   * @param {string} current @param {(v: string) => void} onPick
+   * @returns {HTMLElement}
+   */
+  function buildTiles(parent, options, current, onPick) {
+    const row = document.createElement('div');
+    row.className = 'dd-layout-tiles';
+    row.setAttribute('role', 'radiogroup');
+    /** @type {HTMLButtonElement[]} */
+    const btns = [];
+    const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
+      b.classList.toggle('dd-layout-tile--on', j === i);
+      b.setAttribute('aria-checked', j === i ? 'true' : 'false');
+      b.tabIndex = j === i ? 0 : -1;
+    });
+    options.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dd-layout-tile';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('data-value', o.value);
+      const face = document.createElement('span');
+      face.className = 'dd-layout-tile-face';
+      face.innerHTML = o.icon;
+      const name = document.createElement('span');
+      name.className = 'dd-layout-tile-name';
+      name.textContent = o.label;
+      b.append(face, name);
+      if (o.disabled) {
+        b.setAttribute('aria-disabled', 'true');
+        b.classList.add('is-disabled');
+        if (o.title) b.setAttribute('data-blockr-tooltip', o.title);
+      }
+      b.addEventListener('click', () => {
+        if (o.disabled || b.classList.contains('dd-layout-tile--on')) return;
+        select(i);
+        onPick(o.value);
+      });
+      b.addEventListener('keydown', (e) => {
+        const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
+          : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        let j = i;
+        do { j = (j + step + btns.length) % btns.length; } while (j !== i && options[j].disabled);
+        const next = btns[j];
+        next.focus();
+        next.click();
+      });
+      btns.push(b);
+      row.appendChild(b);
+    });
+    const cur = options.findIndex((o) => o.value === current);
+    select(cur < 0 ? 0 : cur);
+    parent.appendChild(row);
+    return row;
+  }
+
   class DrilldownConfig {
     /** @param {VizDrilldownHost} host */
     constructor(host) {
@@ -2156,20 +2221,37 @@
       lbl.textContent = 'Shade cells';
       wrap.appendChild(lbl);
 
+      // The mode is a tile each, drawn in colour (Blockr.SHADE_TILE_ICONS);
+      // the columns it shades follow on the line under the tiles.
+      const tileOpts = modeOpts.map((/** @type {any} */ o) => {
+        const value = typeof o === 'string' ? o : o.value;
+        const label = typeof o === 'string' ? o.charAt(0).toUpperCase() + o.slice(1) : o.label;
+        return { value, label, icon: SHADE_TILE_ICONS[value] || '' };
+      });
+      const tiled = tileOpts.every((/** @type {any} */ o) => !!o.icon);
+
       shadings.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
+        const entry = document.createElement('div');
+        entry.className = 'dd-shading';
+        if (tiled) {
+          buildTiles(entry, tileOpts, s.mode || 'diverging',
+            (/** @type {string} */ v) => { s.mode = v; commit(); });
+        }
         const row = document.createElement('div');
         row.className = 'dd-value-row dd-shading-row';
 
-        const modeWrap = document.createElement('div');
-        modeWrap.className = 'dd-picker-wrap dd-value-agg';
-        if (S && S.single) {
-          const lo = this._labelOnly(modeOpts, s.mode || 'diverging');
-          S.single(modeWrap, {
-            options: lo.options, selected: lo.selected,
-            onChange: (/** @type {string} */ v) => { s.mode = lo.toValue(v); commit(); }
-          });
+        if (!tiled) {
+          const modeWrap = document.createElement('div');
+          modeWrap.className = 'dd-picker-wrap dd-value-agg';
+          if (S && S.single) {
+            const lo = this._labelOnly(modeOpts, s.mode || 'diverging');
+            S.single(modeWrap, {
+              options: lo.options, selected: lo.selected,
+              onChange: (/** @type {string} */ v) => { s.mode = lo.toValue(v); commit(); }
+            });
+          }
+          row.appendChild(modeWrap);
         }
-        row.appendChild(modeWrap);
 
         const on = document.createElement('span');
         on.className = 'dd-pair-connector';
@@ -2199,7 +2281,8 @@
           shadings.splice(i, 1); commit(); this._rerender();
         });
         row.appendChild(rm);
-        wrap.appendChild(row);
+        entry.appendChild(row);
+        wrap.appendChild(entry);
       });
 
       const add = document.createElement('button');
@@ -3097,57 +3180,7 @@
      * @param {string} current @param {(v: string) => void} onPick
      */
     _buildTiles(parent, options, current, onPick) {
-      const row = document.createElement('div');
-      row.className = 'dd-layout-tiles';
-      row.setAttribute('role', 'radiogroup');
-      /** @type {HTMLButtonElement[]} */
-      const btns = [];
-      const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
-        b.classList.toggle('dd-layout-tile--on', j === i);
-        b.setAttribute('aria-checked', j === i ? 'true' : 'false');
-        b.tabIndex = j === i ? 0 : -1;
-      });
-      options.forEach((o, i) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'dd-layout-tile';
-        b.setAttribute('role', 'radio');
-        b.setAttribute('data-value', o.value);
-        const face = document.createElement('span');
-        face.className = 'dd-layout-tile-face';
-        face.innerHTML = o.icon;
-        const name = document.createElement('span');
-        name.className = 'dd-layout-tile-name';
-        name.textContent = o.label;
-        b.append(face, name);
-        if (o.disabled) {
-          b.setAttribute('aria-disabled', 'true');
-          b.classList.add('is-disabled');
-          if (o.title) b.setAttribute('data-blockr-tooltip', o.title);
-        }
-        b.addEventListener('click', () => {
-          if (o.disabled || b.classList.contains('dd-layout-tile--on')) return;
-          select(i);
-          onPick(o.value);
-        });
-        b.addEventListener('keydown', (e) => {
-          const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
-            : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-          if (!step) return;
-          e.preventDefault();
-          let j = i;
-          do { j = (j + step + btns.length) % btns.length; } while (j !== i && options[j].disabled);
-          const next = btns[j];
-          next.focus();
-          next.click();
-        });
-        btns.push(b);
-        row.appendChild(b);
-      });
-      const cur = options.findIndex((o) => o.value === current);
-      select(cur < 0 ? 0 : cur);
-      parent.appendChild(row);
-      return row;
+      return buildTiles(parent, options, current, onPick);
     }
 
     // A fixed choice of two or three short values, all in view: blockr.ui's
@@ -3686,6 +3719,34 @@
     return out;
   })();
   ns.TILE_ICONS = TILE_ICONS;
+  // The table gear's Show tiles (a summary column's mark) and Shade cells
+  // tiles, drawn in the same 48 x 32 box (_scratch/icon-language,
+  // table-tiles.js). A Show drawing is three rows of the column: a header
+  // band, a name per row, the mark. Sparkline, interval and dumbbell have
+  // one mark per summary type, so they are not offered as tiles; their
+  // drawings wait for the Add a column menu. The shading drawings are the
+  // one place a tile is drawn in colour, since the choice is about colour;
+  // red and blue stand in for the board theme's ramp, which stays in R.
+  ns.SHOW_TILE_ICONS = {
+    bar: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.25" width="22" height="3.5" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="18.75" width="14" height="3.5" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.25" width="8" height="3.5" rx="1" fill="currentColor"/></svg>',
+    number: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="33" y="12.75" width="9" height="2.5" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="36" y="19.25" width="6" height="2.5" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="31" y="25.75" width="11" height="2.5" rx="1" fill="currentColor"/></svg>',
+    dot: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 14H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="36" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 20.5H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="28" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 27H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="22" cy="27" r="2" fill="currentColor"/></svg>',
+    tile: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="11.25" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="17.75" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.45"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="24.25" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.2"/></svg>',
+    pointrange: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M20 14H38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="30" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M24 20.5H41" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 27H31" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="27" r="2" fill="currentColor"/></svg>',
+    box: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 14H24M33 14H40" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="24" y="12" width="9" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="24" y="12" width="9" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 12V16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M22 20.5H27M36 20.5H42" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="27" y="18.5" width="9" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="27" y="18.5" width="9" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 18.5V22.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 27H21M28 27H33" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="21" y="25" width="7" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="21" y="25" width="7" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 25V29" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    text: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.75" width="8" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="12.75" width="9" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="19.25" width="7" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="19.25" width="8" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.75" width="9" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="25.75" width="7" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/></svg>',
+    sparkline: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 15L22 13L26 14.5L30 12L34 15.5L38 13.5L42 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 19.5L22 20.5L26 22L30 21L34 19L38 18.5L42 20.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 29L22 28L26 26.5L30 27L34 26L38 25L42 25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    interval: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.5" width="6" height="3" rx="1" fill="currentColor"/><rect x="28" y="12.5" width="9" height="3" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="21" y="19" width="12" height="3" rx="1" fill="currentColor"/><rect x="36" y="19" width="6" height="3" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.5" width="4" height="3" rx="1" fill="currentColor"/><rect x="25" y="25.5" width="5" height="3" rx="1" fill="currentColor"/><rect x="33" y="25.5" width="8" height="3" rx="1" fill="currentColor"/></svg>',
+    dumbbell: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M21 14H37" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M21 11.8L23.2 14L21 16.2L18.8 14Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="37" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M24 20.5H33" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M24 18.3L26.2 20.5L24 22.7L21.8 20.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 27H40" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M19 24.8L21.2 27L19 29.2L16.8 27Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="27" r="2" fill="currentColor"/></svg>'
+  };
+  /** @type {Record<string, string>} */
+  const SHADE_TILE_ICONS = {
+    diverging: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="10" height="8" fill="#dc2626" fill-opacity="0.72"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="4" width="10" height="8" fill="#dc2626" fill-opacity="0.24"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.16"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.64"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="12" width="10" height="8" fill="#dc2626" fill-opacity="0.4"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.08"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.48"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.8"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.24"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="20" width="10" height="8" fill="#dc2626" fill-opacity="0.56"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.72"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="20" width="10" height="8" fill="#dc2626" fill-opacity="0.08"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>',
+    sequential: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.04"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.28"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.48"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.72"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.2"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.44"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.64"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.8"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.52"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.12"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.76"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.36"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>',
+    bar: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="5.5" width="8.1" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="5.5" width="2.7" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="5.5" width="1.8" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="5.5" width="7.2" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="13.5" width="4.5" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="13.5" width="0.9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="13.5" width="5.4" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="13.5" width="9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="21.5" width="2.7" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="21.5" width="6.3" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="21.5" width="8.1" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="21.5" width="0.9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>'
+  };
+  ns.SHADE_TILE_ICONS = SHADE_TILE_ICONS;
+  ns.buildTiles = buildTiles;
   // The table block's three layouts, for its two gears (table.js for
   // records and variables, summarize-table.js for groups), and its looks.
   ns.TABLE_LAYOUTS = [

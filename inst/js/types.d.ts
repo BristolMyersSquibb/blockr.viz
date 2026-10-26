@@ -231,6 +231,17 @@ interface BlockrNamespace {
   TABLE_LOOKS?: Array<{ value: string; label: string; icon: string }>;
   /** The picker tiles' drawings, by chart type, layout and look (drilldown-config.js). */
   TILE_ICONS?: Record<string, string>;
+  /** The Show tiles' drawings, keyed by a summary column's `show`. */
+  SHOW_TILE_ICONS?: Record<string, string>;
+  /** The Shade cells tiles' drawings, keyed by mode. */
+  SHADE_TILE_ICONS?: Record<string, string>;
+  /** Edge-to-edge picker tiles (drilldown-config.js). */
+  buildTiles?(
+    parent: HTMLElement,
+    options: { value: string; label: string; icon: string; disabled?: boolean; title?: string }[],
+    current: string,
+    onPick: (value: string) => void
+  ): HTMLElement;
   /** The block's sentence painter (defined in this package). */
   SentenceSlots: typeof VizSentenceSlots;
   /** The gear tray behaviour (blockr.ui's blockr-ui.js). */

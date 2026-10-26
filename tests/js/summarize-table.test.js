@@ -502,10 +502,12 @@ test('a new groups table opens on its one count column', async () => {
   const body = rows[0].querySelector('.lane-sum-body');
   assert.deepEqual(labelsIn(body), ['Name', 'Aggregate', 'Show']);
   assert.equal(body.querySelector('input.blockr-text-input').value, 'Count');
-  const segs = Array.from(body.querySelectorAll('.blockr-segmented__seg'));
-  assert.deepEqual(segs.map((b) => b.textContent), ['Bar', 'Number', 'Dot'],
+  // Show is a tile per mark, each a drawing of the column.
+  const tiles = Array.from(body.querySelectorAll('.dd-layout-tile'));
+  assert.deepEqual(tiles.map((b) => b.textContent.trim()), ['Bar', 'Number', 'Dot'],
     'the tile is the compact look\'s mark');
-  assert.equal(body.querySelector('.blockr-segmented__seg.is-selected').textContent, 'Bar');
+  assert.ok(tiles.every((b) => b.querySelector('.dd-layout-tile-face svg')), 'each tile has its drawing');
+  assert.equal(body.querySelector('.dd-layout-tile--on').textContent.trim(), 'Bar');
   assert.deepEqual(Array.from(body.querySelectorAll('.lane-sum-offer')).map((b) => b.textContent),
     ['+ Color', '+ Facet']);
   const rm = rows[0].querySelector('.lane-sum-rm');
@@ -519,8 +521,8 @@ test('a new groups table opens on its one count column', async () => {
 
   // Show: Number sends the list with the column drawn as a number, and the
   // column stays open. A number takes no colour split, so its offer leaves.
-  const num = Array.from(sumRows(band)[0].querySelectorAll('.blockr-segmented__seg'))
-    .find((b) => b.textContent === 'Number');
+  const num = Array.from(sumRows(band)[0].querySelectorAll('.dd-layout-tile'))
+    .find((b) => b.textContent.trim() === 'Number');
   click(num);
   assert.equal(lastSummaries(t)[0].show, 'number');
   assert.ok(sumRows(band)[0].classList.contains('is-open'));
@@ -544,9 +546,9 @@ test('with three columns every row is one closed line', async () => {
   assert.ok(rows[1].classList.contains('is-open'));
   assert.equal(rows[1].querySelector('.lane-sum-toggle').getAttribute('aria-expanded'), 'true');
   assert.equal(t.actions().length, before);
-  // A distribution's marks are three: the segmented control.
-  assert.deepEqual(Array.from(rows[1].querySelectorAll('.blockr-segmented__seg'))
-    .map((b) => b.textContent), ['Dot range', 'Box', 'Text']);
+  // A distribution's marks are three tiles.
+  assert.deepEqual(Array.from(rows[1].querySelectorAll('.dd-layout-tile'))
+    .map((b) => b.textContent.trim()), ['Dot range', 'Box', 'Text']);
 
   // Alt+Down moves the column, and the keyboard stays on it.
   const toggle = rows[0].querySelector('.lane-sum-toggle');
@@ -574,8 +576,9 @@ test('an old ranked-bar summarize table opens as one column of the list', async 
   assert.equal(rows.length, 1);
   assert.ok(rows[0].classList.contains('is-open'));
   assert.equal(lineOf(rows[0]), 'Count distinct USUBJID, split by SEV');
+  assert.equal(rows[0].querySelector('.dd-layout-tile--on').textContent.trim(), 'Bar');
   const split = Array.from(rows[0].querySelectorAll('.blockr-segmented__seg.is-selected'))
     .map((b) => b.textContent);
-  assert.deepEqual(split, ['Bar', 'Grouped'], 'bar_mode = "grouped" is the split\'s position');
+  assert.deepEqual(split, ['Grouped'], 'bar_mode = "grouped" is the split\'s position');
   await t.close();
 });

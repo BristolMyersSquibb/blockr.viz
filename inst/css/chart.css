@@ -863,6 +863,14 @@
   border-radius: var(--blockr-radius-md, 6px);
 }
 
+/* A shading rule: its mode as tiles, then the columns it shades. */
+.dd-shading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dd-shading + .dd-shading { margin-top: 12px; }
+
 /* ===== Chart grid (faceting) ===== */
 .dd-chart-grid {
   display: grid;

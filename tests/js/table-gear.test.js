@@ -131,3 +131,18 @@ test('a finished input keeps its badge and offers no row controls', async () => 
   assert.ok(has(band, 'collapsible'));
   await t.close();
 });
+
+test('a shading rule picks its mode from three drawn tiles', async () => {
+  const t = open('flat');
+  const add = t.band().querySelector('.dd-add-shading');
+  assert.ok(add, 'the records gear offers shading');
+  const before = t.band().querySelectorAll('.dd-shading').length;
+  click(add);
+  const rules = Array.from(t.band().querySelectorAll('.dd-shading'));
+  assert.equal(rules.length, before + 1);
+  const tiles = Array.from(rules[rules.length - 1].querySelectorAll('.dd-layout-tile'));
+  assert.deepEqual(tiles.map((b) => b.textContent.trim()), ['Diverging', 'Sequential', 'Bar']);
+  assert.ok(tiles.every((b) => b.querySelector('.dd-layout-tile-face svg')), 'each tile has its drawing');
+  assert.equal(tiles[0].getAttribute('aria-checked'), 'true', 'a new rule diverges');
+  await t.close();
+});
