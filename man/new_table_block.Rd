@@ -56,8 +56,8 @@ variable in \code{summaries}, one column per level of \code{by}).}
 \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 
 \item{by}{Grouping columns, outer first, at most two. Groups layout: one
-row per level, the outer one an expandable parent. Variables layout: one
-column per level.}
+row per level, the outer one an expandable parent; without \code{by}, one row
+over all input rows. Variables layout: one column per level.}
 
 \item{rowname}{Records layout: the stub column (first column, row label).
 With \code{by} set, the rows sit under one collapsible header per level of

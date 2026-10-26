@@ -435,6 +435,25 @@ Cards look (branch `feat/table-cards`, fast-forwarded into `feat/table-rewrite`)
 - The tile block is gone; `blockr_deser.tile_block()` restores a saved tile
   as a table block.
 
+Groups without `by` (branch `feat/table-groups-no-by`):
+
+- `by` is optional in the groups layout. Without it the table is one row
+  over all input rows, in every look. `lane_prepare_summaries()` groups by a
+  synthetic column (`GROUPS_ALL_COL`) whose one level reads "Total", the
+  variables layout's `total_label`, and marks the result `all = TRUE`. The
+  cards look's own synthetic group (`cards_frame()`) is gone.
+- The one row has a blank row header, no header sorting, no drill, and the
+  search box hides. A plain count drops its percentage (always 100%).
+- The gear shows "Group by" as an ordinary mapping row ("all rows" when
+  empty), with no asterisk or amber. Sort, order, search, header sorting and
+  the drill section leave while it is empty. Removing `by` clears a drill
+  selection.
+- A groups table with no summaries starts with one count, "Rows"
+  (`table_groups_seed()`), at construction and on a switch from another
+  layout, so Records -> Groups shows a one-row table.
+- Downloads and `report_call()` need no change: they go through the same
+  preparer.
+
 Phase 5 (vocabulary):
 
 - Summary entries are saved, edited and documented under public keys, the

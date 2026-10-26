@@ -446,6 +446,19 @@ lane_field_join <- function(x) {
   paste(u, collapse = ", ")
 }
 
+# The synthetic group a groups table without `by` draws from: one row over
+# the whole input. Its row reads "Total", the variables layout's word for the
+# column over all rows (`total_label`).
+GROUPS_ALL_COL <- ".all"
+GROUPS_ALL_LABEL <- "Total"
+
+#' Add the one-level group of a groups table without `by`.
+#' @noRd
+groups_all_data <- function(data) {
+  data[[GROUPS_ALL_COL]] <- rep(GROUPS_ALL_LABEL, nrow(data))
+  data
+}
+
 #' The generic preparer: group_by(by) plus the summaries list.
 #'
 #' `by` is outer -> inner; the renderer nests one level, so at most two
@@ -475,7 +488,14 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 
   by <- as.character(by %||% character())
   by <- by[nzchar(by)]
-  if (!length(by)) return(bad("Pick a Group by column in the gear"))
+  # Without `by` the table is one row over all input rows: a synthetic
+  # one-level group (GROUPS_ALL_COL) that has no header, no sort and no
+  # drill. `all` on the result tells the renderers.
+  all <- !length(by)
+  if (all) {
+    data <- groups_all_data(data)
+    by <- GROUPS_ALL_COL
+  }
   if (length(by) > 2L) {
     return(bad("Group by supports at most two columns (outer, inner)"))
   }
@@ -833,7 +853,11 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # rows for a facet copy. Over the full slice, so rows without a group
       # (the population join's) are in it: the same N the ranked-bar
       # surface's facets print (summarize_denom()).
-      if (identical(s$type, "simple") &&
+      # On the one row of a table without `by` the count is its own N, so
+      # its share would read 100%; a colour split keeps its shares.
+      same_n <- all && is.null(s$.color) &&
+        !(pct_total && !is.null(cp$level))
+      if (identical(s$type, "simple") && !same_n &&
             summarize_has_pct(summarize_chr1(s$func) %||% "count")) {
         cp$den <- summarize_denom(if (pct_total) data else cp$slice,
                                   summarize_chr1(s$func) %||% "count",
@@ -1015,7 +1039,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
     n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
     note = note, pct_ok = FALSE, func = "identity",
     facet_spans = facet_spans,
-    failed = unlist(lapply(plan, function(p) p$failed))
+    failed = unlist(lapply(plan, function(p) p$failed)),
+    all = all
   )
 }
 

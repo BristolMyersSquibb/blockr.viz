@@ -1368,8 +1368,10 @@
     group:  { label: "Group", kind: "column", colType: "cat" },
     // The summarize-table path's grouping vector (outer -> inner, at most
     // two): one row per key combo, the outer becomes the expandable parent.
+    // Empty is one row over all input rows. A change re-renders the gear:
+    // sorting, search and drill show only with a grouping.
     by:     { label: "Group by", kind: "columns", colType: "cat",
-              placeholder: "add columns…" },
+              placeholder: "all rows", rerender: true },
     parent: { label: "Nest under", kind: "column", colType: "cat" },
     color:  { label: "Color", kind: "column", colType: "cat" },
     facet:  { label: "Facet", kind: "column", colType: "cat" },
@@ -2466,32 +2468,41 @@
       cfg.summaries.forEach(function (s) {
         if (s && s.facet && fcols.indexOf(s.facet) === -1) fcols.push(s.facet);
       });
+      // Without `by` the table is one row over all input rows: nothing to
+      // sort, search or drill, so those controls leave.
+      var grouped = Array.isArray(cfg.by) && cfg.by.length > 0;
+      var pres = fcols.length === 1
+        ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
+           "sortable", "axis", "pct_of", "missing", "download", "look",
+           "bar_width"]
+        : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
+           "axis", "pct_of", "missing", "download", "look", "bar_width"];
+      if (!grouped) {
+        pres = pres.filter(function (k) {
+          return ["sort_by", "sort_dir", "search", "sortable"].indexOf(k) === -1;
+        });
+      }
       return {
-        requiredMap: ["by"],
+        requiredMap: [],
         // Colour and facet are the COLUMN's mappings, added per summary in
         // the columns editor below: one column can split by severity while
         // the next repeats per sex, and a column that maps neither is plain.
-        // Only the grouping is the whole table's.
+        // Only the grouping is the whole table's, shown always and optional.
         optionalMap: [],
-        mapping: [],
+        mapping: ["by"],
         aggTitle: null,
         customSections: ctx ? [{
           title: "Columns",
           render: function (sec) { renderSummariesEditor(sec, ctx); }
         }] : [],
-        presentation: fcols.length === 1
-          ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
-             "sortable", "axis", "pct_of", "missing", "download", "look",
-             "bar_width"]
-          : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-             "axis", "pct_of", "missing", "download", "look", "bar_width"],
-        drillToggle: "drill",
+        presentation: pres,
+        drillToggle: grouped ? "drill" : null,
         drillDefault: (cfg.by && cfg.by.length)
           ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
         // A click claims the row's grouping path, so there is no column to
         // pick: `drill` is the on switch.
         drillPicker: false,
-        ctrlSection: true,
+        ctrlSection: grouped,
         drillHint: cfg.drill
           ? "Clicking a row filters downstream on " + cfg.drill + "."
           : "Clicking a row filters downstream blocks to that row.",
@@ -2726,8 +2737,9 @@
       typeKey: null,
       typeGroups: null,
       familyFor: null,
+      // `by` is optional: without it the table is one row over all rows.
       entryRequired: function (role) {
-        return role === "by" || role === "group";
+        return role === "group";
       },
       drillAutoLabel: null,
       title: "Summarize table settings",

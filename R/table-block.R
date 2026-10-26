@@ -1480,7 +1480,8 @@ table_arguments <- function() {
       by = new_arg_spec(
         paste0(
           "Grouping columns, outer to inner (at most two). Groups layout: ",
-          "one row per level, the outer column an expandable parent. ",
+          "one row per level, the outer column an expandable parent; empty ",
+          "gives one row over all input rows. ",
           "Variables layout: one column per level. Records layout: rows ",
           "nested under one header per level."
         ),
@@ -1617,6 +1618,13 @@ table_summaries_spec <- function() {
 }
 
 
+#' The column a groups table starts with when it has none: a count of rows.
+#' Without `by` that is one row, the number of input rows.
+#' @noRd
+table_groups_seed <- function() {
+  list(list(type = "simple", func = "count", show = "number", name = "Rows"))
+}
+
 #' Construction guidance for the drill-down table block
 #' @noRd
 table_guidance <- function() {
@@ -1633,6 +1641,8 @@ table_guidance <- function() {
     "of decimals.\n",
     "- \"groups\": one row per level of `by` (at most two, outer first; the ",
     "outer is an expandable parent), one column per entry of `summaries`. ",
+    "Without `by` it is one row over all input rows: the headline numbers ",
+    "of a dashboard, usually with look = \"cards\". ",
     "Use it when one row is one category: most frequent adverse events ",
     "(simple count_distinct of USUBJID, show = bar), duration by term ",
     "(dist, show = box), an episode swimlane per subject (spans), a lab ",
@@ -1683,8 +1693,8 @@ table_guidance <- function() {
 #'   `"variables"` (a Table 1: one row per statistic or level of each
 #'   variable in `summaries`, one column per level of `by`).
 #' @param by Grouping columns, outer first, at most two. Groups layout: one
-#'   row per level, the outer one an expandable parent. Variables layout: one
-#'   column per level.
+#'   row per level, the outer one an expandable parent; without `by`, one row
+#'   over all input rows. Variables layout: one column per level.
 #' @param rowname Records layout: the stub column (first column, row label).
 #'   With `by` set, the rows sit under one collapsible header per level of
 #'   `by` ([table_nest()]).
@@ -1850,6 +1860,9 @@ new_table_block <- function(layout = "records",
   # Old summary keys (stat, from / to, lo / hi, fields, ...) read as the
   # public ones (R/lane-summaries.R).
   summaries <- lapply(summaries, lane_public_summary)
+  if (identical(layout, "groups") && !length(summaries)) {
+    summaries <- table_groups_seed()
+  }
   shadings <- if (is.list(shadings)) shadings else list()
   script_values <- if (is.list(script_values)) script_values else list()
   # `id` is also the module id inside the server; keep the column apart.
@@ -1991,6 +2004,10 @@ new_table_block <- function(layout = "records",
             v <- as.character(unlist(msg$value))[1L]
             if (isTRUE(v %in% c("records", "groups", "variables")) &&
                   !identical(shiny::isolate(r_layout()), v)) {
+              if (identical(v, "groups") &&
+                    !length(shiny::isolate(shared$summaries()))) {
+                shared$summaries(table_groups_seed())
+              }
               r_layout(v)
             }
           }

@@ -89,7 +89,7 @@ table_groups_server <- function(id, data,
   # A board that grew its column list out of the ranked-bar surface -- or one
   # saved before `by` existed -- still carries the value in the old slots, and
   # summarize_prepare() falls back to them. So the table draws correctly while
-  # the gear's REQUIRED "Group by" row shows empty, which reads as a broken
+  # the gear's "Group by" row shows empty, which reads as a broken
   # block. Move the value into the slot the summarize gear reads, and clear the
   # old ones: left in place they would silently resurrect a grouping the user
   # cleared in the gear (the same rule as the colour / facet migration below).
@@ -351,7 +351,15 @@ table_groups_server <- function(id, data,
           # list switches back to the single-mark path.
           setters[[key]](if (is.list(val)) lapply(val, lane_public_summary) else list())
         } else if (key %in% c("cols", "fields", "by")) {
-          setters[[key]](as.character(unlist(val %||% character())))
+          v <- as.character(unlist(val %||% character()))
+          setters[[key]](v[!is.na(v) & nzchar(v)])
+          # A table without `by` is one row with no drill: a selection
+          # made on the old rows would filter downstream with no way to
+          # reset it.
+          if (identical(key, "by") && !length(r_by())) {
+            r_filter_column(NULL)
+            r_filter_values(NULL)
+          }
         } else if (key %in% c("ctrl_target", "ctrl_table")) {
           v <- trimws(as.character(unlist(val %||% "")))
           setters[[key]](if (length(v)) v[[1L]] else "")
@@ -482,8 +490,10 @@ table_groups_server <- function(id, data,
     # chrome, which summarize-table.js applies in place.
     output$summarize_chrome <- shiny::renderUI({
       shiny::isolate(summarize_chrome_shell(
-        max_height = r_max_height(), search = r_search(),
-        drill = r_drill(), elem_id = ns("summarize_table_block"),
+        max_height = r_max_height(),
+        search = r_search() && length(r_by()) > 0L,
+        drill = if (length(r_by())) r_drill(),
+        elem_id = ns("summarize_table_block"),
         ctrl_target = r_ctrl_target(),
         download = shiny::uiOutput(ns("summarize_download"), inline = TRUE)
       ))
@@ -524,19 +534,22 @@ table_groups_server <- function(id, data,
       d <- tryCatch(ann_data(), error = function(e) NULL)
       shiny::req(is.data.frame(d))
       tt <- r_titles()
-      cards <- cards_frame(d, r_look(), r_by(), r_drill())
+      # Without `by` the table is one row (lane_prepare_summaries()):
+      # nothing to search and no group to drill on.
+      grouped <- length(r_by()) > 0L
+      drill <- if (grouped) r_drill()
       p <- summarize_build_payload(
-        cards$data,
+        d,
         chrome = c(
           tt[setdiff(names(tt), "title_arg_values")],
           # The container's own settings, which the one-shot chrome
           # render does not follow. "" rather than NULL: the payload
           # drops NULLs, and an absent key means "leave as is".
-          list(search = isTRUE(r_search()), drill = cards$drill %||% "",
+          list(search = grouped && isTRUE(r_search()), drill = drill %||% "",
                ctrl_target = r_ctrl_target() %||% "",
                max_height = r_max_height() %||% "")
         ),
-        drill = cards$drill,
+        drill = drill,
         # Isolated: a click must not rebuild the body (the JS keeps the
         # highlight live), but any fresh build -- restore, config edit, new
         # data -- re-reads the then-current state, so the highlight
@@ -587,7 +600,7 @@ table_groups_server <- function(id, data,
         group = r_group(), value = r_value(), func = r_func(),
         id_var = r_id_var(), parent = r_parent(), color = r_color(),
         bar_mode = r_bar_mode(), facet = r_facet(),
-        summaries = r_summaries(), by = cards$by,
+        summaries = r_summaries(), by = r_by(),
         facet_layout = r_facet_layout(),
         cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
         sort_dir = r_sort_dir(), top_n = r_top_n(),
@@ -671,13 +684,12 @@ table_groups_server <- function(id, data,
     # (R/download-footer.R), for every format that writes the table
     # rather than the browser's picture.
     dl_exhibit <- function() {
-      cards <- cards_frame(ann_data(), r_look(), r_by(), r_drill())
       e <- do.call(static_summarize_table, c(
-        list(cards$data),
+        list(ann_data()),
         list(
           group = r_group(), parent = r_parent(), color = r_color(),
           facet = r_facet(), func = r_func(), value = r_value(),
-          id_var = r_id_var(), summaries = r_summaries(), by = cards$by,
+          id_var = r_id_var(), summaries = r_summaries(), by = r_by(),
           look = r_look(),
           facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
           cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),

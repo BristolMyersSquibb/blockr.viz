@@ -51,7 +51,8 @@ record <- function(blk, edits = list()) {
         invisible(NULL)
       }
       session$flushReact()
-      expr <- session$makeScope("expr")
+      # The groups engine runs inside the table block's module.
+      expr <- session$makeScope("expr")$makeScope("groups")
       for (e in edits) {
         expr$setInputs(summarize_table_block_action = list(
           action = "config", param = e$param, value = e$value
@@ -115,6 +116,12 @@ cases <- list(
   # A height: the table scrolls in its own box.
   height = record(block(by = "TERM", summaries = list(count_bar),
                         max_height = "300px")),
+  # No grouping: one row over all input rows, with nothing to sort, search
+  # or drill, though search and drill are set. Then a grouping is picked.
+  no_by = record(
+    block(summaries = list(count_bar), drill = "TERM"),
+    edits = list(list(param = "by", value = list("TERM")))
+  ),
   # The gear's container settings, edited in turn: search off, drill on,
   # send to filter on, send to filter off, drill off, search on.
   settings = record(

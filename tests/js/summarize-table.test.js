@@ -298,3 +298,36 @@ test('a gear edit is sent as a config action', async () => {
   assert.ok(t.isOpen());
   await t.close();
 });
+
+test('without a grouping the table is one Total row with nothing to sort, search or drill', async () => {
+  const t = open('no_by');
+  assert.deepEqual(t.labels(), ['Total']);
+  assert.equal(t.search().style.display, 'none');
+  assert.equal(t.root.hasAttribute('data-summarize-drill'), false);
+  assert.equal(t.doc.querySelectorAll('th.blockr-sortable').length, 0);
+  assert.deepEqual(clickRowActions(t), []);
+
+  click(t.doc.querySelector('.blockr-gear-btn'));
+  const band = t.band();
+  const row = Array.from(band.querySelectorAll('.dd-form-row'))
+    .find((r) => /Group by/.test(r.textContent));
+  assert.ok(row, 'the gear has a Group by row');
+  assert.equal(band.querySelectorAll('.dd-role-required-empty').length, 0,
+    'Group by is optional: not marked as missing');
+  assert.equal(/\*/.test(row.textContent), false, 'no required asterisk');
+  assert.equal(/Drill-down/.test(band.textContent), false, 'no drill section');
+  assert.equal(/Header sorting/.test(band.textContent), false);
+  assert.equal(/Search/.test(band.textContent), false);
+
+  // A grouping picked: one row per term, the search box back.
+  t.push(1);
+  assert.equal(t.labels().length, 4);
+  assert.equal(t.search().style.display, '');
+  await t.close();
+});
+
+function clickRowActions(t) {
+  const before = t.actions().length;
+  click(t.rows()[0]);
+  return t.actions().slice(before);
+}

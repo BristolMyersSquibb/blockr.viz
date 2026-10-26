@@ -34,7 +34,10 @@ summarize_export_df <- function(prep) {
   n <- nrow(rows)
 
   out <- list()
-  out[[summarize_label_header(prep)]] <- as.character(rows$.label)
+  # The one row of a table without `by` has a blank header on screen; a
+  # spreadsheet column needs a name, so it gets a blank one.
+  head <- summarize_label_header(prep)
+  out[[if (nzchar(head)) head else " "]] <- as.character(rows$.label)
 
   dropped <- character()
 
