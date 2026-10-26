@@ -13,9 +13,10 @@ dd_ctrl_claims(data, table, filters, subject = NULL)
 filters a plain data frame (or when the target resolves the table itself).}
 
 \item{filters}{Named list, column -> drilled value(s); the columns AND
-together. An \code{NA} value is a missing one: it takes the rows where the
-column is missing or empty, and a column left with no value there is not
-claimed. A value on a column
+together. An \code{NA} value (or a table's "(Missing)" level) is a missing
+one: it takes the rows where the column is missing or empty, and the
+claim names them with the value filter's tokens \code{"<NA>"} / \code{"<empty>"}.
+A value on a column
 carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) is a group name; it
 is matched against the group's members, and the claim is the SET of
 source values the group holds (\code{mode = "multi"}), so a pooled bar claims

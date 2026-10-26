@@ -793,9 +793,10 @@ new_ctrl_bridge_extension <- function(...) {
 #' @param table Name of the table the claim applies to, `""` when the target
 #'   filters a plain data frame (or when the target resolves the table itself).
 #' @param filters Named list, column -> drilled value(s); the columns AND
-#'   together. An `NA` value is a missing one: it takes the rows where the
-#'   column is missing or empty, and a column left with no value there is not
-#'   claimed. A value on a column
+#'   together. An `NA` value (or a table's "(Missing)" level) is a missing
+#'   one: it takes the rows where the column is missing or empty, and the
+#'   claim names them with the value filter's tokens `"<NA>"` / `"<empty>"`.
+#'   A value on a column
 #'   carrying a group definition (see [expand_groups()]) is a group name; it
 #'   is matched against the group's members, and the claim is the SET of
 #'   source values the group holds (`mode = "multi"`), so a pooled bar claims
