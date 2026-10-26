@@ -112,10 +112,12 @@ test_that("config toggle messages update state (on/off and logical back-compat)"
   }
 
   testServer(blk, args = list(data = reactive(df)), {
-    # Defaults: display features on, download off.
+    # Defaults: display features on, download on (as on the chart).
     expect_true(session$returned$state$sortable())
     expect_true(session$returned$state$collapsible())
     expect_true(session$returned$state$search())
+    expect_true(session$returned$state$download())
+    cfg(session, "download", "off")
     expect_false(session$returned$state$download())
 
     # Segmented pills emit "on"/"off".
@@ -197,8 +199,14 @@ test_that("a board saved with any per-format toggle restores as download on", {
     expect_true(session$returned$state$download())
   })
 
-  # ... and one saved before downloads existed stays off.
-  testServer(new_table_block()$expr_server, args = list(data = reactive(df)), {
+  # ... one that stored them all off stays off, and a new table offers
+  # downloads.
+  testServer(new_table_block(excel_download = FALSE, html_download = FALSE,
+                             pptx_download = FALSE)$expr_server,
+             args = list(data = reactive(df)), {
     expect_false(session$returned$state$download())
+  })
+  testServer(new_table_block()$expr_server, args = list(data = reactive(df)), {
+    expect_true(session$returned$state$download())
   })
 })

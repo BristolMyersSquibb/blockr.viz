@@ -23,6 +23,11 @@
   its `missing` and keeps it. Boards saved by the old table, summarize table
   and summary table blocks had no `missing`; they now show "(Missing)" rows
   and columns where their data has missing values.
+* The table block offers its downloads by default (`download = TRUE`), as
+  the chart block does. Boards saved by the new table block stored their
+  choice and keep it. An old table board keeps downloads off when it stored
+  its per-format download flags all off; one saved before those flags
+  existed now offers downloads.
 
 # blockr.viz 0.2.210
 

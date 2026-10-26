@@ -1785,7 +1785,8 @@ table_guidance <- function() {
 #'   column headers; allow collapsing group rows.
 #' @param max_height `NULL` (default): the table runs its full length and
 #'   scrolls with its panel. A CSS length caps it.
-#' @param download Offer the table for download (xlsx, html, pptx).
+#' @param download `TRUE` (default) offers the table for download (xlsx,
+#'   html, pptx), as on [new_chart_block()].
 #' @param title,subtitle,caption Text above and below the table, as on
 #'   [new_chart_block()]: `NULL` = the input's own label, `""` = none, else a
 #'   template resolved against the data.
@@ -1843,7 +1844,7 @@ new_table_block <- function(layout = "records",
                             sortable = TRUE,
                             collapsible = TRUE,
                             max_height = NULL,
-                            download = FALSE,
+                            download = TRUE,
                             title = NULL,
                             subtitle = NULL,
                             caption = getOption("blockr.viz.default_caption"),

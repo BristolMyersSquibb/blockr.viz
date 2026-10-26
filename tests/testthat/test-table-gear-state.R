@@ -112,7 +112,7 @@ test_that("downloads on renders every format the machine can write", {
 
 test_that("downloads off renders no control at all", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- records_engine()
+  blk <- records_engine(download = FALSE)
 
   testServer(blk, args = list(data = reactive(df)), {
     session$flushReact()

@@ -33,7 +33,7 @@ new_table_block(
   sortable = TRUE,
   collapsible = TRUE,
   max_height = NULL,
-  download = FALSE,
+  download = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = getOption("blockr.viz.default_caption"),
@@ -139,7 +139,8 @@ column headers; allow collapsing group rows.}
 \item{max_height}{\code{NULL} (default): the table runs its full length and
 scrolls with its panel. A CSS length caps it.}
 
-\item{download}{Offer the table for download (xlsx, html, pptx).}
+\item{download}{\code{TRUE} (default) offers the table for download (xlsx,
+html, pptx), as on \code{\link[=new_chart_block]{new_chart_block()}}.}
 
 \item{title, subtitle, caption}{Text above and below the table, as on
 \code{\link[=new_chart_block]{new_chart_block()}}: \code{NULL} = the input's own label, \code{""} = none, else a

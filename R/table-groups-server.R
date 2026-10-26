@@ -20,7 +20,7 @@ table_groups_server <- function(id, data,
                                       axis = TRUE,
                                       value_labels = TRUE,
                                       bar_width = "fit",
-                                      download = FALSE,
+                                      download = TRUE,
                                       title = NULL,
                                       subtitle = NULL,
                                       # The chart block's default: a deployment

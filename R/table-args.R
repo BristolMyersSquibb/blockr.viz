@@ -149,10 +149,13 @@ table_legacy_args <- function(args, from = NULL) {
     if (is.null(out[["color"]]) && !is.null(get("row_color"))) {
       out$color <- get("row_color")
     }
-    # Downloads were three per-format toggles before they became one.
-    if (isTRUE(get("excel_download")) || isTRUE(get("html_download")) ||
-          isTRUE(get("pptx_download"))) {
-      out$download <- TRUE
+    # Downloads were three per-format toggles before they became one. A
+    # board that stored them keeps its choice; one without them takes the
+    # default (on).
+    per_format <- c("excel_download", "html_download", "pptx_download")
+    if (any(!vapply(per_format, function(x) is.null(get(x)), logical(1L)))) {
+      out$download <- any(vapply(per_format, function(x) isTRUE(get(x)),
+                                 logical(1L)))
     }
     # The matrix look was a flag (`rotate_titles`, then `compact`) before it
     # became one of the three looks.
