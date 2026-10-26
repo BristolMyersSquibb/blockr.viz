@@ -2689,6 +2689,15 @@
           selected: this._hasVal(cfg[key]) ? cfg[key] : (role.dflt || first)
         };
       }
+      // A number or typed setting whose word lists its values: those values,
+      // and the current one where the list lacks it.
+      if (listed && (role.kind === 'number' || role.kind === 'text')) {
+        const cur = this._hasVal(cfg[key]) ? String(cfg[key]) : '';
+        return {
+          options: cur && listed.indexOf(cur) < 0 ? [...listed, cur] : listed,
+          selected: cur
+        };
+      }
       // A number word is typed over (SentenceSlots._edit); this list is what
       // a caller that asks for options anyway still gets.
       if (role.kind === 'number') {
@@ -2763,6 +2772,16 @@
     _slotEntry(key) {
       const role = this._role(this._slotCfgKey(key));
       return !!(role && role.slot === 'entry');
+    }
+
+    /** Does this word list its values (`{@bins in 10, 30, 60}`) for a
+     * number or a typed setting? Then it opens that list as a menu.
+     * @param {string} key
+     */
+    _slotListedValue(key) {
+      const role = this._role(this._slotCfgKey(key));
+      return !!(role && (role.kind === 'number' || role.kind === 'text') &&
+                this._slotChoices(key));
     }
 
     /** Is this word a number? A number is typed over in place, with its
@@ -3177,11 +3196,14 @@
         ddc._setRoleValue(key, on ? 'off' : 'on');
         return;
       }
-      if (ddc._slotEntry && ddc._slotEntry(key)) {
+      // A list the sentence names (`{@bins in 10, 30, 60}`) is a menu, also
+      // for a number or a typed setting: the author chose those values.
+      const listed = !!(ddc._slotListedValue && ddc._slotListedValue(key));
+      if (!listed && ddc._slotEntry && ddc._slotEntry(key)) {
         this._edit(key, anchor);
         return;
       }
-      const num = ddc._slotNumber && ddc._slotNumber(key);
+      const num = !listed && ddc._slotNumber && ddc._slotNumber(key);
       if (num) {
         this._edit(key, anchor, num);
         return;

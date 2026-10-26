@@ -376,7 +376,7 @@
                  kind: 'text', ph: 'e.g. 45' },
     band_min_n: { label: 'Cut below n', kind: 'text', ph: 'e.g. 12' },
     // About this many bins: R takes readable breaks (pretty()) near it.
-    bins: { label: 'Bins', kind: 'text', ph: 'e.g. 30' },
+    bins: { label: 'Bins', kind: 'number', min: 1, max: 200, step: 1 },
     // How values print (format.js), the tile block's vocabulary.
     format: { label: 'Numbers', kind: 'select',
               options: [{ value: 'number', label: '1,234.5' },

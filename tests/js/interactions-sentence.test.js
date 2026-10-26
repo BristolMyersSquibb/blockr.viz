@@ -145,6 +145,22 @@ test('a segmented word opens its list', () => {
   I.snap('sentence-segmented', r);
 });
 
+// A number whose word lists its values (`{@bins in 10, 30, 60}`) opens
+// that list; without a list the same word is typed over.
+test('a number word with listed values opens them as a list', () => {
+  const cfg = {
+    chart_type: 'histogram', x: 'AVAL', group: 'AVAL_bin', value: '.count', func: 'count',
+    drill: 'auto', bins: 30,
+    subtitle_resolved: '30 bins',
+    subtitle_parts: [{ text: '30', arg: 'bins' }, { text: ' bins' }],
+    slot_choices: { bins: ['10', '30', '60'] },
+    sentence_args: ['bins']
+  };
+  const r = I.runSteps(cfg, [word('30'), pick('10')],
+                       { extra: (c) => ({ menu: menu(c), sentence: sentence(c.block) }) });
+  I.snap('sentence-listed-number', r);
+});
+
 // A number word is typed over, not a list: its range beside the field, the
 // arrows stepping it, and a value outside the range held at the nearest end.
 test('a number word is typed over, held inside its range', () => {
