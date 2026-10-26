@@ -1685,6 +1685,10 @@
     _groupSections(pop) {
       const trayNav = Blockr.trayNav;
       if (!trayNav) return;
+      // Moving a section into the navigation's pane takes the focus off
+      // whatever had it (a column row just moved with Alt+Down); it goes back
+      // once the pane is in place.
+      const active = document.activeElement;
       let i = 0;
       for (const ch of Array.from(pop.children)) {
         if (!(ch instanceof HTMLElement) || ch.classList.contains('dd-section')) continue;
@@ -1715,6 +1719,10 @@
       });
       pop.appendChild(nav.el);
       this._group = nav.current();
+      if (active instanceof HTMLElement && active !== document.activeElement &&
+          pop.contains(active)) {
+        active.focus({ preventScroll: true });
+      }
     }
 
     /** @param {string} titleText @param {any[]} entries */
