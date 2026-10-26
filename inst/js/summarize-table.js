@@ -2796,33 +2796,86 @@
     // of columns, which the engine keeps out of the sentence (a menu picks
     // one); the word names the innermost column, the one each row is, so
     // it opens a single pick that replaces that column.
+    //
+    // Some words name a setting that lives elsewhere. summarize_title_args()
+    // (R/summarize-exhibit.R) reads `group` from the outer `by` column and
+    // `facet`, `fill` and `color` from the first summary. Such a word reads
+    // and writes that same place, so a pick changes the table and not only
+    // the sentence.
     var B = (typeof Blockr !== "undefined") ? Blockr : null;
     if (B && B.SentenceSlots) {
+      var byList = function () {
+        return Array.isArray(cfg.by) ? cfg.by : (cfg.by ? [cfg.by] : []);
+      };
       var lastBy = function () {
-        var b = Array.isArray(cfg.by) ? cfg.by : [];
+        var b = byList();
         return b.length ? b[b.length - 1] : "";
       };
+      var firstSummary = function () {
+        return (Array.isArray(cfg.summaries) && cfg.summaries[0] &&
+          typeof cfg.summaries[0] === "object") ? cfg.summaries[0] : null;
+      };
+      // Where a word's value lives: "by" (innermost), "outer" (the outer
+      // `by` column), "summary" (the first summary's key) or "role" (a
+      // setting of its own).
+      var placeOf = function (k) {
+        if (k === "by") return "by";
+        if (k === "group") return byList().length === 2 ? "outer" : "role";
+        if (k === "fill") return firstSummary() ? "summary" : "role";
+        if ((k === "facet" || k === "color") && !cfg[k] && firstSummary()) {
+          return "summary";
+        }
+        return "role";
+      };
+      // The role whose column list a word offers.
+      var listRole = { by: "by", outer: "group", fill: "color" };
+      var FILL_ROLE = { label: "Fill", kind: "column", colType: "cat" };
       var words = {
         // Synced like the menus below: the sentence paints with the first
         // payload, before the gear has read the script's controls, and a
         // script word's label comes from those.
-        _role: function (k) { sync(); return engine._role(k); },
+        _role: function (k) {
+          sync();
+          return engine._role(k) || (k === "fill" ? FILL_ROLE : null);
+        },
         _slotFlag: function (k) { sync(); return engine._slotFlag(k); },
         _slotNumber: function (k) { sync(); return engine._slotNumber(k); },
         _slotOptionsFor: function (k) {
           sync();
-          if (k !== "by") return engine._slotOptionsFor(k);
+          var place = placeOf(k);
+          if (place === "role") return engine._slotOptionsFor(k);
+          if (place === "by" || place === "outer") {
+            return {
+              options: engine._colOptionsFor(listRole[place], { required: false }),
+              selected: place === "by" ? lastBy() : byList()[0]
+            };
+          }
+          var s1 = firstSummary();
           return {
-            options: engine._colOptionsFor("by", { required: true }),
-            selected: lastBy()
+            options: engine._colOptionsFor(listRole[k] || k, { required: false }),
+            selected: (s1 && s1[k]) ? s1[k] : "(none)"
           };
         },
         _setRoleValue: function (k, v) {
-          if (k !== "by") { engine._setRoleValue(k, v); return; }
-          var b = Array.isArray(cfg.by) ? cfg.by.slice() : [];
-          if (b.length) b[b.length - 1] = v; else b = [v];
-          cfg.by = b;
-          sendConfig(elemId, "by", b);
+          var place = placeOf(k);
+          if (place === "role") { engine._setRoleValue(k, v); return; }
+          if (place === "by" || place === "outer") {
+            var b = byList().slice();
+            var i = place === "by" ? b.length - 1 : 0;
+            // "(none)" takes that column out: `by` is optional (a groups
+            // table without it is one row over all input rows).
+            if (v === "(none)" || v === "") { if (b.length) b.splice(i, 1); }
+            else if (b.length) b[i] = v; else b = [v];
+            cfg.by = b;
+            sendConfig(elemId, "by", b);
+          } else {
+            var list = cfg.summaries.map(function (s) {
+              return (s && typeof s === "object") ? Object.assign({}, s) : s;
+            });
+            if (v === "(none)" || v === "") delete list[0][k]; else list[0][k] = v;
+            cfg.summaries = list;
+            sendConfig(elemId, "summaries", list);
+          }
           if (pop.classList.contains("blockr-settings--open")) engine.render();
         }
       };

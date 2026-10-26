@@ -1180,7 +1180,28 @@
     if (elemId) {
       var blk = elemId.replace(/-records-drilldown_table_block$/, "");
       var vw = document.getElementById(blk + "-variables_wrap");
-      if (vw && getComputedStyle(vw).display !== "none") current = "variables";
+      if (vw && getComputedStyle(vw).display !== "none") {
+        current = "variables";
+        // One gear per block. The variables layout's own settings (what to
+        // summarise, the split, the statistics) come from the summary table
+        // widget; its pickers and settings move into this gear as the first
+        // section, and the widget's own card (with its gear) stays hidden.
+        var host = vw.querySelector(".summary-table-block-container");
+        var stb = host && host._block;
+        if (stb && stb.grid) {
+          stb.card.classList.add("stb-card--in-gear");
+          spec.customSections = (spec.customSections || []).concat([{
+            title: "Table 1",
+            render: function (/** @type {HTMLElement} */ sec) {
+              var body = document.createElement("div");
+              body.className = "stb-in-gear";
+              body.appendChild(stb.grid);
+              body.appendChild(stb._bandGrid);
+              sec.appendChild(body);
+            }
+          }]);
+        }
+      }
     }
     spec.layoutSwitch = {
       value: current,

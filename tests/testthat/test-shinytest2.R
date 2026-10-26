@@ -581,20 +581,20 @@ test_that("cards: a filter action filters the block's output", {
 test_that("summary_table gear: toggling 'overall' adds a Total column to the output", {
   skip_if_no_app()
 
-  scope <- "#board-block_summary-expr-variables-summary_input"
   before <- get_block_result("summary")
   expect_false("Total" %in% names(before))
 
-  # Open the gear and tick the "Overall column" checkbox (design-system band).
-  # This drives summary-table-block.js's real gear -> state -> R -> output.
-  app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').scrollIntoView({block:'center'});", scope))
-  app$run_js(sprintf("document.querySelector('%s .blockr-gear-btn').click();", scope))
+  # The block has one gear, the table's; the summary table widget's settings
+  # are its "Table 1" section. Open it and tick "Overall column": this drives
+  # summary-table-block.js's checkbox -> state -> R -> output.
+  gears <- "Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] .blockr-gear-btn')).filter(function(x){return x.offsetParent;})"
+  expect_equal(app$get_js(paste0(gears, ".length")), 1L)
+  app$run_js(paste0("(function(){var g=", gears, "[0]; g.scrollIntoView({block:'center'}); g.click();})()"))
   app$wait_for_idle()
   Sys.sleep(0.3)
-  app$run_js(sprintf(
-    "(function(){var b=Array.from(document.querySelectorAll('%s .blockr-checkbox')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()",
-    scope
-  ))
+  app$run_js(
+    "(function(){var b=Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] .blockr-checkbox')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()"
+  )
   app$wait_for_idle()
   Sys.sleep(0.5)
   app$wait_for_idle()

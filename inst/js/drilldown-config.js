@@ -3104,7 +3104,13 @@
       }
       for (const p of parts) {
         if (!p || !p.text) continue;
-        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+        if (!p.arg || !this.canOpen(p.arg)) {
+          // A word is drawn as a control only if a click can open it. R
+          // marked this one, so the two disagree: say so where a test sees it.
+          if (p.arg) console.error('blockr: the sentence word "' + p.text + '" (' + p.arg + ') has no control');
+          el.appendChild(document.createTextNode(p.text));
+          continue;
+        }
         const w = document.createElement('span');
         w.className = 'blockr-slot';
         w.textContent = p.text;
@@ -3129,7 +3135,9 @@
         c.textContent = '+ ' + (this.label(key) || key);
         c.setAttribute('role', 'button');
         c.setAttribute('tabindex', '0');
-        this._wire(c, () => this.open(key, c));
+        // A setting no menu can carry (several columns, free text) is set in
+        // the gear: its offer opens the gear instead of doing nothing.
+        this._wire(c, () => (this.canOpen(key) ? this.open(key, c) : this.h.openGear()));
         el.appendChild(c);
       }
       if (keys.length > MAX) {
@@ -3141,6 +3149,19 @@
         this._wire(more, () => this.h.openGear());
         el.appendChild(more);
       }
+    }
+
+    /** Would a click on this word open something? The same checks open()
+     * makes, in the same order, so a word is drawn as a control exactly when
+     * it is one. Without an engine yet the click decides (old behaviour).
+     * @param {string} key */
+    canOpen(key) {
+      const ddc = this.h.ddc();
+      if (!ddc) return true;
+      if (ddc._slotFlag && ddc._slotFlag(key)) return true;
+      if (ddc._slotEntry && ddc._slotEntry(key)) return true;
+      if (ddc._slotNumber && ddc._slotNumber(key)) return true;
+      return !!(ddc._slotOptionsFor && ddc._slotOptionsFor(key));
     }
 
     /** @param {HTMLElement} el @param {() => void} fn */
@@ -3187,7 +3208,10 @@
         return;
       }
       const opts = ddc._slotOptionsFor(key);
-      if (!opts) return;
+      if (!opts) {
+        console.error('blockr: the sentence word "' + key + '" opens nothing');
+        return;
+      }
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;
       if (!B || !B.Select || !B.Select.menu) {
         // LOUD on purpose: a version skew, not a capability to feel out. The

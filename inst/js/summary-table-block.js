@@ -139,6 +139,9 @@
       const grid = document.createElement('div');
       grid.className = 'stb-grid';
       this.card.appendChild(grid);
+      // The table block's gear takes this grid and the settings grid in as
+      // one section (table.js, withLayoutSwitch), so the block has one gear.
+      this.grid = grid;
 
       // Summarize (full-width row)
       const varsWrap = document.createElement('div');
@@ -304,17 +307,32 @@
                 k => k === opt.key || this._state.stats.indexOf(k) >= 0
               );
             }
+            lockLast();
             this._autoSubmit();
           });
         return box;
       });
       boxes.forEach(b => boxRow.appendChild(b.el));
 
+      // The one statistic left cannot be cleared: show it as locked rather
+      // than letting a click be undone without a word.
+      const lockLast = () => {
+        const one = this._state.stats.length === 1;
+        boxes.forEach((box, i) => {
+          const inp = box.el.querySelector('input');
+          const locked = one && this._state.stats[0] === STAT_OPTIONS[i].key;
+          if (inp) inp.disabled = locked;
+          box.el.title = locked ? 'At least one statistic is needed' : '';
+        });
+      };
+
       const update = () => {
         boxes.forEach((box, i) => {
           box.set(this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0);
         });
+        lockLast();
       };
+      lockLast();
 
       // Same `{ _update }` shape as the toggle handles so setState's
       // refresh loop can repaint it uniformly.
