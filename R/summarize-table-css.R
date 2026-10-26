@@ -492,14 +492,23 @@ summarize_table_css <- function() {
                         var(--blockr-summarize-tick)) !important;
   transition: background 0.1s ease;
 }
-/* Rows: the table style every output table uses (blockr.ui design system,
-   Tables): 30px, a 20px line with 5px above and below, no rules in the body.
+/* Rows: 26px, a 20px line with 3px above and below, no rules in the body,
+   as the records and variables layouts draw them (html_table_shared_css_fallback()).
    The 12px lanes sit inside the line, and the gaps between them separate
    the rows. The sparkline row below keeps its own taller cell. */
 .blockr-summarize-table tbody td {
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 3px;
+  padding-bottom: 3px;
   line-height: 20px;
+}
+/* The first column starts on the records layout's text edge (12px); a
+   nested table moves it to the headings' edge below. The header keeps the
+   records layout's space under its titles (7px and a 1px rule there). */
+.blockr-summarize-table tr > :first-child {
+  padding-left: 12px;
+}
+.blockr-summarize-table thead th {
+  padding-bottom: 8px;
 }
 .blockr-summarize-table tbody tr {
   border-bottom: 0;
@@ -790,16 +799,16 @@ summarize_table_css <- function() {
   border: 0;
   background: transparent;
   padding: 0;
-  margin-right: 5px;
-  margin-left: -18px;
+  margin-right: 9px;
+  margin-left: -21px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   vertical-align: baseline;
 }
 .blockr-summarize-container .blockr-chev {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   flex: none;
   color: var(--blockr-color-text-muted, #6b7280);
   transition: transform 0.2s ease, color 0.15s ease;
@@ -817,8 +826,8 @@ summarize_table_css <- function() {
 .blockr-summarize-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
-  gap: 5px;
-  margin-left: -18px;
+  gap: 9px;
+  margin-left: -21px;
 }
 .blockr-summarize-container .dt-foldall {
   display: inline-flex;
@@ -842,18 +851,35 @@ summarize_table_css <- function() {
   border-radius: 2px;
 }
 
-/* Hierarchy. */
-/* A nested table's chevron hangs into the label cell's left padding
-   (margin-left: -18px). The shared 16px left it 2px outside the cell, under
-   the 3px bar a clicked row draws at the cell edge. 24px leaves a gap; the
-   header and the child rows share it, so every label starts on the parent
-   names' text edge. */
+/* Hierarchy, drawn as the records and variables layouts draw their
+   section headings (R/html-table.R). Every label starts on one 24px edge,
+   the 12px chevron and 9px gap hanging to the left of it (margin-left:
+   -21px). A heading has 11px above it and 3px below; the last row of a
+   group has 7px below it. */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
-.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header {
+.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
+.blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
   padding-left: 24px;
 }
-.blockr-summarize-table tr.is-child td.blockr-summarize-label-col {
-  color: var(--blockr-color-text-muted, #6b7280);
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-parent > td {
+  padding-top: 11px;
+  padding-bottom: 3px;
+}
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-child:has(+ tr.is-parent) > td,
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-child:last-child > td {
+  padding-bottom: 7px;
+}
+/* A compact row is its 24px tile plus 1px above and below; the last row of
+   a group adds the same 4px. Its header and headings stay on one line: the
+   label column is as wide as the subject ids, and a heading row has no
+   tiles to make room for a wrapped name. */
+.blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:has(+ tr.is-parent) > td,
+.blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:last-child > td {
+  padding-bottom: 5px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-stub-header .blockr-col-name,
+.blockr-summarize-table[data-summarize-compact='1'] tr.is-parent td.blockr-summarize-label-col {
+  white-space: nowrap;
 }
 .blockr-summarize-table tr.is-child.collapsed-hidden { display: none; }
 .blockr-summarize-table tr.is-parent .blockr-summarize-label {
