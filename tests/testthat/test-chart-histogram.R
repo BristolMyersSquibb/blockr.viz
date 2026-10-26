@@ -34,6 +34,10 @@ test_that("a histogram ships its bins, every one of them, as a bar's group", {
       expect_equal(cfg$func, "count")
       expect_equal(cfg$sort_by, "data")
       expect_equal(cfg$orientation, "vertical")
+      # the bins carry x's name, so a click reads "v = ..." in the footer
+      cols <- sent[[length(sent)]]$columns
+      bin <- Filter(function(c) identical(c$name, "v_bin"), cols)[[1]]
+      expect_equal(bin$label, "v")
       expect_equal(session$returned$state$x(), "v")
       expect_equal(session$returned$state$bins(), 3)
     },

@@ -88,8 +88,8 @@ chart_infer_orientation <- function(type, x, y, func, is_num) {
   if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal"
 }
 
-# The column a histogram's bins are written to: `x` with a suffix, so a click
-# on a bin reads "hwy_bin = 20-25" in the footer.
+# The column a histogram's bins are written to: `x` with a suffix. It carries
+# x's label, so a click on a bin reads "hwy = 20-25" in the footer.
 chart_bin_col <- function(x) {
   if (length(x)) paste0(x, "_bin") else NULL
 }

@@ -542,7 +542,11 @@ new_chart_block <- function(
           if (is.null(x)) {
             return(d)
           }
-          d[[chart_bin_col(x)]] <- chart_bins(d[[x]], r_bins())$bin
+          bin <- chart_bins(d[[x]], r_bins())$bin
+          # The bins speak for x: a click reads "price = 1000-1500" in the
+          # footer, not the bin column's own name.
+          attr(bin, "label") <- attr(d[[x]], "label") %||% x
+          d[[chart_bin_col(x)]] <- bin
           d
         }
         # The same breaks (they depend on the range of x only), for the
