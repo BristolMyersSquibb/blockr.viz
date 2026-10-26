@@ -2070,6 +2070,15 @@ new_table_block <- function(layout = "records",
           output$layout_css <- shiny::renderUI({
             table_layout_css(ns, r_layout())
           })
+          # Both engines' "Rows are" switches draw the layout from this push,
+          # never from their own last click (table.js, layoutOf).
+          shiny::observe({
+            session$sendCustomMessage("blockr-viz-table-layout", list(
+              ids = c(ns("records-drilldown_table_block"),
+                      ns("groups-summarize_table_block")),
+              layout = r_layout()
+            ))
+          })
           shiny::outputOptions(output, "layout_css", suspendWhenHidden = FALSE)
 
           # The cards' script and stylesheet, asked for the first time the

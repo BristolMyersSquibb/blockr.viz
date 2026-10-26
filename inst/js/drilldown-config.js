@@ -498,9 +498,10 @@
         const ls = spec.layoutSwitch;
         const sec = this._sectionEl('Rows are');
         sec.classList.add('dd-section--layout');
-        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => {
-          if (v !== ls.value) ls.onPick(v);
-        });
+        // The segmented control ignores a click on the selected segment.
+        // ls.value is the layout when the tray was drawn and may be stale
+        // by the time of the click, so it is no guard.
+        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
         for (const key of (ls.fields || [])) this._renderRole(sec, key);
       }
 

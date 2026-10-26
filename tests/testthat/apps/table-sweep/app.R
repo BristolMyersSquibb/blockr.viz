@@ -83,7 +83,7 @@ iris_summaries <- list(
 
 # --- board --------------------------------------------------------------------
 
-serve(new_dock_board(
+board <- new_dock_board(
   blocks = c(
     iris = new_static_block(iris, block_name = "Iris"),
     iris_sum = new_static_block(iris_sum, block_name = "Iris, summarised"),
@@ -171,4 +171,26 @@ serve(new_dock_board(
   ),
   active = "records",
   options = dock_board_options()
-))
+)
+
+# Test-only: each table block's layout as the board holds it
+# (test-table-layout-switch.R). exportTestValues() does nothing outside
+# Shiny's test mode.
+class(board) <- c("table_sweep_board", class(board))
+registerS3method(
+  "blockr_test_exports", "table_sweep_board",
+  function(x, rv, ...) {
+    NextMethod()
+    shiny::exportTestValues(layouts = {
+      blocks <- rv[["board"]]$blocks
+      lays <- lapply(blocks, function(b) {
+        st <- b$server$state
+        if (is.function(st$layout)) st$layout()
+      })
+      Filter(Negate(is.null), lays)
+    })
+  },
+  envir = asNamespace("blockr.core")
+)
+
+serve(board)

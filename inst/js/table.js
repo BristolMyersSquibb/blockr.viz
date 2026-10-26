@@ -1166,6 +1166,22 @@
     }
   }
 
+  // The table block's layout by engine element id: the server pushes it on
+  // every change ("blockr-viz-table-layout", R/table-block.R), to this engine
+  // and to the groups engine (summarize-table.js reads the same object). The
+  // "Rows are" switch in either gear draws from it, never from its own last
+  // click: a stale highlight on the wanted segment would swallow the click.
+  /** @type {Record<string, string>} */
+  var layoutOf = /** @type {any} */ (window).blockrTableLayouts =
+    /** @type {any} */ (window).blockrTableLayouts || {};
+  // A gear that should open on the engine taking over, by element id. An
+  // engine drawing for the first time has no gear yet when the push comes
+  // (its chrome is a renderUI that waits for the layout); it opens the gear
+  // when it builds it.
+  /** @type {Record<string, boolean>} */
+  var gearPending = /** @type {any} */ (window).blockrTableGearPending =
+    /** @type {any} */ (window).blockrTableGearPending || {};
+
   // The table block's "Rows are" switch (R/table-block.R). The block's
   // server reads it off this engine's action input.
   var TABLE_LAYOUTS = [
@@ -1180,8 +1196,14 @@
     if (elemId) {
       var blk = elemId.replace(/-records-drilldown_table_block$/, "");
       var vw = document.getElementById(blk + "-variables_wrap");
-      if (vw && getComputedStyle(vw).display !== "none") {
-        current = "variables";
+      // Before the server's first push: which wrap is on screen.
+      var lay = layoutOf[elemId] ||
+        (vw && getComputedStyle(vw).display !== "none" ? "variables" : current);
+      current = lay;
+      if (vw && lay === "variables") {
+        // The table is the block's own Table 1, not a finished input.
+        delete spec.badge;
+        delete spec.badgeTitle;
         // One gear per block. The variables layout's own settings (what to
         // summarise, the split, the statistics) come from the summary table
         // widget; its pickers and settings move into this gear as the first
@@ -1379,16 +1401,16 @@
                  // table, structured included (a "Table 1" wants its title
                  // most of all).
                  titles: ["title", "subtitle", "caption"] });
-    // Structured ("Table 1") input is an already-summarized annotated data
-    // frame with no pickable columns, so grouping / aggregation / drill / colour
-    // don't apply. A small badge names it; the tooltip carries the why.
-    if (!hasCols && !byMode) {
-      spec.badge = "Annotated data frame";
-      spec.badgeTitle = "Dot-prefixed columns (.label, .variable, .group1, …) " +
-        "were detected and interpreted as structure — they build the section " +
-        "hierarchy and row identity and are not shown as data columns. " +
-        "Grouping and aggregation are set upstream; Drill-down and the " +
-        "display options apply here.";
+    // A finished input (gtsummary, composer, annotated frame) has no
+    // pickable columns, so aggregation / drill / colour don't apply. A badge
+    // says so; the tooltip carries the why. withLayoutSwitch() drops it in
+    // the variables layout, whose table the block builds itself.
+    if (!hasCols) {
+      spec.badge = "Finished table";
+      spec.badgeTitle = "The input is already a table (from gtsummary, a " +
+        "table composer or an annotated data frame) and is shown as it is. " +
+        "Its rows and statistics are set where it was made; titles, " +
+        "drill-down and the display options apply here.";
     }
     return spec;
   }
@@ -1713,6 +1735,30 @@
       openPop();
     });
 
+    // A layout switch (layoutOf): the groups engine taking over closes this
+    // gear; this engine drawing the new layout redraws it, open if a gear in
+    // the block was open. The new layout's table arrives after the switch,
+    // so an open gear redraws once more when it does (root._dtAfterPayload).
+    var relayout = false;
+    document.addEventListener("blockr-table-layout", function (e) {
+      var d = /** @type {CustomEvent} */ (e).detail;
+      if (!d || d.id !== elemId || !root.isConnected) return;
+      relayout = false;
+      delete gearPending[elemId];
+      if (d.layout === "groups") { closePop(); return; }
+      if (!d.gearOpen) return;
+      refreshState();
+      engine.refresh();
+      openPop();
+      relayout = true;
+    });
+    /** @type {any} */ (root)._dtAfterPayload = function () {
+      if (!relayout || !pop.classList.contains("blockr-settings--open")) return;
+      relayout = false;
+      refreshState();
+      engine.refresh();
+    };
+
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
     // One control row, chart-style: the chrome's search + download MOVE UP
@@ -1729,8 +1775,11 @@
       if (hdrRow) hdrRow.style.display = "none";
     }
     // Restore the remembered open state across chrome rebuilds (the state
-    // was parsed just above, so no refresh needed here).
-    if (bandOpen[elemId]) openPop();
+    // was parsed just above, so no refresh needed here), or open the gear a
+    // layout switch carried over (gearPending).
+    var carried = gearPending[elemId] && layoutOf[elemId] !== "groups";
+    delete gearPending[elemId];
+    if (bandOpen[elemId] || carried) openPop();
   }
 
   // Chrome wiring — once per container. The gear, search input and scroll
@@ -2262,6 +2311,13 @@
   // stored payload (chrome after payload, dock re-mounts — see wireRoot).
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyPayload(root, p) {
+    drawPayload(root, p);
+    var after = /** @type {any} */ (root)._dtAfterPayload;
+    if (after) after();
+  }
+
+  /** @param {HTMLElement} root @param {VizTablePayload} p */
+  function drawPayload(root, p) {
     var slot = /** @type {HTMLElement | null} */ (
       root.querySelector(".dt-table-slot") ||
       root.querySelector(".blockr-table-wrapper"));
@@ -2434,6 +2490,28 @@
   // container yet just parks in the store — wireRoot delivers it when the
   // chrome turns up (no timers, no delivery window that can expire).
   if (window.Shiny && Shiny.addCustomMessageHandler) {
+    // R -> JS: the table block's layout, to both engines (see layoutOf). A
+    // gear open in either stays open across the switch, on the engine that
+    // draws the new layout; the engines act on the "blockr-table-layout"
+    // event.
+    Shiny.addCustomMessageHandler("blockr-viz-table-layout",
+      function (/** @type {any} */ msg) {
+        /** @type {string[]} */
+        var ids = [].concat(msg.ids || []);
+        var open = ids.some(function (id) {
+          var sel = (window.CSS && CSS.escape) ? CSS.escape(id) : id;
+          var pop = document.querySelector('[data-dd-pop-for="' + sel + '"]');
+          return !!pop && pop.classList.contains("blockr-settings--open");
+        });
+        ids.forEach(function (id) {
+          layoutOf[id] = msg.layout;
+          gearPending[id] = open;
+          document.dispatchEvent(new CustomEvent("blockr-table-layout", {
+            detail: { id: id, layout: msg.layout, gearOpen: open }
+          }));
+        });
+      });
+
     Shiny.addCustomMessageHandler("blockr-viz-table-data",
       function (/** @type {any} */ msg) {
         var entry = payloadStore[msg.id];
