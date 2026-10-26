@@ -4,6 +4,13 @@
   columns directly and put a group switch in the board's filter.
 * The table block orders rows alphabetically with `sort_by = "alpha"`, as
   the chart block does. The old value `"label"` is read as `"alpha"`.
+* The table block's `format` takes the chart block's values: `"number"`,
+  `"compact"` (1.2K, 3.4M), `"percent"` (a fraction x100 with "%") or a
+  whole number of decimals from 0 to 6. A new `unit` heads the numeric
+  columns ("Revenue (CHF)") and follows the number on a card. Both apply to
+  the records layout's cells, cards and downloads; the gear's "Numbers"
+  select and "Unit" field set them. Excel keeps the values as numbers and
+  shows them in the same format.
 
 # blockr.viz 0.2.210
 

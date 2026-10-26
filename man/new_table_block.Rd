@@ -17,6 +17,7 @@ new_table_block(
   color = NULL,
   shadings = list(),
   format = "number",
+  unit = "",
   look = "table",
   facet_layout = "by_summary",
   sort_by = "value",
@@ -98,9 +99,14 @@ the stub column when the board's scale map has it, \code{""} = off.}
 \code{list(mode, cols, domain)} with \code{mode} one of \code{"sequential"},
 \code{"diverging"}, \code{"bar"}.}
 
-\item{format}{Records layout: number format of the cells, \code{"number"} (up
-to two decimals) or a whole number of decimals. The old \code{digits}
-argument reads as this.}
+\item{format, unit}{Records layout: how the numbers print, in the cells, on
+cards and in the downloads, as on \code{\link[=new_chart_block]{new_chart_block()}}. \code{format} is
+\code{"number"} (default; up to two decimals), \code{"compact"} (1.2K, 3.4M),
+\code{"percent"} (a fraction times 100, with "\%") or a whole number of
+decimals from 0 to 6 (trailing zeros dropped). \code{unit} is free text
+(\code{"CHF"}): the headers of the numeric columns carry it, "Revenue (CHF)",
+and a card prints it after its number. The old \code{digits} argument reads
+as \code{format}.}
 
 \item{look}{How the table is drawn: \code{"table"}, \code{"compact"} (the matrix
 look: rotated column titles, so a column is as wide as its cells, and

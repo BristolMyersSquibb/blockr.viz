@@ -100,7 +100,7 @@ test_that("block state round-trips constructor args", {
     {
       session$flushReact()
       expect_equal(session$returned$state$drill(), "USUBJID")
-      expect_equal(session$returned$state$format(), 2L)
+      expect_equal(session$returned$state$format(), "number")
       # The old filter formals are gone; no click means no selection.
       expect_null(session$returned$state$selection())
       expect_false("filter_type" %in% names(session$returned$state))

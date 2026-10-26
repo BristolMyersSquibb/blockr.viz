@@ -943,7 +943,9 @@ dt_table_attrs <- function(table_tag, onclick_col, onclick_idx,
     `data-dt-drill-mode` = drill_mode,
     `data-dt-onclick-col` = onclick_col,
     `data-dt-onclick-idx` = if (!is.null(onclick_idx)) onclick_idx else NULL,
-    `data-dt-digits` = as.character(digits),
+    # The number format and its unit (format / unit), read back by the gear.
+    `data-dt-format` = as.character(digits),
+    `data-dt-unit` = toggles$unit %||% "",
     # Categorical identity color ("Color by" -- row tint via the board scale
     # map; the chart's color aesthetic applied to rows) and the value-encoding
     # `shadings` rules ({mode, cols} JSON, only at this edge).
@@ -1525,11 +1527,22 @@ table_arguments <- function() {
       ),
       format = new_arg_spec(
         paste0(
-          "Records layout: number format of the cells. \"number\" (default, ",
-          "up to two decimals) or a whole number of decimals, e.g. 0 for ",
-          "counts."
+          "Records layout: how numbers print in the cells, on cards and in ",
+          "downloads: \"number\" (default, up to two decimals), ",
+          "\"compact\" (1.2K, 3.4M), \"percent\" (a fraction x100 with %) ",
+          "or a whole number of decimals from 0 to 6, e.g. 0 for counts. ",
+          "Same as the chart block's `format`."
         ),
         example = "number",
+        type = arg_string()
+      ),
+      unit = new_arg_spec(
+        paste0(
+          "Records layout: free-text unit of the numbers (e.g. \"CHF\", ",
+          "\"kg\"); the numeric column headers carry it once, a card ",
+          "prints it after the number. Never guessed from the data."
+        ),
+        example = "CHF",
         type = arg_string()
       )
     ),
@@ -1645,8 +1658,9 @@ table_guidance <- function() {
     "user names (\"Revenue and Profit\" -> columns = [\"Revenue\", ",
     "\"Profit\"]), empty for all. `by` nests the rows under one header per ",
     "level. `shadings` colours numeric cells (diverging for a correlation ",
-    "matrix, sequential for magnitudes); `format` is \"number\" or a number ",
-    "of decimals.\n",
+    "matrix, sequential for magnitudes); `format` is \"number\", ",
+    "\"compact\", \"percent\" or a number of decimals, `unit` a unit ",
+    "for the headers.\n",
     "- \"groups\": one row per level of `by` (at most two, outer first; the ",
     "outer is an expandable parent), one column per entry of `summaries`. ",
     "Without `by` it is one row over all input rows: the headline numbers ",
@@ -1736,9 +1750,14 @@ table_guidance <- function() {
 #' @param shadings Records layout: cell colour rules, a list of
 #'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
-#' @param format Records layout: number format of the cells, `"number"` (up
-#'   to two decimals) or a whole number of decimals. The old `digits`
-#'   argument reads as this.
+#' @param format,unit Records layout: how the numbers print, in the cells, on
+#'   cards and in the downloads, as on [new_chart_block()]. `format` is
+#'   `"number"` (default; up to two decimals), `"compact"` (1.2K, 3.4M),
+#'   `"percent"` (a fraction times 100, with "%") or a whole number of
+#'   decimals from 0 to 6 (trailing zeros dropped). `unit` is free text
+#'   (`"CHF"`): the headers of the numeric columns carry it, "Revenue (CHF)",
+#'   and a card prints it after its number. The old `digits` argument reads
+#'   as `format`.
 #' @param look How the table is drawn: `"table"`, `"compact"` (the matrix
 #'   look: rotated column titles, so a column is as wide as its cells, and
 #'   square cells for `show = "tile"` summaries, a heatmap) or `"cards"` (one
@@ -1804,6 +1823,7 @@ new_table_block <- function(layout = "records",
                             color = NULL,
                             shadings = list(),
                             format = "number",
+                            unit = "",
                             look = "table",
                             facet_layout = "by_summary",
                             sort_by = "value",
@@ -1858,9 +1878,11 @@ new_table_block <- function(layout = "records",
   if (!missing %in% c("drop", "level")) missing <- "drop"
   # Alphabetical order was "label" before it took the chart's "alpha".
   sort_by <- summarize_sort_by(sort_by)
-  # Number format of the records layout's cells: "number" (up to two
-  # decimals) or a whole number of decimals.
-  digits <- table_format_digits(format)
+  # Number format of the records layout's cells, the chart's set:
+  # "number" (up to two decimals), "compact", "percent" or a whole number of
+  # decimals. `unit` heads the numeric columns.
+  format <- table_format_state(format)
+  unit <- chr_state(trimws(as.character(unlist(unit)))) %||% ""
   sections <- chr_vec_state(sections) %||% character()
   # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
   # back as list() (R/state-normalize.R). `color` only collapses the empty
@@ -1930,6 +1952,7 @@ new_table_block <- function(layout = "records",
             look = shiny::reactiveVal(look),
             pct_of = shiny::reactiveVal(pct_of),
             missing = shiny::reactiveVal(missing),
+            unit = shiny::reactiveVal(unit),
             # The records engine draws cards only in the records layout: the
             # variables layout has no card form.
             layout = r_layout,
@@ -1982,7 +2005,7 @@ new_table_block <- function(layout = "records",
           rec <- table_records_server(
             "records", rec_data,
             rowname = rowname, value = columns, color = color,
-            shadings = shadings, drill = drill, digits = digits,
+            shadings = shadings, drill = drill, digits = format,
             max_height = max_height,
             filter_column = rec_sel$column, filter_values = rec_sel$values,
             filter_group_cols = rec_sel$group_cols,
@@ -2102,6 +2125,7 @@ new_table_block <- function(layout = "records",
               color = rs$color,
               shadings = rs$shadings,
               format = rs$digits,
+              unit = shared$unit,
               pct_of = shared$pct_of,
               missing = shared$missing,
               look = shared$look,
@@ -2163,13 +2187,15 @@ new_table_block <- function(layout = "records",
       dat_valid = validate_annotated_df_input,
       allow_empty_state = c(
         "by", "rowname", "columns", "summaries", "id", "color", "shadings",
+        "unit",
         "top_n", "drill", "drill_target", "drill_table", "max_height",
         "title", "subtitle", "caption", "script", "script_values",
         "selection", "sections"
       ),
       external_ctrl = c(
         "layout", "by", "rowname", "columns", "summaries", "id", "color",
-        "shadings", "format", "pct_of", "missing", "look", "facet_layout",
+        "shadings", "format", "unit", "pct_of", "missing", "look",
+        "facet_layout",
         "sort_by",
         "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
         "drill_target", "drill_table", "search", "sortable", "collapsible",

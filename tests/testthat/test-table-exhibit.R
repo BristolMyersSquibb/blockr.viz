@@ -236,7 +236,7 @@ test_that("table_exhibit() is the block as a printed table", {
   expect_false(any(grepl("^\\.(bg|fg):", names(body))))
 })
 
-test_that("the table block's report call carries digits, text and colours (#37)", {
+test_that("the table block's report call carries format, text and colours (#37)", {
   blk <- new_table_block(digits = 1L, title = "Area effect", subtitle = "",
                          cell_color = drilldown_table_color("sequential"))
   cl <- report_call(blk, "gtbl")
@@ -244,7 +244,7 @@ test_that("the table block's report call carries digits, text and colours (#37)"
   inner <- cl[[2]]
   expect_identical(inner[[1]], quote(blockr.viz::table_exhibit))
   expect_identical(inner[[2]], as.name("gtbl"))
-  expect_identical(inner$digits, 1L)
+  expect_identical(inner$format, 1L)
   expect_identical(inner$title, "Area effect")
   expect_identical(inner$subtitle, "")
   expect_identical(inner$shadings[[1]]$mode, "sequential")
@@ -259,4 +259,55 @@ test_that("the table block's report call carries digits, text and colours (#37)"
   skip_if_not_installed("flextable")
   ft <- eval(cl)
   expect_true("3.8" %in% unlist(ft$body$dataset))
+})
+
+# --- format: the chart's set ------------------------------------------------
+
+test_that("the table's number format takes the chart's values", {
+  expect_identical(table_format_state("compact"), "compact")
+  expect_identical(table_format_state("percent"), "percent")
+  expect_identical(table_format_state("2"), 2L)
+  expect_identical(table_format_state(1), 1L)
+  # Old larger decimals clamp to the chart's range; nonsense reads as default.
+  expect_identical(table_format_state(8L), 6L)
+  expect_identical(table_format_state("pct"), "number")
+  expect_identical(table_format_state(NULL), "number")
+
+  v <- c(0.1234, 12.5, 999, 1234, -45678, 2.5e6, 3.21e9)
+  expect_identical(dt_format_num(v, "number"),
+                   c("0.12", "12.5", "999", "1234", "-45678", "2500000",
+                     "3210000000"))
+  expect_identical(dt_format_num(v, "compact"),
+                   c("0.12", "12.5", "999", "1.2K", "-45.7K", "2.5M", "3.2B"))
+  expect_identical(dt_format_num(c(0.1234, 1, -0.0004), "percent"),
+                   c("12.3%", "100%", "0%"))
+  expect_identical(dt_format_num(1234.5678, 1L), "1234.6")
+})
+
+test_that("compact, percent and unit reach cells, cards and downloads", {
+  d <- data.frame(term = c("a", "b"), share = c(0.25, 0.5),
+                  amount = c(1500, 2.5e6))
+  # Cells.
+  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
+  expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
+  p <- dt_build_payload(d, "term", digits = "compact", unit = "CHF")
+  expect_match(p$head %||% jsonlite::toJSON(p), "amount \\(CHF\\)")
+  # Cards: the unit after the number, not in the label.
+  m <- table_cards_records(d, label_col = "term", digits = "compact",
+                           unit = "CHF")
+  expect_identical(m$cols[[2]]$main, c("1.5K CHF", "2.5M CHF"))
+  expect_identical(m$cols[[2]]$label, "amount")
+  # Downloads and the report: the frame the writers get.
+  ex <- table_exhibit(d, rowname = "term", format = "compact", unit = "CHF")
+  expect_identical(ex$amount, c("1.5K", "2.5M"), ignore_attr = TRUE)
+  expect_identical(attr(ex$amount, "label"), "amount (CHF)")
+  expect_identical(xlsx_num_format("percent"), "0.0%")
+  expect_match(xlsx_num_format("compact"), "\"K\"")
+  skip_if_not_installed("openxlsx")
+  f <- tempfile(fileext = ".xlsx")
+  write_annotated_xlsx(d, f, digits = "percent")
+  wb <- openxlsx::loadWorkbook(f)
+  fmts <- vapply(wb$styleObjects, function(s) s$style$numFmt$formatCode %||% "",
+                 character(1L))
+  expect_true("0.0%" %in% fmts)
 })

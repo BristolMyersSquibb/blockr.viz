@@ -20,7 +20,8 @@ table_records_server <- function(id, data,
                                  color = NULL,
                                  shadings = list(),
                                  drill = NULL,
-                                 digits = 2L,
+                                 digits = "number",
+                                 unit = "",
                                  max_height = NULL,
                                  filter_column = NULL,
                                  filter_values = NULL,
@@ -68,7 +69,9 @@ table_records_server <- function(id, data,
     r_color    <- shiny::reactiveVal(color)
     r_shadings <- shiny::reactiveVal(dd_parse_shadings(shadings))
     r_drill      <- shared$drill %||% shiny::reactiveVal(drill)
-    r_digits        <- shiny::reactiveVal(digits)
+    # The number format (table_format_state()) and its unit.
+    r_digits        <- shiny::reactiveVal(table_format_state(digits))
+    r_unit          <- shared$unit %||% shiny::reactiveVal(unit)
     r_max_height    <- shared$max_height %||% shiny::reactiveVal(max_height)
     r_filter_column <- shiny::reactiveVal(filter_column)
     r_filter_values <- shiny::reactiveVal(filter_values)
@@ -112,7 +115,7 @@ table_records_server <- function(id, data,
       p$look <- "cards"
       p$cards <- cards_payload(table_cards_records(
         data, label_col = label_col, value_cols = value_cols,
-        digits = digits, row_hex = row_hex
+        digits = digits, unit = r_unit(), row_hex = row_hex
       ))
       p
     }
@@ -243,8 +246,12 @@ table_records_server <- function(id, data,
         } else if (identical(p, "summaries")) {
           # JS sends the whole summaries list as a JSON string on any edit.
           upd(r_summaries, dd_parse_summaries(v))
-        } else if (identical(p, "digits")) {
-          upd(r_digits, as.integer(v))
+        } else if (p %in% c("format", "digits")) {
+          # "digits" is the gear's old key for a number of decimals.
+          upd(r_digits, table_format_state(v))
+        } else if (identical(p, "unit")) {
+          u <- as.character(unlist(v))
+          upd(r_unit, if (length(u) && !is.na(u[[1L]])) trimws(u[[1L]]) else "")
         } else if (identical(p, "sortable")) {
           upd(r_sortable, as_toggle(v))
         } else if (identical(p, "collapsible")) {
@@ -374,8 +381,12 @@ table_records_server <- function(id, data,
       d <- ann_data()
       auto <- r_data_titles()
       list(
-        data = dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
-                                r_summaries(), r_shadings()),
+        # The unit heads the numeric columns, as on screen.
+        data = dt_unit_labels(
+          dt_exhibit_frame(d, r_rowname(), r_value(), r_group(),
+                           r_summaries(), r_shadings()),
+          r_unit()
+        ),
         # The export frame is built anew and has lost the input's
         # attributes, so the file name's dataset and the download
         # footer's provenance and filters are read off the input.
@@ -399,7 +410,8 @@ table_records_server <- function(id, data,
         cards = if (cards_on() && !dt_is_structured(d)) {
           cards_exhibit(table_cards_records(
             d, label_col = r_rowname(), value_cols = r_value(),
-            digits = r_digits(), row_hex = row_hex_for(d)$hex
+            digits = r_digits(), unit = r_unit(),
+            row_hex = row_hex_for(d)$hex
           ))
         }
       )
@@ -664,6 +676,7 @@ table_records_server <- function(id, data,
             color      = arc_col,
             group      = r_group(), summaries = r_summaries(),
             digits     = r_digits(),
+            unit       = r_unit(),
             sortable    = isTRUE(r_sortable()),
             collapsible = isTRUE(r_collapsible()),
             search      = isTRUE(r_search()),
@@ -701,6 +714,7 @@ table_records_server <- function(id, data,
           shadings   = r_shadings(),
           drill      = r_drill(),
           digits     = r_digits(),
+          unit       = r_unit(),
           row_hex    = row_hex,
           color      = rc_col,
           group      = r_group(), summaries = r_summaries(),

@@ -1270,7 +1270,18 @@
     // engine's _renderShadings, not as a standalone role row).
     shade_mode: { label: "Mode",       kind: "select",
                   options: ["diverging", "sequential", "bar"] },
-    digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] },
+    // How numbers print: the chart's set (chart/format.js), with the
+    // table's own example numbers (no thousands separator in the cells).
+    format:     { label: "Numbers",    kind: "select",
+                  options: [{ value: "number", label: "Auto" },
+                            { value: "0", label: "1235" },
+                            { value: "1", label: "1234.6" },
+                            { value: "2", label: "1234.57" },
+                            { value: "3", label: "1234.568" },
+                            { value: "4", label: "1234.5679" },
+                            { value: "compact", label: "1.2K" },
+                            { value: "percent", label: "12.3%" }] },
+    unit:       { label: "Unit",       kind: "text", ph: "e.g. CHF" },
     // Display toggles (column-free): click-through pills labelled by meaning.
     // Keys match the R config params so onChange(key) round-trips to the block
     // reactiveVals; the row label names the dimension, the pill the state.
@@ -1328,7 +1339,7 @@
     // count). Grand totals = on with no group -> a single totals row.
     var aggOn = !byMode && hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
     var pres = [];
-    if (hasCols) pres.push("digits");
+    if (hasCols) pres.push("format", "unit");
     pres.push("sortable");
     pres.push("look");
     if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
@@ -1455,7 +1466,8 @@
         try { return JSON.parse(table.getAttribute("data-dt-shadings") || "[]"); }
         catch (e) { return []; }
       })(),
-      digits:     table.getAttribute("data-dt-digits") || "2",
+      format:     table.getAttribute("data-dt-format") || "number",
+      unit:       table.getAttribute("data-dt-unit") || "",
       // Display toggles (segmented on/off). Default on, except download.
       sortable:    table.getAttribute("data-dt-sortable") || "on",
       collapsible: table.getAttribute("data-dt-collapsible") || "on",

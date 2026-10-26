@@ -124,14 +124,15 @@ dt_exhibit_frame <- function(data, rowname = NULL, value = NULL,
 #' screen's own formatter; NA stays NA, so the writers draw their missing
 #' mark. The stub (`.label`, else the first column) and the dot-prefixed
 #' structure columns are left alone, as on screen. Column attributes (the
-#' header label, emphasis) survive. `digits = NULL`, or anything that is not
-#' a data frame, comes back unchanged.
+#' header label, emphasis) survive. `digits` is the table's number format
+#' (table_format_state()); `NULL`, or anything that is not a data frame,
+#' comes back unchanged.
 #' @noRd
 dt_format_digits <- function(data, digits) {
-  digits <- suppressWarnings(as.integer(digits))
-  if (!is.data.frame(data) || length(digits) != 1L || is.na(digits)) {
+  if (!is.data.frame(data) || is.null(digits) || !length(digits)) {
     return(data)
   }
+  digits <- table_format_state(digits)
   stub <- if (".label" %in% names(data)) ".label" else names(data)[1L]
   cols <- setdiff(names(data), stub)
   cols <- cols[!startsWith(cols, ".")]
@@ -155,7 +156,8 @@ dt_format_digits <- function(data, digits) {
 #' the block shows it, as an [annotated data frame][as_annotated_df()] for
 #' [static_exhibit()] to typeset. The rowname comes first, then the value
 #' columns (or the aggregate, with `group` / `summaries`); numbers are
-#' rounded to `digits` exactly like the screen, trailing zeros dropped; cells
+#' printed in the block's `format` exactly like the screen, and `unit` heads
+#' the numeric columns; cells
 #' shaded by a diverging or sequential rule carry their colours as `.bg:` /
 #' `.fg:` columns, which [static_table()] and the HTML table paint. Colour
 #' source columns are left out. In-cell bars are not drawn.
@@ -166,7 +168,7 @@ dt_format_digits <- function(data, digits) {
 #'
 #' @param data The table block's input: a data frame or an
 #'   [as_annotated_df()]-coercible table object.
-#' @param rowname,value,group,summaries,shadings,digits As in
+#' @param rowname,value,group,summaries,shadings,format,unit As in
 #'   [new_table_block()].
 #' @param title,subtitle,caption Table text, with the block's three tiers:
 #'   `NULL` takes the input's `label` / `subtitle` / `caption` attribute, `""`
@@ -175,24 +177,31 @@ dt_format_digits <- function(data, digits) {
 #'
 #' @return An annotated data frame, with `label`, `subtitle` and `caption`
 #'   attributes carrying the resolved text.
+#' @param digits Old name of `format` (a number of decimals).
 #' @seealso [new_table_block()], [static_exhibit()], [report_call()]
 #' @examples
 #' table_exhibit(
 #'   data.frame(term = "A", times_more = 3.81427, ci_low = 2.70123),
-#'   digits = 2L, title = "Area effect"
+#'   format = 2L, title = "Area effect"
 #' )
 #' @export
 table_exhibit <- function(data, rowname = NULL, value = NULL,
                           group = character(), summaries = list(),
-                          shadings = list(), digits = 2L, title = NULL,
-                          subtitle = NULL, caption = NULL) {
+                          shadings = list(), format = "number", unit = NULL,
+                          title = NULL, subtitle = NULL, caption = NULL,
+                          digits = NULL) {
+  if (!is.null(digits) && missing(format)) format <- digits
   data <- as_annotated_df(data)
   auto <- input_display_attrs(data)
   out <- dt_exhibit_frame(data, rowname, value,
                           as.character(group %||% character()),
                           dd_parse_summaries(summaries), shadings)
   # A structured frame shows its cells as they come, on screen too.
-  if (!dt_is_structured(data)) out <- dt_format_digits(out, digits)
+  if (!dt_is_structured(data)) {
+    # The unit first: it heads the columns that are numeric before
+    # formatting turns them into text.
+    out <- dt_format_digits(dt_unit_labels(out, unit), format)
+  }
   attr(out, "label") <- resolve_block_title(title, data, auto = auto$label)
   attr(out, "subtitle") <- resolve_block_title(subtitle, data,
                                                auto = auto$subtitle)
@@ -225,7 +234,8 @@ report_call.table_block <- function(x, var, ...) {
          top_n = NULL, axis = TRUE, value_labels = TRUE,
          pct_of = "facet", missing = "drop")
   } else {
-    list(rowname = NULL, columns = NULL, shadings = NULL, digits = 2L)
+    list(rowname = NULL, columns = NULL, shadings = NULL, format = "number",
+         unit = NULL)
   }
   # The static builders keep the engines' names.
   rename <- c(columns = "value", id = "id_var")

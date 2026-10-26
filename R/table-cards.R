@@ -264,11 +264,13 @@ cards_row_hex <- function(rows, prep, data, scale_map) {
 #' @param data The displayed frame.
 #' @param label_col,value_cols The stub and the value columns (`NULL` = the
 #'   first column, and every other column).
-#' @param digits Decimals of numeric cells.
+#' @param digits The number format of numeric cells (table_format_state()).
+#' @param unit Printed after each number, as on a tile.
 #' @param row_hex Per-row colour strip, or `NULL`.
 #' @noRd
 table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
-                                digits = 2L, row_hex = NULL) {
+                                digits = 2L, unit = NULL, row_hex = NULL) {
+  unit <- chr_state(trimws(as.character(unlist(unit))))
   if (is.null(label_col) || !label_col %in% names(data)) {
     label_col <- names(data)[1L]
   }
@@ -283,9 +285,8 @@ table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
     main <- if (num) {
       out <- rep("", n)
       ok <- !is.na(x)
-      out[ok] <- formatC(round(as.numeric(x[ok]), digits), format = "f",
-                         digits = digits, drop0trailing = TRUE,
-                         big.mark = ",")
+      out[ok] <- dt_format_num(x[ok], digits, big.mark = ",")
+      if (!is.null(unit)) out[ok] <- paste(out[ok], unit)
       sub("^-", "\u2212", out)
     } else {
       v <- as.character(x)

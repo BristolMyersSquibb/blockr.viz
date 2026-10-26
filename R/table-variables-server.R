@@ -348,14 +348,19 @@ table_missing_levels <- function(data, cols) {
   data
 }
 
-# Number format to decimals: "number" (the default) is up to two decimals,
-# a whole number is that many. Anything else reads as the default.
-table_format_digits <- function(format) {
-  if (is.numeric(format) && length(format) == 1L && is.finite(format)) {
-    return(as.integer(max(0, min(10, round(format)))))
+# The table's number format, the chart's set (chart_format_state() on the
+# chart branch): "number" (the default, up to two decimals), "compact" (1.2K,
+# 3.4M, 5.6B), "percent" (a fraction x100 with "%") or a whole number of
+# decimals, as an integer from 0 to 6. A number outside 0 to 6 is clamped
+# (an old `digits = 8` reads as 6); anything else reads as "number".
+table_format_state <- function(format) {
+  f <- unlist(format, use.names = FALSE)
+  if (!length(f) || is.na(f[[1L]])) return("number")
+  f <- f[[1L]]
+  if (is.character(f) && f %in% c("number", "compact", "percent")) return(f)
+  n <- suppressWarnings(as.numeric(f))
+  if (length(n) == 1L && is.finite(n)) {
+    return(as.integer(max(0, min(6, round(n)))))
   }
-  f <- as.character(unlist(format %||% "number"))[1L]
-  n <- suppressWarnings(as.integer(f))
-  if (!is.na(n)) return(as.integer(max(0L, min(10L, n))))
-  2L
+  "number"
 }

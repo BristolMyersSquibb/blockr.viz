@@ -39,7 +39,9 @@
 #'   `digits = 2`): the cell keeps the full value, so Excel computes on it,
 #'   and displays it rounded. Whole-number columns keep the general format.
 #'   `NULL` (default) writes every number in the general format. The table
-#'   block passes its own `digits` here.
+#'   block passes its own `format` here, so `"number"` (two decimals),
+#'   `"compact"` (1.2K, 3.4M) and `"percent"` (12.3%) are taken too; those
+#'   two format every numeric column.
 #'
 #' @return `file`, invisibly.
 #' @seealso [as_annotated_df()], [new_table_block()]
@@ -265,15 +267,17 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     # Number format for `digits`: one style per fractional column, stacked on
     # the alignment above. Whole-number columns (counts) keep the general
     # format, which shows 3 as 3 where "0.00" would show 3.00 -- the screen
-    # drops trailing zeros too.
+    # drops trailing zeros too. "compact" and "percent" format every numeric
+    # column, whole numbers included, as the screen does.
     num_fmt <- xlsx_num_format(digits)
+    every <- identical(digits, "compact") || identical(digits, "percent")
     if (!is.null(num_fmt)) {
       fmt_style <- openxlsx::createStyle(numFmt = num_fmt)
       for (j in seq_len(n_data)) {
         v <- df[[data_cols[j]]]
         if (!is.numeric(v)) next
         v <- v[is.finite(v)]
-        if (!length(v) || all(v == round(v))) next
+        if (!length(v) || (!every && all(v == round(v)))) next
         openxlsx::addStyle(wb, sheet, fmt_style, rows = data_xl, cols = j + 1L,
                            stack = TRUE)
       }
@@ -330,8 +334,16 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
 }
 
 # The Excel number format that shows `digits` decimals ("0", "0.0", "0.00",
-# ...), or NULL for none (the general format).
+# ...), or NULL for none (the general format). `digits` may also be a table
+# number format (table_format_state()): "number" shows two decimals,
+# "percent" one decimal with "%", "compact" thousands and millions as 1.2K
+# and 3.4M (Excel's conditions stop at two, so a billion reads 1000.0M).
 xlsx_num_format <- function(digits) {
+  if (identical(digits, "percent")) return("0.0%")
+  if (identical(digits, "compact")) {
+    return('[>=1000000]0.0,,"M";[>=1000]0.0,"K";General')
+  }
+  if (identical(digits, "number")) digits <- 2L
   digits <- suppressWarnings(as.integer(digits))
   if (length(digits) != 1L || is.na(digits) || digits < 0L) return(NULL)
   if (digits == 0L) "0" else paste0("0.", strrep("0", digits))
