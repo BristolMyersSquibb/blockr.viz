@@ -89,6 +89,7 @@ table_variables_args <- function(cfg) {
     nest_hierarchies = isTRUE(cfg$nest)
   )
   if (length(cfg$id) && nzchar(cfg$id)) args$subject_var <- cfg$id
+  if (identical(cfg$missing, "level")) args$missing <- "level"
   args
 }
 
@@ -96,20 +97,7 @@ table_variables_args <- function(cfg) {
 table_variables_call <- function(cfg) {
   args <- table_variables_args(cfg)
   if (is.null(args)) return(NULL)
-  input <- quote(data)
-  if (identical(cfg$missing, "level")) {
-    # Missing values as their own level, in plain dplyr so the emitted code
-    # stands alone.
-    cols <- unique(c(args$vars, args$by, args$sections))
-    input <- bquote(dplyr::mutate(
-      data,
-      dplyr::across(
-        dplyr::any_of(.(cols)),
-        ~ dplyr::coalesce(as.character(.x), "(Missing)")
-      )
-    ))
-  }
-  as.call(c(list(quote(blockr.viz::summary_table), input), args))
+  as.call(c(list(quote(blockr.viz::summary_table), quote(data)), args))
 }
 
 # Replace every `.(data)` placeholder in a bquoted block expression with
@@ -291,6 +279,9 @@ table_variables_ui <- function(id) {
 #' @param by One or two grouping columns, outer first.
 #' @param rowname The column that labels each row. `NULL`: the first column
 #'   that is not in `by`.
+#' @param missing Rows whose `by` value is missing: `"drop"` (default) keeps
+#'   them under a header without a value, `"level"` under a "(Missing)"
+#'   header, which a drill can claim like any other group.
 #' @return An annotated data frame (`.group1`, `.group1_level`, ..., `.label`,
 #'   then the remaining columns).
 #' @examples
@@ -298,10 +289,13 @@ table_variables_ui <- function(id) {
 #'                 n = 1:3)
 #' table_nest(d, by = "species", rowname = "island")
 #' @export
-table_nest <- function(data, by, rowname = NULL) {
+table_nest <- function(data, by, rowname = NULL, missing = "drop") {
   data <- as.data.frame(data)
   by <- intersect(as.character(unlist(by)), names(data))
   if (!length(by)) return(data)
+  if (identical(chr_state(missing), "level")) {
+    data <- table_missing_levels(data, by)
+  }
   rest <- setdiff(names(data), by)
   rowname <- as.character(rowname %||% character())
   rowname <- if (length(rowname) && rowname[[1L]] %in% rest) {
@@ -328,20 +322,25 @@ table_nest <- function(data, by, rowname = NULL) {
   res
 }
 
+# The name of the level that missing values become with `missing = "level"`.
+# A drill on it claims the rows whose value is missing (summarize_drill_expr(),
+# drill_source()).
+MISSING_LEVEL <- "(Missing)"
+
 # Missing values of the given columns as a level of their own, "(Missing)":
-# `missing = "level"` in the groups and variables layouts. Factors get the
-# level appended; other columns turn character.
+# `missing = "level"` in every layout. Factors get the level appended; other
+# columns turn character. Columns without a missing value stay as they are.
 table_missing_levels <- function(data, cols) {
   cols <- intersect(unique(as.character(cols)), names(data))
   for (cl in cols) {
     x <- data[[cl]]
     if (!anyNA(x)) next
     if (is.factor(x)) {
-      levels(x) <- c(levels(x), "(Missing)")
-      x[is.na(x)] <- "(Missing)"
+      levels(x) <- c(levels(x), MISSING_LEVEL)
+      x[is.na(x)] <- MISSING_LEVEL
     } else {
       x <- as.character(x)
-      x[is.na(x)] <- "(Missing)"
+      x[is.na(x)] <- MISSING_LEVEL
     }
     data[[cl]] <- x
   }

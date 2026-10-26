@@ -94,8 +94,7 @@ test_that("format replaces digits", {
 test_that("the variables layout's emitted code keeps missing levels", {
   call <- table_variables_call(list(vars = "SEV", by = "ARM",
                                     missing = "level"))
-  txt <- paste(deparse(call), collapse = " ")
-  expect_match(txt, "dplyr::coalesce", fixed = TRUE)
+  expect_identical(call$missing, "level")
   out <- eval(call, list(data = vocab_df()))
   expect_true(any(grepl("(Missing)", names(out), fixed = TRUE)))
 })

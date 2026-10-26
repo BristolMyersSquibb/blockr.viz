@@ -4,7 +4,7 @@
 \alias{table_nest}
 \title{Nest a tidy frame into a finished table}
 \usage{
-table_nest(data, by, rowname = NULL)
+table_nest(data, by, rowname = NULL, missing = "drop")
 }
 \arguments{
 \item{data}{A data frame, e.g. a \code{dplyr::summarise()} result.}
@@ -13,6 +13,10 @@ table_nest(data, by, rowname = NULL)
 
 \item{rowname}{The column that labels each row. \code{NULL}: the first column
 that is not in \code{by}.}
+
+\item{missing}{Rows whose \code{by} value is missing: \code{"drop"} (default) keeps
+them under a header without a value, \code{"level"} under a "(Missing)"
+header, which a drill can claim like any other group.}
 }
 \value{
 An annotated data frame (\code{.group1}, \code{.group1_level}, ..., \code{.label},

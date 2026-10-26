@@ -314,7 +314,11 @@ drill_source <- function(x, source = NULL, columns = NULL) {
         call. = FALSE
       )
     }
-    keep <- keep & as.character(src[[cl$name]]) %in% as.character(cl$values)
+    v <- src[[cl$name]]
+    hit <- as.character(v) %in% as.character(cl$values)
+    # The "(Missing)" level (`missing = "level"`) claims the missing values.
+    if (MISSING_LEVEL %in% cl$values) hit <- hit | is.na(v)
+    keep <- keep & hit
   }
 
   out <- src[keep, , drop = FALSE]

@@ -87,15 +87,21 @@ summarize_drill_on <- function(rows, group, parent, filters) {
 
 #' The click as a `dplyr::filter()` call on `data`, one condition per column.
 #' `members` maps a column carrying a group definition to the raw values its
-#' clicked group pools (dd_group_filters_members()).
+#' clicked group pools (dd_group_filters_members()). A click on the
+#' "(Missing)" row (`missing = "level"`) claims the rows whose value is
+#' missing.
 #' @noRd
 summarize_drill_expr <- function(filters, members = NULL) {
   if (!length(filters)) {
     return(quote(identity(data)))
   }
   conds <- lapply(names(filters), function(nm) {
-    vals <- members[[nm]] %||% filters[[nm]]
-    bquote(.data[[.(nm)]] %in% .(as.character(vals)))
+    vals <- as.character(members[[nm]] %||% filters[[nm]])
+    cond <- bquote(.data[[.(nm)]] %in% .(vals))
+    if (MISSING_LEVEL %in% vals) {
+      cond <- bquote((.(cond) | is.na(.data[[.(nm)]])))
+    }
+    cond
   })
   as.call(c(list(quote(dplyr::filter), quote(data)), conds))
 }

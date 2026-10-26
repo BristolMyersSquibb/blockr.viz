@@ -1984,17 +1984,12 @@ new_table_block <- function(layout = "records",
             shiny::req(lay %in% c("records", "variables"))
             d <- data()
             if (identical(lay, "variables")) {
-              cfg <- var$config()
-              args <- table_variables_args(cfg)
-              if (!is.null(args) && identical(cfg$missing, "level")) {
-                d <- table_missing_levels(
-                  d, unique(c(args$vars, args$by, args$sections))
-                )
-              }
+              args <- table_variables_args(var$config())
               if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
             } else if (length(shared$by()) && is.data.frame(d)) {
               # Records under headers: the tidy frame nested by `by`.
-              d <- table_nest(d, shared$by(), rec_rowname())
+              d <- table_nest(d, shared$by(), rec_rowname(),
+                              missing = shared$missing())
             }
             d
           })
@@ -2108,7 +2103,10 @@ new_table_block <- function(layout = "records",
               } else if (length(shared$by())) {
                 built <- as.call(c(
                   list(quote(blockr.viz::table_nest), quote(data)),
-                  list(by = shared$by(), rowname = rs$rowname())
+                  list(by = shared$by(), rowname = rs$rowname()),
+                  if (identical(shared$missing(), "level")) {
+                    list(missing = "level")
+                  }
                 ))
                 ex <- table_sub_data(ex, built)
               }

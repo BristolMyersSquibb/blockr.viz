@@ -11,6 +11,12 @@
   the records layout's cells, cards and downloads; the gear's "Numbers"
   select and "Unit" field set them. Excel keeps the values as numbers and
   shows them in the same format.
+* A click on the "(Missing)" row of a table with `missing = "level"` gives
+  the rows whose value is missing, in every layout. Before, it gave none.
+  `summary_table()` and `table_nest()` take `missing`: the variables layout
+  keeps a numeric variable numeric when it has missing values, and a nested
+  records table names its missing group "(Missing)", a header a drill can
+  claim.
 
 # blockr.viz 0.2.210
 
