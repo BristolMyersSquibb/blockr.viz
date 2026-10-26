@@ -137,9 +137,8 @@ drill_paths <- list(
   list(view = "cards", a = "Low dose", b = "High dose",
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "High dose", ], foot_b = "ARM = High dose"),
-  # drill = "source" resolves to source rows; with no click it passes none
-  # (drill_source(): an unclaimed table claims nothing).
-  list(view = "t1", a = "F", b = "(Missing)", none = adsl[0, ],
+  # drill = "source" resolves to source rows; with no click, all of them.
+  list(view = "t1", a = "F", b = "(Missing)",
        want_a = adsl[adsl$SEX %in% "F", ], foot_a = "SEX = F",
        want_b = adsl[na_sex, ], foot_b = "SEX = (Missing)")
 )

@@ -782,9 +782,10 @@ table_records_server <- function(id, data,
         col  <- r_filter_column()
         vals <- r_filter_values()
         # `drill = "source"` wraps whatever the drill built, so every
-        # branch (including the undrilled `filter(TRUE)`) goes through
-        # one resolution step: no claim resolves -> zero rows, never a
-        # silent "everything". The wrap is a plain call around the
+        # branch goes through one resolution step. Before any click the
+        # output is every source row, as below a chart or a groups table
+        # (`unclaimed = "all"`); a click that claims nothing resolvable
+        # still gives zero rows. The wrap is a plain call around the
         # bbquote result, so the emitted code still stands alone.
         #
         # `columns` tells drill_source() which mode to resolve in, using
@@ -799,6 +800,7 @@ table_records_server <- function(id, data,
           }
           call <- list(quote(blockr.viz::drill_source), ex)
           if (length(cols)) call <- c(call, list(columns = cols))
+          if (!length(claim_cols)) call <- c(call, list(unclaimed = "all"))
           as.call(call)
         }
         as_output(
