@@ -96,6 +96,12 @@ table_records_server <- function(id, data,
     # Cards draw the records layout only: the variables layout, which this
     # engine also draws, has no card form.
     r_layout <- shared$layout %||% function() "records"
+    # In the table block's records layout, the gear's "Group by" sets the
+    # block's `by` (rows nested under one header per level). Standalone,
+    # it is this engine's own display aggregation.
+    by_mode <- function() {
+      !is.null(shared$by) && identical(r_layout(), "records")
+    }
     cards_on <- function() {
       identical(r_look(), "cards") && identical(r_layout(), "records")
     }
@@ -229,7 +235,11 @@ table_records_server <- function(id, data,
         } else if (identical(p, "drill")) {
           upd(r_drill, if (identical(v, "(none)") || !nzchar(v)) NULL else v)
         } else if (identical(p, "group")) {
-          upd(r_group, as.character(unlist(v)))
+          if (by_mode()) {
+            upd(shared$by, as.character(unlist(v)))
+          } else {
+            upd(r_group, as.character(unlist(v)))
+          }
         } else if (identical(p, "summaries")) {
           # JS sends the whole summaries list as a JSON string on any edit.
           upd(r_summaries, dd_parse_summaries(v))
@@ -576,6 +586,12 @@ table_records_server <- function(id, data,
         # The block's look, for the gear's look selector: the payload says
         # `look = "cards"` only while cards are drawn.
         p$look_state <- r_look()
+        # The gear's "Group by": the current `by` and the input's columns,
+        # which the nested table no longer shows as columns.
+        if (by_mode()) {
+          p$by_state <- as.list(as.character(shared$by()))
+          p$by_choices <- dt_gear_cols_json(shared$input())
+        }
         p
       }
       # Filter state at build time, ISOLATED: the table body must never

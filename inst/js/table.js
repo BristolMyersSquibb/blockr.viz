@@ -1285,6 +1285,8 @@
                   return (cfg.caption == null && cfg.caption_auto) ? cfg.caption_auto : "";
                 } }
   });
+  // The summarize word, as in the groups layout and dplyr's `.by`.
+  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Group by" });
   // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
   // checkbox capability section (off by default, revealing their controls when
   // checked); Presentation keeps only the always-on display options (decimals,
@@ -1297,10 +1299,13 @@
     // offered; the repeatable summaries list (spec.summaries) appears once a group
     // is set. `value`/`func` are no longer standalone roles here — the
     // summaries list owns them.
-    var hasGroup = hasCols && cfg && cfg.group && cfg.group.length > 0;
+    // byMode (the table block's records layout): "Group by" sets `by`,
+    // which nests the rows; aggregation is the groups layout's job.
+    var byMode = !!(cfg && cfg.byMode);
+    var hasGroup = !byMode && hasCols && cfg && cfg.group && cfg.group.length > 0;
     // Aggregation is "on" when a value is carried (checking the box seeds a
     // count). Grand totals = on with no group -> a single totals row.
-    var aggOn = hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
+    var aggOn = !byMode && hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
     var pres = [];
     if (hasCols) pres.push("digits");
     pres.push("sortable");
@@ -1309,9 +1314,9 @@
     pres.push("search", "download");
     var spec = /** @type {Record<string, any>} */ ({ finished: !hasCols,
                  requiredMap: [], optionalMap: [],
-                 mapping: hasCols ? ["group"] : [],
-                 summaries: hasCols,         // offer the summaries list whenever the box is on
-                 aggregatable: hasCols,    // Variant A: Aggregation checkbox section
+                 mapping: (hasCols || byMode) ? ["group"] : [],
+                 summaries: hasCols && !byMode,    // offer the summaries list whenever the box is on
+                 aggregatable: hasCols && !byMode, // Variant A: Aggregation checkbox section
                  // Empty cols on a numeric aggregation = all numeric columns
                  // (override rule, dd_metric_plan) — placeholder promises it.
                  metricsDefaultAll: true,
@@ -1345,7 +1350,7 @@
     // Structured ("Table 1") input is an already-summarized annotated data
     // frame with no pickable columns, so grouping / aggregation / drill / colour
     // don't apply. A small badge names it; the tooltip carries the why.
-    if (!hasCols) {
+    if (!hasCols && !byMode) {
       spec.badge = "Annotated data frame";
       spec.badgeTitle = "Dot-prefixed columns (.label, .variable, .group1, …) " +
         "were detected and interpreted as structure — they build the section " +
@@ -1468,7 +1473,17 @@
     tlState("subtitle");
     tlState("caption");
     if (stored && stored.look_state) cfg.look = stored.look_state;
-    return { cols: cols, cfg: cfg };
+    // The table block's records layout: "Group by" is the block's `by`. The
+    // payload carries its value and the input's columns, since a table
+    // nested by `by` has no pickable columns of its own.
+    /** @type {VizColumn[]} */
+    var byCols = [];
+    if (stored && stored.by_choices !== undefined) {
+      cfg.byMode = true;
+      cfg.group = [].concat(stored.by_state || []);
+      try { byCols = JSON.parse(stored.by_choices) || []; } catch (e) { byCols = []; }
+    }
+    return { cols: cols, cfg: cfg, byCols: byCols };
   }
 
   /** @param {HTMLElement} root @param {HTMLElement} table */
@@ -1491,6 +1506,7 @@
     var st = readGearState(table);
     var cols = st.cols;
     var cfg = st.cfg;
+    var byCols = st.byCols;
 
     // Re-read state off the CURRENT table. The chrome — and this gear —
     // outlives table re-renders, so the state captured at init goes stale as
@@ -1506,6 +1522,7 @@
       var s = readGearState(t);
       cols = s.cols;
       cfg = s.cfg;
+      byCols = s.byCols;
     }
 
     // Structured ("Table 1") tables expose no pickable columns (the header is
@@ -1550,7 +1567,7 @@
       popoverEl: function () { return pop; },
       roles: TABLE_ROLES,
       config: function () { return cfg; },
-      columns: function () { return cols; },
+      columns: function () { return cols.length ? cols : byCols; },
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
       sections: function () {
@@ -1573,7 +1590,7 @@
       // The table's mapping section is purely the aggregation step (group +
       // aggregate), so name it "Aggregation" — clearer than "Mapping" that it
       // transforms the data before display.
-      mappingTitle: "Aggregation",
+      mappingTitle: function () { return cfg.byMode ? "Mapping" : "Aggregation"; },
       typeKey: null,
       typeGroups: null,
       familyFor: null,

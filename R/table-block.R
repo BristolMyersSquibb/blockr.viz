@@ -1219,7 +1219,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".34"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -1905,7 +1905,10 @@ new_table_block <- function(layout = "records",
             missing = shiny::reactiveVal(missing),
             # The records engine draws cards only in the records layout: the
             # variables layout has no card form.
-            layout = r_layout
+            layout = r_layout,
+            # The input before nesting: the records gear offers its columns
+            # for "Group by".
+            input = data
           )
 
           # Only the active engine sees data. The other one parks: its

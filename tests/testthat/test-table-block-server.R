@@ -422,3 +422,22 @@ test_that("with a ctrl_target the drill click is transient: nothing latched, cla
     expect_length(sent, 2L)
   })
 })
+
+test_that("records gear's Group by sets the block's `by`", {
+  df <- data.frame(
+    grp = c("A", "A", "B"), val = c(1, 2, 3), stringsAsFactors = FALSE
+  )
+  blk <- new_table_block()
+
+  testServer(blk$expr_server, args = list(data = reactive(df)), {
+    session$setInputs(`records-drilldown_table_block_action` = list(
+      action = "config", param = "group", value = list("grp")
+    ))
+    expect_equal(session$returned$state$by(), "grp")
+
+    session$setInputs(`records-drilldown_table_block_action` = list(
+      action = "config", param = "group", value = list()
+    ))
+    expect_equal(session$returned$state$by(), character())
+  })
+})
