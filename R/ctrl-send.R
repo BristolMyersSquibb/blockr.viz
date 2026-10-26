@@ -496,13 +496,33 @@ group_level_cols <- function(nms) {
   gl[order(as.integer(substr(gl, 7L, nchar(gl) - 6L)))]
 }
 
-# One claim per named column: the values the drilled rows hold, missing and
-# empty values left out. Several values claim as a set ("multi").
+# How a claim says "missing" and "empty": the value filter's own tokens
+# (blockr.dm VALUE_FILTER_NA / VALUE_FILTER_EMPTY), which it turns into
+# `is.na(col)` / `col == ""`. A claim never names a missing value as NA or as
+# the table's "(Missing)" level, which would match no row there.
+CTRL_NA <- "<NA>"
+CTRL_EMPTY <- "<empty>"
+
+# The rows of `x` a claim's values select, the tokens included.
+ctrl_claim_hit <- function(x, values) {
+  values <- as.character(unlist(values))
+  x <- as.character(x)
+  hit <- x %in% setdiff(values, c(CTRL_NA, CTRL_EMPTY))
+  if (CTRL_NA %in% values) hit <- hit | is.na(x)
+  if (CTRL_EMPTY %in% values) hit <- hit | (!is.na(x) & x == "")
+  hit
+}
+
+# One claim per named column: the values the drilled rows hold. Missing and
+# empty values are claimed by token (CTRL_NA, CTRL_EMPTY), so a click on the
+# missing bar or the "(Missing)" row claims those rows. Several values claim
+# as a set ("multi").
 drilled_value_claims <- function(rows, table, columns) {
   claims <- list()
   for (col in intersect(columns, names(rows))) {
-    v <- unique(as.character(rows[[col]]))
-    v <- v[!is.na(v) & nzchar(v)]
+    x <- as.character(rows[[col]])
+    v <- unique(x[!is.na(x) & nzchar(x)])
+    v <- c(v, if (anyNA(x)) CTRL_NA, if (any(!is.na(x) & x == "")) CTRL_EMPTY)
     if (!length(v)) {
       next
     }
@@ -831,6 +851,8 @@ dd_ctrl_claims <- function(data, table, filters, subject = NULL) {
   for (col in names(filters)) {
     x <- as.character(data[[col]])
     vals <- as.character(unlist(filters[[col]]))
+    # The table's "(Missing)" level (`missing = "level"`) is a missing value.
+    vals[vals %in% MISSING_LEVEL] <- NA_character_
     hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
     if (anyNA(vals)) {
       hit <- hit | is.na(x) | x == ""
@@ -927,19 +949,29 @@ dd_ctrl_claims <- function(data, table, filters, subject = NULL) {
     out <- out[order(ord)]
   }
 
-  # The user HAS a selection, so an empty read is this block failing to name
-  # it (the subset resolved to no single value, the identity columns are not
-  # there yet), never a request to widen the cohort.
-  if (!length(out)) {
-    return(NULL)
-  }
+  # A structured table's "(Missing)" level names the missing value.
+  out <- lapply(out, function(cl) {
+    v <- as.character(unlist(cl$values))
+    if (MISSING_LEVEL %in% v) cl$values <- unique(replace(v, v == MISSING_LEVEL,
+                                                          CTRL_NA))
+    cl
+  })
 
+  # The subjects behind the click come first: they resolve even where no
+  # column claim does.
   if (length(subject)) {
     ids <- dd_claim_subjects(data, keep, out, subject)
     if (length(ids)) {
       return(list(list(name = subject, mode = "multi", values = ids,
                        label = dd_claim_label(out))))
     }
+  }
+
+  # The user HAS a selection, so an empty read is this block failing to name
+  # it (the subset resolved to no single value, the identity columns are not
+  # there yet), never a request to widen the cohort.
+  if (!length(out)) {
+    return(NULL)
   }
 
   out
@@ -961,10 +993,12 @@ dd_claim_subjects <- function(data, keep, claims, subject) {
     if (!is.data.frame(src) || !subject %in% names(src) || !all(names_ok)) {
       return(NULL)
     }
+    if (!length(claims)) {
+      return(NULL)
+    }
     hit <- rep(TRUE, nrow(src))
     for (cl in claims) {
-      hit <- hit & as.character(src[[cl$name]]) %in%
-        as.character(unlist(cl$values))
+      hit <- hit & ctrl_claim_hit(src[[cl$name]], cl$values)
     }
     src[[subject]][hit]
   }
@@ -979,6 +1013,8 @@ dd_claim_subjects <- function(data, keep, claims, subject) {
 dd_claim_label <- function(claims) {
   parts <- vapply(claims, function(cl) {
     vals <- as.character(unlist(cl$values))
+    vals[vals == CTRL_NA] <- "(missing)"
+    vals[vals == CTRL_EMPTY] <- "(empty)"
     if (length(vals) > 6L) {
       vals <- c(vals[1:6], "\u2026")
     }

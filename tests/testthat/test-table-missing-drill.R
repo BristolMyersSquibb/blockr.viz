@@ -119,3 +119,29 @@ test_that("missing defaults to level; a saved drop stays drop", {
   )
   expect_identical(ser(old)$missing, "level")
 })
+
+test_that("a missing bar or (Missing) row sent to a filter block claims NA", {
+  d <- missing_df()
+  # The table's "(Missing)" row and the chart's missing value (NA) both
+  # claim with the value filter's own token.
+  for (v in list("(Missing)", NA_character_)) {
+    cl <- dd_ctrl_claims(d, "", list(arm = v))
+    expect_identical(cl[[1L]]$name, "arm")
+    expect_identical(cl[[1L]]$values, "<NA>")
+  }
+  # With the board's subject column, the subjects behind the NA rows.
+  cl <- dd_ctrl_claims(d, "", list(arm = "(Missing)"), subject = "id")
+  expect_identical(cl[[1L]]$name, "id")
+  expect_identical(sort(as.character(cl[[1L]]$values)), c("s3", "s5"))
+  expect_identical(cl[[1L]]$label, "arm = (missing)")
+  # A structured table resolves the token against its source.
+  tbl <- summary_table(d, vars = "sex", by = "arm", missing = "level")
+  hit <- tbl[tbl$.variable == "sex" & tbl$.variable_level %in% "(Missing)", ]
+  ids <- dd_claim_subjects(
+    hit, rep(TRUE, nrow(hit)),
+    list(list(name = "sex", values = "<NA>")), "id"
+  )
+  expect_identical(ids, "s2")
+  # Ordinary values claim as before.
+  expect_identical(dd_ctrl_claims(d, "", list(arm = "A"))[[1L]]$values, "A")
+})

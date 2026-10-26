@@ -20,6 +20,11 @@
   value labels beside its bars and its cards. `unit` heads the columns that
   are not counts. The variables layout (Table 1) keeps its statistics' own
   formats. The groups gear has the same "Numbers" and "Unit" controls.
+* A drill sent to a filter block (`drill_target`) from a missing bar, or
+  from a table's "(Missing)" row, claims the rows with no value: the claim
+  carries the value filter's `"<NA>"` / `"<empty>"` tokens, and with the
+  board's subject column it is the subjects behind those rows. Before, it
+  claimed nothing.
 * A click on the "(Missing)" row of a table with `missing = "level"` gives
   the rows whose value is missing, in every layout. Before, it gave none.
   `summary_table()` and `table_nest()` take `missing`: the variables layout
