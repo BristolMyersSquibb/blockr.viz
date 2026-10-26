@@ -187,3 +187,22 @@ test_that("records layout: a nested row claims its group and its drill value", {
                                   dt_group_names(nest)),
                    c("arm = A", "sex = F"))
 })
+
+test_that("variables layout: a cell claims its row and its arm", {
+  d <- missing_df()
+  tbl <- summary_table(d, vars = "sex", by = "arm", add_overall = TRUE)
+  keys <- annotated_column_keys(tbl)
+  # Each arm column names its arm; the Total column claims nothing.
+  expect_identical(keys[["A"]], list(list(column = "arm", values = "A")))
+  expect_null(keys[["Total"]])
+  ck <- list(list(column = "arm", values = list("A")))
+  expect_identical(dd_col_keys_label(ck), "arm = A")
+  hit <- tbl[tbl$.variable_level %in% "F", , drop = FALSE]
+  ex <- dd_col_keys_filter(quote(blockr.viz::drill_source(hit)), ck)
+  expect_identical(eval(ex, list(hit = hit))$id, "s1")
+  # Saved with the selection and stamped for the restore.
+  json <- dd_active_filter_json(list(gcols = ".variable_level", gvals = "F",
+                                     ckeys = ck))
+  expect_match(json, '"col_filters":[{"column":"arm","values":["A"]}]',
+               fixed = TRUE)
+})

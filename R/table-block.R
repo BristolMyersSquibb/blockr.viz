@@ -920,6 +920,46 @@ dt_group_names <- function(data) {
   out
 }
 
+#' The column half of a structured drill, as stored: a list of
+#' `list(column = , values = )`, from the click or from a saved board (where
+#' `values` may come back as a list). NULL when there is none.
+#' @noRd
+dd_col_keys_state <- function(x) {
+  if (!is.list(x) || !length(x)) return(NULL)
+  out <- lapply(x, function(k) {
+    if (!is.list(k)) return(NULL)
+    cl <- as.character(unlist(k[["column"]]))
+    vl <- as.character(unlist(k[["values"]]))
+    if (length(cl) != 1L || !nzchar(cl) || !length(vl)) return(NULL)
+    list(column = cl, values = vl)
+  })
+  out <- Filter(Negate(is.null), out)
+  if (length(out)) out
+}
+
+#' "ARM = Low dose" for each column claim.
+#' @noRd
+dd_col_keys_label <- function(ck) {
+  ck <- dd_col_keys_state(ck)
+  vapply(ck %||% list(), function(k) {
+    paste0(k$column, " = ", paste(k$values, collapse = ", "))
+  }, character(1L))
+}
+
+#' AND a column claim onto an expression that yields source rows:
+#' `dplyr::filter(<ex>, ARM %in% "Low dose")`. "(Missing)" claims the rows
+#' with no value (summarize_drill_expr()).
+#' @noRd
+dd_col_keys_filter <- function(ex, ck) {
+  ck <- dd_col_keys_state(ck)
+  if (!length(ck)) return(ex)
+  f <- stats::setNames(lapply(ck, `[[`, "values"),
+                       vapply(ck, `[[`, "", "column"))
+  out <- summarize_drill_expr(f)
+  out[[2L]] <- ex
+  out
+}
+
 #' Serialize the block's active drill-filter state for the `data-dt-active`
 #' table attribute (JSON lives only at this edge, like `summaries`). `active`
 #' is `list(col, vals, gcols, gvals)` -- the filter reactiveVals as captured
@@ -930,12 +970,24 @@ dd_active_filter_json <- function(active) {
   if (is.null(active)) return(NULL)
   gcols <- as.character(unlist(active$gcols %||% character()))
   gvals <- as.character(unlist(active$gvals %||% character()))
+  ck <- dd_col_keys_state(active$ckeys)
+  # The column half rides along: table.js marks that column.
+  col_filters <- if (length(ck)) {
+    lapply(ck, function(k) list(column = jsonlite::unbox(k$column),
+                                values = k$values))
+  }
   if (length(gcols) && length(gcols) == length(gvals)) {
     return(as.character(jsonlite::toJSON(
-      list(filters = unname(Map(
-        function(cl, vl) list(column = cl, value = vl), gcols, gvals
-      ))),
-      auto_unbox = TRUE
+      c(list(filters = unname(Map(
+        function(cl, vl) list(column = jsonlite::unbox(cl),
+                              value = jsonlite::unbox(vl)),
+        gcols, gvals
+      ))), if (length(col_filters)) list(col_filters = col_filters))
+    )))
+  }
+  if (length(col_filters)) {
+    return(as.character(jsonlite::toJSON(
+      list(filters = list(), col_filters = col_filters)
     )))
   }
   col  <- active$col
@@ -1281,7 +1333,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".35"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".36"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"
@@ -2074,6 +2126,7 @@ new_table_block <- function(layout = "records",
             filter_column = rec_sel$column, filter_values = rec_sel$values,
             filter_group_cols = rec_sel$group_cols,
             filter_group_vals = rec_sel$group_vals,
+            filter_col_keys = rec_sel$col_keys,
             sortable = sortable, collapsible = collapsible, search = search,
             download = download, title = title, subtitle = subtitle,
             caption = caption, ctrl_target = drill_target,
@@ -2152,7 +2205,8 @@ new_table_block <- function(layout = "records",
             } else {
               list(column = rs$filter_column(), values = rs$filter_values(),
                    group_cols = rs$filter_group_cols(),
-                   group_vals = rs$filter_group_vals())
+                   group_vals = rs$filter_group_vals(),
+                   col_keys = rs$filter_col_keys())
             }
             sel <- sel[!vapply(sel, function(x) is.null(x) || !length(x),
                                logical(1L))]

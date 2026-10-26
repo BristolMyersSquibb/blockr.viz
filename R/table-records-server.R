@@ -27,6 +27,7 @@ table_records_server <- function(id, data,
                                  filter_values = NULL,
                                  filter_group_cols = NULL,
                                  filter_group_vals = NULL,
+                                 filter_col_keys = NULL,
                                  sortable = TRUE,
                                  collapsible = TRUE,
                                  search = TRUE,
@@ -80,11 +81,9 @@ table_records_server <- function(id, data,
     # values (aligned vectors) to filter the raw input to that group.
     r_filter_group_cols <- shiny::reactiveVal(filter_group_cols)
     r_filter_group_vals <- shiny::reactiveVal(filter_group_vals)
-    # Column half of a structured click. Session-only, deliberately: it
-    # has no constructor argument, so a board reload comes back with the
-    # row drill restored and no column claim. Add a `filter_col_keys`
-    # ctor arg (and its serialization) to make it survive a save.
-    r_filter_col_keys <- shiny::reactiveVal(NULL)
+    # Column half of a structured click: the arm of a Table 1 cell or
+    # header, as [{column, values}, ...]. Saved with the selection.
+    r_filter_col_keys <- shiny::reactiveVal(dd_col_keys_state(filter_col_keys))
     r_sortable       <- shared$sortable %||% shiny::reactiveVal(isTRUE(sortable))
     r_collapsible    <- shiny::reactiveVal(isTRUE(collapsible))
     r_search         <- shared$search %||% shiny::reactiveVal(isTRUE(search))
@@ -470,6 +469,7 @@ table_records_server <- function(id, data,
       gv  <- as.character(unlist(r_filter_group_vals()))
       col <- r_filter_column()
       vals <- as.character(unlist(r_filter_values()))
+      ck <- r_filter_col_keys()
       grouped_on <- length(gc) > 0 && length(gc) == length(gv)
       single_on  <- !is.null(col) && length(vals) > 0
       drill_on   <- !is.null(r_drill()) && nzchar(r_drill())
@@ -508,10 +508,11 @@ table_records_server <- function(id, data,
           )
         ))
       }
-      if (!grouped_on && !single_on) return(NULL)
-      text <- if (grouped_on) {
+      col_lab <- dd_col_keys_label(ck)
+      if (!grouped_on && !single_on && !length(col_lab)) return(NULL)
+      text <- if (grouped_on || length(col_lab)) {
         gn <- dt_group_names(tryCatch(ann_data(), error = function(e) NULL))
-        paste0("Filtered: ", paste0(dt_claim_label(gc, gv, gn),
+        paste0("Filtered: ", paste0(c(dt_claim_label(gc, gv, gn), col_lab),
                                     collapse = ", "))
       } else {
         paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
@@ -610,7 +611,8 @@ table_records_server <- function(id, data,
       # state here, so the highlight survives those too.
       act <- shiny::isolate(list(
         col   = r_filter_column(),  vals  = r_filter_values(),
-        gcols = r_filter_group_cols(), gvals = r_filter_group_vals()
+        gcols = r_filter_group_cols(), gvals = r_filter_group_vals(),
+        ckeys = r_filter_col_keys()
       ))
       # Aggregation is a DISPLAY projection: when `group` is set, draw the
       # summarised frame (one row per group + a measure). The block's data
@@ -803,7 +805,13 @@ table_records_server <- function(id, data,
           if (!length(claim_cols)) call <- c(call, list(unclaimed = "all"))
           as.call(call)
         }
-        as_output(
+        ck <- r_filter_col_keys()
+        with_cols <- function(ex) {
+          if (!length(ck) || !drill_is_source()) return(ex)
+          # The arm of the clicked cell or header, on the source rows.
+          dd_col_keys_filter(ex, ck)
+        }
+        with_cols(as_output(
         if (length(gc) && length(gc) == length(gv)) {
           # Grouped / structured drill: AND each clicked key. The output
           # is a pure SUBSET of the annotated df -- the identity columns
@@ -841,7 +849,7 @@ table_records_server <- function(id, data,
         } else if (!is.null(col)) {
           as.character(col)
         }
-        )
+        ))
       }),
       state = list(
         rowname       = r_rowname,
@@ -867,6 +875,7 @@ table_records_server <- function(id, data,
         filter_range  = function() NULL,
         filter_group_cols = r_filter_group_cols,
         filter_group_vals = r_filter_group_vals,
+        filter_col_keys = r_filter_col_keys,
         # LEGACY spread formals (the drill no longer adds a synthetic
         # column -- the output is a pure subset and the identity columns
         # are the interface): serialized as NULL, kept as ctor formals so
