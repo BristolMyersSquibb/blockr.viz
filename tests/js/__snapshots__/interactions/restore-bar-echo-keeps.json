@@ -74,12 +74,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -182,9 +177,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Rash"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -278,9 +270,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Rash"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -382,9 +371,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Fatigue"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -422,7 +408,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -508,12 +494,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -621,9 +602,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Fatigue"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

@@ -35,7 +35,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": false,
@@ -113,11 +113,11 @@
        "nameGap": 28,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -152,7 +152,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 64,
         "width": 59,
@@ -473,11 +473,11 @@
        "nameGap": 28,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -512,7 +512,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 64,
         "width": 59,
@@ -898,11 +898,11 @@
        "nameGap": 28,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -937,7 +937,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 64,
         "width": 59,

@@ -194,11 +194,11 @@ function makeCtx(env, clock, el) {
       const [si, di] = ctx.locate(i, pred);
       ctx.click(i, si, di, extra);
     },
-    /** Click the footer's Reset button. */
+    /** Clear the selection the way a reader does: a click on empty plot
+     *  space (the chart has no Reset button). */
     reset() {
-      const b = ctx.block.statusEl.querySelector('.dd-status-reset');
-      if (!b) throw new Error('no Reset button');
-      b.click();
+      if (ctx.block.statusEl.querySelector('.dd-status-reset')) throw new Error('a Reset button');
+      for (const hd of ctx.chart(0).zrHandlers) if (hd.evt === 'click') hd.fn({});
     },
     advance(ms) { clock.advance(ms); },
     close() { return env.close(); }

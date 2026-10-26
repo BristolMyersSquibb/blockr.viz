@@ -281,9 +281,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID, 12 values"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

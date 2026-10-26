@@ -595,9 +595,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 57, Analysis Value 27.4 to 34.5"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -899,12 +896,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -1512,9 +1504,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 2 to 86, Analysis Value 21.4 to 30.0"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1816,12 +1805,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -2429,9 +2413,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 2 to 86, Analysis Value 21.4 to 30.0"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -2733,12 +2714,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -3346,9 +3322,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 30, Analysis Value = 25.1"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -3370,7 +3343,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -3657,12 +3630,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

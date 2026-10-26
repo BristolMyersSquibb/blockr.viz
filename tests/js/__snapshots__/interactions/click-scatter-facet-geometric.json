@@ -612,9 +612,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 3, Analysis Value = 28.4, Planned Arm = High Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -640,7 +637,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -984,12 +981,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

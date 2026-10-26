@@ -71,23 +71,12 @@
       [
        "div.dd-status-footer",
        false,
-       [
-        [
-         "span.dd-status-text",
-         false,
-         null
-        ]
-       ]
+       []
       ]
      ]
     ]
    ]
   ]
  ],
- "footer": [
-  {
-   "cls": "dd-status-text",
-   "text": "No filter active"
-  }
- ]
+ "footer": []
 }

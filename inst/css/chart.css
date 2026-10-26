@@ -1047,8 +1047,7 @@
 .dd-chart-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
-  font-style: italic;
-  padding: 4px 2px 0;
+  padding: 6px 2px 0;
   white-space: pre-line;
 }
 
@@ -1151,6 +1150,21 @@
    keyframes and the colour belong in CSS. */
 .dd-status-receipt {
   color: var(--blockr-color-text-secondary, #374151);
+}
+
+/* The chart's line sits under the caption and is there only while a filter
+   or a receipt is (chart/chrome.js _updateStatus): nothing filtered, no line
+   and no gap. No Reset; a second click on the selected mark clears. */
+.dd-card > .dd-status-footer {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+.dd-card > .dd-status-footer:empty {
+  display: none;
+}
+.dd-card > .dd-status-footer .dd-status-cap {
+  margin-left: 0;
 }
 
 @keyframes dd-receipt-out {

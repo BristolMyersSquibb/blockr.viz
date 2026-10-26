@@ -102,9 +102,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -170,9 +167,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -352,12 +346,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -458,12 +447,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

@@ -595,9 +595,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -630,9 +627,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -665,9 +659,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -700,9 +691,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 1, Analysis Value = 27.4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1000,12 +988,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

@@ -28,7 +28,7 @@
     'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
     'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'direct_labels',
     'value_line_names', 'x_line_names',
-    'format', 'unit', 'bar_mode'];
+    'format', 'unit', 'bar_mode', 'title_resolved'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -138,8 +138,11 @@
     // A name in `x_lines` / `y_lines` labels its line.
     const nmX = Array.isArray(cfg.x_line_names) ? cfg.x_line_names : [];
     const nmY = Array.isArray(cfg.value_line_names) ? cfg.value_line_names : [];
-    refX.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), true, lm, nmX[i] || undefined, false, ink)));
-    refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, nmY[i] || undefined, false, ink)));
+    // An unnamed line at 0 needs no label: the axis prints its value.
+    /** @param {any} v @param {any} nm */
+    const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
+    refX.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), true, lm, refText(v, nmX[i]), false, ink)));
+    refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink)));
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink)) refData.push(r);
     const idRaw = cfg.identity_line;
     const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
@@ -182,7 +185,7 @@
     /** @type {any} */
     const xAxis = {
       type: m.x.type,
-      name: title(m.x.col),
+      name: NS.axisName(title(m.x.col), m.x.col, cfg, { unit: false }),
       nameLocation: 'middle',
       nameGap: xlab && xlab.bottom ? xlab.bottom + 16 : 28,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -203,7 +206,7 @@
     /** @type {any} */
     const yAxis = {
       type: m.y.type,
-      name: NS.unitTitle(title(m.y.col), cfg),
+      name: NS.axisName(title(m.y.col), m.y.col, cfg),
       nameLocation: 'middle',
       nameGap: 46,
       nameRotate: 90,

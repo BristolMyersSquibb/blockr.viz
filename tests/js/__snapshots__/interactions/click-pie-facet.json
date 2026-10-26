@@ -130,9 +130,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD, SEX = F"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -287,9 +284,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD, SEX = M"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -444,9 +438,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MODERATE, SEX = M"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

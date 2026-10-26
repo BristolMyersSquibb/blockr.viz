@@ -617,9 +617,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 17, Analysis Value 27.4 to 30.2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -942,12 +939,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

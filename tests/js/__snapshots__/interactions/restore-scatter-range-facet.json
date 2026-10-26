@@ -760,9 +760,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 30, Analysis Value 25 to 32, Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -784,7 +781,7 @@
    ]
   },
   {
-   "step": "Reset, if shown",
+   "step": "click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -1128,12 +1125,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

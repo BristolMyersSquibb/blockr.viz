@@ -252,9 +252,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD, SEX = M"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

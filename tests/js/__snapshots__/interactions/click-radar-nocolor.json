@@ -9,12 +9,7 @@
    "step": "click series 0 datum 0 in slot 0",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

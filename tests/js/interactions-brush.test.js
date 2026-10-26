@@ -27,7 +27,7 @@ const brushArea = () => ['brush event with an area',
   (c) => c.trigger('brush', { areas: [{ brushType: 'rect' }] })];
 const clickFirst = () => ['click series 0 datum 0', (c) => c.click(0, 0, 0)];
 const wait = (ms) => [`advance ${ms} ms`, (c) => c.advance(ms)];
-const reset = () => ['Reset', (c) => c.reset()];
+const reset = () => ['clear: click empty plot space', (c) => c.reset()];
 
 const scenario = (name, config, steps, opts) =>
   test(name, () => I.snap('brush-' + name, I.runSteps(config, steps, opts)));

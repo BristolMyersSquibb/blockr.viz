@@ -30,7 +30,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": true,
@@ -146,7 +146,7 @@
         },
         "label": {
          "show": true,
-         "fontSize": 11,
+         "fontSize": 12,
          "formatter": "[fn]"
         },
         "itemStyle": {

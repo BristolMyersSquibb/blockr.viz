@@ -961,9 +961,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1938,9 +1935,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = SEVERE"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -2978,9 +2972,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = SEVERE"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -3963,9 +3954,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -4635,9 +4623,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AESEV = MILD"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

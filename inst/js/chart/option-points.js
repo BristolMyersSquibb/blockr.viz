@@ -125,7 +125,7 @@
                      ...(stackArea ? { stack: 'area' } : {}) } : {}),
       ...(directLabels ? { endLabel: {
         show: true, formatter: '{a}', distance: 6,
-        color: (ink && ink.muted) || '#4b5563', fontSize: (ink && ink.fontSize) || 11 } } : {})
+        color: (ink && ink.muted) || '#4b5563', fontSize: (ink && ink.fontSize) || 12 } } : {})
     });
 
     // `linetype`: the levels in the order the rows first carry them; the
@@ -235,7 +235,7 @@
         silent: true,
         itemStyle: { color: (ink && ink.muted) || '#6b7280', opacity: 0.08 },
         label: { position: 'insideTop', color: (ink && ink.muted) || '#6b7280',
-                 fontSize: (ink && ink.fontSize) || 11 },
+                 fontSize: (ink && ink.fontSize) || 12 },
         data: ranges.map((/** @type {any} */ r) =>
           [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }])
       };

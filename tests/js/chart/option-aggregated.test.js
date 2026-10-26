@@ -235,6 +235,27 @@ test('format and unit: compact ticks, the unit in the title, values with it', ()
   assert.strictEqual(C.valueFormat({ unit: 'CHF' }, { unit: false }), null);
 
   const { opt } = build({ value: 'V', func: 'sum', format: 'compact', unit: 'CHF' });
-  assert.match(opt.xAxis.name, /\(CHF\)$/);
+  // A column without a label: the axis is named by the unit alone.
+  assert.strictEqual(opt.xAxis.name, 'CHF');
   assert.strictEqual(opt.xAxis.axisLabel.formatter(2500), '2.5K');
+});
+
+test('the axis name: label and unit, the unit alone, none when the title says it', () => {
+  assert.strictEqual(C.axisName('Term', 'T', { unit: '%' }), 'Term (%)');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%' }), '%');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', {}), 'gdp_2026');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%', title_resolved: 'Real GDP growth 2026, %' }), '');
+  assert.strictEqual(C.axisName('Count', '.count', { title_resolved: 'Adverse events' }), 'Count');
+});
+
+test('value labels share one number of decimals; a line at 0 has no label', () => {
+  assert.strictEqual(C.sharedDigits([2.14, 1.7, 1.9, 2]), 2);
+  assert.strictEqual(C.sharedDigits([3, 12]), 0);
+  assert.strictEqual(C.sharedDigits([1 / 3]), 4);
+  const { opt } = build({ value: 'V', func: 'sum', value_labels: 'on', value_lines: [0, 2] });
+  const lbl = opt.series[0].label.formatter({ value: 1.5 });
+  assert.match(lbl, /^\d+(\.\d+)?$/);
+  const lines = opt.series[0].markLine.data;
+  assert.strictEqual(lines[0].label.show, false);
+  assert.strictEqual(lines[1].label.show, true);
 });

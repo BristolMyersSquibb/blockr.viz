@@ -595,9 +595,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1203,9 +1200,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1293,9 +1287,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 15, Analysis Value 27.4 to 29.2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

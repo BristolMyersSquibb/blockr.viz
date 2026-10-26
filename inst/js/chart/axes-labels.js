@@ -386,17 +386,19 @@
    * runs 0..1); `flipped`: the y axis runs top-down, so a vertical line is
    * labelled at its start.
    * @param {number} v @param {boolean} vertical @param {number} width
-   * @param {string | undefined} text @param {boolean} flipped
-   * @param {{ text: string, muted: string }} ink
+   * @param {string | null | undefined} text @param {boolean} flipped
+   * @param {{ text: string, muted: string, fontSize?: number }} ink
+   * `text` null: no label (an unnamed line at 0, whose value the axis
+   * already prints).
    */
   const guideLine = (v, vertical, width, text, flipped, ink) => ({
     [vertical ? 'xAxis' : 'yAxis']: v,
     lineStyle: { color: ink.text, opacity: 0.55, type: [8, 4], width },
     label: {
-      show: true,
+      show: text !== null,
       position: vertical ? (flipped ? 'start' : 'end') : 'insideEndTop',
       formatter: text != null ? text : String(NS.ddNum(v)),
-      color: ink.muted, fontSize: 10, opacity: 1
+      color: ink.muted, fontSize: ink.fontSize || 12, opacity: 1
     }
   });
 
@@ -423,7 +425,8 @@
       // onX: a horizontal chart, whose category axis is inverse.
       data: vals.map((v, i) => guideLine(v, onX, 1,
         nm[keep[i]] ? String(nm[keep[i]])
-          : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
+          : typed[i] === 0 ? null
+            : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
     };
     // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on a
     // rounded edge would read as the frame, so the edge moves one step out.

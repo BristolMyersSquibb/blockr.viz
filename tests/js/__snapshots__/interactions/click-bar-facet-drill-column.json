@@ -266,9 +266,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S03, S06, S09"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -552,9 +549,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S05, S11"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -839,9 +833,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID, 4 values"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -868,7 +859,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -1149,12 +1140,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

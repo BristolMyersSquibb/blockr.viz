@@ -10,12 +10,7 @@
    "step": "click point (15, 29.24)",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -95,9 +90,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 15, Analysis Value = 29.2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

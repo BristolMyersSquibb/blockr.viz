@@ -32,7 +32,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": false,
@@ -97,11 +97,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "formatter": "[fn]"
        },
        "max": 1,
@@ -135,7 +135,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,
@@ -180,7 +180,7 @@
          "position": "outside",
          "distance": 4,
          "color": "#6b7280",
-         "fontSize": 11,
+         "fontSize": 12,
          "fontFamily": "\"Open Sans\", system-ui, sans-serif",
          "formatter": "[fn]"
         },
@@ -335,11 +335,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "formatter": "[fn]"
        },
        "max": 1,
@@ -373,7 +373,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,
@@ -418,7 +418,7 @@
          "position": "outside",
          "distance": 4,
          "color": "#6b7280",
-         "fontSize": 11,
+         "fontSize": 12,
          "fontFamily": "\"Open Sans\", system-ui, sans-serif",
          "formatter": "[fn]"
         },

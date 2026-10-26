@@ -24,11 +24,9 @@ const click = (pred, slot = 0, extra) => [`click ${describe(pred)}${slot ? ' in 
   (c) => c.clickWhere(slot, pred, extra)];
 const clickAt = (slot, si, di, extra) => [`click series ${si} datum ${di} in slot ${slot}`,
   (c) => c.click(slot, si, di, extra)];
-const reset = () => ['Reset', (c) => c.reset()];
-// Reset, where the chart shows one.
-const resetIfShown = () => ['Reset, if shown', (c) => {
-  if (c.block.statusEl.querySelector('.dd-status-reset')) c.reset();
-}];
+const reset = () => ['clear: click empty plot space', (c) => c.reset()];
+// A click on empty plot space: the chart's way to clear a latched filter.
+const clickEmpty = () => ['click empty plot space', (c) => c.zr('click', {})];
 const wait = (ms) => [`advance ${ms} ms`, (c) => c.advance(ms)];
 const describe = (pred) => pred.label || 'mark';
 const named = (label, pred) => Object.assign(pred, { label });
@@ -49,6 +47,11 @@ const rash = named('Rash', at('Rash'));
 
 scenario('bar-latched', { chart_type: 'bar', ...AE }, [
   click(nausea), click(nausea), click(headache), click(rash), reset()
+]);
+
+// No Reset on the chart: a click on empty plot space clears the selection.
+scenario('bar-empty-click', { chart_type: 'bar', ...AE }, [
+  click(nausea), clickEmpty()
 ]);
 
 scenario('bar-color', { chart_type: 'bar', ...AE, color: 'AESEV' }, [
@@ -362,7 +365,7 @@ const chipsOn = { extra: (c) => ({ legendOn: Array.from(
   c.block.legendEl.querySelectorAll('.dd-legend-chip-on'), (x) => x.textContent) }) };
 
 scenario('legend-scatter-color', { chart_type: 'scatter', ...LAB, color: 'ARM' }, [
-  chip('Placebo'), chip('Placebo'), chip('High Dose'), resetIfShown()
+  chip('Placebo'), chip('Placebo'), chip('High Dose'), clickEmpty()
 ], chipsOn);
 
 scenario('legend-bar-drill-column', { chart_type: 'bar', group: 'AETERM', color: 'AESEV',

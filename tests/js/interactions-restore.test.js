@@ -13,11 +13,9 @@ const LAB = { x: 'ADY', y: 'AVAL', drill: 'auto' };
 const sendCfg = (label, extra) => [label, (c) => c.send({ ...c.cfg, ...extra }, { dataRev: 1 })];
 const echo = (extra) => [`R echoes the config ${JSON.stringify(extra || {})}`, (c) => c.echo(extra)];
 const clickName = (name) => [`click ${name}`, (c) => c.clickWhere(0, (p) => String(p.name) === name)];
-const reset = () => ['Reset', (c) => c.reset()];
-// Reset, where the chart shows one.
-const resetIfShown = () => ['Reset, if shown', (c) => {
-  if (c.block.statusEl.querySelector('.dd-status-reset')) c.reset();
-}];
+const reset = () => ['clear: click empty plot space', (c) => c.reset()];
+// A click on empty plot space: the chart's way to clear a latched filter.
+const clickEmpty = () => ['click empty plot space', (c) => c.zr('click', {})];
 const wait = (ms) => [`advance ${ms} ms`, (c) => c.advance(ms)];
 
 const scenario = (name, config, steps, opts = {}) =>
@@ -106,7 +104,7 @@ scenario('scatter-range-facet', { chart_type: 'scatter', ...LAB, facet: 'ARM',
                                   filter_type: 'range', filters: { ARM: ['Placebo'] },
                                   filter_range: { x_col: 'ADY', y_col: 'AVAL',
                                                   x_range: [1, 30], y_range: [25, 32] } },
-[sendCfg('R sends a saved range taken in the Placebo panel'), resetIfShown()]);
+[sendCfg('R sends a saved range taken in the Placebo panel'), clickEmpty()]);
 
 // -- view state across re-renders --------------------------------------------
 

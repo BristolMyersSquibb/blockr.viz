@@ -105,7 +105,7 @@
     }
    ]
   },
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": true,
@@ -180,11 +180,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -210,7 +210,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 71,
         "width": 66,

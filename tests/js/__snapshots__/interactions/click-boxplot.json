@@ -113,9 +113,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 2"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -243,9 +240,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -267,7 +261,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -376,12 +370,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -507,9 +496,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -538,12 +524,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "AVISIT": [
-        "Week 4"
-       ]
-      },
-      "nonce": 4
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -554,6 +540,13 @@
     {
      "instance": 0,
      "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
       {
        "op": "setOption",
        "option": {
@@ -570,7 +563,7 @@
             ],
             "n": 12,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -583,7 +576,7 @@
             ],
             "n": 10,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -609,7 +602,7 @@
             ],
             "n": 12,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -622,7 +615,7 @@
             ],
             "n": 11,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            }
           ]
@@ -633,18 +626,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "Week 4",
-    "selectedColumn": "AVISIT",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,

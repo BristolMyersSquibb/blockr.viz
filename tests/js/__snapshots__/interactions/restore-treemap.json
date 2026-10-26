@@ -105,9 +105,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Rash"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

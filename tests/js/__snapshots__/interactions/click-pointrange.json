@@ -172,9 +172,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -203,12 +200,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "AVISIT": [
-        "Week 4"
-       ]
-      },
-      "nonce": 2
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -219,6 +216,13 @@
     {
      "instance": 0,
      "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
       {
        "op": "setOption",
        "option": {
@@ -232,7 +236,7 @@
              27.9108
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -242,7 +246,7 @@
              29.862
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -262,7 +266,7 @@
              35.0208
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -272,7 +276,7 @@
              36.5936
             ],
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            }
           ]
@@ -290,7 +294,7 @@
             "lo": 25.8292,
             "hi": 27.9108,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -304,7 +308,7 @@
             "lo": 27.418,
             "hi": 29.862,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -332,7 +336,7 @@
             "lo": 32.9392,
             "hi": 35.0208,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -346,7 +350,7 @@
             "lo": 34.3155,
             "hi": 36.5936,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            }
           ]
@@ -357,18 +361,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "Week 4",
-    "selectedColumn": "AVISIT",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,
@@ -397,7 +393,7 @@
         "Baseline"
        ]
       },
-      "nonce": 3
+      "nonce": 2
      },
      "opts": {
       "priority": "event"
@@ -550,9 +546,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Baseline"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

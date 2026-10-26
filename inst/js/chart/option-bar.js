@@ -47,18 +47,32 @@
    * @param {{ax: any, vertical: boolean, stacked: boolean, percent: boolean,
    *          fraction: boolean, plotPx: number, bandPx: number,
    *          measure: (s: string) => number, face: string,
-   *          vf?: ((v: any) => string) | null}} o
+   *          cfg: Record<string, any>}} o
    * @returns {number}
    */
   const barValueLabels = (series, valAxis, o) => {
     const textW = o.measure;
+    /** @param {any} d */
+    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
+    // One number of decimals for every label the chart prints: the bars'
+    // own values, and a stack's totals.
+    /** @type {number[]} */
+    const printed = [];
+    if (o.stacked) {
+      const n = series.length ? series[0].data.length : 0;
+      for (let gi = 0; gi < n; gi++) {
+        let tot = 0;
+        for (const s of series) { const v = valOf(s.data[gi]); if (v != null) tot += Number(v); }
+        printed.push(tot);
+      }
+    } else {
+      for (const s of series) for (const d of s.data) { const v = valOf(d); if (v != null) printed.push(Number(v)); }
+    }
+    const vf = NS.valueFormat(o.cfg, { digits: NS.sharedDigits(printed) });
     // `|| 0` folds a negative zero, which would print as "-0".
-    const vf = o.vf;
     const fmt = o.fraction
       ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
       : (vf || ((/** @type {number} */ v) => String(NS.ddNum(v || 0))));
-    /** @param {any} d */
-    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
     const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
 
     if (o.percent) {
@@ -274,7 +288,7 @@
     const valAxis = {
       type: 'value',
       name: showPercent ? '% of group total'
-        : (pctFunc ? pctName(cfg) : NS.unitTitle(P.valueTitle, cfg)),
+        : (pctFunc ? pctName(cfg) : NS.axisName(P.valueTitle, cfg.value, cfg)),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -305,7 +319,7 @@
           plotPx: vertical ? 350 - 30 - 66 : (plotW ? plotW - gut.gridLeft - 5 : 0),
           bandPx: vertical ? (plotW ? (plotW - X_INSET) / Math.max(1, groups.length) : 0)
             : ROW_BAND,
-          measure, face: ink.face, vf
+          measure, face: ink.face, cfg
         })
       : 0;
     NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink,
@@ -500,7 +514,7 @@
     };
     /** @type {any} */
     const valAxis = {
-      type: 'value', name: NS.unitTitle(P.valueTitle, cfg), nameLocation: 'middle',
+      type: 'value', name: NS.axisName(P.valueTitle, cfg.value, cfg), nameLocation: 'middle',
       nameGap: 45,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,

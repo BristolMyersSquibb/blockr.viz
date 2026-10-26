@@ -11,12 +11,7 @@
    "step": "click line S03",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -47,12 +42,7 @@
    "step": "advance 274 ms",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -220,9 +210,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S03"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -251,9 +238,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S03"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -290,12 +274,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "USUBJID": [
-        "S03"
-       ]
-      },
-      "nonce": 2
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -311,31 +295,22 @@
        "opts": null
       },
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
@@ -348,74 +323,90 @@
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
           }
          },
          {},
@@ -427,18 +418,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: USUBJID = S03"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "S03",
-    "selectedColumn": "USUBJID",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,
@@ -454,18 +437,10 @@
    "step": "click line S05",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: USUBJID = S03"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "S03",
-    "selectedColumn": "USUBJID",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,
@@ -498,7 +473,7 @@
         "S05"
        ]
       },
-      "nonce": 3
+      "nonce": 2
      },
      "opts": {
       "priority": "event"
@@ -630,9 +605,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S05"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -650,7 +622,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -797,12 +769,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

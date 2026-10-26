@@ -19,7 +19,7 @@
         {
          "axisLabel": {
           "color": "#6b7280",
-          "fontSize": 11,
+          "fontSize": 12,
           "interval": 0,
           "lineHeight": 15,
           "rotate": 0,
@@ -59,7 +59,7 @@
         {
          "axisLabel": {
           "color": "#6b7280",
-          "fontSize": 11,
+          "fontSize": 12,
           "interval": 0,
           "lineHeight": 15,
           "rotate": 90,

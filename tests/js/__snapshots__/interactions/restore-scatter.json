@@ -320,9 +320,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

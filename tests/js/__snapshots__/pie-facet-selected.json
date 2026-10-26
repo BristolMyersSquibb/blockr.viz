@@ -34,7 +34,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "Filtered: AESEV = MILDReset",
+  "status": "Filtered: AESEV = MILD",
   "empty": [],
   "grid": {
    "single": false,
@@ -126,7 +126,7 @@
         ],
         "label": {
          "show": true,
-         "fontSize": 11,
+         "fontSize": 12,
          "formatter": "{b}"
         },
         "emphasis": {
@@ -261,7 +261,7 @@
         ],
         "label": {
          "show": true,
-         "fontSize": 11,
+         "fontSize": 12,
          "formatter": "{b}"
         },
         "emphasis": {

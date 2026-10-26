@@ -31,7 +31,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": false,
@@ -106,11 +106,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -136,7 +136,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,
@@ -276,11 +276,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -307,7 +307,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,
@@ -455,11 +455,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -486,7 +486,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,
@@ -634,11 +634,11 @@
        "nameGap": 30,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {
@@ -666,7 +666,7 @@
        "inverse": true,
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "align": "left",
         "margin": 150,
         "width": 145,

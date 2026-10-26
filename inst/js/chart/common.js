@@ -49,7 +49,7 @@
     raised: '#ffffff',
     text: '#111827',
     shadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    fontSize: 11,
+    fontSize: 12,
     face: "'Open Sans', system-ui, sans-serif"
   });
 
@@ -71,7 +71,7 @@
       raised: tok('color-bg-raised', INK_DEFAULT.raised),
       text: tok('color-text-default', INK_DEFAULT.text),
       shadow: tok('shadow-md', INK_DEFAULT.shadow),
-      fontSize: parseFloat(tok('mark-font-size', '11')) || 11,
+      fontSize: parseFloat(tok('mark-font-size', '12')) || 12,
       face: getComputedStyle(document.body).fontFamily || INK_DEFAULT.face
     };
   };

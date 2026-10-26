@@ -56,9 +56,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 0 to 1"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -124,12 +121,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

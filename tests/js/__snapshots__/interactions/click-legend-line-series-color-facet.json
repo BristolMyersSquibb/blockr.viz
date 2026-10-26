@@ -281,9 +281,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -312,12 +309,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "ARM": [
-        "Placebo"
-       ]
-      },
-      "nonce": 2
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -329,39 +326,22 @@
      "instance": 0,
      "calls": [
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
@@ -374,42 +354,10 @@
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
@@ -422,18 +370,74 @@
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
           }
          },
          {},
@@ -452,15 +456,22 @@
      "instance": 1,
      "calls": [
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
@@ -473,42 +484,10 @@
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
-          }
-         },
-         {
-          "lineStyle": {
-           "opacity": 0.15
-          },
-          "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
@@ -521,42 +500,74 @@
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
           }
          },
          {
           "lineStyle": {
-           "opacity": 0.15
+           "opacity": 1
           },
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "lineStyle": {
+           "opacity": 1
+          },
+          "itemStyle": {
+           "opacity": 1
           }
          },
          {},
@@ -572,18 +583,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "Placebo",
-    "selectedColumn": "ARM",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,

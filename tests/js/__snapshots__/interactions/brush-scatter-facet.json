@@ -713,9 +713,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day 1 to 58, Analysis Value 21.4 to 29.4, Planned Arm = Low Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1441,9 +1438,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Analysis Relative Day = 31, Analysis Value = 32.1, Planned Arm = High Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

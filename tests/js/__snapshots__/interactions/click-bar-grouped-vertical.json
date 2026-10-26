@@ -233,9 +233,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Rash, AESEV = MODERATE"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

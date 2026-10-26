@@ -32,7 +32,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [
    "Too few subjects per window."
   ],

@@ -1253,9 +1253,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S02, S08"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

@@ -142,9 +142,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -299,9 +296,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Planned Arm = Low Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -323,7 +317,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -459,12 +453,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,

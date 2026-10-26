@@ -29,7 +29,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [
    "Mapped column not in data: Group = \"NOPE\". Columns available here: USUBJID, ARM, SEX, AVISIT, AVISITN, ADY, AVAL, AETERM, AESEV, ASTDY, AENDY, ANRHI, CHG, LO, HI. A rename, flatten or pivot upstream may have changed the column name — re-pick it in the gear."
   ],

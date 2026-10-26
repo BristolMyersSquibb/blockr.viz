@@ -28,7 +28,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": true,
@@ -88,11 +88,11 @@
        "nameGap": 28,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "hideOverlap": true
        },
        "axisTick": {
@@ -120,11 +120,11 @@
        "nameRotate": 90,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisTick": {
         "show": false

@@ -72,12 +72,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -100,12 +95,7 @@
    "step": "click line S03",
    "inputs": [],
    "calls": [],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -281,9 +271,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: USUBJID = S02"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

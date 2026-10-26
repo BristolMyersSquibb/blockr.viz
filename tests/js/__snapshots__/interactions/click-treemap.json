@@ -112,9 +112,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Headache"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -240,9 +237,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -264,7 +258,7 @@
    ]
   },
   {
-   "step": "Reset",
+   "step": "clear: click empty plot space",
    "inputs": [
     {
      "name": "blk-drilldown_block_action",
@@ -371,12 +365,7 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "No filter active"
-    }
-   ],
+   "footer": [],
    "state": {
     "selected": null,
     "selectedColumn": null,
@@ -500,9 +489,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -531,12 +517,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "AETERM": [
-        "Nausea"
-       ]
-      },
-      "nonce": 4
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -547,6 +533,13 @@
     {
      "instance": 0,
      "calls": [
+      {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
       {
        "op": "setOption",
        "option": {
@@ -559,7 +552,7 @@
             "n": 10,
             "itemStyle": {
              "color": "#0072B2",
-             "opacity": 0.3
+             "opacity": 1
             }
            },
            {
@@ -568,7 +561,7 @@
             "n": 10,
             "itemStyle": {
              "color": "#E69F00",
-             "opacity": 0.3
+             "opacity": 1
             }
            },
            {
@@ -577,7 +570,7 @@
             "n": 9,
             "itemStyle": {
              "color": "#009E73",
-             "opacity": 0.3
+             "opacity": 1
             }
            },
            {
@@ -586,7 +579,7 @@
             "n": 9,
             "itemStyle": {
              "color": "#CC79A7",
-             "opacity": 0.3
+             "opacity": 1
             }
            },
            {
@@ -604,7 +597,7 @@
             "n": 9,
             "itemStyle": {
              "color": "#D55E00",
-             "opacity": 0.3
+             "opacity": 1
             }
            },
            {
@@ -613,7 +606,7 @@
             "n": 3,
             "itemStyle": {
              "color": "#9AA0A6",
-             "opacity": 0.3
+             "opacity": 1
             }
            }
           ]
@@ -624,18 +617,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "Nausea",
-    "selectedColumn": "AETERM",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,

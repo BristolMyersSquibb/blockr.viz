@@ -82,9 +82,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -113,12 +110,12 @@
      "value": {
       "action": "filter",
       "filter_type": "categorical",
-      "filters": {
-       "AETERM": [
-        "Nausea"
-       ]
-      },
-      "nonce": 1
+      "column": null,
+      "values": null,
+      "x_col": null,
+      "y_col": null,
+      "x_range": null,
+      "y_range": null
      },
      "opts": {
       "priority": "event"
@@ -130,6 +127,13 @@
      "instance": 0,
      "calls": [
       {
+       "op": "dispatchAction",
+       "action": {
+        "type": "brush",
+        "areas": []
+       }
+      },
+      {
        "op": "setOption",
        "option": {
         "series": [
@@ -138,7 +142,7 @@
            {
             "value": 10,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
@@ -150,31 +154,31 @@
            {
             "value": 10,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 9,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 9,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 9,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            },
            {
             "value": 3,
             "itemStyle": {
-             "opacity": 0.15
+             "opacity": 1
             }
            }
           ]
@@ -185,18 +189,10 @@
      ]
     }
    ],
-   "footer": [
-    {
-     "cls": "dd-status-text",
-     "text": "Filtered: Reported Term = Nausea"
-    },
-    {
-     "reset": "Reset"
-    }
-   ],
+   "footer": [],
    "state": {
-    "selected": "Nausea",
-    "selectedColumn": "AETERM",
+    "selected": null,
+    "selectedColumn": null,
     "brush": false
    },
    "signal": null,
@@ -225,7 +221,7 @@
         "Headache"
        ]
       },
-      "nonce": 2
+      "nonce": 1
      },
      "opts": {
       "priority": "event"
@@ -296,9 +292,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: Reported Term = Headache"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

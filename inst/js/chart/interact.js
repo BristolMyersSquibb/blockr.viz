@@ -53,21 +53,44 @@
     }
   };
 
+  // The same columns with the same values, in any order.
+  /** @param {Record<string, any[]>} a @param {Record<string, any[]>} b */
+  const sameFilters = (a, b) => {
+    const norm = (/** @type {Record<string, any[]>} */ x) => JSON.stringify(
+      Object.keys(x || {}).sort().map((k) => [k, (x[k] || []).map(String).sort()]));
+    return norm(a) === norm(b);
+  };
+
   const interact = {
     /** @this {any} @param {any} slot @param {string} family */
     _attachHandlers(slot, family) {
       const h = /** @type {Record<string, any>} */ (handlers)[family];
       if (h) h(this, slot);
+      // A click on empty plot space clears a latched filter: with no Reset,
+      // this and a second click on the selected mark are the ways back. Not
+      // while a line is under the cursor, which a click on it would pick.
+      slot.chart.getZr().on('click', (/** @type {any} */ e) => {
+        if (e && e.target) return;
+        if (slot.focus && slot.focusSi != null) return;
+        if (!this._filter && !this._hasBrushFilter) return;
+        this._reset();
+      });
     },
 
     // A click always sends (D1): latched, the filter becomes the selection;
-    // with a ctrl_target it is an event and nothing latches.
+    // with a ctrl_target it is an event and nothing latches. A second click
+    // on the selected mark clears the selection: the chart has no Reset.
     /** @this {any} @param {any} slot @param {any} params @param {Record<string, any[]>} filters */
     _select(slot, params, filters) {
       if (NS.transientDrill(this.config)) {
         this._flashMark(slot, params);
         this._showReceipt(filters);
         this._sendFilter(filters);
+        return;
+      }
+      const f = this._filter;
+      if (f && f.type === 'categorical' && sameFilters(f.filters, filters)) {
+        this._reset();
         return;
       }
       this._filter = { type: 'categorical', filters };

@@ -637,9 +637,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 4"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

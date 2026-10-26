@@ -29,7 +29,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [
    "Pick a numeric Value to plot its distribution"
   ],

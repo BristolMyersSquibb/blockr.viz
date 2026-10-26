@@ -49,23 +49,14 @@
        "hidden": true
       },
       {
-       "div.dd-status-footer": [
-        {
-         "span.dd-status-text": null
-        }
-       ]
+       "div.dd-status-footer": null
       }
      ]
     }
    ]
   }
  ],
- "footer": [
-  {
-   "cls": "dd-status-text",
-   "text": "No filter active"
-  }
- ],
+ "footer": [],
  "gear": {
   "expanded": "false",
   "label": "Chart settings"

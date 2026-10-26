@@ -50,7 +50,7 @@
     }
    ]
   },
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": true,
@@ -130,7 +130,7 @@
         ],
         "axisLabel": {
          "color": "#6b7280",
-         "fontSize": 11,
+         "fontSize": 12,
          "interval": 0,
          "lineHeight": 15,
          "rotate": 90,
@@ -168,7 +168,7 @@
         ],
         "axisLabel": {
          "color": "#6b7280",
-         "fontSize": 11,
+         "fontSize": 12,
          "interval": 0,
          "lineHeight": 15,
          "rotate": 90,
@@ -207,7 +207,7 @@
         ],
         "axisLabel": {
          "color": "#6b7280",
-         "fontSize": 11,
+         "fontSize": 12,
          "interval": 0,
          "lineHeight": 15,
          "rotate": 90,
@@ -234,11 +234,11 @@
        "nameGap": 45,
        "nameTextStyle": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLabel": {
         "color": "#6b7280",
-        "fontSize": 11
+        "fontSize": 12
        },
        "axisLine": {
         "lineStyle": {

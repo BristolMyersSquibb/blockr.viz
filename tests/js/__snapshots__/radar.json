@@ -55,7 +55,7 @@
     }
    ]
   },
-  "status": "No filter active",
+  "status": "",
   "empty": [],
   "grid": {
    "single": true,
@@ -138,7 +138,7 @@
        ],
        "axisName": {
         "color": "#6b7280",
-        "fontSize": 11,
+        "fontSize": 12,
         "overflow": "truncate",
         "width": 90
        },

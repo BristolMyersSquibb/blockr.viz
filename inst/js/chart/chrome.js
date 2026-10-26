@@ -522,23 +522,20 @@
 
       const f = this._filter;
       const hasFilter = !!f || this._hasBrushFilter;
-      // Transient drill with nothing latched: no line. A brush still latches,
-      // and a cap message is a warning about the picture.
-      const resting = !hasFilter && NS.transientDrill(this.config);
-      if (resting && !this._capMessage) return;
+      // Nothing set, nothing said: the line is there only while a filter is.
+      // A second click on the selected mark clears it (interact.js _select),
+      // so there is no Reset. A cap message is a warning about the picture.
+      if (!hasFilter && !this._capMessage) return;
 
-      let text = 'No filter active';
-      if (f && f.type === 'categorical') {
-        text = 'Filtered: ' + NS.keys.describe(f.filters, this.columns);
-      } else if (f && f.type === 'range') {
-        const m = this._memo.model;
-        text = 'Filtered: ' + NS.keys.describeRange(f.range, this.columns,
-          m && m.x ? m.x.type : undefined, f.filters);
-      } else if (this._hasBrushFilter) {
-        text = 'Brush filter active';
-      }
-
-      if (!resting) {
+      if (hasFilter) {
+        let text = 'Brush filter active';
+        if (f && f.type === 'categorical') {
+          text = 'Filtered: ' + NS.keys.describe(f.filters, this.columns);
+        } else if (f && f.type === 'range') {
+          const m = this._memo.model;
+          text = 'Filtered: ' + NS.keys.describeRange(f.range, this.columns,
+            m && m.x ? m.x.type : undefined, f.filters);
+        }
         const span = document.createElement('span');
         span.className = 'dd-status-text' + (this._returning ? ' dd-status-returning' : '');
         span.textContent = text;
@@ -550,14 +547,6 @@
         cap.className = 'dd-status-cap';
         cap.textContent = this._capMessage;
         this.statusEl.appendChild(cap);
-      }
-
-      if (hasFilter) {
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'dd-status-reset';
-        resetBtn.textContent = 'Reset';
-        resetBtn.addEventListener('click', () => this._reset());
-        this.statusEl.appendChild(resetBtn);
       }
     },
 

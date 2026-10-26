@@ -30,7 +30,7 @@
   "subtitle": null,
   "caption": null,
   "legend": null,
-  "status": "No filter active",
+  "status": "",
   "empty": [
    "No data to chart"
   ],

@@ -646,9 +646,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 2, Planned Arm = Low Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1317,9 +1314,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 2, Planned Arm = Placebo"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {
@@ -1988,9 +1982,6 @@
     {
      "cls": "dd-status-text",
      "text": "Filtered: AVISIT = Week 8, Planned Arm = High Dose"
-    },
-    {
-     "reset": "Reset"
     }
    ],
    "state": {

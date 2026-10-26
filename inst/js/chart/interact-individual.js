@@ -160,6 +160,13 @@
     /** @this {any} @param {any} range @param {boolean} brush
      *  @param {Record<string, any[]> | null} filters the facet key */
     _selectRange(range, brush, filters) {
+      // A second click on the same point clears it, as on a bar.
+      const f = this._filter;
+      if (!brush && f && f.type === 'range' && !f.brush &&
+          JSON.stringify([f.range, f.filters || null]) === JSON.stringify([range, filters || null])) {
+        this._reset();
+        return;
+      }
       this._filter = { type: 'range', range, filters, brush };
       this._hasBrushFilter = true;
       this._refreshSelection();
