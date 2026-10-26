@@ -55,6 +55,43 @@
 (() => {
   'use strict';
 
+  /**
+   * What a click on the sentence's word for `key` opens, asked of the engine
+   * `ddc` (or a host's facade of it): a flag to toggle, a value to type over,
+   * a number to type over, or a menu. null when it opens nothing.
+   *
+   * The one place that decides whether a word is live. The painter draws a
+   * slot only where this answers, the opener follows the same answer, and the
+   * script's strip gives up a control only to a word that can stand in for
+   * it. A word that opens nothing stays plain text and its control stays put.
+   *
+   * @param {any} ddc @param {string} key
+   * @returns {{kind: 'flag', flag: any} | {kind: 'entry'} |
+   *           {kind: 'number', num: {key: string, role: any}} |
+   *           {kind: 'menu', opts: {options: any[], selected: any}} | null}
+   */
+  const slotOpener = (ddc, key) => {
+    if (!ddc) return null;
+    // A flag has no list: the word IS the switch.
+    const flag = ddc._slotFlag && ddc._slotFlag(key);
+    if (flag) return { kind: 'flag', flag };
+    // A list the sentence names (`{@bins in 10, 30, 60}`) is a menu, also
+    // for a number or a typed setting: the author chose those values.
+    const listed = !!(ddc._slotListedValue && ddc._slotListedValue(key));
+    if (!listed && ddc._slotEntry && ddc._slotEntry(key)) return { kind: 'entry' };
+    const num = !listed && ddc._slotNumber && ddc._slotNumber(key);
+    if (num) return { kind: 'number', num };
+    const opts = ddc._slotOptionsFor && ddc._slotOptionsFor(key);
+    return opts ? { kind: 'menu', opts } : null;
+  };
+
+  /** Is blockr.ui's menu script there? Without it no word can open its list. */
+  const hasMenu = () => typeof Blockr !== 'undefined' && !!Blockr.Select &&
+    typeof Blockr.Select.menu === 'function';
+  const MENU_MISSING = 'Blockr.Select.menu() is missing: the words in a block\'s ' +
+    'sentence cannot open their list with this blockr.ui.';
+  let menuMissingLogged = false;
+
   class DrilldownConfig {
     /** @param {VizDrilldownHost} host */
     constructor(host) {
@@ -223,11 +260,15 @@
       // nothing can reach is not worth the line. A value the block's own text
       // names is dropped: the word IS its control, and two live copies of one
       // setting on one face is a state nobody can explain.
-      const named = new Set(this._cfg().sentence_args || []);
+      const named = new Set((this._cfg().sentence_args || [])
+        .filter((/** @type {string} */ k) => slotOpener(this, k)));
       const specs = this._scriptSpecs().filter(sp => sp && !named.has(sp.name));
       const err = this._cfg().script_error;
+      // A sentence whose words cannot open their lists says so here, where
+      // it shows, and not only on the first click.
+      const noMenu = named.size > 0 && !hasMenu();
       el.innerHTML = '';
-      const any = specs.length || err;
+      const any = specs.length || err || noMenu;
       el.style.display = any ? '' : 'none';
       if (!any) return;
       // The strip keeps its OWN select registry. `_selects` is keyed by role
@@ -253,6 +294,12 @@
       // A script that threw. Shown here rather than swallowed into an empty
       // chart, because an empty chart with no reason reads as one that is
       // still loading.
+      if (noMenu) {
+        const row = document.createElement('div');
+        row.className = 'dd-form-row dd-band-row dd-script-failed';
+        row.textContent = MENU_MISSING;
+        el.appendChild(row);
+      }
       if (err) {
         const row = document.createElement('div');
         row.className = 'dd-form-row dd-band-row dd-script-failed';
@@ -3145,6 +3192,12 @@
     /** @param {{ ddc: () => any, config: () => any, openGear: () => void }} host */
     constructor(host) {
       this.h = host;
+      // Fails at load, not on the first click: a page whose words cannot
+      // open says so in the console as soon as it has a sentence.
+      if (!hasMenu() && !menuMissingLogged) {
+        menuMissingLogged = true;
+        console.error(MENU_MISSING);
+      }
       /** @type {string | null} */
       this._key = null;
       /** @type {HTMLElement | null} */
@@ -3161,9 +3214,15 @@
         el.textContent = text || '';
         return;
       }
+      const ddc = this.h.ddc();
       for (const p of parts) {
         if (!p || !p.text) continue;
-        if (!p.arg) { el.appendChild(document.createTextNode(p.text)); continue; }
+        // A word that opens nothing is text: drawn as a control, it would
+        // promise a click that does nothing.
+        if (!p.arg || !slotOpener(ddc, p.arg)) {
+          el.appendChild(document.createTextNode(p.text));
+          continue;
+        }
         const w = document.createElement('span');
         w.className = 'blockr-slot';
         w.textContent = p.text;
@@ -3179,7 +3238,8 @@
      * @param {HTMLElement} el @param {any[]} [offers] */
     paintOffers(el, offers) {
       if (!Array.isArray(offers) || !offers.length) return;
-      const keys = offers.filter(k => typeof k === 'string');
+      const ddc = this.h.ddc();
+      const keys = offers.filter(k => typeof k === 'string' && slotOpener(ddc, k));
       const MAX = 3;
       const shown = keys.length > MAX ? keys.slice(0, MAX - 1) : keys;
       for (const key of shown) {
@@ -3229,38 +3289,32 @@
       this.close();
       if (was === key) return;                 // the word toggles its own menu
       const ddc = this.h.ddc();
-      if (!ddc) return;
-      // A flag has no list: the word IS the switch.
-      const flag = ddc._slotFlag && ddc._slotFlag(key);
-      if (flag) {
-        const on = this.h.config()[flag.key] !== 'off';
+      const how = slotOpener(ddc, key);
+      // paint() drew a slot only where slotOpener answered, so this is a
+      // setting that changed under the painted word: loud, not a dead click.
+      if (!how) {
+        throw new Error(`The sentence's word for "${key}" opens nothing: ` +
+          'it was painted as a control, but no setting answers to it now.');
+      }
+      if (how.kind === 'flag') {
+        const on = this.h.config()[how.flag.key] !== 'off';
         ddc._setRoleValue(key, on ? 'off' : 'on');
         return;
       }
-      // A list the sentence names (`{@bins in 10, 30, 60}`) is a menu, also
-      // for a number or a typed setting: the author chose those values.
-      const listed = !!(ddc._slotListedValue && ddc._slotListedValue(key));
-      if (!listed && ddc._slotEntry && ddc._slotEntry(key)) {
+      if (how.kind === 'entry') {
         this._edit(key, anchor);
         return;
       }
-      const num = !listed && ddc._slotNumber && ddc._slotNumber(key);
-      if (num) {
-        this._edit(key, anchor, num);
+      if (how.kind === 'number') {
+        this._edit(key, anchor, how.num);
         return;
       }
-      const opts = ddc._slotOptionsFor(key);
-      if (!opts) return;
+      const opts = how.opts;
       const B = (typeof Blockr !== 'undefined') ? Blockr : null;
-      if (!B || !B.Select || !B.Select.menu) {
-        // LOUD on purpose: a version skew, not a capability to feel out. The
-        // words would do nothing and say nothing (blockr.docs
-        // design-system/pinned-controls.md).
-        throw new Error(
-          'Blockr.Select.menu() is missing: the words in a block\'s ' +
-          'sentence cannot open their list with this blockr.ui.'
-        );
-      }
+      // LOUD on purpose: a version skew, not a capability to feel out. The
+      // words would do nothing and say nothing (blockr.docs
+      // design-system/pinned-controls.md). Also logged at load.
+      if (!B || !hasMenu()) throw new Error(MENU_MISSING);
       this._key = key;
       this._anchor = anchor;
       anchor.classList.add('blockr-slot--open');

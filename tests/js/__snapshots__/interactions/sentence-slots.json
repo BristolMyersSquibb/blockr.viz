@@ -50,7 +50,8 @@
    "facet",
    "count_on",
    "tt_fields",
-   "sort_by"
+   "sort_by",
+   "orientation"
   ],
   "title_resolved": "Adverse events",
   "title_offers": [

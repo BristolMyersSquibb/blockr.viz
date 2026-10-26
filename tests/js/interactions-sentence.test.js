@@ -92,7 +92,8 @@ const config = {
   chart_type: 'bar', ...AE, color: 'AESEV', value_lines: [5],
   subtitle_resolved: 'Count of rows by Reported Term, coloured by AESEV, line at 5',
   subtitle_parts: parts,
-  subtitle_offers: ['facet', 'count_on', 'tt_fields', 'sort_by'],
+  // tt_fields (several columns) has no menu a word could open: no chip.
+  subtitle_offers: ['facet', 'count_on', 'tt_fields', 'sort_by', 'orientation'],
   title_resolved: 'Adverse events',
   title_offers: ['facet'],
   script: 'serious <- TRUE',
@@ -336,6 +337,103 @@ test('a type word without a list offers every type the gear offers', () => {
     assert.ok(opts.includes('*bar'));
     assert.ok(opts.includes('scatter') && opts.includes('line') && opts.includes('gantt'));
     assert.ok(!opts.includes('radar') && !opts.includes('waterfall'));
+  } finally {
+    c.close();
+  }
+});
+
+// One rule for every word: drawn as a control only if a click opens
+// something (slotOpener in drilldown-config.js). A word that opens nothing is
+// text, an offer that opens nothing is not shown, and a script control the
+// sentence names but cannot open stays in the strip.
+test('a word that opens nothing is plain text, and its control stays', () => {
+  const c = I.open({
+    chart_type: 'bar', ...AE, unit: 'CHF',
+    subtitle_resolved: 'Count by AETERM in CHF, label shown',
+    subtitle_parts: [
+      { text: 'Count', arg: 'func' }, { text: ' by ' },
+      { text: 'AETERM', arg: 'group' }, { text: ' in ' },
+      // free text without a list: nothing a word could open
+      { text: 'CHF', arg: 'unit' }, { text: ', ' },
+      // a script value typed as free text, and a key nothing answers to
+      { text: 'label', arg: 'note' }, { text: ' ' },
+      { text: 'shown', arg: 'nope' }
+    ],
+    subtitle_offers: ['facet', 'tt_fields', 'nope'],
+    script: 'note <- "label"',
+    script_inputs: [{ name: 'note', key: 'sv_note', label: 'Note', kind: 'text' }],
+    sv_note: 'label',
+    sentence_args: ['func', 'group', 'unit', 'note', 'nope', 'facet', 'tt_fields']
+  });
+  try {
+    const s = sentence(c.block);
+    const slots = s.subtitle.filter((x) => x && x.slot).map((x) => x.slot);
+    const offers = s.subtitle.filter((x) => x && x.offer).map((x) => x.offer);
+    assert.deepStrictEqual(slots, ['Count', 'AETERM']);
+    assert.deepStrictEqual(offers, ['+ Facet']);
+    assert.strictEqual(c.block.subtitleEl.textContent,
+                       'Count by AETERM in CHF, label shown+ Facet');
+    // The script's text control is not replaced by a word that cannot open.
+    const band = c.block.el.querySelector('.dd-mapping-band');
+    assert.ok(band.querySelector('.dd-role-sv_note'), 'the note control left the strip');
+  } finally {
+    c.close();
+  }
+});
+
+// A word painted live whose setting then stops answering throws on click
+// instead of doing nothing.
+test('a click on a word that stopped answering throws', () => {
+  const c = I.open({
+    chart_type: 'bar', ...AE,
+    subtitle_resolved: 'by AETERM',
+    subtitle_parts: [{ text: 'by ' }, { text: 'AETERM', arg: 'group' }]
+  });
+  try {
+    const w = c.block.subtitleEl.querySelector('.blockr-slot');
+    const roles = c.block._cfg.h.roles;
+    const saved = roles.group;
+    delete roles.group;
+    try {
+      assert.throws(() => c.block._sentence().open('group', w), /opens nothing/);
+    } finally {
+      roles.group = saved;
+    }
+  } finally {
+    c.close();
+  }
+});
+
+// Without blockr.ui's menu script the words cannot open their lists. That
+// shows at load: console.error, and a line in the strip above the chart.
+test('a missing menu script fails at load', () => {
+  const c = I.open({
+    chart_type: 'bar', ...AE,
+    subtitle_resolved: 'by AETERM',
+    subtitle_parts: [{ text: 'by ' }, { text: 'AETERM', arg: 'group' }],
+    sentence_args: ['group']
+  }, { noSend: true });
+  try {
+    const win = c.env.win;
+    const menuFn = win.Blockr.Select.menu;
+    delete win.Blockr.Select.menu;
+    const errors = [];
+    const orig = win.console.error;
+    win.console.error = (...a) => errors.push(a.join(' '));
+    try {
+      // The painter is built at mount; built again here, as on a page
+      // whose blockr.ui lacks the menu from the start.
+      c.block._slotsInst = null;
+      c.send(c.cfg);
+      c.block._renderConfig();
+    } finally {
+      win.console.error = orig;
+      win.Blockr.Select.menu = menuFn;
+    }
+    assert.ok(errors.some((e) => /Blockr\.Select\.menu\(\) is missing/.test(e)), 'no console.error');
+    const band = c.block.el.querySelector('.dd-mapping-band');
+    assert.match(band.textContent, /Blockr\.Select\.menu\(\) is missing/);
+    assert.notStrictEqual(band.style.display, 'none');
   } finally {
     c.close();
   }
