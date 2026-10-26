@@ -1062,6 +1062,7 @@
     var input = root.querySelector("input.blockr-search");
     if (input && input.value) runSearch(root);
     else applyVisibility(root);
+    if (root._summarizeAfterPayload) root._summarizeAfterPayload();
   }
 
   if (window.Shiny && Shiny.addCustomMessageHandler) {
@@ -2548,10 +2549,13 @@
   // The grouping is what the switch decides a row is, so it sits under the
   // switch, in the same section, rather than in a Mapping section of its
   // own (design system: a mode selector gates the fields below it).
+  // The value is the block's layout as the server last pushed it
+  // (table.js, window.blockrTableLayouts), not this gear's last click.
   function withLayoutSwitch(spec, elemId) {
+    var pushed = window.blockrTableLayouts && window.blockrTableLayouts[elemId];
     spec.layoutSwitch = {
       fields: spec.mapping || [],
-      value: "groups",
+      value: pushed || "groups",
       options: [
         { value: "records", label: "Records" },
         { value: "groups", label: "Groups" },
@@ -2850,6 +2854,40 @@
       openPop();
     });
 
+    // A layout switch (table.js, "blockr-table-layout"): the records engine
+    // taking over closes this gear; switching to groups redraws it, open if
+    // a gear in the block was open, and once more when the groups table
+    // arrives (root._summarizeAfterPayload).
+    var relayout = false;
+    var reread = function () {
+      var t = root.querySelector("table.blockr-summarize-table");
+      if (t) {
+        var s4 = readGearState(t);
+        cfg = s4.cfg;
+        cols = s4.cols;
+      }
+      engine.refresh();
+    };
+    document.addEventListener("blockr-table-layout", function (e) {
+      var d = e.detail;
+      if (!d || d.id !== elemId || !root.isConnected) return;
+      relayout = false;
+      if (window.blockrTableGearPending) delete window.blockrTableGearPending[elemId];
+      if (d.layout !== "groups") {
+        if (pop.classList.contains("blockr-settings--open")) closePop();
+        return;
+      }
+      if (!d.gearOpen) return;
+      reread();
+      openPop();
+      relayout = true;
+    });
+    root._summarizeAfterPayload = function () {
+      if (!relayout || !pop.classList.contains("blockr-settings--open")) return;
+      relayout = false;
+      reread();
+    };
+
     root.insertBefore(header, root.firstChild);
     root.insertBefore(pop, header.nextSibling);
     root.insertBefore(band, pop.nextSibling);
@@ -2868,6 +2906,17 @@
       header.insertBefore(toolbar, btn);
       var hdrRow = root.querySelector(".blockr-html-table-header");
       if (hdrRow) hdrRow.style.display = "none";
+    }
+    // The first switch to groups with a gear open: this chrome did not exist
+    // when the layout came (table.js, gearPending), so the gear opens now.
+    var pending = window.blockrTableGearPending;
+    var lays = window.blockrTableLayouts;
+    if (pending && pending[elemId]) {
+      delete pending[elemId];
+      if (lays && lays[elemId] === "groups") {
+        relayout = true;
+        openPop();
+      }
     }
   }
 

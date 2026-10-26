@@ -398,6 +398,45 @@ const lastSummaries = (t) => {
   return a.length ? a[a.length - 1].value : null;
 };
 
+// The table block's server pushes its layout to both engines (table.js,
+// "blockr-viz-table-layout"); the switch draws from the push, so a click on
+// any segment but the layout on screen sends it, however often it is clicked.
+test('the Rows are switch follows the pushed layout, and every click on another layout sends', async () => {
+  const t = open('three');
+  const push = (layout) => t.win.__handlers['blockr-viz-table-layout'](
+    { ids: ['x-records-drilldown_table_block', t.id], layout });
+  const segs = () => Array.from(t.band().querySelectorAll('.dd-section--layout [role=radio]'));
+  const selected = () => segs().filter((s) => s.getAttribute('aria-checked') === 'true')
+    .map((s) => s.textContent.trim());
+  const sent = () => t.actions().filter((x) => x.param === 'layout').map((x) => x.value);
+  const pick = (name) => click(segs().find((s) => s.textContent.trim() === name));
+
+  push('groups');
+  openGear(t);
+  assert.deepEqual(selected(), ['Groups']);
+  // Groups -> Variables: the records engine takes over, this gear closes.
+  pick('Variables');
+  assert.deepEqual(sent(), ['variables']);
+  push('variables');
+  assert.equal(t.isOpen(), false, 'the groups gear closes');
+  // Back to groups with a gear open in the block: this gear opens on Groups.
+  t.band().classList.add('blockr-settings--open');
+  push('groups');
+  assert.equal(t.isOpen(), true);
+  assert.deepEqual(selected(), ['Groups']);
+  // The click before the switch went to Variables; one click on it sends.
+  pick('Variables');
+  assert.deepEqual(sent(), ['variables', 'variables']);
+  push('variables');
+  // A layout pushed while the gear is closed is what it opens on.
+  push('records');
+  openGear(t);
+  assert.deepEqual(selected(), ['Records']);
+  pick('Groups');
+  assert.deepEqual(sent(), ['variables', 'variables', 'groups']);
+  await t.close();
+});
+
 test('the groups gear is Rows are with Group by, then Columns, then the rest', async () => {
   const t = open('three');
   const band = openGear(t);

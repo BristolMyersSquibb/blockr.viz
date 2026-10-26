@@ -586,18 +586,21 @@
 }
 .dd-value-row > .dd-picker-wrap { flex: 1 1 0; min-width: 0; }
 .dd-value-row > .dd-value-agg { flex: 0 1 35%; }
-/* Small input-type badge above Mapping (e.g. an annotated data frame has no
-   grouping / aggregation controls). The fuller explanation is the hover
-   tooltip, so the panel stays compact. */
+/* Badge above Mapping: the input is a finished table, so there is no
+   grouping or summary to set (table.js). The fuller explanation is the hover
+   tooltip. A neutral badge, blockr.ui's design system (Labels and status). */
 .dd-input-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
   margin: 2px 0 8px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--blockr-color-surface-2, #f3f4f6);
-  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 0 7px;
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-pill);
+  background: var(--blockr-color-bg-subtle);
+  color: var(--blockr-color-text-muted);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--blockr-font-weight-medium);
   cursor: default;
 }
 /* Repeatable metrics list (table/tile aggregation). Breaks out of the section's
