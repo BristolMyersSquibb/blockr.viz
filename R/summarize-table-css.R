@@ -1052,5 +1052,26 @@ summarize_table_css <- function() {
 .blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-label {
   display: none;
 }
+/* A compact matrix is as wide as its cells and starts at the left. The
+   table drops the panel width, and every cell its percentage width (the 1%
+   on the label cells stretches an auto-width table to the panel too), as
+   for a bar_width preset. A tile column is then as wide as its header, and
+   the tile is a square in it. */
+.blockr-summarize-table[data-summarize-compact='1'] { width: auto; }
+.blockr-summarize-table[data-summarize-compact='1'] th,
+.blockr-summarize-table[data-summarize-compact='1'] td { width: auto; }
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header,
+.blockr-summarize-table[data-summarize-compact='1'] td.blockr-summarize-tile-col {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] .blockr-summarize-tile {
+  width: 24px;
+  min-width: 0;
+  height: 24px;
+  line-height: 24px;
+  margin: 0 auto;
+}
 "
 }
