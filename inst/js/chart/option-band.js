@@ -166,7 +166,8 @@
         emphasis: { disabled: true },
         ...(named && nm ? {
           endLabel: { show: true, formatter: '{a}', distance: 6,
-                      color: ink.secondary || '#374151', fontSize: ink.fontSize || 12 },
+                      color: ink.text || '#111827', fontSize: ink.fontSize || 12,
+                      fontWeight: 600 },
           labelLayout: { moveOverlap: 'shiftY' }
         } : {})
       });

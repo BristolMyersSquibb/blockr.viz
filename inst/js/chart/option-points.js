@@ -160,7 +160,8 @@
       ...(directLabels ? {
         endLabel: {
           show: true, formatter: '{a}', distance: 6,
-          color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12
+          color: (ink && ink.text) || '#111827', fontSize: (ink && ink.fontSize) || 12,
+          fontWeight: 600
         },
         // Lines that end close together push their names apart.
         labelLayout: { moveOverlap: 'shiftY' }

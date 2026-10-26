@@ -118,6 +118,9 @@ test('marks on a line: end labels, room on the right, no band', () => {
   const ended = opt.series.filter((s) => s.endLabel && s.endLabel.show);
   assert.ok(ended.length >= 2);
   assert.deepStrictEqual(ended[0].labelLayout, { moveOverlap: 'shiftY' });
+  // Semibold text ink, as the names on a scatter or a stack.
+  assert.strictEqual(ended[0].endLabel.fontWeight, 600);
+  assert.strictEqual(ended[0].endLabel.color, '#111827');
   assert.ok(opt.grid.right > 5);
   assert.strictEqual(band(r), null);
   r.env.close();
@@ -165,6 +168,9 @@ test('marks on a scatter write each colour group at its centre of mass', () => {
   assert.ok(Math.abs(mark.data[0][0] - mx) < 1e-6);
   assert.strictEqual(mark.silent, true);
   assert.ok(mark.label.textBorderWidth > 0);
+  // Semibold text ink reads over dense points; colour stays with the marks.
+  assert.strictEqual(mark.label.fontWeight, 600);
+  assert.strictEqual(mark.label.color, '#111827');
   assert.strictEqual(band(r), null);
   r.env.close();
 });

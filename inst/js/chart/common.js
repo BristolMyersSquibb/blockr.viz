@@ -405,7 +405,8 @@
   /**
    * A name written at a point and nothing else: a silent scatter series with
    * no symbol and a label with a halo in the surface colour, so it reads over
-   * the marks beneath. The id keeps the highlight patch off it.
+   * the marks beneath. Semibold text ink, as the line end labels. The id
+   * keeps the highlight patch off it.
    * @param {string} id @param {string} name @param {number[]} at
    * @param {string} position @param {any} ink @param {Record<string, any>} [extra]
    */
@@ -415,7 +416,8 @@
     emphasis: { disabled: true },
     label: {
       show: true, formatter: name, position,
-      color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12,
+      color: (ink && ink.text) || '#111827', fontSize: (ink && ink.fontSize) || 12,
+      fontWeight: 600,
       textBorderColor: (ink && ink.surface) || '#ffffff', textBorderWidth: 3,
       ...extra
     }
