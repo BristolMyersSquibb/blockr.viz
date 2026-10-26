@@ -48,7 +48,7 @@ drill_state <- function(app, id) {
   s <- app$get_js(sprintf("drillProbe.state('%s')", id))
   list(active = as.character(unlist(s$active)),
        footer = paste(unlist(s$footer), collapse = " "),
-       rows = s$rows %||% 0L)
+       rows = s$rows %||% 0L, cells = s$cells %||% 0L)
 }
 
 # Show a view and wait until its source has rows and its listing a result.
@@ -100,7 +100,9 @@ adae <- drill_adae
 na_sex <- is.na(adsl$SEX)
 
 # One drill path: the view, the block, what is clicked first (`a`) and next
-# (`b`), the rows each claims, and the footer each shows. `expand` opens a
+# (`b`), the rows each claims, and the footer each shows. `cell` / `cell_b`
+# say where in the row to click (a td index or a selector; NULL the label).
+# A click on a cell claims its row and its column. `expand` opens a
 # collapsed parent row first. `none` is the listing with no click.
 drill_paths <- list(
   list(view = "rec", a = "S-003", b = "S-001",
@@ -123,27 +125,31 @@ drill_paths <- list(
   list(view = "grpm", a = "(Missing)", b = "M",
        want_a = adsl[na_sex, ], foot_a = "SEX = (Missing)",
        want_b = adsl[adsl$SEX %in% "M", ], foot_b = "SEX = M"),
-  list(view = "ae", a = "Headache", b = "Nervous system",
+  list(view = "ae", a = "Headache", b = "Headache", cell_b = 2L,
        expand = "Nervous system", none = adae,
        want_a = adae[adae$AEDECOD == "Headache", ],
        foot_a = "AESOC = Nervous system, AEDECOD = Headache",
-       want_b = adae[adae$AESOC == "Nervous system", ],
-       foot_b = "AESOC = Nervous system"),
-  list(view = "col", a = "Low dose", b = "High dose",
+       want_b = adae[adae$AEDECOD == "Headache" & adae$ARM == "Low dose", ],
+       foot_b = "AESOC = Nervous system, AEDECOD = Headache, ARM = Low dose"),
+  list(view = "col", a = "Low dose", b = "Low dose",
+       cell_b = '.blockr-summarize-fill[data-seg="2"]',
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
-       want_b = adsl[adsl$ARM == "High dose", ], foot_b = "ARM = High dose"),
-  list(view = "heat", a = "S-033", b = "S-031", none = adae,
+       want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
+       foot_b = "ARM = Low dose, SEX = M"),
+  # Heatmap columns: Headache, Nausea, ... (most frequent first).
+  list(view = "heat", a = "S-033", b = "S-031", cell_b = 2L, none = adae,
        want_a = adae[adae$USUBJID == "S-033", ],
        foot_a = "ARM = Low dose, USUBJID = S-033",
-       want_b = adae[adae$USUBJID == "S-031", ],
-       foot_b = "ARM = Low dose, USUBJID = S-031"),
+       want_b = adae[adae$USUBJID == "S-031" & adae$AEDECOD == "Nausea", ],
+       foot_b = "ARM = Low dose, USUBJID = S-031, AEDECOD = Nausea"),
   list(view = "cards", a = "Low dose", b = "High dose",
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "High dose", ], foot_b = "ARM = High dose"),
   # drill = "source" resolves to source rows; with no click, all of them.
-  list(view = "t1", a = "F", b = "(Missing)",
+  list(view = "t1", a = "F", b = "(Missing)", cell_b = 1L,
        want_a = adsl[adsl$SEX %in% "F", ], foot_a = "SEX = F",
-       want_b = adsl[na_sex, ], foot_b = "SEX = (Missing)")
+       want_b = adsl[na_sex & adsl$ARM == "Placebo", ],
+       foot_b = "SEX = (Missing), ARM = Placebo")
 )
 names(drill_paths) <- vapply(drill_paths, `[[`, "", "view")
 
@@ -166,7 +172,7 @@ for (p in drill_paths) local({
 
     expect_true(same_rows(drill_result(app, out), none), label = "no click")
 
-    drill_click(app, id, p$a, p$cell)
+    drill_click(app, id, p$a, p[["cell"]])
     s <- drill_state(app, id)
     expect_identical(s$active, p$a)
     expect_identical(s$footer, paste("Filtered:", p$foot_a))
@@ -174,7 +180,7 @@ for (p in drill_paths) local({
                 label = paste("listing after a click on", p$a))
 
     # A second click on the selected row clears it.
-    drill_click(app, id, p$a, p$cell)
+    drill_click(app, id, p$a, p[["cell"]])
     s <- drill_state(app, id)
     expect_length(s$active, 0L)
     expect_identical(s$footer, "")
@@ -182,14 +188,24 @@ for (p in drill_paths) local({
                 label = "listing after the second click")
 
     # A click on another key replaces the first.
-    cell_b <- if ("cell_b" %in% names(p)) p$cell_b else p$cell
-    drill_click(app, id, p$a, p$cell)
+    cell_b <- if ("cell_b" %in% names(p)) p$cell_b else p[["cell"]]
+    drill_click(app, id, p$a, p[["cell"]])
     drill_click(app, id, p$b, cell_b)
     s <- drill_state(app, id)
     expect_identical(s$active, p$b)
     expect_identical(s$footer, paste("Filtered:", p$foot_b))
     expect_true(same_rows(drill_result(app, out), p$want_b),
                 label = paste("listing after a click on", p$b))
+    if (!is.null(cell_b)) expect_gt(s$cells, 0L)
+
+    # The same row or cell again clears; once more sets it for the restore.
+    drill_click(app, id, p$b, cell_b)
+    s <- drill_state(app, id)
+    expect_length(s$active, 0L)
+    expect_identical(s$cells, 0L)
+    expect_true(same_rows(drill_result(app, out), none),
+                label = paste("listing after a second click on", p$b))
+    drill_click(app, id, p$b, cell_b)
   })
 })
 
@@ -224,6 +240,9 @@ test_that("drill: a saved board restores every selection and filter", {
                      label = paste(id, "footer"))
     expect_true(same_rows(drill_result(app2, out), p$want_b),
                 label = paste(id, "listing after restore"))
+    if (!is.null(p[["cell_b"]])) {
+      expect_gt(s$cells, 0L, label = paste(id, "marked cell after restore"))
+    }
   }
   # A click on the restored selection clears it.
   drill_view(app2, "grp", "grp_out")

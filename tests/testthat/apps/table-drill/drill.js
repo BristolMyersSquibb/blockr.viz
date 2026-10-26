@@ -100,6 +100,8 @@
       active: active,
       footer: foot.map(txt),
       rows: rows(r).length,
+      // A marked cell: a groups cell claim, a Table 1 column.
+      cells: r.querySelectorAll("td.is-on-cell, td.dt-col-active").length,
       count: txt(r.querySelector(".dt-row-count"))
     };
   }
