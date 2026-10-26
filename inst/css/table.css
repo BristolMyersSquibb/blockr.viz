@@ -409,12 +409,13 @@
   padding: 0 var(--blockr-card-inset, 0px);
 }
 
-/* The status half takes the rest of the row, so its Reset stays hard right.
+/* The status half (there only while a filter is set) takes the rest of the
+   row.
    Two selectors, one job: shiny-sass.css gives a NON-EMPTY `.shiny-html-output`
    `display: contents`, which erases the slot's own box and promotes the status
    line itself to flex item -- so whichever of the two is the item, it grows.
    (Without this the slot measures 0 wide, space-between has nothing to
-   distribute, and Reset ends up glued to the filter text.) */
+   distribute.) */
 .dt-table-footer > .dt-status-slot,
 .dt-table-footer .dd-status-footer {
   flex: 1 1 auto;
@@ -529,8 +530,8 @@
   border-bottom: none;
   margin-bottom: 0;
 }
-/* The drill line takes the rest of the footer row, so its Reset sits hard
-   right, as under a chart and under the table block. */
+/* The drill line takes the rest of the footer row, as under a chart and
+   under the table block. It is empty, and gone, while no filter is set. */
 .blockr-summarize-footer > .dd-status-footer {
   flex: 1 1 auto;
   padding: 0;

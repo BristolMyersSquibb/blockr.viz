@@ -480,8 +480,8 @@
 
   // The drill's footer line, in the chart's words and markup (chart/chrome.js
   // _updateStatus, chart.css .dd-status-*), so a table and a chart on one
-  // board report a drill the same way. A latched drill reads "No filter
-  // active" / "Filtered: COL = value" with Reset. With a ctrl_target the click
+  // board report a drill the same way. A latched drill reads "Filtered: COL =
+  // value" while it is set, and nothing at rest. With a ctrl_target the click
   // is an event: nothing at rest, and a receipt ("Drilled down to COL =
   // value") that holds, then fades.
   var SUMMARIZE_RECEIPT_HOLD_MS = 1400;
@@ -519,22 +519,15 @@
       root._summarizeReceipt = null;
     }
     if (summarizeTransient(root)) return;
+    // Nothing set, nothing said: the line is there only while a filter is.
+    // A second click on the selected row or card clears it, so there is no
+    // Reset (the chart's rule, chart/chrome.js _updateStatus).
     var sel = root._summarizeSel;
+    if (!sel) return;
     var span = document.createElement("span");
     span.className = "dd-status-text" + (returning ? " dd-status-returning" : "");
-    span.textContent = sel ? "Filtered: " + sel : "No filter active";
+    span.textContent = "Filtered: " + sel;
     box.appendChild(span);
-    if (sel) {
-      var reset = document.createElement("button");
-      reset.type = "button";
-      reset.className = "dd-status-reset";
-      reset.textContent = "Reset";
-      reset.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (root._summarizeClear) root._summarizeClear();
-      });
-      box.appendChild(reset);
-    }
   }
 
 

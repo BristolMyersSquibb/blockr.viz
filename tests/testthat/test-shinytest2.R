@@ -698,7 +698,7 @@ test_that("table drill: a real row click filters; re-click clears (toggle)", {
 
   # Baseline: earlier drill tests left the filter cleared.
   expect_equal(nrow(get_block_result("table")), 6L)
-  expect_equal(dt_status_text("table"), "No filter active")
+  expect_null(dt_status_text("table"))
 
   dt_click_raw("table", "West")
   res <- get_block_result("table")
@@ -714,23 +714,23 @@ test_that("table drill: a real row click filters; re-click clears (toggle)", {
   dt_click_raw("table", "West")
   expect_equal(nrow(get_block_result("table")), 6L)
   expect_equal(dt_active_rows("table"), 0)
-  expect_equal(dt_status_text("table"), "No filter active")
+  expect_null(dt_status_text("table"))
   expect_equal(nrow(get_block_result("table_ds")), 6L)
 })
 
-test_that("table drill: the status-footer Reset clears the filter", {
+test_that("table drill: the status line has no Reset, a re-click clears", {
   skip_if_no_app()
 
   dt_click_raw("table", "North")
   expect_equal(nrow(get_block_result("table")), 2L)
-  app$run_js(sprintf(
-    "document.querySelector('%s .dd-status-reset').click();",
-    dt_result("table")
-  ))
-  app$wait_for_idle()
+  expect_equal(dt_status_text("table"), "Filtered: region = North")
+  expect_false(app$get_js(sprintf(
+    "!!document.querySelector('%s .dd-status-reset')", dt_result("table")
+  )))
+  dt_click_raw("table", "North")
   expect_equal(nrow(get_block_result("table")), 6L)
   expect_equal(dt_active_rows("table"), 0)
-  expect_equal(dt_status_text("table"), "No filter active")
+  expect_null(dt_status_text("table"))
 })
 
 test_that("table drill: a rounded numeric cell filters on its RAW value", {
@@ -805,9 +805,9 @@ test_that("cards drill: re-clicking the active row clears (toggle)", {
   expect_equal(nrow(get_block_result("cards")), 6L)
   expect_equal(app$get_js(sprintf(
     "document.querySelectorAll('%s .tc-row.is-on').length", scope)), 0)
-  expect_equal(app$get_js(sprintf(
-    "document.querySelector('%s .dd-status-text').textContent", scope)),
-    "No filter active")
+  expect_null(app$get_js(sprintf(
+    "(function(){var s=document.querySelector('%s .dd-status-text');
+       return s ? s.textContent : null;})()", scope)))
 })
 
 test_that("restore: a table with ctor filter state comes up filtered + marked", {
@@ -842,9 +842,11 @@ test_that("restore: cards with a saved selection mark the row + footer", {
     "document.querySelector('%s .dd-status-text').textContent", scope)),
     "Filtered: region = South")
 
-  # The footer's Reset clears the restored selection too.
+  # No Reset: a click on the selected card clears the restored selection.
+  expect_false(app$get_js(sprintf(
+    "!!document.querySelector('%s .dd-status-reset')", scope)))
   app$run_js(sprintf(
-    "document.querySelector('%s .dd-status-reset').click();", scope
+    "document.querySelector('%s .tc-row.is-on .tc').click();", scope
   ))
   app$wait_for_idle()
   Sys.sleep(0.4)

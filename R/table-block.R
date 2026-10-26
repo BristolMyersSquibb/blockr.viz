@@ -1115,7 +1115,7 @@ dt_chrome <- function(elem_id, structured, max_height, inner,
         inner
       ),
       # Footer row: the row count on the left, the active-filter status line
-      # and Reset on the right. The count is written by table.js (it has to
+      # (only while a filter is set) on the right. The count is written by table.js (it has to
       # follow the client-side search, which the server never sees) and hides
       # itself while empty; the status line is rendered server-side off the
       # block's filter state (see the block server's dt_status output) so it

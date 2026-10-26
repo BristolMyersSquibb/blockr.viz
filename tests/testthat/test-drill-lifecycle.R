@@ -172,10 +172,11 @@ test_that("restored filter state renders the status line and active stamp", {
     session$flushReact()
     # Output already filtered on restore.
     expect_equal(nrow(eval_block_expr(session$returned$expr(), drill_df)), 1L)
-    # Status line: "Filtered: region = North" + a Reset control.
+    # Status line: "Filtered: region = North", no Reset (a second click on
+    # the row clears, as on the chart).
     status <- as.character(output$dt_status$html)
     expect_true(grepl("Filtered: region = North", status))
-    expect_true(grepl("dd-status-reset", status))
+    expect_false(grepl("dd-status-reset", status))
     # The body payload carries the active stamp (on the <table> head) and
     # the drill column's raw values, for the JS row highlight.
     p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
@@ -186,13 +187,13 @@ test_that("restored filter state renders the status line and active stamp", {
   })
 })
 
-test_that("with drill on but no filter the status line reads 'No filter'", {
+test_that("with drill on but no filter there is no status line", {
   blk <- records_engine(drill = "region")
   testServer(blk, args = list(data = reactive(drill_df)), {
     session$flushReact()
-    status <- as.character(output$dt_status$html)
-    expect_true(grepl("No filter active", status))
-    expect_false(grepl("dd-status-reset", status))
+    status <- as.character(output$dt_status$html %||% "")
+    expect_false(grepl("No filter active", status))
+    expect_false(grepl("dd-status-text", status))
   })
 })
 

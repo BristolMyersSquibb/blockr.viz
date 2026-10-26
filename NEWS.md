@@ -32,6 +32,11 @@
   argument specs: the chart's statistics (`median_q1_q3`, `mean_sd`, ...,
   `whiskers` also `tukey`), plus `mean_ci95` and `"none"`, which only the
   table draws.
+* The table block's footer says nothing about filters while none is set:
+  "No filter active" and the Reset button are gone, in every layout and
+  look, as under the chart. "Filtered: ..." shows while a row or card is
+  selected; a second click on it clears the filter. The records layout keeps
+  its row count.
 
 # blockr.viz 0.2.210
 

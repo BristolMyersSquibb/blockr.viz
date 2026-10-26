@@ -1743,20 +1743,6 @@
     buildCogwheel(root, table);
     wireSearch(root);
     wireScrollShadow(root);
-    // Status-footer Reset (the footer is a server-rendered output inside the
-    // chrome and re-renders per filter change, so delegate from the
-    // container rather than wiring the button itself).
-    var elemIdAttr = root.getAttribute("data-dt-elem-id");
-    if (elemIdAttr) {
-      // Rebound after the guard so the closure sees a plain string.
-      const elemId = elemIdAttr;
-      root.addEventListener("click", function (e) {
-        var t = /** @type {Element | null} */ (e.target);
-        if (!t || !t.closest(".dd-status-reset")) return;
-        clearActiveRows(root);
-        sendClearFilter(elemId);
-      });
-    }
   }
 
   // Table wiring — for each freshly-rendered <table> (sort, row-click drill,

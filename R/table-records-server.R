@@ -457,12 +457,11 @@ table_records_server <- function(id, data,
       )
     })
 
-    # Active-filter status line + Reset (the chart footer's classes, so
-    # both read identically). A tiny output of the filter reactiveVals
-    # only -- the (potentially heavy) table body never re-renders on a
-    # click. Present whenever drill is enabled ("No filter active", chart
-    # parity) or a filter is still active (e.g. restored from a saved
-    # board); the Reset button is wired by delegation in table.js.
+    # Active-filter status line (the chart footer's classes, so both read
+    # identically). A tiny output of the filter reactiveVals only -- the
+    # (potentially heavy) table body never re-renders on a click. Present
+    # only while a filter is set (also one restored from a saved board), as
+    # under the chart. No Reset: a second click on the selected row clears.
     output$dt_status <- shiny::renderUI({
       gc  <- as.character(unlist(r_filter_group_cols()))
       gv  <- as.character(unlist(r_filter_group_vals()))
@@ -506,22 +505,16 @@ table_records_server <- function(id, data,
           )
         ))
       }
+      if (!grouped_on && !single_on) return(NULL)
       text <- if (grouped_on) {
         paste0("Filtered: ", paste0(dt_claim_label(gc, gv),
                                     collapse = " \u203a "))
-      } else if (single_on) {
-        paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
       } else {
-        "No filter active"
+        paste0("Filtered: ", col, " = ", paste(vals, collapse = ", "))
       }
       htmltools::tags$div(
         class = "dd-status-footer",
-        htmltools::tags$span(class = "dd-status-text", text),
-        if (grouped_on || single_on) {
-          htmltools::tags$button(
-            type = "button", class = "dd-status-reset", "Reset"
-          )
-        }
+        htmltools::tags$span(class = "dd-status-text", text)
       )
     })
 
