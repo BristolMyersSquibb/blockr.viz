@@ -57,7 +57,7 @@
 #' @return An [htmltools::tagList()].
 #' @examples
 #' drilldown_table(head(mtcars), label_col = "mpg")
-#' @export
+#' @noRd
 drilldown_table <- function(data,
                             label_col = NULL,
                             value_cols = NULL,
@@ -298,7 +298,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
                  drill_mode = if (drill_on) drill)
 }
 
-#' Cell-visual spec for [drilldown_table()]
+#' Cell-colour spec for a table
 #'
 #' Describes how numeric cells are decorated. Three modes, all purely
 #' presentational (the data is never changed):
@@ -329,7 +329,7 @@ dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
 #'   the AE heatmap's "count shown, worst grade painted". Source columns are
 #'   hidden from the display; sources must be numeric. Diverging/sequential
 #'   only.
-#' @return A list consumed by [drilldown_table()].
+#' @return A cell-colour spec list.
 #' @examples
 #' drilldown_table_color("sequential", domain = c(0, 100))
 #' @export

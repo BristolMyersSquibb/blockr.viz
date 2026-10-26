@@ -1,5 +1,9 @@
 # blockr.viz (development version)
 
+* `interactive_table()` draws a table the way the table block does, for
+  another block's UI, and `update_interactive_table()` replaces the table
+  inside it from the server. It replaces `drilldown_table()`, which is no
+  longer exported. `static_table()` is the print counterpart.
 * The picker block is gone. Bind chart and table mappings to the source
   columns directly and put a group switch in the board's filter.
 * The table block orders rows alphabetically with `sort_by = "alpha"`, as
