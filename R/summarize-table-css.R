@@ -877,6 +877,15 @@ summarize_table_css <- function() {
 .blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:last-child > td {
   padding-bottom: 5px;
 }
+/* The header's grouping names read as the records layout's \"All\" next to
+   the fold-all chevron: small, normal weight, muted (html-table.R
+   .dt-foldall). */
+.blockr-summarize-table[data-summarize-nested='1'] thead th.blockr-stub-header .blockr-col-name {
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
 .blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-stub-header .blockr-col-name,
 .blockr-summarize-table[data-summarize-compact='1'] tr.is-parent td.blockr-summarize-label-col {
   white-space: nowrap;
