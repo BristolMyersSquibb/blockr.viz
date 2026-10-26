@@ -366,7 +366,8 @@
 
   /**
    * The footer note for a category axis squeezed past one label per row,
-   * or null when every label fits.
+   * or null when every label fits. `groupCol` names the categories: the
+   * column's title (axisTitle), not its name.
    * @param {number} plotH @param {number} nCats @param {any} groupCol
    * @returns {string | null}
    */

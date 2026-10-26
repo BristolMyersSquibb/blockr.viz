@@ -147,7 +147,7 @@
     const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
     refX.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), true, lm, refText(v, nmX[i]), false, ink)));
     refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink)));
-    if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink)) refData.push(r);
+    if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
     const idRaw = cfg.identity_line;
     const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category';

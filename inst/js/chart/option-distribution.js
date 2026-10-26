@@ -266,7 +266,7 @@
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, cats.length * 28) + bottomBase,
       labelNote: (!vertical && cats.length * 28 > NS.PANEL_H_CAP)
-        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, cats.length, cfg.group) : null,
+        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, cats.length, P.title(cfg.group)) : null,
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: ink.face },

@@ -194,15 +194,15 @@
   };
 
   /**
-   * The denominator of "% of panel", named by its columns.
-   * @param {Record<string, any>} cfg
+   * The denominator of "% of panel", named by its columns' labels.
+   * @param {Record<string, any>} cfg @param {(col: any) => string} title
    */
-  const pctName = (cfg) => {
+  const pctName = (cfg, title) => {
     /** @type {Record<string, any>} */
     const roleCol = { facet: cfg.facet, group: cfg.group, color: cfg.color };
     const roles = Array.isArray(cfg.pct_of) ? cfg.pct_of : (cfg.pct_of ? [cfg.pct_of] : ['facet']);
     const cols = roles.map((/** @type {string} */ r) => roleCol[r]).filter(Boolean);
-    return cols.length ? '% of ' + cols.join(' x ') : '% of total';
+    return cols.length ? '% of ' + cols.map(title).join(' x ') : '% of total';
   };
 
   /**
@@ -230,7 +230,7 @@
     const rowsH = groups.length * rowBand;
     const hCapped = !vertical && rowsH > NS.PANEL_H_CAP;
     const labelNote = hCapped
-      ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, cfg.group) : null;
+      ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, title(cfg.group)) : null;
     const barLayout = isGrouped
       ? (vertical
           ? { barGap: 0, barCategoryGap: '30%', barMaxWidth: BAR_MAX }
@@ -334,7 +334,7 @@
     const valAxis = {
       type: 'value',
       name: showPercent ? '% of group total'
-        : (pctFunc ? pctName(cfg) : NS.axisName(P.valueTitle, cfg.value, cfg)),
+        : (pctFunc ? pctName(cfg, title) : NS.axisName(P.valueTitle, cfg.value, cfg)),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
