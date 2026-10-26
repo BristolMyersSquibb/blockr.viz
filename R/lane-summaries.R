@@ -411,8 +411,15 @@ lane_summary_auto_name <- function(s) {
   switch(s$type,
     simple = {
       f <- summarize_chr1(s$func) %||% "count"
-      if (identical(f, "count")) "Rows" else
-        paste0(AGG_WORDS[[f]] %||% f, " ", summarize_chr1(s$col))
+      # As is: the column is the value, so it names the column.
+      if (identical(f, "count")) {
+        "Rows"
+      } else if (identical(f, "identity")) {
+        summarize_chr1(s$col) %||% "Value"
+      } else {
+        w <- unname(AGG_WORDS[f])
+        paste0(if (is.na(w)) f else w, " ", summarize_chr1(s$col))
+      }
     },
     dist = summarize_chr1(s$col),
     field = summarize_chr1(s$col),
@@ -646,7 +653,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   skel <- skel[stats::complete.cases(skel), , drop = FALSE]
   # Nothing left to draw: no rows at all, or every row without a group (a
   # population join with no events in it, or a prepare script that cleared
-  # every term). The ranked-bar surface says the same.
+  # every term).
   if (!nrow(skel)) return(bad("No rows to display"))
   skel <- skel[do.call(order, unname(as.list(skel))), , drop = FALSE]
   leaf <- data.frame(.label = as.character(skel[[group]]),
@@ -851,8 +858,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
       # A count's N: the subjects (count distinct) or rows (count) in this
       # copy's slice -- the whole data for an unfaceted column, one level's
       # rows for a facet copy. Over the full slice, so rows without a group
-      # (the population join's) are in it: the same N the ranked-bar
-      # surface's facets print (summarize_denom()).
+      # (the population join's) are in it (summarize_denom()).
       # On the one row of a table without `by` the count is its own N, so
       # its share would read 100%; a colour split keeps its shares.
       same_n <- all && is.null(s$.color) &&
@@ -1118,8 +1124,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  summarize_has_pct(summarize_chr1(s$func) %||% "count"))
   # A count with an N (see lane_prepare_summaries): the header's second line
   # says N, the value reads "8 (12%)", and a bar's length is the percentage,
-  # so arms of different size compare on one scale. The ranked-bar
-  # surface's faceted columns, for the column list.
+  # so arms of different size compare on one scale.
   den <- cp$den
   pct <- is.numeric(den) && length(den) == 1L && is.finite(den) && den > 0
   if (pct) {

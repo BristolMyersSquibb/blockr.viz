@@ -7,40 +7,14 @@
 
 #' Summarize table, as static HTML
 #'
-#' Renders the table without a block. Its original form, a ranked
-#' horizontal-bar table: one row per level of `group`,
-#' ordered by the measure, with the bar drawn as a div in a cell. Search,
-#' click-to-sort, exact values, a sticky header and an arbitrary row count
-#' come from the table form; the bar carries the magnitude.
-#'
-#' The bar column takes one of three shapes, picked by the arguments:
-#' plain (`group` only), split into segments (`color`), or one column per
-#' level (`facet`).
+#' Renders the groups layout without a block: one row per level of `by`, one
+#' column per entry of `summaries`. Search, click-to-sort, exact values, a
+#' sticky header and an arbitrary row count come from the table form.
 #'
 #' @param data A data frame.
-#' @param group Column to rank by (one row per level).
-#' @param summaries,by,facet_layout The summarize-table path: `summaries` is
-#'   an ordered list of typed summary rows (see
-#'   [new_summarize_table_block()]); non-empty, it takes over from the flat
-#'   bar mappings. `by` is the grouping vector (outer -> inner, at most
-#'   two).
-#' @param value,func,id_var The measure. `func` is one of `"count"`,
-#'   `"count_distinct"`, `"sum"`, `"mean"`, `"median"`, `"min"`, `"max"`;
-#'   `value` names the column it reduces (ignored by `"count"`), `id_var` the
-#'   subject identifier `"count_distinct"` counts.
-#' @param parent Optional outer grouping column: parents become expandable
-#'   rows with their children indented under them. A parent is aggregated in
-#'   its own pass, never summed from its children.
-#' @param color Optional column splitting each bar into segments. Composes
-#'   with `facet`.
-#' @param bar_mode `"stacked"`, `"grouped"` or `"percent"`. No-op without
-#'   `color`.
-#' @param facet Optional column giving one bar column per level, all on one
-#'   shared scale.
-#' @param cols Opt-in separate numeric columns beside the bar: any of `"n"`,
-#'   `"pct"`. By default the bar cell carries its own value label.
-#' @param fields Extra columns from the underlying row (identity measure
-#'   only), shown as real columns beside the bar.
+#' @param summaries,by,facet_layout The table's columns, an ordered list of
+#'   typed summaries (see [new_table_block()]), and the grouping (outer ->
+#'   inner, at most two). Empty `summaries` counts rows.
 #' @param sort_by,sort_dir Server-side ordering. `sort_by` is `"value"`,
 #'   `"data"` (the data's own order), `"label"`, a summary column name or a
 #'   facet level name; `sort_dir` is `"desc"` or `"asc"`.
@@ -51,10 +25,9 @@
 #' @param search Show the search input.
 #' @param sortable Allow click-to-sort on the column headers.
 #' @param axis Print each glyph column's domain as a tick strip under its
-#'   header (default `TRUE`): the value domain for bars, boxes and dot
-#'   ranges, the x domain (dates as dates) for swimlanes and sparklines.
+#'   header (default `TRUE`).
 #' @param bar_width `"fit"` (default), `"narrow"`, `"medium"` or `"wide"`:
-#'   the length of the labelled marks. See [new_summarize_table_block()].
+#'   the length of the labelled marks.
 #' @param title,subtitle,caption Display text, already resolved (see
 #'   `resolve_block_title()`).
 #' @param drill Column a row click filters on, or `NULL` for a display-only
@@ -67,31 +40,34 @@
 #' @param expanded Open every nested row. `FALSE` (default) is the dashboard's
 #'   collapsed-to-parents view; an EXPORT sets it, having nobody to click the
 #'   chevron.
+#' @param ... The single ranked bar's arguments (`group`, `func`, `value`,
+#'   ...), read as the column list they map to.
 #'
 #' @return An [htmltools::tagList()].
 #' @examplesIf interactive()
-#' summarize_table(mtcars, group = "cyl", func = "count")
+#' summarize_table(mtcars, by = "cyl")
 #' @noRd
-summarize_table <- function(data, group = NULL, value = ".count",
-                            func = "count", id_var = NULL, summaries = list(),
-                            by = NULL, facet_layout = "by_summary",
-                            parent = NULL, color = NULL, bar_mode = "stacked",
-                            facet = NULL, cols = NULL, fields = NULL,
+summarize_table <- function(data, summaries = list(), by = NULL,
+                            facet_layout = "by_summary",
                             sort_by = "value", sort_dir = "desc", top_n = NULL,
                             max_height = NULL, search = TRUE, sortable = TRUE,
                             axis = TRUE, value_labels = TRUE,
                             bar_width = "fit", title = NULL,
                             subtitle = NULL, caption = NULL, drill = NULL,
                             scale_map = NULL, elem_id = NULL, active = NULL,
-                            expanded = FALSE, subject = NULL) {
+                            expanded = FALSE, subject = NULL, ...) {
+  legacy <- list(...)
+  if (length(legacy)) {
+    tr <- summarize_legacy_args(c(
+      list(summaries = summaries, by = by), legacy
+    ))
+    summaries <- tr$summaries
+    by <- tr$by
+  }
   prep <- summarize_prepare(
-    data, group = group, value = value, func = func, id_var = id_var,
-    summaries = summaries, by = by,
-    facet_layout = facet_layout,
-    parent = parent, color = color, bar_mode = bar_mode, facet = facet,
-    cols = cols, fields = fields, sort_by = sort_by,
-    sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
-    subject = subject
+    data, summaries = summaries, by = by, facet_layout = facet_layout,
+    sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
+    scale_map = scale_map, subject = subject
   )
 
   # The three display slots follow the chart / table contract: NULL = auto
@@ -112,10 +88,8 @@ summarize_table <- function(data, group = NULL, value = ".count",
   # The gear's working state: the block's config as given, plus the pickable
   # input columns. Read back by summarize-table.js off the rendered <table>.
   cfg <- list(
-    group = group, parent = parent, color = color, facet = facet,
-    func = func, value = value, id_var = id_var,
     summaries = summaries, by = by, facet_layout = facet_layout,
-    bar_mode = bar_mode, cols = cols, fields = fields, sort_by = sort_by,
+    sort_by = sort_by,
     sort_dir = sort_dir, top_n = top_n, search = search,
     sortable = sortable, axis = axis, value_labels = value_labels,
     bar_width = bar_width, drill = drill,

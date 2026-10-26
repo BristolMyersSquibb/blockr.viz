@@ -42,10 +42,18 @@ push_fixture <- function() {
   rows
 }
 
+# One bar column, as the gear writes it.
+push_bar <- function(func = "count", col = NULL, ...) {
+  c(list(type = "simple", func = func), if (!is.null(col)) list(col = col),
+    list(show = "bar"), list(...))
+}
+
 test_that("the flat payload carries the head and the per-column vectors", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = "TERM", func = "count_distinct",
-                               id_var = "USUBJID", drill = "TERM")
+  p <- summarize_build_payload(
+    ae, by = "TERM", summaries = list(push_bar("count_distinct", "USUBJID")),
+    drill = "TERM"
+  )
 
   expect_identical(p$kind, "flat")
   expect_identical(p$n, 4L)
@@ -74,18 +82,19 @@ test_that("the flat payload carries the head and the per-column vectors", {
 
 test_that("labels ship PLAIN and are escaped by each consumer, not the payload", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = "TERM", func = "count")
+  S <- list(push_bar())
+  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
   expect_true("T <1> & co" %in% p$label)     # raw in the payload
   html <- as.character(htmltools::renderTags(
-    summarize_table(ae, group = "TERM", func = "count")
+    summarize_table(ae, by = "TERM", summaries = S)
   )$html)
   expect_match(html, "T &lt;1&gt; &amp; co", fixed = TRUE)
 })
 
 test_that("nested tables DO ship the level and parent vectors", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = "TERM", parent = "SOC",
-                               func = "count")
+  p <- summarize_build_payload(ae, by = c("SOC", "TERM"),
+                               summaries = list(push_bar()))
   expect_true(any(as.integer(p$level) > 0L))
   expect_true(any(as.logical(p$parent_row)))
   expect_true("SOC A" %in% as.character(p$parent))
@@ -120,8 +129,9 @@ test_that("section headers keep a raw key when their label carries N", {
 
 test_that("a split column ships one width vector per series", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = "TERM", color = "SEV",
-                               func = "count", bar_mode = "percent")
+  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+    push_bar(color = "SEV", position = "fill")
+  ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "barsplit")
   expect_identical(c1$mode, "percent")
@@ -183,9 +193,9 @@ test_that("the degenerate collapse leaves widths and the domain alone", {
 
 test_that("a non-renderable state ships as kind html, not a cell model", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = NULL)
+  p <- summarize_build_payload(ae, by = "GONE")
   expect_identical(p$kind, "html")
-  expect_match(p$html, "Pick a Group column")
+  expect_match(p$html, "Mapped column not in data")
   # The chrome still travels: the footer and legend slots get cleared.
   expect_true(!is.null(p$chrome))
 })
@@ -194,8 +204,9 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   ae <- push_fixture()
   p <- summarize_build_payload(
     ae, chrome = list(title = "Ranked", subtitle = "N = 30", caption = "src"),
-    group = "TERM", facet = "ARM", color = "SEV", func = "count_distinct",
-    id_var = "USUBJID"
+    by = "TERM", summaries = list(
+      push_bar("count_distinct", "USUBJID", facet = "ARM", color = "SEV")
+    )
   )
   expect_identical(p$chrome$title, "Ranked")
   expect_identical(p$chrome$caption, "src")
@@ -205,15 +216,17 @@ test_that("the chrome rides on the payload so the container is never rebuilt", {
   expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
   # No row count in the footer: the fold row speaks for a Top N cut.
   expect_null(p$chrome$foot$count)
-  plain <- summarize_build_payload(ae, group = "TERM", facet = "ARM",
-                                   func = "count_distinct", id_var = "USUBJID")
+  plain <- summarize_build_payload(ae, by = "TERM", summaries = list(
+    push_bar("count_distinct", "USUBJID", facet = "ARM")
+  ))
   expect_null(plain$chrome$legend)
 })
 
 test_that("the payload is smaller than the markup it replaces", {
   ae <- push_fixture()
-  args <- list(group = "TERM", facet = "ARM", func = "count_distinct",
-               id_var = "USUBJID")
+  args <- list(by = "TERM", summaries = list(
+    push_bar("count_distinct", "USUBJID", facet = "ARM")
+  ))
   json <- summarize_payload_json(
     do.call(summarize_build_payload, c(list(ae), args))
   )
@@ -226,7 +239,7 @@ test_that("the payload is smaller than the markup it replaces", {
 test_that("json keeps single-row columns as arrays", {
   ae <- push_fixture()
   one <- ae[ae$TERM == "T3", , drop = FALSE]
-  p <- summarize_build_payload(one, group = "TERM", func = "count")
+  p <- summarize_build_payload(one, by = "TERM", summaries = list(push_bar()))
   j <- summarize_payload_json(p)
   # A length-1 column must stay [x], never x: the JS assembler indexes it.
   expect_match(j, '"label":\\[')
@@ -237,7 +250,7 @@ test_that("json keeps single-row columns as arrays", {
 
 test_that("a box column ships pre-rounded positions AND widths", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", show = "box")
   ))
   c1 <- p$cols[[1]]
@@ -265,7 +278,7 @@ test_that("a box column ships pre-rounded positions AND widths", {
 test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   ae <- push_fixture()
   one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
-  p <- summarize_build_payload(one, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(one, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", stat = "mean_ci95",
          show = "pointrange")
   ))
@@ -277,7 +290,7 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
   # And the emitter draws the dot alone.
   html <- summarize_cells_html(summarize_cells(summarize_prepare(
-    one, group = NULL, by = "TERM", summaries = list(
+    one, by = "TERM", summaries = list(
       list(type = "dist", col = "DUR", stat = "mean_ci95",
            show = "pointrange")
     )
@@ -288,7 +301,7 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
 
 test_that("an interval column ships per-row segments on the observed domain", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = NULL, by = "USUBJID",
+  p <- summarize_build_payload(ae, by = "USUBJID",
                                summaries = list(
     list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
     list(type = "simple", name = "Events", func = "count", show = "number")
@@ -313,7 +326,7 @@ test_that("an interval column ships per-row segments on the observed domain", {
 
 test_that("a sparkline column ships pre-printed geometry plus hover values", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
     list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
   ))
   c1 <- p$cols[[1]]
@@ -331,7 +344,7 @@ test_that("a sparkline column ships pre-printed geometry plus hover values", {
 
 test_that("a leading rank bar beside a trajectory ranks the rows", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
+  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
     list(type = "simple", func = "mean", col = "DUR", show = "bar"),
     list(type = "series", x = "AVAL", col = "DUR")
   ))
@@ -349,7 +362,7 @@ test_that("a leading rank bar beside a trajectory ranks the rows", {
 test_that("negative lows extend the distribution domain below zero", {
   d <- data.frame(g = rep(c("a", "b"), each = 6),
                   v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
-  prep <- summarize_prepare(d, group = NULL, by = "g", summaries = list(
+  prep <- summarize_prepare(d, by = "g", summaries = list(
     list(type = "dist", col = "v", show = "box")
   ))
   # The domain rides on the plan entry now (per-summary scales).
@@ -366,7 +379,7 @@ test_that("negative lows extend the distribution domain below zero", {
 test_that("a signed simple column becomes a zero-centred diverging bar", {
   mk <- function(vals) {
     d <- data.frame(g = paste0("r", seq_along(vals)), v = vals)
-    summarize_build_payload(d, group = NULL, by = "g", summaries = list(
+    summarize_build_payload(d, by = "g", summaries = list(
       list(type = "simple", func = "median", col = "v", show = "bar")
     ))$cols[[1]]
   }
@@ -401,7 +414,7 @@ test_that("a signed simple column becomes a zero-centred diverging bar", {
 
 test_that("the diverging bar's axis is centred on zero at the column max", {
   d <- data.frame(g = c("a", "b", "c"), v = c(10, 0, -30))
-  prep <- summarize_prepare(d, group = NULL, by = "g", summaries = list(
+  prep <- summarize_prepare(d, by = "g", summaries = list(
     list(type = "simple", func = "median", col = "v", show = "bar")
   ))
   p <- prep$plan[[1]]
@@ -421,27 +434,37 @@ test_that("the JS assembles byte-identical markup to summarize_cells_html", {
   ae <- push_fixture()
   # One case per bar shape, so every branch of the assembler is compared.
   cases <- list(
-    plain = list(group = "TERM", func = "count_distinct", id_var = "USUBJID"),
-    stacked = list(group = "TERM", color = "SEV", func = "count"),
-    grouped = list(group = "TERM", color = "SEV", func = "count",
-                   bar_mode = "grouped"),
-    percent = list(group = "TERM", color = "SEV", func = "count",
-                   bar_mode = "percent"),
-    facet = list(group = "TERM", facet = "ARM", func = "count_distinct",
-                 id_var = "USUBJID"),
-    facet_color = list(group = "TERM", facet = "ARM", color = "SEV",
-                       func = "count"),
-    identity = list(group = "USUBJID", func = "identity", value = "AVAL",
-                    fields = c("SOC", "AVAL")),
-    sep_cols = list(group = "TERM", func = "count", cols = c("n", "pct")),
-    nested = list(group = "TERM", parent = "SOC", func = "count"),
-    capped = list(group = "TERM", func = "count", top_n = 2L),
+    plain = list(by = "TERM", summaries = list(
+      push_bar("count_distinct", "USUBJID")
+    )),
+    stacked = list(by = "TERM", summaries = list(push_bar(color = "SEV"))),
+    grouped = list(by = "TERM", summaries = list(
+      push_bar(color = "SEV", position = "dodge")
+    )),
+    percent = list(by = "TERM", summaries = list(
+      push_bar(color = "SEV", position = "fill")
+    )),
+    facet = list(by = "TERM", summaries = list(
+      push_bar("count_distinct", "USUBJID", facet = "ARM")
+    )),
+    facet_color = list(by = "TERM", summaries = list(
+      push_bar(facet = "ARM", color = "SEV")
+    )),
+    identity = list(by = "USUBJID", summaries = list(
+      push_bar("identity", "AVAL"),
+      list(type = "field", col = "SOC"), list(type = "field", col = "AVAL")
+    )),
+    sep_cols = list(by = "TERM", summaries = list(
+      push_bar(), list(type = "simple", func = "count", show = "number")
+    )),
+    nested = list(by = c("SOC", "TERM"), summaries = list(push_bar())),
+    capped = list(by = "TERM", summaries = list(push_bar()), top_n = 2L),
     # One case per glyph, so every emitter is byte-compared too.
     box = list(by = "TERM", summaries = list(
       list(type = "dist", col = "DUR", show = "box")
     )),
-    box_facet = list(by = "TERM", facet = "ARM", summaries = list(
-      list(type = "dist", col = "DUR", show = "box")
+    box_facet = list(by = "TERM", summaries = list(
+      list(type = "dist", col = "DUR", show = "box", facet = "ARM")
     )),
     box_nested = list(by = c("SOC", "TERM"), summaries = list(
       list(type = "dist", col = "DUR", show = "box")
@@ -533,9 +556,9 @@ test_that("the JS assembles byte-identical markup to summarize_cells_html", {
            band = c("LO", "HI")),
       list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
     )),
-    summaries_facet = list(by = "TERM", facet = "ARM", summaries = list(
+    summaries_facet = list(by = "TERM", summaries = list(
       list(type = "simple", name = "Subjects", func = "count_distinct",
-           col = "USUBJID", show = "bar"),
+           col = "USUBJID", show = "bar", facet = "ARM"),
       list(type = "dist", name = "Overall", col = "DUR", stat = "mean_se",
            show = "text", scope = "pooled"),
       list(type = "field", name = "Arms", col = "ARM")

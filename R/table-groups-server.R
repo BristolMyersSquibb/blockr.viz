@@ -7,19 +7,10 @@
 # list(expr, cond, state) like a block server.
 #' @noRd
 table_groups_server <- function(id, data,
-                                      group = NULL,
-                                      value = ".count",
-                                      func = "count",
                                       id_var = NULL,
                                       summaries = list(),
                                       by = NULL,
                                       facet_layout = "by_summary",
-                                      parent = NULL,
-                                      color = NULL,
-                                      bar_mode = "stacked",
-                                      facet = NULL,
-                                      cols = NULL,
-                                      fields = NULL,
                                       sort_by = "value",
                                       sort_dir = "desc",
                                       top_n = NULL,
@@ -63,15 +54,16 @@ table_groups_server <- function(id, data,
                                       shared = list()) {
   # Heal state poisoned by a pre-#144 DAG copy/paste (a NULL slot returning as
   # list()); see R/state-normalize.R.
-  group <- chr_state(group)
-  value <- chr_state(value)
   id_var <- chr_state(id_var)
-  summaries <- if (is.list(summaries)) summaries else list()
+  # The column list is the table: an empty one starts from one count column,
+  # as a new groups table does.
+  summaries <- if (is.list(summaries) && length(summaries)) {
+    summaries
+  } else {
+    table_groups_seed()
+  }
   by <- chr_vec_state(by)
   facet_layout <- chr_state(facet_layout)
-  parent <- chr_state(parent)
-  color <- chr_state(color)
-  facet <- chr_state(facet)
   drill <- chr_state(drill)
   # The clicked row's path, outer -> inner, one value per column
   # (R/summarize-drill.R). A board saved before holds one column.
@@ -83,40 +75,6 @@ table_groups_server <- function(id, data,
   # its panel carries it, not a choice anyone made.
   max_height <- chr_state(max_height)
   if (identical(max_height, "600px")) max_height <- NULL
-  cols <- chr_vec_state(cols)
-  fields <- chr_vec_state(fields)
-  # The summarize table groups by `by`; the ranked bar by `group` (+ `parent`).
-  # A board that grew its column list out of the ranked-bar surface -- or one
-  # saved before `by` existed -- still carries the value in the old slots, and
-  # summarize_prepare() falls back to them. So the table draws correctly while
-  # the gear's "Group by" row shows empty, which reads as a broken
-  # block. Move the value into the slot the summarize gear reads, and clear the
-  # old ones: left in place they would silently resurrect a grouping the user
-  # cleared in the gear (the same rule as the colour / facet migration below).
-  if (length(summaries) && !length(by) && length(c(parent, group))) {
-    by <- unique(c(parent, group))
-    group <- NULL
-    parent <- NULL
-  }
-  # Colour and facet used to be ONE table-level pair for the summarize table;
-  # they are the summary's own mappings now. Migrate a saved board here, at
-  # construction (which is also how a restore runs), so the fanned-down values
-  # become the block's STATE: migrating at render time instead would resurrect
-  # the table-level colour every time the user removed it from a column. Only
-  # the field values move -- the rows keep the shape they were saved in. The
-  # ranked-bar surface keeps the block-level pair.
-  if (length(summaries) && (!is.null(color) || !is.null(facet))) {
-    norm <- lane_norm_summaries(summaries)
-    if (is.null(norm$err)) {
-      mig <- lane_migrate_globals(norm, color, facet)
-      for (i in seq_along(summaries)) {
-        summaries[[i]]$color <- mig[[i]]$color
-        summaries[[i]]$facet <- mig[[i]]$facet
-      }
-      color <- NULL
-      facet <- NULL
-    }
-  }
   # NOT chr_state: "" is a real value (explicitly no title, as against NULL =
   # auto). See R/title-template.R.
   title <- title_state(title)
@@ -126,19 +84,10 @@ table_groups_server <- function(id, data,
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    r_group   <- shiny::reactiveVal(group)
-    r_value   <- shiny::reactiveVal(value %||% ".count")
-    r_func    <- shiny::reactiveVal(func %||% "count")
     r_id_var  <- shared$id %||% shiny::reactiveVal(id_var)
     r_summaries <- shared$summaries %||% shiny::reactiveVal(summaries)
     r_by      <- shared$by %||% shiny::reactiveVal(as.character(by %||% character()))
     r_facet_layout <- shiny::reactiveVal(facet_layout %||% "by_summary")
-    r_parent  <- shiny::reactiveVal(parent)
-    r_color   <- shiny::reactiveVal(color)
-    r_bar_mode <- shiny::reactiveVal(bar_mode %||% "stacked")
-    r_facet   <- shiny::reactiveVal(facet)
-    r_cols    <- shiny::reactiveVal(as.character(cols %||% character()))
-    r_fields  <- shiny::reactiveVal(as.character(fields %||% character()))
     r_sort_by <- shiny::reactiveVal(sort_by %||% "value")
     r_sort_dir <- shiny::reactiveVal(sort_dir %||% "desc")
     r_top_n   <- shiny::reactiveVal(top_n)
@@ -248,9 +197,7 @@ table_groups_server <- function(id, data,
       # template by their variable: `{@min_patients}` (chart parity).
       script_title_args(
         summarize_title_args(list(
-          by = r_by(), group = r_group(), parent = r_parent(),
-          value = r_value(), func = r_func(), id_var = r_id_var(),
-          color = r_color(), facet = r_facet(), sort_by = r_sort_by(),
+          by = r_by(), id_var = r_id_var(), sort_by = r_sort_by(),
           top_n = r_top_n(), drill = r_drill(), summaries = r_summaries()
         )),
         r_specs(), r_values()
@@ -299,13 +246,10 @@ table_groups_server <- function(id, data,
     # The gear's config params, mapped to their reactiveVals. One place, so
     # a new arg needs one line here and one role in summarize-table.js.
     setters <- list(
-      group = r_group, parent = r_parent, color = r_color,
-      facet = r_facet, func = r_func,
-      value = r_value, id_var = r_id_var, bar_mode = r_bar_mode,
       bar_width = r_bar_width,
       summaries = r_summaries, by = r_by,
       facet_layout = r_facet_layout,
-      cols = r_cols, fields = r_fields, sort_by = r_sort_by,
+      sort_by = r_sort_by,
       sort_dir = r_sort_dir, top_n = r_top_n, drill = r_drill,
       ctrl_target = r_ctrl_target, ctrl_table = r_ctrl_table,
       title = r_title, subtitle = r_subtitle, caption = r_caption
@@ -347,10 +291,12 @@ table_groups_server <- function(id, data,
           # NULL = auto, "" = explicitly none, else the template text.
           setters[[key]](if (is.null(val)) NULL else as.character(val)[[1L]])
         } else if (identical(key, "summaries")) {
-          # The whole column list travels as one JSON array; an empty
-          # list switches back to the single-mark path.
-          setters[[key]](if (is.list(val)) lapply(val, lane_public_summary) else list())
-        } else if (key %in% c("cols", "fields", "by")) {
+          # The whole column list travels as one JSON array. The gear
+          # never sends an empty one (the last column cannot be removed);
+          # anything else that does gets the count column back.
+          new <- if (is.list(val)) lapply(val, lane_public_summary) else list()
+          setters[[key]](if (length(new)) new else table_groups_seed())
+        } else if (identical(key, "by")) {
           v <- as.character(unlist(val %||% character()))
           setters[[key]](v[!is.na(v) & nzchar(v)])
           # A table without `by` is one row with no drill: a selection
@@ -385,8 +331,8 @@ table_groups_server <- function(id, data,
         } else if (identical(key, "top_n")) {
           n <- suppressWarnings(as.integer(as.character(val)[[1L]]))
           setters[[key]](if (is.na(n) || n <= 0L) NULL else n)
-        } else if (key %in% c("func", "bar_mode", "bar_width", "sort_by",
-                              "sort_dir", "facet_layout")) {
+        } else if (key %in% c("bar_width", "sort_by", "sort_dir",
+                              "facet_layout")) {
           v <- as.character(unlist(val %||% character()))
           if (length(v) && nzchar(v[[1L]])) setters[[key]](v[[1L]])
         } else {
@@ -558,12 +504,8 @@ table_groups_server <- function(id, data,
           list(col = r_filter_column(), vals = r_filter_values())
         ),
         cfg = list(
-          group = r_group(), parent = r_parent(), color = r_color(),
-          facet = r_facet(), func = r_func(),
-          value = r_value(), id_var = r_id_var(),
           summaries = r_summaries(), by = r_by(),
           facet_layout = r_facet_layout(),
-          bar_mode = r_bar_mode(), cols = r_cols(), fields = r_fields(),
           sort_by = r_sort_by(), sort_dir = r_sort_dir(),
           top_n = r_top_n(), search = r_search(),
           sortable = r_sortable(), axis = r_axis(),
@@ -597,12 +539,8 @@ table_groups_server <- function(id, data,
           # config, where the engine's script roles read them.
           script_values = dd_script_cfg(r_specs(), r_values())
         ),
-        group = r_group(), value = r_value(), func = r_func(),
-        id_var = r_id_var(), parent = r_parent(), color = r_color(),
-        bar_mode = r_bar_mode(), facet = r_facet(),
         summaries = r_summaries(), by = r_by(),
-        facet_layout = r_facet_layout(),
-        cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
+        facet_layout = r_facet_layout(), sort_by = r_sort_by(),
         sort_dir = r_sort_dir(), top_n = r_top_n(),
         pct_of = r_pct_of(), missing = r_missing(),
         scale_map = board_scale_map(),
@@ -687,12 +625,9 @@ table_groups_server <- function(id, data,
       e <- do.call(static_summarize_table, c(
         list(ann_data()),
         list(
-          group = r_group(), parent = r_parent(), color = r_color(),
-          facet = r_facet(), func = r_func(), value = r_value(),
           id_var = r_id_var(), summaries = r_summaries(), by = r_by(),
           look = r_look(),
-          facet_layout = r_facet_layout(), bar_mode = r_bar_mode(),
-          cols = r_cols(), fields = r_fields(), sort_by = r_sort_by(),
+          facet_layout = r_facet_layout(), sort_by = r_sort_by(),
           sort_dir = r_sort_dir(), top_n = r_top_n(), axis = r_axis(),
           pct_of = r_pct_of(), missing = r_missing(),
           value_labels = r_value_labels(),
@@ -838,12 +773,8 @@ table_groups_server <- function(id, data,
       # constructor, so a formal without one silently loses its value
       # across save/restore (the same warning as the filter_* args).
       state = list(
-        group = r_group, value = r_value, func = r_func,
         id_var = r_id_var, summaries = r_summaries, by = r_by,
-        facet_layout = r_facet_layout, parent = r_parent,
-        color = r_color,
-        bar_mode = r_bar_mode, facet = r_facet,
-        cols = r_cols, fields = r_fields, sort_by = r_sort_by,
+        facet_layout = r_facet_layout, sort_by = r_sort_by,
         sort_dir = r_sort_dir, top_n = r_top_n,
         max_height = r_max_height, search = r_search,
         sortable = r_sortable, axis = r_axis,

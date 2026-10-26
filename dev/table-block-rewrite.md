@@ -486,6 +486,32 @@ Phase 5 (vocabulary):
   function's result columns (`from`, `to`, `lo`, ...), `facet_layout`.
   Per-summary `format` / `unit` are not implemented.
 
+### One column list in the groups gear (branch `feat/groups-one-list`)
+
+The groups layout has one data model, `by` + `summaries`. The single ranked
+bar (block-level `group`, `parent`, `func`, `value`, `id_var`, `color`,
+`facet`, `bar_mode`, `cols`, `fields`) is gone from the gear, the server and
+`summarize_prepare()`. Mockup and decision:
+`_scratch/blockx/groups-gear-mockup/index.html`, option B.
+
+- Gear: Rows are, with Group by under the switch; Columns (the list); then
+  Presentation, Titles, Drill-down, Prepare script. No Mapping section.
+- A new groups table starts with one column, `table_groups_seed()`: a count
+  drawn as a bar, named "Count". The gear opens on it while the table has one
+  column. The last column cannot be removed.
+- Old boards: `table_legacy_args(from = "summarize")` maps the ranked bar to
+  `by = c(parent, group)` and one simple bar summary (`func`, `col` = `value`,
+  or `id_var` for a distinct count, `color`, `facet`, `bar_mode` as
+  `position`), plus a count number column for `cols = "n"` and field columns
+  for `fields` under `func = "identity"`. `compare` (gone since 87616f6) is
+  dropped. `static_summarize_table()` and `summarize_table()` still take the
+  old arguments through the same table.
+- Differences from what the ranked bar drew: a faceted column ranks by its
+  first facet level, not the pooled value; a plain count over pooled groups
+  takes its percent over the expanded rows, not the subjects; a simple
+  column's header uses the column name ("Mean ASTDY"), not its label; a
+  vanished `by` column is an error where a vanished `parent` was dropped.
+
 ### Class migration (resolved)
 
 Resolved by BristolMyersSquibb/blockr.core#379 (PR #384, on `main`): a

@@ -1491,9 +1491,11 @@ table_arguments <- function() {
       summaries = table_summaries_spec(),
       id = new_arg_spec(
         paste0(
-          "A column whose distinct values are counted instead of rows (a ",
-          "subject id), so a count reads as subjects with at least one ",
-          "event, and percentages are of subjects."
+          "Variables layout: a column whose distinct values are counted ",
+          "instead of rows (a subject id), so a count reads as subjects ",
+          "with at least one event, and percentages are of subjects. In ",
+          "the groups layout a column counts subjects itself: a simple ",
+          "summary with func = \"count_distinct\" and col = the id."
         ),
         example = "USUBJID",
         type = arg_string()
@@ -1618,11 +1620,12 @@ table_summaries_spec <- function() {
 }
 
 
-#' The column a groups table starts with when it has none: a count of rows.
-#' Without `by` that is one row, the number of input rows.
+#' The column a groups table starts with when it has none: a count of rows,
+#' drawn as a bar. Without `by` that is one row, the number of input rows.
+#' The gear opens it, so a new table shows what its first column computes.
 #' @noRd
 table_groups_seed <- function() {
-  list(list(type = "simple", func = "count", show = "number", name = "Rows"))
+  list(list(type = "simple", func = "count", show = "bar", name = "Count"))
 }
 
 #' Construction guidance for the drill-down table block
@@ -1660,8 +1663,10 @@ table_guidance <- function() {
     "subject], one simple count with show = \"tile\", facet = the term, ",
     "fill = the grade (painted by the worst level). look = \"cards\" draws ",
     "one card per summary.\n",
-    "Counting: set `id` (USUBJID) only when the user asks for subjects or ",
-    "patients rather than events, never for one-row-per-subject data. ",
+    "Counting: only when the user asks for subjects or patients rather ",
+    "than events, never for one-row-per-subject data. Groups layout: a ",
+    "simple count_distinct with col = USUBJID. Variables layout: ",
+    "`id` = USUBJID. ",
     "`pct_of` = \"facet\" (default) takes a count's percentage over its ",
     "arm; \"total\" over the table. `missing` = \"level\" shows missing ",
     "groups as \"(Missing)\".\n",
@@ -1671,7 +1676,7 @@ table_guidance <- function() {
     "Map common requests: \"demographics by arm\" -> layout = \"variables\", ",
     "by = [\"TRT01A\"], summaries = AGE (dist), SEX and RACE (simple count ",
     "split by color), total = TRUE. \"most frequent AEs per arm\" -> layout ",
-    "= \"groups\", by = [\"AEDECOD\"], id = \"USUBJID\", summaries = ",
+    "= \"groups\", by = [\"AEDECOD\"], summaries = ",
     "[simple count_distinct of USUBJID, facet = \"TRT01A\"]. For vertical ",
     "columns, lines or two measures on axes, use the chart block."
   )
@@ -1710,10 +1715,12 @@ table_guidance <- function() {
 #'   `pair` (`x`, `xend`, `x_func`, `xend_func`, `ref_lo`, `ref_hi`, `ref`,
 #'   `dash`), `expr` and `custom`. Each takes `name`, `show`, and its own
 #'   `color` and `facet`. Entries written with the summarize table's keys
-#'   (`stat`, `from` / `to`, `lo` / `hi`, `fields`) are read as these.
-#' @param id A column whose distinct values are counted instead of rows (a
-#'   subject identifier, so a count reads as "subjects with at least one
-#'   event").
+#'   (`stat`, `from` / `to`, `lo` / `hi`, `fields`) are read as these. An
+#'   empty list in the groups layout is one bar column, a count of rows.
+#' @param id Variables layout: a column whose distinct values are counted
+#'   instead of rows (a subject identifier, so a count reads as "subjects
+#'   with at least one event"). In the groups layout a summary counts
+#'   subjects itself, with `func = "count_distinct"` and `col`.
 #' @param pct_of The base of a count's percentage: `"facet"` (the rows or
 #'   subjects of the column's own facet level) or `"total"` (the table).
 #' @param missing Missing values of a grouping, colour or facet column, and

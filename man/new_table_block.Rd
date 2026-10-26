@@ -76,11 +76,13 @@ variables), an ordered list of typed summaries, each a
 \code{pair} (\code{x}, \code{xend}, \code{x_func}, \code{xend_func}, \code{ref_lo}, \code{ref_hi}, \code{ref},
 \code{dash}), \code{expr} and \code{custom}. Each takes \code{name}, \code{show}, and its own
 \code{color} and \code{facet}. Entries written with the summarize table's keys
-(\code{stat}, \code{from} / \code{to}, \code{lo} / \code{hi}, \code{fields}) are read as these.}
+(\code{stat}, \code{from} / \code{to}, \code{lo} / \code{hi}, \code{fields}) are read as these. An
+empty list in the groups layout is one bar column, a count of rows.}
 
-\item{id}{A column whose distinct values are counted instead of rows (a
-subject identifier, so a count reads as "subjects with at least one
-event").}
+\item{id}{Variables layout: a column whose distinct values are counted
+instead of rows (a subject identifier, so a count reads as "subjects
+with at least one event"). In the groups layout a summary counts
+subjects itself, with \code{func = "count_distinct"} and \code{col}.}
 
 \item{pct_of}{The base of a count's percentage: \code{"facet"} (the rows or
 subjects of the column's own facet level) or \code{"total"} (the table).}

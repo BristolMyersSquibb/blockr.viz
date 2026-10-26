@@ -20,7 +20,8 @@
 
 #' A Summarize Table as a Printable Exhibit
 #'
-#' The summarize table (`new_summarize_table_block()`) rebuilt outside Shiny,
+#' The groups layout of the table block (`new_table_block(layout = "groups")`)
+#' rebuilt outside Shiny,
 #' as an object a report, a deck or a download can render. The block draws the
 #' table by pushing a cell model to the browser, so its result is only the
 #' data; this is what puts the table itself into a document.
@@ -37,9 +38,10 @@
 #'
 #' @param data A data frame (or [as_annotated_df()]-coercible object), the
 #'   table's input.
-#' @param ... The block's own vocabulary, as in
-#'   [new_summarize_table_block()] (`by`,
-#'   `summaries`, `group`, `color`, `facet`, `sort_by`, `top_n`, `title`, ...).
+#' @param ... The groups layout's arguments, as in [new_table_block()]
+#'   (`by`, `summaries`, `sort_by`, `top_n`, `title`, ...). The single ranked
+#'   bar's arguments (`group`, `func`, `value`, `color`, `facet`, ...) are
+#'   read as the column list they map to.
 #'
 #' @return An object of class `summarize_exhibit`.
 #' @seealso [pptx_add_exhibit()], [html_exhibit()]
@@ -56,7 +58,9 @@
 #' @export
 static_summarize_table <- function(data, ...) {
 
-  args <- list(...)
+  # The single ranked bar's arguments (`group`, `func`, `value`, ...) read
+  # as the column list they map to.
+  args <- summarize_legacy_args(list(...))
   # The block hands over the settings its text names, script values
   # included; a direct call names only the table's own arguments.
   targs <- args$.title_args %||% summarize_title_args(args)
@@ -108,9 +112,10 @@ static_summarize_table <- function(data, ...) {
 #' @noRd
 summarize_title_args <- function(args) {
   by <- as.character(unlist(args$by %||% character()))
-  # The first summary's own mappings stand in where the table-level slots
-  # are empty, so a sentence can name them: a heatmap's "painted by
-  # {label(@fill)}, by {label(@group)}".
+  # The first summary stands in for the settings the single ranked bar had
+  # at block level, so a sentence written for it still reads: a heatmap's
+  # "painted by {label(@fill)}, by {label(@group)}", an old board's
+  # "{label(@value)} by {label(@group)}".
   s1 <- if (length(args$summaries) && is.list(args$summaries[[1L]])) {
     args$summaries[[1L]]
   } else {
@@ -118,11 +123,13 @@ summarize_title_args <- function(args) {
   }
   out <- list(
     by = if (length(by)) by[[length(by)]],
-    group = args$group %||% if (length(by) == 2L) by[[1L]],
-    parent = args$parent, value = args$value,
-    func = args$func, id_var = args$id_var,
-    color = args$color %||% summarize_chr1(s1[["color"]]),
-    facet = args$facet %||% summarize_chr1(s1[["facet"]]),
+    group = if (length(by) == 2L) by[[1L]] else if (length(by)) by[[1L]],
+    parent = if (length(by) == 2L) by[[1L]],
+    value = summarize_chr1(s1[["col"]]),
+    func = summarize_chr1(s1[["func"]]),
+    id_var = args$id_var,
+    color = summarize_chr1(s1[["color"]]),
+    facet = summarize_chr1(s1[["facet"]]),
     fill = summarize_chr1(s1[["fill"]]),
     sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
@@ -338,51 +345,16 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   doc
 }
 
-# --- the block's report call -------------------------------------------------
-
-#' @rdname report_call
-#' @export
-report_call.summarize_table_block <- function(x, var, ...) {
-
-  # The committed block's state lives in its constructor closure, the same
-  # values serialization reads.
-  env <- environment(x[["expr_server"]])
-
-  state <- function(nm) {
-    v <- get0(nm, envir = env, ifnotfound = NULL)
-    if (is.function(v)) NULL else v
-  }
-
-  # Print-relevant surface only: how the table is BUILT and what it says.
-  # Interaction state (drill, the ctrl transports, the runtime filter, the
-  # search and sort toggles) is not part of a printed table.
-  spec <- list(
-    group = NULL, parent = NULL, color = NULL, facet = NULL,
-    value = ".count", func = "count", id_var = NULL,
-    summaries = NULL, by = NULL, facet_layout = "by_summary",
-    bar_mode = "stacked", cols = NULL, fields = NULL,
-    sort_by = "value", sort_dir = "desc", top_n = NULL, axis = TRUE,
-    value_labels = TRUE
-  )
-
-  args <- list()
-
-  for (nm in names(spec)) {
-    v <- state(nm)
-    if (is.null(v) || (is.character(v) && !any(nzchar(v)))) next
-    if (identical_default(v, spec[[nm]])) next
-    args[[nm]] <- v
-  }
-
-  for (nm in c("title", "subtitle", "caption")) {
-    v <- state(nm)
-    if (!is.null(v)) args[[nm]] <- as.character(v)[1L]
-  }
-
-  as.call(c(
-    list(call("::", as.name("blockr.viz"),
-              as.name("static_summarize_table")),
-         as.name(var)),
-    args
-  ))
+# The single ranked bar's arguments, as the column list they map to
+# (table_legacy_args()). `id_var` alone is not one of them: the block's
+# report call passes it for the sentence.
+#' @noRd
+summarize_legacy_args <- function(args) {
+  ranked <- c("group", "value", "func", "parent", "color", "bar_mode",
+              "facet", "cols", "fields")
+  set <- !vapply(args, is.null, logical(1L))
+  if (!any(names(args)[set] %in% ranked)) return(args[!names(args) %in% ranked])
+  out <- table_legacy_args(args, from = "summarize")
+  out$id_var <- out[["id"]] %||% args[["id_var"]]
+  out[setdiff(names(out), c("id", "layout", "selection"))]
 }

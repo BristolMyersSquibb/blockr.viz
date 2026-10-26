@@ -491,7 +491,9 @@
 
       // What one row is (the table block's layout): a two-way choice at the
       // top of the tray, above everything it changes. spec.layoutSwitch =
-      // { value, options: [{ value, label }], onPick(value) }.
+      // { value, options: [{ value, label }], onPick(value), fields? }.
+      // `fields` are roles the switch gates (the groups layout's `by`): they
+      // follow it in the same section, each on a row of its own.
       if (spec.layoutSwitch) {
         const ls = spec.layoutSwitch;
         const sec = this._sectionEl('Rows are');
@@ -499,6 +501,7 @@
         this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => {
           if (v !== ls.value) ls.onPick(v);
         });
+        for (const key of (ls.fields || [])) this._renderRole(sec, key);
       }
 
       // Optional input-type badge (a small chip above Mapping). A host sets

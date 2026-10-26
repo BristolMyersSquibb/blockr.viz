@@ -182,13 +182,15 @@ test_that("heatmap rows repeat per group under an overlap definition", {
 
 test_that("summarize table counts per group, percent over subjects", {
   d <- grouped_df()
-  p <- summarize_prepare(d, group = "Group", func = "count",
-                         cols = c("n", "pct"))
+  p <- summarize_prepare(d, by = "Group", summaries = list(
+    list(type = "simple", func = "count_distinct", col = "USUBJID",
+         show = "bar")
+  ))
   expect_null(p$err)
   n <- stats::setNames(p$rows$.v, p$rows$.label)
   expect_equal(unname(n[c("All", "Pbo", "High")]), c(4, 2, 2))
   # The percentage base is the six subjects, not the eight expanded rows.
-  expect_equal(p$denoms[["all"]], 6)
+  expect_equal(p$plan[[1L]]$denom, 6)
 })
 
 # --- colours -----------------------------------------------------------------

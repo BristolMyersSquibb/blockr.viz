@@ -97,7 +97,26 @@ block <- function(..., search = TRUE, drill = NULL, ctrl_target = "",
   b
 }
 
+# The table block's own constructor, in the groups layout.
+tblock <- function(...) {
+  b <- new_table_block(layout = "groups", ...)
+  attr(b, "fixture_search") <- TRUE
+  b
+}
+
 cases <- list(
+  # A new groups table: no columns given, so it starts with the count column.
+  fresh = record(tblock(by = "TERM")),
+  # Three columns of three kinds: a split count, a distribution, a mean.
+  three = record(tblock(by = "TERM", summaries = list(
+    list(type = "simple", func = "count", show = "bar", color = "SEV"),
+    list(type = "dist", col = "AVAL", show = "box", name = "Value"),
+    list(type = "simple", func = "mean", col = "AVAL", show = "number")
+  ))),
+  # An old summarize table with the single ranked bar at block level.
+  legacy = record(block(group = "TERM", parent = "SOC",
+                        func = "count_distinct", id_var = "USUBJID",
+                        color = "SEV", bar_mode = "grouped")),
   # One grouping, a count bar, row drill on the grouping column.
   flat = record(block(by = "TERM", summaries = list(count_bar),
                       drill = "TERM", title = "Terms")),

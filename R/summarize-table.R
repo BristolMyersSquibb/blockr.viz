@@ -1,13 +1,11 @@
 # Summarize table: the data half ---------------------------------------------
 #
-# Began as horizontal ranked bars rendered as an HTML table instead of an
-# echarts chart: the bar is a div in a cell, so search, click-to-sort, exact
+# One row per group, one column per summary, drawn as an HTML table instead of
+# an echarts chart: a mark is a div in a cell, so search, click-to-sort, exact
 # values, a sticky header and an arbitrary row count come from the table form
-# for free. Chart-block VOCABULARY (group / color / facet / bar_mode / sort_by /
-# drill), table-block RENDERING (the shared html-table chrome and CSS).
-#
-# Deliberately horizontal bars only -- that constraint is what keeps the arg
-# surface small. Design + mockups: dev/summarize-table-design.md.
+# for free. Began as a single ranked bar; the column list
+# (R/lane-summaries.R) replaced it, and old boards map onto the list in
+# table_legacy_args().
 #
 # Large tables follow the table block exactly: every row rendered, scrolling
 # at `max_height` with a sticky header, search and sort client-side. `top_n`
@@ -200,452 +198,57 @@ summarize_data_ord <- function(x, labels) {
   as.numeric(i)
 }
 
-#' Prepare the ranked frame and its column plan.
+#' Prepare the table and its column plan.
 #'
 #' Everything the renderer needs, computed once server-side: the row list
-#' (parents and children), the per-column values, the shared bar scale, the
+#' (parents and children), the per-column values, the scales, the
 #' denominators, and the palette. Split from the HTML so it is testable
 #' without htmltools and so the block can validate before rendering.
 #'
-#' Returns `list(err =)` when the config cannot be honored (missing column,
-#' no group picked), else `list(rows =, cols =, ...)`.
+#' One row per level of `by` (outer first, at most two), one column per
+#' entry of `summaries` (lane_prepare_summaries()). An empty `summaries`
+#' counts rows, as a new groups table does (table_groups_seed()).
+#'
+#' Returns `list(err =)` when the config cannot be honored (missing column),
+#' else `list(rows =, plan =, ...)`.
 #'
 #' @noRd
-summarize_prepare <- function(data, group = NULL, value = ".count",
-                              func = "count", id_var = NULL, parent = NULL,
-                              color = NULL, bar_mode = "stacked", facet = NULL,
-                              cols = NULL, fields = NULL, sort_by = "value",
-                              sort_dir = "desc", top_n = NULL, scale_map = NULL,
-                              summaries = list(), by = NULL,
-                              facet_layout = "by_summary", subject = NULL,
+summarize_prepare <- function(data, summaries = list(), by = NULL,
+                              facet_layout = "by_summary", sort_by = "value",
+                              sort_dir = "desc", top_n = NULL,
+                              scale_map = NULL, subject = NULL,
                               pct_of = "facet", missing = "drop") {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
   if (!nrow(data)) return(bad("No rows to display"))
 
+  by <- as.character(unlist(by %||% character()))
+  by <- by[!is.na(by) & nzchar(by)]
+  if (!is.list(summaries) || !length(summaries)) {
+    summaries <- table_groups_seed()
+  }
+  split_cols <- unlist(lapply(summaries, function(s) {
+    if (is.list(s)) c(summarize_chr1(s[["color"]]), summarize_chr1(s[["facet"]]))
+  }))
+
   # Missing values of a grouping, colour or facet column: no group of their
   # own ("drop", the rows count toward the N but draw nothing) or a level
   # called "(Missing)" ("level").
   if (identical(summarize_chr1(missing), "level")) {
-    data <- table_missing_levels(data, c(
-      summarize_chr1(group), summarize_chr1(parent), summarize_chr1(color),
-      summarize_chr1(facet), as.character(unlist(by)),
-      if (is.list(summaries)) {
-        unlist(lapply(summaries, function(s) {
-          if (is.list(s)) c(summarize_chr1(s[["color"]]),
-                            summarize_chr1(s[["facet"]]))
-        }))
-      }
-    ))
+    data <- table_missing_levels(data, c(by, split_cols))
   }
 
   # One copy of each group's rows for every column the table splits by that
-  # carries a group definition (expand_groups()): rows, parents, colour and
-  # facet splits, and the per-column splits of the summaries path. `data0`
-  # keeps one row per subject for the denominators taken over the whole
-  # table.
-  data0 <- data
-  data <- expand_role_groups(data, c(
-    summarize_chr1(group), summarize_chr1(parent), summarize_chr1(color),
-    summarize_chr1(facet),
-    as.character(unlist(by)),
-    if (is.list(summaries)) {
-      unlist(lapply(summaries, function(s) {
-        if (is.list(s)) c(summarize_chr1(s$color), summarize_chr1(s$facet))
-      }))
-    }
-  ))
+  # carries a group definition (expand_groups()): the rows and the colour
+  # and facet splits of the summaries.
+  data <- expand_role_groups(data, c(by, split_cols))
 
-  # The summarize-table path (_blockr.design/open/summarize-table/): the
-  # column list is THE config model. Only the ranked bar keeps its own
-  # path (its colour split / comparison / percent machinery predates the
-  # list and ships in real boards). `by` (outer -> inner) wins over
-  # group/parent; unset, they fill in.
-  if (is.list(summaries) && length(summaries)) {
-    eby <- as.character(by %||% character())
-    eby <- eby[nzchar(eby)]
-    if (!length(eby)) eby <- c(summarize_chr1(parent), summarize_chr1(group))
-    return(lane_prepare_summaries(
-      data, eby, summaries, facet = summarize_chr1(facet),
-      facet_layout = summarize_chr1(facet_layout) %||% "by_summary",
-      color = summarize_chr1(color),
-      sort_by = sort_by,
-      sort_dir = sort_dir, top_n = top_n, scale_map = scale_map,
-      subject = subject, pct_of = pct_of
-    ))
-  }
-
-  group <- summarize_chr1(group)
-  if (is.null(group)) return(bad("Pick a Group column in the gear"))
-  if (!group %in% names(data)) {
-    return(bad(paste0("Mapped column not in data: Group = \"", group,
-                      "\". Re-pick it in the gear.")))
-  }
-
-
-  # Every mapped column must exist. A rename or pivot upstream is the usual
-  # cause, and naming the column beats a stack trace.
-  # `value` is only a mapped column for the aggregations that reduce it --
-  # count and count_distinct never touch it, so a stale ".count" default must
-  # not be reported as missing.
-  needs_value <- func %in% c("identity", "sum", "mean", "median", "min", "max")
-  # ".count" is the unset sentinel for the value slot (the constructor default,
-  # meaningful only for count): asking for a mean without picking a column is a
-  # "pick one" prompt, not a missing-column report.
-  if (needs_value && (is.null(summarize_chr1(value)) ||
-                        identical(summarize_chr1(value), ".count"))) {
-    return(bad(if (identical(func, "identity")) {
-      "Pick a Value column to show as is"
-    } else {
-      paste0("Pick a Value column to ", func)
-    }))
-  }
-  # A REQUIRED column that vanished upstream is a broken table, reported by
-  # name (a rename or pivot is the usual cause, and naming the column beats a
-  # stack trace).
-  mapped <- c(
-    Group = group,
-    Value = if (needs_value) summarize_chr1(value) else NULL,
-    `Subject id` = if (identical(func, "count_distinct")) {
-      summarize_chr1(id_var)
-    }
-  )
-  miss <- mapped[!mapped %in% names(data)]
-  if (length(miss)) {
-    return(bad(paste0(
-      "Mapped column not in data: ",
-      paste0(names(miss), " = \"", unname(miss), "\"", collapse = ", "),
-      ". Re-pick it in the gear."
-    )))
-  }
-  if (identical(func, "count_distinct") && is.null(summarize_chr1(id_var))) {
-    return(bad("Pick a Subject id column to count distinct subjects"))
-  }
-
-  # An OPTIONAL dimension mapped to a column not present in the current data
-  # reads as unmapped -- the table renders without that dim (chart parity:
-  # present_role in chart-block.R). This is what makes an upstream picker's
-  # "(none)" (which emits no such column) actually turn the dim off: the
-  # picker changes DATA, never this block's config, so the config must
-  # self-heal against the data. The saved pick survives untouched, and the
-  # dim comes back the moment the column does.
-  present <- function(col) {
-    col <- summarize_chr1(col)
-    if (is.null(col) || !col %in% names(data)) NULL else col
-  }
-  parent <- present(parent)
-  color <- present(color)
-  facet <- present(facet)
-  id_var <- summarize_chr1(id_var)
-
-  # color and facet TOGETHER mirror the chart: one bar column per facet
-  # level, each bar split into colour segments. Only a comparison still owns
-  # the colour slot (its bars are coloured by direction) -- reported, never
-  # silent.
-  note <- NULL
-  layout <- if (!is.null(facet)) {
-    "facet"
-  } else if (!is.null(color)) {
-    "split"
-  } else {
-    "simple"
-  }
-
-  keys <- c(parent, group)
-  pct_ok <- summarize_has_pct(func)
-  # Separate numeric columns beside the bar are OPT-IN: the bar cell carries
-  # its own value label (see `show_val` below), so the columns exist for
-  # boards that ask for them -- and asking for them mutes the in-bar label,
-  # never duplicates it.
-  cols <- intersect(as.character(cols %||% character()), c("n", "pct"))
-  if (!pct_ok) cols <- setdiff(cols, "pct")
-
-  # --- leaf rows -----------------------------------------------------------
-  leaf <- summarize_aggregate(data, keys, func, value, id_var)
-  # A missing group (NA) draws no row: it is what blockr.pharma's population
-  # join appends for a subject with no record. Those rows stay in `data`, so
-  # the N below and the facets' N count them. A blank string is a value.
-  leaf <- leaf[stats::complete.cases(leaf[keys]), , drop = FALSE]
-  if (!nrow(leaf)) return(bad("No rows to display"))
-  leaf$.label <- as.character(leaf[[group]])
-  leaf$.parent <- if (is.null(parent)) NA_character_ else as.character(leaf[[parent]])
-  # The data's own order, kept alongside the measure so `sort_by = "data"`
-  # costs nothing when unused.
-  leaf$.ord <- summarize_data_ord(data[[group]], leaf$.label)
-
-  # Over the unexpanded rows: a subject in two groups is one subject.
-  denom <- summarize_denom(data0, func, id_var)
-
-  additive <- summarize_additive(func)
-
-  # What an ABSENT (group, level) cell is: zero for the additive measures
-  # (no rows = nothing to count or sum), no value at all for the rest -- a
-  # subject has no mean or as-is value in an arm they are not in. NA renders
-  # as a blank cell and a zero-width bar, the chart's null gap.
-  absent <- if (additive) 0 else NA_real_
-
-  # And: a colour split of a NON-additive measure cannot stack. Stacking
-  # mean(mild) on mean(severe) draws a bar whose length is a number nothing
-  # computes -- and, because the axis scales to those totals, one that dwarfs
-  # the value the row actually reports (the group's own mean). Side by side,
-  # every segment is a real mean read against the shared axis.
-  bar_mode <- summarize_chr1(bar_mode) %||% "stacked"
-  if (!is.null(color) && !additive && !identical(bar_mode, "grouped")) {
-    word <- unname(AGG_WORDS[func])
-    note <- paste(c(note, paste0(
-      "Segments of a ", tolower(if (is.na(word)) func else word),
-      " do not add up; showing the colour split side by side."
-    )), collapse = " ")
-    bar_mode <- "grouped"
-  }
-
-  # --- the column plan -----------------------------------------------------
-  # Each entry: kind (bar / barsplit / bardiv / num), the per-row numeric
-  # vector(s) it draws, and its header. The renderer walks this and knows
-  # nothing about group / facet.
-  plan <- list()
-  series <- NULL
-  pal <- character()
-  facet_levels <- character()
-  denoms <- c(all = denom)
-  pops <- numeric()
-
-  # A single-series bar takes the chart's FIRST palette colour, not a CSS token:
-  # a summarize table and a bar chart of the same data are then the same blue
-  # (and follow a themed board's palette together).
-  solo_fill <- dd_palette(1L)
-  # The value column by its variable label, else its name: the bar column
-  # header and the hover card say it (summarize_measure_label), so the
-  # sub-line only adds the aggregation's word when there is no label.
-  vlab <- dt_col_label(data[[value]], value)
-  vname <- vlab %||% value
-  measure_sub <- if (needs_value && is.null(vlab) &&
-                     !identical(func, "identity")) {
-    paste0(AGG_WORDS[[func]] %||% func, ": ", value)
-  } else if (identical(func, "count_distinct")) {
-    paste0("distinct ", summarize_col_name(data, id_var))
-  } else {
-    NULL
-  }
-  # The bar cell carries its own value label ("26 (43%)" for a counting
-  # measure, the plain value otherwise) unless separate columns were asked
-  # for. `val_denom` is the LABEL's percentage base; `denom` (facet layouts)
-  # scales the bar WIDTHS.
-  show_val <- !length(cols)
-  if (identical(layout, "simple")) {
-    plan <- list(list(kind = "bar",
-                      label = summarize_measure_label(func, vname),
-                      meas = summarize_measure_label(func, vname),
-                      key = ".v", sub_label = measure_sub, fill = solo_fill,
-                      show_val = show_val,
-                      val_denom = if (pct_ok) denom))
-  } else if (identical(layout, "split")) {
-    series <- summarize_color_levels(data[[color]],
-                                     stats::complete.cases(data[keys]))
-    pal <- summarize_level_colors(scale_map, color, series, data[[color]])
-    seg <- summarize_aggregate(data, c(keys, color), func, value, id_var)
-    # One column per level, joined onto the leaf rows in level order.
-    for (lv in series) {
-      s <- seg[as.character(seg[[color]]) == lv, , drop = FALSE]
-      leaf[[paste0(".s_", lv)]] <- summarize_match(leaf, s, keys, absent)
-    }
-    plan <- list(list(kind = "barsplit",
-                      label = summarize_measure_label(func, vname),
-                      meas = summarize_measure_label(func, vname),
-                      cvar = summarize_col_name(data, color),
-                      key = ".v", series = series, mode = bar_mode,
-                      sub_label = measure_sub, show_val = show_val,
-                      val_denom = if (pct_ok) denom))
-  } else {
-    facet_levels <- summarize_levels(data[[facet]])
-    fac <- summarize_aggregate(data, c(keys, facet), func, value, id_var)
-    for (lv in facet_levels) {
-      s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
-      leaf[[paste0(".f_", lv)]] <- summarize_match(leaf, s, keys, absent)
-      # Per-facet denominator: a percentage within an arm is over that arm's
-      # own N, never the pooled total.
-      sub <- data[as.character(data[[facet]]) == lv, , drop = FALSE]
-      denoms[[lv]] <- summarize_denom(sub, func, id_var)
-      # The header's N: the percentage base for a count, else the subjects.
-      pops[[lv]] <- if (pct_ok) denoms[[lv]] else summarize_pop_n(sub, subject)
-    }
-    if (!is.null(color)) {
-      # Facet AND colour, the chart's two independent mappings: one bar
-      # column per facet level, each bar split into colour segments. Facet
-      # columns are keyed by INDEX (.f<i>s_<level>) so a facet level name can
-      # never collide with a colour level name.
-      series <- summarize_color_levels(
-        data[[color]], stats::complete.cases(data[c(keys, facet)])
-      )
-      pal <- summarize_level_colors(scale_map, color, series, data[[color]])
-      seg <- summarize_aggregate(data, c(keys, facet, color), func, value,
-                                 id_var)
-      for (fi in seq_along(facet_levels)) {
-        fv <- facet_levels[[fi]]
-        sf <- seg[as.character(seg[[facet]]) == fv, , drop = FALSE]
-        for (cv in series) {
-          s <- sf[as.character(sf[[color]]) == cv, , drop = FALSE]
-          leaf[[paste0(".f", fi, "s_", cv)]] <-
-            summarize_match(leaf, s, keys, absent)
-        }
-        plan <- c(plan, list(list(
-          kind = "barsplit", label = fv, key = paste0(".f_", fv),
-          flevel = fv, zero_empty = pct_ok,
-          meas = summarize_measure_label(func, vname),
-          cvar = summarize_col_name(data, color),
-          prefix = paste0(".f", fi, "s_"), series = series, mode = bar_mode,
-          denom = if (pct_ok) denoms[[fv]],
-          sub_label = paste0("N = ", pops[[fv]]),
-          show_val = TRUE, val_denom = if (pct_ok) denoms[[fv]]
-        )))
-      }
-    } else {
-      # A denominator only exists for the counting measures: their faceted
-      # bars share a percentage scale (each arm over its own N). A mean or an
-      # as-is value has no percentage -- those bars share the raw scale.
-      # Facet bars are NOT hue-coded by level: the column header already
-      # names the level, and the colour slot stays free for a real `color`
-      # mapping (chart parity -- a facet never recolours the marks).
-      for (lv in facet_levels) {
-        plan <- c(plan, list(list(
-          kind = "bar", label = lv, key = paste0(".f_", lv),
-          flevel = lv, zero_empty = pct_ok,
-          meas = summarize_measure_label(func, vname),
-          fill = solo_fill,
-          denom = if (pct_ok) denoms[[lv]],
-          sub_label = paste0("N = ", pops[[lv]]),
-          show_val = TRUE, val_denom = if (pct_ok) denoms[[lv]]
-        )))
-      }
-    }
-  }
-
-  # The plain n / % columns ride after the bar on the non-faceted layouts,
-  # only when explicitly asked for (the in-bar label is the default).
-  if (layout %in% c("simple", "split") && length(cols)) {
-    if ("n" %in% cols) {
-      # "n" only reads as n for a COUNT: a max or a mean in a column headed "n"
-      # is a lie, so a non-counting measure gets a neutral "Value" (the bar
-      # column's header already names the statistic).
-      plan <- c(plan, list(list(
-        kind = "num", label = if (pct_ok) "n" else "Value", key = ".v"
-      )))
-    }
-    if ("pct" %in% cols) {
-      plan <- c(plan, list(list(kind = "num", label = "%", key = ".v",
-                                denom = denom, pct_only = TRUE,
-                                sub_label = paste0("of ", denom))))
-    }
-  }
-
-  # Extra columns from the underlying row -- the chart's tooltip fields,
-  # shown as real (sortable, searchable) columns. Only the as-is measure has
-  # ONE underlying row per group; under any aggregation a row column would be
-  # an arbitrary representative, which a table must not present as data.
-  fields <- as.character(fields %||% character())
-  fields <- setdiff(fields[nzchar(fields)], group)
-  if (length(fields) && !identical(func, "identity")) {
-    note <- paste(c(note, paste0(
-      "Extra columns need the as-is measure; ignoring ",
-      paste0("\"", fields, "\"", collapse = ", "), "."
-    )), collapse = " ")
-    fields <- character()
-  }
-  fields <- intersect(fields, names(data))
-  if (length(fields)) {
-    fr <- data[!duplicated(data[keys]), , drop = FALSE]
-    for (fld in fields) {
-      leaf[[paste0(".x_", fld)]] <- summarize_match_field(leaf, fr, keys, fld)
-      plan <- c(plan, list(list(
-        kind = "num", label = fld, key = paste0(".x_", fld),
-        raw = TRUE, text = !is.numeric(data[[fld]]),
-        sub_label = dt_col_label(data[[fld]], fld)
-      )))
-    }
-  }
-
-  # --- parent rows ---------------------------------------------------------
-  # A parent is NOT the sum of its children (the same subject appears under
-  # several preferred terms), so it is aggregated in its own pass.
-  par_rows <- NULL
-  if (!is.null(parent)) {
-    par_rows <- summarize_aggregate(data, parent, func, value, id_var)
-    par_rows <- par_rows[!is.na(par_rows[[parent]]), , drop = FALSE]
-    par_rows$.label <- as.character(par_rows[[parent]])
-    par_rows$.ord <- summarize_data_ord(data[[parent]], par_rows$.label)
-    par_rows$.parent <- NA_character_
-    if (identical(layout, "split")) {
-      seg <- summarize_aggregate(data, c(parent, color), func, value, id_var)
-      for (lv in series) {
-        s <- seg[as.character(seg[[color]]) == lv, , drop = FALSE]
-        par_rows[[paste0(".s_", lv)]] <- summarize_match(par_rows, s, parent,
-                                                         absent)
-      }
-    }
-    if (identical(layout, "facet")) {
-      fac <- summarize_aggregate(data, c(parent, facet), func, value, id_var)
-      for (lv in facet_levels) {
-        s <- fac[as.character(fac[[facet]]) == lv, , drop = FALSE]
-        par_rows[[paste0(".f_", lv)]] <- summarize_match(par_rows, s, parent,
-                                                         absent)
-      }
-      if (!is.null(color)) {
-        seg <- summarize_aggregate(data, c(parent, facet, color), func, value,
-                                   id_var)
-        for (fi in seq_along(facet_levels)) {
-          fv <- facet_levels[[fi]]
-          sf <- seg[as.character(seg[[facet]]) == fv, , drop = FALSE]
-          for (cv in series) {
-            s <- sf[as.character(sf[[color]]) == cv, , drop = FALSE]
-            par_rows[[paste0(".f", fi, "s_", cv)]] <-
-              summarize_match(par_rows, s, parent, absent)
-          }
-        }
-      }
-    }
-    # A parent aggregates many rows, so it has no single underlying row: its
-    # field cells stay blank.
-    for (fld in fields) {
-      par_rows[[paste0(".x_", fld)]] <- rep(NA, nrow(par_rows))
-    }
-  }
-
-  # --- ordering + row list ---------------------------------------------------
-  # Flat: leaves in rank order, optionally capped. Nested: parents in rank
-  # order, each followed by its own children in rank order (a cap applies to
-  # parents, since capping inside a class would hide a class's own drivers).
-  # One shared implementation for every mark: summarize_assemble_rows().
-  plan <- summarize_drop_empty_facets(plan, leaf, par_rows)
-  facet_levels <- intersect(facet_levels,
-                            unlist(lapply(plan, function(p) p$flevel)))
-
-  srt <- summarize_resolve_sort(sort_by, plan, data, leaf, par_rows, group,
-                                parent)
-  asm <- summarize_assemble_rows(srt$leaf, srt$par_rows, parent, srt$key,
-                                 sort_dir, top_n)
-  rows <- asm$rows
-  folded <- asm$folded
-  fold_max <- asm$fold_max
-
-  # --- bar scale -----------------------------------------------------------
-  # ONE scale over the whole column (parents included), computed here and
-  # never from the visible or filtered rows -- otherwise scrolling or
-  # searching silently rescales a bar.
-  bar_max <- summarize_bar_max(rows, plan, denoms)
-
-  list(
-    rows = rows, plan = plan, layout = layout, mark = "bar",
-    bar_max = bar_max, bar_min = 0,
-    group_label = summarize_group_label(data, group, parent),
-    series = series, palette = pal, facet_levels = facet_levels,
-    denoms = denoms, group = group, parent = parent, color = color,
-    color_title = summarize_col_name(data, color),
-    facet = facet, folded = folded, fold_max = fold_max,
-    # par_rows is the UNCAPPED frame here (summarize_assemble_rows caps a copy),
-    # so its row count already is the group total.
-    n_total = if (is.null(parent)) nrow(leaf) else nrow(par_rows),
-    note = note, pct_ok = pct_ok, func = func
+  lane_prepare_summaries(
+    data, by, summaries,
+    facet_layout = summarize_chr1(facet_layout) %||% "by_summary",
+    sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
+    scale_map = scale_map, subject = subject, pct_of = pct_of
   )
 }
 
@@ -739,57 +342,7 @@ summarize_resolve_sort <- function(sort_by, plan, data, leaf, par_rows, group,
   list(key = key, leaf = leaf, par_rows = par_rows)
 }
 
-#' @noRd
-summarize_bar_max <- function(rows, plan, denoms) {
-  vals <- numeric()
-  for (p in plan) {
-    if (identical(p$kind, "bar")) {
-      v <- rows[[p$key]]
-      if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
-        v <- v / p$denom * 100
-      }
-      vals <- c(vals, v)
-    } else if (identical(p$kind, "barsplit")) {
-      prefix <- p$prefix %||% ".s_"
-      seg <- vapply(p$series, function(lv) {
-        v <- rows[[paste0(prefix, lv)]]
-        if (is.null(v)) rep(0, nrow(rows)) else v
-      }, numeric(nrow(rows)))
-      seg <- matrix(seg, nrow = nrow(rows))
-      # What the WIDEST thing in the column is, per mode: a stack runs to the
-      # row total, side-by-side bars only to the row's largest segment. Scaling
-      # grouped bars against the total would leave every one of them short.
-      tot <- if (identical(p$mode, "grouped")) {
-        do.call(pmax, c(lapply(seq_len(ncol(seg)), function(j) seg[, j]),
-                        list(na.rm = TRUE)))
-      } else {
-        rowSums(seg, na.rm = TRUE)
-      }
-      if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
-        tot <- tot / p$denom * 100
-      }
-      vals <- c(vals, tot)
-    } else if (identical(p$kind, "bardiv")) {
-      vals <- c(vals, abs(rows[[p$key]]))
-    }
-  }
-  vals <- vals[is.finite(vals)]
-  if (!length(vals)) 0 else max(vals)
-}
 
-# Percentages are shared across a faceted bar column set, so a bar's length
-# means the same thing in every column. Absolute counts share the raw scale.
-#' @noRd
-summarize_match <- function(target, src, keys, fill = 0) {
-  if (!nrow(src)) return(rep(fill, nrow(target)))
-  tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),
-                         list(sep = "\r")))
-  sk <- do.call(paste, c(lapply(keys, function(k) as.character(src[[k]])),
-                         list(sep = "\r")))
-  out <- src$.v[match(tk, sk)]
-  out[is.na(out)] <- fill
-  as.numeric(out)
-}
 
 # The first underlying row's value of `col` per key combination, ANY type
 # (a field column may be text). Absent keys are NA -- there is no row to
@@ -804,22 +357,6 @@ summarize_match_field <- function(target, src, keys, col) {
   src[[col]][match(tk, sk)]
 }
 
-#' @noRd
-summarize_measure_label <- function(func, value) {
-  switch(
-    func %||% "count",
-    count = "Rows",
-    count_distinct = "Subjects",
-    sum = paste0("Sum of ", value),
-    mean = paste0("Mean ", value),
-    median = paste0("Median ", value),
-    min = paste0("Min ", value),
-    max = paste0("Max ", value),
-    # As-is: the column IS the measure, so it heads the bar column itself.
-    identity = value,
-    "Value"
-  )
-}
 
 # A column as the hover card names it: its variable label, else its name.
 #' @noRd
@@ -846,15 +383,4 @@ summarize_group_label <- function(data, group, parent) {
   p <- dt_col_label(data[[parent]], parent)
   if (is.null(p) && is.null(g)) return(NULL)
   paste0(p %||% parent, " / ", g %||% group)
-}
-
-# The `n` column's sub-line: what one unit of n IS. A count of rows says
-# "events"; a distinct count says which entity it counted.
-#' @noRd
-summarize_n_sub <- function(func, id_var, data) {
-  if (identical(func, "count")) return("rows")
-  if (identical(func, "count_distinct") && !is.null(id_var)) {
-    return(paste0("distinct ", id_var))
-  }
-  NULL
 }
