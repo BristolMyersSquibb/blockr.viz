@@ -34,7 +34,9 @@
   };
 
   // A block's card: #<board>-block_handle-<id>.
-  const blockRoot = (el) => el.closest('.card[id*="-block_handle-"]');
+  // A block card is a .card in older blockr.dock, a .blockr-block-card on main.
+  const blockRoot = (el) => el.closest(
+    '.card[id*="-block_handle-"], .blockr-block-card[id*="-block_handle-"]');
   const blockId = (root) => {
     const m = root && root.id.match(/-block_handle-(.+)$/);
     return m ? m[1] : "?";
