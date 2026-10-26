@@ -23,6 +23,39 @@ sum_fixture <- function() {
   ae
 }
 
+test_that("nested rows bind when parent and child internals differ", {
+  leaf <- data.frame(
+    .label = c("S1", "S2"),
+    .parent = c("A", "A"),
+    .parent_key = c("A", "A"),
+    .ord = c(1, 2),
+    .v = c(12, 20),
+    .child_only = c(12, 20),
+    stringsAsFactors = FALSE
+  )
+  par_rows <- data.frame(
+    .label = "A",
+    .parent = NA_character_,
+    .parent_key = "A",
+    .ord = 1,
+    .v = 20,
+    stringsAsFactors = FALSE
+  )
+
+  rows <- summarize_assemble_rows(
+    leaf = leaf,
+    par_rows = par_rows,
+    parent = "Group",
+    sort_key = ".v",
+    sort_dir = "desc",
+    top_n = NULL
+  )$rows
+
+  expect_true(".child_only" %in% names(rows))
+  expect_true(is.na(rows$.child_only[[1L]]))
+  expect_equal(rows$.child_only[[2L]], 20)
+})
+
 test_that("normalization fills defaults and names the broken row", {
   s <- lane_norm_summaries(list(list(type = "dist", col = "DUR")))
   # The house default is the dot style with both ranges on; `show` is the

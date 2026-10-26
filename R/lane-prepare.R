@@ -12,6 +12,23 @@
 #' Shared ordering + fold + row assembly: the tail of summarize_prepare(), split
 #' out so every mark reuses one definition of "rank order, cap, nest".
 #' @noRd
+summarize_bind_internal_rows <- function(pieces) {
+  pieces <- Filter(function(x) !is.null(x) && nrow(x), pieces)
+  if (!length(pieces)) {
+    return(data.frame())
+  }
+  cols <- unique(unlist(lapply(pieces, names), use.names = FALSE))
+  pieces <- lapply(pieces, function(x) {
+    missing <- setdiff(cols, names(x))
+    if (length(missing)) {
+      x[missing] <- NA
+    }
+    x[cols]
+  })
+  do.call(rbind, pieces)
+}
+
+#' @noRd
 summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
                                     top_n) {
   ord <- function(df) {
@@ -74,7 +91,7 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
                                               drop = FALSE]
       }
     }
-    rows <- do.call(rbind, pieces)
+    rows <- summarize_bind_internal_rows(pieces)
   }
   list(rows = rows, folded = folded, fold_max = fold_max)
 }
