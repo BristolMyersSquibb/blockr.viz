@@ -1051,24 +1051,31 @@
   white-space: pre-line;
 }
 
-/* ===== Shared facet legend band ===== */
-/* One legend for the whole facet grid (chart/chrome.js _updateLegendBand): faceted
-   renders hide the per-panel ECharts legends and show the color scale's
-   chips ONCE here. Sizes mirror the ECharts legend defaults (25x14 round-
-   rect chip, 11px text) so toggling the facet column on/off doesn't change
-   the legend's look. A chip click toggles its level across every panel. */
+/* ===== Shared legend band ===== */
+/* One legend for the whole chart (chart/chrome.js _updateLegendBand), shown
+   once under a facet grid, or above it with `legend = "top"`. Left-aligned on
+   the title's and the caption's edge, in the chart text's size
+   (--blockr-mark-font-size, as the axes and the names on the marks) and the
+   secondary ink. The swatch follows the chart's mark: a short line for lines
+   and bands, a dot for scatter and point range, a square for the rest. A chip
+   click filters its level across every panel. */
 .dd-legend-band {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  column-gap: 10px;
+  column-gap: 14px;
   row-gap: 4px;
   padding: 6px 2px 2px;
 }
 
+/* Between the title band and the plot. */
+.dd-legend-band.dd-legend-band--top {
+  padding: 2px 2px 6px;
+}
+
 .dd-legend-title {
-  font-size: 11px;
+  font-size: var(--blockr-mark-font-size, 12px);
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-muted, #6b7280);
 }
@@ -1076,14 +1083,14 @@
 .dd-legend-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   border: none;
   background: none;
   padding: 0;
   margin: 0;
   font-family: inherit;
-  font-size: 11px;
-  color: var(--blockr-color-text-muted, #6b7280);
+  font-size: var(--blockr-mark-font-size, 12px);
+  color: var(--blockr-color-text-secondary, #374151);
   cursor: pointer;
 }
 
@@ -1094,10 +1101,22 @@
 }
 
 .dd-legend-swatch {
-  width: 25px;
-  height: 14px;
-  border-radius: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
   flex: none;
+}
+
+.dd-legend-swatch--line {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.dd-legend-swatch--dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 /* The level a chip filter selects: a ring round the chip. */

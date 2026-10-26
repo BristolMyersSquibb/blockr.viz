@@ -275,7 +275,8 @@
       // just drew: ECharts applies them together in one update on the next
       // frame, instead of one full update per patch and panel.
       this._harmoniseAxes();
-      this._updateLegendBand(impl.legend(m, this.config));
+      const plan = NS.legendPlan(m, this.config);
+      this._updateLegendBand(plan.band ? impl.legend(m, this.config) : null, plan);
       this._capMessage = o.labelNote || null;
       if (impl.alwaysHighlight) {
         this._updateHighlight(true);

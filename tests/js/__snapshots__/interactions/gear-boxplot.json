@@ -167,6 +167,22 @@
       ]
      },
      {
+      "role": "legend",
+      "label": "Legend",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Below",
+         "Above",
+         "On the marks",
+         "None"
+        ],
+        "selected": "Below"
+       }
+      ]
+     },
+     {
       "role": "summary",
       "label": "Box",
       "controls": [

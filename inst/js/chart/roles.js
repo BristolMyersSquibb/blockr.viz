@@ -395,9 +395,16 @@
     // A column whose values set a line's dash (history solid, forecast
     // dashed).
     linetype: { label: 'Dash by', kind: 'column', colType: 'cat', kinds: ['group'] },
-    direct_labels: { label: 'Line names', kind: 'segmented',
-                     options: [{ value: 'on', label: 'At line end' },
-                               { value: 'off', label: 'Off' }] },
+    // Where the colour legend goes. "On the marks" writes the names on the
+    // chart where it has a place for them (line ends, bar segments, point
+    // clouds) and keeps the legend below it where it does not (common.js
+    // legendPlan). Only a mapped colour has a legend.
+    legend: { label: 'Legend', kind: 'segmented', dflt: 'bottom',
+              when: (/** @type {any} */ cfg) => !!cfg.color,
+              options: [{ value: 'bottom', label: 'Below' },
+                        { value: 'top',    label: 'Above' },
+                        { value: 'marks',  label: 'On the marks' },
+                        { value: 'none',   label: 'None' }] },
     line_width_mult: { label: 'Line width', kind: 'slider' },
     dot_size_mult:   { label: 'Dot size',   kind: 'slider' },
     // Chart text (three-tier contract, R side R/title-template.R): null =
@@ -532,6 +539,7 @@
       presentation: ['sort_by', 'sort_dir',
         { role: 'orientation', types: ['bar', 'boxplot', 'pointrange'] },
         { role: 'bar_mode', types: ['bar'] },
+        { role: 'legend', types: ['bar', 'boxplot', 'pointrange', 'radar'] },
         { role: 'value_labels', types: ['bar', 'waterfall'] },
         { role: 'baseline', types: ['bar'] },
         // Distribution statistics: the shared interval pick (box body /
@@ -592,8 +600,8 @@
         { role: 'connect', types: ['line', 'area'] },
         { role: 'lo', types: ['line', 'scatter'] },
         { role: 'hi', types: ['line', 'scatter'] },
-        { role: 'direct_labels', types: ['line', 'area'] },
         { role: 'bar_mode', types: ['area'] },
+        'legend',
         { role: 'format', types: ['scatter', 'line', 'area'] },
         { role: 'unit', types: ['scatter', 'line', 'area'] },
         'line_width_mult', 'dot_size_mult',
@@ -613,7 +621,7 @@
       requiredMap: ['x'],
       optionalMap: ['color', 'facet'],
       mapping: ['bins'],
-      presentation: ['bar_mode', 'value_labels', 'value_lines', 'format', 'unit',
+      presentation: ['bar_mode', 'legend', 'value_labels', 'value_lines', 'format', 'unit',
         'facet_scales', 'facet_cols', 'download'],
       titles: ['title', 'subtitle', 'caption']
     },
@@ -622,7 +630,7 @@
       optionalMap: ['series', 'color', 'facet', 'label', 'tt_fields'],
       mapping: [],
       // Count labels: "axis" counts events (or distinct count_col) per lane.
-      presentation: ['sort_by', 'sort_dir', 'count_on', 'count_col',
+      presentation: ['sort_by', 'sort_dir', 'legend', 'count_on', 'count_col',
         // Facet-grid shape; both hidden until a facet is mapped (role
         // `when`).
         'facet_scales', 'facet_cols', 'download'],

@@ -108,7 +108,7 @@
       "bins": 10,
       "format": "number",
       "linetype": "",
-      "direct_labels": "off",
+      "legend": "bottom",
       "unit": "",
       "band_id": "",
       "ref_hi": "",

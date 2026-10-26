@@ -1,5 +1,5 @@
 # Line features: several ymin/ymax intervals, linetype, x_ranges,
-# direct_labels and the area type.
+# the legend on the marks and the area type.
 
 line_df <- function() {
   data.frame(
@@ -34,7 +34,7 @@ test_that("several intervals, a linetype, ranges and labels reach the browser", 
     type = "line", x = "d", y = "v",
     ymin = c("l95", "l80"), ymax = c("h95", "h80"), linetype = "type",
     x_ranges = list(Forecast = c("2024-01-04", "2024-01-06")),
-    direct_labels = TRUE
+    legend = "marks"
   )
   cfg <- line_cfg(blk)
   expect_equal(unlist(cfg$lo), c("l95", "l80"))
@@ -43,7 +43,8 @@ test_that("several intervals, a linetype, ranges and labels reach the browser", 
   expect_equal(cfg$x_ranges,
                list(list(name = "Forecast", from = "2024-01-04",
                          to = "2024-01-06")))
-  expect_equal(cfg$direct_labels, "on")
+  expect_equal(cfg$legend, "marks")
+  expect_null(cfg$direct_labels)
 
   payload <- blockr.core::blockr_ser(blk)$payload
   expect_equal(payload$ymin, c("l95", "l80"))
@@ -51,6 +52,23 @@ test_that("several intervals, a linetype, ranges and labels reach the browser", 
                list(Forecast = c("2024-01-04", "2024-01-06")))
   expect_error(new_chart_block(ymin = c("a", "b"), ymax = "c"),
                "same number")
+})
+
+test_that("legend takes four places, and direct_labels is its old name", {
+  expect_equal(line_cfg(new_chart_block(type = "line", x = "d", y = "v"))$legend,
+               "bottom")
+  expect_error(new_chart_block(legend = "left"), "must be one of")
+  expect_warning(
+    blk <- new_chart_block(type = "line", x = "d", y = "v",
+                           direct_labels = TRUE),
+    "direct_labels"
+  )
+  expect_equal(blockr.core::blockr_ser(blk)$payload$legend, "marks")
+  expect_warning(
+    blk <- new_chart_block(type = "line", direct_labels = FALSE),
+    "direct_labels"
+  )
+  expect_equal(blockr.core::blockr_ser(blk)$payload$legend, "bottom")
 })
 
 test_that("x_ranges take dates and unnamed stretches, and drop junk", {
@@ -76,14 +94,14 @@ test_that("an area is an individual type, and the gear writes the new rows", {
       session$makeScope("expr")$setInputs(drilldown_block_action = list(
         action = "config", chart_type = "area", x = "d", y = "v",
         lo = list("l95", "l80"), hi = list("h95", "h80"),
-        linetype = "type", direct_labels = "on"
+        linetype = "type", legend = "top"
       ))
       session$flushReact()
       st <- session$returned$state
       expect_equal(st$type(), "area")
       expect_equal(st$ymin(), c("l95", "l80"))
       expect_equal(st$linetype(), "type")
-      expect_true(st$direct_labels())
+      expect_equal(st$legend(), "top")
     },
     args = list(x = blk, data = list(data = line_df))
   )

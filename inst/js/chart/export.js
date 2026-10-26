@@ -91,6 +91,8 @@
       const legR = (this.legendEl && this.legendEl.offsetParent !== null)
         ? this.legendEl.getBoundingClientRect() : null;
       const legH = legR ? legR.height : 0;
+      // The band sits above the plot with `legend = "top"`, else below it.
+      const legTop = !!legR && this.legendEl.classList.contains('dd-legend-band--top');
       const H = Math.round(topH + gridR.height + legH + capH);
 
       let bg = getComputedStyle(this.card).backgroundColor;
@@ -121,7 +123,7 @@
           ctx.textBaseline = 'top';
           for (const ln of b.lines) { ctx.fillText(ln, pad, y); y += b.lineH; }
         }
-        y = topH;
+        y = topH + (legTop ? legH : 0);
 
         for (const p of /** @type {any[]} */ (panels)) {
           if (!p) continue;
@@ -141,10 +143,10 @@
           ctx.drawImage(p.im, x0, y0, r.width, r.height);
         }
 
-        // Legend chips where they are on screen, below the panels; chips
-        // toggled off keep their dimmed opacity.
+        // Legend chips where they are on screen, above or below the panels;
+        // chips toggled off keep their dimmed opacity.
         if (legR) {
-          const bandY = topH + gridR.height;
+          const bandY = legTop ? topH : topH + gridR.height;
           /** @param {Element} el2 */
           const drawLabel = (el2) => {
             const r2 = el2.getBoundingClientRect();
@@ -160,8 +162,18 @@
             const sw = /** @type {Element} */ (child).querySelector('.dd-legend-swatch');
             if (sw) {
               const sr = sw.getBoundingClientRect();
-              ctx.fillStyle = getComputedStyle(sw).backgroundColor || '#999';
-              ctx.fillRect(sr.left - gridR.left, bandY + (sr.top - legR.top), sr.width, sr.height);
+              const swCs = getComputedStyle(sw);
+              ctx.fillStyle = swCs.backgroundColor || '#999';
+              const sx = sr.left - gridR.left, sy = bandY + (sr.top - legR.top);
+              // A dot is round, a square and a line have small corners.
+              const rad = Math.min(parseFloat(swCs.borderTopLeftRadius) || 0, sr.width / 2, sr.height / 2);
+              if (rad > 0 && typeof ctx.roundRect === 'function') {
+                ctx.beginPath();
+                ctx.roundRect(sx, sy, sr.width, sr.height, rad);
+                ctx.fill();
+              } else {
+                ctx.fillRect(sx, sy, sr.width, sr.height);
+              }
               if (sw.nextElementSibling) drawLabel(sw.nextElementSibling);
             } else {
               drawLabel(/** @type {Element} */ (child));

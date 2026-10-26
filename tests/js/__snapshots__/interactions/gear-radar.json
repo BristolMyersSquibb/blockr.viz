@@ -175,6 +175,22 @@
       ]
      },
      {
+      "role": "legend",
+      "label": "Legend",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Below",
+         "Above",
+         "On the marks",
+         "None"
+        ],
+        "selected": "Below"
+       }
+      ]
+     },
+     {
       "role": "count_on",
       "label": "Group counts",
       "controls": [

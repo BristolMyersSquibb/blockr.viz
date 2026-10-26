@@ -147,6 +147,52 @@
     return Math.max(0, Math.ceil(w + 8 - room));
   };
 
+
+  /**
+   * `legend: "marks"` on a stacked or 100% bar: each series' name at the middle
+   * of its segment, beside the last bar (vertical) or above the first bar
+   * (horizontal). One label-only series per segment, so a bar's own labels
+   * (values, totals) keep their place. The names of segments that would
+   * collide are pushed apart. Appends to `series`; returns the px a vertical
+   * grid needs on its right for the longest name.
+   * @param {any[]} series the bar series, one per level
+   * @param {{ vertical: boolean, groups: string[], bandPx: number, barPx: number,
+   *           measure: (s: string) => number, ink: any }} o
+   * @returns {number}
+   */
+  const stackNames = (series, o) => {
+    /** @param {any} d */
+    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
+    const n = o.groups.length;
+    // The bar to name: the last (or first) one with a segment.
+    /** @param {number} gi */
+    const filled = (gi) => series.some((s) => { const v = valOf(s.data[gi]); return v != null && Number(v) !== 0; });
+    let gi = o.vertical ? n - 1 : 0;
+    while (gi >= 0 && gi < n && !filled(gi)) gi += o.vertical ? -1 : 1;
+    if (gi < 0 || gi >= n) return 0;
+    let pos = 0, neg = 0, widest = 0;
+    series.forEach((s, si) => {
+      const v = Number(valOf(s.data[gi]));
+      if (valOf(s.data[gi]) == null || !Number.isFinite(v) || v === 0) return;
+      let mid;
+      if (v >= 0) { mid = pos + v / 2; pos += v; } else { mid = neg + v / 2; neg += v; }
+      const name = String(s.name);
+      // A missing level has no name to write.
+      if (!name) return;
+      widest = Math.max(widest, o.measure(name));
+      const mark = o.vertical
+        ? NS.nameMark('__legend_' + si, name, [o.groups[gi], mid], 'right', o.ink,
+                      { distance: o.barPx / 2 + 6 })
+        : NS.nameMark('__legend_' + si, name, [mid, o.groups[gi]], 'top', o.ink,
+                      { distance: o.barPx / 2 + 3 });
+      mark.labelLayout = { moveOverlap: o.vertical ? 'shiftY' : 'shiftX' };
+      series.push(mark);
+    });
+    if (!o.vertical) return 0;
+    // The label starts beside the bar and may reach past the plot.
+    return Math.max(0, Math.ceil(widest + 6 + o.barPx / 2 + 4 - o.bandPx / 2));
+  };
+
   /**
    * The denominator of "% of panel", named by its columns.
    * @param {Record<string, any>} cfg
@@ -324,6 +370,18 @@
       : 0;
     NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink,
       cfg.value_line_names);
+    // `legend: "marks"`: the level names on the stack's segments. After the
+    // series the tooltip and the highlight read (the first `colors.length`).
+    let namesRight = 0;
+    const marks = NS.legendPlan(m, cfg).marks;
+    if (marks === 'stack' || marks === 'stack-h') {
+      const bandPx = vertical
+        ? (plotW ? (plotW - X_INSET) / Math.max(1, groups.length) : 0)
+        : (hCapped ? NS.PANEL_H_CAP / Math.max(1, groups.length) : ROW_BAND);
+      const barPx = vertical ? (bandPx ? Math.min(BAR_MAX, 0.6 * bandPx) : BAR_MAX / 2)
+        : Math.min(BAR_MAX, 0.6 * bandPx);
+      namesRight = stackNames(series, { vertical, groups, bandPx, barPx, measure, ink });
+    }
 
     const fmtRaw = vf || ((/** @type {number} */ n) =>
       Number.isInteger(n) ? n : Math.round(n * 100) / 100);
@@ -428,7 +486,7 @@
         tooltip,
         legend: legendOn ? { show: false, data: colors } : undefined,
         grid: vertical
-          ? { left: 55, right: 10 + labelRight, top: 30, bottom: bottomBase }
+          ? { left: 55, right: 10 + Math.max(labelRight, namesRight), top: 30, bottom: bottomBase }
           : { left: gut.gridLeft, right: 5 + labelRight, top: 30, bottom: bottomBase },
         xAxis: vertical ? catAxis : valAxis,
         yAxis: vertical ? valAxis : catAxis,

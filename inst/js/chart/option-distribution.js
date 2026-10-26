@@ -135,6 +135,24 @@
       });
     }
 
+    // `legend: "marks"` on a point range: each level's name at the centre of
+    // mass of its centres, over the points, apart from each other.
+    if (!isBox && split && NS.legendPlan(m, cfg).marks === 'centroid') {
+      seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
+        /** @type {number[][]} */
+        const at = [];
+        slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
+          if (s.level === lv && s.body) at.push(vertical ? [ci, s.body.center] : [s.body.center, ci]);
+        });
+        const c = NS.cloudCentre(at);
+        if (!c) return;
+        const mark = NS.nameMark('__legend_' + li, lv, c, vertical ? 'top' : 'right', ink,
+                                 { distance: 8 });
+        mark.labelLayout = { moveOverlap: 'shiftY' };
+        series.push(mark);
+      });
+    }
+
     // Outliers sit on their box's centre line, silent so the box keeps the
     // click and the tooltip, one series per level like the boxes.
     const pointSeries = !(isBox && cfg.box_points === 'outliers') ? []

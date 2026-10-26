@@ -88,7 +88,8 @@
   /**
    * The band series of one panel.
    * @param {any} m the individual model @param {any} panel @param {any} look
-   * @returns {{ series: any[], band: any, markLineIdx: number, many: boolean, levelsDrawn: string[] }}
+   * @returns {{ series: any[], band: any, markLineIdx: number, many: boolean, levelsDrawn: string[],
+   *             labelPad: number }}
    */
   const band = (m, panel, look) => {
     const { cfg, ink } = look;
@@ -97,7 +98,11 @@
     const bandData = cfg.band_series || null;
     /** @type {any[]} */
     const series = [];
-    if (!bandData) return { series, band: null, markLineIdx: -1, many: false, levelsDrawn: [] };
+    if (!bandData) {
+      return { series, band: null, markLineIdx: -1, many: false, levelsDrawn: [], labelPad: 0 };
+    }
+    // `legend: "marks"`: each centre line carries its name at its end.
+    const named = NS.legendPlan(m, cfg).marks === 'end';
     // A facet panel holds its own cohort, so its own band; an unfaceted
     // chart reads __all__.
     const panelBand = bandData[panel.facet] || bandData['__all__'] || null;
@@ -158,8 +163,19 @@
         z: 7, triggerLineEvent: true,
         itemStyle: { color: clr, cursor: 'pointer' },
         lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
-        emphasis: { disabled: true }
+        emphasis: { disabled: true },
+        ...(named && nm ? {
+          endLabel: { show: true, formatter: '{a}', distance: 6,
+                      color: ink.secondary || '#374151', fontSize: ink.fontSize || 12 },
+          labelLayout: { moveOverlap: 'shiftY' }
+        } : {})
       });
+    }
+    // Room on the right for the end labels.
+    let labelPad = 0;
+    if (named) {
+      for (const cl of levels) labelPad = Math.max(labelPad, String(cl).length);
+      labelPad = labelPad ? Math.min(160, labelPad * 6.5 + 12) : 0;
     }
     return {
       series,
@@ -168,7 +184,8 @@
       // Helper lines hang off a centre line, which the hover never empties.
       markLineIdx: firstCenter,
       many,
-      levelsDrawn: levels
+      levelsDrawn: levels,
+      labelPad
     };
   };
 

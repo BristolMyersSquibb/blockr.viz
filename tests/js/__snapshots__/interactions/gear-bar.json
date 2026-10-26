@@ -196,6 +196,22 @@
       ]
      },
      {
+      "role": "legend",
+      "label": "Legend",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Below",
+         "Above",
+         "On the marks",
+         "None"
+        ],
+        "selected": "Below"
+       }
+      ]
+     },
+     {
       "role": "value_labels",
       "controls": [
        {

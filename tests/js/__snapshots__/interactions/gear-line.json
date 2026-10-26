@@ -238,12 +238,18 @@
       ]
      },
      {
-      "role": "direct_labels",
+      "role": "legend",
+      "label": "Legend",
       "controls": [
        {
-        "kind": "checkbox",
-        "label": "At line end",
-        "checked": true
+        "kind": "segmented",
+        "options": [
+         "Below",
+         "Above",
+         "On the marks",
+         "None"
+        ],
+        "selected": "Below"
        }
       ]
      },

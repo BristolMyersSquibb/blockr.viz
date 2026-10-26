@@ -93,8 +93,11 @@
     // A colour split stacks its areas, unless the layout says side by side.
     const stackArea = isArea && m.splitCol && cfg.bar_mode !== 'grouped';
     const ltCol = isLine && cfg.linetype ? cfg.linetype : null;
-    const directLabels = isLine && !crowd &&
-      (cfg.direct_labels === true || cfg.direct_labels === 'on');
+    // `legend: "marks"` writes the names on the marks: at each line's end, or
+    // at the centre of each cloud of points (nothing for a crowd of lines).
+    const plan = NS.legendPlan(m, cfg);
+    const directLabels = isLine && plan.marks === 'end';
+    const cloudLabels = !isLine && plan.marks === 'centroid';
     const encodeX = m.x.encode ||
       ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v));
 
@@ -123,9 +126,14 @@
         : { disabled: true },
       ...(isArea ? { areaStyle: { opacity: stackArea ? 0.7 : 0.25 },
                      ...(stackArea ? { stack: 'area' } : {}) } : {}),
-      ...(directLabels ? { endLabel: {
-        show: true, formatter: '{a}', distance: 6,
-        color: (ink && ink.muted) || '#4b5563', fontSize: (ink && ink.fontSize) || 12 } } : {})
+      ...(directLabels ? {
+        endLabel: {
+          show: true, formatter: '{a}', distance: 6,
+          color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12
+        },
+        // Lines that end close together push their names apart.
+        labelLayout: { moveOverlap: 'shiftY' }
+      } : {})
     });
 
     // `linetype`: the levels in the order the rows first carry them; the
@@ -154,6 +162,7 @@
           sr.lineStyle = { ...sr.lineStyle, type: DASHES[(k - 1) % DASHES.length] };
           // One end label per line, on its first segment.
           delete sr.endLabel;
+          delete sr.labelLayout;
         }
         return sr;
       }).filter((sr) => sr.data.some((/** @type {any} */ p) => p[1] != null));
@@ -239,6 +248,18 @@
         data: ranges.map((/** @type {any} */ r) =>
           [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }])
       };
+    }
+
+    // The name of each colour group at the centre of mass of its points. A
+    // label-only series per group, over the points, with a halo to read on them.
+    if (cloudLabels) {
+      panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
+        const c = NS.cloudCentre(s.pts);
+        if (!c || s.level == null || s.level === '') return;
+        const mark = NS.nameMark('__legend_' + si, String(s.level), c, 'inside', ink);
+        mark.labelLayout = { moveOverlap: 'shiftY' };
+        series.push(mark);
+      });
     }
 
     // Room on the right for the end labels.

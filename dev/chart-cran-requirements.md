@@ -96,7 +96,7 @@ Unchanged: `func`, `color`, `facet`, `series`, `xend`, `label`, `drill`,
 - `linetype`: a column whose values set the dash (history solid, forecast
   dashed from the last observed point on).
 - `x_ranges`: named shaded ranges on x (`list(Pandemic = c(...))`).
-- `direct_labels`: the series name at the end of each line.
+- `legend`: `"bottom"` (default), `"top"`, `"marks"` (names on the marks: line and area ends, the last bar of a stack, a scatter group's centre, pie slices; other types keep the legend) or `"none"`. Replaces `direct_labels`.
 - `format`, `unit`: number format of the value axis, tooltip and labels, as
   on the tile block.
 - `type = "histogram"` with `bins` (default 30, as in blockr.ggplot): R cuts

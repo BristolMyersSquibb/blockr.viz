@@ -104,7 +104,8 @@
       this.chartGrid.className = 'dd-chart-grid';
       this.card.appendChild(this.chartGrid);
 
-      // One legend for every panel, under the grid; hidden while empty.
+      // One legend for every panel, under the grid (or above it, see
+      // _updateLegendBand); hidden while empty.
       this.legendEl = document.createElement('div');
       this.legendEl.className = 'dd-legend-band';
       this.legendEl.style.display = 'none';
@@ -336,7 +337,7 @@
         bins: c.bins == null ? 30 : c.bins,
         format: c.format || 'number',
         linetype: c.linetype || '',
-        direct_labels: (c.direct_labels === 'on' || c.direct_labels === true) ? 'on' : 'off',
+        legend: NS.legendSetting(c),
         unit: c.unit ?? '',
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',
@@ -438,10 +439,13 @@
 
     // One row of chips for every panel. A chip filters its level, as a
     // click on a mark of that level would (D8): the other levels dim, a
-    // second click sends again (D1), Reset clears.
+    // second click sends again (D1), Reset clears. The swatch follows the
+    // chart's mark; the band sits below the plot or above it
+    // (`plan`, from NS.legendPlan), and is gone when the names are on the marks.
     /** @this {any}
-     *  @param {{col: string, items: Array<{name: string, color: string}>} | null} spec */
-    _updateLegendBand(spec) {
+     *  @param {{col: string, items: Array<{name: string, color: string}>} | null} spec
+     *  @param {{ position?: string, swatch?: string }} [plan] */
+    _updateLegendBand(spec, plan) {
       const el = this.legendEl;
       if (!el) return;
       if (!spec || !spec.items.length) {
@@ -451,8 +455,10 @@
         return;
       }
       this._legendCol = spec.col;
+      this._placeLegendBand(plan && plan.position === 'top' ? 'top' : 'bottom');
 
       el.innerHTML = '';
+      const swatch = (plan && plan.swatch) || 'square';
       const title = this._legendTitleName(spec.items, spec.col);
       if (title) {
         const t = document.createElement('span');
@@ -466,7 +472,7 @@
         chip.className = 'dd-legend-chip';
         chip.dataset.level = it.name;
         const sw = document.createElement('span');
-        sw.className = 'dd-legend-swatch';
+        sw.className = 'dd-legend-swatch dd-legend-swatch--' + swatch;
         sw.style.background = it.color;
         const lb = document.createElement('span');
         lb.textContent = it.name;
@@ -477,6 +483,21 @@
       }
       el.style.display = '';
       this._markLegendChips();
+    },
+
+    // The band under the grid, or over it, between the title band and the
+    // plot.
+    /** @this {any} @param {'top' | 'bottom'} position */
+    _placeLegendBand(position) {
+      const el = this.legendEl;
+      if (!el || !this.chartGrid) return;
+      el.classList.toggle('dd-legend-band--top', position === 'top');
+      const inPlace = position === 'top'
+        ? el.nextElementSibling === this.chartGrid
+        : el.previousElementSibling === this.chartGrid;
+      if (inPlace) return;
+      if (position === 'top') this.card.insertBefore(el, this.chartGrid);
+      else this.card.insertBefore(el, this.chartGrid.nextSibling);
     },
 
     // A chip click: its level as a filter, or with an explicit drill column
@@ -506,11 +527,13 @@
       }
     },
 
-    // The colour column's title over the chips, unless a level already
-    // carries that name.
+    // The colour column's label before the chips: only for a column that has
+    // one (a name alone says nothing the levels do not), and not when a
+    // level already carries that name.
     /** @this {any} @param {any[]} items @param {string} col */
     _legendTitleName(items, col) {
-      const title = NS.axes.axisTitle(this.columns, col);
+      const meta = NS.axes.colMeta(this.columns, col);
+      const title = meta && meta.label && meta.label !== meta.name ? meta.label : null;
       if (!title || !items || !items.length) return null;
       const taken = items.some((it) =>
         String(it != null && typeof it === 'object' ? it.name : it) === title);

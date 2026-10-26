@@ -33,8 +33,8 @@
     : TIMELINE_TYPES.includes(type) ? 'timeline' : 'individual';
 
   /**
-   * @typedef {{ muted: string, strong: string, border: string, surface: string,
-   *             danger: string, raised: string, text: string, shadow: string,
+   * @typedef {{ muted: string, secondary: string, strong: string, border: string,
+   *             surface: string, danger: string, raised: string, text: string, shadow: string,
    *             fontSize: number, face: string }} Ink
    */
   // The light tokens, used when the page loads no token sheet. ECharts cannot
@@ -42,6 +42,7 @@
   /** @type {Readonly<Ink>} */
   const INK_DEFAULT = Object.freeze({
     muted: '#6b7280',
+    secondary: '#374151',
     strong: '#d1d5db',
     border: '#e5e7eb',
     surface: '#ffffff',
@@ -64,6 +65,7 @@
     const tok = (name, fb) => cs.getPropertyValue('--blockr-' + name).trim() || fb;
     return {
       muted: tok('color-text-muted', INK_DEFAULT.muted),
+      secondary: tok('color-text-secondary', INK_DEFAULT.secondary),
       strong: tok('color-border-strong', INK_DEFAULT.strong),
       border: tok('color-border-default', INK_DEFAULT.border),
       surface: tok('color-bg-surface', INK_DEFAULT.surface),
@@ -276,6 +278,125 @@
     return m;
   };
 
+  // -- Legend ------------------------------------------------------------------
+
+  // Where the colour legend goes: a band below the plot (the default) or above
+  // it, the names written on the marks, or nothing.
+  const LEGEND_MODES = ['bottom', 'top', 'marks', 'none'];
+  // Past this many levels the names on the marks of a line crowd each other.
+  const MARKS_MAX_LEVELS = 8;
+
+  /**
+   * The `legend` setting. A config from before it, with `direct_labels` on,
+   * means the names on the marks.
+   * @param {Record<string, any>} cfg
+   * @returns {'bottom' | 'top' | 'marks' | 'none'}
+   */
+  const legendSetting = (cfg) => {
+    const v = cfg && cfg.legend;
+    if (LEGEND_MODES.includes(v)) return v;
+    const dl = cfg && cfg.direct_labels;
+    return (dl === 'on' || dl === true) ? 'marks' : 'bottom';
+  };
+
+  /**
+   * How the names go on the marks of this chart, or null where they have no
+   * good place (the legend band stays).
+   *   end       the end of each line, at its last point
+   *   stack     beside the last vertical bar, at each segment's middle
+   *   stack-h   above the first horizontal bar, at each segment's centre
+   *   centroid  the centre of mass of each colour group's points
+   *   slices    a pie or treemap names its own slices
+   * @param {any} m the model @param {Record<string, any>} cfg
+   * @returns {'end' | 'stack' | 'stack-h' | 'centroid' | 'slices' | null}
+   */
+  const marksKind = (m, cfg) => {
+    if (m.family === 'individual') {
+      // Chips that are not the series (a series column apart from the colour)
+      // have no mark to sit on.
+      if (!m.legend || m.byColor) return null;
+      if (m.type === 'scatter') {
+        return (m.x.type === 'category' || m.y.type === 'category') ? null : 'centroid';
+      }
+      if (m.type === 'line' || m.type === 'area' || m.type === 'band') {
+        // A crowd of lines (one per entity) cannot be named.
+        return (m.crowd || !m.levels.length || m.levels.length > MARKS_MAX_LEVELS) ? null : 'end';
+      }
+      return null;
+    }
+    if (m.family === 'aggregated') {
+      if (m.type === 'pie' || m.type === 'treemap') return 'slices';
+      if (m.type === 'bar' && !m.histogram && !m.cumulative && m.colors.length &&
+          (cfg.bar_mode || 'stacked') !== 'grouped') {
+        return cfg.orientation === 'vertical' ? 'stack' : 'stack-h';
+      }
+      if (m.type === 'pointrange' && m.split) return 'centroid';
+    }
+    return null;
+  };
+
+  /**
+   * The swatch of a legend chip, by the chart's mark: a short line for lines,
+   * a dot for points, a square for the rest.
+   * @param {any} type @returns {'line' | 'dot' | 'square'}
+   */
+  const swatchOf = (type) => (type === 'line' || type === 'band') ? 'line'
+    : (type === 'scatter' || type === 'pointrange') ? 'dot' : 'square';
+
+  /**
+   * What the legend does for this chart: whether the HTML band shows and
+   * where, how the names go on the marks (null when they do not), and the
+   * swatch. "marks" where the chart has no place for names keeps the band,
+   * at the bottom.
+   * @param {any} m the model @param {Record<string, any>} cfg
+   * @returns {{ setting: string, marks: ReturnType<typeof marksKind>, band: boolean,
+   *             position: 'bottom' | 'top', swatch: 'line' | 'dot' | 'square' }}
+   */
+  const legendPlan = (m, cfg) => {
+    const setting = legendSetting(cfg);
+    const swatch = swatchOf(cfg.chart_type);
+    if (setting === 'none') return { setting, marks: null, band: false, position: 'bottom', swatch };
+    if (setting === 'marks') {
+      const marks = marksKind(m, cfg);
+      return { setting, marks, band: !marks, position: 'bottom', swatch };
+    }
+    return { setting, marks: null, band: true, position: setting, swatch };
+  };
+
+  /**
+   * The centre of mass of a group's points: the mean of the finite x and y.
+   * Null without a point.
+   * @param {any[][]} pts @returns {[number, number] | null}
+   */
+  const cloudCentre = (pts) => {
+    let sx = 0, sy = 0, n = 0;
+    for (const p of pts) {
+      const x = Number(p[0]), y = Number(p[1]);
+      if (p[0] == null || p[1] == null || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+      sx += x; sy += y; n++;
+    }
+    return n ? [sx / n, sy / n] : null;
+  };
+
+  /**
+   * A name written at a point and nothing else: a silent scatter series with
+   * no symbol and a label with a halo in the surface colour, so it reads over
+   * the marks beneath. The id keeps the highlight patch off it.
+   * @param {string} id @param {string} name @param {number[]} at
+   * @param {string} position @param {any} ink @param {Record<string, any>} [extra]
+   */
+  const nameMark = (id, name, at, position, ink, extra) => ({
+    id, type: 'scatter', data: [at], silent: true, symbolSize: 0, z: 11,
+    legendHoverLink: false, animation: false, tooltip: { show: false },
+    emphasis: { disabled: true },
+    label: {
+      show: true, formatter: name, position,
+      color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12,
+      textBorderColor: (ink && ink.surface) || '#ffffff', textBorderWidth: 3,
+      ...extra
+    }
+  });
+
   // Ceiling for a panel's plot height. A canvas taller than the browser's
   // area limit renders blank, so past it the lanes squeeze instead.
   const PANEL_H_CAP = 4000;
@@ -285,6 +406,8 @@
     INK_DEFAULT, readInk, esc, tipHead, tipRow, tipNote, TIP_SEP, rowTooltip, cardTooltip, ddNum, ddNum3,
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
     hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
-    applyDrillEmphasis, facetScales, PANEL_H_CAP
+    applyDrillEmphasis, facetScales, PANEL_H_CAP,
+    LEGEND_MODES, MARKS_MAX_LEVELS, legendSetting, marksKind, swatchOf, legendPlan,
+    cloudCentre, nameMark
   });
 })();

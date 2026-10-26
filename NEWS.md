@@ -13,8 +13,15 @@
 * `linetype` names a column whose values set a line's dash: the first value
   is solid, the others dashed, from the last point of the solid part on.
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
-  "2009-06-30"))`); `direct_labels = TRUE` writes each line's name at its
-  end.
+  "2009-06-30"))`).
+* `legend` places the colour legend: `"bottom"` (default), `"top"`, `"marks"`
+  or `"none"`. `"marks"` writes the names on the marks (at a line's or an
+  area's end, beside the last bar of a stack, at a scatter group's centre,
+  on a pie slice); dodged bars, histograms and boxplots keep the legend.
+  The legend is left-aligned, its swatch has the mark's shape (a line, a
+  dot or a square), and it has a title only when the colour column has a
+  label. `direct_labels = TRUE`, from earlier builds of 0.3.0, is read as
+  `legend = "marks"`.
 * `format` (`"number"`, `"compact"`, `"percent"`) and `unit` print the values
   as the tile block does: the ticks in the format, the unit once in the axis
   title, tooltips and value labels with both.

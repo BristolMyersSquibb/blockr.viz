@@ -330,13 +330,16 @@ chart_arguments <- function() {
       ),
       example = NULL
     ),
-    direct_labels = new_arg_spec(
+    legend = new_arg_spec(
       paste0(
-        "Line/area only: true writes each line's name at its end, so the ",
-        "reader does not look up the legend. Use with a few lines."
+        "Where the colour legend goes: \"bottom\" (default), \"top\", ",
+        "\"marks\" (the names written on the marks: at a line's or area's ",
+        "end, beside the last bar of a stack, at a scatter group's centre, ",
+        "on a pie slice; dodged bars, histograms and boxplots keep the ",
+        "legend) or \"none\". \"marks\" suits a few lines that end apart."
       ),
-      example = TRUE,
-      type = arg_boolean()
+      example = "marks",
+      type = arg_enum(CHART_LEGENDS)
     ),
     ref_lo = new_arg_spec(
       paste0(

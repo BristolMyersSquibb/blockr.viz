@@ -32,7 +32,7 @@ new_chart_block(
   ymax = NULL,
   linetype = NULL,
   x_ranges = NULL,
-  direct_labels = FALSE,
+  legend = "bottom",
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -160,8 +160,13 @@ the last observed point on. Line and area.}
 of \code{c(from, to)}: \code{list(Recession = c("2008-01-01", "2009-06-30"))}.
 Dates, date-times or numbers, matching x.}
 
-\item{direct_labels}{\code{TRUE} writes each line's name at its end. Line and
-area.}
+\item{legend}{Where the colour legend goes: \code{"bottom"} (default, under the
+plot), \code{"top"} (between the subtitle and the plot), \code{"marks"} (the names
+written on the marks: at a line's or an area's end, beside the last bar
+of a stack, at the centre of a scatter group, on a pie slice) or
+\code{"none"}. Where a type has no place for names on its marks (dodged bars,
+a histogram, a boxplot), \code{"marks"} keeps the legend under the plot. The
+legend is titled only when the colour column has a label.}
 
 \item{smoother}{Trend line on a scatter: \code{"none"} (default), \code{"lm"} or
 \code{"loess"}, fit per colour or series group and per facet panel.}

@@ -24,7 +24,7 @@
   const OPTION_FIELDS = ['chart_type', 'bar_mode', 'orientation', 'value_labels', 'value_lines',
     'pct_of', 'waterfall_totals', 'connect_centers', 'drill', 'palette', 'scales', 'value',
     'func', 'count_on', 'summary', 'whiskers', 'box_points', 'group', 'color', 'facet',
-    'format', 'unit', 'value_line_names', 'title_resolved'];
+    'format', 'unit', 'value_line_names', 'title_resolved', 'legend', 'direct_labels'];
 
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
@@ -159,6 +159,8 @@
     const anyFilter = !!lit;
 
     const series = (current.series || []).map((/** @type {any} */ s) => {
+      // A name written on the marks is no mark of the data.
+      if (typeof s.id === 'string' && s.id.indexOf('__legend_') === 0) return {};
       if (s.type === 'pie' || s.type === 'treemap') {
         const dim = s.type === 'pie' ? 0.2 : 0.3;
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d

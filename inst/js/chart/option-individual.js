@@ -26,7 +26,7 @@
   // Config fields the option reads beside the model's.
   const OPTION_FIELDS = ['chart_type', 'drill', 'dot_size_mult', 'line_width_mult', 'connect',
     'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
-    'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'direct_labels',
+    'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'legend', 'direct_labels',
     'value_line_names', 'x_line_names',
     'format', 'unit', 'bar_mode', 'title_resolved'];
 
@@ -115,15 +115,19 @@
     let band = null;
     /** @type {any} */
     let pts = null;
+    // Room on the right for names at the line ends.
+    let labelPad = 0;
     if (isBand) {
       const b = parts.band(m, panel, look);
       series = b.series;
+      labelPad = b.labelPad;
       band = b.band;
       bandMany = b.many;
       if (b.markLineIdx >= 0) mlTarget = b.markLineIdx;
     } else {
       pts = parts.points(m, panel, look, width > X_INSET ? width - X_INSET : 0);
       series = pts.series;
+      labelPad = pts.labelPad || 0;
     }
 
     const ext = (isBand && m.y.type === 'value' && series.length)
@@ -261,7 +265,7 @@
       tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
       // A hidden legend: its selection model is what the chips toggle.
       legend: { show: false },
-      grid: { left: 66, right: 5 + ((pts && pts.labelPad) || 0), top: 30,
+      grid: { left: 66, right: 5 + labelPad, top: 30,
               bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
       yAxis: isLine ? [yAxis, scrimAxis] : yAxis,

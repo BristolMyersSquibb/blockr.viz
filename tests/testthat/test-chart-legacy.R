@@ -132,6 +132,15 @@ test_that("a board saved with 0.2.x restores silently", {
   expect_equal(st$func, "sum")
 })
 
+test_that("a board saved with direct_labels restores as legend = marks", {
+  ser <- blockr.core::blockr_ser(new_chart_block(type = "line"))
+  ser$payload$legend <- NULL
+  ser$payload$direct_labels <- TRUE
+  expect_no_warning(blk <- blockr.core::blockr_deser(ser))
+  expect_equal(blockr.core::blockr_ser(blk)$payload$legend, "marks")
+  expect_null(blockr.core::blockr_ser(blk)$payload$direct_labels)
+})
+
 test_that("the orientation is inferred from x and y", {
   num <- function(col) col %in% c("sales", "AVAL")
   inf <- function(type, x, y, func = "count") {

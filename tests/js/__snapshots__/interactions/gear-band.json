@@ -626,6 +626,22 @@
       ]
      },
      {
+      "role": "legend",
+      "label": "Legend",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Below",
+         "Above",
+         "On the marks",
+         "None"
+        ],
+        "selected": "Below"
+       }
+      ]
+     },
+     {
       "role": "line_width_mult",
       "label": "Line width",
       "controls": [

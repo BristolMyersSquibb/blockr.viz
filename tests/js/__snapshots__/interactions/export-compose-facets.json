@@ -98,20 +98,9 @@
     272
    ],
    [
-    "fillText",
-    "AESEV",
-    10,
-    602,
-    "normal 16px \"Open Sans\", system-ui, sans-serif",
-    "#333",
-    "left",
-    "middle",
-    1
-   ],
-   [
     "fillRect",
     "#0072B2",
-    90,
+    10,
     597,
     10,
     10
@@ -119,7 +108,7 @@
    [
     "fillText",
     "",
-    104,
+    24,
     602,
     "normal 16px \"Open Sans\", system-ui, sans-serif",
     "#333",
@@ -130,7 +119,7 @@
    [
     "fillRect",
     "#E69F00",
-    170,
+    90,
     597,
     10,
     10
@@ -138,7 +127,7 @@
    [
     "fillText",
     "MILD",
-    184,
+    104,
     602,
     "normal 16px \"Open Sans\", system-ui, sans-serif",
     "#333",
@@ -149,7 +138,7 @@
    [
     "fillRect",
     "#009E73",
-    250,
+    170,
     597,
     10,
     10
@@ -157,7 +146,7 @@
    [
     "fillText",
     "MODERATE",
-    264,
+    184,
     602,
     "normal 16px \"Open Sans\", system-ui, sans-serif",
     "#333",
@@ -168,7 +157,7 @@
    [
     "fillRect",
     "#CC79A7",
-    330,
+    250,
     597,
     10,
     10
@@ -176,7 +165,7 @@
    [
     "fillText",
     "SEVERE",
-    344,
+    264,
     602,
     "normal 16px \"Open Sans\", system-ui, sans-serif",
     "#333",

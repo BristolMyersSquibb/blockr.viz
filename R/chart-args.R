@@ -24,6 +24,10 @@ CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
                  "boxplot", "pointrange", "scatter", "line", "area", "band",
                  "gantt")
 
+# Where the colour legend goes (`legend`): under the plot, above it, the
+# names on the marks, or none.
+CHART_LEGENDS <- c("bottom", "top", "marks", "none")
+
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
@@ -293,7 +297,7 @@ CHART_LEGACY_ARGS <- c(
   "band_id", "count_col", "count_on", "na_group", "ctrl_target",
   "ctrl_table", "values", "filter_type", "filters", "filter_range",
   "filter_point", "filter_column", "filter_values", "baseline",
-  "func_toggle", "metric", "agg_fn"
+  "func_toggle", "metric", "agg_fn", "direct_labels"
 )
 
 chart_legacy_args <- function(args) {
@@ -322,6 +326,11 @@ chart_legacy_args <- function(args) {
   if ("metric" %in% names(args)) {
     v <- take("metric")
     if (is.null(args$value)) args["value"] <- list(v)
+  }
+  # `direct_labels = TRUE` (0.3.0 before `legend`): the names on the marks.
+  if ("direct_labels" %in% names(args)) {
+    v <- take("direct_labels")
+    if (is.null(args$legend) && isTRUE(bool_state(v))) args$legend <- "marks"
   }
 
   type <- as.character(unlist(args$type %||% "bar"))[1L]

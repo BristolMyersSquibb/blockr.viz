@@ -98,8 +98,13 @@
 #' @param x_ranges Named stretches of x shaded behind the marks, a named list
 #'   of `c(from, to)`: `list(Recession = c("2008-01-01", "2009-06-30"))`.
 #'   Dates, date-times or numbers, matching x.
-#' @param direct_labels `TRUE` writes each line's name at its end. Line and
-#'   area.
+#' @param legend Where the colour legend goes: `"bottom"` (default, under the
+#'   plot), `"top"` (between the subtitle and the plot), `"marks"` (the names
+#'   written on the marks: at a line's or an area's end, beside the last bar
+#'   of a stack, at the centre of a scatter group, on a pie slice) or
+#'   `"none"`. Where a type has no place for names on its marks (dodged bars,
+#'   a histogram, a boxplot), `"marks"` keeps the legend under the plot. The
+#'   legend is titled only when the colour column has a label.
 #' @param smoother Trend line on a scatter: `"none"` (default), `"lm"` or
 #'   `"loess"`, fit per colour or series group and per facet panel.
 #' @param identity_line `TRUE` draws a dashed y = x line on a scatter.
@@ -216,7 +221,7 @@ new_chart_block <- function(
     ymax = NULL,
     linetype = NULL,
     x_ranges = NULL,
-    direct_labels = FALSE,
+    legend = "bottom",
     smoother = "none",
     identity_line = FALSE,
     box_points = "none",
@@ -271,13 +276,23 @@ new_chart_block <- function(
   }
   old <- intersect(names(dots), CHART_LEGACY_ARGS)
   if (length(old)) {
-    warning(
-      "new_chart_block(): ", paste0("`", old, "`", collapse = ", "),
-      if (length(old) > 1L) " are" else " is",
-      " from blockr.viz < 0.3.0. See ?new_chart_block for the current ",
-      "names.",
-      call. = FALSE
-    )
+    pre <- setdiff(old, "direct_labels")
+    if (length(pre)) {
+      warning(
+        "new_chart_block(): ", paste0("`", pre, "`", collapse = ", "),
+        if (length(pre) > 1L) " are" else " is",
+        " from blockr.viz < 0.3.0. See ?new_chart_block for the current ",
+        "names.",
+        call. = FALSE
+      )
+    }
+    if ("direct_labels" %in% old) {
+      warning(
+        "new_chart_block(): `direct_labels = TRUE` is now ",
+        "`legend = \"marks\"`.",
+        call. = FALSE
+      )
+    }
     fn <- sys.function()
     given <- intersect(names(match.call())[-1L], names(formals(fn)))
     cur <- mget(given, envir = environment())
@@ -337,7 +352,11 @@ new_chart_block <- function(
   }
   linetype <- chr_state(linetype)
   x_ranges <- chart_ranges_state(x_ranges)
-  direct_labels <- bool_state(direct_labels)
+  legend <- chr_state(legend) %||% "bottom"
+  if (!legend %in% CHART_LEGENDS) {
+    stop("new_chart_block(): `legend` must be one of ",
+         paste0('"', CHART_LEGENDS, '"', collapse = ", "), ".", call. = FALSE)
+  }
   connect <- match.arg(
     connect,
     c("monotone", "straight", "step-start", "step-middle", "step-end")
@@ -713,7 +732,7 @@ new_chart_block <- function(
         r_hi <- shiny::reactiveVal(ymax)
         r_linetype <- shiny::reactiveVal(linetype)
         r_x_ranges <- shiny::reactiveVal(x_ranges)
-        r_direct_labels <- shiny::reactiveVal(direct_labels)
+        r_legend <- shiny::reactiveVal(legend)
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_bins <- shiny::reactiveVal(bins)
         # Number format of the values (axis, tooltips, labels), as on the
@@ -1307,7 +1326,7 @@ new_chart_block <- function(
               lo = as.list(r_lo()), hi = as.list(r_hi()),
               linetype = present_role(r_linetype()),
               x_ranges = chart_ranges_json(r_x_ranges()),
-              direct_labels = if (isTRUE(r_direct_labels())) "on" else "off",
+              legend = r_legend(),
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
@@ -1640,8 +1659,9 @@ new_chart_block <- function(
             if (!is.null(msg$lo)) upd(r_lo, chr_vec_state(nn(msg$lo)))
             if (!is.null(msg$hi)) upd(r_hi, chr_vec_state(nn(msg$hi)))
             if (!is.null(msg$linetype)) upd_healed(r_linetype, msg$linetype)
-            if (!is.null(msg$direct_labels)) {
-              upd(r_direct_labels, bool_state(msg$direct_labels))
+            if (!is.null(msg$legend)) {
+              v <- chr_state(msg$legend)
+              if (!is.null(v) && v %in% CHART_LEGENDS) upd(r_legend, v)
             }
             # Chart text: "" is a real value (explicitly no title -- it
             # suppresses the auto/data-label tier), so no nn(). null = auto
@@ -2146,7 +2166,7 @@ new_chart_block <- function(
             ymax = r_hi,
             linetype = r_linetype,
             x_ranges = r_x_ranges,
-            direct_labels = r_direct_labels,
+            legend = r_legend,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2233,7 +2253,7 @@ new_chart_block <- function(
       "value_labels", "format", "unit", "tooltip", "drill", "line_width",
       "point_size",
       "connect", "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
-      "direct_labels", "smoother",
+      "legend", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",
       "ref_lo", "ref_hi", "waterfall_totals", "bins", "show_n", "missing",
