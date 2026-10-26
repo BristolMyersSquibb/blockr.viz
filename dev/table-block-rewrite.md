@@ -506,11 +506,13 @@ bar (block-level `group`, `parent`, `func`, `value`, `id_var`, `color`,
   for `fields` under `func = "identity"`. `compare` (gone since 87616f6) is
   dropped. `static_summarize_table()` and `summarize_table()` still take the
   old arguments through the same table.
-- Differences from what the ranked bar drew: a faceted column ranks by its
-  first facet level, not the pooled value; a plain count over pooled groups
-  takes its percent over the expanded rows, not the subjects; a simple
-  column's header uses the column name ("Mean ASTDY"), not its label; a
-  vanished `by` column is an error where a vanished `parent` was dropped.
+- Brought in line with the ranked bar, for new tables too: a faceted column
+  ranks rows by its value over all levels (a tile matrix keeps its row
+  total); a count's percent base counts each input row once when pooled
+  groups copy rows; an unnamed column's header reads the variable label
+  ("Mean Start Day").
+- Kept: a `by` column missing from the data is an error, where a missing
+  `parent` used to be dropped.
 
 ### Class migration (resolved)
 

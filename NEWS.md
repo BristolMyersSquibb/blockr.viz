@@ -7,6 +7,10 @@
   column. Boards saved with the old summarize table's bar restore as that
   list: `group` and `parent` become `by`, and `func`, `value`, `id_var`,
   `color`, `facet` and `bar_mode` become the column's own settings.
+* In the groups layout a faceted column ranks the rows by its value over all
+  levels, not by its first level. A count's percent over pooled groups
+  counts each input row once. An unnamed column is headed by its variable's
+  label ("Mean Start Day", not "Mean ASTDY").
 * A summarize table grouped by two `by` columns lists the inner column flat
   when the outer one has no value in any row. A prepare script can blank the
   outer column behind a flag (`soc <- FALSE`, `AEBODSYS = if (soc) AEBODSYS

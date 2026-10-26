@@ -223,3 +223,62 @@ test_that("the ranked bar's arguments are gone from the specs and the server", {
   expect_false(any(c("group", "func", "value", "parent") %in%
                      names(formals(summarize_prepare))))
 })
+
+test_that("a restored faceted bar ranks rows by the value over all levels", {
+  # S1 has four events, all on arm P; S3 has two, all on arm H. Ranked by its
+  # first level (H) S3 would lead; the bar ranked by the pooled count.
+  d <- data.frame(
+    USUBJID = c("S1", "S1", "S1", "S1", "S3", "S3", "S2"),
+    ARM = c("P", "P", "P", "P", "H", "H", "H"),
+    stringsAsFactors = FALSE
+  )
+  b <- restore_ranked(group = "USUBJID", func = "count", facet = "ARM")
+  prep <- drawn(b, d)
+  expect_identical(prep$rows$.label, c("S1", "S3", "S2"))
+  expect_equal(values_of(prep), c(S1 = 4, S3 = 2, S2 = 1))
+  # Ascending reverses the same pooled order.
+  ba <- restore_ranked(group = "USUBJID", func = "count", facet = "ARM",
+                       sort_dir = "asc")
+  expect_identical(drawn(ba, d)$rows$.label, c("S2", "S3", "S1"))
+})
+
+test_that("a restored count over pooled groups takes its percent over input rows", {
+  d <- data.frame(
+    USUBJID = sprintf("s%02d", 1:6),
+    TRT = c("Pbo", "Pbo", "Low", "Low", "High", "High"),
+    stringsAsFactors = FALSE
+  )
+  d$Group <- d$TRT
+  attr(d$Group, "blockr_source") <- "TRT"
+  attr(d$Group, "blockr_groups") <- list(
+    groups = list(All = c("Low", "High"), Pbo = "Pbo", High = "High"),
+    overlap = TRUE
+  )
+  b <- restore_ranked(group = "Group", func = "count")
+  prep <- drawn(b, d)
+  # Six input rows, copied into eight by the pooled All group: the base is
+  # six, as the bar had it, so All reads 4 of 6.
+  expect_equal(values_of(prep)[c("All", "Pbo", "High")],
+               c(All = 4, Pbo = 2, High = 2))
+  expect_equal(prep$plan[[1L]]$denom, 6)
+  # A distinct count counts subjects either way.
+  bd <- restore_ranked(group = "Group", func = "count_distinct",
+                       id_var = "USUBJID")
+  expect_equal(drawn(bd, d)$plan[[1L]]$denom, 6)
+  # The row tag never reaches the drawn rows.
+  expect_false(SUMMARIZE_ROW_ID %in% names(prep$rows))
+})
+
+test_that("a restored bar's header reads the column's label", {
+  d <- one_list_ae()
+  attr(d$AVAL, "label") <- "Analysis Value"
+  b <- restore_ranked(group = "TERM", func = "mean", value = "AVAL")
+  expect_identical(drawn(b, d)$plan[[1L]]$label, "Mean Analysis Value")
+  per <- data.frame(USUBJID = c("S1", "S2"), BMI = c(21, 25))
+  attr(per$BMI, "label") <- "Body mass index"
+  bi <- restore_ranked(group = "USUBJID", func = "identity", value = "BMI")
+  expect_identical(drawn(bi, per)$plan[[1L]]$label, "Body mass index")
+  # A column without a label keeps its name.
+  bn <- restore_ranked(group = "TERM", func = "max", value = "AVAL")
+  expect_identical(drawn(bn, one_list_ae())$plan[[1L]]$label, "Max AVAL")
+})

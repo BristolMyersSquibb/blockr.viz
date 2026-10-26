@@ -111,7 +111,20 @@ summarize_denom <- function(data, func, id_var) {
         id_var %in% names(data)) {
     return(dplyr::n_distinct(data[[id_var]]))
   }
-  nrow(data)
+  summarize_n_rows(data)
+}
+
+# The input rows a slice holds. Pooled groups (expand_groups()) copy a row
+# into every group it belongs to, so after the expansion the same input row
+# can sit in a slice twice; summarize_prepare() tags each input row first
+# (SUMMARIZE_ROW_ID), and a percent base counts the tags. Without the tag a
+# slice's rows are input rows.
+SUMMARIZE_ROW_ID <- ".blockr_row"
+
+#' @noRd
+summarize_n_rows <- function(data) {
+  id <- data[[SUMMARIZE_ROW_ID]]
+  if (is.null(id)) nrow(data) else length(unique(id))
 }
 
 # A facet level's Big N: the subjects in its rows, or the rows when there is
@@ -123,7 +136,7 @@ summarize_pop_n <- function(data, subject = NULL) {
   if (!is.null(subject) && subject %in% names(data)) {
     return(dplyr::n_distinct(data[[subject]]))
   }
-  nrow(data)
+  summarize_n_rows(data)
 }
 
 #' @noRd
@@ -241,7 +254,13 @@ summarize_prepare <- function(data, summaries = list(), by = NULL,
 
   # One copy of each group's rows for every column the table splits by that
   # carries a group definition (expand_groups()): the rows and the colour
-  # and facet splits of the summaries.
+  # and facet splits of the summaries. Each input row is tagged first, so a
+  # count's percent base counts it once (summarize_n_rows()).
+  pooled <- intersect(c(by, split_cols), names(data))
+  if (any(vapply(pooled, function(col) !is.null(group_def(data[[col]])),
+                 logical(1L)))) {
+    data[[SUMMARIZE_ROW_ID]] <- seq_len(nrow(data))
+  }
   data <- expand_role_groups(data, c(by, split_cols))
 
   lane_prepare_summaries(

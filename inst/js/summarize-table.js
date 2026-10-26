@@ -1655,20 +1655,27 @@
   }
 
   /** The default header R gives an unnamed column
-   *  (lane_summary_auto_name()), for the Name field's placeholder. */
-  function autoName(s) {
+   *  (lane_summary_auto_name()), for the Name field's placeholder: a data
+   *  column reads as its variable label where it has one. `cols` is the
+   *  gear's column list ({ name, label }). */
+  function autoName(s, cols) {
+    var nm = function (c) {
+      if (!c) return "";
+      var hit = (cols || []).filter(function (x) { return x.name === c; })[0];
+      return (hit && hit.label && hit.label !== c) ? hit.label : c;
+    };
     switch (s.type) {
       case "simple": {
         var f = s.func || "count";
         if (f === "count") return "Rows";
-        if (f === "identity") return s.col || "Value";
+        if (f === "identity") return nm(s.col) || "Value";
         var word = { count_distinct: "Distinct", mean: "Mean", median: "Median",
                      sum: "Sum", min: "Min", max: "Max" }[f] || f;
-        return word + " " + (s.col || "");
+        return word + " " + nm(s.col);
       }
-      case "dist": case "field": case "series": return s.col || "";
-      case "spans": return (s.x || "") + " \u2192 " + (s.xend || "");
-      case "pair": return (s.x || "") + " \u2192 " + (s.xend || "");
+      case "dist": case "field": case "series": return nm(s.col);
+      case "spans": return nm(s.x) + " \u2192 " + nm(s.xend);
+      case "pair": return nm(s.x) + " \u2192 " + nm(s.xend);
       default: return "Value";
     }
   }
@@ -2085,7 +2092,7 @@
     // The fields of one column, in the order they are set: what it is
     // called, what it computes, how it is drawn, what splits it.
     function renderColumnFields(body, s) {
-      textCtl(body, "Name", s.name, autoName(s), function (v) {
+      textCtl(body, "Name", s.name, autoName(s, cols), function (v) {
         s.name = v;
         edit();
       });
