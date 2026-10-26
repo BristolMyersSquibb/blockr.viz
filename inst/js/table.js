@@ -1124,6 +1124,10 @@
       /** @type {any} */
       var af = null;
       try { af = JSON.parse(activeJson); } catch (e) { af = null; }
+      // The column half of a restored structured click: mark its column.
+      if (af && structured && af.col_filters && af.col_filters.length) {
+        markCol(af.col_filters);
+      }
       if (af && structured && af.filters && af.filters.length) {
         // Structured rows/headers self-describe via data-dd-keys: the active
         // element is the one whose keys equal the restored filter set.

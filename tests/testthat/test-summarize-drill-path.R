@@ -138,3 +138,31 @@ test_that("a path claim reaches the target as one condition per column", {
   expect_length(cl, 2L)
   expect_identical(vapply(cl, `[[`, "", "name"), c("SEX", "ARM"))
 })
+
+test_that("a facet column and a colour split say what a cell click adds", {
+  d <- data.frame(arm = c("A", "A", "B", "B"), sex = c("F", "M", "F", "F"),
+                  soc = c("x", "x", "y", "y"))
+  prep <- summarize_prepare(
+    d, by = "soc",
+    summaries = list(list(type = "simple", func = "count", show = "bar",
+                          facet = "arm", name = "n"))
+  )
+  m <- summarize_cells(prep, drill = "auto")
+  expect_identical(lapply(m$cols, `[[`, "fkey"),
+                   list(list(column = "arm", value = "A"),
+                        list(column = "arm", value = "B")))
+  prep <- summarize_prepare(
+    d, by = "soc",
+    summaries = list(list(type = "simple", func = "count", show = "bar",
+                          color = "sex", name = "n"))
+  )
+  m <- summarize_cells(prep, drill = "auto")
+  expect_identical(m$cols[[1L]]$scol, "sex")
+  # A stored row-and-cell claim lights the row and hands the cell part on.
+  m <- summarize_cells(prep, drill = "auto",
+                       active = list(col = c("soc", "sex"), vals = c("x", "M")))
+  expect_identical(m$on, c(TRUE, FALSE))
+  expect_identical(m$on_cell, list(sex = "M"))
+  ex <- summarize_drill_expr(summarize_drill_filters(c("soc", "sex"), c("x", "M")))
+  expect_identical(nrow(eval(ex, list(data = d))), 1L)
+})

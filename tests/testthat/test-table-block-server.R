@@ -235,9 +235,9 @@ test_that("drill = 'source' resolves the click to the source records", {
   blk <- records_engine(drill = "source")
 
   testServer(blk, args = list(data = reactive(wide)), {
-    # Undrilled: nothing resolves to a single value, so no cohort. NOT the
-    # whole source -- a silent "everything" is the dangerous default.
-    expect_equal(nrow(eval_block_expr(session$returned$expr(), wide)), 0L)
+    # Undrilled: every source row, as below a chart or a groups table.
+    expect_equal(nrow(eval_block_expr(session$returned$expr(), wide)),
+                 nrow(adae))
 
     session$setInputs(
       drilldown_table_block_action = list(

@@ -324,6 +324,8 @@ table_nest <- function(data, by, rowname = NULL, missing = "drop",
   res <- as.data.frame(out, stringsAsFactors = FALSE)
   for (cl in keep) res[[cl]] <- data[[cl]]
   rownames(res) <- NULL
+  # The input column behind `.label`, for a row drill on it.
+  attr(res, "nest_rowname") <- rowname
   res
 }
 

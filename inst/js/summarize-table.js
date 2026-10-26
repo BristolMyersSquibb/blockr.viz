@@ -404,6 +404,78 @@
     };
   }
 
+  // What a click on a cell adds to its row's claim: a facet column's level
+  // (an arm, a heatmap tile's term), and the level of the colour segment hit.
+  // Nothing for the row label, a plain column or a card. The payload's
+  // column carries both (R/summarize-push.R, `fkey` and `scol`).
+  function cellClaim(root, tr, target) {
+    var td = target && target.closest ? target.closest("td") : null;
+    if (!td || td.parentElement !== tr || td.classList.contains("blockr-stub")) {
+      return [];
+    }
+    var pay = root._summarizePayload;
+    var c = pay && pay.cols ? pay.cols[td.cellIndex - 1] : null;
+    if (!c) return [];
+    // An empty cell (no tile, a zero bar) has no rows behind it: the row.
+    var v = td.getAttribute("data-v");
+    if (v === "" || v === "0") return [];
+    var out = [];
+    if (c.fkey) out.push({ col: c.fkey.column, val: String(c.fkey.value) });
+    if (c.scol && c.names) {
+      var seg = target.closest(".blockr-summarize-fill[data-seg]");
+      var j = seg ? parseInt(seg.getAttribute("data-seg") || "", 10) : NaN;
+      if (!isNaN(j) && c.names[j] != null) {
+        out.push({ col: c.scol, val: String(c.names[j]) });
+      }
+    }
+    return out;
+  }
+
+  // One string per cell claim, whatever order its parts came in: the selected
+  // cell is the one whose claim equals the stored one.
+  function cellKey(parts) {
+    return parts.map(function (p) { return p.col + "\u0001" + p.val; })
+      .sort().join("\u0002");
+  }
+
+  function clearCells(root) {
+    root.querySelectorAll(".is-on-cell").forEach(function (n) {
+      n.classList.remove("is-on-cell");
+    });
+    root.querySelectorAll("[data-on-cell]").forEach(function (n) {
+      n.removeAttribute("data-on-cell");
+    });
+  }
+
+  // A restored or re-rendered selection with a cell part (`on_cell`, column
+  // -> value): mark the cell of each lit row whose column claims exactly it.
+  function markCells(root, p) {
+    var want = p && p.on_cell;
+    if (!want || !p.cols) return;
+    var names = Object.keys(want);
+    if (!names.length) return;
+    var key = cellKey(names.map(function (n) {
+      return { col: n, val: String(want[n]) };
+    }));
+    rows(root).forEach(function (tr) {
+      if (!tr.classList.contains("is-on")) return;
+      var tds = tr.children;
+      for (var k = 0; k < p.cols.length; k++) {
+        var c = p.cols[k];
+        var parts = [];
+        if (c.fkey) parts.push({ col: c.fkey.column, val: String(c.fkey.value) });
+        if (c.scol && want[c.scol] != null) {
+          parts.push({ col: c.scol, val: String(want[c.scol]) });
+        }
+        if (parts.length && cellKey(parts) === key && tds[k + 1]) {
+          tds[k + 1].classList.add("is-on-cell");
+          tr.setAttribute("data-on-cell", key);
+          return;
+        }
+      }
+    });
+  }
+
   // "AEBODSYS = X, AEDECOD = Y": the footer's and the receipt's words.
   function claimPhrase(c) {
     return c.cols.map(function (col, i) {
@@ -436,6 +508,7 @@
     }
     root._summarizeClear = function () {
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+      clearCells(root);
       send(null);
       select(null);
     };
@@ -449,6 +522,13 @@
       var col = root.getAttribute("data-summarize-drill");
       if (!col) return;
       var claim = rowClaim(root, tr, col);
+      // A cell adds its column: "AEDECOD = Headache, ARM = Low dose".
+      var cell = cellClaim(root, tr, e.target);
+      var ck = cellKey(cell);
+      claim = {
+        cols: claim.cols.concat(cell.map(function (p) { return p.col; })),
+        vals: claim.vals.concat(cell.map(function (p) { return p.val; }))
+      };
       // Transient: no toggle. A second click on the same row means "send it
       // again", never "un-drill" -- that is the target's job.
       if (summarizeTransient(root)) {
@@ -465,13 +545,22 @@
         }, SUMMARIZE_RECEIPT_HOLD_MS + SUMMARIZE_RECEIPT_FADE_MS + 200);
         return;
       }
-      var was = tr.classList.contains("is-on");
+      // A second click on the same row and cell clears; a click on another
+      // cell of the selected row replaces the claim.
+      var was = tr.classList.contains("is-on") &&
+        (tr.getAttribute("data-on-cell") || "") === ck;
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+      clearCells(root);
       if (was) {
         send(null);
         select(null);
       } else {
         tr.classList.add("is-on");
+        if (ck) {
+          tr.setAttribute("data-on-cell", ck);
+          var td = e.target.closest("td");
+          if (td) td.classList.add("is-on-cell");
+        }
         send(claim);
         select(claimPhrase(claim));
       }
@@ -595,7 +684,7 @@
       // A stacked segment's own number, inside it (R: summarize_cells()).
       var lab = (!grouped && c.slab) ? c.slab[j][i] : "";
       var body = '<div class="blockr-summarize-fill' + (lab ? " has-lab" : "") +
-        '" style="width:' +
+        '" data-seg="' + j + '" style="width:' +
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
         '" data-summarize-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '">' + (lab ? '<span class="blockr-summarize-seglab w' + lab.length +
@@ -1050,6 +1139,7 @@
       wrap.innerHTML = p.head;
       var tb = wrap.querySelector("tbody");
       if (tb) tb.innerHTML = assembleBody(p);
+      markCells(root, p);
     }
     // Fresh rows, fresh server order: the next header click starts at click 1.
     root._summarizeSort = { key: null, dir: 0 };
@@ -2701,6 +2791,7 @@
       onMults: function () {},
       onClearFilter: function () {
         rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+        clearCells(root);
         sendConfig(elemId, "filter_values", null);
       },
       ensureDefaults: function () {},
