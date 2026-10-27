@@ -200,3 +200,16 @@ test('the gear offers every column of the data, not only the shipped ones', () =
   assert.ok(names.includes('USUBJID') && names.includes('AVAL'), names.join(' '));
   c.close();
 });
+
+test('a histogram stands its bins on x', () => {
+  const { F } = require('../cases');
+  const bins = F.data.ADY.map((v) => (v == null ? null : (v < 30 ? '0-30' : '30-90')));
+  const cols = F.columns.concat([{ name: 'ADY_bin', type: 'categorical', n_unique: 2,
+                                   levels: ['0-30', '30-90'] }]);
+  const c = D.open({ type: 'histogram', x: 'ADY' }, { columns: cols,
+                                                       data: { ...F.data, ADY_bin: bins } });
+  const o = c.chart().getOption();
+  assert.strictEqual(o.xAxis[0].type, 'category');
+  assert.deepStrictEqual(D.plain(o.xAxis[0].data), ['0-30', '30-90']);
+  c.close();
+});

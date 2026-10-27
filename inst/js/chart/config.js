@@ -66,7 +66,7 @@
     const type = c.type || 'bar';
     if (type === 'histogram') {
       return { group: set(c.x) ? c.x + '_bin' : null, value: '.count', func: 'count',
-               cat_key: 'x', val_key: null };
+               orientation: 'vertical', cat_key: 'x', val_key: null };
     }
     const fixed = FIXED.includes(type);
     const lie = fixed ? 'vertical' : (c.orientation || d.orientation || inferLie(c, columns));
