@@ -10,6 +10,7 @@
     system.file("css", package = pkgname)
   )
 
+  viz_input_handlers(lapply(names(VIZ_BLOCK_SPECS), viz_block_spec))
   register_viz_blocks()
   echart_theme_blockr_viz()
   register_drilldown_ai_effect()

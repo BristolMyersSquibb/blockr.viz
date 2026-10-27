@@ -50,7 +50,7 @@ test_that("old names in code are translated, with a warning", {
   expect_equal(st$missing, "drop")
   expect_equal(st$drill_target, "flt")
   expect_equal(st$drill_table, "adsl")
-  expect_equal(st$pct_of, "category")
+  expect_equal(st$percent_of, "category")
   expect_equal(st$y_lines, 2)
   expect_equal(st$line_width, 2)
   expect_equal(st$point_size, 0.5)
@@ -160,36 +160,15 @@ test_that("the orientation is inferred from x and y", {
   expect_equal(inf("pointrange", NULL, NULL), "vertical")
 })
 
-test_that("the gear's roles become public x and y", {
-  num <- function(col) col %in% c("sales")
-  prev <- list(x = NULL, y = "region", orientation = NULL)
-  pub <- function(...) chart_roles_public(..., prev = prev, is_num = num)
 
-  # a horizontal count: the category on y
-  expect_equal(pub("bar", "region", ".count", "", "", "horizontal", "count"),
-               list(x = NULL, y = "region", orientation = NULL))
-  # swapped to vertical
-  expect_equal(pub("bar", "region", ".count", "", "", "vertical", "count"),
-               list(x = "region", y = NULL, orientation = NULL))
-  # a sum, horizontal: inferred, so no orientation is stored
-  expect_equal(pub("bar", "region", "sales", "", "", "horizontal", "sum"),
-               list(x = "sales", y = "region", orientation = NULL))
-  # pie: x is the slice
-  expect_equal(pub("pie", "region", "sales", "", "", "horizontal", "sum"),
-               list(x = "region", y = "sales", orientation = NULL))
-  # a switch to a line whose roles the gear left empty keeps the columns
-  expect_equal(pub("line", "region", ".count", "", "", "horizontal", "count"),
-               list(x = NULL, y = "region", orientation = NULL))
-})
-
-test_that("title slots take the public names, and the old ones still work", {
-  alias <- chart_slot_alias("bar", list(orientation = "horizontal"))
-  expect_equal(
-    chart_template_internal("{@type}: {label(@y)} by {@x in a, b}", alias),
-    "{@chart_type}: {label(@group)} by {@value in a, b}"
-  )
-  expect_equal(chart_template_internal("{@group}", alias), "{@group}")
-  expect_equal(chart_template_internal("{@x_lines}", alias), "{@x_lines}")
-  alias <- chart_slot_alias("scatter", list())
-  expect_equal(chart_template_internal("{label(@x)}", alias), "{label(@x)}")
+test_that("title slots take the public names, and a saved old one is renamed", {
+  blk <- suppressWarnings(blockr.core::blockr_deser(
+    structure(list(), class = "chart_block"),
+    list(payload = list(chart_type = "bar", group = "region", value = ".count",
+                        subtitle = "{@chart_type}: {label(@group)}"),
+         constructor = list(version = "0.2.9"))
+  ))
+  st <- blockr.core:::initial_block_state(blk)
+  expect_identical(st$subtitle, "{@type}: {label(@y)}")
+  expect_identical(st$y, "region")
 })

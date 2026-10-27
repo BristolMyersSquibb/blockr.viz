@@ -1648,3 +1648,13 @@
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }
+
+/* Empty state */
+.vd-empty-state {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 120px; padding: 24px;
+}
+.vd-empty-text {
+  font-size: 13px; color: var(--blockr-color-text-muted, #9ca3af);
+  text-align: center;
+}

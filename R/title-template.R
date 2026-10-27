@@ -329,19 +329,6 @@ resolve_title_token <- function(token, data, args = list()) {
   plain(paste(vals, collapse = ", "))
 }
 
-# The printed value of a block argument. Everything the roles use for "unset"
-# collapses to "", which is what makes an optional segment disappear: NULL,
-# "", NA, and the literal "(none)" sentinel the config engine writes.
-# A numeric list the way a sentence prints it and the gear takes it back:
-# "40, 70". NULL when empty, so a clause naming it drops.
-num_list_text <- function(v) {
-  if (!length(v)) {
-    return(NULL)
-  }
-  paste(vapply(v, format, character(1L), scientific = FALSE, trim = TRUE),
-        collapse = ", ")
-}
-
 # A slot may name its choices: `{@func in mean, median}`,
 # `{label(@value in AVAL, CHG, PCHG)}`. The list only narrows what the word's
 # menu offers; everything else about the token reads the bare name.
@@ -470,7 +457,6 @@ input_display_attrs <- function(d) {
     caption  = one("caption")
   )
 }
-
 
 # Every argument the block's own text speaks for: the words it makes live, and
 # the ones it only offers because their clause dropped. A control elsewhere on

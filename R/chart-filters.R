@@ -55,35 +55,6 @@ chart_legacy_filters <- function(column, values) {
   stats::setNames(list(vals), col)
 }
 
-# The filter a categorical message carries: `filters`, else the older
-# `column` / `values`. NULL clears.
-chart_msg_filters <- function(msg) {
-  if (!is.null(msg$filters)) {
-    return(chart_filters_state(msg$filters))
-  }
-  chart_legacy_filters(msg$column, msg$values)
-}
-
-# The filter as the chart's config carries it to the browser: each column a
-# JSON array, NA as null.
-chart_filters_json <- function(filters) {
-  if (!length(filters)) {
-    return(NULL)
-  }
-  lapply(filters, as.list)
-}
-
-# The filter in the older one-column form the chart config also carries
-# (filter_column + filter_values). A filter that form cannot hold (several
-# columns, a missing value, a range) gives none.
-chart_filters_one_column <- function(filters, type) {
-  if (!identical(type, "categorical") || length(filters) != 1L ||
-        anyNA(filters[[1L]])) {
-    return(list(column = NULL, values = NULL))
-  }
-  list(column = names(filters), values = filters[[1L]])
-}
-
 # One condition per filtered column, for dplyr::filter(), which ANDs them.
 # `members` maps a column to the members of the clicked groups of an overlap
 # definition (dd_group_filters_members()). A missing value matches NA and the

@@ -411,7 +411,9 @@ record_scenarios <- function() {
     ),
 
     # --- constructor ------------------------------------------------------
-    ctor_normalize = list(args = list(
+    # Saved-board shapes. The reference healed them in the constructor; the
+    # rewrite heals them on restore (`restore = TRUE`).
+    ctor_normalize = list(restore = TRUE, args = list(
       type = list("bar"), x = list(), y = "cat", color = list(),
       identity_line = "on", value_labels = "off", box_points = "all",
       facet_cols = "junk", bins = "0", format = 2, unit = NA,
@@ -547,6 +549,7 @@ record_run <- function(sc, target = record_target()) {
   withr::local_options(list(
     blockr.viz.facet_cols = NULL,
     blockr.viz.default_caption = NULL,
+    blockr.viz.browser_script = TRUE,
     useFancyQuotes = FALSE
   ))
   src <- new.env(parent = emptyenv())
@@ -560,7 +563,7 @@ record_run <- function(sc, target = record_target()) {
   out$warnings <- character()
   out$steps <- list()
   blk <- withCallingHandlers(
-    target$ctor(sc$args),
+    target$ctor(sc$args, sc),
     warning = function(w) {
       out$warnings <- c(out$warnings, conditionMessage(w))
       invokeRestart("muffleWarning")
@@ -612,7 +615,7 @@ record_run <- function(sc, target = record_target()) {
           }),
           ctrl = ctrl$log,
           download = dl,
-          browser = target$payload(msgs),
+          browser = target$payload(msgs, expr, cx),
           wire = msgs
         )
       }
@@ -637,9 +640,9 @@ record_run <- function(sc, target = record_target()) {
           src$d <- record_data(s$name)
           tick(i)
         } else if (identical(s$kind, "capture")) {
-          expr$setInputs(drilldown_block_capture = list(
+          do.call(expr$setInputs, target$capture(list(
             png = record_capture_png(), width = 640, height = 400
-          ))
+          )))
         } else if (identical(s$kind, "download")) {
           session$flushReact()
           dl <- record_download(expr$output, s$id)

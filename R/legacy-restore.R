@@ -38,7 +38,7 @@ legacy_restore <- function(block, state, version = NULL) {
   state <- as.list(state)
   state <- switch(
     block,
-    chart = chart_legacy_args(state),
+    chart = legacy_chart_selection(chart_legacy_args(state)),
     table = legacy_table_before_030(state)
   )
   state <- legacy_rename(block, state)
