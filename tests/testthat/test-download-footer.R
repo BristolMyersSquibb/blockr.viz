@@ -95,7 +95,6 @@ test_that("blocks with downloads put the option on the board", {
   }
   expect_true("download_footer" %in% ids(new_chart_block()))
   expect_true("download_footer" %in% ids(new_summarize_table_block()))
-  expect_true("download_footer" %in% suppressWarnings(ids(new_heatmap_block())))
   expect_true("download_footer" %in% ids(new_table_block()))
 })
 
@@ -127,15 +126,15 @@ test_that("the table block's downloads carry the footer in every format", {
     )
     session$flushReact()
 
-    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
     expect_match(h, "Exported from AQ-001", fixed = TRUE)
 
-    x <- openxlsx::read.xlsx(output$dl_xlsx, colNames = FALSE,
+    x <- openxlsx::read.xlsx(output[["records-dl_xlsx"]], colNames = FALSE,
                              skipEmptyRows = FALSE)
     expect_true("Exported from AQ-001" %in% x[[1L]])
 
     td <- withr::local_tempdir()
-    utils::unzip(output$dl_pptx, exdir = td)
+    utils::unzip(output[["records-dl_pptx"]], exdir = td)
     sl <- paste(unlist(lapply(
       list.files(file.path(td, "ppt/slides"), "xml$", full.names = TRUE),
       readLines, warn = FALSE

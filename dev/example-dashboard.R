@@ -1,7 +1,7 @@
 # blockr.viz — everything at once.
 #
-# A union of the three per-renderer tours (example-chart / -table / -tile):
-# every chart type, every table mode, every tile style. Each view holds about
+# A union of the per-renderer tours (example-chart / -table): every chart
+# type, every table mode, the table's cards look. Each view holds about
 # three panels, and each panel is a TAB STRIP — click through the variants in
 # place instead of squinting at a dense grid. Switch views with the tabs
 # top-right. No narrative — just the capabilities.
@@ -9,8 +9,8 @@
 # Views (panel = tab strip)
 #   Charts        [bar|pie|treemap] [scatter+lm|line|boxplot] [radar|facet|waterfall]
 #   Tables        [flat|Table 1|gt publication] [crosstab heatmap|correlation]
-#   Tiles         [delta|fill|pill] [matrix] [compact|percent|unit]
-#   Interactions  drill: chart->table and tile->table (shown side by side)
+#   Cards         [by arm] [one row]
+#   Interactions  drill: chart->table and cards->table (shown side by side)
 #
 # Run from the workspace root (inside or outside the dev container):
 #   Rscript blockr.viz/dev/example-dashboard.R
@@ -42,7 +42,6 @@ num_vars <- c("AGE", "BMIBL", "WEIGHTBL", "HEIGHTBL")
 cmat <- round(stats::cor(adsl[num_vars], use = "pairwise.complete.obs"), 2)
 cor_df <- data.frame(Variable = rownames(cmat), cmat,
                      check.names = FALSE, row.names = NULL)
-d <- tile_demo_data()           # $scorecard, $regions
 
 board <- new_dock_board(
   blocks = c(
@@ -52,8 +51,6 @@ board <- new_dock_board(
     bridge_d = new_static_block(bridge, block_name = "Revenue bridge"),
     orange_d = new_static_block(orange, block_name = "Orange trees"),
     cor_d    = new_static_block(cor_df, block_name = "Correlation matrix"),
-    sc       = new_static_block(d$scorecard, block_name = "Scorecard"),
-    rg       = new_static_block(d$regions, block_name = "Regions"),
 
     # --- CHARTS (every type) -----------------------------------------------
     c_bar     = new_chart_block(chart_type = "bar", group = "ARM", color = "SEX",
@@ -115,27 +112,24 @@ board <- new_dock_board(
                                    subtitle = "Safety population",
                                    block_name = "Publication (gt)"),
 
-    # --- TILES (every style) -----------------------------------------------
-    ti_delta   = new_tile_block(value = "value", measure = "metric",
-                                secondary = "delta", style = "delta",
-                                good_when = "up", format = "compact",
-                                block_name = "Delta cards"),
-    ti_fill    = new_tile_block(value = "value", measure = "metric",
-                                secondary = "progress", style = "fill",
-                                format = "compact", block_name = "Progress fill"),
-    ti_pill    = new_tile_block(value = "value", measure = "metric",
-                                secondary = "status", style = "pill",
-                                format = "compact", block_name = "Status pills"),
-    ti_matrix  = new_tile_block(value = c("revenue", "conversion", "orders"),
-                                by = "region", layout = "table",
-                                block_name = "Matrix (measures x region)"),
-    ti_compact = new_tile_block(value = "value", measure = "metric",
-                                format = "compact", block_name = "Compact format"),
-    ti_percent = new_tile_block(value = "progress", measure = "metric",
-                                format = "percent", block_name = "Percent format"),
-    ti_unit    = new_tile_block(value = "orders", by = "region",
-                                format = "number", unit = "orders",
-                                block_name = "Number + unit"),
+    # --- CARDS (the table block's cards look) ----------------------------
+    k_arm      = new_table_block(
+      layout = "groups", by = "ARM", look = "cards",
+      summaries = list(
+        list(type = "simple", func = "count", show = "bar", name = "Subjects"),
+        list(type = "dist", col = "AGE", style = "box", name = "Age"),
+        list(type = "simple", func = "count", color = "SEX", show = "bar",
+             name = "Sex")
+      ),
+      block_name = "Cards by arm"),
+    k_strip    = new_table_block(
+      layout = "groups", look = "cards",
+      summaries = list(
+        list(type = "simple", func = "count", color = "ARM", show = "bar",
+             name = "Subjects"),
+        list(type = "dist", col = "BMIBL", style = "box", name = "BMI")
+      ),
+      block_name = "One row of cards"),
 
     # --- INTERACTIONS (drill) ----------------------------------------------
     ix_chart   = new_chart_block(chart_type = "bar", group = "AEBODSYS",
@@ -146,9 +140,12 @@ board <- new_dock_board(
     ix_tbl     = new_table_block(rowname = "USUBJID",
                                  values = c("AEDECOD", "AEBODSYS", "TRTA"),
                                  block_name = "Adverse events (drilled)"),
-    ix_tile    = new_tile_block(value = "orders", by = "region", unit = "orders",
-                                drill = TRUE, block_name = "Orders by region (drill)"),
-    ix_tiletbl = new_table_block(block_name = "Region (drilled)")
+    ix_cards   = new_table_block(
+      layout = "groups", by = "RACE", look = "cards", drill = "RACE",
+      summaries = list(list(type = "simple", func = "count", show = "bar",
+                            name = "Subjects")),
+      block_name = "Subjects by race (drill)"),
+    ix_cardstbl = new_table_block(block_name = "Race (drilled)")
   ),
   links = links(
     from = c(
@@ -156,17 +153,16 @@ board <- new_dock_board(
       "adsl_d", "bridge_d",
       "adsl_d", "adsl_d", "t_summ", "t_summ", "adsl_d", "xt_summ", "xt_wide",
       "cor_d",
-      "sc", "sc", "sc", "rg", "sc", "sc", "rg",
-      "adae_d", "ix_chart", "rg", "ix_tile"
+      "adsl_d", "adsl_d",
+      "adae_d", "ix_chart", "adsl_d", "ix_cards"
     ),
     to = c(
       "c_bar", "c_scatter", "c_line", "c_pie", "c_treemap", "c_radar", "c_box",
       "c_facet", "c_wf",
       "t_flat", "t_summ", "t_summtbl", "t_gt", "xt_summ", "xt_wide", "t_xt",
       "t_cor",
-      "ti_delta", "ti_fill", "ti_pill", "ti_matrix", "ti_compact", "ti_percent",
-      "ti_unit",
-      "ix_chart", "ix_tbl", "ix_tile", "ix_tiletbl"
+      "k_arm", "k_strip",
+      "ix_chart", "ix_tbl", "ix_cards", "ix_cardstbl"
     )
   ),
   # ~3 panels per view; each panel is a TABBED leaf (panels()) so a user clicks
@@ -181,16 +177,15 @@ board <- new_dock_board(
       panels("t_flat", "t_summtbl", "t_gt"),
       panels("t_xt", "t_cor"),
       orientation = "horizontal", name = "Tables (+ gt)"),
-    tiles = dock_layout(
-      panels("ti_delta", "ti_fill", "ti_pill"),
-      panels("ti_matrix"),
-      panels("ti_compact", "ti_percent", "ti_unit"),
-      orientation = "horizontal", name = "Tiles"),
+    cards = dock_layout(
+      panels("k_arm"),
+      panels("k_strip"),
+      orientation = "horizontal", name = "Cards"),
     # Drill needs the chart and its table visible together, so keep these as
     # side-by-side pairs rather than tabs.
     interactions = dock_layout(
       group("ix_chart", "ix_tbl"),
-      group("ix_tile", "ix_tiletbl"),
+      group("ix_cards", "ix_cardstbl"),
       orientation = "vertical", name = "Interactions (drill)")
   ),
   options = dock_board_options(),

@@ -566,12 +566,25 @@ test_that("a table only splits sideways once the headers are unreadable", {
   on.exit(unlink(f), add = TRUE)
   expect_no_message(write_exhibit_pptx(ae, f, title = "Adverse events"))
 
-  # The tolerance is what decides it: hold the headers to their full words and
-  # the same table comes apart.
+  # The tolerance is what decides it once the headers break inside a word.
+  # The table above never gets there: its cells wrap between words and every
+  # header keeps its longest word (3318756). Short counts under long header
+  # words do break the headers while the cells still fit. By default that
+  # table stays whole; hold the headers to their full words and it comes
+  # apart.
+  hosp <- ae[".label"]
+  hosp$.indent <- 0L
+  for (a in LETTERS[1:7]) {
+    hosp[[sprintf("Arm %s (N=143)||Participants", a)]] <-
+      structure(c("143", "88", "12"), label = "Participants")
+    hosp[[sprintf("Arm %s (N=143)||Hospitalisations", a)]] <-
+      structure(c("21", "10", "1"), label = "Hospitalisations")
+  }
   g <- tempfile(fileext = ".pptx")
   on.exit(unlink(g), add = TRUE)
+  expect_no_message(write_exhibit_pptx(hosp, g, title = "Adverse events"))
   withr::local_options(blockr.viz.ft_header_break_tol = 1)
-  expect_message(write_exhibit_pptx(ae, g, title = "Adverse events"),
+  expect_message(write_exhibit_pptx(hosp, g, title = "Adverse events"),
                  "dealt over")
 })
 

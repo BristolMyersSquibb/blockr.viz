@@ -12,8 +12,6 @@ drift_blocks <- function() {
   list(
     chart         = list(args = chart_arguments,         ctor = new_chart_block),
     table         = list(args = table_arguments,         ctor = new_table_block),
-    tile          = list(args = tile_arguments,          ctor = new_tile_block),
-    summary_table = list(args = summary_table_arguments, ctor = new_summary_table_block),
     gt_table      = list(args = gt_table_arguments,      ctor = new_gt_table_block)
   )
 }
@@ -37,30 +35,15 @@ registry_allowlist <- list(
     "selection"
   ),
   table = c(
-    # Runtime filter transport: written by clicks, round-trips through
-    # save/restore only -- never AI-set at creation. (filter_spread_col /
-    # filter_spread_from are DEFUNCT restore-only formals: no longer
-    # external_ctrl, so not listed here.)
-    "filter_column", "filter_values",
-    "filter_group_cols", "filter_group_vals",
     # Display-only gear toggles / sizing, deliberately off the AI surface
     # (`download` included: whether a table can be taken away is a
     # dashboard-authoring choice, not something an intent describes).
-    # (excel_download / html_download / pptx_download are LEGACY restore-only
-    # formals folding into `download`: no longer external_ctrl, so like the
-    # filter_spread_* pair above they are not listed here.)
     "max_height", "sortable", "collapsible", "search", "download",
-    "rotate_titles"
+    # The prepare script and its control values, as on the chart: a general
+    # escape hatch the assistant should not reach for where a summary would
+    # do.
+    "script", "script_values"
   ),
-  tile = c(
-    # Runtime filter transport (see the table's filter_* above).
-    "filter_column", "filter_values",
-    # LEGACY, ctor-only for saved-board restore: `overline` lost its gear
-    # control (duplicated the Name slot); `good_when` is ignored (polarity
-    # is forced to "up"). Neither may be advertised to the AI.
-    "overline", "good_when"
-  ),
-  summary_table = character(),
   gt_table = character()
 )
 

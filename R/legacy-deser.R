@@ -46,15 +46,17 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 
 #' Legacy deserialization for the tile block
 #'
-#' Restores boards saved before the tile gained in-block aggregation, and
-#' before the drill-filter state took the shared transport names. The
-#' grouping column was `by` (now `group`, the dplyr::group_by column shared with
-#' the table), and per-measure display overrides rode on `measures` (dropped --
-#' multi-measure tiles are now homogeneous). The click-filter state was
-#' `filter_col` / `filter_value` (now `filter_column` / `filter_values`, the
-#' names the chart and table share; the old scalar value coerces to the
-#' plural list shape). Rename `by` -> `group`, drop `measures`, rename the
-#' filter fields; current payloads pass straight through.
+#' The tile block is gone: a tile is a table block in the cards look
+#' (`new_table_block(look = "cards")`). A board saved with a tile restores as
+#' a table block. A tile that aggregated in place (`summaries`, with or
+#' without a `group`) becomes the groups layout in the cards look, one card
+#' per summary and one row of cards per group (one row without a group); its
+#' drill and click state carry over. Any other tile read a precomputed frame:
+#' a wide one (several `value` columns, no `name`) becomes the records layout
+#' in the cards look, one card per column; the long tile frame (`name` /
+#' `value` / `secondary`) becomes a plain records table. Settings the table
+#' has no counterpart for (`format`, `unit`, `secondary`, `style`, ...) are
+#' dropped with a warning. The board saves as a table block from then on.
 #'
 #' Drop this method when backwards compatibility is no longer needed.
 #'
@@ -62,42 +64,73 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 #' @keywords internal
 #' @export
 blockr_deser.tile_block <- function(x, data, ...) {
-  stopifnot(all(c("constructor", "payload") %in% names(data)))
+  stopifnot("payload" %in% names(data))
+  p <- data[["payload"]]
+  # The tile's own arguments; whatever else rides on the payload is a block
+  # attribute (block_name, ...) and passes through.
+  own <- c("value", "group", "by", "name", "summaries", "color", "layout",
+           "overline", "caption", "secondary", "style", "good_when",
+           "format", "unit", "drill", "filter_column", "filter_values",
+           "filter_col", "filter_value", "ctrl_target", "ctrl_table",
+           "measures", "showcase", "state")
+  attrs <- p[setdiff(names(p), own)]
+  value <- chr_vec_state(p[["value"]]) %||% character()
+  group <- chr_vec_state(p[["group"]] %||% p[["by"]]) %||% character()
+  group <- group[nzchar(group)]
+  name <- chr_state(p[["name"]])
+  summaries <- p[["summaries"]]
+  filter_column <- chr_vec_state(p[["filter_column"]] %||% p[["filter_col"]])
+  filter_values <- null_state(p[["filter_values"]] %||% p[["filter_value"]])
+  drill_target <- chr_state(p[["ctrl_target"]]) %||% ""
+  drill_table <- chr_state(p[["ctrl_table"]]) %||% ""
+  label <- chr_state(attrs[["block_name"]]) %||% "a tile"
 
-  payload <- data[["payload"]]
-  if ("by" %in% names(payload) && !("group" %in% names(payload))) {
-    payload[["group"]] <- payload[["by"]]
+  dropped <- function(nm) {
+    set <- vapply(nm, function(k) {
+      v <- p[[k]]
+      !is.null(v) && length(v) && !identical(v, "") &&
+        !identical(v, "plain") && !identical(v, "number") &&
+        !identical(v, "up") && !identical(v, "cards")
+    }, logical(1L))
+    nm[set]
   }
-  payload[["by"]] <- NULL
-  payload[["measures"]] <- NULL
-  # Pre-rename filter transport: filter_col / filter_value -> the shared
-  # filter_column / filter_values (the old filter_value was scalar; coerce to
-  # the plural list shape). Mapping here keeps restores warning-free -- the
-  # ctor's own alias path warns, this one must not.
-  if (!is.null(payload[["filter_col"]]) &&
-        is.null(payload[["filter_column"]])) {
-    payload[["filter_column"]] <- payload[["filter_col"]]
-  }
-  if (!is.null(payload[["filter_value"]]) &&
-        is.null(payload[["filter_values"]])) {
-    payload[["filter_values"]] <- as.list(payload[["filter_value"]])
-  }
-  payload[["filter_col"]] <- NULL
-  payload[["filter_value"]] <- NULL
 
-  ctor <- blockr.core::blockr_deser(data[["constructor"]])
-  args <- c(
-    payload,
-    list(
-      ctor = blockr.core::coal(
-        blockr.core::ctor_name(ctor),
-        blockr.core::ctor_fun(ctor)
-      ),
-      ctor_pkg = blockr.core::ctor_pkg(ctor)
+  if (table_is_agg_summaries(summaries)) {
+    args <- list(
+      layout = "groups", by = group, look = "cards",
+      summaries = table_agg_to_summaries(summaries),
+      drill = if (isTRUE(p[["drill"]]) && length(group)) group[[1L]],
+      drill_target = drill_target, drill_table = drill_table,
+      selection = if (length(filter_column) && length(filter_values)) {
+        list(column = filter_column, values = filter_values)
+      }
     )
+    lost <- dropped(c("format", "unit", "secondary", "caption", "overline"))
+  } else if (is.null(name) && length(value)) {
+    args <- list(layout = "records", look = "cards", columns = value,
+                 rowname = if (length(group)) group[[1L]])
+    lost <- dropped(c("format", "unit", "secondary", "style", "caption",
+                      "overline", "drill"))
+  } else {
+    args <- list(
+      layout = "records", rowname = name %||% (if (length(group)) group[[1L]]),
+      columns = unique(c(group, value, chr_state(p[["secondary"]])))
+    )
+    lost <- c("the long tile frame", dropped(c("format", "unit", "style",
+                                               "caption", "overline",
+                                               "drill")))
+  }
+  if (length(lost)) {
+    warning(
+      "The tile block is gone: ", label, " restores as a table block. ",
+      "Not carried over: ", paste(lost, collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
+  do.call(
+    new_table_block,
+    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
-
-  do.call(blockr.core::ctor_fun(ctor), args)
 }
 
 #' Legacy deserialization for the chart block

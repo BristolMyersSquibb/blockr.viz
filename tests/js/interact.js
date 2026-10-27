@@ -364,16 +364,20 @@ function row(r, env) {
 }
 
 /**
- * The gear as a reader sees it: the type tiles, then each section with its
- * title, fold state and rows.
+ * The gear as a reader sees it: the type tiles, the groups (the current one
+ * starred), then each section with its group, title, fold state and rows.
+ * Sections of the groups not shown are listed too.
  */
 function gearOutline(block, env) {
   const pop = block.popoverEl;
   const tiles = Array.from(pop.querySelectorAll('.dd-type-tile'), (b) =>
     (b.classList.contains('dd-type-active') ? '*' : '') + txt(b));
-  const sections = Array.from(pop.querySelectorAll(':scope > .dd-section'), (sec) => {
+  const groups = Array.from(pop.querySelectorAll('.blockr-tray-nav__tab'), (b) =>
+    (b.classList.contains('is-current') ? '*' : '') + txt(b));
+  const sections = Array.from(pop.querySelectorAll('.dd-section'), (sec) => {
     const t = sec.querySelector(':scope > .dd-section-title');
     const s = {};
+    if (sec.dataset.trayGroup) s.group = sec.dataset.trayGroup;
     if (t) {
       const sum = t.querySelector('.dd-fold-sum');
       const label = Array.from(t.querySelectorAll(':scope > span'))
@@ -389,7 +393,7 @@ function gearOutline(block, env) {
     s.rows = Array.from(sec.children).filter((c) => c !== t).map((r) => row(r, env));
     return s;
   });
-  return { open: pop.classList.contains('blockr-settings--open'), tiles, sections };
+  return { open: pop.classList.contains('blockr-settings--open'), tiles, groups, sections };
 }
 
 /** The script's control strip (the mapping band moved into the card). */
@@ -412,7 +416,7 @@ function gearLines(block) {
     return `${c.kind}=${JSON.stringify(c.value)}`;
   };
   for (const s of o.sections) {
-    lines.push(`## ${s.title}` + (s.fold ? ` (${s.fold}${s.summary ? ': ' + s.summary : ''})` : ''));
+    lines.push(`## ${s.group ? s.group + ' / ' : ''}${s.title}` + (s.fold ? ` (${s.fold}${s.summary ? ': ' + s.summary : ''})` : ''));
     for (const r of s.rows) {
       if (r.add) { lines.push('  + ' + r.add.join(', ')); continue; }
       if (r.other) { lines.push('  ' + r.other + ': ' + r.text); continue; }
@@ -505,15 +509,30 @@ function typeText(env, input, value) {
   input.dispatchEvent(new env.win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 }
 
-/** The section whose title reads `title`. */
+/** The section whose title reads `title`, in whatever group it sits. */
 function section(block, title) {
-  const secs = Array.from(block.popoverEl.querySelectorAll(':scope > .dd-section'));
+  const secs = Array.from(block.popoverEl.querySelectorAll('.dd-section'));
   const s = secs.find((x) => {
     const t = x.querySelector(':scope > .dd-section-title');
     return t && t.textContent.includes(title);
   });
   if (!s) throw new Error(`no section ${title}`);
   return s;
+}
+
+/** Bring the section titled `title` into view the way a user does: open its
+ *  fold in a plain tray, or click its group's tab in a grouped one. */
+function openSection(block, title) {
+  const pop = block.popoverEl;
+  const fold = Array.from(pop.querySelectorAll('.dd-section-title--fold'))
+    .find((f) => f.textContent.includes(title));
+  if (fold) { fold.click(); return; }
+  const sec = Array.from(pop.querySelectorAll('.dd-section'))
+    .find((x) => x.dataset.ddTitle === title);
+  if (!sec || !sec.dataset.trayGroup) throw new Error(`no section ${title}`);
+  const tab = Array.from(pop.querySelectorAll('.blockr-tray-nav__tab'))
+    .find((x) => x.id.endsWith('-tab-' + sec.dataset.trayGroup));
+  tab.click();
 }
 
 // ---------------------------------------------------------------------------
@@ -573,5 +592,5 @@ const rectTarget = (x, y, width, height, r) => ({
 module.exports = {
   ID, F, BASE, open, mountRoot, useClock, makeCtx, paramsAt, footer, signal, legendOff,
   gearOutline, gearLines, bandOutline, roleRow, pickSelect, selectOptions, pickSegment,
-  toggleCheckbox, typeText, section, snap, runSteps, stepState, cleanInput, summarizeCall, rectTarget, txt
+  toggleCheckbox, typeText, section, openSection, snap, runSteps, stepState, cleanInput, summarizeCall, rectTarget, txt
 };

@@ -47,13 +47,13 @@ test_that("a parent row filters its outer column only", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       dp_click(scope, "SEX", "F")
       session$flushReact()
       out <- eval(session$returned$expr(), list(data = dp_toy()))
       expect_setequal(out$USUBJID, c("1", "2"))
-      expect_identical(session$returned$state$filter_column(), "SEX")
+      expect_identical(session$returned$state$selection()$column, "SEX")
     },
     args = list(x = blk, data = list(data = function() dp_toy()))
   )
@@ -64,7 +64,7 @@ test_that("a child row filters under its own parent, not every parent", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       # "Placebo" sits under F and under M: the click names the F one.
       dp_click(scope, c("SEX", "ARM"), c("F", "Placebo"))
@@ -73,8 +73,8 @@ test_that("a child row filters under its own parent, not every parent", {
       expect_setequal(out$USUBJID, c("1", "2"))
       expect_true(all(out$SEX == "F" & out$ARM == "Placebo"))
       st <- session$returned$state
-      expect_identical(st$filter_column(), c("SEX", "ARM"))
-      expect_identical(st$filter_values(), c("F", "Placebo"))
+      expect_identical(st$selection()$column, c("SEX", "ARM"))
+      expect_identical(st$selection()$values, c("F", "Placebo"))
     },
     args = list(x = blk, data = list(data = function() dp_toy()))
   )
@@ -137,4 +137,32 @@ test_that("a path claim reaches the target as one condition per column", {
   cl <- dd_ctrl_claims(dp_toy(), "", list(SEX = "F", ARM = "Placebo"))
   expect_length(cl, 2L)
   expect_identical(vapply(cl, `[[`, "", "name"), c("SEX", "ARM"))
+})
+
+test_that("a facet column and a colour split say what a cell click adds", {
+  d <- data.frame(arm = c("A", "A", "B", "B"), sex = c("F", "M", "F", "F"),
+                  soc = c("x", "x", "y", "y"))
+  prep <- summarize_prepare(
+    d, by = "soc",
+    summaries = list(list(type = "simple", func = "count", show = "bar",
+                          facet = "arm", name = "n"))
+  )
+  m <- summarize_cells(prep, drill = "auto")
+  expect_identical(lapply(m$cols, `[[`, "fkey"),
+                   list(list(column = "arm", value = "A"),
+                        list(column = "arm", value = "B")))
+  prep <- summarize_prepare(
+    d, by = "soc",
+    summaries = list(list(type = "simple", func = "count", show = "bar",
+                          color = "sex", name = "n"))
+  )
+  m <- summarize_cells(prep, drill = "auto")
+  expect_identical(m$cols[[1L]]$scol, "sex")
+  # A stored row-and-cell claim lights the row and hands the cell part on.
+  m <- summarize_cells(prep, drill = "auto",
+                       active = list(col = c("soc", "sex"), vals = c("x", "M")))
+  expect_identical(m$on, c(TRUE, FALSE))
+  expect_identical(m$on_cell, list(sex = "M"))
+  ex <- summarize_drill_expr(summarize_drill_filters(c("soc", "sex"), c("x", "M")))
+  expect_identical(nrow(eval(ex, list(data = d))), 1L)
 })

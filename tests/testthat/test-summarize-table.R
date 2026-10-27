@@ -1,7 +1,8 @@
 # Summarize table: the data half (summarize_prepare) and the HTML contract.
 #
 # The JS half (search / sort / expand / row-click) is verified against the
-# running board in dev/verify-summarize-block.R.
+# running board in dev/verify-summarize-block.R. The column list itself
+# (normalization, marks, scope, by_level) is in test-lane-summaries.R.
 
 ae_fixture <- function() {
   subj <- sprintf("S%03d", seq_len(60))
@@ -25,34 +26,48 @@ ae_fixture <- function() {
   rows
 }
 
+# One summary column, as the gear writes it.
+bar_col <- function(func = "count", col = NULL, ...) {
+  c(list(type = "simple", func = func), if (!is.null(col)) list(col = col),
+    list(show = "bar"), list(...))
+}
+
+# Subjects per term.
+subj_bar <- function(...) {
+  list(bar_col("count_distinct", "USUBJID", ...))
+}
+
+# The column of a facet copy, by its level.
+facet_key <- function(p, level) {
+  hit <- vapply(p$plan, function(x) identical(x$flevel, level), logical(1L))
+  p$plan[[which(hit)[[1L]]]]$key
+}
+
 test_that("summarize_prepare ranks by the measure and counts subjects", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", func = "count_distinct",
-                         id_var = "USUBJID")
+  p <- summarize_prepare(ae, by = "TERM", summaries = subj_bar())
 
   expect_null(p$err)
   expect_identical(p$rows$.label, paste0("T", 1:5))
   expect_identical(p$rows$.v, c(26, 22, 18, 14, 10))
   expect_identical(p$layout, "simple")
-  # The bar scale is the whole column's max, not the visible rows' -- otherwise
-  # scrolling or searching would rescale the bars.
-  expect_identical(p$bar_max, 26)
+  # The bar is a share of the column's N, 26 subjects in all, so the widest
+  # bar is the full track whatever rows are visible.
+  e <- p$plan[[1L]]
+  expect_identical(e$denom, 26L)
+  expect_equal(e$dmax, 100)
 })
 
-test_that("summarize_prepare sorts by label and ascending on request", {
+test_that("rows can be ranked ascending", {
   ae <- ae_fixture()
-  asc <- summarize_prepare(ae, group = "TERM", func = "count", sort_dir = "asc")
+  asc <- summarize_prepare(ae, by = "TERM", summaries = list(bar_col()),
+                           sort_dir = "asc")
   expect_identical(asc$rows$.label, paste0("T", 5:1))
-
-  lab <- summarize_prepare(ae, group = "TERM", func = "count",
-                           sort_by = "label", sort_dir = "asc")
-  expect_identical(lab$rows$.label, paste0("T", 1:5))
 })
 
 test_that("a parent is aggregated in its own pass, never summed", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", parent = "SOC",
-                         func = "count_distinct", id_var = "USUBJID")
+  p <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = subj_bar())
 
   expect_null(p$err)
   expect_identical(sum(p$rows$.is_parent), 2L)
@@ -66,13 +81,15 @@ test_that("a parent is aggregated in its own pass, never summed", {
   expect_identical(first_kids[!is.na(first_kids)], c("T1", "T2"))
 })
 
-test_that("a colour split adds one series column per level, summing to the row", {
+test_that("a colour split adds one segment per level, summing to the row", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", color = "SEV", func = "count")
+  p <- summarize_prepare(ae, by = "TERM",
+                         summaries = list(bar_col(color = "SEV")))
 
-  expect_identical(p$layout, "split")
+  e <- p$plan[[1L]]
+  expect_identical(e$kind, "barsplit")
   expect_identical(p$series, c("MILD", "MODERATE"))
-  segs <- rowSums(p$rows[, c(".s_MILD", ".s_MODERATE")])
+  segs <- rowSums(p$rows[, paste0(e$prefix, c("MILD", "MODERATE"))])
   expect_equal(unname(segs), p$rows$.v)
   expect_identical(unname(p$palette[["MILD"]]), dd_palette(1L))
 })
@@ -80,36 +97,40 @@ test_that("a colour split adds one series column per level, summing to the row",
 test_that("a split of a non-additive measure groups instead of stacking", {
   ae <- ae_fixture()
   # Stacking mean(MILD) on mean(MODERATE) would draw a bar nothing computes,
-  # and scale the axis to that non-number: the row's own mean then reads as
-  # half its bar. Side by side, each segment is a real mean.
-  p <- summarize_prepare(ae, group = "TERM", value = "AVAL", func = "mean",
-                         color = "SEV")
-  expect_identical(p$plan[[1]]$mode, "grouped")
-  expect_match(p$note, "do not add up")
+  # and scale the axis to that non-number. Side by side, each segment is a
+  # real mean.
+  p <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col("mean", "AVAL", color = "SEV")
+  ))
+  e <- p$plan[[1L]]
+  expect_identical(e$mode, "grouped")
   # The axis reaches the widest SEGMENT, never the sum of them.
-  cells <- unlist(p$rows[, c(".s_MILD", ".s_MODERATE")])
-  expect_equal(p$bar_max, max(cells))
-  # Side by side, each level prints its own mean; with value labels off
-  # the cell is the bars alone.
+  cells <- unlist(p$rows[, paste0(e$prefix, c("MILD", "MODERATE"))])
+  expect_equal(e$dmax, max(cells))
+  # Side by side, each level prints its own mean; the cell has no one total.
   m <- summarize_cells(p)
   expect_null(m$cols[[1]]$disp)
   expect_length(m$cols[[1]]$ldisp, 2L)
 
-  # An explicit grouped ask needs no note, and the additive measures keep
-  # stacking: their parts really do sum to the whole.
-  g <- summarize_prepare(ae, group = "TERM", value = "AVAL", func = "mean",
-                         color = "SEV", bar_mode = "grouped")
-  expect_null(g$note)
-  cnt <- summarize_prepare(ae, group = "TERM", color = "SEV", func = "count")
+  # The additive measures stack: their parts really do sum to the whole.
+  cnt <- summarize_prepare(ae, by = "TERM",
+                           summaries = list(bar_col(color = "SEV")))
   expect_identical(cnt$plan[[1]]$mode, "stacked")
-  expect_null(cnt$note)
-  expect_equal(cnt$bar_max, max(cnt$rows$.v))
+  # The domain is in percent of N, the unit the bars are drawn in.
+  expect_equal(cnt$plan[[1]]$dmax,
+               max(cnt$rows$.v) / cnt$plan[[1]]$denom * 100)
+
+  # A count can be asked to sit side by side, too.
+  g <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col(color = "SEV", position = "dodge")
+  ))
+  expect_identical(g$plan[[1]]$mode, "grouped")
 })
 
 test_that("faceting gives one bar column per level with its own denominator", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", facet = "ARM",
-                         func = "count_distinct", id_var = "USUBJID")
+  p <- summarize_prepare(ae, by = "TERM",
+                         summaries = subj_bar(facet = "ARM"))
 
   expect_identical(p$layout, "facet")
   # "High" is a level of the factor with no rows in this fixture: an empty
@@ -118,14 +139,19 @@ test_that("faceting gives one bar column per level with its own denominator", {
   bars <- vapply(p$plan, function(x) identical(x$kind, "bar"), logical(1L))
   expect_identical(sum(bars), 2L)
   # Each arm's percentage is over that arm's own N, never the pooled total.
-  expect_identical(unname(p$denoms[["Placebo"]]), 20L)
-  expect_true(p$bar_max <= 100)
+  expect_identical(p$plan[[1L]]$sub_label, "N = 20")
+  expect_identical(p$plan[[1L]]$denom, 20L)
+  expect_identical(p$plan[[2L]]$denom, 6L)
+  # The copies share one percentage scale.
+  expect_true(all(vapply(p$plan, function(x) x$dmax, 1) <= 100))
+  # T1 is reported by every Placebo subject: a full bar in that arm.
+  expect_identical(p$rows[[facet_key(p, "Placebo")]][[1L]], 20)
 })
 
 test_that("facet and colour compose: split bars inside each facet column", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", facet = "ARM", color = "SEV",
-                         func = "count")
+  S <- list(bar_col(facet = "ARM", color = "SEV"))
+  p <- summarize_prepare(ae, by = "TERM", summaries = S)
   expect_identical(p$layout, "facet")
   expect_null(p$note)
   splits <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)
@@ -134,24 +160,23 @@ test_that("facet and colour compose: split bars inside each facet column", {
   expect_identical(splits[[1]]$label, "Placebo")
   expect_identical(as.character(splits[[1]]$series), c("MILD", "MODERATE"))
   # Column keys are facet-INDEXED so level names can never collide.
-  expect_identical(splits[[2]]$prefix, ".f2s_")
+  expect_identical(splits[[2]]$prefix, ".s1f2_S_")
   # Each facet cell's segments sum to that facet's own total.
-  segs <- p$rows[[".f1s_MILD"]] + p$rows[[".f1s_MODERATE"]]
-  expect_equal(unname(segs), p$rows$.f_Placebo)
+  segs <- p$rows[[".s1f1_S_MILD"]] + p$rows[[".s1f1_S_MODERATE"]]
+  expect_equal(unname(segs), p$rows[[facet_key(p, "Placebo")]])
   # The palette encodes the COLOUR levels, and the legend says so.
   expect_identical(names(p$palette), c("MILD", "MODERATE"))
   expect_identical(summarize_legend_spec(p)$groups[[1L]]$title, "SEV")
   # A labelled colour column titles the legend by its label.
   attr(ae$SEV, "label") <- "Severity"
-  p <- summarize_prepare(ae, group = "TERM", facet = "ARM", color = "SEV",
-                         func = "count")
+  p <- summarize_prepare(ae, by = "TERM", summaries = S)
   expect_identical(summarize_legend_spec(p)$groups[[1L]]$title, "Severity")
 })
 
 test_that("a plain facet is colour-neutral: no per-level hues, no legend", {
   ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", facet = "ARM",
-                         func = "count_distinct", id_var = "USUBJID")
+  p <- summarize_prepare(ae, by = "TERM",
+                         summaries = subj_bar(facet = "ARM"))
   bars <- Filter(function(x) identical(x$kind, "bar"), p$plan)
   expect_true(all(vapply(bars, function(x) identical(x$fill, dd_palette(1L)),
                          logical(1L))))
@@ -165,7 +190,8 @@ test_that("a BLANK colour level legends as (Missing) instead of throwing", {
   ae <- ae_fixture()
   ae$SEV <- as.character(ae$SEV)
   ae$SEV[seq(1L, nrow(ae), by = 7L)] <- ""
-  p <- summarize_prepare(ae, group = "TERM", color = "SEV", func = "count")
+  p <- summarize_prepare(ae, by = "TERM",
+                         summaries = list(bar_col(color = "SEV")))
   expect_identical(names(p$palette), c("", "MILD", "MODERATE"))
   spec <- summarize_legend_spec(p)
   expect_identical(
@@ -177,29 +203,32 @@ test_that("a BLANK colour level legends as (Missing) instead of throwing", {
                          function(it) nzchar(it$color %||% ""), logical(1L))))
 })
 
-test_that("the bar cell carries its own value label unless cols asks for columns", {
+test_that("a bar column carries its own value label; a number column is another", {
   ae <- ae_fixture()
-  # Default: no separate num columns; the bar plan entry wants its label.
-  p <- summarize_prepare(ae, group = "TERM", func = "count")
+  # The bar plan entry wants its label, with the share of N beside it.
+  p <- summarize_prepare(ae, by = "TERM", summaries = list(bar_col()))
   expect_length(p$plan, 1L)
   expect_true(isTRUE(p$plan[[1]]$show_val))
-  expect_identical(p$plan[[1]]$val_denom, unname(p$denoms[["all"]]))
+  expect_identical(p$plan[[1]]$val_denom, nrow(ae))
   m <- summarize_cells(p)
   expect_identical(m$cols[[1]]$disp[[1]], "26")
   expect_match(m$cols[[1]]$pct[[1]], "^\\(\\d+%\\)$")
   expect_true(m$cols[[1]]$dw >= nchar("26 (43%)") - 1L)
 
-  # Explicit cols: separate columns come back and the in-bar label mutes.
-  pc <- summarize_prepare(ae, group = "TERM", func = "count",
-                          cols = c("n", "pct"))
+  # A number column beside it is a column of its own; the bar keeps its label.
+  pc <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col(), list(type = "simple", func = "count", show = "number")
+  ))
   expect_identical(
-    vapply(pc$plan, function(x) x$kind, ""), c("bar", "num", "num")
+    vapply(pc$plan, function(x) x$kind, ""), c("bar", "num")
   )
-  expect_false(isTRUE(pc$plan[[1]]$show_val))
-  expect_null(summarize_cells(pc)$cols[[1]]$disp)
+  expect_true(isTRUE(pc$plan[[1]]$show_val))
+  mc <- summarize_cells(pc)
+  expect_identical(mc$cols[[1]]$disp, m$cols[[1]]$disp)
+  expect_identical(trimws(mc$cols[[2]]$disp), m$cols[[1]]$disp)
 })
 
-test_that("identity fields ride as raw columns, text sorting on the text", {
+test_that("field columns ride as raw text, sorting on the text", {
   subj <- data.frame(
     USUBJID = c("S1", "S2", "S3"),
     AVAL = c(4, 2, 8),
@@ -207,34 +236,34 @@ test_that("identity fields ride as raw columns, text sorting on the text", {
     ARM = c("Placebo", "High", "High"),
     stringsAsFactors = FALSE
   )
-  p <- summarize_prepare(subj, group = "USUBJID", func = "identity",
-                         value = "AVAL", fields = c("ARM", "AGE"))
+  p <- summarize_prepare(subj, by = "USUBJID", summaries = list(
+    bar_col("identity", "AVAL"),
+    list(type = "field", col = "ARM"), list(type = "field", col = "AGE")
+  ))
   expect_null(p$err)
   kinds <- vapply(p$plan, function(x) x$kind, "")
   expect_identical(kinds, c("bar", "num", "num"))
-  expect_true(isTRUE(p$plan[[2]]$text))     # ARM is text
-  expect_false(isTRUE(p$plan[[3]]$text))    # AGE is numeric
-  expect_identical(p$rows$.x_ARM, c("High", "Placebo", "High"))
+  expect_true(isTRUE(p$plan[[2]]$text))     # fields are text
+  expect_true(isTRUE(p$plan[[3]]$text))
+  # Rows arrive ranked by AVAL: S3, S1, S2.
+  expect_identical(p$rows$.label, c("S3", "S1", "S2"))
+  expect_identical(p$rows[[p$plan[[2]]$key]], c("High", "Placebo", "High"))
   m <- summarize_cells(p)
   expect_identical(as.character(m$cols[[2]]$disp), c("High", "Placebo", "High"))
   h <- summarize_cells_html(m)
   expect_match(h, "blockr-summarize-txt")
   expect_match(h, 'data-v="High"', fixed = TRUE)
-
-  # Fields need the as-is measure: anywhere else they are refused out loud.
-  pn <- summarize_prepare(subj, group = "ARM", func = "count", fields = "AGE")
-  expect_match(pn$note, "as-is measure")
-  expect_identical(vapply(pn$plan, function(x) x$kind, ""), "bar")
 })
 
 test_that("top_n caps with a reported fold, and is off by default", {
   ae <- ae_fixture()
-  capped <- summarize_prepare(ae, group = "TERM", func = "count", top_n = 2)
+  capped <- summarize_prepare(ae, by = "TERM", summaries = list(bar_col()),
+                              top_n = 2)
   expect_identical(nrow(capped$rows), 2L)
   expect_identical(capped$folded, 3L)
   expect_identical(capped$n_total, 5L)
 
-  full <- summarize_prepare(ae, group = "TERM", func = "count")
+  full <- summarize_prepare(ae, by = "TERM", summaries = list(bar_col()))
   expect_identical(nrow(full$rows), 5L)
   expect_identical(full$folded, 0L)
 })
@@ -243,53 +272,62 @@ test_that("an optional dim whose column vanished reads as unmapped", {
   ae <- ae_fixture()
   # An upstream picker's "(none)" drops the column from the DATA; the saved
   # mapping must self-heal (chart parity), not error the whole table.
-  p <- summarize_prepare(ae, group = "TERM", facet = "GONE_FACET",
-                         color = "GONE_COLOR", parent = "GONE_PARENT",
-                         func = "count")
+  p <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col(facet = "GONE_FACET", color = "GONE_COLOR")
+  ))
   expect_null(p$err)
   expect_identical(p$layout, "simple")
   expect_null(p$facet)
   expect_null(p$color)
-  expect_null(p$parent)
 
   # One dim missing, the other present: only the missing one drops.
-  ph <- summarize_prepare(ae, group = "TERM", facet = "GONE", color = "SEV",
-                          func = "count")
-  expect_identical(ph$layout, "split")
+  ph <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col(facet = "GONE", color = "SEV")
+  ))
+  expect_null(ph$err)
+  expect_identical(ph$layout, "simple")
+  expect_identical(ph$plan[[1L]]$kind, "barsplit")
 
   # REQUIRED columns still report by name.
-  expect_match(summarize_prepare(ae, group = "GONE")$err, "GONE")
+  expect_match(summarize_prepare(ae, by = "GONE",
+                                 summaries = list(bar_col()))$err, "GONE")
   expect_match(
-    summarize_prepare(ae, group = "TERM", func = "identity",
-                      value = "GONE")$err,
-    "Value = \"GONE\""
+    summarize_prepare(ae, by = "TERM",
+                      summaries = list(bar_col("identity", "GONE")))$err,
+    "GONE"
   )
 })
 
 test_that("a bad config is a message, never an error", {
   ae <- ae_fixture()
-  expect_identical(summarize_prepare(ae, group = NULL)$err,
-                   "Pick a Group column in the gear")
-  expect_match(summarize_prepare(ae, group = "GONE")$err, "GONE")
+  expect_match(summarize_prepare(ae, by = "GONE")$err, "GONE")
   expect_match(
-    summarize_prepare(ae, group = "TERM", func = "count_distinct")$err,
-    "Subject id"
+    summarize_prepare(ae, by = "TERM", summaries = list(bar_col("mean")))$err,
+    "`col` is required"
   )
-  expect_match(summarize_prepare(ae, group = "TERM", func = "mean")$err,
-               "Value column")
-  expect_identical(summarize_prepare(ae[0, ], group = "TERM")$err,
+  expect_identical(summarize_prepare(ae[0, ], by = "TERM")$err,
                    "No rows to display")
   # A one-level facet (one arm left after a filter) draws, it is not an error.
   one_arm <- droplevels(ae[ae$ARM == "Placebo", ])
   expect_null(
-    summarize_prepare(one_arm, group = "TERM", facet = "ARM",
-                      func = "count")$err
+    summarize_prepare(one_arm, by = "TERM",
+                      summaries = list(bar_col(facet = "ARM")))$err
   )
+})
+
+test_that("a table without `by` is one Total row, not a message", {
+  ae <- ae_fixture()
+  p <- summarize_prepare(ae)
+  expect_null(p$err)
+  expect_identical(p$rows$.label, "Total")
+  expect_true(p$all)
+  # Empty `summaries` counts rows.
+  expect_equal(p$rows$.v, nrow(ae))
 })
 
 test_that("identity ranks a per-group value as-is, like the chart's None (as is)", {
   # The headline use: one pre-computed value per subject, stratified the same
-  # way the chart block does it (color split, facet columns).
+  # way the chart block does it (colour split, facet columns).
   subj <- data.frame(
     USUBJID = c("S1", "S2", "S3", "S4"),
     AVAL = c(4, NA, 2, 8),
@@ -297,53 +335,43 @@ test_that("identity ranks a per-group value as-is, like the chart's None (as is)
     ARM = factor(c("Placebo", "Placebo", "High", "High")),
     stringsAsFactors = FALSE
   )
+  as_is <- function(...) list(bar_col("identity", "AVAL", ...))
 
-  p <- summarize_prepare(subj, group = "USUBJID", func = "identity",
-                         value = "AVAL")
+  p <- summarize_prepare(subj, by = "USUBJID", summaries = as_is())
   expect_null(p$err)
   expect_identical(p$rows$.label, c("S4", "S1", "S3", "S2"))
   expect_identical(p$rows$.v, c(8, 4, 2, NA))
-  # The value column heads the bar itself; no percentage exists.
+  # The value column names the bar itself; no percentage exists.
   expect_identical(p$plan[[1L]]$label, "AVAL")
-  expect_false(p$pct_ok)
+  expect_null(p$plan[[1L]]$denom)
 
   # An all-NA group stays NA; duplicates collapse to the first non-missing.
   dup <- rbind(subj, data.frame(USUBJID = "S2", AVAL = 6, SEX = factor("M"),
                                 ARM = factor("Placebo")))
-  pd <- summarize_prepare(dup, group = "USUBJID", func = "identity",
-                          value = "AVAL")
+  pd <- summarize_prepare(dup, by = "USUBJID", summaries = as_is())
   expect_identical(pd$rows$.v[pd$rows$.label == "S2"], 6)
 
-  # Faceted identity: raw shared scale, no arm-N denominator, plain Value col.
-  pf <- summarize_prepare(subj, group = "SEX", func = "identity",
-                          value = "AVAL", facet = "ARM")
+  # Faceted identity: raw shared scale, no arm-N denominator.
+  pf <- summarize_prepare(subj, by = "SEX", summaries = as_is(facet = "ARM"))
   expect_null(pf$err)
   bars <- Filter(function(x) identical(x$kind, "bar"), pf$plan)
+  expect_length(bars, 2L)
   expect_true(all(vapply(bars, function(x) is.null(x$denom), logical(1L))))
-  # No separate value columns: the bar cells carry the values themselves.
-  expect_length(Filter(function(x) identical(x$kind, "num"), pf$plan), 0L)
-  expect_identical(pf$bar_max, 8)
+  expect_true(all(vapply(bars, function(x) x$dmax, 1) == 8))
 
   # A subject has NO value in an arm they are not in: blank (NA), not the 0 a
   # counting measure fills (the chart's null gap).
-  pp <- summarize_prepare(subj, group = "USUBJID", func = "identity",
-                          value = "AVAL", facet = "ARM")
-  expect_true(is.na(pp$rows$.f_High[pp$rows$.label == "S1"]))
-  expect_identical(pp$rows$.f_Placebo[pp$rows$.label == "S1"], 4)
+  pp <- summarize_prepare(subj, by = "USUBJID", summaries = as_is(facet = "ARM"))
+  s1 <- pp$rows$.label == "S1"
+  expect_true(is.na(pp$rows[[facet_key(pp, "High")]][s1]))
+  expect_identical(pp$rows[[facet_key(pp, "Placebo")]][s1], 4)
 
-  # No value picked is a prompt, not an error.
-  expect_identical(
-    summarize_prepare(subj, group = "USUBJID", func = "identity")$err,
-    "Pick a Value column to show as is"
+  # No value picked is a message, not an error.
+  expect_match(
+    summarize_prepare(subj, by = "USUBJID",
+                      summaries = list(bar_col("identity")))$err,
+    "`col` is required"
   )
-})
-
-test_that("percentages are dropped for measures that have no denominator", {
-  ae <- ae_fixture()
-  p <- summarize_prepare(ae, group = "TERM", func = "mean", value = "AVAL",
-                         cols = c("n", "pct"))
-  pct <- vapply(p$plan, function(x) isTRUE(x$pct_only), logical(1L))
-  expect_false(any(pct))
 })
 
 markup <- function(ae, ...) {
@@ -355,8 +383,8 @@ markup <- function(ae, ...) {
 
 test_that("the chrome uses the canonical title / caption bands", {
   ae <- ae_fixture()
-  h <- markup(ae, group = "TERM", func = "count", title = "T", subtitle = "S",
-              caption = "C")
+  h <- markup(ae, by = "TERM", summaries = list(bar_col()), title = "T",
+              subtitle = "S", caption = "C")
   # .dd-table-titles / .dd-table-caption are the chart and table blocks' bands
   # (inst/css/table.css), so the control row keeps its height and the title sits
   # between it and the column headers.
@@ -371,9 +399,10 @@ test_that("the chrome uses the canonical title / caption bands", {
 test_that("header sub-lines carry the real data labels", {
   ae <- ae_fixture()
   attr(ae$TERM, "label") <- "Preferred term"
-  h <- markup(ae, group = "TERM", func = "count_distinct", id_var = "USUBJID")
+  h <- markup(ae, by = "TERM", summaries = subj_bar())
   expect_match(h, "Preferred term")          # the group column's own label
-  expect_match(h, "distinct USUBJID")        # what the measure counts
+  expect_match(h, "Distinct USUBJID")        # what the column counts
+  expect_match(h, "N = 26")                  # over how many
   expect_match(h, "blockr-col-label")        # the table block's label class
 })
 
@@ -381,7 +410,7 @@ test_that("the HTML carries the chrome, the marks and the drill contract", {
   ae <- ae_fixture()
   html <- function(...) markup(ae, ...)
 
-  h <- html(group = "TERM", func = "count_distinct", id_var = "USUBJID",
+  h <- html(by = "TERM", summaries = subj_bar(),
             title = "Ranked", subtitle = "N = {n_distinct(USUBJID)}",
             caption = "Source: fixture", drill = "TERM", elem_id = "blk-1")
   expect_match(h, "dd-table-title")
@@ -394,14 +423,14 @@ test_that("the HTML carries the chrome, the marks and the drill contract", {
   expect_match(h, "blockr-summarize-fill")
 
   # No drill = no click affordance.
-  expect_false(grepl("is-pick", html(group = "TERM", func = "count")))
+  expect_false(grepl("is-pick", html(by = "TERM", summaries = list(bar_col()))))
 })
 
 test_that("the HTML marks nested and split shapes distinctly", {
   ae <- ae_fixture()
   html <- function(...) markup(ae, ...)
 
-  nested <- html(group = "TERM", parent = "SOC", func = "count")
+  nested <- html(by = c("SOC", "TERM"), summaries = list(bar_col()))
   expect_match(nested, 'data-summarize-nested="1"', fixed = TRUE)
   # The collapse affordance is the table block's own chevron: same button, same
   # svg, same rotation contract (the ROW carries `collapsed`).
@@ -409,14 +438,16 @@ test_that("the HTML marks nested and split shapes distinctly", {
   expect_match(nested, "blockr-chev")
   expect_match(nested, "blockr-indent-toggle collapsed")
   expect_match(nested, "is-sub")   # child bars are the subordinate step
+  # Child labels start on their parent's name: no padding of their own.
+  expect_match(nested, "is-child", fixed = TRUE)
+  expect_no_match(nested, "padding-left:48px", fixed = TRUE)
 
-  grouped <- html(group = "TERM", color = "SEV", func = "count",
-                  bar_mode = "grouped")
+  side <- list(bar_col(color = "SEV", position = "dodge"))
+  grouped <- html(by = "TERM", summaries = side)
   # Each level its own thin track with its value beside it; with the
   # values off, the levels stack as thin rows in one tall track.
   expect_match(grouped, "blockr-summarize-track is-lv", fixed = TRUE)
-  bare <- html(group = "TERM", color = "SEV", func = "count",
-               bar_mode = "grouped", value_labels = FALSE)
+  bare <- html(by = "TERM", summaries = side, value_labels = FALSE)
   expect_match(bare, "blockr-summarize-row3")
 })
 
@@ -425,43 +456,75 @@ test_that("title tiers follow the chart and table contract", {
   attr(ae, "label") <- "Events fixture"
   html <- function(...) markup(ae, ...)
   # NULL = auto (the input's own label), "" = explicitly none.
-  expect_match(html(group = "TERM", func = "count", title = NULL),
+  S <- list(bar_col())
+  expect_match(html(by = "TERM", summaries = S, title = NULL),
                "Events fixture")
   expect_false(grepl("dd-table-title",
-                     html(group = "TERM", func = "count", title = "")))
+                     html(by = "TERM", summaries = S, title = "")))
 })
 
 test_that("a config that cannot be honored renders a message table", {
   ae <- ae_fixture()
-  h <- markup(ae)
-  expect_match(h, "Pick a Group column")
+  h <- markup(ae, by = "GONE")
+  expect_match(h, "Mapped column not in data")
   expect_false(grepl("blockr-summarize-fill", h))
 })
 
-test_that("the block constructs, registers and round-trips its state", {
+test_that("the old constructor builds a table block in the groups layout", {
   blk <- new_summarize_table_block(group = "TERM", func = "count_distinct",
                                    id_var = "USUBJID", drill = "TERM")
-  expect_s3_class(blk, "summarize_table_block")
+  expect_s3_class(blk, "table_block")
   expect_s3_class(blk, "transform_block")
 
-  # blockr.core serializes a block from its constructor formals and restores by
-  # re-calling the constructor, so the runtime filter transport has to stay in
-  # the signature or a saved click cannot come back.
-  fmls <- names(formals(new_summarize_table_block))
-  expect_true(all(c("group", "func", "id_var", "drill", "ctrl_target",
-                    "ctrl_table", "filter_type", "filter_column",
-                    "filter_values", "summaries", "by",
-                    "facet_layout") %in% fmls))
+  st <- blockr.core::blockr_ser(blk)$payload
+  expect_identical(st$layout, "groups")
+  expect_identical(st$by, "TERM")
+  expect_identical(st$id, "USUBJID")
+  expect_identical(st$drill, "TERM")
+  expect_identical(st$summaries[[1L]]$func, "count_distinct")
 
-  # Registered, so it shows up in the block-adder and the assistant universe.
-  expect_true("summarize_table_block" %in%
-                names(blockr.core::available_blocks()))
+  # The click survives a save: one `selection` argument carries it.
+  expect_true("selection" %in% names(formals(new_table_block)))
+
+  # Only the table block is in the block-adder and the assistant universe.
+  expect_true("table_block" %in% names(blockr.core::available_blocks()))
+  expect_false("summarize_table_block" %in%
+                 names(blockr.core::available_blocks()))
+})
+
+test_that("the single bar's old arguments still read as the column list", {
+  ae <- ae_fixture()
+  # Same table through the old names and through `by` + `summaries`: the
+  # translation lands on one bar column with its colour split.
+  old <- markup(ae, group = "TERM", parent = "SOC", func = "count_distinct",
+                id_var = "USUBJID", color = "SEV", bar_mode = "grouped")
+  new <- markup(ae, by = c("SOC", "TERM"), summaries = subj_bar(
+    color = "SEV", position = "dodge"
+  ))
+  expect_identical(old, new)
+
+  # The exhibit translates too, extra count column included.
+  ex <- static_summarize_table(ae, group = "TERM", func = "mean",
+                               value = "AVAL", cols = "n")
+  expect_identical(vapply(ex$prep$plan, function(x) x$kind, ""),
+                   c("bar", "num"))
+  expect_identical(ex$prep$rows$.label, paste0("T", 1:5))
+})
+
+test_that("only a count carries an N and a share", {
+  ae <- ae_fixture()
+  p <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col("mean", "AVAL"), bar_col()
+  ))
+  expect_null(p$plan[[1L]]$denom)
+  expect_null(p$plan[[1L]]$val_denom)
+  expect_identical(p$plan[[2L]]$val_denom, nrow(ae))
 })
 
 test_that("html escaping survives a label with markup in it", {
   ae <- ae_fixture()
   ae$TERM[ae$TERM == "T1"] <- "<b>T1</b>"
-  h <- markup(ae, group = "TERM", func = "count")
+  h <- markup(ae, by = "TERM", summaries = list(bar_col()))
   expect_match(h, "&lt;b&gt;T1&lt;/b&gt;", fixed = TRUE)
   expect_false(grepl("<b>T1</b>", h, fixed = TRUE))
 })
@@ -469,7 +532,7 @@ test_that("html escaping survives a label with markup in it", {
 test_that("sorting can be turned off: no hook class, no arrow", {
   d <- data.frame(AVISIT = c("Baseline", "Week 2", "Week 2"),
                   AVAL = c(1, 2, 3), stringsAsFactors = FALSE)
-  prep <- summarize_prepare(d, group = "AVISIT", func = "count")
+  prep <- summarize_prepare(d, by = "AVISIT", summaries = list(bar_col()))
 
   on <- summarize_thead(prep)
   expect_match(on, "blockr-sortable")
@@ -482,13 +545,13 @@ test_that("sorting can be turned off: no hook class, no arrow", {
   # The cell model carries the toggle through cfg, and so does the ctor.
   m <- summarize_cells(prep, cfg = list(sortable = FALSE))
   expect_false(grepl("blockr-sortable", m$thead, fixed = TRUE))
-  expect_true("sortable" %in% names(formals(new_summarize_table_block)))
+  expect_true("sortable" %in% names(formals(new_table_block)))
 })
 
 test_that("every row carries the order it arrived in", {
   d <- data.frame(AVISIT = c("Baseline", "Week 2", "Week 10"),
                   AVISITN = c(0, 2, 10), stringsAsFactors = FALSE)
-  prep <- summarize_prepare(d, group = "AVISIT", func = "count",
+  prep <- summarize_prepare(d, by = "AVISIT", summaries = list(bar_col()),
                             sort_by = "AVISITN", sort_dir = "asc")
   html <- summarize_cells_html(summarize_cells(prep))
   ord <- regmatches(html, gregexpr("data-summarize-ord=\"[0-9]+\"", html))[[1L]]
@@ -511,7 +574,9 @@ test_that("the glyph, not the cell, carries the column's minimum width", {
 
 test_that("bar_width: fit needs no hook, a preset stamps the table", {
   ae <- data.frame(SOC = c("A", "A", "B"), TRT = c("x", "y", "x"))
-  html <- function(...) as.character(summarize_table(ae, group = "SOC", ...))
+  html <- function(...) {
+    as.character(summarize_table(ae, by = "SOC", ...))
+  }
   # Fit is the stylesheet's default (the lanes fill, up to the ceiling).
   expect_false(grepl("data-summarize-width=\"", html(), fixed = TRUE))
   expect_match(html(bar_width = "medium"), "data-summarize-width=\"medium\"",
@@ -554,7 +619,9 @@ test_that("a colour level no row carries gets no slot, and no colour shifts", {
   ae <- ae_fixture()
   ae$ARM <- factor(as.character(ae$ARM), levels = c("Placebo", "High", "Low"))
   # "High" has no rows in the fixture; the factor still lists it.
-  p <- summarize_prepare(ae, group = "TERM", color = "ARM", bar_mode = "grouped")
+  p <- summarize_prepare(ae, by = "TERM", summaries = list(
+    bar_col(color = "ARM", position = "dodge")
+  ))
   split <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)[[1]]
   expect_identical(as.character(split$series), c("Placebo", "Low"))
   expect_identical(unname(p$palette), dd_palette()[c(1L, 3L)])
@@ -568,7 +635,9 @@ test_that("a colour level only ungrouped rows carry gets no slot", {
   pop$TERM <- NA_character_
   pop$ARM <- factor("High", levels = levels(ae$ARM))
   d <- rbind(ae, pop)
-  p <- summarize_prepare(d, group = "TERM", color = "ARM", bar_mode = "grouped")
+  p <- summarize_prepare(d, by = "TERM", summaries = list(
+    bar_col(color = "ARM", position = "dodge")
+  ))
   split <- Filter(function(x) identical(x$kind, "barsplit"), p$plan)[[1]]
   expect_identical(as.character(split$series), c("Placebo", "Low"))
   S <- list(list(type = "simple", name = "Subjects", func = "count_distinct",

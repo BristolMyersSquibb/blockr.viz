@@ -2,7 +2,7 @@
 % Please edit documentation in R/table-block.R
 \name{drilldown_table_color}
 \alias{drilldown_table_color}
-\title{Cell-visual spec for \code{\link[=drilldown_table]{drilldown_table()}}}
+\title{Cell-colour spec for a table}
 \usage{
 drilldown_table_color(
   type = c("diverging", "sequential", "bar"),
@@ -38,7 +38,7 @@ hidden from the display; sources must be numeric. Diverging/sequential
 only.}
 }
 \value{
-A list consumed by \code{\link[=drilldown_table]{drilldown_table()}}.
+A cell-colour spec list.
 }
 \description{
 Describes how numeric cells are decorated. Three modes, all purely

@@ -14,7 +14,8 @@ summary_table(
   overall_label = "Total",
   subject_var = NULL,
   indent_details = TRUE,
-  nest_hierarchies = FALSE
+  nest_hierarchies = FALSE,
+  missing = "drop"
 )
 }
 \arguments{
@@ -63,6 +64,12 @@ categoricals) are tagged with \code{.indent = 1}. When \code{FALSE}, no
 When \code{TRUE}, adjacent categorical entries in \code{vars} that form a
 functional dependency in \code{data} are rendered as a row-side
 drill-down. v1 supports 2-level hierarchies only.}
+
+\item{missing}{Missing values of a categorical variable, of \code{by} and of
+\code{sections}: \code{"drop"} (default) gives them no row or column, \code{"level"}
+shows them as "(Missing)". Numeric variables are summarised without
+their missing values either way. A \code{\link[=drill_source]{drill_source()}} claim on the
+"(Missing)" level selects the rows whose value is missing.}
 }
 \value{
 A wide annotated data frame: dotted identity / structure columns

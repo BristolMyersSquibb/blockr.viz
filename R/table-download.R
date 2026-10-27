@@ -91,7 +91,7 @@ dl_tool <- function(ns, spec) {
 #'
 #' Registers the download handlers for every format this machine can write and
 #' returns the slot to drop on the table's toolbar (`dt_chrome()`'s
-#' `download_slot`, which [drilldown_table()] takes as `download_slot`). Each
+#' `download_slot`, which [interactive_table()] takes as `download`). Each
 #' format writes the SAME frame the table shows, through that format's own
 #' writer: [write_annotated_xlsx()] for the spreadsheet,
 #' [write_exhibit_html()] for a self-contained page, [write_exhibit_pptx()]
@@ -201,6 +201,11 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
                 return(write_exhibit_html(p, file, title = e$title))
               }
               e <- exhibit()
+              if (!is.null(e$cards)) {
+                return(write_exhibit_html(e$cards, file, title = e$title,
+                                          subtitle = e$subtitle,
+                                          caption = dl_caption(e)))
+              }
               write_exhibit_html(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
                                  subtitle = e$subtitle, caption = dl_caption(e),
@@ -216,6 +221,11 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
               p <- pic()
               if (!is.null(p)) return(write_exhibit_pptx(p, file))
               e <- exhibit()
+              if (!is.null(e$cards)) {
+                return(write_exhibit_pptx(e$cards, file, title = e$title,
+                                          subtitle = e$subtitle,
+                                          caption = dl_caption(e)))
+              }
               write_exhibit_pptx(dt_format_digits(e$data, e$digits), file,
                                  title = e$title,
                                  subtitle = e$subtitle, caption = dl_caption(e))

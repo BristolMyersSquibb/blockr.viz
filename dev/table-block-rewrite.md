@@ -1,0 +1,596 @@
+# Table block rewrite: requirements
+
+2026-10-25. Mockup with the interactive block, the heatmaps and all tables
+below: `_scratch/blockx/table-mockup/index.html` in the workspace. Argument
+names follow the chart block review, `_scratch/blockx/viz-mockup/arg-names.md`.
+Background: `dev/table-and-chart-architecture.md`, the annotated data frame
+spec (`_blockr.design/open/annotated-data-frame/`) and the summarize table
+spec (`_blockr.design/open/summarize-table/`).
+
+## Goal
+
+One block, `new_table_block()`, for every table blockr.viz draws. It replaces:
+
+| Today | In the new block |
+|---|---|
+| `new_table_block()` (flat table, in-block aggregation, annotated frames) | layout `"records"`, pass-through |
+| `new_summarize_table_block()` (one row per group, glyph cells) | layout `"groups"` |
+| `new_summary_table_block()` (Table 1, one row per variable) | layout `"variables"` |
+| `new_heatmap_block()` (matrix engine behind the AE heatmap) | layout `"groups"` + `look = "compact"` |
+| `new_gt_table_block()` | retired; gt can become a download format |
+
+Written in R first. blockx follows through the blockx-ready contract.
+
+## Why one block
+
+The group-by summary and Table 1 hold the same numbers. Every cell is one
+group level, one variable and one statistic; the group-by summary puts group
+levels on rows, Table 1 puts them on columns. Behind both is the long ARD
+shape that {cards} produces and a SQL `GROUP BY` returns. So `by` and
+`summaries` mean the same in both layouts, and one switch picks the
+orientation.
+
+The flat table adds one job the summary layouts lack: showing a frame built
+elsewhere. One block can do that too: input that already is a finished table
+is shown as it is.
+
+## Layouts and inputs
+
+- **Records.** Input rows as they are. Row name column, optional `by` for
+  collapsible row groups, cell colour, sort, search, drill. Also the target
+  for a tidy summary from dplyr: `by = "species", rowname = "island"` nests it.
+- **Groups.** One row per level of `by`, one column per summary, text or glyph
+  cells.
+- **Variables.** One row per statistic or level, one column per level of `by`.
+- **Finished table (pass-through).** Input is a gtsummary object, a composer
+  object or a frame with annotated columns (`.variable`, `.label`, ...). The
+  block converts it (the `as_annotated_df()` methods run inside the block) and
+  shows it as it is. Layout and summaries are hidden behind a badge.
+
+Output, as for chart and tile: the input rows, filtered by the last drill
+click. Downloads (xlsx, html, pptx) carry the table as shown. Table 1 as a data
+output for another block is given up; its only consumer was `gt_table`.
+
+Class stays `table_block`. blockr.outline's export checks
+`inherits(blk, c("table_block", ...))` (`R/export.R:558`).
+
+## Requirements
+
+### Contract
+
+1. Inside the block every finished table is an annotated frame (format v2):
+   gtsummary and composer objects are converted to it, and the downloads read
+   it. User code never builds it.
+2. Numbers stay numbers. Rounding and composites such as "13 (18.8%)" are
+   render choices, so Excel gets numbers and sorting works.
+   `summary_table()` writes character cells today.
+3. Column labels and the footnotes of a converted table survive dplyr,
+   serialization and the Parquet / DuckDB step in blockx. Title and caption
+   are block arguments and do not travel with the data.
+
+### The block
+
+4. One block, `new_table_block()`, class `table_block`, with `layout` =
+   `"records"`, `"groups"` or `"variables"`, and pass-through for gtsummary,
+   composer and annotated frames.
+5. Argument names match the chart block (table below), including `script` /
+   `script_values`, so a prepare snippet works in both blocks.
+6. One statistics vocabulary across chart, tile and table: the chart's `func`
+   and `summary` values. Today there are two (`AGG_FNS` and the
+   `summary_table` stat keys).
+7. Denominators are explicit: `id` for distinct counts, `pct_of`, `missing`,
+   N in the column header.
+8. A compact matrix look (`compact = TRUE`) in every layout, good enough to
+   replace the heatmap block: the AE heatmap at 184 × 25 and a correlation
+   matrix read without x overflow.
+9. Nested categoricals (species → island, SOC → PT) give collapsible nested
+   rows, sorted by frequency within each level, with an optional top N and
+   "Other". Group headers look the same in every layout: bold title, N muted
+   beside it, chevron left of the stub edge (as since `c79f5fb`).
+10. No domain words in the block. Clinical terms come from column labels and
+    board options, so the same block works on penguins and ADSL.
+11. Old boards load: `new_summarize_table_block()` and
+    `new_summary_table_block()` forward; legacy argument names go through
+    `blockr_deser.table_block()`. The devmaster board's uses (below) are the
+    acceptance test.
+
+### Code in front of the block
+
+12. Code in front of a table block (an R block, the `script` prepare step, the
+    assistant's code) uses existing packages only: dplyr, gtsummary, {cards},
+    composer. No blockr function, no dotted columns written by hand. It runs
+    and can be verified without blockr.
+13. Presentation lives in the table block's arguments: `by` and `rowname` nest
+    a tidy frame, `title` and `caption` label it. The assistant learns the
+    block's arguments, not a column convention.
+
+### blockx
+
+14. blockx hosts the new table widget under the block type `table` and uses
+    it on pages. Today it keys the summarize widget on `summarize_table`
+    (`web/src/blockr/registry.ts`, `shared/blocks.ts`).
+15. The block follows the blockx-ready contract: summaries as IR (DuckDB
+    `GROUP BY`), layout as a shared pure function, R stays the source of
+    truth.
+
+## Arguments
+
+```r
+new_table_block(
+  layout        = "records",    # "records", "groups", "variables"
+  by            = character(),  # groups: one row per level; variables: one
+                                # column per level; records: collapsible row
+                                # groups. Outer first, at most 2.
+  rowname       = NULL,         # records: stub column
+  summaries     = list(),       # groups, variables: one entry per column
+  id            = NULL,         # count distinct values of this column
+  pct_of        = "by",         # denominator of percentages: "by", "total"
+  missing       = "level",      # missing categories: "level", "drop"
+  total         = FALSE,        # total row (groups) or column (variables)
+  shadings      = list(),       # cell colour rules: list(list(mode, cols, domain))
+  format        = "number",     # default number format, as chart and tile
+  look          = "table",      # "compact": square cells, rotated titles; "cards"
+  value_labels  = TRUE,
+  facet_layout  = "by_summary",
+  sort_by       = "value",
+  sort_dir      = "desc",
+  top_n         = NULL,
+  drill         = NULL,
+  drill_target  = "",
+  drill_table   = "",
+  search        = TRUE,
+  sortable      = TRUE,
+  collapsible   = TRUE,
+  max_height    = NULL,
+  download      = FALSE,
+  title         = NULL,
+  subtitle      = NULL,
+  caption       = getOption("blockr.viz.default_caption"),
+  script        = NULL,         # prepare step: plain R on the incoming rows
+  script_values = list(),
+  selection     = NULL,         # internal: what the last click selected
+  ...
+)
+
+# one entry of `summaries`
+list(
+  type     = "dist",     # simple, dist, share, field, pair, series, spans, expr
+  col      = "body_mass",
+  func     = NULL,       # simple: count, count_distinct, sum, mean, ...
+  summary  = "mean_sd",  # dist: mean_sd, median_q1_q3, ...; several in "variables"
+  whiskers = NULL,
+  show     = "box",      # number, bar, dot, box, pointrange, text, tile, ...
+  fill     = NULL,       # tile: column whose worst level paints the cell
+  name     = "Body mass (g)",
+  color    = NULL, position = "stack",
+  facet    = NULL,
+  format   = NULL, unit = NULL,
+  ref_lo   = NULL, ref_hi = NULL,
+  x        = NULL, xend = NULL,
+  label    = NULL, tooltip = NULL
+)
+```
+
+### Same concept, same name
+
+| Concept | Chart (after review) | Tile (today) | New table | Today in table / summarize / Table 1 |
+|---|---|---|---|---|
+| kind of display | `type` | `layout` | `layout` | three blocks |
+| grouping column | `x` / `y` | `group` | `by` | `group` / `by` / `by` |
+| value column | `y` | `value` | `summaries$col` | `value` / `col` / `vars` |
+| aggregation | `func` | `summaries$func` | `summaries$func` | `func` |
+| distribution statistic | `summary` | | `summaries$summary` | `stat` / `stats` |
+| colour split | `color` | `color` | `summaries$color` | `color` |
+| split mode | `position` (stack, dodge, fill) | | `summaries$position` | `bar_mode` (stacked, grouped, percent) |
+| small multiples | `facet` | | `summaries$facet`, `facet_layout` | same |
+| individual id | `id` | | `id` | `id_var` |
+| percent denominator | `pct_of` | | `pct_of` | |
+| missing categories | `missing` | | `missing` | |
+| reference range | `ref_lo`, `ref_hi` | | `summaries$ref_lo`, `$ref_hi` | `lo`, `hi` (pair) |
+| segment | `x`, `xend` | | `summaries$x`, `$xend` | `from`, `to` (pair) |
+| tooltip columns | `tooltip` | | `summaries$tooltip` | `fields` (spans) |
+| paint by another column | | | `summaries$fill` | `color` (heatmap), `source` (shading) |
+| matrix look | | | `look = "compact"` | `rotate_titles`; always on (heatmap) |
+| number format | `format`, `unit` | `format`, `unit` | `format`, `summaries$format`, `$unit` | `digits` |
+| drill | `drill`, `drill_target`, `drill_table` | `ctrl_*` | as chart | `ctrl_*` |
+| click state | `selection` | `filter_*` | `selection` | `filter_*` |
+| prepare step | `script`, `script_values` | | same | `script`, `values` |
+| text | `title`, `subtitle`, `caption` | `caption` | same | same |
+
+### Gear labels for grouping (decided 2026-10-26)
+
+`by` and `sections` are both group-by columns, as in dplyr's
+`summarize(.by = c(island, species))`. They differ only in where their levels
+go: `by` gives the rows in groups, the columns in variables and the
+collapsible row groups in records; `sections` gives header rows above the
+variable rows. Each gets one label, the same in every layout:
+
+| Argument | Label | Today |
+|---|---|---|
+| `by` | "Group by", with a hint in variables: one column per level | "Group" (records), "Group by" (groups), "Split by" (variables) |
+| `sections` | "Section by", next to the "Sections: Collapsible" toggle | "Group by" (variables) |
+
+- Labels only: `by` and `sections` stay two arguments. Folding `sections`
+  into `by`, with the layout placing each column, was considered and left
+  out because it changes saved boards.
+- The layout switch is a section "Table" with three tiles, each a drawing
+  of the table it gives over its name: List (records), Per group (groups),
+  Per variable (variables). A line under the tiles says what the chosen
+  layout gives. The grouping is named for what it does there: "Nest by",
+  "One row per", "One column per". Tiles and drawings: `TABLE_LAYOUTS` and
+  `_buildTiles()` in `drilldown-config.js`; mockup in
+  `_scratch/rows-are/index.html` (monorepo).
+- Labels to change: `inst/js/drilldown-agg.js` (`Group`),
+  `inst/js/summary-table-block.js` (`Split by`, `Group by`).
+- Decision page with mockups: `_scratch/table-grouping/index.html`.
+
+### Old boards
+
+As for the chart: the constructor has no deprecated formals. A
+`blockr_deser.table_block()` method renames keys of boards saved before the
+CRAN release, from one internal table (`table_legacy_names`), and folds the
+`filter_*` fields into `selection`. `new_summarize_table_block()` and
+`new_summary_table_block()` stay as forwarding constructors and leave the
+block list.
+
+| Old block | Old argument | New |
+|---|---|---|
+| table | `cell_color`, `row_color`, `color` | `shadings` |
+| table | `group`, `value`, `summaries` (in-block aggregation) | `layout = "groups"`, `by`, `summaries` |
+| table | `digits` | `format` |
+| table | `excel_download`, `html_download`, `pptx_download`; `rotate_titles`, `compact` | `download`; `look = "compact"` |
+| summarize | `group`, `value`, `func`, `parent`, block-level `color` / `facet` / `bar_mode` | one `simple` summary; `parent` becomes the outer `by`; `bar_mode` becomes `position` |
+| summarize | `id_var`; `values` | `id`; `script_values` |
+| summarize | summary keys `stat`, `lo`, `hi`, `from`, `to`, `fields` | `summary`, `ref_lo`, `ref_hi`, `x`, `xend`, `tooltip` |
+| summarize | `cols`, `fields`, `axis`, `bar_width` | to check one by one |
+| summary_table | `vars` + `stats` | one summary per variable: `dist` with `summary` for numeric, `share` for categorical |
+| summary_table | `sections`, `nest_hierarchies` | nested `share`: `col = c("AESOC", "AEDECOD")` |
+| summary_table | `add_overall`, `overall_label` | `total` (label "Total") |
+| summary_table | `id_var`; `indent_details` | `id`; dropped (always indented) |
+| all | `ctrl_target`, `ctrl_table`, `filter_*` | `drill_target`, `drill_table`, `selection` |
+
+## Heatmaps
+
+The heatmap block folds into the table. Its matrix look is `compact = TRUE`:
+square cells with a 28px floor, rotated and sticky column titles, empty cells
+left blank. Groups use the same collapsible header rows as every other
+layout; the grey rail of the August 2026 version does not come back.
+
+AE heatmap, one row per subject grouped by arm, one column per term, count
+shown, painted by worst severity:
+
+```r
+new_table_block(
+  layout    = "groups",
+  by        = c("ACTARM", "USUBJID"),
+  summaries = list(list(
+    type  = "simple", func = "count",
+    facet = "AEDECOD",
+    show  = "tile",
+    fill  = "AESEV"
+  )),
+  compact   = TRUE,
+  sort_by   = "value", sort_dir = "desc",
+  drill     = "USUBJID",
+  script    = "
+top_n <- 25  #| number(min = 1, max = 200)
+top <- dplyr::count(data, AEDECOD, sort = TRUE)
+dplyr::filter(data, AEDECOD %in% utils::head(top$AEDECOD, top_n))"
+)
+```
+
+The prepare script keeps only the top-N cap, as `ae_heatmap_script()` does
+today. Counting and the worst level are the block's own summary, so each cell
+keeps its subject and term. The ConMed heatmap is the same call with
+`facet = "CMDECOD"` and no `fill`: cells are then painted by count.
+
+Correlation matrix (`correlate` output, one row per variable):
+
+```r
+new_table_block(
+  layout   = "records",
+  rowname  = "var",
+  shadings = list(list(mode = "diverging", domain = c(-1, 1))),
+  compact  = TRUE
+)
+```
+
+The renderer takes over from the heatmap: the compact display, `show = "tile"`
+with `fill` (worst level of an ordered factor in its own order, numeric grades
+numerically, a character column sorted), facet columns ordered by count that
+stay usable at 25 and more columns, the status line
+(`184 × 25 of 230 AE Term`), and the pptx download that splits a long matrix
+over several slides.
+
+Afterwards these go: `new_heatmap_block()`, `heatmap_matrix()`,
+`R/heatmap-block.R`, `R/heatmap-html.R`, `inst/js/heatmap-block.js`,
+`inst/css/heatmap-block.css` and the hook at `R/html-table.R:1749`.
+
+### `blockr.pharma::new_ae_heatmap_block()`
+
+Not needed as a block after the rewrite. Its three reasons today: it is the
+registered surface (the engine is not registered, and an unregistered block
+in a saved board breaks the dock on restore), it carries AE defaults, and
+saved boards name it as their constructor. The table block is registered,
+and the defaults become ordinary arguments in the board. What remains is old
+boards.
+
+So it shrinks to a forwarding function: it returns
+`new_table_block(layout = "groups", ...)` and stamps `new_table_block` from
+blockr.viz as the constructor, the reverse of what it stamps today. An old
+board loads through it and saves as `new_table_block` on its next save. Once
+the prod boards are re-saved, delete it.
+
+Goes with it: the AE heatmap tests in blockr.pharma, the deploy check in
+`blockr.sandbox/deploy-simple.R:948-970`, the load-order note in the devmaster
+board's `_boot.R`, and the `ae_heatmap_block` example in blockr.sandbox's
+`clinical-figures` skill.
+
+## Devmaster board (blockr.sandbox)
+
+Acceptance test for loading and look. Its clinical tables are composer blocks
+and do not change.
+
+| Block | Today | New |
+|---|---|---|
+| correlation heatmap (`explore_cor_tbl`) | `new_table_block(rowname = "var", cell_color = drilldown_table_color("diverging", domain = c(-1, 1)))` | `layout = "records"`, `rowname = "var"`, `shadings = list(list(mode = "diverging", domain = c(-1, 1)))`, `compact = TRUE` |
+| baseline to peak (`lab_pair`) | `new_summarize_table_block(by = "USUBJID", summaries = list(field, pair), ..., ctrl_target = "pt_drill")` | `layout = "groups"`, same `by` and summaries (pair keys renamed), `drill_target = "pt_drill"` |
+| AE heatmap, ConMed heatmap | `new_ae_heatmap_block(...)` | `new_table_block()` calls as above |
+| checks | `checks/figure-catalogue.R` names the id `summarize_table_block` | update the id |
+
+Prod master and study boards were not checked. They load through the
+forwarding constructors.
+
+## Open decisions
+
+1. Grouping column: `by` or `group`. Proposal `by`: blockr.dplyr's summarize
+   has it on CRAN and dplyr uses `.by`. The tile renamed `by` to `group` in
+   June and would rename back.
+2. Distribution statistic key: `summary` (the chart's name) inside each entry
+   of `summaries`. The alternative is `stat` in both blocks, which means a
+   rename in the chart review too.
+3. Glyphs in layout "variables": text only, or a glyph per cell where a row
+   shares a scale.
+4. Composite cells: character in the frame, or numbers plus a template (R2).
+5. How column labels and footnotes reach blockx (R3): attributes in Parquet
+   metadata, or a small sidecar with the result.
+6. Accept a {cards} ARD as input and lay it out with `layout` without
+   recomputing. Cards keeps statistics in a list column, which needs a check
+   for the Parquet step.
+7. Names for the matrix pieces: `compact` and `fill`.
+8. `digits` to `format`: enough, or does a table need fixed decimals per
+   column?
+
+## Implementation phases
+
+Branch `feat/table-rewrite`. The chart block's CRAN branch (`feat/chart-cran`)
+edits `R/legacy-deser.R`, `NAMESPACE` and `DESCRIPTION`; the table keeps its
+legacy handling in its own files (`R/table-args.R`) to keep the merge small.
+
+1. **One constructor, two engines.** `new_table_block()` with the new
+   signature and a `layout` state. Its server runs the current table server
+   (records) and the current summarize server (groups) as sub-modules, on a
+   shared set of reactiveVals for the cross-cutting settings (title,
+   subtitle, caption, download, search, sortable, drill target). Only the
+   active engine sees data; the other is parked. Old names in code and in
+   saved boards translate through `table_legacy_args()`. In-block aggregation
+   of the old table (`group` + `summaries` of `{func, cols}`) restores as
+   layout "groups" with one `simple` summary per column.
+2. **Layout in the gear.** "Rows are" in both gears; switching swaps the
+   engine and keeps the shared settings.
+3. **Variables layout.** `summary_table()` computed from the `summaries`
+   list, drawn by the records engine's structured path. gtsummary input
+   through `as_annotated_df()`.
+4. **Heatmap.** `show = "tile"` with `fill`, facet over 25+ levels ordered
+   by count (the summarize facet caps at 15 today, `LANE_MAX_LEVELS`), and
+   `compact = TRUE` (rotated headers, square cells) in the groups engine.
+   AE heatmap on top of it; heatmap engine deleted.
+5. **Vocabulary.** Summary keys renamed (`stat` -> `summary`, `lo`/`hi` ->
+   `ref_lo`/`ref_hi`, `from`/`to` -> `x`/`xend`, `fields` -> `tooltip`,
+   `bar_mode` -> `position`), `digits` -> `format`, `pct_of`, `missing`.
+   Registry, argument specs, guidance, `gt_table` retired.
+6. **One renderer.** Merge `table.js` and `summarize-table.js`.
+7. **blockx.**
+
+### Status (2026-10-26)
+
+Phases 1 to 4 are done on `feat/table-rewrite`. Deviations from the sketch
+above:
+
+- The records layout keeps a `columns` argument (the old `value`).
+- `...` sits right after `layout`, so old names cannot partially match new
+  ones (`value` would match `value_labels`).
+- `digits` became `format` in phase 5.
+- The variables layout takes the Table 1 settings as their own arguments
+  (`stats`, `sections`, `total`, `total_label`, `nest`); its variables and
+  grouping are the shared `summaries`, `by` and `id`. A categorical variable
+  is stored as a count split by that variable (`simple` with `color`), the
+  closest existing summary type to the planned `share`.
+- The variables layout's settings are the former summary table widget,
+  shown above the table; the table is drawn by the records engine.
+- The variables layout's data output is the drilled Table 1 frame, as when a
+  summary table block fed a table block (`drill = "source"` resolves it to
+  source rows). The records and groups layouts output the drilled input.
+- `new_summary_table_block()` forwards to `layout = "variables"` and left the
+  registry.
+
+Phase 4 (heatmap):
+
+- `show = "tile"` on a `simple` summary, with `fill` (the worst level of a
+  column, levels in factor / numeric / sorted order) and `facet_order`
+  (`"count"`, the default for tiles, or `"level"`). A tile facet takes up to
+  300 levels (`LANE_MAX_TILE_LEVELS`); other marks keep 15.
+- `compact = TRUE` (now `look = "compact"`) is shared by both engines:
+  rotated titles, square cells, open groups. Rows of a faceted tile matrix sort by their total.
+- Downloads: xlsx carries `.bg:` / `.fg:` paint; the fallback picture draws
+  squares and titles on their side.
+- Titles can name the first summary's `facet` and `fill`
+  (`{label(@fill)}`).
+- The heatmap engine (`new_heatmap_block()`, `heatmap_matrix()`, its R, JS
+  and CSS) is gone. `blockr.pharma::new_ae_heatmap_block()` builds a table
+  block (branch `feat/ae-heatmap-table` in blockr.pharma) and left pharma's
+  registry. `locked_roles` is accepted and ignored.
+- Still to do outside these two repos: blockr.sandbox's deploy check
+  (`deploy-simple.R:948-970`) asks for `new_heatmap_block` and the
+  `ae_heatmap_block` registry entry, and its `clinical-figures` skill names
+  `ae_heatmap_block`.
+
+R tests: all pass except `test-summarize-push` and `test-write-exhibit`,
+which fail on `main` too. JS tests: 449 of 450, the same one fails on
+`main`.
+
+Cards look (branch `feat/table-cards`, fast-forwarded into `feat/table-rewrite`):
+
+- `look = "table" | "compact" | "cards"` replaces `compact`; `compact = TRUE`
+  and the old `rotate_titles = TRUE` read as `look = "compact"`
+  (`table_legacy_names()`).
+- Cards draw the groups layout (one card per summary, one row of cards per
+  level of `by`, one row without `by`) and the records layout (one card per
+  column). The variables layout and a structured input draw as a table; the
+  gear greys Cards out there. `spans` and `expr` summaries are left out and
+  the gear names them. A summary with a `facet` gives one card per level.
+- The card text comes from R (`R/table-cards.R`, on the payload as `cards`);
+  the glyphs are the summarize table's cells, drawn by its own emitters
+  (`glyphHtml()` in summarize-table.js), so a column of cards shares the
+  table column's scale. `inst/js/table-cards.js` lays them out and loads only
+  with a table in the cards look.
+- Card rows carry the table rows' classes and data attributes, so drill,
+  selection, search and collapse are the table look's code.
+- Downloads: xlsx the table's values, html the cards (the same JS, inlined),
+  pptx the browser picture or a painted fallback (`R/cards-exhibit.R`, which
+  reuses the summarize painter's glyph functions).
+- The tile block is gone; `blockr_deser.tile_block()` restores a saved tile
+  as a table block.
+
+Groups without `by` (branch `feat/table-groups-no-by`):
+
+- `by` is optional in the groups layout. Without it the table is one row
+  over all input rows, in every look. `lane_prepare_summaries()` groups by a
+  synthetic column (`GROUPS_ALL_COL`) whose one level reads "Total", the
+  variables layout's `total_label`, and marks the result `all = TRUE`. The
+  cards look's own synthetic group (`cards_frame()`) is gone.
+- The one row has a blank row header, no header sorting, no drill, and the
+  search box hides. A plain count drops its percentage (always 100%).
+- The gear shows "Group by" as an ordinary mapping row ("all rows" when
+  empty), with no asterisk or amber. Sort, order, search, header sorting and
+  the drill section leave while it is empty. Removing `by` clears a drill
+  selection.
+- A groups table with no summaries starts with one count, "Rows"
+  (`table_groups_seed()`), at construction and on a switch from another
+  layout, so Records -> Groups shows a one-row table.
+- Downloads and `report_call()` need no change: they go through the same
+  preparer.
+
+Phase 5 (vocabulary):
+
+- Summary entries are saved, edited and documented under public keys, the
+  chart block's names: dist `summary` (inner range, and a text column's
+  statistic), `whiskers`, `style`; pair `x`, `xend`, `x_func`, `xend_func`,
+  `ref_lo`, `ref_hi`; spans `tooltip`; simple `position` (`"stack"`,
+  `"dodge"`, `"fill"`) for a colour split. `lane_public_summary()` turns old
+  keys into these (constructor, gear edits, legacy translation);
+  `lane_internal_summary()` maps them back to the engine's own fields at the
+  top of `lane_norm_summaries()`, so the engine code is unchanged. The gear
+  writes the public keys.
+- Block-level `bar_mode` of an old summarize table becomes `position` on its
+  colour-split summaries.
+- `format` replaces `digits`: `"number"` (up to two decimals) or a whole
+  number of decimals. Saved state holds the decimals. `"percent"` and
+  `"compact"` (the chart's and tile's other values) are not implemented.
+- `pct_of`: `"facet"` (default, a count's share of its facet level's N) or
+  `"total"`. `missing`: `"drop"` (default, today's behaviour) or `"level"`
+  (`"(Missing)"` as a level of grouping, colour and facet columns, and of
+  Table 1 variables; the variables layout's emitted code does the same in
+  dplyr). Both are shared by the groups and variables layouts and are in
+  the groups gear. A drill on a "(Missing)" row does not resolve to the NA
+  rows yet.
+- Registry: one `table_arguments()` with its own `summaries` spec and one
+  `table_guidance()`; the chart and the table are the only registered
+  blocks. `new_gt_table_block()` left the registry (kept for saved boards).
+- Cards: a faceted count's card head names the count range, not the
+  percentage scale the bar is drawn on.
+- Not renamed: the pair's `ref`, `dash`, `band` (series), the custom
+  function's result columns (`from`, `to`, `lo`, ...), `facet_layout`.
+  Per-summary `format` / `unit` are not implemented.
+
+### One column list in the groups gear (branch `feat/groups-one-list`)
+
+The groups layout has one data model, `by` + `summaries`. The single ranked
+bar (block-level `group`, `parent`, `func`, `value`, `id_var`, `color`,
+`facet`, `bar_mode`, `cols`, `fields`) is gone from the gear, the server and
+`summarize_prepare()`. Mockup and decision:
+`_scratch/blockx/groups-gear-mockup/index.html`, option B.
+
+- Gear: Rows are, with Group by under the switch; Columns (the list); then
+  Presentation, Titles, Drill-down, Prepare script. No Mapping section.
+- A new groups table starts with one column, `table_groups_seed()`: a count
+  drawn as a bar, named "Count". The gear opens on it while the table has one
+  column. The last column cannot be removed.
+- Old boards: `table_legacy_args(from = "summarize")` maps the ranked bar to
+  `by = c(parent, group)` and one simple bar summary (`func`, `col` = `value`,
+  or `id_var` for a distinct count, `color`, `facet`, `bar_mode` as
+  `position`), plus a count number column for `cols = "n"` and field columns
+  for `fields` under `func = "identity"`. `compare` (gone since 87616f6) is
+  dropped. `static_summarize_table()` and `summarize_table()` still take the
+  old arguments through the same table.
+- Brought in line with the ranked bar, for new tables too: a faceted column
+  ranks rows by its value over all levels (a tile matrix keeps its row
+  total); a count's percent base counts each input row once when pooled
+  groups copy rows; an unnamed column's header reads the variable label
+  ("Mean Start Day").
+- Kept: a `by` column missing from the data is an error, where a missing
+  `parent` used to be dropped.
+
+### Gear gaps (branch `feat/table-gear-gaps`)
+
+Every argument a user changes has a control in each layout where it changes
+the table. All three gears read: Rows are (with what a row is), Columns or
+Table 1, Presentation, Color, Titles, Drill-down, Prepare script.
+
+| Argument | Records | Groups | Variables |
+|---|---|---|---|
+| `rowname` | "Row names", under Rows are | - | - |
+| `columns` | "Columns", under Rows are; also limits a nested table | - | - |
+| `format`, `unit` | flat and nested (number cells of a nested frame) | yes | - (Table 1 cells are text) |
+| `color`, `shadings` | flat only | - (per summary) | - |
+| `missing` | with `by` set | yes | yes |
+| `collapsible` | with `by` set | - (not wired) | yes |
+| `top_n` | - | "Top", after Sort and Order | - |
+| `id` | - | - (no effect: a distinct count names its column) | "Count distinct by" |
+| `script` | yes | yes | yes |
+| `max_height` | code only | code only | code only |
+
+- The prepare script runs at the block (`table_prepare()`,
+  R/table-prepare.R), before every layout. In records and variables a click
+  filters the rows the script returned; in groups it filters the input
+  before the script, as on the chart.
+- The records engine's in-block aggregation (`group` + `summaries` of
+  `{func, cols}`) is gone from the engine, its payload and table.js. Old
+  boards restore as the groups layout (`table_legacy_args()`); aggregation
+  without a group restores as groups without `by`.
+- A records table with `by` no longer reads as "Finished table".
+- The records engine keeps every column of `columns` (it kept the first).
+- Toggle labels match across gears: "Header sorting", "Download".
+
+### Class migration (resolved)
+
+Resolved by BristolMyersSquibb/blockr.core#379 (PR #384, on `main`): a
+restored block only has to be a block. Needs a blockr.core build that
+includes it; the version number was not bumped (still 0.1.4).
+
+#### Earlier analysis
+
+
+blockr.core restores a saved block only if the rebuilt block has exactly the
+saved class vector (`blockr_deser.list`, `blockr.core/R/utils-serdes.R:295`).
+A board saved with a summarize table (`summarize_table_block`,
+`lane_chart_block`, `rank_block`) or an AE heatmap (`ae_heatmap_block`,
+`heatmap_block`) therefore cannot come back as a `table_block`. Two ways:
+
+- Keep the old class on blocks restored through the old constructors, for
+  good. The forwarders stay, and every `table_block` method is registered
+  for those classes too. No change outside blockr.viz.
+- Let blockr.core accept a declared class migration (for example, a
+  deserializer method marks its result as migrated and the class check then
+  only requires a block). Old boards then save as `table_block` and the
+  forwarders can go later. Needs a blockr.core change.

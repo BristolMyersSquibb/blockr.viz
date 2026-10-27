@@ -47,7 +47,7 @@
   label. `direct_labels = TRUE`, from earlier builds of 0.3.0, is read as
   `legend = "marks"`.
 * `format` (`"number"`, `"compact"`, `"percent"`) and `unit` print the values
-  as the tile block does: the ticks in the format, the unit once in the axis
+  as the table block does: the ticks in the format, the unit once in the axis
   title, tooltips and value labels with both.
 * Line charts follow the rules from the line chart review. A dense line
   draws no dots; a line whose points are at least 24 px apart draws ringed
@@ -97,9 +97,78 @@
 * An unnamed `y_lines` line at 0 has no label: the axis prints 0.
 * A histogram's bins carry x's label, so the filter line reads "price =
   1000-1500".
+* `interactive_table()` draws a table the way the table block does, for
+  another block's UI, and `update_interactive_table()` replaces the table
+  inside it from the server. It replaces `drilldown_table()`, which is no
+  longer exported. `static_table()` is the print counterpart.
+* The heatmap and tile blocks are gone. The table block draws heatmaps
+  (the groups layout with `look = "compact"`) and tiles (`look = "cards"`).
+  A saved tile block loads as a table block.
+* The picker block is gone. Bind chart and table mappings to the source
+  columns directly and put a group switch in the board's filter.
+* The table block orders rows alphabetically with `sort_by = "alpha"`, as
+  the chart block does. The old value `"label"` is read as `"alpha"`.
+* The table block's `format` takes the chart block's values: `"number"`,
+  `"compact"` (1.2K, 3.4M), `"percent"` (a fraction x100 with "%") or a
+  whole number of decimals from 0 to 6. A new `unit` heads the numeric
+  columns ("Revenue (CHF)") and follows the number on a card. Both apply to
+  the records layout's cells, cards and downloads; the gear's "Numbers"
+  select and "Unit" field set them. Excel keeps the values as numbers and
+  shows them in the same format.
+* A fixed number of decimals prints exactly that many (`format = 2` gives
+  4.30), so a column lines up; Excel formats every numeric column with it.
+  `"number"` prints up to two decimals, and a value that would round to 0
+  keeps two significant digits (0.0034). An old `digits = 2`, the old
+  default, reads as `"number"`.
+* `format` and `unit` reach the groups layout too: its number cells, the
+  value labels beside its bars and its cards. `unit` heads the columns that
+  are not counts. The variables layout (Table 1) keeps its statistics' own
+  formats. The groups gear has the same "Numbers" and "Unit" controls.
+* A drill sent to a filter block (`drill_target`) from a missing bar, or
+  from a table's "(Missing)" row, claims the rows with no value: the claim
+  carries the value filter's `"<NA>"` / `"<empty>"` tokens, and with the
+  board's subject column it is the subjects behind those rows. Before, it
+  claimed nothing.
+* A click on the "(Missing)" row of a table with `missing = "level"` gives
+  the rows whose value is missing, in every layout. Before, it gave none.
+  `summary_table()` and `table_nest()` take `missing`: the variables layout
+  keeps a numeric variable numeric when it has missing values, and a nested
+  records table names its missing group "(Missing)", a header a drill can
+  claim.
+* The table block's `missing` defaults to `"level"`, as on the chart block:
+  missing values of a grouping, colour or facet column show as "(Missing)"
+  unless the author drops them. A board saved by the new table block stored
+  its `missing` and keeps it. Boards saved by the old table, summarize table
+  and summary table blocks had no `missing`; they now show "(Missing)" rows
+  and columns where their data has missing values.
+* The table block offers its downloads by default (`download = TRUE`), as
+  the chart block does. Boards saved by the new table block stored their
+  choice and keep it. An old table board keeps downloads off when it stored
+  its per-format download flags all off; one saved before those flags
+  existed now offers downloads.
+* A table summary's `summary` and `whiskers` are typed in the block's
+  argument specs: the chart's statistics (`median_q1_q3`, `mean_sd`, ...,
+  `whiskers` also `tukey`), plus `mean_ci95` and `"none"`, which only the
+  table draws.
+* The table block's footer says nothing about filters while none is set:
+  "No filter active" and the Reset button are gone, in every layout and
+  look, as under the chart. "Filtered: ..." shows while a row or card is
+  selected; a second click on it clears the filter. The records layout keeps
+  its row count.
 
 # blockr.viz 0.2.210
 
+* The table block's groups layout has one way to say what its columns are:
+  the column list. The gear's Mapping section (Group, Aggregate, Add
+  mapping) and the single ranked bar behind it are gone. Group by sits under
+  the "Rows are" switch. A new groups table starts with one open "Count"
+  column. Boards saved with the old summarize table's bar restore as that
+  list: `group` and `parent` become `by`, and `func`, `value`, `id_var`,
+  `color`, `facet` and `bar_mode` become the column's own settings.
+* In the groups layout a faceted column ranks the rows by its value over all
+  levels, not by its first level. A count's percent over pooled groups
+  counts each input row once. An unnamed column is headed by its variable's
+  label ("Mean Start Day", not "Mean ASTDY").
 * A summarize table grouped by two `by` columns lists the inner column flat
   when the outer one has no value in any row. A prepare script can blank the
   outer column behind a flag (`soc <- FALSE`, `AEBODSYS = if (soc) AEBODSYS

@@ -80,7 +80,9 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     parts <- summarize_num_parts(vraw, denom = p$val_denom,
                                  combined = !is.null(p$val_denom),
                                  signed = signed,
-                                 fmt = if (!is.na(dig)) {
+                                 fmt = if (!is.null(prep$format)) {
+                                   function(v) dt_format_num(v, prep$format)
+                                 } else if (!is.na(dig)) {
                                    function(v) summarize_val_str(v, dig)
                                  })
     # formatC pads "fg" output to a common width; harmless in a collapsing
@@ -136,6 +138,13 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       }
       c(list(kind = "bar", w = mk_pct_w(p$dmax %||% mx)(v), v = sortv(v),
              fill = p$fill, sub = rows$.level > 0L), lab)
+    } else if (identical(p$kind, "tile")) {
+      # The matrix cell. An empty count is an empty cell: no square, no "0".
+      v <- rows[[p$key]]
+      paint <- lane_tile_paint(p, rows)
+      disp <- if (vals_on) ifelse(paint$has, lane_fmt(v), "") else rep("", n)
+      list(kind = "tile", v = sortv(v), bg = paint$bg, fg = paint$fg,
+           disp = disp)
     } else if (identical(p$kind, "barsplit")) {
       prefix <- p$prefix %||% ".s_"
       # Per-entry scale, like the plain bar: on the summaries path every
@@ -609,7 +618,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
       parts <- summarize_num_parts(v, denom = p$denom,
                                    combined = isTRUE(p$combined),
                                    signed = isTRUE(p$signed),
-                                   pct_only = isTRUE(p$pct_only))
+                                   pct_only = isTRUE(p$pct_only),
+                                   fmt = if (!is.null(prep$format)) {
+                                     function(x) dt_format_num(x, prep$format)
+                                   })
       c(list(kind = "num", v = sortv(v)), parts)
     }
   })
@@ -620,21 +632,47 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   for (i in seq_along(cols)) {
     cols[[i]]$tt <- summarize_tip_meta(plan[[i]])
   }
+  # What a click on a cell adds to the row's claim: a facet column its level,
+  # a colour split the level of the segment hit (the drill, below).
+  for (i in seq_along(cols)) {
+    pl <- plan[[i]]
+    if (!is.null(pl$flevel) && !is.null(pl$fcol)) {
+      cols[[i]]$fkey <- list(column = pl$fcol, value = as.character(pl$flevel))
+    }
+    if (identical(cols[[i]]$kind, "barsplit") && !is.null(pl$ccol)) {
+      cols[[i]]$scol <- pl$ccol
+    }
+  }
 
+  # A stored click is the row's path, plus what a cell added. The row lights
+  # from its path; the cell part goes to the client, which marks the cell.
+  path <- c(summarize_chr1(prep$parent), summarize_chr1(prep$group))
+  filters <- summarize_drill_filters(active$col, active$vals)
+  on_path <- names(filters) %in% path
   on <- summarize_drill_on(
     rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
-    summarize_drill_filters(active$col, active$vals)
+    filters[on_path]
   )
+  on_cell <- if (any(on) && any(!on_path)) {
+    lapply(filters[!on_path], function(v) as.character(v)[[1L]])
+  }
+  # The one row of a table without `by` has no group to drill on and
+  # nothing to sort against.
+  if (isTRUE(prep$all)) drill <- NULL
 
   list(
     n = n,
-    thead = summarize_thead(prep, sortable = isTRUE(cfg$sortable %||% TRUE),
+    thead = summarize_thead(prep, sortable = !isTRUE(prep$all) &&
+                              isTRUE(cfg$sortable %||% TRUE),
                             cols = cols, axis = isTRUE(cfg$axis %||% TRUE)),
     tfoot = summarize_tfoot(prep, cols = cols,
                             axis = isTRUE(cfg$axis %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
-    expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))),
+    # A compact matrix opens its groups, as the heatmap did: the subjects are
+    # what it shows.
+    expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))) ||
+      isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = summarize_parent_labels(rows),
     parent_key = as.character(
@@ -643,6 +681,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
     on = on,
+    on_cell = on_cell,
     pick = !is.null(drill),
     # The columns a row click claims, outer -> inner: a parent row claims the
     # first, a child row both (R/summarize-drill.R).
@@ -1009,7 +1048,11 @@ summarize_fold_text <- function(prep) {
 summarize_cells_html <- function(m, expanded = FALSE) {
   expanded <- isTRUE(expanded) || isTRUE(m$expanded)
   cells <- lapply(m$cols, function(c) {
-    if (identical(c$kind, "bar")) {
+    if (identical(c$kind, "tile")) {
+      paste0("<td class=\"blockr-summarize-tile-col\"",
+             summarize_data_v(c$v), ">",
+             summarize_tile_html(c$bg, c$fg, c$disp), "</td>")
+    } else if (identical(c$kind, "bar")) {
       paste0("<td class=\"blockr-summarize-bar-col\"",
              summarize_data_v(c$v), ">",
              summarize_barwrap(summarize_track_html(c$w, c$fill, c$sub), c),
@@ -1073,13 +1116,12 @@ summarize_cells_html <- function(m, expanded = FALSE) {
     "<button class=\"blockr-indent-btn\" type=\"button\" tabindex=\"-1\"",
     " aria-expanded=\"false\">", as.character(section_chevron_svg()), "</button>"
   )
-  # Child rows sit 24px deeper than their parent, whose label cell has 24px
-  # of padding on a nested table (summarize-table-css.R) so the chevron
-  # hanging into it (margin-left:-18px) clears a clicked row's 3px bar.
+  # Child rows start where their parent's name starts: every label cell of
+  # a nested table has 24px of padding (summarize-table-css.R), and the
+  # parent's chevron hangs into it (margin-left:-18px).
   lbl <- paste0(
     "<td class=\"blockr-summarize-label-col blockr-stub",
-    ifelse(m$parent_row, " blockr-has-toggle", ""), "\"",
-    ifelse(m$level > 0L, " style=\"padding-left:48px;\"", ""), ">",
+    ifelse(m$parent_row, " blockr-has-toggle", ""), "\">",
     ifelse(m$parent_row, chev, ""),
     "<span class=\"blockr-summarize-label\">", summarize_esc(m$label),
     "</span></td>"
@@ -1181,7 +1223,9 @@ summarize_split_html <- function(c) {
     lab <- if (!grouped && !is.null(c$slab)) c$slab[[j]] else rep("", n)
     body <- paste0(
       "<div class=\"blockr-summarize-fill", ifelse(nzchar(lab), " has-lab", ""),
-      "\" style=\"width:",
+      # The segment's index: a click on a colour segment claims its level
+      # (summarize-table.js reads it), so the static markup carries it too.
+      "\" data-seg=\"", j - 1L, "\" style=\"width:",
       summarize_fmt_w(c$seg[[j]]),
       "%;background:", c$fills[[j]], "\" data-summarize-tip=\"",
       summarize_esc(c$names[[j]]), ": ", c$segv[[j]], "\">",
@@ -1564,6 +1608,17 @@ summarize_flat_payload <- function(m) {
   arr_if <- function(x) if (any(x, na.rm = TRUE)) arr(x) else NULL
   one <- function(c) {
     out <- list(kind = c$kind)
+    # What a click on this column's cell adds to the row's claim.
+    out$fkey <- c$fkey
+    out$scol <- c$scol
+    if (identical(c$kind, "tile")) {
+      out$bg <- arr(c$bg)
+      out$fg <- arr(c$fg)
+      out$disp <- arr(as.character(c$disp))
+      out$v <- arr(c$v)
+      if (length(c$tt)) out$tt <- c$tt
+      return(out)
+    }
     if (identical(c$kind, "num")) {
       out$disp <- arr(as.character(c$disp))
       if (!is.null(c$pct)) out$pct <- arr(as.character(c$pct))
@@ -1709,6 +1764,7 @@ summarize_flat_payload <- function(m) {
     level = if (any(m$level > 0L)) arr(m$level) else NULL,
     parent_row = arr_if(m$parent_row),
     on = arr_if(m$on),
+    on_cell = m$on_cell,
     pick = isTRUE(m$pick),
     path = if (isTRUE(m$pick)) arr(as.character(m$path)) else NULL,
     cols = lapply(m$cols, one),
@@ -1750,9 +1806,18 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
            summarize_esc(prep$err), "</td></tr></tbody></table>"
          ))
   } else {
-    summarize_flat_payload(summarize_cells(prep, drill = drill, active = active,
-                                           cfg = cfg))
+    m <- summarize_cells(prep, drill = drill, active = active, cfg = cfg)
+    out <- summarize_flat_payload(m)
+    # The cards look draws from the same cell model; the payload adds the
+    # cards' text (R/table-cards.R).
+    if (identical(cfg$look, "cards")) {
+      out$cards <- cards_payload(table_cards_groups(
+        m, prep, data = data, scale_map = list(...)$scale_map
+      ))
+    }
+    out
   }
+  if (!is.null(cfg$look)) body$look <- cfg$look
   body$chrome <- summarize_drop_null(c(chrome, list(
     legend = summarize_legend_spec(prep),
     foot = summarize_foot_spec(prep, drill = drill, active = active)
@@ -1770,4 +1835,15 @@ summarize_build_payload <- function(data, chrome = list(), drill = NULL,
 #' @noRd
 summarize_payload_json <- function(p) {
   as.character(jsonlite::toJSON(p, auto_unbox = TRUE, na = "null"))
+}
+
+#' A tile cell's mark: a painted square with the value in it, or nothing.
+#' Vectorised over rows; NA paint = an empty cell.
+#' @noRd
+summarize_tile_html <- function(bg, fg, disp) {
+  ifelse(
+    is.na(bg), "",
+    paste0("<span class=\"blockr-summarize-tile\" style=\"background:", bg,
+           ";color:", fg, "\">", disp, "</span>")
+  )
 }

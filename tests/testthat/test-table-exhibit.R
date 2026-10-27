@@ -118,14 +118,14 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
                     args = list(data = shiny::reactive(d)), {
     session$flushReact()
 
-    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
     for (b in bg) expect_match(h, paste0("background:", b), fixed = TRUE)
     expect_false(grepl(".bg:", h, fixed = TRUE))
 
-    st <- xlsx_styles(output$dl_xlsx)
+    st <- xlsx_styles(output[["records-dl_xlsx"]])
     for (x in hex) expect_match(st, x, fixed = TRUE)
 
-    sl <- toupper(slide_xml(output$dl_pptx))
+    sl <- toupper(slide_xml(output[["records-dl_pptx"]]))
     for (x in hex) expect_match(sl, x, fixed = TRUE)
   })
 })
@@ -153,19 +153,24 @@ test_that("exports format numbers like the screen (#37)", {
   attr(d$times_more, "label") <- "Times more"
   out <- dt_format_digits(d, 2L)
   expect_identical(as.character(out$times_more), "3.81")
+  # A fixed number of decimals prints exactly that many, so a column lines up.
+  expect_identical(out$ci_low, "2.70")
+  expect_identical(out$n, "12.00")
+  # "number" drops trailing zeros.
+  out <- dt_format_digits(d, "number")
   expect_identical(out$ci_low, "2.7")
   expect_identical(out$n, "12")
   expect_identical(attr(out$times_more, "label"), "Times more")
   # the screen's own formatter, cell for cell
   b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = 2L)
   expect_identical(b$cells[[1]]$disp, "3.81")
-  expect_identical(b$cells[[2]]$disp, "2.7")
+  expect_identical(b$cells[[2]]$disp, "2.70")
 
   # NA stays missing, a numeric stub is left alone, NULL is a no-op
   d2 <- data.frame(id = c(1.234, 2), v = c(NA, 1.005))
   out2 <- dt_format_digits(d2, 1L)
   expect_identical(out2$id, d2$id)
-  expect_identical(out2$v, c(NA, "1"))
+  expect_identical(out2$v, c(NA, "1.0"))
   expect_identical(dt_format_digits(d2, NULL), d2)
 })
 
@@ -179,7 +184,12 @@ test_that("Excel keeps the full value under a rounding number format (#37)", {
   fmts <- xlsx_num_formats(f)
   expect_identical(fmts[["2"]], "0.00")
   expect_identical(fmts[["3"]], "0.00")
-  # a count column keeps the general format (3, not 3.00)
+  # fixed decimals reach a count column too (3.00), as on screen
+  expect_identical(fmts[["4"]], "0.00")
+  # "number" leaves a count column in the general format (3, not 3.00)
+  write_annotated_xlsx(coef_frame(), f, digits = "number")
+  fmts <- xlsx_num_formats(f)
+  expect_identical(fmts[["3"]], "0.00")
   expect_null(fmts[["4"]])
 
   # the format survives the paint stacked over it
@@ -200,17 +210,17 @@ test_that("the block's downloads round to its digits (#37)", {
                     args = list(data = shiny::reactive(coef_frame())), {
     session$flushReact()
 
-    h <- paste(readLines(output$dl_html, warn = FALSE), collapse = "")
+    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
     expect_match(h, ">3.81<", fixed = TRUE)
     expect_match(h, ">2.7<", fixed = TRUE)
     expect_false(grepl("3.8142", h, fixed = TRUE))
 
-    sl <- slide_xml(output$dl_pptx)
+    sl <- slide_xml(output[["records-dl_pptx"]])
     expect_match(sl, ">3.81<", fixed = TRUE)
     expect_match(sl, ">2.7<", fixed = TRUE)
     expect_false(grepl("3.8142", sl, fixed = TRUE))
 
-    fx <- output$dl_xlsx
+    fx <- output[["records-dl_xlsx"]]
     expect_equal(openxlsx::read.xlsx(fx)$times_more, 3.81427057462906)
     expect_identical(xlsx_num_formats(fx)[["2"]], "0.00")
   })
@@ -236,7 +246,7 @@ test_that("table_exhibit() is the block as a printed table", {
   expect_false(any(grepl("^\\.(bg|fg):", names(body))))
 })
 
-test_that("the table block's report call carries digits, text and colours (#37)", {
+test_that("the table block's report call carries format, text and colours (#37)", {
   blk <- new_table_block(digits = 1L, title = "Area effect", subtitle = "",
                          cell_color = drilldown_table_color("sequential"))
   cl <- report_call(blk, "gtbl")
@@ -244,7 +254,7 @@ test_that("the table block's report call carries digits, text and colours (#37)"
   inner <- cl[[2]]
   expect_identical(inner[[1]], quote(blockr.viz::table_exhibit))
   expect_identical(inner[[2]], as.name("gtbl"))
-  expect_identical(inner$digits, 1L)
+  expect_identical(inner$format, 1L)
   expect_identical(inner$title, "Area effect")
   expect_identical(inner$subtitle, "")
   expect_identical(inner$shadings[[1]]$mode, "sequential")
@@ -259,4 +269,104 @@ test_that("the table block's report call carries digits, text and colours (#37)"
   skip_if_not_installed("flextable")
   ft <- eval(cl)
   expect_true("3.8" %in% unlist(ft$body$dataset))
+})
+
+# --- format: the chart's set ------------------------------------------------
+
+test_that("the table's number format takes the chart's values", {
+  expect_identical(table_format_state("compact"), "compact")
+  expect_identical(table_format_state("percent"), "percent")
+  expect_identical(table_format_state("2"), 2L)
+  expect_identical(table_format_state(1), 1L)
+  # Old larger decimals clamp to the chart's range; nonsense reads as default.
+  expect_identical(table_format_state(8L), 6L)
+  expect_identical(table_format_state("pct"), "number")
+  expect_identical(table_format_state(NULL), "number")
+
+  v <- c(0.1234, 12.5, 999, 1234, -45678, 2.5e6, 3.21e9)
+  expect_identical(dt_format_num(v, "number"),
+                   c("0.12", "12.5", "999", "1234", "-45678", "2500000",
+                     "3210000000"))
+  expect_identical(dt_format_num(v, "compact"),
+                   c("0.12", "12.5", "999", "1.2K", "-45.7K", "2.5M", "3.2B"))
+  expect_identical(dt_format_num(c(0.1234, 1, -0.0004), "percent"),
+                   c("12.3%", "100%", "0%"))
+  expect_identical(dt_format_num(1234.5678, 1L), "1234.6")
+})
+
+test_that("compact, percent and unit reach cells, cards and downloads", {
+  d <- data.frame(term = c("a", "b"), share = c(0.25, 0.5),
+                  amount = c(1500, 2.5e6))
+  # Cells.
+  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
+  expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
+  p <- dt_build_payload(d, "term", digits = "compact", unit = "CHF")
+  expect_match(p$head %||% jsonlite::toJSON(p), "amount \\(CHF\\)")
+  # Cards: the unit after the number, not in the label.
+  m <- table_cards_records(d, label_col = "term", digits = "compact",
+                           unit = "CHF")
+  expect_identical(m$cols[[2]]$main, c("1.5K CHF", "2.5M CHF"))
+  expect_identical(m$cols[[2]]$label, "amount")
+  # Downloads and the report: the frame the writers get.
+  ex <- table_exhibit(d, rowname = "term", format = "compact", unit = "CHF")
+  expect_identical(ex$amount, c("1.5K", "2.5M"), ignore_attr = TRUE)
+  expect_identical(attr(ex$amount, "label"), "amount (CHF)")
+  expect_identical(xlsx_num_format("percent"), "0.0%")
+  expect_match(xlsx_num_format("compact"), "\"K\"")
+  skip_if_not_installed("openxlsx")
+  f <- tempfile(fileext = ".xlsx")
+  write_annotated_xlsx(d, f, digits = "percent")
+  wb <- openxlsx::loadWorkbook(f)
+  fmts <- vapply(wb$styleObjects, function(s) s$style$numFmt$formatCode %||% "",
+                 character(1L))
+  expect_true("0.0%" %in% fmts)
+})
+
+test_that("fixed decimals print exactly, number keeps small values", {
+  expect_identical(dt_format_num(c(4.3, 3), 2L), c("4.30", "3.00"))
+  expect_identical(dt_format_num(c(4.3587, 0.0034, -0.00012, 0), "number"),
+                   c("4.36", "0.0034", "-0.00012", "0"))
+  expect_identical(dt_format_num(0.0034, "compact"), "0.0034")
+  # An old `digits = 2` ("up to two decimals") reads as "number".
+  expect_identical(table_digits_format(2L), "number")
+  expect_identical(table_digits_format(1L), 1L)
+  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
+  expect_identical(p$format, "number")
+})
+
+test_that("fixed decimals print exactly, number keeps small values", {
+  expect_identical(dt_format_num(c(4.3, 3), 2L), c("4.30", "3.00"))
+  expect_identical(dt_format_num(c(4.3587, 0.0034, -0.00012, 0), "number"),
+                   c("4.36", "0.0034", "-0.00012", "0"))
+  expect_identical(dt_format_num(0.0034, "compact"), "0.0034")
+  # An old `digits = 2` ("up to two decimals") reads as "number".
+  expect_identical(table_digits_format(2L), "number")
+  expect_identical(table_digits_format(1L), 1L)
+  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
+  expect_identical(p$format, "number")
+})
+
+test_that("format and unit reach the groups layout's number cells and labels", {
+  d <- data.frame(g = c("a", "a", "b"), x = c(1.234, 1500, 0.0021))
+  S <- list(list(type = "simple", func = "mean", col = "x", show = "number"),
+            list(type = "simple", func = "sum", col = "x", show = "bar"),
+            list(type = "simple", func = "count", show = "number"))
+  p <- summarize_prepare(d, by = "g", summaries = S, format = "compact",
+                         unit = "CHF")
+  # The unit heads the columns in the data's unit, not the count.
+  labs <- vapply(p$plan, function(q) q$label, "")
+  expect_match(labs[[1L]], "(CHF)", fixed = TRUE)
+  expect_match(labs[[2L]], "(CHF)", fixed = TRUE)
+  expect_false(grepl("CHF", labs[[3L]]))
+  m <- summarize_cells(p, cfg = list(value_labels = TRUE))
+  expect_identical(m$cols[[1L]]$disp, c("750.62", "0.0021"))
+  # The value label beside the bar.
+  expect_identical(m$cols[[2L]]$disp, c("1.5K", "0.0021"))
+  # Cards: the unit after the number, the label without it.
+  cards <- table_cards_groups(m, p)
+  expect_identical(cards$cols[[1L]]$main, c("750.62 CHF", "0.0021 CHF"))
+  expect_false(grepl("CHF", cards$cols[[1L]]$label))
+  # Without a format the engine keeps its own digits.
+  p0 <- summarize_prepare(d, by = "g", summaries = S)
+  expect_null(p0$format)
 })

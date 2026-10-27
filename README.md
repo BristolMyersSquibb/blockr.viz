@@ -2,8 +2,8 @@
 
 The render layer for blockr dashboards.
 
-blockr.viz draws rectangular data: interactive `chart`, `table`, and
-`tile` blocks (built on ECharts and HTML widgets), a static `gt` table
+blockr.viz draws rectangular data: interactive `chart` and `table`
+blocks (built on ECharts and HTML widgets), a static `gt` table
 renderer, and a `summary_table` shaper. Renderers never compute or reshape —
 they take an already-shaped data frame and turn it into pixels, with optional
 cell coloring and opt-in click-to-filter drill-down.
@@ -20,8 +20,7 @@ pak::pak("BristolMyersSquibb/blockr.viz")
 | Block | Role | What it does |
 |---|---|---|
 | `new_chart_block()` | Renderer | Configurable ECharts chart (bar, line, scatter, pie, treemap, boxplot, radar, gantt, waterfall). |
-| `new_table_block()` | Renderer | Interactive HTML table — sticky header, sort, search, optional cell coloring. Renders flat *and* structured ("Table 1") input. |
-| `new_tile_block()` | Renderer | Scorecard of bold KPI numbers — cards or an aligned matrix, with deltas / fills / status pills. |
+| `new_table_block()` | Renderer | Interactive HTML table — sticky header, sort, search, optional cell coloring. Renders flat *and* structured ("Table 1") input, as a table, a compact matrix, or KPI cards (`look = "cards"`). |
 | `new_gt_table_block()` | Renderer (static) | Renders a wide display table as a styled `gt` table for print / report / CSR output. |
 | `new_summary_table_block()` | Shaper | Wide, display-shaped multi-variable summary ("list of variables by Y"); emits a tidy `.fmt` frame for any renderer. |
 

@@ -3,7 +3,7 @@
 #   dm (safetyData ADaM) -> pull adsl -> summary_table (SEX, RACE by ARM)
 #   -> table (drill = auto, ctrl_target = "cohort")     --.
 #   adsl -> chart (RACE bar, drill = auto, ctrl_target)  --+--> cohort
-#   adsl -> tile (SEX cards, drill, ctrl_target)         --'   (value filter)
+#   adsl -> cards (SEX, drill, drill_target)            --'   (value filter)
 #                                                              -> downstream
 #
 # No standalone ctrl_filter_block anywhere: each viz block pushes its own
@@ -74,12 +74,12 @@ serve(
         block_name = "Race bars (sends)"
       ),
 
-      # Tile sender: card click on the group column.
-      tile = new_tile_block(
-        group = "SEX",
-        summaries = list(list(func = "count", cols = list())),
-        drill = TRUE,
-        ctrl_target = "cohort",
+      # Cards sender: a click on a row of cards claims its group.
+      tile = new_table_block(
+        layout = "groups", by = "SEX", look = "cards",
+        summaries = list(list(type = "simple", func = "count", show = "bar")),
+        drill = "SEX",
+        drill_target = "cohort",
         block_name = "Sex cards (sends)"
       ),
 

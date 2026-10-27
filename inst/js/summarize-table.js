@@ -28,7 +28,9 @@
   /** @param {Element} root */
   function rows(root) {
     return Array.prototype.slice.call(
-      root.querySelectorAll("tbody tr.blockr-summarize-row")
+      // Table rows, or the rows of the cards look (table-cards.js), which
+      // carry the same classes and attributes.
+      root.querySelectorAll(".blockr-summarize-row")
     );
   }
 
@@ -339,7 +341,7 @@
       if (!btn || !root.contains(btn)) return;
       e.stopPropagation();
       e.preventDefault();
-      var row = btn.closest("tr.blockr-summarize-row");
+      var row = btn.closest(".blockr-summarize-row");
       if (!row) return;
       setOpen(row, row.classList.contains("collapsed"));
       applyVisibility(root);
@@ -366,7 +368,7 @@
   // Light the clicked row, then release it. One at a time: two lit rows would
   // read as two selections where only the last click counts.
   function summarizeFlash(root, tr) {
-    root.querySelectorAll("tr.summarize-flash").forEach(function (n) {
+    root.querySelectorAll(".summarize-flash").forEach(function (n) {
       n.classList.remove("summarize-flash");
     });
     tr.classList.add("summarize-flash");
@@ -402,6 +404,78 @@
     };
   }
 
+  // What a click on a cell adds to its row's claim: a facet column's level
+  // (an arm, a heatmap tile's term), and the level of the colour segment hit.
+  // Nothing for the row label, a plain column or a card. The payload's
+  // column carries both (R/summarize-push.R, `fkey` and `scol`).
+  function cellClaim(root, tr, target) {
+    var td = target && target.closest ? target.closest("td") : null;
+    if (!td || td.parentElement !== tr || td.classList.contains("blockr-stub")) {
+      return [];
+    }
+    var pay = root._summarizePayload;
+    var c = pay && pay.cols ? pay.cols[td.cellIndex - 1] : null;
+    if (!c) return [];
+    // An empty cell (no tile, a zero bar) has no rows behind it: the row.
+    var v = td.getAttribute("data-v");
+    if (v === "" || v === "0") return [];
+    var out = [];
+    if (c.fkey) out.push({ col: c.fkey.column, val: String(c.fkey.value) });
+    if (c.scol && c.names) {
+      var seg = target.closest(".blockr-summarize-fill[data-seg]");
+      var j = seg ? parseInt(seg.getAttribute("data-seg") || "", 10) : NaN;
+      if (!isNaN(j) && c.names[j] != null) {
+        out.push({ col: c.scol, val: String(c.names[j]) });
+      }
+    }
+    return out;
+  }
+
+  // One string per cell claim, whatever order its parts came in: the selected
+  // cell is the one whose claim equals the stored one.
+  function cellKey(parts) {
+    return parts.map(function (p) { return p.col + "\u0001" + p.val; })
+      .sort().join("\u0002");
+  }
+
+  function clearCells(root) {
+    root.querySelectorAll(".is-on-cell").forEach(function (n) {
+      n.classList.remove("is-on-cell");
+    });
+    root.querySelectorAll("[data-on-cell]").forEach(function (n) {
+      n.removeAttribute("data-on-cell");
+    });
+  }
+
+  // A restored or re-rendered selection with a cell part (`on_cell`, column
+  // -> value): mark the cell of each lit row whose column claims exactly it.
+  function markCells(root, p) {
+    var want = p && p.on_cell;
+    if (!want || !p.cols) return;
+    var names = Object.keys(want);
+    if (!names.length) return;
+    var key = cellKey(names.map(function (n) {
+      return { col: n, val: String(want[n]) };
+    }));
+    rows(root).forEach(function (tr) {
+      if (!tr.classList.contains("is-on")) return;
+      var tds = tr.children;
+      for (var k = 0; k < p.cols.length; k++) {
+        var c = p.cols[k];
+        var parts = [];
+        if (c.fkey) parts.push({ col: c.fkey.column, val: String(c.fkey.value) });
+        if (c.scol && want[c.scol] != null) {
+          parts.push({ col: c.scol, val: String(want[c.scol]) });
+        }
+        if (parts.length && cellKey(parts) === key && tds[k + 1]) {
+          tds[k + 1].classList.add("is-on-cell");
+          tr.setAttribute("data-on-cell", key);
+          return;
+        }
+      }
+    });
+  }
+
   // "AEBODSYS = X, AEDECOD = Y": the footer's and the receipt's words.
   function claimPhrase(c) {
     return c.cols.map(function (col, i) {
@@ -434,12 +508,13 @@
     }
     root._summarizeClear = function () {
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+      clearCells(root);
       send(null);
       select(null);
     };
 
     root.addEventListener("click", function (e) {
-      var tr = e.target.closest("tr.blockr-summarize-row.is-pick");
+      var tr = e.target.closest(".blockr-summarize-row.is-pick");
       if (!tr || !root.contains(tr)) return;
       if (e.target.closest(".blockr-indent-btn")) return;
       // Read per click: the gear turns the drill on and off through the
@@ -447,6 +522,13 @@
       var col = root.getAttribute("data-summarize-drill");
       if (!col) return;
       var claim = rowClaim(root, tr, col);
+      // A cell adds its column: "AEDECOD = Headache, ARM = Low dose".
+      var cell = cellClaim(root, tr, e.target);
+      var ck = cellKey(cell);
+      claim = {
+        cols: claim.cols.concat(cell.map(function (p) { return p.col; })),
+        vals: claim.vals.concat(cell.map(function (p) { return p.val; }))
+      };
       // Transient: no toggle. A second click on the same row means "send it
       // again", never "un-drill" -- that is the target's job.
       if (summarizeTransient(root)) {
@@ -463,13 +545,22 @@
         }, SUMMARIZE_RECEIPT_HOLD_MS + SUMMARIZE_RECEIPT_FADE_MS + 200);
         return;
       }
-      var was = tr.classList.contains("is-on");
+      // A second click on the same row and cell clears; a click on another
+      // cell of the selected row replaces the claim.
+      var was = tr.classList.contains("is-on") &&
+        (tr.getAttribute("data-on-cell") || "") === ck;
       rows(root).forEach(function (r) { r.classList.remove("is-on"); });
+      clearCells(root);
       if (was) {
         send(null);
         select(null);
       } else {
         tr.classList.add("is-on");
+        if (ck) {
+          tr.setAttribute("data-on-cell", ck);
+          var td = e.target.closest("td");
+          if (td) td.classList.add("is-on-cell");
+        }
         send(claim);
         select(claimPhrase(claim));
       }
@@ -478,8 +569,8 @@
 
   // The drill's footer line, in the chart's words and markup (chart/chrome.js
   // _updateStatus, chart.css .dd-status-*), so a table and a chart on one
-  // board report a drill the same way. A latched drill reads "No filter
-  // active" / "Filtered: COL = value" with Reset. With a ctrl_target the click
+  // board report a drill the same way. A latched drill reads "Filtered: COL =
+  // value" while it is set, and nothing at rest. With a ctrl_target the click
   // is an event: nothing at rest, and a receipt ("Drilled down to COL =
   // value") that holds, then fades.
   var SUMMARIZE_RECEIPT_HOLD_MS = 1400;
@@ -517,22 +608,15 @@
       root._summarizeReceipt = null;
     }
     if (summarizeTransient(root)) return;
+    // Nothing set, nothing said: the line is there only while a filter is.
+    // A second click on the selected row or card clears it, so there is no
+    // Reset (the chart's rule, chart/chrome.js _updateStatus).
     var sel = root._summarizeSel;
+    if (!sel) return;
     var span = document.createElement("span");
     span.className = "dd-status-text" + (returning ? " dd-status-returning" : "");
-    span.textContent = sel ? "Filtered: " + sel : "No filter active";
+    span.textContent = "Filtered: " + sel;
     box.appendChild(span);
-    if (sel) {
-      var reset = document.createElement("button");
-      reset.type = "button";
-      reset.className = "dd-status-reset";
-      reset.textContent = "Reset";
-      reset.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (root._summarizeClear) root._summarizeClear();
-      });
-      box.appendChild(reset);
-    }
   }
 
 
@@ -600,7 +684,7 @@
       // A stacked segment's own number, inside it (R: summarize_cells()).
       var lab = (!grouped && c.slab) ? c.slab[j][i] : "";
       var body = '<div class="blockr-summarize-fill' + (lab ? " has-lab" : "") +
-        '" style="width:' +
+        '" data-seg="' + j + '" style="width:' +
         w(c.seg[j][i]) + "%;background:" + c.fills[j] +
         '" data-summarize-tip="' + esc(c.names[j]) + ": " + c.segv[j][i] +
         '">' + (lab ? '<span class="blockr-summarize-seglab w' + lab.length +
@@ -801,38 +885,80 @@
     return (c.kind === "box" ? g.bc[i] : g.c[i]) != null;
   }
 
+  /** A row's classes and data attributes: the table row's, and the card
+   *  row's in the cards look, so drill, search and collapse read one shape. */
+  function rowMeta(p, i) {
+    var expanded = !!p.expanded;
+    var parent = !!(p.parent_row && p.parent_row[i]);
+    var child = !!(p.level && p.level[i] > 0);
+    var cls = "blockr-summarize-row" +
+      (parent ? " is-parent blockr-indent-toggle" +
+        (expanded ? "" : " collapsed") : "") +
+      (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
+      (p.pick ? " is-pick" : "") +
+      (p.on && p.on[i] ? " is-on" : "");
+    var attrs = ' data-summarize-label="' + esc(p.label[i]) + '"' +
+      (parent && p.parent_key ? ' data-summarize-key="' +
+        esc(p.parent_key[i]) + '"' : "") +
+      (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
+      (child && p.parent_key ? ' data-summarize-parent-key="' +
+        esc(p.parent_key[i]) + '"' : "") +
+      ' data-summarize-level="' + (child ? p.level[i] : 0) +
+      '" data-summarize-ord="' + i + '"';
+    var btn = parent ? '<button class="blockr-indent-btn" type="button"' +
+      ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
+      '">' + CHEV + "</button>" : "";
+    return { cls: cls, attrs: attrs, parent: parent, child: child, btn: btn };
+  }
+
+  /** The mark of one cell, without its value label: the one emitter per
+   *  kind, shared by the table's cells and the cards' glyphs. "" for a
+   *  column that draws no mark (numbers, text, tiles). */
+  function glyphHtml(c, i) {
+    switch (c.kind) {
+      case "bar": return trackHtml(c.w[i], c.fill, c.sub && c.sub[i]);
+      case "barsplit": return splitHtml(c, i);
+      case "bardiv": return dvHtml(c.w[i], c.pos[i]);
+      case "box": return c.multi ? multiHtml(c, i) : boxHtml(c, i);
+      case "pointrange": return c.multi ? multiHtml(c, i) : prHtml(c, i);
+      case "pair": return c.multi ? multiHtml(c, i) : pairHtml(c, i);
+      case "interval": return ivHtml(c, i);
+      case "sparkline": return spHtml(c, i);
+      default: return "";
+    }
+  }
+
+  /** A column as a card draws it: the card prints the number above the
+   *  mark, so the mark drops its own value labels. */
+  function cardCol(c) {
+    if (!c) return c;
+    var g = {};
+    for (var k in c) g[k] = c[k];
+    g.slab = null;
+    g.ldisp = null;
+    g.dw = null;
+    return g;
+  }
+
   /** Assemble the whole tbody from the cell model. */
   function assembleBody(p) {
     var out = [];
-    var expanded = !!p.expanded;
     for (var i = 0; i < p.n; i++) {
-      var parent = !!(p.parent_row && p.parent_row[i]);
-      var child = !!(p.level && p.level[i] > 0);
-      var cls = "blockr-summarize-row" +
-        (parent ? " is-parent blockr-indent-toggle" +
-          (expanded ? "" : " collapsed") : "") +
-        (child ? " is-child" + (expanded ? "" : " collapsed-hidden") : "") +
-        (p.pick ? " is-pick" : "") +
-        (p.on && p.on[i] ? " is-on" : "");
-      var row = '<tr class="' + cls + '" data-summarize-label="' +
-        esc(p.label[i]) + '"' +
-        (parent && p.parent_key ? ' data-summarize-key="' +
-          esc(p.parent_key[i]) + '"' : "") +
-        (child ? ' data-summarize-parent="' + esc(p.parent[i]) + '"' : "") +
-        (child && p.parent_key ? ' data-summarize-parent-key="' +
-          esc(p.parent_key[i]) + '"' : "") +
-        ' data-summarize-level="' + (child ? p.level[i] : 0) +
-        '" data-summarize-ord="' + i + '">';
+      var rm = rowMeta(p, i);
+      var parent = rm.parent;
+      var row = '<tr class="' + rm.cls + '"' + rm.attrs + ">";
       row += '<td class="blockr-summarize-label-col blockr-stub' +
-        (parent ? " blockr-has-toggle" : "") + '"' +
-        (child ? ' style="padding-left:48px;"' : "") + ">" +
-        (parent ? '<button class="blockr-indent-btn" type="button"' +
-          ' tabindex="-1" aria-expanded="' + (expanded ? "true" : "false") +
-          '">' + CHEV + "</button>" : "") +
+        (parent ? " blockr-has-toggle" : "") + '">' + rm.btn +
         '<span class="blockr-summarize-label">' + esc(p.label[i]) + "</span></td>";
       for (var k = 0; k < p.cols.length; k++) {
         var c = p.cols[k];
-        if (c.kind === "num" && c.text) {
+        if (c.kind === "tile") {
+          row += '<td class="blockr-summarize-tile-col"' + dataV(c.v[i]) + ">" +
+            (c.bg[i] == null ? "" :
+              '<span class="blockr-summarize-tile" style="background:' +
+              c.bg[i] + ";color:" + c.fg[i] + '">' + c.disp[i] + "</span>") +
+            "</td>";
+        } else if (c.kind === "num" && c.text) {
           row += '<td class="blockr-summarize-txt' +
             (c.failed ? " is-failed" : "") + '"' + dataV(c.v[i]) + ">" +
             c.disp[i] + "</td>";
@@ -841,33 +967,13 @@
             ">" + c.disp[i] +
             (c.pct ? ' <span class="blockr-summarize-pct">' + c.pct[i] + "</span>" : "") +
             "</td>";
-        } else if (c.kind === "barsplit") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(splitHtml(c, i), c, i) + "</td>";
-        } else if (c.kind === "bardiv") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(dvHtml(c.w[i], c.pos[i]), c, i) + "</td>";
-        } else if (c.kind === "box" || c.kind === "pointrange") {
-          var glyph = c.multi
-            ? multiHtml(c, i)
-            : (c.kind === "box" ? boxHtml(c, i) : prHtml(c, i));
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(glyph, c, i) + "</td>";
-        } else if (c.kind === "pair") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(c.multi ? multiHtml(c, i) : pairHtml(c, i), c, i) +
-            "</td>";
         } else if (c.kind === "interval") {
           row += '<td class="blockr-summarize-bar-col' +
             (c.lg ? " blockr-summarize-wide" : "") + '"' + dataV(c.v[i]) + ">" +
-            ivHtml(c, i) + "</td>";
-        } else if (c.kind === "sparkline") {
-          row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(spHtml(c, i), c, i) + "</td>";
+            glyphHtml(c, i) + "</td>";
         } else {
           row += '<td class="blockr-summarize-bar-col"' + dataV(c.v[i]) + ">" +
-            barWrap(trackHtml(c.w[i], c.fill, c.sub && c.sub[i]), c, i) +
-            "</td>";
+            barWrap(glyphHtml(c, i), c, i) + "</td>";
         }
       }
       out.push(row + "</tr>");
@@ -878,6 +984,47 @@
     }
     return out.join("");
   }
+
+  // ---------- the cards look ----------
+  // The payload's `cards` (R/table-cards.R), drawn by table-cards.js with
+  // this file's emitters and row attributes. That script loads only with a
+  // table in the cards look, so it may arrive after the payload: the table
+  // waits for it (the "blockr-table-cards-ready" event below).
+  function renderCards(root, p) {
+    var host = root.querySelector(".blockr-cards-host");
+    var TC = window.BlockrTableCards;
+    if (!host) return;
+    if (!TC) {
+      root._tcPending = true;
+      return;
+    }
+    root._tcPending = false;
+    var cols = (p.cols || []).map(cardCol);
+    TC.render(host, p.cards, {
+      glyph: function (k, i) { return cols[k] ? glyphHtml(cols[k], i) : ""; },
+      row: function (i) {
+        var rm = rowMeta(p, i);
+        return { cls: rm.cls, attrs: rm.attrs, pre: rm.btn };
+      }
+    });
+  }
+
+  document.addEventListener("blockr-table-cards-ready", function () {
+    document.querySelectorAll(".blockr-summarize-container").forEach(function (root) {
+      if (!root._tcPending || !root._summarizePayload) return;
+      renderCards(root, root._summarizePayload);
+      root._summarizeCache = null;
+      var input = root.querySelector("input.blockr-search");
+      if (input && input.value) runSearch(root);
+      else applyVisibility(root);
+    });
+  });
+
+  // A downloaded page draws its cards without a block: table-cards.js reads
+  // the glyphs from here.
+  window.BlockrSummarizeGlyphs = {
+    glyph: function (c, i) { return glyphHtml(cardCol(c), i); }
+  };
 
   /** The container's own settings, which its one-shot render does not
    *  follow: search box, drill column, ctrl_target, height. A key the
@@ -913,7 +1060,8 @@
     if (root._summarizeBand) root._summarizeBand();
     var lg = root.querySelector(".blockr-summarize-legend");
     if (lg) {
-      if (!ch.legend) {
+      // Cards carry their legends themselves (table-cards.js).
+      if (!ch.legend || root._summarizeLook === "cards") {
         lg.style.display = "none";
         lg.innerHTML = "";
       } else {
@@ -976,12 +1124,22 @@
   function applyPayload(root, p) {
     var wrap = root.querySelector(".blockr-table-wrapper");
     if (!wrap) return;
+    var cards = p.kind !== "html" && p.look === "cards" && p.cards;
+    root._summarizeLook = cards ? "cards" : "table";
+    wrap.classList.toggle("tc-on", !!cards);
     if (p.kind === "html") {
       wrap.innerHTML = p.html;
+    } else if (cards) {
+      // The table stays, empty and hidden: the gear and the download menu
+      // read their state off its attributes.
+      wrap.innerHTML = p.head + '<div class="blockr-cards-host"></div>';
+      root._summarizePayload = p;
+      renderCards(root, p);
     } else {
       wrap.innerHTML = p.head;
       var tb = wrap.querySelector("tbody");
       if (tb) tb.innerHTML = assembleBody(p);
+      markCells(root, p);
     }
     // Fresh rows, fresh server order: the next header click starts at click 1.
     root._summarizeSort = { key: null, dir: 0 };
@@ -994,6 +1152,7 @@
     var input = root.querySelector("input.blockr-search");
     if (input && input.value) runSearch(root);
     else applyVisibility(root);
+    if (root._summarizeAfterPayload) root._summarizeAfterPayload();
   }
 
   if (window.Shiny && Shiny.addCustomMessageHandler) {
@@ -1122,6 +1281,17 @@
     }
   }
 
+  // A compact matrix is as wide as its cells, so its picture is too: the
+  // host drops to the width its content asks for, never past `width`. Without
+  // this a narrow heatmap sat at the left of a panel-wide white picture.
+  function narrowToContent(host, root, width) {
+    if (!root.querySelector("table[data-summarize-compact]")) return;
+    host.style.width = "max-content";
+    var need = Math.ceil(host.offsetWidth);
+    // No layout (a DOM without one measures 0): keep the given width.
+    host.style.width = (need > 0 ? Math.min(width, need) : width) + "px";
+  }
+
   /** One picture of a payload at `width` CSS px: {png, width, height}, the
    * size in CSS px (R turns it into inches at 96 dpi). With a slide `box`
    * (R: capture_page_box()) it also carries `pages` when the table is too
@@ -1146,6 +1316,7 @@
           requestAnimationFrame(function () { requestAnimationFrame(r); });
         });
       }).then(function () {
+        narrowToContent(host, root, width);
         widenToContent(host, root);
         var w = Math.ceil(root.offsetWidth);
         var h = Math.ceil(root.offsetHeight);
@@ -1206,12 +1377,14 @@
   var FUNC_OPT = ((DAggR && DAggR.AGG_FNS) ||
     ["count", "count_distinct", "sum", "mean", "median", "min", "max"])
     .concat([{ value: "identity", label: "None (as is)" }]);
-  var BAR_MODE_OPT = [{ value: "stacked", label: "Stacked" },
-                      { value: "grouped", label: "Grouped" },
-                      { value: "percent", label: "100%" }];
   // The chart's words, so the two trays read alike.
   var SORT_DIR_OPT = [{ value: "desc", label: "Descending" },
                       { value: "asc", label: "Ascending" }];
+  // The table block's three looks (R: TABLE_LOOKS). Cards need a row per
+  // group; the variables layout has none, and its gear greys them out.
+  var LOOK_OPT = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
+                  { value: "compact", label: "Compact" },
+                  { value: "cards", label: "Cards" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
                     { value: "off", label: "No search bar" }];
   // Header sorting off: the configured order is the exhibit. A visit table
@@ -1234,8 +1407,9 @@
   // One toggle, every format the machine can write: "can people take this
   // table away" is one decision, and which file the reader wants is theirs.
   // (The table block settled this the same way.)
-  var DOWNLOAD_OPT = [{ value: "on", label: "Downloads" },
-                      { value: "off", label: "No downloads" }];
+  // The records gear's words (table.js), so the trays read alike.
+  var DOWNLOAD_OPT = [{ value: "on", label: "Download" },
+                      { value: "off", label: "No download" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
   // (R/lane-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
@@ -1281,25 +1455,19 @@
   };
 
   var SUMMARIZE_ROLES = {
-    // Mapping — the chart block's labels verbatim (Group / Color / Facet), so
-    // the two gears read as the same system. `parent` is the ranked-bar surface's extra.
+    // The table's one grouping (outer -> inner, at most two): one row per
+    // key combination, the outer an expandable parent. Empty is one Total
+    // row over all input rows, so the placeholder says that. A change
+    // re-renders the gear: sorting, search and drill show only with a
+    // grouping.
+    by:     { label: "One row per", kind: "columns", colType: "cat",
+              placeholder: "One Total row", rerender: true },
+    // Words of the sentence only, never rows of the gear: a title can name
+    // the outer grouping column and the first column's colour and facet
+    // (summarize_title_args() in R/summarize-exhibit.R).
     group:  { label: "Group", kind: "column", colType: "cat" },
-    // The summarize-table path's grouping vector (outer -> inner, at most
-    // two): one row per key combo, the outer becomes the expandable parent.
-    by:     { label: "Group by", kind: "columns", colType: "cat",
-              placeholder: "add columns…" },
-    parent: { label: "Nest under", kind: "column", colType: "cat" },
     color:  { label: "Color", kind: "column", colType: "cat" },
     facet:  { label: "Facet", kind: "column", colType: "cat" },
-    // Extra row columns beside the bar — the chart's tooltip fields, shown
-    // as real columns. Offered only for the as-is measure (summarizeSections):
-    // any aggregation has no underlying row to read a column from.
-    fields: { label: "More columns", kind: "columns", colType: "any",
-              placeholder: "add columns…" },
-    func:   { label: "Aggregate", kind: "select", options: FUNC_OPT,
-              rerender: true },
-    value:  { label: "Of column", kind: "column", colType: "num" },
-    id_var: { label: "Count distinct", kind: "column", colType: "any" },
     // Facet column order in the summarize-table mode: each summary's level
     // copies adjacent (the comparison affordance), or level groups spanning
     // the summaries (the Table-1 reading).
@@ -1309,8 +1477,11 @@
     ] },
     // Presentation.
     sort_by:  { label: "Sort", kind: "select", options: [] },
-    bar_mode: { label: "Split layout", kind: "segmented", options: BAR_MODE_OPT },
     sort_dir: { label: "Order", kind: "segmented", options: SORT_DIR_OPT },
+    // A row cap (R: `top_n`): the first rows in the sort order, the rest
+    // folded into one "Other" row. Empty shows every row.
+    top_n:    { label: "Top", kind: "number", min: 1, step: 1,
+                placeholder: "All rows" },
     search:   { label: "Search", kind: "segmented", options: SEARCH_OPT },
     sortable: { label: "Header sorting", kind: "segmented",
                 options: SORTABLE_OPT },
@@ -1320,7 +1491,31 @@
     value_labels: { label: "Values", kind: "segmented", options: VALUES_OPT },
     bar_width: { label: "Bar width", kind: "segmented",
                  options: BAR_WIDTH_OPT },
+    // A count's percentage base and missing groups (the table block's
+    // `pct_of` / `missing`).
+    pct_of: { label: "Percent of", kind: "segmented", options: [
+      { value: "facet", label: "Column" }, { value: "total", label: "Table" }
+    ] },
+    missing: { label: "Missing", kind: "segmented", options: [
+      { value: "drop", label: "Drop" }, { value: "level", label: "Show" }
+    ] },
+    // How the number cells and value labels print, and their unit: the
+    // records gear's control (table.js), shared through the block.
+    format: { label: "Numbers", kind: "select",
+              options: [{ value: "number", label: "Auto" },
+                        { value: "0", label: "1235" },
+                        { value: "1", label: "1234.6" },
+                        { value: "2", label: "1234.57" },
+                        { value: "3", label: "1234.568" },
+                        { value: "4", label: "1234.5679" },
+                        { value: "compact", label: "1.2K" },
+                        { value: "percent", label: "12.3%" }] },
+    unit: { label: "Unit", kind: "text", ph: "e.g. CHF" },
     download: { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
+    // The table, the matrix look (square cells, titles on their side) or
+    // cards. `hint` is set per render (summarizeSections) to name the
+    // summaries the cards leave out.
+    look:     { label: "Look", kind: "segmented", options: LOOK_OPT },
     // Drill-down: a plain column role, like the table block's.
     drill:    { label: "Filter on", kind: "column", colType: "any" },
     title:    { label: "Title", kind: "text", ph: "e.g. AEs by {ARM}",
@@ -1346,7 +1541,7 @@
   // ==========================================================================
 
   var SUMMARY_TYPES = {
-    simple: { label: "simple", shows: ["bar", "number", "dot"] },
+    simple: { label: "simple", shows: ["bar", "number", "dot", "tile"] },
     dist:   { label: "dist", shows: ["pointrange", "box", "text"] },
     field:  { label: "field", shows: ["text"] },
     series: { label: "series", shows: ["sparkline"] },
@@ -1376,13 +1571,23 @@
       '<line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>' +
       '<rect x="1.8" y="5.8" width="4.4" height="4.4" fill="none" stroke="currentColor"' +
       ' stroke-width="1.2" transform="rotate(45 4 8)"/>' +
-      '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>'
+      '<circle cx="12" cy="8" r="2.6" fill="currentColor"/></svg>',
+    tile: '<svg width="14" height="14" viewBox="0 0 16 16">' +
+      '<rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/>' +
+      '<rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor" opacity=".45"/>' +
+      '<rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor" opacity=".45"/>' +
+      '<rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg>'
   };
   SHOW_ICONS.auto = '<svg width="14" height="14" viewBox="0 0 16 16">' +
     '<text x="1" y="12" font-size="9" font-style="italic" fill="currentColor">fx</text></svg>';
   // Tile captions: friendlier than the raw enum where it helps.
   var SHOW_LABELS = { pointrange: "dot range", interval: "swimlane",
                       auto: "from result" };
+  // The marks as the Show control and the row's glyph name them.
+  var SHOW_WORDS = { bar: "Bar", number: "Number", dot: "Dot", tile: "Tile",
+                     pointrange: "Dot range", box: "Box", text: "Text",
+                     sparkline: "Sparkline", interval: "Swimlane",
+                     dumbbell: "Dumbbell", auto: "From result" };
   // The seed a new custom column starts from: a working function.
   var CUSTOM_SEED = "\\(d) data.frame(value = nrow(d))";
 
@@ -1395,10 +1600,15 @@
   var NONE_OPT = { value: "none", label: "(none)" };
   var RANGE_OPT = [NONE_OPT].concat(LANE_STATS);
   var OUTER_OPT = [NONE_OPT].concat(LANE_WHISKERS);
-  function distInner(s) { return s.inner || s.stat || "median_q1_q3"; }
+  // Public keys (R/lane-summaries.R): `summary` is the inner range (and a
+  // text column's statistic), `whiskers` the outer one. The old names are
+  // read too, for an entry written before the rename.
+  function distInner(s) {
+    return s.summary || s.inner || s.stat || "median_q1_q3";
+  }
   function distOuter(s) {
-    if (s.outer) return s.outer;
     if (s.whiskers) return s.whiskers;
+    if (s.outer) return s.outer;
     return s.show === "pointrange" ? "none" : "tukey";
   }
   function rangeWord(v) { return v === "none" ? "" : v; }
@@ -1409,21 +1619,31 @@
   var SUMMARY_MAPS = [
     { key: "color", label: "Color",
       hint: "Split this column by a column's levels",
+      phrase: function (v) { return "split by " + v; },
       ok: function (s) {
         // A custom column's split is a column of what it returns.
         if (s.type === "custom") return false;
         if (s.type === "dist") return (s.show || "pointrange") !== "text";
-        if (s.type === "simple") return (s.show || "bar") !== "number";
+        if (s.type === "simple") {
+          return ["number", "tile"].indexOf(s.show || "bar") < 0;
+        }
         return s.type === "spans" || s.type === "pair";
       } },
     { key: "facet",  label: "Facet",
       hint: "Repeat this column once per level of a column",
+      phrase: function (v) { return "faceted by " + v; },
       ok: function (s) { return s.type !== "field"; } },
+    // A tile's paint: the worst level of this column among the cell's rows
+    // (an AE heatmap's severity). Without it the tile is painted by value.
+    { key: "fill", label: "Paint by",
+      hint: "Paint each cell by the worst level of a column",
+      phrase: function (v) { return "painted by the worst " + v; },
+      ok: function (s) { return s.type === "simple" && s.show === "tile"; } },
     // A custom count's population: distinct values of this column in the
     // cell's slice are its N, so it prints "54 (18%)".
     { key: "denom", label: "Percent of", want: "any",
       hint: "Show the count as a share of this column's distinct values",
-      badge: function (v) { return "% of " + v; },
+      phrase: function (v) { return "% of " + v; },
       seed: function (cols) {
         for (var i = 0; i < cols.length; i++) {
           if (/^USUBJID$|SUBJ/i.test(cols[i].name)) return cols[i].name;
@@ -1435,27 +1655,6 @@
           ["auto", "bar", "number"].indexOf(markOf(s)) > -1;
       } }
   ];
-  SUMMARY_MAPS.forEach(function (m) {
-    if (!m.badge) {
-      m.badge = function (v) { return m.label.toLowerCase() + " " + v; };
-    }
-  });
-
-  // The mapped dimensions, appended to any type's line so a collapsed row
-  // still says what it is split by and what it repeats over.
-  function mapWords(s) {
-    var out = "";
-    SUMMARY_MAPS.forEach(function (m) {
-      if (s[m.key] && m.ok(s)) {
-        out += " · " + m.label.toLowerCase() + " " + s[m.key];
-      }
-    });
-    return out;
-  }
-
-  function summaryLine(s) {
-    return summaryBody(s) + mapWords(s);
-  }
 
   function summaryBody(s) {
     switch (s.type) {
@@ -1463,7 +1662,7 @@
         (s.col ? "(" + s.col + ")" : "()") + " · " + (s.show || "bar");
       case "dist": {
         if (s.show === "text") {
-          return (s.stat || "median_q1_q3") + "(" + (s.col || "?") + ") · text";
+          return distInner(s) + "(" + (s.col || "?") + ") · text";
         }
         // The pieces in the order they are drawn, then the style.
         var pieces = [rangeWord(distInner(s)), rangeWord(distOuter(s))]
@@ -1478,11 +1677,11 @@
       case "spans": return (s.x || "?") + " → " + (s.xend || "?") +
         (s.label ? ", label " + s.label : "") +
         (s.size === "lg" ? ", wide" : "");
-      case "pair": return (s.from_func && s.from_func !== "identity" ?
-          s.from_func + "(" + (s.from || "?") + ")" : (s.from || "?")) +
-        " → " + (s.to_func || "max") + "(" + (s.to || "?") + ")" +
-        (s.lo != null && s.lo !== "" || s.hi != null && s.hi !== "" ?
-          ", range " + (s.lo == null ? "" : s.lo) + "–" + (s.hi == null ? "" : s.hi) : "") +
+      case "pair": return (s.x_func && s.x_func !== "identity" ?
+          s.x_func + "(" + (s.x || "?") + ")" : (s.x || "?")) +
+        " → " + (s.xend_func || "max") + "(" + (s.xend || "?") + ")" +
+        (s.ref_lo != null && s.ref_lo !== "" || s.ref_hi != null && s.ref_hi !== "" ?
+          ", range " + (s.ref_lo == null ? "" : s.ref_lo) + "–" + (s.ref_hi == null ? "" : s.ref_hi) : "") +
         (s.ref != null && s.ref !== "" ? ", ref " + s.ref : "") +
         (s.dash ? ", dashed by " + s.dash : "");
       case "expr": return s.expr || "";
@@ -1518,10 +1717,10 @@
       case "series": return (s.col || "?") + " over " + (s.x || "?");
       case "spans": return "Events, " + (s.x || "?") + " to " + (s.xend || "?");
       case "pair": {
-        var a = s.from_func && s.from_func !== "identity"
-          ? fw(s.from_func) + " " + (s.from || "?") : (s.from || "?");
-        var b = (s.to_func || "max") === "identity" ? (s.to || "?")
-          : fw(s.to_func || "max").toLowerCase() + " " + (s.to || "?");
+        var a = s.x_func && s.x_func !== "identity"
+          ? fw(s.x_func) + " " + (s.x || "?") : (s.x || "?");
+        var b = (s.xend_func || "max") === "identity" ? (s.xend || "?")
+          : fw(s.xend_func || "max").toLowerCase() + " " + (s.xend || "?");
         return a + " to " + b;
       }
       case "expr": return s.expr || "";
@@ -1530,16 +1729,66 @@
     }
   }
 
-  /** The badges after the description: what splits or repeats the column. */
-  function summaryBadges(s) {
+  /** What splits, repeats or paints the column, as words after its
+   *  description: ", split by sex, faceted by arm". */
+  function mapPhrase(s) {
     var out = "";
     SUMMARY_MAPS.forEach(function (m) {
-      if (s[m.key] && m.ok(s)) {
-        out += '<span class="lane-sum-badge">' + esc(m.badge(s[m.key])) +
-          "</span>";
-      }
+      if (s[m.key] && m.ok(s)) out += ", " + m.phrase(s[m.key]);
     });
     return out;
+  }
+
+  /** The collapsed row as a sentence: a lead in the row's weight (the
+   *  column's name, else the word for what it computes) and the rest after
+   *  it, muted. "Count of rows, split by sex"; "Subjects: count distinct
+   *  USUBJID". */
+  function summaryLead(s) {
+    var desc = summaryDesc(s);
+    var maps = mapPhrase(s);
+    var name = String(s.name || "").trim();
+    if (name && desc.toLowerCase().indexOf(name.toLowerCase()) !== 0) {
+      return { lead: name,
+               rest: (desc ? desc.charAt(0).toLowerCase() + desc.slice(1) : "") +
+                 maps };
+    }
+    var heads = Object.keys(FUNC_WORDS).map(function (k) { return FUNC_WORDS[k]; })
+      .concat(["Distribution", "Values", "Events"])
+      .sort(function (a, b) { return b.length - a.length; });
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i];
+      if (desc === h || desc.indexOf(h + " ") === 0) {
+        return { lead: h, rest: (desc.slice(h.length).trim() + maps)
+          .replace(/^, /, "") };
+      }
+    }
+    return { lead: desc, rest: maps.replace(/^, /, "") };
+  }
+
+  /** The default header R gives an unnamed column
+   *  (lane_summary_auto_name()), for the Name field's placeholder: a data
+   *  column reads as its variable label where it has one. `cols` is the
+   *  gear's column list ({ name, label }). */
+  function autoName(s, cols) {
+    var nm = function (c) {
+      if (!c) return "";
+      var hit = (cols || []).filter(function (x) { return x.name === c; })[0];
+      return (hit && hit.label && hit.label !== c) ? hit.label : c;
+    };
+    switch (s.type) {
+      case "simple": {
+        var f = s.func || "count";
+        if (f === "count") return "Rows";
+        if (f === "identity") return nm(s.col) || "Value";
+        var word = { count_distinct: "Distinct", mean: "Mean", median: "Median",
+                     sum: "Sum", min: "Min", max: "Max" }[f] || f;
+        return word + " " + nm(s.col);
+      }
+      case "dist": case "field": case "series": return nm(s.col);
+      case "spans": return nm(s.x) + " \u2192 " + nm(s.xend);
+      case "pair": return nm(s.x) + " \u2192 " + nm(s.xend);
+      default: return "Value";
+    }
   }
 
   /** The mark a row draws: its `show`, or the type's first (custom: "auto"). */
@@ -1570,8 +1819,8 @@
       }
       case "pair":
         return "\\(d) d |>\n  dplyr::summarise(\n    from = " +
-          agg(s.from_func || "identity", s.from || "") + ",\n    to = " +
-          agg(s.to_func || "max", s.to || "") + by + "\n  )";
+          agg(s.x_func || "identity", s.x || "") + ",\n    to = " +
+          agg(s.xend_func || "max", s.xend || "") + by + "\n  )";
       case "dist": {
         var v = s.col || "";
         // Quartiles and the range: the presets' whisker rules (Tukey, the
@@ -1642,13 +1891,19 @@
 
 
 
-  /** The editor body. ctx: { cfg(), cols(), send(list), rerender(), open:Set } */
+  /** The Columns section: the table's columns as a list of rows (design
+   *  system, "Rows"). A row is one line that says what the column computes;
+   *  a click opens its editor below that line, inside the same row, with the
+   *  fields on the tray's grid. One row open at a time.
+   *  ctx: { cfg(), cols(), send(list), rerender(), open: Set, stash: {} } */
   function renderSummariesEditor(sec, ctx) {
     var cfg = ctx.cfg();
     var cols = ctx.cols();
     var list = Array.isArray(cfg.summaries) ? cfg.summaries : (cfg.summaries = []);
-    var S = (typeof Blockr !== "undefined" && Blockr.Select) || null;
+    var B = (typeof Blockr !== "undefined") ? Blockr : null;
+    var S = (B && B.Select) || null;
     var commit = function () { ctx.send(list.slice()); };
+    var edit = function () { commit(); ctx.rerender(); };
 
     function colOpts(want) {
       return cols.filter(function (c) {
@@ -1656,26 +1911,39 @@
           (want === "num" ? c.type === "numeric" : c.type !== "numeric");
       }).map(function (c) { return { value: c.name, label: c.label || c.name }; });
     }
-    // `onRemove` makes the control an OPTIONAL mapping: the label grows the
-    // same ✕ the grouping roles carry, and clicking it drops the mapping
-    // rather than setting it to some empty value.
-    function selectCtl(parent, label, want, selected, onChange, onRemove) {
-      var ctl = document.createElement("div");
-      ctl.className = "lane-sum-ctl";
+    function tip(el, text) {
+      el.setAttribute("data-blockr-tooltip", text);
+      el.setAttribute("aria-label", text);
+    }
+    // One field of the grid: the label above its control, as the engine's
+    // rows (.dd-form-row). `onRemove` makes it an optional mapping: the
+    // label carries the engine's remove button, as the chart's optional
+    // roles do.
+    function field(parent, label, opts) {
+      opts = opts || {};
+      var f = document.createElement("div");
+      f.className = "lane-sum-ctl" + (opts.wide ? " lane-sum-ctl-wide" : "");
+      var head = document.createElement("div");
+      head.className = "dd-row-head";
       var l = document.createElement("span");
       l.className = "blockr-label";
       l.textContent = label;
-      if (onRemove) {
+      head.appendChild(l);
+      if (opts.onRemove) {
         var x = document.createElement("button");
         x.type = "button";
-        x.className = "dd-role-remove lane-sum-map-rm";
-        x.setAttribute("data-blockr-tooltip", "Remove " + label.toLowerCase());
-        x.setAttribute("aria-label", "Remove " + label.toLowerCase());
-        x.innerHTML = "✕";
-        x.addEventListener("click", onRemove);
-        l.appendChild(x);
+        x.className = "dd-role-remove";
+        tip(x, "Remove " + label.toLowerCase());
+        x.textContent = "✕";
+        x.addEventListener("click", opts.onRemove);
+        head.appendChild(x);
       }
-      ctl.appendChild(l);
+      f.appendChild(head);
+      parent.appendChild(f);
+      return f;
+    }
+    function selectCtl(parent, label, want, selected, onChange, onRemove) {
+      var f = field(parent, label, { onRemove: onRemove });
       var wrap = document.createElement("div");
       wrap.className = "dd-picker-wrap";
       var opts = typeof want === "string" ? colOpts(want) : want;
@@ -1697,18 +1965,12 @@
       }
       if (S && S.single) {
         S.single(wrap, { bordered: true, options: opts, selected: sel,
-                         onChange: pick });
+                         label: label, onChange: pick });
       }
-      ctl.appendChild(wrap);
-      parent.appendChild(ctl);
+      f.appendChild(wrap);
     }
     function multiCtl(parent, label, selected, onChange) {
-      var ctl = document.createElement("div");
-      ctl.className = "lane-sum-ctl";
-      var l = document.createElement("span");
-      l.className = "blockr-label";
-      l.textContent = label;
-      ctl.appendChild(l);
+      var f = field(parent, label, { wide: true });
       var wrap = document.createElement("div");
       wrap.className = "dd-picker-wrap";
       if (S && S.multi) {
@@ -1716,56 +1978,142 @@
           bordered: true,
           options: colOpts("any"),
           selected: (selected || []).slice(),
-          placeholder: "add columns…",
+          placeholder: "None",
+          label: label,
           onChange: onChange
         });
       }
-      ctl.appendChild(wrap);
-      parent.appendChild(ctl);
+      f.appendChild(wrap);
     }
+    // Two or three fixed short values: the segmented control.
     function segCtl(parent, label, options, selected, onChange) {
-      var ctl = document.createElement("div");
-      ctl.className = "lane-sum-ctl";
-      var l = document.createElement("span");
-      l.className = "blockr-label";
-      l.textContent = label;
-      ctl.appendChild(l);
-      var seg = document.createElement("div");
-      seg.className = "lane-sum-seg";
-      options.forEach(function (o) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "lane-sum-seg-btn" + (o.value === selected ? " is-on" : "");
-        b.textContent = o.label;
-        b.addEventListener("click", function () {
-          onChange(o.value);
-        });
-        seg.appendChild(b);
+      var f = field(parent, label);
+      var wrap = document.createElement("div");
+      wrap.className = "dd-pill-wrap";
+      if (B && B.segmented) {
+        wrap.appendChild(B.segmented(options, selected, onChange,
+                                     { label: label }).el);
+      }
+      f.appendChild(wrap);
+    }
+    // A name or a number: the text field that commits on Enter or blur,
+    // with the ↵ chip while it holds an edit (Blockr.textCommit).
+    function textCtl(parent, label, value, placeholder, onCommit, wide) {
+      var f = field(parent, label, { wide: wide });
+      var wrap = document.createElement("div");
+      wrap.className = "dd-text-wrap";
+      var inp = document.createElement("input");
+      inp.type = "text";
+      inp.className = "blockr-text-input";
+      inp.value = value == null ? "" : String(value);
+      if (placeholder) inp.placeholder = placeholder;
+      inp.setAttribute("aria-label", label);
+      wrap.appendChild(inp);
+      f.appendChild(wrap);
+      if (B && B.textCommit) {
+        B.textCommit(inp, { onCommit: onCommit });
+      } else {
+        inp.addEventListener("change", function () { onCommit(inp.value); });
+      }
+    }
+    // What the column draws: a tile per mark, each a drawing of the column
+    // (Blockr.SHOW_TILE_ICONS). Without the drawings (an older engine, or a
+    // custom column's "auto"), the segmented control for two or three marks
+    // and a select past that. A tile is the compact look's mark, offered
+    // there and on a column that already draws one.
+    function showCtl(parent, s, t) {
+      var shows = ((SUMMARY_TYPES[t] || {}).shows || []).filter(function (sh) {
+        return sh !== "tile" || cfg.look === "compact" || s.show === "tile";
       });
-      ctl.appendChild(seg);
-      parent.appendChild(ctl);
+      if (shows.length < 2) return;
+      var cur = (t === "custom" && !s.show) ? "auto" : (s.show || shows[0]);
+      var opts = shows.map(function (sh) {
+        return { value: sh, label: SHOW_WORDS[sh] || sh };
+      });
+      var apply = function (sh) {
+        if (t === "custom" && sh === "auto") { delete s.show; edit(); return; }
+        s.show = sh;
+        // For a distribution the mark is the STYLE: switching does not
+        // change which numbers the column holds, so the ranges are pinned
+        // to what they already were rather than left to the default the
+        // new `show` would imply.
+        if (t === "dist" && sh !== "text") {
+          s.style = sh === "box" ? "box" : "dot";
+          s.inner = distInner(s);
+          s.outer = distOuter(s);
+        }
+        edit();
+      };
+      var icons = B && B.SHOW_TILE_ICONS;
+      if (B && B.buildTiles && icons &&
+          opts.every(function (o) { return !!icons[o.value]; })) {
+        var f = field(parent, "Show", { wide: true });
+        B.buildTiles(f, opts.map(function (o) {
+          return { value: o.value, label: o.label, icon: icons[o.value] };
+        }), cur, apply);
+        return;
+      }
+      if (opts.length <= 3) segCtl(parent, "Show", opts, cur, apply);
+      else selectCtl(parent, "Show", opts, cur, apply);
     }
 
-    // dd-summaries: the engine's full-width escape from the section's
-    // narrow grid cells (the metrics editor's own trick).
     var wrap = document.createElement("div");
     wrap.className = "dd-summaries lane-summaries";
 
+    var moveTo = function (from, to) {
+      if (to < 0 || to >= list.length || to === from) return;
+      var wasOpen = ctx.open.has(from);
+      list.splice(to, 0, list.splice(from, 1)[0]);
+      ctx.open.clear();
+      if (wasOpen) ctx.open.add(to);
+      ctx.stash = {};
+      ctx.focus = to;
+      edit();
+    };
+
     list.forEach(function (s, i) {
+      var isOpen = ctx.open.has(i);
       var row = document.createElement("div");
-      row.className = "lane-sum-row" + (ctx.open.has(i) ? " is-open" : "");
+      row.className = "lane-sum-row" + (isOpen ? " is-open" : "");
+      row.setAttribute("data-sum-index", String(i));
 
       var head = document.createElement("div");
       head.className = "lane-sum-head";
-      var isOpen = ctx.open.has(i);
-      // The row reads as a sentence: the mark it draws, its name, what it
-      // computes, what splits or repeats it.
-      head.innerHTML =
-        '<span class="lane-sum-grip" aria-hidden="true">' + GRIP_SVG + "</span>" +
-        '<span class="lane-sum-glyph">' + (SHOW_ICONS[markOf(s)] || "") + "</span>" +
-        '<span class="lane-sum-name">' + esc(s.name || "Untitled") + "</span>" +
-        '<span class="lane-sum-line">' + esc(summaryDesc(s)) + "</span>" +
-        summaryBadges(s);
+      var grip = document.createElement("span");
+      grip.className = "lane-sum-grip";
+      grip.setAttribute("aria-hidden", "true");
+      grip.innerHTML = GRIP_SVG;
+      head.appendChild(grip);
+
+      // The row's one line, a button: a click or Enter opens the editor,
+      // Alt+Up / Alt+Down move the column (design system, "Block lists").
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "lane-sum-toggle";
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      var glyph = document.createElement("span");
+      glyph.className = "lane-sum-glyph";
+      glyph.innerHTML = SHOW_ICONS[markOf(s)] || "";
+      tip(glyph, SHOW_WORDS[markOf(s)] || markOf(s));
+      var sentence = summaryLead(s);
+      var line = document.createElement("span");
+      line.className = "lane-sum-line";
+      var lead = document.createElement("span");
+      lead.className = "lane-sum-lead";
+      lead.textContent = sentence.lead;
+      line.appendChild(lead);
+      if (sentence.rest) {
+        line.appendChild(document.createTextNode(" " + sentence.rest));
+      }
+      toggle.appendChild(glyph);
+      toggle.appendChild(line);
+      toggle.addEventListener("keydown", function (e) {
+        if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+        e.preventDefault();
+        moveTo(i, i + (e.key === "ArrowUp" ? -1 : 1));
+      });
+      head.appendChild(toggle);
+
       if (isOpen) {
         // The code switch: a preset becomes the function that computes the
         // same frame; back again only to the preset it came from.
@@ -1777,10 +2125,9 @@
         code.innerHTML = CODE_SVG;
         var canGo = asCode ? !!ctx.stash[i] : presetToFn(s) != null;
         code.disabled = !canGo;
-        code.setAttribute("data-blockr-tooltip", asCode
+        tip(code, asCode
           ? (canGo ? "Back to the preset" : "Started as code")
           : (canGo ? "Edit as code" : "No code form for this mark"));
-        code.setAttribute("aria-label", code.getAttribute("data-blockr-tooltip"));
         code.addEventListener("click", function (e) {
           e.stopPropagation();
           if (asCode) {
@@ -1792,39 +2139,42 @@
             ctx.stash[i] = JSON.parse(JSON.stringify(s));
             list[i] = cu;
           }
-          commit();
-          ctx.rerender();
+          edit();
         });
         head.appendChild(code);
       }
+      // The table always has a column: the last one cannot go, and says so.
       var rm = document.createElement("button");
       rm.type = "button";
       rm.className = "lane-sum-rm";
-      rm.setAttribute("data-blockr-tooltip", "Remove column");
-      rm.setAttribute("aria-label", "Remove column");
+      rm.disabled = list.length < 2;
+      tip(rm, rm.disabled ? "A table needs one column" : "Remove column");
       rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" ' +
         'fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
       rm.addEventListener("click", function (e) {
         e.stopPropagation();
+        if (list.length < 2) return;
         list.splice(i, 1);
         ctx.open.clear();
         ctx.stash = {};
-        commit();
-        ctx.rerender();
+        edit();
       });
       head.appendChild(rm);
       var chev = document.createElement("span");
       chev.className = "lane-sum-chev";
-      chev.innerHTML = CHEV_SVG;
+      chev.setAttribute("aria-hidden", "true");
+      chev.innerHTML = (B && B.icons && B.icons.chevron) || CHEV_SVG;
       head.appendChild(chev);
-      // One column open at a time.
-      head.addEventListener("click", function () {
+      // A click anywhere on the line but its buttons opens or closes it.
+      head.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest(".lane-sum-code, .lane-sum-rm")) return;
         var was = ctx.open.has(i);
         ctx.open.clear();
         if (!was) ctx.open.add(i);
+        ctx.focus = i;
         ctx.rerender();
       });
-      // Reorder by dragging the row (design system: rows drag, no arrows).
+      // Reorder by dragging the row.
       row.draggable = true;
       row.addEventListener("dragstart", function (e) {
         e.dataTransfer.effectAllowed = "move";
@@ -1841,353 +2191,234 @@
         e.preventDefault();
         row.classList.remove("is-drop");
         var from = Number(e.dataTransfer.getData("text/plain"));
-        if (isNaN(from) || from === i) return;
-        list.splice(i, 0, list.splice(from, 1)[0]);
-        ctx.open.clear();
-        ctx.stash = {};
-        commit();
-        ctx.rerender();
+        if (isNaN(from)) return;
+        moveTo(from, i);
       });
       row.appendChild(head);
 
-      if (ctx.open.has(i)) {
+      if (isOpen) {
         var body = document.createElement("div");
         body.className = "lane-sum-body";
-        // Name.
-        var nameCtl = document.createElement("div");
-        nameCtl.className = "lane-sum-ctl";
-        nameCtl.innerHTML = '<span class="blockr-label">Name</span>';
-        var nameIn = document.createElement("input");
-        nameIn.type = "text";
-        nameIn.className = "lane-sum-name-input";
-        nameIn.value = s.name || "";
-        nameIn.addEventListener("change", function () {
-          s.name = nameIn.value;
-          commit();
-          ctx.rerender();
+        // The fields of an open row are not draggable: a drag that starts
+        // in a select or a text field is a text selection.
+        body.addEventListener("dragstart", function (e) {
+          if (e.target !== row) e.stopPropagation();
         });
-        nameCtl.appendChild(nameIn);
-        body.appendChild(nameCtl);
-
-        var t = s.type || "simple";
-        if (t === "simple") {
-          // The full aggregate set INCLUDING identity ("None (as is)"): a
-          // value already reduced upstream — one row per group — drawn
-          // as-is, as a bar or a number. The chart block's duality.
-          selectCtl(body, "Function", FUNC_OPT, s.func || "count",
-            function (v) {
-              s.func = v;
-              commit();
-              ctx.rerender();
-            });
-          if ((s.func || "count") !== "count") {
-            selectCtl(body,
-              s.func === "count_distinct" ? "Distinct of" : "Of column",
-              s.func === "count_distinct" ? "any" : "num",
-              s.col, function (v) { s.col = v; commit(); ctx.rerender(); });
-          }
-        } else if (t === "dist") {
-          selectCtl(body, "Value", "num", s.col, function (v) {
-            s.col = v;
-            commit();
-            ctx.rerender();
-          });
-          // The glyph is a centre plus two optional ranges; the Display
-          // tiles pick how they are drawn. Both ranges offer "(none)",
-          // which is where the IQR bar, the plain dot range and the bare
-          // dot live -- so the list never needs a mark per shape.
-          if (s.show !== "text") {
-            selectCtl(body, "Inner range", RANGE_OPT, distInner(s),
-              function (v) { s.inner = v; commit(); ctx.rerender(); });
-            selectCtl(body, "Outer range", OUTER_OPT, distOuter(s),
-              function (v) { s.outer = v; commit(); ctx.rerender(); });
-          } else {
-            selectCtl(body, "Statistic", LANE_STATS, s.stat || "median_q1_q3",
-              function (v) { s.stat = v; commit(); ctx.rerender(); });
-          }
-        } else if (t === "field") {
-          selectCtl(body, "Column", "any", s.col, function (v) {
-            s.col = v;
-            commit();
-            ctx.rerender();
-          });
-        } else if (t === "series") {
-          selectCtl(body, "Order (x)", "num", s.x, function (v) {
-            s.x = v;
-            commit();
-            ctx.rerender();
-          });
-          selectCtl(body, "Value (y)", "num", s.col, function (v) {
-            s.col = v;
-            commit();
-            ctx.rerender();
-          });
-          var band = (s.band && s.band.length === 2) ? s.band : ["", ""];
-          selectCtl(body, "Band low", "num", band[0], function (v) {
-            s.band = [v, band[1]];
-            commit();
-            ctx.rerender();
-          });
-          selectCtl(body, "Band high", "num", band[1], function (v) {
-            s.band = [band[0], v];
-            commit();
-            ctx.rerender();
-          });
-          // The computed reference: pooled orientation line/band, computed
-          // in R over the column's values (per facet level under facet).
-          selectCtl(body, "Reference", [
-            { value: "none", label: "None" },
-            { value: "mean", label: "Mean" },
-            { value: "mean_sd", label: "Mean ± SD" },
-            { value: "median_iqr", label: "Median · IQR" }
-          ], s.ref || "none", function (v) {
-            s.ref = v;
-            commit();
-            ctx.rerender();
-          });
-        } else if (t === "spans") {
-          selectCtl(body, "Start", "num", s.x, function (v) {
-            s.x = v;
-            commit();
-            ctx.rerender();
-          });
-          selectCtl(body, "End", "num", s.xend, function (v) {
-            s.xend = v;
-            commit();
-            ctx.rerender();
-          });
-          // Event identity on hover: label headlines the segment tooltip
-          // and keys the same-event highlight; fields append extras.
-          selectCtl(body, "Label (hover)", "any", s.label, function (v) {
-            s.label = v;
-            commit();
-            ctx.rerender();
-          });
-          multiCtl(body, "Tooltip fields", s.fields, function (vals) {
-            s.fields = vals;
-            commit();
-            ctx.rerender();
-          });
-          segCtl(body, "Width", [
-            { value: "md", label: "Regular" },
-            { value: "lg", label: "Wide" }
-          ], s.size || "md", function (v) {
-            s.size = v;
-            commit();
-            ctx.rerender();
-          });
-        } else if (t === "pair") {
-          // Two summaries of the group on one segment. A band bound or the
-          // reference takes a number; a band bound may also name a column
-          // (a per-subject reference range such as ANRLO / ANRHI).
-          var PAIR_FUNCS = [
-            { value: "identity", label: "None (as is)" },
-            { value: "mean", label: "Mean" },
-            { value: "median", label: "Median" },
-            { value: "min", label: "Min" },
-            { value: "max", label: "Max" }
-          ];
-          selectCtl(body, "From ◇", "num", s.from, function (v) {
-            s.from = v; commit(); ctx.rerender();
-          });
-          selectCtl(body, "From function", PAIR_FUNCS,
-            s.from_func || "identity",
-            function (v) { s.from_func = v; commit(); ctx.rerender(); });
-          selectCtl(body, "To ●", "num", s.to, function (v) {
-            s.to = v; commit(); ctx.rerender();
-          });
-          selectCtl(body, "To function", PAIR_FUNCS, s.to_func || "max",
-            function (v) { s.to_func = v; commit(); ctx.rerender(); });
-          [["lo", "Range low", "number or column"],
-           ["hi", "Range high", "number or column"],
-           ["ref", "Reference line", "e.g. 20"]].forEach(function (d) {
-            var tc = document.createElement("div");
-            tc.className = "lane-sum-ctl";
-            tc.innerHTML = '<span class="blockr-label">' + d[1] +
-              "</span>";
-            var ti = document.createElement("input");
-            ti.type = "text";
-            ti.className = "lane-sum-name-input";
-            ti.value = s[d[0]] == null ? "" : String(s[d[0]]);
-            ti.placeholder = d[2];
-            ti.addEventListener("change", function () {
-              var v = ti.value.trim();
-              if (v === "") delete s[d[0]];
-              else s[d[0]] = isFinite(Number(v)) ? Number(v) : v;
-              commit();
-              ctx.rerender();
-            });
-            tc.appendChild(ti);
-            body.appendChild(tc);
-          });
-          if (s.dash) {
-            selectCtl(body, "Dashed by", "cat", s.dash, function (v) {
-              s.dash = v; commit(); ctx.rerender();
-            }, function () { delete s.dash; commit(); ctx.rerender(); });
-          } else {
-            var dm = document.createElement("div");
-            dm.className = "lane-sum-ctl lane-sum-addmaps";
-            var db = document.createElement("button");
-            db.type = "button";
-            db.className = "lane-sum-add";
-            db.textContent = "+ dashed by";
-            db.disabled = !firstMapCol(cols);
-            db.addEventListener("click", function () {
-              s.dash = firstMapCol(cols); commit(); ctx.rerender();
-            });
-            dm.appendChild(db);
-            body.appendChild(dm);
-          }
-        } else if (t === "expr") {
-          var exCtl = document.createElement("div");
-          exCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
-          exCtl.innerHTML =
-            '<span class="blockr-label">Expression</span>';
-          var exIn = document.createElement("input");
-          exIn.type = "text";
-          exIn.className = "lane-sum-name-input";
-          exIn.value = s.expr || "";
-          exIn.placeholder = "e.g. sd(DUR)/mean(DUR) * 100";
-          exIn.addEventListener("change", function () {
-            s.expr = exIn.value;
-            commit();
-            ctx.rerender();
-          });
-          exCtl.appendChild(exIn);
-          body.appendChild(exCtl);
-        } else if (t === "custom") {
-          // Code commits on its own button (or Mod+Enter), never per
-          // keystroke: every commit reruns the function for every level.
-          var fnCtl = document.createElement("div");
-          fnCtl.className = "lane-sum-ctl lane-sum-ctl-wide";
-          fnCtl.innerHTML = '<span class="blockr-label">Summary of ' +
-            "<code>d</code>, grouped by table row</span>";
-          var fnIn = document.createElement("textarea");
-          fnIn.className = "blockr-text-input dd-script-editor lane-sum-fn";
-          fnIn.rows = Math.max(3, String(s.fn || "").split("\n").length + 1);
-          fnIn.spellcheck = false;
-          fnIn.value = s.fn || "";
-          fnIn.placeholder = "\\(d) d |> dplyr::count(AESEV, name = \"value\")";
-          var fnFoot = document.createElement("div");
-          fnFoot.className = "lane-sum-fn-foot";
-          var fnHint = document.createElement("span");
-          fnHint.className = "lane-sum-hint";
-          fnHint.textContent = "Return value; from, to; lo, q1, mid, q3, hi; " +
-            "or text. One more column splits the cell.";
-          var fnApply = document.createElement("button");
-          fnApply.type = "button";
-          fnApply.className = "lane-sum-apply";
-          fnApply.textContent = "Apply";
-          var applyFn = function () {
-            if (fnIn.value === (s.fn || "")) return;
-            s.fn = fnIn.value;
-            commit();
-            ctx.rerender();
-          };
-          fnApply.addEventListener("click", applyFn);
-          fnIn.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              applyFn();
-            }
-          });
-          fnFoot.appendChild(fnHint);
-          fnFoot.appendChild(fnApply);
-          fnCtl.appendChild(fnIn);
-          fnCtl.appendChild(fnFoot);
-          body.appendChild(fnCtl);
-        }
-
-        // Display tiles (only where the type offers a choice).
-        var shows = (SUMMARY_TYPES[t] || {}).shows || [];
-        if (shows.length > 1) {
-          var dCtl = document.createElement("div");
-          dCtl.className = "lane-sum-ctl";
-          dCtl.innerHTML = '<span class="blockr-label">Mark</span>';
-          var tiles = document.createElement("div");
-          tiles.className = "dd-type-grid lane-sum-tiles";
-          shows.forEach(function (sh) {
-            var b = document.createElement("button");
-            b.type = "button";
-            b.className = "dd-type-tile" +
-              ((s.show || shows[0]) === sh ? " dd-type-active" : "");
-            if (t === "custom" && sh === "auto" && !s.show) {
-              b.className += " dd-type-active";
-            }
-            b.innerHTML = '<span class="dd-type-tile-icon">' +
-              (SHOW_ICONS[sh] || "") + '</span>' +
-              '<span class="dd-type-tile-label">' +
-              (SHOW_LABELS[sh] || sh) + "</span>";
-            b.addEventListener("click", function () {
-              if (t === "custom" && sh === "auto") {
-                delete s.show;
-                commit();
-                ctx.rerender();
-                return;
-              }
-              s.show = sh;
-              // For a distribution the tiles are the STYLE: switching does
-              // not change which numbers the column holds, so the ranges
-              // are pinned to what they already were rather than left to
-              // the legacy default the new `show` would imply.
-              if (t === "dist" && sh !== "text") {
-                s.style = sh === "box" ? "box" : "dot";
-                s.inner = distInner(s);
-                s.outer = distOuter(s);
-              }
-              commit();
-              ctx.rerender();
-            });
-            tiles.appendChild(b);
-          });
-          dCtl.appendChild(tiles);
-          body.appendChild(dCtl);
-        }
-
-        // The column's own optional mappings. Nothing shows until one is
-        // added, so a plain column stays plain, and each is dropped from
-        // its own ✕ rather than through an inert "none" state.
-        var addable = [];
-        SUMMARY_MAPS.forEach(function (m) {
-          if (!m.ok(s)) return;
-          if (!s[m.key]) { addable.push(m); return; }
-          selectCtl(body, m.label, m.want || "cat", s[m.key], function (v) {
-            s[m.key] = v;
-            commit();
-            ctx.rerender();
-          }, function () {
-            delete s[m.key];
-            commit();
-            ctx.rerender();
-          });
-        });
-        if (addable.length) {
-          var maps = document.createElement("div");
-          maps.className = "lane-sum-ctl lane-sum-addmaps";
-          addable.forEach(function (m) {
-            var b = document.createElement("button");
-            b.type = "button";
-            b.className = "lane-sum-add";
-            b.textContent = "+ " + m.label.toLowerCase();
-            // Nothing decodable to map: the button would only produce an
-            // error message in the table.
-            var seedOf = function () {
-              return m.seed ? m.seed(cols) : firstMapCol(cols);
-            };
-            b.disabled = !seedOf();
-            b.addEventListener("click", function () {
-              s[m.key] = seedOf();
-              commit();
-              ctx.rerender();
-            });
-            maps.appendChild(b);
-          });
-          body.appendChild(maps);
-        }
+        renderColumnFields(body, s);
         row.appendChild(body);
       }
       wrap.appendChild(row);
     });
+
+    // The fields of one column, in the order they are set: what it is
+    // called, what it computes, how it is drawn, what splits it.
+    function renderColumnFields(body, s) {
+      textCtl(body, "Name", s.name, autoName(s, cols), function (v) {
+        s.name = v;
+        edit();
+      });
+
+      var t = s.type || "simple";
+      if (t === "simple") {
+        // The full aggregate set INCLUDING identity ("None (as is)"): a
+        // value already reduced upstream, one row per group, drawn as is.
+        // The chart block's duality and its label.
+        selectCtl(body, "Aggregate", FUNC_OPT, s.func || "count", function (v) {
+          s.func = v;
+          // A distinct count reads the subject column; the rest read a
+          // number.
+          if (v !== "count" && !s.col) {
+            s.col = v === "count_distinct"
+              ? SUMMARY_MAPS.filter(function (m) { return m.key === "denom"; })[0].seed(cols)
+              : firstCol(cols, "num");
+          }
+          edit();
+        });
+        if ((s.func || "count") !== "count") {
+          selectCtl(body,
+            s.func === "count_distinct" ? "Distinct of" : "Of column",
+            s.func === "count_distinct" ? "any" : "num",
+            s.col, function (v) { s.col = v; edit(); });
+        }
+      } else if (t === "dist") {
+        selectCtl(body, "Value", "num", s.col, function (v) { s.col = v; edit(); });
+      } else if (t === "field") {
+        selectCtl(body, "Column", "any", s.col, function (v) { s.col = v; edit(); });
+      } else if (t === "series") {
+        selectCtl(body, "Order (x)", "num", s.x, function (v) { s.x = v; edit(); });
+        selectCtl(body, "Value (y)", "num", s.col, function (v) { s.col = v; edit(); });
+      } else if (t === "spans") {
+        selectCtl(body, "Start", "num", s.x, function (v) { s.x = v; edit(); });
+        selectCtl(body, "End", "num", s.xend, function (v) { s.xend = v; edit(); });
+      } else if (t === "pair") {
+        // Two summaries of the group on one segment.
+        var PAIR_FUNCS = [
+          { value: "identity", label: "None (as is)" },
+          { value: "mean", label: "Mean" },
+          { value: "median", label: "Median" },
+          { value: "min", label: "Min" },
+          { value: "max", label: "Max" }
+        ];
+        selectCtl(body, "From ◇", "num", s.x, function (v) { s.x = v; edit(); });
+        selectCtl(body, "From function", PAIR_FUNCS, s.x_func || "identity",
+          function (v) { s.x_func = v; edit(); });
+        selectCtl(body, "To ●", "num", s.xend, function (v) { s.xend = v; edit(); });
+        selectCtl(body, "To function", PAIR_FUNCS, s.xend_func || "max",
+          function (v) { s.xend_func = v; edit(); });
+      } else if (t === "expr") {
+        textCtl(body, "Expression", s.expr, "e.g. sd(DUR)/mean(DUR) * 100",
+          function (v) { s.expr = v; edit(); }, true);
+      } else if (t === "custom") {
+        // Code commits on its own button (or Mod+Enter), never per
+        // keystroke: every commit reruns the function for every level.
+        var fnCtl = field(body, "Summary of d, grouped by table row", { wide: true });
+        var fnIn = document.createElement("textarea");
+        fnIn.className = "blockr-text-input dd-script-editor lane-sum-fn";
+        fnIn.rows = Math.max(3, String(s.fn || "").split("\n").length + 1);
+        fnIn.spellcheck = false;
+        fnIn.value = s.fn || "";
+        fnIn.placeholder = "\\(d) d |> dplyr::count(AESEV, name = \"value\")";
+        fnIn.setAttribute("aria-label", "Summary function");
+        var fnFoot = document.createElement("div");
+        fnFoot.className = "lane-sum-fn-foot";
+        var fnHint = document.createElement("span");
+        fnHint.className = "dd-form-help";
+        fnHint.textContent = "Return value; from, to; lo, q1, mid, q3, hi; " +
+          "or text. One more column splits the cell.";
+        var fnApply = document.createElement("button");
+        fnApply.type = "button";
+        fnApply.className = "blockr-btn blockr-btn--main blockr-btn--xs";
+        fnApply.textContent = "Apply";
+        var applyFn = function () {
+          if (fnIn.value === (s.fn || "")) return;
+          s.fn = fnIn.value;
+          edit();
+        };
+        fnApply.addEventListener("click", applyFn);
+        fnIn.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            applyFn();
+          }
+        });
+        fnFoot.appendChild(fnHint);
+        fnFoot.appendChild(fnApply);
+        fnCtl.appendChild(fnIn);
+        fnCtl.appendChild(fnFoot);
+      }
+
+      showCtl(body, s, t);
+
+      // How the mark is drawn, once the mark is picked.
+      if (t === "dist") {
+        // The glyph is a centre plus two optional ranges. Both offer
+        // "(none)", which is where the IQR bar, the plain dot range and the
+        // bare dot live -- so the list never needs a mark per shape.
+        if (s.show !== "text") {
+          selectCtl(body, "Inner range", RANGE_OPT, distInner(s), function (v) {
+            s.summary = v; delete s.inner; delete s.stat; edit();
+          });
+          selectCtl(body, "Outer range", OUTER_OPT, distOuter(s), function (v) {
+            s.whiskers = v; delete s.outer; edit();
+          });
+        } else {
+          selectCtl(body, "Statistic", LANE_STATS, distInner(s), function (v) {
+            s.summary = v; delete s.inner; delete s.stat; edit();
+          });
+        }
+      } else if (t === "series") {
+        var band = (s.band && s.band.length === 2) ? s.band : ["", ""];
+        selectCtl(body, "Band low", "num", band[0], function (v) {
+          s.band = [v, band[1]]; edit();
+        });
+        selectCtl(body, "Band high", "num", band[1], function (v) {
+          s.band = [band[0], v]; edit();
+        });
+        // The computed reference: a pooled line or band, computed in R
+        // over the column's values (per facet level under a facet).
+        selectCtl(body, "Reference", [
+          { value: "none", label: "None" },
+          { value: "mean", label: "Mean" },
+          { value: "mean_sd", label: "Mean ± SD" },
+          { value: "median_iqr", label: "Median · IQR" }
+        ], s.ref || "none", function (v) { s.ref = v; edit(); });
+      } else if (t === "spans") {
+        // Event identity on hover: the label headlines the segment tooltip
+        // and keys the same-event highlight; the tooltip fields append.
+        selectCtl(body, "Label (hover)", "any", s.label, function (v) {
+          s.label = v; edit();
+        });
+        segCtl(body, "Width", [
+          { value: "md", label: "Regular" },
+          { value: "lg", label: "Wide" }
+        ], s.size || "md", function (v) { s.size = v; edit(); });
+        multiCtl(body, "Tooltip fields", s.tooltip, function (vals) {
+          s.tooltip = vals; edit();
+        });
+      } else if (t === "pair") {
+        // A band bound or the reference takes a number; a band bound may
+        // also name a column (a per-subject range such as ANRLO / ANRHI).
+        [["ref_lo", "Range low", "Number or column"],
+         ["ref_hi", "Range high", "Number or column"],
+         ["ref", "Reference line", "e.g. 20"]].forEach(function (d) {
+          textCtl(body, d[1], s[d[0]], d[2], function (v) {
+            v = String(v).trim();
+            if (v === "") delete s[d[0]];
+            else s[d[0]] = isFinite(Number(v)) ? Number(v) : v;
+            edit();
+          });
+        });
+      }
+
+      // The column's own optional mappings: a set one is a field with its
+      // remove button; an unset one is an offer, a dashed "+ Color" as the
+      // sentence offers a setting it does not name. A pair's "Dashed by"
+      // is one of them.
+      var maps = SUMMARY_MAPS.filter(function (m) { return m.ok(s); });
+      if (t === "pair") {
+        maps = maps.concat([{ key: "dash", label: "Dashed by",
+          hint: "Draw the link dashed for this column's non-first levels" }]);
+      }
+      var offers = [];
+      maps.forEach(function (m) {
+        if (!s[m.key]) { offers.push(m); return; }
+        selectCtl(body, m.label, m.want || "cat", s[m.key], function (v) {
+          s[m.key] = v; edit();
+        }, function () { delete s[m.key]; edit(); });
+        // A colour-split bar's layout, the chart's `position`, after the
+        // split it lays out.
+        if (m.key === "color" && t === "simple" && (s.show || "bar") === "bar") {
+          segCtl(body, "Split", [
+            { value: "stack", label: "Stacked" },
+            { value: "dodge", label: "Grouped" },
+            { value: "fill", label: "100%" }
+          ], s.position || "stack", function (v) { s.position = v; edit(); });
+        }
+      });
+      if (offers.length) {
+        var bar = document.createElement("div");
+        bar.className = "lane-sum-offers";
+        offers.forEach(function (m) {
+          var seedOf = function () {
+            return m.seed ? m.seed(cols) : firstMapCol(cols);
+          };
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "lane-sum-offer";
+          b.textContent = "+ " + m.label;
+          b.setAttribute("data-blockr-tooltip", m.hint);
+          // Nothing decodable to map: the offer would only produce an
+          // error message in the table.
+          b.disabled = !seedOf();
+          b.addEventListener("click", function () {
+            s[m.key] = seedOf();
+            edit();
+          });
+          bar.appendChild(b);
+        });
+        body.appendChild(bar);
+      }
+    }
 
     // Add: one menu of summaries, each named by what it computes and shown
     // with the mark it starts with; the last starts from code.
@@ -2226,10 +2457,10 @@
         ns.xend = firstCol(cols, "num", [ns.x]);
       }
       if (t === "pair") {
-        ns.from = firstCol(cols, "num");
-        ns.to = firstCol(cols, "num", [ns.from]) || ns.from;
-        ns.from_func = "identity";
-        ns.to_func = "max";
+        ns.x = firstCol(cols, "num");
+        ns.xend = firstCol(cols, "num", [ns.x]) || ns.x;
+        ns.x_func = "identity";
+        ns.xend_func = "max";
       }
       return ns;
     };
@@ -2237,8 +2468,8 @@
       list.push(seedFor(t, f));
       ctx.open.clear();
       ctx.open.add(list.length - 1);
-      commit();
-      ctx.rerender();
+      ctx.focus = list.length - 1;
+      edit();
     };
     var ADD_ITEMS = [
       { title: "Counts" },
@@ -2247,7 +2478,7 @@
       { title: "Values" },
       { label: "One value", meta: "mean, sum, max", icon: SHOW_ICONS.number, t: "simple", f: "mean" },
       { label: "Distribution", meta: "box or dot range", icon: SHOW_ICONS.box, t: "dist" },
-      { label: "Two values, from \u2192 to", meta: "onset to end", icon: SHOW_ICONS.dumbbell, t: "pair" },
+      { label: "Two values, from → to", meta: "onset to end", icon: SHOW_ICONS.dumbbell, t: "pair" },
       { title: "Rows of the cell" },
       { label: "Events", meta: "a swimlane", icon: SHOW_ICONS.interval, t: "spans" },
       { label: "Series", meta: "a sparkline", icon: SHOW_ICONS.sparkline, t: "series" },
@@ -2256,15 +2487,20 @@
       { divider: true },
       { label: "Custom summary", meta: "a function of the rows", icon: CODE_SVG, t: "custom" }
     ];
+    // "Add column" under the list: the quiet add button of a row list
+    // (blockr.ui's .blockr-add-link, as "Add condition"), opening the menu.
     var addRow = document.createElement("div");
-    addRow.className = "lane-sum-addrow";
+    addRow.className = "blockr-add-row lane-sum-addrow";
     var addBtn = document.createElement("button");
     addBtn.type = "button";
-    addBtn.className = "lane-sum-addcol";
-    addBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" ' +
-      'fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Add column';
-    var B = (typeof Blockr !== "undefined") ? Blockr : null;
+    addBtn.className = "blockr-add-link lane-sum-addcol";
+    addBtn.innerHTML = '<span class="blockr-add-icon">' +
+      ((B && B.icons && B.icons.plus) ||
+       '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" ' +
+       'fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>') +
+      "</span>Add column";
     if (B && B.menu) {
+      addBtn.setAttribute("aria-haspopup", "menu");
       addBtn.addEventListener("click", function () {
         B.menu(addBtn, {
           minWidth: 340,
@@ -2277,14 +2513,14 @@
       });
       addRow.appendChild(addBtn);
     } else {
-      // Without blockr.ui's menu: the same entries as plain buttons.
+      // Without blockr.ui's menu: the same entries as offers.
       var addWrap = document.createElement("div");
-      addWrap.className = "lane-sum-add-types";
+      addWrap.className = "lane-sum-offers";
       ADD_ITEMS.forEach(function (it) {
         if (it.title || it.divider) return;
         var b = document.createElement("button");
         b.type = "button";
-        b.className = "lane-sum-add";
+        b.className = "lane-sum-offer";
         b.textContent = "+ " + it.label;
         b.addEventListener("click", function () { addOne(it.t, it.f); });
         addWrap.appendChild(b);
@@ -2292,117 +2528,74 @@
       addRow.appendChild(addWrap);
     }
     wrap.appendChild(addRow);
-
-    if (!list.length) {
-      var hint = document.createElement("div");
-      hint.className = "lane-sum-hint";
-      hint.textContent = "Adding columns switches the block to the " +
-        "multi-column table and replaces the single mark above.";
-      wrap.appendChild(hint);
-    }
     sec.appendChild(wrap);
+
+    // Keep the keyboard on the row it acted on: a re-render replaces it.
+    if (ctx.focus != null) {
+      var again = wrap.querySelector('[data-sum-index="' + ctx.focus + '"] .lane-sum-toggle');
+      ctx.focus = null;
+      if (again && again.focus) again.focus();
+    }
   }
 
-  // Which controls apply depends on the picks: `Of column` only for the
-  // aggregations that reduce a column, `Count distinct` only for
-  // count_distinct, the split layout only with a colour split, Compare only
-  // with a facet. Conditional rows beat a wall of inert ones.
+  // The groups layout's gear: the grouping, then the column list, then how
+  // the table looks. One model, `by` + `summaries`; the column list is
+  // never empty (a new table starts with one count column).
   function summarizeSections(cfg, ctx) {
-    var mapping = [];
-    var optional = [];
-    var pres = ["sort_by", "sort_dir"];
-    var aggTitle = null;
+    var list = Array.isArray(cfg.summaries) ? cfg.summaries : [];
 
-    // The summarize-table mode: the column list IS the config. Grouping
-    // (`by`) and facet below it; the flat mark mappings never render.
-    if (Array.isArray(cfg.summaries) && cfg.summaries.length) {
-      // Which facet columns the table uses: the by-level reading spans ONE
-      // column's groups across the summaries, so it is offered only when
-      // every faceted column agrees on it.
-      var fcols = [];
-      cfg.summaries.forEach(function (s) {
-        if (s && s.facet && fcols.indexOf(s.facet) === -1) fcols.push(s.facet);
+    // The cards look leaves out what a card cannot draw (R:
+    // CARDS_SKIP_TYPES), and says so under the look selector.
+    var skip = list
+      .filter(function (s) { return s && (s.type === "spans" || s.type === "expr"); })
+      .map(function (s) { return s.name || s.col || s.type; });
+    SUMMARIZE_ROLES.look.hint = (cfg.look === "cards" && skip.length)
+      ? "Not drawn as cards: " + skip.join(", ") +
+        ". The table look shows them."
+      : "";
+
+    // Which facet columns the table uses: the by-level reading spans ONE
+    // column's groups across the summaries, so it is offered only when
+    // every faceted column agrees on it.
+    var fcols = [];
+    list.forEach(function (s) {
+      if (s && s.facet && fcols.indexOf(s.facet) === -1) fcols.push(s.facet);
+    });
+    // Without `by` the table is one row over all input rows: nothing to
+    // sort, search or drill, so those controls leave.
+    var grouped = Array.isArray(cfg.by) && cfg.by.length > 0;
+    var pres = fcols.length === 1
+      ? ["sort_by", "sort_dir", "top_n", "facet_layout", "value_labels", "format",
+         "unit", "search", "sortable", "axis", "pct_of", "missing",
+         "download", "look", "bar_width"]
+      : ["sort_by", "sort_dir", "top_n", "value_labels", "format", "unit", "search",
+         "sortable", "axis", "pct_of", "missing", "download", "look",
+         "bar_width"];
+    if (!grouped) {
+      pres = pres.filter(function (k) {
+        return ["sort_by", "sort_dir", "top_n", "search",
+                "sortable"].indexOf(k) === -1;
       });
-      return {
-        requiredMap: ["by"],
-        // Colour and facet are the COLUMN's mappings, added per summary in
-        // the columns editor below: one column can split by severity while
-        // the next repeats per sex, and a column that maps neither is plain.
-        // Only the grouping is the whole table's.
-        optionalMap: [],
-        mapping: [],
-        aggTitle: null,
-        customSections: ctx ? [{
-          title: "Columns",
-          render: function (sec) { renderSummariesEditor(sec, ctx); }
-        }] : [],
-        presentation: fcols.length === 1
-          ? ["sort_by", "sort_dir", "facet_layout", "value_labels", "search",
-             "sortable", "axis", "download", "bar_width"]
-          : ["sort_by", "sort_dir", "value_labels", "search", "sortable",
-             "axis", "download", "bar_width"],
-        drillToggle: "drill",
-        drillDefault: (cfg.by && cfg.by.length)
-          ? cfg.by[cfg.by.length - 1] : (cfg.group || ""),
-        // A click claims the row's grouping path, so there is no column to
-        // pick: `drill` is the on switch.
-        drillPicker: false,
-        ctrlSection: true,
-        drillHint: cfg.drill
-          ? "Clicking a row filters downstream on " + cfg.drill + "."
-          : "Clicking a row filters downstream blocks to that row.",
-        titles: ["title", "subtitle", "caption"]
-      };
     }
-
-    // The ranked-bar surface (the block's original form, kept for boards
-    // that never opt into the column list): func / value / id_var, colour
-    // split, facet, comparison. Every other glyph lives in the columns
-    // editor above -- the type belongs to the COLUMN.
-    var needsValue = ["identity", "sum", "mean", "median", "min", "max"]
-      .indexOf(cfg.func) > -1;
-    mapping = ["func"];
-    if (needsValue) mapping.push("value");
-    if (cfg.func === "count_distinct") mapping.push("id_var");
-    optional = ["parent", "color", "facet"];
-    if (cfg.func === "identity") optional.push("fields");
-    // color + facet compose (split bars inside each facet column), so the
-    // split layout applies whenever a colour split exists.
-    if (cfg.color) pres.push("bar_mode");
-    // The measure sits in Mapping, as the chart's does: no Aggregation
-    // section of its own.
-    aggTitle = null;
-    pres.push("value_labels");
-    pres.push("search");
-    pres.push("sortable");
-    pres.push("axis");
-    pres.push("download");
-    // Last: four segments overflow a grid cell, and the end of the row is
-    // the one place with nothing to their right.
-    pres.push("bar_width");
-
     return {
-      requiredMap: ["group"],
-      optionalMap: optional,
-      mapping: mapping,
-      aggTitle: aggTitle,
-      // The entry point into the summarize-table mode: an empty column
-      // list with the add/preset row. Adding the first column commits a
-      // non-empty `summaries` and this spec switches to the branch above.
+      requiredMap: [],
+      // Colour and facet are the COLUMN's mappings, set in the column list.
+      // Only the grouping is the whole table's, optional. Under the layout
+      // switch it moves into the Table section (withLayoutSwitch()).
+      optionalMap: [],
+      mapping: ["by"],
+      aggTitle: null,
       customSections: ctx ? [{
         title: "Columns",
         render: function (sec) { renderSummariesEditor(sec, ctx); }
       }] : [],
       presentation: pres,
-      drillToggle: "drill",
-      drillDefault: cfg.group || "",
+      drillToggle: grouped ? "drill" : null,
+      drillDefault: grouped ? cfg.by[cfg.by.length - 1] : "",
+      // A click claims the row's grouping path, so there is no column to
+      // pick: `drill` is the on switch.
       drillPicker: false,
-      // "Send to filter (beta)" inside the open Drill-down section, chart /
-      // table parity: the engine reads cfg.ctrl_target / cfg.ctrl_choices.
-      ctrlSection: true,
-      // Spec-level hint (the table block's shape). NOT a host-level drillHint:
-      // that one triggers the chart/tile drill section too and rendered a
-      // second, empty "Drill-down" heading.
+      ctrlSection: grouped,
       drillHint: cfg.drill
         ? "Clicking a row filters downstream on " + cfg.drill + "."
         : "Clicking a row filters downstream blocks to that row.",
@@ -2436,8 +2629,9 @@
     cfg.title_auto = titles.title || "";
     cfg.subtitle_auto = titles.subtitle || "";
     cfg.caption_auto = titles.caption || "";
-    // A `null` column pick reads as "" for the pickers (the engine's no-value).
-    ["group", "parent", "color", "facet", "value", "id_var", "drill"]
+    // A `null` column pick reads as "" for the pickers (the engine's
+    // no-value). `group`, `color` and `facet` are sentence words only.
+    ["group", "color", "facet", "drill"]
       .forEach(function (k) { if (cfg[k] == null) cfg[k] = ""; });
     // The summarize-table config: the column list and the grouping vector.
     if (!Array.isArray(cfg.summaries)) {
@@ -2445,10 +2639,6 @@
     }
     if (!Array.isArray(cfg.by)) cfg.by = cfg.by ? [String(cfg.by)] : [];
     if (!cfg.facet_layout) cfg.facet_layout = "by_summary";
-    // The multi-column picker wants an array.
-    if (!Array.isArray(cfg.fields)) {
-      cfg.fields = cfg.fields ? [String(cfg.fields)] : [];
-    }
     // The ctrl-send tail wants a string target and an array of choices.
     if (cfg.ctrl_target == null) cfg.ctrl_target = "";
     if (!Array.isArray(cfg.ctrl_choices)) cfg.ctrl_choices = [];
@@ -2463,7 +2653,7 @@
       // first-appearance in the rows (chart parity: "Data order"). A visit
       // or dose-group table reads wrong alphabetically.
       { value: "data", label: "Data order" },
-      { value: "label", label: "Name" }
+      { value: "alpha", label: "A\u2013Z" }
     ].concat(sumNames)
       .concat(levels.map(function (lv) { return { value: lv, label: lv }; }))
       // Numeric columns of the input (the engine expands "#num"): the row's
@@ -2471,6 +2661,40 @@
       // character AVISIT does not carry.
       .concat(["#num"]);
     return { cfg: cfg, cols: cols };
+  }
+
+  // The table block's layout switch (R/table-block.R): records or
+  // groups. The block's server reads it off this engine's action input.
+  // The grouping is what the switch decides a row is, so it sits under the
+  // switch, in the same section, rather than in a Mapping section of its
+  // own (design system: a mode selector gates the fields below it).
+  // The value is the block's layout as the server last pushed it
+  // (table.js, window.blockrTableLayouts), not this gear's last click.
+  function withLayoutSwitch(spec, elemId, cfg) {
+    var pushed = window.blockrTableLayouts && window.blockrTableLayouts[elemId];
+    var by = (cfg && cfg.by) || [];
+    var who = { strong: [].concat(by).filter(Boolean).join(" and ") };
+    spec.layoutSwitch = {
+      title: "Table",
+      fields: spec.mapping || [],
+      value: pushed || "groups",
+      // List, Per group, Per variable, with their drawings
+      // (drilldown-config.js).
+      options: (window.Blockr && Blockr.TABLE_LAYOUTS) || [
+        { value: "records", label: "List" },
+        { value: "groups", label: "Per group" },
+        { value: "variables", label: "Per variable" }
+      ],
+      hint: who.strong ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."],
+      onPick: function (v) {
+        // The block keeps its height while the engines swap (table.js).
+        if (window.blockrTableHold) window.blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
+    };
+    spec.mapping = [];
+    return spec;
   }
 
   function sendConfig(elemId, param, value) {
@@ -2513,8 +2737,13 @@
       stash: {}
     };
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -2552,25 +2781,28 @@
       columns: function () { return cols; },
       context: function () { return "all"; },
       currentType: function () { return null; },
-      sections: function () { return summarizeSections(cfg, ctx); },
-      sectionsForFamily: function () { return summarizeSections(cfg, ctx); },
+      sections: function () {
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
+      },
+      sectionsForFamily: function () {
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
+      },
       secondary: new Set(),
-      // "Mapping" in both modes, as on the chart: the trays share their
-      // section names.
+      // Outside the table block (no layout switch) the grouping keeps the
+      // chart's section name.
       mappingTitle: function () { return "Mapping"; },
       // No block-level type picker: the type belongs to the COLUMN (the
       // columns editor's row types + display tiles).
       typeKey: null,
       typeGroups: null,
       familyFor: null,
-      entryRequired: function (role) {
-        return role === "by" || role === "group";
-      },
+      // `by` is optional: without it the table is one row over all rows.
+      entryRequired: function () { return false; },
       drillAutoLabel: null,
       title: "Summarize table settings",
       onChange: function (key) {
         sendConfig(elemId, key, cfg[key]);
-        // The ranked default is descending; the data's own order read
+        // The default order is descending; the data's own order read
         // backwards is exactly what "data order" is asked for to avoid, so
         // the pick carries the direction with it. One control change, two
         // params sent -- and the direction stays a control, so reverse
@@ -2634,33 +2866,86 @@
     // of columns, which the engine keeps out of the sentence (a menu picks
     // one); the word names the innermost column, the one each row is, so
     // it opens a single pick that replaces that column.
+    //
+    // Some words name a setting that lives elsewhere. summarize_title_args()
+    // (R/summarize-exhibit.R) reads `group` from the outer `by` column and
+    // `facet`, `fill` and `color` from the first summary. Such a word reads
+    // and writes that same place, so a pick changes the table and not only
+    // the sentence.
     var B = (typeof Blockr !== "undefined") ? Blockr : null;
     if (B && B.SentenceSlots) {
+      var byList = function () {
+        return Array.isArray(cfg.by) ? cfg.by : (cfg.by ? [cfg.by] : []);
+      };
       var lastBy = function () {
-        var b = Array.isArray(cfg.by) ? cfg.by : [];
+        var b = byList();
         return b.length ? b[b.length - 1] : "";
       };
+      var firstSummary = function () {
+        return (Array.isArray(cfg.summaries) && cfg.summaries[0] &&
+          typeof cfg.summaries[0] === "object") ? cfg.summaries[0] : null;
+      };
+      // Where a word's value lives: "by" (innermost), "outer" (the outer
+      // `by` column), "summary" (the first summary's key) or "role" (a
+      // setting of its own).
+      var placeOf = function (k) {
+        if (k === "by") return "by";
+        if (k === "group") return byList().length === 2 ? "outer" : "role";
+        if (k === "fill") return firstSummary() ? "summary" : "role";
+        if ((k === "facet" || k === "color") && !cfg[k] && firstSummary()) {
+          return "summary";
+        }
+        return "role";
+      };
+      // The role whose column list a word offers.
+      var listRole = { by: "by", outer: "group", fill: "color" };
+      var FILL_ROLE = { label: "Fill", kind: "column", colType: "cat" };
       var words = {
         // Synced like the menus below: the sentence paints with the first
         // payload, before the gear has read the script's controls, and a
         // script word's label comes from those.
-        _role: function (k) { sync(); return engine._role(k); },
+        _role: function (k) {
+          sync();
+          return engine._role(k) || (k === "fill" ? FILL_ROLE : null);
+        },
         _slotFlag: function (k) { sync(); return engine._slotFlag(k); },
         _slotNumber: function (k) { sync(); return engine._slotNumber(k); },
         _slotOptionsFor: function (k) {
           sync();
-          if (k !== "by") return engine._slotOptionsFor(k);
+          var place = placeOf(k);
+          if (place === "role") return engine._slotOptionsFor(k);
+          if (place === "by" || place === "outer") {
+            return {
+              options: engine._colOptionsFor(listRole[place], { required: false }),
+              selected: place === "by" ? lastBy() : byList()[0]
+            };
+          }
+          var s1 = firstSummary();
           return {
-            options: engine._colOptionsFor("by", { required: true }),
-            selected: lastBy()
+            options: engine._colOptionsFor(listRole[k] || k, { required: false }),
+            selected: (s1 && s1[k]) ? s1[k] : "(none)"
           };
         },
         _setRoleValue: function (k, v) {
-          if (k !== "by") { engine._setRoleValue(k, v); return; }
-          var b = Array.isArray(cfg.by) ? cfg.by.slice() : [];
-          if (b.length) b[b.length - 1] = v; else b = [v];
-          cfg.by = b;
-          sendConfig(elemId, "by", b);
+          var place = placeOf(k);
+          if (place === "role") { engine._setRoleValue(k, v); return; }
+          if (place === "by" || place === "outer") {
+            var b = byList().slice();
+            var i = place === "by" ? b.length - 1 : 0;
+            // "(none)" takes that column out: `by` is optional (a groups
+            // table without it is one row over all input rows).
+            if (v === "(none)" || v === "") { if (b.length) b.splice(i, 1); }
+            else if (b.length) b[i] = v; else b = [v];
+            cfg.by = b;
+            sendConfig(elemId, "by", b);
+          } else {
+            var list = cfg.summaries.map(function (s) {
+              return (s && typeof s === "object") ? Object.assign({}, s) : s;
+            });
+            if (v === "(none)" || v === "") delete list[0][k]; else list[0][k] = v;
+            cfg.summaries = list;
+            sendConfig(elemId, "summaries", list);
+          }
           if (pop.classList.contains("blockr-settings--open")) engine.render();
         }
       };
@@ -2680,6 +2965,7 @@
     var layer = null;
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.setAttribute("aria-expanded", "true");
       if (!layer && B && B.layer) {
         layer = B.layer(pop, {
@@ -2691,6 +2977,7 @@
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.setAttribute("aria-expanded", "false");
       if (layer) { layer.remove(); layer = null; }
       // Back to the server's state for everything the gear held.
@@ -2707,28 +2994,86 @@
         cfg = s2.cfg;
         cols = s2.cols;
       }
+      // A table with one column opens on that column's editor, so a new
+      // table shows what its first column computes. With more, every row
+      // starts closed.
+      ctx.open.clear();
+      if (Array.isArray(cfg.summaries) && cfg.summaries.length === 1) {
+        ctx.open.add(0);
+      }
       engine.refresh();
       openPop();
     });
 
+    // A layout switch (table.js, "blockr-table-layout"): the records engine
+    // taking over closes this gear; switching to groups redraws it, open if
+    // a gear in the block was open, and once more when the groups table
+    // arrives (root._summarizeAfterPayload).
+    var relayout = false;
+    var reread = function () {
+      var t = root.querySelector("table.blockr-summarize-table");
+      if (t) {
+        var s4 = readGearState(t);
+        cfg = s4.cfg;
+        cols = s4.cols;
+      }
+      engine.refresh();
+    };
+    document.addEventListener("blockr-table-layout", function (e) {
+      var d = e.detail;
+      if (!d || d.id !== elemId || !root.isConnected) return;
+      relayout = false;
+      if (window.blockrTableGearPending) delete window.blockrTableGearPending[elemId];
+      if (d.layout !== "groups") {
+        // Closed once this container is off screen (table.js,
+        // closeWhenHidden): earlier, the table would jump for a few frames.
+        if (pop.classList.contains("blockr-settings--open")) {
+          var cwh = window.blockrCloseWhenHidden;
+          if (cwh) cwh(root, closePop); else closePop();
+        }
+        return;
+      }
+      if (!d.gearOpen) return;
+      reread();
+      openPop();
+      relayout = true;
+    });
+    root._summarizeAfterPayload = function () {
+      if (!relayout || !pop.classList.contains("blockr-settings--open")) return;
+      relayout = false;
+      reread();
+    };
+
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    root.insertBefore(band, pop.nextSibling);
-    // The title band moves into the gear row, on its left: the chart's header
-    // (chart/chrome.js _buildDOM). The settings band then opens below the title.
+    header.appendChild(pop);
+    root.insertBefore(band, header.nextSibling);
+    // The title band joins the header, on its left; open, it sits under the
+    // tray with the tools (chart.css .vz-head--open).
     var titles = root.querySelector(".dd-table-titles");
-    if (titles) header.insertBefore(titles, header.firstChild);
+    if (titles) {
+      titles.classList.add("vz-head__titles");
+      header.insertBefore(titles, header.firstChild);
+    }
     bindCapture(root, header);
-    // One control row, chart / table parity: the search box MOVES UP into the
-    // gear row and sits LEFT of the gear, which keeps its canonical top-right
-    // spot (the cross-block anchor). The emptied chrome row is hidden so it
-    // leaves no stray padded border. The legend is NOT in this row -- it has
-    // its own row below, so it can never push the search box around.
+    // The search box MOVES UP into the header's tools, left of the gear. The
+    // emptied chrome row is hidden so it leaves no stray padded border. The
+    // legend has its own row below.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = root.querySelector(".blockr-html-table-header");
       if (hdrRow) hdrRow.style.display = "none";
+    }
+    // The first switch to groups with a gear open: this chrome did not exist
+    // when the layout came (table.js, gearPending), so the gear opens now.
+    var pending = window.blockrTableGearPending;
+    var lays = window.blockrTableLayouts;
+    if (pending && pending[elemId]) {
+      delete pending[elemId];
+      if (lays && lays[elemId] === "groups") {
+        relayout = true;
+        openPop();
+      }
     }
   }
 
@@ -2891,10 +3236,13 @@
   /** The card for the cell under the pointer, or "" for none. */
   function cardHtml(td, t) {
     var root = td.closest(".blockr-summarize-container");
-    var tr = td.parentNode;
+    // A card's glyph names its column; a table cell is placed by its index.
+    var card = td.hasAttribute("data-k");
+    var tr = card ? td.closest("[data-summarize-ord]") : td.parentNode;
     var p = root && root._summarizePayload;
     var i = tr ? Number(tr.getAttribute("data-summarize-ord")) : NaN;
-    var c = (p && p.kind === "flat" && p.cols) ? p.cols[td.cellIndex - 1] : null;
+    var ci = card ? Number(td.getAttribute("data-k")) : td.cellIndex - 1;
+    var c = (p && p.kind === "flat" && p.cols) ? p.cols[ci] : null;
     if (!c || isNaN(i) || i >= p.n) {
       // No payload (a static page): the one-line text the cell carries.
       var own = closestIn(t, td, "[data-summarize-tip]");
@@ -3068,7 +3416,7 @@
     var tip = tipEl();
     if (!lane) {
       laneHighlight(null, null);
-      var td = t.closest("td.blockr-summarize-bar-col");
+      var td = t.closest("td.blockr-summarize-bar-col, .tc-glyph");
       var html = td && t.closest(".blockr-summarize-container") ? cardHtml(td, t) : "";
       if (!html) {
         tip.hidden = true;

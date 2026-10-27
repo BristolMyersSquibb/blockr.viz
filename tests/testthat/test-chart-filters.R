@@ -169,10 +169,10 @@ test_that("a drill target receives the AND of the columns", {
     expect_equal(claims(1), list(AETERM = "Rash", AESEV = "MODERATE"))
 
     # A missing value narrows the rows the other column is read from, and is
-    # not claimed itself.
+    # claimed by the value filter's "<NA>" token.
     t$send(click_msg(list(USUBJID = list("S3"), AESEV = list(NULL)), nonce = 2))
     expect_length(sent, 2L)
-    expect_equal(claims(2), list(USUBJID = "S3"))
+    expect_equal(claims(2), list(USUBJID = "S3", AESEV = "<NA>"))
 
     # A one-column message still claims.
     t$send(list(action = "filter", filter_type = "categorical",
@@ -187,12 +187,16 @@ test_that("a drill target receives the AND of the columns", {
 
 test_that("dd_ctrl_claims() matches a missing value on NA and on \"\"", {
   d <- filters_df()
-  expect_equal(
-    dd_ctrl_claims(d, "", list(AETERM = "Nausea", AESEV = NA_character_)),
-    list(list(name = "AETERM", mode = "multi", values = "Nausea"))
-  )
-  # Only the missing column: nothing to claim, so hold.
-  expect_null(dd_ctrl_claims(d, "", list(AESEV = NA_character_)))
+  got <- dd_ctrl_claims(d, "", list(AETERM = "Nausea", AESEV = NA_character_))
+  expect_equal(got[[1L]], list(name = "AETERM", mode = "multi",
+                               values = "Nausea"))
+  # The missing column is claimed by the value filter's tokens.
+  expect_identical(got[[2L]]$name, "AESEV")
+  expect_true(all(got[[2L]]$values %in% c("<NA>", "<empty>")))
+  # Only the missing column: a claim on the missing rows.
+  only <- dd_ctrl_claims(d, "", list(AESEV = NA_character_))
+  expect_identical(only[[1L]]$name, "AESEV")
+  expect_true(all(only[[1L]]$values %in% c("<NA>", "<empty>")))
 })
 
 test_that("a board saved before `filters` restores its filter", {

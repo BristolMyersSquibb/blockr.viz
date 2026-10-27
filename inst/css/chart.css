@@ -482,6 +482,9 @@
 .blockr-settings.dd-popover .dd-section > .dd-add-wrap,
 .blockr-settings.dd-popover .dd-section > .dd-script-row,
 .blockr-settings.dd-popover .dd-section > .dd-drill-hint,
+.blockr-settings.dd-popover .dd-section > .dd-layout-tiles,
+.blockr-settings.dd-popover .dd-section > .dd-layout-hint,
+.blockr-settings.dd-popover .dd-section > .dd-form-row.dd-role-tiles,
 .blockr-settings.dd-popover .dd-section--titles > .dd-form-row,
 .blockr-settings.dd-popover .dd-section--custom > * {
   grid-column: 1 / -1;
@@ -524,6 +527,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* An option that exists but does not apply here (the table's Cards look in
+   the variables layout): drawn, greyed, inert. */
+.blockr-settings.dd-popover .blockr-segmented__seg.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* Row head: label + remove button on one line above the control. */
 .dd-row-head {
@@ -556,7 +565,8 @@
 }
 .dd-row-controls > .dd-picker-wrap,
 .dd-row-controls > .dd-pill-wrap,
-.dd-row-controls > .dd-slider-wrap { flex: 1 1 0; min-width: 0; }
+.dd-row-controls > .dd-slider-wrap,
+.dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
 /* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
 .dd-pair-connector {
   align-self: center;
@@ -580,18 +590,21 @@
 }
 .dd-value-row > .dd-picker-wrap { flex: 1 1 0; min-width: 0; }
 .dd-value-row > .dd-value-agg { flex: 0 1 35%; }
-/* Small input-type badge above Mapping (e.g. an annotated data frame has no
-   grouping / aggregation controls). The fuller explanation is the hover
-   tooltip, so the panel stays compact. */
+/* Badge above Mapping: the input is a finished table, so there is no
+   grouping or summary to set (table.js). The fuller explanation is the hover
+   tooltip. A neutral badge, blockr.ui's design system (Labels and status). */
 .dd-input-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
   margin: 2px 0 8px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--blockr-color-surface-2, #f3f4f6);
-  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 0 7px;
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-pill);
+  background: var(--blockr-color-bg-subtle);
+  color: var(--blockr-color-text-muted);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--blockr-font-weight-medium);
   cursor: default;
 }
 /* Repeatable metrics list (table/tile aggregation). Breaks out of the section's
@@ -732,76 +745,131 @@
   font-weight: var(--blockr-font-weight-medium, 500);
 }
 
-/* ===== Type picker as icon tile grid (typeTiles, proposal B) =====
-   Uniform icon-over-label tiles in an auto-fill grid — wraps into even
-   rows at any width; per-family micro-headings when a host has several
-   type groups. */
+/* ===== Picker tiles =====
+   One tile for every picker that shows drawings: the chart type (.dd-type-tile,
+   with per-family micro-headings) and the table block's layout and look
+   (.dd-layout-tile, drilldown-config.js _buildTiles). Edge to edge: the
+   drawing (Blockr.TILE_ICONS, a 48 x 32 viewBox) is the tile's face and
+   fills it at 3:2; the name sits under the face, outside it. The button has
+   no frame of its own. The drawing is currentColor and keeps its 1.5px and
+   1px lines at any width (non-scaling-stroke). States sit on the face and
+   the name: muted at rest, default on hover, the accent when chosen, the
+   disabled ink when not available. */
 .dd-popover-types-tiles {
   display: block;
 }
 .dd-type-grid-label {
   margin-bottom: 5px;
 }
-.dd-type-grid {
+.dd-type-grid,
+.dd-layout-tiles {
   display: grid;
-  /* 72px fits the longest labels without truncation. */
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 6px;
+  /* Five a row in a 560px gear, three in a 360px panel. */
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
 }
+.dd-layout-tiles { grid-column: 1 / -1; }
 .dd-type-group-head {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-medium, 500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--blockr-grey-400, #9ca3af);
+  color: var(--blockr-color-text-muted, #6b7280);
   margin: 8px 0 4px;
 }
 .dd-type-group-head:first-child {
   margin-top: 0;
 }
-.dd-type-tile {
+.dd-type-tile,
+.dd-layout-tile {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 5px;
-  padding: 9px 4px 7px;
-  background: #fff;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: var(--blockr-radius-md, 6px);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-500, #6b7280);
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
-  text-transform: capitalize;
-  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.dd-type-tile:hover {
-  background: var(--blockr-grey-50, #f9fafb);
-  border-color: var(--blockr-grey-300, #d1d5db);
-}
-.dd-type-tile.dd-type-active {
-  background: #eff6ff;
-  border-color: var(--blockr-color-primary, #2563eb);
-  color: var(--blockr-color-primary, #2563eb);
-  font-weight: var(--blockr-font-weight-medium, 500);
-}
-.dd-type-tile-icon svg {
+.dd-type-tile { text-transform: capitalize; }
+.dd-type-tile-icon,
+.dd-layout-tile-face {
   display: block;
-  opacity: 0.5;
+  width: 100%;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-surface, #fff);
+  overflow: hidden;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.dd-type-tile.dd-type-active .dd-type-tile-icon svg {
-  opacity: 0.9;
+.dd-type-tile-icon svg,
+.dd-layout-tile-face svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.dd-type-tile-label {
+.dd-type-tile-icon svg *,
+.dd-layout-tile-face svg * {
+  vector-effect: non-scaling-stroke;
+}
+.dd-type-tile-label,
+.dd-layout-tile-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  text-align: center;
 }
-.dd-popover .dd-type-tile:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--blockr-color-focus, rgba(37, 99, 235, 0.45));
+.dd-type-tile:hover,
+.dd-layout-tile:hover {
+  color: var(--blockr-color-text-default, #111827);
+}
+.dd-type-tile:hover .dd-type-tile-icon,
+.dd-layout-tile:hover .dd-layout-tile-face {
+  background: var(--blockr-color-bg-hover, #f3f4f6);
+  border-color: var(--blockr-color-border-strong, #d1d5db);
+}
+.dd-type-tile.dd-type-active,
+.dd-layout-tile--on,
+.dd-type-tile.dd-type-active:hover,
+.dd-layout-tile--on:hover {
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+.dd-type-tile.dd-type-active .dd-type-tile-icon,
+.dd-layout-tile--on .dd-layout-tile-face {
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: inset 0 0 0 1px var(--blockr-color-border-accent, #2563eb);
+}
+.dd-layout-tile.is-disabled,
+.dd-layout-tile.is-disabled:hover {
+  color: var(--blockr-color-text-disabled, #9ca3af);
+  cursor: not-allowed;
+}
+.dd-layout-tile.is-disabled .dd-layout-tile-face,
+.dd-layout-tile.is-disabled:hover .dd-layout-tile-face {
+  background: var(--blockr-color-bg-surface, #fff);
+  border-color: var(--blockr-color-border-default, #e5e7eb);
+}
+.dd-popover .dd-type-tile:focus-visible,
+.dd-layout-tile:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: var(--blockr-radius-md, 6px);
 }
+
+/* A shading rule: its mode as tiles, then the columns it shades. */
+.dd-shading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dd-shading + .dd-shading { margin-top: 12px; }
 
 /* ===== Chart grid (faceting) ===== */
 .dd-chart-grid {
@@ -1570,3 +1638,13 @@
 .blockr-busy .blockr-table-wrapper {
   opacity: 0.45;
 }
+
+/* The table block's layout switch: the picker tiles above, and a line under
+   them that says what the chosen layout gives. */
+.dd-layout-hint {
+  grid-column: 1 / -1;
+  margin: -8px 0 0;          /* 16px row gap - 8 = 8px under the tiles */
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }

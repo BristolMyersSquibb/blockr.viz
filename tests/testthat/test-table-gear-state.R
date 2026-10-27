@@ -51,42 +51,16 @@ test_that("data-dt-cols is stamped on flat, message and structured tables", {
   expect_true(grepl("data-dt-cols=\"\\[\\]\"", st))
 })
 
-test_that("aggregated display keeps the RAW input schema on data-dt-cols", {
-  df  <- data.frame(region = c("N", "S", "N"), revenue = c(1, 2, 3),
-                    stringsAsFactors = FALSE)
-  blk <- new_table_block(group = "region",
-                         summaries = list(list(func = "count",
-                                               cols = list())))
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
-    session$flushReact()
-    # The body ships as the data-push payload (not a renderUI output); the
-    # gear attributes ride on the payload's <table> head.
-    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
-    expect_identical(p$kind, "flat")
-    # The displayed frame is the aggregate: group + the "Count" metric column
-    # (and 2 group rows, not 3 raw rows).
-    expect_true(grepl("Count", p$head))
-    expect_identical(p$n, 2L)
-    # ... but the gear's pickable columns stay the raw input schema: revenue
-    # (not displayed) is offered, the synthetic Count column is not.
-    m <- regmatches(p$head, regexpr("data-dt-cols=\"[^\"]*\"", p$head))
-    expect_length(m, 1L)
-    expect_true(grepl("region", m))
-    expect_true(grepl("revenue", m))
-    expect_false(grepl("Count", m))
-  })
-})
-
 test_that("a format whose writer is missing is left out of the menu", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(download = TRUE)
+  blk <- records_engine(download = TRUE)
 
   # Nobody asked for the spreadsheet specifically -- the download toggle did --
   # so an entry that could only explain why it does not work is noise. (It was
   # shown disabled while each format had its own pill: there, a toggle you had
   # just switched on that rendered nothing read as broken.)
   local_mocked_bindings(dt_has_openxlsx = function() FALSE)
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
     expect_false(grepl("dl_xlsx", html, fixed = TRUE))
@@ -99,9 +73,9 @@ test_that("a format whose writer is missing is left out of the menu", {
 test_that("downloads on renders every format the machine can write", {
   skip_if_not_installed("openxlsx")
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(download = TRUE)
+  blk <- records_engine(download = TRUE)
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
     expect_true(grepl("shiny-download-link", html))
@@ -112,9 +86,9 @@ test_that("downloads on renders every format the machine can write", {
 
 test_that("downloads off renders no control at all", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block()
+  blk <- records_engine(download = FALSE)
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$flushReact()
     expect_null(output$dt_download)
   })
@@ -129,7 +103,7 @@ test_that("one writable format renders a button, several render a menu", {
     dt_has_openxlsx = function() FALSE,
     dt_has_officer  = function() FALSE
   )
-  testServer(new_table_block(download = TRUE)$expr_server,
+  testServer(records_engine(download = TRUE),
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
@@ -151,7 +125,7 @@ test_that("several formats render a menu in spec order", {
     dt_has_openxlsx = function() TRUE,
     dt_has_officer  = function() TRUE
   )
-  testServer(new_table_block(download = TRUE)$expr_server,
+  testServer(records_engine(download = TRUE),
              args = list(data = reactive(df)), {
     session$flushReact()
     html <- as.character(output$dt_download$html)
@@ -174,9 +148,9 @@ test_that("several formats render a menu in spec order", {
 
 test_that("the html download writes a self-contained page", {
   df  <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_table_block(download = TRUE, title = "Groups")
+  blk <- records_engine(download = TRUE, title = "Groups")
 
-  testServer(blk$expr_server, args = list(data = reactive(df)), {
+  testServer(blk, args = list(data = reactive(df)), {
     session$flushReact()
     # testServer runs the handler and hands back the path it wrote to.
     html <- paste(readLines(output$dl_html, warn = FALSE), collapse = "\n")
@@ -200,9 +174,9 @@ test_that("the download control does not re-render when the data changes", {
   )
 
   rv <- reactiveVal(data.frame(grp = c("A", "B"), val = c(1, 2)))
-  blk <- new_table_block(download = TRUE)
+  blk <- records_engine(download = TRUE)
 
-  testServer(blk$expr_server, args = list(data = rv), {
+  testServer(blk, args = list(data = rv), {
     session$flushReact()
     invisible(output$dt_download)
     first <- calls

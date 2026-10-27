@@ -24,5 +24,5 @@ columns}; the row-structure rendering belongs to the table renderers.
 Other dot-prefixed columns are not reserved and pass through.
 }
 \seealso{
-\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=new_chart_block]{new_chart_block()}}, \code{\link[=new_tile_block]{new_tile_block()}}
+\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=new_chart_block]{new_chart_block()}}, \code{\link[=new_table_block]{new_table_block()}}
 }

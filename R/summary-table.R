@@ -407,6 +407,11 @@ summary_table_long <- function(data,
 #'   When `TRUE`, adjacent categorical entries in `vars` that form a
 #'   functional dependency in `data` are rendered as a row-side
 #'   drill-down. v1 supports 2-level hierarchies only.
+#' @param missing Missing values of a categorical variable, of `by` and of
+#'   `sections`: `"drop"` (default) gives them no row or column, `"level"`
+#'   shows them as "(Missing)". Numeric variables are summarised without
+#'   their missing values either way. A [drill_source()] claim on the
+#'   "(Missing)" level selects the rows whose value is missing.
 #' @return A wide annotated data frame: dotted identity / structure columns
 #'   plus one formatted character column per by-group level, each carrying a
 #'   `label` attribute holding its `"<group>\nN = <n>"` header. Consumed by
@@ -439,10 +444,19 @@ summary_table <- function(data,
                           overall_label = "Total",
                           subject_var = NULL,
                           indent_details = TRUE,
-                          nest_hierarchies = FALSE) {
+                          nest_hierarchies = FALSE,
+                          missing = "drop") {
+  # The table is computed from `input`; `data`, with its missing values,
+  # stays the source a drill resolves against.
+  input <- data
+  if (identical(chr_state(missing), "level")) {
+    cats <- Filter(function(v) !is.numeric(data[[v]]),
+                   intersect(as.character(vars), names(data)))
+    input <- table_missing_levels(data, c(by, sections, cats))
+  }
   out <- fmt_to_wide(
     summary_table_long(
-      data,
+      input,
       vars             = vars,
       sections         = sections,
       by               = by,
@@ -467,8 +481,24 @@ summary_table <- function(data,
   # every one. A composer table applies a population filter and restricts to
   # denominator members before summarising, so its input over-selects and it
   # must stamp what it actually summarised. `summary_table()` summarises
-  # `data` as given, so the two frames are the same frame.
+  # `data` as given, so the two frames are the same frame. With `missing =
+  # "level"` the stamped frame keeps its missing values, and drill_source()
+  # reads a "(Missing)" claim as those.
   attr(out, "source_data") <- data
+
+  # Which arm each column is, so a click on a cell claims its row and its
+  # arm (annotated_column_keys()). The overall column is every row and
+  # claims nothing.
+  by1 <- as.character(unlist(by))
+  if (length(by1) == 1L && by1 %in% names(input)) {
+    lv <- intersect(names(out), unique(as.character(input[[by1]])))
+    lv <- setdiff(lv, if (isTRUE(add_overall)) overall_label)
+    if (length(lv)) {
+      attr(out, "column_keys") <- stats::setNames(
+        lapply(lv, function(l) list(list(column = by1, values = l))), lv
+      )
+    }
+  }
 
   out
 }

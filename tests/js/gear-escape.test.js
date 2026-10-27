@@ -1,4 +1,4 @@
-/* Escape closes the gear tray of the chart, table, tile and summarize table,
+/* Escape closes the gear tray of the chart, table and summarize table,
  * as it does the heatmap's (Blockr.gearTray): pressed in the band or on the
  * gear, it closes the band and focuses the gear. */
 'use strict';
@@ -85,21 +85,6 @@ test('Escape closes the table gear tray', async () => {
   await win.happyDOM.close();
 });
 
-const TILE = `
-  <div class="tk-block" data-tk-elem-id="tile"
-       data-tk-cols='[{"name":"AGE","type":"numeric"}]' data-tk-config='{}'></div>`;
-
-test('Escape closes the tile gear tray', async () => {
-  const win = mount(TILE, ['tile-block.js']);
-  const band = win.document.querySelector('.blockr-settings.dd-popover');
-  const gear = win.document.querySelector('.blockr-gear-btn');
-  assert.ok(band && gear, 'the tile has a gear');
-  check(win, band, gear, onGear);
-  check(win, band, gear, inBand);
-  win.happyDOM.abort();
-  await win.happyDOM.close();
-});
-
 test('Escape closes the summarize table gear tray and resets its band', async () => {
   const c = fixtures.flat;
   const win = mount(c.chrome, ['table.js', 'summarize-table.js']);
@@ -127,43 +112,6 @@ test('Escape closes the summary table gear tray', async () => {
   const band = host.querySelector('.blockr-settings');
   const gear = host.querySelector('.blockr-gear-btn');
   assert.ok(band && gear, 'the summary table has a gear');
-  check(win, band, gear, onGear);
-  check(win, band, gear, inBand);
-  win.happyDOM.abort();
-  await win.happyDOM.close();
-});
-
-// The picker block's script is inline in R/picker-block.R, so it takes R to
-// get it. The JS job in CI has no R; there the test is skipped.
-function pickerScript() {
-  const r = require('node:child_process').spawnSync('Rscript', ['-e', [
-    'e <- new.env(); sys.source("R/picker-block.R", e)',
-    'a <- e$picker_block_assets(function(x) paste0("pk-", x))',
-    's <- Filter(function(t) inherits(t, "shiny.tag") && t$name == "script", a)',
-    'cat(as.character(s[[1]]$children[[1]]))'
-  ].join('; ')], { cwd: require('node:path').join(__dirname, '..', '..'), encoding: 'utf8' });
-  return r.status === 0 ? r.stdout : null;
-}
-const PICKER_JS = pickerScript();
-
-test('Escape closes the picker gear tray', { skip: !PICKER_JS && 'needs Rscript' }, async () => {
-  const win = mount(`
-    <div class="block-container blockr-picker">
-      <div class="blockr-gear-header">
-        <button id="pk-gear" type="button" class="blockr-gear-btn"></button>
-      </div>
-      <div id="pk-band" class="blockr-settings blockr-settings--beak">
-        <div id="pk-rows" class="pk-rows"></div>
-        <div class="blockr-add-row"><span id="pk-add" class="blockr-add-link">
-          <span class="blockr-add-icon"></span>Add picker</span></div>
-      </div>
-      <div id="pk-face"></div>
-    </div>`, []);
-  // Connected already, so the script announces itself without waiting.
-  win.Shiny.shinyapp = { isConnected: () => true };
-  win.eval(PICKER_JS);
-  const band = win.document.getElementById('pk-band');
-  const gear = win.document.getElementById('pk-gear');
   check(win, band, gear, onGear);
   check(win, band, gear, inBand);
   win.happyDOM.abort();

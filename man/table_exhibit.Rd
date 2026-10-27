@@ -11,23 +11,27 @@ table_exhibit(
   group = character(),
   summaries = list(),
   shadings = list(),
-  digits = 2L,
+  format = "number",
+  unit = NULL,
   title = NULL,
   subtitle = NULL,
-  caption = NULL
+  caption = NULL,
+  digits = NULL
 )
 }
 \arguments{
 \item{data}{The table block's input: a data frame or an
 \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
 
-\item{rowname, value, group, summaries, shadings, digits}{As in
+\item{rowname, value, group, summaries, shadings, format, unit}{As in
 \code{\link[=new_table_block]{new_table_block()}}.}
 
 \item{title, subtitle, caption}{Table text, with the block's three tiers:
 \code{NULL} takes the input's \code{label} / \code{subtitle} / \code{caption} attribute, \code{""}
 shows none, any other string is a title template resolved against
 \code{data}.}
+
+\item{digits}{Old name of \code{format} (a number of decimals).}
 }
 \value{
 An annotated data frame, with \code{label}, \code{subtitle} and \code{caption}
@@ -38,7 +42,8 @@ What \code{\link[=new_table_block]{new_table_block()}} puts into a rendered repo
 the block shows it, as an \link[=as_annotated_df]{annotated data frame} for
 \code{\link[=static_exhibit]{static_exhibit()}} to typeset. The rowname comes first, then the value
 columns (or the aggregate, with \code{group} / \code{summaries}); numbers are
-rounded to \code{digits} exactly like the screen, trailing zeros dropped; cells
+printed in the block's \code{format} exactly like the screen, and \code{unit} heads
+the numeric columns; cells
 shaded by a diverging or sequential rule carry their colours as \verb{.bg:} /
 \verb{.fg:} columns, which \code{\link[=static_table]{static_table()}} and the HTML table paint. Colour
 source columns are left out. In-cell bars are not drawn.
@@ -51,7 +56,7 @@ its own settings, so blockr.outline needs nothing table-specific.
 \examples{
 table_exhibit(
   data.frame(term = "A", times_more = 3.81427, ci_low = 2.70123),
-  digits = 2L, title = "Area effect"
+  format = 2L, title = "Area effect"
 )
 }
 \seealso{

@@ -51,7 +51,9 @@ record <- function(blk, edits = list()) {
         invisible(NULL)
       }
       session$flushReact()
-      expr <- session$makeScope("expr")
+      # The table block's groups engine (R/table-groups-server.R) runs
+      # inside the block's module and reads its gear edits under "groups".
+      expr <- session$makeScope("expr")$makeScope("groups")
       for (e in edits) {
         expr$setInputs(summarize_table_block_action = list(
           action = "config", param = e$param, value = e$value
@@ -96,7 +98,26 @@ block <- function(..., search = TRUE, drill = NULL, ctrl_target = "",
   b
 }
 
+# The table block's own constructor, in the groups layout.
+tblock <- function(...) {
+  b <- new_table_block(layout = "groups", ...)
+  attr(b, "fixture_search") <- TRUE
+  b
+}
+
 cases <- list(
+  # A new groups table: no columns given, so it starts with the count column.
+  fresh = record(tblock(by = "TERM")),
+  # Three columns of three kinds: a split count, a distribution, a mean.
+  three = record(tblock(by = "TERM", summaries = list(
+    list(type = "simple", func = "count", show = "bar", color = "SEV"),
+    list(type = "dist", col = "AVAL", show = "box", name = "Value"),
+    list(type = "simple", func = "mean", col = "AVAL", show = "number")
+  ))),
+  # An old summarize table with the single ranked bar at block level.
+  legacy = record(block(group = "TERM", parent = "SOC",
+                        func = "count_distinct", id_var = "USUBJID",
+                        color = "SEV", bar_mode = "grouped")),
   # One grouping, a count bar, row drill on the grouping column.
   flat = record(block(by = "TERM", summaries = list(count_bar),
                       drill = "TERM", title = "Terms")),
@@ -115,6 +136,12 @@ cases <- list(
   # A height: the table scrolls in its own box.
   height = record(block(by = "TERM", summaries = list(count_bar),
                         max_height = "300px")),
+  # No grouping: one row over all input rows, with nothing to sort, search
+  # or drill, though search and drill are set. Then a grouping is picked.
+  no_by = record(
+    block(summaries = list(count_bar), drill = "TERM"),
+    edits = list(list(param = "by", value = list("TERM")))
+  ),
   # The gear's container settings, edited in turn: search off, drill on,
   # send to filter on, send to filter off, drill off, search on.
   settings = record(
@@ -126,6 +153,18 @@ cases <- list(
       list(param = "ctrl_target", value = ""),
       list(param = "drill", value = NULL),
       list(param = "search", value = "on")
+    )
+  ),
+  # One pick in each of the gear's segmented controls, in the order the
+  # selection test clicks them: the payload after each is the server's echo.
+  segments = record(
+    block(by = "TERM", summaries = list(count_bar)),
+    edits = list(
+      list(param = "sort_dir", value = "asc"),
+      list(param = "pct_of", value = "total"),
+      list(param = "missing", value = "level"),
+      list(param = "bar_width", value = "wide"),
+      list(param = "look", value = "compact")
     )
   )
 )

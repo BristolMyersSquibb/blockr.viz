@@ -105,9 +105,10 @@ html_table <- function(data,
     sortable = sortable,
     collapsible = collapsible
   )
+  nest <- html_is_nest(data, section_cols, styling_cols)
   tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
                             styling_cols = styling_cols,
-                            collapsible = collapsible)
+                            collapsible = collapsible, nest = nest)
 
   # Use the same class names the canonical blockr.ui preview uses so the
   # shared table_preview_css() rules (typography, padding, hover, sort icons)
@@ -116,6 +117,10 @@ html_table <- function(data,
     thead, tbody,
     structured_colgroup(data, data_cols, stub_col)
   )
+  if (nest) {
+    table_tag <- htmltools::tagAppendAttributes(table_tag,
+                                                class = "blockr-table-nest")
+  }
 
   scroll_style <- if (!is.null(max_height)) {
     paste0("max-height:", max_height, ";overflow:auto;")
@@ -771,13 +776,38 @@ annotated_structure_view <- function(data) {
 #' (.dt-row-nodrill). The drilled output is a pure SUBSET of the annotated
 #' df; downstream consumers read the identity columns themselves (no
 #' synthetic "spread" column is added).
+#'
+#' A third shape is a records table nested by `by` (table_nest()) with a
+#' drill COLUMN (`drill_col`, a real column of the input): each row claims its
+#' enclosing groups and its own value in that column, "ARM = Low dose, SEX =
+#' M". The rowname column lives on `.label` there (`nest_rowname`
+#' attribute). A row whose value is missing claims nothing, as in a flat
+#' table.
 #' @noRd
-dd_row_drill_attrs <- function(data, section_cols) {
+dd_row_drill_attrs <- function(data, section_cols, drill_col = NULL) {
   n <- nrow(data)
   group_cols <- intersect(section_cols,
                           grep("^\\.group\\d+_level$", names(data), value = TRUE))
   has_leaf <- all(c(".variable", ".variable_level") %in% names(data))
   has_fil <- ".filter" %in% names(data)
+
+  # The nested records' column drill.
+  col_vals <- dd_nest_drill_values(data, drill_col)
+  if (!has_leaf && !has_fil && !is.null(col_vals)) {
+    keys <- character(n)
+    for (i in which(!is.na(col_vals))) {
+      pairs <- list()
+      for (sc in group_cols) {
+        val <- as.character(data[[sc]][i])
+        if (!is.na(val)) pairs[[length(pairs) + 1L]] <-
+            list(column = sc, value = val)
+      }
+      pairs[[length(pairs) + 1L]] <- list(column = drill_col,
+                                           value = col_vals[i])
+      keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
+    }
+    return(list(keys = keys))
+  }
 
   chr <- function(col) if (col %in% names(data)) as.character(data[[col]]) else rep(NA_character_, n)
   v_var <- chr(".variable")
@@ -817,6 +847,23 @@ dd_row_drill_attrs <- function(data, section_cols) {
     keys[i] <- as.character(jsonlite::toJSON(pairs, auto_unbox = TRUE))
   }
   list(keys = keys)
+}
+
+#' The values a nested records row claims for the drill column: the column
+#' itself, or `.label` when the drill column is the rowname table_nest() moved
+#' there. NULL when `drill_col` is a mode ("auto", "source") or names nothing
+#' in the frame.
+#' @noRd
+dd_nest_drill_values <- function(data, drill_col) {
+  if (is.null(drill_col) || !nzchar(drill_col) || startsWith(drill_col, ".")) {
+    return(NULL)
+  }
+  if (drill_col %in% names(data)) return(as.character(data[[drill_col]]))
+  if (identical(attr(data, "nest_rowname", exact = TRUE), drill_col) &&
+        ".label" %in% names(data)) {
+    return(as.character(data[[".label"]]))
+  }
+  NULL
 }
 
 #' Per-header-row structured-drill attributes for section level `L`.
@@ -866,10 +913,19 @@ dd_attr_chunk <- function(name, json) {
   )
 }
 
+# A table with section headers: records nested by table_nest(), a Table 1's
+# variable blocks. Each header's name starts where the rows under it start,
+# and its chevron hangs to the left of that edge.
+#' @noRd
+html_is_nest <- function(data, section_cols, styling_cols) {
+  length(section_cols) > 0L
+}
+
 #' @noRd
 build_html_tbody <- function(data, section_cols, stub_col, data_cols,
                              styling_cols = character(), collapsible = TRUE,
-                             drill_keys = FALSE) {
+                             drill_keys = FALSE, nest = FALSE,
+                             drill_col = NULL) {
   ncol_total <- length(data_cols) + (if (is.null(stub_col)) 0L else 1L)
   if (ncol_total == 0L) ncol_total <- 1L
 
@@ -926,8 +982,13 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # Section-header rows: one HTML string per (row, level), blanked on rows
   # where level L does not restart (L < diff_from, or no change at all).
   # When collapsing is off the section header is a static label -- no chevron, no
-  # button affordance (wireCollapse also bails via data-dt-collapsible=0).
-  chev     <- if (isTRUE(collapsible)) as.character(section_chevron_svg()) else ""
+  # button affordance (wireCollapse also bails via data-dt-collapsible=0). An
+  # empty chevron-sized span keeps the name on the rows' text edge.
+  chev <- if (isTRUE(collapsible)) {
+    as.character(section_chevron_svg())
+  } else {
+    "<span class=\"blockr-chev\" aria-hidden=\"true\"></span>"
+  }
   btn_open <- if (isTRUE(collapsible)) {
     "<button class=\"blockr-section-btn\" type=\"button\" aria-expanded=\"true\">"
   } else {
@@ -959,6 +1020,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
       "<tr class=\"blockr-section-header\" data-level=\"", L, "\"",
       hdr_drill, ">",
       "<td class=\"blockr-section-cell level-", L,
+      if (isTRUE(nest)) " blockr-section-nest",
       "\" colspan=\"", ncol_total, "\">",
       btn_open, chev, prefix,
       "<span class=\"blockr-section-value\">", esc(path_mat[, L]),
@@ -1009,8 +1071,13 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
 
   # Stub + data cells, column-vectorized.
   if (!is.null(stub_col)) {
-    stub_style <- ifelse(row_indent > 0L,
-      paste0(" style=\"padding-left:calc(", 24L + row_indent * indent_px,
+    # Rows start under the innermost header's name, one step per header
+    # level below the first; a row's own indent steps in from the
+    # shallowest row's (a Table 1's statistics sit at indent 1).
+    pad_indent <- row_indent - if (n_rows) min(row_indent) else 0L
+    if (isTRUE(nest)) pad_indent <- pad_indent + (k - 1L)
+    stub_style <- ifelse(pad_indent > 0L,
+      paste0(" style=\"padding-left:calc(", 24L + pad_indent * indent_px,
              "px + var(--blockr-card-inset, 0px));\""),
       "")
     # Parent rows get a chevron toggle button before the label; the JS attaches
@@ -1062,7 +1129,7 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   # rows (stat rows -- no identity claim) additionally render
   # `dt-row-nodrill`: no pointer, no hover highlight, click is a no-op.
   row_drill <- if (isTRUE(drill_keys)) {
-    a <- dd_row_drill_attrs(data, section_cols)
+    a <- dd_row_drill_attrs(data, section_cols, drill_col = drill_col)
     nodrill <- !nzchar(a$keys)
     row_class[nodrill] <- paste(row_class[nodrill], "dt-row-nodrill")
     dd_attr_chunk("dd-keys", a$keys)
@@ -1319,9 +1386,12 @@ input.blockr-search:focus {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
 /* Fold all (table.js adds it when the table folds and has groups): the
-   chevron sits in the gutter the group chevrons use, so the title starts on
-   the group headings' text edge (12px padding + 12px chevron + 9px gap). Only
+   chevron hangs to the left, so the title starts on the rows' 24px text edge
+   (3px padding + 12px chevron + 9px gap), as the group headings do. Only
    the chevron is the button; without a title it carries \"All\". */
+.blockr-html-table-container thead th.blockr-stub-header.dt-has-foldall {
+  padding-left: calc(3px + var(--blockr-card-inset, 0px));
+}
 .blockr-html-table-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
@@ -1492,14 +1562,20 @@ input.blockr-search:focus {
 }
 /* Collapsing disabled: the section label is a static span, not a control. */
 .blockr-html-table-container .blockr-section-btn-static { cursor: default; }
-.blockr-html-table-container .blockr-section-cell.level-2 .blockr-section-btn {
-  padding-left: 36px;
+/* Section headers (html_is_nest()): each heading's name starts where its
+   rows start (24px, one 16px step per level), the 12px chevron and 9px gap
+   hanging to the left of it. */
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest .blockr-section-btn {
+  padding-left: 3px;
 }
-.blockr-html-table-container .blockr-section-cell.level-3 .blockr-section-btn {
-  padding-left: 54px;
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-2 .blockr-section-btn {
+  padding-left: 19px;
 }
-.blockr-html-table-container .blockr-section-cell.level-4 .blockr-section-btn {
-  padding-left: 72px;
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-3 .blockr-section-btn {
+  padding-left: 35px;
+}
+.blockr-html-table-container .blockr-section-cell.blockr-section-nest.level-4 .blockr-section-btn {
+  padding-left: 51px;
 }
 .blockr-html-table-container .blockr-section-value {
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -1749,14 +1825,6 @@ input.blockr-search:focus {
 }
 "
   )
-}
-
-# The download control is blockr.ui's tool and action menu now
-# (dl_control_ui()), styled by blockr.ui. The heatmap block still injects
-# this; the call goes with the heatmap's rewrite.
-#' @noRd
-dl_chrome_css <- function() {
-  ""
 }
 
 # ---------------------------------------------------------------------------

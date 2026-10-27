@@ -374,6 +374,22 @@
 :is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
   gap: 6px;
 }
+/* A layout switch swaps the block's engine containers. Chrome's scroll
+   anchoring would then move a scrolled panel to keep some node in place, so
+   the table jumped by hundreds of pixels; the panel keeps its scroll. */
+.blockr-table-engine { overflow-anchor: none; }
+
+/* Layout E (chart.css .vz-head): the title band sits in the header, on its
+   left, laid out as the chart's. It wraps before the tools, and in the
+   header it has no hairline under it, as the chart's has none. */
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head > .dd-table-titles {
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head {
+  margin-bottom: 6px;
+}
 
 
 /* Wrapping column titles. The width estimator measures a header by its
@@ -408,12 +424,13 @@
   padding: 0 var(--blockr-card-inset, 0px);
 }
 
-/* The status half takes the rest of the row, so its Reset stays hard right.
+/* The status half (there only while a filter is set) takes the rest of the
+   row.
    Two selectors, one job: shiny-sass.css gives a NON-EMPTY `.shiny-html-output`
    `display: contents`, which erases the slot's own box and promotes the status
    line itself to flex item -- so whichever of the two is the item, it grows.
    (Without this the slot measures 0 wide, space-between has nothing to
-   distribute, and Reset ends up glued to the filter text.) */
+   distribute.) */
 .dt-table-footer > .dt-status-slot,
 .dt-table-footer .dd-status-footer {
   flex: 1 1 auto;
@@ -466,6 +483,12 @@
   white-space: nowrap;
   line-height: 1.15;
 }
+/* The table keeps the widths its columns ask for instead of stretching
+   them over the panel: a compact matrix is as wide as its cells. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] {
+  width: auto;
+}
 /* The column sub-label (variable label) has no room in a 30px column;
    the title carries the identity in matrix mode. */
 :is(.drilldown-table-container, .blockr-summarize-container)
@@ -507,23 +530,9 @@
   padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
 
-/* ===== Summarize table: the chart's header and drill line ===== */
-/* The title band sits in the gear row, on its left (summarize-table.js buildGear),
-   laid out as the chart's (chart.css .dd-card .blockr-gear-header): it takes
-   the row's width and wraps before the tools, which stay top right. In the
-   row it has no hairline under it: the chart's has none either. */
-.blockr-summarize-container .blockr-gear-header {
-  align-items: flex-start;
-}
-.blockr-summarize-container .blockr-gear-header .dd-table-titles {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 2px 8px 0 2px;
-  border-bottom: none;
-  margin-bottom: 0;
-}
-/* The drill line takes the rest of the footer row, so its Reset sits hard
-   right, as under a chart and under the table block. */
+/* ===== Summarize table: drill line ===== */
+/* The drill line takes the rest of the footer row, as under a chart and
+   under the table block. It is empty, and gone, while no filter is set. */
 .blockr-summarize-footer > .dd-status-footer {
   flex: 1 1 auto;
   padding: 0;

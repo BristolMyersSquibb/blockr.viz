@@ -1121,6 +1121,10 @@
       /** @type {any} */
       var af = null;
       try { af = JSON.parse(activeJson); } catch (e) { af = null; }
+      // The column half of a restored structured click: mark its column.
+      if (af && structured && af.col_filters && af.col_filters.length) {
+        markCol(af.col_filters);
+      }
       if (af && structured && af.filters && af.filters.length) {
         // Structured rows/headers self-describe via data-dd-keys: the active
         // element is the one whose keys equal the restored filter set.
@@ -1163,6 +1167,123 @@
     }
   }
 
+  // The table block's layout by engine element id: the server pushes it on
+  // every change ("blockr-viz-table-layout", R/table-block.R), to this engine
+  // and to the groups engine (summarize-table.js reads the same object). The
+  // layout switch in either gear draws from it, never from its own last
+  // click: a stale highlight on the wanted segment would swallow the click.
+  /** @type {Record<string, string>} */
+  var layoutOf = /** @type {any} */ (window).blockrTableLayouts =
+    /** @type {any} */ (window).blockrTableLayouts || {};
+  // A gear that should open on the engine taking over, by element id. An
+  // engine drawing for the first time has no gear yet when the push comes
+  // (its chrome is a renderUI that waits for the layout); it opens the gear
+  // when it builds it.
+  /** @type {Record<string, boolean>} */
+  var gearPending = /** @type {any} */ (window).blockrTableGearPending =
+    /** @type {any} */ (window).blockrTableGearPending || {};
+
+  // The table block's layout switch (R/table-block.R): three tiles, List,
+  // Per group and Per variable, defined with the gear engine
+  // (drilldown-config.js). The block's server reads the pick off this
+  // engine's action input.
+  /** @returns {Array<{value: string, label: string, icon?: string}>} */
+  function tableLayouts() {
+    return (typeof Blockr !== "undefined" && Blockr.TABLE_LAYOUTS) || [
+      { value: "records", label: "List" },
+      { value: "groups", label: "Per group" },
+      { value: "variables", label: "Per variable" }
+    ];
+  }
+
+  // What the chosen layout gives, in a line under the tiles: text parts, a
+  // { strong } part a column name. `by` is the layout's grouping.
+  /** @param {string} layout @param {string[]} by @returns {Array<string | {strong: string}>} */
+  function layoutHint(layout, by) {
+    var b = (by || []).filter(Boolean);
+    var who = { strong: b.join(" and ") };
+    if (layout === "records") {
+      return b.length ? ["Each input row as it is, nested under each ", who, "."]
+        : ["Each input row as it is."];
+    }
+    if (layout === "groups") {
+      return b.length ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."];
+    }
+    return b.length ? ["One row per statistic of each variable, one column per ", who, "."]
+      : ["One row per statistic of each variable."];
+  }
+
+  /** @param {*} spec @param {string} current @param {string | null} elemId @param {string[]} [by] */
+  function withLayoutSwitch(spec, current, elemId, by) {
+    // The hint's grouping: the records layout's `by`, or the variables
+    // layout's own (its settings widget).
+    var hintBy = by || [];
+    // The records engine also draws the variables layout; that layout's
+    // settings widget sits beside it and is shown only then.
+    if (elemId) {
+      var blk = elemId.replace(/-records-drilldown_table_block$/, "");
+      var vw = document.getElementById(blk + "-variables_wrap");
+      // Before the server's first push: which wrap is on screen.
+      var lay = layoutOf[elemId] ||
+        (vw && getComputedStyle(vw).display !== "none" ? "variables" : current);
+      current = lay;
+      if (vw && lay === "variables") {
+        // The table is the block's own Table 1, not a finished input.
+        delete spec.badge;
+        delete spec.badgeTitle;
+        // One gear per block. The variables layout's own settings (what to
+        // summarise, the split, the statistics) come from the summary table
+        // widget; its pickers and settings move into this gear as the first
+        // section, and the widget's own card (with its gear) stays hidden.
+        var host = vw.querySelector(".summary-table-block-container");
+        var stb = host && host._block;
+        if (stb && stb._state && stb._state.by) hintBy = stb._state.by;
+        if (stb && stb.grid) {
+          stb.card.classList.add("stb-card--in-gear");
+          spec.customSections = (spec.customSections || []).concat([{
+            title: "Variables",
+            render: function (/** @type {HTMLElement} */ sec) {
+              var body = document.createElement("div");
+              body.className = "stb-in-gear";
+              body.appendChild(stb.grid);
+              body.appendChild(stb._bandGrid);
+              sec.appendChild(body);
+            }
+          }]);
+        }
+      }
+    }
+    // What a row is sits under the switch, as in the groups gear: the
+    // grouping, the row names and the columns.
+    spec.layoutSwitch = {
+      title: "Table",
+      fields: spec.mapping || [],
+      value: current,
+      options: tableLayouts(),
+      hint: layoutHint(current, hintBy),
+      onPick: function (/** @type {string} */ v) {
+        if (elemId) /** @type {any} */ (window).blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
+    };
+    spec.mapping = [];
+    // A Table 1 (the variables layout) has no card form, and a finished
+    // table keeps the layout it came with.
+    var finished = !!spec.finished;
+    TABLE_ROLES.look.options = LOOK_OPT.map(function (o) {
+      var off = (o.value === "cards" && (current === "variables" || finished)) ||
+        (o.value === "compact" && finished);
+      return off ? {
+        value: o.value, label: o.label, icon: o.icon, disabled: true,
+        title: current === "variables"
+          ? "The variables layout has no card form"
+          : "A finished table keeps its own layout"
+      } : o;
+    });
+    return spec;
+  }
+
   /** @param {string | null} elemId @param {string} param @param {*} value */
   function sendConfig(elemId, param, value) {
     if (!elemId || !window.Shiny || !Shiny.setInputValue) return;
@@ -1186,16 +1307,20 @@
   // sendConfig(key, value) round-trips directly.
   // Click-through toggle options: the pill states what the CURRENT setting means
   // (not a bare On/Off) — see blockr.docs design-system/components/blockr-row.md.
-  var SORTABLE_OPT    = [{ value: "on", label: "Sortable" },
-                         { value: "off", label: "Not sortable" }];
+  // The groups gear's words (summarize-table.js), so the trays read alike.
+  var SORTABLE_OPT    = [{ value: "on", label: "Header sorting" },
+                         { value: "off", label: "No header sorting" }];
   var COLLAPSIBLE_OPT = [{ value: "on", label: "Collapsible" },
                          { value: "off", label: "Not collapsible" }];
   var SEARCH_OPT      = [{ value: "on", label: "Search bar" },
                          { value: "off", label: "No search bar" }];
   var DOWNLOAD_OPT    = [{ value: "on", label: "Download" },
                          { value: "off", label: "No download" }];
-  var ROTATE_OPT      = [{ value: "off", label: "Horizontal titles" },
-                         { value: "on", label: "Rotated titles" }];
+  // The table block's three looks (R: TABLE_LOOKS). withLayoutSwitch()
+  // greys out what the current layout cannot draw.
+  var LOOK_OPT        = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
+                         { value: "compact", label: "Compact" },
+                         { value: "cards", label: "Cards" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
     // "Filter on" matches the chart's drill picker label (one vocabulary).
     drill:      { label: "Filter on", kind: "column", colType: "any" },
@@ -1206,11 +1331,34 @@
     // engine's _renderShadings, not as a standalone role row).
     shade_mode: { label: "Mode",       kind: "select",
                   options: ["diverging", "sequential", "bar"] },
-    digits:     { label: "Decimals",   kind: "select", options: ["0", "1", "2", "3", "4"] },
+    // How numbers print: the chart's set (chart/format.js), with the
+    // table's own example numbers (no thousands separator in the cells).
+    format:     { label: "Numbers",    kind: "select",
+                  options: [{ value: "number", label: "Auto" },
+                            { value: "0", label: "1235" },
+                            { value: "1", label: "1234.6" },
+                            { value: "2", label: "1234.57" },
+                            { value: "3", label: "1234.568" },
+                            { value: "4", label: "1234.5679" },
+                            { value: "compact", label: "1.2K" },
+                            { value: "percent", label: "12.3%" }] },
+    unit:       { label: "Unit",       kind: "text", ph: "e.g. CHF" },
+    // The records layout's rows: the stub column and the columns beside it
+    // (R: `rowname`, `columns`). Empty is the default: the first column,
+    // and every other column.
+    rowname:    { label: "Row names", kind: "column", colType: "any",
+                  placeholder: "First column" },
+    columns:    { label: "Columns", kind: "columns", colType: "any",
+                  placeholder: "All columns" },
+    // What a missing `by` value is, in the words of the groups gear
+    // (summarize-table.js): shared by the three layouts.
+    missing:    { label: "Missing", kind: "segmented", options: [
+                  { value: "drop", label: "Drop" }, { value: "level", label: "Show" }
+                ] },
     // Display toggles (column-free): click-through pills labelled by meaning.
     // Keys match the R config params so onChange(key) round-trips to the block
     // reactiveVals; the row label names the dimension, the pill the state.
-    sortable:    { label: "Sorting",  kind: "segmented", options: SORTABLE_OPT },
+    sortable:    { label: "Header sorting", kind: "segmented", options: SORTABLE_OPT },
     collapsible: { label: "Sections", kind: "segmented", options: COLLAPSIBLE_OPT },
     search:      { label: "Search",   kind: "segmented", options: SEARCH_OPT },
     // One row, not one per format: "may the reader take this table away" is a
@@ -1218,10 +1366,11 @@
     // format it can write (xlsx, html, pptx) -- a button for one, a menu for
     // several.
     download:    { label: "Download", kind: "segmented", options: DOWNLOAD_OPT },
-    // Matrix display mode: value-column titles stand upright and columns
-    // size on cell content — a wide subject x term matrix (AE heatmap)
-    // fits several times more columns per viewport.
-    rotate_titles: { label: "Column titles", kind: "segmented", options: ROTATE_OPT },
+    // The look: the table, the compact matrix (value-column titles stand
+    // upright and columns size on cell content, so a wide subject x term
+    // matrix fits several times more columns per viewport), or cards (one
+    // card per column, one row of cards per row).
+    look: { label: "Look", kind: "segmented", options: LOOK_OPT },
     // Table text (chart parity; three-tier contract, R side
     // R/title-template.R): null = auto — the title inherits the data frame's
     // label attribute; "" = explicitly none; other text renders with {...}
@@ -1241,72 +1390,59 @@
                   return (cfg.caption == null && cfg.caption_auto) ? cfg.caption_auto : "";
                 } }
   });
-  // Variant A: Aggregation, Drill-down, Coloring and Row color are each a
-  // checkbox capability section (off by default, revealing their controls when
-  // checked); Presentation keeps only the always-on display options (decimals,
-  // sorting, search, export). `hasCols` is false for a structured ("Table 1")
-  // frame — there the column-based capabilities are no-ops, so only the display
-  // toggles show (and Collapsible, which needs sections).
+  // The summarize word, as in the groups layout and dplyr's `.by`.
+  // The records layout's grouping nests the rows under a header per group.
+  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Nest by" });
+  // The records and variables layouts' gear, in the groups gear's order:
+  // Table (the layout tiles and their grouping), Presentation, Color, Titles, Drill-down,
+  // Prepare script. `hasCols` is false for a structured frame (a Table 1, a
+  // nested table, a finished input): its cells are not picked by column, so
+  // Color leaves. A control shows only where it changes the table.
   /** @param {Record<string, any>} cfg @param {boolean} hasCols @param {string} [stubCol] */
   function tableSections(cfg, hasCols, stubCol) {
-    // Aggregation lives under the "Aggregation" header: `group` is always
-    // offered; the repeatable summaries list (spec.summaries) appears once a group
-    // is set. `value`/`func` are no longer standalone roles here — the
-    // summaries list owns them.
-    var hasGroup = hasCols && cfg && cfg.group && cfg.group.length > 0;
-    // Aggregation is "on" when a value is carried (checking the box seeds a
-    // count). Grand totals = on with no group -> a single totals row.
-    var aggOn = hasCols && cfg && cfg.summaries && cfg.summaries.length > 0;
+    // The records layout inside the table block: the payload carries the
+    // rows' own settings (rows_state), and "Group by" is the block's `by`.
+    var rows = (cfg && cfg.rows) || null;
+    var byMode = !!(cfg && cfg.byMode);
+    var nested = byMode && cfg.group && cfg.group.length > 0;
+    var variables = !!(cfg && cfg.variablesLayout);
+    // Numbers the format changes: a flat table's columns, or a nested
+    // table's number cells.
+    var numbers = hasCols || (nested && !!rows && !!rows.numbers);
     var pres = [];
-    if (hasCols) pres.push("digits");
-    pres.push("sortable");
-    if (hasCols) pres.push("rotate_titles");   // flat tables only
-    if (!hasCols) pres.push("collapsible");   // only sectioned tables collapse
+    if (numbers) pres.push("format", "unit");
+    pres.push("sortable", "look");
+    // Collapsing needs header rows: a nested table or a Table 1.
+    if (!hasCols) pres.push("collapsible");
+    // A missing `by` value is a header of its own or dropped: nesting and
+    // Table 1 only.
+    if (nested || variables) pres.push("missing");
     pres.push("search", "download");
-    var spec = /** @type {Record<string, any>} */ ({ requiredMap: [], optionalMap: [],
-                 mapping: hasCols ? ["group"] : [],
-                 summaries: hasCols,         // offer the summaries list whenever the box is on
-                 aggregatable: hasCols,    // Variant A: Aggregation checkbox section
-                 // Empty cols on a numeric aggregation = all numeric columns
-                 // (override rule, dd_metric_plan) — placeholder promises it.
-                 metricsDefaultAll: true,
-                 // Drill-down checkbox section only for a raw (non-aggregated)
-                 // table; a grouped table drills on its group keys, and a
-                 // totals row (aggregating, no group) has nothing to drill.
-                 drillToggle: (hasCols && !hasGroup && !aggOn) ? "drill" : null,
-                 // Checking the box pre-fills the filter column with the
-                 // rowname/stub column (the row's identity — the natural
-                 // click target), so drill works in one click; the picker
-                 // stays for re-aiming (e.g. AETERM instead of USUBJID).
-                 drillDefault: stubCol || "",
-                 // The picker-less variants (structured / aggregated) take a
-                 // MODE rather than a column, so they can offer "hand over
-                 // the source records instead". A flat table has a column to
-                 // choose and no mode, so it never sees this.
-                 drillSourceOption: (!hasCols || hasGroup),
-                 // COLOR — one plain section (no checkbox: its activation
-                 // lives in the picks): "Color by" identity tint + the
-                 // repeatable "Shade cells" value-encoding rules.
-                 colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
-                 // External-control send (beta) — available on every table:
-                 // the structured ("Table 1") frame is the prime sender (its
-                 // drilled output carries the ARD identity the claim reads).
-                 ctrlSection: true,
-                 presentation: pres,
-                 // Table text (title / subtitle / caption) — applies to every
-                 // table, structured included (a "Table 1" wants its title
-                 // most of all).
-                 titles: ["title", "subtitle", "caption"] });
-    // Structured ("Table 1") input is an already-summarized annotated data
-    // frame with no pickable columns, so grouping / aggregation / drill / colour
-    // don't apply. A small badge names it; the tooltip carries the why.
-    if (!hasCols) {
-      spec.badge = "Annotated data frame";
-      spec.badgeTitle = "Dot-prefixed columns (.label, .variable, .group1, …) " +
-        "were detected and interpreted as structure — they build the section " +
-        "hierarchy and row identity and are not shown as data columns. " +
-        "Grouping and aggregation are set upstream; Drill-down and the " +
-        "display options apply here.";
+    // A finished input (gtsummary, composer, annotated frame) has no
+    // columns to pick and nothing to nest: it is shown as it came.
+    var finished = !hasCols && !nested && !variables;
+    var spec = /** @type {Record<string, any>} */ ({
+      finished: finished,
+      requiredMap: [], optionalMap: [],
+      mapping: (byMode && !finished) ? ["group", "rowname", "columns"] : [],
+      // Drill-down: a flat table picks the column a click filters on, the
+      // row's own column by default.
+      drillToggle: hasCols ? "drill" : null,
+      drillDefault: stubCol || "",
+      drillSourceOption: !hasCols,
+      colorSection: hasCols ? { colorKey: "color", shadings: true } : null,
+      ctrlSection: true,
+      presentation: pres,
+      titles: ["title", "subtitle", "caption"]
+    });
+    // A finished input (gtsummary, composer, annotated frame) has no
+    // pickable columns. A badge says so; the tooltip carries the why.
+    if (spec.finished) {
+      spec.badge = "Finished table";
+      spec.badgeTitle = "The input is already a table (from gtsummary, a " +
+        "table composer or an annotated data frame) and is shown as it is. " +
+        "Its rows and statistics are set where it was made; titles, " +
+        "drill-down and the display options apply here.";
     }
     return spec;
   }
@@ -1348,14 +1484,8 @@
     var onClick = table.getAttribute("data-dt-onclick-col");
     /** @type {Record<string, any>} */
     var cfg = {
-      // Aggregation config: group (comma-joined -> array), and a summaries list
-      // (JSON array of {func, cols}) parsed off the table element.
-      group: (table.getAttribute("data-dt-group") || "")
-        .split(",").filter(function (n) { return !!n; }),
-      summaries: (function () {
-        try { return JSON.parse(table.getAttribute("data-dt-summaries") || "[]"); }
-        catch (e) { return []; }
-      })(),
+      // "Group by": the block's `by`, read off the payload below.
+      group: [],
       // Drill state. Raw table: the filter column (data-dt-onclick-col).
       // Grouped/aggregated table: the keys drill is a boolean — ON iff the
       // renderer wired the group-cols (data-dt-group-cols is emitted only
@@ -1384,13 +1514,16 @@
         try { return JSON.parse(table.getAttribute("data-dt-shadings") || "[]"); }
         catch (e) { return []; }
       })(),
-      digits:     table.getAttribute("data-dt-digits") || "2",
+      format:     table.getAttribute("data-dt-format") || "number",
+      unit:       table.getAttribute("data-dt-unit") || "",
       // Display toggles (segmented on/off). Default on, except download.
       sortable:    table.getAttribute("data-dt-sortable") || "on",
       collapsible: table.getAttribute("data-dt-collapsible") || "on",
       search:      table.getAttribute("data-dt-search") || "on",
       download:    table.getAttribute("data-dt-download") || "off",
-      rotate_titles: table.getAttribute("data-dt-rotate-titles") || "off",
+      // The look; the payload carries it (look_state), the rotated-titles
+      // attribute is the fallback for a table drawn without one.
+      look: (table.getAttribute("data-dt-rotate-titles") === "on") ? "compact" : "table",
       // External-control send (beta): target value filter block + dm table,
       // and the board's candidate targets ([{value,label}] JSON, stamped by R).
       ctrl_target: table.getAttribute("data-dt-ctrl-target") || "",
@@ -1420,7 +1553,40 @@
     tlState("title");
     tlState("subtitle");
     tlState("caption");
-    return { cols: cols, cfg: cfg };
+    if (stored && stored.look_state) cfg.look = stored.look_state;
+    // The table block's records layout: "Group by" is the block's `by`. The
+    // payload carries its value and the input's columns, since a table
+    // nested by `by` has no pickable columns of its own.
+    /** @type {VizColumn[]} */
+    var byCols = [];
+    if (stored && stored.by_choices !== undefined) {
+      cfg.byMode = true;
+      cfg.group = [].concat(stored.by_state || []);
+      try { byCols = JSON.parse(stored.by_choices) || []; } catch (e) { byCols = []; }
+    }
+    // The rows' settings (records: row names, columns, missing; variables:
+    // missing), which a nested table or a Table 1 does not show as columns.
+    var rs = stored && stored.rows_state;
+    if (rs) {
+      cfg.rows = rs;
+      cfg.rowname = rs.rowname || "";
+      cfg.columns = [].concat(rs.columns || []);
+      if (rs.missing) cfg.missing = rs.missing;
+      if (!cfg.byMode) cfg.variablesLayout = true;
+    }
+    // The block's prepare script: its text, the controls it declares, its
+    // error, and each control's value (sv_<name>), where the engine's script
+    // roles read them. Absent outside the table block, which hides the
+    // section.
+    var prep = stored && stored.prep;
+    if (prep) {
+      cfg.script = prep.script == null ? "" : prep.script;
+      cfg.script_inputs = prep.script_inputs || [];
+      cfg.script_error = prep.script_error || null;
+      var sv = prep.script_values || {};
+      Object.keys(sv).forEach(function (k) { cfg[k] = sv[k]; });
+    }
+    return { cols: cols, cfg: cfg, byCols: byCols };
   }
 
   /** @param {HTMLElement} root @param {HTMLElement} table */
@@ -1443,6 +1609,7 @@
     var st = readGearState(table);
     var cols = st.cols;
     var cfg = st.cfg;
+    var byCols = st.byCols;
 
     // Re-read state off the CURRENT table. The chrome — and this gear —
     // outlives table re-renders, so the state captured at init goes stale as
@@ -1458,6 +1625,7 @@
       var s = readGearState(t);
       cols = s.cols;
       cfg = s.cfg;
+      byCols = s.byCols;
     }
 
     // Structured ("Table 1") tables expose no pickable columns (the header is
@@ -1469,8 +1637,14 @@
     // no-column case too.
     function hasCols() { return cols.length > 0; }
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state. Closed, one
+    // row; open, the gear alone on top, the tray, then titles and tools.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -1502,34 +1676,34 @@
       popoverEl: function () { return pop; },
       roles: TABLE_ROLES,
       config: function () { return cfg; },
-      columns: function () { return cols; },
+      columns: function () { return cols.length ? cols : byCols; },
       context: function () { return "all"; },
       currentType: function () { return cfg.transform; },
       sections: function () {
-        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
+        return withLayoutSwitch(
+          tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
+          "records", elemId, cfg.group
+        );
       },
       sectionsForFamily: function () {
-        return tableSections(cfg, hasCols(), cols.length ? cols[0].name : "");
+        return withLayoutSwitch(
+          tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
+          "records", elemId, cfg.group
+        );
       },
       // Paired-tail roles (e.g. func behind value) are rendered inside their
       // partner's row, never standalone — mirror the chart's DD_SECONDARY.
       secondary: new Set(Object.keys(TABLE_ROLES)
         .map(function (k) { return TABLE_ROLES[k].pairedWith; })
         .filter(Boolean)),
-      // The table's mapping section is purely the aggregation step (group +
-      // aggregate), so name it "Aggregation" — clearer than "Mapping" that it
-      // transforms the data before display.
-      mappingTitle: "Aggregation",
+      mappingTitle: function () { return "Mapping"; },
       typeKey: null,
       typeGroups: null,
       familyFor: null,
       entryRequired: function () { return false; },
       drillAutoLabel: null,
-      // Grouped table: the drill target is the group keys — structurally
-      // determined, so the section is a picker-less checkbox (same as the
-      // tile). Raw table: null — its drill is the drillToggle column picker
-      // (a raw row is multi-column; the target is a genuine choice). No
-      // columns (annotated frame) or grand totals: null (section hidden).
+      // A flat table: null, its drill is the drillToggle column picker (a
+      // raw row is multi-column; the target is a genuine choice).
       drillHint: function () {
         // Structured (annotated) table: the drill target is the row's own
         // identity columns -- structurally determined, so the section is the
@@ -1540,24 +1714,10 @@
             "subset of this table \u2014 the identity columns carry the " +
             "selection, so a downstream block can read them directly.";
         }
-        var hasGroup = cfg.group && cfg.group.length > 0;
-        if (!hasCols() || !hasGroup) return null;
-        return "Clicking a row filters downstream on the group key" +
-          (cfg.group.length > 1 ? "s" : "") + " (" + cfg.group.join(", ") + ").";
+        return null;
       },
       title: "Table settings",
-      // Repeatable aggregation list: the engine renders one "[agg] of [cols]"
-      // row per value. A grouped table always shows at least a count, so an
-      // empty list surfaces as a single count row.
-      metricsList: function () {
-        return (cfg.summaries && cfg.summaries.length)
-          ? cfg.summaries : [{ func: "count", cols: [] }];
-      },
-      onMetricsChange: function (/** @type {any[]} */ ms) {
-        cfg.summaries = ms;
-        sendConfig(elemId, "summaries", JSON.stringify(ms));
-      },
-      // Repeatable "Shade cells" rules — same JSON transport as summaries.
+      // Repeatable "Shade cells" rules, sent as one JSON string.
       // No floor row: an empty list IS "no shading".
       shadingsList: function () { return cfg.shadings || []; },
       onShadingsChange: function (/** @type {any[]} */ ss) {
@@ -1590,6 +1750,7 @@
     var layer = null;
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.classList.add("blockr-gear-active");
       btn.setAttribute("aria-expanded", "true");
       bandOpen[elemId] = true;
@@ -1603,6 +1764,7 @@
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.classList.remove("blockr-gear-active");
       btn.setAttribute("aria-expanded", "false");
       bandOpen[elemId] = false;
@@ -1621,24 +1783,59 @@
       openPop();
     });
 
+    // A layout switch (layoutOf): the groups engine taking over closes this
+    // gear; this engine drawing the new layout redraws it, open if a gear in
+    // the block was open. The new layout's table arrives after the switch,
+    // so an open gear redraws once more when it does (root._dtAfterPayload).
+    var relayout = false;
+    // Until the new layout's table arrives, the tray keeps the height it had,
+    // so it does not shrink to the old table's gear and grow back.
+    var holdHeight = function (/** @type {number} */ h) {
+      pop.style.minHeight = h ? h + "px" : "";
+      if (h) setTimeout(function () { pop.style.minHeight = ""; }, 3000);
+    };
+    document.addEventListener("blockr-table-layout", function (e) {
+      var d = /** @type {CustomEvent} */ (e).detail;
+      if (!d || d.id !== elemId || !root.isConnected) return;
+      relayout = false;
+      delete gearPending[elemId];
+      if (d.layout === "groups") { closeWhenHidden(root, closePop); return; }
+      if (!d.gearOpen) return;
+      var held = pop.classList.contains("blockr-settings--open") ? pop.offsetHeight : 0;
+      refreshState();
+      engine.refresh();
+      openPop();
+      holdHeight(held);
+      relayout = true;
+    });
+    /** @type {any} */ (root)._dtAfterPayload = function () {
+      if (!relayout || !pop.classList.contains("blockr-settings--open")) return;
+      relayout = false;
+      refreshState();
+      engine.refresh();
+      holdHeight(0);
+    };
+
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    // One control row, chart-style: the chrome's search + download MOVE UP
-    // into the gear row, sitting LEFT of the gear. The gear itself stays in
-    // its canonical top-right spot (the cross-block anchor — every block
-    // puts its gear there), which is why the toolbar comes to the gear and
-    // not the other way around. The vacated chrome header row would leave a
-    // stray padded border, so it is hidden once emptied.
+    header.appendChild(pop);
+    // The title band joins the header, on its left (applyTitles fills it).
+    header.insertBefore(titlesBand(root), header.firstChild);
+    // The chrome's search + download MOVE UP into the header's tools, left
+    // of the gear, which keeps its top-right spot. The vacated chrome header
+    // row would leave a stray padded border, so it is hidden once emptied.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = /** @type {HTMLElement | null} */ (
         root.querySelector(".blockr-html-table-header"));
       if (hdrRow) hdrRow.style.display = "none";
     }
     // Restore the remembered open state across chrome rebuilds (the state
-    // was parsed just above, so no refresh needed here).
-    if (bandOpen[elemId]) openPop();
+    // was parsed just above, so no refresh needed here), or open the gear a
+    // layout switch carried over (gearPending).
+    var carried = gearPending[elemId] && layoutOf[elemId] !== "groups";
+    delete gearPending[elemId];
+    if (bandOpen[elemId] || carried) openPop();
   }
 
   // Chrome wiring — once per container. The gear, search input and scroll
@@ -1651,20 +1848,6 @@
     buildCogwheel(root, table);
     wireSearch(root);
     wireScrollShadow(root);
-    // Status-footer Reset (the footer is a server-rendered output inside the
-    // chrome and re-renders per filter change, so delegate from the
-    // container rather than wiring the button itself).
-    var elemIdAttr = root.getAttribute("data-dt-elem-id");
-    if (elemIdAttr) {
-      // Rebound after the guard so the closure sees a plain string.
-      const elemId = elemIdAttr;
-      root.addEventListener("click", function (e) {
-        var t = /** @type {Element | null} */ (e.target);
-        if (!t || !t.closest(".dd-status-reset")) return;
-        clearActiveRows(root);
-        sendClearFilter(elemId);
-      });
-    }
   }
 
   // Table wiring — for each freshly-rendered <table> (sort, row-click drill,
@@ -1721,7 +1904,8 @@
    *   rowH: number,
    *   measured: boolean,
    *   winStart: number,
-   *   winEnd: number
+   *   winEnd: number,
+   *   cards: any
    * }} DtModel
    */
 
@@ -1839,6 +2023,44 @@
     return out + "</tr>";
   }
 
+  // The cards look: the rows of `view` (search applied) as rows of cards,
+  // drawn by table-cards.js, which loads only with a table in that look and
+  // may arrive after the payload (the "blockr-table-cards-ready" listener
+  // below draws then). Card rows carry data-i, the row classes and nothing
+  // else the table rows do not: the click, the highlight and the count read
+  // them alike.
+  /** @param {HTMLElement} root @param {DtModel} model */
+  function renderCards(root, model) {
+    var host = /** @type {HTMLElement | null} */ (
+      root.querySelector(".blockr-cards-host"));
+    var TC = /** @type {any} */ (window).BlockrTableCards;
+    if (!host) return;
+    if (!TC) {
+      /** @type {any} */ (root)._tcPending = true;
+      return;
+    }
+    /** @type {any} */ (root)._tcPending = false;
+    var cards = model.cards;
+    TC.render(host, cards, {
+      order: model.view.filter(function (i) { return i < cards.n; }),
+      row: function (/** @type {number} */ i) {
+        return {
+          cls: (model.nodrill.has(i) ? "dt-row-nodrill" : "") +
+            (model.activeSet.has(i) ? " dt-row-active" : ""),
+          attrs: ' data-i="' + i + '"'
+        };
+      }
+    });
+  }
+
+  document.addEventListener("blockr-table-cards-ready", function () {
+    document.querySelectorAll(".drilldown-table-container").forEach(function (el) {
+      var root = /** @type {HTMLElement} */ (el);
+      var m = getModel(root);
+      if (/** @type {any} */ (root)._tcPending && m && m.cards) renderCards(root, m);
+    });
+  });
+
   /** @param {number} h @param {number} ncols */
   function spacerRow(h, ncols) {
     return '<tr class="dt-vspacer" aria-hidden="true"><td colspan="' + ncols +
@@ -1850,6 +2072,10 @@
   // VIRT_MIN rows this renders everything (start=0, end=n, no spacers).
   /** @param {HTMLElement} root @param {DtModel} model */
   function renderWindow(root, model) {
+    if (model.cards) {
+      renderCards(root, model);
+      return;
+    }
     var table = /** @type {HTMLElement | null} */ (
       root.querySelector("table.blockr-table"));
     var tbody = table && /** @type {HTMLElement | null} */ (
@@ -1916,7 +2142,7 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         var m = getModel(root);
-        if (!m || m.view.length <= VIRT_MIN) return;
+        if (!m || m.cards || m.view.length <= VIRT_MIN) return;
         // Re-render once scrolling nears the rendered window's edge.
         var first = Math.floor(sc.scrollTop / m.rowH);
         var last = first + Math.ceil(sc.clientHeight / m.rowH);
@@ -1930,7 +2156,7 @@
 
   /** @param {HTMLElement} root @param {DtModel} model */
   function repaintActive(root, model) {
-    root.querySelectorAll("tbody tr[data-i]").forEach(function (r) {
+    root.querySelectorAll("tbody tr[data-i], .tc-row[data-i]").forEach(function (r) {
       var i = parseInt(r.getAttribute("data-i") || "", 10);
       if (!isNaN(i) && model.activeSet.has(i)) {
         r.classList.add("dt-row-active");
@@ -2024,8 +2250,9 @@
     if (!elemIdAttr) return;
     // Rebound after the guard so the closures below see a plain string.
     const elemId = elemIdAttr;
-    var tbody = /** @type {HTMLElement | null} */ (
-      table.querySelector("tbody"));
+    // The rows a click lands on: the table's, or the cards' (same data-i).
+    var tbody = /** @type {HTMLElement | null} */ (model.cards ?
+      root.querySelector(".blockr-cards-host") : table.querySelector("tbody"));
     if (!tbody) return;
     var grouped = model.groupIdx.length > 0;
     var single = !!model.onclickCol && !isNaN(model.onclickIdx);
@@ -2034,7 +2261,7 @@
 
     tbody.addEventListener("click", function (e) {
       var t = /** @type {Element | null} */ (e.target);
-      var tr = t && t.closest("tr[data-i]");
+      var tr = t && t.closest("tr[data-i], .tc-row[data-i]");
       if (!tr) return;
       if (!window.Shiny || !Shiny.setInputValue) return;
       var i = parseInt(tr.getAttribute("data-i") || "", 10);
@@ -2091,6 +2318,165 @@
   // ensured lazily around the scroll wrapper so the chrome — which outlives
   // payloads — needs no rebuild. Hidden while empty: a title-less table is
   // pixel-identical to before. textContent, never innerHTML.
+  // The title and subtitle band: the container's own, or a new one, hidden
+  // until applyTitles has text for it.
+  /** @param {HTMLElement} root @returns {HTMLElement} */
+  function titlesBand(root) {
+    var band = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dd-table-titles"));
+    if (band) { band.classList.add("vz-head__titles"); return band; }
+    band = document.createElement("div");
+    band.className = "dd-table-titles vz-head__titles";
+    band.style.display = "none";
+    var te = document.createElement("div");
+    te.className = "dd-table-title";
+    var se = document.createElement("div");
+    se.className = "dd-table-subtitle";
+    band.appendChild(te);
+    band.appendChild(se);
+    return band;
+  }
+
+  // A layout switch shows the other engine's container (the server's
+  // layout_css). The first time, that container is still empty: the server
+  // draws an engine's table only once its output is on screen. Until the new
+  // container has its table, and its tray if a gear was open, the old one
+  // stays on screen and the new one is laid out out of sight (hidden, out of
+  // the flow, so Shiny still renders into it); the block never shows
+  // nothing. Inline !important outranks the server's rule; it comes off when
+  // the new view is ready, or after two seconds.
+  // The element that holds a block's three engine containers.
+  /** @param {string[]} ids @returns {HTMLElement | null} */
+  function engineBox(ids) {
+    for (var i = 0; i < ids.length; i++) {
+      var sel = (window.CSS && CSS.escape) ? CSS.escape(ids[i]) : ids[i];
+      var c = document.querySelector('[data-dt-elem-id="' + sel + '"], [data-summarize-elem-id="' + sel + '"]');
+      var w = c && c.closest(".blockr-table-engine");
+      if (w) return /** @type {HTMLElement | null} */ (w.parentElement);
+    }
+    return null;
+  }
+
+  // While the engines swap, the block can be shorter for a moment (the
+  // records engine draws the new layout's table before the layout message,
+  // a tray is redrawn), and a scrolled panel would clamp its scroll and keep
+  // it there. From the click on a layout tile, the block keeps its height
+  // until the server is idle and its content has not changed for 300 ms, at
+  // most five seconds. One hold per block: a second call extends it.
+  /** @param {HTMLElement} box */
+  function holdBlockHeight(box) {
+    var held = /** @type {any} */ (box)._dtHold;
+    if (held) { held.extend(); return; }
+    var h0 = box.offsetHeight;
+    if (!h0) return;
+    var prev = box.style.minHeight;
+    box.style.minHeight = h0 + "px";
+    var t0 = Date.now(), since = t0, last = -1;
+    var natural = function () {
+      var sum = 0;
+      Array.prototype.forEach.call(box.children, function (/** @type {HTMLElement} */ c) {
+        if (c.offsetParent) sum += c.offsetHeight;
+      });
+      return sum;
+    };
+    /** @type {any} */ (box)._dtHold = {
+      extend: function () { t0 = Date.now(); since = t0; }
+    };
+    var check = function () {
+      var n = natural(), now = Date.now();
+      if (n !== last) { last = n; since = now; }
+      if (document.documentElement.classList.contains("shiny-busy")) since = now;
+      if ((now - since > 300 && now - t0 > 300) || now - t0 > 5000) {
+        box.style.minHeight = prev;
+        delete /** @type {any} */ (box)._dtHold;
+        return;
+      }
+      setTimeout(check, 50);
+    };
+    setTimeout(check, 50);
+  }
+  // For the groups engine's switch (summarize-table.js).
+  /** @type {any} */ (window).blockrTableHold = function (/** @type {string} */ id) {
+    var box = engineBox([id]);
+    if (box) holdBlockHeight(box);
+  };
+
+  /** @param {string[]} ids @param {string} layout @param {boolean} open */
+  function bridgeSwitch(ids, layout, open) {
+    var box = engineBox(ids);
+    if (!box) return;
+    var wraps = /** @type {HTMLElement[]} */ (Array.prototype.slice.call(
+      box.querySelectorAll(":scope > .blockr-table-engine")));
+    var kind = function (/** @type {HTMLElement} */ w) {
+      var m = /(records|groups|variables)_wrap$/.exec(w.id);
+      return m ? m[1] : "";
+    };
+    var shown = wraps.filter(function (w) { return !!w.offsetParent; });
+    if (!shown.length) return;
+    var engine = wraps.filter(function (w) {
+      return kind(w) === (layout === "groups" ? "groups" : "records");
+    })[0];
+    if (!engine) return;
+    var ready = function () {
+      return !!engine.querySelector("table") &&
+        (!open || !!engine.querySelector(".blockr-settings--open"));
+    };
+    if (ready()) return;
+    var hold = box;
+    var pos = hold.style.position;
+    if (getComputedStyle(hold).position === "static") hold.style.position = "relative";
+    var off = ["position", "visibility", "top", "left", "right", "pointer-events"];
+    wraps.forEach(function (w) {
+      if (shown.indexOf(w) >= 0) {
+        w.style.setProperty("display", "block", "important");
+      } else if (w === engine) {
+        w.style.setProperty("display", "block", "important");
+        w.style.setProperty("position", "absolute");
+        w.style.setProperty("visibility", "hidden");
+        w.style.setProperty("top", "0");
+        w.style.setProperty("left", "0");
+        w.style.setProperty("right", "0");
+        w.style.setProperty("pointer-events", "none");
+      } else {
+        w.style.setProperty("display", "none", "important");
+      }
+    });
+    var t0 = Date.now();
+    var check = function () {
+      if (ready() || Date.now() - t0 > 2000) {
+        wraps.forEach(function (w) {
+          w.style.removeProperty("display");
+          off.forEach(function (k) { w.style.removeProperty(k); });
+        });
+        hold.style.position = pos;
+        return;
+      }
+      setTimeout(check, 16);
+    };
+    setTimeout(check, 16);
+  }
+
+  // A layout switch hands the gear to the other engine. The server shows
+  // the other engine's container a moment after the layout message, so the
+  // tray closes only once its own container is off screen: closed earlier,
+  // the table would jump up for a few frames and back down. Gives up after
+  // three seconds.
+  /** @param {HTMLElement} root @param {() => void} close */
+  function closeWhenHidden(root, close) {
+    var t0 = Date.now();
+    var check = function () {
+      if (!root.isConnected || !root.offsetParent || Date.now() - t0 > 3000) {
+        close();
+        return;
+      }
+      // A timer, not requestAnimationFrame: a tab in the background runs
+      // no frames, and the tray would stay open behind the scenes.
+      setTimeout(check, 16);
+    };
+    check();
+  }
+  /** @type {any} */ (window).blockrCloseWhenHidden = closeWhenHidden;
+
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyTitles(root, p) {
     // No `titles` field at all: the sender paints its own band (the composer
@@ -2101,19 +2487,8 @@
       root.querySelector(".blockr-table-wrapper"));
     if (!wrap || !wrap.parentNode) return;
     var tl = /** @type {any} */ (p).titles || {};
-    var band = /** @type {HTMLElement | null} */ (
-      root.querySelector(".dd-table-titles"));
-    if (!band) {
-      band = document.createElement("div");
-      band.className = "dd-table-titles";
-      var te = document.createElement("div");
-      te.className = "dd-table-title";
-      var se = document.createElement("div");
-      se.className = "dd-table-subtitle";
-      band.appendChild(te);
-      band.appendChild(se);
-      wrap.parentNode.insertBefore(band, wrap);
-    }
+    var band = titlesBand(root);
+    if (!band.parentNode) wrap.parentNode.insertBefore(band, wrap);
     var capEl = /** @type {HTMLElement | null} */ (
       root.querySelector(".dd-table-caption"));
     if (!capEl) {
@@ -2140,6 +2515,13 @@
   // stored payload (chrome after payload, dock re-mounts — see wireRoot).
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyPayload(root, p) {
+    drawPayload(root, p);
+    var after = /** @type {any} */ (root)._dtAfterPayload;
+    if (after) after();
+  }
+
+  /** @param {HTMLElement} root @param {VizTablePayload} p */
+  function drawPayload(root, p) {
     var slot = /** @type {HTMLElement | null} */ (
       root.querySelector(".dt-table-slot") ||
       root.querySelector(".blockr-table-wrapper"));
@@ -2161,7 +2543,13 @@
       return;
     }
     if (!p.head || !p.cols) return;
-    slot.innerHTML = p.head;
+    // The cards look (R/table-cards.R): the table stays, empty and hidden,
+    // for the gear and the drill to read their state off; the cards draw
+    // beside it from the same rows.
+    var cards = p.look === "cards" && /** @type {any} */ (p).cards;
+    slot.innerHTML = p.head + (cards ? '<div class="blockr-cards-host"></div>' : "");
+    var wrapEl = root.querySelector(".blockr-table-wrapper");
+    if (wrapEl) wrapEl.classList.toggle("tc-on", !!cards);
     var table = /** @type {HTMLElement | null} */ (
       slot.querySelector("table.blockr-table"));
     if (!table) return;
@@ -2187,7 +2575,8 @@
       rowH: 30,
       measured: false,
       winStart: 0,
-      winEnd: 0
+      winEnd: 0,
+      cards: cards || null
     };
     /** @type {any} */ (root)._dtModel = model;
 
@@ -2305,6 +2694,31 @@
   // container yet just parks in the store — wireRoot delivers it when the
   // chrome turns up (no timers, no delivery window that can expire).
   if (window.Shiny && Shiny.addCustomMessageHandler) {
+    // R -> JS: the table block's layout, to both engines (see layoutOf). A
+    // gear open in either stays open across the switch, on the engine that
+    // draws the new layout; the engines act on the "blockr-table-layout"
+    // event.
+    Shiny.addCustomMessageHandler("blockr-viz-table-layout",
+      function (/** @type {any} */ msg) {
+        /** @type {string[]} */
+        var ids = [].concat(msg.ids || []);
+        var open = ids.some(function (id) {
+          var sel = (window.CSS && CSS.escape) ? CSS.escape(id) : id;
+          var pop = document.querySelector('[data-dd-pop-for="' + sel + '"]');
+          return !!pop && pop.classList.contains("blockr-settings--open");
+        });
+        var box = engineBox(ids);
+        if (box) holdBlockHeight(box);
+        bridgeSwitch(ids, msg.layout, open);
+        ids.forEach(function (id) {
+          layoutOf[id] = msg.layout;
+          gearPending[id] = open;
+          document.dispatchEvent(new CustomEvent("blockr-table-layout", {
+            detail: { id: id, layout: msg.layout, gearOpen: open }
+          }));
+        });
+      });
+
     Shiny.addCustomMessageHandler("blockr-viz-table-data",
       function (/** @type {any} */ msg) {
         var entry = payloadStore[msg.id];

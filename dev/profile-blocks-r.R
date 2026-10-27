@@ -103,10 +103,9 @@ add("blockr.viz", "table", "render:flat:body",
 add("blockr.viz", "table", "render:flat:gear_cols_json",
     bench(dt_gear_cols_json(adsl)))
 
-# ---- TILE --------------------------------------------------------------------
-add("blockr.viz", "tile", "construct", bench(new_tile_block()))
-add("blockr.viz", "tile", "render",
-    bench(tile_html(adsl[1, , drop = FALSE], value = c("AGE", "BMI"))))
+# ---- TABLE, CARDS LOOK --------------------------------------------------------
+add("blockr.viz", "table", "construct:cards",
+    bench(new_table_block(look = "cards")))
 
 # ---- SUMMARY_TABLE (upstream of the structured table) ------------------------
 add("blockr.viz", "summary_table", "construct", bench(new_summary_table_block()))

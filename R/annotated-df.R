@@ -177,7 +177,7 @@ reject_long_form <- function(data) {
 #' @param ... Passed on to [as_annotated_df()].
 #'
 #' @return A data frame without the reserved annotation columns.
-#' @seealso [as_annotated_df()], [new_chart_block()], [new_tile_block()]
+#' @seealso [as_annotated_df()], [new_chart_block()], [new_table_block()]
 #' @export
 as_plain_df <- function(x, ...) {
   x <- as_annotated_df(x, ...)
@@ -241,14 +241,20 @@ as_plain_df <- function(x, ...) {
 #' @param columns Real source columns the claim is read from, for an
 #'   aggregated table. Default `NULL` = read the ARD identity columns
 #'   (`.variable` / `.variable_level`, `.group<k>` pairs) instead.
+#' @param unclaimed What a frame that claims nothing resolves to: `"none"`
+#'   (default), a zero-row frame, or `"all"`, the whole source. The table
+#'   block passes `"all"` before any click, so a listing below a Table 1
+#'   shows every row until one is picked.
 #'
-#' @return A subset of `source`: the rows the claim selects, or a zero-row
-#'   frame when nothing is claimed.
+#' @return A subset of `source`: the rows the claim selects. When nothing is
+#'   claimed, a zero-row frame or the whole source (`unclaimed`).
 #' @seealso [as_annotated_df()], [new_table_block()] (`drill = "source"`)
 #' @examplesIf interactive()
 #' drill_source(drilled_table)
 #' @export
-drill_source <- function(x, source = NULL, columns = NULL) {
+drill_source <- function(x, source = NULL, columns = NULL,
+                         unclaimed = c("none", "all")) {
+  unclaimed <- match.arg(unclaimed)
   x <- as_annotated_df(x)
   src <- source %||% attr(x, "source_data", exact = TRUE)
 
@@ -291,7 +297,7 @@ drill_source <- function(x, source = NULL, columns = NULL) {
 
   claims <- drill_claim_columns(x, table = "", columns = columns)
   if (!length(claims) && is.null(filter_claim)) {
-    return(src[0, , drop = FALSE])
+    return(if (identical(unclaimed, "all")) src else src[0, , drop = FALSE])
   }
 
   keep <- rep(TRUE, nrow(src))
@@ -314,7 +320,11 @@ drill_source <- function(x, source = NULL, columns = NULL) {
         call. = FALSE
       )
     }
-    keep <- keep & as.character(src[[cl$name]]) %in% as.character(cl$values)
+    v <- src[[cl$name]]
+    hit <- as.character(v) %in% as.character(cl$values)
+    # The "(Missing)" level (`missing = "level"`) claims the missing values.
+    if (MISSING_LEVEL %in% cl$values) hit <- hit | is.na(v)
+    keep <- keep & hit
   }
 
   out <- src[keep, , drop = FALSE]

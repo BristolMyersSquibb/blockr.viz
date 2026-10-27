@@ -2,7 +2,7 @@
  * Protocol / ambient types for blockr.viz's hand-written JS.
  *
  * This file is the contract between the R side (block servers, *-dep.R) and
- * the JS in inst/js/ (chart/, table.js, tile-block.js, summary-table-block.js,
+ * the JS in inst/js/ (chart/, table.js, summarize-table.js, table-cards.js,
  * drilldown-config.js). It is dev-tooling only: type-checked via tsconfig.json /
  * `tsc`, never referenced by an htmlDependency, never run in the browser.
  *
@@ -66,7 +66,7 @@ interface VizTablePayload {
 }
 
 /* --- Drilldown gear-popover engine (drilldown-config.js) ---
-   The engine is host-agnostic: chart/chrome.js, table.js and tile-block.js each build
+   The engine is host-agnostic: chart/chrome.js, table.js and summarize-table.js each build
    a `host` object and do `new Blockr.DrilldownConfig(host)`. Role keys are the
    R-side config params. Typed permissively here; the class body refines it. */
 
@@ -127,7 +127,7 @@ declare class VizSentenceSlots {
 
 /* --- Shared aggregation vocabulary (drilldown-agg.js) ---
    The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
-   consumed identically by the chart (chart/), table.js and tile-block.js. Exposed as
+   consumed identically by the chart (chart/) and table.js. Exposed as
    Blockr.DrilldownAgg (and window.DrilldownAgg). */
 
 interface VizDrilldownAgg {
@@ -228,6 +228,23 @@ interface BlockrNamespace {
   contentWidth(el: Element): number;
   /** The shared drilldown popover engine (defined in this package). */
   DrilldownConfig: typeof VizDrilldownConfig;
+  /** The table block's layouts: value, name and drawing (drilldown-config.js). */
+  TABLE_LAYOUTS?: Array<{ value: string; label: string; icon: string }>;
+  /** The table block's looks, as TABLE_LAYOUTS. */
+  TABLE_LOOKS?: Array<{ value: string; label: string; icon: string }>;
+  /** The picker tiles' drawings, by chart type, layout and look (drilldown-config.js). */
+  TILE_ICONS?: Record<string, string>;
+  /** The Show tiles' drawings, keyed by a summary column's `show`. */
+  SHOW_TILE_ICONS?: Record<string, string>;
+  /** The Shade cells tiles' drawings, keyed by mode. */
+  SHADE_TILE_ICONS?: Record<string, string>;
+  /** Edge-to-edge picker tiles (drilldown-config.js). */
+  buildTiles?(
+    parent: HTMLElement,
+    options: { value: string; label: string; icon: string; disabled?: boolean; title?: string }[],
+    current: string,
+    onPick: (value: string) => void
+  ): HTMLElement;
   /** The block's sentence painter (defined in this package). */
   SentenceSlots: typeof VizSentenceSlots;
   /** The gear tray behaviour (blockr.ui's blockr-ui.js). */
@@ -236,6 +253,16 @@ interface BlockrNamespace {
     gear: HTMLButtonElement,
     opts?: { label?: string }
   ): { set(open: boolean): void; toggle(): void; isOpen(): boolean };
+  /** Groups for a long gear tray (blockr.ui's blockr-ui.js); absent on an
+      older blockr.ui, where the tray stays one column. */
+  trayNav?(
+    groups: {
+      key: string;
+      title: string;
+      sections: { el: HTMLElement; title: string; titleEl?: HTMLElement | null }[];
+    }[],
+    opts?: { current?: string; onPick?: (key: string) => void; label?: string }
+  ): { el: HTMLDivElement; show(key: string): void; current(): string };
   /** Shared aggregation vocabulary (drilldown-agg.js). */
   DrilldownAgg?: VizDrilldownAgg;
   /** Design-system checkbox factory (blockr.ui's blockr-ui.js). */

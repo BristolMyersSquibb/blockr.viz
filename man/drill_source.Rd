@@ -4,7 +4,7 @@
 \alias{drill_source}
 \title{Resolve a drilled summary row back to the source rows behind it}
 \usage{
-drill_source(x, source = NULL, columns = NULL)
+drill_source(x, source = NULL, columns = NULL, unclaimed = c("none", "all"))
 }
 \arguments{
 \item{x}{A drilled annotated data frame, or an object coercible via
@@ -16,10 +16,15 @@ drill_source(x, source = NULL, columns = NULL)
 \item{columns}{Real source columns the claim is read from, for an
 aggregated table. Default \code{NULL} = read the ARD identity columns
 (\code{.variable} / \code{.variable_level}, \verb{.group<k>} pairs) instead.}
+
+\item{unclaimed}{What a frame that claims nothing resolves to: \code{"none"}
+(default), a zero-row frame, or \code{"all"}, the whole source. The table
+block passes \code{"all"} before any click, so a listing below a Table 1
+shows every row until one is picked.}
 }
 \value{
-A subset of \code{source}: the rows the claim selects, or a zero-row
-frame when nothing is claimed.
+A subset of \code{source}: the rows the claim selects. When nothing is
+claimed, a zero-row frame or the whole source (\code{unclaimed}).
 }
 \description{
 A drill on a structured (annotated) table yields a subset of the DISPLAY

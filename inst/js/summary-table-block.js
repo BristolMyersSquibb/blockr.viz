@@ -141,6 +141,9 @@
       const grid = document.createElement('div');
       grid.className = 'stb-grid';
       this.card.appendChild(grid);
+      // The table block's gear takes this grid and the settings grid in as
+      // one section (table.js, withLayoutSwitch), so the block has one gear.
+      this.grid = grid;
 
       // Summarize (full-width row)
       const varsWrap = document.createElement('div');
@@ -167,17 +170,17 @@
       this._varsWrap = varsWrap;
       this._setVarsAttention();
 
-      // Split by (max 2)
+      // One column per (max 2): one column per level of the grouping
       const byWrap = document.createElement('div');
       byWrap.className = 'stb-field stb-field--full';
       const byLabel = document.createElement('label');
       byLabel.className = 'blockr-label';
-      byLabel.textContent = 'Split by';
+      byLabel.textContent = 'One column per';
       byWrap.appendChild(byLabel);
       this._selects.by = BSelect.multi(byWrap, {
         options: [],
         selected: [],
-        placeholder: 'Column dimension (up to 2)\u2026',
+        placeholder: 'One column per level (up to 2)\u2026',
         onChange: (selected) => {
           const sel = (selected || []).slice(0, 2);
           if ((selected || []).length > 2) {
@@ -306,17 +309,32 @@
                 k => k === opt.key || this._state.stats.indexOf(k) >= 0
               );
             }
+            lockLast();
             this._autoSubmit();
           });
         return box;
       });
       boxes.forEach(b => boxRow.appendChild(b.el));
 
+      // The one statistic left cannot be cleared: show it as locked rather
+      // than letting a click be undone without a word.
+      const lockLast = () => {
+        const one = this._state.stats.length === 1;
+        boxes.forEach((box, i) => {
+          const inp = box.el.querySelector('input');
+          const locked = one && this._state.stats[0] === STAT_OPTIONS[i].key;
+          if (inp) inp.disabled = locked;
+          box.el.title = locked ? 'At least one statistic is needed' : '';
+        });
+      };
+
       const update = () => {
         boxes.forEach((box, i) => {
           box.set(this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0);
         });
+        lockLast();
       };
+      lockLast();
 
       // Same `{ _update }` shape as the toggle handles so setState's
       // refresh loop can repaint it uniformly.
@@ -425,13 +443,13 @@
 
       const label = document.createElement('span');
       label.className = 'blockr-label';
-      label.textContent = 'Group by';
+      label.textContent = 'Section by';
       label.style.display = 'block';
       label.style.marginBottom = '4px';
       wrap.appendChild(label);
 
       const hint = document.createElement('span');
-      hint.textContent = 'Outer row hierarchy above the summarized variables';
+      hint.textContent = 'Header rows above the summarized variables';
       hint.style.fontSize = '0.75rem';
       hint.style.color = '#9ca3af';
       hint.style.display = 'block';

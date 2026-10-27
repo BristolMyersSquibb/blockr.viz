@@ -2,244 +2,27 @@
 % Please edit documentation in R/summarize-block.R
 \name{new_summarize_table_block}
 \alias{new_summarize_table_block}
-\title{Summarize Table Block}
+\title{Summarize table block (superseded)}
 \usage{
-new_summarize_table_block(
-  group = NULL,
-  value = ".count",
-  func = "count",
-  id_var = NULL,
-  summaries = list(),
-  by = NULL,
-  facet_layout = "by_summary",
-  parent = NULL,
-  color = NULL,
-  bar_mode = "stacked",
-  facet = NULL,
-  cols = NULL,
-  fields = NULL,
-  sort_by = "value",
-  sort_dir = "desc",
-  top_n = NULL,
-  max_height = NULL,
-  search = TRUE,
-  sortable = TRUE,
-  axis = TRUE,
-  value_labels = TRUE,
-  bar_width = "fit",
-  download = FALSE,
-  title = NULL,
-  subtitle = NULL,
-  caption = getOption("blockr.viz.default_caption"),
-  drill = NULL,
-  script = NULL,
-  values = list(),
-  ctrl_target = "",
-  ctrl_table = "",
-  filter_type = "categorical",
-  filter_column = NULL,
-  filter_values = NULL,
-  ...
-)
+new_summarize_table_block(...)
 }
 \arguments{
-\item{group}{Column to rank by: one row per level, ordered by the measure.}
-
-\item{value, func, id_var}{The measure. \code{func} is one of \code{"count"},
-\code{"count_distinct"}, \code{"sum"}, \code{"mean"}, \code{"median"}, \code{"min"}, \code{"max"}, or
-\code{"identity"} (the chart block's "None (as is)": \code{value} untouched, for
-data already reduced upstream -- e.g. one value per subject);
-\code{value} is the column it reduces (unused by \code{"count"}); \code{id_var} is the
-subject identifier \code{"count_distinct"} counts, which is what makes a count
-read as "subjects with at least one event" rather than "events".}
-
-\item{summaries}{The column list
-(\verb{_blockr.design/open/summarize-table/}): an ordered list of typed
-summary rows, each a \code{list(type =, ...)}. Types:
-\code{simple} (\code{func}, \code{col}; show \code{"bar"}, \code{"number"} or \code{"dot"}), \code{dist} (\code{col},
-\code{stat}, box-only \code{whiskers}; show \code{"box"}, \code{"pointrange"} or
-\code{"text"}), \code{field} (\code{col}; the group's distinct values joined, with a
-fold cap -- never an arbitrary first row), \code{series} (\code{x}, \code{col},
-optional \code{band = c(lo, hi)} data columns, optional computed
-\code{ref = "mean"} / \code{"mean_sd"} / \code{"median_iqr"} -- a pooled orientation
-line/band over the column's values, per facet level under facet; a
-sparkline), \code{spans} (\code{x}, \code{xend},
-optional \code{color}, optional \code{label} -- the event-identity column that
-headlines each segment's hover tooltip and keys the same-event
-highlight -- optional \code{fields} (extra tooltip columns) and
-\code{size = "md"} / \code{"lg"} (a WIDER column when the swimlane is the
-centerpiece); a swimlane), \code{expr}
-(free R code over the group's
-rows; text). Each row takes \code{name}, \code{show} and its OWN optional
-\code{color} (a categorical column: the cell is split into one glyph or
-dumbbell per level, a bar into segments, a swimlane's events tinted)
-and \code{facet}
-(a categorical column: the column repeats once per level). Both are
-per column, so one column may split by severity while the next
-repeats per sex and a third carries neither. A \code{field} row never
-facets: group facts stand outside it. (The block-level \code{color} /
-\code{facet} below belong to the ranked-bar surface; a board saved when
-the summarize table shared them opens with them fanned down onto the
-rows they applied to, \code{scope = "pooled"} meaning "no facet".)}
-
-\item{by}{Grouping columns for the summaries path, outer to inner (at
-most two; the outer becomes the expandable parent). Unset, \code{group} /
-\code{parent} fill in.}
-
-\item{facet_layout}{Facet column order on the summaries path:
-\code{"by_summary"} (each summary's level copies adjacent on their shared
-scale -- the comparison reading, the default) or \code{"by_level"}
-(unfaceted columns and fields lead, then one spanning column group per
-facet level -- the Table-1 reading, with a two-row header). \code{"by_level"}
-needs every faceted column to map the SAME facet column; with several
-there are no shared groups to span and the layout stays \code{"by_summary"}.}
-
-\item{parent}{Optional outer grouping column (e.g. system organ class over
-preferred term): parents become expandable rows with children indented
-under them. Each level is aggregated in its own pass, so a parent is never
-the sum of its children.}
-
-\item{color}{Optional column splitting each bar into segments. Composes
-with \code{facet} (the chart's two independent mappings): each facet column's
-bars are then split by \code{color}.}
-
-\item{bar_mode}{\code{"stacked"}, \code{"grouped"} or \code{"percent"}; no-op without
-\code{color}. Only a measure whose parts sum to the whole (count, count
-distinct, sum) can stack: a mean / median / min / max splits side by
-side whatever is asked for, and the table says so in its footer.}
-
-\item{facet}{Optional column giving one bar column per level on a shared
-scale (e.g. one column per treatment arm).}
-
-\item{cols}{Opt-in separate numeric columns beside the bar: any of \code{"n"},
-\code{"pct"}. By default the bar cell carries its own value label instead.}
-
-\item{fields}{Extra columns from the underlying row, shown as real columns
-beside the bar -- the chart's tooltip fields. Only meaningful with
-\code{func = "identity"}, where each group IS one row.}
-
-\item{sort_by, sort_dir}{Server-side ordering: \code{"value"} (the measure),
-\code{"data"} (the data's own order -- factor levels, else first appearance),
-\code{"label"}, a summary column name or a facet level name; and \code{"desc"} /
-\code{"asc"}.}
-
-\item{top_n}{Optional cap (\code{NULL} = off, the table scrolls instead).}
-
-\item{max_height}{\code{NULL} (default): the table runs its full length and
-scrolls with the panel around it, the header following, as the composer
-table does. A CSS length (\code{"600px"}) keeps it in a box of that height
-that scrolls on its own. \code{"600px"}, the default before, is read as
-\code{NULL}: boards saved with it scroll with their panel too.}
-
-\item{search}{Show the search input.}
-
-\item{sortable}{Allow click-to-sort on the column headers. \code{FALSE} freezes
-the table in the configured \code{sort_by} order -- for exhibits whose row
-order carries meaning (visits, dose groups), where an accidental click
-would scramble it.}
-
-\item{axis}{Print each glyph column's domain as a tick strip under its
-header (default \code{TRUE}). One strip per column, whatever the mark: the
-value domain for a box, a dot range or a bar, the zero-centred one for a
-difference bar, the x domain (dates as dates) for a swimlane or a
-sparkline. \code{FALSE} drops every strip, for a dense exhibit where the
-numbers beside the marks carry the scale.}
-
-\item{value_labels}{Print each mark's value beside it (default \code{TRUE}):
-a bar's value, a box's or a dot range's centre, a dumbbell's change, a
-sparkline's last value. A colour-split column prints one number per
-level, beside its lane. Labels print one decimal finer than the column
-axis's ticks; whole numbers stay whole. \code{FALSE} drops them all. Number
-and text columns are their values and are not affected.}
-
-\item{bar_width}{Length of the marks that carry a value label (bars,
-boxes, dot ranges, sparklines). \code{"fit"} (default) fills the panel, from
-80px up to a 320px ceiling; \code{"narrow"}, \code{"medium"} and \code{"wide"} fix the
-lane at 90, 150 and 240px and leave the rest of a wider panel blank. The
-exported picture follows the table as drawn.}
-
-\item{download}{Offer the table for download. \code{FALSE} (default) shows no
-control; \code{TRUE} adds one to the gear row, writing every format this
-machine can: the numbers as a spreadsheet (through
-\code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}, one column per statistic each mark was drawn
-from -- a box glyph is three or five numbers, and
-whoever opens an xlsx came to pivot), the table itself as a
-self-contained page, and the painted exhibit as a deck or an image. One
-writable format renders a button, several render a menu.}
-
-\item{title, subtitle, caption}{Display text, as on \code{\link[=new_chart_block]{new_chart_block()}}:
-\code{NULL} = auto (inherits the input's label / subtitle / caption
-attribute), \code{""} = explicitly none, else a template with the chart
-block's \code{{...}} tokens (see \code{resolve_title_template()}). A token naming
-one of the block's settings (\verb{\{label(@by)\}}, \verb{\{@func\}}) prints as a word
-that opens that setting; \code{by} names its innermost column. \code{caption}
-defaults to the option \code{blockr.viz.default_caption} (unset = \code{NULL}).}
-
-\item{drill}{Turns the row click on (any column name; empty = display
-only). A click filters on the row's grouping path: on a nested table a
-parent row filters its outer column, a child row the outer and the inner
-column together, a flat row its group column. The emitted filter is the
-same categorical contract as \code{\link[=new_chart_block]{new_chart_block()}}, so existing filter
-links compose.}
-
-\item{script, values}{Prepare script, as in \code{\link[=new_chart_block]{new_chart_block()}}: R code run
-on the incoming rows before the table is built, whose top assignments
-become controls on the card (\code{x <- value #| label = "..."}). \code{values}
-holds their current settings. The block's result is the prepared rows,
-filtered by a row click. \verb{\{@x\}} in a title template names a script value.}
-
-\item{ctrl_target}{Character(1), beta. Block id of a value filter block on
-the same board: the drill's claim is ALSO pushed into that block over
-the board's control channel (same feature as the chart and table
-blocks), so a row click can filter a pipeline this block has no data
-link to. Empty (default) = off.
-
-\code{"auto"} needs no block id: it resolves to the board's drill destination
--- the one \code{blockr.dm::new_drill_filter_block()} on the board, else the
-one value filter block (\code{\link[=ctrl_auto_target]{ctrl_auto_target()}}). That is what the gear's
-checkbox writes, so a drill reaches the cohort filter with nothing typed.}
-
-\item{ctrl_table}{Character(1), beta. Only with \code{ctrl_target}: the table
-in the target's dm the pushed conditions apply to. Empty for a value
-filter fed a plain data frame.}
-
-\item{filter_type, filter_column, filter_values}{Runtime filter transport,
-normally left at defaults: they hold the click state so it survives a
-board save and restore. \code{filter_column} is the clicked row's path, outer
-to inner, with one \code{filter_values} entry per column; a single column
-takes any of its values.}
-
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+\item{...}{Arguments of the former summarize table block (\code{by},
+\code{summaries}, \code{id_var}, \code{group}, \code{value}, \code{func}, ...), translated to
+\code{\link[=new_table_block]{new_table_block()}}'s.}
 }
 \value{
-A blockr transform block of class \code{summarize_table_block}.
+A blockr transform block of class \code{table_block}.
 }
 \description{
-\code{group_by(by) |> summarise(...)} where every column is a summarising
-function over the group's rows, rendered as text or as a glyph -- a bar
-beside a box beside a sparkline in one interactive table. The third
-sibling of \code{\link[=new_chart_block]{new_chart_block()}} and \code{\link[=new_table_block]{new_table_block()}}: the chart's
-vocabulary, the table's rendering (sticky header, client-side search and
-sort, scroll at \code{max_height}, exact values in their own columns).
-}
-\details{
-\code{summaries} is the config model: an ordered list of typed summary rows
-(see below). One row is one group, and every glyph is a horizontal mark
-on a shared linear domain confined to a cell. With no \code{summaries}, the
-block is the original ranked-bar table (the flat \code{group} / \code{func} /
-\code{color} / \code{facet} surface below). For anything else --
-vertical columns, lines, scatter, a second measure on an axis -- use
-\code{\link[=new_chart_block]{new_chart_block()}}.
-
-Large inputs behave exactly like the table block: every row is rendered and
-the container scrolls. \code{top_n} is opt-in, for report exhibits where there is
-no scrollbar (a pptx slide wants ten bars, not a hundred), and always draws
-a visible fold row.
+Superseded by \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "groups"}, which takes the
+same summaries. This constructor translates its arguments and returns a
+table block, so code and boards that use it keep working.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_summarize_table_block(
-  by = "cyl",
+  by = "Species",
   summaries = list(list(type = "simple", func = "count", show = "bar"))
 )
 \dontshow{\}) # examplesIf}

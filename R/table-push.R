@@ -26,7 +26,7 @@
 #' escapes with the htmltools rules at assembly time.
 #' @noRd
 dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
-                          shadings = list(), drill = NULL, digits = 2L,
+                          shadings = list(), drill = NULL, digits = "number",
                           row_hex = NULL, color = NULL, toggles = list(),
                           group_cols = NULL, group = character(),
                           summaries = list(), active = NULL,
@@ -228,14 +228,74 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   )
 }
 
-#' A numeric cell as the flat table displays it: rounded to `digits`, trailing
-#' zeros dropped, each value on its own (1.5 stays "1.5" next to 2.25). The
-#' downloads and the report format through here too (dt_format_digits), so
-#' the screen and the file show the same number. Expects non-NA values.
+#' A numeric cell as the table displays it, in the table's number format
+#' (table_format_state()), the same rules as the chart
+#' (inst/js/chart/format.js):
+#'
+#' - a whole number `d`: exactly `d` decimals (`2`: 4.30), so a column lines
+#'   up;
+#' - "number": up to two decimals, trailing zeros dropped (1.5 next to 2.25);
+#'   a value that would round to 0 keeps two significant digits (0.0034);
+#' - "compact": 1.2K / 3.4M / 5.6B with one decimal, below a thousand as
+#'   "number";
+#' - "percent": a fraction x100 with one decimal and "%".
+#'
+#' The cards, the groups layout's number cells, the downloads and the report
+#' format through here too, so the screen and the file show the same number.
+#' Expects non-NA values.
 #' @noRd
-dt_format_num <- function(v, digits) {
-  formatC(round(as.numeric(v), digits), format = "f", digits = digits,
-          drop0trailing = TRUE, big.mark = "")
+dt_format_num <- function(v, format = "number", big.mark = "") {
+  v <- as.numeric(v)
+  dec <- function(x, d, drop0 = TRUE) {
+    x <- round(x, d)
+    # No "-0": a value that rounds to zero prints as 0.
+    x[x == 0] <- 0
+    formatC(x, format = "f", digits = d, drop0trailing = drop0,
+            big.mark = big.mark)
+  }
+  num <- function(x) {
+    out <- dec(x, 2L)
+    tiny <- !is.na(x) & x != 0 & abs(x) < 0.005
+    if (any(tiny)) {
+      out[tiny] <- formatC(signif(x[tiny], 2L), format = "fg", digits = 2L)
+    }
+    out
+  }
+  format <- table_format_state(format)
+  if (is.numeric(format)) return(dec(v, format, drop0 = FALSE))
+  if (identical(format, "percent")) return(paste0(dec(v * 100, 1L), "%"))
+  if (!identical(format, "compact")) return(num(v))
+  out <- num(v)
+  a <- abs(v)
+  for (s in list(c(1e3, "K"), c(1e6, "M"), c(1e9, "B"))) {
+    at <- !is.na(a) & a >= as.numeric(s[[1L]])
+    out[at] <- paste0(dec(v[at] / as.numeric(s[[1L]]), 1L), s[[2L]])
+  }
+  out
+}
+
+#' Put the table's `unit` into the headers of its numeric columns, as the
+#' chart puts it into the axis title once: "Revenue (CHF)". The stub and the
+#' dot-prefixed structure columns are left alone. `unit` empty or `NULL`, a
+#' structured frame or anything that is not a data frame comes back
+#' unchanged.
+#' @noRd
+dt_unit_labels <- function(data, unit, stub = NULL) {
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  if (is.null(unit) || !is.data.frame(data) || dt_is_structured(data)) {
+    return(data)
+  }
+  if (is.null(stub) || !stub %in% names(data)) {
+    stub <- if (".label" %in% names(data)) ".label" else names(data)[1L]
+  }
+  cols <- setdiff(names(data), stub)
+  cols <- cols[!startsWith(cols, ".")]
+  cols <- cols[vapply(data[cols], is.numeric, logical(1L))]
+  for (cn in cols) {
+    lbl <- dt_col_label(data[[cn]], cn) %||% cn
+    attr(data[[cn]], "label") <- paste0(lbl, " (", unit, ")")
+  }
+  data
 }
 
 #' Paste the cell model into the historical flat `<table>` tag.
@@ -337,8 +397,8 @@ dt_flat_payload <- function(b, stamp = identity) {
 #' ships the cell model.
 #' @noRd
 dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
-                             shadings = list(), drill = NULL, digits = 2L,
-                             row_hex = NULL, color = NULL,
+                             shadings = list(), drill = NULL, digits = "number",
+                             unit = NULL, row_hex = NULL, color = NULL,
                              sortable = TRUE, collapsible = TRUE,
                              search = TRUE, download = FALSE,
                              rotate_titles = FALSE,
@@ -350,12 +410,14 @@ dt_build_payload <- function(data, label_col = NULL, value_cols = NULL,
   reject_long_form(data)
   toggles <- list(sortable = sortable, collapsible = collapsible,
                   search = search, download = download,
-                  rotate_titles = rotate_titles)
+                  rotate_titles = rotate_titles, unit = unit)
   if (dt_is_structured(data)) {
     tag <- stamp(dt_table_tag_structured(data, drill, digits, toggles,
                                          active = active))
     return(list(kind = "html", html = as.character(tag)))
   }
+  # The unit heads the numeric columns ("Revenue (CHF)").
+  data <- dt_unit_labels(data, unit, label_col)
   b <- dt_flat_build(data, label_col, value_cols, shadings, drill, digits,
                      row_hex, color, toggles, group_cols, group, summaries,
                      active, gear_cols)

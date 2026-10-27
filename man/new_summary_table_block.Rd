@@ -2,76 +2,25 @@
 % Please edit documentation in R/summary-table-block.R
 \name{new_summary_table_block}
 \alias{new_summary_table_block}
-\title{Summary Table Block}
+\title{Summary table block (superseded)}
 \usage{
-new_summary_table_block(
-  vars = character(),
-  sections = character(),
-  by = character(),
-  stats = "mean_sd",
-  add_overall = FALSE,
-  overall_label = "Total",
-  indent_details = TRUE,
-  nest_hierarchies = FALSE,
-  id_var = NULL,
-  ...
-)
+new_summary_table_block(...)
 }
 \arguments{
-\item{vars}{Character, variables to summarise (each becomes a row-section).}
-
-\item{sections}{Character, outer section columns that contain \code{vars} (0..N).}
-
-\item{by}{Character, column-split dimensions (0..2).}
-
-\item{stats}{Character vector of stat keys emitted for numeric variables
-(see \code{\link[=summary_table]{summary_table()}}): any combination of \code{"n"}, \code{"n_pct"}, \code{"mean"},
-\code{"sd"}, \code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"},
-\code{"min_max"}. One key = a single row per variable; several = one row per
-stat. Legacy \code{"compact"} / \code{"expanded"} presets are still accepted.}
-
-\item{add_overall}{Logical, append an overall column across all \code{by} levels.}
-
-\item{overall_label}{Label for the overall column, default \code{"Total"}.}
-
-\item{indent_details}{Logical, indent detail rows under their variable
-header. Default \code{TRUE}.}
-
-\item{nest_hierarchies}{Logical, advanced row-side drill-down for adjacent
-functionally-dependent categorical vars. Default \code{FALSE}.}
-
-\item{id_var}{Optional subject-identifier column name. When set, column N
-values and percentages are computed over distinct values of this column
-instead of row counts. Useful when each row is an event and multiple rows
-can belong to the same entity (e.g. patient, order, session).}
-
-\item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
+\item{...}{Arguments of the former summary table block, translated to
+\code{\link[=new_table_block]{new_table_block()}}'s.}
 }
 \value{
-A blockr transform block of class \code{summary_table_block}.
+A blockr transform block of class \code{table_block}.
 }
 \description{
-Blockr transform block wrapping \code{\link[=summary_table]{summary_table()}}. Multi-variable
-descriptive summary where each \code{vars} entry becomes a row-section
-(one row per selected stat for numerics, one row per level for
-categoricals, one row per flag for logicals).
-}
-\details{
-Output is the wide annotated data frame \code{\link[=summary_table]{summary_table()}} produces
-(dotted identity columns \verb{.group<k>} / \verb{.group<k>_level}, \code{.variable} /
-\code{.variable_level} / \code{.variable_label}, \code{.label}, \code{.indent}, plus one
-formatted column per by-group level), consumable by
-\code{\link[=new_gt_table_block]{new_gt_table_block()}} or any renderer that understands the
-annotated-data-frame convention.
-
-The UI has two main fields (Summarize, Split by) and a gear popover
-with advanced options (stat picker pills, overall column, nest
-hierarchy, group-by sections, count-distinct-by).
-
-Spec: \verb{blockr.design/open/table-blocks/}.
+Superseded by \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "variables"}, which draws
+the same table and takes the same settings. This constructor translates
+its arguments (\code{vars}, \code{by}, \code{stats}, \code{add_overall}, ...) and returns a
+table block, so code and boards that use it keep working.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
-new_summary_table_block()
+new_summary_table_block(vars = c("AGE", "SEX"), by = "ARM")
 \dontshow{\}) # examplesIf}
 }

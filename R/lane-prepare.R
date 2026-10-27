@@ -1,9 +1,7 @@
 # Summarize table: shared row assembly ----------------------------------------
 #
-# Helpers shared by the bar path (summarize-table.R) and the summaries path
-# (lane-summaries.R). The single-mark preparers that briefly lived here are
-# gone: the column list is the one config model, and only the ranked bar
-# keeps a dedicated path.
+# Row assembly for the column list (lane-summaries.R), the one config model
+# of the groups layout.
 #
 # The rule for what belongs on this surface: one row is one category, and the
 # mark is a horizontal glyph on a shared linear domain confined to a cell

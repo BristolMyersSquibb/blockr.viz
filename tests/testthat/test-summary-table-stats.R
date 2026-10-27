@@ -156,7 +156,7 @@ test_that("block constructor normalizes legacy stats into state", {
       )
       # A widget edit with legacy-free keys lands filtered + canonical.
       session$setInputs(
-        summary_input = list(
+        `variables-summary_input` = list(
           vars = list("mpg"),
           stats = list("min_max", "n_pct", "nonsense")
         )

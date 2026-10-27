@@ -1,5 +1,5 @@
 # COLOR concept verification: `color` (identity tint) + `shadings` (cell
-# value-encoding rules) on the table, `color` card tint on the tile.
+# value-encoding rules) on the table, and the row strip of its cards look.
 # Package roots resolve from THIS script's location, so the same command runs
 # in the container (/workspace) and on a host clone. Port: command-line arg,
 # then BLOCKR_PORT, then the container's forwarded 3838.
@@ -68,24 +68,24 @@ board <- new_dock_board(
       shadings = list(list(mode = "diverging", cols = list())),
       block_name = "AGGREGATED: Color by ARM + diverging shading"),
 
-    # 3. Tile: grouped by region, Color by region (card accents via map
-    #    palette fallback... ARM bound; region -> board palette).
-    tile_g = new_tile_block(
-      value = "value", name = "metric", group = "region",
-      color = "region",
-      block_name = "Tile: Color by group (region)"),
+    # 3. Cards: one row per region, each row's strip in the region's
+    #    colour from the scale map.
+    cards_g = new_table_block(
+      layout = "groups", by = "region", look = "cards",
+      summaries = list(list(type = "simple", func = "sum", col = "value",
+                            show = "bar", name = "Value")),
+      block_name = "Cards: rows tinted by region"),
 
-    # 4. Tile: ungrouped KPI list, Color by the Name column.
-    tile_n = new_tile_block(
-      value = "value", name = "metric",
-      color = "metric", layout = "table",
-      block_name = "Tile: Color by Name (metric)")
+    # 4. Cards from the KPI frame as it is: one card per column.
+    cards_n = new_table_block(
+      rowname = "metric", look = "cards",
+      block_name = "Cards: records, one card per column")
   ),
   links = links(from = c("data", "data", "data", "kpis", "kpis"),
-                to = c("tbl", "legacy", "agg_tbl", "tile_g", "tile_n")),
+                to = c("tbl", "legacy", "agg_tbl", "cards_g", "cards_n")),
   layouts = list(
     tables = dock_layout("tbl", "legacy", "agg_tbl", name = "1. Tables"),
-    tiles  = dock_layout("tile_g", "tile_n", name = "2. Tiles")
+    cards  = dock_layout("cards_g", "cards_n", name = "2. Cards")
   ),
   options = new_board_options(new_scale_map_option(study_scale_map)),
   active = "tables"

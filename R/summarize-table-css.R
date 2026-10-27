@@ -492,14 +492,23 @@ summarize_table_css <- function() {
                         var(--blockr-summarize-tick)) !important;
   transition: background 0.1s ease;
 }
-/* Rows: the table style every output table uses (blockr.ui design system,
-   Tables): 30px, a 20px line with 5px above and below, no rules in the body.
+/* Rows: 26px, a 20px line with 3px above and below, no rules in the body,
+   as the records and variables layouts draw them (html_table_shared_css_fallback()).
    The 12px lanes sit inside the line, and the gaps between them separate
    the rows. The sparkline row below keeps its own taller cell. */
 .blockr-summarize-table tbody td {
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 3px;
+  padding-bottom: 3px;
   line-height: 20px;
+}
+/* The first column starts on the records layout's text edge (12px); a
+   nested table moves it to the headings' edge below. The header keeps the
+   records layout's space under its titles (7px and a 1px rule there). */
+.blockr-summarize-table tr > :first-child {
+  padding-left: 12px;
+}
+.blockr-summarize-table thead th {
+  padding-bottom: 8px;
 }
 .blockr-summarize-table tbody tr {
   border-bottom: 0;
@@ -550,11 +559,13 @@ summarize_table_css <- function() {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
-/* The summarize-table columns editor (the gear's Columns section), on the
-   design system's rows: one 42px row per column that reads as a sentence
-   (mark glyph, name, what it computes, badges), one column open at a time as
-   a card in place. The drag handle sits in the list's left padding and
-   shows on hover, as on every row list. */
+/* The gear's Columns section: one row per column of the table, on the
+   design system's rows (42px, 1px border, radius 8, 6px apart; in the tray
+   a field is the surface colour). A row is one line that says what the
+   column computes; a click opens its editor below that line, in the same
+   row, with its fields on the tray's grid. The drag handle and the remove
+   button show on hover or keyboard focus of their row; the handle sits in
+   the list's left padding. */
 .lane-summaries { display: flex; flex-direction: column; gap: 6px; width: 100%; padding-left: 14px; margin-left: -14px; }
 .lane-sum-row {
   position: relative;
@@ -565,14 +576,19 @@ summarize_table_css <- function() {
 }
 .lane-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
 .lane-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
+/* A row holds fields, so it takes a field's focus (blockr.ui .blockr-row). */
+.lane-sum-row:focus-within {
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+}
 .lane-sum-row.is-dragging { opacity: 0.5; }
 .lane-sum-row.is-drop { box-shadow: 0 -2px 0 var(--blockr-color-border-accent, #2563eb); }
 .lane-sum-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   height: 40px;
-  padding: 0 6px 0 12px;
+  padding: 0 6px 0 4px;
   cursor: pointer;
   min-width: 0;
   font-size: var(--blockr-font-size-base, 14px);
@@ -587,33 +603,42 @@ summarize_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
   cursor: grab;
   opacity: 0;
-  transition: opacity 0.12s;
+  transition: opacity var(--blockr-transition, 0.15s ease);
 }
-.lane-sum-row:hover .lane-sum-grip { opacity: 1; }
+.lane-sum-row:hover .lane-sum-grip,
+.lane-sum-row:focus-within .lane-sum-grip { opacity: 1; }
+/* The row's line is a button: the text starts on the field labels' edge. */
+.lane-sum-toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--blockr-radius-md, 6px);
+  background: transparent;
+  font: inherit;
+  color: var(--blockr-color-text-default, #111827);
+  text-align: left;
+  cursor: pointer;
+}
+.lane-sum-toggle:focus-visible { outline: var(--blockr-focus-outline, 2px solid #2563eb); outline-offset: 0; }
 .lane-sum-glyph { display: inline-flex; flex: none; width: 18px; justify-content: center; color: var(--blockr-color-text-muted, #6b7280); }
-.lane-sum-name { font-weight: 500; flex: none; white-space: nowrap; }
-.lane-sum-row.is-open .lane-sum-name { font-weight: 600; }
 .lane-sum-line {
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: var(--blockr-font-size-sm, 13px);
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.lane-sum-badge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  border-radius: 999px;
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  font-size: 11px;
-  font-weight: 500;
   color: var(--blockr-color-text-muted, #6b7280);
-  white-space: nowrap;
+  font-size: var(--blockr-font-size-sm, 13px);
+}
+.lane-sum-lead {
+  color: var(--blockr-color-text-default, #111827);
+  font-size: var(--blockr-font-size-base, 14px);
+  font-weight: var(--blockr-font-weight-medium, 500);
 }
 .lane-sum-rm, .lane-sum-code {
   flex: none;
@@ -629,9 +654,11 @@ summarize_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
 }
-.lane-sum-rm { opacity: 0; transition: opacity 0.12s; }
-.lane-sum-row:hover .lane-sum-rm, .lane-sum-rm:focus-visible { opacity: 1; }
-.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
+.lane-sum-rm { opacity: 0; transition: opacity var(--blockr-transition, 0.15s ease); }
+.lane-sum-row:hover .lane-sum-rm,
+.lane-sum-row:focus-within .lane-sum-rm { opacity: 1; }
+.lane-sum-rm:hover:not(:disabled) { color: var(--blockr-color-text-danger, #b91c1c); }
+.lane-sum-rm:disabled { color: var(--blockr-color-text-disabled, #9ca3af); cursor: default; }
 .lane-sum-code:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); color: var(--blockr-color-text-default, #111827); }
 .lane-sum-code[aria-pressed='true'] {
   color: var(--blockr-color-text-accent, #2563eb);
@@ -639,90 +666,55 @@ summarize_table_css <- function() {
   border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
 }
 .lane-sum-code:disabled { opacity: 0.4; cursor: default; background: transparent; }
+/* A fold: right when closed, down when open. */
 .lane-sum-chev { flex: none; display: inline-flex; width: 26px; justify-content: center; color: var(--blockr-color-text-muted, #6b7280); transform: rotate(-90deg); transition: transform var(--blockr-transition, 0.15s ease); }
+.lane-sum-head:hover .lane-sum-chev { color: var(--blockr-color-text-default, #111827); }
 .lane-sum-row.is-open .lane-sum-chev { transform: none; }
+/* The open row's fields on the tray's grid: the columns the section's
+   container query sets (chart.css, --dd-cols / --dd-s2), 16px between rows
+   and 12px between columns. A list or code field takes the whole row. */
 .lane-sum-body {
-  padding: 4px 12px 16px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(var(--dd-cols, 2), minmax(0, 1fr));
   gap: 16px 12px;
+  align-items: end;
+  padding: 6px 10px 14px;
 }
-.lane-sum-ctl { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
-.lane-sum-ctl > .blockr-label { font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
-.lane-sum-ctl-wide { flex: 1 1 100%; }
-/* The optional mappings (colour, facet, percent): quiet add buttons on the
-   controls' line; an added mapping carries its remove button in the label. */
-.lane-sum-addmaps { flex-direction: row; gap: 6px; align-self: flex-end; min-width: 0; padding-bottom: 8px; }
-.lane-sum-map-rm {
-  border: 0;
-  background: none;
-  padding: 0 0 0 4px;
-  font-size: 0.65rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.lane-sum-map-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
-.lane-sum-name-input {
-  height: var(--blockr-control-h, 42px);
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: var(--blockr-radius-lg, 8px);
-  padding: 0 12px;
-  font: inherit;
-  font-size: var(--blockr-font-size-base, 14px);
-  background: var(--blockr-color-bg-field, #f9fafb);
-}
-.lane-sum-name-input:focus { outline: 0; border-color: var(--blockr-color-border-accent, #2563eb); box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12)); background: var(--blockr-color-bg-surface, #fff); }
-.lane-sum-seg {
-  display: inline-grid;
-  grid-auto-flow: column;
-  height: var(--blockr-control-h, 42px);
-  padding: 3px;
-  gap: 3px;
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-color-bg-field, #f9fafb);
-}
-.lane-sum-seg-btn {
-  border: 1px solid transparent;
-  border-radius: var(--blockr-radius-md, 6px);
-  background: transparent;
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: var(--blockr-font-size-base, 14px);
-  padding: 0 12px;
-  cursor: pointer;
-}
-.lane-sum-seg-btn:hover { color: var(--blockr-color-text-default, #111827); background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); }
-.lane-sum-seg-btn.is-on {
-  color: var(--blockr-color-text-accent, #2563eb);
-  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
-  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
-  font-weight: 500;
-}
-/* Display tiles: outside the engine's type grid the tiles shrink to their
-   caption (bar collapsed to 30px), so give them the grid's footprint. */
-.lane-sum-tiles { display: flex; gap: 5px; }
-.lane-sum-tiles .dd-type-tile { min-width: 64px; }
-.lane-sum-addrow { display: flex; align-items: center; margin-top: 2px; }
-.lane-sum-addcol {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 8px;
-  border: 1px solid transparent;
+.lane-sum-ctl { grid-column: span var(--dd-s2, 2); min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.lane-sum-ctl-wide, .lane-sum-offers { grid-column: 1 / -1; }
+.lane-sum-ctl .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400; color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-ctl .dd-pill-wrap > .blockr-segmented { display: flex; width: 100%; min-width: 0; }
+.lane-sum-ctl .dd-pill-wrap > .blockr-segmented > .blockr-segmented__seg { flex: 1 1 0; min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; }
+.lane-sum-ctl .blockr-text-input { width: 100%; box-sizing: border-box; }
+/* An unset mapping of the column, offered as the sentence offers a
+   setting it does not name: a small dashed button that turns accent on
+   hover and leaves once the mapping is set. */
+.lane-sum-offers { display: flex; flex-wrap: wrap; gap: 6px; }
+.lane-sum-offer {
+  height: 22px;
+  padding: 0 6px;
+  border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
   border-radius: var(--blockr-radius-sm, 4px);
   background: transparent;
-  color: var(--blockr-color-text-muted, #6b7280);
+  font: inherit;
   font-size: var(--blockr-font-size-xs, 12px);
-  font-weight: 500;
+  color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
+  white-space: nowrap;
 }
-.lane-sum-addcol:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06)); color: var(--blockr-color-text-default, #111827); }
-.lane-sum-add-types { display: flex; flex-wrap: wrap; gap: 5px; }
-/* A custom column's function: the prepare script's editor look, an Apply
-   button under it (code commits on its own button, design system). */
+.lane-sum-offer:hover:not(:disabled),
+.lane-sum-offer:focus-visible {
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  color: var(--blockr-color-text-accent, #2563eb);
+  outline: none;
+}
+.lane-sum-offer:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Add column, under the list: blockr.ui's add row, its text on the rows'
+   text edge. */
+.lane-sum-addrow { justify-content: flex-start; }
+.lane-sum-addcol { margin-left: 0; border: 0; background: transparent; font-family: inherit; color: inherit; }
+/* A custom column's function: the prepare script's editor look, Apply
+   under it (code commits on its own button). */
 .lane-sum-fn {
   width: 100%;
   font-family: var(--blockr-font-mono, ui-monospace, monospace);
@@ -735,38 +727,9 @@ summarize_table_css <- function() {
   gap: 12px;
   margin-top: 6px;
 }
-.lane-sum-apply {
-  flex: none;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--blockr-color-text-accent, #2563eb);
-  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
-  border: 1px solid var(--blockr-color-border-accent-subtle, #bfdbfe);
-}
-.lane-sum-apply:hover { border-color: var(--blockr-color-border-accent, #2563eb); }
-.lane-sum-add {
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: 4px;
-  background: var(--blockr-color-bg-surface, #ffffff);
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 0.76rem;
-  padding: 3px 8px;
-  min-width: 58px;
-  cursor: pointer;
-}
-.lane-sum-add:hover {
-  border-color: var(--blockr-color-border-accent, #2563eb);
-  color: var(--blockr-color-text-accent, #2563eb);
-}
-.lane-sum-hint {
-  font-size: 0.74rem;
-  color: var(--blockr-color-text-muted, #6b7280);
-  margin-top: 5px;
-}
+/* The Table section: the groups layout's One row per follows the tiles on
+   a row of its own, the whole row as a select with tags takes. */
+.blockr-settings.dd-popover .dd-section--layout > .dd-form-row { grid-column: 1 / -1; }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
    per page, positioned by summarize-table.js. It follows the pointer, so it is
@@ -836,16 +799,16 @@ summarize_table_css <- function() {
   border: 0;
   background: transparent;
   padding: 0;
-  margin-right: 5px;
-  margin-left: -18px;
+  margin-right: 9px;
+  margin-left: -21px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   vertical-align: baseline;
 }
 .blockr-summarize-container .blockr-chev {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   flex: none;
   color: var(--blockr-color-text-muted, #6b7280);
   transition: transform 0.2s ease, color 0.15s ease;
@@ -863,8 +826,8 @@ summarize_table_css <- function() {
 .blockr-summarize-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
-  gap: 5px;
-  margin-left: -18px;
+  gap: 9px;
+  margin-left: -21px;
 }
 .blockr-summarize-container .dt-foldall {
   display: inline-flex;
@@ -888,18 +851,44 @@ summarize_table_css <- function() {
   border-radius: 2px;
 }
 
-/* Hierarchy. */
-/* A nested table's chevron hangs into the label cell's left padding
-   (margin-left: -18px). The shared 16px left it 2px outside the cell, under
-   the 3px bar a clicked row draws at the cell edge. 24px leaves a gap; the
-   header moves with it so the labels stay under it, and the children's
-   inline 48px keeps them 24px deeper. */
+/* Hierarchy, drawn as the records and variables layouts draw their
+   section headings (R/html-table.R). Every label starts on one 24px edge,
+   the 12px chevron and 9px gap hanging to the left of it (margin-left:
+   -21px). A heading has 11px above it and 3px below; the last row of a
+   group has 7px below it. */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
-.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header {
+.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
+.blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
   padding-left: 24px;
 }
-.blockr-summarize-table tr.is-child td.blockr-summarize-label-col {
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-parent > td {
+  padding-top: 11px;
+  padding-bottom: 3px;
+}
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-child:has(+ tr.is-parent) > td,
+.blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-child:last-child > td {
+  padding-bottom: 7px;
+}
+/* A compact row is its 24px tile plus 1px above and below; the last row of
+   a group adds the same 4px. Its header and headings stay on one line: the
+   label column is as wide as the subject ids, and a heading row has no
+   tiles to make room for a wrapped name. */
+.blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:has(+ tr.is-parent) > td,
+.blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:last-child > td {
+  padding-bottom: 5px;
+}
+/* The header's grouping names read as the records layout's \"All\" next to
+   the fold-all chevron: small, normal weight, muted (html-table.R
+   .dt-foldall). */
+.blockr-summarize-table[data-summarize-nested='1'] thead th.blockr-stub-header .blockr-col-name {
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-muted, #6b7280);
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-stub-header .blockr-col-name,
+.blockr-summarize-table[data-summarize-compact='1'] tr.is-parent td.blockr-summarize-label-col {
+  white-space: nowrap;
 }
 .blockr-summarize-table tr.is-child.collapsed-hidden { display: none; }
 .blockr-summarize-table tr.is-parent .blockr-summarize-label {
@@ -914,6 +903,11 @@ summarize_table_css <- function() {
 .blockr-summarize-table tr.is-pick { cursor: pointer; }
 .blockr-summarize-table tr.is-on {
   background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
+}
+/* A cell click claims the row and the cell column: that cell, one step
+   stronger than its row. */
+.blockr-summarize-table tr.is-on td.is-on-cell {
+  background: color-mix(in srgb, var(--blockr-summarize-fill) 22%, transparent);
 }
 /* Transient drill (a ctrl_target is set): the row is lit, held, released --
    there is nothing to un-set. A LAYER whose opacity fades, not the row's own
@@ -1001,5 +995,77 @@ summarize_table_css <- function() {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .blockr-summarize-note { color: var(--blockr-color-text-warning, #b45309); }
+/* The tile: a square mark with its value, painted by the cell's level. An
+   empty cell is truly empty. */
+.blockr-summarize-table td.blockr-summarize-tile-col {
+  width: 28px;
+  min-width: 28px;
+  padding: 1px;
+  text-align: center;
+}
+.blockr-summarize-tile {
+  display: block;
+  min-width: 24px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: var(--blockr-mark-radius, 3px);
+  text-align: center;
+  font-size: var(--blockr-mark-font-size, 0.7rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+/* Compact: a column is as wide as its cells, so the titles turn on their
+   side, read bottom-up, and a long term ends in an ellipsis. */
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header {
+  vertical-align: bottom;
+  height: 150px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0 2px 6px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] tbody td {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .dt-th-namerow {
+  display: block;
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-name {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 144px;
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--blockr-font-size-xs, 0.7rem);
+}
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .dt-th-subrow,
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-sort-icon,
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-label {
+  display: none;
+}
+/* A compact matrix is as wide as its cells and starts at the left. The
+   table drops the panel width, and every cell its percentage width (the 1%
+   on the label cells stretches an auto-width table to the panel too), as
+   for a bar_width preset. A tile column is then as wide as its header, and
+   the tile is a square in it. */
+.blockr-summarize-table[data-summarize-compact='1'] { width: auto; }
+.blockr-summarize-table[data-summarize-compact='1'] th,
+.blockr-summarize-table[data-summarize-compact='1'] td { width: auto; }
+.blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header,
+.blockr-summarize-table[data-summarize-compact='1'] td.blockr-summarize-tile-col {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+}
+.blockr-summarize-table[data-summarize-compact='1'] .blockr-summarize-tile {
+  width: 24px;
+  min-width: 0;
+  height: 24px;
+  line-height: 24px;
+  margin: 0 auto;
+}
 "
 }

@@ -165,23 +165,32 @@ test_that("group claims sit beside ordinary ones", {
 # --- other blocks ------------------------------------------------------------
 
 test_that("heatmap rows repeat per group under an overlap definition", {
+  # The heatmap is a tile table now: one row per subject under each group
+  # it belongs to.
   d <- grouped_df()
   d$AEDECOD <- "Headache"
-  p <- heatmap_prep(d, "USUBJID", "AEDECOD", group = "Group")
-  expect_equal(length(p$rows), 8)
-  expect_equal(unname(vapply(p$groups, `[[`, 1L, "n")), c(4, 2, 2))
-  expect_equal(p$rows[p$group_of == "High"], c("s05", "s06"))
+  p <- summarize_prepare(
+    d, by = c("Group", "USUBJID"),
+    summaries = list(list(type = "simple", func = "count", show = "tile",
+                          facet = "AEDECOD"))
+  )
+  expect_null(p$err)
+  leaf <- p$rows[p$rows$.level > 0L, ]
+  expect_equal(nrow(leaf), 8)
+  expect_equal(sort(leaf$.label[leaf$.parent == "High"]), c("s05", "s06"))
 })
 
 test_that("summarize table counts per group, percent over subjects", {
   d <- grouped_df()
-  p <- summarize_prepare(d, group = "Group", func = "count",
-                         cols = c("n", "pct"))
+  p <- summarize_prepare(d, by = "Group", summaries = list(
+    list(type = "simple", func = "count_distinct", col = "USUBJID",
+         show = "bar")
+  ))
   expect_null(p$err)
   n <- stats::setNames(p$rows$.v, p$rows$.label)
   expect_equal(unname(n[c("All", "Pbo", "High")]), c(4, 2, 2))
   # The percentage base is the six subjects, not the eight expanded rows.
-  expect_equal(p$denoms[["all"]], 6)
+  expect_equal(p$plan[[1L]]$denom, 6)
 })
 
 # --- colours -----------------------------------------------------------------

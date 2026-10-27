@@ -72,17 +72,16 @@ for (const [name, cfg] of Object.entries(OUTLINES)) {
   });
 }
 
-test('outline: Titles fold opened, Prepare script fold closed', () => {
+test('outline: Titles opened, then Prepare script', () => {
   const c = I.open({ ...R, chart_type: 'bar', ...AE, title: 'AEs by {ARM}', subtitle: null,
                      caption: '', title_resolved: 'AEs by Placebo',
                      subtitle_resolved: 'Count of rows by Reported Term',
                      script: 'data <- data\n# two lines' });
   try {
     c.block.gearBtn.click();
-    const folds = () => Array.from(c.block.popoverEl.querySelectorAll('.dd-section-title--fold'));
     const before = I.gearOutline(c.block);
-    folds().find((f) => f.textContent.includes('Titles')).click();
-    folds().find((f) => f.textContent.includes('Prepare script')).click();
+    I.openSection(c.block, 'Titles');
+    I.openSection(c.block, 'Prepare script');
     const m = c.mark();
     const after = I.gearOutline(c.block);
     I.snap('gear-folds', { before, after, sent: c.since(m).inputs });
@@ -304,8 +303,7 @@ scenario('gantt', { ...GANTT }, [
 
 scenario('titles', { chart_type: 'bar', ...AE, title_resolved: 'Adverse events' }, [
   gearOpen(),
-  ['open the Titles fold', (c) => Array.from(c.block.popoverEl
-    .querySelectorAll('.dd-section-title--fold')).find((f) => f.textContent.includes('Titles')).click()],
+  ['open Titles', (c) => I.openSection(c.block, 'Titles')],
   ['type title = "My title" + Enter', (c) => I.typeText(c.env,
     c.block.popoverEl.querySelector('.dd-title-title input.blockr-text-input'), 'My title')],
   ['type caption = "N = {n}" + Enter', (c) => I.typeText(c.env,

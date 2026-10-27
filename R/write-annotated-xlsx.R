@@ -34,12 +34,14 @@
 #' @param caption Optional caption / footnote line, written italic below the
 #'   table.
 #' @param sheet Worksheet name.
-#' @param digits Optional number of decimals to SHOW. Numeric data columns
-#'   that hold fractions get the cell number format `"0.00"` (for
-#'   `digits = 2`): the cell keeps the full value, so Excel computes on it,
-#'   and displays it rounded. Whole-number columns keep the general format.
-#'   `NULL` (default) writes every number in the general format. The table
-#'   block passes its own `digits` here.
+#' @param digits Optional number format, the table block's `format`. A number
+#'   of decimals gives every numeric data column that cell number format
+#'   (`"0.00"` for `digits = 2`, so 3 shows as 3.00): the cell keeps the full
+#'   value, so Excel computes on it, and displays it rounded. `"number"`
+#'   shows two decimals on columns that hold fractions and leaves
+#'   whole-number columns in the general format. `"compact"` (1.2K, 3.4M) and
+#'   `"percent"` (12.3%) format every numeric column. `NULL` (default) writes
+#'   every number in the general format.
 #'
 #' @return `file`, invisibly.
 #' @seealso [as_annotated_df()], [new_table_block()]
@@ -265,15 +267,19 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     # Number format for `digits`: one style per fractional column, stacked on
     # the alignment above. Whole-number columns (counts) keep the general
     # format, which shows 3 as 3 where "0.00" would show 3.00 -- the screen
-    # drops trailing zeros too.
+    # drops trailing zeros too. A fixed number of decimals, "compact" and
+    # "percent" format every numeric column, whole numbers included, as the
+    # screen does (3 shows as 3.00 with 2 decimals).
     num_fmt <- xlsx_num_format(digits)
+    every <- identical(digits, "compact") || identical(digits, "percent") ||
+      (is.numeric(digits) && length(digits) == 1L)
     if (!is.null(num_fmt)) {
       fmt_style <- openxlsx::createStyle(numFmt = num_fmt)
       for (j in seq_len(n_data)) {
         v <- df[[data_cols[j]]]
         if (!is.numeric(v)) next
         v <- v[is.finite(v)]
-        if (!length(v) || all(v == round(v))) next
+        if (!length(v) || (!every && all(v == round(v)))) next
         openxlsx::addStyle(wb, sheet, fmt_style, rows = data_xl, cols = j + 1L,
                            stack = TRUE)
       }
@@ -330,8 +336,16 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
 }
 
 # The Excel number format that shows `digits` decimals ("0", "0.0", "0.00",
-# ...), or NULL for none (the general format).
+# ...), or NULL for none (the general format). `digits` may also be a table
+# number format (table_format_state()): "number" shows two decimals,
+# "percent" one decimal with "%", "compact" thousands and millions as 1.2K
+# and 3.4M (Excel's conditions stop at two, so a billion reads 1000.0M).
 xlsx_num_format <- function(digits) {
+  if (identical(digits, "percent")) return("0.0%")
+  if (identical(digits, "compact")) {
+    return('[>=1000000]0.0,,"M";[>=1000]0.0,"K";General')
+  }
+  if (identical(digits, "number")) digits <- 2L
   digits <- suppressWarnings(as.integer(digits))
   if (length(digits) != 1L || is.na(digits) || digits < 0L) return(NULL)
   if (digits == 0L) "0" else paste0("0.", strrep("0", digits))
