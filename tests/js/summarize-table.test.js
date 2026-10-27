@@ -25,7 +25,7 @@ function open(name, { deliver = true } = {}) {
   win.eval(h.PRELUDE);
   win.document.body.innerHTML = c.chrome;
   win.eval(h.iconsScript());
-  for (const f of FILES) win.eval(h.source(f));
+  for (const f of FILES) h.run(win, f);
   const doc = win.document;
   const root = doc.querySelector('[data-summarize-elem-id]');
   const env = {

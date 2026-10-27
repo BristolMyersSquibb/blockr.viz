@@ -1,12 +1,23 @@
 {
   "name": "blockr.viz",
   "private": true,
-  "description": "Test harness for the chart JavaScript in inst/js (see tests/js/).",
+  "description": "Tests and checks for the JavaScript and CSS in inst/ (see tests/js/ and tools/).",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js"
+    "lint": "eslint inst/js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js",
+    "coverage": "c8 --all --src inst/js --include 'inst/js/**/*.js' --exclude 'inst/js/snapdom.js' --exclude 'inst/js/spec/**' --reporter text --reporter json-summary --report-dir coverage/js --check-coverage --lines 90 npm test"
   },
   "devDependencies": {
-    "happy-dom": "^20.11.2"
+    "acorn": "8.15.0",
+    "acorn-walk": "8.3.4",
+    "c8": "10.1.3",
+    "eslint": "10.12.0",
+    "globals": "16.4.0",
+    "happy-dom": "20.14.5",
+    "postcss": "8.5.6",
+    "postcss-selector-parser": "7.1.0",
+    "typescript": "6.0.3"
   }
 }

@@ -95,7 +95,10 @@ const only = process.env.SCALING_ONLY;
 
 for (const cs of CASES) {
   if (only && cs.name !== only) continue;
-  const opts = skip ? { skip: 'SKIP_SCALING=1' } : {};
+  // Timings mean nothing under coverage instrumentation, which also runs
+  // these cases out of heap.
+  const opts = skip ? { skip: 'SKIP_SCALING=1' }
+    : process.env.NODE_V8_COVERAGE ? { skip: 'under coverage' } : {};
   test(`scaling: ${cs.name}`, opts, async (t) => {
     const env = h.createEnv({ record: 'none' });
     try {
