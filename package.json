@@ -5,10 +5,10 @@
   "type": "commonjs",
   "scripts": {
     "lint": "eslint inst/js",
-    "lint:core": "eslint inst/js/core",
+    "lint:core": "eslint inst/js/core inst/js/table",
     "typecheck": "tsc -p tsconfig.json",
     "typecheck:core": "tsc -p tsconfig.core.json",
-    "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js tests/js/core/*.test.js",
+    "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js tests/js/core/*.test.js tests/js/table/*.test.js",
     "coverage": "c8 --all --src inst/js --include 'inst/js/**/*.js' --exclude 'inst/js/snapdom.js' --exclude 'inst/js/spec/**' --reporter text --reporter json-summary --report-dir coverage/js --check-coverage --lines 90 npm test"
   },
   "devDependencies": {

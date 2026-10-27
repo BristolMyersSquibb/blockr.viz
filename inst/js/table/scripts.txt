@@ -1,0 +1,10 @@
+# The table block's scripts, in load order, after the core scripts and the
+# generated spec. Read by the table's html dependency and by
+# tests/js/table/load.js.
+html.js
+dom.js
+drill.js
+chrome.js
+cards.js
+records.js
+view.js
