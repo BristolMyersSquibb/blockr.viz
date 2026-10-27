@@ -19,7 +19,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   // How long a click guards against the brush clear that follows it, and
   // how long a line click waits for a second click.
@@ -68,7 +69,7 @@
     zr.on('dblclick', () => {
       if (!NS.isLineType(view.config.chart_type)) return;
       if (view._lineClickTimer) {
-        clearTimeout(view._lineClickTimer);
+        view._lineClickTimer();
         view._lineClickTimer = null;
       }
       chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
@@ -84,9 +85,9 @@
       if (slot.resetBtn) slot.resetBtn.hidden = !slot.zoom;
     });
     if (slot.resetBtn) {
-      slot.resetBtn.onclick = () => {
+      view.scope.on(slot.resetBtn, 'click', () => {
         if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
-      };
+      });
     }
 
     chart.on('click', (/** @type {any} */ params) => {
@@ -96,14 +97,15 @@
       // A click in brush mode also fires a brush clear; ignore it for a
       // moment.
       view._suppressBrushClear = true;
-      setTimeout(() => { view._suppressBrushClear = false; }, isLine ? LINE_GUARD_MS : GUARD_MS);
+      view.scope.timeout(() => { view._suppressBrushClear = false; },
+                         isLine ? LINE_GUARD_MS : GUARD_MS);
       if (isLine) {
         // The hovered line, taken at the click, before the cursor drifts.
         const f = slot.focus;
         const focusName = (f && slot.focusSi != null && f.series[slot.focusSi])
           ? f.series[slot.focusSi].name : undefined;
-        if (view._lineClickTimer) clearTimeout(view._lineClickTimer);
-        view._lineClickTimer = setTimeout(() => {
+        if (view._lineClickTimer) view._lineClickTimer();
+        view._lineClickTimer = view.scope.timeout(() => {
           view._lineClickTimer = null;
           view._individualClick(slot, params, focusName);
         }, LINE_HOLD_MS);
@@ -185,9 +187,7 @@
 
     /** @this {any} @param {any} range @param {Record<string, any[]> | null} filters */
     _sendRangeFilter(range, filters) {
-      if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', NS.keys.rangeMessage(range, filters),
-                          { priority: 'event' });
+      this._sendSelection(NS.keys.rangeSelection(range, filters));
     },
 
     // What the brush caught (D9): an explicit drill column's values in the
@@ -221,11 +221,11 @@
     _brushCleared() {
       if (this._suppressBrushClear) return;
       if (NS.drillState(this.config) === 'off') return;
-      const type = this._clearType();
+
       this._filter = null;
       this._hasBrushFilter = false;
       this._refreshSelection();
-      this._sendClearFilter(type);
+      this._sendSelection(null);
     },
 
     // -- Before and after a panel's option is set ------------------------------

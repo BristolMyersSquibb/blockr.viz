@@ -1,29 +1,26 @@
 {
  "config": {
-  "value": ".count",
-  "func": "count",
-  "bar_mode": "stacked",
-  "value_labels": "off",
-  "line_width_mult": 1,
-  "dot_size_mult": 1,
+  "position": "stack",
+  "value_labels": false,
+  "line_width": 1,
+  "point_size": 1,
   "connect": "monotone",
-  "value_lines": [],
-  "x_lines": [],
   "smoother": "none",
-  "identity_line": "off",
+  "identity_line": false,
   "box_points": "none",
-  "connect_centers": "off",
-  "count_on": "off",
-  "na_group": "level",
+  "connect_centers": false,
+  "show_n": "none",
+  "missing": "level",
   "facet_scales": "fixed",
-  "download": "off",
-  "waterfall_totals": [],
-  "filter_values": [],
-  "chart_type": "bar",
-  "group": "AETERM",
-  "color": "AESEV",
-  "drill": ""
+  "download": false,
+  "type": "bar",
+  "y": "AETERM",
+  "x": null,
+  "orientation": "horizontal",
+  "func": "count",
+  "color": "AESEV"
  },
+ "derived": null,
  "resend": null,
  "error": null,
  "dom": {
@@ -595,13 +592,5 @@
   }
  ],
  "disposed": 0,
- "inputs": [
-  {
-   "name": "block-drilldown_block_ready",
-   "value": "[time]",
-   "opts": {
-    "priority": "event"
-   }
-  }
- ]
+ "inputs": []
 }

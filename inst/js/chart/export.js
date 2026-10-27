@@ -11,7 +11,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   /** @type {any} */
   let measureCtx = null;
@@ -46,15 +47,15 @@
         const cs = el ? getComputedStyle(el) : null;
         return (cs && cs.color) || fb;
       };
-      const cfg = this.config || {};
+      const tx = this._titleText || {};
       const blocksTop = [
-        { text: cfg.title_resolved || '', font: fontOf(this.titleEl, '600 15px'),
+        { text: tx.title || '', font: fontOf(this.titleEl, '600 15px'),
           color: colorOf(this.titleEl, '#1f2937') },
-        { text: cfg.subtitle_resolved || '', font: fontOf(this.subtitleEl, '13px'),
+        { text: tx.subtitle || '', font: fontOf(this.subtitleEl, '13px'),
           color: colorOf(this.subtitleEl, '#6b7280') }
       ].filter((b) => b.text);
-      const capBlock = (cfg.caption_resolved || '') && {
-        text: cfg.caption_resolved, font: fontOf(this.captionEl, 'italic 11px'),
+      const capBlock = (tx.caption || '') && {
+        text: tx.caption, font: fontOf(this.captionEl, 'italic 11px'),
         color: colorOf(this.captionEl, '#6b7280')
       };
 
@@ -200,10 +201,7 @@
           return;
         }
         if (send) {
-          if (window.Shiny && Shiny.setInputValue) {
-            Shiny.setInputValue(this.el.id + '_capture', { png: url, width: W, height: H },
-                                { priority: 'event' });
-          }
+          V.util.send(this.el.id, 'capture', { png: url, width: W, height: H });
           return;
         }
         const a = document.createElement('a');
@@ -216,84 +214,60 @@
 
   // -- Capture service --------------------------------------------------------
   //
-  // R asks for a picture of a block at a given box; the browser draws a fresh
-  // chart in a host parked off screen (a hidden element measures zero) and
-  // answers once. One host per request, removed however the request ends
-  // (B3).
-
-  let captureSeq = 0;
-  /** @param {number} w @param {number} h */
-  const captureHost = (w, h) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'blockr-capture-host';
-    wrap.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + w + 'px;height:' + h + 'px;';
-    const el = /** @type {any} */ (document.createElement('div'));
-    el.id = 'blockr-capture-chart-' + (++captureSeq);
-    el.className = 'drilldown-chart-container';
-    el.style.cssText = 'width:' + w + 'px;height:' + h + 'px;';
-    wrap.appendChild(el);
-    document.body.appendChild(wrap);
-    el._wrap = wrap;
-    return el;
-  };
+  // R asks for a picture of a block at a given box (`blockr-viz:capture`,
+  // the payload plus `req`, `width`, `height`); a fresh view draws it in a
+  // host core/capture.js parks off screen, and the reply goes out once.
 
   // ECharts animates in for about a second after a draw; reading the
   // panels the moment they exist captures a blank first frame.
   const CAPTURE_SETTLE_MS = 1400;
-  /** @param {any} inst @param {() => void} then @param {number} [tries] */
-  const whenDrawn = (inst, then, tries) => {
-    const left = tries === undefined ? 50 : tries;
-    const ready = (inst._slots || []).some((/** @type {any} */ s) =>
+  let captureSeq = 0;
+
+  /** Wait until a panel has a height, then let the animation settle.
+   * @param {any} view @param {VizScope} scope @param {() => void} then @param {number} left */
+  const whenDrawn = (view, scope, then, left) => {
+    const ready = (view._slots || []).some((/** @type {any} */ s) =>
       s && s.chart && s.chartDiv && s.chartDiv.clientHeight > 40);
-    if (ready || left <= 0) {
-      setTimeout(then, CAPTURE_SETTLE_MS);
-      return;
-    }
-    setTimeout(() => whenDrawn(inst, then, left - 1), 100);
+    if (ready || left <= 0) scope.timeout(then, CAPTURE_SETTLE_MS);
+    else scope.timeout(() => whenDrawn(view, scope, then, left - 1), 100);
   };
 
-  /** The drilldown-capture handler. @param {new (el: any) => any} View */
-  const captureHandler = (View) => (/** @type {any} */ msg) => {
-    /** @type {any} */
-    let el = null;
-    const drop = () => {
-      if (!el) return;
-      if (el._block) el._block.dispose();
-      if (el._wrap) el._wrap.remove();
-    };
-    // Exactly one reply per request, whatever happens.
-    let replied = false;
-    const reply = (/** @type {any} */ payload) => {
-      if (replied) return;
-      replied = true;
-      drop();
-      if (window.Shiny && Shiny.setInputValue) {
-        Shiny.setInputValue('blockr_viz_capture_result',
-                            Object.assign({ req: msg.req }, payload), { priority: 'event' });
-      }
-    };
-    setTimeout(() => reply({ error: 'the chart did not compose in time' }), 20000);
-    try {
-      el = captureHost(msg.width, msg.height);
-      el._block = new View(el);
-      el._block.setData(msg.columns, msg.data, msg.config, msg.arguments, msg.data_rev);
-    } catch (e) {
-      reply({ error: String(e) });
-      return;
-    }
-    whenDrawn(el._block, () => {
-      try {
-        el._block._downloadImage(false, {
-          pixelRatio: msg.ratio,
-          done: (/** @type {string} */ url, /** @type {number} */ w, /** @type {number} */ h) =>
-            reply({ png: url, width: w, height: h })
-        });
-      } catch (e) {
-        reply({ error: String(e) });
-      }
+  /** @param {VizViewClass} View @param {any} msg @returns {Promise<VizPicture>} */
+  const capturePicture = (View, msg) => {
+    const scope = new V.Scope();
+    const p = V.capture({
+      width: msg.width, height: msg.height,
+      draw: (/** @type {HTMLElement} */ host) => new Promise((resolve, reject) => {
+        const el = host.appendChild(document.createElement('div'));
+        el.id = 'blockr-capture-chart-' + (++captureSeq);
+        el.style.cssText = 'width:' + msg.width + 'px;height:' + msg.height + 'px;';
+        const view = scope.own(new View(el, scope));
+        view.render(msg);
+        whenDrawn(view, scope, () => {
+          try {
+            /** @type {any} */ (view)._downloadImage(false, {
+              pixelRatio: msg.ratio,
+              done: (/** @type {string} */ png, /** @type {number} */ width,
+                     /** @type {number} */ height) => resolve({ png, width, height })
+            });
+          } catch (e) {
+            reject(e);
+          }
+        }, 50);
+      })
     });
+    return p.finally(() => scope.dispose());
+  };
+
+  /** Register the capture service's message for the chart's views.
+   * @param {VizViewClass} View */
+  const registerCapture = (View) => {
+    const shiny = root.Shiny;
+    if (!shiny || typeof shiny.addCustomMessageHandler !== 'function') return;
+    shiny.addCustomMessageHandler('blockr-viz:capture', (/** @type {any} */ msg) =>
+      V.captureReply(msg.req, capturePicture(View, msg)));
   };
 
   NS.exporter = exporter;
-  NS.captureHandler = captureHandler;
+  NS.registerCapture = registerCapture;
 })();

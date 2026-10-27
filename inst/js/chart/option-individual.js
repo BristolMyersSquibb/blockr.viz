@@ -19,7 +19,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -225,7 +226,7 @@
    * @param {any} m @param {any} panel @param {any} look @param {number} width
    */
   const panelOption = (m, panel, look, width) => {
-    const { cfg, ink, measure, theme } = look;
+    const { cfg, ink, theme } = look;
     // This panel's log domains, null on a linear axis.
     const lx = (look.logDom && look.logDom.x) || null;
     const ly = (look.logDom && look.logDom.y) || null;

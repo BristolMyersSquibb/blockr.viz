@@ -17,7 +17,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
@@ -31,7 +32,7 @@
   // boxes of one group into one slot.
   const BOX_CAT_SEP = '\u0000';
 
-  const DAgg = () => /** @type {any} */ (B.DrilldownAgg || root.DrilldownAgg);
+  const DAgg = () => NS.agg;
 
   /**
    * {center, lo, hi} of a statistic over ascending values, or null for none.
@@ -41,6 +42,20 @@
    * @param {number[]} vals @param {string} stat
    * @returns {{center: number, lo: number, hi: number} | null}
    */
+  const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
+    2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
+    2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
+  /** The 97.5% quantile of Student's t, as R's qt(0.975, df): a table to 30
+   * degrees of freedom, the Cornish-Fisher series past it.
+   * @param {number} df */
+  const t975 = (df) => {
+    if (df <= T975.length) return T975[Math.max(1, Math.round(df)) - 1];
+    const z = 1.959964;
+    const z3 = z * z * z, z5 = z3 * z * z, z7 = z5 * z * z;
+    return z + (z3 + z) / (4 * df) + (5 * z5 + 16 * z3 + 3 * z) / (96 * df * df) +
+      (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
+  };
+
   const summarizeStat = (vals, stat) => {
     const n = vals.length;
     if (n === 0) return null;
@@ -57,6 +72,10 @@
       case 'mean_sd': return { center: mean, lo: mean - sd, hi: mean + sd };
       case 'mean_2sd': return { center: mean, lo: mean - 2 * sd, hi: mean + 2 * sd };
       case 'mean_se': return { center: mean, lo: mean - se, hi: mean + se };
+      case 'mean_ci95': {
+        const h = n > 1 ? t975(n - 1) * se : 0;
+        return { center: mean, lo: mean - h, hi: mean + h };
+      }
       case 'p5_p95': return { center: q(0.5), lo: q(0.05), hi: q(0.95) };
       case 'p10_p90': return { center: q(0.5), lo: q(0.1), hi: q(0.9) };
       case 'min_max': return { center: q(0.5), lo: vals[0], hi: vals[n - 1] };

@@ -1,27 +1,25 @@
 {
  "config": {
-  "value": ".count",
-  "func": "count",
-  "bar_mode": "stacked",
-  "value_labels": "off",
-  "line_width_mult": 1,
-  "dot_size_mult": 1,
+  "position": "stack",
+  "value_labels": false,
+  "line_width": 1,
+  "point_size": 1,
   "connect": "monotone",
-  "value_lines": [],
-  "x_lines": [],
   "smoother": "none",
-  "identity_line": "off",
+  "identity_line": false,
   "box_points": "none",
-  "connect_centers": "off",
-  "count_on": "off",
-  "na_group": "level",
+  "connect_centers": false,
+  "show_n": "none",
+  "missing": "level",
   "facet_scales": "fixed",
-  "download": "off",
-  "waterfall_totals": [],
-  "filter_values": [],
-  "chart_type": "bar",
-  "group": "NOPE"
+  "download": false,
+  "type": "bar",
+  "y": "NOPE",
+  "x": null,
+  "orientation": "horizontal",
+  "func": "count"
  },
+ "derived": null,
  "resend": null,
  "error": null,
  "dom": {
@@ -31,7 +29,7 @@
   "legend": null,
   "status": "",
   "empty": [
-   "Mapped column not in data: Group = \"NOPE\". Columns available here: USUBJID, ARM, SEX, AVISIT, AVISITN, ADY, AVAL, AETERM, AESEV, ASTDY, AENDY, ANRHI, CHG, LO, HI. A rename, flatten or pivot upstream may have changed the column name — re-pick it in the gear."
+   "Mapped column not in data: Y = \"NOPE\". Columns available here: USUBJID, ARM, SEX, AVISIT, AVISITN, ADY, AVAL, AETERM, AESEV, ASTDY, AENDY, ANRHI, CHG, LO, HI. A rename, flatten or pivot upstream may have changed the column name — re-pick it in the gear."
   ],
   "grid": {
    "single": false,
@@ -41,13 +39,5 @@
  },
  "slots": [],
  "disposed": 0,
- "inputs": [
-  {
-   "name": "block-drilldown_block_ready",
-   "value": "[time]",
-   "opts": {
-    "priority": "event"
-   }
-  }
- ]
+ "inputs": []
 }

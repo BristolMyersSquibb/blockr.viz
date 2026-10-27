@@ -15,7 +15,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   // Event handlers per family, attached once per ECharts instance. They read
   // the view's live state, never values captured at draw time, because an
@@ -100,47 +101,26 @@
 
     /** @this {any} @param {Record<string, any[]>} filters */
     _sendFilter(filters) {
+      this._sendSelection({ type: 'categorical', filters });
+    },
+
+    // What R gets for a click, a brush or a clear (design.md section 2):
+    // `{selection, nonce}`, `selection` null for a clear. The counter tells
+    // R a second click on the same mark from a board re-evaluation, which
+    // would otherwise look the same.
+    /** @this {any} @param {Record<string, any> | null} selection */
+    _sendSelection(selection) {
       if (!this.el.id) return;
-      // The counter tells R a second click on the same mark from a board
-      // re-evaluation, which would otherwise look the same.
-      Shiny.setInputValue(this.el.id + '_action',
-        NS.keys.filterMessage(filters, ++this._drillSeq), { priority: 'event' });
-    },
-
-    // The type of what a clear clears (B1); with nothing latched,
-    // categorical on an aggregated chart, else range.
-    /** @this {any} */
-    _clearType() {
-      if (this._filter) return this._filter.type;
-      return this._family() === 'aggregated' ? 'categorical' : 'range';
-    },
-
-    /** @this {any} @param {'categorical' | 'range' | 'point'} type */
-    _sendClearFilter(type) {
-      if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', NS.keys.clearMessage(type),
-                          { priority: 'event' });
-    },
-
-    // The gear dropped the filter (a mapping or drill change): the footer
-    // says so at once (D4), then R hears it.
-    /** @this {any} */
-    _gearClearFilter() {
-      const type = this._clearType();
-      this._filter = null;
-      this._hasBrushFilter = false;
-      this._updateStatus();
-      this._sendClearFilter(type);
+      V.util.send(this.el.id, 'select', { selection, nonce: ++this._drillSeq });
     },
 
     /** @this {any} */
     _reset() {
-      const type = this._clearType();
       this._filter = null;
       this._hasBrushFilter = false;
       this._clearBrush();
       this._updateHighlight();
-      this._sendClearFilter(type);
+      this._sendSelection(null);
     },
 
     /** @this {any} */
@@ -250,10 +230,10 @@
         if (el.parentNode) el.parentNode.removeChild(el);
         if (this._signalEl === el) this._signalEl = null;
       };
-      el.addEventListener('animationend', drop);
+      this.scope.on(el, 'animationend', drop);
       this._signalEl = el;
       host.appendChild(el);
-      setTimeout(drop, ms);
+      this.scope.timeout(drop, ms);
     },
 
     /** @this {any} */

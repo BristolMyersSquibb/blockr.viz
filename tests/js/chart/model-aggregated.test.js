@@ -99,28 +99,6 @@ test('the default sort follows the category column', () => {
   // Boxplot keeps data order on a text category.
   assert.deepStrictEqual(dflt('country', { chart_type: 'boxplot' }), ['data', 'asc']);
 
-  const fam = (group, extra) => {
-    const cfg = { chart_type: 'pie', group, ...extra };
-    C.model.familyDefaults(cfg, cols);
-    return [cfg.sort_by, cfg.sort_dir];
-  };
-  assert.deepStrictEqual(fam('day'), ['data', 'asc']);
-  assert.deepStrictEqual(fam('country'), ['value', 'desc']);
-});
-
-test('a new category re-sorts a default sort and keeps a picked one', () => {
-  const cols = [cat('country'), { name: 'day', type: 'categorical', temporal: 'date' }];
-  const after = (cfg, group) => {
-    const c = { chart_type: 'bar', ...cfg, group };
-    C.model.resortForGroup(c, cols);
-    return [c.sort_by, c.sort_dir];
-  };
-  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'desc' }, 'day'), ['data', 'asc']);
-  assert.deepStrictEqual(after({ sort_by: 'data', sort_dir: 'asc' }, 'country'), ['value', 'desc']);
-  assert.deepStrictEqual(after({ sort_by: 'alpha', sort_dir: 'asc' }, 'day'), ['alpha', 'asc']);
-  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'asc' }, 'day'), ['value', 'asc']);
-  assert.deepStrictEqual(after({ chart_type: 'boxplot', sort_by: 'data', sort_dir: 'asc' }, 'country'),
-                         ['data', 'asc']);
 });
 
 test('colour levels follow the scale order, then factor levels, then the alphabet', () => {

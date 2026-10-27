@@ -14,7 +14,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
@@ -69,8 +70,8 @@
     const SEP = NS.model.BOX_CAT_SEP;
     const isBox = cfg.chart_type === 'boxplot';
     const vertical = cfg.orientation !== 'horizontal';
-    const bodyMeta = NS.roles.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se'));
-    const whiskMeta = NS.roles.statMeta(cfg.whiskers || 'tukey');
+    const bodyMeta = NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se'));
+    const whiskMeta = NS.agg.statMeta(cfg.whiskers || 'tukey');
     const palette = NS.paletteOf(cfg);
     const levels = m.levels;
     const split = m.split;

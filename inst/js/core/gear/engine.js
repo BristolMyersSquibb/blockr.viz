@@ -304,6 +304,46 @@
   }
 
   /**
+   * A gear button and its tray, appended to a view's header `head`: blockr.ui's
+   * Blockr.gearTray when the page has it, else the button toggles the tray.
+   * The header gets `vz-head--open` while the tray is open; a tray left open
+   * is closed when `scope` goes, which takes it off blockr.ui's dismiss
+   * stack.
+   * @param {HTMLElement} head @param {VizScope} scope @param {string} label
+   * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
+   *             isOpen(): boolean }}
+   */
+  V.gear.tray = (head, scope, label) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blockr-gear-btn';
+    btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
+    const band = document.createElement('div');
+    band.className = 'blockr-settings blockr-settings--beak dd-popover';
+    head.append(btn, band);
+    const ui = root.Blockr;
+    let open = false;
+    const own = ui.gearTray ? ui.gearTray(band, btn, { label }) : null;
+    const set = (/** @type {boolean} */ on) => {
+      if (own) { own.set(on); return; }
+      open = on;
+      band.classList.toggle('blockr-settings--open', on);
+      btn.classList.toggle('blockr-gear-active', on);
+      btn.setAttribute('aria-expanded', String(on));
+    };
+    if (!own) {
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('aria-expanded', 'false');
+      scope.on(btn, 'click', () => set(!open));
+    }
+    const sync = () => head.classList.toggle('vz-head--open',
+                                             btn.getAttribute('aria-expanded') === 'true');
+    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
+    scope.own({ dispose: () => set(false) });
+    return { band, button: btn, set, isOpen: () => (own ? own.isOpen() : open) };
+  };
+
+  /**
    * Mount a gear into the tray element `el`.
    * @param {HTMLElement} el @param {VizGearOptions} opts @returns {VizGear}
    */

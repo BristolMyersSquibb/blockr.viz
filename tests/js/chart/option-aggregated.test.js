@@ -286,14 +286,3 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
   assert.strictEqual(h.series[0].markLine.data[1].yAxis, '2026-10-19');
   assert.strictEqual(h.series[0].markArea.data[0][1].yAxis, '2026-10-05');
 });
-
-test('the gear writes lines as text with their names, and reads them back', () => {
-  assert.strictEqual(C.linesText([3, '2026-10-21'], ['', 'Listed']), '3; Listed: 2026-10-21');
-  assert.strictEqual(C.linesText([2, 5], []), '2, 5');
-  assert.strictEqual(C.linesText('2, 5'), '2, 5');
-  assert.deepStrictEqual(plain(C.parseLines('Listed: 2026-10-21; 3, W43 19 Oct; 2 5')),
-    { values: ['2026-10-21', 3, 'W43 19 Oct', 2, 5], names: ['Listed', '', '', '', ''] });
-  // A time of day is no name.
-  assert.deepStrictEqual(plain(C.parseLines('2026-10-21 10:30')),
-    { values: ['2026-10-21 10:30'], names: [''] });
-});

@@ -17,7 +17,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   const AGGREGATED_TYPES = ['bar', 'histogram', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
   const INDIVIDUAL_TYPES = ['scatter', 'line', 'area', 'band'];

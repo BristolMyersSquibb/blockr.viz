@@ -1,7 +1,9 @@
-# The chart scripts, in load order. Read by the chart's html dependency
-# (R/chart-dep.R) and by the node test harness (tests/js/harness.js).
+# The chart scripts, in load order, after the core (core/scripts.txt) and
+# the generated spec. Read by the chart's html dependency and by the node
+# test harness (tests/js/harness.js).
 common.js
 format.js
+agg.js
 chart-index.js
 chart-keys.js
 axes-labels.js
@@ -17,10 +19,10 @@ option-aggregated.js
 option-points.js
 option-band.js
 option-individual.js
-roles.js
+config.js
+gear.js
 chrome.js
 interact.js
 interact-individual.js
 export.js
 view.js
-binding.js
