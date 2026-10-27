@@ -54,8 +54,8 @@ test_that("summarize_stat degrades on thin and empty input", {
 })
 
 test_that("summarize_stat covers the chart's SUMMARY_STATS with no drift", {
-  js <- system.file("js", "chart", "roles.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "chart/roles.js not found")
+  js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
+  expect_true(file.exists(js))
   src <- paste(readLines(js, warn = FALSE), collapse = "\n")
   block <- sub("^[\\s\\S]*?const SUMMARY_STATS = \\[", "", src, perl = TRUE)
   block <- sub("\\][\\s\\S]*", "", block, perl = TRUE)

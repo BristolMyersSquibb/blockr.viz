@@ -35,11 +35,11 @@ js_script_list <- function(dir) {
   lines[nzchar(lines) & !startsWith(lines, "#")]
 }
 
-#' The shared drilldown JS
+#' The table's drilldown JS
 #'
 #' The aggregation vocabulary (drilldown-agg.js) and the gear config engine
-#' (drilldown-config.js), used by the chart and the table. Loads before the
-#' block scripts, which read Blockr.DrilldownAgg and Blockr.DrilldownConfig,
+#' (drilldown-config.js), used by the table. Loads before the table
+#' scripts, which read Blockr.DrilldownAgg and Blockr.DrilldownConfig,
 #' and after blockr.ui::controls_dep(), whose Blockr.checkbox and
 #' Blockr.Select the engine uses.
 #'
@@ -49,7 +49,7 @@ js_script_list <- function(dir) {
 drilldown_shared_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
-    version = paste0(utils::packageVersion("blockr.viz"), ".30"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".31"),
     src = system.file("js", package = "blockr.viz"),
     script = c("drilldown-agg.js", "drilldown-config.js", "capture-pages.js",
                "busy-cue.js")

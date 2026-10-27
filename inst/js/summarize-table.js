@@ -1412,8 +1412,8 @@
                       { value: "off", label: "No download" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
-  // (R/table-model-groups-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
-  // mean_ci95, which exists only on this surface because R has qt().
+  // (R/table-model-groups-stats.R, drift-tested), the same list as the
+  // chart's SUMMARY_STATS (chart/agg.js).
   var LANE_STATS = [
     { value: "median_q1_q3", label: "Median · Q1–Q3" },
     { value: "mean_sd", label: "Mean ± SD" },

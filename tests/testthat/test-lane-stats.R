@@ -129,17 +129,10 @@ js_enum <- function(path, anchor) {
   sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1", vals, perl = TRUE)
 }
 
-test_that("LANE_STATS mirrors the chart's SUMMARY_STATS plus mean_ci95", {
-  js <- system.file("js", "chart", "roles.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "chart/roles.js not found")
-  chart_stats <- js_enum(js, "SUMMARY_STATS")
-  expect_true(length(chart_stats) >= 5L)
-  # The one deliberate difference: mean_ci95 exists only where R computes
-  # (qt has no JS equivalent; see the spec's NOTE-confidence-intervals.md).
-  expect_identical(setdiff(LANE_STATS, chart_stats), "mean_ci95")
-  expect_identical(setdiff(chart_stats, LANE_STATS), character(0))
-  # Same relative order, so the two selects read identically.
-  expect_identical(intersect(LANE_STATS, chart_stats), chart_stats)
+test_that("LANE_STATS is the chart's SUMMARY_STATS, in the same order", {
+  js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
+  expect_true(file.exists(js))
+  expect_identical(js_enum(js, "const SUMMARY_STATS"), LANE_STATS)
 })
 
 test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {

@@ -85,6 +85,10 @@ summarize_stat <- function(vals, stat = "median_q1_q3") {
     mean_sd  = list(center = m, lo = m - sd,     hi = m + sd),
     mean_2sd = list(center = m, lo = m - 2 * sd, hi = m + 2 * sd),
     mean_se  = list(center = m, lo = m - se,     hi = m + se),
+    mean_ci95 = {
+      h <- if (n > 1L) stats::qt(0.975, n - 1L) * se else 0
+      list(center = m, lo = m - h, hi = m + h)
+    },
     p5_p95   = list(center = q(.5), lo = q(.05), hi = q(.95)),
     p10_p90  = list(center = q(.5), lo = q(.10), hi = q(.90)),
     min_max  = list(center = q(.5), lo = vals[1L], hi = vals[n]),
