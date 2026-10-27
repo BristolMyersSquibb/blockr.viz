@@ -1,16 +1,10 @@
 // @ts-check
 /**
- * Chart block: the aggregated option.
- *
- * The aggregated model and how it should look in, one ECharts option per
- * panel out, built by the chart type's builder (option-bar.js,
- * option-radial.js, option-distribution.js). Beside it: the legend band's
- * chips, and the highlight patch, which dims the marks a filter does not
- * light (D5).
- *
- * Every panel result carries its canvas height, the inputs a resize needs
- * to re-fit turned x labels (`xFit`), and a footer note when a horizontal
- * axis had to thin its labels.
+ * Chart block: the aggregated option. One ECharts option per panel, built by
+ * the chart type's builder (option-bar.js, option-radial.js,
+ * option-distribution.js), with its canvas height, the `xFit` inputs a resize
+ * re-fits and a thinned-label note. Also the legend chips and the highlight
+ * patch, which dims the marks a filter does not light.
  */
 (function () {
   'use strict';
@@ -32,8 +26,8 @@
   const DEFAULT_PANEL_H = 350;
 
   /**
-   * What every aggregated builder shares: the axis ink, the value's title,
-   * the aggregation's name, and the tooltip's label/value rows.
+   * What every builder shares: axis ink, the value's title, the
+   * aggregation's name and the tooltip's rows.
    * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
    */
   parts.common = (look) => {
@@ -42,18 +36,18 @@
     const fn = cfg.func || 'count';
     const col = title(cfg.measure);
     const aggLabel = fn === 'count' ? 'Count'
-      // "None (as is)": the bar is the value, named by its column alone.
       : fn === 'identity' ? (col || 'Value')
       : fn === 'count_distinct' ? 'Distinct ' + col
       : (NS.agg.AGG_WORDS[fn] || fn) + ' of ' + col;
     return {
+      base: { ...(look.theme ? {} : { backgroundColor: 'transparent' }),
+              textStyle: { fontFamily: ink.face } },
       ax: { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border },
       esc: NS.esc,
       title,
       valueTitle: cfg.measure === '.count' ? 'Count' : col,
       aggLabel,
-      // The aggregation and its value, a share, and n where n is not
-      // already the value.
+      // The aggregation and its value, a share, and n where n is not the value.
       aggPairs: (/** @type {number} */ value, /** @type {number} */ n,
                  /** @type {number} */ percent) => {
         /** @type {Array<[string, any]>} */
@@ -87,14 +81,15 @@
     let labelNote = null;
     const panels = m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) => {
       const r = build(m, panel, look, (look.widths || [])[i] || 0);
-      if (!r) return { option: null, height: DEFAULT_PANEL_H + 'px', panelH: DEFAULT_PANEL_H, xFit: null };
+      if (!r) {
+        return { option: null, height: DEFAULT_PANEL_H + 'px', panelH: DEFAULT_PANEL_H, xFit: null };
+      }
       if (r.labelNote) labelNote = r.labelNote;
       const panelH = r.panelH != null ? r.panelH : DEFAULT_PANEL_H;
       return {
         option: NS.cardTooltip(NS.applyDrillEmphasis(r.option, look.cfg), look.ink),
-        // A one-row panel is 104 px and that is right; 64 only catches a
-        // degenerate option.
-        height: (r.panelH != null ? Math.max(64, Math.round(r.panelH)) : DEFAULT_PANEL_H) + 'px',
+        // 64 only catches a degenerate option; a one-row panel is 104.
+        height: Math.max(64, Math.round(panelH)) + 'px',
         panelH,
         xFit: r.xFit || null
       };
@@ -104,8 +99,8 @@
   aggregated.FIELDS = OPTION_FIELDS;
 
   /**
-   * The legend band's chips: a distribution's split levels, else the
-   * colour levels of a bar. Pie, treemap and waterfall have none.
+   * The legend chips: a distribution's split levels, else a bar's colour
+   * levels. Pie, treemap and waterfall have none.
    * @param {any} m @param {Record<string, any>} cfg
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
@@ -116,7 +111,7 @@
     if (m.distribution) levels = m.levels;
     else if (ct !== 'pie' && ct !== 'treemap' && !m.cumulative) levels = m.colors;
     if (!levels.length) return null;
-    // A highlight lists the levels it lights, in the colours the bars took.
+    // A highlight lists only the levels it lights.
     if (m.hlColors && !m.distribution) {
       const lit = NS.litLevelColors(levels, m.hlColors, m.colorScale, palette);
       const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
@@ -129,18 +124,13 @@
                ({ name, color: colors[i] })) };
   };
 
-  // -- Highlight (D5) ----------------------------------------------------------
-
-  // Series patched only while a filter dims something (or to undo it), so
-  // a chart without one gets an empty patch.
+  // Series patched only while a filter dims something (or to undo it).
   const QUIET_TYPES = ['line', 'scatter', 'custom'];
 
   /**
    * The highlight patch for one panel: every datum's opacity from whether
-   * its mark is lit. `lit(keys)` says whether a mark is lit; null when no
-   * filter is active, and every mark is. Read off the option the panel holds now, so what each datum
-   * carries (a stack's corner, a waterfall's colour, a percent's raw value,
-   * a label) rides along.
+   * its mark is lit (`lit` null: no filter). Built off the current option so
+   * what each datum carries (corner, colour, raw value, label) rides along.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {any} current chart.getOption()
    * @param {((keys: Record<string, any>) => boolean) | null} lit
@@ -184,14 +174,12 @@
         }) };
       }
       if (QUIET_TYPES.includes(s.type)) {
-        // A point range's dots and intervals, a box's outliers. The
-        // connecting line and series outside this family stay as they are.
+        // A point range's dots and intervals, a box's outliers.
         if (!m.distribution || s.type === 'line' || (!anyFilter && !wasDimmed)) return {};
         return { data: (s.data || []).map((/** @type {any} */ d) => {
           if (d == null) return d;
           const isObj = typeof d === 'object' && !Array.isArray(d);
           const val = isObj ? d.value : d;
-          // Which slot the datum sits in: its name, else its slot index.
           let cat = isObj && d.name != null ? d.name : null;
           if (cat == null && Array.isArray(val)) {
             const idx = s.type === 'custom' ? val[0]

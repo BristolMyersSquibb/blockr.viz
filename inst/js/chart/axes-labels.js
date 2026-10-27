@@ -1,12 +1,8 @@
 // @ts-check
 /**
- * Chart block: axes and their labels, as plain functions.
- *
- * Axis types and category order from the column metadata, axis titles,
- * the category label gutter and the x label ladder (measured with a
- * function the caller passes, so no canvas is needed here), value
- * formatting on an axis, helper lines on a value axis, and the shared
- * domain of a facet grid.
+ * Chart block: axes and their labels, as plain functions. Axis types and
+ * category order, titles, the label gutter and x label ladder (text measured
+ * with a caller-passed function), log ticks, helper lines and marks.
  */
 (function () {
   'use strict';
@@ -15,7 +11,6 @@
   const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
-  // The time helpers (axes-time.js) load first and start NS.axes.
   const { timeValue } = NS.axes;
 
   /** @param {VizColumn[] | null | undefined} columns @param {any} name */
@@ -23,7 +18,7 @@
     /** @type {any} */ ((columns || []).find((c) => c.name === name));
 
   /**
-   * An axis title: the column's label when it has one, else its name.
+   * The column's label when it has one, else its name.
    * @param {VizColumn[]} columns @param {any} col @returns {string}
    */
   const axisTitle = (columns, col) => {
@@ -35,9 +30,7 @@
 
   /**
    * 'category' for a categorical column, 'time' for a *DT column holding
-   * epoch milliseconds, else 'value'. With `temporal`, a Date or date-time
-   * column (`temporal` in its metadata, R/col-meta.R) is 'time' too; the
-   * gantt does not ask for it and keeps such a column a category.
+   * epoch ms (or, with `temporal`, a Date or date-time column), else 'value'.
    * @param {VizColumn[]} columns @param {any[]} rows @param {any} colName
    * @param {{ temporal?: boolean }} [opts]
    * @returns {'category' | 'time' | 'value'}
@@ -57,9 +50,8 @@
   };
 
   /**
-   * The categories of a column on an axis: factor levels first (values
-   * outside them after, in order of appearance), else by a companion number
-   * (AVISIT by AVISITN), else in order of appearance.
+   * The categories of a column: factor levels (others after), else by a
+   * companion number (AVISIT by AVISITN), else in order of appearance.
    * @param {VizColumn[]} columns @param {any[]} rows @param {string} colName
    * @returns {string[]}
    */
@@ -96,8 +88,8 @@
   };
 
   /**
-   * Order levels: by the board scale's order, else the column's factor
-   * levels, else alphabetically. Unknown levels sort last, alphabetically.
+   * Order levels by the scale's order, else the factor levels, else
+   * alphabetically; unknown levels last.
    * @param {any[]} levels @param {any} scale @param {VizColumn[]} columns
    * @param {string} colName @returns {any[]}
    */
@@ -116,14 +108,13 @@
   };
 
   /**
-   * The category label gutter of a horizontal axis, fitted to the widest
-   * label up to a cap: the label width, its margin and the grid's left edge.
+   * The label gutter of a horizontal category axis, fitted to the widest
+   * label up to a cap.
    * @param {any[]} labels @param {(s: string) => number} measure
    */
   const yGutter = (labels, measure) => {
     const LABEL_CAP = 145;
-    // Slack for the fallback font the canvas may measure with before the
-    // page font loads; without it short labels truncate.
+    // Slack for the fallback font measured before the page font loads.
     const PAD = 10;
     let w = 0;
     for (const l of labels) {
@@ -136,8 +127,7 @@
   };
 
   /**
-   * One domain over the panels' own (already nice-rounded) extents, or null
-   * when fewer than two panels have a numeric one.
+   * One domain over the panels' extents, or null with fewer than two.
    * @param {Array<number[] | null>} extents @returns {number[] | null}
    */
   const sharedDomain = (extents) => {
@@ -151,17 +141,12 @@
     return (n >= 2 && lo < hi) ? [lo, hi] : null;
   };
 
-  // -- Log axes ----------------------------------------------------------------
-  //
-  // ECharts labels a log axis at powers of ten only (1K, 10K, 100K), which
-  // leaves two or three labels on most data. Up to three decades the ticks
-  // are 1-2-5 (or 1-1.5-2-3-5-7 within one decade), set as the axis's own
-  // values; the gridlines follow them. The axis ends on the ticks either
-  // side of the data.
+  // ECharts labels a log axis at powers of ten only, which leaves two or
+  // three labels. Up to three decades the ticks are 1-2-5 (1-1.5-2-3-5-7
+  // within one decade); the axis ends on the ticks either side of the data.
 
   /**
-   * The domain and ticks of a log axis over positive values lo..hi. Null
-   * when there is no positive range.
+   * The domain and ticks of a log axis over positive lo..hi, or null.
    * @param {number} lo @param {number} hi
    * @returns {{ min: number, max: number, ticks: number[] } | null}
    */
@@ -188,8 +173,7 @@
     return { min, max, ticks: all.filter((t) => t >= min && t <= max) };
   };
 
-  /**
-   * Turn a value axis into a log axis over a domain from logTicks().
+  /** Turn a value axis into a log axis over a logTicks() domain.
    * @param {any} axis @param {{ min: number, max: number, ticks: number[] }} dom
    */
   const logAxis = (axis, dom) => {
@@ -203,18 +187,14 @@
     return axis;
   };
 
-  // -- Category labels on an x axis ------------------------------------------
-  //
-  // A long label goes down a ladder, cheapest first: one line; wrapped on
-  // spaces onto up to three flat lines; turned 90 degrees and wrapped onto
-  // two; and, only where the axis is an ordered run (`decimate`), thinned.
-  // Nothing is cut: a word too wide for the whole budget breaks mid-word.
+  // A long x label goes down a ladder: one line; wrapped onto up to three flat
+  // lines; turned 90 degrees onto two; and, on an ordered axis (`decimate`),
+  // thinned. A word too wide for the budget breaks mid-word.
   const LABEL_LINE_H = 15;   // 11px text, 1.35 leading
   const FLAT_MAX_LINES = 3;
   const TURN_MAX_LINES = 2;
   const TURN_CAP = 160;      // px of height a turned label may spend
-  // Reserved whether or not a scrollbar shows: a turned label grows the
-  // panel, which can bring one up and flip a borderline label next time.
+  // Always reserved: a turned label grows the panel and can bring one up.
   const SCROLLBAR = 16;
 
   /**
@@ -249,14 +229,14 @@
     return { lines: lines.length ? lines : [''], hard };
   };
 
-  /** What a label layout is: turned, thinned, wrap width, line count. A
-   *  resize that keeps it needs no new layout. @param {any} axisLabel */
+  /** The layout's identity: a resize that keeps it needs no new layout.
+   * @param {any} axisLabel */
   const xLabelKey = (axisLabel) =>
     `${axisLabel.rotate}|${axisLabel.interval}|${axisLabel.__wrapAt}|${axisLabel.__lines}`;
 
   /**
    * An axisLabel whose formatter first maps the category to what it shows
-   * (a "(n)" count, a level suffix stripped), then wraps it.
+   * (a "(n)" count), then wraps it.
    * @param {any} axisLabel @param {((v: any) => any) | null | undefined} display
    */
   const axisLabelWithDisplay = (axisLabel, display) => {
@@ -273,9 +253,8 @@
   };
 
   /**
-   * Category labels for an x axis at a plot width: flat when they fit their
-   * slot, else wrapped flat, else turned. `bottom` is the extra grid gutter
-   * the labels cost, `key` the layout's identity (xLabelKey).
+   * Category labels for an x axis: flat when they fit their slot, else
+   * wrapped flat, else turned. `bottom` is the extra grid gutter they cost.
    * @param {any[]} labels @param {number} availW plot width minus the grid's margins
    * @param {boolean} decimate thin turned labels (ordered axes only)
    * @param {(s: string) => number} measure @param {{ muted: string, fontSize: number }} ink
@@ -290,8 +269,7 @@
     }
     const PAD = 8;
     const n = Math.max(1, labels.length);
-    // A hidden panel measures 0: assume a typical width rather than turn
-    // short labels.
+    // A hidden panel measures 0: assume a typical width.
     const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
     const base = { color: ink.muted, fontSize: ink.fontSize, interval: 0, lineHeight: LABEL_LINE_H };
 
@@ -300,8 +278,7 @@
       return { axisLabel, bottom: 0, key: xLabelKey(axisLabel) };
     }
 
-    // Flat, wrapped to the slot, unless a word had to break or it takes
-    // more than three lines.
+    // Flat, unless a word had to break or it takes more than three lines.
     const flatW = Math.max(10, slot - PAD);
     const flat = labels.map((l) => wrapLabel(m, l, flatW));
     const flatLines = NS.maxOf(flat.map((f) => f.lines.length));
@@ -313,8 +290,7 @@
       return { axisLabel, bottom: (flatLines - 1) * LABEL_LINE_H, key: xLabelKey(axisLabel) };
     }
 
-    // Turned: the wrap budget is the height a label may spend; past two
-    // lines the rest joins the last one.
+    // Turned: past two lines the rest joins the last one.
     const turnedLines = (/** @type {string} */ v) => {
       const w = wrapLabel(m, v, TURN_CAP).lines;
       if (w.length <= TURN_MAX_LINES) return w;
@@ -323,8 +299,7 @@
     const turned = labels.map(turnedLines);
     const turnLines = NS.maxOf(turned.map((t) => t.length));
     const len = Math.ceil(NS.maxOf(turned.map((t) => NS.maxOf(t.map(m))))) + PAD;
-    // Turned text needs about a line height of room per line; `interval: k`
-    // draws one label and skips k.
+    // Turned text needs a line height per line; `interval: k` skips k labels.
     const room = Math.max(13, turnLines * LABEL_LINE_H);
     const interval = decimate ? Math.max(0, Math.ceil(room / slot) - 1) : 0;
     const axisLabel = {
@@ -334,14 +309,12 @@
     return { axisLabel, bottom: len, key: xLabelKey(axisLabel) };
   };
 
-  // Height one horizontal category label takes. Past it ECharts drops
-  // labels without a word, so the chart says so in the footer.
+  // Past this height per label ECharts drops labels silently.
   const CAT_LABEL_H = 14;
 
   /**
-   * The footer note for a category axis squeezed past one label per row,
-   * or null when every label fits. `groupCol` names the categories: the
-   * column's title (axisTitle), not its name.
+   * The footer note for a category axis squeezed past one label per row, or
+   * null. `groupCol` is the column's title.
    * @param {number} plotH @param {number} nCats @param {any} groupCol
    * @returns {string | null}
    */
@@ -353,18 +326,13 @@
       ' — filter to fewer to see them all.';
   };
 
-  // -- Helper lines on the value axis -----------------------------------------
-
   /**
-   * One helper line as a markLine datum: a quiet long dash behind the data,
-   * its value at the end. `text` replaces the printed value (a percent axis
-   * runs 0..1); `flipped`: the y axis runs top-down, so a vertical line is
-   * labelled at its start.
+   * One helper line as a markLine datum: a quiet dash behind the data, its
+   * value at the end. `text` replaces the value (null: no label); `flipped`:
+   * the y axis runs top-down, so a vertical line is labelled at its start.
    * @param {number} v @param {boolean} vertical @param {number} width
    * @param {string | null | undefined} text @param {boolean} flipped
    * @param {{ text: string, muted: string, fontSize?: number }} ink
-   * `text` null: no label (an unnamed line at 0, whose value the axis
-   * already prints).
    */
   const guideLine = (v, vertical, width, text, flipped, ink) => ({
     [vertical ? 'xAxis' : 'yAxis']: v,
@@ -378,14 +346,12 @@
   });
 
   /**
-   * `y_lines` on the value axis (x when the chart lies horizontal): a
-   * markLine on the first series, and axis bounds that take in the lines
-   * and the data, rounded outward to a nice step. Mutates `series[0]` and
+   * `y_lines` on the value axis: a markLine on the first series, and axis
+   * bounds that take in the lines and the data. Mutates `series[0]` and
    * `valAxis`.
    * @param {any[]} series @param {any} valAxis @param {boolean} onX
    * @param {boolean} fraction the axis runs 0..1 while the reader types percent
-   * @param {any} lines `[{value, label}]`; a label names its line
-   *   (`y_lines = c(Target = 2)`), none prints the value
+   * @param {any} lines `[{value, label}]`
    * @param {{ text: string, muted: string }} ink
    */
   const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
@@ -402,8 +368,8 @@
           : typed[i] === 0 ? null
             : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
     };
-    // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on a
-    // rounded edge would read as the frame, so the edge moves one step out.
+    // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on
+    // the rounded edge would read as the frame, so the edge moves a step out.
     const zero = !valAxis.scale;
     const lo = NS.minOf(vals), hi = NS.maxOf(vals);
     /** @param {{min: number, max: number}} e */
@@ -441,16 +407,12 @@
     }
   };
 
-  // -- Lines and ranges on a category axis -------------------------------------
-
   const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 
   /**
    * The category a typed x position marks: the one it names, or, when the
-   * categories are dates in order (rising or falling), the one whose period
-   * holds the date (a week's bar holds its Wednesday). `edge`: a date before
-   * the first category or after the last takes that end, so a range reaching
-   * past the axis shades up to it. null when it marks none.
+   * categories are ordered dates, the one whose period holds the date.
+   * `edge`: a date past either end takes that end. null when it marks none.
    * @param {any} v @param {any[]} cats @param {boolean} [edge]
    * @returns {string | null}
    */
@@ -460,7 +422,6 @@
     for (const c of cats) if (String(c) === s) return String(c);
     if (!ISO_DAY.test(s) || cats.length < 2) return null;
     let ts = cats.map((c) => (ISO_DAY.test(String(c)) ? timeValue(c) : NaN));
-    // Newest first: the same periods, read the other way.
     if (ts[0] > ts[ts.length - 1]) {
       cats = cats.slice().reverse();
       ts = ts.slice().reverse();
@@ -481,11 +442,9 @@
   };
 
   /**
-   * `x_lines` and `x_ranges` on a bar's category axis: a line through the
-   * bar each marks, a shade over the bars each range spans. ECharts places a
-   * category at its band, so a line sits on the bar's centre and a range
-   * covers whole bars. Mutates `series[0]`, adding to the markLine the value
-   * lines put there.
+   * `x_lines` and `x_ranges` on a bar's category axis: a line through each
+   * marked bar, a shade over the bars a range spans. Mutates `series[0]`,
+   * adding to the markLine the value lines put there.
    * @param {any[]} series @param {boolean} onX the categories run along x
    * @param {any[]} cats @param {any} lines `x_lines` @param {any} ranges `x_ranges`
    * @param {{ text: string, muted: string, fontSize?: number }} ink
@@ -498,8 +457,7 @@
     NS.labelled(lines).forEach(({ value: v, label }) => {
       const c = catOf(v, cats);
       if (c == null) return;
-      // Unnamed, a line on its own category needs no label (the axis prints
-      // it); a date inside a bar's period prints the date.
+      // Unnamed, a line on its own category needs no label.
       const text = label ? String(label) : (c === String(v) ? null : String(v));
       data.push(guideLine(c, onX, 1, text, false, ink));
     });
@@ -531,8 +489,8 @@
 
   Object.assign(NS.axes, {
     colMeta, axisTitle, axisTypeFor, orderedCategories, orderLevels, yGutter,
-    sharedDomain, logTicks, logAxis, wrapLabel, xLabelKey, axisLabelWithDisplay,
+    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay,
     xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
-    LABEL_LINE_H, CAT_LABEL_H
+    LABEL_LINE_H
   });
 })();

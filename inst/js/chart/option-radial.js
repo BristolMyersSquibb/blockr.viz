@@ -1,9 +1,7 @@
 // @ts-check
 /**
- * Chart block: the pie and treemap options.
- *
- * Neither has a category axis: a pie slice and a treemap tile label
- * themselves. Each draws on the default 350 px canvas.
+ * Chart block: the pie and treemap options. Neither has a category axis;
+ * each draws on the default 350 px canvas.
  */
 (function () {
   'use strict';
@@ -15,9 +13,8 @@
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   /**
-   * A slice or tile per group: the group's total over its cells and the
-   * rows behind it, in the board scale's colour or the palette's, and its
-   * `label` text where there is one. Groups with nothing to show drop out.
+   * A slice or tile per group: its total, the rows behind it, its colour and
+   * `label` text. Groups with nothing to show drop out.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    */
   const groupTotals = (m, panel, cfg) => {
@@ -41,13 +38,11 @@
     const data = groupTotals(m, panel, cfg);
     return {
       option: {
-        ...(look.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: ink.face },
+        ...P.base,
         tooltip: { trigger: 'item', confine: true,
                    formatter: (/** @type {any} */ p) => NS.rowTooltip(p.name,
                      P.aggPairs(p.value, p.data && p.data.n, p.percent), p.color) },
         series: [{ type: 'pie', radius: ['30%', '70%'], data,
-                   // The slice's `label` text, else its name.
                    label: { show: true, fontSize: ink.fontSize,
                             formatter: data.some((/** @type {any} */ d) => d.text != null)
                               ? (/** @type {any} */ p) =>
@@ -64,8 +59,7 @@
     const P = parts.common(look);
     return {
       option: {
-        ...(look.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: ink.face },
+        ...P.base,
         tooltip: { trigger: 'item', confine: true,
                    formatter: (/** @type {any} */ p) => NS.rowTooltip(p.name,
                      P.aggPairs(p.value, p.data && p.data.n), p.color) },
