@@ -19,6 +19,7 @@ VIZ_SHARED_ARGS <- list(
     type = "template", default = NULL, null = "the input's label",
     gear = gear("Titles", "template", "Title"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
+    example = "Sales by {region}",
     describe = paste(
       "Text above the block. NULL uses the input's label, \"\" shows",
       "nothing, any other string is a template resolved against the data:",
@@ -32,6 +33,7 @@ VIZ_SHARED_ARGS <- list(
     type = "template", default = NULL, null = "the input's subtitle",
     gear = gear("Titles", "template", "Subtitle"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
+    example = "Mean {label(revenue)} per {region}",
     describe = "Text under the title, a template as `title`."
   ),
 
@@ -40,6 +42,7 @@ VIZ_SHARED_ARGS <- list(
     null = "the input's caption",
     gear = gear("Titles", "template", "Caption"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
+    example = "N = {n_distinct(customer_id)} customers",
     describe = paste(
       "Text below the block, a template as `title`. Defaults to the option",
       "`blockr.viz.default_caption`."
@@ -50,6 +53,7 @@ VIZ_SHARED_ARGS <- list(
     type = "string", default = "", null = FALSE,
     gear = gear("Drill-down", "select", "Target filter"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
+    example = "cohort_filter",
     describe = paste(
       "Beta. The id of a filter block a click is sent to, or \"auto\" for",
       "the board's drill destination. With a target set a click is an",
@@ -61,6 +65,7 @@ VIZ_SHARED_ARGS <- list(
     type = "string", default = "", null = FALSE,
     gear = gear("Drill-down", "text", "Table", when = "drill_target"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
+    example = "adsl",
     describe = "Beta. The table in the target's dm the click applies to."
   ),
 
@@ -76,10 +81,10 @@ VIZ_SHARED_ARGS <- list(
 
   script_values = viz_arg(
     type = "map", default = list(), null = FALSE,
-    slot = TRUE, ctrl = TRUE, ai = FALSE,
+    slot = FALSE, ctrl = TRUE, ai = FALSE,
     describe = paste(
-      "Settings of the script's controls, by variable name. Each is also a",
-      "title slot under that name."
+      "Settings of the script's controls, by variable name. The script code,",
+      "not the spec, makes each one a title slot."
     )
   ),
 
@@ -105,11 +110,12 @@ viz_download_arg <- function(ctrl = TRUE) {
   )
 }
 
-viz_format_arg <- function(applies = NULL) {
+viz_format_arg <- function(applies = NULL, example = "number") {
   viz_arg(
     type = "format", default = "number", null = FALSE, applies = applies,
     gear = gear("Numbers", "select", "Numbers"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = example,
     describe = paste(
       "How numbers print: \"number\" (separators and up to two decimals,",
       "trailing zeros dropped; a value that would round to 0 keeps two",
@@ -120,22 +126,25 @@ viz_format_arg <- function(applies = NULL) {
   )
 }
 
-viz_unit_arg <- function(applies = NULL) {
+viz_unit_arg <- function(applies = NULL, example = "CHF") {
   viz_arg(
     type = "string", default = "", null = FALSE, applies = applies,
     gear = gear("Numbers", "text", "Unit"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = example,
     describe = "Free text printed after the number (\"CHF\"); headers carry it once."
   )
 }
 
-viz_missing_arg <- function(applies = NULL, group = "Mapping") {
+viz_missing_arg <- function(applies = NULL, group = "Mapping",
+                            example = "level") {
   viz_arg(
     type = "enum", default = "level", values = c("level", "drop"),
     null = FALSE, applies = applies,
     gear = gear(group, "segmented", "Missing",
                 labels = c("Own level", "Drop")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = example,
     describe = paste(
       "Rows whose category is missing: \"level\" gives them their own",
       "(\"(Missing)\"; a click on it gives the rows with no value), \"drop\"",

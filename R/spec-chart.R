@@ -18,6 +18,7 @@ CHART_SPEC_MAPPING <- list(
     type = "enum", default = "bar", values = SPEC_CHART_TYPES, null = FALSE,
     gear = gear("Chart type", "tiles", "Chart type"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "scatter",
     describe = paste(
       "Chart type. Aggregated: bar, waterfall, pie, treemap, boxplot,",
       "pointrange. One mark per row: scatter, line, area, band.",
@@ -29,6 +30,7 @@ CHART_SPEC_MAPPING <- list(
     type = "column", default = NULL, null = "unset",
     gear = gear("Mapping", "column", "X"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "Sepal.Length",
     describe = paste(
       "Column on the horizontal axis. For an aggregated type one of x and y",
       "is the category and the other the column `func` aggregates. Gantt:",
@@ -41,6 +43,7 @@ CHART_SPEC_MAPPING <- list(
     applies = except("histogram"),
     gear = gear("Mapping", "column", "Y"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "Sepal.Width",
     describe = paste(
       "Column on the vertical axis. With `func = \"count\"` set only the",
       "category column. Gantt: the lane. Pie and treemap: the value."
@@ -57,6 +60,7 @@ CHART_SPEC_MAPPING <- list(
                 labels = c("Count", "Count distinct", "% of panel", "Mean",
                            "Median", "Sum", "Min", "Max", "None (as is)")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "count",
     describe = paste(
       "Aggregation of the value column per category. \"identity\" draws",
       "the value as is; \"pct_distinct\" is the share of the panel's",
@@ -69,6 +73,7 @@ CHART_SPEC_MAPPING <- list(
     applies = except("waterfall", "pie", "treemap"),
     gear = gear("Add mapping", "column", "Color"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "Species",
     describe = "Column mapped to color, at most 15 levels."
   ),
 
@@ -121,16 +126,15 @@ CHART_SPEC_MAPPING <- list(
   ),
 
   highlight = viz_arg(
-    type = type_record(column = "column",
-                       values = type_values(of = "column")),
-    default = NULL, null = "no highlight",
+    type = "map", default = NULL, null = "no highlight",
     applies = c("bar", "scatter", "line", "area"),
     gear = gear("Add mapping", "column", "Highlight"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
     describe = paste(
       "One column and some of its values, as `list(country = \"Switzerland\")`.",
       "Matching marks keep their color; every other mark is gray."
-    )
+    ),
+    example = list(country = "Switzerland")
   ),
 
   tooltip = viz_arg(
@@ -183,6 +187,7 @@ CHART_SPEC_LOOK <- list(
     gear = gear("Look", "segmented", "Stacking",
                 labels = c("Stacked", "Side by side", "100%")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "stack",
     describe = "Layout of a color split: stacked, side by side, or to 100%."
   ),
 
@@ -193,6 +198,7 @@ CHART_SPEC_LOOK <- list(
                 labels = c("Below", "Above", "On the marks", "None"),
                 when = "color"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "marks",
     describe = paste(
       "Where the color legend goes. \"marks\" writes the names on the marks",
       "where the type has room, and keeps the legend elsewhere."
@@ -205,6 +211,7 @@ CHART_SPEC_LOOK <- list(
     applies = c("scatter", "line", "band"),
     gear = gear("Look", "segmented", "Y scale", labels = c("Linear", "Log")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "log10",
     describe = paste(
       "\"log10\" draws a base-10 y axis. Values at or below zero are not",
       "drawn; a note under the chart counts them."
@@ -217,12 +224,12 @@ CHART_SPEC_LOOK <- list(
     applies = "scatter",
     gear = gear("Look", "segmented", "X scale", labels = c("Linear", "Log")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "log10",
     describe = "As `y_transform`, for the x axis of a scatter."
   ),
 
   x_ranges = viz_arg(
-    type = type_records(name = "string", from = "string", to = "string"),
-    default = NULL, null = "no ranges",
+    type = "map", default = NULL, null = "no ranges",
     applies = c("bar", "scatter", "line", "area"),
     gear = gear("Look", "text", "Shaded", parse = "ranges"),
     slot = FALSE, ctrl = TRUE, ai = TRUE,
@@ -230,7 +237,8 @@ CHART_SPEC_LOOK <- list(
       "Named stretches of x shaded behind the marks, as",
       "`list(Recession = c(\"2008-01-01\", \"2009-06-30\"))`. Text form:",
       "\"Recession: 2008-01-01 to 2009-06-30; ...\"."
-    )
+    ),
+    example = list(Recession = c("2008-01-01", "2009-06-30"))
   ),
 
   waterfall_totals = viz_arg(
@@ -249,6 +257,7 @@ CHART_SPEC_ORDER <- list(
     applies = c(SPEC_CHART_AGGREGATED, "gantt"),
     gear = gear("Order", "select", "Sort"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "value",
     describe = paste(
       "Category order: \"value\", \"data\", \"alpha\", or a column (its",
       "per-category minimum). Gantt: \"onset\", \"alpha\" or a column.",
@@ -263,6 +272,7 @@ CHART_SPEC_ORDER <- list(
     gear = gear("Order", "segmented", "Order",
                 labels = c("Ascending", "Descending")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "desc",
     describe = "Sort direction."
   )
 )
@@ -275,13 +285,14 @@ CHART_SPEC_NUMBERS <- list(
     gear = gear("Bars", "segmented", "Values",
                 labels = c("Show values", "Off")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = TRUE,
     describe = paste(
       "TRUE writes each bar's value at its end: a stack its total, a",
       "filled bar each share."
     )
   ),
 
-  format = viz_format_arg(SPEC_CHART_NUMBER_TYPES),
+  format = viz_format_arg(SPEC_CHART_NUMBER_TYPES, example = "compact"),
   unit = viz_unit_arg(SPEC_CHART_NUMBER_TYPES),
 
   percent_of = viz_arg(
@@ -291,6 +302,7 @@ CHART_SPEC_NUMBERS <- list(
     gear = gear("Numbers", "select", "Percent of",
                 labels = c("Facet", "Category", "Color", "Whole chart")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "facet",
     describe = paste(
       "The role whose levels a `pct_distinct` denominator is taken",
       "within, or \"total\" for the whole chart."
@@ -306,6 +318,7 @@ CHART_SPEC_NUMBERS <- list(
                 labels = c("Off", "On category axis", "On facet labels",
                            "On axis + facets")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "none",
     describe = "Observation counts in labels, e.g. \"Female (12)\"."
   ),
 
@@ -313,6 +326,7 @@ CHART_SPEC_NUMBERS <- list(
     type = "column", default = NULL, null = "count rows",
     gear = gear("Counts", "column", "Individual id"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "customer_id",
     describe = paste(
       "Column that identifies an individual, counted distinct by the band",
       "and by `show_n`."
@@ -350,6 +364,7 @@ CHART_SPEC_LINES <- list(
     gear = gear("Reference lines", "segmented", "Identity",
                 labels = c("Identity line (y = x)", "Off")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = FALSE,
     describe = "TRUE draws a dashed y = x line."
   ),
 
@@ -382,6 +397,7 @@ CHART_SPEC_MARKS <- list(
     gear = gear("Marks", "select", "Smoother",
                 labels = c("None", "Linear", "Loess")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "none",
     describe = "Trend line, fit per color or series group and per panel."
   ),
 
@@ -403,6 +419,7 @@ CHART_SPEC_MARKS <- list(
     applies = SPEC_CHART_INDIVIDUAL,
     gear = gear("Marks", "slider", "Line width"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = 1,
     describe = "Line width relative to the default (1)."
   ),
 
@@ -411,6 +428,7 @@ CHART_SPEC_MARKS <- list(
     applies = SPEC_CHART_INDIVIDUAL,
     gear = gear("Marks", "slider", "Point size"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = 1,
     describe = "Marker size relative to the default (1)."
   ),
 
@@ -420,6 +438,7 @@ CHART_SPEC_MARKS <- list(
     applies = c("boxplot", "pointrange", "band"),
     gear = gear("Marks", "select", "Inner range", labels = SPEC_STAT_LABELS),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "mean_se",
     describe = paste(
       "Statistic of a boxplot's body, a pointrange's interval or a band's",
       "inner range."
@@ -433,6 +452,7 @@ CHART_SPEC_MARKS <- list(
     gear = gear("Marks", "select", "Outer range",
                 labels = c("Tukey (1.5\u00d7IQR)", SPEC_STAT_LABELS)),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "tukey",
     describe = "Outer interval: Tukey fences or any `summary` statistic."
   ),
 
@@ -443,6 +463,7 @@ CHART_SPEC_MARKS <- list(
     gear = gear("Marks", "segmented", "Points",
                 labels = c("None", "Outliers")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "none",
     describe = "\"outliers\" draws the points beyond the whiskers."
   ),
 
@@ -452,6 +473,7 @@ CHART_SPEC_MARKS <- list(
     gear = gear("Marks", "segmented", "Centers",
                 labels = c("Connect centers", "Off")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = TRUE,
     describe = "TRUE joins a pointrange's centers in category order."
   ),
 
@@ -462,6 +484,7 @@ CHART_SPEC_MARKS <- list(
     gear = gear("Marks", "select", "Window",
                 labels = c("Adaptive (by subjects)", "Fixed (x units)")),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "adaptive",
     describe = paste(
       "\"adaptive\" grows the window at each point until it holds",
       "`band_size` individuals; \"fixed\" uses `band_size` as a half-width",
@@ -474,6 +497,7 @@ CHART_SPEC_MARKS <- list(
     applies = "band",
     gear = gear("Marks", "text", "Subjects per window"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = 45,
     describe = "Individuals per window, or the half-width; see `band_window`."
   ),
 
@@ -482,6 +506,7 @@ CHART_SPEC_MARKS <- list(
     applies = "band",
     gear = gear("Marks", "text", "Cut below n"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = 12L,
     describe = "Points with fewer individuals than this are not drawn."
   ),
 
@@ -490,6 +515,7 @@ CHART_SPEC_MARKS <- list(
     applies = "histogram",
     gear = gear("Mapping", "number", "Bins"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = 30L,
     describe = "About how many bins x is cut into, at readable breaks."
   )
 )
@@ -504,6 +530,7 @@ CHART_SPEC_FACETS <- list(
                            "Free y per panel"),
                 when = "facet"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "fixed",
     describe = paste(
       "\"fixed\" shares one scale across panels, \"free\" lets each panel",
       "size itself, \"free_y\" frees y only (scatter, line and band)."
@@ -526,6 +553,7 @@ CHART_SPEC_INTERACT <- list(
     null = "a click does nothing",
     gear = gear("Drill-down", "toggle", "Filter on"),
     slot = TRUE, ctrl = TRUE, ai = TRUE,
+    example = "Species",
     describe = paste(
       "Column a click filters downstream on, or \"auto\" for the type's",
       "natural target (the clicked group, bin or lane)."

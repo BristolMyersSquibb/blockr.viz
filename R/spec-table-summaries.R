@@ -1,7 +1,8 @@
 # The keys of a table summary entry (`summaries`) and of a shading rule
 # (`shadings`). Each summary type has its own spec, on top of the keys every
 # type takes (TABLE_SUMMARY_COMMON). The table spec types both arguments as
-# `map` and points its readers here. Collates before spec-table.R.
+# records of every key (TABLE_SUMMARY_RECORD, at the end); an entry's own
+# spec checks it further. Collates before spec-table.R.
 #
 # A key without a default that an entry must have (a dist's `col`) is marked
 # `null = "required"` until the spec vocabulary has a word for it; nothing
@@ -322,4 +323,32 @@ TABLE_SHADING_SPEC <- viz_spec(
     null = "the data range; diverging is symmetric around 0",
     describe = "`c(low, high)` the colors span, e.g. `c(-1, 1)` for correlations."
   )
+)
+
+# The record type of `summaries` and `shadings` in the table spec: every key
+# any entry may carry, typed as in its own spec. An enum key is a string
+# here; the entry's own spec checks its values.
+spec_entry_fields <- function(specs) {
+  out <- list()
+  for (spec in specs) {
+    for (nm in names(spec$args)) {
+      if (nm %in% names(out)) next
+      t <- spec$args[[nm]]$type
+      out[[nm]] <- if (t$name %in% c("enum", "enums")) {
+        if (t$name == "enum") "string" else "strings"
+      } else {
+        t
+      }
+    }
+  }
+  out
+}
+
+TABLE_SUMMARY_RECORD <- do.call(
+  type_records,
+  spec_entry_fields(c(list(TABLE_SUMMARY_COMMON), TABLE_SUMMARY_SPECS))
+)
+
+TABLE_SHADING_RECORD <- do.call(
+  type_records, spec_entry_fields(list(TABLE_SHADING_SPEC))
 )
