@@ -96,11 +96,12 @@
   };
 
   /**
-   * The scatter or line series of one panel, with their overlays.
+   * What every part of a panel's points reads: the mark sizes, the line
+   * style, the interval pairs and log floors, the names on the marks.
    * @param {any} m the individual model @param {any} panel @param {any} look
-   * @param {number} [plotW] the plot's width in px
+   * @param {number} plotW the plot's width in px
    */
-  const points = (m, panel, look, plotW = 0) => {
+  const pointsContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const isLine = m.isLine;
     const dm = cfg.dot_size_mult ?? 1.0;
@@ -147,12 +148,21 @@
     const clrOf = (/** @type {any} */ s) => (s.muted ? muted : s.color);
     const hlNames = isLine && !!m.hl && !!m.splitCol;
 
-    // A scatter's native emphasis is off: it would strobe a dense cloud. A
-    // line keeps it without scaling or focus, which is what draws one dot
-    // per line at the crosshair; the crowd's is off, its hover is the
-    // overlay.
-    const mkSeries = (/** @type {any} */ name, /** @type {any[]} */ data, /** @type {string} */ clr,
-                      /** @type {boolean} */ isMuted = false) => /** @type {any} */ ({
+    return { cfg, ink, m, panel, isLine, dm, lm, crowd, dots, lineMarkerPx, lineW, surface, stepMode, smoothOn, smoother, smootherSeries, pairs, floorY, floorX, loEnd, hiEnd, isArea, stackArea, ltCol, directLabels, cloudLabels, encodeX, muted, clrOf, hlNames };
+  };
+
+  /**
+   * One scatter or line series.
+   * A scatter's native emphasis is off: it would strobe a dense cloud. A
+   * line keeps it without scaling or focus, which is what draws one dot per
+   * line at the crosshair; the crowd's is off, its hover is the overlay.
+   * @param {any} k @param {any} name @param {any[]} data @param {string} clr
+   * @param {boolean} [isMuted]
+   */
+  const mkSeries = (k, name, data, clr, isMuted = false) => {
+    const { isLine, stepMode, smoothOn, crowd, lineMarkerPx, dm, dots, surface, lineW, m, isArea,
+            stackArea, directLabels, hlNames, ink } = k;
+    return /** @type {any} */ ({
       type: isLine ? 'line' : 'scatter',
       name,
       data,
@@ -186,11 +196,16 @@
         labelLayout: { moveOverlap: 'shiftY' }
       } : {})
     });
+  };
 
-    // `linetype`: the levels in the order the rows first carry them; the
-    // first is solid. A segment takes the level of the point it leads to,
-    // so a forecast is dashed from the last observed point on.
-    /** @type {string[]} */
+  /**
+   * `linetype`: the levels in the order the rows first carry them; the
+   * first is solid. A segment takes the level of the point it leads to, so a
+   * forecast is dashed from the last observed point on.
+   * @param {any} k @returns {string[]}
+   */
+  const lineTypeLevels = (k) => {
+    const { ltCol, panel } = k;
     const ltLevels = [];
     if (ltCol) {
       const seen = new Set();
@@ -201,16 +216,21 @@
         }
       }
     }
-    /** @param {any} s @param {number} si */
-    const lineSegments = (s, si) => {
+    return ltLevels;
+  };
+
+  /** One line split at its linetype levels.
+   * @param {any} k @param {string[]} ltLevels @param {any} s @param {number} si */
+  const lineSegments = (k, ltLevels, s, si) => {
+    const { ltCol, clrOf } = k;
       const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
-      return ltLevels.map((L, k) => {
+      return ltLevels.map((L, j) => {
         const data = s.pts.map((/** @type {any} */ p, /** @type {number} */ i) =>
           (lv[i] === L || lv[i + 1] === L) ? p : [p[0], null]);
-        const sr = mkSeries(s.level, data, clrOf(s), !!s.muted);
-        sr.id = '__seg_' + si + '_' + k;
-        if (k > 0) {
-          sr.lineStyle = { ...sr.lineStyle, type: DASHES[(k - 1) % DASHES.length] };
+        const sr = mkSeries(k, s.level, data, clrOf(s), !!s.muted);
+        sr.id = '__seg_' + si + '_' + j;
+        if (j > 0) {
+          sr.lineStyle = { ...sr.lineStyle, type: DASHES[(j - 1) % DASHES.length] };
           // One end label per line, on its first segment.
           delete sr.endLabel;
           delete sr.labelLayout;
@@ -219,10 +239,14 @@
       }).filter((sr) => sr.data.some((/** @type {any} */ p) => p[1] != null));
     };
 
-    // `ymin`/`ymax` on a line: one band per pair, the first the outermost.
-    // Grey for a single line; in the line's colour when colour splits them.
-    /** @param {any} s */
-    const lineBands = (s) => {
+
+  /**
+   * `ymin`/`ymax` on a line: one band per pair, the first the outermost.
+   * Grey for a single line; in the line's colour when colour splits them.
+   * @param {any} k @param {any} s
+   */
+  const lineBands = (k, s) => {
+    const { m, clrOf, ink, pairs, loEnd, hiEnd } = k;
       const clr = m.splitCol ? clrOf(s) : ((ink && ink.muted) || '#6b7280');
       /** @type {any[]} */
       const out = [];
@@ -238,8 +262,13 @@
       return out;
     };
 
-    // R fits the smoother per group, nested by facet level when faceted.
-    const smootherLine = (/** @type {any} */ groupName) => {
+
+  /**
+   * R fits the smoother per group, nested by facet level when faceted.
+   * @param {any} k @param {any} groupName
+   */
+  const smootherLine = (k, groupName) => {
+    const { smoother, smootherSeries, m, panel } = k;
       if (smoother === 'none' || !smootherSeries) return null;
       const bucket = (m.facet && panel.facet !== '__all__')
         ? smootherSeries[panel.facet] : smootherSeries;
@@ -254,21 +283,27 @@
       return out.length >= 2 ? out : null;
     };
 
+
+  /** Per level: its bands, its line or points, its fit, its error bars.
+   * @param {any} k */
+  const panelSeries = (k) => {
+    const { panel, isLine, pairs, ltCol, clrOf, smoother, m, hiEnd, loEnd, floorX, encodeX } = k;
+    const ltLevels = lineTypeLevels(k);
     /** @type {any[]} */
     const series = [];
     panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
-      if (isLine && pairs.length && s.rows.length) for (const b of lineBands(s)) series.push(b);
+      if (isLine && pairs.length && s.rows.length) for (const b of lineBands(k, s)) series.push(b);
       if (ltCol && ltLevels.length > 1) {
-        for (const sr of lineSegments(s, si)) series.push(sr);
+        for (const sr of lineSegments(k, ltLevels, s, si)) series.push(sr);
       } else {
-        series.push(mkSeries(s.level, s.pts, clrOf(s), !!s.muted));
+        series.push(mkSeries(k, s.level, s.pts, clrOf(s), !!s.muted));
       }
       // R fits one smoother per level: with a highlight it goes with the
       // level's highlighted points when it has some.
       const fitHere = !s.muted || !panel.series.some((/** @type {any} */ o) =>
         !o.muted && o.level === s.level);
       if (smoother !== 'none' && !isLine && fitHere) {
-        const ln = smootherLine(s.level);
+        const ln = smootherLine(k, s.level);
         if (ln) {
           series.push({
             type: 'line', name: s.level || 'fit', legendHoverLink: false, data: ln,
@@ -292,7 +327,15 @@
       }
     });
 
-    // `x_ranges`: named stretches of x, shaded behind the marks.
+    return series;
+  };
+
+  /**
+   * `x_ranges`: named stretches of x, shaded behind the marks.
+   * @param {any} k @param {any[]} series
+   */
+  const addRanges = (k, series) => {
+    const { cfg, ink, m, floorX, encodeX } = k;
     const ranges = Array.isArray(cfg.x_ranges) ? cfg.x_ranges : [];
     const host = series.find((sr) => sr.type === 'line' || sr.type === 'scatter');
     if (ranges.length && host) {
@@ -312,13 +355,20 @@
       };
     }
 
-    // `label`: the column's value written beside each point that has one, so
-    // a few named points stand out of a cloud. One label-only series per
-    // panel, over the points, with a halo to read on them; its id keeps the
-    // highlight patch and the brush off it.
-    // A highlight on a scatter without `label` names its highlighted points
-    // by the highlighted value, where that value picks out one or two points
-    // of the panel (a region on 40 points is said once, in the subtitle).
+  };
+
+  /**
+   * `label`: the column's value written beside each point that has one, so
+   * a few named points stand out of a cloud. One label-only series per
+   * panel, over the points, with a halo to read on them; its id keeps the
+   * highlight patch and the brush off it. A highlight on a scatter without
+   * `label` names its highlighted points by the highlighted value, where
+   * that value picks out one or two points of the panel (a region on 40
+   * points is said once, in the subtitle).
+   * @param {any} k @param {any[]} series @param {any} room
+   */
+  const pointLabels = (k, series, room) => {
+    const { isLine, m, cfg, panel, lineMarkerPx, dm, ink, surface } = k;
     const hlCol = !isLine && m.hl && !cfg.label ? Object.keys(m.hl)[0] : null;
     const labelCol = cfg.label || hlCol;
     /** @type {Map<string, number>} */
@@ -332,8 +382,6 @@
         }
       }
     }
-    // Point labels and group names keep out of each other's way.
-    const room = { placed: [], lastS: -1, lastD: -1 };
     if (labelCol) {
       /** @type {any[]} */
       const data = [];
@@ -367,10 +415,16 @@
       }
     }
 
-    // The name of each colour group at the centre of mass of its points. A
-    // label-only series per group, over the points, with a halo to read on them.
-    // Names of clouds that sit close are moved apart a line at a time, by one
-    // spacer the groups share.
+  };
+
+  /**
+   * The name of each colour group at the centre of mass of its points: a
+   * label-only series per group, over the points. Names of clouds that sit
+   * close are moved apart a line at a time, by one spacer the groups share.
+   * @param {any} k @param {any[]} series @param {any} room
+   */
+  const cloudNames = (k, series, room) => {
+    const { cloudLabels, panel, ink } = k;
     if (cloudLabels) {
       const spacer = labelSpacer('inside', 0, room);
       panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
@@ -382,6 +436,22 @@
       });
     }
 
+  };
+
+  /**
+   * The scatter or line series of one panel, with their overlays.
+   * @param {any} m the individual model @param {any} panel @param {any} look
+   * @param {number} [plotW] the plot's width in px
+   */
+  const points = (m, panel, look, plotW = 0) => {
+    const k = pointsContext(m, panel, look, plotW);
+    const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
+    const series = panelSeries(k);
+    addRanges(k, series);
+    // Point labels and group names keep out of each other's way.
+    const room = { placed: [], lastS: -1, lastD: -1 };
+    pointLabels(k, series, room);
+    cloudNames(k, series, room);
     // Room on the right for the end labels.
     let labelPad = 0;
     if (directLabels || hlNames) {
