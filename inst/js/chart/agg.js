@@ -1,0 +1,217 @@
+// @ts-check
+/**
+ * Chart block: the aggregation engine and the names of the statistics.
+ *
+ * aggregate() groups rows by facet, category and colour and aggregates the
+ * value column per cell. It is the browser's twin of the table model's
+ * aggregation in R; tests/testthat/test-agg-golden.R runs this file in node
+ * and compares the numbers. Pure: no DOM, no Shiny.
+ *
+ * The statistics are the vocabulary of `summary` and `whiskers` on the
+ * boxplot, point range and band.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
+
+  /** One word per aggregation, for composed labels ("Mean AGE").
+   * @type {Record<string, string>} */
+  const AGG_WORDS = {
+    count: 'Count', count_distinct: 'Distinct', mean: 'Mean',
+    median: 'Median', sum: 'Sum', min: 'Min', max: 'Max'
+  };
+
+  /** @type {Array<{value: string, label: string, center: string, range: string}>} */
+  const SUMMARY_STATS = [
+    { value: 'median_q1_q3', label: 'Median · Q1–Q3', center: 'Median', range: 'Q1–Q3' },
+    { value: 'mean_sd', label: 'Mean ± SD', center: 'Mean', range: '±1 SD' },
+    { value: 'mean_2sd', label: 'Mean ± 2 SD', center: 'Mean', range: '±2 SD' },
+    { value: 'mean_se', label: 'Mean ± SE', center: 'Mean', range: '±1 SE' },
+    { value: 'mean_ci95', label: 'Mean · 95% CI', center: 'Mean', range: '95% CI' },
+    { value: 'p5_p95', label: '5th–95th percentile', center: 'Median', range: 'P5–P95' },
+    { value: 'p10_p90', label: '10th–90th percentile', center: 'Median', range: 'P10–P90' },
+    { value: 'min_max', label: 'Min–Max', center: 'Median', range: 'Min–Max' }
+  ];
+  /** Whiskers take the same statistics and Tukey's fences. */
+  const WHISKER_STATS = [
+    { value: 'tukey', label: 'Tukey (1.5×IQR)', center: '', range: '1.5×IQR' },
+    ...SUMMARY_STATS
+  ];
+  /** @param {string} stat */
+  const statMeta = (stat) => WHISKER_STATS.find((s) => s.value === stat) || WHISKER_STATS[0];
+
+  // Math.max (dir 1) or Math.min (dir -1) of a non-empty array of numbers
+  // (never NaN: the caller drops those). A tie between 0 and -0 resolves the
+  // way Math.max / Math.min resolve it.
+  /** @param {number[]} vals @param {number} dir */
+  function extreme(vals, dir) {
+    let m = vals[0];
+    for (let i = 1; i < vals.length; i++) {
+      const v = vals[i];
+      if (dir > 0 ? (v > m || (v === 0 && m === 0 && Object.is(m, -0)))
+                  : (v < m || (v === 0 && m === 0 && Object.is(v, -0)))) m = v;
+    }
+    return m;
+  }
+
+  /**
+   * Group + aggregate rows. Semantics are aligned to the R engine
+   * (dd_table_aggregate / dd_metric_plan in R/table-block.R — the source of
+   * truth); the golden cross-test guards the pair:
+   *
+   *   count           rows in the (facet, group, color) cell.
+   *   count_distinct  distinct non-missing values of `value` in the cell
+   *                   (R: dplyr::n_distinct(x, na.rm = TRUE)).
+   *   sum             sum over usable numeric values; an empty cell sums
+   *                   to 0 (R: sum(x, na.rm = TRUE)).
+   *   mean/median/    over usable numeric values; a cell with NONE yields
+   *   min/max         null — no value, not a fabricated 0 (R: NA). The
+   *                   chart renders null as a gap (ECharts native).
+   *
+   * "Usable" = non-null and coercible to a number, so a single bad cell
+   * can't poison a mean/sum into NaN. Missing group KEYS form their own
+   * cell by default: null/undefined stringify to '' here, while R groups them
+   * under NA (a labeling difference only — same rows, same numbers).
+   *
+   *   na_group        'level' (default, the behaviour above) or 'drop'.
+   *                   'drop' removes rows whose cell has no complete address —
+   *                   a missing value in ANY mapped role, group, facet or
+   *                   color — so they draw no nameless bar, panel or series.
+   *                   They are still counted in the population pct_distinct
+   *                   divides by, because that is built before any of this.
+   *                   The distinction is the whole point: a subject something
+   *                   did not happen to is not a category, and is still a
+   *                   subject.
+   *                   (All three roles, not just group: R's twin has always
+   *                   dropped on any of them, since the table passes facet,
+   *                   group and color as one grouping. JS checked group alone,
+   *                   so the engines disagreed whenever a FACET carried NAs.)
+   *   pct_distinct    chart-only. distinct `value` in the cell divided by
+   *                   distinct `value` in the surrounding population, as a
+   *                   fraction (0..1, like bar_mode 'percent'). Absent from
+   *                   AGG_FNS for the same reason as identity: no R twin, so
+   *                   it sits out the golden cross-test (see
+   *                   test-agg-pct-distinct.R).
+   *   pct_of          which roles the denominator is taken WITHIN: any subset
+   *                   of 'facet', 'group', 'color'. Default ['facet'].
+   *                   A cell only knows the values of the roles it is mapped
+   *                   on, so those three are the whole option space -- there
+   *                   is nothing else a denominator could be grouped by.
+   *
+   *                   Why it cannot be inferred: the chart would have to know
+   *                   whether a column is a POPULATION split (arm, sex,
+   *                   country -- a per-level denominator is meaningful) or an
+   *                   EVENT attribute (grade, seriousness -- dividing grade-2
+   *                   subjects by subjects-with-grade-2 is circular). Nothing
+   *                   in the data says which, so the user says.
+   *
+   * Returns RAW numbers ({facet, group, color, value, n}) — presentation
+   * rounding belongs to the consumers (tooltip / label formatters).
+   * @param {any[]} rows
+   * @param {{group?: string, color?: string, facet?: string,
+   *          value?: string, func?: string, na_group?: string,
+   *          pct_of?: string | string[]}} cfg
+   */
+  function aggregate(rows, cfg) {
+    const { group, color, facet, value, func, na_group, pct_of } = cfg || {};
+    if (!rows || rows.length === 0) return [];
+
+    // A key is missing when it stringifies to '' — the same fold the golden
+    // cross-test applies to R's NA, so both engines drop the same rows.
+    const dropNa = na_group === 'drop';
+    const cellCols = /** @type {string[]} */ ([group, facet, color].filter(Boolean));
+    const incomplete = (/** @type {any} */ row) =>
+      cellCols.some(c => String(row[c] ?? '') === '');
+    const usable = (/** @type {any} */ v) =>
+      v != null && !(typeof v === 'number' && Number.isNaN(v));
+
+    // The roles the pct_distinct denominator is taken within. Placeholders for
+    // an unmapped role MUST match the ones the cells use below ('Total' for
+    // group, '__all__' for facet/color), or a cell's key never finds its
+    // denominator and every percentage comes out null. A name that is no role
+    // ('total') keys every row '__all__': one denominator for all the rows.
+    const pctRoles = (Array.isArray(pct_of) ? pct_of
+      : (pct_of ? [pct_of] : ['facet'])).map(String);
+    const coords = (/** @type {any} */ row) => ({
+      facet: facet ? String(row[facet] ?? '') : '__all__',
+      group: group ? String(row[group] ?? '') : 'Total',
+      color: color ? String(row[color] ?? '') : '__all__'
+    });
+    const denomKey = (/** @type {any} */ c) =>
+      pctRoles.map(r => c[r] !== undefined ? c[r] : '__all__').join('|||');
+
+    // Denominators, counted over EVERY row including the ones 'drop' removes
+    // from the cells. Built before the cells, because that is the point: a
+    // subject something did not happen to still belongs to the population.
+    /** @type {Record<string, Set<any>>} */
+    const denomPop = {};
+    if (func === 'pct_distinct') {
+      for (const row of rows) {
+        const v = value != null ? row[value] : null;
+        if (!usable(v)) continue;
+        const k = denomKey(coords(row));
+        (denomPop[k] || (denomPop[k] = new Set())).add(v);
+      }
+    }
+
+    /** @type {Record<string, any>} */
+    const groups = {};
+    for (const row of rows) {
+      if (dropNa && incomplete(row)) continue;
+      const gv = group ? String(row[group] ?? '') : 'Total';
+      const cv = color ? String(row[color] ?? '') : '__all__';
+      const fv = facet ? String(row[facet] ?? '') : '__all__';
+      const key = fv + '|||' + gv + '|||' + cv;
+      if (!groups[key]) groups[key] = { facet: fv, group: gv, color: cv, values: [], rows: [] };
+      groups[key].rows.push(row);
+      if (value !== '.count' && value != null && row[value] != null) {
+        const n = Number(row[value]);
+        if (!Number.isNaN(n)) groups[key].values.push(n);
+      }
+    }
+
+    const result = [];
+    for (const g of Object.values(groups)) {
+      // `out` (not `value`) — `value` is the config's aggregated column name,
+      // read as r[value] in the count_distinct branch; a local `value` would
+      // shadow it and silently count r[undefined] (every group → 0).
+      let out;
+      if (func === 'count') out = g.rows.length;
+      else if (func === 'count_distinct') { const s = new Set(); for (const r of g.rows) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); } out = s.size; }
+      // Share of the FACET's distinct values, as a fraction. A facet with no
+      // usable value has no denominator, so the cell is null (a gap) rather
+      // than a fabricated 0 — same rule as mean/min on an empty cell.
+      else if (func === 'pct_distinct') {
+        const s = new Set();
+        for (const r of g.rows) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); }
+        const pop = denomPop[denomKey(g)];
+        const den = pop ? pop.size : 0;
+        out = den ? s.size / den : null;
+      }
+      else if (func === 'mean') out = g.values.length ? g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / g.values.length : null;
+      else if (func === 'median') { const s = g.values.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b); const m = Math.floor(s.length / 2); out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; }
+      else if (func === 'sum') out = g.values.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
+      // A loop, not Math.min.apply: passing a cell's values as arguments
+      // throws a RangeError past about 100k of them.
+      else if (func === 'min') out = g.values.length ? extreme(g.values, -1) : null;
+      else if (func === 'max') out = g.values.length ? extreme(g.values, 1) : null;
+      // identity: the value AS-IS — no aggregation. Returns the cell's first
+      // usable numeric value; with one row per (group, color) cell (the
+      // intended use: precomputed bar heights) that IS the row's value. A cell
+      // with no usable value stays null (a gap, like mean/min). Chart-only:
+      // offered solely in the chart's `func` picker (chart/roles.js), never in the
+      // shared AGG_FNS, so the table/tile and the drift/golden tests are
+      // unaffected. Duplicate categories collapse to the first row (documented).
+      else if (func === 'identity') out = g.values.length ? g.values[0] : null;
+      // n = rows behind this (group, color) cell, for the tooltip's
+      // "n = ..." line (how many observations the mark aggregates).
+      result.push({ facet: g.facet, group: g.group, color: g.color, value: out, n: g.rows.length });
+    }
+    return result;
+  }
+
+  NS.agg = { AGG_WORDS, SUMMARY_STATS, WHISKER_STATS, statMeta, aggregate, extreme };
+})();

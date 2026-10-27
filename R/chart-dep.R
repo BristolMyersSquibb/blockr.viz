@@ -1,35 +1,29 @@
 #' HTML dependencies for the chart block
 #'
 #' The design system's tokens and shared controls (blockr.ui), the ECharts
-#' themes, the shared aggregation vocabulary and gear engine (they load
-#' before the chart scripts, which read Blockr.DrilldownAgg and
-#' Blockr.DrilldownConfig at load), then the chart scripts listed in
-#' `inst/js/chart/scripts.txt`.
+#' themes, the busy cue, the JS core and the specs (viz_core_dep()), then
+#' the chart scripts listed in `inst/js/chart/scripts.txt`.
 #' @noRd
 drilldown_chart_dep <- memoise0(function() {
   htmltools::tagList(
     blockr.ui::controls_dep(),
     drilldown_echarts_themes_dep(),
-    drilldown_shared_dep(),
-    htmltools::htmlDependency(
-      name = "chart-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".157"),
-      src = system.file("js", package = "blockr.viz"),
-      script = c("drilldown-theme-register.js", chart_scripts())
-    ),
+    viz_core_dep(),
+    chart_js_dep(),
     chart_css_dep()
   )
 })
 
-# The chart scripts in load order, relative to inst/js. The node test harness
-# reads the same list.
-chart_scripts <- function() {
-  lines <- trimws(readLines(
-    system.file("js", "chart", "scripts.txt", package = "blockr.viz"),
-    warn = FALSE
-  ))
-  file.path("chart", lines[nzchar(lines) & !startsWith(lines, "#")])
-}
+chart_js_dep <- memoise0(function() {
+  script <- c("busy-cue.js", "drilldown-theme-register.js",
+              file.path("chart", js_script_list("chart")))
+  htmltools::htmlDependency(
+    name = "chart-js",
+    version = js_version(script),
+    src = system.file("js", package = "blockr.viz"),
+    script = script
+  )
+})
 
 # chart.css, shared by the chart block and the table block (which reuses the
 # chart's gear/popover styling). ONE definition so the cache-busting suffix
@@ -42,7 +36,7 @@ chart_css_dep <- memoise0(function() {
     tooltip_card_dep(),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".57"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".58"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     )

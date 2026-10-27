@@ -90,20 +90,20 @@
   }
 
   /**
-   * An empty section: a title over a body.
+   * An empty section: its title, then its rows as the section's own
+   * children, which the stylesheet lays out in a grid (chart.css,
+   * `.dd-section`). `body` is the section itself.
    * @param {string} title
    */
   function sectionEl(title) {
     const el = document.createElement('div');
-    el.className = 'dd-section';
+    el.className = 'dd-section' + (title === 'Titles' ? ' dd-section--titles' : '');
     el.setAttribute('data-section', title);
     const titleEl = document.createElement('div');
     titleEl.className = 'dd-section-title';
     titleEl.textContent = title;
-    const body = document.createElement('div');
-    body.className = 'dd-section-body';
-    el.append(titleEl, body);
-    return { el, titleEl, body };
+    el.appendChild(titleEl);
+    return { el, titleEl, body: el };
   }
 
   /**

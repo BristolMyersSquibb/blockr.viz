@@ -35,21 +35,6 @@ test('a restored filter needs a column and values', () => {
   assert.strictEqual(K.restored({}), null);
 });
 
-test('the filter message is a named list of columns (D2, D3)', () => {
-  assert.deepStrictEqual(plain(K.filterMessage({ AETERM: ['Rash'], AESEV: ['MODERATE'] }, 41)), {
-    action: 'filter', filter_type: 'categorical',
-    filters: { AETERM: ['Rash'], AESEV: ['MODERATE'] }, nonce: 41
-  });
-});
-
-test('a clear names the type of what it clears (B1)', () => {
-  const m = plain(K.clearMessage('categorical'));
-  assert.strictEqual(m.filter_type, 'categorical');
-  assert.strictEqual(m.column, null);
-  assert.strictEqual(m.x_range, null);
-  assert.strictEqual(plain(K.clearMessage('range')).filter_type, 'range');
-});
-
 test('the footer names the filter in column labels (D4)', () => {
   assert.strictEqual(K.describe({ AETERM: ['Nausea'] }, columns), 'Reported Term = Nausea');
   assert.strictEqual(K.describe({ AETERM: ['Nausea', 'Headache'] }, columns),
@@ -161,15 +146,14 @@ test('a restored range carries the facet key it was taken in (D10, D11)', () => 
   assert.strictEqual(K.restoredRange({ filter_type: 'range' }), null);
 });
 
-test('the range message: x and y fields, the facet key in filters only in a panel (D10)', () => {
+test('a range selection: x and y fields, the facet key in filters only in a panel (D10)', () => {
   const r = { x_col: 'ADY', y_col: 'AVAL', x_range: [28, 28], y_range: [41, 41] };
-  assert.deepStrictEqual(plain(K.rangeMessage(r, null)), {
-    action: 'filter', filter_type: 'range', x_col: 'ADY', y_col: 'AVAL',
-    x_range: [28, 28], y_range: [41, 41]
+  assert.deepStrictEqual(plain(K.rangeSelection(r, null)), {
+    type: 'range', x: 'ADY', y: 'AVAL', x_range: [28, 28], y_range: [41, 41]
   });
-  assert.deepStrictEqual(plain(K.rangeMessage(r, { ARM: ['Placebo'] })).filters, { ARM: ['Placebo'] });
+  assert.deepStrictEqual(plain(K.rangeSelection(r, { ARM: ['Placebo'] })).filters, { ARM: ['Placebo'] });
   // No y range: no y column.
-  assert.strictEqual(K.rangeMessage({ ...r, y_range: null }, null).y_col, null);
+  assert.strictEqual(K.rangeSelection({ ...r, y_range: null }, null).y, null);
 });
 
 test('a point is in a range by its x and y; text compares as text (D11)', () => {

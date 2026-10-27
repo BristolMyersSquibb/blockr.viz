@@ -30,7 +30,6 @@ test_that("gt_table_arguments() names match new_gt_table_block() formals exactly
 test_that("every *_arguments() descriptor is consistent with its constructor", {
   pairs <- list(
     list(args = gt_table_arguments,      ctor = new_gt_table_block),
-    list(args = chart_arguments,         ctor = new_chart_block),
     list(args = table_arguments,         ctor = new_table_block)
   )
 

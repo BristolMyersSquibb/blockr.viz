@@ -10,13 +10,13 @@ const { matchSnapshot } = require('./snapshot');
 function caseSnapshot(cs) {
   const data = cs.data || (cs.dict ? F.data_dict : F.data);
   const columns = cs.columns || F.columns;
+  const derived = { ...(cs.derived || {}), theme: cs.theme };
   const r = h.draw(cs.config, data, columns,
-                   { width: cs.width, height: cs.height, theme: cs.theme,
-                     keepOpen: !!cs.resend });
+                   { width: cs.width, height: cs.height, derived, keepOpen: !!cs.resend });
   let { error } = r;
   if (cs.resend) {
     try {
-      h.send(r.env, r.id, { columns, data, config: { ...cs.config, ...cs.resend } });
+      h.send(r.env, r.id, { columns, data, config: { ...cs.config, ...cs.resend }, derived });
     } catch (e) {
       error = String(e);
     }
@@ -28,6 +28,7 @@ function caseSnapshot(cs) {
   // the window's realm behind.
   return JSON.parse(JSON.stringify({
     config: cs.config,
+    derived: cs.derived || null,
     resend: cs.resend || null,
     error,
     dom: r.dom,

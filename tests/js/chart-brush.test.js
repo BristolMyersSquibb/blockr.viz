@@ -27,17 +27,17 @@ function cloud() {
 /** Draw the scatter, then brush every point of its one series. */
 function brushAll(drill) {
   const env = h.createEnv({ record: 'none' });
-  const { block, id } = h.mount(env);
+  const m = h.mount(env);
   const d = cloud();
-  h.send(env, id, { columns: d.columns, data: d.data,
-                    config: { chart_type: 'scatter', x: 'X', y: 'Y', drill } });
-  const chart = block._slots[0].chart;
+  h.send(env, m.id, { columns: d.columns, data: d.data,
+                      config: { type: 'scatter', x: 'X', y: 'Y', drill } });
+  const chart = m.block._slots[0].chart;
   const pts = chart.getOption().series[0].data;
   assert.strictEqual(pts.length, N);
   chart.trigger('brushSelected', {
     batch: [{ selected: [{ seriesIndex: 0, dataIndex: Array.from({ length: N }, (_, i) => i) }] }]
   });
-  const actions = env.inputs().filter((i) => /_action$/.test(i.name)).map((i) => i.value);
+  const actions = env.inputs().filter((i) => /_select:/.test(i.name)).map((i) => i.value.selection);
   env.close();
   return actions;
 }
@@ -46,7 +46,7 @@ test('brush with a drill column: every row once in the drill payload', () => {
   const actions = brushAll('ID');
   assert.strictEqual(actions.length, 1);
   const a = actions[0];
-  assert.strictEqual(a.filter_type, 'categorical');
+  assert.strictEqual(a.type, 'categorical');
   const values = a.filters.ID;
   assert.strictEqual(values.length, N);
   assert.strictEqual(new Set(values).size, N);
@@ -56,7 +56,6 @@ test('brush without a drill column: a range over every brushed point', () => {
   const actions = brushAll('auto');
   assert.strictEqual(actions.length, 1);
   assert.deepStrictEqual(actions[0], {
-    action: 'filter', filter_type: 'range', x_col: 'X', y_col: 'Y',
-    x_range: [0, SIDE - 1], y_range: [0, SIDE - 1]
+    type: 'range', x: 'X', y: 'Y', x_range: [0, SIDE - 1], y_range: [0, SIDE - 1]
   });
 });

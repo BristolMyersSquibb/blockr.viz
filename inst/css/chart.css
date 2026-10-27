@@ -567,6 +567,10 @@
 .dd-row-controls > .dd-pill-wrap,
 .dd-row-controls > .dd-slider-wrap,
 .dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
+/* Tiles in groups (the chart type): each group its heading over its tiles,
+   the groups side by side while they fit. */
+.dd-row-controls:has(> .dd-tile-group) { flex-wrap: wrap; gap: 16px; }
+.dd-row-controls > .dd-tile-group { flex: 1 1 240px; min-width: 0; }
 /* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
 .dd-pair-connector {
   align-self: center;
@@ -1648,3 +1652,13 @@
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }
+
+/* Empty state */
+.vd-empty-state {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 120px; padding: 24px;
+}
+.vd-empty-text {
+  font-size: 13px; color: var(--blockr-color-text-muted, #9ca3af);
+  text-align: center;
+}

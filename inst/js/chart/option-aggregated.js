@@ -16,7 +16,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
@@ -44,7 +45,7 @@
       // "None (as is)": the bar is the value, named by its column alone.
       : fn === 'identity' ? (col || 'Value')
       : fn === 'count_distinct' ? 'Distinct ' + col
-      : ((NS.roles.DAgg.AGG_WORDS || {})[fn] || fn) + ' of ' + col;
+      : (NS.agg.AGG_WORDS[fn] || fn) + ' of ' + col;
     return {
       ax: { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border },
       esc: NS.esc,
@@ -70,7 +71,6 @@
     if (ct === 'pie') return parts.pie;
     if (NS.DISTRIBUTION_TYPES.includes(ct)) return parts.distribution;
     if (ct === 'treemap') return parts.treemap;
-    if (ct === 'radar') return parts.radar;
     return m.cumulative ? parts.waterfall : parts.bar;
   };
 
@@ -105,7 +105,7 @@
 
   /**
    * The legend band's chips: a distribution's split levels, else the
-   * colour levels of a bar or radar. Pie, treemap and waterfall have none.
+   * colour levels of a bar. Pie, treemap and waterfall have none.
    * @param {any} m @param {Record<string, any>} cfg
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
@@ -174,17 +174,6 @@
         const dim = s.type === 'pie' ? 0.2 : 0.3;
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d
           : ({ ...d, itemStyle: { ...d.itemStyle, opacity: on(d.name, null) ? 1 : dim } })) };
-      }
-      if (s.type === 'radar') {
-        return { data: (s.data || []).map((/** @type {any} */ d) => {
-          if (d == null) return d;
-          const lv = cfg.color ? d.name : null;
-          const lt = on(null, lv);
-          return { ...d,
-                   lineStyle: { ...d.lineStyle, opacity: lt ? 1 : 0.15 },
-                   itemStyle: { ...d.itemStyle, opacity: lt ? 1 : 0.15 },
-                   areaStyle: { ...d.areaStyle, opacity: lt ? 0.15 : 0.04 } };
-        }) };
       }
       if (s.type === 'boxplot') {
         if (cats.length === 0) return {};
