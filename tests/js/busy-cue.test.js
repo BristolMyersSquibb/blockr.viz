@@ -77,11 +77,35 @@ const front = (env, el) => {
   env.win.document.dispatchEvent(new env.win.CustomEvent('dockview:active-panel', { bubbles: true }));
 };
 
+test('a chart with no picture counts from when its panel shows', () => {
+  const env = h.createEnv();
+  const { el, id } = h.mount(env);
+  hide(el);
+  // Shiny binds the element (its find()) before R sends anything.
+  env.binding.find(env.win.document);
+  env.flushTimers(500);
+  assert.ok(!busy(el), 'hidden: no clock');
+
+  front(env, el);
+  env.flushTimers(1);
+  env.flushTimers(1);
+  assert.ok(busy(el), 'shown: the clock runs before R has said anything');
+  assert.match(el.querySelector('.blockr-busy-line').textContent, /^drawing… \d+\.\d s$/);
+
+  env.handlers['blockr-busy']({ id, label: 'drawing' });
+  assert.ok(busy(el), "R's start keeps the clock");
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
+  env.flushTimers(500);
+  assert.ok(!busy(el), 'the picture ends it');
+  env.close();
+});
+
 test('a chart R has already spoken about is not watched', () => {
   const env = h.createEnv();
   const id = 'block_spoken-drilldown_block';
   env.handlers['blockr-busy-done']({ id });
   const { el } = h.mount(env, id);
+  env.binding.find(env.win.document);
   front(env, el);
   env.flushTimers(500);
   assert.ok(!busy(el));

@@ -138,3 +138,23 @@ test('a new element under a live id disposes the old view', () => {
   assert.deepEqual(log.map((l) => l[0]),
                    ['new', 'render', 'dispose', 'new', 'render']);
 });
+
+test('with a busy label, a found element gets its view and a busy watch', () => {
+  const env = setup({ busy: 'drawing' });
+  const watched = [];
+  env.win.Blockr.busy = { watch: (id, label) => watched.push([id, label]) };
+  const el = env.add('a');
+  env.b.find(env.win.document);
+  env.b.find(env.win.document);
+  assert.deepEqual(env.log, [['new', 'a']]);
+  assert.deepEqual(watched, [['a', 'drawing']]);
+  env.b.renderValue(el, payload(1, { g: ['x'] }));
+  assert.deepEqual(env.log, [['new', 'a'], ['render', 1, ['x']]]);
+});
+
+test('without a busy label, finding an element builds nothing', () => {
+  const { b, add, log, win } = setup();
+  add('a');
+  b.find(win.document);
+  assert.deepEqual(log, []);
+});

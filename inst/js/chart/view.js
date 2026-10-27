@@ -163,10 +163,6 @@
       /** @type {any} */ this.statusEl = null;
       /** @type {any} */ this._gear = null;
       this._buildDOM();
-      // No picture yet: the busy cue (busy-cue.js) counts the wait from when
-      // the chart shows.
-      const busy = root.Blockr.busy;
-      if (busy && typeof busy.watch === 'function') busy.watch(el.id, 'drawing');
       // One resize per animation frame, however many ticks a relayout fires.
       /** @type {(() => void) | null} */
       let pending = null;
@@ -553,6 +549,6 @@
 
   NS.ChartView = ChartView;
   NS.FAMILIES = FAMILIES;
-  if (typeof V.binding === 'function') V.binding('blockr.viz.chart', 'chart', ChartView);
+  if (typeof V.binding === 'function') V.binding('blockr.viz.chart', 'chart', ChartView, { busy: 'drawing' });
   if (typeof NS.registerCapture === 'function') NS.registerCapture(ChartView);
 })();
