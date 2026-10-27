@@ -1,7 +1,8 @@
 # LEGACY: delete with this file.
 #
-# The one place for argument names and values of blockr.viz < 0.3.0. The
-# specs (R/spec-chart.R, R/spec-table.R) carry only the current names.
+# The one place for argument names and values of blockr.viz < 0.3.0, with
+# R/legacy-restore.R, which applies them. The specs (R/spec-chart.R,
+# R/spec-table.R) carry only the current names.
 # Written from the legacy tables in _scratch/viz-cran-review/spec-chart.md
 # and spec-table.md.
 #
@@ -79,7 +80,7 @@ LEGACY_NAMES <- legacy_table(list(
              c(linear = "identity", log = "log10")),
   legacy_row("chart", "connect", "connect",
              c(`step-start` = "step_start", `step-middle` = "step_middle",
-               `step-end` = "step_end")),
+               `step-end` = "step_end", off = "straight")),
   legacy_row("chart", "box_points", "box_points", c(all = "none")),
   legacy_row("chart", "value_labels", "value_labels",
              c(on = "TRUE", off = "FALSE"), rule = "to logical"),
@@ -92,6 +93,8 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("chart", "ctrl_target", "drill_target"),
   legacy_row("chart", "ctrl_table", "drill_table"),
   legacy_row("chart", "values", "script_values"),
+  legacy_row("chart", "script", "script",
+             rule = "saved as lines, joined by newlines"),
   legacy_row("chart", "filter_type", "selection", rule = "merged into one map"),
   legacy_row("chart", "filters", "selection", rule = "merged into one map"),
   legacy_row("chart", "filter_range", "selection", rule = "merged into one map"),
@@ -133,9 +136,14 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("table", "filter_spread_from", "selection",
              rule = "merged into one map"),
   legacy_row("table", "max_height", NA, rule = "read and dropped"),
+  legacy_row("table", "script", "script",
+             rule = "saved as lines, joined by newlines"),
   legacy_row("table", "pct_of", "percent_of"),
   legacy_row("table", "axis", "column_axis"),
   legacy_row("table", "sort_by", "sort_by", c(label = "alpha")),
+  legacy_row("table", "stats", "stats", c(compact = "mean_sd"),
+             rule = paste("\"expanded\" is n, mean, sd, median, q1_q3,",
+                          "min_max")),
   legacy_row("table", "color", "color",
              rule = paste("saved before 0.3.0: NULL means \"auto\" and \"\"",
                           "means NULL")),
