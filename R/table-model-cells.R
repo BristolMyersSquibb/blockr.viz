@@ -247,10 +247,10 @@ summarize_parent_labels <- function(rows) {
 summarize_fold_text <- function(prep) {
   if (!isTRUE(prep$folded > 0L)) return(NULL)
   paste0(
-    "Other — ", prep$folded, " ",
+    "Other \u2014 ", prep$folded, " ",
     if (is.null(prep$parent)) "rows" else "groups", " below the cut",
     if (is.finite(prep$fold_max)) {
-      paste0(", each with a value ≤ ",
+      paste0(", each with a value \u2264 ",
              format(prep$fold_max, scientific = FALSE, trim = TRUE))
     } else {
       ""

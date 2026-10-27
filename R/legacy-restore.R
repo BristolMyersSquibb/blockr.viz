@@ -44,6 +44,7 @@ legacy_restore <- function(block, state, version = NULL) {
   state <- legacy_rename(block, state)
   state <- legacy_map_values(block, state)
   state <- legacy_values(block, state, version)
+  if (identical(block, "table")) state <- legacy_table_selection(state)
   if (identical(block, "table")) {
     if (is.list(state[["summaries"]])) {
       state$summaries <- lapply(state$summaries, legacy_summary_entry)
@@ -420,4 +421,33 @@ legacy_deser <- function(class, data) {
   )
   list(block = if (identical(class, "chart_block")) "chart" else "table",
        args = args, attrs = attrs)
+}
+
+# LEGACY: delete with this file
+# The table's selection as the reference saved it, one shape per engine:
+# `column` and `values` (a flat table, the groups layout), `group_cols` and
+# `group_vals` (a structured or nested table), `col_keys` (the clicked
+# column's identity). The kit holds one shape for all: `filters`, column to
+# values, and `columns` (kit-input.R).
+legacy_table_selection <- function(state) {
+  s <- state[["selection"]]
+  if (!is.list(s) || !length(s) || !is.null(s$filters) || !is.null(s$type)) {
+    return(state)
+  }
+  gc <- as.character(unlist(s$group_cols))
+  gv <- as.character(unlist(s$group_vals))
+  filters <- if (length(gc) && length(gc) == length(gv)) {
+    stats::setNames(as.list(gv), gc)
+  } else {
+    summarize_drill_filters(s$column, s$values)
+  }
+  ck <- dd_col_keys_state(s$col_keys)
+  columns <- if (length(ck)) {
+    stats::setNames(lapply(ck, `[[`, "values"), vapply(ck, `[[`, "", "column"))
+  }
+  state["selection"] <- list(if (length(filters) || length(columns)) {
+    c(list(type = "categorical", filters = filters),
+      if (length(columns)) list(columns = columns))
+  })
+  state
 }

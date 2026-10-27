@@ -171,7 +171,7 @@ cells_dist_text <- function(ctx, p) {
     is.na(cc), "",
     paste0(lane_fmt(cc),
            ifelse(is.na(ll) | is.na(hh), "",
-                  paste0(" (", lane_fmt(ll), "–", lane_fmt(hh), ")")))
+                  paste0(" (", lane_fmt(ll), "\u2013", lane_fmt(hh), ")")))
   )
   list(kind = "num", v = cells_sortv(cc), disp = disp)
 }

@@ -46,7 +46,7 @@ lane_plan_sub <- function(s, cp) {
   } else if (is.null(cp$pop)) {
     s$name
   } else {
-    paste0(s$name, " · N = ", cp$pop)
+    paste0(s$name, " \u00b7 N = ", cp$pop)
   }
 }
 
@@ -77,7 +77,7 @@ lane_plan_base <- function(s, cp, sid, label, sub, den) {
   # so arms of different size compare on one scale.
   if (!is.null(den)) {
     base$sub_label <- if (isTRUE(cp$named)) {
-      paste0(s$name, " · N = ", den)
+      paste0(s$name, " \u00b7 N = ", den)
     } else {
       paste0("N = ", den)
     }
@@ -265,16 +265,16 @@ lane_plan_pair <- function(s, sid, base, sub, data, scale_map) {
   dlv <- s$.dlevels
   words <- c(
     trimws(paste(LANE_PAIR_WORDS[[s$from_func]],
-                 summarize_col_name(data, s$from), "◇")),
+                 summarize_col_name(data, s$from), "\u25c7")),
     trimws(paste(LANE_PAIR_WORDS[[s$to_func]],
-                 summarize_col_name(data, s$to), "●"))
+                 summarize_col_name(data, s$to), "\u25cf"))
   )
   # Set on `base` itself: c() would append a second `sub_label` that `$`
   # never reads past the first (NULL) one.
   base$sub_label <- sub %||% paste0(
-    words[[1L]], " → ", words[[2L]],
+    words[[1L]], " \u2192 ", words[[2L]],
     if (length(dlv) > 1L) {
-      paste0(" · dashed: ", summarize_col_name(data, s$dash), " ≠ ",
+      paste0(" \u00b7 dashed: ", summarize_col_name(data, s$dash), " \u2260 ",
              dlv[[1L]])
     } else {
       ""
