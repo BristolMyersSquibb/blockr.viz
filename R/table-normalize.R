@@ -28,8 +28,9 @@ table_normalize <- function(state, prev = NULL, kinds = NULL) {
     state$summaries <- list(table_seed_summary())
   }
   if (identical(layout, "variables") && length(state[["by"]])) {
-    keep <- !vapply(state[["summaries"]] %||% list(), table_summary_on_by,
-                    logical(1L), by = state$by)
+    keep <- !vapply(state[["summaries"]] %||% list(), function(e) {
+      any(table_summaries_vars(list(e)) %in% state$by)
+    }, logical(1L))
     state["summaries"] <- list(state[["summaries"]][keep])
   }
   if (changed(state, prev, "sort_by") && identical(state[["sort_by"]], "data")) {
@@ -43,16 +44,4 @@ table_seed_summary <- function() {
   seed <- list(type = "simple", name = "Count", func = "count", show = "bar")
   spec <- viz_block_spec("table")
   viz_check_value(spec$args$summaries, list(seed), "summaries")[[1L]]
-}
-
-# The variable a summary is a row for in the variables layout: a dist's or
-# a field's column, a count's color split.
-table_summary_on_by <- function(entry, by) {
-  type <- entry[["type"]] %||% "simple"
-  var <- switch(type,
-    dist = , field = entry[["col"]],
-    simple = entry[["color"]] %||% entry[["col"]],
-    NULL
-  )
-  length(var) == 1L && var %in% by
 }

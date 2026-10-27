@@ -266,3 +266,19 @@ exhibit_inline_deps <- function(deps) {
 
   out
 }
+
+# The web page download: the picture when the browser drew one, else what
+# the block's render object draws, else the rows as the screen rounds them.
+export_html <- function(x, file) {
+  t <- exhibit_titles(x)
+  p <- exhibit_picture(x)
+  if (!is.null(p)) {
+    return(write_exhibit_html(p, file, title = t$title))
+  }
+  obj <- exhibit_render(x) %||% exhibit_data(x, display = TRUE)
+  m <- exhibit_meta(x)
+  write_exhibit_html(obj, file, title = t$title, subtitle = t$subtitle,
+                     caption = t$caption,
+                     collapsible = !identical(m$collapsible, FALSE),
+                     sortable = !identical(m$sortable, FALSE))
+}

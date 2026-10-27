@@ -193,7 +193,7 @@ test_that("a grouped tile restores as grouped cards with its drill", {
   expect_identical(vapply(r$args$summaries, `[[`, "", "func"),
                    c("sum", "count"))
   expect_identical(r$args$drill, "auto")
-  expect_identical(r$args$selection$column, "region")
+  expect_identical(r$args$selection$filters, list(region = "North"))
   expect_identical(r$attrs$block_name, "Revenue by region")
 })
 

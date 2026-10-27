@@ -135,123 +135,22 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
                                        max_height = NULL,
                                        default_expanded = NULL, ...) {
 
-  # Same shape as the rendered-plot method next door: the image inline as a
-  # data URI, so the page carries it. Through a file and base64enc rather
-  # than jsonlite, whose base64_enc() wraps its output at 80 columns -- a
-  # data URI with newlines in it silently does not load.
+  # The image inline as a data URI, so the page carries it. jsonlite's
+  # base64_enc() wraps its output at 80 columns, and a data URI with newlines
+  # does not load, so they are taken out.
   f <- chart_capture_file(x)
   on.exit(unlink(f), add = TRUE)
 
   htmltools::tags$img(
     class = "blockr-exhibit-img",
-    src = if (requireNamespace("base64enc", quietly = TRUE)) {
-      base64enc::dataURI(file = f, mime = "image/png")
-    } else if (requireNamespace("knitr", quietly = TRUE)) {
-      knitr::image_uri(f)
-    } else {
-      stop("Writing a chart to HTML needs 'base64enc' or 'knitr'.",
-           call. = FALSE)
-    },
+    src = paste0("data:image/png;base64,", gsub(
+      "\n", "", jsonlite::base64_enc(readBin(f, "raw", file.size(f))),
+      fixed = TRUE
+    )),
     style = "max-width:100%;height:auto;display:block;"
   )
 }
 
-#' @export
-pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
-                                           subtitle = NULL, caption = NULL,
-                                           template = NULL, layout = NULL,
-                                           master = NULL, top = NULL,
-                                           max_rows = NULL, max_cols = NULL,
-                                           min_font_size = NULL, ...) {
-
-  if (!requireNamespace("officer", quietly = TRUE)) {
-    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
-  }
-
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
-
-  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
-  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  can_title <- pptx_layout_has_title(doc, layout, master)
-
-  # A picture the browser cut into pages (inst/js/capture-pages.js) goes out
-  # one page per slide, every page at the same scale so the rows line up
-  # when the reader flips. Page 1 opens with the picture's own title band;
-  # the later ones say whose continuation they are in the slide title.
-  pages <- x$pages
-  if (length(pages) > 1L) {
-    n <- length(pages)
-    label <- if (has_title) title else x$title %||% ""
-    titles <- c(if (has_title) title else "",
-                trimws(paste0(label, " (", seq_len(n)[-1L], " of ", n, ")")))
-    tops <- vapply(titles, function(t) {
-      if (nzchar(t) && can_title) {
-        top %||% pptx_title_bottom(doc, layout, master, template %||% "",
-                                   t) %||% 1.1
-      } else {
-        top %||% 1.1
-      }
-    }, numeric(1))
-    fit <- min(mapply(function(p, t) {
-      min((slide_w - 0.8) / p$width, (slide_h - t - 0.4) / p$height, 2)
-    }, pages, tops))
-    for (k in seq_len(n)) {
-      doc <- pptx_capture_slide(doc, pages[[k]], fit, titles[[k]], tops[[k]],
-                                can_title, layout, master, slide_w)
-    }
-    return(doc)
-  }
-
-  slide_title <- has_title && can_title
-
-  top <- top %||% if (slide_title) {
-    pptx_title_bottom(doc, layout, master, template %||% "", title) %||% 1.1
-  } else {
-    1.1
-  }
-
-  # Fit the box, keeping the captured aspect -- the same rule the ggplot
-  # exhibit follows, except that a bitmap scales rather than re-renders. The
-  # composer draws at pixelRatio 2, so growing to twice the captured size
-  # spends the pixels that are already there and stops at screen density;
-  # past that it would be blowing them up.
-  fit <- min((slide_w - 0.8) / x$width, (slide_h - top - 0.4) / x$height, 2)
-
-  pptx_capture_slide(doc, x, fit, if (slide_title) title else "", top,
-                     can_title, layout, master, slide_w)
-}
-
-# One slide: the title when there is one and the layout has a place for it,
-# the picture at `fit`, centred.
-#' @noRd
-pptx_capture_slide <- function(doc, x, fit, title, top, can_title, layout,
-                               master, slide_w) {
-  w <- x$width * fit
-  h <- x$height * fit
-
-  doc <- officer::add_slide(doc, layout = layout, master = master)
-
-  if (nzchar(title) && can_title) {
-    doc <- tryCatch(
-      officer::ph_with(doc, title,
-                       location = officer::ph_location_type(type = "title")),
-      error = function(e) doc)
-  }
-
-  officer::ph_with(
-    doc, officer::external_img(chart_capture_file(x), width = w, height = h),
-    location = officer::ph_location(left = (slide_w - w) / 2, top = top,
-                                    width = w, height = h)
-  )
-}
 
 # -- The capture service, R side ---------------------------------------------
 #

@@ -198,3 +198,25 @@ test_that("a custom count with `denom` keeps N on its header", {
   subs <- vapply(prep$plan, function(p) p$sub_label %||% "", character(1))
   expect_true(all(grepl("N = ", subs)))
 })
+
+test_that("a custom summary that fails only on the parent rows is one failed column", {
+  d <- data.frame(soc = rep(c("A", "B"), each = 6),
+                  term = rep(c("a1", "a2", "b1", "b2"), each = 3),
+                  arm = rep(c("X", "Y"), 6), stringsAsFactors = FALSE)
+  fn <- paste("\\(d) if (length(dplyr::group_vars(d)) == 1) stop('parent boom')",
+              "else dplyr::summarise(d, value = dplyr::n())")
+  for (facet in list(NULL, "arm")) {
+    prep <- suppressMessages(lane_prepare_summaries(d, by = c("soc", "term"),
+      summaries = list(
+        list(type = "simple", func = "count", show = "bar"),
+        c(list(type = "custom", fn = fn, name = "pf"),
+          if (!is.null(facet)) list(facet = facet))
+      )))
+    expect_null(prep$err)
+    expect_length(prep$failed, 1L)
+    expect_match(prep$failed[[1L]], "parent boom")
+    # The count column and the failed one, over parents and leaves alike.
+    expect_identical(nrow(prep$rows), 6L)
+    expect_length(prep$plan, 2L)
+  }
+})

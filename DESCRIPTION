@@ -1,17 +1,24 @@
 Package: blockr.viz
-Title: Visualization and Render Blocks for Blockr
+Title: Chart and Table Blocks for 'blockr'
 Version: 0.3.0
-Authors@R:
+Authors@R: c(
     person(given = "Christoph",
            family = "Sax",
            role = c("aut", "cre"),
            email = "christoph@cynkra.com",
-           comment = c(ORCID = "0000-0002-7192-7044"))
-Description: The render layer for blockr dashboards: interactive 'chart',
-    'table', and 'tile' blocks (built on ECharts and HTML widgets) plus a
-    'summary_table' shaper and a static 'gt' table renderer. Renderers take
-    tidy, rectangular data and draw it, with optional cell coloring and
-    click-to-filter drill-down.
+           comment = c(ORCID = "0000-0002-7192-7044")),
+    person(given = "ZumerLab",
+           role = "cph",
+           comment = "SnapDOM, bundled in inst/js/vendor/snapdom.js")
+    )
+Description: Two blocks for 'blockr' boards. The chart block draws bar,
+    histogram, waterfall, pie, treemap, box, point-range, scatter, line,
+    area, band and timeline charts with 'ECharts', aggregating the rows
+    where the chart type asks for it. The table block shows the rows, one
+    row per group with a column per summary, or one row per statistic of
+    each variable, as a table, a compact matrix or cards. A click on either
+    filters the blocks downstream. Both download as 'Excel', a web page, an
+    image or 'PowerPoint'.
 URL: https://github.com/BristolMyersSquibb/blockr.viz
 BugReports: https://github.com/BristolMyersSquibb/blockr.viz/issues
 License: GPL (>= 3)
@@ -19,9 +26,8 @@ Depends:
     R (>= 4.1.0)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
-    blockr.core,
+    blockr.core (>= 0.1.4),
     blockr.ui,
     dplyr,
     echarts4r,
@@ -38,17 +44,16 @@ Imports:
     tidyr,
     utils
 Suggests:
-    base64enc,
+    bit64,
     blockr.ai,
     blockr.assistant,
     blockr.dag,
-    blockr.dplyr,
+    blockr.dm,
     blockr.dock,
-    blockr.extra,
-    blockr.io,
     blockr.theme (>= 0.0.0.9002),
     callr,
     chromote,
+    codetools,
     flextable,
     ggplot2,
     grid,
@@ -62,16 +67,16 @@ Suggests:
     shinytest2,
     systemfonts,
     testthat (>= 3.0.0),
-    withr
+    withr,
+    xml2
 Remotes:
     BristolMyersSquibb/blockr.core,
     BristolMyersSquibb/blockr.assistant,
-    BristolMyersSquibb/blockr.dplyr,
     BristolMyersSquibb/blockr.ai,
     BristolMyersSquibb/blockr.ui,
-    cynkra/blockr.extra,
     BristolMyersSquibb/blockr.theme,
-    BristolMyersSquibb/blockr.dock
+    BristolMyersSquibb/blockr.dock,
+    BristolMyersSquibb/blockr.dm
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0

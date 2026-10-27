@@ -402,7 +402,7 @@ summarize_num_parts <- function(v, denom = NULL, combined = FALSE,
     )))
   }
   # Four SIGNIFICANT digits, the same budget lane_fmt() prints a statistic at
-  # (R/lane-stats.R), so a split bar's label and a box's centre read alike. "fg"
+  # (R/table-model-groups-stats.R), so a split bar's label and a box's centre read alike. "fg"
   # keeps whole numbers whole: a count of 12345 stays 12345, a mean of 155.625
   # reads 155.6 rather than spelling out a precision the estimate has not got.
   # `fmt`, when given, is the value label's own precision (one digit finer

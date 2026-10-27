@@ -90,7 +90,10 @@ has_theme_palette <- function() {
 #' @param fallback Colours to use when no theme answers the role.
 #' @return A character vector of hex colours, or `NULL` when the role is
 #'   unanswered and `fallback` is `NULL`.
-#' @noRd
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 viz_palette <- function(role, n = NULL, fallback = NULL) {
   if (has_theme_palette()) {
     # Unguarded: theme_palette() answers NULL (with a warning) for anything a

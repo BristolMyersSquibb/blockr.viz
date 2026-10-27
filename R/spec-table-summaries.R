@@ -122,8 +122,8 @@ table_summary_specs <- function() {
         )
       ),
       whiskers = viz_arg(
-        type = "enum", default = "tukey", values = c("tukey", SPEC_STATS, "none"),
-        null = FALSE,
+        type = "enum", default = NULL, values = c("tukey", SPEC_STATS, "none"),
+        null = "Tukey on a box, none on a dot range",
         gear = gear("Columns", "select", "Outer range",
                     labels = c("Tukey (1.5\u00d7IQR)", SPEC_STAT_LABELS, "None")),
         describe = "Outer range, as the chart's `whiskers`."
