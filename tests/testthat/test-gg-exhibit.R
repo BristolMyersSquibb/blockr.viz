@@ -1,4 +1,4 @@
-# A ggplot through the exhibit writers (R/gg-exhibit.R). Other packages'
+# A ggplot through the exhibit writers (R/export-pptx-chart.R). Other packages'
 # blocks hand these a ggplot; the chart block exports its captured picture.
 
 species_plot <- function(title = NULL) {

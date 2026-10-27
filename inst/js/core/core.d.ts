@@ -49,6 +49,20 @@ interface VizMount {
   needRev: number | null;
 }
 
+/** One row of a view's download menu (R/export-registry.R). */
+interface VizDownload {
+  id: string;
+  label: string;
+  ext: string;
+}
+
+/** A picture of a view: a PNG data URL and its size in CSS px. */
+interface VizPicture {
+  png: string;
+  width: number;
+  height: number;
+}
+
 interface VizNamespace {
   /** The block specs, generated from R (inst/js/spec/). */
   spec: Record<string, unknown>;
@@ -60,4 +74,10 @@ interface VizNamespace {
   Scope: { new (): VizScope; open(): number };
   binding(name: string, view: string, View: VizViewClass,
           opts?: { grace?: number }): boolean;
+  downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
+            scope: VizScope, opts?: { onOpen?: () => void }): void;
+  capture(opts: { width: number; height: number;
+                  draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
+                  timeout?: number }): Promise<VizPicture>;
+  captureReply(req: string, p: Promise<VizPicture>): Promise<void>;
 }

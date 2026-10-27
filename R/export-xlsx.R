@@ -350,3 +350,12 @@ xlsx_num_format <- function(digits) {
   if (length(digits) != 1L || is.na(digits) || digits < 0L) return(NULL)
   if (digits == 0L) "0" else paste0("0.", strrep("0", digits))
 }
+
+# The Excel download: the exhibit's rows with their values, rounded by a
+# number format rather than as text, under its titles.
+export_xlsx <- function(x, file) {
+  t <- exhibit_titles(x)
+  write_annotated_xlsx(exhibit_data(x), file, title = t$title,
+                       subtitle = t$subtitle, caption = t$caption,
+                       digits = exhibit_meta(x)$digits)
+}

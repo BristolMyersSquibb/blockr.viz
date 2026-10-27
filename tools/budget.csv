@@ -69,10 +69,7 @@ R: exports,R/export-registry.R,1500
 R: exports,R/export-xlsx.R,1500
 R: exports,R/export-png.R,1500
 R: exports,R/export-html.R,1500
-R: exports,R/write-annotated-xlsx.R,1500
-R: exports,R/write-exhibit-html.R,1500
 R: exports,R/static-exhibit.R,1500
-R: exports,R/static-table.R,1500
 R: exports,R/table-exhibit.R,1500
 R: exports,R/cards-exhibit.R,1500
 R: exports,R/download-footer.R,1500
@@ -83,9 +80,7 @@ R: exports,R/table-download.R,1500
 R: exports,R/summarize-download.R,1500
 R: exports,R/summarize-exhibit.R,1500
 R: PowerPoint and the table painter,R/export-pptx-*.R,1800
-R: PowerPoint and the table painter,R/write-exhibit-pptx.R,1800
 R: PowerPoint and the table painter,R/summarize-paint.R,1800
-R: PowerPoint and the table painter,R/gg-exhibit.R,1800
 R: legacy,R/legacy.R,400
 R: legacy,R/legacy-deser.R,400
 R: legacy,R/gt-table-block.R,400
