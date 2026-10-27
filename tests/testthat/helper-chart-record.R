@@ -627,6 +627,7 @@ record_run <- function(sc, target = record_target()) {
           if (identical(s$kind, "click")) cx$nonce <- cx$nonce + 1L
           cx$state <- lapply(st, function(rv) shiny::isolate(rv()))
           cx$data <- src$d
+          cx$sent <- sent$msgs
           inputs <- target$inputs(s, cx)
           for (k in seq_along(inputs)) {
             do.call(expr$setInputs, inputs[k])

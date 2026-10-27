@@ -8,7 +8,23 @@
 //   // eslint-disable-next-line max-lines-per-function -- viz: long <reason>
 //
 // The file-wrapping IIFEs are not counted as functions.
+//
+// The rewritten core (inst/js/core) gets more on top: no var, and listeners,
+// observers, timers and chart instances only through a Scope
+// (inst/js/core/scope.js), so all of it goes with its block. `npm run
+// lint:core` checks just the core and must stay green.
 import globals from 'globals';
+
+const outsideScope = [
+  { selector: "CallExpression[callee.property.name='addEventListener']",
+    message: 'Listen through scope.on(), so the listener goes with its block.' },
+  { selector: "CallExpression[callee.name=/^(setTimeout|setInterval|requestAnimationFrame)$/]",
+    message: 'Use scope.timeout(), scope.interval() or scope.frame().' },
+  { selector: "NewExpression[callee.name=/^(ResizeObserver|MutationObserver)$/]",
+    message: 'Use scope.resize() or scope.mutate().' },
+  { selector: "CallExpression[callee.object.name='echarts'][callee.property.name='init']",
+    message: 'Hand the instance to scope.own().' }
+];
 
 export default [
   { ignores: ['inst/js/snapdom.js', 'inst/js/spec/**'] },
@@ -44,5 +60,17 @@ export default [
         max: 80, skipBlankLines: true, skipComments: true, IIFEs: false
       }]
     }
+  },
+  {
+    files: ['inst/js/core/**/*.js'],
+    rules: {
+      'no-var': 'error',
+      'no-console': 'error',
+      'no-restricted-syntax': ['error', ...outsideScope]
+    }
+  },
+  {
+    files: ['inst/js/core/scope.js'],
+    rules: { 'no-restricted-syntax': 'off' }
   }
 ];

@@ -142,6 +142,26 @@ record_ref_set <- function(a, cx) {
     msg <- put("y", col(r$y))
     msg <- put("orientation", col(r$orientation))
   }
+  # The gear always sends the roles and every key the reference reads with
+  # `$` that is a prefix of another key (`x` of `x_scale`, `facet` of
+  # `facet_cols`, ...); without them `$` matches the longer key. Sent at
+  # their current values, as the browser last got them, they change nothing.
+  if (!any(roles %in% names(a))) {
+    cfg <- record_ref_last_config(cx$sent)
+    msg <- put("chart_type", cfg$chart_type)
+    msg <- put("func", cfg$func)
+    for (k in c("group", "value", "x", "y", "orientation")) {
+      msg <- put(k, col(cfg[[k]]))
+    }
+  }
+  anchors <- list(facet = "facet", connect = "connect", hi = "ymax")
+  cfg <- record_ref_last_config(cx$sent)
+  for (k in names(anchors)) {
+    if (!anchors[[k]] %in% names(a) && !k %in% names(a)) {
+      v <- cfg[[k]]
+      msg <- put(k, if (is.null(v) || !length(v)) "" else v)
+    }
+  }
   same <- c("color", "facet", "series", "xend", "label", "drill", "sort_by",
             "linetype", "ref_lo", "ref_hi")
   for (nm in intersect(names(a), same)) msg <- put(nm, col(a[[nm]]))
@@ -199,6 +219,15 @@ record_ref_set <- function(a, cx) {
     out <- c(out, list(drilldown_block_action = mults))
   }
   out
+}
+
+# The config of the last payload the browser got.
+record_ref_last_config <- function(msgs) {
+  cfg <- list()
+  for (m in msgs) {
+    if (identical(m[["type"]], "drilldown-data")) cfg <- m[["message"]][["config"]]
+  }
+  cfg
 }
 
 # Browser config keys that carry a public setting under another name.
