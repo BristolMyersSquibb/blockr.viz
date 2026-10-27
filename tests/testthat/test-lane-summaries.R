@@ -313,6 +313,43 @@ test_that("swimlane parent rows can act as section headers", {
   expect_true(summarize_cells(prep)$expanded)
 })
 
+test_that("nested row assembly aligns missing internal columns", {
+  empty_pts <- list(x = numeric(), y = numeric(), lo = NULL, hi = NULL)
+  pts <- list(x = c(1, 2), y = c(3, 4), lo = NULL, hi = NULL)
+  leaf <- data.frame(
+    .label = c("S01", "S02"),
+    .parent = c("Active", "Active"),
+    .parent_key = c("Active", "Active"),
+    .ord = c(1, 2),
+    .s1f1_last = c(4, 5),
+    .s1f2_last = c(6, 7),
+    .v = c(4, 5),
+    stringsAsFactors = FALSE
+  )
+  leaf$.s1f1_pts <- I(list(pts, pts))
+  leaf$.s1f2_pts <- I(list(pts, pts))
+  par_rows <- data.frame(
+    .label = "Active",
+    .parent = NA_character_,
+    .parent_key = "Active",
+    .ord = 1,
+    .s1f1_last = NA_real_,
+    .v = NA_real_,
+    stringsAsFactors = FALSE
+  )
+  par_rows$.s1f1_pts <- I(list(empty_pts))
+
+  asm <- summarize_assemble_rows(
+    leaf, par_rows, "Group", ".label", "asc", NULL
+  )
+
+  expect_equal(nrow(asm$rows), 3L)
+  expect_true(".s1f2_pts" %in% names(asm$rows))
+  expect_true(is.list(asm$rows$.s1f2_pts))
+  expect_length(asm$rows$.s1f2_pts[[1L]], 0L)
+  expect_equal(asm$rows$.s1f2_last[[1L]], NA_real_)
+})
+
 test_that("interval columns keep an explicit axis domain", {
   ae <- sum_fixture()
   attr(ae$ASTDY, "blockr_domain") <- c(100, 350)

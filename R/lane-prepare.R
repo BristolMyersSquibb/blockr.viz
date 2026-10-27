@@ -54,7 +54,8 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     # Every renderer-internal column is dot-prefixed; the original data
     # columns (the group / parent keys) are not, and rbind() must not demand
     # them from both frames.
-    keep <- grep("^\\.", names(leaf), value = TRUE)
+    keep <- unique(c(grep("^\\.", names(leaf), value = TRUE),
+                     grep("^\\.", names(par_rows), value = TRUE)))
     pieces <- list()
     for (i in seq_len(nrow(par_rows))) {
       p <- par_rows[i, , drop = FALSE]
@@ -67,16 +68,50 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
       }
       kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == pkey, ,
                        drop = FALSE])
-      pieces[[length(pieces) + 1L]] <-
-        p[, intersect(keep, names(p)), drop = FALSE]
+      pieces[[length(pieces) + 1L]] <- p[, intersect(keep, names(p)),
+                                          drop = FALSE]
       if (nrow(kids)) {
         pieces[[length(pieces) + 1L]] <- kids[, intersect(keep, names(kids)),
                                               drop = FALSE]
       }
     }
-    rows <- do.call(rbind, pieces)
+    rows <- do.call(summarize_rbind_internal, pieces)
   }
   list(rows = rows, folded = folded, fold_max = fold_max)
+}
+
+#' @noRd
+summarize_rbind_internal <- function(...) {
+  pieces <- list(...)
+  pieces <- Filter(function(x) !is.null(x) && nrow(x), pieces)
+  if (!length(pieces)) return(data.frame())
+  cols <- unique(unlist(lapply(pieces, names), use.names = FALSE))
+  templates <- setNames(vector("list", length(cols)), cols)
+  for (piece in pieces) {
+    missing <- cols[vapply(templates[cols], is.null, logical(1L))]
+    hit <- intersect(missing, names(piece))
+    for (nm in hit) templates[[nm]] <- piece[[nm]]
+  }
+  aligned <- lapply(pieces, function(piece) {
+    for (nm in setdiff(cols, names(piece))) {
+      piece[[nm]] <- summarize_empty_internal_col(templates[[nm]],
+                                                  nrow(piece))
+    }
+    piece[cols]
+  })
+  do.call(rbind, aligned)
+}
+
+#' @noRd
+summarize_empty_internal_col <- function(x, n) {
+  if (is.list(x) && !is.data.frame(x)) {
+    return(I(vector("list", n)))
+  }
+  if (is.integer(x)) return(rep(NA_integer_, n))
+  if (is.numeric(x)) return(rep(NA_real_, n))
+  if (is.logical(x)) return(rep(NA, n))
+  if (is.character(x)) return(rep(NA_character_, n))
+  rep(NA, n)
 }
 
 #' Match an arbitrary stat column from `src` into `target` by `keys`

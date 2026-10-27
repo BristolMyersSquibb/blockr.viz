@@ -313,15 +313,17 @@ test_that("an interval column ships per-row segments on the observed domain", {
 
 test_that("a sparkline column ships pre-printed geometry plus hover values", {
   ae <- push_fixture()
+  ae$VISIT <- paste("Visit", ae$AVAL)
   p <- summarize_build_payload(ae, group = NULL, by = "TERM", summaries = list(
-    list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
+    list(type = "series", x = "AVAL", x_label = "VISIT", col = "DUR",
+         band = c("LO", "HI"))
   ))
   c1 <- p$cols[[1]]
   expect_identical(c1$kind, "sparkline")
   expect_length(c1$pl, 4L)
   expect_match(c1$pl[[1]], "^[0-9.,]+( [0-9.,]+)+$")
   expect_false(anyNA(c1$bd))          # the band columns are complete
-  expect_match(c1$xs[[1]], ",")       # hover snap data
+  expect_match(c1$xs[[1]], "Visit")   # hover snap data can label x values
   # Sort value = the last y per row.
   expect_equal(as.numeric(c1$v),
                round(unname(vapply(split(ae, ae$TERM), function(d) {

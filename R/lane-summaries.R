@@ -1190,6 +1190,8 @@ lane_axis_domain_attr <- function(data, cols) {
 lane_series_split <- function(slice, target, tkeys, s) {
   xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
   ys <- as.numeric(slice[[summarize_chr1(s$col)]])
+  x_label <- summarize_chr1(s$x_label)
+  x_label <- if (!is.null(x_label) && x_label %in% names(slice)) x_label
   band <- as.character(s$band %||% character())
   band <- band[nzchar(band)]
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
@@ -1202,6 +1204,7 @@ lane_series_split <- function(slice, target, tkeys, s) {
     idx <- idx[order(xs[idx])]
     list(
       x = xs[idx], y = ys[idx],
+      xl = if (!is.null(x_label)) as.character(slice[[x_label]])[idx],
       lo = if (has_band) as.numeric(slice[[band[[1L]]]])[idx],
       hi = if (has_band) as.numeric(slice[[band[[2L]]]])[idx]
     )

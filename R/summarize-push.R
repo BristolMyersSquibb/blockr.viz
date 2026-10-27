@@ -544,7 +544,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
         list(
           pl = paste0(xs, ",", ys, collapse = " "), bd = bd,
           dx = xs[[n1]], dy = round(ys[[n1]] / H * 100, 2L),
-          xs = paste(fmt_x(p1$x), collapse = ","),
+          xs = paste(p1$xl %||% fmt_x(p1$x), collapse = ","),
           ys = paste(lane_fmt(p1$y), collapse = ",")
         )
       }
