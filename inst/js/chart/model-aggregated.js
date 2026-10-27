@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Chart block: the aggregated model (bar, waterfall, pie, treemap,
- * radar, and the distribution marks boxplot and point range).
+ * and the distribution marks boxplot and point range).
  *
  * Rows and config in, what to draw out: the cells of the shared aggregation
  * engine (drilldown-agg.js), the panels (one per facet level), the groups
@@ -11,13 +11,14 @@
  * A mark is addressed by (group, colour level) inside a panel; its keys are
  * the column values that define it (chart-keys.js): the group, the colour
  * where colour splits the mark (bar segments, boxes, point ranges), the
- * colour alone for a radar shape, and the facet in a facet panel.
+ * and the facet in a facet panel.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
@@ -31,7 +32,7 @@
   // boxes of one group into one slot.
   const BOX_CAT_SEP = '\u0000';
 
-  const DAgg = () => /** @type {any} */ (B.DrilldownAgg || root.DrilldownAgg);
+  const DAgg = () => NS.agg;
 
   /**
    * {center, lo, hi} of a statistic over ascending values, or null for none.
@@ -41,6 +42,20 @@
    * @param {number[]} vals @param {string} stat
    * @returns {{center: number, lo: number, hi: number} | null}
    */
+  const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
+    2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
+    2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
+  /** The 97.5% quantile of Student's t, as R's qt(0.975, df): a table to 30
+   * degrees of freedom, the Cornish-Fisher series past it.
+   * @param {number} df */
+  const t975 = (df) => {
+    if (df <= T975.length) return T975[Math.max(1, Math.round(df)) - 1];
+    const z = 1.959964;
+    const z3 = z * z * z, z5 = z3 * z * z, z7 = z5 * z * z;
+    return z + (z3 + z) / (4 * df) + (5 * z5 + 16 * z3 + 3 * z) / (96 * df * df) +
+      (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
+  };
+
   const summarizeStat = (vals, stat) => {
     const n = vals.length;
     if (n === 0) return null;
@@ -57,6 +72,10 @@
       case 'mean_sd': return { center: mean, lo: mean - sd, hi: mean + sd };
       case 'mean_2sd': return { center: mean, lo: mean - 2 * sd, hi: mean + 2 * sd };
       case 'mean_se': return { center: mean, lo: mean - se, hi: mean + se };
+      case 'mean_ci95': {
+        const h = n > 1 ? t975(n - 1) * se : 0;
+        return { center: mean, lo: mean - h, hi: mean + h };
+      }
       case 'p5_p95': return { center: q(0.5), lo: q(0.05), hi: q(0.95) };
       case 'p10_p90': return { center: q(0.5), lo: q(0.1), hi: q(0.9) };
       case 'min_max': return { center: q(0.5), lo: vals[0], hi: vals[n - 1] };
@@ -294,7 +313,7 @@
    * @typedef {{ family: 'aggregated', empty: string | null, type: string,
    *             cumulative: boolean, colors: string[], colorScale: any,
    *             levels: string[], split: boolean, distribution: boolean,
-   *             noValue: boolean, sharedMax: number | null, ttFields: string[],
+   *             noValue: boolean, ttFields: string[],
    *             facet: string | null, nFacets: number, single: boolean,
    *             ix: any, panels: AggregatedPanel[], histogram: boolean,
    *             markLabels: Map<string, string | null> | null,
@@ -318,7 +337,7 @@
       family: 'aggregated', empty: null, type: ct, cumulative: isCumulative(cfg),
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
       distribution, noValue: distribution && (!value || value === '.count'),
-      sharedMax: null, ttFields: [], facet: facet || null, nFacets: 1, single: true,
+      ttFields: [], facet: facet || null, nFacets: 1, single: true,
       ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
@@ -345,9 +364,6 @@
     // same category in each; pie and treemap label their own slices.
     const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
       ? orderGroups(agg, rows, columns, cfg) : null;
-    // A radar's spokes share one max; fixed scales widen it to the grid.
-    out.sharedMax = (sharedGroups && ct === 'radar')
-      ? (Math.max(NS.maxOf(agg.map((/** @type {any} */ a) => a.value ?? 0)), 0) || 1) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? barTtFields(cfg) : [];
@@ -450,8 +466,7 @@
 
   /**
    * The keys of an aggregated mark: the group, the colour where colour
-   * splits the mark, the colour alone for a radar shape, and the facet in a
-   * facet panel. Values are as the aggregation keys them ('' for missing).
+   * splits the mark, and the facet in a facet panel. Values are as the aggregation keys them ('' for missing).
    * @param {Record<string, any>} cfg @param {any} facetVal
    * @param {string | null} group @param {string | null} level
    * @returns {Record<string, string>}
@@ -459,31 +474,21 @@
   const aggregatedKeys = (cfg, facetVal, group, level) => {
     /** @type {Record<string, string>} */
     const keys = {};
-    if (cfg.chart_type === 'radar') {
-      if (cfg.color && level != null) keys[cfg.color] = level;
-    } else {
-      if (group != null) keys[cfg.group] = group;
-      if (cfg.color && level != null) keys[cfg.color] = level;
-    }
+    if (group != null) keys[cfg.group] = group;
+    if (cfg.color && level != null) keys[cfg.color] = level;
     if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
     return keys;
   };
 
   /**
    * The (group, level) a click landed on, or null when the click has no
-   * mark (a radar without colour draws one shape of every row; a datum
-   * without a name). Bars read the colour off the series, a split
-   * distribution off its slot, a radar shape is its level.
+   * mark (a datum without a name). Bars read the colour off the series, a
+   * split distribution off its slot.
    * @param {AggregatedModel} m @param {Record<string, any>} cfg @param {any} params
    * @returns {{ group: string | null, level: string | null } | null}
    */
   const aggregatedMarkAt = (m, cfg, params) => {
     if (!params || (params.componentType && params.componentType !== 'series')) return null;
-    if (cfg.chart_type === 'radar') {
-      if (!cfg.color) return null;
-      const lv = params.name;
-      return (lv == null || lv === '') ? null : { group: null, level: String(lv) };
-    }
     const g = params.name || (params.value && params.value[0]);
     if (!g) return null;
     if (m.distribution && m.split && typeof g === 'string') {

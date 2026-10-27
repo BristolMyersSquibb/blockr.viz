@@ -21,6 +21,26 @@
   const S = V.gear.sections;
   const C = V.gear.controls;
 
+  /** Free text that takes more than one line (controls.js draws a textarea). */
+  const MULTILINE = ['script', 'expr', 'fn'];
+
+  /**
+   * How wide a row is in the section's grid (chart.css): tiles, editors,
+   * templates and multi-line text take the whole width; a control with a
+   * second one beside it (drill, highlight) two cells; a checkbox sits on
+   * the controls' line.
+   * @param {VizRowCtx} ctx @param {boolean} boxed
+   */
+  const rowClass = (ctx, boxed) => {
+    const control = ctx.arg.gear ? ctx.arg.gear.control : '';
+    if (control === 'tiles' || control === 'none' || control === 'template') return ' dd-role-tiles';
+    if (MULTILINE.includes(ctx.key)) return ' dd-script-row';
+    if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
+      return ' dd-role-paired';
+    }
+    return boxed ? ' dd-form-row--check' : '';
+  };
+
   /** A local edit not yet echoed by R: its value, the value R had, and how
    * many more payloads may still predate it. */
   /** @typedef {{ value: unknown, before: unknown, left: number }} Pending */
@@ -173,12 +193,12 @@
      * it repeats the section's title or where a checkbox carries it.
      * @param {HTMLElement} body @param {string} section @param {VizRowCtx} ctx */
     _row(body, section, ctx) {
-      const row = document.createElement('div');
-      row.className = 'dd-form-row';
-      row.setAttribute('data-role', ctx.key);
       const g = /** @type {VizGearField} */ (ctx.arg.gear);
       const boxed = g.control === 'toggle' ||
         (g.control === 'segmented' && ctx.arg.type.name === 'bool');
+      const row = document.createElement('div');
+      row.className = 'dd-form-row' + rowClass(ctx, boxed);
+      row.setAttribute('data-role', ctx.key);
       if (!boxed && ctx.label !== section) {
         const head = document.createElement('div');
         head.className = 'dd-row-head';
@@ -200,28 +220,39 @@
      * @param {VizScope} scope */
     _addMenu(body, keys, values, scope) {
       const row = document.createElement('div');
-      row.className = 'dd-form-row dd-add-mapping';
+      row.className = 'dd-form-row dd-add-wrap dd-add-mapping';
+      body.appendChild(row);
+      const add = (/** @type {string} */ key) => {
+        if (!key) return;
+        this._added.add(key);
+        this.render();
+      };
+      const labels = keys.map((k) => this.label(k, values));
+      const Sel = /** @type {VizUi} */ (root.Blockr).Select;
+      if (Sel) {
+        const inst = Sel.single(row, {
+          options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
+          label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
+        });
+        scope.own({ dispose: () => inst.destroy() });
+        return;
+      }
       const sel = document.createElement('select');
       sel.className = 'dd-select dd-add-select';
       sel.setAttribute('aria-label', 'Add a mapping');
       sel.setAttribute('data-gear-input', '.add');
       const first = document.createElement('option');
       first.value = '';
-      first.textContent = '+ Add';
+      first.textContent = '+ Add a mapping';
       sel.appendChild(first);
-      for (const key of keys) {
+      keys.forEach((key, i) => {
         const o = document.createElement('option');
         o.value = key;
-        o.textContent = this.label(key, values);
+        o.textContent = labels[i];
         sel.appendChild(o);
-      }
-      scope.on(sel, 'change', () => {
-        if (!sel.value) return;
-        this._added.add(sel.value);
-        this.render();
       });
+      scope.on(sel, 'change', () => add(sel.value));
       row.appendChild(sel);
-      body.appendChild(row);
     }
 
     /** A field being typed in, so a re-render can put it back. */
@@ -267,9 +298,9 @@
                  max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1 };
       }
       if ((name === 'numbers' || name === 'values') && !listed) return { kind: 'entry' };
-      if (['string', 'template', 'map', 'records', 'records_by', 'named'].includes(name)) {
-        return null;
-      }
+      if (['map', 'records', 'records_by', 'named'].includes(name)) return null;
+      // Free text stays in the gear; a string picked from a list is a menu.
+      if ((name === 'string' || name === 'template') && arg.gear.control !== 'select') return null;
       const ctx = this._ctx(key, values, this.scope);
       const empty = name === 'columns' || name === 'enums' ? null : C.emptyChoice(ctx);
       let options = /** @type {VizChoice[]} */ (empty ? [empty] : []).concat(C.options(ctx));
@@ -302,6 +333,46 @@
       this.el.textContent = '';
     }
   }
+
+  /**
+   * A gear button and its tray, appended to a view's header `head`: blockr.ui's
+   * Blockr.gearTray when the page has it, else the button toggles the tray.
+   * The header gets `vz-head--open` while the tray is open; a tray left open
+   * is closed when `scope` goes, which takes it off blockr.ui's dismiss
+   * stack.
+   * @param {HTMLElement} head @param {VizScope} scope @param {string} label
+   * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
+   *             isOpen(): boolean }}
+   */
+  V.gear.tray = (head, scope, label) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blockr-gear-btn';
+    btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
+    const band = document.createElement('div');
+    band.className = 'blockr-settings blockr-settings--beak dd-popover';
+    head.append(btn, band);
+    const ui = root.Blockr;
+    let open = false;
+    const own = ui.gearTray ? ui.gearTray(band, btn, { label }) : null;
+    const set = (/** @type {boolean} */ on) => {
+      if (own) { own.set(on); return; }
+      open = on;
+      band.classList.toggle('blockr-settings--open', on);
+      btn.classList.toggle('blockr-gear-active', on);
+      btn.setAttribute('aria-expanded', String(on));
+    };
+    if (!own) {
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('aria-expanded', 'false');
+      scope.on(btn, 'click', () => set(!open));
+    }
+    const sync = () => head.classList.toggle('vz-head--open',
+                                             btn.getAttribute('aria-expanded') === 'true');
+    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
+    scope.own({ dispose: () => set(false) });
+    return { band, button: btn, set, isOpen: () => (own ? own.isOpen() : open) };
+  };
 
   /**
    * Mount a gear into the tray element `el`.

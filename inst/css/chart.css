@@ -567,6 +567,10 @@
 .dd-row-controls > .dd-pill-wrap,
 .dd-row-controls > .dd-slider-wrap,
 .dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
+/* Tiles in groups (the chart type): each group its heading over its tiles,
+   the groups side by side while they fit. */
+.dd-row-controls:has(> .dd-tile-group) { flex-wrap: wrap; gap: 16px; }
+.dd-row-controls > .dd-tile-group { flex: 1 1 240px; min-width: 0; }
 /* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
 .dd-pair-connector {
   align-self: center;

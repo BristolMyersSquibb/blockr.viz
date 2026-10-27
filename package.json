@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "lint": "eslint inst/js",
-    "lint:core": "eslint inst/js/core inst/js/table",
+    "lint:core": "eslint inst/js/core inst/js/table inst/js/chart",
     "typecheck": "tsc -p tsconfig.json",
     "typecheck:core": "tsc -p tsconfig.core.json",
     "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js tests/js/core/*.test.js tests/js/table/*.test.js",

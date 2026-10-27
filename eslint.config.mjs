@@ -22,7 +22,8 @@ const outsideScope = [
     message: 'Use scope.timeout(), scope.interval() or scope.frame().' },
   { selector: "NewExpression[callee.name=/^(ResizeObserver|MutationObserver)$/]",
     message: 'Use scope.resize() or scope.mutate().' },
-  { selector: "CallExpression[callee.object.name='echarts'][callee.property.name='init']",
+  { selector: "CallExpression[callee.object.name='echarts'][callee.property.name='init']" +
+      ":not(CallExpression[callee.property.name='own'] > CallExpression)",
     message: 'Hand the instance to scope.own().' }
 ];
 

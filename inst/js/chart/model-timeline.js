@@ -28,7 +28,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = NS.model = NS.model || {};
 
   // Config fields the model reads; a change to any other field reuses it.
@@ -51,6 +52,33 @@
    *             facet: string | null, nFacets: number, single: boolean,
    *             ttFields: string[], panels: TimelinePanel[] }} TimelineModel
    */
+
+  /**
+   * One mark per row with an x and a known lane, and the source row of each
+   * mark, for a filter on a column the mark does not carry (D5).
+   * @param {any} k @param {any[]} prow @param {Map<string, number>} laneOf
+   */
+  const panelMarks = (k, prow, laneOf) => {
+    const { cfg, xCoord, ttFields, drill } = k;
+    const { x, xend, y, color, series, label } = cfg;
+    const marks = [];
+    const markRows = [];
+    for (const r of prow) {
+      if (r[x] == null) continue;
+      const term = String(r[y] ?? '');
+      const lane = laneOf.get(term);
+      if (lane === undefined) continue;
+      const s = xCoord(r[x]);
+      const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
+      marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, r[color] ?? '',
+                  (label != null ? (r[label] ?? '') : ''),
+                  r[series] ?? '',
+                  (drill != null ? (r[drill] ?? '') : ''),
+                  ttFields.length ? ttFields.map((/** @type {any} */ c) => r[c] ?? '') : 0]);
+      markRows.push(r);
+    }
+    return { marks, markRows };
+  };
 
   /**
    * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
@@ -146,24 +174,7 @@
       const laneOf = new Map();
       terms.forEach((t, i) => laneOf.set(t, i));
 
-      const marks = [];
-      // The source row of each mark, for a filter on a column the mark does
-      // not carry (D5).
-      const markRows = [];
-      for (const r of prow) {
-        if (r[x] == null) continue;
-        const term = String(r[y] ?? '');
-        const lane = laneOf.get(term);
-        if (lane === undefined) continue;
-        const s = xCoord(r[x]);
-        const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
-        marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, r[color] ?? '',
-                    (label != null ? (r[label] ?? '') : ''),
-                    r[series] ?? '',
-                    (drill != null ? (r[drill] ?? '') : ''),
-                    ttFields.length ? ttFields.map((c) => r[c] ?? '') : 0]);
-        markRows.push(r);
-      }
+      const { marks, markRows } = panelMarks({ cfg, xCoord, ttFields, drill }, prow, laneOf);
       out.panels.push({
         facet: fv,
         label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,

@@ -19,7 +19,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   // How long a click guards against the brush clear that follows it, and
   // how long a line click waits for a second click.
@@ -31,11 +32,9 @@
   const HOVER_PX = 14;
   const BAND_HOVER_PX = 60;
 
-  /** @param {any} view @param {any} slot */
-  NS.interactHandlers.individual = (view, slot) => {
-    const chart = slot.chart;
-    const zr = chart.getZr();
-    // Band: show the nearest level's ribbon.
+  /** Band: show the nearest level's ribbon.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const bandHover = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
       if (view.config.chart_type !== 'band' || !slot.band) return;
       const lvl = view._nearestBandLevel(slot, chart, e.offsetX, e.offsetY);
@@ -49,7 +48,11 @@
       slot.bandFocus = null;
       view._applyBandFocus(slot, chart);
     });
-    // Line: promote the nearest line, demote when none is near.
+  };
+
+  /** Line: promote the nearest line, demote when none is near.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const lineHover = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
       if (!slot.focus) return;
       const si = view._nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
@@ -63,12 +66,18 @@
       slot.hover.si = null;
       view._demoteFocus(slot, chart);
     });
+  };
+
+  /** The zoom: a double-click resets it, the zoom window is kept for a
+   * redraw, and the reset button clears it.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const zoomEvents = (view, slot, chart, zr) => {
     // A double-click on a line chart resets the zoom, and cancels the line
     // click its two clicks queued.
     zr.on('dblclick', () => {
       if (!NS.isLineType(view.config.chart_type)) return;
       if (view._lineClickTimer) {
-        clearTimeout(view._lineClickTimer);
+        view._lineClickTimer();
         view._lineClickTimer = null;
       }
       chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
@@ -84,11 +93,14 @@
       if (slot.resetBtn) slot.resetBtn.hidden = !slot.zoom;
     });
     if (slot.resetBtn) {
-      slot.resetBtn.onclick = () => {
+      view.scope.on(slot.resetBtn, 'click', () => {
         if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
-      };
+      });
     }
+  };
 
+  /** A click on a mark. @param {any} view @param {any} slot @param {any} chart */
+  const clickEvents = (view, slot, chart) => {
     chart.on('click', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (params.componentType !== 'series') return;
@@ -96,14 +108,15 @@
       // A click in brush mode also fires a brush clear; ignore it for a
       // moment.
       view._suppressBrushClear = true;
-      setTimeout(() => { view._suppressBrushClear = false; }, isLine ? LINE_GUARD_MS : GUARD_MS);
+      view.scope.timeout(() => { view._suppressBrushClear = false; },
+                         isLine ? LINE_GUARD_MS : GUARD_MS);
       if (isLine) {
         // The hovered line, taken at the click, before the cursor drifts.
         const f = slot.focus;
         const focusName = (f && slot.focusSi != null && f.series[slot.focusSi])
           ? f.series[slot.focusSi].name : undefined;
-        if (view._lineClickTimer) clearTimeout(view._lineClickTimer);
-        view._lineClickTimer = setTimeout(() => {
+        if (view._lineClickTimer) view._lineClickTimer();
+        view._lineClickTimer = view.scope.timeout(() => {
           view._lineClickTimer = null;
           view._individualClick(slot, params, focusName);
         }, LINE_HOLD_MS);
@@ -111,7 +124,11 @@
       }
       view._individualClick(slot, params);
     });
+  };
 
+  /** The brush: what it caught, and its clear.
+   * @param {any} view @param {any} slot @param {any} chart */
+  const brushEvents = (view, slot, chart) => {
     chart.on('brushSelected', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (!params.batch || params.batch.length === 0) return;
@@ -137,6 +154,17 @@
     chart.on('brush', (/** @type {any} */ params) => {
       if (!params.areas || params.areas.length === 0) view._brushCleared();
     });
+  };
+
+  /** @param {any} view @param {any} slot */
+  NS.interactHandlers.individual = (view, slot) => {
+    const chart = slot.chart;
+    const zr = chart.getZr();
+    bandHover(view, slot, chart, zr);
+    lineHover(view, slot, chart, zr);
+    zoomEvents(view, slot, chart, zr);
+    clickEvents(view, slot, chart);
+    brushEvents(view, slot, chart);
   };
 
   const individual = {
@@ -185,9 +213,7 @@
 
     /** @this {any} @param {any} range @param {Record<string, any[]> | null} filters */
     _sendRangeFilter(range, filters) {
-      if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', NS.keys.rangeMessage(range, filters),
-                          { priority: 'event' });
+      this._sendSelection(NS.keys.rangeSelection(range, filters));
     },
 
     // What the brush caught (D9): an explicit drill column's values in the
@@ -221,11 +247,11 @@
     _brushCleared() {
       if (this._suppressBrushClear) return;
       if (NS.drillState(this.config) === 'off') return;
-      const type = this._clearType();
+
       this._filter = null;
       this._hasBrushFilter = false;
       this._refreshSelection();
-      this._sendClearFilter(type);
+      this._sendSelection(null);
     },
 
     // -- Before and after a panel's option is set ------------------------------

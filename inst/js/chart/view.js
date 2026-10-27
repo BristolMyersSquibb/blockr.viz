@@ -13,14 +13,18 @@
  * model and the fields it reads; a click patches opacities; a resize only
  * resizes. Every draw still hands the option to ECharts.
  *
- * The chrome, the interactions and the export are mixed in from
- * chrome.js, interact.js and export.js.
+ * The view is built by the shared output binding (core/binding.js) with a
+ * Scope; everything it sets up outside its element goes through that Scope
+ * or one of its children, so disposing the view leaves nothing behind. The
+ * chrome, the interactions and the export are mixed in from chrome.js,
+ * interact.js and export.js.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   // The chart families.
   // `widths`: the option reads each panel's width (x labels, value labels).
@@ -64,12 +68,21 @@
   const Mixins = /** @type {any} */ (function Mixins() {});
   Object.assign(Mixins.prototype, NS.chrome, NS.interact, NS.exporter);
 
+  /** Column meta from the wire's columns, when R sent no `column_meta`.
+   * @param {VizPayload['columns']} cols */
+  const metaOf = (cols) => (cols || []).map((c) => Object.assign({}, c, {
+    type: ['integer', 'double', 'numeric', 'duration', 'integer64'].includes(c.class)
+      ? 'numeric' : 'categorical',
+    temporal: c.class === 'date' || c.class === 'datetime' ? c.class : undefined
+  }));
+
   class ChartView extends Mixins {
-    /** @param {HTMLElement & Record<string, any>} el */
-    constructor(el) {
+    /** @param {HTMLElement & Record<string, any>} el @param {VizScope} scope */
+    constructor(el, scope) {
       super();
       /** @type {any} */
       this.el = el;
+      this.scope = scope;
       /** @type {any[]} */
       this.data = [];
       this._ix = new NS.RowIndex();
@@ -81,17 +94,20 @@
       /** @type {Record<string, any>} */
       this.config = {};
       /** @type {Record<string, any>} */
-      this.argHelp = {};
+      this.derived = {};
       /** @type {any[]} */
       this.charts = [];
       /** @type {any[]} */
       this._slots = [];
       /** @type {string | null} */
       this._renderShape = null;
-      /** @type {string | null} */
-      this._lastDataStr = null;
+      /** Owns the panels' ECharts instances; a new shape gets a new one. */
+      /** @type {VizScope | null} */
+      this._shapeScope = null;
       /** @type {any} */
       this._lastDataRev = null;
+      /** @type {any} */
+      this._lastSelection = undefined;
       // The selection (chart-keys.js): {type: 'categorical', filters} or
       // {type: 'range', range, filters} (filters: the facet key, or null),
       // `brush` when a brush made it; or null.
@@ -100,49 +116,41 @@
       this._filter = null;
       // A line click waits for a second click (interact-individual.js), and
       // a click guards against the brush clear that follows it.
-      /** @type {any} */
+      /** @type {(() => void) | null} */
       this._lineClickTimer = null;
       this._suppressBrushClear = false;
       this._hasBrushFilter = false;
-      this._awaitData = false;
-      // True once the last setData drew its charts or its empty state; the
-      // busy cue ends on it.
+      // True once the last render drew its charts or its empty state.
       this.drawn = false;
-      // Click counter riding on every filter message.
+      // Click counter riding on every selection message.
       this._drillSeq = 0;
       /** @type {HTMLElement | null} */
       this._signalEl = null;
       /** @type {string | null} */
       this._receipt = null;
-      /** @type {any} */
+      /** @type {(() => void) | null} */
       this._receiptTimer = null;
       this._returning = false;
       this._receiptAt = 0;
       // The legend band's column, for marking the chip a filter selects.
       /** @type {string | null} */
       this._legendCol = null;
-      /** @type {any} */
-      this._slotsInst = null;
+      /** @type {VizScope | null} */
+      this._chipScope = null;
       /** @type {string | null} */
       this._capMessage = null;
-      /** @type {any} */
+      /** @type {Record<string, string>} */
+      this._titleText = {};
+      /** @type {string | null} */
       this.theme = null;
       this._ink = NS.INK_DEFAULT;
       /** @type {{ modelKey: string | null, model: any, optionKey: string | null, option: any }} */
       this._memo = { modelKey: null, model: null, optionKey: null, option: null };
-      /** @type {boolean | undefined} */
-      this._popoverOpen = undefined;
-      /** @type {any} */
-      this._trayLayerH = null;
-      /** @type {any} */
-      this._resizeObserver = null;
-      /** @type {any} */
-      this._resizeRaf = null;
+      /** @type {(() => void) | null} */
+      this._settle = null;
       // DOM fields, built by _buildDOM().
       /** @type {any} */ this.card = null;
-      /** @type {any} */ this.gearBtn = null;
       /** @type {any} */ this.gearHeader = null;
-      /** @type {any} */ this.popoverEl = null;
       /** @type {any} */ this.titleWrap = null;
       /** @type {any} */ this.titleEl = null;
       /** @type {any} */ this.subtitleEl = null;
@@ -150,9 +158,22 @@
       /** @type {any} */ this.chartGrid = null;
       /** @type {any} */ this.legendEl = null;
       /** @type {any} */ this.statusEl = null;
+      /** @type {any} */ this._gear = null;
       this._buildDOM();
-      /** @type {any} */
-      this._cfg = this._makeConfig();
+      // No picture yet: the busy cue (busy-cue.js) counts the wait from when
+      // the chart shows.
+      const busy = root.Blockr.busy;
+      if (busy && typeof busy.watch === 'function') busy.watch(el.id, 'drawing');
+      // One resize per animation frame, however many ticks a relayout fires.
+      /** @type {(() => void) | null} */
+      let pending = null;
+      scope.resize(this.chartGrid, () => {
+        if (pending) return;
+        pending = scope.frame(() => {
+          pending = null;
+          this._resizeCharts();
+        });
+      });
     }
 
     // The selection as a value (or values) and a column. Read by code and
@@ -162,55 +183,77 @@
 
     _family() { return NS.familyOf(this.config.chart_type); }
 
-    /** @param {any} theme */
-    setTheme(theme) {
-      const normalized = (theme && theme !== 'default') ? theme : null;
-      if (this.theme === normalized) return;
-      this.theme = normalized;
-      if (this.data && this.data.length) this._render();
+    /** The ECharts theme R named; a theme R sent whole is registered once.
+     * @param {any} theme */
+    _setTheme(theme) {
+      let name = typeof theme === 'string' ? theme : (theme && theme.name) || null;
+      if (theme && typeof theme === 'object' && theme.theme && name && root.echarts &&
+          typeof root.echarts.registerTheme === 'function') {
+        root.echarts.registerTheme(name, theme.theme);
+      }
+      if (name === 'default') name = null;
+      this.theme = name;
     }
 
     /**
-     * A message from R. The rows are parsed only when they changed: an
-     * unchanged data_rev (or the same payload string) keeps the rows held.
-     * @param {any} columns @param {any} data @param {any} config
-     * @param {any} args @param {any} [dataRev]
+     * A payload from R (core/binding.js hands it over with its rows). The
+     * rows are parsed only when their revision changed.
+     * @param {VizPayload} p
      */
-    setData(columns, data, config, args, dataRev) {
-      this.columns = columns || [];
+    render(p) {
+      const d = /** @type {Record<string, any>} */ (p.derived || {});
+      this.derived = d;
+      this.columns = d.column_meta || metaOf(p.columns);
       this._columnsKey = JSON.stringify(this.columns);
-      this.config = config || {};
-      if (args) this.argHelp = args;
-
-      const unchanged =
-        (dataRev != null && dataRev === this._lastDataRev && Array.isArray(this.data)) ||
-        (typeof data === 'string' && data === this._lastDataStr);
-      if (!unchanged) {
+      if (p.data_rev !== this._lastDataRev || !this.data.length) {
         this._ix = new NS.RowIndex();
         this._rowsGen++;
-        this._lastDataStr = typeof data === 'string' ? data : null;
-        this.data = NS.rowsFromPayload(data);
+        this.data = NS.rowsFromPayload(p.data);
+        this._lastDataRev = p.data_rev;
       }
-      this._lastDataRev = dataRev != null ? dataRev : null;
-      // Whatever the chart waited for, this is the answer.
-      this._awaitData = false;
-
+      this.config = NS.config.settings(p.config, d, this.columns);
       NS.model.defaults(this.config, this.columns);
-
-      // A saved selection: a categorical filter, or a range with the facet
-      // key it was taken in. A transient chart never latches, so it
-      // restores none.
-      if (!NS.transientDrill(this.config)) {
-        const range = NS.keys.restoredRange(this.config);
-        const saved = range ? null : NS.keys.restored(this.config);
-        if (range) this._filter = { type: 'range', range: range.range, filters: range.filters };
-        else if (saved) this._filter = { type: 'categorical', filters: saved };
-      }
-
-      this._renderConfig();
-      this._updateTitles();
+      this._restoreSelection(p.config && p.config.selection);
+      this._setTheme(d.theme);
+      // The gear first: the sentence's words open what the gear offers. It
+      // offers every column of the data, not only the ones R shipped rows
+      // for.
+      if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
+      this._titleText = NS.titleText(d.titles);
+      this._updateTitles(d.titles);
+      this._updateDownloads(d.downloads);
       this.drawn = false;
       this._render();
+      this._busyDone();
+    }
+
+    // The busy cue ends once the picture is painted: two frames after the
+    // charts or the empty state were drawn.
+    _busyDone() {
+      const busy = root.Blockr.busy;
+      if (!busy || typeof busy.stop !== 'function') return;
+      this.scope.frame(() => this.scope.frame(() => busy.stop(this.el.id)));
+    }
+
+    // A saved selection R sent back: a categorical filter, or a range with
+    // the facet key it was taken in. Only a selection that changed replaces
+    // what the reader sees; a transient chart restores none.
+    /** @param {any} sel */
+    _restoreSelection(sel) {
+      const key = JSON.stringify(sel == null ? null : sel);
+      if (key === this._lastSelection) return;
+      this._lastSelection = key;
+      if (NS.transientDrill(this.config)) { this._filter = null; return; }
+      const range = NS.keys.restoredRange(this.config);
+      const saved = range ? null : NS.keys.restored(this.config);
+      this._filter = range ? { type: 'range', range: range.range, filters: range.filters }
+        : (saved ? { type: 'categorical', filters: saved } : null);
+    }
+
+    /** An error R sent: said where the chart would be. @param {string} message */
+    error(message) {
+      this._showEmpty(NS.model.emptyState(NS.esc(message)));
+      this._busyDone();
     }
 
     // -- Drawing -------------------------------------------------------------
@@ -221,10 +264,10 @@
       if (empty) { this._showEmpty(empty); return; }
       const fam = this._family();
       this._draw(fam, FAMILIES[fam]);
-      // Once more after layout settles, and again whenever the grid resizes
+      // Once more after layout settles; the observer covers later resizes
       // (a dock tab coming to the front).
-      setTimeout(() => { this._resizeCharts(); }, 300);
-      this._observeResize();
+      if (this._settle) this._settle();
+      this._settle = this.scope.timeout(() => { this._resizeCharts(); }, 300);
     }
 
     /** @param {string} fam @param {FamilyImpl} impl */
@@ -248,7 +291,7 @@
         const po = o.panels[i];
         if (!po.option) {
           // Nothing to draw here: the empty state owns the div.
-          if (slot.chart) { slot.chart.dispose(); slot.chart = null; }
+          this._dropSlotChart(slot);
           this._setSlotHeight(slot, po.height);
           slot.chartDiv.innerHTML = NO_VALUE_HTML;
           return;
@@ -357,7 +400,8 @@
     }
 
     _teardownCharts() {
-      for (const s of this._slots) { if (s && s.chart) s.chart.dispose(); }
+      if (this._shapeScope) this._shapeScope.dispose();
+      this._shapeScope = null;
       this._slots = [];
       this.charts = [];
       this._renderShape = null;
@@ -432,10 +476,19 @@
     _ensureSlotChart(slot, family) {
       if (!slot.chart) {
         slot.chartDiv.innerHTML = '';
-        slot.chart = echarts.init(slot.chartDiv, this.theme || undefined);
+        const shape = this._shapeScope || (this._shapeScope = this.scope.own(new V.Scope()));
+        slot.scope = shape.own(new V.Scope());
+        slot.chart = slot.scope.own(echarts.init(slot.chartDiv, this.theme || undefined));
         this._attachHandlers(slot, family);
       }
       return slot.chart;
+    }
+
+    /** @param {any} slot */
+    _dropSlotChart(slot) {
+      if (slot.scope) slot.scope.dispose();
+      slot.scope = null;
+      slot.chart = null;
     }
 
     /** @param {any} slot @param {string} h */
@@ -488,30 +541,16 @@
       }
     }
 
-    // One resize per animation frame, however many ticks a relayout fires.
-    _observeResize() {
-      if (this._resizeObserver) this._resizeObserver.disconnect();
-      this._resizeObserver = new ResizeObserver(() => {
-        if (this._resizeRaf) return;
-        this._resizeRaf = requestAnimationFrame(() => {
-          this._resizeRaf = null;
-          this._resizeCharts();
-        });
-      });
-      this._resizeObserver.observe(this.chartGrid);
-    }
-
     resize() { this._resizeCharts(); }
 
     dispose() {
-      if (this._resizeObserver) this._resizeObserver.disconnect();
-      if (this._resizeRaf) { cancelAnimationFrame(this._resizeRaf); this._resizeRaf = null; }
       this._teardownCharts();
-      // The slot menu is portalled to <body>, outside the card.
-      this._closeSlot();
+      if (this._gear) this._gear = null;
     }
   }
 
   NS.ChartView = ChartView;
   NS.FAMILIES = FAMILIES;
+  if (typeof V.binding === 'function') V.binding('blockr.viz.chart', 'chart', ChartView);
+  if (typeof NS.registerCapture === 'function') NS.registerCapture(ChartView);
 })();

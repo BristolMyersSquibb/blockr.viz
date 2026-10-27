@@ -10,7 +10,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { loadPure, measure } = require('./chart/load');
-const I = require('./interact');
+const D = require('./chart/drive');
 
 const C = loadPure({ roles: true });
 
@@ -269,8 +269,8 @@ test('the filter line names columns by label, the histogram bin by x\'s label', 
 
 // -- legend, facets, gear and sentence, drawn ------------------------------------
 
-const DRAWN = { chart_type: 'bar', group: 'AETERM', value: '.count', func: 'count', drill: 'auto' };
-const draw = (config) => I.open({ ...DRAWN, ...config }, { data: ROWS, columns: COLUMNS });
+const DRAWN = { type: 'bar', y: 'AETERM', orientation: 'horizontal', func: 'count', drill: 'auto' };
+const draw = (config, derived) => D.open({ ...DRAWN, ...config }, { data: ROWS, columns: COLUMNS, derived });
 
 test('drawn: the legend title is the colour column\'s label, none without one', () => {
   const c = draw({ color: 'AESEV' });
@@ -292,7 +292,7 @@ test('drawn: facet strips show the facet values, never the column', () => {
 test('drawn: a click names its filter by label in the footer', () => {
   const c = draw({});
   c.clickWhere(0, (p) => p.name === 'Rash');
-  const text = c.footer().map((f) => f.text).join(' ');
+  const text = c.footer();
   assert.match(text, /Reported Term = Rash/);
   noBareName(text, 'footer');
   c.close();
@@ -300,8 +300,8 @@ test('drawn: a click names its filter by label in the footer', () => {
 
 test('drawn: the gear\'s column menus show each label', () => {
   const c = draw({ color: 'AESEV' });
-  c.block._openPopover();
-  const sel = I.roleRow(c.block, 'color').querySelector('.blockr-select');
+  c.block._tray.set(true);
+  const sel = c.block.popoverEl.querySelector('[data-role="color"] .blockr-select');
   sel.querySelector('.blockr-select__control').click();
   const lb = c.doc.getElementById(sel.querySelector('.blockr-select__search')
     .getAttribute('aria-controls'));
@@ -313,11 +313,9 @@ test('drawn: the gear\'s column menus show each label', () => {
 });
 
 test('drawn: a word printed from a label opens a list led by labels', () => {
-  const c = draw({
-    color: 'AESEV',
-    subtitle_resolved: 'by Severity',
-    subtitle_parts: [{ text: 'by ' }, { text: 'Severity', arg: 'color', by: 'label' }]
-  });
+  const c = draw({ color: 'AESEV' }, { titles: { subtitle: {
+    text: 'by Severity', parts: [{ text: 'by ' }, { text: 'Severity', arg: 'color', by: 'label' }]
+  } } });
   const w = Array.from(c.block.subtitleEl.querySelectorAll('.blockr-slot'))
     .find((x) => x.textContent === 'Severity');
   w.click();
@@ -333,7 +331,7 @@ test('drawn: a word printed from a label opens a list led by labels', () => {
 });
 
 test('the subtitle placeholder writes its columns as labels', () => {
-  const ph = C.roles.ROLES.subtitle.ph;
+  const ph = C.gear.host({}).placeholder('subtitle');
   assert.match(ph, /\{label\(@color\)\}/);
   assert.ok(!/\{@color\}/.test(ph));
 });
