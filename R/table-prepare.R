@@ -21,10 +21,15 @@
 #   wrap_drill(filters, members) the groups click filter with the script
 #                   around it; a column only the script makes is filtered
 #                   after it
+#
+# A block on the kit passes its state's `script` and `script_values` as
+# `r_script` and `r_values`; the old engines pass the starting values.
 #' @noRd
-table_prepare <- function(data, script = NULL, values = list()) {
-  r_script <- shiny::reactiveVal(cb_script_text(script))
-  r_values <- shiny::reactiveVal(if (is.list(values)) values else list())
+table_prepare <- function(data, script = NULL, values = list(),
+                          r_script = NULL, r_values = NULL) {
+  r_script <- r_script %||% shiny::reactiveVal(cb_script_text(script))
+  r_values <- r_values %||%
+    shiny::reactiveVal(if (is.list(values)) values else list())
   r_parsed <- shiny::reactive(cb_parse(r_script()))
   has_script <- function() {
     s <- r_script()

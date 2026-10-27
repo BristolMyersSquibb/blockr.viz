@@ -89,8 +89,7 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
     data, summaries = state$summaries, by = state$by,
     facet_layout = state$facet_layout %||% "by_summary",
     sort_by = state$sort_by %||% "value",
-    sort_dir = state$sort_dir %||%
-      (if (identical(state$sort_by %||% "value", "value")) "desc" else "asc"),
+    sort_dir = table_sort_dir(state),
     top_n = state$top_n, scale_map = scale_map, subject = subject,
     pct_of = state$percent_of %||% "facet",
     missing = state$missing %||% "level",
@@ -111,6 +110,17 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
                                cfg = cfg))
 }
 
+#' The groups layout's sort direction
+#'
+#' Unset, it is descending for `sort_by = "value"` and ascending otherwise.
+#' @param state The table's state, under the spec's names.
+#' @return `"asc"` or `"desc"`.
+#' @noRd
+table_sort_dir <- function(state) {
+  state$sort_dir %||%
+    (if (identical(state$sort_by %||% "value", "value")) "desc" else "asc")
+}
+
 #' The variables layout's Table 1
 #'
 #' The variables are the summaries' variables less the `by` columns.
@@ -120,15 +130,27 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
 #'   summary names a variable.
 #' @noRd
 table_model_variables <- function(state, data) {
-  vars <- setdiff(table_summaries_vars(state$summaries), state$by)
-  args <- table_variables_args(list(
-    vars = vars, sections = state$sections, by = state$by,
-    stats = state$stats, total = state$total,
-    total_label = state$total_label, nest = state$nest, id = state$id,
-    missing = state$missing
-  ))
+  args <- table_variables_args(table_variables_cfg(state, data))
   if (is.null(args)) {
     return(data)
   }
   do.call(summary_table, c(list(data), args))
+}
+
+#' The variables layout's settings as summary_table() reads them
+#'
+#' A variable listed as a row count that the data holds as a number is
+#' summarised as a distribution (table_fix_var_types()).
+#' @param state The table's state, under the spec's names.
+#' @param data The input rows, or `NULL`.
+#' @return The settings list table_variables_args() reads.
+#' @noRd
+table_variables_cfg <- function(state, data = NULL) {
+  summaries <- table_fix_var_types(state$summaries, data)
+  list(
+    vars = setdiff(table_summaries_vars(summaries), state$by),
+    sections = state$sections, by = state$by, stats = state$stats,
+    total = state$total, total_label = state$total_label, nest = state$nest,
+    id = state$id, missing = state$missing
+  )
 }
