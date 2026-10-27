@@ -4,7 +4,7 @@
 # an echarts chart: a mark is a div in a cell, so search, click-to-sort, exact
 # values, a sticky header and an arbitrary row count come from the table form
 # for free. Began as a single ranked bar; the column list
-# (R/lane-summaries.R) replaced it, and old boards map onto the list in
+# (R/table-model-groups*.R) replaced it, and old boards map onto the list in
 # table_legacy_args().
 #
 # Large tables follow the table block exactly: every row rendered, scrolling
@@ -182,7 +182,7 @@ summarize_has_pct <- function(func) {
 # counting the severe rows IS the group's count, while the mean of each is not
 # its mean. Only these may be STACKED into a split bar -- everything else
 # splits side by side. Both split-bar producers (summarize_table_prep() and the
-# summaries plan in lane-summaries.R) ask here.
+# summaries plan in table-model-groups-plan.R) ask here.
 #' @noRd
 summarize_additive <- function(func) {
   isTRUE(func %in% c("count", "count_distinct", "sum"))

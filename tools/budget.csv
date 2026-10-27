@@ -4,6 +4,7 @@ R: spec machinery,R/kit-input.R,900
 R: spec machinery,R/wire.R,900
 R: specs,R/spec-chart*.R,1200
 R: specs,R/spec-table*.R,1200
+R: specs,R/spec-base.R,1200
 R: specs,R/chart-args.R,1200
 R: specs,R/chart-arguments.R,1200
 R: specs,R/block-arguments.R,1200
@@ -12,6 +13,7 @@ R: specs,R/state-normalize.R,1200
 R: chart,R/chart-block.R,1800
 R: chart,R/chart-roles.R,1800
 R: chart,R/chart-derived.R,1800
+R: chart,R/chart-normalize.R,1800
 R: chart,R/chart-filters.R,1800
 R: chart,R/chart-payload.R,1800
 R: chart,R/chart-dep.R,1800
@@ -20,17 +22,21 @@ R: chart,R/describe-chart.R,1800
 R: chart,R/scale-map-resolve.R,1800
 R: table shell and shared model,R/table-block.R,1200
 R: table shell and shared model,R/table-model.R,1200
+R: table shell and shared model,R/table-normalize.R,1200
 R: table shell and shared model,R/table-push.R,1200
 R: table shell and shared model,R/table-prepare.R,1200
-R: table shell and shared model,R/fmt-cells.R,1200
+R: table shell and shared model,R/table-model-format.R,1200
+R: table shell and shared model,R/table-model-shading.R,1200
 R: table shell and shared model,R/column-kinds.R,1200
 R: table shell and shared model,R/col-meta.R,1200
 R: records,R/table-records*.R,1400
+R: records,R/table-model-records.R,1400
 R: records,R/html-table.R,1400
 R: records,R/interactive-table.R,1400
 R: records,R/table-cards.R,1400
 R: groups,R/table-groups*.R,3600
-R: groups,R/lane-*.R,3600
+R: groups,R/table-model-groups*.R,3600
+R: groups,R/table-model-cells*.R,3600
 R: groups,R/summarize-push.R,3600
 R: groups,R/summarize-table*.R,3600
 R: groups,R/summarize-drill.R,3600
@@ -38,6 +44,7 @@ R: variables,R/table-variables*.R,900
 R: variables,R/summary-stats.R,900
 R: variables,R/summary-table*.R,900
 R: shared plumbing,R/kit-server.R,3000
+R: shared plumbing,R/normalize.R,3000
 R: shared plumbing,R/titles.R,3000
 R: shared plumbing,R/selection.R,3000
 R: shared plumbing,R/ctrl.R,3000
@@ -87,6 +94,7 @@ R: PowerPoint and the table painter,R/write-exhibit-pptx.R,1800
 R: PowerPoint and the table painter,R/summarize-paint.R,1800
 R: PowerPoint and the table painter,R/gg-exhibit.R,1800
 R: legacy,R/legacy.R,400
+R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400
 R: legacy,R/gt-table-block.R,400
 R: legacy,R/summarize-block.R,400

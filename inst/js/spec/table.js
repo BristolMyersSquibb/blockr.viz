@@ -266,9 +266,8 @@
               "type": {
                 "name": "enum"
               },
-              "default": "tukey",
               "values": ["tukey", "median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "mean_ci95", "p5_p95", "p10_p90", "min_max", "none"],
-              "nullable": false,
+              "nullable": true,
               "gear": {
                 "group": "Columns",
                 "control": "select",

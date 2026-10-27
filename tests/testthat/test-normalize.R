@@ -7,10 +7,6 @@
 
 # Recorded states that are not the reference's rules, by scenario and step.
 NORM_SKIP <- list(
-  # The recording helper wrote "log" into x and y when x_transform and
-  # y_transform were set, and "junk" into facet for facet_cols: partial
-  # matching of argument names in the recorder, not chart behaviour.
-  set_aesthetics = c(3L, 4L, 5L, 18L, 19L),
   # The reference kept a column the data lacks when it was set to NULL (a
   # guard against gear echoes). The rewrite's gear sends only changed keys,
   # so a NULL clears it.

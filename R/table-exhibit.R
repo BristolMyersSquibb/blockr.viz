@@ -10,34 +10,6 @@
 # functions the screen uses.
 # ---------------------------------------------------------------------------
 
-#' The paint of one shaded column, as the screen draws it.
-#'
-#' `sv` is a `kind = "bg"` entry of dd_shading_visuals(). Returns
-#' `list(bg =, fg =)`, one hex per row of `data`, NA where the cell is
-#' unpainted: an NA cell, or a row whose paint value is missing. With a colour
-#' SOURCE (`sv$src`) the paint reads the companion column at the same rows
-#' while the cell keeps displaying its own value. dt_flat_build() turns this
-#' into the cell styles, the downloads into paint columns, so the two cannot
-#' disagree.
-#' @noRd
-dt_bg_paint <- function(sv, data, col) {
-  n <- nrow(data)
-  bg <- fg <- rep(NA_character_, n)
-  v <- data[[col]]
-  pv <- if (is.null(sv$src)) {
-    suppressWarnings(as.numeric(v))
-  } else {
-    suppressWarnings(as.numeric(data[[sv$src]]))
-  }
-  ok <- !is.na(v) & is.finite(pv)
-  if (any(ok)) {
-    p <- sv$fun(pv[ok])
-    bg[ok] <- p$bg
-    fg[ok] <- p$fg
-  }
-  list(bg = bg, fg = fg)
-}
-
 #' The frame the table block displays, before any formatting.
 #'
 #' Aggregation is a display projection (see dd_table_aggregate()): with a
