@@ -207,6 +207,8 @@
           // marked open until R repaints the sentence (B5).
           this._closeSlot();
           if (key === 'func') this._reconcileMetric();
+          // Values of one column are no values of another.
+          if (key === 'highlight_by') this.config.highlight = [];
           // A mapping onto a column the rows do not carry yet: R has to send
           // the data again, so hold the last picture until it does.
           if (this._mappingNeedsData()) this._awaitData = true;
@@ -250,7 +252,7 @@
       const rows = this.data;
       if (!rows || !rows.length || !rows[0]) return false;
       const have = rows[0];
-      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet', 'label']
+      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet', 'label', 'highlight_by']
         .some((k) => {
           const v = this.config[k];
           return typeof v === 'string' && v && v !== '.count' && !(v in have);
@@ -369,6 +371,10 @@
         lo: c.lo || '',
         hi: c.hi || '',
         tt_fields: Array.isArray(c.tt_fields) ? c.tt_fields : [],
+        // "" and [] clear the highlight, so both are always sent.
+        highlight_by: c.highlight_by || '',
+        highlight: Array.isArray(c.highlight) ? c.highlight.map(String)
+          : (NS.hasVal(c.highlight) ? [String(c.highlight)] : []),
         // null is auto, "" is none.
         title: c.title ?? null,
         subtitle: c.subtitle ?? null,

@@ -328,6 +328,27 @@
   };
 
   /**
+   * An axis label that sets the names in `lit` in semibold text ink, line by
+   * line (a vertical axis wraps long names). A name holding rich-text syntax
+   * stays as it is.
+   * @param {any} axisLabel @param {Set<string>} lit @param {any} ink
+   */
+  const boldNames = (axisLabel, lit, ink) => {
+    const base = axisLabel || {};
+    const fmt = base.formatter;
+    return {
+      ...base,
+      formatter: (/** @type {any} */ v, /** @type {number} */ i) => {
+        const t = String(typeof fmt === 'function' ? fmt(v, i) : v);
+        if (!lit.has(String(v)) || /[{}|]/.test(t)) return t;
+        return t.split('\n').map((l) => '{hl|' + l + '}').join('\n');
+      },
+      rich: { ...(base.rich || {}),
+              hl: { fontWeight: 600, color: ink.text, fontSize: base.fontSize || ink.fontSize } }
+    };
+  };
+
+  /**
    * A plain, stacked, grouped or percent bar.
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
@@ -359,6 +380,18 @@
           : (hCapped ? { barGap: 0, barCategoryGap: '20%' } : { barGap: 0, barWidth: GROUP_BAR }))
       : { barWidth: '60%', barMaxWidth: BAR_MAX };
 
+    // `highlight`: a bar without a highlighted row is grey; the colour
+    // levels that have one take the palette between them.
+    const hlLit = m.hlLit;
+    const muted = NS.mutedMark(ink);
+    const levelColor = m.hlColors
+      ? NS.litLevelColors(colors, m.hlColors, m.colorScale, palette)
+      : NS.levelColors(colors, m.colorScale, palette);
+    /** @param {any} v @param {string} g @param {string | null} lv */
+    const greyed = (v, g, lv) => (v == null || !hlLit || hlLit(panel.facet, g, lv)) ? v
+      : (typeof v === 'object' ? { ...v, itemStyle: { ...v.itemStyle, color: muted } }
+        : { value: v, itemStyle: { color: muted } });
+
     /** @type {any[]} */
     const series = [];
     if (colors.length === 0) {
@@ -367,7 +400,7 @@
         type: 'bar',
         data: groups.map((/** @type {string} */ g) => {
           const d = NS.model.cellOf(m, panel, g);
-          return d ? d.value : null;
+          return greyed(d ? d.value : null, g, null);
         }),
         itemStyle: { color: palette[0], borderRadius: barRadius(vertical) },
         barWidth: '60%', barMaxWidth: BAR_MAX, emphasis: { focus: 'self' }
@@ -382,7 +415,6 @@
             .reduce((/** @type {number} */ s, /** @type {any} */ a) => s + a.value, 0);
         }
       }
-      const colorScale = m.colorScale;
       for (let ci = 0; ci < colors.length; ci++) {
         const color = colors[ci];
         series.push({
@@ -395,15 +427,12 @@
             if (raw == null) return null;
             if (isPercent) {
               const tot = groupTotals[g];
-              return tot ? { value: raw / tot, raw } : null;
+              return greyed(tot ? { value: raw / tot, raw } : null, g, color);
             }
-            return raw;
+            return greyed(raw, g, color);
           }),
           ...(isGrouped ? {} : { stack: 'stack' }),
-          itemStyle: {
-            color: (colorScale && colorScale.color && colorScale.color[color]) ||
-              NS.paletteAt(palette, ci)
-          },
+          itemStyle: { color: levelColor[ci] || muted },
           ...barLayout,
           emphasis: { focus: 'self' }
         });
@@ -444,6 +473,17 @@
                        margin: gut.margin, width: gut.width, overflow: 'truncate',
                        ellipsis: '…', ...(catFmt ? { formatter: catFmt } : {}) },
           axisLine: { show: false }, axisTick: { show: false } };
+    // A highlighted bar's name is semibold, as a name written on a mark. A
+    // resize that turns the x labels again keeps it (`decorate`).
+    /** @type {((axisLabel: any) => any) | null} */
+    let decorate = null;
+    if (hlLit) {
+      const lit = new Set(groups.filter((/** @type {string} */ g) => (colors.length
+        ? colors.some((/** @type {string} */ c) => hlLit(panel.facet, g, c))
+        : hlLit(panel.facet, g, null))));
+      decorate = (axisLabel) => boldNames(axisLabel, lit, ink);
+      catAxis.axisLabel = decorate(catAxis.axisLabel);
+    }
     // A share needs a colour split (one series is 100% of itself);
     // pct_distinct is a share of the panel and needs none.
     const showPercent = isPercent && colors.length > 0;
@@ -608,7 +648,7 @@
     const bottomBase = vertical ? 40 + 26 + (xlab ? xlab.bottom : 0) : 20 + 26;
     return {
       xFit: xlab ? { labels: catLabels, inset: X_INSET, decimate: false, gutter: xlab.bottom,
-                     key: xlab.key, formatter: catFmt } : undefined,
+                     key: xlab.key, formatter: catFmt, decorate } : undefined,
       // Horizontal: one fixed band per row. Vertical: the default canvas plus
       // the turned-label gutter, so labels lengthen the canvas.
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)

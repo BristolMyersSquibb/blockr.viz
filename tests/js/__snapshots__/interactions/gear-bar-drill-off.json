@@ -90,7 +90,8 @@
        "Color",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]

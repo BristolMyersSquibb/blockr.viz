@@ -474,7 +474,9 @@
       fit.gutter = lab.bottom;
       const grid = (chart.getOption().grid || [])[0] || {};
       /** @type {any} */
-      const xPatch = { axisLabel: NS.axes.axisLabelWithDisplay(lab.axisLabel, fit.formatter) };
+      const label = NS.axes.axisLabelWithDisplay(lab.axisLabel, fit.formatter);
+      /** @type {any} */
+      const xPatch = { axisLabel: fit.decorate ? fit.decorate(label) : label };
       // A titled x axis moves its title below the turned text.
       if (fit.nameGap) xPatch.nameGap = lab.bottom ? lab.bottom + 16 : 28;
       chart.setOption({ xAxis: [xPatch], grid: { bottom: (Number(grid.bottom) || 0) + delta } });

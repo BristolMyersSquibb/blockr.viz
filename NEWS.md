@@ -1,5 +1,15 @@
 # blockr.viz 0.3.0
 
+* `highlight` makes a few marks of a bar, scatter, line or area stand out:
+  `highlight = list(country = "Switzerland")` names one column and some of
+  its values. Marks holding one of the values keep their colour, every other
+  mark is grey and drawn behind them. With `color` the highlighted marks keep
+  their colour level, the palette is spread over the highlighted levels
+  only, and the legend lists only those. Highlighted marks are named: in
+  semibold on a bar's axis, beside a point, at a line's end. A title says it
+  with `{highlight}`: `"...[, {highlight} highlighted]"`. The gear offers it
+  under "Add mapping" as a column and a value picker. A drill selection
+  still dims by opacity on top.
 * `type = "histogram"` cuts `x` into about `bins` bins (default 30) at
   readable breaks and draws them as touching bars, empty bins included. A
   click on a bin filters `x` to its range.

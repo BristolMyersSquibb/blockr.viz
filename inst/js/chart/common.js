@@ -189,6 +189,65 @@
   /** @param {any} v */
   const hasVal = (v) => v !== null && v !== undefined && v !== '' && v !== '(none)';
 
+  // -- Highlight ---------------------------------------------------------------
+  // `highlight_by` names a column, `highlight` some of its values. A mark is
+  // highlighted when its rows hold one of them (the rule a drill selection
+  // lights marks by, chart-keys.js markLit); every other mark is drawn in
+  // the muted grey, behind. The types that draw it:
+  const HIGHLIGHT_TYPES = ['bar', 'scatter', 'line', 'area'];
+
+  /**
+   * The highlight as a filter, {col: [values]}, or null for none.
+   * @param {Record<string, any>} cfg @returns {Record<string, string[]> | null}
+   */
+  const highlightOf = (cfg) => {
+    if (!cfg || !HIGHLIGHT_TYPES.includes(cfg.chart_type) || !hasVal(cfg.highlight_by)) return null;
+    const v = cfg.highlight;
+    const vals = (Array.isArray(v) ? v : [v]).filter(hasVal).map(String);
+    return vals.length ? { [String(cfg.highlight_by)]: vals } : null;
+  };
+
+  /** A CSS colour as [r, g, b], or null. @param {any} c */
+  const rgbOf = (c) => {
+    const t = String(c || '').trim();
+    let m = /^#([0-9a-f]{3})$/i.exec(t);
+    if (m) return m[1].split('').map((h) => parseInt(h + h, 16));
+    const h6 = /^#([0-9a-f]{6})$/i.exec(t);
+    if (h6) return [0, 2, 4].map((i) => parseInt(h6[1].slice(i, i + 2), 16));
+    m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(t);
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  };
+
+  /**
+   * The colour of a mark that is not highlighted: 40% of the muted text
+   * over the surface, so it recedes in either scheme (about #c4c7cc on
+   * white).
+   * @param {any} ink
+   */
+  const mutedMark = (ink) => {
+    const a = rgbOf(ink && ink.muted), b = rgbOf(ink && ink.surface);
+    if (!a || !b) return (ink && ink.strong) || INK_DEFAULT.strong;
+    const hex = a.map((v, i) => Math.round(0.4 * v + 0.6 * b[i]).toString(16).padStart(2, '0'));
+    return '#' + hex.join('');
+  };
+
+  /**
+   * One colour per level when only the `lit` levels are highlighted: the
+   * board scale's colour, else the palette counted over the lit levels, so
+   * a highlighted level never lands past the palette's end. Null for a level
+   * that is not lit.
+   * @param {any[]} levels @param {Set<any>} lit @param {any} scale @param {string[]} palette
+   * @returns {Array<string | null>}
+   */
+  const litLevelColors = (levels, lit, scale, palette) => {
+    let k = 0;
+    return levels.map((lvl) => {
+      if (!lit.has(lvl)) return null;
+      const i = k++;
+      return (scale && scale.color && scale.color[lvl]) || paletteAt(palette, i);
+    });
+  };
+
   // Largest / smallest without spreading into arguments (a RangeError past
   // about 100k values). NaN as soon as one value is NaN, like Math.max.
   /** @param {ArrayLike<any>} xs */
@@ -431,6 +490,7 @@
     AGGREGATED_TYPES, INDIVIDUAL_TYPES, TIMELINE_TYPES, DISTRIBUTION_TYPES, familyOf, isLineType,
     INK_DEFAULT, readInk, esc, tipHead, tipRow, tipNote, TIP_SEP, rowTooltip, cardTooltip, ddNum, ddNum3,
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
+    HIGHLIGHT_TYPES, highlightOf, mutedMark, litLevelColors,
     hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
     applyDrillEmphasis, facetScales, PANEL_H_CAP,
     LEGEND_MODES, MARKS_MAX_LEVELS, legendSetting, marksKind, swatchOf, legendPlan,

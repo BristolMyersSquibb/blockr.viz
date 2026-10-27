@@ -333,9 +333,21 @@
     const inRange = range ? (/** @type {any[]} */ p) => NS.keys.pointInRange(p, range) : null;
     const NONE = '\u0000';
     const keyOf = (/** @type {any} */ name) => (name == null ? NONE : String(name));
+    // A highlight splits a scatter level into its muted points and its
+    // highlighted ones (model-individual.js highlightSeries): `byPart` finds
+    // the part a drawn series is, `byLevel` the whole level.
+    const MUTED = '\u0002';
     /** @type {Map<string, any>} */
+    const byPart = new Map();
+    /** @type {Map<string, { rows: any[], pts: any[] }>} */
     const byLevel = new Map();
-    for (const s of panel.series) byLevel.set(keyOf(s.level), s);
+    for (const s of panel.series) {
+      byPart.set(keyOf(s.level) + (s.muted ? MUTED : ''), s);
+      const k = keyOf(s.level);
+      const all = byLevel.get(k);
+      if (all) byLevel.set(k, { rows: all.rows.concat(s.rows), pts: all.pts.concat(s.pts) });
+      else byLevel.set(k, { rows: s.rows, pts: s.pts });
+    }
     const keyCols = new Set(m.splitCol ? [m.splitCol] : []);
     if (m.facet) keyCols.add(m.facet);
     const byRow = !!lit && !!filters && Object.keys(filters).some((c) => !keyCols.has(c));
@@ -363,7 +375,7 @@
       if (!s || s.id != null) return {};
       // The legend's empty series.
       if (s.silent && s.type !== 'custom' && Array.isArray(s.data) && !s.data.length) return {};
-      const ms = byLevel.get(keyOf(s.name));
+      const ms = byPart.get(keyOf(s.name) + (s.blockrMuted ? MUTED : ''));
       if (isMark(s) && s.type === 'scatter' && ms) {
         if (perPoint) {
           let any = false;
@@ -375,7 +387,8 @@
             if (on) any = true;
             return { value: p, itemStyle: { opacity: on ? 1 : DIM } };
           });
-          levelLit.set(keyOf(s.name), any);
+          // Both parts of a highlighted level answer for it.
+          levelLit.set(keyOf(s.name), any || levelLit.get(keyOf(s.name)) === true);
           return { data, itemStyle: { opacity: 1 } };
         }
         // The plain points again, in case a filter dimmed them one by one.

@@ -190,6 +190,16 @@
     // not something the marks can predict. Left unnarrowed on purpose.
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
     label:  { label: 'Label',  kind: 'column', colType: 'any', kinds: ['group', 'id'] },
+    // One column and the values of it that stand out; everything else turns
+    // grey. One row: the column, then its values beside it. Any column, as
+    // `drill`: a scatter of countries highlights by country or by region,
+    // neither of which it maps.
+    highlight_by: { label: 'Highlight', kind: 'column', colType: 'cat', kinds: ['group', 'id'],
+                    pairedWith: 'highlight' },
+    highlight: { label: 'Values', kind: 'multi', placeholder: 'Pick values',
+                 options: (/** @type {any} */ cfg, /** @type {any} */ h) =>
+                   (cfg.highlight_by && h && typeof h.levels === 'function'
+                     ? h.levels(cfg.highlight_by) : []) },
     // Extra columns to append to each mark's hover tooltip (beyond the mapped
     // roles). Multi-select; empty = none. Values are shipped and packed
     // per-bar, so this is bounded to the picked columns, never the whole row.
@@ -572,16 +582,19 @@
         // Offered only on bar because only the bar tooltip formatter consumes
         // it (pie/treemap/boxplot/radar/waterfall have their own).
         { role: 'tt_fields', types: ['bar'] },
-        { role: 'label', types: ['bar', 'pie', 'treemap'] }
+        { role: 'label', types: ['bar', 'pie', 'treemap'] },
+        { role: 'highlight_by', types: ['bar'] }
       ],
       // Missing group sits next to Group: it decides whether rows without a
       // group are counted as their own category. Bar only, like the percent
       // denominator after the aggregation: both exist for the
       // population-as-rows pattern, which is a bar idea (a pie of "everyone,
       // including the ones with no category" is not a chart anyone wants).
+      // `highlight` is drawn in the highlight_by row (pairedWith); it is
+      // listed so the row knows it applies.
       mapping: [{ role: 'na_group', types: ['bar'] },
         'value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] },
-        { role: 'pct_of', types: ['bar'] }],
+        { role: 'pct_of', types: ['bar'] }, { role: 'highlight', types: ['bar'] }],
       // orientation: bar + the distribution marks (which default vertical —
       // groups on x — while bar defaults horizontal; see
       // ensureDistributionMetric). Waterfall is vertical-only (a bridge
@@ -623,8 +636,9 @@
       // each value is unambiguous (unlike an aggregated bar, a group of rows).
       optionalMap: ['series', 'color', 'facet', 'tt_fields',
         { role: 'label', types: ['scatter', 'line', 'area'] },
-        { role: 'linetype', types: ['line', 'area'] }],
-      mapping: [],
+        { role: 'linetype', types: ['line', 'area'] },
+        { role: 'highlight_by', types: ['scatter', 'line', 'area'] }],
+      mapping: [{ role: 'highlight', types: ['scatter', 'line', 'area'] }],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
         // Band: the window is the only new idea; `summary` / `whiskers`
