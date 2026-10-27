@@ -32,20 +32,20 @@ expect_spec_takes <- function(spec, states) {
   }
 }
 
-spec_or_skip <- function(name) {
-  ns <- asNamespace("blockr.viz")
-  skip_if_not(exists(name, envir = ns, inherits = FALSE),
-              paste(name, "is not written yet"))
-  get(name, envir = ns)
+spec_or_skip <- function(block) {
+  fn <- paste0(block, "_spec")
+  skip_if_not(exists(fn, envir = asNamespace("blockr.viz"), inherits = FALSE),
+              paste0(fn, "() is not written yet"))
+  viz_block_spec(block)
 }
 
 test_that("every recorded chart state passes the chart spec", {
-  spec <- spec_or_skip("CHART_SPEC")
+  spec <- spec_or_skip("chart")
   expect_spec_takes(spec, recorded_states("chart-record"))
 })
 
 test_that("every recorded table state passes the table spec", {
-  spec <- spec_or_skip("TABLE_SPEC")
+  spec <- spec_or_skip("table")
   vocab <- list(args = TRUE, summary_table = TRUE)
   expect_spec_takes(spec, recorded_states(
     "table-golden", function(st) table_golden_translate(st, vocab)

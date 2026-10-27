@@ -37,17 +37,27 @@ test_that("the registry lists the ai arguments with core types", {
                    "object")
 })
 
-test_that("an example must pass the argument's type", {
-  expect_error(
-    viz_spec("chart", type = viz_arg("enum", default = "bar", values = "bar",
-                                     example = "pie")),
-    "`type` must be one of"
-  )
+test_that("required record fields are required in the schema", {
+  s <- viz_spec("table", shadings = viz_arg(
+    type_records(spec = viz_spec("shading",
+                                 col = viz_arg("column", required = TRUE),
+                                 low = viz_arg("number", null = "min"))),
+    null = "none"
+  ))
+  t <- blockr.core::arg_spec_type(viz_registry_args(s)$shadings)
+  expect_identical(t$items$required, I("col"))
 })
 
-test_that("a record argument cannot be a slot", {
-  expect_error(viz_arg("map", default = list(), slot = TRUE),
-               "cannot be a title slot")
+test_that("records_by has no schema type, only its description", {
+  s <- viz_spec("table", summaries = viz_arg(
+    type_records_by("type", list(a = viz_spec("a", n = viz_arg("bool",
+                                                               default = TRUE)))),
+    default = list(), describe = "Summaries."
+  ))
+  r <- viz_registry_args(s)
+  expect_null(blockr.core::arg_spec_type(r$summaries))
+  expect_identical(blockr.core::arg_spec_description(r$summaries),
+                   "Summaries.")
 })
 
 test_that("slots print single values as they are and lists joined", {

@@ -38,8 +38,9 @@ test_that("the JS spec carries what the gear needs", {
   expect_identical(d$facet_cols$bounds, list(min = 1, max = NULL,
                                              minOpen = FALSE))
   expect_identical(d$facet_cols$gear$when, "color")
-  expect_identical(d$highlight$type$fields$values,
+  expect_identical(d$highlight$type$fields$values$type,
                    list(name = "values", of = "column"))
+  expect_true(d$highlight$type$fields$values$nullable)
   expect_identical(d$script_values$default, setNames(list(), character()))
 })
 
@@ -65,6 +66,17 @@ test_that("the types follow the wire", {
   )
   expect_true(any(grepl("highlight: \\{ column: string \\| null; values:",
                         dts)))
+  v <- viz_spec("table", summaries = viz_arg(
+    type_records_by("type", list(
+      simple = viz_spec("simple", col = viz_arg("column", null = "rows")),
+      dist = viz_spec("dist", col = viz_arg("column", required = TRUE))
+    )),
+    default = list()
+  ))
+  expect_true(paste0(
+    "  summaries: ({ type: 'simple'; col: string | null } | ",
+    "{ type: 'dist'; col: string })[];"
+  ) %in% g$gen_spec_dts(v))
   expect_true("  values: Partial<ChartConfig>;" %in% dts)
 })
 

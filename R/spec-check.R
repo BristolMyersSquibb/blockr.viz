@@ -14,10 +14,14 @@
 #'   argument allows `NULL`.
 #' @noRd
 viz_check_value <- function(arg, x, name) {
-  if (is.list(x) && !length(x) && !arg$type$name %in% c("map", "records")) {
+  if (is.list(x) && !length(x) &&
+        !arg$type$name %in% c("map", "records", "records_by")) {
     x <- NULL
   }
   if (is.null(x)) {
+    if (isTRUE(arg$required)) {
+      spec_fail(name, "is required")
+    }
     if (!isFALSE(arg$null)) {
       return(NULL)
     }
@@ -222,10 +226,13 @@ check_format <- function(x, arg) {
   as.integer(d)
 }
 
-# One record: a named list whose fields are checked by their types. A field
-# may be left out, which leaves it NULL.
+# One record: a named list whose fields are checked as arguments. A field
+# left out takes its default, NULL for most.
 check_record <- function(x, arg) {
-  fields <- arg$type$fields
+  check_fields(x, arg$type$fields)
+}
+
+check_fields <- function(x, fields) {
   if (!is.list(x) || (length(x) && is.null(names(x)))) {
     value_fail("must be a named list with fields ",
                paste(names(fields), collapse = ", "))
@@ -236,10 +243,9 @@ check_record <- function(x, arg) {
   }
   out <- list()
   for (f in names(fields)) {
-    field_arg <- list(type = fields[[f]], null = "unset", bounds = NULL,
-                      also = NULL, values = NULL)
-    v <- if (is.null(x[[f]])) NULL else SPEC_CHECKERS[[fields[[f]]$name]](
-      x[[f]], field_arg
+    v <- tryCatch(
+      viz_check_value(fields[[f]], x[[f]], f),
+      viz_arg_error = function(e) value_fail("has field ", conditionMessage(e))
     )
     out[f] <- list(v)
   }
@@ -251,6 +257,28 @@ check_records <- function(x, arg) {
     value_fail("must be a list of records")
   }
   out <- lapply(x, check_record, arg = arg)
+  if (!length(out) && !isFALSE(arg$null)) NULL else out
+}
+
+# Records whose fields depend on their `key` field: each is checked against
+# the variant its key names, with the key kept as its first field.
+check_records_by <- function(x, arg) {
+  if (!is.list(x) || (!is.null(names(x)) && length(x))) {
+    value_fail("must be a list of records")
+  }
+  key <- arg$type$key
+  variants <- arg$type$variants
+  out <- lapply(x, function(r) {
+    k <- if (is.list(r)) json_atomic(r[[key]])
+    if (!is.character(k) || length(k) != 1L || !k %in% names(variants)) {
+      value_fail("needs `", key, "` in each record, one of ",
+                 paste0("\"", names(variants), "\"", collapse = ", "))
+    }
+    fields <- variants[[k]]$fields
+    rest <- check_fields(r[setdiff(names(r), key)],
+                         fields[setdiff(names(fields), key)])
+    c(stats::setNames(list(k), key), rest)
+  })
   if (!length(out) && !isFALSE(arg$null)) NULL else out
 }
 
@@ -278,6 +306,7 @@ SPEC_CHECKERS <- list(
   format = check_format,
   record = check_record,
   records = check_records,
+  records_by = check_records_by,
   map = check_map
 )
 

@@ -16,33 +16,40 @@ gen_spec_header <- function(block) {
 # The spec as plain data for the browser: what the gear and the type checks
 # need. The registry text (`describe`, `example`, `ai`) stays in R.
 gen_spec_data <- function(spec) {
-  lapply(spec$args, function(a) {
-    d <- a$default
-    out <- list(
-      type = gen_type_data(a$type),
-      default = if (inherits(d, "viz_opt")) NULL else gen_default(a$type, d),
-      option = if (inherits(d, "viz_opt")) d$name,
-      values = if (!is.null(a$values)) I(a$values),
-      bounds = if (!is.null(a$bounds)) {
-        list(min = gen_num(a$bounds$min), max = gen_num(a$bounds$max),
-             minOpen = a$bounds$min_open)
-      },
-      nullable = !isFALSE(a$null),
-      also = if (!is.null(a$also)) I(a$also),
-      applies = gen_applies(a$applies),
-      gear = if (!is.null(a$gear)) gen_gear(a$gear),
-      slot = a$slot,
-      ctrl = a$ctrl
-    )
-    Filter(Negate(is.null), out)
-  })
+  lapply(spec$args, gen_arg_data)
+}
+
+gen_arg_data <- function(a) {
+  d <- a$default
+  out <- list(
+    type = gen_type_data(a$type),
+    default = if (inherits(d, "viz_opt")) NULL else gen_default(a$type, d),
+    option = if (inherits(d, "viz_opt")) d$name,
+    values = if (!is.null(a$values)) I(a$values),
+    bounds = if (!is.null(a$bounds)) {
+      list(min = gen_num(a$bounds$min), max = gen_num(a$bounds$max),
+           minOpen = a$bounds$min_open)
+    },
+    nullable = !isFALSE(a$null),
+    required = if (isTRUE(a$required)) TRUE,
+    also = if (!is.null(a$also)) I(a$also),
+    applies = gen_applies(a$applies),
+    gear = if (!is.null(a$gear)) gen_gear(a$gear),
+    slot = a$slot,
+    ctrl = a$ctrl
+  )
+  Filter(Negate(is.null), out)
 }
 
 gen_type_data <- function(type) {
-  out <- list(name = type$name)
-  if (!is.null(type$of)) out$of <- type$of
-  if (!is.null(type$fields)) out$fields <- lapply(type$fields, gen_type_data)
-  out
+  out <- list(name = type$name, of = type$of, key = type$key)
+  if (!is.null(type$fields)) out$fields <- lapply(type$fields, gen_arg_data)
+  if (!is.null(type$variants)) {
+    out$variants <- lapply(type$variants, function(v) {
+      lapply(v$fields, gen_arg_data)
+    })
+  }
+  Filter(Negate(is.null), out)
 }
 
 # A default as viz_wire() would send it.
@@ -105,18 +112,30 @@ gen_ts_type <- function(type, values = NULL, nullable = FALSE) {
     numbers = "{ value: number; label: string | null }[]",
     values = "{ value: number | string; label: string | null }[]",
     format = "'number' | 'compact' | 'percent' | number",
-    record = gen_ts_record(type),
-    records = paste0(gen_ts_record(type), "[]"),
+    record = gen_ts_record(type$fields),
+    records = paste0(gen_ts_record(type$fields), "[]"),
+    records_by = gen_ts_variants(type),
     map = "Record<string, unknown>"
   )
   if (nullable) paste(t, "| null") else t
 }
 
-gen_ts_record <- function(type) {
-  fields <- vapply(names(type$fields), function(f) {
-    paste0(f, ": ", gen_ts_type(type$fields[[f]], nullable = TRUE))
+gen_ts_record <- function(fields, key = NULL) {
+  types <- vapply(names(fields), function(f) {
+    a <- fields[[f]]
+    paste0(f, ": ", gen_ts_type(a$type, a$values, nullable = !isFALSE(a$null)))
   }, character(1L))
-  paste0("{ ", paste(fields, collapse = "; "), " }")
+  paste0("{ ", paste(c(key, types), collapse = "; "), " }")
+}
+
+# A list of records keyed by `key`: one record type per variant.
+gen_ts_variants <- function(type) {
+  parts <- vapply(names(type$variants), function(k) {
+    fields <- type$variants[[k]]$fields
+    gen_ts_record(fields[setdiff(names(fields), type$key)],
+                  key = paste0(type$key, ": '", k, "'"))
+  }, character(1L))
+  paste0("(", paste(parts, collapse = " | "), ")[]")
 }
 
 gen_spec_dts <- function(spec) {
@@ -157,10 +176,13 @@ gen_spec_files <- function(specs, dir) {
   invisible(paths)
 }
 
-# The package's specs: every `*_SPEC` object in its namespace.
+# The package's block specs: those in VIZ_BLOCK_SPECS whose spec function
+# is defined.
 gen_package_specs <- function(ns) {
-  nms <- grep("_SPEC$", ls(ns, all.names = TRUE), value = TRUE)
-  Filter(function(x) inherits(x, "viz_spec"), mget(nms, envir = ns))
+  blocks <- names(ns$VIZ_BLOCK_SPECS)
+  have <- vapply(paste0(blocks, "_spec"), exists, logical(1L), envir = ns,
+                 inherits = FALSE)
+  lapply(blocks[have], ns$viz_block_spec)
 }
 
 if (sys.nframe() == 0L) {

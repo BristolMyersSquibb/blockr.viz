@@ -124,11 +124,61 @@ test_that("map takes any named list", {
   expect_error(viz_check_value(m, list(1), "script_values"), "named list")
 })
 
-test_that("a spec refuses a default that fails its type", {
-  expect_error(
-    viz_spec("chart", n = viz_arg("integer", default = 0L, bounds = bounds(1))),
-    "`n` must be at least 1"
+test_that("a required value cannot be left out", {
+  col <- viz_arg("column", required = TRUE)
+  expect_identical(viz_check_value(col, "x", "col"), "x")
+  expect_error(viz_check_value(col, NULL, "col"), "`col` is required")
+  s <- viz_spec("dist", type = viz_arg("enum", default = "dist",
+                                       values = "dist"), col = col)
+  expect_error(viz_check(s, list()), "`col` is required")
+})
+
+test_that("a record field can carry values, a default and required", {
+  shading <- viz_spec(
+    "shading",
+    mode = viz_arg("enum", default = "scale", values = c("scale", "rule")),
+    col = viz_arg("column", required = TRUE),
+    low = viz_arg("number", null = "data minimum")
   )
+  a <- viz_arg(type_records(spec = shading), null = "none")
+  out <- viz_check_value(a, json('[{"col": "AGE"}]'), "shadings")
+  expect_identical(out, list(list(mode = "scale", col = "AGE", low = NULL)))
+  expect_error(viz_check_value(a, json('[{"mode": "rule"}]'), "shadings"),
+               "`shadings` has field `col` is required")
+  expect_error(viz_check_value(a, json('[{"col": "A", "mode": "x"}]'),
+                               "shadings"),
+               "has field `mode` must be one of \"scale\", \"rule\"")
+})
+
+summary_specs <- function() {
+  list(
+    simple = viz_spec("simple",
+                      fn = viz_arg("enum", default = "n",
+                                   values = c("n", "mean")),
+                      col = viz_arg("column", null = "count rows")),
+    dist = viz_spec("dist", col = viz_arg("column", required = TRUE),
+                    stat = viz_arg("enum", default = "mean_sd",
+                                   values = c("mean_sd", "min_max")))
+  )
+}
+
+test_that("records_by checks each record against its key's spec", {
+  a <- viz_arg(type_records_by("type", summary_specs()), default = list())
+  x <- json('[{"type": "simple"}, {"type": "dist", "col": "AGE"}]')
+  out <- viz_check_value(a, x, "summaries")
+  expect_identical(out, list(
+    list(type = "simple", fn = "n", col = NULL),
+    list(type = "dist", col = "AGE", stat = "mean_sd")
+  ))
+  expect_identical(viz_check_value(a, list(), "summaries"), list())
+  expect_error(viz_check_value(a, json('[{"type": "pie"}]'), "summaries"),
+               "needs `type` in each record, one of \"simple\", \"dist\"")
+  expect_error(viz_check_value(a, json('[{"type": "dist"}]'), "summaries"),
+               "has field `col` is required")
+  expect_error(viz_check_value(a, json('[{"type": "simple", "stat": "x"}]'),
+                               "summaries"), "has no field `stat`")
+  s <- viz_spec("table", summaries = a)
+  expect_identical(viz_spec_check(s), s)
 })
 
 spec_abc <- function() {

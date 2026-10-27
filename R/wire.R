@@ -39,6 +39,10 @@ wire_value <- function(type, x) {
     numbers = , values = wire_labelled(x),
     record = wire_record(type, x),
     records = lapply(unname(x), wire_record, type = type),
+    records_by = lapply(unname(x), function(r) {
+      c(r[type$key], wire_record(type$variants[[r[[type$key]]]],
+                                 r[setdiff(names(r), type$key)]))
+    }),
     map = if (length(x)) x else structure(list(), names = character()),
     x
   )
@@ -56,7 +60,7 @@ wire_labelled <- function(x) {
 wire_record <- function(type, x) {
   out <- list()
   for (f in names(type$fields)) {
-    out[f] <- list(wire_value(type$fields[[f]], x[[f]]))
+    out[f] <- list(wire_value(type$fields[[f]]$type, x[[f]]))
   }
   out
 }

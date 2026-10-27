@@ -39,9 +39,11 @@ registry_type <- function(type, values = NULL, required = TRUE) {
   )
 }
 
-# A record's fields are all optional: a field left out is unset.
+# A record field is required in the schema when the spec requires it.
 registry_object <- function(type, required) {
-  fields <- lapply(type$fields, registry_type, required = FALSE)
+  fields <- lapply(type$fields, function(f) {
+    registry_type(f$type, f$values, required = isTRUE(f$required))
+  })
   fields <- Filter(Negate(is.null), fields)
   do.call(blockr.core::arg_object, c(fields, list(required = required)))
 }
