@@ -82,7 +82,7 @@ R: shared plumbing,R/expand-groups.R,3000
 R: shared plumbing,R/report-call.R,3000
 R: shared plumbing,R/drilldown-ai-effect.R,3000
 R: shared plumbing,R/blockr.viz-package.R,3000
-R: shared plumbing,R/kit-dep.R,3000
+R: table shell and shared model,R/table-dep.R,1200
 R: shared plumbing,R/kit-titles.R,3000
 R: exports,R/exhibit.R,1500
 R: exports,R/export-registry.R,1500
