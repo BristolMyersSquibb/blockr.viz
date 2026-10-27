@@ -30,16 +30,21 @@ const ROWS = [
 const look = (c) => ({ cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure,
                        widths: [600, 600] });
 
+// `highlight` is a column and some of its values: H('country', 'CH').
+const H = (col, ...values) => ({ [col]: values.map((value) => ({ value, label: null })) });
+
 const bar = (cfg) => {
-  const c = { chart_type: 'bar', group: 'country', value: 'x', func: 'sum', drill: 'auto',
-              sort_by: 'alpha', sort_dir: 'asc', ...cfg };
+  const c = C.model.settings({ type: 'bar', y: 'country', x: 'x', orientation: 'horizontal',
+                               func: 'sum', drill: 'auto', sort_by: 'alpha', sort_dir: 'asc',
+                               ...cfg }, {}, COLUMNS);
   const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.aggregated(m, look(c));
   return { m, c, opt: o.panels[0].option };
 };
 
 const points = (cfg) => {
-  const c = { chart_type: 'scatter', x: 'x', y: 'y', drill: 'auto', ...cfg };
+  const c = C.model.settings({ type: 'scatter', x: 'x', y: 'y', drill: 'auto', ...cfg },
+                             {}, COLUMNS);
   const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.individual(m, look(c));
   return { m, c, opt: o.panels[0].option };
@@ -49,13 +54,12 @@ const colourOf = (d, s) => (d && typeof d === 'object' && d.itemStyle && d.itemS
   s.itemStyle.color;
 
 test('highlightOf reads the column and its values, on the types that draw it', () => {
-  assert.deepStrictEqual(plain(C.highlightOf({ chart_type: 'bar', highlight_by: 'country',
-                                               highlight: ['CH'] })), { country: ['CH'] });
-  assert.deepStrictEqual(plain(C.highlightOf({ chart_type: 'line', highlight_by: 'country',
-                                               highlight: 'CH' })), { country: ['CH'] });
-  assert.strictEqual(C.highlightOf({ chart_type: 'bar', highlight_by: 'country', highlight: [] }), null);
-  assert.strictEqual(C.highlightOf({ chart_type: 'bar', highlight_by: '', highlight: ['CH'] }), null);
-  assert.strictEqual(C.highlightOf({ chart_type: 'pie', highlight_by: 'country', highlight: ['CH'] }), null);
+  const of = (type, highlight) => C.highlightOf(C.model.settings({ type, highlight }, {}, COLUMNS));
+  assert.deepStrictEqual(plain(of('bar', H('country', 'CH'))), { country: ['CH'] });
+  assert.deepStrictEqual(plain(of('line', H('country', 'CH'))), { country: ['CH'] });
+  assert.strictEqual(of('bar', H('country')), null);
+  assert.strictEqual(of('bar', {}), null);
+  assert.strictEqual(of('pie', H('country', 'CH')), null);
 });
 
 test('the muted grey sits between the muted text and the surface', () => {
@@ -64,7 +68,7 @@ test('the muted grey sits between the muted text and the surface', () => {
 });
 
 test('a bar: the highlighted bar keeps its colour, the others are grey', () => {
-  const { opt } = bar({ highlight_by: 'country', highlight: ['CH'] });
+  const { opt } = bar({ highlight: H('country', 'CH') });
   const s = opt.series[0];
   const cats = plain(opt.yAxis.data);
   const byCat = Object.fromEntries(cats.map((g, i) => [g, colourOf(s.data[i], s)]));
@@ -76,7 +80,7 @@ test('a bar: the highlighted bar keeps its colour, the others are grey', () => {
 });
 
 test('a bar highlights by a column it does not map, through its rows', () => {
-  const { opt } = bar({ highlight_by: 'region', highlight: ['Europe'] });
+  const { opt } = bar({ highlight: H('region', 'Europe') });
   const s = opt.series[0];
   const cats = plain(opt.yAxis.data);
   const lit = cats.filter((g, i) => colourOf(s.data[i], s) !== MUTED);
@@ -84,7 +88,7 @@ test('a bar highlights by a column it does not map, through its rows', () => {
 });
 
 test('a colour split: the palette and the legend cover the highlighted levels', () => {
-  const { m, c, opt } = bar({ color: 'region', highlight_by: 'country', highlight: ['JP'] });
+  const { m, c, opt } = bar({ color: 'region', highlight: H('country', 'JP') });
   const asia = opt.series.find((s) => s.name === 'Asia');
   const europe = opt.series.find((s) => s.name === 'Europe');
   // Asia is the only highlighted level, so it takes the palette's first colour.
@@ -95,13 +99,13 @@ test('a colour split: the palette and the legend cover the highlighted levels', 
 
 test('without a highlight nothing changes', () => {
   const a = bar({ color: 'region' }).opt;
-  const b = bar({ color: 'region', highlight_by: 'country', highlight: [] }).opt;
+  const b = bar({ color: 'region', highlight: H('country') }).opt;
   assert.deepStrictEqual(plain(a.series.map((s) => s.itemStyle.color)),
                          plain(b.series.map((s) => s.itemStyle.color)));
 });
 
 test('a scatter: muted points first, then the highlighted ones, named', () => {
-  const { m, opt } = points({ highlight_by: 'country', highlight: ['CH'] });
+  const { m, opt } = points({ highlight: H('country', 'CH') });
   const marks = opt.series.filter((s) => s.type === 'scatter' && s.id == null);
   assert.deepStrictEqual(plain(marks.map((s) => [s.itemStyle.color, s.data.length, !!s.blockrMuted])),
                          [[MUTED, 6, true], [BLUE, 2, false]]);
@@ -112,12 +116,12 @@ test('a scatter: muted points first, then the highlighted ones, named', () => {
 });
 
 test('a scatter: a value on many points is not written on each', () => {
-  const { opt } = points({ highlight_by: 'region', highlight: ['Europe'] });
+  const { opt } = points({ highlight: H('region', 'Europe') });
   assert.strictEqual(opt.series.find((s) => s.id === '__label__'), undefined);
 });
 
 test('a scatter coloured by another column keeps that colour on the highlighted points', () => {
-  const { m, opt } = points({ color: 'period', highlight_by: 'country', highlight: ['CH'] });
+  const { m, opt } = points({ color: 'period', highlight: H('country', 'CH') });
   const marks = opt.series.filter((s) => s.type === 'scatter' && s.id == null);
   // Both periods' muted points, then CH's 30y and 5y point.
   assert.deepStrictEqual(plain(marks.map((s) => [s.name, s.itemStyle.color])),
@@ -127,8 +131,8 @@ test('a scatter coloured by another column keeps that colour on the highlighted 
 });
 
 test('a line: muted lines first, the highlighted one named at its end', () => {
-  const { opt } = points({ chart_type: 'line', x: 'x', y: 'y', series: 'country',
-                           highlight_by: 'country', highlight: ['CH'] });
+  const { opt } = points({ type: 'line', x: 'x', y: 'y', series: 'country',
+                           highlight: H('country', 'CH') });
   const lines = opt.series.filter((s) => s.type === 'line' && s.id == null && !s.silent);
   const last = lines[lines.length - 1];
   assert.strictEqual(last.name, 'CH');
@@ -139,7 +143,7 @@ test('a line: muted lines first, the highlighted one named at its end', () => {
 });
 
 test('a drill selection dims each part of a split level by its own points', () => {
-  const { m, opt } = points({ color: 'period', highlight_by: 'country', highlight: ['CH'] });
+  const { m, opt } = points({ color: 'period', highlight: H('country', 'CH') });
   const filters = { region: ['Asia'] };
   const lit = (keys, rows) => C.keys.markLit(keys, rows, filters);
   const patch = plain(C.option.individualPatch(m, m.panels[0], opt.series, lit, false, filters));

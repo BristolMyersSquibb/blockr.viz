@@ -167,14 +167,14 @@
   /** The series pool: the board theme's categorical role, else the built-in.
    *  @param {Record<string, any>} cfg @returns {string[]} */
   const paletteOf = (cfg) => {
-    const p = cfg && cfg.palette;
+    const p = cfg && cfg.derived && cfg.derived.palette;
     return (Array.isArray(p) && p.length) ? p : BLOCKR_PALETTE;
   };
 
   /** The board scale for `varName`, or null when the scale targets another
    *  column. @param {Record<string, any>} cfg @param {any} varName */
   const scaleFor = (cfg, varName) => {
-    const sc = cfg && cfg.scales;
+    const sc = cfg && cfg.derived && cfg.derived.scales;
     return (sc && varName && sc.var === varName) ? sc : null;
   };
 
@@ -190,8 +190,20 @@
   /** @param {any} v */
   const hasVal = (v) => v !== null && v !== undefined && v !== '' && v !== '(none)';
 
+  /** A `numbers` or `values` setting, `[{value, label}]`, or [] when unset.
+   * @param {any} v @returns {{ value: any, label: string | null }[]} */
+  const labelled = (v) => (Array.isArray(v) ? v : []);
+
+  /** The `x_ranges` setting, `{name: [from, to]}`, as a list of spans.
+   * @param {any} r @returns {{ name: string, from: any, to: any }[]} */
+  const rangesOf = (r) => (r && typeof r === 'object' ? Object.entries(r) : [])
+    .map(([name, span]) => {
+      const s = labelled(span);
+      return { name, from: s[0] ? s[0].value : null, to: s[1] ? s[1].value : null };
+    }).filter((x) => x.from != null && x.to != null);
+
   // -- Highlight ---------------------------------------------------------------
-  // `highlight_by` names a column, `highlight` some of its values. A mark is
+  // `highlight` names a column and some of its values. A mark is
   // highlighted when its rows hold one of them (the rule a drill selection
   // lights marks by, chart-keys.js markLit); every other mark is drawn in
   // the muted grey, behind. The types that draw it:
@@ -202,10 +214,11 @@
    * @param {Record<string, any>} cfg @returns {Record<string, string[]> | null}
    */
   const highlightOf = (cfg) => {
-    if (!cfg || !HIGHLIGHT_TYPES.includes(cfg.chart_type) || !hasVal(cfg.highlight_by)) return null;
-    const v = cfg.highlight;
-    const vals = (Array.isArray(v) ? v : [v]).filter(hasVal).map(String);
-    return vals.length ? { [String(cfg.highlight_by)]: vals } : null;
+    const h = cfg && cfg.highlight;
+    const col = h && typeof h === 'object' ? Object.keys(h)[0] : null;
+    if (!col || !HIGHLIGHT_TYPES.includes(cfg.type)) return null;
+    const vals = labelled(h[col]).map((x) => x.value).filter(hasVal).map(String);
+    return vals.length ? { [col]: vals } : null;
   };
 
   /** A CSS colour as [r, g, b], or null. @param {any} c */
@@ -296,15 +309,15 @@
     const d = cfg.drill;
     if (!d || d === '') return null;
     if (d !== 'auto') return d;
-    const fam = familyOf(cfg.chart_type);
-    if (fam === 'aggregated') return cfg.group || null;
+    const fam = familyOf(cfg.type);
+    if (fam === 'aggregated') return cfg.category || null;
     if (fam === 'timeline') return cfg.y || null;
     return cfg.series || cfg.color || null;
   };
 
-  /** A ctrl_target makes a click an event sent to another block. @param {Record<string, any>} cfg */
+  /** A drill_target makes a click an event sent to another block. @param {Record<string, any>} cfg */
   const transientDrill = (cfg) => {
-    const t = cfg.ctrl_target;
+    const t = cfg.drill_target;
     return !!(t && String(t).trim());
   };
 
@@ -337,21 +350,21 @@
   const facetScales = (cfg) => {
     const m = cfg.facet_scales || 'fixed';
     if (m !== 'fixed' && m !== 'free' && m !== 'free_y') return 'fixed';
-    if (m === 'free_y' && familyOf(cfg.chart_type) !== 'individual') return 'free';
+    if (m === 'free_y' && familyOf(cfg.type) !== 'individual') return 'free';
     return m;
   };
 
   /**
-   * Which axes a chart draws on a log scale: `y_scale` on a scatter, line or
-   * band, `x_scale` on a scatter. The model also needs the axis to be a
+   * Which axes a chart draws on a log scale: `y_transform` on a scatter,
+   * line or band, `x_transform` on a scatter. The model also needs the axis to be a
    * number (not a date or a category).
    * @param {Record<string, any>} cfg @returns {{ x: boolean, y: boolean }}
    */
   const logAxes = (cfg) => {
-    const t = cfg.chart_type;
+    const t = cfg.type;
     return {
-      y: cfg.y_scale === 'log' && (t === 'scatter' || t === 'line' || t === 'band'),
-      x: cfg.x_scale === 'log' && t === 'scatter'
+      y: cfg.y_transform === 'log10' && (t === 'scatter' || t === 'line' || t === 'band'),
+      x: cfg.x_transform === 'log10' && t === 'scatter'
     };
   };
 
@@ -363,17 +376,10 @@
   // Past this many levels the names on the marks of a line crowd each other.
   const MARKS_MAX_LEVELS = 8;
 
-  /**
-   * The `legend` setting. A config from before it, with `direct_labels` on,
-   * means the names on the marks.
-   * @param {Record<string, any>} cfg
-   * @returns {'bottom' | 'top' | 'marks' | 'none'}
-   */
+  /** @param {Record<string, any>} cfg @returns {'bottom' | 'top' | 'marks' | 'none'} */
   const legendSetting = (cfg) => {
     const v = cfg && cfg.legend;
-    if (LEGEND_MODES.includes(v)) return v;
-    const dl = cfg && cfg.direct_labels;
-    return (dl === 'on' || dl === true) ? 'marks' : 'bottom';
+    return LEGEND_MODES.includes(v) ? v : 'bottom';
   };
 
   /**
@@ -404,7 +410,7 @@
     if (m.family === 'aggregated') {
       if (m.type === 'pie' || m.type === 'treemap') return 'slices';
       if (m.type === 'bar' && !m.histogram && !m.cumulative && m.colors.length &&
-          (cfg.bar_mode || 'stacked') !== 'grouped') {
+          cfg.position !== 'dodge') {
         const vertical = cfg.orientation === 'vertical';
         // The names sit on one bar (the last, or the first lying down); a
         // level that bar lacks would have no name, so the legend stays.
@@ -451,7 +457,7 @@
    */
   const legendPlan = (m, cfg) => {
     const setting = legendSetting(cfg);
-    const swatch = swatchOf(cfg.chart_type);
+    const swatch = swatchOf(cfg.type);
     if (setting === 'none') return { setting, marks: null, band: false, position: 'bottom', swatch };
     if (setting === 'marks') {
       const marks = marksKind(m, cfg);
@@ -505,7 +511,7 @@
     INK_DEFAULT, readInk, esc, tipHead, tipRow, tipNote, TIP_SEP, rowTooltip, cardTooltip, ddNum, ddNum3,
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
     HIGHLIGHT_TYPES, highlightOf, mutedMark, litLevelColors,
-    hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
+    hasVal, labelled, rangesOf, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
     applyDrillEmphasis, facetScales, logAxes, PANEL_H_CAP,
     LEGEND_MODES, MARKS_MAX_LEVELS, legendSetting, marksKind, swatchOf, legendPlan,
     cloudCentre, nameMark

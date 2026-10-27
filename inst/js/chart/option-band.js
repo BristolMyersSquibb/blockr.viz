@@ -2,7 +2,7 @@
 /**
  * Chart block: the band series of the individual option.
  *
- * A band draws R's windowed statistics (config.band_series: per facet, per
+ * A band draws R's windowed statistics (derived.band.series: per facet, per
  * level, x with a centre line and inner and outer intervals), not rows, so
  * the browser and R cannot disagree. Per level: a ribbon (two edges as one
  * polygon per run where both exist), a halo under the centre line and the
@@ -131,9 +131,9 @@
    */
   const band = (m, panel, look) => {
     const { cfg, ink } = look;
-    const dm = cfg.dot_size_mult ?? 1.0;
-    const lm = cfg.line_width_mult ?? 1.0;
-    const bandData = cfg.band_series || null;
+    const dm = cfg.point_size ?? 1.0;
+    const lm = cfg.line_width ?? 1.0;
+    const bandData = (cfg.derived.band && cfg.derived.band.series) || null;
     /** @type {any[]} */
     const series = [];
     if (!bandData) {
@@ -214,8 +214,8 @@
    * @returns {{ lo: number, hi: number } | null}
    */
   const bandExtent = (cfg, panel, many) => {
-    const bandData = cfg.band_series;
-    const bandRefs = cfg.band_refs || null;
+    const bandData = cfg.derived.band && cfg.derived.band.series;
+    const bandRefs = (cfg.derived.band && cfg.derived.band.refs) || null;
     let lo = Infinity, hi = -Infinity;
     const scan = (/** @type {any} */ v) => {
       if (v == null) return;
@@ -270,8 +270,8 @@
    * @param {VizColumn[]} [columns]
    */
   const bandRefLines = (cfg, ext, ink, columns) => {
-    const bandRefs = cfg.band_refs || null;
-    const lm = cfg.line_width_mult ?? 1.0;
+    const bandRefs = (cfg.derived.band && cfg.derived.band.refs) || null;
+    const lm = cfg.line_width ?? 1.0;
     /** @type {any[]} */
     const out = [];
     if (!bandRefs) return out;

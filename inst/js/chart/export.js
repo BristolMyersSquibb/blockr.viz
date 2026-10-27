@@ -241,7 +241,7 @@
       if (!slots.length || !this.chartGrid) { none('the chart has nothing drawn'); return; }
       const gridR = this.chartGrid.getBoundingClientRect();
       if (!gridR.width || !gridR.height) { none('the chart has no size'); return; }
-      const pr = (opts && opts.pixelRatio) || (this.config && this.config.capture_ratio) || 2;
+      const pr = (opts && opts.pixelRatio) || (this.derived && this.derived.capture_ratio) || 2;
       const k = exportContext(this, gridR, pr);
 
       panelBitmaps(slots, pr).then((panels) => {

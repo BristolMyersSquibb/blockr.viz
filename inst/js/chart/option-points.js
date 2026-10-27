@@ -44,8 +44,8 @@
 
   /** The interval column pairs, lo and hi, as arrays. @param {Record<string, any>} cfg */
   const intervalPairs = (cfg) => {
-    const lo = [].concat(cfg.lo || []).filter(Boolean);
-    const hi = [].concat(cfg.hi || []).filter(Boolean);
+    const lo = [].concat(cfg.ymin || []).filter(Boolean);
+    const hi = [].concat(cfg.ymax || []).filter(Boolean);
     /** @type {Array<[string, string]>} */
     const out = [];
     for (let i = 0; i < Math.min(lo.length, hi.length); i++) out.push([lo[i], hi[i]]);
@@ -104,12 +104,12 @@
   const pointsContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const isLine = m.isLine;
-    const dm = cfg.dot_size_mult ?? 1.0;
-    const lm = cfg.line_width_mult ?? 1.0;
+    const dm = cfg.point_size ?? 1.0;
+    const lm = cfg.line_width ?? 1.0;
     // One line per entity (a `series` column): the trajectory crowd.
     const crowd = isLine && m.crowd;
     // An area's fill already shows where the values are; dots would clutter it.
-    const dots = isLine && !crowd && cfg.chart_type !== 'area' &&
+    const dots = isLine && !crowd && cfg.type !== 'area' &&
       m.symbol !== 'none' && sparseLines(panel, plotW);
     const lineMarkerPx = BASE_LINE_MARKER * dm;
     const lineW = (crowd ? CROWD_LINE_WIDTH : BASE_LINE_WIDTH) * lm;
@@ -117,10 +117,10 @@
     // One select drives step and smoothing: straight segments (the default),
     // monotone smoothing, or a step at the start, middle or end.
     const connect = cfg.connect || 'straight';
-    const stepMode = connect.indexOf('step-') === 0 ? connect.slice(5) : null;
+    const stepMode = connect.indexOf('step_') === 0 ? connect.slice(5) : null;
     const smoothOn = isLine && connect === 'monotone';
     const smoother = cfg.smoother || 'none';
-    const smootherSeries = cfg.smoother_series || null;
+    const smootherSeries = cfg.derived.smoother || null;
     const pairs = intervalPairs(cfg);
     // On a log axis an interval end at or below zero: the low end is cut at
     // the axis floor, a high end there drops the interval.
@@ -131,9 +131,9 @@
       : (floorY != null && !(Number(v) > 0) ? floorY : Number(v)));
     /** @param {any} v */
     const hiEnd = (v) => (v == null || (floorY != null && !(Number(v) > 0)) ? null : Number(v));
-    const isArea = cfg.chart_type === 'area';
+    const isArea = cfg.type === 'area';
     // A colour split stacks its areas, unless the layout says side by side.
-    const stackArea = isArea && m.splitCol && cfg.bar_mode !== 'grouped';
+    const stackArea = isArea && m.splitCol && cfg.position !== 'dodge';
     const ltCol = isLine && cfg.linetype ? cfg.linetype : null;
     // `legend: "marks"` writes the names on the marks: at each line's end, or
     // at the centre of each cloud of points (nothing for a crowd of lines).
@@ -336,7 +336,7 @@
    */
   const addRanges = (k, series) => {
     const { cfg, ink, m, floorX, encodeX } = k;
-    const ranges = Array.isArray(cfg.x_ranges) ? cfg.x_ranges : [];
+    const ranges = NS.rangesOf(cfg.x_ranges);
     const host = series.find((sr) => sr.type === 'line' || sr.type === 'scatter');
     if (ranges.length && host) {
       host.markArea = {

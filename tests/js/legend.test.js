@@ -178,9 +178,17 @@ const ROWS = [
   { T: 'b', SEV: 'LOW', V: 3 }, { T: 'b', SEV: 'HIGH', V: 1 },
   { T: 'c', SEV: 'LOW', V: 5 }
 ];
+// A bar lies horizontal unless it says otherwise: its category T is y and
+// its measure V is x. Vertical, and a boxplot, put T on x and V on y.
+const settingsOf = (cfg) => {
+  const vertical = cfg.orientation === 'vertical' || cfg.type === 'boxplot';
+  return C.model.settings({
+    type: 'bar', func: 'sum', color: 'SEV', sort_by: 'alpha', sort_dir: 'asc', drill: 'auto',
+    ...(vertical ? { x: 'T', y: 'V' } : { y: 'T', x: 'V', orientation: 'horizontal' }), ...cfg
+  }, {}, COLUMNS);
+};
 const build = (cfg) => {
-  const c = { ...BASE, chart_type: 'bar', group: 'T', value: 'V', func: 'sum', color: 'SEV',
-              sort_by: 'alpha', sort_dir: 'asc', ...cfg };
+  const c = settingsOf(cfg);
   const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
@@ -216,8 +224,9 @@ test('marks on a stack spread the names of thin segments a line apart', () => {
   const add = (t, sev, n) => { for (let i = 0; i < n; i++) rows.push({ T: t, SEV: sev, V: 1, ID: t + sev + i, ARM: 'A' }); };
   add('a', 'HIGH', 40); add('a', 'LOW', 40); add('a', 'MID', 1);
   add('b', 'HIGH', 1); add('b', 'LOW', 1); add('b', 'MID', 1);
-  const c = { ...BASE, chart_type: 'bar', group: 'T', value: '.count', func: 'count', color: 'SEV',
-              sort_by: 'alpha', sort_dir: 'asc', orientation: 'vertical', legend: 'marks' };
+  const c = C.model.settings({ type: 'bar', x: 'T', func: 'count', color: 'SEV', sort_by: 'alpha',
+                               sort_dir: 'asc', orientation: 'vertical', legend: 'marks',
+                               drill: 'auto' }, {}, COLUMNS);
   const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const opt = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                        measure, widths: [600] }).panels[0].option;
@@ -233,7 +242,7 @@ test('marks on a stack spread the names of thin segments a line apart', () => {
 });
 
 test('marks on a horizontal stack: names above the first bar, at each centre', () => {
-  const { plan, opt } = build({ orientation: 'horizontal', legend: 'marks', bar_mode: 'percent' });
+  const { plan, opt } = build({ orientation: 'horizontal', legend: 'marks', position: 'fill' });
   assert.strictEqual(plan.marks, 'stack-h');
   const names = opt.series.filter((s) => String(s.id || '').startsWith('__legend_'));
   assert.deepStrictEqual(plain(names.map((s) => [s.label.formatter, s.label.position])),
@@ -244,13 +253,13 @@ test('marks on a horizontal stack: names above the first bar, at each centre', (
 });
 
 test('marks on a dodged bar, a histogram and a boxplot fall back to the band', () => {
-  const dodged = build({ orientation: 'vertical', bar_mode: 'grouped', legend: 'marks' });
+  const dodged = build({ orientation: 'vertical', position: 'dodge', legend: 'marks' });
   assert.strictEqual(dodged.plan.marks, null);
   assert.strictEqual(dodged.plan.band, true);
   assert.strictEqual(dodged.plan.position, 'bottom');
   assert.ok(!dodged.opt.series.some((s) => String(s.id || '').startsWith('__legend_')));
 
-  assert.strictEqual(build({ chart_type: 'boxplot', legend: 'marks' }).plan.band, true);
+  assert.strictEqual(build({ type: 'boxplot', legend: 'marks' }).plan.band, true);
 
   // Through the view: the band stays at the bottom.
   const r = draw({ chart_type: 'bar', ...AE, color: 'AESEV', bar_mode: 'grouped',
@@ -306,13 +315,10 @@ test('marks on a pie need no band: the slices name themselves', () => {
 
 // -- the setting --------------------------------------------------------------
 
-test('legendSetting: the value, bottom when missing, marks for an old direct_labels', () => {
+test('legendSetting: the value, bottom when missing', () => {
   assert.strictEqual(C.legendSetting({}), 'bottom');
   assert.strictEqual(C.legendSetting({ legend: 'top' }), 'top');
   assert.strictEqual(C.legendSetting({ legend: 'bogus' }), 'bottom');
-  assert.strictEqual(C.legendSetting({ direct_labels: 'on' }), 'marks');
-  assert.strictEqual(C.legendSetting({ direct_labels: true }), 'marks');
-  assert.strictEqual(C.legendSetting({ direct_labels: 'off' }), 'bottom');
-  assert.strictEqual(C.legendSetting({ legend: 'none', direct_labels: 'on' }), 'none');
+  assert.strictEqual(C.legendSetting({ legend: 'none' }), 'none');
 });
 

@@ -19,10 +19,11 @@ const ROWS = [
   { ID: 'S02', ARM: 'A', SEX: 'F', VIS: 'Base', DAY: 2, VAL: 7, LO: 6, HI: 8 },
   { ID: 'S02', ARM: 'A', SEX: 'F', VIS: 'W2', DAY: 15, VAL: 9, LO: null, HI: 10 }
 ];
-const BASE = { chart_type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
+const BASE = { type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
 
-const build = (cfg, look = {}) => {
-  const c = { ...BASE, ...cfg };
+// `derived` is what R computes beside the config: the band, the smoother.
+const build = (cfg, look = {}, derived = {}) => {
+  const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
   const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.individual(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600, 600], ...look });
@@ -51,7 +52,7 @@ test('a scatter with series is clicked, not brushed', () => {
 });
 
 test('a line: the zoom toolbox, the veil\'s axes, the hover overlay, a picker for a crowd', () => {
-  const { po, opt } = build({ chart_type: 'line', series: 'ID', connect: 'step-end' });
+  const { po, opt } = build({ type: 'line', series: 'ID', connect: 'step_end' });
   assert.deepStrictEqual(types(opt), [['line', 'S01'], ['line', 'S02'], ['custom', null],
                                       ['line', '__focus__'], ['scatter', '__focus_dots__']]);
   assert.strictEqual(opt.series[0].step, 'end');
@@ -63,12 +64,12 @@ test('a line: the zoom toolbox, the veil\'s axes, the hover overlay, a picker fo
   assert.strictEqual(po.focus.series, opt.series);
   assert.strictEqual(po.focus.stepMode, 'end');
   // One line: nothing to pick out.
-  assert.strictEqual(build({ chart_type: 'line' }).po.focus, null);
+  assert.strictEqual(build({ type: 'line' }).po.focus, null);
 });
 
 test('layout changes snap: no update animation, the first draw keeps its own', () => {
-  for (const chart_type of ['line', 'scatter']) {
-    const { opt } = build({ chart_type });
+  for (const type of ['line', 'scatter']) {
+    const { opt } = build({ type });
     assert.strictEqual(opt.animationDurationUpdate, 0);
     assert.notStrictEqual(opt.animation, false);
     assert.strictEqual(opt.animationDuration, undefined);
@@ -76,7 +77,7 @@ test('layout changes snap: no update animation, the first draw keeps its own', (
 });
 
 test('the line tooltip follows the hovered line, and says nothing away from every line', () => {
-  const { po, opt } = build({ chart_type: 'line', series: 'ID' });
+  const { po, opt } = build({ type: 'line', series: 'ID' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'S01', value: [1, 3], color: '#111111' },
               { seriesType: 'line', seriesIndex: 1, seriesName: 'S02', value: [1, 7], color: '#222222' }];
   assert.strictEqual(opt.tooltip.formatter(ps), '');
@@ -88,7 +89,7 @@ test('the line tooltip follows the hovered line, and says nothing away from ever
 });
 
 test('a colour-split line card lists every level at the crosshair, highest first', () => {
-  const { po, opt } = build({ chart_type: 'line', color: 'ARM' });
+  const { po, opt } = build({ type: 'line', color: 'ARM' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'A', value: [1, 3], color: '#111111' },
               { seriesType: 'line', seriesIndex: 1, seriesName: 'B', value: [1, 7], color: '#222222' }];
   // No line is picked on a colour split: the card does not depend on the
@@ -101,7 +102,7 @@ test('a colour-split line card lists every level at the crosshair, highest first
 });
 
 test('a crowd of lines (one per series) names only the line under the cursor', () => {
-  const { po, opt } = build({ chart_type: 'line', series: 'ID' });
+  const { po, opt } = build({ type: 'line', series: 'ID' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'S1', value: [1, 3], color: '#111111' },
               { seriesType: 'line', seriesIndex: 1, seriesName: 'S2', value: [1, 7], color: '#222222' }];
   assert.strictEqual(opt.tooltip.formatter(ps), '');
@@ -112,7 +113,7 @@ test('a crowd of lines (one per series) names only the line under the cursor', (
 });
 
 test('the point tooltip: the level, x and y by title, then the tooltip fields', () => {
-  const { opt } = build({ color: 'ARM', tt_fields: ['SEX'] });
+  const { opt } = build({ color: 'ARM', tooltip: ['SEX'] });
   const html = opt.tooltip.formatter({ seriesName: 'A', value: [2, 7, 'F'], color: '#123456' });
   for (const s of ['A', 'Study Day', '>2<', 'VAL', '>7<', 'Arm', 'SEX', '>F<']) {
     assert.ok(html.includes(s), `${s} in ${html}`);
@@ -120,9 +121,9 @@ test('the point tooltip: the level, x and y by title, then the tooltip fields', 
 });
 
 test('error bars in data order, the smoother from R\'s series of the panel', () => {
-  const smoother_series = { F: { __all__: { x: [0, 10, 20], y: [1, 2, 3] } },
+  const smoother = { F: { __all__: { x: [0, 10, 20], y: [1, 2, 3] } },
                             M: { __all__: { x: [0, 10], y: [5, NaN] } } };
-  const { o } = build({ facet: 'SEX', lo: 'LO', hi: 'HI', smoother: 'lm', smoother_series });
+  const { o } = build({ facet: 'SEX', ymin: ['LO'], ymax: ['HI'], smoother: 'lm' }, {}, { smoother });
   const [f, m] = o.panels.map((p) => p.option);
   assert.deepStrictEqual(types(f), [['scatter', null], ['line', 'fit'], ['custom', 'errbar']]);
   assert.deepStrictEqual(plain(f.series[1].data), [[0, 1], [10, 2], [20, 3]]);
@@ -133,7 +134,7 @@ test('error bars in data order, the smoother from R\'s series of the panel', () 
 });
 
 test('the identity line: one rounded domain on both axes, on the markLine', () => {
-  const { opt } = build({ identity_line: 'on' });
+  const { opt } = build({ identity_line: true });
   assert.strictEqual(opt.xAxis.min, 0);
   assert.strictEqual(opt.xAxis.max, 16);
   assert.strictEqual(opt.yAxis.min, 0);
@@ -141,21 +142,22 @@ test('the identity line: one rounded domain on both axes, on the markLine', () =
   const d = opt.series[0].markLine.data;
   assert.deepStrictEqual(plain(d[d.length - 1].map((e) => e.coord)), [[0, 0], [16, 16]]);
   // Not on a line chart.
-  assert.strictEqual(build({ chart_type: 'line', identity_line: 'on' }).opt.xAxis[0].min, undefined);
+  assert.strictEqual(build({ type: 'line', identity_line: true }).opt.xAxis[0].min, undefined);
 });
 
 test('helper lines on x and y share the markLine of the first series', () => {
-  const { opt } = build({ x_lines: [5], value_lines: [4, 8] });
+  const { opt } = build({ x_lines: [{ value: 5, label: null }],
+                       y_lines: [{ value: 4, label: null }, { value: 8, label: null }] });
   const d = plain(opt.series[0].markLine.data);
   assert.deepStrictEqual(d.map((e) => e.xAxis ?? e.yAxis), [5, 4, 8]);
 });
 
 test('categorical x: the labels fit the panel width; turned labels grow the canvas', () => {
-  const wide = build({ chart_type: 'line', x: 'VIS', series: 'ID' });
+  const wide = build({ type: 'line', x: 'VIS', series: 'ID' });
   assert.deepStrictEqual(plain(wide.opt.xAxis[0].data), ['Base', 'W2']);
   assert.strictEqual(wide.po.xFit.inset, 71);
   assert.strictEqual(wide.po.height, '400px');
-  const narrow = build({ chart_type: 'line', x: 'VIS', series: 'ID' }, { widths: [100] });
+  const narrow = build({ type: 'line', x: 'VIS', series: 'ID' }, { widths: [100] });
   assert.ok(narrow.po.panelH > 400);
   assert.strictEqual(narrow.opt.xAxis[0].axisLabel.rotate, 90);
 });
@@ -169,7 +171,7 @@ const BAND = {
 };
 
 test('a coloured band: per level a hidden ribbon, a halo and the centre line', () => {
-  const { po, opt } = build({ chart_type: 'band', color: 'ARM', band_series: BAND });
+  const { po, opt } = build({ type: 'band', color: 'ARM' }, {}, { band: { series: BAND } });
   // B's ribbon breaks at the missing lo into runs of one: no ribbon.
   assert.deepStrictEqual(types(opt), [['custom', 'A'], ['line', 'A'], ['line', 'A'],
                                       ['line', 'B'], ['line', 'B']]);
@@ -183,7 +185,7 @@ test('a coloured band: per level a hidden ribbon, a halo and the centre line', (
 
 test('one band level: the outer ribbon, the outliers, a y axis fitted to them', () => {
   const band_series = { __all__: { A: BAND.__all__.A } };
-  const { po, opt } = build({ chart_type: 'band', color: 'ARM', band_series, box_points: 'outliers' });
+  const { po, opt } = build({ type: 'band', color: 'ARM', box_points: 'outliers' }, {}, { band: { series: band_series } });
   assert.deepStrictEqual(types(opt).map((t) => t[0]), ['custom', 'custom', 'scatter', 'line', 'line']);
   assert.strictEqual(po.band, null);
   assert.ok(opt.yAxis.max >= 12);
@@ -193,7 +195,7 @@ test('band reference limits: inside the frame, or pinned to its edge', () => {
   const band_series = { __all__: { __all__: BAND.__all__.A } };
   const refs = { hi: { col: 'HI', value: 8.5, lo: 8, hi: 9, n_distinct: 2 },
                  lo: { col: 'LO', value: -50, lo: -50, hi: -50, n_distinct: 1 } };
-  const { opt } = build({ chart_type: 'band', band_series, band_refs: refs });
+  const { opt } = build({ type: 'band' }, {}, { band: { series: band_series, refs } });
   const ml = opt.series.find((s) => s.markLine).markLine.data;
   assert.deepStrictEqual(plain(ml.map((d) => d.label.formatter)), ['HI 8.5 (8–9)', 'LO -50 ↓ off scale']);
   assert.strictEqual(ml[1].yAxis, opt.yAxis.min);
@@ -201,7 +203,7 @@ test('band reference limits: inside the frame, or pinned to its edge', () => {
 
 test('a band reads its facet panel\'s own series', () => {
   const band_series = { F: { __all__: BAND.__all__.A }, M: { __all__: BAND.__all__.B } };
-  const { o } = build({ chart_type: 'band', facet: 'SEX', band_series });
+  const { o } = build({ type: 'band', facet: 'SEX' }, {}, { band: { series: band_series } });
   const centre = (p) => p.option.series[p.option.series.length - 1].data[0];
   assert.deepStrictEqual(plain(o.panels.map(centre)), [[0, 5], [0, 1]]);
 });
@@ -217,7 +219,7 @@ test('the legend: the colour levels; by colour value with a separate series', ()
 });
 
 test('drill off: no emphasis, no hand cursor; a theme drops the transparent background', () => {
-  const { opt } = build({ drill: '' });
+  const { opt } = build({ drill: null });
   assert.strictEqual(opt.series[0].cursor, 'default');
   assert.strictEqual(opt.backgroundColor, 'transparent');
   assert.strictEqual(build({}, { theme: 'dark' }).opt.backgroundColor, undefined);
@@ -225,22 +227,22 @@ test('drill off: no emphasis, no hand cursor; a theme drops the transparent back
 
 // -- Highlight (D5) ----------------------------------------------------------
 
-const patch = (cfg, filters, wasDimmed = false) => {
-  const { m, opt } = build(cfg);
+const patch = (cfg, filters, wasDimmed = false, derived = {}) => {
+  const { m, opt } = build(cfg, {}, derived);
   const lit = filters ? (keys, rows) => C.keys.markLit(keys, rows, filters) : null;
   return plain(C.option.individualPatch(m, m.panels[0], opt.series, lit, wasDimmed, filters));
 };
 
 test('D5: no filter is an empty patch, unless something was dimmed', () => {
-  assert.deepStrictEqual(patch({ chart_type: 'line', series: 'ID' }, null),
+  assert.deepStrictEqual(patch({ type: 'line', series: 'ID' }, null),
                          { series: [{}, {}, {}, {}, {}], dimmed: false });
-  const undo = patch({ chart_type: 'line', series: 'ID' }, null, true);
+  const undo = patch({ type: 'line', series: 'ID' }, null, true);
   assert.deepStrictEqual(undo.series[0], { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 } });
   assert.deepStrictEqual(undo.series.slice(2), [{}, {}, {}]);
 });
 
 test('D5: a filter on the series dims the other lines', () => {
-  const p = patch({ chart_type: 'line', series: 'ID' }, { ID: ['S02'] });
+  const p = patch({ type: 'line', series: 'ID' }, { ID: ['S02'] });
   assert.deepStrictEqual(p.series.slice(0, 2), [
     { lineStyle: { opacity: 0.15 }, itemStyle: { opacity: 0.15 } },
     { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 } }]);
@@ -259,26 +261,30 @@ test('D5: a filter on a column the points do not carry lights each point by its 
 });
 
 test('D5: a band level dims with its halo and ribbon', () => {
-  const p = patch({ chart_type: 'band', color: 'ARM', band_series: BAND }, { ARM: ['A'] });
+  const p = patch({ type: 'band', color: 'ARM' }, { ARM: ['A'] }, false, { band: { series: BAND } });
   assert.deepStrictEqual(p.series.map((s) => (s.lineStyle || s.itemStyle).opacity),
                          [1, 1, 1, 0.15, 0.15]);
 });
 
 test('the option reads only the config fields it and the model list', () => {
   const configs = [
-    {}, { color: 'ARM', facet: 'SEX', lo: 'LO', hi: 'HI', x_lines: [1], value_lines: [2] },
-    { chart_type: 'line', series: 'ID', connect: 'straight', line_width_mult: 2 },
-    { chart_type: 'line', x: 'VIS', color: 'ARM', dot_size_mult: 2 },
-    { smoother: 'lm', smoother_series: {}, identity_line: 'on', drill: '' },
-    { chart_type: 'band', color: 'ARM', band_series: BAND, box_points: 'outliers',
-      band_refs: { hi: { col: 'HI', value: 7 } } }
+    [{}],
+    [{ color: 'ARM', facet: 'SEX', ymin: ['LO'], ymax: ['HI'], x_lines: [{ value: 1, label: null }],
+       y_lines: [{ value: 2, label: null }] }],
+    [{ type: 'line', series: 'ID', connect: 'straight', line_width: 2 }],
+    [{ type: 'line', x: 'VIS', color: 'ARM', point_size: 2 }],
+    [{ smoother: 'lm', identity_line: true, drill: null }, { smoother: {} }],
+    [{ type: 'band', color: 'ARM', box_points: 'outliers' },
+     { band: { series: BAND, refs: { hi: { col: 'HI', value: 7 } } } }]
   ];
   const allowed = new Set([...C.model.individual.FIELDS, ...C.option.individual.FIELDS]);
-  for (const cfg of configs) {
-    const c = { ...BASE, ...cfg };
+  for (const [cfg, derived] of configs) {
+    const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
     const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
     const read = new Set();
-    const spy = new Proxy(c, { get(t, k) { read.add(k); return t[k]; } });
+    // `derived` is read through too: a field is listed as `derived.<key>`.
+    const dspy = new Proxy(c.derived, { get(t, k) { read.add('derived.' + String(k)); return t[k]; } });
+    const spy = new Proxy(c, { get(t, k) { if (k !== 'derived') read.add(k); return k === 'derived' ? dspy : t[k]; } });
     C.option.individual(m, { cfg: spy, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                              measure, widths: [600, 600, 600] });
     const extra = [...read].filter((k) => typeof k === 'string' && !allowed.has(k));
@@ -290,7 +296,7 @@ test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the mon
   const columns = [{ name: 'MONTH', type: 'categorical', temporal: 'date' }, num('VAL'), cat('G')];
   const rows = ['2020-01-01', '2020-02-01', '2020-03-01'].flatMap((d, i) =>
     [{ MONTH: d, VAL: i, G: 'a' }, { MONTH: d, VAL: i + 5, G: 'b' }]);
-  const c = { chart_type: 'line', x: 'MONTH', y: 'VAL', color: 'G' };
+  const c = C.model.settings({ type: 'line', x: 'MONTH', y: 'VAL', color: 'G' }, {}, columns);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
   assert.strictEqual(m.x.type, 'time');
   assert.strictEqual(m.x.period, 'month');
@@ -311,7 +317,7 @@ test('a quarterly line over ten years on a 650 px card has no dots', () => {
   const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
   const rows = (n) => Array.from({ length: n }, (_, i) =>
     ({ D: new Date(Date.UTC(2015, 3 * i, 1)).toISOString().slice(0, 10), VAL: i }));
-  const c = { chart_type: 'line', x: 'D', y: 'VAL' };
+  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
   const dots = (n) => {
     const r = rows(n);
     const m = C.model.individual({ rows: r, ix: new C.RowIndex(), columns, cfg: c });
@@ -328,7 +334,7 @@ test('a dense line has no dots; a gantt keeps a Date x a category', () => {
   const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
   const rows = Array.from({ length: 200 }, (_, i) =>
     ({ D: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10), VAL: i }));
-  const c = { chart_type: 'line', x: 'D', y: 'VAL' };
+  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
   const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
@@ -340,17 +346,17 @@ test('a dense line has no dots; a gantt keeps a Date x a category', () => {
 // -- ymin/ymax bands, linetype, x_ranges, direct labels, area -----------------
 
 test('a line with two intervals draws two grey bands under the line', () => {
-  const { opt } = build({ chart_type: 'line', lo: ['LO', 'LO'], hi: ['HI', 'HI'] });
+  const { opt } = build({ type: 'line', ymin: ['LO', 'LO'], ymax: ['HI', 'HI'] });
   const bands = opt.series.filter((s) => s.type === 'custom' && s.z === 1);
   assert.strictEqual(bands.length, 2);
   assert.strictEqual(bands[0].itemStyle.color, C.INK_DEFAULT.muted);
   // a scatter keeps error bars
-  const sc = build({ lo: 'LO', hi: 'HI' }).opt;
+  const sc = build({ ymin: ['LO'], ymax: ['HI'] }).opt;
   assert.ok(sc.series.some((s) => s.type === 'custom' && s.name === 'errbar'));
 });
 
 test('a linetype cuts a line into segments, the later levels dashed', () => {
-  const { opt } = build({ chart_type: 'line', linetype: 'VIS' });
+  const { opt } = build({ type: 'line', linetype: 'VIS' });
   const segs = opt.series.filter((s) => /^__seg_/.test(s.id || ''));
   assert.strictEqual(segs.length, 2);
   assert.strictEqual(segs[0].lineStyle.type, undefined);
@@ -358,8 +364,8 @@ test('a linetype cuts a line into segments, the later levels dashed', () => {
 });
 
 test('x_ranges shade x, direct labels name the lines and make room', () => {
-  const { opt } = build({ chart_type: 'line', color: 'ARM', direct_labels: 'on',
-                          x_ranges: [{ name: 'Run-in', from: 0, to: 5 }] });
+  const { opt } = build({ type: 'line', color: 'ARM', legend: 'marks',
+                          x_ranges: { 'Run-in': [{ value: 0, label: null }, { value: 5, label: null }] } });
   const host = opt.series.find((s) => s.markArea);
   assert.deepStrictEqual(plain(host.markArea.data[0]), [{ name: 'Run-in', xAxis: 0 }, { xAxis: 5 }]);
   assert.ok(opt.series.filter((s) => s.endLabel && s.endLabel.show).length >= 2);
@@ -367,20 +373,24 @@ test('x_ranges shade x, direct labels name the lines and make room', () => {
 });
 
 test('an area fills and stacks a colour split, from zero, without dots', () => {
-  const { opt } = build({ chart_type: 'area', color: 'ARM' });
+  const { opt } = build({ type: 'area', color: 'ARM' });
   const areas = opt.series.filter((s) => s.areaStyle);
   assert.strictEqual(areas.length, 2);
   assert.ok(areas.every((s) => s.stack === 'area' && s.showSymbol === false));
   assert.strictEqual(typeof opt.yAxis[0].min, 'function');
-  const dodge = build({ chart_type: 'area', color: 'ARM', bar_mode: 'grouped' }).opt;
+  const dodge = build({ type: 'area', color: 'ARM', position: 'dodge' }).opt;
   assert.ok(dodge.series.filter((s) => s.areaStyle).every((s) => !s.stack));
 });
 
 test('x_lines on a Date x: placed as dates, labelled by name or by the date', () => {
   const columns = [{ name: 'DAY', type: 'categorical', temporal: 'date' }, num('VAL')];
   const rows = ['2026-10-14', '2026-10-21', '2026-10-28'].map((d, i) => ({ DAY: d, VAL: i }));
-  const c = { chart_type: 'line', x: 'DAY', y: 'VAL', x_lines: ['2026-10-21', '2026-10-27', 'junk'],
-              x_line_names: ['Listed', ''], x_ranges: [{ name: 'Up', from: '2026-10-21', to: '2026-10-28' }] };
+  const c = C.model.settings({
+    type: 'line', x: 'DAY', y: 'VAL',
+    x_lines: [{ value: '2026-10-21', label: 'Listed' }, { value: '2026-10-27', label: null },
+              { value: 'junk', label: null }],
+    x_ranges: { Up: [{ value: '2026-10-21', label: null }, { value: '2026-10-28', label: null }] }
+  }, {}, columns);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
   const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
@@ -393,7 +403,7 @@ test('x_lines on a Date x: placed as dates, labelled by name or by the date', ()
 });
 
 test('x_lines on a category x: on the category it names', () => {
-  const { opt } = build({ chart_type: 'line', x: 'VIS', x_lines: ['W2', 'W9'], x_line_names: ['Dose'] });
+  const { opt } = build({ type: 'line', x: 'VIS', x_lines: [{ value: 'W2', label: 'Dose' }, { value: 'W9', label: null }] });
   assert.deepStrictEqual(plain(opt.series[0].markLine.data.map((d) => [d.xAxis, d.label.formatter])),
                          [['W2', 'Dose']]);
 });

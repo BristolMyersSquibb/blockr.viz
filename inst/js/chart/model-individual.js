@@ -6,7 +6,7 @@
  * series levels (the series column, else the colour column) with their
  * colours, the legend, and per facet panel its rows and, for scatter and
  * line, one series per level holding the rows it draws and their points.
- * A band draws R's windowed statistics (config.band_series), not rows, so
+ * A band draws R's windowed statistics (derived.band.series), not rows, so
  * its panels carry rows only for clicks and highlights.
  *
  * A point is a tuple [x, y, ...tooltip values]; a series' `rows` line up
@@ -25,9 +25,9 @@
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['chart_type', 'x', 'y', 'color', 'facet', 'series', 'tt_fields',
-    'scales', 'palette', 'count_on', 'count_col', 'func', 'highlight_by', 'highlight',
-    'y_scale', 'x_scale'];
+  const MODEL_FIELDS = ['type', 'x', 'y', 'color', 'facet', 'series', 'tooltip',
+    'derived.scales', 'derived.palette', 'show_n', 'id', 'func', 'highlight',
+    'y_transform', 'x_transform'];
 
   // Line charts: past TRAJ_FULL_MAX series the lines thin and drop their
   // markers, past TRAJ_REDUCED_MAX they thin further, and past the cap the
@@ -155,7 +155,7 @@
    * @returns {IndividualModel}
    */
   const individual = ({ rows, ix, columns, cfg }) => {
-    const ct = cfg.chart_type;
+    const ct = cfg.type;
     const { x, y } = cfg;
     const color = cfg.color || null;
     const facet = cfg.facet || null;
@@ -185,7 +185,7 @@
     // Tooltip fields, less the ones the tooltip already shows (x is the
     // header, y the value, the split column the series name).
     const shown = new Set([x, y, splitCol].filter(Boolean).map(String));
-    out.ttFields = [].concat(cfg.tt_fields || []).map(String)
+    out.ttFields = [].concat(cfg.tooltip || []).map(String)
       .filter((c) => c && c !== 'null' && c !== '(none)' && !shown.has(c));
 
     const facets = facet ? ix.levels(rows, facet, 'nz').slice().sort() : ['__all__'];

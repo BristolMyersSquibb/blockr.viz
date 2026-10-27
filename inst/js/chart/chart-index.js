@@ -153,7 +153,7 @@
 
   /**
    * Count per value of `dimCol`, optionally within one facet: distinct
-   * `count_col` when set, else rows. A "None (as is)" chart shows the
+   * `id` when set, else rows. A "None (as is)" chart shows the
    * count column's first value per group as it is.
    * @param {any[]} rows @param {Record<string, any>} cfg
    * @param {string | null | undefined} dimCol
@@ -161,7 +161,7 @@
    * @returns {Map<string, any>}
    */
   const labelCounts = (rows, cfg, dimCol, facetCol, facetVal) => {
-    const idCol = cfg.count_col;
+    const idCol = cfg.id;
     const restrict = !!facetCol && facetVal != null && facetVal !== '__all__';
     /** @param {any} r */
     const skip = (r) => restrict &&
@@ -215,10 +215,10 @@
     return s + ' (' + disp + ')';
   };
 
-  /** Does count_on cover `surface` ('axis' | 'facet')?
+  /** Does show_n cover `surface` ('axis' | 'facet')?
    *  @param {Record<string, any>} cfg @param {string} surface */
   const countOn = (cfg, surface) => {
-    const v = cfg.count_on || 'off';
+    const v = cfg.show_n;
     return v === surface || v === 'both';
   };
 

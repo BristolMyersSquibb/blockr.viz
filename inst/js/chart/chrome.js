@@ -111,7 +111,7 @@
     // the time a format is picked.
     /** @this {any} @param {any} list */
     _updateDownloads(list) {
-      const show = this.config.download !== 'off' && Array.isArray(list) && list.length > 0;
+      const show = this.config.download !== false && Array.isArray(list) && list.length > 0;
       this.downloadEl.hidden = !show;
       if (typeof V.downloads === 'function') {
         V.downloads(this.downloadEl, show ? list : [], this.scope,

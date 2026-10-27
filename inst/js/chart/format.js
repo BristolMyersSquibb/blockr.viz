@@ -88,7 +88,8 @@
     const labelled = !!title && title !== col;
     const name = labelled ? unitTitle(title, unit ? cfg : {})
       : (unit || title || '');
-    const head = String(cfg.title_resolved || '').toLowerCase();
+    const t = cfg.derived && cfg.derived.titles && cfg.derived.titles.title;
+    const head = String((t && t.text) || '').toLowerCase();
     if (name && head.includes(name.toLowerCase())) return '';
     return name;
   };

@@ -22,11 +22,11 @@
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['chart_type', 'bar_mode', 'orientation', 'value_labels', 'value_lines',
-    'pct_of', 'waterfall_totals', 'connect_centers', 'drill', 'palette', 'scales', 'value',
-    'func', 'count_on', 'summary', 'whiskers', 'box_points', 'group', 'color', 'facet',
-    'format', 'unit', 'value_line_names', 'title_resolved', 'legend', 'direct_labels',
-    'x_lines', 'x_line_names', 'x_ranges'];
+  const OPTION_FIELDS = ['type', 'position', 'orientation', 'value_labels', 'y_lines',
+    'percent_of', 'waterfall_totals', 'connect_centers', 'drill', 'derived.palette',
+    'derived.scales', 'measure', 'func', 'show_n', 'summary', 'whiskers', 'box_points',
+    'category', 'color', 'facet', 'format', 'unit', 'derived.titles', 'legend', 'x_lines',
+    'x_ranges'];
 
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
@@ -40,7 +40,7 @@
     const { cfg, columns, ink } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const fn = cfg.func || 'count';
-    const col = title(cfg.value);
+    const col = title(cfg.measure);
     const aggLabel = fn === 'count' ? 'Count'
       // "None (as is)": the bar is the value, named by its column alone.
       : fn === 'identity' ? (col || 'Value')
@@ -50,7 +50,7 @@
       ax: { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border },
       esc: NS.esc,
       title,
-      valueTitle: cfg.value === '.count' ? 'Count' : col,
+      valueTitle: cfg.measure === '.count' ? 'Count' : col,
       aggLabel,
       // The aggregation and its value, a share, and n where n is not
       // already the value.

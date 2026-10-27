@@ -22,29 +22,33 @@ const ROWS = [
   { T: 'Rash', ID: 'S03', ARM: 'A', SEV: 'SEVERE', V: 6, D: 5, SEX: 'M' }
 ];
 
-const BASE = { chart_type: 'bar', group: 'T', value: '.count', func: 'count', drill: 'auto',
+// A vertical bar of row counts per T: the category is x, the measure y.
+const BASE = { type: 'bar', x: 'T', orientation: 'vertical', func: 'count', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
 
-const build = (cfg, rows = ROWS, columns = COLUMNS) => C.model.aggregated(
-  { rows, ix: new C.RowIndex(), columns, cfg: { ...BASE, ...cfg } });
+const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
+  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+
+const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.aggregated(
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
 
 const groupsOf = (m) => plain(m.panels.map((p) => p.groups));
 
-test('a missing group is its own level; na_group drop removes it', () => {
+test('a missing group is its own level; missing drop removes it', () => {
   const m = build({});
   assert.strictEqual(m.empty, null);
   assert.strictEqual(m.single, true);
   // Rash 3, then the ties in first-seen order of the cells.
   assert.deepStrictEqual(groupsOf(m), [['Rash', 'Nausea', '', 'Fever']]);
-  assert.deepStrictEqual(groupsOf(build({ na_group: 'drop' })), [['Rash', 'Nausea', 'Fever']]);
+  assert.deepStrictEqual(groupsOf(build({ missing: 'drop' })), [['Rash', 'Nausea', 'Fever']]);
   // Drop also removes a row whose colour is missing.
-  const c = build({ color: 'SEV', na_group: 'drop' });
+  const c = build({ color: 'SEV', missing: 'drop' });
   assert.deepStrictEqual(plain(c.colors), ['MILD', 'SEVERE']);
   assert.strictEqual(C.model.cellOf(c, c.panels[0], 'Rash', 'MILD').value, 1);
 });
 
 test('no cells: the empty state', () => {
-  const m = build({ na_group: 'drop' }, [{ T: null, ID: 'S01' }]);
+  const m = build({ missing: 'drop' }, [{ T: null, ID: 'S01' }]);
   assert.match(m.empty, /No data to chart/);
 });
 
@@ -53,7 +57,7 @@ test('group order: value, alpha, factor levels, data, a column', () => {
   assert.deepStrictEqual(groupsOf(build({ sort_by: 'alpha', sort_dir: 'asc' })),
                          [['', 'Fever', 'Nausea', 'Rash']]);
   // Factor levels win over the alphabet, and unused levels drop out.
-  assert.deepStrictEqual(groupsOf(build({ group: 'SEX', sort_by: 'alpha', sort_dir: 'asc' })),
+  assert.deepStrictEqual(groupsOf(build({ x: 'SEX', sort_by: 'alpha', sort_dir: 'asc' })),
                          [['M', 'F']]);
   assert.deepStrictEqual(groupsOf(build({ sort_by: 'data', sort_dir: 'asc' })),
                          [['Rash', 'Nausea', '', 'Fever']]);
@@ -63,7 +67,7 @@ test('group order: value, alpha, factor levels, data, a column', () => {
   assert.deepStrictEqual(groupsOf(build({ sort_by: 'D', sort_dir: 'asc' })),
                          [['Nausea', '', 'Rash', 'Fever']]);
   // A bridge keeps the data order whatever the sort says.
-  assert.deepStrictEqual(groupsOf(build({ chart_type: 'waterfall', sort_by: 'value' })),
+  assert.deepStrictEqual(groupsOf(build({ type: 'waterfall', sort_by: 'value' })),
                          [['Rash', 'Nausea', '', 'Fever']]);
 });
 
@@ -73,18 +77,18 @@ test('data order: a date or a number in its own order, whatever the row order', 
     { day: '2025-03-01', dose: 20, V: 1 }, { day: '2025-01-01', dose: 5, V: 9 },
     { day: null, dose: 10, V: 2 }, { day: '2025-02-01', dose: null, V: 4 }
   ];
-  const sorted = (cfg) => groupsOf(build({ value: 'V', func: 'sum', sort_by: 'data',
+  const sorted = (cfg) => groupsOf(build({ y: 'V', func: 'sum', sort_by: 'data',
                                            sort_dir: 'asc', ...cfg }, rows, cols));
-  assert.deepStrictEqual(sorted({ group: 'day' }), [['2025-01-01', '2025-02-01', '2025-03-01', '']]);
-  assert.deepStrictEqual(sorted({ group: 'dose' }), [['5', '10', '20', '']]);
-  assert.deepStrictEqual(sorted({ group: 'dose', sort_dir: 'desc' }), [['', '20', '10', '5']]);
+  assert.deepStrictEqual(sorted({ x: 'day' }), [['2025-01-01', '2025-02-01', '2025-03-01', '']]);
+  assert.deepStrictEqual(sorted({ x: 'dose' }), [['5', '10', '20', '']]);
+  assert.deepStrictEqual(sorted({ x: 'dose', sort_dir: 'desc' }), [['', '20', '10', '5']]);
 });
 
 test('the default sort follows the category column', () => {
   const cols = [cat('country'), cat('quarter', { levels: ['Q1', 'Q2'] }),
                 { name: 'day', type: 'categorical', temporal: 'date' }, num('year'), num('V')];
-  const dflt = (group, extra) => {
-    const cfg = { chart_type: 'bar', group, ...extra };
+  const dflt = (category, extra) => {
+    const cfg = { type: 'bar', category, ...extra };
     C.model.defaults(cfg, cols);
     return [cfg.sort_by, cfg.sort_dir];
   };
@@ -97,15 +101,16 @@ test('the default sort follows the category column', () => {
   assert.deepStrictEqual(dflt('country', { sort_by: 'data' }), ['data', 'asc']);
   assert.deepStrictEqual(dflt('country', { sort_by: 'alpha' }), ['alpha', 'asc']);
   // Boxplot keeps data order on a text category.
-  assert.deepStrictEqual(dflt('country', { chart_type: 'boxplot' }), ['data', 'asc']);
+  assert.deepStrictEqual(dflt('country', { type: 'boxplot' }), ['data', 'asc']);
 
 });
 
 test('colour levels follow the scale order, then factor levels, then the alphabet', () => {
   assert.deepStrictEqual(plain(build({ color: 'SEV' }).colors), ['', 'MILD', 'SEVERE']);
-  const scaled = build({ color: 'SEV', scales: { var: 'SEV', order: ['SEVERE', 'MILD'] } });
+  const scaled = build({ color: 'SEV' }, ROWS, COLUMNS,
+                       { scales: { var: 'SEV', order: ['SEVERE', 'MILD'] } });
   assert.deepStrictEqual(plain(scaled.colors), ['SEVERE', 'MILD', '']);
-  assert.deepStrictEqual(plain(build({ group: 'T', color: 'SEX' }).colors), ['M', 'F']);
+  assert.deepStrictEqual(plain(build({ x: 'T', color: 'SEX' }).colors), ['M', 'F']);
 });
 
 test('facets: fixed scales share one group order, free scales keep their own', () => {
@@ -118,21 +123,21 @@ test('facets: fixed scales share one group order, free scales keep their own', (
   const free = build({ facet: 'ARM', facet_scales: 'free' });
   assert.deepStrictEqual(groupsOf(free), [['Rash', '', 'Fever'], ['Rash', 'Nausea']]);
   // Facet counts on the strip.
-  const counted = build({ facet: 'ARM', count_on: 'facet', count_col: 'ID' });
+  const counted = build({ facet: 'ARM', show_n: 'facet', id: 'ID' });
   assert.deepStrictEqual(plain(counted.panels.map((p) => p.label)), ['A (2)', 'B (1)']);
 });
 
-test('count_on axis: rows, or distinct count_col, per panel', () => {
-  const rows = build({ count_on: 'axis' });
+test('show_n axis: rows, or distinct id, per panel', () => {
+  const rows = build({ show_n: 'axis' });
   assert.deepStrictEqual(plain(rows.panels[0].axisCounts), { Rash: 3, Nausea: 1, '': 1, Fever: 1 });
-  const ids = build({ facet: 'ARM', count_on: 'axis', count_col: 'ID' });
+  const ids = build({ facet: 'ARM', show_n: 'axis', id: 'ID' });
   assert.deepStrictEqual(plain(ids.panels.map((p) => p.axisCounts)),
                          [{ Rash: 2, '': 1, Fever: 1 }, { Rash: 1, Nausea: 1 }]);
   assert.strictEqual(build({}).panels[0].axisCounts, null);
 });
 
 test('tooltip fields: the first row of each group in the panel', () => {
-  const m = build({ facet: 'ARM', tt_fields: ['ID', 'SEV'] });
+  const m = build({ facet: 'ARM', tooltip: ['ID', 'SEV'] });
   assert.deepStrictEqual(plain(m.ttFields), ['ID', 'SEV']);
   assert.deepStrictEqual(plain(m.panels[0].ttRep.Rash), ['S02', '']);
   assert.deepStrictEqual(plain(m.panels[1].ttRep.Rash), ['S01', 'MILD']);
@@ -160,7 +165,7 @@ test('B8: the 10th-90th percentile draws that range around the median, not Q1-Q3
 test('B10: a distribution panel finds its rows by the shared key, a missing facet too', () => {
   const rows = [{ G: 'a', F: null, V: 1 }, { G: 'a', F: null, V: 3 }, { G: 'a', F: 'p', V: 10 }];
   const cols = [cat('G'), cat('F'), num('V')];
-  const m = build({ chart_type: 'boxplot', group: 'G', facet: 'F', value: 'V', func: 'mean',
+  const m = build({ type: 'boxplot', x: 'G', facet: 'F', y: 'V',
                     sort_by: 'data', sort_dir: 'asc' }, rows, cols);
   assert.deepStrictEqual(plain(m.panels.map((p) => [p.facet, p.slots[0].n, p.slots[0].body.center])),
                          [['', 2, 2], ['p', 1, 10]]);
@@ -170,7 +175,7 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
   const rows = [1, 2, 3, 4, 100].map((V) => ({ G: 'a', V, C: 'x' }))
     .concat([{ G: 'b', V: null, C: 'y' }, { G: 'b', V: 5, C: 'y' }]);
   const cols = [cat('G'), num('V'), cat('C')];
-  const cfg = { chart_type: 'boxplot', group: 'G', value: 'V', func: 'mean',
+  const cfg = { type: 'boxplot', x: 'G', y: 'V',
                 sort_by: 'data', sort_dir: 'asc', box_points: 'outliers' };
   const m = build(cfg, rows, cols);
   const s = m.panels[0].slots;
@@ -185,7 +190,7 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
                          [['a', 'x'], ['b', 'y']]);
   assert.strictEqual(split.panels[0].slots[0].cat, 'a\u0000x');
   // No numeric value: nothing to summarise.
-  const none = build({ chart_type: 'boxplot', group: 'G', value: '' }, rows, cols);
+  const none = build({ type: 'boxplot', x: 'G', y: null }, rows, cols);
   assert.strictEqual(none.noValue, true);
   assert.strictEqual(none.panels[0].slots, null);
 });
@@ -193,8 +198,8 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
 test('a fixed facet grid keeps every distribution slot in every panel', () => {
   const rows = [{ G: 'a', C: 'x', F: 'p', V: 1 }, { G: 'b', C: 'y', F: 'q', V: 2 }];
   const cols = [cat('G'), cat('C'), cat('F'), num('V')];
-  const cfg = { chart_type: 'pointrange', group: 'G', color: 'C', facet: 'F', value: 'V',
-                func: 'mean', sort_by: 'data', sort_dir: 'asc' };
+  const cfg = { type: 'pointrange', x: 'G', color: 'C', facet: 'F', y: 'V',
+                sort_by: 'data', sort_dir: 'asc' };
   const slots = (m) => plain(m.panels.map((p) => p.slots.map((s) => [s.cat, s.n])));
   assert.deepStrictEqual(slots(build(cfg, rows, cols)), [
     [['a\u0000x', 1], ['a\u0000y', 0], ['b\u0000x', 0], ['b\u0000y', 0]],
@@ -205,22 +210,22 @@ test('a fixed facet grid keeps every distribution slot in every panel', () => {
 
 test('the mark a click lands on: a bar segment, a split box', () => {
   const bar = build({ color: 'SEV' });
-  const at = (m, cfg, p) => plain(C.model.aggregatedMarkAt(m, { ...BASE, ...cfg }, p));
+  const at = (m, cfg, p) => plain(C.model.aggregatedMarkAt(m, settingsOf(cfg), p));
   assert.deepStrictEqual(at(bar, { color: 'SEV' },
                             { componentType: 'series', name: 'Rash', seriesName: 'MILD' }),
                          { group: 'Rash', level: 'MILD' });
   assert.strictEqual(at(bar, { color: 'SEV' }, { componentType: 'series', name: '' }), null);
   assert.strictEqual(at(bar, { color: 'SEV' }, { componentType: 'markLine', name: 'Rash' }), null);
-  const wf = build({ chart_type: 'waterfall' });
-  assert.deepStrictEqual(at(wf, { chart_type: 'waterfall' }, { name: 'Rash', seriesName: 'delta' }),
+  const wf = build({ type: 'waterfall' });
+  assert.deepStrictEqual(at(wf, { type: 'waterfall' }, { name: 'Rash', seriesName: 'delta' }),
                          { group: 'Rash', level: null });
-  const box = build({ chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV' });
-  assert.deepStrictEqual(at(box, { chart_type: 'boxplot', color: 'SEV' }, { name: 'Rash\u0000MILD' }),
+  const box = build({ type: 'boxplot', y: 'V', color: 'SEV' });
+  assert.deepStrictEqual(at(box, { type: 'boxplot', y: 'V', color: 'SEV' }, { name: 'Rash\u0000MILD' }),
                          { group: 'Rash', level: 'MILD' });
 });
 
 test('keys: group, colour where it splits the mark, facet in a panel (D2, D3)', () => {
-  const keys = (cfg, fv, g, lv) => plain(C.model.aggregatedKeys({ ...BASE, ...cfg }, fv, g, lv));
+  const keys = (cfg, fv, g, lv) => plain(C.model.aggregatedKeys(settingsOf(cfg), fv, g, lv));
   assert.deepStrictEqual(keys({}, '__all__', 'Rash', null), { T: 'Rash' });
   assert.deepStrictEqual(keys({ color: 'SEV', facet: 'ARM' }, 'A', 'Rash', 'MILD'),
                          { T: 'Rash', SEV: 'MILD', ARM: 'A' });
@@ -228,7 +233,7 @@ test('keys: group, colour where it splits the mark, facet in a panel (D2, D3)', 
 
 test('a click sends the keys, a missing one as null; a drill column its values', () => {
   const ix = new C.RowIndex();
-  const send = (cfg, keys) => plain(C.model.aggregatedClick({ ...BASE, ...cfg }, keys,
+  const send = (cfg, keys) => plain(C.model.aggregatedClick(settingsOf(cfg), keys,
     () => C.model.rowsUnder(ROWS, ix, keys)));
   assert.deepStrictEqual(send({ color: 'SEV' }, { T: 'Rash', SEV: 'MILD' }),
                          { T: ['Rash'], SEV: ['MILD'] });
@@ -246,18 +251,19 @@ test('a click sends the keys, a missing one as null; a drill column its values',
 
 test('the model reads only the config fields it lists', () => {
   const configs = [
-    {}, { color: 'SEV', facet: 'ARM', count_on: 'both', count_col: 'ID', tt_fields: ['ID'] },
-    { chart_type: 'waterfall', value: 'V', func: 'sum' }, { chart_type: 'pie', facet: 'ARM' },
-    { chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV', box_points: 'outliers' },
-    { chart_type: 'pointrange', value: 'V', func: 'mean', summary: 'mean_sd', facet: 'ARM' },
-    { sort_by: 'D' }, { sort_by: 'data' }, { func: 'pct_distinct', value: 'ID', pct_of: 'color' }
+    {}, { color: 'SEV', facet: 'ARM', show_n: 'both', id: 'ID', tooltip: ['ID'] },
+    { type: 'waterfall', y: 'V', func: 'sum' }, { type: 'pie', facet: 'ARM' },
+    { type: 'boxplot', y: 'V', color: 'SEV', box_points: 'outliers' },
+    { type: 'pointrange', y: 'V', summary: 'mean_sd', facet: 'ARM' },
+    { sort_by: 'D' }, { sort_by: 'data' }, { func: 'pct_distinct', y: 'ID', percent_of: 'color' }
   ];
   for (const cfg of configs) {
     const read = new Set();
-    const spy = new Proxy({ ...BASE, ...cfg }, { get(t, k) { read.add(k); return t[k]; } });
+    const spy = new Proxy(settingsOf(cfg), { get(t, k) { read.add(k); return t[k]; } });
     C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    const extra = [...read].filter((k) => typeof k === 'string' &&
-                                          !C.model.aggregated.FIELDS.includes(k));
+    // A listed path such as 'derived.scales' covers the read of its root.
+    const listed = (k) => C.model.aggregated.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
+    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
     assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
   }
 });

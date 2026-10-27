@@ -30,9 +30,8 @@
     const groups = panel.groups;
     const colors = m.colors;
     const palette = NS.paletteOf(cfg);
-    const barMode = cfg.bar_mode || 'stacked';
-    const isGrouped = barMode === 'grouped';
-    const isPercent = barMode === 'percent';
+    const isGrouped = cfg.position === 'dodge';
+    const isPercent = cfg.position === 'fill';
     const vertical = cfg.orientation === 'vertical';
     // Horizontal: the row band is fixed, so bars are sized off it; past the
     // panel cap a grouped fan squeezes into its band. Vertical: bands come
@@ -60,7 +59,7 @@
     return { m, panel, look, cfg, ink, plotW, groups, colors, palette, isGrouped, isPercent,
              vertical, rowsH, hCapped, hlLit, muted, levelColor, greyed, showPercent, pctFunc,
              asFraction: showPercent || pctFunc, bandPx,
-             valueLabelsOn: cfg.value_labels === 'on' || cfg.value_labels === true };
+             valueLabelsOn: cfg.value_labels === true };
   };
 
   /** The bar series: one, or one per colour level. @param {any} k */
@@ -187,7 +186,7 @@
     return {
       type: 'value',
       name: showPercent ? '% of group total'
-        : (pctFunc ? pctName(cfg, P.title) : NS.axisName(P.valueTitle, cfg.value, cfg)),
+        : (pctFunc ? pctName(cfg, P.title) : NS.axisName(P.valueTitle, cfg.measure, cfg)),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30,
       nameTextStyle: { color: P.ax.labelColor, fontSize: P.ax.fontSize },
@@ -229,12 +228,10 @@
           valueLabels: k.valueLabelsOn, valuePx, bandPx: k.bandPx, ax, face: ink.face, measure
         })
       : 0;
-    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.value_lines, ink,
-      cfg.value_line_names);
+    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.y_lines, ink);
     // A histogram's bins are ranges of a number, not categories to name.
     if (!m.histogram) {
-      NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_line_names,
-        cfg.x_ranges, ink);
+      NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_ranges, ink);
     }
     // `legend: "marks"`: the level names on the stack's segments. After the
     // series the tooltip and the highlight read (the first `colors.length`).
@@ -381,7 +378,7 @@
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, k.rowsH) + bottomBase,
       labelNote: k.hCapped
-        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, P.title(k.cfg.group)) : null,
+        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, P.title(k.cfg.category)) : null,
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: ink.face },
@@ -417,7 +414,7 @@
       return vals.length ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
         : null;
     };
-    const totals = new Set((cfg.waterfall_totals || []).map(String));
+    const totals = new Set(NS.labelled(cfg.waterfall_totals).map((x) => String(x.value)));
     /** @type {any[]} */
     const base = [];
     /** @type {any[]} */
@@ -472,7 +469,7 @@
     const P = parts.common(look);
     const { ax, esc } = P;
     const groups = panel.groups;
-    const labelsOn = cfg.value_labels === 'on' || cfg.value_labels === true;
+    const labelsOn = cfg.value_labels === true;
     const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const { base, delta, lo, hi } = waterfallSteps(m, panel, cfg, labelsOn, wvf);
 
@@ -489,7 +486,7 @@
     };
     /** @type {any} */
     const valAxis = {
-      type: 'value', name: NS.axisName(P.valueTitle, cfg.value, cfg), nameLocation: 'middle',
+      type: 'value', name: NS.axisName(P.valueTitle, cfg.measure, cfg), nameLocation: 'middle',
       nameGap: 45,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
@@ -519,8 +516,7 @@
       for (const d of delta) if (d && d.label) w = Math.max(w, measure(d.label.formatter));
       labelRight = Math.max(0, Math.ceil(w / 2 - 10));
     }
-    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink,
-      cfg.value_line_names);
+    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.y_lines, ink);
     return {
       panelH: 350 + xlab.bottom,
       xFit: { labels: stepLabels, inset: X_INSET, decimate: false, gutter: xlab.bottom,

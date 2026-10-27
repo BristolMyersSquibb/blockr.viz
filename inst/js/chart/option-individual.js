@@ -25,11 +25,10 @@
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['chart_type', 'drill', 'dot_size_mult', 'line_width_mult', 'connect',
-    'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
-    'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'legend', 'direct_labels',
-    'value_line_names', 'x_line_names', 'label',
-    'format', 'unit', 'bar_mode', 'title_resolved', 'y_scale', 'x_scale', 'facet_scales'];
+  const OPTION_FIELDS = ['type', 'drill', 'point_size', 'line_width', 'connect', 'smoother',
+    'derived.smoother', 'ymin', 'ymax', 'x_lines', 'y_lines', 'identity_line', 'derived.band',
+    'box_points', 'linetype', 'x_ranges', 'legend', 'label', 'format', 'unit', 'position',
+    'derived.titles', 'y_transform', 'x_transform', 'facet_scales'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -61,6 +60,14 @@
 
   const { identityDomain, pos, logDomains, clampBand } = parts.log;
 
+  /** The settings with the band's series clamped above `floor`, for a log
+   * axis. @param {Record<string, any>} cfg @param {number} floor */
+  const clampedBand = (cfg, floor) => {
+    const band = cfg.derived.band || {};
+    return { ...cfg, derived: { ...cfg.derived,
+                                band: { ...band, series: clampBand(band.series, floor) } } };
+  };
+
   /**
    * What every part of a panel's option reads: the config, the colours, the
    * panel's log domains and the measured x labels.
@@ -73,7 +80,7 @@
     const ly = (look.logDom && look.logDom.y) || null;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
-    const lm = cfg.line_width_mult ?? 1.0;
+    const lm = cfg.line_width ?? 1.0;
     const xCats = m.x.cats;
     // Categorical x: every label, flat while it fits its slot, else turned
     // and thinned (an ordered axis). Measured before the height: turned
@@ -102,7 +109,7 @@
     let series;
     if (k.isBand) {
       const b = parts.band(m, panel, ly
-        ? { ...look, cfg: { ...cfg, band_series: clampBand(cfg.band_series, ly.min) } } : look);
+        ? { ...look, cfg: clampedBand(cfg, ly.min) } : look);
       series = b.series;
       labelPad = b.labelPad;
       band = b.band;
@@ -128,40 +135,35 @@
     const { m, look, cfg, ink, lx, ly, lm, isBand, isLine } = k;
     /** @type {any[]} */
     const refData = [];
-    const refX = Array.isArray(cfg.x_lines) ? cfg.x_lines : [];
-    const refY = Array.isArray(cfg.value_lines) ? cfg.value_lines : [];
-    // A name in `x_lines` / `y_lines` labels its line.
-    const nmX = Array.isArray(cfg.x_line_names) ? cfg.x_line_names : [];
-    const nmY = Array.isArray(cfg.value_line_names) ? cfg.value_line_names : [];
-    // An unnamed line at 0 needs no label: the axis prints its value.
+    // A line's label names it; an unnamed line at 0 needs none: the axis
+    // prints its value.
     /** @param {any} v @param {any} nm */
     const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
     // An x line sits where the axis puts x: a date on a time axis, a
     // category on a category axis (as `x_ranges` does).
-    refX.forEach((v, i) => {
+    NS.labelled(cfg.x_lines).forEach(({ value: v, label: nm }) => {
       if (lx && !pos(v)) return;
       if (m.x.type === 'category') {
         const c = NS.axes.catOf(v, m.x.cats || []);
         if (c == null) return;
-        const text = nmX[i] || (c === String(v) ? null : String(v));
+        const text = nm || (c === String(v) ? null : String(v));
         refData.push(NS.axes.guideLine(c, true, lm, text, false, ink));
         return;
       }
       const at = m.x.encode ? m.x.encode(v) : Number(v);
       if (!Number.isFinite(at)) return;
       const text = m.x.type === 'time'
-        ? (nmX[i] || NS.axes.fmtXVal(at, 'time', null, m.x.period === 'time' ? 'time' : null))
-        : refText(v, nmX[i]);
+        ? (nm || NS.axes.fmtXVal(at, 'time', null, m.x.period === 'time' ? 'time' : null))
+        : refText(v, nm);
       refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
     });
-    refY.forEach((v, i) => {
+    NS.labelled(cfg.y_lines).forEach(({ value: v, label: nm }) => {
       if (ly && !pos(v)) return;
-      refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink));
+      refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
-    const idRaw = cfg.identity_line;
     // y = x is a straight diagonal only when both axes use the same scale.
-    const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
+    const identityOn = cfg.identity_line === true && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
     /** @type {any} */
     let idDom = null;
@@ -250,7 +252,7 @@
     if (idDom && m.y.type === 'value') { yAxis.min = idDom[0]; yAxis.max = idDom[1]; }
     if (ext) { yAxis.min = ext.lo; yAxis.max = ext.hi; }
     // An area is measured from zero.
-    if (cfg.chart_type === 'area' && m.y.type === 'value' && yAxis.min == null) {
+    if (cfg.type === 'area' && m.y.type === 'value' && yAxis.min == null) {
       yAxis.scale = false;
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }

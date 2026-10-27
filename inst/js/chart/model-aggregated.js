@@ -22,10 +22,9 @@
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['chart_type', 'group', 'color', 'facet', 'value', 'func', 'na_group',
-    'pct_of', 'sort_by', 'sort_dir', 'baseline', 'facet_scales', 'scales', 'count_on',
-    'count_col', 'tt_fields', 'summary', 'whiskers', 'box_points', 'label',
-    'highlight_by', 'highlight'];
+  const MODEL_FIELDS = ['type', 'category', 'color', 'facet', 'measure', 'func', 'missing',
+    'percent_of', 'sort_by', 'sort_dir', 'facet_scales', 'derived.scales', 'show_n',
+    'id', 'tooltip', 'summary', 'whiskers', 'box_points', 'label', 'highlight'];
 
   // A colour-split distribution slot is `group + SEP + level`: ECharts
   // dedupes a category axis by value, so the bare group would collapse the
@@ -90,9 +89,6 @@
     }
   };
 
-  /** Is this a bar drawn as a running bridge? @param {Record<string, any>} cfg */
-  const isCumulative = (cfg) => cfg.chart_type === 'waterfall' ||
-    (cfg.chart_type === 'bar' && cfg.baseline === 'cumulative');
 
   /**
    * The order of a panel's groups on the category axis. A bridge keeps the
@@ -109,12 +105,12 @@
     const groups = [...new Set(cells.map((a) => a.group))];
     const sortBy = cfg.sort_by || 'alpha';
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
-    const groupCol = cfg.group;
+    const groupCol = cfg.category;
     const meta = NS.axes.colMeta(columns, groupCol);
     const levels = meta && Array.isArray(meta.levels) && meta.levels.length ? meta.levels : null;
     // Every bin of a histogram, the empty ones too: a missing bin would
     // close the gap in the distribution it stands for.
-    if (cfg.chart_type === 'histogram' && levels) return levels.map(String);
+    if (cfg.type === 'histogram' && levels) return levels.map(String);
 
     const dataOrder = () => {
       if (levels) {
@@ -149,7 +145,7 @@
       return seen.filter((g) => present.has(g)).concat(groups.filter((g) => !seenSet.has(g)));
     };
 
-    if (isCumulative(cfg)) return dataOrder();
+    if (cfg.type === 'waterfall') return dataOrder();
     if (sortBy === 'data') {
       const ord = dataOrder();
       return sortDir < 0 ? ord.reverse() : ord;
@@ -188,7 +184,7 @@
   };
 
   /** Tooltip fields of a bar, in order. @param {Record<string, any>} cfg @returns {string[]} */
-  const barTtFields = (cfg) => [].concat(cfg.tt_fields || [])
+  const barTtFields = (cfg) => [].concat(cfg.tooltip || [])
     .map(String).filter((c) => c && c !== 'null' && c !== '(none)');
 
   /**
@@ -198,7 +194,7 @@
    * @returns {Map<string, Record<string, any[]>>}
    */
   const ttRepValues = (rows, cfg, ttFields) => {
-    const groupCol = cfg.group, facetCol = cfg.facet;
+    const groupCol = cfg.category, facetCol = cfg.facet;
     /** @type {Map<string, Record<string, any[]>>} */
     const byFacet = new Map();
     /** @type {Record<string, any[]>} */
@@ -226,7 +222,7 @@
    * @returns {Map<string, string | null>} keyed facet|||group|||color
    */
   const markLabels = (rows, cfg, byColor) => {
-    const col = cfg.label, groupCol = cfg.group, facetCol = cfg.facet;
+    const col = cfg.label, groupCol = cfg.category, facetCol = cfg.facet;
     const colorCol = byColor ? cfg.color : null;
     /** @type {Map<string, string | null>} */
     const out = new Map();
@@ -253,8 +249,8 @@
    *           levels: string[], facet: string }} p
    */
   const distributionSlots = ({ rows, ix, cfg, groups, levels, facet }) => {
-    const groupBy = cfg.group, colorCol = cfg.color, facetCol = cfg.facet, value = cfg.value;
-    const isBox = cfg.chart_type === 'boxplot';
+    const groupBy = cfg.category, colorCol = cfg.color, facetCol = cfg.facet, value = cfg.measure;
+    const isBox = cfg.type === 'boxplot';
     const bodyStat = cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se');
     const whiskerStat = cfg.whiskers || 'tukey';
     // A facet's rows by the key every family uses, so a panel for a
@@ -264,7 +260,7 @@
     const split = levels.length > 0;
     const keepEmpty = !!facetCol && NS.facetScales(cfg) !== 'free';
     const outliersOn = isBox && cfg.box_points === 'outliers';
-    const idCol = cfg.count_col;
+    const idCol = cfg.id;
 
     /** @param {any[]} rs */
     const valsOf = (rs) => rs.map((r) => Number(r[value])).filter((v) => !Number.isNaN(v))
@@ -327,21 +323,25 @@
    * @returns {AggregatedModel}
    */
   const aggregated = ({ rows, ix, columns, cfg }) => {
-    // A histogram is a bar over the bins R adds to the rows (`group` names
-    // the bin column), drawn with the bars touching.
-    const ct = cfg.chart_type === 'histogram' ? 'bar' : cfg.chart_type;
-    const { group, color, facet, value, func, na_group, pct_of } = cfg;
+    // A histogram is a bar over the bins R adds to the rows (`category`
+    // names the bin column), drawn with the bars touching.
+    const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
+    const { category, color, facet, measure, func } = cfg;
     const distribution = NS.DISTRIBUTION_TYPES.includes(ct);
     /** @type {AggregatedModel} */
     const out = {
-      family: 'aggregated', empty: null, type: ct, cumulative: isCumulative(cfg),
+      family: 'aggregated', empty: null, type: ct, cumulative: cfg.type === 'waterfall',
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
-      distribution, noValue: distribution && (!value || value === '.count'),
+      distribution, noValue: distribution && (!measure || measure === '.count'),
       ttFields: [], facet: facet || null, nFacets: 1, single: true,
-      ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null,
+      ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
-    const agg = DAgg().aggregate(rows, { group, color, facet, value, func, na_group, pct_of });
+    // The engine's own words: the category is its `group`.
+    const agg = DAgg().aggregate(rows, {
+      group: category, color, facet, value: measure, func, na_group: cfg.missing,
+      pct_of: cfg.percent_of === 'category' ? 'group' : cfg.percent_of
+    });
     if (agg.length === 0) {
       out.empty = model.emptyState('No data to chart');
       return out;
@@ -383,7 +383,7 @@
       const restrict = !!facet && fv !== '__all__';
       let axisCounts = null;
       if (countAxis) {
-        axisCounts = NS.labelCounts(restrict ? ix.get(rows, facet, 'nz', fv) : rows, cfg, group);
+        axisCounts = NS.labelCounts(restrict ? ix.get(rows, facet, 'nz', fv) : rows, cfg, category);
       }
       out.panels.push({
         facet: fv,
@@ -474,7 +474,7 @@
   const aggregatedKeys = (cfg, facetVal, group, level) => {
     /** @type {Record<string, string>} */
     const keys = {};
-    if (group != null) keys[cfg.group] = group;
+    if (group != null) keys[cfg.category] = group;
     if (cfg.color && level != null) keys[cfg.color] = level;
     if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
     return keys;
@@ -530,7 +530,7 @@
     return NS.keys.fromKeys(keys);
   };
 
-  Object.assign(model, { aggregated, summarizeStat, orderGroups, isCumulative, cellOf, cellsOf, labelOf,
+  Object.assign(model, { aggregated, summarizeStat, orderGroups, cellOf, cellsOf, labelOf,
                          colourSplitsMark, aggregatedKeys, aggregatedMarkAt, aggregatedClick,
                          rowsUnder, BOX_CAT_SEP });
 })();

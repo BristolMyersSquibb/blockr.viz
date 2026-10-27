@@ -1,4 +1,4 @@
-/* y_scale / x_scale = "log": the ticks, which types and axes take it, values
+/* y_transform / x_transform = "log10": the ticks, which types and axes take it, values
  * at or below zero left out and counted, intervals cut at the floor, shared
  * facet domains, the identity line and the band. */
 'use strict';
@@ -20,10 +20,10 @@ const ROWS = [
   { CTRY: 'XX', REG: 'AS', YEAR: 2000, GDP: 0, LIFE: 50, LO: null, HI: null },
   { CTRY: 'XX', REG: 'AS', YEAR: 2010, GDP: -5, LIFE: 51, LO: null, HI: null }
 ];
-const BASE = { chart_type: 'scatter', x: 'GDP', y: 'LIFE' };
+const BASE = { type: 'scatter', x: 'GDP', y: 'LIFE' };
 
-const build = (cfg, rows = ROWS) => {
-  const c = { ...BASE, ...cfg };
+const build = (cfg, rows = ROWS, derived = {}) => {
+  const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.individual(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600, 600] });
@@ -44,16 +44,16 @@ test('log ticks: 1-2-5 up to three decades, powers of ten beyond, ends on ticks'
 });
 
 test('which charts take a log axis', () => {
-  const on = (chart_type) => plain(C.logAxes({ chart_type, y_scale: 'log', x_scale: 'log' }));
+  const on = (type) => plain(C.logAxes({ type, y_transform: 'log10', x_transform: 'log10' }));
   assert.deepStrictEqual(on('scatter'), { x: true, y: true });
   assert.deepStrictEqual(on('line'), { x: false, y: true });
   assert.deepStrictEqual(on('band'), { x: false, y: true });
   for (const t of ['bar', 'area', 'histogram', 'boxplot', 'gantt']) assert.deepStrictEqual(on(t), { x: false, y: false });
-  assert.deepStrictEqual(plain(C.logAxes({ chart_type: 'scatter' })), { x: false, y: false });
+  assert.deepStrictEqual(plain(C.logAxes({ type: 'scatter' })), { x: false, y: false });
 });
 
 test('a log x axis: its own ticks, rows at or below zero left out and counted', () => {
-  const { m, o, opt } = build({ x_scale: 'log' });
+  const { m, o, opt } = build({ x_transform: 'log10' });
   assert.strictEqual(m.logDropped, 2);
   const x = ax(opt.xAxis);
   assert.strictEqual(x.type, 'log');
@@ -75,28 +75,28 @@ test('linear axes draw every row and say nothing', () => {
   assert.strictEqual(o.labelNote, null);
 });
 
-test('a line takes y_scale and ignores x_scale; an area ignores both', () => {
-  const line = build({ chart_type: 'line', x: 'YEAR', y: 'GDP', series: 'CTRY', y_scale: 'log', x_scale: 'log' });
+test('a line takes y_transform and ignores x_transform; an area ignores both', () => {
+  const line = build({ type: 'line', x: 'YEAR', y: 'GDP', series: 'CTRY', y_transform: 'log10', x_transform: 'log10' });
   assert.strictEqual(ax(line.opt.yAxis).type, 'log');
   assert.strictEqual(ax(line.opt.xAxis).type, 'value');
   assert.strictEqual(line.m.logDropped, 2);
   // The hover picks lines in logs.
   assert.strictEqual(line.o.panels[0].focus.yLog, true);
-  const area = build({ chart_type: 'area', x: 'YEAR', y: 'GDP', y_scale: 'log' });
+  const area = build({ type: 'area', x: 'YEAR', y: 'GDP', y_transform: 'log10' });
   assert.strictEqual(ax(area.opt.yAxis).type, 'value');
   assert.strictEqual(area.m.logDropped, 0);
 });
 
 test('a guide line at or below zero is left out and counted', () => {
-  const { o, opt } = build({ chart_type: 'line', x: 'YEAR', y: 'GDP', series: 'CTRY', y_scale: 'log',
-                             value_lines: [0, 1000] });
+  const { o, opt } = build({ type: 'line', x: 'YEAR', y: 'GDP', series: 'CTRY', y_transform: 'log10',
+                             y_lines: [{ value: 0, label: null }, { value: 1000, label: null }] });
   const ml = opt.series.find((s) => s.markLine).markLine.data;
   assert.strictEqual(ml.length, 1);
   assert.strictEqual(o.labelNote, 'Log scale: 3 values at or below zero not shown.');
 });
 
 test('an interval end at or below zero: the low end is cut at the floor', () => {
-  const { opt } = build({ chart_type: 'scatter', x: 'YEAR', y: 'GDP', y_scale: 'log', lo: 'LO', hi: 'HI' });
+  const { opt } = build({ type: 'scatter', x: 'YEAR', y: 'GDP', y_transform: 'log10', ymin: ['LO'], ymax: ['HI'] });
   const y = ax(opt.yAxis);
   const bars = opt.series.find((s) => s.type === 'custom');
   const lows = bars.data.map((d) => d[1]);
@@ -105,7 +105,7 @@ test('an interval end at or below zero: the low end is cut at the floor', () => 
 });
 
 test('shared facet scales share one log domain; free scales do not', () => {
-  const cfg = { x_scale: 'log', facet: 'REG' };
+  const cfg = { x_transform: 'log10', facet: 'REG' };
   const fixed = build(cfg).o.panels.map((p) => [ax(p.option.xAxis).min, ax(p.option.xAxis).max]);
   assert.deepStrictEqual(plain(fixed[0]), plain(fixed[1]));
   const free = build({ ...cfg, facet_scales: 'free' }).o.panels.map((p) => ax(p.option.xAxis).min);
@@ -116,11 +116,11 @@ test('shared facet scales share one log domain; free scales do not', () => {
 });
 
 test('the identity line: on log-log over one domain, gone when the scales differ', () => {
-  const both = build({ x: 'LO', y: 'HI', x_scale: 'log', y_scale: 'log', identity_line: 'on' });
+  const both = build({ x: 'LO', y: 'HI', x_transform: 'log10', y_transform: 'log10', identity_line: true });
   const x = ax(both.opt.xAxis), y = ax(both.opt.yAxis);
   assert.deepStrictEqual([x.min, x.max], [y.min, y.max]);
   assert.ok(both.opt.series.some((s) => s.markLine));
-  const mixed = build({ x: 'LO', y: 'HI', x_scale: 'log', identity_line: 'on' });
+  const mixed = build({ x: 'LO', y: 'HI', x_transform: 'log10', identity_line: true });
   assert.ok(!mixed.opt.series.some((s) => s.markLine));
 });
 
@@ -129,8 +129,8 @@ test('a log band: a low edge at zero sits on the floor, an outlier there is coun
     x: [2000, 2005, 2010], center: [5, 8, 20], lo: [0, 4, 10], hi: [9, 15, 40],
     olo: [-2, 2, 6], ohi: [12, 20, 60], out_x: [2005, 2010], out_y: [0, 90]
   } } };
-  const { o, opt } = build({ chart_type: 'band', x: 'YEAR', y: 'GDP', y_scale: 'log', band_series,
-                             box_points: 'outliers' });
+  const { o, opt } = build({ type: 'band', x: 'YEAR', y: 'GDP', y_transform: 'log10', box_points: 'outliers' },
+                           ROWS, { band: { series: band_series } });
   const y = ax(opt.yAxis);
   assert.strictEqual(y.type, 'log');
   assert.ok(y.min > 0 && y.max >= 90);

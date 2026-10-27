@@ -33,12 +33,12 @@
   const model = NS.model = NS.model || {};
 
   // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['chart_type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
-    'series', 'label', 'tt_fields', 'drill', 'scales', 'count_on', 'count_col', 'func',
+  const MODEL_FIELDS = ['type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
+    'series', 'label', 'tooltip', 'drill', 'derived.scales', 'show_n', 'id', 'func',
     'facet_scales'];
 
   /** @param {Record<string, any>} cfg @returns {string[]} */
-  const ttFieldsOf = (cfg) => [].concat(cfg.tt_fields || [])
+  const ttFieldsOf = (cfg) => [].concat(cfg.tooltip || [])
     .map(String).filter((c) => c && c !== 'null');
 
   /**
@@ -168,7 +168,7 @@
       // Events per lane, or distinct count_col. A lane has no "as is" value,
       // so the identity aggregation of a bar does not apply here.
       const laneCounts = countAxis
-        ? NS.labelCounts(prow, { count_col: cfg.count_col }, y) : null;
+        ? NS.labelCounts(prow, { id: cfg.id }, y) : null;
 
       /** @type {Map<string, number>} */
       const laneOf = new Map();

@@ -53,14 +53,14 @@
 
   /** The interval column pairs, lo and hi. @param {Record<string, any>} cfg */
   const intervalPairs = (cfg) => {
-    const lo = [].concat(cfg.lo || []).filter(Boolean);
-    const hi = [].concat(cfg.hi || []).filter(Boolean);
+    const lo = [].concat(cfg.ymin || []).filter(Boolean);
+    const hi = [].concat(cfg.ymax || []).filter(Boolean);
     return lo.map((l, i) => [l, hi[i]]).filter((p) => p[1]);
   };
 
   /** A panel's band levels, keyed by level. @param {any} cfg @param {any} panel */
   const bandBucket = (cfg, panel) => {
-    const bs = cfg.band_series;
+    const bs = cfg.derived.band && cfg.derived.band.series;
     return bs ? (bs[panel.facet] || bs['__all__'] || null) : null;
   };
 
@@ -124,7 +124,7 @@
     };
     let dropped = 0;
     if (m.logY) {
-      dropped += [].concat(cfg.value_lines || []).filter((v) => !pos(v)).length;
+      dropped += NS.labelled(cfg.y_lines).filter((x) => !pos(x.value)).length;
       if (m.isBand && cfg.box_points === 'outliers') {
         for (const p of m.panels) {
           for (const b of Object.values(bandBucket(cfg, p) || {})) {
@@ -133,7 +133,7 @@
         }
       }
     }
-    if (m.logX) dropped += [].concat(cfg.x_lines || []).filter((v) => !pos(v)).length;
+    if (m.logX) dropped += NS.labelled(cfg.x_lines).filter((x) => !pos(x.value)).length;
     return {
       x: per('x', m.logX, mode !== 'free'),
       y: per('y', m.logY, mode === 'fixed'),
@@ -144,7 +144,7 @@
   /**
    * A band on a log axis: a low edge at or below zero is cut at the floor,
    * a high edge or centre there is a gap, and outliers there are not drawn.
-   * @param {any} bs band_series @param {number} floor
+   * @param {any} bs the band's series @param {number} floor
    */
   const clampBand = (bs, floor) => {
     if (!bs) return bs;

@@ -36,14 +36,14 @@
    * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
   const bandHover = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
-      if (view.config.chart_type !== 'band' || !slot.band) return;
+      if (view.config.type !== 'band' || !slot.band) return;
       const lvl = view._nearestBandLevel(slot, chart, e.offsetX, e.offsetY);
       if (lvl === slot.bandFocus) return;
       slot.bandFocus = lvl;
       view._applyBandFocus(slot, chart);
     });
     zr.on('globalout', () => {
-      if (view.config.chart_type !== 'band' || !slot.band) return;
+      if (view.config.type !== 'band' || !slot.band) return;
       if (slot.bandFocus == null) return;
       slot.bandFocus = null;
       view._applyBandFocus(slot, chart);
@@ -75,7 +75,7 @@
     // A double-click on a line chart resets the zoom, and cancels the line
     // click its two clicks queued.
     zr.on('dblclick', () => {
-      if (!NS.isLineType(view.config.chart_type)) return;
+      if (!NS.isLineType(view.config.type)) return;
       if (view._lineClickTimer) {
         view._lineClickTimer();
         view._lineClickTimer = null;
@@ -104,7 +104,7 @@
     chart.on('click', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (params.componentType !== 'series') return;
-      const isLine = NS.isLineType(view.config.chart_type);
+      const isLine = NS.isLineType(view.config.type);
       // A click in brush mode also fires a brush clear; ignore it for a
       // moment.
       view._suppressBrushClear = true;

@@ -321,8 +321,8 @@
    */
   const pctName = (cfg, title) => {
     /** @type {Record<string, any>} */
-    const roleCol = { facet: cfg.facet, group: cfg.group, color: cfg.color };
-    const roles = Array.isArray(cfg.pct_of) ? cfg.pct_of : (cfg.pct_of ? [cfg.pct_of] : ['facet']);
+    const roleCol = { facet: cfg.facet, category: cfg.category, color: cfg.color };
+    const roles = [cfg.percent_of];
     const cols = roles.map((/** @type {string} */ r) => roleCol[r]).filter(Boolean);
     return cols.length ? '% of ' + cols.map(title).join(' x ') : '% of total';
   };

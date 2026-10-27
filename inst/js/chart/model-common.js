@@ -2,10 +2,9 @@
 /**
  * Chart block: the model rules every family shares.
  *
- * The defaults a config gets when R sends it or when the gear switches the
- * chart type, and the gate in front of every draw: the empty states for no
- * rows, an unset required role, too many colour levels and a mapped column
- * the rows do not carry.
+ * The settings the builders read, from the payload's config, and the gate
+ * in front of every draw: the empty states for no rows, an unset required
+ * role, too many colour levels and a mapped column the rows do not carry.
  */
 (function () {
   'use strict';
@@ -15,23 +14,52 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = NS.model = NS.model || {};
 
+  const FIXED = ['waterfall', 'pie', 'treemap'];
+  /** @param {unknown} v */
+  const set = (v) => v != null && v !== '' && !(Array.isArray(v) && !v.length);
+
   /**
-   * Box and point range need a numeric value and never the row count, and
-   * default to vertical, data order. True when `cfg` is one of them.
-   * @param {Record<string, any>} cfg
+   * Which way an oriented chart lies when `orientation` is not given, the
+   * twin of R's chart_infer_lie(): a row count's single column is the
+   * category, any other single column the value; a numeric x beside a
+   * non-numeric y is horizontal; otherwise vertical, and a bar with neither
+   * set horizontal.
+   * @param {Record<string, any>} c @param {VizColumn[]} columns
+   * @returns {'horizontal' | 'vertical'}
    */
-  const ensureDistributionMetric = (cfg) => {
-    if (!NS.DISTRIBUTION_TYPES.includes(cfg.chart_type)) return false;
-    if (!cfg.func || cfg.func === 'count') cfg.func = 'mean';
-    // An empty "Value *" asks for a real choice; the first numeric column is
-    // often a code that plots as a flat line.
-    if (cfg.value === '.count') cfg.value = '';
-    if (!cfg.summary) cfg.summary = cfg.chart_type === 'boxplot' ? 'median_q1_q3' : 'mean_se';
-    if (cfg.chart_type === 'boxplot' && !cfg.whiskers) cfg.whiskers = 'tukey';
-    if (!cfg.orientation) cfg.orientation = 'vertical';
-    if (!cfg.sort_by) cfg.sort_by = 'data';
-    if (!cfg.sort_dir) cfg.sort_dir = 'asc';
-    return true;
+  const inferLie = (c, columns) => {
+    const type = c.type || 'bar';
+    const hasX = set(c.x), hasY = set(c.y);
+    const count = type === 'bar' && (c.func || 'count') === 'count';
+    if (hasX !== hasY) return hasX === count ? 'vertical' : 'horizontal';
+    if (!hasX) return type === 'bar' ? 'horizontal' : 'vertical';
+    const numeric = (/** @type {string} */ n) => {
+      const m = /** @type {any} */ ((columns || []).find((col) => col.name === n));
+      return m ? m.type === 'numeric' : null;
+    };
+    return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
+  };
+
+  /**
+   * An aggregated chart's axes: the category column, the column it
+   * aggregates (`measure`, ".count" for a row count), the statistic, the
+   * way it lies, and which of x and y holds each.
+   * @param {Record<string, any>} c @param {VizColumn[]} columns
+   */
+  const axes = (c, columns) => {
+    if (c.type === 'histogram') {
+      return { category: set(c.x) ? c.x + '_bin' : null, measure: '.count', func: 'count',
+               orientation: 'vertical', cat_key: 'x', val_key: null };
+    }
+    const fixed = FIXED.includes(c.type);
+    const lie = fixed ? 'vertical' : (c.orientation || inferLie(c, columns));
+    const onY = lie === 'horizontal';
+    const func = NS.DISTRIBUTION_TYPES.includes(c.type) ? 'mean' : (c.func || 'count');
+    const count = func === 'count';
+    return { category: (onY ? c.y : c.x) || null,
+             measure: count ? '.count' : ((onY ? c.x : c.y) || ''), func,
+             orientation: fixed ? null : lie, cat_key: onY ? 'y' : 'x',
+             val_key: count ? null : (onY ? 'x' : 'y') };
   };
 
   /**
@@ -42,51 +70,60 @@
    * @returns {{ sort_by: string, sort_dir: string }}
    */
   const naturalSort = (cfg, columns) => {
-    const meta = /** @type {any} */ ((columns || []).find((c) => c.name === cfg.group));
+    const meta = /** @type {any} */ ((columns || []).find((c) => c.name === cfg.category));
     const ordered = !!meta && (meta.type === 'numeric' || !!meta.temporal ||
       (Array.isArray(meta.levels) && meta.levels.length > 0));
     return ordered ? { sort_by: 'data', sort_dir: 'asc' } : { sort_by: 'value', sort_dir: 'desc' };
   };
 
   /**
-   * Fills an unset sort of an aggregated chart. An unset direction follows
-   * the sort: largest first by value, ascending otherwise, so a `sort_by =
-   * "data"` without a direction does not draw the data backwards.
-   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
-   */
-  const fillSort = (cfg, columns) => {
-    const has = NS.hasVal;
-    if (!has(cfg.sort_by)) cfg.sort_by = naturalSort(cfg, columns).sort_by;
-    if (!has(cfg.sort_dir)) cfg.sort_dir = cfg.sort_by === 'value' ? 'desc' : 'asc';
-  };
-
-  /**
-   * The defaults a config gets before a draw: the distribution statistics
-   * and an aggregated chart's sort. A mapping is never picked here: an unset
-   * one asks for a pick (gate()). Mutates `cfg`.
+   * The defaults that depend on the chart: the statistics of a box and a
+   * point range, and the sort. An unset direction follows the sort: largest
+   * first by value, ascending otherwise. A mapping is never picked here: an
+   * unset one asks for a pick (gate()). Mutates `cfg`.
    * @param {Record<string, any>} cfg @param {VizColumn[]} columns
    */
   const defaults = (cfg, columns) => {
-    if (!cfg.chart_type) cfg.chart_type = 'bar';
-    const fam = NS.familyOf(cfg.chart_type);
-    if (fam === 'aggregated') {
-      if (!ensureDistributionMetric(cfg)) {
-        if (!cfg.func) cfg.func = 'count';
-        if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
-      }
-      fillSort(cfg, columns);
-    } else if (fam === 'timeline') {
-      if (!cfg.sort_by) cfg.sort_by = 'onset';
-      if (!cfg.sort_dir) cfg.sort_dir = 'asc';
+    const fam = NS.familyOf(cfg.type);
+    if (NS.DISTRIBUTION_TYPES.includes(cfg.type)) {
+      const box = cfg.type === 'boxplot';
+      if (!cfg.summary) cfg.summary = box ? 'median_q1_q3' : 'mean_se';
+      if (box && !cfg.whiskers) cfg.whiskers = 'tukey';
+      if (!set(cfg.sort_by)) cfg.sort_by = 'data';
+    } else if (fam === 'timeline' && !set(cfg.sort_by)) {
+      cfg.sort_by = 'onset';
     }
+    if (fam === 'individual') return;
+    if (!set(cfg.sort_by)) cfg.sort_by = naturalSort(cfg, columns).sort_by;
+    if (!set(cfg.sort_dir)) cfg.sort_dir = cfg.sort_by === 'value' ? 'desc' : 'asc';
+  };
+
+  /**
+   * The settings the model and option builders read: each spec argument,
+   * its default where the config leaves it out, R's `derived`, and an
+   * aggregated chart's axes (axes()).
+   * @param {Record<string, any>} config @param {Record<string, any>} [derived]
+   * @param {VizColumn[]} [columns]
+   * @returns {Record<string, any>}
+   */
+  const settings = (config, derived, columns) => {
+    const spec = (V.spec && V.spec.chart) || {};
+    /** @type {Record<string, any>} */
+    const cfg = {};
+    for (const k of Object.keys(spec)) cfg[k] = spec[k].default ?? null;
+    for (const [k, v] of Object.entries(config || {})) if (v != null) cfg[k] = v;
+    cfg.derived = derived || {};
+    if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg, columns || []));
+    defaults(cfg, columns || []);
+    return cfg;
   };
 
   /** The settings a family cannot draw without, as [setting, spec key].
    * @param {Record<string, any>} cfg @returns {[string, string][]} */
   const requiredOf = (cfg) => {
-    const fam = NS.familyOf(cfg.chart_type);
-    if (cfg.chart_type === 'histogram') return [['x', 'x']];
-    if (fam === 'aggregated') return [['group', cfg.cat_key || 'x']];
+    const fam = NS.familyOf(cfg.type);
+    if (cfg.type === 'histogram') return [['x', 'x']];
+    if (fam === 'aggregated') return [['category', cfg.cat_key || 'x']];
     return [['x', 'x'], ['y', 'y']];
   };
 
@@ -111,7 +148,7 @@
    * @returns {string | null}
    */
   const gate = (rows, columns, cfg) => {
-    const fam = NS.familyOf(cfg.chart_type);
+    const fam = NS.familyOf(cfg.type);
     const unset = requiredOf(cfg).filter(([k]) => !NS.hasVal(cfg[k]));
     if (unset.length) {
       return emptyState('Pick ' + unset.map(([, key]) => specLabel(key)).join(' and ') +
@@ -120,10 +157,10 @@
 
     const colSet = new Set((columns || []).map((c) => c.name));
     // A histogram's category is the bin column R adds beside x.
-    const req = cfg.chart_type === 'histogram' ? [[specLabel('x'), cfg.x]]
+    const req = cfg.type === 'histogram' ? [[specLabel('x'), cfg.x]]
       : fam === 'aggregated'
-        ? [[specLabel(cfg.cat_key || 'x'), cfg.group],
-           [specLabel(cfg.val_key || 'y'), cfg.value !== '.count' ? cfg.value : null]]
+        ? [[specLabel(cfg.cat_key || 'x'), cfg.category],
+           [specLabel(cfg.val_key || 'y'), cfg.measure !== '.count' ? cfg.measure : null]]
         : [['X', cfg.x], ['Y', cfg.y]];
     const missing = req
       .filter(([, v]) => v && !colSet.has(v))
@@ -142,8 +179,9 @@
     if (rows.length === 0) return emptyState('No data to chart');
 
     // A band whose series R could not compute says why.
-    if (cfg.chart_type === 'band' && !cfg.band_series && cfg.band_note) {
-      return emptyState(NS.esc(cfg.band_note));
+    const band = cfg.derived && cfg.derived.band;
+    if (cfg.type === 'band' && band && !band.series && band.note) {
+      return emptyState(NS.esc(band.note));
     }
 
     if (cfg.color) {
@@ -160,7 +198,7 @@
   };
 
   /**
-   * Facet value -> its strip label, with "(n)" when count_on covers facets.
+   * Facet value -> its strip label, with "(n)" when show_n covers facets.
    * @param {any[]} rows @param {Record<string, any>} cfg @param {any[]} facets
    * @returns {Map<string, any>}
    */
@@ -172,6 +210,6 @@
     return m;
   };
 
-  Object.assign(model, { ensureDistributionMetric, naturalSort, defaults, gate, emptyState,
-                         facetLabels, MAX_COLOR_LEVELS });
+  Object.assign(model, { settings, inferLie, axes, FIXED, naturalSort, defaults, gate,
+                         emptyState, facetLabels, MAX_COLOR_LEVELS });
 })();

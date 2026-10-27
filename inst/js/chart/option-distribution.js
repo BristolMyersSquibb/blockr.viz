@@ -67,7 +67,7 @@
   const distributionContext = (m, panel, look, plotW) => {
     const { cfg, ink, measure } = look;
     const P = parts.common(look);
-    const isBox = cfg.chart_type === 'boxplot';
+    const isBox = cfg.type === 'boxplot';
     const palette = NS.paletteOf(cfg);
     const split = m.split;
     const scale = m.colorScale;
@@ -108,13 +108,13 @@
 
   /**
    * Per level: a silent interval under a clickable centre dot, and a line
-   * through the centres when connect_centers is on. All three share the
+   * through the centres with connect_centers. All three share the
    * level's name, so one legend chip hides them together.
    * @param {any} k
    */
   const distRangeSeries = (k) => {
     const { cfg, split, hexFor, palette, slots, cats, vertical, seriesLevels } = k;
-    const connect = cfg.connect_centers === 'on' || cfg.connect_centers === true;
+    const connect = cfg.connect_centers === true;
     /** @type {any[]} */
     const series = [];
     seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
@@ -284,7 +284,7 @@
     // A distribution reads by position and spread, so the value axis fits
     // the data rather than holding zero.
     const valAxis = {
-      type: 'value', scale: true, name: NS.unitTitle(P.title(cfg.value), cfg),
+      type: 'value', scale: true, name: NS.unitTitle(P.title(cfg.measure), cfg),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
@@ -325,8 +325,7 @@
     const { xlab, gut, catFmt, catLabels } = cat;
     const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
     const { valAxis, catAxes } = distAxes(k, cat);
-    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.value_lines, ink,
-      cfg.value_line_names);
+    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.y_lines, ink);
     return {
       xFit: (vertical && xlab) ? { labels: catLabels, inset: X_INSET, decimate: false,
                                    gutter: xlab.bottom, key: xlab.key, formatter: catFmt }
@@ -335,7 +334,7 @@
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, cats.length * 28) + bottomBase,
       labelNote: (!vertical && cats.length * 28 > NS.PANEL_H_CAP)
-        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, cats.length, P.title(cfg.group)) : null,
+        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, cats.length, P.title(cfg.category)) : null,
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: ink.face },

@@ -21,10 +21,13 @@ const ROWS = [
   { ID: 'S03', ARM: null, SEX: 'F', VIS: 'W2', DAY: 15, VAL: 6, LO: 5, HI: 7 },
   { ID: null, ARM: 'A', SEX: null, VIS: 'W4', DAY: 30, VAL: null, LO: 1, HI: 2 }
 ];
-const BASE = { chart_type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
+const BASE = { type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
 
-const model = (cfg, rows = ROWS) => C.model.individual({ rows, ix: new C.RowIndex(),
-                                                         columns: COLUMNS, cfg: { ...BASE, ...cfg } });
+// `derived` is R's derived object: the colour scales, the palette.
+const settingsOf = (cfg, derived = {}) => C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
+
+const model = (cfg, rows = ROWS, derived = {}) => C.model.individual({ rows, ix: new C.RowIndex(),
+  columns: COLUMNS, cfg: settingsOf(cfg, derived) });
 
 test('an unsplit scatter: one series of the rows with an x and a y', () => {
   const m = model({});
@@ -44,7 +47,7 @@ test('without x or y the model is empty', () => {
 });
 
 test('tooltip fields ride on the points, less the ones the tooltip shows', () => {
-  const m = model({ color: 'ARM', tt_fields: ['SEX', 'DAY', 'ARM', 'null'] });
+  const m = model({ color: 'ARM', tooltip: ['SEX', 'DAY', 'ARM', 'null'] });
   assert.deepStrictEqual(plain(m.ttFields), ['SEX']);
   assert.deepStrictEqual(plain(m.panels[0].series[1].pts[0]), [2, 7, 'F']);
 });
@@ -62,8 +65,8 @@ test('a colour split: a level per value, a missing colour is the "" level', () =
 });
 
 test('a series apart from the colour: a series takes its colour value\'s colour', () => {
-  const m = model({ series: 'ID', color: 'ARM',
-                    scales: { var: 'ARM', color: { B: '#123456' } } });
+  const m = model({ series: 'ID', color: 'ARM' }, ROWS,
+                  { scales: { var: 'ARM', color: { B: '#123456' } } });
   // '' (the missing ID) has colour A; S01 B (scale); S02 A; S03 missing.
   assert.deepStrictEqual(plain(m.levels), ['', 'S01', 'S02', 'S03']);
   const P = C.BLOCKR_PALETTE;
@@ -75,7 +78,7 @@ test('a series apart from the colour: a series takes its colour value\'s colour'
 });
 
 test('categorical x: factor levels order the axis, a line runs in that order', () => {
-  const m = model({ chart_type: 'line', x: 'VIS', series: 'ID' });
+  const m = model({ type: 'line', x: 'VIS', series: 'ID' });
   assert.strictEqual(m.x.type, 'category');
   assert.deepStrictEqual(plain(m.x.cats), ['Base', 'W2', 'W4']);
   const s01 = m.panels[0].series.find((s) => s.level === 'S01');
@@ -86,14 +89,14 @@ test('categorical x: factor levels order the axis, a line runs in that order', (
 });
 
 test('a numeric line is drawn in x order, a scatter in row order', () => {
-  assert.deepStrictEqual(plain(model({ chart_type: 'line' }).panels[0].series[0].pts.map((p) => p[0])),
+  assert.deepStrictEqual(plain(model({ type: 'line' }).panels[0].series[0].pts.map((p) => p[0])),
                          [1, 2, 14, 15, 28]);
   assert.deepStrictEqual(plain(model({}).panels[0].series[0].pts.map((p) => p[0])),
                          [14, 1, 2, 28, 15]);
 });
 
 test('facets: sorted levels, a panel each; the missing facet\'s panel is empty', () => {
-  const m = model({ facet: 'SEX', count_on: 'facet', count_col: 'ID' });
+  const m = model({ facet: 'SEX', show_n: 'facet', id: 'ID' });
   assert.deepStrictEqual(plain(m.panels.map((p) => p.facet)), ['', 'F', 'M']);
     // No patient has a missing sex, so that strip has no count.
   assert.deepStrictEqual(plain(m.panels.map((p) => p.label)), ['', 'F (2)', 'M (1)']);
@@ -104,7 +107,7 @@ test('facets: sorted levels, a panel each; the missing facet\'s panel is empty',
 test('a line with more than 1000 series draws the first 1000 and says so', () => {
   const rows = [];
   for (let i = 0; i < 1003; i++) rows.push({ ID: 'P' + String(i).padStart(4, '0'), DAY: 1, VAL: i });
-  const m = model({ chart_type: 'line', series: 'ID' }, rows);
+  const m = model({ type: 'line', series: 'ID' }, rows);
   assert.strictEqual(m.levels.length, 1000);
   assert.strictEqual(m.seriesCount, 1000);
   assert.match(m.capMessage, /^Showing first 1000 of 1003 series \(ID\)/);
@@ -115,7 +118,7 @@ test('a line with more than 1000 series draws the first 1000 and says so', () =>
 });
 
 test('a band keeps rows for clicks and draws no row series', () => {
-  const m = model({ chart_type: 'band', color: 'ARM', facet: 'SEX' });
+  const m = model({ type: 'band', color: 'ARM', facet: 'SEX' });
   assert.deepStrictEqual(plain(m.panels.map((p) => p.series.length)), [0, 0, 0]);
   assert.strictEqual(m.panels[1].rows.length, 3);
 });
@@ -124,7 +127,7 @@ test('a band keeps rows for clicks and draws no row series', () => {
 
 const click = (cfg, params, facet = '__all__', focusName) => {
   const m = model(cfg);
-  const c = { ...BASE, ...cfg };
+  const c = settingsOf(cfg);
   return plain(C.model.individualClick(m, c, C.model.panelOf(m, facet), params, focusName));
 };
 
@@ -152,7 +155,7 @@ test('an explicit drill column: its values in the rows under the point', () => {
 });
 
 test('a line: the hovered line before the hit test; drill off sends nothing', () => {
-  const cfg = { chart_type: 'line', series: 'ID' };
+  const cfg = { type: 'line', series: 'ID' };
   assert.deepStrictEqual(click(cfg, { seriesName: 'S03', value: [15, 6] }, '__all__', 'S01'),
                          { filters: { ID: ['S01'] } });
   assert.deepStrictEqual(click(cfg, { seriesName: 'S03', value: [15, 6] }),
@@ -161,23 +164,23 @@ test('a line: the hovered line before the hit test; drill off sends nothing', ()
                          { filters: { ARM: ['A'] } });
   assert.strictEqual(click({ ...cfg, drill: '' }, { seriesName: 'S03', value: [15, 6] }), null);
   // An unsplit line's point is a range, as a scatter's.
-  assert.ok(click({ chart_type: 'line' }, { value: [15, 6] }).range);
+  assert.ok(click({ type: 'line' }, { value: [15, 6] }).range);
 });
 
 test('D7: a coloured band selects its level; an uncoloured band is not clickable', () => {
-  assert.deepStrictEqual(click({ chart_type: 'band', color: 'ARM' }, { seriesName: 'A', value: [0, 5] }),
+  assert.deepStrictEqual(click({ type: 'band', color: 'ARM' }, { seriesName: 'A', value: [0, 5] }),
                          { filters: { ARM: ['A'] } });
-  assert.deepStrictEqual(click({ chart_type: 'band', color: 'ARM', facet: 'SEX' },
+  assert.deepStrictEqual(click({ type: 'band', color: 'ARM', facet: 'SEX' },
                                { seriesName: 'A', value: [0, 5] }, 'F'),
                          { filters: { ARM: ['A'], SEX: ['F'] } });
-  assert.deepStrictEqual(click({ chart_type: 'band', color: 'ARM', drill: 'ID' },
+  assert.deepStrictEqual(click({ type: 'band', color: 'ARM', drill: 'ID' },
                                { seriesName: 'A', value: [0, 5] }),
                          { filters: { ID: ['S02'] } });
-  assert.strictEqual(click({ chart_type: 'band' }, { seriesName: undefined, value: [0, 5] }), null);
+  assert.strictEqual(click({ type: 'band' }, { seriesName: undefined, value: [0, 5] }), null);
 });
 
 test('the keys of a line or band level: its level and the facet', () => {
-  const m = model({ chart_type: 'line', series: 'ID', facet: 'SEX' });
+  const m = model({ type: 'line', series: 'ID', facet: 'SEX' });
   assert.deepStrictEqual(plain(C.model.individualKeys(m, 'F', 'S02')), { ID: 'S02', SEX: 'F' });
   assert.deepStrictEqual(plain(C.model.individualKeys(m, '', '')), { ID: '', SEX: '' });
   assert.deepStrictEqual(plain(C.model.individualKeys(model({}), '__all__', null)), {});
@@ -188,7 +191,7 @@ test('the keys of a line or band level: its level and the facet', () => {
 test('a brush: the points\' x and y; with a drill column their rows, each (x, y) once', () => {
   const rows = [{ X: 1, Y: 5, ID: 'a' }, { X: 1, Y: 5, ID: 'b' }, { X: 2, Y: 6, ID: 'c' }];
   const cols = [num('X'), num('Y'), cat('ID')];
-  const cfg = { chart_type: 'scatter', x: 'X', y: 'Y', drill: 'ID' };
+  const cfg = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', drill: 'ID' }, {}, cols);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg });
   const series = [{ data: m.panels[0].series[0].pts }];
   const sel = (idx) => idx.map((dataIndex) => ({ seriesIndex: 0, dataIndex }));
@@ -203,7 +206,7 @@ test('a brush: the points\' x and y; with a drill column their rows, each (x, y)
 // D9: a brush takes the brushed points, never their colour; D10: in a facet
 // panel the panel's key rides with it.
 const brushOf = (cfg, idx, facet = '__all__') => {
-  const c = { ...BASE, ...cfg };
+  const c = settingsOf(cfg);
   const m = model(cfg);
   const panel = C.model.panelOf(m, facet);
   const series = panel.series.map((s) => ({ name: s.level, data: s.pts }));
@@ -248,16 +251,17 @@ test('interpYAtX: between points, null outside; a category x by its position', (
 
 test('the model reads only the config fields it lists', () => {
   const configs = [
-    {}, { color: 'ARM', facet: 'SEX', count_on: 'both', count_col: 'ID', tt_fields: ['ID'] },
-    { chart_type: 'line', series: 'ID', color: 'ARM', scales: { var: 'ARM', color: {} } },
-    { chart_type: 'band', color: 'ARM', palette: ['#000000'] }, { x: 'VIS', chart_type: 'line' }
+    [{}], [{ color: 'ARM', facet: 'SEX', show_n: 'both', id: 'ID', tooltip: ['ID'] }],
+    [{ type: 'line', series: 'ID', color: 'ARM' }, { scales: { var: 'ARM', color: {} } }],
+    [{ type: 'band', color: 'ARM' }, { palette: ['#000000'] }], [{ x: 'VIS', type: 'line' }]
   ];
-  for (const cfg of configs) {
+  for (const [cfg, derived] of configs) {
     const read = new Set();
-    const spy = new Proxy({ ...BASE, ...cfg }, { get(t, k) { read.add(k); return t[k]; } });
+    const spy = new Proxy(settingsOf(cfg, derived), { get(t, k) { read.add(k); return t[k]; } });
     C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    const extra = [...read].filter((k) => typeof k === 'string' &&
-                                          !C.model.individual.FIELDS.includes(k));
+    // A listed path such as 'derived.scales' covers the read of its root.
+    const listed = (k) => C.model.individual.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
+    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
     assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
   }
 });

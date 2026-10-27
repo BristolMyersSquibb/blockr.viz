@@ -17,14 +17,20 @@ const ROWS = [
   { T: 'Nausea', SEV: 'SEVERE', ID: 'S02', S: 2, E: null, V: 'Week 2' },
   { T: 'Rash', SEV: 'SEVERE', ID: 'S02', S: 1, E: 3, V: 'Week 2' }
 ];
-const BASE = { chart_type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
+const BASE = { type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
+
+// `derived` in a case is R's derived object.
+const settings = (cfg) => {
+  const { derived, ...config } = { ...BASE, ...cfg };
+  return C.model.settings(config, derived, COLUMNS);
+};
 
 const build = (cfg = {}, look = {}) => {
-  const c = { ...BASE, ...cfg };
+  const c = settings(cfg);
   const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.timeline(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                    measure, ...look });
-  return { m, o, opt: o.panels[0].option };
+  return { m, c, o, opt: o.panels[0].option };
 };
 
 test('one custom series without colour, the lanes on an inverted category y', () => {
@@ -48,18 +54,19 @@ test('a series per colour level; a board scale colours the levels', () => {
   assert.deepStrictEqual(plain(opt.series.map((s) => [s.name, s.data.length])),
                          [['MILD', 1], ['SEVERE', 2]]);
   assert.deepStrictEqual(plain(opt.legend), { show: false, data: ['MILD', 'SEVERE'] });
-  const scaled = build({ color: 'SEV', scales: { var: 'SEV', color: { SEVERE: '#aa0000' } } });
+  const scales = { var: 'SEV', color: { SEVERE: '#aa0000' } };
+  const scaled = build({ color: 'SEV', derived: { scales } });
   assert.deepStrictEqual(plain(scaled.opt.color), ['#0072B2', '#aa0000']);
-  const legend = C.option.timelineLegend(scaled.m, { scales: { var: 'SEV', color: { SEVERE: '#aa0000' } } });
+  const legend = C.option.timelineLegend(scaled.m, scaled.c);
   assert.deepStrictEqual(plain(legend), { col: 'SEV', items: [
     { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#aa0000' }] });
-  assert.strictEqual(C.option.timelineLegend(build().m, {}), null);
+  assert.strictEqual(C.option.timelineLegend(build().m, build().c), null);
 });
 
 test('panel height: 28 px a lane plus 80, at least 200, capped', () => {
   assert.strictEqual(build().o.panels[0].height, '200px');
   const rows = Array.from({ length: 300 }, (_, i) => ({ T: 'L' + i, S: i, E: i + 1 }));
-  const cfg = { ...BASE };
+  const cfg = settings({});
   const m = C.model.timeline({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg });
   const o = C.option.timeline(m, { cfg, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure });
   assert.strictEqual(o.panels[0].height, (Math.min(C.PANEL_H_CAP, 300 * 28) + 80) + 'px');
@@ -68,13 +75,13 @@ test('panel height: 28 px a lane plus 80, at least 200, capped', () => {
 test('the label gutter is measured, with lane counts in it', () => {
   // "Nausea" is 42 px at 7 px a character, plus 10 slack.
   assert.deepStrictEqual(plain(build().opt.grid), { left: 67, right: 10, top: 20, bottom: 48 });
-  const { opt } = build({ count_on: 'axis' });
+  const { opt } = build({ show_n: 'axis' });
   assert.strictEqual(opt.yAxis.axisLabel.formatter('Rash'), 'Rash (2)');
   assert.strictEqual(opt.grid.left, 7 * 'Nausea (1)'.length + 10 + 15);
 });
 
 test('the tooltip: the lane, the interval and its length, the colour, extra fields', () => {
-  const { opt } = build({ color: 'SEV', tt_fields: ['ID'] });
+  const { opt } = build({ color: 'SEV', tooltip: ['ID'] });
   const tip = opt.tooltip.formatter;
   const bar = tip({ value: [4, 9, 0, 'Rash', 'MILD', '', '', 'Rash', ['S01']] });
   assert.match(bar, /<span>Rash<\/span>/);
@@ -114,7 +121,7 @@ test('the tooltip card takes the ink', () => {
 // -- D5 ------------------------------------------------------------------------
 
 const timelinePatch = (cfg, filters, wasDimmed = false) => {
-  const c = { ...BASE, ...cfg };
+  const c = settings(cfg);
   const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const lit = filters ? (keys, rows) => C.keys.markLit(keys, rows, filters) : null;
   return plain(C.option.timelinePatch(m, m.panels[0], c, lit, wasDimmed));

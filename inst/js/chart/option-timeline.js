@@ -17,7 +17,7 @@
 
   // Config fields the option reads beside the model's; a change to any
   // other field reuses the option.
-  const OPTION_FIELDS = ['label', 'drill', 'palette', 'scales'];
+  const OPTION_FIELDS = ['label', 'drill', 'derived.palette', 'derived.scales'];
 
   // Lane height and the room around the plot, in CSS px.
   const LANE_PX = 28;

@@ -47,20 +47,24 @@ const noBareName = (text, what) => {
 
 const look = (cfg, extra = {}) => ({ cfg, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600], ...extra });
-const agg = (cfg, rows = ROWS) => {
-  const c = { drill: 'auto', sort_by: 'value', sort_dir: 'desc', ...cfg };
+// An aggregated chart in public names. A bar lies horizontal: its category is
+// y and its measure x. The other types take the category on x, the measure on y.
+const agg = (cfg, rows = ROWS, derived = {}) => {
+  const c = C.model.settings({ drill: 'auto', sort_by: 'value', sort_dir: 'desc', ...cfg },
+                             derived, COLUMNS);
   const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.aggregated(m, look(c));
   return { m, o, opt: o.panels[0].option, c };
 };
 const ind = (cfg, rows = ROWS) => {
-  const c = { drill: 'auto', ...cfg };
+  const c = C.model.settings({ drill: 'auto', ...cfg }, {}, COLUMNS);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.individual(m, look(c, { widths: [600] }));
   return { m, o, opt: o.panels[0].option, c };
 };
 const gantt = (cfg) => {
-  const c = { chart_type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM', drill: 'auto', ...cfg };
+  const c = C.model.settings({ type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM',
+                               drill: 'auto', ...cfg }, {}, COLUMNS);
   const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.timeline(m, look(c));
   return { m, o, opt: o.panels[0].option };
@@ -76,56 +80,55 @@ test('axisTitle: the label, else the name', () => {
 });
 
 test('axisName: the label with the unit; unlabelled, the unit alone, else the name', () => {
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', { unit: 'mg' }), 'Analysis Value (mg)');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', {}), 'Analysis Value');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', { unit: 'mg' }), 'mg');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', {}), 'PLAIN');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL',
-    { title_resolved: 'Mean analysis value by visit' }), '');
+  const set = (config, derived) => C.model.settings(config, derived, COLUMNS);
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({ unit: 'mg' })), 'Analysis Value (mg)');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({})), 'Analysis Value');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({ unit: 'mg' })), 'mg');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({})), 'PLAIN');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}, {
+    titles: { title: { text: 'Mean analysis value by visit' } } })), '');
 });
 
 test('bar: the value axis by the value column\'s label, a count as "Count"', () => {
-  assert.strictEqual(valueAxis(agg({ chart_type: 'bar', group: 'AETERM', value: 'AVAL',
+  assert.strictEqual(valueAxis(agg({ type: 'bar', y: 'AETERM', x: 'AVAL',
                                      func: 'sum' }).opt).name, 'Analysis Value');
-  assert.strictEqual(valueAxis(agg({ chart_type: 'bar', group: 'AETERM', value: '.count',
+  assert.strictEqual(valueAxis(agg({ type: 'bar', y: 'AETERM',
                                      func: 'count' }).opt).name, 'Count');
-  assert.strictEqual(valueAxis(agg({ chart_type: 'bar', group: 'AETERM', value: 'AVAL',
+  assert.strictEqual(valueAxis(agg({ type: 'bar', y: 'AETERM', x: 'AVAL',
                                      func: 'mean', unit: 'mg' }).opt).name,
                      'Analysis Value (mg)');
 });
 
 test('bar: "% of panel" names its denominator by label', () => {
-  const { opt } = agg({ chart_type: 'bar', group: 'AETERM', color: 'AESEV', value: 'USUBJID',
-                        func: 'pct_distinct', pct_of: ['color'] });
+  const { opt } = agg({ type: 'bar', y: 'AETERM', color: 'AESEV', x: 'USUBJID',
+                        func: 'pct_distinct', percent_of: 'color' });
   assert.strictEqual(valueAxis(opt).name, '% of Severity');
-  const both = agg({ chart_type: 'bar', group: 'AETERM', color: 'AESEV', facet: 'ARM',
-                     value: 'USUBJID', func: 'pct_distinct', pct_of: ['facet', 'color'] });
-  assert.strictEqual(valueAxis(both.opt).name, '% of Planned Arm x Severity');
+  const both = agg({ type: 'bar', y: 'AETERM', color: 'AESEV', facet: 'ARM',
+                     x: 'USUBJID', func: 'pct_distinct', percent_of: 'facet' });
+  assert.strictEqual(valueAxis(both.opt).name, '% of Planned Arm');
 });
 
 test('waterfall: the value axis by label', () => {
-  const { opt } = agg({ chart_type: 'bar', baseline: 'cumulative', group: 'AETERM',
-                        value: 'AVAL', func: 'sum' });
+  const { opt } = agg({ type: 'waterfall', x: 'AETERM', y: 'AVAL', func: 'sum' });
   assert.strictEqual(opt.yAxis.name, 'Analysis Value');
 });
 
 test('boxplot and point range: the value axis by label', () => {
   for (const ct of ['boxplot', 'pointrange']) {
-    const { opt } = agg({ chart_type: ct, group: 'AETERM', value: 'AVAL', func: 'mean' });
+    const { opt } = agg({ type: ct, x: 'AETERM', y: 'AVAL' });
     assert.strictEqual(valueAxis(opt).name, 'Analysis Value', ct);
   }
 });
 
 test('histogram: bins are counted, and the bin column names itself with x\'s label', () => {
-  const { opt } = agg({ chart_type: 'histogram', group: 'ADY_bin', value: '.count',
-                        func: 'count', sort_by: '' });
+  const { opt } = agg({ type: 'histogram', x: 'ADY', sort_by: 'data' });
   assert.strictEqual(valueAxis(opt).name, 'Count');
   assert.strictEqual(C.axes.axisTitle(COLUMNS, 'ADY_bin'), 'Study Day');
 });
 
 test('scatter, line, band: x and y by label', () => {
   for (const ct of ['scatter', 'line']) {
-    const { opt } = ind({ chart_type: ct, x: 'ADY', y: 'AVAL' });
+    const { opt } = ind({ type: ct, x: 'ADY', y: 'AVAL' });
     // A line chart carries a second, hidden pair of axes for its veil.
     const first = (a) => (Array.isArray(a) ? a[0] : a);
     assert.strictEqual(first(opt.xAxis).name, 'Study Day', ct);
@@ -140,27 +143,24 @@ test('gantt: the time axis by label', () => {
 // -- tooltips ------------------------------------------------------------------
 
 test('bar tooltip: the aggregation by label, the colour rows and tooltip fields too', () => {
-  const plainBar = agg({ chart_type: 'bar', group: 'AETERM', value: 'AVAL', func: 'mean',
-                         tt_fields: ['USUBJID'] });
+  const plainBar = agg({ type: 'bar', y: 'AETERM', x: 'AVAL', func: 'mean',
+                         tooltip: ['USUBJID'] });
   const html1 = plainBar.opt.tooltip.formatter([{ name: 'Fever', value: 2, dataIndex: 1 }]);
   assert.match(html1, /Mean of Analysis Value/);
   noBareName(html1, 'bar tooltip');
 
-  const split = agg({ chart_type: 'bar', group: 'AETERM', color: 'AESEV', value: '.count',
-                      func: 'count' });
+  const split = agg({ type: 'bar', y: 'AETERM', color: 'AESEV', func: 'count' });
   const html2 = split.opt.tooltip.formatter({ name: 'Rash', dataIndex: 0, seriesName: 'MILD' });
   assert.match(html2, /Severity MILD/);
   noBareName(html2, 'split bar tooltip');
 
-  const pct = agg({ chart_type: 'bar', group: 'AETERM', color: 'AESEV', bar_mode: 'percent',
-                    value: '.count', func: 'count' });
+  const pct = agg({ type: 'bar', y: 'AETERM', color: 'AESEV', position: 'fill', func: 'count' });
   const html3 = pct.opt.tooltip.formatter({ name: 'Rash', dataIndex: 0, seriesName: 'MILD' });
   assert.match(html3, /Severity MILD/);
 });
 
 test('bar tooltip: tooltip fields by label', () => {
-  const { opt } = agg({ chart_type: 'bar', group: 'AETERM', value: '.count', func: 'count',
-                        tt_fields: ['USUBJID'] });
+  const { opt } = agg({ type: 'bar', y: 'AETERM', func: 'count', tooltip: ['USUBJID'] });
   const html = opt.tooltip.formatter([{ name: 'Fever', value: 1, dataIndex: 1 }]);
   assert.match(html, /Subject/);
   noBareName(html, 'bar tooltip fields');
@@ -168,7 +168,7 @@ test('bar tooltip: tooltip fields by label', () => {
 
 test('pie and treemap tooltips: the aggregation by label', () => {
   for (const ct of ['pie', 'treemap']) {
-    const { opt } = agg({ chart_type: ct, group: 'AETERM', value: 'AVAL', func: 'sum' });
+    const { opt } = agg({ type: ct, x: 'AETERM', y: 'AVAL', func: 'sum' });
     const html = opt.tooltip.formatter({ name: 'Rash', value: 10, data: { n: 2 }, percent: 50 });
     assert.match(html, /Sum of Analysis Value/, ct);
     noBareName(html, ct + ' tooltip');
@@ -176,8 +176,7 @@ test('pie and treemap tooltips: the aggregation by label', () => {
 });
 
 test('waterfall tooltip: the aggregation by label', () => {
-  const { opt } = agg({ chart_type: 'bar', baseline: 'cumulative', group: 'AETERM',
-                        value: 'AVAL', func: 'sum' });
+  const { opt } = agg({ type: 'waterfall', x: 'AETERM', y: 'AVAL', func: 'sum' });
   const html = opt.tooltip.formatter([{ seriesName: 'delta', name: 'Rash', value: 10 }]);
   assert.match(html, /Sum of Analysis Value/);
   noBareName(html, 'waterfall tooltip');
@@ -186,8 +185,7 @@ test('waterfall tooltip: the aggregation by label', () => {
 test('boxplot and point range tooltips: the colour column by label', () => {
   const SEP = C.model.BOX_CAT_SEP;
   for (const ct of ['boxplot', 'pointrange']) {
-    const { opt } = agg({ chart_type: ct, group: 'AETERM', color: 'AESEV', value: 'AVAL',
-                          func: 'mean' });
+    const { opt } = agg({ type: ct, x: 'AETERM', color: 'AESEV', y: 'AVAL' });
     const html = opt.tooltip.formatter({ name: 'Rash' + SEP + 'MILD' });
     assert.match(html, /Severity MILD/, ct);
     noBareName(html, ct + ' tooltip');
@@ -195,15 +193,15 @@ test('boxplot and point range tooltips: the colour column by label', () => {
 });
 
 test('point tooltip: x, y, the split column and the tooltip fields by label', () => {
-  const { opt } = ind({ chart_type: 'scatter', x: 'ADY', y: 'AVAL', color: 'AESEV',
-                        tt_fields: ['USUBJID'] });
+  const { opt } = ind({ type: 'scatter', x: 'ADY', y: 'AVAL', color: 'AESEV',
+                        tooltip: ['USUBJID'] });
   const html = opt.tooltip.formatter({ seriesName: 'MILD', value: [1, 4, 'S01'], color: '#123' });
   for (const l of ['Study Day', 'Analysis Value', 'Severity', 'Subject']) assert.match(html, new RegExp(l));
   noBareName(html, 'point tooltip');
 });
 
 test('band tooltip: the point tooltip, by label', () => {
-  const { opt } = ind({ chart_type: 'band', x: 'ADY', y: 'AVAL' });
+  const { opt } = ind({ type: 'band', x: 'ADY', y: 'AVAL' });
   const html = opt.tooltip.formatter({ value: [1, 4] });
   assert.match(html, /Study Day/);
   assert.match(html, /Analysis Value/);
@@ -211,7 +209,7 @@ test('band tooltip: the point tooltip, by label', () => {
 });
 
 test('line tooltip: x in the headline, the line and its tooltip fields by label', () => {
-  const { opt } = ind({ chart_type: 'line', x: 'ADY', y: 'AVAL', tt_fields: ['USUBJID'] });
+  const { opt } = ind({ type: 'line', x: 'ADY', y: 'AVAL', tooltip: ['USUBJID'] });
   const html = opt.tooltip.formatter([{ seriesType: 'line', seriesIndex: 0, seriesName: '',
                                          value: [3, 6, 'S02'] }]);
   assert.match(html, /Study Day: 3/);
@@ -221,7 +219,7 @@ test('line tooltip: x in the headline, the line and its tooltip fields by label'
 });
 
 test('gantt tooltip: lane, interval, colour, series and fields by label', () => {
-  const { opt } = gantt({ color: 'AESEV', series: 'USUBJID', tt_fields: ['ARM'] });
+  const { opt } = gantt({ color: 'AESEV', series: 'USUBJID', tooltip: ['ARM'] });
   const html = opt.tooltip.formatter({ value: [1, 5, 0, 'Rash', 'MILD', '', 'S01', '', ['A']] });
   for (const l of ['Reported Term', 'Start Day', 'End Day', 'Severity', 'Planned Arm']) {
     assert.match(html, new RegExp(l));
@@ -233,23 +231,23 @@ test('gantt tooltip: lane, interval, colour, series and fields by label', () => 
 
 test('a thinned category axis names its column by label', () => {
   const rows = Array.from({ length: 300 }, (_, i) => ({ ...ROWS[0], AETERM: 'T' + i }));
-  const { o } = agg({ chart_type: 'bar', group: 'AETERM', value: '.count', func: 'count' }, rows);
+  const { o } = agg({ type: 'bar', y: 'AETERM', func: 'count' }, rows);
   assert.match(o.labelNote, /Reported Term labelled/);
   noBareName(o.labelNote, 'thinned-axis note');
-  const box = agg({ chart_type: 'boxplot', group: 'AETERM', value: 'AVAL', func: 'mean',
-                    orientation: 'horizontal' }, rows);
+  const box = agg({ type: 'boxplot', y: 'AETERM', x: 'AVAL', orientation: 'horizontal' }, rows);
   assert.match(box.o.labelNote, /Reported Term labelled/);
 });
 
 test('a line chart past its series cap names the series column by label', () => {
   const rows = Array.from({ length: 1001 }, (_, i) => ({ ...ROWS[0], USUBJID: 'S' + i }));
-  const { m } = ind({ chart_type: 'line', x: 'ADY', y: 'AVAL', series: 'USUBJID' }, rows);
+  const { m } = ind({ type: 'line', x: 'ADY', y: 'AVAL', series: 'USUBJID' }, rows);
   assert.match(m.capMessage, /\(Subject\)/);
   noBareName(m.capMessage, 'series cap note');
 });
 
 test('a band\'s reference line names its column by label', () => {
-  const cfg = { band_refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8, n_distinct: 1 } } };
+  const cfg = C.model.settings({}, { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8,
+                                                          n_distinct: 1 } } } }, COLUMNS);
   const lines = C.option.indParts.bandRefLines(cfg, null, C.INK_DEFAULT, COLUMNS);
   assert.strictEqual(lines[0].label.formatter, 'Upper Limit 8');
 });

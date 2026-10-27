@@ -42,8 +42,8 @@
    * @param {Record<string, any>} v @param {VizColumn[]} meta */
   const roleKeys = (v, meta) => {
     const type = v.type || 'bar';
-    if (NS.config.FIXED.includes(type) || type === 'histogram') return { cat: 'x', val: 'y' };
-    const lie = v.orientation || NS.config.inferLie(v, meta);
+    if (NS.model.FIXED.includes(type) || type === 'histogram') return { cat: 'x', val: 'y' };
+    const lie = v.orientation || NS.model.inferLie(v, meta);
     return lie === 'horizontal' ? { cat: 'y', val: 'x' } : { cat: 'x', val: 'y' };
   };
 

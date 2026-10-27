@@ -53,10 +53,13 @@
     'Pick a numeric Value to plot its distribution</p></div>';
 
   /** @param {Record<string, any>} cfg @param {string[]} fields */
+  // A field `derived.x` keys on R's derived x.
   const pick = (cfg, fields) => {
     /** @type {Record<string, any>} */
     const out = {};
-    for (const f of fields) out[f] = cfg[f];
+    for (const f of fields) {
+      out[f] = f.startsWith('derived.') ? cfg.derived[f.slice(8)] : cfg[f];
+    }
     return JSON.stringify(out);
   };
 
@@ -181,7 +184,7 @@
     get _selected() { return NS.keys.selectionView(this._filter && this._filter.filters).selected; }
     get _selectedColumn() { return NS.keys.selectionView(this._filter && this._filter.filters).column; }
 
-    _family() { return NS.familyOf(this.config.chart_type); }
+    _family() { return NS.familyOf(this.config.type); }
 
     /** The ECharts theme R named; a theme R sent whole is registered once.
      * @param {any} theme */
@@ -211,8 +214,7 @@
         this.data = NS.rowsFromPayload(p.data);
         this._lastDataRev = p.data_rev;
       }
-      this.config = NS.config.settings(p.config, d, this.columns);
-      NS.model.defaults(this.config, this.columns);
+      this.config = NS.model.settings(p.config, d, this.columns);
       this._restoreSelection(p.config && p.config.selection);
       this._setTheme(d.theme);
       // The gear first: the sentence's words open what the gear offers. It

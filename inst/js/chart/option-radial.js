@@ -21,7 +21,7 @@
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    */
   const groupTotals = (m, panel, cfg) => {
-    const gScale = NS.scaleFor(cfg, cfg.group);
+    const gScale = NS.scaleFor(cfg, cfg.category);
     const palette = NS.paletteOf(cfg);
     return panel.groups.map((/** @type {string} */ g, /** @type {number} */ i) => {
       const cells = NS.model.cellsOf(m, panel, g);

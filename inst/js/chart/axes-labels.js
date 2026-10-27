@@ -378,28 +378,27 @@
   });
 
   /**
-   * `value_lines` on the value axis (x when the chart lies horizontal): a
+   * `y_lines` on the value axis (x when the chart lies horizontal): a
    * markLine on the first series, and axis bounds that take in the lines
    * and the data, rounded outward to a nice step. Mutates `series[0]` and
    * `valAxis`.
    * @param {any[]} series @param {any} valAxis @param {boolean} onX
    * @param {boolean} fraction the axis runs 0..1 while the reader types percent
-   * @param {any} valueLines @param {{ text: string, muted: string }} ink
-   * @param {any} [names] a label per line (`y_lines = c(Target = 2)`); "" or
-   *   none prints the value
+   * @param {any} lines `[{value, label}]`; a label names its line
+   *   (`y_lines = c(Target = 2)`), none prints the value
+   * @param {{ text: string, muted: string }} ink
    */
-  const addValueLines = (series, valAxis, onX, fraction, valueLines, ink, names) => {
-    const raw = Array.isArray(valueLines) ? valueLines : [];
-    const nm = Array.isArray(names) ? names : [];
-    const keep = raw.map((v, i) => i).filter((i) => Number.isFinite(Number(raw[i])));
-    const typed = keep.map((i) => Number(raw[i]));
+  const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
+    const keep = NS.labelled(lines).filter((x) => Number.isFinite(Number(x.value)));
+    const nm = keep.map((x) => x.label);
+    const typed = keep.map((x) => Number(x.value));
     const vals = typed.map((v) => (fraction ? v / 100 : v));
     if (!vals.length || !series.length) return;
     series[0].markLine = {
       silent: true, symbol: 'none',
       // onX: a horizontal chart, whose category axis is inverse.
       data: vals.map((v, i) => guideLine(v, onX, 1,
-        nm[keep[i]] ? String(nm[keep[i]])
+        nm[i] ? String(nm[i])
           : typed[i] === 0 ? null
             : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
     };
@@ -488,21 +487,20 @@
    * covers whole bars. Mutates `series[0]`, adding to the markLine the value
    * lines put there.
    * @param {any[]} series @param {boolean} onX the categories run along x
-   * @param {any[]} cats @param {any} lines @param {any} names @param {any} ranges
+   * @param {any[]} cats @param {any} lines `x_lines` @param {any} ranges `x_ranges`
    * @param {{ text: string, muted: string, fontSize?: number }} ink
    */
-  const addCategoryMarks = (series, onX, cats, lines, names, ranges, ink) => {
+  const addCategoryMarks = (series, onX, cats, lines, ranges, ink) => {
     if (!series.length) return;
     const key = onX ? 'xAxis' : 'yAxis';
-    const nm = Array.isArray(names) ? names : [];
     /** @type {any[]} */
     const data = [];
-    (Array.isArray(lines) ? lines : []).forEach((v, i) => {
+    NS.labelled(lines).forEach(({ value: v, label }) => {
       const c = catOf(v, cats);
       if (c == null) return;
       // Unnamed, a line on its own category needs no label (the axis prints
       // it); a date inside a bar's period prints the date.
-      const text = nm[i] ? String(nm[i]) : (c === String(v) ? null : String(v));
+      const text = label ? String(label) : (c === String(v) ? null : String(v));
       data.push(guideLine(c, onX, 1, text, false, ink));
     });
     if (data.length) {
@@ -512,8 +510,7 @@
     }
     /** @type {any[]} */
     const areas = [];
-    for (const r of (Array.isArray(ranges) ? ranges : [])) {
-      if (!r) continue;
+    for (const r of NS.rangesOf(ranges)) {
       const a = catOf(r.from, cats, true), b = catOf(r.to, cats, true);
       if (a == null || b == null) continue;
       // Both ends past the same edge: the range misses the axis.
