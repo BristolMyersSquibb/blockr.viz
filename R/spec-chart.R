@@ -128,7 +128,8 @@ chart_spec_mapping <- function() {
     ),
 
     highlight = viz_arg(
-      type = "map", default = NULL, null = "no highlight",
+      type = type_named(type_values(), max = 1L), default = NULL,
+      null = "no highlight",
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Add mapping", "column", "Highlight"),
       slot = FALSE, ctrl = TRUE, ai = TRUE,
@@ -233,7 +234,7 @@ chart_spec_look <- function() {
     ),
 
     x_ranges = viz_arg(
-      type = "map", default = NULL, null = "no ranges",
+      type = type_named(type_values()), default = NULL, null = "no ranges",
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Look", "text", "Shaded", parse = "ranges"),
       slot = FALSE, ctrl = TRUE, ai = TRUE,

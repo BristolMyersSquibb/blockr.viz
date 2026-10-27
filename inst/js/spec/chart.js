@@ -486,7 +486,16 @@
     },
     "x_ranges": {
       "type": {
-        "name": "map"
+        "name": "named",
+        "value": {
+          "type": {
+            "name": "values"
+          },
+          "nullable": false,
+          "required": true,
+          "slot": false,
+          "ctrl": true
+        }
       },
       "nullable": true,
       "applies": {
@@ -520,7 +529,17 @@
     },
     "highlight": {
       "type": {
-        "name": "map"
+        "name": "named",
+        "value": {
+          "type": {
+            "name": "values"
+          },
+          "nullable": false,
+          "required": true,
+          "slot": false,
+          "ctrl": true
+        },
+        "max": 1
       },
       "nullable": true,
       "applies": {

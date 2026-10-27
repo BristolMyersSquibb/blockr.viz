@@ -30,9 +30,9 @@ interface ChartConfig {
   ymin: string[] | null;
   ymax: string[] | null;
   linetype: string | null;
-  x_ranges: Record<string, unknown> | null;
+  x_ranges: Record<string, { value: number | string; label: string | null }[]> | null;
   legend: 'bottom' | 'top' | 'marks' | 'none';
-  highlight: Record<string, unknown> | null;
+  highlight: Record<string, { value: number | string; label: string | null }[]> | null;
   smoother: 'none' | 'lm' | 'loess';
   identity_line: boolean;
   box_points: 'none' | 'outliers';
