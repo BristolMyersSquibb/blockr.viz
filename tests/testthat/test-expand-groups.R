@@ -222,12 +222,7 @@ test_that("a click on a pooled group filters the input on its members", {
     blockr.core:::get_s3_method("block_server", blk),
     {
       expr_scope <- session$makeScope("expr")
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "filter",
-        filter_type = "categorical",
-        column = "Group",
-        values = list("All")
-      ))
+      chart_input_click(expr_scope, Group = "All")
       session$flushReact()
       result <- session$returned$result()
       expect_equal(sort(result$USUBJID), c("s03", "s04", "s05", "s06"))

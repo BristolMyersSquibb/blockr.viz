@@ -14,10 +14,11 @@ R: specs,R/chart-arguments.R,1200
 R: specs,R/block-arguments.R,1200
 R: specs,R/table-args.R,1200
 R: specs,R/state-normalize.R,1200
-R: specs,R/spec-base.R,1200
 R: chart,R/chart-block.R,1800
 R: chart,R/chart-roles.R,1800
 R: chart,R/chart-derived.R,1800
+R: chart,R/chart-server.R,1800
+R: chart,R/chart-view.R,1800
 R: chart,R/chart-normalize.R,1800
 R: chart,R/chart-filters.R,1800
 R: chart,R/chart-payload.R,1800
@@ -25,7 +26,6 @@ R: chart,R/chart-dep.R,1800
 R: chart,R/band-series.R,1800
 R: chart,R/describe-chart.R,1800
 R: chart,R/scale-map-resolve.R,1800
-R: chart,R/chart-normalize.R,1800
 R: table shell and shared model,R/table-block.R,1200
 R: table shell and shared model,R/table-model.R,1200
 R: table shell and shared model,R/table-normalize.R,1200
@@ -35,7 +35,6 @@ R: table shell and shared model,R/table-model-format.R,1200
 R: table shell and shared model,R/table-model-shading.R,1200
 R: table shell and shared model,R/column-kinds.R,1200
 R: table shell and shared model,R/col-meta.R,1200
-R: table shell and shared model,R/table-normalize.R,1200
 R: table shell and shared model,R/table-server.R,1200
 R: table shell and shared model,R/table-expr.R,1200
 R: records,R/table-records*.R,1400
@@ -54,6 +53,7 @@ R: variables,R/table-variables*.R,900
 R: variables,R/summary-stats.R,900
 R: variables,R/summary-table*.R,900
 R: shared plumbing,R/kit-server.R,3000
+R: shared plumbing,R/kit-output.R,3000
 R: shared plumbing,R/normalize.R,3000
 R: shared plumbing,R/titles.R,3000
 R: shared plumbing,R/selection.R,3000
@@ -81,8 +81,6 @@ R: shared plumbing,R/expand-groups.R,3000
 R: shared plumbing,R/report-call.R,3000
 R: shared plumbing,R/drilldown-ai-effect.R,3000
 R: shared plumbing,R/blockr.viz-package.R,3000
-R: shared plumbing,R/kit-output.R,3000
-R: shared plumbing,R/normalize.R,3000
 R: shared plumbing,R/kit-dep.R,3000
 R: shared plumbing,R/kit-titles.R,3000
 R: exports,R/exhibit.R,1500
@@ -107,7 +105,6 @@ R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400
 R: legacy,R/gt-table-block.R,400
 R: legacy,R/summarize-block.R,400
-R: legacy,R/legacy-restore.R,400
 JS: core,inst/js/core/*.js,1300
 JS: core,inst/js/busy-cue.js,1300
 JS: core,inst/js/capture-pages.js,1300

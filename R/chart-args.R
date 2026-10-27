@@ -20,18 +20,6 @@ CHART_ORIENTED_TYPES <- c("bar", "boxplot", "pointrange")
 CHART_AGGREGATED_TYPES <- c("bar", "waterfall", "pie", "treemap",
                             "boxplot", "pointrange")
 CHART_DISTRIBUTION_TYPES <- c("boxplot", "pointrange")
-CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
-                 "boxplot", "pointrange", "scatter", "line", "area", "band",
-                 "gantt")
-
-# Where the colour legend goes (`legend`): under the plot, above it, the
-# names on the marks, or none.
-CHART_LEGENDS <- c("bottom", "top", "marks", "none")
-
-# An axis scale (`y_scale`, `x_scale`), and the types each applies to.
-CHART_SCALES <- c("linear", "log")
-CHART_Y_SCALE_TYPES <- c("scatter", "line", "band")
-CHART_X_SCALE_TYPES <- "scatter"
 
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
@@ -41,18 +29,9 @@ CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 CHART_PCT_OF <- c(facet = "facet", category = "group", color = "color",
                   total = "total")
 
-chart_position_internal <- function(position) {
-  unname(CHART_POSITIONS[position %||% "stack"]) %|NA|% "stacked"
-}
-
 chart_position_public <- function(bar_mode) {
   names(CHART_POSITIONS)[match(bar_mode %||% "stacked", CHART_POSITIONS)] %|NA|%
     "stack"
-}
-
-chart_pct_of_internal <- function(pct_of) {
-  out <- unname(CHART_PCT_OF[pct_of %||% "facet"])
-  out[!is.na(out)] %||% "facet"
 }
 
 # Unknown values pass through, so the constructor can refuse them.
@@ -131,105 +110,6 @@ chart_roles_internal <- function(type, x, y, func, orientation,
        orientation = orient)
 }
 
-# The gear's config (internal names, every role as the browser holds it) ->
-# public `x`, `y`, `orientation`. `orientation` comes back only when the
-# inference would get it wrong, so a chart that reads the usual way saves
-# without one. `prev` is the public state before the edit: a type switch to
-# another family whose roles the gear left empty keeps the columns.
-chart_roles_public <- function(type, group, value, x, y, orientation, func,
-                               prev, is_num = function(col) NA) {
-  blank <- function(v) {
-    v <- as.character(unlist(v))
-    v <- v[!is.na(v) & nzchar(v)]
-    if (length(v)) v[[1L]] else NULL
-  }
-  group <- blank(group)
-  value <- blank(value)
-  if (identical(value, ".count")) value <- NULL
-  x <- blank(x)
-  y <- blank(y)
-
-  if (identical(type, "histogram")) {
-    return(list(x = x %||% prev$x, y = NULL, orientation = NULL))
-  }
-  if (!type %in% CHART_AGGREGATED_TYPES) {
-    if (is.null(x) && is.null(y)) {
-      x <- prev$x
-      y <- prev$y
-    }
-    return(list(x = x, y = y, orientation = prev$orientation))
-  }
-  if (is.null(group) && is.null(value)) {
-    return(list(x = prev$x, y = prev$y, orientation = prev$orientation))
-  }
-  if (!type %in% CHART_ORIENTED_TYPES) {
-    return(list(x = group, y = value, orientation = NULL))
-  }
-  orient <- blank(orientation) %||%
-    chart_infer_orientation(type, group, value, func, is_num)
-  if (identical(orient, "horizontal")) {
-    out <- list(x = value, y = group)
-  } else {
-    out <- list(x = group, y = value)
-  }
-  inferred <- chart_infer_orientation(type, out$x, out$y, func, is_num)
-  out["orientation"] <- list(if (identical(inferred, orient)) NULL else orient)
-  out
-}
-
-# y_scale / x_scale: "linear" or "log". NULL is linear.
-chart_scale_state <- function(x, arg = "y_scale") {
-  v <- as.character(unlist(x %||% "linear"))[1L] %|NA|% "linear"
-  if (!v %in% CHART_SCALES) {
-    stop("`", arg, "` must be \"linear\" or \"log\". Got \"", v, "\".",
-         call. = FALSE)
-  }
-  v
-}
-
-# The scale the gear sent, or the current one when the value is not a scale.
-chart_scale_msg <- function(x, current) {
-  v <- as.character(unlist(x))[1L]
-  if (length(v) && !is.na(v) && v %in% CHART_SCALES) v else current
-}
-
-# Whether a chart draws a log axis: the scale says so and the type takes it.
-chart_log_axes <- function(type, y_scale, x_scale) {
-  list(
-    y = identical(y_scale, "log") && isTRUE(type %in% CHART_Y_SCALE_TYPES),
-    x = identical(x_scale, "log") && isTRUE(type %in% CHART_X_SCALE_TYPES)
-  )
-}
-
-# x_ranges: a named list of c(from, to), as the caller writes it, or the
-# list of {name, from, to} the browser sends back. NULL when empty. Dates
-# travel as ISO strings, numbers as numbers.
-chart_ranges_state <- function(x_ranges) {
-  if (is.data.frame(x_ranges)) {
-    x_ranges <- lapply(seq_len(nrow(x_ranges)), function(i) as.list(x_ranges[i, ]))
-  }
-  if (!is.list(x_ranges) || !length(x_ranges)) {
-    return(NULL)
-  }
-  nms <- names(x_ranges) %||% rep("", length(x_ranges))
-  out <- list()
-  for (i in seq_along(x_ranges)) {
-    r <- x_ranges[[i]]
-    if (is.list(r) && !is.null(r$from)) {
-      v <- list(r$from, r$to)
-      nm <- as.character(r$name %||% "")
-    } else {
-      if (length(r) != 2L) next
-      v <- if (inherits(r, c("Date", "POSIXt"))) as.list(format(r)) else as.list(r)
-      nm <- nms[[i]]
-    }
-    if (length(v) != 2L || any(vapply(v, is.null, logical(1L)))) next
-    key <- if (nzchar(nm)) nm else paste0("range", i)
-    out[[key]] <- unlist(v)
-  }
-  if (length(out)) out else NULL
-}
-
 # highlight: one column and the values of it that stand out, as
 # `list(country = "Switzerland")`. A named character vector is the same
 # thing. NULL when there is no column or no value. Saved boards and MCP
@@ -262,29 +142,6 @@ chart_highlight_state <- function(highlight) {
   stats::setNames(list(vals), nms[[1L]])
 }
 
-# The highlight from the gear: the column and the values, either of which may
-# be "" or empty (cleared). A column without values is no highlight yet.
-chart_highlight_msg <- function(by, values) {
-  by <- chr_state(by)
-  vals <- chr_vec_state(values)
-  vals <- vals[nzchar(vals)]
-  if (is.null(by) || !length(vals)) {
-    return(NULL)
-  }
-  stats::setNames(list(vals), by)
-}
-
-# What the browser reads: the column and the values, or NULLs. State set
-# from outside (MCP, restore) is normalised here too; a shape that does not
-# read as a highlight draws none.
-chart_highlight_json <- function(highlight) {
-  hl <- tryCatch(chart_highlight_state(highlight), error = function(e) NULL)
-  if (is.null(hl)) {
-    return(list(by = NULL, values = NULL))
-  }
-  list(by = names(hl)[[1L]], values = as.list(hl[[1L]]))
-}
-
 # How a title's `{highlight}` prints the values: "Switzerland",
 # "Switzerland and Germany", "Switzerland, Germany and Japan". "" for none.
 chart_highlight_text <- function(highlight) {
@@ -299,17 +156,6 @@ chart_highlight_text <- function(highlight) {
   paste(paste(utils::head(v, -1L), collapse = ", "), "and", utils::tail(v, 1L))
 }
 
-# What the browser reads: [{name, from, to}].
-chart_ranges_json <- function(x_ranges) {
-  if (!length(x_ranges)) {
-    return(NULL)
-  }
-  unname(Map(function(nm, v) {
-    list(name = if (grepl("^range[0-9]+$", nm)) "" else nm,
-         from = v[[1L]], to = v[[2L]])
-  }, names(x_ranges), x_ranges))
-}
-
 # selection (public) <-> filter_type / filters / filter_range / filter_point
 # (internal). NULL when nothing is selected, so a chart without a click saves
 # no selection.
@@ -321,18 +167,6 @@ chart_selection <- function(type = "categorical", filters = NULL,
     return(NULL)
   }
   list(type = type, filters = filters, range = range, point = point)
-}
-
-chart_selection_state <- function(selection) {
-  if (!is.list(selection) || !length(selection)) {
-    return(NULL)
-  }
-  chart_selection(
-    type = as.character(unlist(selection$type))[1L] %|NA|% "categorical",
-    filters = chart_filters_state(selection$filters),
-    range = null_state(selection$range),
-    point = null_state(selection$point)
-  )
 }
 
 # Old argument names, as boards saved before 0.3.0 carry them and as code
@@ -463,54 +297,4 @@ chart_legacy_args <- function(args) {
 
   take("func_toggle")
   args
-}
-
-# Something that reads and writes like a reactiveVal (`f()`, `f(v)`) but is
-# backed by other state. The server's internal names are these, over the
-# public reactiveVals, so the code that reads and writes them is unchanged.
-chart_facade <- function(get, set) {
-  force(get)
-  force(set)
-  function(value) {
-    if (base::missing(value)) get() else invisible(set(value))
-  }
-}
-
-# `{@arg}` slots in a title template name the PUBLIC arguments
-# (`{@type}`, `{label(@y)}`); the resolver and the gear know the internal
-# ones. Rewrite the names just before resolving; the stored template keeps
-# what the author wrote. A saved template that already names an internal
-# argument ("{@group}") resolves as it did.
-CHART_SLOT_INTERNAL <- c(type = "chart_type", position = "bar_mode",
-                         tooltip = "tt_fields", y_lines = "value_lines",
-                         show_n = "count_on", missing = "na_group",
-                         line_width = "line_width_mult",
-                         point_size = "dot_size_mult")
-
-# The internal name behind each public slot name, for the current roles: on
-# an aggregated chart `x` and `y` are `group` and `value`, one way or the
-# other.
-chart_slot_alias <- function(type, roles) {
-  out <- CHART_SLOT_INTERNAL
-  if (type %in% CHART_AGGREGATED_TYPES) {
-    if (identical(roles$orientation, "horizontal")) {
-      out <- c(out, x = "value", y = "group")
-    } else {
-      out <- c(out, x = "group", y = "value")
-    }
-  }
-  out
-}
-
-chart_template_internal <- function(template, alias) {
-  if (!is.character(template) || !length(template) || is.na(template[[1L]]) ||
-        !grepl("@", template[[1L]], fixed = TRUE)) {
-    return(template)
-  }
-  out <- template[[1L]]
-  for (nm in names(alias)) {
-    out <- gsub(paste0("@(\\s*)", nm, "\\b(?!\\.)"),
-                paste0("@\\1", alias[[nm]]), out, perl = TRUE)
-  }
-  out
 }
