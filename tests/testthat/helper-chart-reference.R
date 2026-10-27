@@ -55,12 +55,13 @@ record_to_new <- function(x) {
 record_target <- function() {
   list(
     name = "reference",
-    ctor = function(args) {
+    ctor = function(args, sc = NULL) {
       eval(as.call(c(list(quote(new_chart_block)), record_to_old(args))))
     },
     state = record_to_new,
     inputs = record_ref_inputs,
-    payload = record_ref_payload,
+    payload = function(msgs, expr, cx) record_ref_payload(msgs),
+    capture = function(x) list(drilldown_block_capture = x),
     wire = TRUE
   )
 }
