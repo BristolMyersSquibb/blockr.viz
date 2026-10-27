@@ -45,6 +45,11 @@ viz_spec <- function(block, ...) {
   }
   for (nm in nms) {
     spec_arg_refs_ok(args[[nm]], nm, nms)
+    # A literal default must pass its own type; an option default is read
+    # and checked when the block is built.
+    if (!inherits(args[[nm]]$default, "viz_opt")) {
+      viz_check_value(args[[nm]], args[[nm]]$default, nm)
+    }
   }
   structure(list(block = block, args = args), class = "viz_spec")
 }
