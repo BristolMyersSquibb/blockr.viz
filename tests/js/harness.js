@@ -2,18 +2,16 @@
  * R does.
  *
  * The files run unmodified, in the order the page loads them: blockr.ui's
- * controls (controls_dep()), then drilldown-agg.js, drilldown-config.js,
- * capture-pages.js and busy-cue.js (drilldown_shared_dep()), then
- * drilldown-theme-register.js and the chart scripts in inst/js/chart/,
- * in the order scripts.txt lists them (drilldown_chart_dep()). A chart is
- * created through the input binding's `initialize`, and its data arrives
- * through the `drilldown-data` message handler, exactly as from
- * build_chart_msg().
+ * controls (controls_dep()), the core (inst/js/core/scripts.txt), the
+ * generated chart spec, then the chart scripts in inst/js/chart/, in the
+ * order scripts.txt lists them. A chart is built by the shared output
+ * binding on its element's first payload, exactly as Shiny hands R's
+ * viz_payload() to `renderValue`.
  *
  * What is stubbed:
- *   - Shiny: the binding, the custom message handlers and setInputValue are
- *     captured. `$` is a do-nothing jQuery (the binding's `find` is the only
- *     user, and the tests call `initialize` themselves).
+ *   - Shiny: the output binding, the custom message handlers and
+ *     setInputValue are captured. `$` is a small jQuery stand-in (the
+ *     binding's `find`, and `on` / `off` for "shiny:unbound").
  *   - echarts: a fake that records every setOption / dispatchAction / resize
  *     per instance and keeps a merged option for getOption(). See fakeEcharts.
  *   - Layout: happy-dom has none, so clientWidth / clientHeight come from the
@@ -39,8 +37,12 @@ const JS_DIR = path.join(__dirname, '..', '..', 'inst', 'js');
 // package, the copy R serves; BLOCKR_UI_JS points at a source tree instead
 // (CI checks blockr.ui out next to this repo).
 const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
-const SHARED_FILES = ['drilldown-agg.js', 'drilldown-config.js', 'capture-pages.js', 'busy-cue.js',
-                      'drilldown-theme-register.js'];
+/** The core scripts, then the generated spec. */
+const CORE_FILES = fs.readFileSync(path.join(JS_DIR, 'core', 'scripts.txt'), 'utf8')
+  .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  .map((f) => 'core/' + f);
+// busy-cue.js is blockr.viz's busy cue until the core has one.
+const SHARED_FILES = ['busy-cue.js', ...CORE_FILES, 'spec/chart.js'];
 
 /** The chart scripts in load order, as the html dependency lists them. */
 const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')
@@ -438,14 +440,18 @@ const PRELUDE = `
   window.__inputs = [];
   window.__binding = null;
   window.Shiny = {
+    OutputBinding: function () {},
+    outputBindings: { register: function (b) { window.__binding = b; } },
+    // The old table scripts still register input bindings.
     InputBinding: function () {},
     inputBindings: { register: function (b) { window.__binding = b; } },
     addCustomMessageHandler: function (n, f) { window.__handlers[n] = f; },
     setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); }
   };
-  window.$ = window.jQuery = function () {
-    var q = { find: function () { return []; }, on: function () { return q; },
-              off: function () { return q; } };
+  window.$ = window.jQuery = function (x) {
+    var q = { find: function () { return []; },
+              on: function (t, f) { (x.__jq = x.__jq || {})[t] = f; return q; },
+              off: function (t) { if (x.__jq) delete x.__jq[t]; return q; } };
     return q;
   };
 
@@ -541,7 +547,7 @@ function createEnv(opts = {}) {
   for (const f of VIZ_FILES) run(win, f);
 
   const binding = win.__binding;
-  if (!binding) throw new Error('the chart scripts registered no input binding');
+  if (!binding) throw new Error('the chart scripts registered no output binding');
 
   return {
     win,
@@ -567,57 +573,59 @@ function createEnv(opts = {}) {
 let mountSeq = 0;
 
 /**
- * Mount a chart container the way the block's UI renders it (the mapping
- * band beside it, both inside one block root) and bind it.
- * @returns {{ el: any, block: any, id: string }}
+ * Mount a chart output the way viz_output() renders it. The view is built
+ * on the first payload; `block` reads it.
+ * @returns {{ el: any, id: string, readonly block: any }}
  */
 function mount(env, id) {
   const doc = env.win.document;
-  const cid = id || `block_${++mountSeq}-drilldown_block`;
+  const cid = id || `block_${++mountSeq}-chart`;
   const root = doc.createElement('div');
   root.className = 'block-root';
-  root.innerHTML =
-    `<div id="${cid.replace(/drilldown_block$/, 'mapping_band')}" class="dd-mapping-band" style="display:none"></div>` +
-    `<div id="${cid}" class="drilldown-chart-container"></div>`;
+  root.innerHTML = `<div id="${cid}" class="blockr-viz-output" data-viz-view="chart"></div>`;
   doc.body.appendChild(root);
   const el = doc.getElementById(cid);
-  env.binding.initialize(el);
-  return { el, block: el._block, id: cid };
+  return { el, id: cid, get block() { return el._viz ? el._viz.view : null; } };
 }
 
+let revSeq = 0;
+
 /**
- * The `drilldown-data` message R's build_chart_msg() sends, parsed into the
- * page's realm the way Shiny delivers it (a data string stays a string).
+ * The payload R's viz_payload() sends, parsed into the page's realm the way
+ * Shiny delivers it.
+ * @param {{ columns?: any[], data?: any, config: object, derived?: object,
+ *           dataRev?: any, stateRev?: number }} p
  */
-function message(env, id, { columns, data, config, dataRev }) {
+function message(env, id, { columns, data, config, derived, dataRev, stateRev }) {
   const msg = env.win.JSON.parse(JSON.stringify({
-    id, columns, config, arguments: null, data_rev: dataRev == null ? null : dataRev,
-    data: typeof data === 'string' ? null : data
+    state_rev: stateRev == null ? ++revSeq : stateRev,
+    data_rev: dataRev == null ? 1 : dataRev,
+    columns: columns || [], config,
+    derived: Object.assign({ column_meta: columns || [] }, derived || {}),
+    data: typeof data === 'string' ? null : (data == null ? null : data)
   }));
   if (typeof data === 'string') msg.data = data;
   return msg;
 }
 
-/** Deliver a `drilldown-data` message to the registered handler. */
+/** Hand a payload to the output binding, as Shiny does. */
 function send(env, id, payload) {
-  const handler = env.handlers['drilldown-data'];
-  if (!handler) throw new Error('no drilldown-data handler');
-  handler(message(env, id, payload));
+  const el = env.win.document.getElementById(id);
+  env.binding.renderValue(el, message(env, id, payload));
 }
 
 /**
- * Milliseconds one setData takes on a fresh chart: mount, build the message,
- * then time only the handler call (which is setData). The chart is disposed
- * and removed afterwards.
+ * Milliseconds one render takes on a fresh chart: mount, build the payload,
+ * then time only the binding call. The chart is disposed and removed
+ * afterwards.
  */
 function timeDraw(env, payload) {
-  const { el, block, id } = mount(env);
+  const { el, id } = mount(env);
   const msg = message(env, id, payload);
-  const handler = env.handlers['drilldown-data'];
   const t0 = performance.now();
-  handler(msg);
+  env.binding.renderValue(el, msg);
   const ms = performance.now() - t0;
-  block.dispose();
+  el._viz.scope.dispose();
   el.parentElement.remove();
   return ms;
 }
@@ -643,7 +651,10 @@ function domSummary(block) {
     subtitle: text(block.subtitleEl),
     caption: text(block.captionEl),
     legend,
-    status: block.statusEl ? block.statusEl.textContent : null,
+    // The footer's words; its clear button is not text.
+    status: block.statusEl ? Array.from(block.statusEl.childNodes)
+      .filter((n) => !(n.classList && n.classList.contains('dd-status-clear')))
+      .map((n) => n.textContent).join('') : null,
     empty,
     grid: {
       single: block.chartGrid.classList.contains('dd-chart-grid-single'),
@@ -676,21 +687,21 @@ function slotLogs(block) {
 function draw(config, data, columns, opts = {}) {
   const env = createEnv({ width: opts.width, height: opts.height, record: 'full' });
   try {
-    const { el, block, id } = mount(env, opts.id || 'block-drilldown_block');
-    if (opts.theme) env.handlers['drilldown-theme']({ id, theme: opts.theme });
+    const m = mount(env, opts.id || 'block-chart');
     let error = null;
     try {
-      send(env, id, { columns, data, config, dataRev: opts.dataRev });
+      send(env, m.id, { columns, data, config, derived: opts.derived, dataRev: opts.dataRev });
     } catch (e) {
       error = String(e && e.stack ? e.stack.split('\n')[0] : e);
     }
+    const block = m.block;
     const result = {
       error,
-      options: slotLogs(block),
-      dom: domSummary(block),
-      inputs: env.inputs().map((i) => (/_ready$/.test(i.name) ? { ...i, value: '[time]' } : i)),
+      options: block ? slotLogs(block) : [],
+      dom: block ? domSummary(block) : null,
+      inputs: env.inputs(),
       disposed: env.fake.instances.filter((i) => i.isDisposed()).length,
-      env, el, block, id
+      env, el: m.el, block, id: m.id
     };
     if (!opts.keepOpen) env.close();
     return result;
@@ -700,7 +711,22 @@ function draw(config, data, columns, opts = {}) {
   }
 }
 
+/** draw() for settings in the builders' words (chart/internal-config.js). */
+function drawInternal(settings, data, columns, opts = {}) {
+  const { toPayload } = require('./chart/internal-config');
+  const p = toPayload(settings);
+  return draw(p.config, data, columns,
+              { ...opts, derived: { ...p.derived, ...(opts.derived || {}) } });
+}
+
+/** send() for settings in the builders' words. */
+function sendInternal(env, id, { settings, ...rest }) {
+  const { toPayload } = require('./chart/internal-config');
+  const p = toPayload(settings);
+  send(env, id, { ...rest, config: p.config, derived: { ...p.derived, ...(rest.derived || {}) } });
+}
+
 module.exports = {
-  createEnv, mount, message, send, timeDraw, draw, normalize, domSummary, slotLogs,
+  createEnv, mount, message, send, timeDraw, draw, drawInternal, sendInternal, normalize, domSummary, slotLogs,
   source, run, JS_DIR, CHART_FILES, PRELUDE, UI_FILES, SHARED_FILES, iconsScript
 };

@@ -25,7 +25,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   /** @typedef {Record<string, any[]>} Filters */
 
@@ -110,38 +111,21 @@
     };
   };
 
-  /** The filter message for a click. @param {Filters} filters @param {number} nonce */
-  const filterMessage = (filters, nonce) => ({
-    action: 'filter', filter_type: 'categorical', filters, nonce
-  });
-
   /**
-   * The message for a range: its x and y fields, plus the facet key in `filters`
-   * when the range was taken in a facet panel (D10).
+   * A range as the selection R reads: its x and y fields, plus the facet key
+   * in `filters` when the range was taken in a facet panel (D10).
    * @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range
    * @param {Filters | null} [filters]
    */
-  const rangeMessage = (range, filters) => {
+  const rangeSelection = (range, filters) => {
     /** @type {Record<string, any>} */
-    const msg = {
-      action: 'filter', filter_type: 'range',
-      x_col: range.x_col, y_col: range.y_range ? range.y_col : null,
+    const sel = {
+      type: 'range', x: range.x_col, y: range.y_range ? range.y_col : null,
       x_range: range.x_range, y_range: range.y_range
     };
-    if (filters && Object.keys(filters).length) msg.filters = filters;
-    return msg;
+    if (filters && Object.keys(filters).length) sel.filters = filters;
+    return sel;
   };
-
-  /**
-   * The message that clears a filter. It names the type of the filter it
-   * clears (B1); every other field is null.
-   * @param {'categorical' | 'range' | 'point'} type
-   */
-  const clearMessage = (type) => ({
-    action: 'filter', filter_type: type,
-    column: null, values: null,
-    x_col: null, y_col: null, x_range: null, y_range: null
-  });
 
   // Above this many values a column is named with its count, not its values.
   const MAX_LISTED = 3;
@@ -305,7 +289,7 @@
     return { column: cols, selected: filters };
   };
 
-  NS.keys = { isMissing, fromKeys, fromRows, clean, restored, restoredRange, filterMessage,
-              rangeMessage, clearMessage, describe, describeRange, rangeWords, rowMatches,
+  NS.keys = { isMissing, fromKeys, fromRows, clean, restored, restoredRange,
+              rangeSelection, describe, describeRange, rangeWords, rowMatches,
               pointInRange, markLit, selectionView, MAX_LISTED, MISSING_WORD };
 })();

@@ -62,16 +62,10 @@ test('pct_of "total": one denominator for every panel', () => {
   for (let i = 0; i < 10; i++) {
     rows.push({ F: i < 4 ? 'X' : 'Y', ID: 's' + i, E: (i < 2 || (i >= 4 && i < 7)) ? 'yes' : '' });
   }
-  const agg = (pct_of) => C.roles.DAgg.aggregate(rows, {
+  const agg = (pct_of) => C.agg.aggregate(rows, {
     group: 'E', facet: 'F', value: 'ID', func: 'pct_distinct', na_group: 'drop', pct_of });
   const byFacet = (cells) => Object.fromEntries(cells.map((a) => [a.facet, a.value]));
   assert.deepStrictEqual(byFacet(agg('facet')), { X: 0.5, Y: 0.5 });
   assert.deepStrictEqual(byFacet(agg('total')), { X: 0.2, Y: 0.3 });
 });
 
-test('the gear offers decimals and the whole chart', () => {
-  const R = C.roles.ROLES;
-  assert.strictEqual(R.format.options.map((o) => o.value).join(' '),
-                     'number 0 1 2 compact percent');
-  assert.ok(R.pct_of.options.some((o) => o.value === 'total'));
-});

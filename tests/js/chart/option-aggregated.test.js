@@ -111,14 +111,6 @@ test('pie and treemap: a slice per group with a value, the board scale colours i
   assert.deepStrictEqual(plain(tm.series[0].data.map((d) => d.name)), ['Rash', 'Fever']);
 });
 
-test('radar: a shape per colour level on spokes sharing one max', () => {
-  const { opt } = build({ chart_type: 'radar', color: 'SEV', facet: 'ARM' });
-  assert.deepStrictEqual(plain(opt.radar.indicator.map((i) => [i.name, i.max])),
-                         [['Rash', 1], ['Nausea', 1], ['Fever', 1]]);
-  assert.deepStrictEqual(plain(opt.series[0].data.map((d) => [d.name, d.value])),
-                         [['MILD', [1, 0, 1]], ['SEVERE', [1, 0, 0]]]);
-});
-
 test('boxplot: five numbers per slot, a NaN box for an empty one, outliers beside', () => {
   const rows = [1, 2, 3, 4, 100].map((V) => ({ T: 'a', V })).concat([{ T: 'b', V: null }]);
   const { opt } = build({ chart_type: 'boxplot', value: 'V', func: 'mean', sort_by: 'data',
@@ -204,7 +196,7 @@ test('the option reads only the config fields the model and the option list', ()
     { func: 'pct_distinct', value: 'ID', pct_of: ['color'], color: 'SEV' },
     { chart_type: 'waterfall', value: 'V', func: 'sum', waterfall_totals: ['Fever'],
       value_labels: 'on', count_on: 'axis' },
-    { chart_type: 'pie' }, { chart_type: 'treemap' }, { chart_type: 'radar', color: 'SEV' },
+    { chart_type: 'pie' }, { chart_type: 'treemap' },
     { chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV', box_points: 'outliers',
       count_on: 'axis', count_col: 'ID' },
     { chart_type: 'pointrange', value: 'V', func: 'mean', connect_centers: 'on',
@@ -285,15 +277,4 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
   const h = run({ ...cfg, orientation: 'horizontal' });
   assert.strictEqual(h.series[0].markLine.data[1].yAxis, '2026-10-19');
   assert.strictEqual(h.series[0].markArea.data[0][1].yAxis, '2026-10-05');
-});
-
-test('the gear writes lines as text with their names, and reads them back', () => {
-  assert.strictEqual(C.linesText([3, '2026-10-21'], ['', 'Listed']), '3; Listed: 2026-10-21');
-  assert.strictEqual(C.linesText([2, 5], []), '2, 5');
-  assert.strictEqual(C.linesText('2, 5'), '2, 5');
-  assert.deepStrictEqual(plain(C.parseLines('Listed: 2026-10-21; 3, W43 19 Oct; 2 5')),
-    { values: ['2026-10-21', 3, 'W43 19 Oct', 2, 5], names: ['Listed', '', '', '', ''] });
-  // A time of day is no name.
-  assert.deepStrictEqual(plain(C.parseLines('2026-10-21 10:30')),
-    { values: ['2026-10-21 10:30'], names: [''] });
 });

@@ -20,7 +20,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
@@ -58,6 +59,96 @@
    *             nFacets: number, single: boolean, ix: any,
    *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
    */
+
+  /**
+   * The x and y axes (type, categories, how a value is placed) and whether
+   * each is logarithmic, set on the model.
+   * @param {any[]} rows @param {VizColumn[]} columns @param {any} cfg @param {IndividualModel} out
+   */
+  const setAxes = (rows, columns, cfg, out) => {
+    const { x, y } = cfg;
+    // A Date x is a time axis (a line over dates, a scatter against time);
+    // a Date y stays a category.
+    const xType = NS.axes.axisTypeFor(columns, rows, x, { temporal: true });
+    const yType = NS.axes.axisTypeFor(columns, rows, y);
+    const xCats = xType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
+    const yCats = yType === 'category' ? NS.axes.orderedCategories(columns, rows, y) : null;
+    // A categorical x's axis positions: a line is drawn in axis order, or it
+    // zig-zags between visits.
+    const xOrder = xCats
+      ? new Map(xCats.map((/** @type {any} */ c, /** @type {number} */ i) => [String(c), i]))
+      : null;
+    // A date arrives as an ISO string; a time axis positions it in ms.
+    const encodeX = (/** @type {any} */ v) => xType === 'category' ? String(v ?? '')
+      : (xType === 'time' ? NS.axes.timeValue(v) : Number(v));
+    out.x = { col: x, type: xType, cats: xCats, order: xOrder, encode: encodeX,
+              period: xType === 'time' ? NS.axes.timePeriod(rows, x) : null };
+    out.y = { col: y, type: yType, cats: yCats };
+    // A log axis on a number. A row at or below zero on it is not drawn
+    // and counted for the footer.
+    const logs = NS.logAxes(cfg);
+    out.logX = logs.x && xType === 'value';
+    out.logY = logs.y && yType === 'value';
+  };
+
+  /**
+   * The facet panels: per panel its rows and, for scatter and line, one
+   * series per level.
+   * @param {any[]} rows @param {any} ix @param {any} cfg @param {IndividualModel} out
+   * @param {string[]} facets
+   */
+  const buildPanels = (rows, ix, cfg, out, facets) => {
+    const { isLine, isBand, splitCol, facet, levels } = out;
+    const { col: x, type: xType, order: xOrder, encode: encodeX } = out.x;
+    const y = out.y.col, yType = out.y.type;
+    const encodeY = (/** @type {any} */ v) => yType === 'category' ? String(v ?? '') : Number(v);
+    /** @param {any} r */
+    const packPt = (r) => [encodeX(r[x]), encodeY(r[y]), ...out.ttFields.map((c) => r[c] ?? '')];
+    const drawn = (/** @type {any} */ r) => {
+      if (r[x] == null || r[y] == null) return false;
+      if ((out.logX && !(Number(r[x]) > 0)) || (out.logY && !(Number(r[y]) > 0))) {
+        out.logDropped++;
+        return false;
+      }
+      return true;
+    };
+    /** @param {string | undefined} level @param {any[]} rs @param {string} clr @returns {IndSeries} */
+    const mkSeries = (level, rs, clr) => {
+      let pts = rs.map(packPt);
+      let srows = rs;
+      if (isLine) {
+        const order = lineOrder(pts, xType, xOrder);
+        if (order) {
+          pts = order.map((i) => pts[i]);
+          srows = order.map((i) => rs[i]);
+        }
+      }
+      // `src`: the rows in data order, which the error bars keep.
+      return { level, color: clr, rows: srows, pts, src: rs };
+    };
+    const labels = model.facetLabels(rows, cfg, facets);
+    for (const fv of facets) {
+      // A facet's rows by the raw value, so the panel of a missing facet
+      // value holds none.
+      const prow = fv === '__all__' ? rows : ix.get(rows, /** @type {string} */ (facet), 'raw', fv);
+      /** @type {IndSeries[]} */
+      const series = [];
+      if (!isBand) {
+        if (!levels.length) {
+          series.push(mkSeries(undefined, prow.filter(drawn), out.palette[0]));
+        } else {
+          // Keyed like the levels: a null split value is the '' series.
+          levels.forEach((lv, ci) => series.push(
+            mkSeries(lv, ix.get(prow, splitCol, 'nz', lv).filter(drawn), out.levelColors[ci])));
+        }
+      }
+      out.panels.push({
+        facet: fv,
+        label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
+        rows: prow, series
+      });
+    }
+  };
 
   /**
    * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
@@ -121,90 +212,11 @@
     // One line per entity (a subject, a store): hover picks the nearest line
     // instead of listing every line at the crosshair.
     out.crowd = isLine && !!seriesCol && out.seriesCount > 1;
-
     const colours = seriesColours(rows, ix, out, cfg);
     out.levelColors = levels.map((lv, i) => colours.of(lv, i));
     legendOf(rows, ix, out, colours.lookup);
-
-    // A Date x is a time axis (a line over dates, a scatter against time);
-    // a Date y stays a category.
-    const xType = NS.axes.axisTypeFor(columns, rows, x, { temporal: true });
-    const yType = NS.axes.axisTypeFor(columns, rows, y);
-    const xCats = xType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
-    const yCats = yType === 'category' ? NS.axes.orderedCategories(columns, rows, y) : null;
-    // A categorical x's axis positions: a line is drawn in axis order, or it
-    // zig-zags between visits.
-    const xOrder = xCats
-      ? new Map(xCats.map((/** @type {any} */ c, /** @type {number} */ i) => [String(c), i]))
-      : null;
-    // A date arrives as an ISO string; a time axis positions it in ms.
-    const encodeX = (/** @type {any} */ v) => xType === 'category' ? String(v ?? '')
-      : (xType === 'time' ? NS.axes.timeValue(v) : Number(v));
-    out.x = { col: x, type: xType, cats: xCats, order: xOrder, encode: encodeX,
-              period: xType === 'time' ? NS.axes.timePeriod(rows, x) : null };
-    out.y = { col: y, type: yType, cats: yCats };
-
-    // A log axis on a number. A row at or below zero on it is not drawn
-    // and counted for the footer.
-    const logs = NS.logAxes(cfg);
-    out.logX = logs.x && xType === 'value';
-    out.logY = logs.y && yType === 'value';
-    const encodeY = (/** @type {any} */ v) => yType === 'category' ? String(v ?? '') : Number(v);
-    const tt = out.ttFields;
-    /** @param {any} r */
-    const packPt = (r) => {
-      const p = [encodeX(r[x]), encodeY(r[y])];
-      for (const c of tt) p.push(r[c] ?? '');
-      return p;
-    };
-    const drawn = (/** @type {any} */ r) => {
-      if (r[x] == null || r[y] == null) return false;
-      if ((out.logX && !(Number(r[x]) > 0)) || (out.logY && !(Number(r[y]) > 0))) {
-        out.logDropped++;
-        return false;
-      }
-      return true;
-    };
-
-    /** @param {string | undefined} level @param {any[]} rs @param {string} clr @returns {IndSeries} */
-    const mkSeries = (level, rs, clr) => {
-      let pts = rs.map(packPt);
-      let srows = rs;
-      if (isLine) {
-        const order = lineOrder(pts, xType, xOrder);
-        if (order) {
-          pts = order.map((i) => pts[i]);
-          srows = order.map((i) => rs[i]);
-        }
-      }
-      // `src`: the rows in data order, which the error bars keep.
-      return { level, color: clr, rows: srows, pts, src: rs };
-    };
-
-    const labels = model.facetLabels(rows, cfg, facets);
-    for (const fv of facets) {
-      // A facet's rows by the raw value, so the panel of a missing facet
-      // value holds none.
-      const prow = fv === '__all__' ? rows : ix.get(rows, /** @type {string} */ (facet), 'raw', fv);
-      /** @type {IndSeries[]} */
-      const series = [];
-      if (!isBand) {
-        if (!levels.length) {
-          series.push(mkSeries(undefined, prow.filter(drawn), out.palette[0]));
-        } else {
-          levels.forEach((lv, ci) => {
-            // Keyed like the levels: a null split value is the '' series.
-            series.push(mkSeries(lv, ix.get(prow, splitCol, 'nz', lv).filter(drawn),
-                                 out.levelColors[ci]));
-          });
-        }
-      }
-      out.panels.push({
-        facet: fv,
-        label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
-        rows: prow, series
-      });
-    }
+    setAxes(rows, columns, cfg, out);
+    buildPanels(rows, ix, cfg, out, facets);
     highlightSeries(out, rows, ix, cfg);
     return out;
   };

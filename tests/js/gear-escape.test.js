@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Window } = require('happy-dom');
 const h = require('./harness.js');
-const I = require('./interact');
+const D = require('./chart/drive');
 const fixtures = require('./fixtures/summarize-table.json');
 
 const SHARED = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
@@ -56,11 +56,11 @@ const onGear = (band, gear) => gear;
 const inBand = (band) => band;
 
 test('Escape closes the chart gear tray', async () => {
-  const c = I.open({ chart_type: 'bar', group: 'AETERM' });
+  const c = D.open({ type: 'bar', y: 'AETERM', orientation: 'horizontal' });
   try {
     check(c.env.win, c.block.popoverEl, c.block.gearBtn, onGear);
     check(c.env.win, c.block.popoverEl, c.block.gearBtn, inBand);
-    assert.equal(c.block._popoverOpen, false);
+    assert.equal(c.block._tray.isOpen(), false);
   } finally {
     await c.env.close();
   }

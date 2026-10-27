@@ -19,7 +19,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -58,189 +59,37 @@
     }
   });
 
-  /**
-   * A domain rounded outward to a nice step: an explicit min/max turns
-   * off ECharts' own rounding.
-   * @param {number} lo @param {number} hi
-   */
-  const niceDomain = (lo, hi) => {
-    const span = hi - lo;
-    const mag = Math.pow(10, Math.floor(Math.log10(span)));
-    const rel = span / mag;
-    const step = rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
-    return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
-  };
+  const { identityDomain, pos, logDomains, clampBand } = parts.log;
 
   /**
-   * The identity line (y = x) over one domain shared by both axes, so the
-   * diagonal runs corner to corner. Null without two numeric ranges.
-   * @param {any[]} series
+   * What every part of a panel's option reads: the config, the colours, the
+   * panel's log domains and the measured x labels.
+   * @param {any} m @param {any} look @param {number} width
    */
-  const identityDomain = (series) => {
-    let xLo = Infinity, xHi = -Infinity, yLo = Infinity, yHi = -Infinity;
-    for (const s of series) {
-      if (s.type !== 'scatter' || !Array.isArray(s.data)) continue;
-      for (const p of s.data) {
-        const px = Number(p[0]), py = Number(p[1]);
-        if (Number.isFinite(px)) { if (px < xLo) xLo = px; if (px > xHi) xHi = px; }
-        if (Number.isFinite(py)) { if (py < yLo) yLo = py; if (py > yHi) yHi = py; }
-      }
-    }
-    const rLo = Math.min(xLo, yLo), rHi = Math.max(xHi, yHi);
-    if (!(Number.isFinite(rLo) && Number.isFinite(rHi) && rLo < rHi)) return null;
-    return niceDomain(rLo, rHi);
-  };
-
-  // -- Log axes ----------------------------------------------------------------
-
-  const pos = (/** @type {any} */ v) => v != null && v !== '' && Number(v) > 0;
-
-  /** The interval column pairs, lo and hi. @param {Record<string, any>} cfg */
-  const intervalPairs = (cfg) => {
-    const lo = [].concat(cfg.lo || []).filter(Boolean);
-    const hi = [].concat(cfg.hi || []).filter(Boolean);
-    return lo.map((l, i) => [l, hi[i]]).filter((p) => p[1]);
-  };
-
-  /** A panel's band levels, keyed by level. @param {any} cfg @param {any} panel */
-  const bandBucket = (cfg, panel) => {
-    const bs = cfg.band_series;
-    return bs ? (bs[panel.facet] || bs['__all__'] || null) : null;
-  };
-
-  /**
-   * The positive values one panel draws along an axis: the points, and on y
-   * the interval ends, the band and the smoother. [lo, hi] or null.
-   * @param {any} m @param {any} panel @param {any} cfg @param {'x' | 'y'} axis
-   */
-  const positiveExtent = (m, panel, cfg, axis) => {
-    let lo = Infinity, hi = -Infinity;
-    const scan = (/** @type {any} */ v) => {
-      if (!pos(v)) return;
-      const n = Number(v);
-      if (n < lo) lo = n;
-      if (n > hi) hi = n;
-    };
-    const k = axis === 'x' ? 0 : 1;
-    for (const s of panel.series) for (const p of s.pts) scan(p[k]);
-    if (axis === 'y') {
-      const pairs = intervalPairs(cfg);
-      if (pairs.length) {
-        for (const s of panel.series) {
-          for (const r of s.rows) for (const [a, b] of pairs) { scan(r[a]); scan(r[b]); }
-        }
-      }
-      const pb = m.isBand ? bandBucket(cfg, panel) : null;
-      if (pb) {
-        for (const b of Object.values(pb)) {
-          if (!b) continue;
-          for (const key of ['center', 'lo', 'hi', 'olo', 'ohi', 'out_y']) {
-            if (Array.isArray(b[key])) for (const v of b[key]) scan(v);
-          }
-        }
-      }
-    }
-    return Number.isFinite(lo) ? [lo, hi] : null;
-  };
-
-  /**
-   * Each panel's log domain per axis (null on a linear axis), shared across
-   * the panels where the facet scales are, and what the log axes leave out:
-   * the guide lines and band outliers at or below zero. The model counted
-   * the rows.
-   * @param {any} m @param {Record<string, any>} cfg
-   */
-  const logDomains = (m, cfg) => {
-    const mode = NS.facetScales(cfg);
-    const n = m.panels.length;
-    /** @param {'x' | 'y'} axis @param {boolean} on @param {boolean} shared */
-    const per = (axis, on, shared) => {
-      if (!on) return new Array(n).fill(null);
-      const exts = m.panels.map((/** @type {any} */ p) => positiveExtent(m, p, cfg, axis));
-      if (shared) {
-        const all = exts.filter(Boolean);
-        const dom = all.length
-          ? NS.axes.logTicks(Math.min(...all.map((e) => e[0])), Math.max(...all.map((e) => e[1])))
-          : null;
-        return new Array(n).fill(dom);
-      }
-      return exts.map((e) => (e ? NS.axes.logTicks(e[0], e[1]) : null));
-    };
-    let dropped = 0;
-    if (m.logY) {
-      dropped += [].concat(cfg.value_lines || []).filter((v) => !pos(v)).length;
-      if (m.isBand && cfg.box_points === 'outliers') {
-        for (const p of m.panels) {
-          for (const b of Object.values(bandBucket(cfg, p) || {})) {
-            if (b && Array.isArray(b.out_y)) dropped += b.out_y.filter((v) => !pos(v)).length;
-          }
-        }
-      }
-    }
-    if (m.logX) dropped += [].concat(cfg.x_lines || []).filter((v) => !pos(v)).length;
-    return {
-      x: per('x', m.logX, mode !== 'free'),
-      y: per('y', m.logY, mode === 'fixed'),
-      dropped
-    };
-  };
-
-  /**
-   * A band on a log axis: a low edge at or below zero is cut at the floor,
-   * a high edge or centre there is a gap, and outliers there are not drawn.
-   * @param {any} bs band_series @param {number} floor
-   */
-  const clampBand = (bs, floor) => {
-    if (!bs) return bs;
-    /** @type {Record<string, any>} */
-    const out = {};
-    for (const [f, levels] of Object.entries(bs)) {
-      if (!levels || typeof levels !== 'object') { out[f] = levels; continue; }
-      /** @type {Record<string, any>} */
-      const lv = {};
-      for (const [k, b] of Object.entries(levels)) {
-        if (!b || typeof b !== 'object') { lv[k] = b; continue; }
-        const c = { ...b };
-        for (const key of ['lo', 'olo']) {
-          if (Array.isArray(b[key])) c[key] = b[key].map((/** @type {any} */ v) => (v == null ? null : (pos(v) ? v : floor)));
-        }
-        for (const key of ['center', 'hi', 'ohi']) {
-          if (Array.isArray(b[key])) c[key] = b[key].map((/** @type {any} */ v) => (pos(v) ? v : null));
-        }
-        if (Array.isArray(b.out_y)) {
-          const keep = b.out_y.map(pos);
-          for (const key of ['out_x', 'out_y', 'out_id']) {
-            if (Array.isArray(b[key])) c[key] = b[key].filter((/** @type {any} */ _, /** @type {number} */ i) => keep[i]);
-          }
-        }
-        lv[k] = c;
-      }
-      out[f] = lv;
-    }
-    return out;
-  };
-
-  /**
-   * One panel's option and the state its slot gets.
-   * @param {any} m @param {any} panel @param {any} look @param {number} width
-   */
-  const panelOption = (m, panel, look, width) => {
-    const { cfg, ink, measure, theme } = look;
+  const panelContext = (m, look, width) => {
+    const { cfg, ink, theme } = look;
     // This panel's log domains, null on a linear axis.
     const lx = (look.logDom && look.logDom.x) || null;
     const ly = (look.logDom && look.logDom.y) || null;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
     const lm = cfg.line_width_mult ?? 1.0;
-    const isLine = m.isLine, isBand = m.isBand;
     const xCats = m.x.cats;
     // Categorical x: every label, flat while it fits its slot, else turned
     // and thinned (an ordered axis). Measured before the height: turned
     // labels grow the canvas by their gutter.
     const xlab = xCats ? NS.axes.xAxisLabels(xCats, width - X_INSET, true, look.measure, ink) : null;
+    return { m, look, width, cfg, ink, theme, lx, ly, title, ax, lm, xCats, xlab,
+             isLine: m.isLine, isBand: m.isBand, isTime: m.x.type === 'time' };
+  };
 
-    /** @type {any[]} */
-    let series;
+  /**
+   * The panel's series from the band or the points part, with what the
+   * option needs beside them.
+   * @param {any} k @param {any} panel
+   */
+  const panelSeries = (k, panel) => {
+    const { m, look, cfg, lx, ly, width } = k;
     let mlTarget = 0;
     let bandMany = false;
     /** @type {any} */
@@ -249,7 +98,9 @@
     let pts = null;
     // Room on the right for names at the line ends.
     let labelPad = 0;
-    if (isBand) {
+    /** @type {any[]} */
+    let series;
+    if (k.isBand) {
       const b = parts.band(m, panel, ly
         ? { ...look, cfg: { ...cfg, band_series: clampBand(cfg.band_series, ly.min) } } : look);
       series = b.series;
@@ -264,14 +115,17 @@
       series = pts.series;
       labelPad = pts.labelPad || 0;
     }
+    return { series, mlTarget, bandMany, band, pts, labelPad };
+  };
 
-    // On a log axis the band's frame is the log domain, so a reference
-    // limit at or below zero is pinned to its foot.
-    const ext = (isBand && m.y.type === 'value' && series.length)
-      ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
-
-    // Helper lines, the band's limits and the identity line share one
-    // markLine (ECharts allows one per series).
+  /**
+   * The helper lines, the band's limits and the identity line, ready for the
+   * shared markLine, with the domain both axes then share (`idDom`, null when
+   * the identity line is off).
+   * @param {any} k @param {any} ext @param {any[]} series
+   */
+  const panelRefData = (k, ext, series) => {
+    const { m, look, cfg, ink, lx, ly, lm, isBand, isLine } = k;
     /** @type {any[]} */
     const refData = [];
     const refX = Array.isArray(cfg.x_lines) ? cfg.x_lines : [];
@@ -326,37 +180,38 @@
         { coord: [idDom[1], idDom[1]] }
       ]);
     }
-    if (series.length > 0 && refData.length) {
-      series[series[mlTarget] ? mlTarget : 0].markLine = {
-        silent: true, symbol: 'none',
-        lineStyle: { color: ink.danger, type: 'dashed', width: 1.5 * lm },
-        label: { show: false },
-        data: refData
-      };
-    }
+    return { refData, idDom, idLog };
+  };
 
-    // With a series column apart from the colour, the chips are colour
-    // values no series is named after: an empty series per chip gives the
-    // legend something to bind to.
-    if (m.byColor && m.legend) {
-      for (const it of m.legend.items) {
-        series.push({
-          type: isLine ? 'line' : 'scatter', name: it.name, data: [],
-          itemStyle: { color: it.color }, lineStyle: { color: it.color },
-          showSymbol: false, silent: true
-        });
-      }
+  /**
+   * With a series column apart from the colour, the chips are colour
+   * values no series is named after: an empty series per chip gives the
+   * legend something to bind to.
+   * @param {any} k @param {any[]} series
+   */
+  const addChipSeries = (k, series) => {
+    const { m, isLine } = k;
+    if (!(m.byColor && m.legend)) return;
+    for (const it of m.legend.items) {
+      series.push({
+        type: isLine ? 'line' : 'scatter', name: it.name, data: [],
+        itemStyle: { color: it.color }, lineStyle: { color: it.color },
+        showSymbol: false, silent: true
+      });
     }
+  };
 
+  /** @param {any} k @param {any} ext @param {any} idDom @param {any} idLog */
+  const panelAxes = (k, ext, idDom, idLog) => {
+    const { m, cfg, ink, ax, lx, ly, xCats, xlab, isLine, isTime } = k;
     // Gridlines are solid hairlines. A line chart reads values off the y
     // grid and dates off the crosshair, so it has no x grid and no y axis
     // line.
     const grid = { lineStyle: { color: ax.splitLineColor, type: 'solid', width: 1 } };
-    const isTime = m.x.type === 'time';
     /** @type {any} */
     const xAxis = {
       type: m.x.type,
-      name: NS.axisName(title(m.x.col), m.x.col, cfg, { unit: false }),
+      name: NS.axisName(k.title(m.x.col), m.x.col, cfg, { unit: false }),
       nameLocation: 'middle',
       nameGap: xlab && xlab.bottom ? xlab.bottom + 16 : 28,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
@@ -374,10 +229,11 @@
     };
     if (xCats) xAxis.data = xCats;
     if (idDom && m.x.type === 'value') { xAxis.min = idDom[0]; xAxis.max = idDom[1]; }
+    if (lx) NS.axes.logAxis(xAxis, idLog || lx);
     /** @type {any} */
     const yAxis = {
       type: m.y.type,
-      name: NS.axisName(title(m.y.col), m.y.col, cfg),
+      name: NS.axisName(k.title(m.y.col), m.y.col, cfg),
       nameLocation: 'middle',
       nameGap: 46,
       nameRotate: 90,
@@ -398,10 +254,40 @@
       yAxis.scale = false;
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }
-    if (lx) NS.axes.logAxis(xAxis, idLog || lx);
     if (ly) NS.axes.logAxis(yAxis, idLog || ly);
     // The veil's own 0..1 axes, in the same grid (line charts only).
     const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
+    return { xAxis, yAxis, scrimAxis };
+  };
+
+  /**
+   * One panel's option and the state its slot gets.
+   * @param {any} m @param {any} panel @param {any} look @param {number} width
+   */
+  const panelOption = (m, panel, look, width) => {
+    const k = panelContext(m, look, width);
+    const { cfg, ink, theme, ly, isLine, isBand, isTime, xlab, xCats } = k;
+    const { series, mlTarget, bandMany, band, pts, labelPad } = panelSeries(k, panel);
+
+    // On a log axis the band's frame is the log domain, so a reference
+    // limit at or below zero is pinned to its foot.
+    const ext = (isBand && m.y.type === 'value' && series.length)
+      ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
+
+    // Helper lines, the band's limits and the identity line share one
+    // markLine (ECharts allows one per series).
+    const { refData, idDom, idLog } = panelRefData(k, ext, series);
+    if (series.length > 0 && refData.length) {
+      series[series[mlTarget] ? mlTarget : 0].markLine = {
+        silent: true, symbol: 'none',
+        lineStyle: { color: ink.danger, type: 'dashed', width: 1.5 * k.lm },
+        label: { show: false },
+        data: refData
+      };
+    }
+    addChipSeries(k, series);
+
+    const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
 
     // The brush needs continuous x; a line and a band are clicked, not
     // brushed, and so is a scatter with series (a brush would race the

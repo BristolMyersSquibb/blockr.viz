@@ -2,19 +2,19 @@
 /**
  * Chart block: everything around the canvases.
  *
- * The card (header with titles, tools, gear and settings tray; panel grid,
- * legend band, caption, footer), the gear host for drilldown-config.js, the titles
- * and their sentence words, the shared legend band, and the status footer.
- * These are methods of the chart view (view.js copies them onto its
- * prototype); they read the view's state and decide nothing about the
- * picture.
+ * The card: a header with the titles, the download control and the gear
+ * (core/gear, in a tray under the header), the prepare script's strip, the
+ * panel grid, the legend band, the caption and the status footer, which
+ * names the filter a click set and clears it. These are methods of the
+ * chart view (view.js copies them onto its prototype); they read the view's
+ * state and decide nothing about the picture.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
-
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   // How long the footer holds a drill receipt, and how long it takes to
   // leave. The receipt's age drives the animation, so a footer rebuilt
   // while the receipt is on screen resumes rather than restarts it.
@@ -25,445 +25,99 @@
   const now = () => (typeof performance !== 'undefined' && performance.now)
     ? performance.now() : Date.now();
 
+  /** @param {string} tag @param {string} cls @param {HTMLElement} [parent] */
+  const mk = (tag, cls, parent) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+
   const chrome = {
     /** @this {any} */
     _buildDOM() {
-      // The mapping band is R's markup, moved into the card below; park it
-      // outside before clearing so a rebuild does not destroy it.
-      const parked = this.el.querySelector(':scope > .dd-card > .dd-mapping-band');
-      if (parked && this.el.parentNode) this.el.parentNode.appendChild(parked);
       this.el.innerHTML = '';
-
-      this.card = document.createElement('div');
-      this.card.className = 'dd-card';
-      this.el.appendChild(this.card);
-
-      // The header holds the titles, the tools (download), the gear and the
-      // settings tray. chart.css places them by state: closed, one row with
-      // the titles on the left and the tools and gear on the right; open,
-      // the gear alone on top, the tray under it, then the titles and tools.
-      const gearHeader = document.createElement('div');
-      gearHeader.className = 'blockr-gear-header vz-head';
-
-      // Titles are HTML, once above a facet grid.
-      this.titleWrap = document.createElement('div');
-      this.titleWrap.className = 'dd-chart-titles vz-head__titles';
-      this.titleEl = document.createElement('div');
-      this.titleEl.className = 'dd-chart-title';
-      this.subtitleEl = document.createElement('div');
-      this.subtitleEl.className = 'dd-chart-subtitle';
-      this.titleWrap.appendChild(this.titleEl);
-      this.titleWrap.appendChild(this.subtitleEl);
-      gearHeader.appendChild(this.titleWrap);
-
-      const tools = document.createElement('div');
-      tools.className = 'vz-head__tools';
-      gearHeader.appendChild(tools);
-
-      this.gearBtn = document.createElement('button');
-      this.gearBtn.type = 'button';
-      this.gearBtn.className = 'blockr-gear-btn';
-      this.gearBtn.innerHTML = (typeof Blockr !== 'undefined' && Blockr.icons)
-        ? Blockr.icons.gear : '⚙';
-      this.gearBtn.setAttribute('data-blockr-tooltip', 'Settings');
-      this.gearBtn.setAttribute('aria-label', 'Chart settings');
-      this.gearBtn.setAttribute('aria-haspopup', 'dialog');
-      this.gearBtn.setAttribute('aria-expanded', 'false');
-      this.gearBtn.addEventListener('click', (/** @type {Event} */ e) => {
-        e.stopPropagation();
-        this._togglePopover();
-      });
-      // The download control is R's (download links are server-driven); the
-      // card only decides where it sits.
-      this._hoistDownload(tools);
-      // With capture_export, opening the download menu composes the picture
-      // and sends it to R, so it is there by the time a format is picked.
-      tools.addEventListener('click', (/** @type {Event} */ e) => {
-        const t = /** @type {Element} */ (e.target);
-        if (!this.config || !this.config.capture_export || !t.closest) return;
-        const host = t.closest('.blockr-action-menu__trigger, .dd-chart-dl .blockr-tool');
-        if (host) this._downloadImage(true);
-      }, true);
-      this.gearHeader = gearHeader;
-      gearHeader.appendChild(this.gearBtn);
-
-      // The settings tray: in flow, so it pushes the titles and the chart
-      // down while open.
-      this.popoverEl = document.createElement('div');
-      this.popoverEl.className = 'blockr-settings blockr-settings--beak dd-popover';
-      gearHeader.appendChild(this.popoverEl);
-      this.card.appendChild(gearHeader);
-
-      // The busy cue's line (busy-cue.js writes it).
-      const busyLine = document.createElement('div');
-      busyLine.className = 'blockr-busy-line';
-      busyLine.setAttribute('aria-live', 'polite');
-      this.card.appendChild(busyLine);
-
-      // The prepare script's control strip, under the titles.
-      const band = this._bandEl();
-      if (band) this.card.appendChild(band);
-      if (this._popoverOpen) this._setOpenState(true);
-
-      this.chartGrid = document.createElement('div');
-      this.chartGrid.className = 'dd-chart-grid';
-      this.card.appendChild(this.chartGrid);
-
-      // One legend for every panel, under the grid (or above it, see
-      // _updateLegendBand); hidden while empty.
-      this.legendEl = document.createElement('div');
-      this.legendEl.className = 'dd-legend-band';
+      this.card = mk('div', 'dd-card', this.el);
+      // The header: titles on the left, then the tools and the gear; open,
+      // the tray sits under them and pushes the chart down.
+      const head = this.gearHeader = mk('div', 'blockr-gear-header vz-head', this.card);
+      this.titleWrap = mk('div', 'dd-chart-titles vz-head__titles', head);
+      this.titleEl = mk('div', 'dd-chart-title', this.titleWrap);
+      this.subtitleEl = mk('div', 'dd-chart-subtitle', this.titleWrap);
+      this.toolsEl = mk('div', 'vz-head__tools', head);
+      this.downloadEl = mk('div', 'dd-chart-dl', this.toolsEl);
+      mk('div', 'blockr-busy-line', this.card).setAttribute('aria-live', 'polite');
+      this.bandEl = mk('div', 'dd-mapping-band', this.card);
+      this.bandEl.style.display = 'none';
+      this.chartGrid = mk('div', 'dd-chart-grid', this.card);
+      this.legendEl = mk('div', 'dd-legend-band', this.card);
       this.legendEl.style.display = 'none';
-      this.card.appendChild(this.legendEl);
-
-      this.captionEl = document.createElement('div');
-      this.captionEl.className = 'dd-chart-caption';
-      this.card.appendChild(this.captionEl);
-
-      this.statusEl = document.createElement('div');
-      this.statusEl.className = 'dd-status-footer';
-      this.card.appendChild(this.statusEl);
+      this.captionEl = mk('div', 'dd-chart-caption', this.card);
+      this.statusEl = mk('div', 'dd-status-footer', this.card);
+      this.clearBtn = /** @type {HTMLButtonElement} */ (mk('button', 'dd-status-clear'));
+      this.clearBtn.type = 'button';
+      this.clearBtn.textContent = '×';
+      this.clearBtn.setAttribute('aria-label', 'Clear filter');
+      this.clearBtn.setAttribute('data-blockr-tooltip', 'Clear filter');
+      this.scope.on(this.clearBtn, 'click', () => this._reset());
+      this._mountGear(head);
       this._updateStatus();
-      this._updateTitles();
+      this._updateTitles(null);
     },
 
-    // R renders the download host beside the chart element; it moves into
-    // the header's tools.
-    /** @this {any} @param {HTMLElement} tools */
-    _hoistDownload(tools) {
-      const host = this.el && this.el.parentElement
-        ? /** @type {HTMLElement | null} */ (this.el.parentElement.querySelector('.dd-chart-dl-host'))
-        : null;
-      if (!host) return;
-      host.style.display = '';
-      host.classList.add('dd-chart-dl');
-      tools.appendChild(host);
+    // The core gear engine in a tray under the header, and the sentence
+    // whose words open their setting. Without the engine there is neither.
+    /** @this {any} @param {HTMLElement} head */
+    _mountGear(head) {
+      const G = V.gear;
+      if (!G || typeof G.mount !== 'function') return;
+      const t = this._tray = G.tray(head, this.scope, 'Chart settings');
+      this.popoverEl = t.band;
+      this.gearBtn = t.button;
+      this._gear = this.scope.own(G.mount(t.band, {
+        block: 'chart', id: this.el.id, scope: this.scope, typeKey: 'type',
+        title: 'Chart settings', host: NS.gear.host(this)
+      }));
+      if (V.titles && typeof V.titles.slots === 'function') {
+        this._slots_ = this.scope.own(V.titles.slots({
+          gear: this._gear, scope: this.scope, openGear: () => t.set(true)
+        }));
+      }
     },
 
-    // The prepare script's strip: in the card once moved there, else the
-    // sibling R rendered.
-    /** @this {any} */
-    _bandEl() {
-      const inCard = this.el.querySelector(':scope > .dd-card > .dd-mapping-band');
-      if (inCard) return inCard;
-      const host = this.el && this.el.parentNode;
-      if (!host || !host.querySelector) return null;
-      return host.querySelector(':scope > .dd-mapping-band');
-    },
-
-    // -- The gear ----------------------------------------------------------
-
-    /** The host the shared gear engine renders from. @this {any} */
-    _makeConfig() {
-      const R = NS.roles;
-      const DCfg = /** @type {typeof VizDrilldownConfig} */ (
-        (typeof Blockr !== 'undefined' && Blockr.DrilldownConfig) || window.DrilldownConfig);
-      return new DCfg({
-        popoverEl: () => this.popoverEl,
-        roles: R.ROLES,
-        config: () => this.config,
-        columns: () => this.columns,
-        // A column's values in the rows, first seen first (the waterfall
-        // totals' choices). Capped: a list longer than that picks nothing.
-        levels: (/** @type {string} */ col) => (this.data && this._ix
-          ? this._ix.levels(this.data, col, 'nz').filter((/** @type {string} */ v) => v !== '')
-            .slice(0, 500)
-          : []),
-        context: () => this._family(),
-        currentType: () => this.config.chart_type,
-        sections: () => this._sectionsSpec(),
-        sectionsForFamily: (/** @type {string} */ fam) => R.FAMILY_ROLES[fam],
-        secondary: R.DD_SECONDARY,
-        typeKey: 'chart_type',
-        typeTiles: true,
-        // The drawings are the package's tile icons (drilldown-config.js).
-        typeIcon: (/** @type {string} */ t) => (Blockr.TILE_ICONS || {})[t] || '',
-        // Presentation only: waterfall is a bar option, band lists under
-        // Aggregated and gantt under Individual by how they treat rows.
-        typeGroups: [
-          { label: 'Aggregated',
-            // Radar is drawn for old boards but no longer offered.
-            types: NS.AGGREGATED_TYPES.filter((/** @type {string} */ t) =>
-              t !== 'waterfall' && t !== 'radar').concat(['band']) },
-          { label: 'Individual',
-            types: NS.INDIVIDUAL_TYPES.filter((/** @type {string} */ t) => t !== 'band').concat(NS.TIMELINE_TYPES) }
-        ],
-        familyFor: NS.familyOf,
-        // drill is a capability and value is required to draw: both survive
-        // a family switch.
-        carryKeep: ['drill', 'value'],
-        entryRequired: (/** @type {string} */ role) => role === 'value' && this._family() === 'aggregated',
-        drillAutoLabel: () => {
-          const fam = this._family();
-          if (this.config.chart_type === 'radar') return 'Auto, the clicked shape';
-          if (this.config.chart_type === 'histogram') return 'Auto, the clicked bin';
-          return fam === 'aggregated' ? 'Auto, the clicked group'
-            : fam === 'timeline' ? 'Auto, the clicked lane'
-            : NS.isLineType(this.config.chart_type) ? 'Auto, the clicked series'
-            : 'Auto, the selected point';
-        },
-        title: 'Chart settings',
-        onChange: (/** @type {string} */ key) => {
-          // A pick through a sentence word is done: its menu does not stay
-          // marked open until R repaints the sentence (B5).
-          this._closeSlot();
-          if (key === 'func') this._reconcileMetric();
-          if (key === 'group') NS.model.resortForGroup(this.config, this.columns);
-          // Values of one column are no values of another.
-          if (key === 'highlight_by') this.config.highlight = [];
-          // A mapping onto a column the rows do not carry yet: R has to send
-          // the data again, so hold the last picture until it does.
-          if (this._mappingNeedsData()) this._awaitData = true;
-          else this._render();
-          this._sendConfig();
-        },
-        onMults: () => this._sendMults(),
-        onClearFilter: () => this._gearClearFilter(),
-        ensureDefaults: () => NS.model.familyDefaults(this.config, this.columns),
-        afterTypeChange: () => this._updateFamilyClass(),
-        isOpen: () => this._popoverOpen,
-        reopen: () => this._openPopover(),
-        bandEl: () => this._bandEl()
-      });
-    },
-
-    /** @this {any} */
-    _renderConfig() { this._cfg.render(); this._cfg.renderBand(); },
-
-    // The family's sections; the count column only once a count surface is
-    // picked, and the drill target section on every family.
-    /** @this {any} */
-    _sectionsSpec() {
-      const base = this.config.chart_type === 'histogram'
-        ? NS.roles.FAMILY_ROLES.histogram
-        : NS.roles.FAMILY_ROLES[this._family()];
-      const countOff = !this.config.count_on || this.config.count_on === 'off';
-      const spec = (!countOff || !base.presentation) ? base : {
-        ...base,
-        presentation: base.presentation.filter((/** @type {any} */ e) =>
-          (typeof e === 'string' ? e : e.role) !== 'count_col')
+    // The title, subtitle and caption R resolved, their words live where the
+    // gear has a control for them; hidden while empty.
+    /** @this {any} @param {any} titles */
+    _updateTitles(titles) {
+      const x = titles || {};
+      /** @param {any} b */
+      const band = (b) => (typeof b === 'string' ? { text: b } : b || null);
+      /** @param {any} b */
+      const shows = (b) => !!b && (!!b.text || (Array.isArray(b.offers) && b.offers.length > 0));
+      const [t, s, c] = [band(x.title), band(x.subtitle), band(x.caption)];
+      const paint = (/** @type {HTMLElement} */ e, /** @type {any} */ b) => {
+        if (this._slots_) this._slots_.paint(e, b);
+        else e.textContent = b && b.text ? b.text : '';
+        e.style.display = shows(b) ? '' : 'none';
       };
-      return { ...spec, ctrlSection: true };
+      paint(this.titleEl, t);
+      paint(this.subtitleEl, s);
+      paint(this.captionEl, c);
+      this.titleWrap.style.display = shows(t) || shows(s) ? '' : 'none';
     },
 
-    /** @this {any} */
-    _reconcileMetric() { NS.roles.DAgg.reconcileValue(this.config, this.columns); },
-
-    /** Does the config name a column the rows do not carry? @this {any} */
-    _mappingNeedsData() {
-      const rows = this.data;
-      if (!rows || !rows.length || !rows[0]) return false;
-      const have = rows[0];
-      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet', 'label', 'highlight_by']
-        .some((k) => {
-          const v = this.config[k];
-          return typeof v === 'string' && v && v !== '.count' && !(v in have);
-        });
-    },
-
-    /** @this {any} */
-    _updateFamilyClass() {
-      const fams = ['dd-family-aggregated', 'dd-family-individual', 'dd-family-timeline'];
-      const cls = 'dd-family-' + this._family();
-      this.el.classList.remove(...fams);
-      this.el.classList.add(cls);
-      if (this.popoverEl) {
-        this.popoverEl.classList.remove(...fams);
-        this.popoverEl.classList.add(cls);
+    // The formats R offers, as core/download.js draws them. Reaching for
+    // the control composes the picture and sends it to R, so it is there by
+    // the time a format is picked.
+    /** @this {any} @param {any} list */
+    _updateDownloads(list) {
+      const show = this.config.download !== 'off' && Array.isArray(list) && list.length > 0;
+      this.downloadEl.hidden = !show;
+      if (typeof V.downloads === 'function') {
+        V.downloads(this.downloadEl, show ? list : [], this.scope,
+                    { onOpen: () => this._downloadImage(true) });
       }
     },
-
-    /** @this {any} */
-    _togglePopover() { this._popoverOpen ? this._closePopover() : this._openPopover(); },
-    /** @this {any} */
-    _openPopover() {
-      this._popoverOpen = true;
-      this._setOpenState(true);
-      // The band is in flow, so the chart has less room now.
-      this._resizeCharts();
-    },
-    /** @this {any} */
-    _closePopover() {
-      this._popoverOpen = false;
-      this._setOpenState(false);
-      this._resizeCharts();
-    },
-    // The tray, the gear and the header's layout follow the open state.
-    /** @this {any} @param {boolean} on */
-    _setOpenState(on) {
-      this.popoverEl.classList.toggle('blockr-settings--open', on);
-      if (this.gearHeader) this.gearHeader.classList.toggle('vz-head--open', on);
-      this.gearBtn.classList.toggle('blockr-gear-active', on);
-      this.gearBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
-      this._trayLayer(on);
-    },
-    // Open, the band is a layer in the page (Blockr.layer), as the heatmap's
-    // gear tray: Escape in the band or on the gear closes it and focuses the
-    // gear.
-    /** @this {any} @param {boolean} on */
-    _trayLayer(on) {
-      if (this._trayLayerH) { this._trayLayerH.remove(); this._trayLayerH = null; }
-      if (!on || typeof Blockr === 'undefined' || !Blockr.layer) return;
-      this._trayLayerH = Blockr.layer(this.popoverEl, {
-        from: this.gearBtn,
-        inPage: true,
-        escape: () => { this._closePopover(); this.gearBtn.focus(); }
-      });
-    },
-
-    // What R gets after a gear edit: every setting, verbatim where null and
-    // "" mean different things.
-    /** @this {any} */
-    _sendConfig() {
-      if (!this.el.id) return;
-      const c = this.config;
-      /** @type {Record<string, any>} */
-      const msg = {
-        action: 'config',
-        group: c.group,
-        color: c.color || '',
-        facet: c.facet || '',
-        value: c.value,
-        func: c.func,
-        chart_type: c.chart_type,
-        x: c.x || '',
-        y: c.y || '',
-        xend: c.xend || '',
-        sort_by: c.sort_by || '',
-        sort_dir: c.sort_dir || 'asc',
-        orientation: c.orientation || 'horizontal',
-        bar_mode: c.bar_mode || 'stacked',
-        value_labels: (c.value_labels === 'on' || c.value_labels === true) ? 'on' : 'off',
-        na_group: c.na_group || 'level',
-        pct_of: c.pct_of || 'facet',
-        baseline: c.baseline || 'zero',
-        // [] clears the totals, so this is always sent.
-        waterfall_totals: Array.isArray(c.waterfall_totals) ? c.waterfall_totals.map(String)
-          : (c.waterfall_totals == null || c.waterfall_totals === '' ? [] : [String(c.waterfall_totals)]),
-        series: c.series || '',
-        label: c.label || '',
-        drill: c.drill || '',
-        smoother: c.smoother || 'none',
-        connect: c.connect || 'straight',
-        identity_line: c.identity_line || 'off',
-        // "" clears every line, so these are always sent.
-        // As text with the names ("Target: 4; 6"); R parses it.
-        value_lines: NS.linesText(c.value_lines, c.value_line_names),
-        x_lines: NS.linesText(c.x_lines, c.x_line_names),
-        // [] clears every range, so this is always sent.
-        x_ranges: Array.isArray(c.x_ranges) ? c.x_ranges : [],
-        box_points: c.box_points || 'none',
-        connect_centers: (c.connect_centers === 'on' || c.connect_centers === true) ? 'on' : 'off',
-        // band_series / band_refs are R's output, never sent back.
-        band_window: c.band_window || 'adaptive',
-        band_size: c.band_size == null ? 45 : c.band_size,
-        band_min_n: c.band_min_n == null ? 12 : c.band_min_n,
-        bins: c.bins == null ? 30 : c.bins,
-        format: c.format || 'number',
-        linetype: c.linetype || '',
-        legend: NS.legendSetting(c),
-        unit: c.unit ?? '',
-        y_scale: c.y_scale === 'log' ? 'log' : 'linear',
-        x_scale: c.x_scale === 'log' ? 'log' : 'linear',
-        band_id: c.band_id || '',
-        ref_hi: c.ref_hi || '',
-        ref_lo: c.ref_lo || '',
-        count_on: c.count_on || 'off',
-        count_col: c.count_col || '',
-        facet_scales: c.facet_scales || 'fixed',
-        facet_cols: c.facet_cols == null ? '' : String(c.facet_cols),
-        download: (c.download === false || c.download === 'off') ? 'off' : 'on',
-        lo: c.lo || '',
-        hi: c.hi || '',
-        tt_fields: Array.isArray(c.tt_fields) ? c.tt_fields : [],
-        // "" and [] clear the highlight, so both are always sent.
-        highlight_by: c.highlight_by || '',
-        highlight: Array.isArray(c.highlight) ? c.highlight.map(String)
-          : (NS.hasVal(c.highlight) ? [String(c.highlight)] : []),
-        // null is auto, "" is none.
-        title: c.title ?? null,
-        subtitle: c.subtitle ?? null,
-        caption: c.caption ?? null,
-        ctrl_target: c.ctrl_target || '',
-        ctrl_table: c.ctrl_table || '',
-        script: c.script == null ? '' : String(c.script)
-      };
-      // The distribution picks, only on the types whose gear offers them; R
-      // keeps its own state (and its per-type default) otherwise.
-      const t = c.chart_type;
-      if (c.summary && (NS.DISTRIBUTION_TYPES.includes(t) || t === 'band')) msg.summary = c.summary;
-      if (c.whiskers && (t === 'boxplot' || t === 'band')) msg.whiskers = c.whiskers;
-      // Script control values; an emptied multi-select ships as "" so R can
-      // tell it from no value at all.
-      for (const spec of (c.script_inputs || [])) {
-        if (!spec || !spec.key || spec.kind === 'error') continue;
-        const v = c[spec.key];
-        msg[spec.key] = (Array.isArray(v) && !v.length) ? '' : (v == null ? '' : v);
-      }
-      Shiny.setInputValue(this.el.id + '_action', msg, { priority: 'event' });
-    },
-
-    /** @this {any} */
-    _sendMults() {
-      if (!this.el.id) return;
-      Shiny.setInputValue(this.el.id + '_action', {
-        action: 'set_mults',
-        line_width_mult: this.config.line_width_mult ?? 1.0,
-        dot_size_mult: this.config.dot_size_mult ?? 1.0
-      }, { priority: 'event' });
-    },
-
-    // -- Titles --------------------------------------------------------------
-
-    // The title, subtitle and caption from the text R resolved, with the
-    // offers for settings whose clause dropped. Hidden while empty.
-    /** @this {any} */
-    _updateTitles() {
-      if (!this.titleWrap || !this.titleEl || !this.subtitleEl || !this.captionEl) return;
-      const cfg = this.config || {};
-      const t = cfg.title_resolved || '';
-      const s = cfg.subtitle_resolved || '';
-      const cap = cfg.caption_resolved || '';
-      // A repaint replaces the node an open slot menu is anchored to.
-      this._closeSlot();
-      const some = (/** @type {any} */ o) => Array.isArray(o) && o.length > 0;
-      const tOffered = some(cfg.title_offers);
-      const sOffered = some(cfg.subtitle_offers);
-      const capOffered = some(cfg.caption_offers);
-      this._paintTitle(this.titleEl, t, cfg.title_parts, cfg.title_offers);
-      this._paintTitle(this.subtitleEl, s, cfg.subtitle_parts, cfg.subtitle_offers);
-      this.titleEl.style.display = (t || tOffered) ? '' : 'none';
-      this.subtitleEl.style.display = (s || sOffered) ? '' : 'none';
-      this.titleWrap.style.display = (t || s || tOffered || sOffered) ? '' : 'none';
-      this._paintTitle(this.captionEl, cap, cfg.caption_parts, cfg.caption_offers);
-      this.captionEl.style.display = (cap || capOffered) ? '' : 'none';
-    },
-
-    /** @this {any} @param {HTMLElement} el @param {string} text @param {any[]} [parts] @param {any[]} [offers] */
-    _paintTitle(el, text, parts, offers) {
-      const s = this._sentence();
-      s.paint(el, text, parts);
-      s.paintOffers(el, offers);
-    },
-
-    // The sentence painter, shared with the heatmap (drilldown-config.js).
-    /** @this {any} */
-    _sentence() {
-      if (!this._slotsInst) {
-        this._slotsInst = new Blockr.SentenceSlots({
-          ddc: () => this._cfg,
-          config: () => this.config,
-          openGear: () => this._openPopover()
-        });
-      }
-      return this._slotsInst;
-    },
-    /** @this {any} @param {string} key */
-    _slotLabel(key) { return this._sentence().label(key); },
-    /** @this {any} @param {string} key @param {HTMLElement} anchor @param {string} [by] */
-    _openSlot(key, anchor, by) { this._sentence().open(key, anchor, by); },
-    /** @this {any} */
-    _closeSlot() { if (this._slotsInst) this._slotsInst.close(); },
 
     // -- Legend band ---------------------------------------------------------
 
@@ -488,6 +142,8 @@
       this._placeLegendBand(plan && plan.position === 'top' ? 'top' : 'bottom');
 
       el.innerHTML = '';
+      if (this._chipScope) this._chipScope.dispose();
+      this._chipScope = this.scope.own(new V.Scope());
       const swatch = (plan && plan.swatch) || 'square';
       const title = this._legendTitleName(spec.items, spec.col);
       if (title) {
@@ -508,7 +164,7 @@
         lb.textContent = it.name;
         chip.appendChild(sw);
         chip.appendChild(lb);
-        chip.addEventListener('click', () => this._legendChipClick(spec.col, it.name));
+        this._chipScope.on(chip, 'click', () => this._legendChipClick(spec.col, it.name));
         el.appendChild(chip);
       }
       el.style.display = '';
@@ -578,6 +234,7 @@
     _updateStatus() {
       if (!this.statusEl) return;
       this.statusEl.innerHTML = '';
+      this.clearBtn.hidden = true;
 
       if (this._receipt) {
         const age = now() - (this._receiptAt || 0);
@@ -588,7 +245,7 @@
           // A negative delay resumes the fade where the receipt is.
           rec.style.animation = `dd-receipt-out ${RECEIPT_FADE_MS}ms linear ` +
             `${RECEIPT_HOLD_MS - age}ms both`;
-          rec.addEventListener('animationend', () => this._dropReceipt());
+          this.scope.on(rec, 'animationend', () => this._dropReceipt());
           this.statusEl.appendChild(rec);
           return;
         }
@@ -597,9 +254,9 @@
 
       const f = this._filter;
       const hasFilter = !!f || this._hasBrushFilter;
-      // Nothing set, nothing said: the line is there only while a filter is.
-      // A second click on the selected mark clears it (interact.js _select),
-      // so there is no Reset. A cap message is a warning about the picture.
+      // Nothing set, nothing said: the line is there only while a filter is,
+      // with a clear button after it. A cap message is a warning about the
+      // picture.
       if (!hasFilter && !this._capMessage) return;
 
       if (hasFilter) {
@@ -615,6 +272,8 @@
         span.className = 'dd-status-text' + (this._returning ? ' dd-status-returning' : '');
         span.textContent = text;
         this.statusEl.appendChild(span);
+        this.statusEl.appendChild(this.clearBtn);
+        this.clearBtn.hidden = false;
       }
 
       if (this._capMessage) {
@@ -633,8 +292,8 @@
       // The clock starts at the click; a redraw never restarts it.
       this._receiptAt = now();
       this._updateStatus();
-      clearTimeout(this._receiptTimer);
-      this._receiptTimer = setTimeout(() => this._dropReceipt(),
+      if (this._receiptTimer) this._receiptTimer();
+      this._receiptTimer = this.scope.timeout(() => this._dropReceipt(),
         RECEIPT_HOLD_MS + RECEIPT_FADE_MS + RECEIPT_GRACE_MS);
     },
 
@@ -649,5 +308,19 @@
     }
   };
 
+  /** The bands' plain text, for the picture.
+   * @param {any} titles @returns {Record<string, string>} */
+  const titleText = (titles) => {
+    const x = titles || {};
+    /** @type {Record<string, string>} */
+    const out = {};
+    for (const k of ['title', 'subtitle', 'caption']) {
+      const b = x[k];
+      out[k] = typeof b === 'string' ? b : (b && b.text) || '';
+    }
+    return out;
+  };
+
   NS.chrome = chrome;
+  NS.titleText = titleText;
 })();

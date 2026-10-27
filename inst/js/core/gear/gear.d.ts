@@ -157,6 +157,8 @@ interface VizTileKit {
 
 interface VizGearNamespace {
   mount(el: HTMLElement, opts: VizGearOptions): VizGear;
+  tray(head: HTMLElement, scope: VizScope, label: string): { band: HTMLElement;
+    button: HTMLButtonElement; set(on: boolean): void; isOpen(): boolean };
   sections: VizSectionKit;
   controls: VizControlKit;
   tiles: VizTileKit;
@@ -185,6 +187,9 @@ interface VizNamespace {
 
 /** The part of blockr.ui (local main) the gear uses, each part optional. */
 interface VizUi {
+  icons?: Record<string, string>;
+  gearTray?(band: HTMLElement, gear: HTMLButtonElement, opts?: { label?: string; open?: boolean }):
+    { set(open: boolean): void; toggle(): void; isOpen(): boolean };
   trayNav?(groups: { key: string; title: string;
                      sections: { el: HTMLElement; title: string; titleEl?: HTMLElement | null }[] }[],
            opts?: { current?: string; onPick?: (key: string) => void; label?: string }):

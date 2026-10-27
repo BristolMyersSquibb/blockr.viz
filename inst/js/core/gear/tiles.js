@@ -71,8 +71,11 @@
       btns.push(b);
       row.appendChild(b);
     });
+    // A group without the current value has no pick; its first tile still
+    // takes the keyboard.
     const cur = options.findIndex((o) => o.value === current);
-    select(cur < 0 ? 0 : cur);
+    select(cur);
+    if (cur < 0 && btns[0]) btns[0].tabIndex = 0;
     parent.appendChild(row);
     return row;
   }
