@@ -34,6 +34,8 @@ interface TableHeadCell {
   keys?: TableClaim | null;
   /** The stub's header, top left. */
   stub?: boolean;
+  /** A stub header the producer set in bold. */
+  bold?: boolean;
 }
 
 /** One body column. */

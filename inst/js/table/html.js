@@ -53,7 +53,8 @@
       h.stub ? '' : (h.col != null ? 'leaf' : 'group'),
       !h.stub && h.col == null && r > 0 ? 'group-inner' : '',
       col ? (col.num ? 'dt-col-num' : 'dt-col-txt') : '',
-      sortable ? 'blockr-sortable' : '', h.keys ? 'dt-keyed' : ''];
+      sortable ? 'blockr-sortable' : '', h.keys ? 'dt-keyed' : '',
+      h.stub && h.bold ? 'blockr-stub-header-bold' : ''];
     let inner = headText(h, sortable);
     if (h.stub && f.foldAll) {
       cls.push('dt-has-foldall');

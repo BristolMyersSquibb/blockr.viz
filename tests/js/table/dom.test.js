@@ -221,6 +221,14 @@ test('an indented row folds the rows under it', () => {
   assert.equal(t.stubs().length, 4);
 });
 
+test('a bold stub header keeps its class; leaves without sorting are not sortable', () => {
+  const m = table1();
+  m.head[0][0].bold = true;
+  const t = mount(payload({ data: m, config: { sortable: false } }));
+  assert.ok(t.$('th.blockr-stub-header').classList.contains('blockr-stub-header-bold'));
+  assert.equal(t.$$('th.blockr-sortable').length, 0);
+});
+
 test('column widths make a fixed layout', () => {
   const m = flatModel(2);
   m.widths = [80, 120, 60];
