@@ -1,45 +1,29 @@
-# The chart block's server, on the kit (kit-server.R, kit-output.R).
+# The chart block's server, on the kit (viz_block_server(), kit-server.R).
 #
-# The state is one reactiveVal per spec argument, under the public names.
-# The gear's settings, clicks and pictures come in through the kit's
-# observers, which only check and write state. Everything else is a reactive
-# that reads the state: the data the chart draws (here), the payload
-# (chart-view.R) and the filter the block emits downstream (here).
+# The kit holds the state, one reactiveVal per spec argument under the
+# public names, and the observers that take the gear's settings, clicks and
+# pictures into it. The chart adds reactives that read the state: the data
+# it draws and the filter it emits (here), the payload and the exhibit for
+# the downloads (chart-view.R), and the claims a drill target receives.
 
 chart_server <- function(id, data, init) {
-  shiny::moduleServer(id, function(input, output, session) {
-    spec <- viz_block_spec("chart")
-    el <- session$ns("chart")
-    state <- viz_state(init)
-    revs <- new_viz_revs(init)
-    viz_rev_tracker(state, revs)
-
-    shiny::observe({
-      busy_cue_start(session, el, "drawing")
-      tryCatch(data(), error = function(e) busy_cue_done(session, el))
-    }, priority = 200L)
-
-    src <- chart_sources(data, state)
-    viz_settings_observer(
-      input, "chart", spec, state, revs,
-      normalize = function(v) {
-        chart_normalize(v, viz_values(state), shiny::isolate(src$kinds()))
-      }
-    )
-    claim <- shiny::reactiveVal(NULL)
-    transient <- function() nzchar(state$drill_target() %||% "")
-    viz_selection_observer(input, "chart", state, revs, transient, claim)
-    capture <- shiny::reactiveVal(NULL)
-    viz_capture_observer(input, "chart", capture)
-
-    view <- chart_view(spec, state, revs, src, session)
-    viz_payload_output(output, input, "chart", view$payload)
-    chart_capture_service(session, el, view$payload)
-    chart_drill_sender(state, src, claim, transient, init$selection, session)
-    chart_downloads(output, session, state, src, view, capture, data)
-
-    list(expr = chart_expr(data, state, src), state = state)
-  })
+  viz_block_server(
+    id, viz_block_spec("chart"), data, init, "chart",
+    function(kit) {
+      src <- chart_sources(data, kit$state)
+      view <- chart_view(kit, src)
+      chart_capture_service(kit$session, kit$el, view$payload)
+      list(
+        payload = view$payload,
+        expr = chart_expr(data, kit$state, src),
+        exhibit = chart_exhibit(kit, src, view),
+        normalize = function(v) {
+          chart_normalize(v, viz_values(kit$state), shiny::isolate(src$kinds()))
+        },
+        claims = chart_claims(kit, src)
+      )
+    }
+  )
 }
 
 # The data the chart draws: the input, coerced; the prepare script's
@@ -227,39 +211,25 @@ chart_filter_parts <- function(v, src, members) {
        cols = c(list(c(sel$x, if (!is.null(sel$y_range)) sel$y)), cols))
 }
 
-# A drill target receives the click's conditions over the control channel.
-# With a target set a click is an event (`claim`); without, the held
-# selection is the claim. Nothing is sent while the selection is the one the
-# block was built with.
-chart_drill_sender <- function(state, src, claim, transient, sel0, session) {
-  claims <- shiny::reactive({
+# What a drill target receives: the click's conditions. With a target set
+# a click is an event (the kit's `claim`); without, the held selection is
+# the claim. The kit sends them.
+chart_claims <- function(kit, src) {
+  shiny::reactive({
     d <- tryCatch(src$prepared(), error = function(e) NULL)
-    if (transient()) {
-      c1 <- claim()
+    if (kit$transient()) {
+      c1 <- kit$claim()
       if (is.null(c1)) {
         return(NULL)
       }
       filters <- chart_selection_filters(c1$selection)
     } else {
-      sel <- state$selection()
+      sel <- kit$state$selection()
       filters <- if (!identical(sel$type, "range")) {
         chart_selection_filters(sel)
       }
     }
-    dd_ctrl_claims(d, state$drill_table(), filters %||% list(),
-                   subject = dd_ctrl_subject(session))
+    dd_ctrl_claims(d, kit$state$drill_table(), filters %||% list(),
+                   subject = dd_ctrl_subject(kit$session))
   })
-  latch <- dd_ctrl_pristine(function() state$selection(), sel0)
-  dd_ctrl_sender(
-    state$drill_target, claims,
-    function() {
-      still <- latch()
-      is.null(claim()) && still
-    },
-    session,
-    r_nonce = function() {
-      c1 <- claim()
-      if (is.null(c1)) NULL else c1$nonce
-    }
-  )
 }

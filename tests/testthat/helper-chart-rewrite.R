@@ -94,7 +94,8 @@ record_rw_payload <- function(msgs, expr, cx) {
   view <- record_computed(list(
     rows = if (!is.null(p[["data"]])) record_ref_rows(p[["data"]]),
     columns = d$column_meta,
-    titles = d$titles[c("title", "subtitle", "caption")],
+    titles = lapply(d$titles[c("title", "subtitle", "caption")],
+                    function(b) b$text),
     band = d$band,
     smoother = d$smoother,
     scales = d$scales,
@@ -121,9 +122,10 @@ record_ref_computed <- function(entry) {
   }
   record_computed(list(
     rows = entry$rows, columns = entry$columns,
-    titles = list(title = cfg$title_resolved,
-                  subtitle = cfg$subtitle_resolved,
-                  caption = cfg$caption_resolved),
+    titles = lapply(list(title = cfg$title_resolved,
+                         subtitle = cfg$subtitle_resolved,
+                         caption = cfg$caption_resolved),
+                    function(x) if (length(x) && nzchar(x)) x),
     band = band, smoother = cfg$smoother_series, scales = cfg$scales,
     palette = cfg$palette
   ))
@@ -162,11 +164,18 @@ record_rw_expected <- function(rec) {
   }
   rec$warnings <- record_rw_warnings(rec$warnings)
   rec$initial <- sel(rec$initial)
+  msg <- function(dl) {
+    if (inherits(dl, "record_error") && dl$message %in% names(record_rw_messages)) {
+      dl$message <- record_rw_messages[[dl$message]]
+    }
+    dl
+  }
   last <- NULL
   for (i in seq_along(rec$steps)) {
     s <- rec$steps[[i]]
     s$wire <- NULL
     s$state <- sel(s$state)
+    s["download"] <- list(msg(s$download))
     views <- list()
     for (b in lapply(s$browser, record_ref_computed)) {
       core <- b[names(b) != "rows"]
@@ -216,4 +225,11 @@ record_rw_open <- c(
   heal_missing_column = "row 1: clearing a column the data lacks clears it",
   drill_point = "row 9: a point click emits between()",
   drill_point_date = "row 9: a point click emits between()"
+)
+
+# Messages that changed with an open behaviour change (behaviour-changes.md),
+# reference = rewrite.
+record_rw_messages <- c(
+  "the chart has not been drawn yet; try again in a moment" =
+    "the picture is not ready yet; open the menu again"
 )

@@ -4,7 +4,11 @@
 # section 3. The pieces are cached on exactly their inputs, so a setting that
 # changes only the drawing reuses them.
 
-chart_view <- function(spec, state, revs, src, session) {
+chart_view <- function(kit, src) {
+  spec <- kit$spec
+  state <- kit$state
+  revs <- kit$revs
+  session <- kit$session
   rows <- viz_rows()
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
@@ -107,31 +111,31 @@ chart_needed_cols <- function(v, d, kinds) {
   needed[nzchar(needed) & needed %in% names(d)]
 }
 
-# The chart text resolved against the data, and the pieces the face draws
-# as controls. Slots name the spec's arguments (`{@color}`), plus the
-# prepare script's declared values.
+# The chart text resolved against the data, in the shape core/titles.js
+# reads: each band its text, its pieces (the words a reader may set) and
+# the settings offered where a clause dropped; NULL with nothing to show.
+# `args` is what each `{@arg}` prints now, `choices` the lists a sentence
+# gives its words. Slots name the spec's arguments, plus the prepare
+# script's declared values.
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
-  parts <- list(
-    title = block_title_parts(v$title, d, auto = auto$label, args = a),
-    subtitle = block_title_parts(v$subtitle, d, auto = auto$subtitle,
-                                 args = a),
-    caption = block_title_parts(v$caption, d, auto = auto$caption, args = a)
-  )
+  band <- function(tpl, auto_text) {
+    text <- resolve_block_title(tpl, d, auto = auto_text, args = a)
+    parts <- block_title_parts(tpl, d, auto = auto_text, args = a)
+    offers <- as.list(attr(parts, "offers"))
+    empty <- !length(text) || is.na(text[[1L]]) || !nzchar(text[[1L]])
+    if (empty && !length(offers)) {
+      return(NULL)
+    }
+    list(text = text, parts = parts, offers = offers)
+  }
   list(
-    title = resolve_block_title(v$title, d, auto = auto$label, args = a),
-    subtitle = resolve_block_title(v$subtitle, d, auto = auto$subtitle,
-                                   args = a),
-    caption = resolve_block_title(v$caption, d, auto = auto$caption,
-                                  args = a),
-    parts = parts,
-    offers = lapply(parts, function(p) as.list(attr(p, "offers"))),
-    sentence_args = as.list(sentence_args(parts$title, parts$subtitle,
-                                          parts$caption)),
-    arg_values = lapply(stats::setNames(nm = names(a)), arg_token_value,
-                        args = a),
-    slot_choices = lapply(
+    title = band(v$title, auto$label),
+    subtitle = band(v$subtitle, auto$subtitle),
+    caption = band(v$caption, auto$caption),
+    args = lapply(stats::setNames(nm = names(a)), arg_token_value, args = a),
+    choices = lapply(
       template_slot_choices(list(v$title, v$subtitle, v$caption)), as.list
     )
   )
@@ -151,76 +155,28 @@ chart_capture_service <- function(session, el, payload) {
   })
 }
 
-# The download menu: the numbers as Excel, the picture as png, web page or
-# PowerPoint. The picture is the one the browser posted when the menu
-# opened; without one the capture service draws it and the next click
-# finds it.
-chart_downloads <- function(output, session, state, src, view, capture,
-                            data) {
-  ns <- session$ns
-  picture <- chart_picture(session, capture, data)
-  formats <- shiny::reactive({
-    if (!isTRUE(state$download())) {
-      return(list())
-    }
-    Filter(function(s) isTRUE(s$ok), list(
-      list(id = "dl_xlsx", ext = "xlsx", label = "Excel",
-           ok = requireNamespace("openxlsx", quietly = TRUE)),
-      list(id = "dl_html", ext = "html", label = "Web page", ok = TRUE),
-      list(id = "dl_pptx", ext = "pptx", label = "PowerPoint",
-           ok = requireNamespace("officer", quietly = TRUE)),
-      list(id = "dl_png", ext = "png", label = "Image", ok = TRUE)
-    ))
-  })
-  output$chart_download <- shiny::renderUI(dl_control_ui(ns, formats()))
-
-  text <- function(key, auto_key) {
-    v <- chart_state_values(state)
-    inp <- tryCatch(src$input(), error = function(e) NULL)
-    auto <- input_display_attrs(if (is.list(inp)) inp$df else NULL)
-    resolve_block_title(v[[key]], src$plain(), auto = auto[[auto_key]],
-                        args = viz_slot_values(viz_block_spec("chart"), v))
-  }
-  handler <- function(ext, what, write) {
-    shiny::downloadHandler(
-      filename = function() {
-        dl_filename(tryCatch(dl_dataset(data()), error = function(e) NULL),
-                    tryCatch(view$titles()$title, error = function(e) NULL),
-                    "chart", ext)
-      },
-      content = function(file) dl_guard(what, write(file))
+# What the downloads write (export-registry.R): the numbers the chart shows,
+# one row per mark for the aggregated types and the rows for the rest; the
+# browser's picture, when it has sent one; the resolved text. Read when a
+# format is clicked.
+chart_exhibit <- function(kit, src, view) {
+  function() {
+    v <- chart_state_values(kit$state)
+    kinds <- src$kinds()
+    data <- chart_xlsx_frame(
+      src$plain(), chart_type = v$type, group = chart_category(v, kinds),
+      color = v$color, facet = v$facet, func = v$func,
+      value = chart_value_col(v, kinds), na_group = v$missing
     )
-  }
-  output$dl_xlsx <- handler("xlsx", "Excel", function(file) {
-    v <- chart_state_values(state)
-    d <- chart_xlsx_frame(
-      src$plain(), chart_type = v$type,
-      group = chart_category(v, src$kinds()), color = v$color,
-      facet = v$facet, func = v$func,
-      value = chart_value_col(v, src$kinds()), na_group = v$missing
+    ti <- view$titles()
+    text <- function(band) if (!is.null(band)) band$text
+    new_viz_exhibit(
+      data, picture = chart_picture(kit$capture()),
+      title = text(ti$title), subtitle = text(ti$subtitle),
+      caption = text(ti$caption), kind = "chart",
+      meta = list(dataset = tryCatch(dl_dataset(kit$data()),
+                                     error = function(e) NULL))
     )
-    shiny::req(is.data.frame(d))
-    write_annotated_xlsx(
-      d, file, title = text("title", "label"),
-      subtitle = text("subtitle", "subtitle"),
-      caption = download_footer_caption(text("caption", "caption"), data(),
-                                        session)
-    )
-  })
-  output$dl_html <- handler("html", "web page", function(file) {
-    write_exhibit_html(picture(), file, title = text("title", "label"),
-                       subtitle = NULL)
-  })
-  output$dl_pptx <- handler("pptx", "PowerPoint", function(file) {
-    write_exhibit_pptx(picture(), file, title = text("title", "label"))
-  })
-  output$dl_png <- handler("png", "image", function(file) {
-    chart_capture_file(picture(), file)
-  })
-  # A link in a display:none host is a hidden output, which Shiny would
-  # suspend: the click would get a 404.
-  for (id in c("chart_download", "dl_xlsx", "dl_html", "dl_pptx", "dl_png")) {
-    shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
   }
 }
 
@@ -234,42 +190,12 @@ chart_value_col <- function(v, kinds) {
   if (identical(cat, v$x)) v$y else v$x
 }
 
-# The browser's picture with the board's download footer, or, when there is
-# none yet, a request to the capture service and an error that says so.
-chart_picture <- function(session, capture, data) {
-  token <- shiny::reactiveVal(NULL)
-  shiny::observe({
-    tok <- token()
-    shiny::req(tok)
-    cap <- tryCatch(chart_capture_collect(tok), error = function(e) {
-      token(NULL)
-      NULL
-    })
-    shiny::req(cap)
-    token(NULL)
-    if (is.null(shiny::isolate(capture()))) capture(cap)
-  })
-  function() {
-    cap <- capture()
-    if (!is.null(cap)) {
-      if (!inherits(cap, "chart_capture")) {
-        cap <- new_chart_capture(chart_capture_decode(cap$png), cap$width,
-                                 cap$height)
-      }
-      return(download_footer_stamp(cap, data(), session))
-    }
-    if (is.null(shiny::isolate(token()))) {
-      tok <- tryCatch(chart_capture_request(session$ns("chart"), 960, 540),
-                      error = function(e) NULL)
-      if (is.null(tok)) {
-        stop("the chart has no data yet; open its view and try again",
-             call. = FALSE)
-      }
-      token(tok)
-    }
-    stop("the chart has not been drawn yet; try again in a moment",
-         call. = FALSE)
+# The browser's picture as a chart_capture, or NULL.
+chart_picture <- function(cap) {
+  if (is.null(cap) || inherits(cap, "chart_capture")) {
+    return(cap)
   }
+  new_chart_capture(chart_capture_decode(cap$png), cap$width, cap$height)
 }
 
 # What the Excel download holds: one row per mark for the aggregated types,
