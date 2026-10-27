@@ -169,12 +169,19 @@ check_bool <- function(x, arg) {
   x
 }
 
-# Numbers whose names are labels. JSON sends `[{value, label}]`.
-check_numbers <- function(x, arg) {
-  if (is.list(x) && length(x) && all(vapply(x, is.list, logical(1L)))) {
-    labels <- vapply(x, function(e) e$label %||% "", character(1L))
-    x <- stats::setNames(json_atomic(lapply(x, `[[`, "value")), labels)
+# Values whose names are labels arrive from JSON as `[{value, label}]`;
+# they become a vector named by the labels.
+unlabel <- function(x) {
+  if (!is.list(x) || !length(x) || !all(vapply(x, is.list, logical(1L)))) {
+    return(x)
   }
+  labels <- vapply(x, function(e) e$label %||% "", character(1L))
+  stats::setNames(json_atomic(lapply(x, `[[`, "value")), labels)
+}
+
+# Numbers whose names are labels.
+check_numbers <- function(x, arg) {
+  x <- unlabel(x)
   nms <- names(x)
   x <- json_atomic(x)
   if (!is.numeric(x) || !all(is.finite(x))) {
@@ -188,6 +195,7 @@ check_numbers <- function(x, arg) {
 # Values of a column: numbers when every value is a number, else text, dates
 # as ISO text. Names are labels, as on `numbers`.
 check_values <- function(x, arg) {
+  x <- unlabel(x)
   nms <- names(x)
   if (inherits(x, c("Date", "POSIXt"))) {
     x <- format(x)
@@ -251,7 +259,7 @@ check_map <- function(x, arg) {
                                       any(!nzchar(names(x)))))) {
     value_fail("must be a named list")
   }
-  x
+  if (length(x)) x else list()
 }
 
 SPEC_CHECKERS <- list(
