@@ -9,10 +9,10 @@
 //
 // The file-wrapping IIFEs are not counted as functions.
 //
-// The rewritten core (inst/js/core) gets more on top: no var, and listeners,
+// The rewritten core (inst/js/core) and table (inst/js/table) get more on top: no var, and listeners,
 // observers, timers and chart instances only through a Scope
 // (inst/js/core/scope.js), so all of it goes with its block. `npm run
-// lint:core` checks just the core and must stay green.
+// lint:core` checks just those and must stay green.
 import globals from 'globals';
 
 const outsideScope = [
@@ -62,7 +62,7 @@ export default [
     }
   },
   {
-    files: ['inst/js/core/**/*.js'],
+    files: ['inst/js/core/**/*.js', 'inst/js/table/**/*.js'],
     rules: {
       'no-var': 'error',
       'no-console': 'error',

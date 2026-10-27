@@ -1,5 +1,6 @@
 {
-  // Type-checks the rewritten JS: inst/js/core and the generated specs.
+  // Type-checks the rewritten JS: inst/js/core, inst/js/table and the
+  // generated specs.
   // Strict and checkJs on every file; no per-file opt-in.
   // Run: npm run typecheck
   "compilerOptions": {
@@ -12,5 +13,6 @@
     "types": []
   },
   "include": ["inst/js/core/**/*.js", "inst/js/core/**/*.d.ts",
-              "inst/js/spec/**/*.js", "inst/js/spec/**/*.d.ts"]
+              "inst/js/spec/**/*.js", "inst/js/spec/**/*.d.ts",
+              "inst/js/table/**/*.js", "inst/js/table/**/*.d.ts"]
 }
