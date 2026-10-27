@@ -8,33 +8,34 @@
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"dist","name":null,"facet":null,"show":"box","col":"num2","summary":"median_q1_q3","whiskers":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Groups","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Groups",
-          "subtitle": "Sub",
-          "caption": "Cap",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Groups",
+            "parts": [
               {
                 "text": "Groups"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
               {
                 "text": "Sub"
               }
             ],
-            "caption": [
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
               {
                 "text": "Cap"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -63,7 +64,7 @@
             "group": "cat",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -114,25 +115,21 @@
             "num": false,
             "disp": ["4", "4", "3", "1"],
             "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 75, 25],
+              "w": [100, 100, 75, 25],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
-              "hover": {
+              "tt": {
                 "head": "Rows",
                 "sub": "N = 12",
-                "measure": "Rows",
-                "base": 12
+                "meas": "Rows",
+                "den": 12
               }
             }
           },
@@ -147,37 +144,33 @@
             "num": false,
             "disp": ["2.50", "5.00", "5.00", "8.00"],
             "key": [2.5, 5, 5, 8],
+            "axis": {
+              "at": [21.06, 50, 78.94],
+              "labels": ["2.5", "5", "7.5"]
+            },
             "mark": {
               "kind": "box",
-              "whisker_low": [3.7, 16.72, 38.43, 84.72],
-              "whisker_low_width": [8.68, 21.7, 5.79, 0],
-              "box_low": [12.38, 38.43, 44.21, 84.72],
-              "box_width": [14.47, 14.47, 28.94, 0],
-              "center": [21.06, 50, 50, 84.72],
-              "box_high": [26.85, 52.89, 73.15000000000001, 84.72],
-              "whisker_high_width": [0, 8.68, 23.15, 0],
-              "whisker_high": [26.85, 61.57, 96.3, 84.72],
-              "n": [4, 4, 3, 1],
+              "wl": [3.7, 16.72, 38.43, 84.72],
+              "w1": [8.68, 21.7, 5.79, 0],
+              "bl": [12.38, 38.43, 44.21, 84.72],
+              "bw": [14.47, 14.47, 28.94, 0],
+              "bc": [21.06, 50, 50, 84.72],
+              "b2": [26.85, 52.89, 73.15000000000001, 84.72],
+              "w2": [0, 8.68, 23.15, 0],
+              "wh": [26.85, 61.57, 96.3, 84.72],
+              "nn": [4, 4, 3, 1],
               "tip": ["n=4 · Median 2.5 · Q1–Q3 1.75–3 · 1.5×IQR 1–3", "n=4 · Median 5 · Q1–Q3 4–5.25 · 1.5×IQR 2.125–6", "n=3 · Median 5 · Q1–Q3 4.5–7 · 1.5×IQR 4–9", "n=1 · Median 8 · Q1–Q3 8–8 · 1.5×IQR 8–8"],
-              "stats": {
-                "center": [2.5, 5, 5, 8],
-                "low": [1.75, 4, 4.5, 8],
-                "high": [3, 5.25, 7, 8],
-                "whisker_low": [1, 2.125, 4, 8],
-                "whisker_high": [3, 6, 9, 8]
-              },
-              "domain": {
-                "min": 0.68,
-                "max": 9.32
-              },
-              "ticks": {
-                "at": [2.5, 5, 7.5],
-                "labels": ["2.5", "5", "7.5"]
+              "r": {
+                "bc": [2.5, 5, 5, 8],
+                "bl": [1.75, 4, 4.5, 8],
+                "bh": [3, 5.25, 7, 8],
+                "wl": [1, 2.125, 4, 8],
+                "wh": [3, 6, 9, 8]
               },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "num2",
-                "measure": "num2",
+                "meas": "num2",
                 "words": {
                   "center": "Median",
                   "range": "Q1–Q3",
@@ -226,33 +219,34 @@
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"dist","name":null,"facet":null,"show":"box","col":"num2","summary":"median_q1_q3","whiskers":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Groups","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Groups",
-          "subtitle": "Sub",
-          "caption": "Cap",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Groups",
+            "parts": [
               {
                 "text": "Groups"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
               {
                 "text": "Sub"
               }
             ],
-            "caption": [
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
               {
                 "text": "Cap"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -281,7 +275,7 @@
             "group": "cat",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

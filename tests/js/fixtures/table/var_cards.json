@@ -9,24 +9,17 @@
       "derived": {
         "titles": {
           "title": null,
-          "subtitle": "Mean (SD)",
-          "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": [
+          "subtitle": {
+            "text": "Mean (SD)",
+            "parts": [
               {
                 "text": "Mean (SD)"
               }
             ],
-            "caption": null
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "caption": null,
+          "args": {
             "layout": "variables",
             "by": "grp",
             "rowname": "",
@@ -53,7 +46,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

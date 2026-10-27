@@ -10,23 +10,16 @@
         "titles": {
           "title": null,
           "subtitle": null,
-          "caption": "12 rows",
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": [
+          "caption": {
+            "text": "12 rows",
+            "parts": [
               {
                 "text": "12 rows"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "",
@@ -53,7 +46,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

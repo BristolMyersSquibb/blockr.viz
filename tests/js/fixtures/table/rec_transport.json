@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -49,7 +38,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -232,18 +221,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -270,7 +248,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -454,18 +432,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -492,7 +459,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "empty": {
           "kind": "message",
@@ -540,18 +507,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -578,7 +534,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "empty": {
           "kind": "message",
@@ -625,18 +581,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -663,7 +608,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

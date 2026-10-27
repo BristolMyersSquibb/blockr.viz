@@ -8,11 +8,9 @@
       "config": {"layout":"variables","by":["grp"],"rowname":null,"columns":null,"summaries":[{"type":"dist","name":null,"facet":null,"show":"box","col":"num","summary":"median_q1_q3","whiskers":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"By {@by}","subtitle":"{@stats}","caption":"{n} rows","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "By grp",
-          "subtitle": "",
-          "caption": "1 rows",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "By grp",
+            "parts": [
               {
                 "text": "By "
               },
@@ -22,29 +20,19 @@
                 "by": "name"
               }
             ],
-            "subtitle": [
-              {
-                "text": "",
-                "arg": "stats",
-                "by": "name"
-              }
-            ],
-            "caption": [
+            "offers": []
+          },
+          "subtitle": null,
+          "caption": {
+            "text": "1 rows",
+            "parts": [
               {
                 "text": "1 rows"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [
-            "by",
-            "stats"
-          ],
-          "arg_values": {
+          "args": {
             "layout": "variables",
             "by": "grp",
             "rowname": "",
@@ -71,7 +59,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

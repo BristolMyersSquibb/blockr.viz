@@ -8,33 +8,34 @@
       "config": {"layout":"records","by":[],"rowname":"cat","columns":["num","num2"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":1,"unit":"kg","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Records","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Records",
-          "subtitle": "Sub",
-          "caption": "Cap",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Records",
+            "parts": [
               {
                 "text": "Records"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
               {
                 "text": "Sub"
               }
             ],
-            "caption": [
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
               {
                 "text": "Cap"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -61,7 +62,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -149,33 +150,34 @@
       "config": {"layout":"records","by":[],"rowname":"cat","columns":["num","num2"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":1,"unit":"kg","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Records","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Records",
-          "subtitle": "Sub",
-          "caption": "Cap",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Records",
+            "parts": [
               {
                 "text": "Records"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
               {
                 "text": "Sub"
               }
             ],
-            "caption": [
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
               {
                 "text": "Cap"
               }
-            ]
+            ],
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -202,7 +204,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

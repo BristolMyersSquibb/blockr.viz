@@ -85,15 +85,15 @@ test_that("the groups view carries one card per drawable summary", {
   col <- function(nm) cards$cols[[match(nm, labels)]]
   expect_identical(as.character(col("Rows")$main), c("3", "2", "1"))
   # A glyph points at the column of the table the card draws it from, so a
-  # column of cards shares that column's scale. It counts from 0 over the
-  # summaries (the view has the stub in front).
+  # column of cards shares that column's scale. It is the column's index in
+  # the view, where the stub is 0.
   for (nm in c("Rows", "Events", "Age", "SBP", "Trend")) {
     k <- col(nm)$glyph
     expect_true(is.numeric(k))
-    expect_identical(m$cells$cols[[k + 1L]]$kind,
+    expect_identical(m$cells$cols[[k]]$kind,
                      c(Rows = "bar", Events = "barsplit", Age = "box",
                        SBP = "pair", Trend = "sparkline")[[nm]])
-    expect_identical(model$cols[[k + 2L]]$mark$kind,
+    expect_identical(model$cols[[k + 1L]]$mark$kind,
                      c(Rows = "bar", Events = "barsplit", Age = "box",
                        SBP = "pair", Trend = "sparkline")[[nm]])
   }

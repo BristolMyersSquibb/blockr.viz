@@ -8,29 +8,26 @@
       "config": {"layout":"records","by":[],"rowname":null,"columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"{n} rows of {label(cat)}","subtitle":"{n_distinct(id)} ids","caption":"","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "12 rows of Category",
-          "subtitle": "6 ids",
-          "caption": null,
-          "parts": {
-            "title": [
+          "title": {
+            "text": "12 rows of Category",
+            "parts": [
               {
                 "text": "12 rows of Category"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "6 ids",
+            "parts": [
               {
                 "text": "6 ids"
               }
             ],
-            "caption": null
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "caption": null,
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "",
@@ -57,7 +54,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "",
@@ -49,7 +38,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -232,18 +221,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "",
             "rowname": "",
@@ -271,7 +249,7 @@
             "nest": "FALSE",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -322,22 +300,18 @@
             "num": false,
             "disp": ["12"],
             "key": [12],
+            "axis": {
+              "at": [0, 41.67, 83.33],
+              "labels": ["0", "5", "10"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100],
+              "w": [100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 12
-              },
-              "ticks": {
-                "at": [0, 5, 10],
-                "labels": ["0", "5", "10"]
-              },
               "dw": 2,
-              "hover": {
+              "tt": {
                 "head": "Count",
-                "measure": "Count"
+                "meas": "Count"
               }
             }
           }
@@ -367,18 +341,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "",
@@ -405,7 +368,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -588,18 +551,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "variables",
             "by": "",
             "rowname": "",
@@ -626,7 +578,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

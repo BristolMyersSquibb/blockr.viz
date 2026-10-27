@@ -1,6 +1,6 @@
-# The groups view's text: what a cell says as plain text (`disp`, which the
-# browser searches and, without a `key`, sorts on), the axis of a column, and
-# the escapes the cell model carries for the HTML path.
+# The groups view's columns: what a cell says as plain text (`disp`, which
+# the browser searches), its mark, the axis of a column, and the escapes the
+# cell model carries for the HTML path.
 
 # The text the cell model escaped for markup, as the text it stands for.
 table_groups_plain <- function(x) {
@@ -71,35 +71,49 @@ table_groups_join_levels <- function(levels, labs) {
   }, character(1L))
 }
 
-# The scale a mark is drawn on: `domain` (what its positions are percentages
-# of) and, with the axis on, `ticks`, the labelled positions of the column
-# axis in the domain's units. summarize_axis_strip() draws the same strip as
-# HTML: a percentage scale carries its "%" on the last label. `domain`
-# fields: `min` and `max` (d0, d1 of summarize_axis_domain()), `date` when
-# they are days since 1970-01-01. A swimlane keeps its own domain when the
-# axis helper has none (a degenerate span still hovers).
-table_groups_scale <- function(c, p, prep, axis) {
-  dom <- summarize_axis_domain(p, prep)
-  if (is.null(dom)) {
-    if (!identical(c$kind, "interval")) {
-      return(list())
-    }
-    return(list(domain = table_groups_compact(list(
-      min = c$d0, max = c$d1, date = if (isTRUE(c$dd)) TRUE
-    ))))
+# The mark of a column: summarize_payload_col()'s fields (names in
+# R/summarize-push.R), less what the TableCol holds itself: `disp`, `v` (the
+# key), `pct`, the tile paint and the claims. The cell model escapes some text
+# for the HTML path (box and point range tooltips, swimlane tooltips and
+# labels); the browser escapes, so it is plain here. A plain number or text
+# has no mark.
+table_groups_mark <- function(c) {
+  if (identical(c$kind, "num")) {
+    return(NULL)
   }
-  out <- list(domain = table_groups_compact(list(
-    min = round(dom$d0, 4L), max = round(dom$d1, 4L),
-    date = if (isTRUE(dom$date)) TRUE
-  )))
-  if (isTRUE(axis)) {
-    out$ticks <- table_groups_ticks(dom, p)
+  out <- summarize_payload_col(c)
+  out[c("fkey", "scol", "disp", "v", "pct", "bg", "fg")] <- NULL
+  out$tip <- table_groups_tips(out[["tip"]])
+  if (!is.null(out$lv)) {
+    out$lv <- lapply(out$lv, function(g) {
+      g$tip <- table_groups_tips(g[["tip"]])
+      g
+    })
   }
-  out
+  if (identical(c$kind, "interval")) {
+    out$tips <- lapply(out$tips, table_groups_tips)
+    out$segs <- lapply(out$segs, lapply, function(sg) {
+      if (length(sg) >= 4L) sg[[4L]] <- table_groups_plain(sg[[4L]])
+      sg
+    })
+  }
+  summarize_drop_null(out)
 }
 
-# `{at, labels}` of the axis, or `NULL` when there are fewer than two ticks.
-table_groups_ticks <- function(dom, p) {
+table_groups_tips <- function(x) {
+  if (!is.null(x)) summarize_arr(table_groups_plain(x))
+}
+
+# The column axis the header draws: where the ticks sit (percent of the
+# cell, 0 to 100) and their labels, the same numbers summarize_axis_strip()
+# prints, with the "%" of a percent scale already on the last label. `foot`
+# marks a large swimlane, which repeats the axis under the table. `NULL`
+# for a column with no scale or fewer than two ticks.
+table_groups_axis <- function(p, prep) {
+  dom <- summarize_axis_domain(p, prep)
+  if (is.null(dom)) {
+    return(NULL)
+  }
   t <- if (isTRUE(dom$date)) {
     summarize_axis_date_ticks(dom$d0, dom$d1)
   } else {
@@ -111,10 +125,13 @@ table_groups_ticks <- function(dom, p) {
   if (length(t$at) < 2L) {
     return(NULL)
   }
-  last <- length(t$at)
   if (isTRUE(dom$pct)) {
+    last <- length(t$labels)
     t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
-  list(at = table_groups_arr(round(t$at, 6L)),
-       labels = table_groups_arr(t$labels))
+  pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
+  table_groups_compact(list(
+    at = summarize_arr(pos), labels = summarize_arr(t$labels),
+    foot = if (identical(p$kind, "interval") && identical(p$size, "lg")) TRUE
+  ))
 }

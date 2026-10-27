@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -52,7 +41,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -103,22 +92,18 @@
             "num": false,
             "disp": ["22.5", "26"],
             "key": [22.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [86.54000000000001, 100],
+              "w": [86.54000000000001, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 26
-              },
-              "ticks": {
-                "at": [0, 10, 20],
-                "labels": ["0", "10", "20"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }
@@ -137,7 +122,7 @@
             }
           ]
         ],
-        "fold": "Other — 2 rows below the cut, each with a value ≤ 19.5"
+        "note": "Other — 2 rows below the cut, each with a value ≤ 19.5"
       }
     },
     {
@@ -150,18 +135,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -191,7 +165,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -239,18 +213,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -280,7 +243,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -331,22 +294,18 @@
             "num": false,
             "disp": ["12", "19.5"],
             "key": [12, 19.5],
+            "axis": {
+              "at": [0, 25.64, 51.28, 76.92],
+              "labels": ["0", "5", "10", "15"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [61.54, 100],
+              "w": [61.54, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 19.5
-              },
-              "ticks": {
-                "at": [0, 5, 10, 15],
-                "labels": ["0", "5", "10", "15"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }
@@ -365,7 +324,7 @@
             }
           ]
         ],
-        "fold": "Other — 2 rows below the cut, each with a value ≤ 26"
+        "note": "Other — 2 rows below the cut, each with a value ≤ 26"
       }
     },
     {
@@ -378,18 +337,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -419,7 +367,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -470,22 +418,18 @@
             "num": false,
             "disp": ["22.5", "26"],
             "key": [22.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [86.54000000000001, 100],
+              "w": [86.54000000000001, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 26
-              },
-              "ticks": {
-                "at": [0, 10, 20],
-                "labels": ["0", "10", "20"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }
@@ -504,7 +448,7 @@
             }
           ]
         ],
-        "fold": "Other — 2 rows below the cut, each with a value ≤ 19.5"
+        "note": "Other — 2 rows below the cut, each with a value ≤ 19.5"
       }
     },
     {
@@ -517,18 +461,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -558,7 +491,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -609,22 +542,18 @@
             "num": false,
             "disp": ["12", "19.5"],
             "key": [12, 19.5],
+            "axis": {
+              "at": [0, 25.64, 51.28, 76.92],
+              "labels": ["0", "5", "10", "15"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [61.54, 100],
+              "w": [61.54, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 19.5
-              },
-              "ticks": {
-                "at": [0, 5, 10, 15],
-                "labels": ["0", "5", "10", "15"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }
@@ -643,7 +572,7 @@
             }
           ]
         ],
-        "fold": "Other — 2 rows below the cut, each with a value ≤ 26"
+        "note": "Other — 2 rows below the cut, each with a value ≤ 26"
       }
     },
     {
@@ -656,18 +585,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -697,7 +615,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -748,22 +666,18 @@
             "num": false,
             "disp": ["12", "19.5", "26"],
             "key": [12, 19.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [46.15, 75, 100],
+              "w": [46.15, 75, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 26
-              },
-              "ticks": {
-                "at": [0, 10, 20],
-                "labels": ["0", "10", "20"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }
@@ -782,7 +696,7 @@
             }
           ]
         ],
-        "fold": "Other — 1 rows below the cut, each with a value ≤ 22.5"
+        "note": "Other — 1 rows below the cut, each with a value ≤ 22.5"
       }
     },
     {
@@ -795,18 +709,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -836,7 +739,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -887,22 +790,18 @@
             "num": false,
             "disp": ["12", "19.5", "26", "22.5"],
             "key": [12, 19.5, 26, 22.5],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [46.15, 75, 100, 86.54000000000001],
+              "w": [46.15, 75, 100, 86.54000000000001],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 26
-              },
-              "ticks": {
-                "at": [0, 10, 20],
-                "labels": ["0", "10", "20"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Total",
-                "measure": "Total"
+                "meas": "Total"
               }
             }
           }

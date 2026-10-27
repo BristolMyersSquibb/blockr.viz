@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "grp",
             "rowname": "cat",
@@ -49,7 +38,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -231,18 +220,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "grp",
             "rowname": "cat",
@@ -271,7 +249,7 @@
             "group": "grp",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -322,25 +300,21 @@
             "num": false,
             "disp": ["6", "6"],
             "key": [50, 50],
+            "pct": ["(50%)", "(50%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100],
+              "w": [100, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 50
-              },
-              "ticks": {
-                "at": [0, 20, 40],
-                "labels": ["0", "20", "40%"]
-              },
               "dw": 7,
-              "pct": ["(50%)", "(50%)"],
-              "hover": {
+              "tt": {
                 "head": "Count",
                 "sub": "N = 12",
-                "measure": "Count",
-                "base": 12
+                "meas": "Count",
+                "den": 12
               }
             }
           }
@@ -371,18 +345,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "grp",
             "rowname": "cat",
@@ -411,7 +374,7 @@
             "group": "grp",
             "value": "num"
           },
-          "slot_choices": []
+          "choices": []
         },
         "legend": {
           "groups": [
@@ -487,37 +450,33 @@
             "num": false,
             "disp": ["7.2", "6.0"],
             "key": [7.25, 6],
+            "axis": {
+              "at": [34.57, 78.66],
+              "labels": ["5", "10"]
+            },
             "mark": {
               "kind": "box",
-              "whisker_low": [8.109999999999999, 3.7],
-              "whisker_low_width": [23.15, 19.29],
-              "box_low": [31.26, 22.99],
-              "box_width": [42.99, 47.4],
-              "center": [54.41, 43.39],
-              "box_high": [74.25, 70.39],
-              "whisker_high_width": [22.05, 17.09],
-              "whisker_high": [96.3, 87.48],
-              "n": [6, 6],
+              "wl": [8.109999999999999, 3.7],
+              "w1": [23.15, 19.29],
+              "bl": [31.26, 22.99],
+              "bw": [42.99, 47.4],
+              "bc": [54.41, 43.39],
+              "b2": [74.25, 70.39],
+              "w2": [22.05, 17.09],
+              "wh": [96.3, 87.48],
+              "nn": [6, 6],
               "tip": ["n=6 · Median 7.25 · Q1–Q3 4.625–9.5 · 1.5×IQR 2–12", "n=6 · Median 6 · Q1–Q3 3.688–9.062 · 1.5×IQR 1.5–11"],
-              "stats": {
-                "center": [7.25, 6],
-                "low": [4.625, 3.6875],
-                "high": [9.5, 9.0625],
-                "whisker_low": [2, 1.5],
-                "whisker_high": [12, 11]
-              },
-              "domain": {
-                "min": 1.08,
-                "max": 12.42
-              },
-              "ticks": {
-                "at": [5, 10],
-                "labels": ["5", "10"]
+              "r": {
+                "bc": [7.25, 6],
+                "bl": [4.625, 3.6875],
+                "bh": [9.5, 9.0625],
+                "wl": [2, 1.5],
+                "wh": [12, 11]
               },
               "dw": 3,
-              "hover": {
+              "tt": {
                 "head": "Numeric value",
-                "measure": "Numeric value",
+                "meas": "Numeric value",
                 "words": {
                   "center": "Median",
                   "range": "Q1–Q3",
@@ -531,59 +490,42 @@
             "num": false,
             "disp": ["6", "6"],
             "key": [50, 50],
+            "pct": ["(50%)", "(50%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
             "mark": {
               "kind": "barsplit",
               "mode": "stacked",
-              "levels": [
-                {
-                  "name": "a",
-                  "color": "#0072B2",
-                  "width": [33.33, 33.33],
-                  "amount": [2, 2],
-                  "inside": ["2", "2"],
-                  "ink": "#ffffff"
-                },
-                {
-                  "name": "b",
-                  "color": "#E69F00",
-                  "width": [33.33, 33.33],
-                  "amount": [2, 2],
-                  "inside": ["2", "2"],
-                  "ink": "#1f2937"
-                },
-                {
-                  "name": "c",
-                  "color": "#009E73",
-                  "width": [16.67, 33.33],
-                  "amount": [1, 2],
-                  "inside": ["1", "2"],
-                  "ink": "#ffffff"
-                },
-                {
-                  "name": "d",
-                  "color": "#CC79A7",
-                  "width": [16.67, 0],
-                  "amount": [1, 0],
-                  "inside": ["1", ""],
-                  "ink": "#ffffff"
-                }
+              "names": ["a", "b", "c", "d"],
+              "fills": ["#0072B2", "#E69F00", "#009E73", "#CC79A7"],
+              "seg": [
+                [33.33, 33.33],
+                [33.33, 33.33],
+                [16.67, 33.33],
+                [16.67, 0]
               ],
-              "domain": {
-                "min": 0,
-                "max": 50
-              },
-              "ticks": {
-                "at": [0, 20, 40],
-                "labels": ["0", "20", "40%"]
-              },
+              "segv": [
+                [2, 2],
+                [2, 2],
+                [1, 2],
+                [1, 0]
+              ],
+              "slab": [
+                ["2", "2"],
+                ["2", "2"],
+                ["1", "2"],
+                ["1", ""]
+              ],
+              "sink": ["#ffffff", "#1f2937", "#ffffff", "#ffffff"],
               "dw": 7,
-              "pct": ["(50%)", "(50%)"],
-              "hover": {
+              "tt": {
                 "head": "cat",
                 "sub": "N = 12",
-                "measure": "cat",
-                "color_by": "Category",
-                "base": 12
+                "meas": "cat",
+                "cvar": "Category",
+                "den": 12
               }
             }
           }
@@ -618,18 +560,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "variables",
             "by": "grp",
             "rowname": "cat",
@@ -656,7 +587,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -753,18 +684,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "grp",
             "rowname": "cat",
@@ -791,7 +711,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

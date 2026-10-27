@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "grp",
             "rowname": "id",
@@ -49,7 +38,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

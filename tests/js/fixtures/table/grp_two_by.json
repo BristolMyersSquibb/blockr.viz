@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -52,7 +41,7 @@
             "parent": "grp",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -103,26 +92,22 @@
             "num": false,
             "disp": ["6", "2", "2", "2", "6", "2", "2", "1", "1"],
             "key": [50, 16.6667, 16.6667, 16.6667, 50, 16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "w": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "sub": [false, true, true, true, false, true, true, true, true],
               "fill": "#0072B2",
-              "child": [false, true, true, true, false, true, true, true, true],
-              "domain": {
-                "min": 0,
-                "max": 50
-              },
-              "ticks": {
-                "at": [0, 20, 40],
-                "labels": ["0", "20", "40%"]
-              },
               "dw": 7,
-              "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
-              "hover": {
+              "tt": {
                 "head": "Count",
                 "sub": "N = 12",
-                "measure": "Count",
-                "base": 12
+                "meas": "Count",
+                "den": 12
               }
             }
           }
@@ -159,18 +144,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -200,7 +174,7 @@
             "parent": "grp",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "receipt": "Filtered: grp = g1, cat = a",
         "script": {
@@ -249,18 +223,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -290,7 +253,7 @@
             "parent": "grp",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "receipt": "Filtered: grp = g2",
         "script": {
@@ -339,18 +302,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -380,7 +332,7 @@
             "parent": "grp",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

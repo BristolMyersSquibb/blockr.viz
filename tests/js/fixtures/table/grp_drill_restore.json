@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -51,7 +40,7 @@
             "group": "cat",
             "func": "count"
           },
-          "slot_choices": []
+          "choices": []
         },
         "receipt": "Filtered: cat = a",
         "script": {
@@ -103,25 +92,21 @@
             "num": false,
             "disp": ["4", "4", "3", "1"],
             "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 75, 25],
+              "w": [100, 100, 75, 25],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
-              "hover": {
+              "tt": {
                 "head": "Count",
                 "sub": "N = 12",
-                "measure": "Count",
-                "base": 12
+                "meas": "Count",
+                "den": 12
               }
             }
           }

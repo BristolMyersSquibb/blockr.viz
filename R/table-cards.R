@@ -212,8 +212,8 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     range = range,
     word = word,
     legend = legend,
-    # 0-based, into the payload's `cols`: the glyph the table draws there.
-    glyph = if (glyph) k - 1L,
+    # Into the payload's `cols` (the stub is 0): the glyph the table draws.
+    glyph = if (glyph) k,
     text = text,
     main = as.character(main),
     sub = if (!is.null(sub)) as.character(sub)

@@ -8,29 +8,26 @@
       "config": {"layout":"variables","by":["grp"],"rowname":null,"columns":null,"summaries":[{"type":"dist","name":null,"facet":null,"show":"box","col":"num","summary":"median_q1_q3","whiskers":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":true,"total_label":"Total","nest":false,"title":"Table 1","subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Table 1",
-          "subtitle": "Mean (SD)",
-          "caption": null,
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Table 1",
+            "parts": [
               {
                 "text": "Table 1"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Mean (SD)",
+            "parts": [
               {
                 "text": "Mean (SD)"
               }
             ],
-            "caption": null
+            "offers": []
           },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "caption": null,
+          "args": {
             "layout": "variables",
             "by": "grp",
             "rowname": "",
@@ -57,7 +54,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

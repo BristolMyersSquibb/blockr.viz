@@ -8,11 +8,9 @@
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":3,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Top {@top_n} by {label(@by)}","subtitle":"{@func in count, sum} [of {@col}]","caption":"{n} rows","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "Top 3 by Category",
-          "subtitle": "count ",
-          "caption": "12 rows",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "Top 3 by Category",
+            "parts": [
               {
                 "text": "Top "
               },
@@ -30,7 +28,11 @@
                 "by": "label"
               }
             ],
-            "subtitle": [
+            "offers": []
+          },
+          "subtitle": {
+            "text": "count ",
+            "parts": [
               {
                 "text": "count",
                 "arg": "func",
@@ -40,26 +42,20 @@
                 "text": " "
               }
             ],
-            "caption": [
+            "offers": [
+              "col"
+            ]
+          },
+          "caption": {
+            "text": "12 rows",
+            "parts": [
               {
                 "text": "12 rows"
               }
-            ]
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [
-              "col"
             ],
-            "caption": []
+            "offers": []
           },
-          "sentence_args": [
-            "top_n",
-            "by",
-            "func",
-            "col"
-          ],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -88,7 +84,7 @@
             "group": "cat",
             "func": "count"
           },
-          "slot_choices": {
+          "choices": {
             "func": [
               "count",
               "sum"
@@ -144,25 +140,21 @@
             "num": false,
             "disp": ["4", "4", "3"],
             "key": [33.3333, 33.3333, 25],
+            "pct": ["(33%)", "(33%)", "(25%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 75],
+              "w": [100, 100, 75],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(25%)"],
-              "hover": {
+              "tt": {
                 "head": "Count",
                 "sub": "N = 12",
-                "measure": "Count",
-                "base": 12
+                "meas": "Count",
+                "den": 12
               }
             }
           }
@@ -182,7 +174,7 @@
             }
           ]
         ],
-        "fold": "Other — 1 rows below the cut, each with a value ≤ 1"
+        "note": "Other — 1 rows below the cut, each with a value ≤ 1"
       }
     }
   ]

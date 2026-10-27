@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "id",
             "rowname": "",
@@ -54,7 +43,7 @@
             "facet": "cat",
             "fill": "grade"
           },
-          "slot_choices": []
+          "choices": []
         },
         "legend": {
           "groups": [
@@ -126,14 +115,14 @@
             "num": false,
             "disp": [null, "1", null, null, "1", null, null, null, null, "1", null, null, "1", null],
             "key": [2, 1, null, null, 1, null, null, 2, null, 1, null, null, 1, null],
+            "bg": [null, "#CDD9F7", null, null, "#2F5BD3", null, null, null, null, "#CDD9F7", null, null, "#CDD9F7", null],
+            "fg": [null, "#111827", null, null, "#ffffff", null, null, null, null, "#111827", null, null, "#111827", null],
             "mark": {
               "kind": "tile",
-              "fill": [null, "#CDD9F7", null, null, "#2F5BD3", null, null, null, null, "#CDD9F7", null, null, "#CDD9F7", null],
-              "ink": [null, "#111827", null, null, "#ffffff", null, null, null, null, "#111827", null, null, "#111827", null],
-              "hover": {
+              "tt": {
                 "head": "a",
-                "measure": "Rows",
-                "base": 4
+                "meas": "Rows",
+                "den": 4
               }
             }
           },
@@ -142,14 +131,14 @@
             "num": false,
             "disp": [null, null, null, "1", null, null, "1", null, "1", null, null, "1", null, null],
             "key": [2, null, null, 1, null, null, 1, 2, 1, null, null, 1, null, null],
+            "bg": [null, null, null, "#CDD9F7", null, null, "#7FA2EE", null, "#7FA2EE", null, null, "#2F5BD3", null, null],
+            "fg": [null, null, null, "#111827", null, null, "#111827", null, "#111827", null, null, "#ffffff", null, null],
             "mark": {
               "kind": "tile",
-              "fill": [null, null, null, "#CDD9F7", null, null, "#7FA2EE", null, "#7FA2EE", null, null, "#2F5BD3", null, null],
-              "ink": [null, null, null, "#111827", null, null, "#111827", null, "#111827", null, null, "#ffffff", null, null],
-              "hover": {
+              "tt": {
                 "head": "b",
-                "measure": "Rows",
-                "base": 4
+                "meas": "Rows",
+                "den": 4
               }
             }
           },
@@ -158,14 +147,14 @@
             "num": false,
             "disp": [null, null, "1", null, null, "1", null, null, null, null, "1", null, null, null],
             "key": [2, null, 1, null, null, 1, null, 1, null, null, 1, null, null, null],
+            "bg": [null, null, "#2F5BD3", null, null, "#7FA2EE", null, null, null, null, "#7FA2EE", null, null, null],
+            "fg": [null, null, "#ffffff", null, null, "#111827", null, null, null, null, "#111827", null, null, null],
             "mark": {
               "kind": "tile",
-              "fill": [null, null, "#2F5BD3", null, null, "#7FA2EE", null, null, null, null, "#7FA2EE", null, null, null],
-              "ink": [null, null, "#ffffff", null, null, "#111827", null, null, null, null, "#111827", null, null, null],
-              "hover": {
+              "tt": {
                 "head": "c",
-                "measure": "Rows",
-                "base": 3
+                "meas": "Rows",
+                "den": 3
               }
             }
           },
@@ -174,14 +163,14 @@
             "num": false,
             "disp": [null, null, null, null, null, null, null, null, null, null, null, null, null, "1"],
             "key": [null, null, null, null, null, null, null, 1, null, null, null, null, null, 1],
+            "bg": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#2F5BD3"],
+            "fg": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#ffffff"],
             "mark": {
               "kind": "tile",
-              "fill": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#2F5BD3"],
-              "ink": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#ffffff"],
-              "hover": {
+              "tt": {
                 "head": "d",
-                "measure": "Rows",
-                "base": 1
+                "meas": "Rows",
+                "den": 1
               }
             }
           }

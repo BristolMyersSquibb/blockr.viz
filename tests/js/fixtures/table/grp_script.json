@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "kind",
             "rowname": "",
@@ -53,7 +42,7 @@
             "func": "sum",
             "k": "6"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [
@@ -150,18 +139,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "kind",
             "rowname": "",
@@ -192,7 +170,7 @@
             "func": "sum",
             "k": "8"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [
@@ -289,18 +267,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "kind",
             "rowname": "",
@@ -331,7 +298,7 @@
             "func": "sum",
             "k": "8"
           },
-          "slot_choices": []
+          "choices": []
         },
         "receipt": "Filtered: kind = big",
         "script": {
@@ -389,18 +356,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "kind",
             "rowname": "",
@@ -430,7 +386,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "empty": {
           "kind": "message",

@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -52,7 +41,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -109,22 +98,18 @@
             "num": false,
             "disp": ["4.25", "2.25", "6", "8"],
             "key": [4.25, 2.25, 6, 8],
+            "axis": {
+              "at": [0, 31.25, 62.5, 93.75],
+              "labels": ["0", "2.5", "5", "7.5"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [53.12, 28.12, 75, 100],
+              "w": [53.12, 28.12, 75, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 8
-              },
-              "ticks": {
-                "at": [0, 2.5, 5, 7.5],
-                "labels": ["0", "2.5", "5", "7.5"]
-              },
               "dw": 4,
-              "hover": {
+              "tt": {
                 "head": "Mean num2 (CHF)",
-                "measure": "Mean num2"
+                "meas": "Mean num2"
               }
             }
           }

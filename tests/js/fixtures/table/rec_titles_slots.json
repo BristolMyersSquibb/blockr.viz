@@ -8,11 +8,9 @@
       "config": {"layout":"records","by":[],"rowname":"cat","columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"By {@rowname}[, with {@columns}]","subtitle":"{label(@rowname)}","caption":"{@look} look","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
-          "title": "By cat",
-          "subtitle": "Category",
-          "caption": "table look",
-          "parts": {
-            "title": [
+          "title": {
+            "text": "By cat",
+            "parts": [
               {
                 "text": "By "
               },
@@ -22,14 +20,24 @@
                 "by": "name"
               }
             ],
-            "subtitle": [
+            "offers": [
+              "columns"
+            ]
+          },
+          "subtitle": {
+            "text": "Category",
+            "parts": [
               {
                 "text": "Category",
                 "arg": "rowname",
                 "by": "label"
               }
             ],
-            "caption": [
+            "offers": []
+          },
+          "caption": {
+            "text": "table look",
+            "parts": [
               {
                 "text": "table",
                 "arg": "look",
@@ -38,21 +46,10 @@
               {
                 "text": " look"
               }
-            ]
-          },
-          "offers": {
-            "title": [
-              "columns"
             ],
-            "subtitle": [],
-            "caption": []
+            "offers": []
           },
-          "sentence_args": [
-            "rowname",
-            "columns",
-            "look"
-          ],
-          "arg_values": {
+          "args": {
             "layout": "records",
             "by": "",
             "rowname": "cat",
@@ -79,7 +76,7 @@
             "total_label": "Total",
             "nest": "FALSE"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

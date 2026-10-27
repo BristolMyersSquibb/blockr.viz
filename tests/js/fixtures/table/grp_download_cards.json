@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "grp",
             "rowname": "",
@@ -52,7 +41,7 @@
             "value": "num",
             "func": "sum"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],

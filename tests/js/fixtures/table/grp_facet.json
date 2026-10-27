@@ -11,18 +11,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -52,7 +41,7 @@
             "func": "count",
             "facet": "grp"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -101,31 +90,28 @@
           {
             "name": "fac",
             "num": false,
-            "disp": ["lo", "hi", "mid", "mid"]
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
           },
           {
             "name": "Rows",
             "num": false,
             "disp": ["2", "2", "2", null],
             "key": [16.6667, 16.6667, 16.6667, null],
+            "pct": ["(17%)", "(17%)", "(17%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "5", "10", "15%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 100, null],
+              "w": [100, 100, 100, null],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 16.6667
-              },
-              "ticks": {
-                "at": [0, 5, 10, 15],
-                "labels": ["0", "5", "10", "15%"]
-              },
               "dw": 7,
-              "pct": ["(17%)", "(17%)", "(17%)", ""],
-              "hover": {
+              "tt": {
                 "head": "Rows",
-                "measure": "Rows",
-                "base": 12
+                "meas": "Rows",
+                "den": 12
               }
             }
           },
@@ -140,24 +126,20 @@
             "num": false,
             "disp": ["2", "2", "1", "1"],
             "key": [16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "5", "10", "15%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 50, 50],
+              "w": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 16.6667
-              },
-              "ticks": {
-                "at": [0, 5, 10, 15],
-                "labels": ["0", "5", "10", "15%"]
-              },
               "dw": 7,
-              "pct": ["(17%)", "(17%)", "(8%)", "(8%)"],
-              "hover": {
+              "tt": {
                 "head": "Rows",
-                "measure": "Rows",
-                "base": 12
+                "meas": "Rows",
+                "den": 12
               }
             }
           },
@@ -224,18 +206,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -265,7 +236,7 @@
             "func": "count",
             "facet": "grp"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -314,31 +285,28 @@
           {
             "name": "fac",
             "num": false,
-            "disp": ["lo", "hi", "mid", "mid"]
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
           },
           {
             "name": "Rows",
             "num": false,
             "disp": ["2", "2", "2", null],
             "key": [33.3333, 33.3333, 33.3333, null],
+            "pct": ["(33%)", "(33%)", "(33%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 100, null],
+              "w": [100, 100, 100, null],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(33%)", ""],
-              "hover": {
+              "tt": {
                 "head": "Rows",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -353,24 +321,20 @@
             "num": false,
             "disp": ["2", "2", "1", "1"],
             "key": [33.3333, 33.3333, 16.6667, 16.6667],
+            "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 50, 50],
+              "w": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
-              "hover": {
+              "tt": {
                 "head": "Rows",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -437,18 +401,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -478,7 +431,7 @@
             "func": "count",
             "facet": "grp"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -529,25 +482,21 @@
             "num": false,
             "disp": ["2", "2", "2", null],
             "key": [33.3333, 33.3333, 33.3333, null],
+            "pct": ["(33%)", "(33%)", "(33%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 100, null],
+              "w": [100, 100, 100, null],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(33%)", ""],
-              "hover": {
+              "tt": {
                 "head": "g1",
                 "sub": "Rows · N = 6",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -556,25 +505,21 @@
             "num": false,
             "disp": ["2", "2", "1", "1"],
             "key": [33.3333, 33.3333, 16.6667, 16.6667],
+            "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, 100, 50, 50],
+              "w": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
-              "hover": {
+              "tt": {
                 "head": "g2",
                 "sub": "Rows · N = 6",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -593,7 +538,8 @@
           {
             "name": "fac",
             "num": false,
-            "disp": ["lo", "hi", "mid", "mid"]
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
           }
         ],
         "head": [
@@ -642,18 +588,7 @@
           "title": null,
           "subtitle": null,
           "caption": null,
-          "parts": {
-            "title": null,
-            "subtitle": null,
-            "caption": null
-          },
-          "offers": {
-            "title": [],
-            "subtitle": [],
-            "caption": []
-          },
-          "sentence_args": [],
-          "arg_values": {
+          "args": {
             "layout": "groups",
             "by": "cat",
             "rowname": "",
@@ -683,7 +618,7 @@
             "func": "count",
             "facet": "grp"
           },
-          "slot_choices": []
+          "choices": []
         },
         "script": {
           "inputs": [],
@@ -734,25 +669,21 @@
             "num": false,
             "disp": ["2", null, "2", "2"],
             "key": [33.3333, null, 33.3333, 33.3333],
+            "pct": ["(33%)", null, "(33%)", "(33%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [100, null, 100, 100],
+              "w": [100, null, 100, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(33%)", "", "(33%)", "(33%)"],
-              "hover": {
+              "tt": {
                 "head": "g1",
                 "sub": "Rows · N = 6",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -761,25 +692,21 @@
             "num": false,
             "disp": ["1", "1", "2", "2"],
             "key": [16.6667, 16.6667, 33.3333, 33.3333],
+            "pct": ["(17%)", "(17%)", "(33%)", "(33%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
             "mark": {
               "kind": "bar",
-              "width": [50, 50, 100, 100],
+              "w": [50, 50, 100, 100],
               "fill": "#0072B2",
-              "domain": {
-                "min": 0,
-                "max": 33.3333
-              },
-              "ticks": {
-                "at": [0, 10, 20, 30],
-                "labels": ["0", "10", "20", "30%"]
-              },
               "dw": 7,
-              "pct": ["(17%)", "(17%)", "(33%)", "(33%)"],
-              "hover": {
+              "tt": {
                 "head": "g2",
                 "sub": "Rows · N = 6",
-                "measure": "Rows",
-                "base": 6
+                "meas": "Rows",
+                "den": 6
               }
             }
           },
@@ -798,7 +725,8 @@
           {
             "name": "fac",
             "num": false,
-            "disp": ["mid", "mid", "lo", "hi"]
+            "disp": ["mid", "mid", "lo", "hi"],
+            "key": ["mid", "mid", "lo", "hi"]
           }
         ],
         "head": [

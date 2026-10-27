@@ -11,116 +11,43 @@ tg_vec <- function(x) {
   unlist(lapply(x, function(e) if (is.null(e)) NA else e), use.names = FALSE)
 }
 
-# The recorded fields of each mark kind and where the view puts them.
-tg_fields <- list(
-  bar = c(w = "width", sub = "child"),
-  bardiv = c(w = "width", pos = "positive"),
-  box = c(wl = "whisker_low", w1 = "whisker_low_width", bl = "box_low",
-          bw = "box_width", bc = "center", b2 = "box_high",
-          w2 = "whisker_high_width", wh = "whisker_high", nn = "n"),
-  pointrange = c(c = "center", l = "inner_low", rw = "inner_width", nn = "n",
-                 ol = "outer_low", ow = "outer_width"),
-  pair = c(a = "from", b = "to", l = "link_left", w = "link_width",
-           bl = "band_left", bw = "band_width", dash = "dash", open = "open",
-           fill = "fill"),
-  sparkline = c(pl = "line", bd = "band", dx = "end_x", dy = "end_y",
-                xs = "x_text", ys = "y_text", nn = "n")
-)
-
-tg_plain <- function(x) {
-  table_groups_plain(vapply(x, function(e) e %||% NA_character_, ""))
+# The recorded mark with the text the cell model escaped as plain text.
+tg_unescape <- function(w) {
+  plain <- function(x) lapply(x, function(e) table_groups_plain(e))
+  if (!is.null(w[["tip"]])) w$tip <- plain(w[["tip"]])
+  w$lv <- lapply(w$lv, function(g) {
+    g$tip <- plain(g[["tip"]])
+    g
+  })
+  if (!is.null(w$tips)) w$tips <- lapply(w$tips, plain)
+  if (!is.null(w$segs)) {
+    w$segs <- lapply(w$segs, lapply, function(sg) {
+      if (length(sg) >= 4L) sg[[4L]] <- table_groups_plain(sg[[4L]])
+      sg
+    })
+  }
+  if (is.null(w$lv) || !length(w$lv)) w$lv <- NULL
+  w
 }
 
-# Geometry of one glyph (a plain column, or one level of a split one).
-tg_expect_glyph <- function(mk, w, kind, label, level = FALSE) {
-  fields <- tg_fields[[kind]]
-  if (level) fields <- fields[names(fields) != "fill"]
-  for (old in intersect(names(fields), names(w))) {
-    new <- fields[[old]]
-    expect_equal(tg_vec(mk[[new]]), tg_vec(w[[old]]), label = paste(label, old))
-  }
-  for (new in setdiff(fields, fields[names(w)])) {
-    expect_null(mk[[new]], label = paste(label, new, "absent"))
-  }
-  if (!is.null(w[["tip"]])) {
-    tip <- tg_plain(w[["tip"]])
-    tip[!nzchar(tip)] <- NA
-    expect_equal(tg_vec(mk$tip), tip, label = paste(label, "tip"))
-  }
-  if (!is.null(w[["r"]])) {
-    stats <- c(bc = "center", bl = "low", bh = "high", wl = "whisker_low",
-               wh = "whisker_high")
-    expect_identical(names(mk$stats), unname(stats[names(w[["r"]])]))
-    for (nm in names(w[["r"]])) {
-      expect_equal(tg_vec(mk$stats[[stats[[nm]]]]), tg_vec(w[["r"]][[nm]]))
-    }
+# The mark has the fields of the recorded column, named as there, less
+# what the TableCol holds.
+tg_expect_mark <- function(mk, w, label) {
+  moved <- c("fkey", "scol", "disp", "v", "pct", "bg", "fg")
+  w <- tg_unescape(w[setdiff(names(w), moved)])
+  expect_setequal(names(mk), names(w))
+  for (f in names(w)) {
+    expect_equal(mk[[f]], w[[f]], label = paste(label, f))
   }
 }
 
-tg_expect_mark <- function(mk, w, label, pick) {
-  kind <- w$kind
-  expect_identical(mk$kind, kind, label = label)
-  expect_identical(mk$dw, w$dw, label = paste(label, "dw"))
-  if (kind %in% c("bar", "bardiv", "sparkline") ||
-        (kind %in% c("box", "pointrange", "pair") && !isTRUE(w$multi))) {
-    tg_expect_glyph(mk, w, kind, label)
-  }
-  if (identical(kind, "bar")) {
-    expect_identical(mk$fill, w$fill)
-  }
-  if (identical(kind, "tile")) {
-    expect_equal(tg_vec(mk$fill), tg_vec(w$bg))
-    expect_equal(tg_vec(mk$ink), tg_vec(w$fg))
-  }
-  if (identical(kind, "barsplit")) {
-    expect_identical(mk$mode, w$mode)
-    expect_identical(mk$level_col, if (pick) w$scol)
-    for (j in seq_along(w$names)) {
-      lv <- mk$levels[[j]]
-      expect_identical(lv$name, w$names[[j]])
-      expect_identical(lv$color, w$fills[[j]])
-      expect_equal(tg_vec(lv$width), tg_vec(w$seg[[j]]))
-      expect_equal(tg_vec(lv$amount), tg_vec(w$segv[[j]]))
-      expect_equal(tg_vec(lv$inside), tg_vec(w$slab[[j]]))
-      expect_identical(lv$ink, w$sink[[j]])
-      expect_equal(tg_vec(lv$label), tg_vec(w$ldisp[[j]]))
-    }
-  }
-  if (isTRUE(w$multi)) {
-    expect_length(mk$levels, length(w$lv))
-    for (j in seq_along(w$lv)) {
-      lv <- mk$levels[[j]]
-      expect_identical(lv$name, w$levels[[j]])
-      expect_identical(lv$color, w$fills[[j]])
-      tg_expect_glyph(lv, w$lv[[j]], kind, paste(label, "level", j), TRUE)
-      expect_equal(tg_vec(lv$label), tg_vec(w$lv[[j]]$disp))
-    }
-  }
-  if (identical(kind, "pair")) {
-    expect_identical(mk$ref, w$rf)
-  }
-  if (identical(kind, "sparkline")) {
-    expect_identical(mk$ref_line, w$rc)
-    expect_identical(mk$ref_band_top, w$rby)
-    expect_identical(mk$ref_band_height, w$rbh)
-  }
-  if (identical(kind, "interval")) {
-    expect_identical(isTRUE(mk$large), isTRUE(w$lg))
-    expect_identical(isTRUE(mk$domain$date), isTRUE(w$dd))
-    expect_equal(mk$domain$min, w$d0)
-    expect_equal(mk$domain$max, w$d1)
-    expect_equal(tg_vec(mk$fills), tg_vec(w$fills))
-    for (i in seq_along(w$segs)) {
-      expect_length(mk$spans[[i]], length(w$segs[[i]]))
-      for (k in seq_along(w$segs[[i]])) {
-        sg <- w$segs[[i]][[k]]
-        sg[[3L]] <- sg[[3L]] - 1L
-        if (length(sg) >= 4L) sg[[4L]] <- table_groups_plain(sg[[4L]])
-        expect_equal(mk$spans[[i]][[k]], sg)
-      }
-      expect_identical(tg_vec(mk$tips[[i]]), table_groups_plain(tg_vec(w$tips[[i]])))
-    }
-  }
+# The claim a column carries: the facet level, the colour levels.
+tg_col_keys <- function(w) {
+  out <- list()
+  if (!is.null(w$fkey)) out[[w$fkey$column]] <- list(w$fkey$value)
+  if (!is.null(w$scol)) out[[w$scol]] <- w$names
+  out <- lapply(out, function(v) as.character(unlist(v)))
+  if (length(out)) out
 }
 
 # One column against the reference payload's column.
@@ -134,31 +61,16 @@ tg_expect_col <- function(g, w, n, pick, label) {
     want[!nzchar(want)] <- NA
     expect_equal(tg_vec(g$disp), want, label = paste(label, "disp"))
   }
-  if (isTRUE(w$text)) {
-    expect_null(g$key)
-  } else {
-    expect_equal(tg_vec(g$key), tg_vec(w$v), label = paste(label, "key"))
-  }
-  expect_identical(!is.null(g$keys), pick && !is.null(w$fkey),
-                   label = paste(label, "keys"))
-  if (!is.null(g$keys)) {
-    expect_identical(names(g$keys), w$fkey$column)
-    expect_identical(tg_vec(g$keys[[1L]]), as.character(w$fkey$value))
-  }
-  mark <- w$kind != "num" || !is.null(w$pct) || isTRUE(w$failed)
-  expect_identical(!is.null(g$mark), mark, label = paste(label, "mark"))
-  if (mark) {
-    tg_expect_mark(g$mark, w, label, pick)
-    expect_equal(tg_vec(g$mark$pct), tg_vec(w$pct))
-    tt <- w$tt
-    h <- g$mark$hover
-    expect_identical(h$head, tt$head)
-    expect_identical(h$sub, tt$sub)
-    expect_identical(h$measure, tt$meas)
-    expect_identical(h$color_by, tt$cvar)
-    expect_identical(h$base, tt$den)
-    expect_identical(h$words, tt$words)
-  }
+  expect_equal(tg_vec(g$key), tg_vec(w$v), label = paste(label, "key"))
+  pct <- tg_vec(w$pct)
+  if (!is.null(pct)) pct[!nzchar(pct)] <- NA
+  expect_equal(tg_vec(g$pct), pct, label = paste(label, "pct"))
+  expect_equal(tg_vec(g$bg), tg_vec(w$bg))
+  expect_equal(tg_vec(g$fg), tg_vec(w$fg))
+  keys <- if (pick) tg_col_keys(w)
+  expect_identical(if (!is.null(g$keys)) lapply(g$keys, tg_vec), keys, label = paste(label, "keys"))
+  expect_identical(!is.null(g$mark), w$kind != "num", label = label)
+  if (!is.null(g$mark)) tg_expect_mark(g$mark, w, label)
 }
 
 # The recorded header: one list per <tr> of its cells, as the browser read
@@ -183,7 +95,9 @@ tg_head <- function(html) {
         span = attr(th, "colspan"), rows = attr(th, "rowspan"),
         col = attr(th, "data-col-index"),
         stub = grepl("blockr-stub-header", xml2::xml_attr(th, "class")),
-        axis = tg_axis(xml2::xml_find_first(th, ".//div[contains(@class, 'blockr-summarize-axis')]"))
+        axis = tg_axis(xml2::xml_find_first(
+          th, ".//div[contains(@class, 'blockr-summarize-axis')]"
+        ))
       )
     })
   })
@@ -205,17 +119,16 @@ tg_axis <- function(el) {
   )
 }
 
-tg_expect_axis <- function(want, mark, label) {
+tg_expect_axis <- function(want, col, label) {
+  ax <- col$axis
   if (is.null(want)) {
-    expect_null(mark$ticks, label = paste(label, "no strip"))
+    expect_null(ax, label = paste(label, "no strip"))
     return(invisible())
   }
-  tk <- mark$ticks
-  dom <- mark$domain
-  pos <- round((tg_vec(tk$at) - dom$min) / (dom$max - dom$min) * 100, 2L)
-  expect_equal(pos, want$pos, tolerance = 0.01, label = paste(label, "ticks"))
-  expect_identical(tg_vec(tk$labels), want$labels, label = paste(label, "labels"))
-  expect_identical(!is.null(mark$dw), want$has_val, label = paste(label, "slot"))
+  expect_equal(tg_vec(ax$at), want$pos, tolerance = 0.01,
+               label = paste(label, "ticks"))
+  expect_identical(tg_vec(ax$labels), want$labels, label = paste(label, "labels"))
+  expect_identical(!is.null(col$mark$dw), want$has_val, label = paste(label, "slot"))
 }
 
 tg_expect_head <- function(v, want, label) {
@@ -229,20 +142,20 @@ tg_expect_head <- function(v, want, label) {
       lab <- paste(label, "head", r, k)
       expect_identical(h$text, w$text %||% "", label = lab)
       expect_identical(h$sub, w$sub, label = paste(lab, "sub"))
+      expect_null(h$axis)
       expect_identical(h$span, w$span, label = paste(lab, "span"))
       expect_identical(h$rows, w$rows, label = paste(lab, "rows"))
       if (!is.null(w$col)) expect_identical(h$col, w$col, label = paste(lab, "col"))
       expect_identical(isTRUE(h$stub), w$stub, label = paste(lab, "stub"))
       if (!is.null(w$col) && w$col > 0L) {
-        tg_expect_axis(w$axis, v$cols[[w$col + 1L]]$mark, lab)
+        tg_expect_axis(w$axis, v$cols[[w$col + 1L]], lab)
       }
     }
   }
   # The bottom axis of the large swimlanes.
   foot <- xml2::xml_find_all(xml2::read_html(want$head),
                              "//tfoot//div[contains(@class, 'blockr-summarize-axis')]")
-  large <- Filter(function(cc) isTRUE(cc$mark$large) && !is.null(cc$mark$ticks),
-                  v$cols)
+  large <- Filter(function(cc) isTRUE(cc$axis$foot), v$cols)
   expect_length(large, length(foot))
 }
 
@@ -262,7 +175,7 @@ tg_expect_rows <- function(v, w, label) {
   }
   expect_identical(isTRUE(v$collapsed), nested && !isTRUE(w$expanded))
   expect_identical(!is.null(v$rows$keys), isTRUE(w$pick), label = label)
-  expect_identical(v$fold, w$fold)
+  expect_identical(v$note, w$fold)
   if (!isTRUE(w$pick)) {
     return(invisible())
   }
@@ -355,8 +268,15 @@ test_that("a one-row table's columns are arrays on the wire", {
   v <- table_groups_view(table_model_groups(cs$state, cs$data))
   back <- tm_json(v)
   expect_type(back$cols[[1L]]$disp, "list")
-  expect_type(back$cols[[2L]]$mark$width, "list")
+  expect_type(back$cols[[2L]]$mark$w, "list")
   expect_type(back$cols[[2L]]$key, "list")
+})
+
+test_that("a column's axis has no empty fields on the wire", {
+  cs <- tm_cases("groups")$grp_all_types
+  v <- tm_json(table_groups_view(table_model_groups(cs$state, cs$data)))
+  expect_named(v$cols[[2L]]$axis, c("at", "labels"))
+  expect_true(v$cols[[11L]]$axis$foot)
 })
 
 test_that("a failed preparation has no view", {

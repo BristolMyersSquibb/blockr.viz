@@ -72,7 +72,7 @@ test_that("a flat table has a row per group and a bar with its own label", {
   expect_identical(v$n, 4L)
   expect_length(v$cols, 2L)
   expect_identical(v$cols[[2]]$mark$kind, "bar")
-  expect_length(v$cols[[2]]$mark$width, 4L)
+  expect_length(v$cols[[2]]$mark$w, 4L)
   expect_length(v$rows$keys, 4L)
 })
 
