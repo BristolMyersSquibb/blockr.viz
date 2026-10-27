@@ -629,8 +629,9 @@ golden_ctor_run <- function(args) {
         invokeRestart("muffleWarning")
       }
     ),
-    error = function(e) structure(list(message = conditionMessage(e)),
-                                  class = "golden_error")
+    error = function(e) {
+      structure(list(message = conditionMessage(e)), class = "golden_error")
+    }
   )
   if (!inherits(res, "golden_error")) {
     keep <- !vapply(attributes(res), is.function, logical(1L))
