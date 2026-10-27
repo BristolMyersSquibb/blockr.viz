@@ -164,8 +164,12 @@ table_legacy_args <- function(args, from = NULL) {
     if (length(group)) {
       out$layout <- "groups"
       out$by <- group
+      # An aggregation list becomes summaries; summaries already in the
+      # groups layout's form are kept; none is one count.
       out$summaries <- if (table_is_agg_summaries(out[["summaries"]])) {
         table_agg_to_summaries(out[["summaries"]])
+      } else if (is.list(out[["summaries"]]) && length(out$summaries)) {
+        out$summaries
       } else {
         list(list(type = "simple", func = "count", show = "number"))
       }

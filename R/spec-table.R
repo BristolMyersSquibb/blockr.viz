@@ -70,8 +70,8 @@ table_spec_data <- function() {
       describe = paste(
         "Groups: the table's columns. Variables: its variables. An ordered",
         "list of typed summaries, each `list(type = , ...)`: simple, dist,",
-        "field, sparkline, spans, pair, expr, custom. Keys per type: see",
-        "table_summary_specs()."
+        "field, sparkline, spans, pair, expr, custom. Keys per type: see the",
+        "Summaries section of ?new_table_block."
       )
     ),
 
