@@ -113,3 +113,110 @@ viz_capture_observer <- function(input, id, capture) {
   obs <- shiny::observeEvent(input[[name]], capture(input[[name]]))
   invisible(obs)
 }
+
+#' The server every block view runs
+#'
+#' The skeleton of a block on the kit (design.md section 7). It holds the
+#' block's state, one reactiveVal per spec argument, and wires what every
+#' block has:
+#'
+#' - the revision tracker, the busy cue while the input recomputes;
+#' - the settings observer, which runs the block's `normalize()` over every
+#'   change from the gear;
+#' - the selection and capture observers;
+#' - the payload output;
+#' - the drill sender, when the block gives claims.
+#'
+#' Everything particular to the block comes from `setup(kit)`: it builds the
+#' block's reactives from `kit` (`input`, `output`, `session`, `spec`,
+#' `state`, `revs`, `el`, the element id the view draws into, `data`,
+#' `claim` and `transient` for clicks sent to a drill target, and `capture`,
+#' the browser's last picture) and returns them in a list:
+#'
+#' - `payload`: a function of no arguments returning viz_payload()'s list;
+#' - `expr`: the reactive filter expression the block emits;
+#' - `normalize`: a function of the full value list, the block's rules
+#'   between arguments (chart_normalize(), table_normalize()); optional;
+#' - `claims`: a reactive of the conditions a drill target receives
+#'   (dd_ctrl_claims()); optional, no sender without it.
+#'
+#' Anything else, a capture service or a download menu, `setup()` wires
+#' itself with what `kit` holds.
+#'
+#' @param id The block's module id.
+#' @param spec The block's `viz_spec`.
+#' @param data The block's input, a reactive.
+#' @param init The block's values at construction (viz_check()'s result).
+#' @param view The view's id inside the module (`"chart"`, `"table"`): the
+#'   output and the `<view>_set`, `<view>_select`, `<view>_capture` inputs.
+#' @param setup A function of `kit`, as above.
+#' @return blockr.core's `list(expr, state)`.
+#' @noRd
+viz_block_server <- function(id, spec, data, init, view, setup) {
+  shiny::moduleServer(id, function(input, output, session) {
+    kit <- viz_kit(input, output, session, spec, data, init, view)
+    viz_busy_observer(kit)
+    parts <- setup(kit)
+    stopifnot(is.function(parts$payload), is.function(parts$expr))
+    viz_settings_observer(input, view, spec, kit$state, kit$revs,
+                          normalize = parts$normalize %||% identity)
+    viz_selection_observer(input, view, kit$state, kit$revs, kit$transient,
+                           kit$claim)
+    viz_capture_observer(input, view, kit$capture)
+    viz_payload_output(output, input, view, parts$payload)
+    if (!is.null(parts$claims)) {
+      viz_drill_sender(kit, parts$claims, init$selection)
+    }
+    list(expr = parts$expr, state = kit$state)
+  })
+}
+
+# What viz_block_server() hands a block's setup().
+viz_kit <- function(input, output, session, spec, data, init, view) {
+  state <- viz_state(init)
+  revs <- new_viz_revs(init)
+  viz_rev_tracker(state, revs)
+  list(
+    input = input, output = output, session = session, spec = spec,
+    state = state, revs = revs, el = session$ns(view), data = data,
+    # With a drill target set a click is an event: kept here, not in the
+    # selection. A block without the argument holds every click.
+    claim = shiny::reactiveVal(NULL),
+    transient = function() {
+      !is.null(state$drill_target) && nzchar(state$drill_target() %||% "")
+    },
+    capture = shiny::reactiveVal(NULL)
+  )
+}
+
+# The busy cue: the message goes out first and the input is read after it,
+# so a rerun tells the browser before the upstream recompute starts. The
+# view ends the cue once it has drawn; a failed input ends it here.
+viz_busy_observer <- function(kit) {
+  shiny::observe({
+    busy_cue_start(kit$session, kit$el, "drawing")
+    tryCatch(kit$data(), error = function(e) {
+      busy_cue_done(kit$session, kit$el)
+    })
+  }, priority = 200L)
+}
+
+# A drill target receives the claims over the control channel. With a
+# target set each click is sent once, by its nonce; without one the held
+# selection is the claim, and nothing goes out while it is the one the block
+# was built with.
+viz_drill_sender <- function(kit, claims, sel0) {
+  latch <- dd_ctrl_pristine(function() kit$state$selection(), sel0)
+  dd_ctrl_sender(
+    kit$state$drill_target, claims,
+    function() {
+      still <- latch()
+      is.null(kit$claim()) && still
+    },
+    kit$session,
+    r_nonce = function() {
+      c1 <- kit$claim()
+      if (is.null(c1)) NULL else c1$nonce
+    }
+  )
+}
