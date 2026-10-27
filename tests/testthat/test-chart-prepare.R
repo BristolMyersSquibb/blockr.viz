@@ -222,12 +222,15 @@ test_that("`script` is deliberately absent from the AI surface", {
   # Signed off as a non-AI-exposed argument: a general escape hatch on a block
   # that appears twenty times in a board invites the assistant to write a
   # script where a mapping would have done the job.
-  expect_false("script" %in% names(chart_arguments()))
-  expect_false("values" %in% names(chart_arguments()))
+  args <- viz_registry_args(viz_block_spec("chart"))
+  expect_false("script" %in% names(args))
+  expect_false("script_values" %in% names(args))
 })
 
 
 test_that("the gear's textarea writes the script, and the band writes its knobs", {
+  # The browser may send a script only where the option allows it.
+  withr::local_options(blockr.viz.browser_script = TRUE)
   blk <- new_chart_block(
     y = "Species",
     func = "count",
@@ -241,26 +244,19 @@ test_that("the gear's textarea writes the script, and the band writes its knobs"
       expect_equal(session$returned$state$script(), "n <- 6\nutils::head(data, n)")
 
       # A knob turned on the band.
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "config", sv_n = 2
-      ))
+      chart_input_set(expr_scope, script_values = list(n = 2))
       session$flushReact()
       expect_equal(session$returned$state$script_values()$n, 2)
 
-      # The script rewritten in the gear. The old value is dropped, because the
-      # script no longer declares that name.
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "config", script = "keep <- 4\nutils::head(data, keep)"
-      ))
+      # The script rewritten in the gear.
+      chart_input_set(expr_scope, script = "keep <- 4\nutils::head(data, keep)")
       session$flushReact()
       expect_equal(session$returned$state$script(),
                    "keep <- 4\nutils::head(data, keep)")
 
       # Clearing it (the gear's section checkbox) is a real write, not an
       # absent key.
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "config", script = ""
-      ))
+      chart_input_set(expr_scope, script = "")
       session$flushReact()
       expect_equal(session$returned$state$script(), "")
     },
@@ -280,10 +276,7 @@ test_that("the block's expression carries the script and the filter together", {
     blockr.core:::get_s3_method("block_server", blk),
     {
       expr_scope <- session$makeScope("expr")
-      expr_scope$setInputs(drilldown_block_action = list(
-        action = "filter", filter_type = "categorical",
-        column = "Species", values = list("setosa")
-      ))
+      chart_input_click(expr_scope, Species = "setosa")
       session$flushReact()
       txt <- paste(deparse(session$returned$expr()), collapse = " ")
       expect_match(txt, "dplyr::mutate")

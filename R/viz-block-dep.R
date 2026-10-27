@@ -4,16 +4,6 @@
 # read.dcf + system.file) on every render and construct -- ~95% of dt_chrome()
 # and of dplyr block construction. See dev/block-build-cost-findings.md.
 
-#' @noRd
-viz_block_css_dep <- memoise0(function() {
-  htmltools::htmlDependency(
-    name = "viz-block-css",
-    version = utils::packageVersion("blockr.viz"),
-    src = system.file("css", package = "blockr.viz"),
-    stylesheet = "viz-block.css"
-  )
-})
-
 #' The shared drilldown JS — the aggregation vocabulary (drilldown-agg.js)
 #' and the gear-popover config engine (drilldown-config.js) consumed by the
 #' chart and the table. ONE dependency with ONE version counter, so an
