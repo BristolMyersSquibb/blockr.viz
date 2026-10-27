@@ -29,10 +29,13 @@ function loadCore(opts = {}) {
   windows.push(win);
   const sent = [];
   const outputs = {};
+  const bound = [];
   if (opts.shiny !== false) {
     win.Shiny = {
       setInputValue: (name, value, o) => sent.push({ name, value, opts: o }),
       OutputBinding: class {},
+      bindAll: (el) => bound.push(['bind', el]),
+      unbindAll: (el) => bound.push(['unbind', el]),
       outputBindings: { register: (b, name) => { outputs[name] = b; } }
     };
     // The few jQuery calls the binding makes: find, and on / off for
@@ -47,7 +50,7 @@ function loadCore(opts = {}) {
     win.eval(fs.readFileSync(path.join(CORE_DIR, f), 'utf8'));
   }
   const trigger = (el, type) => { if (el.__jq && el.__jq[type]) el.__jq[type](); };
-  return { win, V: win.Blockr.viz, sent, outputs, trigger };
+  return { win, V: win.Blockr.viz, sent, outputs, trigger, bound };
 }
 
 module.exports = { loadCore, CORE_FILES };

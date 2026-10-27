@@ -13,6 +13,7 @@
   register_viz_blocks()
   echart_theme_blockr_viz()
   register_drilldown_ai_effect()
+  viz_register_exporters()
 
   invisible(NULL)
 } # nocov end

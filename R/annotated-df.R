@@ -128,6 +128,11 @@ annotation_cols_in <- function(data) {
 
 # The paint of data column `col` as list(bg =, fg =), one entry per row, NA
 # where unpainted; NULL when the column carries no paint at all.
+#' The paint of one column of an annotated frame
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 annotation_cell_paint <- function(data, col) {
   bg <- data[[paste0(".bg:", col)]]
   if (is.null(bg) || all(is.na(bg))) return(NULL)
