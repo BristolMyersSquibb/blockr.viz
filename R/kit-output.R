@@ -39,18 +39,34 @@ viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' A client that holds no rows for a payload's revision asks through
 #' `<id>_need`; the next render then sends everything.
 #'
+#' The busy cue goes out first, before `build()` reads the input, so the
+#' browser hears of a recompute before it starts. A render that draws
+#' nothing (cancelled, or an error) ends the cue here; one that draws, the
+#' view ends once it has drawn.
+#'
 #' @param output,input The block's Shiny output and input.
 #' @param id The output id.
 #' @param build A function of no arguments returning the payload.
+#' @param session,el The block's session and the element id the view draws
+#'   into, for the busy cue; without them no cue is sent.
 #' @return Invisibly, `NULL`.
 #' @noRd
-viz_payload_output <- function(output, input, id, build) {
+viz_payload_output <- function(output, input, id, build, session = NULL,
+                               el = NULL) {
   sent <- new.env(parent = emptyenv())
   full <- shiny::reactiveVal(0L)
+  busy <- !is.null(session) && !is.null(el)
+  done <- function() if (busy) busy_cue_done(session, el)
   output[[id]] <- viz_render({
     full()
-    msg <- tryCatch(build(), shiny.silent.error = function(e) NULL)
+    if (busy) busy_cue_start(session, el, "drawing")
+    msg <- tryCatch(build(), shiny.silent.error = function(e) NULL,
+                    error = function(e) {
+                      done()
+                      stop(e)
+                    })
     if (is.null(msg) || identical(msg, sent$msg)) {
+      done()
       shiny::req(FALSE, cancelOutput = TRUE)
     }
     sent$msg <- msg

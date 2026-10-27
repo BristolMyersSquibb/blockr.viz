@@ -101,3 +101,78 @@ test_that("a block without drill_target holds every click", {
     expect_identical(session$returned$state$selection(), sel)
   })
 })
+
+# A block whose payload reads the data but does not change with it, so a
+# data change renders an identical payload.
+kbs_steady <- function(id, data, init, log = new.env()) {
+  viz_block_server(id, kbs_spec(), data, init, "chart", function(kit) {
+    log$kit <- kit
+    list(
+      payload = function() {
+        kit$data()
+        list(data_rev = 1L, data = list(a = 1), derived = list())
+      },
+      expr = shiny::reactive(quote(TRUE)),
+      claims = shiny::reactive({
+        c1 <- kit$claim()
+        sel <- if (is.null(c1)) kit$state$selection() else c1$selection
+        if (!is.null(sel)) sel$filters
+      })
+    )
+  })
+}
+
+test_that("a render that draws nothing ends the busy cue", {
+  cue <- new.env()
+  cue$calls <- character()
+  local_mocked_bindings(
+    busy_cue_start = function(session, id, label = "") {
+      cue$calls <- c(cue$calls, "start")
+    },
+    busy_cue_done = function(session, id) cue$calls <- c(cue$calls, "done")
+  )
+  d <- shiny::reactiveVal(data.frame(a = 1))
+  shiny::testServer(kbs_steady, args = list(data = d,
+                                            init = viz_check(kbs_spec(), list())), {
+    expect_identical(output$chart$data_rev, 1L)
+    expect_identical(cue$calls, "start")
+    d(data.frame(a = 2))
+    session$flushReact()
+    try(output$chart, silent = TRUE)
+    expect_identical(cue$calls, c("start", "start", "done"))
+  })
+})
+
+test_that("<view>_need brings the rows back through the kit", {
+  d <- shiny::reactiveVal(data.frame(a = 1))
+  shiny::testServer(kbs_steady, args = list(data = d,
+                                            init = viz_check(kbs_spec(), list())), {
+    expect_identical(output$chart$data, list(a = 1))
+    session$setInputs(chart_need = 1)
+    expect_identical(output$chart$data, list(a = 1))
+  })
+})
+
+test_that("the drill sender sends once per click, nothing for a restored selection", {
+  sent <- new.env()
+  sent$n <- 0L
+  sel <- list(type = "categorical", filters = list(cyl = "4"))
+  init <- viz_check(kbs_spec(), list(drill_target = "f1", selection = sel))
+  shiny::testServer(kbs_steady, args = list(data = shiny::reactive(NULL),
+                                            init = init), {
+    session$userData$blockr_ctrl_send <- function(target, args, ...) {
+      sent$n <- sent$n + 1L
+      sent$target <- target
+    }
+    session$flushReact()
+    expect_identical(sent$n, 0L)
+    click <- list(type = "categorical", filters = list(cyl = "6"))
+    session$setInputs(chart_select = list(selection = click, nonce = 1))
+    expect_identical(sent$n, 1L)
+    expect_identical(sent$target, "f1")
+    session$setInputs(chart_select = list(selection = click, nonce = 1))
+    expect_identical(sent$n, 1L)
+    session$setInputs(chart_select = list(selection = click, nonce = 2))
+    expect_identical(sent$n, 2L)
+  })
+})
