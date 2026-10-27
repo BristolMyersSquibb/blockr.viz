@@ -15,7 +15,7 @@
 #' @noRd
 viz_check_value <- function(arg, x, name) {
   if (is.list(x) && !length(x) &&
-        !arg$type$name %in% c("map", "records", "records_by")) {
+        !arg$type$name %in% c("map", "records", "records_by", "named")) {
     x <- NULL
   }
   if (is.null(x)) {
@@ -245,7 +245,7 @@ check_fields <- function(x, fields) {
   for (f in names(fields)) {
     v <- tryCatch(
       viz_check_value(fields[[f]], x[[f]], f),
-      viz_arg_error = function(e) value_fail("has field ", conditionMessage(e))
+      viz_arg_error = function(e) value_fail("has field ", inner_message(e))
     )
     out[f] <- list(v)
   }
@@ -282,6 +282,32 @@ check_records_by <- function(x, arg) {
   if (!length(out) && !isFALSE(arg$null)) NULL else out
 }
 
+# The message of a nested argument error, without its closing period.
+inner_message <- function(e) sub("\\.$", "", conditionMessage(e))
+
+# A list keyed by free names, each value checked against the value type.
+check_named <- function(x, arg) {
+  nms <- names(x)
+  bad_names <- length(x) && (is.null(nms) || any(!nzchar(nms)) ||
+                               anyDuplicated(nms))
+  if ((!is.list(x) && !is.atomic(x)) || bad_names) {
+    value_fail("must be a list with a unique name for each entry")
+  }
+  max <- arg$type$max
+  if (!is.null(max) && length(x) > max) {
+    value_fail("takes at most ", max, " entries, not ", length(x))
+  }
+  out <- list()
+  for (nm in nms) {
+    v <- tryCatch(
+      viz_check_value(arg$type$value, x[[nm]], nm),
+      viz_arg_error = function(e) value_fail("has entry ", inner_message(e))
+    )
+    out[nm] <- list(v)
+  }
+  if (!length(out) && !isFALSE(arg$null)) NULL else out
+}
+
 check_map <- function(x, arg) {
   if (!is.list(x) || (length(x) && (is.null(names(x)) ||
                                       any(!nzchar(names(x)))))) {
@@ -307,6 +333,7 @@ SPEC_CHECKERS <- list(
   record = check_record,
   records = check_records,
   records_by = check_records_by,
+  named = check_named,
   map = check_map
 )
 

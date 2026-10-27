@@ -43,6 +43,11 @@ wire_value <- function(type, x) {
       c(r[type$key], wire_record(type$variants[[r[[type$key]]]],
                                  r[setdiff(names(r), type$key)]))
     }),
+    named = if (length(x)) {
+      lapply(x, wire_value, type = type$value$type)
+    } else {
+      structure(list(), names = character())
+    },
     map = if (length(x)) x else structure(list(), names = character()),
     x
   )

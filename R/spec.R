@@ -16,11 +16,11 @@
 VIZ_TYPES <- c(
   "column", "columns", "enum", "enums", "string", "template", "number",
   "integer", "bool", "numbers", "strings", "values", "format", "record",
-  "records", "records_by", "map"
+  "records", "records_by", "named", "map"
 )
 
 # Types built with a type_*() function because they have parts.
-VIZ_COMPOUND_TYPES <- c("values", "record", "records", "records_by")
+VIZ_COMPOUND_TYPES <- c("values", "record", "records", "records_by", "named")
 
 # The gear controls an argument can be edited with.
 VIZ_CONTROLS <- c(
@@ -116,7 +116,8 @@ spec_type <- function(x) {
 #' Compound types
 #'
 #' - `type_values(of)`: values of the column another argument names
-#'   (reference lines on x, highlighted values).
+#'   (reference lines on x). With `of = NULL`, of a column named elsewhere,
+#'   such as the entry name of a `type_named()` list.
 #' - `type_record(...)`: one record, or `NULL`. The fields are given by name
 #'   as types (`column = "column"`), as `viz_arg()` entries when a field
 #'   needs values, a default or `required`, or all at once as a spec
@@ -125,8 +126,12 @@ spec_type <- function(x) {
 #' - `type_records_by(key, specs)`: a list of records whose fields depend on
 #'   the value of `key`; `specs` is a named list of specs, one per value
 #'   (the table's summaries, by `type`).
+#' - `type_named(value, max)`: a list whose names are free text, a column or
+#'   a label, and whose values have the type `value` (a type, or a
+#'   `viz_arg()`): `highlight = list(country = "Switzerland")`,
+#'   `x_ranges = list(Recession = c(from, to))`. `max` caps the entries.
 #' @noRd
-type_values <- function(of) {
+type_values <- function(of = NULL) {
   structure(list(name = "values", of = of), class = "viz_type")
 }
 
@@ -152,6 +157,16 @@ type_records_by <- function(key, specs) {
          variants = lapply(specs, function(s) type_record(spec = s))),
     class = "viz_type"
   )
+}
+
+#' @rdname type_values
+#' @noRd
+type_named <- function(value, max = NULL) {
+  if (!inherits(value, "viz_arg")) {
+    value <- viz_arg(value, required = TRUE)
+  }
+  structure(list(name = "named", value = value, max = max),
+            class = "viz_type")
 }
 
 # Record fields as a named list of viz_arg. A field given as a bare type is

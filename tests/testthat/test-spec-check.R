@@ -209,3 +209,34 @@ test_that("viz_heal() resets bad values and drops unknown names", {
   expect_identical(out, list(type = "bar", color = NULL, bins = 30L))
   expect_silent(viz_heal(s, list(type = "line")))
 })
+
+test_that("named lists are keyed by free names", {
+  hl <- viz_arg(type_named(type_values(), max = 1L), null = "none")
+  expect_identical(viz_check_value(hl, list(country = "CH"), "highlight"),
+                   list(country = "CH"))
+  expect_identical(
+    viz_check_value(hl, json('{"country": ["CH", "AT"]}'), "highlight"),
+    list(country = c("CH", "AT"))
+  )
+  expect_null(viz_check_value(hl, list(), "highlight"))
+  expect_error(viz_check_value(hl, list(a = 1, b = 2), "highlight"),
+               "at most 1 entries, not 2")
+  expect_error(viz_check_value(hl, list("CH"), "highlight"),
+               "unique name for each entry")
+  ranges <- viz_arg(type_named(type_values()), null = "none")
+  r <- viz_check_value(ranges, list(Recession = as.Date(c("2008-01-01",
+                                                          "2009-06-30"))),
+                       "x_ranges")
+  expect_identical(r, list(Recession = c("2008-01-01", "2009-06-30")))
+  expect_error(viz_check_value(ranges, list(a = list(list(1))), "x_ranges"),
+               "has entry `a` must be [^.]*\\.$")
+  s <- viz_spec("chart", highlight = hl, x_ranges = ranges)
+  expect_identical(viz_spec_check(s), s)
+  w <- jsonlite::fromJSON(viz_wire(s, list(highlight = list(country = "CH"),
+                                           x_ranges = NULL)),
+                          simplifyVector = FALSE)
+  expect_identical(w$highlight, list(country = list(list(value = "CH",
+                                                         label = NULL))))
+  back <- viz_read_set(s, list(rev = 0, values = w))
+  expect_identical(back$values$highlight, list(country = "CH"))
+})

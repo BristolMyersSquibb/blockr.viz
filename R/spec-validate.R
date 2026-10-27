@@ -56,9 +56,20 @@ type_problems <- function(type) {
   }
   switch(
     t,
-    values = if (!is.character(type$of) || length(type$of) != 1L) {
-      "has a values type without `of`"
+    values = if (!is.null(type$of) && (!is.character(type$of) ||
+                                          length(type$of) != 1L)) {
+      "has a values type whose `of` is not one name"
     },
+    named = c(
+      if (!inherits(type$value, "viz_arg")) "has a named type without a value",
+      if (!is.null(type$max) && !is_whole_count(type$max)) {
+        "has a named type whose `max` is not a count"
+      },
+      if (inherits(type$value, "viz_arg")) {
+        p <- spec_arg_problems(type$value, "value", character())
+        if (length(p)) paste("has", p)
+      }
+    ),
     record = , records = fields_problems(type$fields),
     records_by = c(
       if (!is.character(type$key) || length(type$key) != 1L) {
@@ -117,7 +128,7 @@ field_rule_problems <- function(arg) {
       "has `slot`, `ctrl`, `ai` or `required` that is not TRUE or FALSE"
     },
     if (isTRUE(arg$slot) && t %in% c("record", "records", "records_by",
-                                     "map")) {
+                                     "named", "map")) {
       "cannot be a title slot"
     }
   )
@@ -150,7 +161,10 @@ gear_problems <- function(g, arg) {
 # The arguments a type names. Inside a record, `values(of = <field>)` names a
 # sibling field, which is not an argument.
 spec_type_refs <- function(type) {
-  if (identical(type$name, "values")) type$of else character()
+  if (!identical(type$name, "values")) {
+    return(character())
+  }
+  type$of %||% character()
 }
 
 # A literal default and an example must pass their own type.

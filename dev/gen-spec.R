@@ -44,6 +44,8 @@ gen_arg_data <- function(a) {
 gen_type_data <- function(type) {
   out <- list(name = type$name, of = type$of, key = type$key)
   if (!is.null(type$fields)) out$fields <- lapply(type$fields, gen_arg_data)
+  if (!is.null(type$value)) out$value <- gen_arg_data(type$value)
+  if (!is.null(type$max)) out$max <- type$max
   if (!is.null(type$variants)) {
     out$variants <- lapply(type$variants, function(v) {
       lapply(v$fields, gen_arg_data)
@@ -115,6 +117,9 @@ gen_ts_type <- function(type, values = NULL, nullable = FALSE) {
     record = gen_ts_record(type$fields),
     records = paste0(gen_ts_record(type$fields), "[]"),
     records_by = gen_ts_variants(type),
+    named = paste0("Record<string, ",
+                   gen_ts_type(type$value$type, type$value$values,
+                               nullable = !isFALSE(type$value$null)), ">"),
     map = "Record<string, unknown>"
   )
   if (nullable) paste(t, "| null") else t
