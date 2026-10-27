@@ -300,7 +300,7 @@
     const g = glyph(m, i, o.labels);
     const own = m.kind === 'barsplit' || (/** @type {any} */ (m).multi);
     const lab = o.labels && !own && 'dw' in m && m.dw != null && c.disp[i] != null;
-    return '<td class="blockr-summarize-bar-col">' + (lab
+    return '<td class="blockr-summarize-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (lab
       ? '<div class="blockr-summarize-barwrap">' + g + barval(value(c, i), /** @type {any} */ (m).dw) +
         '</div>'
       : g) + '</td>';

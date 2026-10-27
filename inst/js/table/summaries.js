@@ -155,6 +155,9 @@
     opened.set(box, open);
     el.textContent = '';
     el.classList.add('lane-summaries');
+    // The entries need the section's width, not one column of its grid.
+    const body = el.closest('.dd-section-body');
+    if (body) body.classList.add('lane-sum-wide');
     list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
     const add = document.createElement('select');
     add.className = 'dd-select lane-sum-addcol';

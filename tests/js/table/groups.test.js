@@ -189,6 +189,7 @@ test('a swimlane: its segments in their level colours, the axis in the foot', ()
 
 test('a sparkline: band, reference line, line and the last point', () => {
   const t = mount(payload({ data: groups(), config: G }));
+  assert.ok(t.cell(0, 8).classList.contains('is-spark'));
   const sp = t.cell(0, 8).querySelector('.blockr-summarize-spcell');
   assert.deepEqual(Array.from(sp.querySelector('svg').children).map((e) => e.tagName.toLowerCase()),
                    ['polygon', 'line', 'polyline']);
