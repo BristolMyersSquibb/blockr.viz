@@ -38,7 +38,7 @@ templates are emitted for \strong{numeric} variables (the underlying
 numbers are always all computed). Any combination of \code{"n"},
 \code{"n_pct"} (non-missing n and \% of group rows), \code{"mean"}, \code{"sd"},
 \code{"mean_sd"}, \code{"median"}, \code{"median_q1_q3"}, \code{"q1_q3"}, \code{"min_max"};
-rows follow this canonical order regardless of input order. A single
+rows follow the order given. A single
 key gives one row per variable, several give one row per stat. The
 legacy presets \code{"compact"} (= \code{"mean_sd"}) and \code{"expanded"}
 (= \code{c("n", "mean", "sd", "median", "q1_q3", "min_max")}) are still

@@ -83,7 +83,7 @@
 #'   numbers are always all computed). Any combination of `"n"`,
 #'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
 #'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
-#'   rows follow this canonical order regardless of input order. A single
+#'   rows follow the order given. A single
 #'   key gives one row per variable, several give one row per stat. The
 #'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
 #'   (= `c("n", "mean", "sd", "median", "q1_q3", "min_max")`) are still
@@ -386,7 +386,7 @@ summary_table_long <- function(data,
 #'   numbers are always all computed). Any combination of `"n"`,
 #'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
 #'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
-#'   rows follow this canonical order regardless of input order. A single
+#'   rows follow the order given. A single
 #'   key gives one row per variable, several give one row per stat. The
 #'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
 #'   (= `c("n", "mean", "sd", "median", "q1_q3", "min_max")`) are still
@@ -585,8 +585,8 @@ add_group_col <- function(stats_df, by) {
 # =============================================================================
 
 # Each entry maps a stat key to the row label and `.fmt` template it emits
-# for numeric variables. Catalog order is the canonical row order -- the
-# selection is reordered to it, so serialized boards are order-insensitive.
+# for numeric variables. Catalog order is the order of the gear's option list;
+# the rows follow the order the stats are given in.
 #
 # **`composer` is the standard for clinical table numbers, and this catalog does
 # not exceed it.** composer is BMS's own CSR-output package and computes through
@@ -618,9 +618,8 @@ SUMMARY_STATS_LEGACY <- list(
   expanded = c("n", "mean", "sd", "median", "q1_q3", "min_max")
 )
 
-#' Normalize a `stats` value to a deduplicated vector of catalog keys in
-#' canonical (catalog) order. Accepts the legacy `"compact"` / `"expanded"`
-#' scalars.
+#' Normalize a `stats` value to a deduplicated vector of catalog keys, in
+#' the order given. Accepts the legacy `"compact"` / `"expanded"` scalars.
 #' @noRd
 normalize_summary_stats <- function(stats) {
   stats <- as.character(stats)
@@ -638,7 +637,7 @@ normalize_summary_stats <- function(stats) {
   if (length(stats) == 0L) {
     stop("summary_table() requires at least one `stats` key.")
   }
-  intersect(names(SUMMARY_STATS_CATALOG), stats)
+  unique(stats)
 }
 
 # =============================================================================

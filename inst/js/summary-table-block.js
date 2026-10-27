@@ -30,8 +30,8 @@
 
   /**
    * Numeric stat vocabulary — must mirror SUMMARY_STATS_CATALOG in
-   * R/summary-table.R. Array order is the canonical row order; the
-   * selection is kept in this order regardless of click order.
+   * R/summary-table.R. Array order is the option list order; the rows
+   * follow the order the stats were picked in.
    */
   const STAT_OPTIONS = [
     { key: 'n',            label: 'N' },
@@ -45,6 +45,10 @@
     { key: 'min_max',      label: 'Min, Max' }
   ];
   const STAT_KEYS = STAT_OPTIONS.map(o => o.key);
+  /** @type {Record<string, string>} */
+  const STAT_KEY_OF = Object.fromEntries(STAT_OPTIONS.map(o => [o.label, o.key]));
+  /** @type {Record<string, string>} */
+  const STAT_LABEL_OF = Object.fromEntries(STAT_OPTIONS.map(o => [o.key, o.label]));
   /** Legacy preset values from boards saved before `stats` was a vector.
    *  @type {Record<string, string[]>} */
   const STAT_LEGACY = {
@@ -59,7 +63,11 @@
       stats = [stats];
     }
     if (!Array.isArray(stats)) return null;
-    const keys = STAT_KEYS.filter(k => stats.indexOf(k) >= 0);
+    /** @type {string[]} */
+    const keys = [];
+    for (const k of stats) {
+      if (STAT_KEYS.includes(k) && !keys.includes(k)) keys.push(k);
+    }
     return keys.length ? keys : null;
   };
 
@@ -266,6 +274,7 @@
     }
 
     _addStatsRow() {
+      const BSelect = /** @type {BlockrSelectStatic} */ (Blockr.Select);
       const wrap = document.createElement('div');
       wrap.className = 'blockr-settings__field blockr-settings__field--full';
       wrap.style.marginBottom = '8px';
@@ -273,70 +282,46 @@
       const label = document.createElement('span');
       label.className = 'blockr-label';
       label.textContent = 'Statistics';
-      label.style.display = 'block';
-      label.style.marginBottom = '4px';
       wrap.appendChild(label);
 
+      // The options are the display names: a { value, label } option would
+      // show the key next to the name. The names are unique, so they map
+      // back to keys. Tags drag to reorder; the rows follow the tag order.
+      const names = () => this._state.stats.map(k => STAT_LABEL_OF[k]);
+      const select = BSelect.multi(wrap, {
+        options: STAT_OPTIONS.map(o => o.label),
+        selected: names(),
+        search: false,
+        placeholder: 'Pick a statistic',
+        onChange: (picked) => {
+          const keys = (picked || []).map(n => STAT_KEY_OF[n]).filter(Boolean);
+          // An empty pick keeps the last table: the engine needs at least
+          // one statistic, so nothing is sent until one comes back.
+          Blockr.setRequiredEmpty(wrap, keys.length === 0);
+          if (!keys.length) return;
+          this._state.stats = keys;
+          this._autoSubmit();
+        }
+      });
+      select.el.classList.add('blockr-select--bordered');
+
       const hint = document.createElement('span');
-      hint.textContent = 'Rows per numeric variable — one selected = a single row, several = one row each.';
-      hint.style.fontSize = '0.75rem';
-      hint.style.color = '#9ca3af';
+      hint.textContent = 'One row each, in this order, under every numeric ' +
+        "variable. With one statistic it goes on the variable's own row.";
+      hint.style.fontSize = '12px';
+      hint.style.color = 'var(--blockr-color-text-muted)';
       hint.style.display = 'block';
-      hint.style.marginBottom = '6px';
+      hint.style.marginTop = '4px';
       wrap.appendChild(hint);
 
-      // One checkbox per stat (independent on/off options — design-system
-      // rule: data options are checkboxes, not self-labeling pills).
-      const boxRow = document.createElement('div');
-      boxRow.className = 'blockr-checkbox-row';
-      wrap.appendChild(boxRow);
-
-      const boxes = STAT_OPTIONS.map((opt) => {
-        const box = Blockr.checkbox(
-          opt.label,
-          this._state.stats.indexOf(opt.key) >= 0,
-          (/** @type {boolean} */ checked) => {
-            if (!checked) {
-              // Never deselect the last stat — the engine needs at least one.
-              if (this._state.stats.length === 1) { box.set(true); return; }
-              const idx = this._state.stats.indexOf(opt.key);
-              if (idx >= 0) this._state.stats.splice(idx, 1);
-            } else {
-              // Keep canonical catalog order regardless of click order.
-              this._state.stats = STAT_KEYS.filter(
-                k => k === opt.key || this._state.stats.indexOf(k) >= 0
-              );
-            }
-            lockLast();
-            this._autoSubmit();
-          });
-        return box;
-      });
-      boxes.forEach(b => boxRow.appendChild(b.el));
-
-      // The one statistic left cannot be cleared: show it as locked rather
-      // than letting a click be undone without a word.
-      const lockLast = () => {
-        const one = this._state.stats.length === 1;
-        boxes.forEach((box, i) => {
-          const inp = box.el.querySelector('input');
-          const locked = one && this._state.stats[0] === STAT_OPTIONS[i].key;
-          if (inp) inp.disabled = locked;
-          box.el.title = locked ? 'At least one statistic is needed' : '';
-        });
-      };
-
       const update = () => {
-        boxes.forEach((box, i) => {
-          box.set(this._state.stats.indexOf(STAT_OPTIONS[i].key) >= 0);
-        });
-        lockLast();
+        select.setOptions(STAT_OPTIONS.map(o => o.label), names());
+        Blockr.setRequiredEmpty(wrap, false);
       };
-      lockLast();
 
       // Same `{ _update }` shape as the toggle handles so setState's
       // refresh loop can repaint it uniformly.
-      this._toggle_stats = /** @type {any} */ ({ _update: update });
+      this._toggle_stats = /** @type {any} */ ({ _update: update, _select: select });
       this._bandGrid.appendChild(wrap);
     }
 

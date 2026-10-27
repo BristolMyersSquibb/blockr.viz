@@ -214,8 +214,8 @@ table_variables_server <- function(id, data, shared,
       }
       by <- as.character(unlist(st$by %||% character()))
       if (!identical(by, shiny::isolate(shared$by()))) shared$by(by)
-      stats_in <- intersect(names(SUMMARY_STATS_CATALOG),
-                            as.character(unlist(st$stats %||% character())))
+      stats_in <- unique(as.character(unlist(st$stats %||% character())))
+      stats_in <- stats_in[stats_in %in% names(SUMMARY_STATS_CATALOG)]
       r_stats(if (length(stats_in)) stats_in else "mean_sd")
       r_sections(as.character(unlist(st$sections %||% character())))
       r_total(isTRUE(st$add_overall))
