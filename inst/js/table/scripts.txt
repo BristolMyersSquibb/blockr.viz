@@ -9,6 +9,7 @@ drill.js
 chrome.js
 cards.js
 gear.js
+summaries.js
 records.js
 groups.js
 variables.js
