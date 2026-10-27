@@ -503,7 +503,7 @@ legacy_deser <- function(class, data) {
 # else in a payload is a block attribute, such as blockr.dock's `visible`.
 legacy_arg_names <- function(block) {
   unique(c(names(viz_block_spec(block)$args), CHART_LEGACY_ARGS,
-           LEGACY_NAMES$old[LEGACY_NAMES$block == block]))
+           CHART_RETIRED_ARGS, LEGACY_NAMES$old[LEGACY_NAMES$block == block]))
 }
 
 # LEGACY: delete with this file

@@ -106,4 +106,15 @@ test_that("a chart keeps block attributes it does not own through a restore", {
   expect_identical(attr(out, "visible"), "outputs")
   expect_warning(old <- new_chart_block(chart_type = "line"), "`chart_type`")
   expect_null(attr(old, "chart_type"))
+  expect_warning(
+    out <- blockr.core::blockr_deser(
+      structure(list(), class = "chart_block"),
+      list(payload = list(type = "bar", x = "a", smooth = TRUE,
+                          visible = "outputs"),
+           constructor = list(version = "0.2.9"))
+    ),
+    "smooth"
+  )
+  expect_null(attr(out, "smooth"))
+  expect_identical(attr(out, "visible"), "outputs")
 })

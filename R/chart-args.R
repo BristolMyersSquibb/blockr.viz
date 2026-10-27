@@ -187,6 +187,14 @@ CHART_LEGACY_ARGS <- c(
   "func_toggle", "metric", "agg_fn", "direct_labels"
 )
 
+# Arguments older charts had and that have no current meaning. A restore
+# warns and drops them; any other unknown name is a block attribute.
+CHART_RETIRED_ARGS <- c(
+  "expose", "vlines", "hlines", "ref_x", "ref_y", "step", "smooth",
+  "metrics", "group_by", "color_by", "facet_by", "x_col", "y_col",
+  "series_by", "x_end_col", "lo_col", "hi_col"
+)
+
 chart_legacy_args <- function(args) {
   if (!any(CHART_LEGACY_ARGS %in% names(args))) {
     return(args)
