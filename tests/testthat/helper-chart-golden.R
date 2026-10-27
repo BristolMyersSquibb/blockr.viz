@@ -540,6 +540,7 @@ golden_run <- function(sc) {
   })
   out <- new.env(parent = emptyenv())
   out$ctor_warnings <- character()
+  out$initial <- NULL
   out$steps <- list()
   blk <- withCallingHandlers(
     golden_ctor(sc$args),
@@ -548,7 +549,7 @@ golden_run <- function(sc) {
       invokeRestart("muffleWarning")
     }
   )
-
+  out$initial <- blockr.core:::initial_block_state(blk)
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -612,7 +613,8 @@ golden_run <- function(sc) {
     },
     args = list(x = blk, data = list(data = dat))
   )
-  golden_scrub(list(ctor_warnings = out$ctor_warnings, steps = out$steps))
+  golden_scrub(list(ctor_warnings = out$ctor_warnings,
+                    initial = out$initial, steps = out$steps))
 }
 
 golden_ctor_run <- function(args) {
@@ -633,6 +635,7 @@ golden_ctor_run <- function(args) {
   if (!inherits(res, "golden_error")) {
     keep <- !vapply(attributes(res), is.function, logical(1L))
     res <- list(
+      initial = blockr.core:::initial_block_state(res),
       class = class(res),
       attrs = attributes(res)[keep & names(attributes(res)) != "class"],
       ui = as.character(res$expr_ui("blk"))
