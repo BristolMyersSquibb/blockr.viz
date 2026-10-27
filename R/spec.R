@@ -50,6 +50,9 @@ viz_spec <- function(block, ...) {
     if (!inherits(args[[nm]]$default, "viz_opt")) {
       viz_check_value(args[[nm]], args[[nm]]$default, nm)
     }
+    if (!is.null(args[[nm]]$example)) {
+      viz_check_value(args[[nm]], args[[nm]]$example, nm)
+    }
   }
   structure(list(block = block, args = args), class = "viz_spec")
 }
@@ -115,16 +118,19 @@ spec_type_refs <- function(type) {
 #' @param ctrl Whether the argument is externally controllable.
 #' @param ai Whether the block registry lists it for the assistant.
 #' @param describe The registry text, and the source of its `@param` docs.
+#' @param example A worked value for the registry, checked against the type.
 #' @return A `viz_arg`.
 #' @noRd
 viz_arg <- function(type, default = NULL, values = NULL, bounds = NULL,
                     null = FALSE, also = NULL, applies = NULL, gear = NULL,
-                    slot = FALSE, ctrl = TRUE, ai = TRUE, describe = NULL) {
+                    slot = FALSE, ctrl = TRUE, ai = TRUE, describe = NULL,
+                    example = NULL) {
   type <- as_viz_type(type)
   arg <- structure(
     list(type = type, default = default, values = values, bounds = bounds,
          null = null, also = also, applies = applies, gear = gear,
-         slot = slot, ctrl = ctrl, ai = ai, describe = describe),
+         slot = slot, ctrl = ctrl, ai = ai, describe = describe,
+         example = example),
     class = "viz_arg"
   )
   viz_arg_valid(arg)
@@ -160,6 +166,9 @@ viz_arg_valid <- function(arg) {
     stop("`applies` is NULL, a character vector or except().", call. = FALSE)
   }
   stopifnot(is_flag(arg$slot), is_flag(arg$ctrl), is_flag(arg$ai))
+  if (arg$slot && t %in% c("record", "records", "map")) {
+    stop("A ", t, " argument cannot be a title slot.", call. = FALSE)
+  }
   invisible(TRUE)
 }
 
