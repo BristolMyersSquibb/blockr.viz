@@ -88,11 +88,15 @@ test_that("several stat keys emit one indented row each", {
   expect_identical(out$.indent, c(1L, 1L))
 })
 
-test_that("selection is reordered to canonical catalog order", {
-  fwd <- summary_table_long(mtcars, vars = "mpg", stats = c("n", "min_max"))
-  rev <- summary_table_long(mtcars, vars = "mpg", stats = c("min_max", "n"))
-  expect_identical(fwd, rev)
-  expect_identical(fwd$.label, c("N", "Min, Max"))
+test_that("rows follow the order the stats are given in", {
+  out <- summary_table_long(mtcars, vars = "mpg",
+                            stats = c("min_max", "mean_sd"))
+  expect_identical(out$.label, c("Min, Max", "Mean (SD)"))
+  wide <- summary_table(mtcars, vars = "mpg", stats = c("min_max", "mean_sd"))
+  expect_identical(wide$.label[wide$.indent == 1L], c("Min, Max", "Mean (SD)"))
+  dup <- summary_table_long(mtcars, vars = "mpg",
+                            stats = c("min_max", "n", "min_max"))
+  expect_identical(dup$.label, c("Min, Max", "N"))
 })
 
 test_that("n_pct is the share of non-missing rows per group", {
@@ -154,7 +158,7 @@ test_that("block constructor normalizes legacy stats into state", {
         session$returned$state$stats(),
         c("n", "mean", "sd", "median", "q1_q3", "min_max")
       )
-      # A widget edit with legacy-free keys lands filtered + canonical.
+      # A widget edit lands filtered, in the order it was picked.
       session$setInputs(
         `variables-summary_input` = list(
           vars = list("mpg"),
@@ -163,7 +167,7 @@ test_that("block constructor normalizes legacy stats into state", {
       )
       expect_identical(
         session$returned$state$stats(),
-        c("n_pct", "min_max")
+        c("min_max", "n_pct")
       )
     }
   )
