@@ -356,5 +356,5 @@
    */
   const wire = (grid, frame, scope, ctx) => new Drill(grid, frame, scope, ctx);
 
-  V.table.drill = { same, covers, equal, label, wire };
+  V.table.drill = { same, covers, equal, label, wire, clickable };
 })();

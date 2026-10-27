@@ -1,0 +1,62 @@
+/* The table block's view (inst/js/table/): what its frame and markup add to
+   table.css. Keyed headers and section values carry `dt-keyed`, set where
+   the markup is written. */
+
+/* The view sizes its header by its own width, so a narrow block reflows
+   whatever panel or card it sits in. */
+.vz-table {
+  container-type: inline-size;
+}
+.vz-table [hidden] {
+  display: none !important;
+}
+
+/* What a click claims reads as clickable. */
+.vz-table.dt-clickable .blockr-table thead th.dt-keyed,
+.vz-table.dt-clickable .blockr-table tbody tr.blockr-section-header.dt-keyed .blockr-section-value,
+.vz-table.dt-clickable .tc-row {
+  cursor: pointer;
+}
+.vz-table.dt-clickable .tc-row.dt-row-nodrill {
+  cursor: default;
+}
+
+/* The receipt's clear button, after the text. */
+.vz-table .dd-status-footer {
+  justify-content: flex-start;
+  gap: 4px;
+}
+.vz-table .dd-status-clear {
+  font-size: var(--blockr-font-size-sm, 0.875rem);
+  line-height: 1;
+  color: var(--blockr-grey-400, #9ca3af);
+  background: none;
+  border: none;
+  border-radius: var(--blockr-radius-sm, 4px);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.vz-table .dd-status-clear:hover {
+  color: var(--blockr-grey-700, #374151);
+  background: var(--blockr-color-bg-hover, #f3f4f6);
+}
+
+/* A narrow block: the search and download take a row of their own under
+   the title, which keeps the width of the block. */
+@container (max-width: 420px) {
+  .vz-table > .vz-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "titles gear" "tools tools";
+    row-gap: 6px;
+  }
+  .vz-table > .vz-head.vz-head--open {
+    grid-template-areas: ". gear" "tray tray" "titles titles" "tools tools";
+  }
+  .vz-table > .vz-head > .vz-head__tools {
+    justify-self: stretch;
+  }
+  .vz-table > .vz-head > .vz-head__tools > .blockr-search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

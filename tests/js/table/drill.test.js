@@ -33,6 +33,7 @@ test('a row click claims the drill value and lights every row with it', () => {
   assert.deepEqual(t.lit(), [0, 3]);
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo');
   assert.equal(t.$('.dd-status-footer').hidden, false);
+  assert.ok(t.$('.vz-table').classList.contains('dt-clickable'));
 });
 
 test('a second click on a lit row clears the drill', () => {
@@ -64,6 +65,7 @@ test('without a drill column nothing clicks or looks clickable', () => {
   t.click(t.row(0));
   assert.deepEqual(t.selects(), []);
   assert.equal(t.$$('tr.dt-row-nodrill').length, 0);
+  assert.equal(t.$('.vz-table').classList.contains('dt-clickable'), false);
 });
 
 test("R's selection lights its rows and writes R's receipt", () => {

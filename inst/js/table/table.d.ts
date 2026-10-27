@@ -280,6 +280,7 @@ interface VizTableNamespace {
     covers(claim: TableClaim, keys: TableClaim | null | undefined): boolean;
     equal(a: TableClaim | null | undefined, b: TableClaim | null | undefined): boolean;
     label(sel: TableSelection | null, labels: Record<string, string>): string;
+    clickable(m: TableModel | null): boolean;
     wire(grid: TableGrid, frame: TableFrame, scope: VizScope,
          ctx: TableDrillContext): TableDrill;
   };

@@ -26,6 +26,11 @@
     const name = '<span class="blockr-col-name arm__name">' +
       String(h.text == null ? '' : h.text).split('\n').map(esc).join('<br>') + '</span>';
     const icon = sortable ? '<span class="blockr-sort-icon"></span>' : '';
+    // A spanner aligns by its cell's text-align, which a flex row would undo.
+    if (h.col == null && !h.stub) {
+      return name + (h.sub ? '<div class="dt-th-subrow"><span class="blockr-col-label arm__n">' +
+        esc(h.sub) + '</span></div>' : '');
+    }
     if (h.sub) {
       return name + '<div class="dt-th-subrow"><span class="blockr-col-label arm__n">' +
         esc(h.sub) + '</span>' + icon + '</div>';

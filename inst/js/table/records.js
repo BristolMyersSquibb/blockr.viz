@@ -119,11 +119,13 @@
         this.drawnWith = '';
         this.grid.clear();
         this.cardsHost.hidden = true;
+        f.el.classList.remove('dt-clickable');
         f.count('');
         f.receipt(null, null);
         return;
       }
       f.structured(!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys));
+      f.el.classList.toggle('dt-clickable', T.drill.clickable(m));
       this.draw(m, cfg);
     }
 
