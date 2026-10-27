@@ -27,8 +27,8 @@
 #'     `0` lets a page run right up to it. Worth more than it looks: a stated
 #'     row height is a floor and PowerPoint grows a row that needs another
 #'     line, so the bottom of a page is where a measurement error lands.}
-#'   \item{`blockr.viz.ft_header_break_tol` (0, off)}{Set to a fraction (0.6
-#'     was the old default) to deal the columns over two sets of slides when
+#'   \item{`blockr.viz.ft_header_break_tol` (0, off)}{Set to a fraction (say
+#'     0.6) to deal the columns over two sets of slides when
 #'     a header word is cut past that much of itself. Off by default because
 #'     a table read by flipping between two sets of slides is a high price,
 #'     and a wrapped header is not worth it: the columns now come apart only
@@ -47,7 +47,7 @@
 #'     not being the rendering font -- a deck naming a typeface the exporting
 #'     machine does not have is measured in whatever systemfonts substitutes.
 #'     Raise it if a real deck wraps where the export predicted it would not.}
-#'   \item{`blockr.viz.ft_col_widths` ("measured")}{`"even"` is the older
+#'   \item{`blockr.viz.ft_col_widths` ("measured")}{`"even"` is the
 #'     positional rule: the stub takes a fixed width, the data columns share
 #'     what is left equally, whatever their text needs.}
 #' }

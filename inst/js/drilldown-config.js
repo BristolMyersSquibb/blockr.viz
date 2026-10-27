@@ -1623,7 +1623,7 @@
     // state: "Off", "None", "4 lines") after the title. Folding is view state
     // only: it never changes the output or clears a value. The fold's open
     // state is kept apart from the feature's on state (`key`), and a section
-    // that is on starts open, as it did when the header was its checkbox.
+    // that is on starts open.
     // Returns the section when open, else null (only the header was drawn).
     /**
      * @param {string} title @param {string} key @param {boolean} on
@@ -1644,7 +1644,7 @@
 
     // The checkbox that switches an optional section's feature on: the first
     // field inside the opened section. Switching it off is what clears the
-    // feature, as the header checkbox did before.
+    // feature.
     /**
      * @param {HTMLElement} sec @param {string} label @param {boolean} on
      * @param {(on: boolean) => void} onToggle
@@ -2076,7 +2076,7 @@
       const inst = this._selects[key];
       const el = inst && inst.el;
       // No live select (native <select multiple> fallback) or dropdown
-      // already closed (tag-remove click) -> re-render now, as before.
+      // already closed (tag-remove click) -> re-render now.
       if (!el || el.getAttribute('aria-expanded') !== 'true') {
         this._rerender();
         return;
@@ -2517,8 +2517,8 @@
       const choices = Array.isArray(cfg.ctrl_choices) ? cfg.ctrl_choices : [];
       const cur = cfg.ctrl_target || '';
       // No "Not set": the checkbox above is how the send is turned off, and a
-      // checked box pointing nowhere was a state that looked configured and
-      // did nothing. R puts 'Automatic (<block>)' at the head of the choices.
+      // checked box pointing nowhere would look configured and do nothing.
+      // R puts 'Automatic (<block>)' at the head of the choices.
       /** @type {Array<{value: string, label: string}>} */
       const opts = [];
       // A configured target no longer on the board stays visible as its own

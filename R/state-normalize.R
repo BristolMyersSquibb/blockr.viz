@@ -1,12 +1,11 @@
 # Heal corrupted block state written by the DAG clipboard.
 #
-# blockr.dag's copy_selection_to_clipboard() used to serialize live block state
-# with jsonlite::toJSON(auto_unbox = TRUE) but WITHOUT null = "null", so every
-# NULL state field was written as `{}` and came back from the paste as an empty
-# named list(). blockr.core hands that payload to the constructor verbatim, so
-# the pasted block holds list() where it should hold NULL. Fixed upstream in
-# blockr.dag#144 -- but that only stops NEW corruption: a block whose state was
-# poisoned by a pre-fix paste and then SAVED keeps its list() on disk, restores
+# Older blockr.dag versions' copy_selection_to_clipboard() serialize live block
+# state with jsonlite::toJSON(auto_unbox = TRUE) but WITHOUT null = "null", so
+# every NULL state field is written as `{}` and comes back from the paste as an
+# empty named list(). blockr.core hands that payload to the constructor
+# verbatim, so the pasted block holds list() where it should hold NULL. A
+# block pasted that way and then SAVED keeps its list() on disk, restores
 # with it, and re-emits `{}` on the next copy (an empty list serializes to an
 # empty object no matter what `null` is set to). The corruption propagates
 # through save/restore, so the heal has to live in the constructor, which every
@@ -44,12 +43,10 @@ chr_vec_state <- function(x) {
 # A boolean toggle slot: always a length-1 logical, never a string.
 #
 # The JS gear renders a two-option segmented control and transports its value
-# as the strings "on" / "off" (chart/roles.js ROLES, table.js SORTABLE_OPT).
-# That is the CONTROL's wire format, not the block's API: table-block already
-# coerces it at the boundary (`as_toggle()`), so `sortable` et al. are plain
-# logicals. `identity_line` did not, and let the transport string leak into
-# block state -- every chart board saved before that fix carries the literal
-# "off".
+# as the strings "on" / "off" (table.js SORTABLE_OPT). That is the CONTROL's
+# wire format, not the block's API: table-block coerces it at the boundary
+# (`as_toggle()`), so `sortable` et al. are plain logicals. Older chart
+# boards carry the literal "off" for `identity_line`.
 #
 # So accept every shape the value can arrive in: a logical (the API), "on" /
 # "off" (the gear + legacy state), "true" / "false" (a JSON round-trip), 1 / 0.

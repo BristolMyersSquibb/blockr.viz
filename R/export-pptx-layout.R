@@ -70,10 +70,9 @@ pptx_width_squeezed <- function(ft) {
 # read straight through. The columns come apart only when a reader could not
 # follow them at all.
 #
-# `blockr.viz.ft_header_break_tol` used to sit here at 0.6, so a header word
-# losing a third of itself dealt the columns. That is what put seven-column
-# tables on two sets of slides. It now defaults to 0 -- off -- and an app
-# that wants the old eagerness can set it.
+# `blockr.viz.ft_header_break_tol` defaults to 0, off. At 0.6 a header word
+# losing a third of itself deals the columns, which puts seven-column tables
+# on two sets of slides.
 pptx_width_broken <- function(ft, tol = getOption(
                                 "blockr.viz.ft_header_break_tol", 0)) {
   sq <- attr(ft, "width_squeeze")
@@ -181,8 +180,8 @@ pptx_hold_sections <- function(breaks, key, keep = 2L) {
     if (start > lower) breaks[[i]] <- start - 1L
   }
 
-  # Trailing breaks can now repeat or run backwards; drop what is no longer a
-  # boundary.
+  # Trailing breaks can repeat or run backwards here; keep the ones that are
+  # still boundaries.
   breaks <- breaks[c(TRUE, diff(breaks) > 0)]
   if (utils::tail(breaks, 1L) < n) breaks <- c(breaks, n)
   breaks
@@ -399,16 +398,11 @@ pptx_content_width <- function(template) {
 
 # How far down the slide a table may run, in inches from the top.
 #
-# The same lesson as the title, at the other end: a constant does not know
-# what the template put there. This was `slide_h - 0.4`, and the BMS layout
-# starts its footer band at 6.95in of a 7.5in slide -- so a full page of rows
-# was allowed 0.15in INTO the footer, and the last row or two printed over the
-# company line. Split or not, every page did it, which is why it showed up on
-# a page that had already been split.
-#
-# So the limit is the top of whatever the layout puts at the foot -- the
-# footer, the date, the slide number -- and never worse than the old
-# constant. The date and slide-number placeholders count: they are usually
+# The limit is the top of whatever the layout puts at the foot -- the
+# footer, the date, the slide number -- and never below `slide_h - 0.4`. A
+# constant alone does not know the template: the BMS layout starts its footer
+# band at 6.95in of a 7.5in slide, so `slide_h - 0.4` would print the last
+# row or two over the company line. The date and slide-number placeholders count: they are usually
 # level with the footer, and a table over the page number is as wrong as a
 # table over the company name.
 pptx_body_bottom <- function(doc, layout, master, slide_h,
@@ -437,9 +431,8 @@ pptx_body_bottom <- function(doc, layout, master, slide_h,
 # Where the title placeholder's text ends, in inches from the top of the
 # slide. The table is placed below THAT rather than at a constant, because a
 # title long enough to wrap runs down into the table: the BMS layout puts its
-# title at 0.4in with 1.25in of box, and the exporter's old fixed 1.1in top
-# sits inside it. A one-line title never showed the collision; adding a
-# "(55 of 57)" page marker to an already long one does.
+# title at 0.4in with 1.25in of box, so a fixed 1.1in top sits inside it once
+# a "(55 of 57)" page marker wraps a long title.
 #
 # NULL when the layout has no title placeholder or the geometry cannot be
 # read, and the caller keeps its default.

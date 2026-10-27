@@ -15,9 +15,8 @@
 #' The output stays `dplyr`-able (every number is a plain numeric column)
 #' and re-renderable: a renderer turns it into the familiar wide display
 #' grid by formatting each row's `.fmt` template, then spreading `.group`
-#' to columns (see `fmt_assemble()`). The shaper no longer bakes display
-#' strings -- it emits numbers + templates and leaves formatting to the
-#' renderer.
+#' to columns (see `fmt_assemble()`). The shaper emits numbers and templates
+#' and leaves formatting to the renderer.
 #'
 #' Each `vars` entry contributes rows shaped by the variable's type and
 #' the chosen `stats` selection:
@@ -218,8 +217,7 @@ summary_table_long <- function(data,
   # When multiple independent variable blocks are present, tag every row of a
   # run with a constant `.variable_label` -- the renderer synthesizes one
   # collapsible header per label run (headers are rendering, never data rows;
-  # annotated-df v2). Detail rows keep the absolute indents the materialized
-  # header rows used to impose, so the rendered depths are unchanged.
+  # annotated-df v2). Detail rows keep their absolute indents.
   # Hierarchy runs (length(run)==2) count as one block: their rows share the
   # outer variable's label even though `.variable` alternates outer/inner.
   # Flag lists (all-logical vars) render flat -- no `.variable_label`.

@@ -1,10 +1,9 @@
-/* Scope note (2026-07-26): every rule below applies to EITHER blockr table
+/* Every rule below applies to EITHER blockr table
    container -- the drilldown table (`.drilldown-table-container`, managed by
    table.js) or the summarize table (`.blockr-summarize-container`, payload-rendered,
    R/summarize-table-html.R). They are the same chrome: one control row, one header
    cell, one set of body alignments. Written as `:is(...)` so there is ONE
-   definition to keep, not two that drift -- the summarize table's header spacing
-   silently diverged (84px header against 59px) while these were table-only.
+   definition to keep.
    `.drilldown-table-structured` rules stay table-only: a summarize table is never a
    structured Table-1 frame. */
 

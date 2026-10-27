@@ -4,7 +4,7 @@
 # itself cannot be that object: `new_summarize_table_block()` is a transform
 # block whose result is its (filtered) INPUT, and the table exists only as a
 # push to summarize-table.js. A report or a deck evaluating the board would
-# print the input frame -- which is what it did before this file existed.
+# print the input frame.
 #
 # So the block states how to rebuild its table (report_call), and the rebuilt
 # table carries everything every target needs:

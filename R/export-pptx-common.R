@@ -41,7 +41,7 @@
 #'   measured height of the rendered rows runs out of slide rather than at a
 #'   row count, since a wrapped label costs a line that no row count knows
 #'   about. A number cuts every `max_rows` input rows instead. `NULL` never
-#'   splits, and a long table overflows the slide as it did before.
+#'   splits, and a long table overflows the slide.
 #'
 #'   Every page repeats the title, the column header band and the footnote,
 #'   because a slide pulled out of the deck has to stand on its own; the title
@@ -72,10 +72,9 @@
 #'   (`getOption("blockr.viz.ft_stub_share")`, the share of the width it
 #'   claims while the data columns are still short), the cells wrap between
 #'   words and the headers break inside them. A wrapped header is not a
-#'   reason to split: `getOption("blockr.viz.ft_header_break_tol")` used to
-#'   deal the columns when a header word was cut past 0.6 of itself, which
-#'   sent seven-column tables sideways; it now defaults to 0, and an app that
-#'   wants that behaviour back can set it.
+#'   reason to split unless an app sets
+#'   `getOption("blockr.viz.ft_header_break_tol")` (default 0, off) to deal
+#'   the columns when a header word is cut past that share of itself.
 #' @param min_font_size Points. The floor for the two shrink passes. `NULL`
 #'   (default) resolves it, first hit wins, from the board's
 #'   `exhibit_min_font_size` option ([new_exhibit_font_option()], which is how
@@ -176,9 +175,8 @@ write_exhibit_pptx <- function(x, file, title = NULL, subtitle = NULL,
 #' same slides as a caller downloading one table.
 #'
 #' That caller is blockr.outline's slide builder, which places many blocks'
-#' exhibits into one deck. Before this seam existed it placed each table with a
-#' single `officer::ph_with()`, so a table longer than the slide ran off the
-#' bottom of it.
+#' exhibits into one deck. A single `officer::ph_with()` would run a table
+#' longer than the slide off the bottom of it.
 #'
 #' @section What the caller owns:
 #' The two options that size and typeset the table

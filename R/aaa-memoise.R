@@ -8,9 +8,9 @@
 #' result too, so a builder that legitimately returns `NULL` is not rebuilt.
 #'
 #' Used for the block htmlDependency builders: each takes no data-dependent args
-#' and returns the same immutable object for the life of the process, yet was
-#' re-running disk I/O (packageVersion -> read.dcf + system.file) on every render
-#' and construct. htmlDependency objects are immutable value lists htmltools
+#' and returns the same immutable object for the life of the process, and
+#' unmemoised would repeat its disk I/O (packageVersion -> read.dcf +
+#' system.file) on every render and construct. htmlDependency objects are immutable value lists htmltools
 #' already shares across sessions, so one cached copy per process shared across
 #' Shiny sessions is correct.
 #' @noRd

@@ -156,10 +156,9 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       if (sum(want) + stub_floor > total) {
         # Nothing fits at its full width, so everything gives a little rather
         # than one column being crushed. The stub takes part in the fill
-        # instead of being handed the remainder: it used to be pinned at its
-        # floor while columns of medium-long text kept every character on one
-        # line, which is the wide-spread table -- three lines of stub beside
-        # data columns with air in them.
+        # instead of being handed the remainder; pinned at its floor, it would
+        # wrap to three lines while columns of medium-long text kept every
+        # character on one line.
         #
         # Each column is filled from what it cannot go below (its longest
         # word) toward what it would like (its whole text), all to a common

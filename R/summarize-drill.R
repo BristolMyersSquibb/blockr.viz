@@ -4,14 +4,13 @@
 # table (`by = c("AEBODSYS", "AEDECOD")`) a parent row is one body system and
 # a child row is one term inside one body system, so the click claims
 # `AEBODSYS = X` for the parent and `AEBODSYS = X, AEDECOD = Y` for the child.
-# The single drill column the block used to claim on every row sent a body
-# system name as an AEDECOD value, which matched nothing, and a child label that
-# repeats under several parents (SEX > ARM) claimed it under all of them.
+# One drill column for every row would send a body system name as an AEDECOD
+# value, which matches nothing, and a child label that repeats under several
+# parents (SEX > ARM) would claim it under all of them.
 #
 # The click is stored as `filter_column` (the path's columns) and
-# `filter_values` (one value per column). A board saved before carries one
-# column and its values, which keeps its old meaning: that column, any of
-# those values.
+# `filter_values` (one value per column). A board saved with one column and
+# its values means that column, any of those values.
 
 #' The stored click as filters: a named list, column -> value(s), the columns
 #' ANDed. `list()` when there is no click, or the two slots do not pair up.

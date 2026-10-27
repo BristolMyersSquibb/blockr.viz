@@ -101,8 +101,8 @@ viz_shared_args <- function() {
   )
 }
 
-# `ctrl = FALSE` on the chart: the reference chart does not list `download`
-# in external_ctrl, and Christoph kept that (2026-10-27).
+# `ctrl = FALSE` on the chart: `download` is not in the chart's
+# external_ctrl.
 viz_download_arg <- function(ctrl = TRUE) {
   viz_arg(
     type = "bool", default = TRUE, null = FALSE,

@@ -1,15 +1,11 @@
 # Colour by ROLE, resolved through the board theme.
 #
-# Before this, the three colour surfaces in this package were reachable in
-# three different ways: series colours were a package constant (not reachable
-# at all), header bands were a `blockr.viz.*` option and heatmap ramps were a
-# function argument. A client theme could therefore restyle one of the three.
-# Consumers now ask blockr.theme for the role they mean and one theme entry
-# recolours every renderer that shares it.
+# Series colours, header bands and heatmap ramps ask blockr.theme for the
+# role they mean, so one theme entry recolours every renderer that shares it.
 #
 # blockr.theme stays in Suggests: with the package absent, an older version
 # without theme_palette(), or no theme applied, every call returns the
-# hard-coded fallback and the board renders exactly as it did before.
+# hard-coded fallback.
 
 # Mirrors the JS BLOCKR_PALETTE (inst/js/chart/common.js) -- the pool the
 # chart cycles when no scale applies, so hash assignment draws from the same
