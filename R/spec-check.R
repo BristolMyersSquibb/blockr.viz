@@ -313,7 +313,31 @@ check_map <- function(x, arg) {
                                       any(!nzchar(names(x)))))) {
     value_fail("must be a named list")
   }
-  if (length(x)) x else list()
+  if (length(x)) map_canon(x) else list()
+}
+
+# A map's values in the one form R and a JSON round trip agree on: a JSON
+# array of single values is an atomic vector again, numbers are doubles
+# (JSON does not say integer), a vector of only NA is logical (JSON does
+# not say its type), an empty vector is NULL, and a factor is text. Named
+# lists keep their names and are read the same way inside.
+map_canon <- function(x) {
+  if (is.list(x)) {
+    if (is.null(names(x)) && length(x) && all(vapply(x, function(e) {
+      is.null(e) || (is.atomic(e) && length(e) == 1L)
+    }, logical(1L)))) {
+      return(map_canon(json_atomic(x)))
+    }
+    return(lapply(x, map_canon))
+  }
+  if (!is.atomic(x) || !length(x)) {
+    return(if (length(x)) x else NULL)
+  }
+  if (is.factor(x)) x <- as.character(x)
+  if (all(is.na(x))) {
+    return(rep(NA, length(x)))
+  }
+  if (is.integer(x)) as.numeric(x) else unname(as.vector(x))
 }
 
 SPEC_CHECKERS <- list(
