@@ -103,7 +103,7 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 2 or 1, 4"
+        "placeholder": "e.g. 2 or Target: 4"
        }
       ]
      },

@@ -468,7 +468,98 @@
     }
   };
 
+  // -- Lines and ranges on a category axis -------------------------------------
+
+  const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
+
+  /**
+   * The category a typed x position marks: the one it names, or, when the
+   * categories are dates in order (rising or falling), the one whose period
+   * holds the date (a week's bar holds its Wednesday). `edge`: a date before
+   * the first category or after the last takes that end, so a range reaching
+   * past the axis shades up to it. null when it marks none.
+   * @param {any} v @param {any[]} cats @param {boolean} [edge]
+   * @returns {string | null}
+   */
+  const catOf = (v, cats, edge = false) => {
+    if (v == null || v === '' || !Array.isArray(cats) || !cats.length) return null;
+    const s = String(v);
+    for (const c of cats) if (String(c) === s) return String(c);
+    if (!ISO_DAY.test(s) || cats.length < 2) return null;
+    let ts = cats.map((c) => (ISO_DAY.test(String(c)) ? timeValue(c) : NaN));
+    // Newest first: the same periods, read the other way.
+    if (ts[0] > ts[ts.length - 1]) {
+      cats = cats.slice().reverse();
+      ts = ts.slice().reverse();
+    }
+    for (let i = 0; i < ts.length; i++) {
+      if (!Number.isFinite(ts[i]) || (i > 0 && !(ts[i] > ts[i - 1]))) return null;
+    }
+    const t = timeValue(s);
+    const last = ts.length - 1;
+    // The last category's period is as long as the one before it.
+    const end = ts[last] + (ts[last] - ts[last - 1]);
+    if (!Number.isFinite(t)) return null;
+    if (t < ts[0]) return edge ? String(cats[0]) : null;
+    if (t >= end) return edge ? String(cats[last]) : null;
+    let i = last;
+    while (ts[i] > t) i--;
+    return String(cats[i]);
+  };
+
+  /**
+   * `x_lines` and `x_ranges` on a bar's category axis: a line through the
+   * bar each marks, a shade over the bars each range spans. ECharts places a
+   * category at its band, so a line sits on the bar's centre and a range
+   * covers whole bars. Mutates `series[0]`, adding to the markLine the value
+   * lines put there.
+   * @param {any[]} series @param {boolean} onX the categories run along x
+   * @param {any[]} cats @param {any} lines @param {any} names @param {any} ranges
+   * @param {{ text: string, muted: string, fontSize?: number }} ink
+   */
+  const addCategoryMarks = (series, onX, cats, lines, names, ranges, ink) => {
+    if (!series.length) return;
+    const key = onX ? 'xAxis' : 'yAxis';
+    const nm = Array.isArray(names) ? names : [];
+    /** @type {any[]} */
+    const data = [];
+    (Array.isArray(lines) ? lines : []).forEach((v, i) => {
+      const c = catOf(v, cats);
+      if (c == null) return;
+      // Unnamed, a line on its own category needs no label (the axis prints
+      // it); a date inside a bar's period prints the date.
+      const text = nm[i] ? String(nm[i]) : (c === String(v) ? null : String(v));
+      data.push(guideLine(c, onX, 1, text, false, ink));
+    });
+    if (data.length) {
+      const ml = series[0].markLine;
+      if (ml && Array.isArray(ml.data)) ml.data = ml.data.concat(data);
+      else series[0].markLine = { silent: true, symbol: 'none', data };
+    }
+    /** @type {any[]} */
+    const areas = [];
+    for (const r of (Array.isArray(ranges) ? ranges : [])) {
+      if (!r) continue;
+      const a = catOf(r.from, cats, true), b = catOf(r.to, cats, true);
+      if (a == null || b == null) continue;
+      // Both ends past the same edge: the range misses the axis.
+      const ia = cats.map(String).indexOf(a), ib = cats.map(String).indexOf(b);
+      if (ia === ib && catOf(r.from, cats) == null && catOf(r.to, cats) == null) continue;
+      areas.push([{ name: r.name || '', [key]: ia <= ib ? a : b }, { [key]: ia <= ib ? b : a }]);
+    }
+    if (areas.length) {
+      series[0].markArea = {
+        silent: true,
+        itemStyle: { color: ink.muted || '#6b7280', opacity: 0.08 },
+        label: { position: onX ? 'insideTop' : 'insideRight', color: ink.muted || '#6b7280',
+                 fontSize: ink.fontSize || 12 },
+        data: areas
+      };
+    }
+  };
+
   NS.axes = { colMeta, axisTitle, axisTypeFor, timeValue, timePeriod, orderedCategories, orderLevels, yGutter,
               fmtXVal, durationStr, sharedDomain, wrapLabel, xLabelKey, axisLabelWithDisplay,
-              xAxisLabels, thinnedLabelNote, guideLine, addValueLines, LABEL_LINE_H, CAT_LABEL_H };
+              xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
+              LABEL_LINE_H, CAT_LABEL_H };
 })();

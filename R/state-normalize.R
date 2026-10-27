@@ -93,24 +93,17 @@ bool_state <- function(x, default = FALSE) {
   isTRUE(as.logical(x))
 }
 
-# A numeric multi-value slot (helper-line positions): NULL or a numeric vector.
+# A numeric multi-value slot (`y_lines`): NULL or a numeric vector.
 #
 # Values reach the ctor as a bare numeric (code), a list of numbers (a JSON
-# round-trip through saved state), or a comma-separated string (the gear's
-# numlist control, and whatever the assistant hands over as text). Non-numeric
+# round-trip through saved state), or text (the gear, the sentence, the
+# assistant): "2, 5" or "Target: 4; 6" (see line_text_split()). Non-numeric
 # junk drops rather than poisoning the slot with NA -- a guide line at NA is not
 # a line, and the renderer would silently skip it anyway.
 num_vec_state <- function(x) {
 
+  x <- line_values(x)
   if (is.null(x)) return(NULL)
-
-  # Names label the lines (`y_lines = c(Target = 2)`); a typed list has none.
-  x <- unlist(x)
-
-  if (is.character(x)) {
-    x <- unlist(strsplit(x, "[,;[:space:]]+"), use.names = FALSE)
-    x <- x[nzchar(x)]
-  }
 
   nms <- names(x)
   x <- suppressWarnings(as.numeric(x))
@@ -119,6 +112,89 @@ num_vec_state <- function(x) {
   if (!is.null(names(x)) && !any(nzchar(names(x)))) names(x) <- NULL
 
   if (!length(x)) NULL else x
+}
+
+# Positions of `x_lines`: NULL, a numeric vector, or a character vector of
+# dates and category values. A date is kept as ISO text, as `x_ranges` keeps
+# it; the browser places it on the axis. Numbers stay numbers, so boards saved
+# with numeric lines read back unchanged. A value that matches nothing on the
+# axis draws nothing.
+x_vec_state <- function(x) {
+
+  x <- line_values(x)
+  if (is.null(x)) return(NULL)
+
+  x <- trimws(x)
+  x <- x[!is.na(x) & nzchar(x)]
+  if (!length(x)) return(NULL)
+
+  num <- suppressWarnings(as.numeric(x))
+  if (!anyNA(num)) {
+    names(num) <- names(x)
+    x <- num
+  }
+  if (!is.null(names(x)) && !any(nzchar(names(x)))) names(x) <- NULL
+  x
+}
+
+# Line positions as one named character vector, from whatever the caller
+# wrote: numbers, dates, a list of either (saved state), or text.
+line_values <- function(x) {
+
+  if (is.null(x) || !length(x)) return(NULL)
+
+  # Dates format before unlist(), which would drop their class.
+  dated <- function(v) {
+    if (inherits(v, c("Date", "POSIXt"))) {
+      stats::setNames(format(v), names(v))
+    } else {
+      v
+    }
+  }
+  x <- if (is.list(x)) lapply(x, dated) else dated(x)
+  x <- unlist(x)
+  if (!length(x)) return(NULL)
+
+  if (is.character(x)) {
+    x <- line_text_split(x)
+  } else {
+    x <- stats::setNames(as.character(x), names(x))
+  }
+  if (!length(x)) NULL else x
+}
+
+# Text the gear, the sentence or the assistant writes: lines separated by ";"
+# or ",", each optionally named as "Name: value", as the gear writes shaded
+# ranges. "Listed: 2026-10-21; 3" -> c(Listed = "2026-10-21", "3"). The colon
+# needs a space after it, so a time of day ("10:30") is no name. Numbers
+# separated by spaces ("2 5") are two lines, as the field always took them.
+line_text_split <- function(x) {
+
+  nms <- names(x) %||% rep("", length(x))
+  vals <- character()
+  out_nms <- character()
+
+  for (i in seq_along(x)) {
+    if (is.na(x[[i]])) next
+    parts <- trimws(strsplit(x[[i]], "[;,]")[[1L]])
+    parts <- parts[nzchar(parts)]
+    for (p in parts) {
+      m <- regmatches(p, regexec("^([^:]+):[[:space:]]+(.*)$", p))[[1L]]
+      nm <- if (length(m)) trimws(m[[2L]]) else ""
+      v <- if (length(m)) trimws(m[[3L]]) else p
+      if (!nzchar(nm) && length(parts) == 1L) nm <- nms[[i]]
+      tok <- strsplit(v, "[[:space:]]+")[[1L]]
+      if (length(tok) > 1L && !anyNA(suppressWarnings(as.numeric(tok)))) {
+        v <- tok
+        nm <- c(nm, rep("", length(tok) - 1L))
+      }
+      vals <- c(vals, v)
+      out_nms <- c(out_nms, nm)
+    }
+  }
+
+  names(vals) <- out_nms
+  vals
 }
 
 # Panels per row in a facet grid: NULL (auto) or a length-1 character holding

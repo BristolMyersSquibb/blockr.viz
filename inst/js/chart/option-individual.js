@@ -145,7 +145,23 @@
     // An unnamed line at 0 needs no label: the axis prints its value.
     /** @param {any} v @param {any} nm */
     const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
-    refX.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), true, lm, refText(v, nmX[i]), false, ink)));
+    // An x line sits where the axis puts x: a date on a time axis, a
+    // category on a category axis (as `x_ranges` does).
+    refX.forEach((v, i) => {
+      if (m.x.type === 'category') {
+        const c = NS.axes.catOf(v, m.x.cats || []);
+        if (c == null) return;
+        const text = nmX[i] || (c === String(v) ? null : String(v));
+        refData.push(NS.axes.guideLine(c, true, lm, text, false, ink));
+        return;
+      }
+      const at = m.x.encode ? m.x.encode(v) : Number(v);
+      if (!Number.isFinite(at)) return;
+      const text = m.x.type === 'time'
+        ? (nmX[i] || NS.axes.fmtXVal(at, 'time', null, m.x.period === 'time' ? 'time' : null))
+        : refText(v, nmX[i]);
+      refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
+    });
     refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink)));
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
     const idRaw = cfg.identity_line;

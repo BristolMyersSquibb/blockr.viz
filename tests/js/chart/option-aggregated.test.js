@@ -258,3 +258,42 @@ test('value labels print each value on its own; a line at 0 has no label', () =>
   assert.strictEqual(lines[0].label.show, false);
   assert.strictEqual(lines[1].label.show, true);
 });
+
+test('x_lines and x_ranges on a bar: on the categories, either way round', () => {
+  const columns = [{ name: 'WEEK', type: 'categorical', temporal: 'date' }, num('V')];
+  const rows = ['2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26']
+    .map((d, i) => ({ WEEK: d, V: i + 1 }));
+  const run = (cfg) => {
+    const c = { ...BASE, group: 'WEEK', value: 'V', func: 'sum', sort_by: 'data', ...cfg };
+    const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns, cfg: c });
+    return C.option.aggregated(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+                                    measure, widths: [600] }).panels[0].option;
+  };
+  const cfg = { x_lines: ['2026-10-21', '2026-10-12', '2027-01-01'], x_line_names: ['Listed', ''],
+                x_ranges: [{ name: 'Promo', from: '2026-09-01', to: '2026-10-14' }], value_lines: [2] };
+  const v = run({ ...cfg, orientation: 'vertical' });
+  // The value line stays; a date inside a week marks that week's bar; past
+  // the axis draws nothing; unnamed on its own bar, no label.
+  assert.deepStrictEqual(plain(v.series[0].markLine.data.map((d) => [d.xAxis ?? null, d.yAxis ?? null])),
+                         [[null, 2], ['2026-10-19', null], ['2026-10-12', null]]);
+  assert.strictEqual(v.series[0].markLine.data[1].label.formatter, 'Listed');
+  assert.strictEqual(v.series[0].markLine.data[2].label.show, false);
+  // The range starts before the axis: it shades from the oldest bar. The
+  // weeks run newest first (sort_dir desc), the range in axis order.
+  assert.deepStrictEqual(plain(v.series[0].markArea.data),
+                         [[{ name: 'Promo', xAxis: '2026-10-12' }, { xAxis: '2026-10-05' }]]);
+  const h = run({ ...cfg, orientation: 'horizontal' });
+  assert.strictEqual(h.series[0].markLine.data[1].yAxis, '2026-10-19');
+  assert.strictEqual(h.series[0].markArea.data[0][1].yAxis, '2026-10-05');
+});
+
+test('the gear writes lines as text with their names, and reads them back', () => {
+  assert.strictEqual(C.linesText([3, '2026-10-21'], ['', 'Listed']), '3; Listed: 2026-10-21');
+  assert.strictEqual(C.linesText([2, 5], []), '2, 5');
+  assert.strictEqual(C.linesText('2, 5'), '2, 5');
+  assert.deepStrictEqual(plain(C.parseLines('Listed: 2026-10-21; 3, W43 19 Oct; 2 5')),
+    { values: ['2026-10-21', 3, 'W43 19 Oct', 2, 5], names: ['Listed', '', '', '', ''] });
+  // A time of day is no name.
+  assert.deepStrictEqual(plain(C.parseLines('2026-10-21 10:30')),
+    { values: ['2026-10-21 10:30'], names: [''] });
+});

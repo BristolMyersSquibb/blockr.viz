@@ -375,3 +375,25 @@ test('an area fills and stacks a colour split, from zero, without dots', () => {
   const dodge = build({ chart_type: 'area', color: 'ARM', bar_mode: 'grouped' }).opt;
   assert.ok(dodge.series.filter((s) => s.areaStyle).every((s) => !s.stack));
 });
+
+test('x_lines on a Date x: placed as dates, labelled by name or by the date', () => {
+  const columns = [{ name: 'DAY', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const rows = ['2026-10-14', '2026-10-21', '2026-10-28'].map((d, i) => ({ DAY: d, VAL: i }));
+  const c = { chart_type: 'line', x: 'DAY', y: 'VAL', x_lines: ['2026-10-21', '2026-10-27', 'junk'],
+              x_line_names: ['Listed', ''], x_ranges: [{ name: 'Up', from: '2026-10-21', to: '2026-10-28' }] };
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
+  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+                                     measure, widths: [600] });
+  const ml = o.panels[0].option.series[0].markLine.data;
+  // Junk draws nothing.
+  assert.deepStrictEqual(plain(ml.map((d) => d.xAxis)), [Date.UTC(2026, 9, 21), Date.UTC(2026, 9, 27)]);
+  assert.deepStrictEqual(plain(ml.map((d) => d.label.formatter)), ['Listed', '2026-10-27']);
+  const ma = o.panels[0].option.series[0].markArea.data;
+  assert.deepStrictEqual(plain(ma[0].map((d) => d.xAxis)), [Date.UTC(2026, 9, 21), Date.UTC(2026, 9, 28)]);
+});
+
+test('x_lines on a category x: on the category it names', () => {
+  const { opt } = build({ chart_type: 'line', x: 'VIS', x_lines: ['W2', 'W9'], x_line_names: ['Dose'] });
+  assert.deepStrictEqual(plain(opt.series[0].markLine.data.map((d) => [d.xAxis, d.label.formatter])),
+                         [['W2', 'Dose']]);
+});

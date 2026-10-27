@@ -148,9 +148,14 @@ default (1). Range 0.5 to 3.}
 \code{"step-middle"} or \code{"step-end"}. A saved chart keeps the value it was
 saved with.}
 
-\item{y_lines, x_lines}{Numbers at which dashed guide lines are drawn.
-\code{y_lines} run across the value axis (y on a scatter or line, the value
-axis of a bar or boxplot either way round); \code{x_lines} across a numeric x.}
+\item{y_lines, x_lines}{Positions at which dashed guide lines are drawn. A
+name labels its line: \code{x_lines = c(Listed = "2026-10-21")}. \code{y_lines}
+are numbers across the value axis (y on a scatter or line, the value
+axis of a bar or boxplot either way round). \code{x_lines} run across x on a
+scatter, line or area, and across the category axis of a bar either way
+round: numbers, dates or date-times, or category values, matching x, as
+in \code{x_ranges}. On a bar over dates, a date between two bars marks the bar
+whose period holds it.}
 
 \item{ymin, ymax}{Columns holding the lower and upper end of an interval per
 row. On a line they draw a shaded band, on a scatter error bars. Several
@@ -165,7 +170,8 @@ the last observed point on. Line and area.}
 
 \item{x_ranges}{Named stretches of x shaded behind the marks, a named list
 of \code{c(from, to)}: \code{list(Recession = c("2008-01-01", "2009-06-30"))}.
-Dates, date-times or numbers, matching x.}
+Dates, date-times, numbers or category values, matching x. On a bar they
+shade whole bars, along the category axis.}
 
 \item{legend}{Where the colour legend goes: \code{"bottom"} (default, under the
 plot), \code{"top"} (between the subtitle and the plot), \code{"marks"} (the names
