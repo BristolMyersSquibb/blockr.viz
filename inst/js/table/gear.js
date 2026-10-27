@@ -9,7 +9,8 @@
  *   picks no columns, the shadings and row colour need a flat table,
  *   folding needs sections, `missing` needs nesting;
  * - the `by` label, which differs per layout;
- * - the shading rules editor (`custom`).
+ * - the editors of keys the engine has no control for (`custom`): the
+ *   shading rules here, a layout's own in its file (`Blockr.viz.table.editors`).
  *
  * Without the engine the view has no gear.
  */
@@ -171,7 +172,12 @@
     const host = {
       visible: (key, v) => visible(key, v, info()),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
-      custom: (key, el, ctx) => { if (key === 'shadings') shadings(el, ctx); }
+      // A layout's own editor for a key ("variables.summaries"), else the
+      // key's ("shadings").
+      custom: (key, el, ctx) => {
+        const ed = V.table.editors[ctx.values.layout + '.' + key] || V.table.editors[key];
+        if (ed) ed(el, ctx);
+      }
     };
     const engine = scope.own(G.mount(t.band, {
       block: 'table', id: frame.id, scope, typeKey: 'layout', title: 'Table settings', host
@@ -180,4 +186,5 @@
   }
 
   V.table.gear = { mount, visible, shadings };
+  V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();

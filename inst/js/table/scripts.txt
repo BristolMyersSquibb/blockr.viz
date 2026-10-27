@@ -10,4 +10,5 @@ cards.js
 gear.js
 records.js
 groups.js
+variables.js
 view.js

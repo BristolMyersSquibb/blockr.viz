@@ -415,6 +415,14 @@ interface VizTableNamespace {
   rowText(model: TableModel, i: number): string;
   Frame: new (el: HTMLElement, scope: VizScope) => TableFrame;
   View: VizViewClass;
+  /** Gear editors for keys the engine draws no control for, by
+   *  "<layout>.<key>" or "<key>". */
+  editors: Record<string, (el: HTMLElement, ctx: TableGearCtx) => void>;
+  variables: {
+    varOf(s: Record<string, unknown>): string | null;
+    withVars(summaries: Record<string, unknown>[], vars: string[],
+             columns: VizPayload['columns']): Record<string, unknown>[];
+  };
   /** A picture of a groups table drawn off screen (groups.js). */
   picture(payload: VizPayload, width: number, ratio?: number): Promise<VizPicture>;
   /** The records layout; groups extends it. */
