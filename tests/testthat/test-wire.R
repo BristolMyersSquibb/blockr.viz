@@ -61,7 +61,7 @@ test_that("records and maps keep their shape", {
   expect_identical(w$highlight$column, "country")
   expect_identical(w$highlight$values, list(list(value = "CH", label = NULL)))
   expect_identical(w$x_ranges[[1L]]$name, "Recession")
-  expect_identical(w$script_values, list(site = "A"))
+  expect_identical(w$script_values, list(site = list("A")))
 })
 
 test_that("what goes on the wire comes back through the reader", {
@@ -133,4 +133,22 @@ test_that("rows: big 64-bit integers go as text", {
   expect_warning(w <- viz_wire_df(df), "2\\^53")
   rows <- jsonlite::fromJSON(w$data)
   expect_identical(rows$i, c("1", "9007199254740993"))
+})
+
+test_that("a map survives the wire in one R form", {
+  s <- viz_spec("chart",
+                sv = viz_arg("map", default = list()),
+                sel = viz_arg("map", null = "nothing selected"))
+  v <- viz_check(s, list(
+    sv = list(k = 3, n = 2L, f = factor("a"), none = character()),
+    sel = list(type = "categorical",
+               filters = list(cat = c("a", "b"), cat_na = NA_character_),
+               range = list(x_range = c(1, 2)))
+  ))
+  expect_identical(v$sv, list(k = 3, n = 2, f = "a", none = NULL))
+  expect_identical(v$sel$filters$cat_na, NA)
+  w <- jsonlite::fromJSON(viz_wire(s, v), simplifyVector = FALSE)
+  expect_identical(w$sel$filters$cat_na, list(NULL))
+  back <- viz_read_set(s, list(rev = 0, values = w))
+  expect_identical(back$values, v)
 })
