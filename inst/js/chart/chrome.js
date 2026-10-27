@@ -362,6 +362,8 @@
         linetype: c.linetype || '',
         legend: NS.legendSetting(c),
         unit: c.unit ?? '',
+        y_scale: c.y_scale === 'log' ? 'log' : 'linear',
+        x_scale: c.x_scale === 'log' ? 'log' : 'linear',
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',
         ref_lo: c.ref_lo || '',

@@ -12,7 +12,9 @@ compute_smoother_series(
   color_by,
   series_by,
   facet_by = NULL,
-  loess_max = 5000L
+  loess_max = 5000L,
+  x_log = FALSE,
+  y_log = FALSE
 )
 }
 \arguments{
@@ -39,6 +41,10 @@ covers the same stretch of x. On 12k noisy rows the line moved by at
 most 0.3 where the exact fit's own error was 1.8; keeping every k-th
 point instead moved it by 0.9. No randomness, so the same data draws the
 same line. A group at or below the limit is fit exactly as before.}
+
+\item{x_log, y_log}{\code{TRUE} fits on log10 of that axis, as a chart with a
+log axis draws it, so a straight fit stays straight. Rows at or below
+zero on a log axis are left out; the line comes back in raw units.}
 }
 \value{
 A named list or \code{NULL}.

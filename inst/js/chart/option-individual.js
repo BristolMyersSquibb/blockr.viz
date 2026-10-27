@@ -28,7 +28,7 @@
     'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
     'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'legend', 'direct_labels',
     'value_line_names', 'x_line_names', 'label',
-    'format', 'unit', 'bar_mode', 'title_resolved'];
+    'format', 'unit', 'bar_mode', 'title_resolved', 'y_scale', 'x_scale', 'facet_scales'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -91,12 +91,144 @@
     return niceDomain(rLo, rHi);
   };
 
+  // -- Log axes ----------------------------------------------------------------
+
+  const pos = (/** @type {any} */ v) => v != null && v !== '' && Number(v) > 0;
+
+  /** The interval column pairs, lo and hi. @param {Record<string, any>} cfg */
+  const intervalPairs = (cfg) => {
+    const lo = [].concat(cfg.lo || []).filter(Boolean);
+    const hi = [].concat(cfg.hi || []).filter(Boolean);
+    return lo.map((l, i) => [l, hi[i]]).filter((p) => p[1]);
+  };
+
+  /** A panel's band levels, keyed by level. @param {any} cfg @param {any} panel */
+  const bandBucket = (cfg, panel) => {
+    const bs = cfg.band_series;
+    return bs ? (bs[panel.facet] || bs['__all__'] || null) : null;
+  };
+
+  /**
+   * The positive values one panel draws along an axis: the points, and on y
+   * the interval ends, the band and the smoother. [lo, hi] or null.
+   * @param {any} m @param {any} panel @param {any} cfg @param {'x' | 'y'} axis
+   */
+  const positiveExtent = (m, panel, cfg, axis) => {
+    let lo = Infinity, hi = -Infinity;
+    const scan = (/** @type {any} */ v) => {
+      if (!pos(v)) return;
+      const n = Number(v);
+      if (n < lo) lo = n;
+      if (n > hi) hi = n;
+    };
+    const k = axis === 'x' ? 0 : 1;
+    for (const s of panel.series) for (const p of s.pts) scan(p[k]);
+    if (axis === 'y') {
+      const pairs = intervalPairs(cfg);
+      if (pairs.length) {
+        for (const s of panel.series) {
+          for (const r of s.rows) for (const [a, b] of pairs) { scan(r[a]); scan(r[b]); }
+        }
+      }
+      const pb = m.isBand ? bandBucket(cfg, panel) : null;
+      if (pb) {
+        for (const b of Object.values(pb)) {
+          if (!b) continue;
+          for (const key of ['center', 'lo', 'hi', 'olo', 'ohi', 'out_y']) {
+            if (Array.isArray(b[key])) for (const v of b[key]) scan(v);
+          }
+        }
+      }
+    }
+    return Number.isFinite(lo) ? [lo, hi] : null;
+  };
+
+  /**
+   * Each panel's log domain per axis (null on a linear axis), shared across
+   * the panels where the facet scales are, and what the log axes leave out:
+   * the guide lines and band outliers at or below zero. The model counted
+   * the rows.
+   * @param {any} m @param {Record<string, any>} cfg
+   */
+  const logDomains = (m, cfg) => {
+    const mode = NS.facetScales(cfg);
+    const n = m.panels.length;
+    /** @param {'x' | 'y'} axis @param {boolean} on @param {boolean} shared */
+    const per = (axis, on, shared) => {
+      if (!on) return new Array(n).fill(null);
+      const exts = m.panels.map((/** @type {any} */ p) => positiveExtent(m, p, cfg, axis));
+      if (shared) {
+        const all = exts.filter(Boolean);
+        const dom = all.length
+          ? NS.axes.logTicks(Math.min(...all.map((e) => e[0])), Math.max(...all.map((e) => e[1])))
+          : null;
+        return new Array(n).fill(dom);
+      }
+      return exts.map((e) => (e ? NS.axes.logTicks(e[0], e[1]) : null));
+    };
+    let dropped = 0;
+    if (m.logY) {
+      dropped += [].concat(cfg.value_lines || []).filter((v) => !pos(v)).length;
+      if (m.isBand && cfg.box_points === 'outliers') {
+        for (const p of m.panels) {
+          for (const b of Object.values(bandBucket(cfg, p) || {})) {
+            if (b && Array.isArray(b.out_y)) dropped += b.out_y.filter((v) => !pos(v)).length;
+          }
+        }
+      }
+    }
+    if (m.logX) dropped += [].concat(cfg.x_lines || []).filter((v) => !pos(v)).length;
+    return {
+      x: per('x', m.logX, mode !== 'free'),
+      y: per('y', m.logY, mode === 'fixed'),
+      dropped
+    };
+  };
+
+  /**
+   * A band on a log axis: a low edge at or below zero is cut at the floor,
+   * a high edge or centre there is a gap, and outliers there are not drawn.
+   * @param {any} bs band_series @param {number} floor
+   */
+  const clampBand = (bs, floor) => {
+    if (!bs) return bs;
+    /** @type {Record<string, any>} */
+    const out = {};
+    for (const [f, levels] of Object.entries(bs)) {
+      if (!levels || typeof levels !== 'object') { out[f] = levels; continue; }
+      /** @type {Record<string, any>} */
+      const lv = {};
+      for (const [k, b] of Object.entries(levels)) {
+        if (!b || typeof b !== 'object') { lv[k] = b; continue; }
+        const c = { ...b };
+        for (const key of ['lo', 'olo']) {
+          if (Array.isArray(b[key])) c[key] = b[key].map((/** @type {any} */ v) => (v == null ? null : (pos(v) ? v : floor)));
+        }
+        for (const key of ['center', 'hi', 'ohi']) {
+          if (Array.isArray(b[key])) c[key] = b[key].map((/** @type {any} */ v) => (pos(v) ? v : null));
+        }
+        if (Array.isArray(b.out_y)) {
+          const keep = b.out_y.map(pos);
+          for (const key of ['out_x', 'out_y', 'out_id']) {
+            if (Array.isArray(b[key])) c[key] = b[key].filter((/** @type {any} */ _, /** @type {number} */ i) => keep[i]);
+          }
+        }
+        lv[k] = c;
+      }
+      out[f] = lv;
+    }
+    return out;
+  };
+
   /**
    * One panel's option and the state its slot gets.
    * @param {any} m @param {any} panel @param {any} look @param {number} width
    */
   const panelOption = (m, panel, look, width) => {
     const { cfg, ink, measure, theme } = look;
+    // This panel's log domains, null on a linear axis.
+    const lx = (look.logDom && look.logDom.x) || null;
+    const ly = (look.logDom && look.logDom.y) || null;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
     const lm = cfg.line_width_mult ?? 1.0;
@@ -118,20 +250,25 @@
     // Room on the right for names at the line ends.
     let labelPad = 0;
     if (isBand) {
-      const b = parts.band(m, panel, look);
+      const b = parts.band(m, panel, ly
+        ? { ...look, cfg: { ...cfg, band_series: clampBand(cfg.band_series, ly.min) } } : look);
       series = b.series;
       labelPad = b.labelPad;
       band = b.band;
       bandMany = b.many;
       if (b.markLineIdx >= 0) mlTarget = b.markLineIdx;
     } else {
-      pts = parts.points(m, panel, look, width > X_INSET ? width - X_INSET : 0);
+      pts = parts.points(m, panel, (lx || ly)
+        ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
+        width > X_INSET ? width - X_INSET : 0);
       series = pts.series;
       labelPad = pts.labelPad || 0;
     }
 
+    // On a log axis the band's frame is the log domain, so a reference
+    // limit at or below zero is pinned to its foot.
     const ext = (isBand && m.y.type === 'value' && series.length)
-      ? parts.bandExtent(cfg, panel, bandMany) : null;
+      ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
 
     // Helper lines, the band's limits and the identity line share one
     // markLine (ECharts allows one per series).
@@ -148,6 +285,7 @@
     // An x line sits where the axis puts x: a date on a time axis, a
     // category on a category axis (as `x_ranges` does).
     refX.forEach((v, i) => {
+      if (lx && !pos(v)) return;
       if (m.x.type === 'category') {
         const c = NS.axes.catOf(v, m.x.cats || []);
         if (c == null) return;
@@ -162,12 +300,25 @@
         : refText(v, nmX[i]);
       refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
     });
-    refY.forEach((v, i) => refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink)));
+    refY.forEach((v, i) => {
+      if (ly && !pos(v)) return;
+      refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink));
+    });
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
     const idRaw = cfg.identity_line;
+    // y = x is a straight diagonal only when both axes use the same scale.
     const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
-      m.x.type !== 'category' && m.y.type !== 'category';
-    const idDom = identityOn ? identityDomain(series) : null;
+      m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
+    /** @type {any} */
+    let idDom = null;
+    /** @type {any} */
+    let idLog = null;
+    if (identityOn && lx && ly) {
+      idLog = NS.axes.logTicks(Math.min(lx.min, ly.min), Math.max(lx.max, ly.max));
+      if (idLog) idDom = [idLog.min, idLog.max];
+    } else if (identityOn) {
+      idDom = identityDomain(series);
+    }
     if (idDom) {
       refData.push([
         { coord: [idDom[0], idDom[0]],
@@ -247,6 +398,8 @@
       yAxis.scale = false;
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }
+    if (lx) NS.axes.logAxis(xAxis, idLog || lx);
+    if (ly) NS.axes.logAxis(yAxis, idLog || ly);
     // The veil's own 0..1 axes, in the same grid (line charts only).
     const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
 
@@ -265,7 +418,8 @@
     // on the plot changes as the cursor moves.
     const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
       series, stepMode: pts.stepMode || null, smoothOn: pts.smoothOn,
-      xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW
+      xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW,
+      yLog: !!ly
     }) : null;
 
     const opt = {
@@ -310,12 +464,19 @@
    * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme: any,
    *           measure: (s: string) => number, widths?: number[] }} look
    */
-  const individual = (m, look) => ({
-    panels: m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) =>
-      panelOption(m, panel, look, (look.widths || [])[i] || 0)),
-    // The trajectory cap, in the footer.
-    labelNote: m.capMessage
-  });
+  const individual = (m, look) => {
+    const logs = (m.logX || m.logY) ? logDomains(m, look.cfg) : null;
+    const dropped = (m.logDropped || 0) + (logs ? logs.dropped : 0);
+    const logNote = dropped
+      ? `Log scale: ${dropped} value${dropped === 1 ? '' : 's'} at or below zero not shown.` : null;
+    return {
+      panels: m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) =>
+        panelOption(m, panel, logs ? { ...look, logDom: { x: logs.x[i], y: logs.y[i] } } : look,
+                    (look.widths || [])[i] || 0)),
+      // The trajectory cap and what a log axis leaves out, in the footer.
+      labelNote: [m.capMessage, logNote].filter(Boolean).join(' ') || null
+    };
+  };
   individual.FIELDS = OPTION_FIELDS;
 
   /** The legend band's chips. @param {any} m */

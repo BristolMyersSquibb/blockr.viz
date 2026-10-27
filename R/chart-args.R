@@ -28,6 +28,11 @@ CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
 # names on the marks, or none.
 CHART_LEGENDS <- c("bottom", "top", "marks", "none")
 
+# An axis scale (`y_scale`, `x_scale`), and the types each applies to.
+CHART_SCALES <- c("linear", "log")
+CHART_Y_SCALE_TYPES <- c("scatter", "line", "band")
+CHART_X_SCALE_TYPES <- "scatter"
+
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
@@ -220,6 +225,30 @@ chart_roles_public <- function(type, group, value, x, y, orientation, func,
   inferred <- chart_infer_orientation(type, out$x, out$y, func, is_num)
   out["orientation"] <- list(if (identical(inferred, orient)) NULL else orient)
   out
+}
+
+# y_scale / x_scale: "linear" or "log". NULL is linear.
+chart_scale_state <- function(x, arg = "y_scale") {
+  v <- as.character(unlist(x %||% "linear"))[1L] %|NA|% "linear"
+  if (!v %in% CHART_SCALES) {
+    stop("`", arg, "` must be \"linear\" or \"log\". Got \"", v, "\".",
+         call. = FALSE)
+  }
+  v
+}
+
+# The scale the gear sent, or the current one when the value is not a scale.
+chart_scale_msg <- function(x, current) {
+  v <- as.character(unlist(x))[1L]
+  if (length(v) && !is.na(v) && v %in% CHART_SCALES) v else current
+}
+
+# Whether a chart draws a log axis: the scale says so and the type takes it.
+chart_log_axes <- function(type, y_scale, x_scale) {
+  list(
+    y = identical(y_scale, "log") && isTRUE(type %in% CHART_Y_SCALE_TYPES),
+    x = identical(x_scale, "log") && isTRUE(type %in% CHART_X_SCALE_TYPES)
+  )
 }
 
 # x_ranges: a named list of c(from, to), as the caller writes it, or the

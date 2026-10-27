@@ -497,6 +497,14 @@
                         { value: 'compact', label: '1.2K' },
                         { value: 'percent', label: '12.3%' }] },
     unit: { label: 'Unit', kind: 'text', ph: 'e.g. CHF' },
+    // A base-10 axis. Values at or below zero are not drawn; the footer
+    // counts them. Offered where the axis is a number (NS.logAxes).
+    y_scale: { label: 'Y scale', kind: 'segmented', dflt: 'linear',
+               options: [{ value: 'linear', label: 'Linear' },
+                         { value: 'log', label: 'Log' }] },
+    x_scale: { label: 'X scale', kind: 'segmented', dflt: 'linear',
+               options: [{ value: 'linear', label: 'Linear' },
+                         { value: 'log', label: 'Log' }] },
     band_id: { label: 'Subject id', kind: 'column', colType: 'any',
                ph: 'id counted distinct (blank = rows)' },
     ref_hi: { label: 'Upper limit', kind: 'column', colType: 'num',
@@ -731,6 +739,8 @@
         'legend',
         { role: 'format', types: ['scatter', 'line', 'area'] },
         { role: 'unit', types: ['scatter', 'line', 'area'] },
+        { role: 'y_scale', types: ['scatter', 'line', 'band'] },
+        { role: 'x_scale', types: ['scatter'] },
         'line_width_mult', 'dot_size_mult',
         // Count labels: scatter/line have numeric axes, so only facet counts
         // apply here (the "axis" choice no-ops); shown for faceted charts.

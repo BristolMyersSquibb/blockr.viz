@@ -149,6 +149,28 @@ chart_arguments <- function() {
       example = "CHF",
       type = arg_string()
     ),
+    y_scale = new_arg_spec(
+      paste0(
+        "\"linear\" (default) or \"log\", a base-10 y axis (scatter, line, ",
+        "band). Use log when values span orders of magnitude (GDP levels ",
+        "across countries, a long growth series, lab values): equal slopes ",
+        "then mean equal growth rates. Values at or below zero are not ",
+        "drawn and a note counts them; do not use log for data that is ",
+        "mostly zero or negative (growth rates, differences). Say it in the ",
+        "subtitle (\"..., log scale\")."
+      ),
+      example = "log",
+      type = arg_enum(CHART_SCALES)
+    ),
+    x_scale = new_arg_spec(
+      paste0(
+        "\"linear\" (default) or \"log\", a base-10 x axis on a scatter, ",
+        "e.g. income on x against life expectancy. Values at or below zero ",
+        "are not drawn. A smoother is fitted on the log scale."
+      ),
+      example = "log",
+      type = arg_enum(CHART_SCALES)
+    ),
     tooltip = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",
@@ -634,6 +656,9 @@ chart_guidance <- function() {
     "default, which is what makes them comparable. Set facet_scales=\"free\"",
     "ONLY when the panels do not share a unit, or when the user asks for",
     "per-panel axes.",
+    "\n- \"on a log scale\", or levels that span orders of magnitude (GDP",
+    "per head across countries) -> y_scale=\"log\" on a line, scatter or",
+    "band; x_scale=\"log\" for income on a scatter's x.",
     "\n- \"bar of counts by X, click filters X\" -> type=\"bar\", y=\"X\",",
     "func=\"count\", drill=\"X\" (horizontal; x=\"X\" for vertical)",
     "\n- \"mean Y by X\" -> type=\"bar\", x=\"X\", y=\"Y\", func=\"mean\"",

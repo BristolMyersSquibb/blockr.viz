@@ -120,6 +120,15 @@
     const smoother = cfg.smoother || 'none';
     const smootherSeries = cfg.smoother_series || null;
     const pairs = intervalPairs(cfg);
+    // On a log axis an interval end at or below zero: the low end is cut at
+    // the axis floor, a high end there drops the interval.
+    const floorY = look.logFloorY ?? null;
+    const floorX = look.logFloorX ?? null;
+    /** @param {any} v */
+    const loEnd = (v) => (v == null ? null
+      : (floorY != null && !(Number(v) > 0) ? floorY : Number(v)));
+    /** @param {any} v */
+    const hiEnd = (v) => (v == null || (floorY != null && !(Number(v) > 0)) ? null : Number(v));
     const isArea = cfg.chart_type === 'area';
     // A colour split stacks its areas, unless the layout says side by side.
     const stackArea = isArea && m.splitCol && cfg.bar_mode !== 'grouped';
@@ -219,8 +228,8 @@
       for (const [loCol, hiCol] of pairs) {
         const b = {
           x: s.pts.map((/** @type {any} */ p) => p[0]),
-          lo: s.rows.map((/** @type {any} */ r) => r[loCol] == null ? null : Number(r[loCol])),
-          hi: s.rows.map((/** @type {any} */ r) => r[hiCol] == null ? null : Number(r[hiCol]))
+          lo: s.rows.map((/** @type {any} */ r) => loEnd(r[loCol])),
+          hi: s.rows.map((/** @type {any} */ r) => hiEnd(r[hiCol]))
         };
         const rib = parts.ribbon ? parts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY) : null;
         if (rib) { rib.z = 1; out.push(rib); }
@@ -272,8 +281,9 @@
       if (!isLine && pairs.length && s.src.length) {
         for (const [loCol, hiCol] of pairs) {
           const errPts = s.src
-            .filter((/** @type {any} */ r) => r[m.x.col] != null && r[loCol] != null && r[hiCol] != null)
-            .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), Number(r[loCol]), Number(r[hiCol])]);
+            .filter((/** @type {any} */ r) => r[m.x.col] != null && r[loCol] != null &&
+              hiEnd(r[hiCol]) != null && (floorX == null || Number(r[m.x.col]) > 0))
+            .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), loEnd(r[loCol]), Number(r[hiCol])]);
           if (errPts.length) {
             series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, clrOf(s), false));
           }
@@ -295,7 +305,8 @@
         data: ranges.map((/** @type {any} */ r) => (m.x.type === 'category'
           ? [{ name: r.name || '', xAxis: NS.axes.catOf(r.from, m.x.cats || [], true) },
              { xAxis: NS.axes.catOf(r.to, m.x.cats || [], true) }]
-          : [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }]))
+          : [{ name: r.name || '', xAxis: floorX != null && !(Number(r.from) > 0) ? floorX : encodeX(r.from) },
+             { xAxis: floorX != null && !(Number(r.to) > 0) ? null : encodeX(r.to) }]))
           .filter((/** @type {any} */ d) => d[0].xAxis != null && d[1].xAxis != null)
       };
     }

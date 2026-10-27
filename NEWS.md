@@ -1,5 +1,11 @@
 # blockr.viz 0.3.0
 
+* `y_scale = "log"` draws a base-10 y axis on a scatter, line or band, and
+  `x_scale = "log"` the x axis of a scatter. Ticks run 1-2-5 up to three
+  decades and at powers of ten beyond. Values and guide lines at or below
+  zero are not drawn, and the footer counts them; an interval's low end
+  there is cut at the bottom of the axis. A smoother is fitted on the log
+  scale. The gear offers "Y scale" and "X scale" next to Unit.
 * `highlight` makes a few marks of a bar, scatter, line or area stand out:
   `highlight = list(country = "Switzerland")` names one column and some of
   its values. Marks holding one of the values keep their colour, every other

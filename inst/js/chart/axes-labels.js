@@ -229,6 +229,58 @@
     return (n >= 2 && lo < hi) ? [lo, hi] : null;
   };
 
+  // -- Log axes ----------------------------------------------------------------
+  //
+  // ECharts labels a log axis at powers of ten only (1K, 10K, 100K), which
+  // leaves two or three labels on most data. Up to three decades the ticks
+  // are 1-2-5 (or 1-1.5-2-3-5-7 within one decade), set as the axis's own
+  // values; the gridlines follow them. The axis ends on the ticks either
+  // side of the data.
+
+  /**
+   * The domain and ticks of a log axis over positive values lo..hi. Null
+   * when there is no positive range.
+   * @param {number} lo @param {number} hi
+   * @returns {{ min: number, max: number, ticks: number[] } | null}
+   */
+  const logTicks = (lo, hi) => {
+    if (!(lo > 0) || !(hi > 0) || !Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+    if (hi < lo) [lo, hi] = [hi, lo];
+    const dec = Math.log10(hi / lo);
+    const steps = dec > 3 ? [1] : (dec > 1.2 ? [1, 2, 5] : [1, 1.5, 2, 3, 5, 7]);
+    /** @type {number[]} */
+    const all = [];
+    for (let k = Math.floor(Math.log10(lo)) - 1; k <= Math.ceil(Math.log10(hi)) + 1; k++) {
+      for (const st of steps) all.push(Number((st * Math.pow(10, k)).toPrecision(6)));
+    }
+    const below = all.filter((t) => t <= lo);
+    const above = all.filter((t) => t >= hi);
+    let min = below.length ? below[below.length - 1] : lo;
+    let max = above.length ? above[0] : hi;
+    // One value: a step either side, so the point is not on the frame.
+    if (min === max) {
+      const i = all.indexOf(min);
+      min = all[Math.max(0, i - 1)];
+      max = all[Math.min(all.length - 1, i + 1)];
+    }
+    return { min, max, ticks: all.filter((t) => t >= min && t <= max) };
+  };
+
+  /**
+   * Turn a value axis into a log axis over a domain from logTicks().
+   * @param {any} axis @param {{ min: number, max: number, ticks: number[] }} dom
+   */
+  const logAxis = (axis, dom) => {
+    axis.type = 'log';
+    axis.logBase = 10;
+    delete axis.scale;
+    axis.min = dom.min;
+    axis.max = dom.max;
+    axis.axisLabel = { ...(axis.axisLabel || {}), customValues: dom.ticks };
+    axis.axisTick = { ...(axis.axisTick || {}), customValues: dom.ticks };
+    return axis;
+  };
+
   // -- Category labels on an x axis ------------------------------------------
   //
   // A long label goes down a ladder, cheapest first: one line; wrapped on
@@ -559,7 +611,7 @@
   };
 
   NS.axes = { colMeta, axisTitle, axisTypeFor, timeValue, timePeriod, orderedCategories, orderLevels, yGutter,
-              fmtXVal, durationStr, sharedDomain, wrapLabel, xLabelKey, axisLabelWithDisplay,
+              fmtXVal, durationStr, sharedDomain, logTicks, logAxis, wrapLabel, xLabelKey, axisLabelWithDisplay,
               xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
               LABEL_LINE_H, CAT_LABEL_H };
 })();
