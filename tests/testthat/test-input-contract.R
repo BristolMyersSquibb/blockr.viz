@@ -150,10 +150,7 @@ test_that("chart expr is byte-identical for plain data frames", {
     expect_equal(eval_block_expr(session$returned$expr(), df), df)
 
     # A click filter stays unwrapped too.
-    session$setInputs(drilldown_block_action = list(
-      action = "filter", filter_type = "categorical",
-      column = "grp", values = list("A")
-    ))
+    chart_input_click(session, grp = "A")
     expect_identical(
       deparse(session$returned$expr()),
       "dplyr::filter(.(data), .data[[\"grp\"]] == \"A\")"

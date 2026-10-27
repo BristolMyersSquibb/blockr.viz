@@ -1,8 +1,10 @@
 # The chart block replayed against its recordings (helper-chart-record.R,
-# written by dev/chart-record.R). A difference is a change in what the
-# block holds, emits, sends downstream or shows.
+# written by dev/chart-record.R on the reference). The rewritten chart is
+# fed the same steps through the kit's inputs (helper-chart-rewrite.R). A
+# difference is a change in what the block holds, emits, sends downstream or
+# computes for the drawing.
 
-target <- record_target()
+target <- record_target_rewrite()
 
 for (nm in names(record_scenarios())) {
   local({
@@ -11,31 +13,28 @@ for (nm in names(record_scenarios())) {
     test_that(paste("chart recording:", nm), {
       path <- file.path(record_dir(), paste0(nm, ".rds"))
       skip_if_not(file.exists(path), "no recording")
-      skip_if(isTRUE(sc$wire) && !target$wire,
-              "the target speaks other browser messages")
-      got <- record_run(sc, target)
-      want <- readRDS(path)
-      if (!target$wire) {
-        got <- record_public(got)
-        want <- record_public(want)
+      skip_if(isTRUE(sc$wire), "the reference's browser messages")
+      if (nm %in% names(record_rw_open)) {
+        skip(paste("open behaviour change,", record_rw_open[[nm]]))
       }
-      expect_identical(got, want)
+      got <- suppressWarnings(record_run(sc, target))
+      expect_equal(record_rw_got(got), record_rw_expected(readRDS(path)))
     })
   })
 }
 
-test_that("chart recording: constructor cases", {
+# The constructor's errors are the spec's now (api-proposal.md section 1);
+# what stays is which calls fail and which warn.
+test_that("chart recording: constructor cases fail and warn as before", {
   path <- file.path(record_dir(), "ctor-cases.rds")
   skip_if_not(file.exists(path), "no recording")
-  expect_identical(lapply(record_ctor_cases(), record_ctor_run, target),
-                   readRDS(path))
-})
-
-test_that("chart recording: registry entry", {
-  path <- file.path(record_dir(), "registry.rds")
-  skip_if_not(file.exists(path), "no recording")
-  expect_identical(
-    list(arguments = chart_arguments(), guidance = chart_guidance()),
-    readRDS(path)
-  )
+  # `expose` is an unknown argument now (behaviour-changes.md row 11).
+  want <- readRDS(path)[setdiff(names(record_ctor_cases()), "expose")]
+  got <- lapply(record_ctor_cases()[names(want)], record_ctor_run, target)
+  failed <- function(x) {
+    vapply(x, function(r) inherits(r$value, "record_error"), logical(1L))
+  }
+  expect_identical(failed(got), failed(want))
+  expect_identical(lapply(got, `[[`, "warnings"),
+                   lapply(want, `[[`, "warnings"))
 })

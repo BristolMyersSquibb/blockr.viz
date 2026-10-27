@@ -5,24 +5,24 @@
 
 test_that("a board saved with `expose` still restores, minus the band", {
   expect_warning(
-    blk <- new_chart_block(
-      y = "Species",
-      func = "count",
-      expose = c("color", "facet")
+    blk <- blockr.core::blockr_deser(
+      structure(list(), class = "chart_block"),
+      list(payload = list(type = "bar", y = "Species", func = "count",
+                          expose = c("color", "facet")),
+           constructor = list(version = "0.2.9"))
     ),
-    "retired"
+    "expose"
   )
-  # It is gone from the block's state, so it cannot serialize under the old
-  # name again.
+  expect_s3_class(blk, "chart_block")
   expect_false("expose" %in% names(formals(new_chart_block)))
 })
 
 test_that("the retired argument is off the AI surface", {
-  args <- chart_arguments()
+  args <- viz_registry_args(viz_block_spec("chart"))
   expect_false("expose" %in% names(args))
   # And the sentence that replaced it is described where the assistant reads.
   expect_match(
-    blockr.core:::arg_spec_description(args$subtitle), "\\{@arg\\}",
+    blockr.core::arg_spec_description(args$title), "\\{@arg\\}",
     fixed = FALSE
   )
 })

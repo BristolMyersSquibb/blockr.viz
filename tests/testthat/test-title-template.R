@@ -317,18 +317,21 @@ test_that("an empty label(@arg) is still that argument's slot", {
 
 test_that("reference lines print as a list and drop their clause when unset", {
   d <- data.frame(a = 1)
-  tpl <- "Count[, target {@value_lines}]"
+  tpl <- "Count[, target {@y_lines}]"
+  spec <- viz_block_spec("chart")
 
-  set <- title_template_parts(tpl, d,
-                              args = list(value_lines = num_list_text(c(40, 32.5))))
+  set <- title_template_parts(
+    tpl, d, args = viz_slot_values(spec, list(y_lines = c(40, 32.5)))
+  )
   expect_identical(paste0(vapply(set, `[[`, "", "text"), collapse = ""),
                    "Count, target 40, 32.5")
-  expect_identical(set[[2L]]$arg, "value_lines")
+  expect_identical(set[[2L]]$arg, "y_lines")
 
-  unset <- title_template_parts(tpl, d,
-                                args = list(value_lines = num_list_text(NULL)))
+  unset <- title_template_parts(
+    tpl, d, args = viz_slot_values(spec, list(y_lines = NULL))
+  )
   expect_identical(unset[[1L]]$text, "Count")
-  expect_identical(attr(unset, "offers"), "value_lines")
+  expect_identical(attr(unset, "offers"), "y_lines")
 })
 
 test_that("a slot's choice list narrows its menu, not its word", {
