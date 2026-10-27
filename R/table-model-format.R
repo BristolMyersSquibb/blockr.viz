@@ -1,3 +1,7 @@
+# Number formats in the table model: the table's `format` setting
+# (table_format_state(), dt_format_num()), the unit in the column headers
+# (dt_unit_labels()), and the `.fmt` cell-formatting engine below.
+#
 # The `.fmt` cell-formatting engine.
 #
 # Tidy shapers (summary_table/describe, broom, frequencies, ...) emit plain
@@ -221,3 +225,97 @@ fmt_to_wide <- function(df) {
   }
   wide
 }
+# The table's number format, the chart's set (chart_format_state() on the
+# chart branch): "number" (the default, up to two decimals), "compact" (1.2K,
+# 3.4M, 5.6B), "percent" (a fraction x100 with "%") or a whole number of
+# decimals, as an integer from 0 to 6. A number outside 0 to 6 is clamped
+# (an old `digits = 8` reads as 6); anything else reads as "number".
+# An old `digits = d` ("up to d decimals") as a format: 2, the old default,
+# is "number"; any other number is that many decimals, now printed exactly.
+table_digits_format <- function(digits) {
+  f <- table_format_state(digits)
+  if (identical(f, 2L)) "number" else f
+}
+
+table_format_state <- function(format) {
+  f <- unlist(format, use.names = FALSE)
+  if (!length(f) || is.na(f[[1L]])) return("number")
+  f <- f[[1L]]
+  if (is.character(f) && f %in% c("number", "compact", "percent")) return(f)
+  n <- suppressWarnings(as.numeric(f))
+  if (length(n) == 1L && is.finite(n)) {
+    return(as.integer(max(0, min(6, round(n)))))
+  }
+  "number"
+}
+
+#' A numeric cell as the table displays it, in the table's number format
+#' (table_format_state()), the same rules as the chart
+#' (inst/js/chart/format.js):
+#'
+#' - a whole number `d`: exactly `d` decimals (`2`: 4.30), so a column lines
+#'   up;
+#' - "number": up to two decimals, trailing zeros dropped (1.5 next to 2.25);
+#'   a value that would round to 0 keeps two significant digits (0.0034);
+#' - "compact": 1.2K / 3.4M / 5.6B with one decimal, below a thousand as
+#'   "number";
+#' - "percent": a fraction x100 with one decimal and "%".
+#'
+#' The cards, the groups layout's number cells, the downloads and the report
+#' format through here too, so the screen and the file show the same number.
+#' Expects non-NA values.
+#' @noRd
+dt_format_num <- function(v, format = "number", big.mark = "") {
+  v <- as.numeric(v)
+  dec <- function(x, d, drop0 = TRUE) {
+    x <- round(x, d)
+    # No "-0": a value that rounds to zero prints as 0.
+    x[x == 0] <- 0
+    formatC(x, format = "f", digits = d, drop0trailing = drop0,
+            big.mark = big.mark)
+  }
+  num <- function(x) {
+    out <- dec(x, 2L)
+    tiny <- !is.na(x) & x != 0 & abs(x) < 0.005
+    if (any(tiny)) {
+      out[tiny] <- formatC(signif(x[tiny], 2L), format = "fg", digits = 2L)
+    }
+    out
+  }
+  format <- table_format_state(format)
+  if (is.numeric(format)) return(dec(v, format, drop0 = FALSE))
+  if (identical(format, "percent")) return(paste0(dec(v * 100, 1L), "%"))
+  if (!identical(format, "compact")) return(num(v))
+  out <- num(v)
+  a <- abs(v)
+  for (s in list(c(1e3, "K"), c(1e6, "M"), c(1e9, "B"))) {
+    at <- !is.na(a) & a >= as.numeric(s[[1L]])
+    out[at] <- paste0(dec(v[at] / as.numeric(s[[1L]]), 1L), s[[2L]])
+  }
+  out
+}
+
+#' Put the table's `unit` into the headers of its numeric columns, as the
+#' chart puts it into the axis title once: "Revenue (CHF)". The stub and the
+#' dot-prefixed structure columns are left alone. `unit` empty or `NULL`, a
+#' structured frame or anything that is not a data frame comes back
+#' unchanged.
+#' @noRd
+dt_unit_labels <- function(data, unit, stub = NULL) {
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  if (is.null(unit) || !is.data.frame(data) || dt_is_structured(data)) {
+    return(data)
+  }
+  if (is.null(stub) || !stub %in% names(data)) {
+    stub <- if (".label" %in% names(data)) ".label" else names(data)[1L]
+  }
+  cols <- setdiff(names(data), stub)
+  cols <- cols[!startsWith(cols, ".")]
+  cols <- cols[vapply(data[cols], is.numeric, logical(1L))]
+  for (cn in cols) {
+    lbl <- dt_col_label(data[[cn]], cn) %||% cn
+    attr(data[[cn]], "label") <- paste0(lbl, " (", unit, ")")
+  }
+  data
+}
+
