@@ -86,3 +86,24 @@ new_viz_revs <- function(values = list()) {
     }
   )
 }
+
+#' The arguments a block may hold empty
+#'
+#' blockr.core holds a block's result back while a state field is empty,
+#' unless the block lists it: every argument that takes NULL, or whose
+#' default is empty ("", an empty list).
+#' @noRd
+viz_empty_ok <- function(spec) {
+  ok <- vapply(spec$args, function(a) {
+    d <- a$default
+    !isFALSE(a$null) || is.null(d) || (is.list(d) && !length(d)) ||
+      (is.character(d) && length(d) == 1L && !nzchar(d))
+  }, logical(1L))
+  names(spec$args)[ok]
+}
+
+#' The arguments other blocks and the assistant may set
+#' @noRd
+viz_ctrl_args <- function(spec) {
+  names(spec$args)[vapply(spec$args, function(a) isTRUE(a$ctrl), logical(1L))]
+}

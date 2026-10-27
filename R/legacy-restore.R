@@ -61,6 +61,77 @@ legacy_restore <- function(block, state, version = NULL) {
 }
 
 # LEGACY: delete with this file
+# The constructor's hook. Old names and old values in code are translated
+# with one warning that names them. Values the spec refuses are left for
+# viz_check(): in code they are errors, not healed.
+legacy_ctor_args <- function(block, args) {
+  named <- switch(
+    block,
+    chart = legacy_chart_selection(chart_legacy_args(args)),
+    table = legacy_table_selection(legacy_table_before_030(args))
+  )
+  named <- legacy_rename(block, named)
+  out <- legacy_map_values(block, named)
+  if (is.character(out[["script"]]) && length(out$script) > 1L) {
+    out$script <- paste(out$script, collapse = "\n")
+  }
+  # The old names, and the current names given an old value.
+  current <- names(viz_block_spec(block)$args)
+  old <- union(setdiff(names(args), current), Filter(function(nm) {
+    nm %in% names(args) && !identical(named[[nm]], out[[nm]]) &&
+      !identical(nm, "script")
+  }, names(out)))
+  labels <- "direct_labels" %in% old
+  old <- setdiff(old, "direct_labels")
+  if (length(old)) {
+    warning(
+      "new_", block, "_block(): ", paste0("`", old, "`", collapse = ", "),
+      if (length(old) > 1L) " are" else " is",
+      " from blockr.viz < 0.3.0. See ?new_", block, "_block for the ",
+      "current names.",
+      call. = FALSE
+    )
+  }
+  if (labels) {
+    warning("new_", block, "_block(): `direct_labels = TRUE` is now ",
+            "`legend = \"marks\"`.", call. = FALSE)
+  }
+  out
+}
+
+# LEGACY: delete with this file
+# The chart's selection as the reference saved it, `{type, filters, range,
+# point}`, in the shape the kit reads (kit-input.R): categorical, or a range;
+# a point becomes a range with equal ends.
+legacy_chart_selection <- function(args) {
+  s <- args[["selection"]]
+  if (!is.list(s) || !length(s)) {
+    return(args)
+  }
+  type <- as.character(unlist(s$type))[1L] %|NA|% "categorical"
+  old <- any(c("range", "point") %in% names(s)) ||
+    (identical(type, "categorical") && !"columns" %in% names(s))
+  if (!old) {
+    return(args)
+  }
+  r <- s$range
+  p <- s$point
+  args["selection"] <- list(if (identical(type, "range") && !is.null(r)) {
+    list(type = "range", x = r$x_col, y = r$y_col,
+         x_range = as.numeric(unlist(r$x_range)),
+         y_range = if (!is.null(r$y_range)) as.numeric(unlist(r$y_range)),
+         filters = s$filters %||% list())
+  } else if (identical(type, "point") && !is.null(p)) {
+    list(type = "range", x = p$x_col, y = p$y_col,
+         x_range = rep(as.numeric(p$x_val), 2L),
+         y_range = rep(as.numeric(p$y_val), 2L), filters = list())
+  } else if (length(s$filters)) {
+    list(type = "categorical", filters = s$filters, columns = list())
+  })
+  args
+}
+
+# LEGACY: delete with this file
 # The table payloads before the rewrite of the table block: old table
 # names, an aggregation list where the typed summaries go.
 legacy_table_before_030 <- function(state) {
