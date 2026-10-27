@@ -24,7 +24,31 @@ table_records_view <- function(m) {
     rows = if (!is.null(m$stub$tint)) list(tint = m$stub$tint),
     drill = m$attr_args$onclick_col
   )
-  out[!vapply(out, is.null, logical(1L))]
+  table_view_arrays(out[!vapply(out, is.null, logical(1L))])
+}
+
+#' Per-row vectors as JSON arrays
+#'
+#' Shiny writes an output's value with `auto_unbox`, so a one-row table's
+#' columns would arrive as bare strings. Every vector the TableModel holds
+#' per row or per column is marked as an array.
+#' @param m A TableModel list.
+#' @return The same list.
+#' @noRd
+table_view_arrays <- function(m) {
+  arr <- function(x) if (is.null(x) || is.list(x)) x else I(unname(x))
+  per_col <- c("disp", "raw", "key", "bg", "fg", "bar")
+  m$cols <- lapply(m$cols, function(cc) {
+    cc[intersect(per_col, names(cc))] <- lapply(cc[intersect(per_col,
+                                                             names(cc))], arr)
+    cc
+  })
+  if (!is.null(m$rows)) {
+    keep <- setdiff(names(m$rows), "keys")
+    m$rows[keep] <- lapply(m$rows[keep], arr)
+  }
+  if (!is.null(m$widths)) m$widths <- arr(m$widths)
+  m
 }
 
 # One column of the cell model as a TableCol: name, numeric flag, display

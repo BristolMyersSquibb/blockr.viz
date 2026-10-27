@@ -69,6 +69,21 @@ test_that("a records header names each column and its label", {
   expect_identical(v$head[[1L]][[2L]], list(text = "v", sub = "Value",
                                             col = 1L))
   expect_true(v$cols[[2L]]$num)
-  expect_identical(v$cols[[2L]]$disp, c("1.5", "2"))
+  expect_identical(as.vector(v$cols[[2L]]$disp), c("1.5", "2"))
   expect_length(v$widths, 2L)
+})
+
+test_that("a one-row table's columns are arrays on the wire", {
+  d <- data.frame(id = "a", v = 1.5)
+  v <- table_records_view(table_model_records(list(rowname = "id"), d))
+  json <- jsonlite::toJSON(v, auto_unbox = TRUE)
+  back <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+  expect_type(back$cols[[2L]]$disp, "list")
+  expect_type(back$widths, "list")
+  s <- table_structured_view(table_nest(
+    data.frame(g = "x", id = "a", v = 1), "g", "id"
+  ))
+  back <- jsonlite::fromJSON(jsonlite::toJSON(s, auto_unbox = TRUE),
+                             simplifyVector = FALSE)
+  expect_type(back$cols[[1L]]$disp, "list")
 })

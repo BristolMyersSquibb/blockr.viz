@@ -56,7 +56,7 @@ table_structured_view <- function(data, drill = NULL, digits = "number",
     rows = table_structured_rows(data, p$section_cols, drill_on, drill),
     sections = table_structured_sections(data, p$section_cols, drill_on)
   )
-  out[!vapply(out, is.null, logical(1L))]
+  table_view_arrays(out[!vapply(out, is.null, logical(1L))])
 }
 
 # The frame split into what the table draws: the data with its synthetic

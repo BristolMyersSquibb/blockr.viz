@@ -314,7 +314,8 @@ test_that("the claims name their columns and keep single values as arrays", {
                                 .group2_level = I("PT 1")))
   expect_identical(v$cols[[5L]]$keys,
                    list(ARM = I(c("Placebo", "Drug X"))))
-  expect_identical(v$cols[[5L]]$bg, c("#FF0000", NA, NA, NA, "#00FF00"))
+  expect_identical(as.vector(v$cols[[5L]]$bg),
+                   c("#FF0000", NA, NA, NA, "#00FF00"))
   expect_identical(v$cols[[2L]]$disp[[4L]], NA_character_)
   none <- table_structured_view(ts_frame(), drill = NULL)
   expect_null(none$rows$keys)
