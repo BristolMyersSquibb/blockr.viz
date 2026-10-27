@@ -45,12 +45,16 @@ lane_summary_copies <- function(s, i, ctx) {
 # One summary's copies: fill the frames, add the plan entries. A custom
 # function that fails is the user's code: its column stays empty, with the
 # error beside it, and every other column draws. The copies already built
-# for it go; the failed column is one copy.
+# for it go, columns and plan entries, from the leaf and the parent rows
+# alike; the failed column is one copy. (When the function failed only on
+# the parent rows, the leaf kept that copy's columns and the two frames no
+# longer bound into one table.)
 lane_build_summary <- function(st, i, ctx) {
   s <- st$summaries[[i]]
   copies <- lane_summary_copies(s, i, ctx)
   sid1 <- copies[[1L]]$suffix
   n0 <- length(st$plan)
+  cols0 <- list(leaf = names(st$leaf), par = names(st$par_rows))
   for (cp in copies) {
     cp <- lane_copy_denom(cp, s, ctx)
     res <- lane_fill_copy(st, cp, s, ctx)
@@ -59,6 +63,8 @@ lane_build_summary <- function(st, i, ctx) {
       s <- lane_failed_summary(s, res$failed)
       st$summaries[[i]] <- s
       sid1 <- paste0(".s", i)
+      st$leaf <- st$leaf[cols0$leaf]
+      if (!is.null(st$par_rows)) st$par_rows <- st$par_rows[cols0$par]
       st <- lane_replace_failed(st, s, sid1, n0, ctx)
       break
     }
@@ -96,8 +102,8 @@ lane_copy_denom <- function(cp, s, ctx) {
 }
 
 # Fill the leaf and parent frames for one copy. Returns `list(st, failed)`;
-# `failed` is the message of a custom function's error, else NULL. A failure
-# on the parent frame keeps the leaf columns already written.
+# `failed` is the message of a custom function's error, else NULL. On a
+# failure the caller drops what the summary wrote (lane_build_summary()).
 lane_fill_copy <- function(st, cp, s, ctx) {
   r <- lane_try_fill(st$leaf, ctx$keys, ctx$keys, cp$slice, s, cp$suffix)
   if (!inherits(r, "lane_custom_error")) {
