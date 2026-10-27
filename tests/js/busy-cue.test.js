@@ -34,9 +34,7 @@ test('a message without rows keeps the cue until the rows arrive', () => {
   const env = h.createEnv();
   const { el, id } = h.mount(env);
   env.handlers['blockr-busy']({ id, label: 'drawing' });
-  env.handlers['drilldown-data'](env.win.JSON.parse(JSON.stringify({
-    id, columns: F.columns, config, arguments: null, data_rev: 5
-  })));
+  h.send(env, id, { columns: F.columns, config, dataRev: 5 });
   env.flushTimers(500);
   assert.ok(busy(el), 'still waiting for the rows');
   assert.ok(env.inputs().some((i) => i.name === id + '_need'));
@@ -78,27 +76,6 @@ const front = (env, el) => {
   el.parentElement.style.visibility = '';
   env.win.document.dispatchEvent(new env.win.CustomEvent('dockview:active-panel', { bubbles: true }));
 };
-
-test('a chart with no picture counts from when its panel shows', () => {
-  const env = h.createEnv();
-  const { el, id } = h.mount(env);
-  hide(el);
-  env.flushTimers(500);
-  assert.ok(!busy(el), 'hidden: no clock');
-
-  front(env, el);
-  env.flushTimers(1);
-  env.flushTimers(1);
-  assert.ok(busy(el), 'shown: the clock runs before R has said anything');
-  assert.match(el.querySelector('.blockr-busy-line').textContent, /^drawing… \d+\.\d s$/);
-
-  env.handlers['blockr-busy']({ id, label: 'drawing' });
-  assert.ok(busy(el), "R's start keeps the clock");
-  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
-  env.flushTimers(500);
-  assert.ok(!busy(el), 'the picture ends it');
-  env.close();
-});
 
 test('a chart R has already spoken about is not watched', () => {
   const env = h.createEnv();

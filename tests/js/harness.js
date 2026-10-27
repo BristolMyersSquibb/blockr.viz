@@ -41,7 +41,8 @@ const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
 const CORE_FILES = fs.readFileSync(path.join(JS_DIR, 'core', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((f) => 'core/' + f);
-const SHARED_FILES = [...CORE_FILES, 'spec/chart.js'];
+// busy-cue.js is blockr.viz's busy cue until the core has one.
+const SHARED_FILES = ['busy-cue.js', ...CORE_FILES, 'spec/chart.js'];
 
 /** The chart scripts in load order, as the html dependency lists them. */
 const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')
@@ -441,6 +442,9 @@ const PRELUDE = `
   window.Shiny = {
     OutputBinding: function () {},
     outputBindings: { register: function (b) { window.__binding = b; } },
+    // The old table scripts still register input bindings.
+    InputBinding: function () {},
+    inputBindings: { register: function (b) { window.__binding = b; } },
     addCustomMessageHandler: function (n, f) { window.__handlers[n] = f; },
     setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); }
   };
@@ -707,7 +711,22 @@ function draw(config, data, columns, opts = {}) {
   }
 }
 
+/** draw() for settings in the builders' words (chart/internal-config.js). */
+function drawInternal(settings, data, columns, opts = {}) {
+  const { toPayload } = require('./chart/internal-config');
+  const p = toPayload(settings);
+  return draw(p.config, data, columns,
+              { ...opts, derived: { ...p.derived, ...(opts.derived || {}) } });
+}
+
+/** send() for settings in the builders' words. */
+function sendInternal(env, id, { settings, ...rest }) {
+  const { toPayload } = require('./chart/internal-config');
+  const p = toPayload(settings);
+  send(env, id, { ...rest, config: p.config, derived: { ...p.derived, ...(rest.derived || {}) } });
+}
+
 module.exports = {
-  createEnv, mount, message, send, timeDraw, draw, normalize, domSummary, slotLogs,
+  createEnv, mount, message, send, timeDraw, draw, drawInternal, sendInternal, normalize, domSummary, slotLogs,
   source, run, JS_DIR, CHART_FILES, PRELUDE, UI_FILES, SHARED_FILES, iconsScript
 };

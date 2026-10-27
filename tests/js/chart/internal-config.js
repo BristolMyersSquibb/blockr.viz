@@ -1,7 +1,7 @@
-/* One-off: a reference case config (old internal names, as build_chart_msg()
- * sent it) as a payload under the spec's names, `{config, derived}`. Used to
- * check that the rewritten view draws what the reference drew, and to write
- * cases.js in public names. */
+/* The model and option builders' settings (their own words: `group`,
+ * `value`, `bar_mode`, "on"/"off") as a payload under the spec's names,
+ * `{config, derived}`: the inverse of chart/config.js settings(). For tests
+ * that state a case in the builders' words and draw it through the view. */
 'use strict';
 
 const BAR_MODE = { stacked: 'stack', grouped: 'dodge', percent: 'fill' };

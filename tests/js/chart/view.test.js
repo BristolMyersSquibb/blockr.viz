@@ -1,0 +1,191 @@
+/* The chart view around the drawing: its gear (the core engine with the
+ * chart's hooks), the titles and their words, the download control, the
+ * theme, rows kept per data revision, errors, the capture service, and
+ * teardown: 50 mounts and unmounts leave nothing behind. */
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const D = require('./drive');
+
+const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
+const rows = (b) => Array.from(b.popoverEl.querySelectorAll('.dd-form-row[data-role]'),
+                               (r) => r.getAttribute('data-role'));
+const row = (b, key) => b.popoverEl.querySelector('.dd-form-row[data-role="' + key + '"]');
+
+test('the gear shows the rows the spec offers for the chart type', () => {
+  const c = D.open(BAR);
+  const bar = rows(c.block);
+  for (const k of ['type', 'func', 'sort_by', 'orientation', 'value_labels', 'drill']) {
+    assert.ok(bar.includes(k), k);
+  }
+  for (const k of ['smoother', 'connect', 'bins', 'percent_of']) assert.ok(!bar.includes(k), k);
+  assert.strictEqual(row(c.block, 'y').querySelector('.blockr-label').textContent, 'Y *');
+  c.send({ ...BAR, type: 'scatter', x: 'ADY', y: 'AVAL' });
+  const sc = rows(c.block);
+  assert.ok(sc.includes('smoother') && !sc.includes('func'));
+  c.send({ ...BAR, func: 'pct_distinct', x: 'USUBJID' });
+  assert.ok(rows(c.block).includes('percent_of'), 'a share asks what it is a share of');
+  c.close();
+});
+
+test('a gear edit goes to R as the changed key, with the payload revision', () => {
+  const c = D.open(BAR);
+  c.send(c.config, { stateRev: 7 });
+  row(c.block, 'type').querySelector('[data-value="line"]').click();
+  assert.deepStrictEqual(D.plain(c.sets()), [{ type: 'line' }]);
+  const msg = c.inputs().find((x) => x.name === D.ID + '_set:blockr.viz.chart');
+  assert.strictEqual(msg.value.rev, 7);
+  c.close();
+});
+
+test('the gear hooks: type groups, drill words, sort orders, drill target', () => {
+  const c = D.open(BAR, { derived: { ctrl_choices: [{ value: 'flt_ae', label: 'Filter AE' }] } });
+  const heads = Array.from(row(c.block, 'type').querySelectorAll('.dd-type-group-head'),
+                           (e) => e.textContent);
+  assert.deepStrictEqual(heads, ['Aggregated', 'Individual']);
+  const texts = (key) => c.block._gear.slot(key).options.map((o) => o.label);
+  assert.ok(texts('drill').includes('Auto, the clicked group'));
+  assert.ok(texts('sort_by').includes('Data order'));
+  assert.ok(texts('drill_target').includes('Filter AE'));
+  c.send({ ...BAR, drill: null });
+  assert.ok(!rows(c.block).includes('drill_target'), 'no target without a drill');
+  c.close();
+});
+
+test('titles: R\'s words are live where the gear has a control, offers after them', () => {
+  const titles = {
+    title: { text: 'AEs by AETERM', parts: [{ text: 'AEs by ' }, { text: 'AETERM', arg: 'y' }],
+             offers: ['color'] },
+    subtitle: null,
+    caption: { text: 'N = 60' },
+    args: { y: 'AETERM' }
+  };
+  const c = D.open(BAR, { derived: { titles } });
+  const b = c.block;
+  assert.strictEqual(b.titleEl.querySelector('.blockr-slot').textContent, 'AETERM');
+  assert.strictEqual(b.titleEl.querySelector('.blockr-slot-offer').textContent, '+ Color');
+  assert.strictEqual(b.subtitleEl.style.display, 'none');
+  assert.strictEqual(b.captionEl.textContent, 'N = 60');
+  assert.strictEqual(b._titleText.title, 'AEs by AETERM');
+  c.close();
+});
+
+test('downloads: the formats R offers, while download is on', () => {
+  const downloads = [{ id: 'blk-dl_xlsx', ext: 'xlsx', label: 'Excel' },
+                     { id: 'blk-dl_png', ext: 'png', label: 'Image' }];
+  const c = D.open({ ...BAR, download: true }, { derived: { downloads } });
+  assert.ok(c.block.downloadEl.querySelector('#blk-dl_xlsx'));
+  assert.strictEqual(c.block.downloadEl.hidden, false);
+  c.send({ ...c.config, download: false });
+  assert.strictEqual(c.block.downloadEl.hidden, true);
+  assert.strictEqual(c.block.downloadEl.querySelector('#blk-dl_xlsx'), null);
+  c.close();
+});
+
+test('the theme R names is the ECharts theme; a new one draws new instances', () => {
+  const c = D.open(BAR, { derived: { theme: 'dark' } });
+  assert.strictEqual(c.chart().theme, 'dark');
+  c.send(c.config, { derived: { theme: { name: 'blockr-light', theme: { color: ['#000'] } } } });
+  assert.strictEqual(c.chart().theme, 'blockr-light');
+  assert.ok(c.env.fake.themes['blockr-light'], 'a theme R sent whole is registered');
+  c.close();
+});
+
+test('a payload without rows draws from the rows of its data revision', () => {
+  const c = D.open(BAR);
+  const first = c.block.data;
+  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
+  assert.strictEqual(c.block.data, first);
+  assert.ok(c.block.legendEl.querySelector('.dd-legend-chip'));
+  c.send(BAR, { data: null, dataRev: 2 });
+  assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),
+            'rows it does not hold are asked for');
+  c.close();
+});
+
+test('an error R sends is said where the chart would be', () => {
+  const c = D.open(BAR);
+  c.env.binding.renderError(c.el, { message: 'object "AETERM" not found' });
+  assert.match(c.block.chartGrid.textContent, /object "AETERM" not found/);
+  c.close();
+});
+
+test('the capture service draws a chart off screen and replies once', () => {
+  const c = D.open(BAR);
+  const handler = c.env.handlers['blockr-viz:capture'];
+  const msg = { state_rev: 1, data_rev: 9, columns: [], derived: { column_meta: require('../cases').F.columns },
+                config: BAR, data: require('../cases').F.data, req: 'r1', width: 640, height: 360 };
+  handler(c.env.win.JSON.parse(JSON.stringify(msg)));
+  assert.ok(c.doc.querySelector('.blockr-capture-host'));
+  return new Promise((resolve) => setImmediate(resolve)).then(async () => {
+    for (let i = 0; i < 40; i++) {
+      c.advance(100);
+      await new Promise((r) => setImmediate(r));
+    }
+    const reply = c.inputs().filter((x) => x.name === 'blockr_viz_capture_result');
+    assert.strictEqual(reply.length, 1);
+    assert.strictEqual(reply[0].value.req, 'r1');
+    // happy-dom lays nothing out, so the grid has no size and the reply says so.
+    assert.ok(reply[0].value.png || /no size|nothing drawn/.test(reply[0].value.error));
+    assert.strictEqual(c.doc.querySelector('.blockr-capture-host'), null, 'the host is gone');
+    c.close();
+  });
+});
+
+test('50 mounts and unmounts leave no listener, timer, scope, node or chart behind', () => {
+  const c = D.open(BAR);
+  const win = c.env.win;
+  const live = new Set();
+  for (const target of [win, win.document]) {
+    const add = target.addEventListener.bind(target);
+    const rm = target.removeEventListener.bind(target);
+    target.addEventListener = (t, f, o) => { live.add(f); return add(t, f, o); };
+    target.removeEventListener = (t, f, o) => { live.delete(f); return rm(t, f, o); };
+  }
+  const V = win.Blockr.viz;
+  c.el._viz.scope.dispose();
+  c.advance(10000);
+  const base = { listeners: live.size, timers: c.clock.timers.length, scopes: V.Scope.open(),
+                 nodes: c.doc.body.querySelectorAll('*').length };
+  const h = require('../harness');
+  for (let i = 0; i < 50; i++) {
+    const m = h.mount(c.env, 'cycle-' + i);
+    h.send(c.env, m.id, { columns: require('../cases').F.columns, data: require('../cases').F.data,
+                          config: { ...BAR, color: 'AESEV', facet: 'SEX' } });
+    const b = m.block;
+    b._slots[0].chart.trigger('click', D.paramsAt(b._slots[0].chart, 0, 0));
+    b._tray.set(true);
+    b._gear.set({ func: 'mean' });
+    m.el.parentElement.remove();
+    m.el.__jq['shiny:unbound']();
+    c.advance(10000);
+  }
+  assert.deepStrictEqual({ listeners: live.size, timers: c.clock.timers.length,
+                           scopes: V.Scope.open(), nodes: c.doc.body.querySelectorAll('*').length }, base);
+  assert.ok(c.env.fake.instances.every((i) => i.isDisposed()), 'every ECharts instance disposed');
+  c.close();
+});
+
+test('every chart type: the gear rows are the spec rows that apply to it', () => {
+  const c = D.open(BAR);
+  const spec = c.env.win.Blockr.viz.spec.chart;
+  // Rows the chart's hooks hold back: a share's base, the drill target.
+  const held = ['percent_of', 'drill_target', 'drill_table'];
+  const set = ['x', 'y', 'color', 'facet', 'drill'];
+  for (const type of spec.type.values) {
+    c.send({ ...BAR, type, x: 'ADY', y: 'AVAL', color: 'ARM', facet: 'SEX' });
+    const want = Object.keys(spec).filter((k) => {
+      const a = spec[k];
+      if (!a.gear || a.gear.control === 'none' || held.includes(k)) return false;
+      if (a.gear.group === 'Add mapping' && !set.includes(k)) return false;
+      const ap = a.applies;
+      if (ap && ap.only && !ap.only.includes(type)) return false;
+      if (ap && ap.except && ap.except.includes(type)) return false;
+      return !a.gear.when || set.includes(a.gear.when);
+    });
+    const got = rows(c.block).filter((k) => !held.includes(k));
+    assert.deepStrictEqual(got.slice().sort(), want.sort(), type);
+  }
+  c.close();
+});

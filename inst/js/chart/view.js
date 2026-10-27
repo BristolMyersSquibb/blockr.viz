@@ -160,6 +160,10 @@
       /** @type {any} */ this.statusEl = null;
       /** @type {any} */ this._gear = null;
       this._buildDOM();
+      // No picture yet: the busy cue (busy-cue.js) counts the wait from when
+      // the chart shows.
+      const busy = root.Blockr.busy;
+      if (busy && typeof busy.watch === 'function') busy.watch(el.id, 'drawing');
       // One resize per animation frame, however many ticks a relayout fires.
       /** @type {(() => void) | null} */
       let pending = null;
@@ -211,12 +215,22 @@
       NS.model.defaults(this.config, this.columns);
       this._restoreSelection(p.config && p.config.selection);
       this._setTheme(d.theme);
+      // The gear first: the sentence's words open what the gear offers.
+      if (this._gear) this._gear.update(p);
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
       this._updateDownloads(d.downloads);
       this.drawn = false;
       this._render();
-      if (this._gear) this._gear.update(p);
+      this._busyDone();
+    }
+
+    // The busy cue ends once the picture is painted: two frames after the
+    // charts or the empty state were drawn.
+    _busyDone() {
+      const busy = root.Blockr.busy;
+      if (!busy || typeof busy.stop !== 'function') return;
+      this.scope.frame(() => this.scope.frame(() => busy.stop(this.el.id)));
     }
 
     // A saved selection R sent back: a categorical filter, or a range with
@@ -237,6 +251,7 @@
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
       this._showEmpty(NS.model.emptyState(NS.esc(message)));
+      this._busyDone();
     }
 
     // -- Drawing -------------------------------------------------------------

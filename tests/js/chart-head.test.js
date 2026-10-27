@@ -6,13 +6,15 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const I = require('./interact');
+const D = require('./chart/drive');
 
 const cls = (el) => el.className.split(/\s+/)[0];
+const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal' };
+const TITLES = { titles: { title: { text: 'A title' }, subtitle: { text: 'A subtitle' } } };
+const tick = () => new Promise((r) => setImmediate(r));
 
 test('chart header: titles, tools, gear and tray, in that order', async () => {
-  const c = I.open({ chart_type: 'bar', group: 'AETERM', title_resolved: 'A title',
-                     subtitle_resolved: 'A subtitle' }, { download: true });
+  const c = D.open(BAR, { derived: TITLES });
   try {
     const head = c.block.gearHeader;
     assert.ok(head.classList.contains('vz-head'));
@@ -26,18 +28,21 @@ test('chart header: titles, tools, gear and tray, in that order', async () => {
   }
 });
 
-test('chart header: the gear sets vz-head--open, and a rebuild keeps it', async () => {
-  const c = I.open({ chart_type: 'bar', group: 'AETERM', title_resolved: 'A title' });
+test('chart header: the gear sets vz-head--open, and a new payload keeps it', async () => {
+  const c = D.open(BAR, { derived: TITLES });
   try {
     const open = () => c.block.gearHeader.classList.contains('vz-head--open');
     assert.equal(open(), false);
     c.block.gearBtn.click();
+    await tick();
     assert.ok(open(), 'open');
     assert.ok(c.block.popoverEl.classList.contains('blockr-settings--open'));
     assert.equal(c.block.popoverEl.parentNode, c.block.gearHeader, 'the tray is in the header');
-    c.block._buildDOM();
-    assert.ok(open(), 'a rebuild while open keeps the open layout');
+    c.send({ ...c.config, color: 'AESEV' });
+    await tick();
+    assert.ok(open(), 'a payload while open keeps the open layout');
     c.block.gearBtn.click();
+    await tick();
     assert.equal(open(), false, 'closed');
     assert.equal(c.block.popoverEl.classList.contains('blockr-settings--open'), false);
   } finally {

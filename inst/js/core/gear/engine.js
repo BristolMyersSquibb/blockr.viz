@@ -267,9 +267,9 @@
                  max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1 };
       }
       if ((name === 'numbers' || name === 'values') && !listed) return { kind: 'entry' };
-      if (['string', 'template', 'map', 'records', 'records_by', 'named'].includes(name)) {
-        return null;
-      }
+      if (['map', 'records', 'records_by', 'named'].includes(name)) return null;
+      // Free text stays in the gear; a string picked from a list is a menu.
+      if ((name === 'string' || name === 'template') && arg.gear.control !== 'select') return null;
       const ctx = this._ctx(key, values, this.scope);
       const empty = name === 'columns' || name === 'enums' ? null : C.emptyChoice(ctx);
       let options = /** @type {VizChoice[]} */ (empty ? [empty] : []).concat(C.options(ctx));

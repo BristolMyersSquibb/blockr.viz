@@ -24,12 +24,15 @@
     /** @this {any}
      *  @param {boolean} [send]
      *  @param {{pixelRatio?: number,
-     *           done?: (url: string, w: number, h: number) => void}} [opts] */
+     *           done?: (url: string, w: number, h: number) => void,
+     *           fail?: (e: Error) => void}} [opts] */
     _downloadImage(send, opts) {
+      // Nothing drawn, or a grid with no size: there is no picture to take.
+      const none = (/** @type {string} */ why) => { if (opts && opts.fail) opts.fail(new Error(why)); };
       const slots = (this._slots || []).filter((/** @type {any} */ s) => s && s.chart);
-      if (!slots.length || !this.chartGrid) return;
+      if (!slots.length || !this.chartGrid) { none('the chart has nothing drawn'); return; }
       const gridR = this.chartGrid.getBoundingClientRect();
-      if (!gridR.width || !gridR.height) return;
+      if (!gridR.width || !gridR.height) { none('the chart has no size'); return; }
       const pr = (opts && opts.pixelRatio) || (this.config && this.config.capture_ratio) || 2;
       const pad = 12;
       const face = (this._ink || NS.INK_DEFAULT).face;
@@ -224,9 +227,13 @@
   let captureSeq = 0;
 
   /** Wait until a panel has a height, then let the animation settle.
+   * An empty state ends the wait at once.
    * @param {any} view @param {VizScope} scope @param {() => void} then @param {number} left */
   const whenDrawn = (view, scope, then, left) => {
-    const ready = (view._slots || []).some((/** @type {any} */ s) =>
+    const slots = view._slots || [];
+    // An empty state is all there is: nothing to wait for.
+    if (view.drawn && !slots.some((/** @type {any} */ s) => s && s.chart)) { then(); return; }
+    const ready = slots.some((/** @type {any} */ s) =>
       s && s.chart && s.chartDiv && s.chartDiv.clientHeight > 40);
     if (ready || left <= 0) scope.timeout(then, CAPTURE_SETTLE_MS);
     else scope.timeout(() => whenDrawn(view, scope, then, left - 1), 100);
@@ -246,7 +253,7 @@
         whenDrawn(view, scope, () => {
           try {
             /** @type {any} */ (view)._downloadImage(false, {
-              pixelRatio: msg.ratio,
+              pixelRatio: msg.ratio, fail: reject,
               done: (/** @type {string} */ png, /** @type {number} */ width,
                      /** @type {number} */ height) => resolve({ png, width, height })
             });
