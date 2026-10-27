@@ -12,13 +12,10 @@
 # source blockr.dev/scripts/use-remote-chrome.R first.
 
 run_drill <-
-  !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) &&
-  requireNamespace("shinytest2", quietly = TRUE) &&
-  requireNamespace("chromote", quietly = TRUE) &&
+  run_browser_tests() &&
   requireNamespace("blockr.dock", quietly = TRUE) &&
   requireNamespace("blockr.dm", quietly = TRUE) &&
-  requireNamespace("pkgload", quietly = TRUE) &&
-  chromote_works()
+  requireNamespace("pkgload", quietly = TRUE)
 
 drill_app_dir <- test_path("apps", "table-drill")
 source(file.path(drill_app_dir, "data.R"), local = TRUE)

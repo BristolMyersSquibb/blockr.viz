@@ -428,8 +428,7 @@ test_that("the diverging bar's axis is centred on zero at the column max", {
 })
 
 test_that("the JS assembles byte-identical markup to summarize_cells_html", {
-  skip_on_cran()
-  skip_if_not(chromote_works(), "no headless browser here")
+  skip_without_browser()
 
   ae <- push_fixture()
   # One case per bar shape, so every branch of the assembler is compared.

@@ -6,3 +6,8 @@ scope.js
 binding.js
 download.js
 capture.js
+titles.js
+gear/sections.js
+gear/tiles.js
+gear/controls.js
+gear/engine.js
