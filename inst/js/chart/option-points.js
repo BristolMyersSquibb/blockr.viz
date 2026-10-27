@@ -1,13 +1,9 @@
 // @ts-check
 /**
- * Chart block: the scatter and line series of the individual option.
- *
- * Per model series: the points (a scatter, or a line in its connect mode),
- * then R's smoother for that series (scatter only) and its lo/hi error
- * bars. A smoother or an error bar shares its series' name, so one legend
- * toggle takes them together. A line chart also gets the hover overlay
- * (a veil, the hovered line and its dots), which interact-individual.js
- * fills, and an axis tooltip that follows the hovered line.
+ * Chart block: the scatter and line series of the individual option. Per
+ * model series: the points, R's smoother (scatter only) and the lo/hi error
+ * bars, which share its name so one legend toggle takes them together. A line
+ * chart also gets the hover overlay and an axis tooltip.
  */
 (function () {
   'use strict';
@@ -18,44 +14,26 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
-  // A line chart of a few series draws 2px lines; one line per entity (a
-  // subject's trajectory) stays thin, so a crowd of them reads as a texture.
+  // A crowd of lines (one per entity) stays thin so it reads as a texture.
   const BASE_LINE_WIDTH = 2;
   const CROWD_LINE_WIDTH = 1.4;
   const BASE_SCATTER_SIZE = 6;
-  // A line's dots, ringed in the surface colour so they stay legible where
-  // lines cross. Drawn only while the points are at least SPARSE_DOT_PX
-  // apart on screen, so at least as much line as dot shows between two
-  // readings; closer, the dots cover the line and it reads as dashed.
-  // Without a width, at most SPARSE_DOT_N points.
   const BASE_LINE_MARKER = 9;
+  // A line's dots show only while points are at least SPARSE_DOT_PX apart (at
+  // most SPARSE_DOT_N points without a width); closer, they hide the line.
   const SPARSE_DOT_PX = 24;
   const SPARSE_DOT_N = 20;
   // Rows an axis tooltip lists before "+n more".
   const TT_ROW_CAP = 12;
   // The dash of each `linetype` level after the first, which is solid.
   const DASHES = [[6, 4], [2, 3], [8, 3, 2, 3], [1, 2]];
-  // A band's fill: each nested interval adds this much, so the inner one
-  // reads darker.
+  // Each nested interval adds this opacity, so the inner one reads darker.
   const BAND_OPACITY = 0.14;
-  // A line's id when `linetype` splits it into segments: the tooltip folds
-  // the segments of one line back into one row.
+  // The id of a `linetype` segment: the tooltip folds a line's segments into one row.
   const SEG_ID = /^__seg_(\d+)_/;
 
-  /** The interval column pairs, lo and hi, as arrays. @param {Record<string, any>} cfg */
-  const intervalPairs = (cfg) => {
-    const lo = [].concat(cfg.ymin || []).filter(Boolean);
-    const hi = [].concat(cfg.ymax || []).filter(Boolean);
-    /** @type {Array<[string, string]>} */
-    const out = [];
-    for (let i = 0; i < Math.min(lo.length, hi.length); i++) out.push([lo[i], hi[i]]);
-    return out;
-  };
-
-  /**
-   * Whether a panel's lines are sparse enough to carry dots.
-   * @param {any} panel @param {number} plotW the plot's width in px, 0 if unknown
-   */
+  /** Whether a panel's lines are sparse enough to carry dots.
+   * @param {any} panel @param {number} plotW the plot's width in px, 0 if unknown */
   const sparseLines = (panel, plotW) => {
     let n = 0;
     for (const s of panel.series) if (s.pts.length > n) n = s.pts.length;
@@ -66,13 +44,9 @@
 
   /**
    * A `labelLayout` that moves a label up or down, a line at a time, until it
-   * covers no label placed before it. ECharts' own `moveOverlap` leaves
-   * scatter labels where they are. Each label is measured from where it rests
-   * beside its point, so a resize lays them out again from scratch. One
-   * spacer may serve several series, and spacers given the same `room`
-   * place their labels around each other (point labels and the names of
-   * colour groups): a label that comes before the last one seen starts a new
-   * layout pass.
+   * covers no label placed before it (`moveOverlap` ignores scatter labels).
+   * Spacers sharing a `room` place their labels around each other; a label
+   * that comes before the last one seen starts a new layout pass.
    * @param {string} position 'right', 'top' or 'inside' @param {number} distance
    * @param {{ placed: any[], lastS: number, lastD: number }} [room]
    */
@@ -96,32 +70,20 @@
   };
 
   /**
-   * What every part of a panel's points reads: the mark sizes, the line
-   * style, the interval pairs and log floors, the names on the marks.
+   * What every part of a panel's points reads.
    * @param {any} m the individual model @param {any} panel @param {any} look
    * @param {number} plotW the plot's width in px
    */
   const pointsContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const isLine = m.isLine;
-    const dm = cfg.point_size ?? 1.0;
-    const lm = cfg.line_width ?? 1.0;
-    // One line per entity (a `series` column): the trajectory crowd.
+    const dm = cfg.point_size;
+    const lm = cfg.line_width;
     const crowd = isLine && m.crowd;
     // An area's fill already shows where the values are; dots would clutter it.
     const dots = isLine && !crowd && cfg.type !== 'area' &&
       m.symbol !== 'none' && sparseLines(panel, plotW);
-    const lineMarkerPx = BASE_LINE_MARKER * dm;
-    const lineW = (crowd ? CROWD_LINE_WIDTH : BASE_LINE_WIDTH) * lm;
-    const surface = (ink && ink.surface) || '#ffffff';
-    // One select drives step and smoothing: straight segments (the default),
-    // monotone smoothing, or a step at the start, middle or end.
-    const connect = cfg.connect || 'straight';
-    const stepMode = connect.indexOf('step_') === 0 ? connect.slice(5) : null;
-    const smoothOn = isLine && connect === 'monotone';
-    const smoother = cfg.smoother || 'none';
-    const smootherSeries = cfg.derived.smoother || null;
-    const pairs = intervalPairs(cfg);
+    const stepMode = cfg.connect.indexOf('step_') === 0 ? cfg.connect.slice(5) : null;
     // On a log axis an interval end at or below zero: the low end is cut at
     // the axis floor, a high end there drops the interval.
     const floorY = look.logFloorY ?? null;
@@ -132,30 +94,37 @@
     /** @param {any} v */
     const hiEnd = (v) => (v == null || (floorY != null && !(Number(v) > 0)) ? null : Number(v));
     const isArea = cfg.type === 'area';
-    // A colour split stacks its areas, unless the layout says side by side.
-    const stackArea = isArea && m.splitCol && cfg.position !== 'dodge';
-    const ltCol = isLine && cfg.linetype ? cfg.linetype : null;
-    // `legend: "marks"` writes the names on the marks: at each line's end, or
-    // at the centre of each cloud of points (nothing for a crowd of lines).
+    // `legend: "marks"` names the marks: at each line's end, or at the centre
+    // of each cloud of points.
     const plan = NS.legendPlan(m, cfg);
-    const directLabels = isLine && plan.marks === 'end';
-    const cloudLabels = !isLine && plan.marks === 'centroid';
-    const encodeX = m.x.encode ||
-      ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v));
-    // `highlight`: the muted series in grey; the highlighted lines named at
-    // their end.
     const muted = NS.mutedMark(ink);
-    const clrOf = (/** @type {any} */ s) => (s.muted ? muted : s.color);
-    const hlNames = isLine && !!m.hl && !!m.splitCol;
 
-    return { cfg, ink, m, panel, isLine, dm, lm, crowd, dots, lineMarkerPx, lineW, surface, stepMode, smoothOn, smoother, smootherSeries, pairs, floorY, floorX, loEnd, hiEnd, isArea, stackArea, ltCol, directLabels, cloudLabels, encodeX, muted, clrOf, hlNames };
+    return {
+      cfg, ink, m, panel, isLine, dm, lm, crowd, dots, stepMode, floorX, loEnd, hiEnd, isArea,
+      lineMarkerPx: BASE_LINE_MARKER * dm,
+      lineW: (crowd ? CROWD_LINE_WIDTH : BASE_LINE_WIDTH) * lm,
+      surface: ink.surface,
+      smoothOn: isLine && cfg.connect === 'monotone',
+      smoother: cfg.smoother,
+      smootherSeries: cfg.derived.smoother,
+      pairs: parts.log.intervalPairs(cfg),
+      // A colour split stacks its areas, unless the layout says side by side.
+      stackArea: isArea && m.splitCol && cfg.position !== 'dodge',
+      ltCol: isLine && cfg.linetype ? cfg.linetype : null,
+      directLabels: isLine && plan.marks === 'end',
+      cloudLabels: !isLine && plan.marks === 'centroid',
+      encodeX: m.x.encode ||
+        ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v)),
+      // `highlight`: the muted series in grey; the highlighted lines named at their end.
+      clrOf: (/** @type {any} */ s) => (s.muted ? muted : s.color),
+      hlNames: isLine && !!m.hl && !!m.splitCol
+    };
   };
 
   /**
-   * One scatter or line series.
-   * A scatter's native emphasis is off: it would strobe a dense cloud. A
-   * line keeps it without scaling or focus, which is what draws one dot per
-   * line at the crosshair; the crowd's is off, its hover is the overlay.
+   * One scatter or line series. A scatter's native emphasis is off (it would
+   * strobe a dense cloud); a line keeps it, without scaling, for the dot at the
+   * crosshair; the crowd's hover is the overlay.
    * @param {any} k @param {any} name @param {any[]} data @param {string} clr
    * @param {boolean} [isMuted]
    */
@@ -183,14 +152,12 @@
         : { disabled: true },
       ...(isArea ? { areaStyle: { opacity: stackArea ? 0.7 : 0.25 },
                      ...(stackArea ? { stack: 'area' } : {}) } : {}),
-      // The muted part of a highlight: the drill patch tells it from the
-      // highlighted part of the same level by this.
+      // The drill patch tells the muted part of a highlight from the lit part by this.
       ...(isMuted ? { blockrMuted: true } : {}),
       ...((m.hl ? (directLabels || hlNames) && !isMuted : directLabels) ? {
         endLabel: {
           show: true, formatter: '{a}', distance: 6,
-          color: (ink && ink.text) || '#111827', fontSize: (ink && ink.fontSize) || 12,
-          fontWeight: 600
+          color: ink.text, fontSize: ink.fontSize, fontWeight: 600
         },
         // Lines that end close together push their names apart.
         labelLayout: { moveOverlap: 'shiftY' }
@@ -198,108 +165,84 @@
     });
   };
 
-  /**
-   * `linetype`: the levels in the order the rows first carry them; the
-   * first is solid. A segment takes the level of the point it leads to, so a
-   * forecast is dashed from the last observed point on.
-   * @param {any} k @returns {string[]}
-   */
-  const lineTypeLevels = (k) => {
-    const { ltCol, panel } = k;
-    const ltLevels = [];
-    if (ltCol) {
-      const seen = new Set();
-      for (const s of panel.series) {
-        for (const r of s.rows) {
-          const v = String(r[ltCol] ?? '');
-          if (!seen.has(v)) { seen.add(v); ltLevels.push(v); }
-        }
-      }
-    }
-    return ltLevels;
+  /** `linetype`: the levels in the order the rows first carry them; the first is solid.
+   * @param {any} k @returns {string[]} */
+  const lineTypeLevels = ({ ltCol, panel }) => {
+    const seen = new Set();
+    if (ltCol) for (const s of panel.series) for (const r of s.rows) seen.add(String(r[ltCol] ?? ''));
+    return [...seen];
   };
 
-  /** One line split at its linetype levels.
-   * @param {any} k @param {string[]} ltLevels @param {any} s @param {number} si */
+  /**
+   * One line split at its linetype levels; a segment takes the level of the
+   * point it leads to, so a forecast is dashed from the last observed point on.
+   * @param {any} k @param {string[]} ltLevels @param {any} s @param {number} si
+   */
   const lineSegments = (k, ltLevels, s, si) => {
     const { ltCol, clrOf } = k;
-      const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
-      return ltLevels.map((L, j) => {
-        const data = s.pts.map((/** @type {any} */ p, /** @type {number} */ i) =>
-          (lv[i] === L || lv[i + 1] === L) ? p : [p[0], null]);
-        const sr = mkSeries(k, s.level, data, clrOf(s), !!s.muted);
-        sr.id = '__seg_' + si + '_' + j;
-        if (j > 0) {
-          sr.lineStyle = { ...sr.lineStyle, type: DASHES[(j - 1) % DASHES.length] };
-          // One end label per line, on its first segment.
-          delete sr.endLabel;
-          delete sr.labelLayout;
-        }
-        return sr;
-      }).filter((sr) => sr.data.some((/** @type {any} */ p) => p[1] != null));
-    };
+    const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
+    return ltLevels.map((L, j) => {
+      const data = s.pts.map((/** @type {any} */ p, /** @type {number} */ i) =>
+        (lv[i] === L || lv[i + 1] === L) ? p : [p[0], null]);
+      const sr = mkSeries(k, s.level, data, clrOf(s), !!s.muted);
+      sr.id = '__seg_' + si + '_' + j;
+      if (j > 0) {
+        sr.lineStyle = { ...sr.lineStyle, type: DASHES[(j - 1) % DASHES.length] };
+        // One end label per line, on its first segment.
+        delete sr.endLabel;
+        delete sr.labelLayout;
+      }
+      return sr;
+    }).filter((sr) => sr.data.some((/** @type {any} */ p) => p[1] != null));
+  };
 
-
-  /**
-   * `ymin`/`ymax` on a line: one band per pair, the first the outermost.
-   * Grey for a single line; in the line's colour when colour splits them.
-   * @param {any} k @param {any} s
-   */
+  /** `ymin`/`ymax` on a line: a band per pair, the first the outermost; grey
+   * unless colour splits the lines. @param {any} k @param {any} s */
   const lineBands = (k, s) => {
     const { m, clrOf, ink, pairs, loEnd, hiEnd } = k;
-      const clr = m.splitCol ? clrOf(s) : ((ink && ink.muted) || '#6b7280');
-      /** @type {any[]} */
-      const out = [];
-      for (const [loCol, hiCol] of pairs) {
-        const b = {
-          x: s.pts.map((/** @type {any} */ p) => p[0]),
-          lo: s.rows.map((/** @type {any} */ r) => loEnd(r[loCol])),
-          hi: s.rows.map((/** @type {any} */ r) => hiEnd(r[hiCol]))
-        };
-        const rib = parts.ribbon ? parts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY) : null;
-        if (rib) { rib.z = 1; out.push(rib); }
-      }
-      return out;
-    };
+    const clr = m.splitCol ? clrOf(s) : ink.muted;
+    const out = [];
+    for (const [loCol, hiCol] of pairs) {
+      const b = {
+        x: s.pts.map((/** @type {any} */ p) => p[0]),
+        lo: s.rows.map((/** @type {any} */ r) => loEnd(r[loCol])),
+        hi: s.rows.map((/** @type {any} */ r) => hiEnd(r[hiCol]))
+      };
+      const rib = parts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY);
+      if (rib) { rib.z = 1; out.push(rib); }
+    }
+    return out;
+  };
 
-
-  /**
-   * R fits the smoother per group, nested by facet level when faceted.
-   * @param {any} k @param {any} groupName
-   */
+  /** R's smoother of one group, nested by facet level when faceted.
+   * @param {any} k @param {any} groupName */
   const smootherLine = (k, groupName) => {
-    const { smoother, smootherSeries, m, panel } = k;
-      if (smoother === 'none' || !smootherSeries) return null;
-      const bucket = (m.facet && panel.facet !== '__all__')
-        ? smootherSeries[panel.facet] : smootherSeries;
-      if (!bucket) return null;
-      const s = bucket[groupName != null ? String(groupName) : '__all__'];
-      if (!s || !s.x || !s.y) return null;
-      /** @type {any[]} */
-      const out = [];
-      for (let i = 0; i < s.x.length; i++) {
-        if (Number.isFinite(s.x[i]) && Number.isFinite(s.y[i])) out.push([s.x[i], s.y[i]]);
-      }
-      return out.length >= 2 ? out : null;
-    };
+    const { smootherSeries, m, panel } = k;
+    if (!smootherSeries) return null;
+    const bucket = (m.facet && panel.facet !== '__all__')
+      ? smootherSeries[panel.facet] : smootherSeries;
+    const s = bucket && bucket[groupName != null ? String(groupName) : '__all__'];
+    if (!s || !s.x || !s.y) return null;
+    const out = [];
+    for (let i = 0; i < s.x.length; i++) {
+      if (Number.isFinite(s.x[i]) && Number.isFinite(s.y[i])) out.push([s.x[i], s.y[i]]);
+    }
+    return out.length >= 2 ? out : null;
+  };
 
-
-  /** Per level: its bands, its line or points, its fit, its error bars.
-   * @param {any} k */
+  /** Per level: its bands, line or points, fit and error bars. @param {any} k */
   const panelSeries = (k) => {
     const { panel, isLine, pairs, ltCol, clrOf, smoother, m, hiEnd, loEnd, floorX, encodeX } = k;
     const ltLevels = lineTypeLevels(k);
-    /** @type {any[]} */
     const series = [];
     panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
-      if (isLine && pairs.length && s.rows.length) for (const b of lineBands(k, s)) series.push(b);
+      if (isLine && pairs.length && s.rows.length) series.push(...lineBands(k, s));
       if (ltCol && ltLevels.length > 1) {
-        for (const sr of lineSegments(k, ltLevels, s, si)) series.push(sr);
+        series.push(...lineSegments(k, ltLevels, s, si));
       } else {
         series.push(mkSeries(k, s.level, s.pts, clrOf(s), !!s.muted));
       }
-      // R fits one smoother per level: with a highlight it goes with the
-      // level's highlighted points when it has some.
+      // With a highlight the level's smoother goes with its highlighted points.
       const fitHere = !s.muted || !panel.series.some((/** @type {any} */ o) =>
         !o.muted && o.level === s.level);
       if (smoother !== 'none' && !isLine && fitHere) {
@@ -312,8 +255,7 @@
           });
         }
       }
-      // Error bars on a scatter (a forest plot is a scatter with ymin/ymax
-      // whiskers), one per pair.
+      // A forest plot is a scatter with ymin/ymax whiskers, one per pair.
       if (!isLine && pairs.length && s.src.length) {
         for (const [loCol, hiCol] of pairs) {
           const errPts = s.src
@@ -326,51 +268,42 @@
         }
       }
     });
-
     return series;
   };
 
-  /**
-   * `x_ranges`: named stretches of x, shaded behind the marks.
-   * @param {any} k @param {any[]} series
-   */
+  /** `x_ranges`: named stretches of x, shaded behind the marks.
+   * @param {any} k @param {any[]} series */
   const addRanges = (k, series) => {
     const { cfg, ink, m, floorX, encodeX } = k;
     const ranges = NS.rangesOf(cfg.x_ranges);
     const host = series.find((sr) => sr.type === 'line' || sr.type === 'scatter');
-    if (ranges.length && host) {
-      host.markArea = {
-        silent: true,
-        itemStyle: { color: (ink && ink.muted) || '#6b7280', opacity: 0.08 },
-        label: { position: 'insideTop', color: (ink && ink.muted) || '#6b7280',
-                 fontSize: (ink && ink.fontSize) || 12 },
-        // On a category axis an end names its category, or a date the one
-        // whose period holds it, as the x lines do.
-        data: ranges.map((/** @type {any} */ r) => (m.x.type === 'category'
-          ? [{ name: r.name || '', xAxis: NS.axes.catOf(r.from, m.x.cats || [], true) },
-             { xAxis: NS.axes.catOf(r.to, m.x.cats || [], true) }]
-          : [{ name: r.name || '', xAxis: floorX != null && !(Number(r.from) > 0) ? floorX : encodeX(r.from) },
-             { xAxis: floorX != null && !(Number(r.to) > 0) ? null : encodeX(r.to) }]))
-          .filter((/** @type {any} */ d) => d[0].xAxis != null && d[1].xAxis != null)
-      };
-    }
-
+    if (!ranges.length || !host) return;
+    host.markArea = {
+      silent: true,
+      itemStyle: { color: ink.muted, opacity: 0.08 },
+      label: { position: 'insideTop', color: ink.muted, fontSize: ink.fontSize },
+      // On a category axis an end names its category, as the x lines do.
+      data: ranges.map((/** @type {any} */ r) => (m.x.type === 'category'
+        ? [{ name: r.name || '', xAxis: NS.axes.catOf(r.from, m.x.cats || [], true) },
+           { xAxis: NS.axes.catOf(r.to, m.x.cats || [], true) }]
+        : [{ name: r.name || '', xAxis: floorX != null && !(Number(r.from) > 0) ? floorX : encodeX(r.from) },
+           { xAxis: floorX != null && !(Number(r.to) > 0) ? null : encodeX(r.to) }]))
+        .filter((/** @type {any} */ d) => d[0].xAxis != null && d[1].xAxis != null)
+    };
   };
 
   /**
-   * `label`: the column's value written beside each point that has one, so
-   * a few named points stand out of a cloud. One label-only series per
-   * panel, over the points, with a halo to read on them; its id keeps the
-   * highlight patch and the brush off it. A highlight on a scatter without
-   * `label` names its highlighted points by the highlighted value, where
-   * that value picks out one or two points of the panel (a region on 40
-   * points is said once, in the subtitle).
+   * `label`: the column's value beside each point that has one, as one
+   * label-only series per panel (its id keeps the patch and the brush off it).
+   * A highlight without `label` names its points by the highlighted value,
+   * where that value picks out one or two points of the panel.
    * @param {any} k @param {any[]} series @param {any} room
    */
   const pointLabels = (k, series, room) => {
     const { isLine, m, cfg, panel, lineMarkerPx, dm, ink, surface } = k;
     const hlCol = !isLine && m.hl && !cfg.label ? Object.keys(m.hl)[0] : null;
     const labelCol = cfg.label || hlCol;
+    if (!labelCol) return;
     /** @type {Map<string, number>} */
     const hlCount = new Map();
     if (hlCol) {
@@ -382,60 +315,49 @@
         }
       }
     }
-    if (labelCol) {
-      /** @type {any[]} */
-      const data = [];
-      for (const s of panel.series) {
-        if (hlCol && s.muted) continue;
-        s.rows.forEach((/** @type {any} */ r, /** @type {number} */ i) => {
-          const v = r[labelCol];
-          const p = s.pts[i];
-          if (!NS.hasVal(v) || v === 'NA' || !p || p[0] == null || p[1] == null) return;
-          if (hlCol && (hlCount.get(String(v)) || 0) > 2) return;
-          data.push([p[0], p[1], String(v)]);
-        });
-      }
-      if (data.length) {
-        const position = isLine ? 'top' : 'right';
-        const distance = isLine ? lineMarkerPx / 2 + 2 : (BASE_SCATTER_SIZE * dm) / 2 + 3;
-        series.push({
-          id: '__label__', type: 'scatter', data, silent: true,
-          symbolSize: 0, z: 11, legendHoverLink: false, animation: false,
-          tooltip: { show: false }, emphasis: { disabled: true },
-          label: {
-            show: true, position, distance,
-            formatter: (/** @type {any} */ prm) => prm.value[2],
-            color: hlCol ? ((ink && ink.text) || '#111827') : ((ink && ink.secondary) || '#374151'),
-            fontSize: (ink && ink.fontSize) || 12,
-            ...(hlCol ? { fontWeight: 600 } : {}),
-            textBorderColor: surface, textBorderWidth: 3
-          },
-          labelLayout: labelSpacer(position, distance, room)
-        });
-      }
-    }
-
-  };
-
-  /**
-   * The name of each colour group at the centre of mass of its points: a
-   * label-only series per group, over the points. Names of clouds that sit
-   * close are moved apart a line at a time, by one spacer the groups share.
-   * @param {any} k @param {any[]} series @param {any} room
-   */
-  const cloudNames = (k, series, room) => {
-    const { cloudLabels, panel, ink } = k;
-    if (cloudLabels) {
-      const spacer = labelSpacer('inside', 0, room);
-      panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
-        const c = NS.cloudCentre(s.pts);
-        if (!c || s.muted || s.level == null || s.level === '') return;
-        const mark = NS.nameMark('__legend_' + si, String(s.level), c, 'inside', ink);
-        mark.labelLayout = spacer;
-        series.push(mark);
+    const data = [];
+    for (const s of panel.series) {
+      if (hlCol && s.muted) continue;
+      s.rows.forEach((/** @type {any} */ r, /** @type {number} */ i) => {
+        const v = r[labelCol];
+        const p = s.pts[i];
+        if (!NS.hasVal(v) || v === 'NA' || !p || p[0] == null || p[1] == null) return;
+        if (hlCol && (hlCount.get(String(v)) || 0) > 2) return;
+        data.push([p[0], p[1], String(v)]);
       });
     }
+    if (!data.length) return;
+    const position = isLine ? 'top' : 'right';
+    const distance = isLine ? lineMarkerPx / 2 + 2 : (BASE_SCATTER_SIZE * dm) / 2 + 3;
+    series.push({
+      id: '__label__', type: 'scatter', data, silent: true,
+      symbolSize: 0, z: 11, legendHoverLink: false, animation: false,
+      tooltip: { show: false }, emphasis: { disabled: true },
+      label: {
+        show: true, position, distance,
+        formatter: (/** @type {any} */ prm) => prm.value[2],
+        color: hlCol ? ink.text : ink.secondary,
+        fontSize: ink.fontSize,
+        ...(hlCol ? { fontWeight: 600 } : {}),
+        textBorderColor: surface, textBorderWidth: 3
+      },
+      labelLayout: labelSpacer(position, distance, room)
+    });
+  };
 
+  /** Each colour group's name at the centre of its points, one spacer shared.
+   * @param {any} k @param {any[]} series @param {any} room */
+  const cloudNames = (k, series, room) => {
+    const { cloudLabels, panel, ink } = k;
+    if (!cloudLabels) return;
+    const spacer = labelSpacer('inside', 0, room);
+    panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
+      const c = NS.cloudCentre(s.pts);
+      if (!c || s.muted || s.level == null || s.level === '') return;
+      const mark = NS.nameMark('__legend_' + si, String(s.level), c, 'inside', ink);
+      mark.labelLayout = spacer;
+      series.push(mark);
+    });
   };
 
   /**
@@ -448,7 +370,6 @@
     const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
     const series = panelSeries(k);
     addRanges(k, series);
-    // Point labels and group names keep out of each other's way.
     const room = { placed: [], lastS: -1, lastD: -1 };
     pointLabels(k, series, room);
     cloudNames(k, series, room);
@@ -465,10 +386,9 @@
   };
 
   /**
-   * The hover overlay of a line chart, mounted on every line chart (empty
-   * until a line is hovered) so the series keep one shape: a veil over the
-   * plot on its own hidden 0..1 axes, then the hovered line and its dots.
-   * `state.veil` is the veil's fill, set when a line is promoted.
+   * The hover overlay, on every line chart (empty until a line is hovered) so
+   * the series keep one shape: a veil on its own hidden 0..1 axes, then the
+   * hovered line and its dots. `state.veil` is the fill, set on promotion.
    * @param {{ veil?: string }} state
    */
   const lineOverlay = (state) => [{
@@ -487,32 +407,43 @@
     legendHoverLink: false, z: 10, animation: false
   }];
 
+  /** The tooltip fields as a "  (col: v, col2: v2)" suffix on a line's row.
+   * @param {any} m @param {any} look */
+  const ttSuffixOf = (m, look) => (/** @type {any} */ val) => {
+    if (!m.ttFields.length || !Array.isArray(val)) return '';
+    const out = [];
+    for (let i = 0; i < m.ttFields.length; i++) {
+      const v = val[2 + i];
+      if (v != null && v !== '') {
+        out.push(NS.esc(NS.axes.axisTitle(look.columns, m.ttFields[i]) || m.ttFields[i]) + ': ' +
+                 NS.esc(typeof v === 'number' ? NS.ddNum3(v) : v));
+      }
+    }
+    return out.length ? '  (' + out.join(', ') + ')' : '';
+  };
+
   /**
-   * The line chart's tooltip, on a hairline crosshair: per x position, each
-   * line's value there, highest first, capped. A crowd of lines (one per
-   * entity) shows only the line nearest the cursor (`hover.si`), and
-   * nothing away from every line.
+   * The line chart's tooltip on a hairline crosshair: each line's value at x,
+   * highest first, capped. A crowd shows only the line nearest the cursor
+   * (`hover.si`).
    * @param {any} m @param {any} look @param {{ si: number | null }} hover
    */
   const lineTooltip = (m, look, hover) => {
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ttSuffix = ttSuffixOf(m, look);
-    const ink = look.ink || {};
-    const vf = NS.valueFormat(look.cfg || {});
+    const vf = NS.valueFormat(look.cfg);
     return {
       trigger: 'axis',
       axisPointer: { type: 'line', label: { show: false },
-                     lineStyle: { color: ink.muted || '#6b7280', width: 1, type: 'solid' } },
+                     lineStyle: { color: look.ink.muted, width: 1, type: 'solid' } },
       confine: true,
       formatter: (/** @type {any} */ ps) => {
         if (!Array.isArray(ps)) ps = [ps];
         let rows = ps.filter((/** @type {any} */ p) =>
           p && p.seriesType === 'line' && Array.isArray(p.value) && p.seriesName !== '__focus__');
-        if (!rows.length) return '';
         if (m.crowd) {
           if (hover.si == null) return '';
           rows = rows.filter((/** @type {any} */ p) => p.seriesIndex === hover.si);
-          if (!rows.length) return '';
         }
         // One row per line, the first of replicates at one x; the segments
         // a `linetype` cuts a line into are one line.
@@ -545,32 +476,12 @@
     };
   };
 
-  /**
-   * The tooltip fields as a "  (col: v, col2: v2)" suffix on a line's row.
-   * @param {any} m @param {any} look
-   */
-  const ttSuffixOf = (m, look) => (/** @type {any} */ val) => {
-    if (!m.ttFields.length || !Array.isArray(val)) return '';
-    const out = [];
-    for (let i = 0; i < m.ttFields.length; i++) {
-      const v = val[2 + i];
-      if (v != null && v !== '') {
-        out.push(NS.esc(NS.axes.axisTitle(look.columns, m.ttFields[i]) || m.ttFields[i]) + ': ' +
-                 NS.esc(typeof v === 'number' ? NS.ddNum3(v) : v));
-      }
-    }
-    return out.length ? '  (' + out.join(', ') + ')' : '';
-  };
-
-  /**
-   * The point tooltip (scatter and band): the series level as headline,
-   * else the y title; x and y by their titles, the split column, then the
-   * tooltip fields.
-   * @param {any} m @param {any} look
-   */
+  /** The point tooltip (scatter and band): the series level or the y title as
+   * headline, then x, y, the split column and the tooltip fields.
+   * @param {any} m @param {any} look */
   const pointTooltip = (m, look) => {
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
-    const vf = NS.valueFormat(look.cfg || {});
+    const vf = NS.valueFormat(look.cfg);
     return {
       trigger: 'item', confine: true,
       formatter: (/** @type {any} */ p) => {
@@ -591,6 +502,5 @@
     };
   };
 
-  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip,
-                         BASE_LINE_WIDTH, BASE_SCATTER_SIZE });
+  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip });
 })();
