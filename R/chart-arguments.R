@@ -474,19 +474,25 @@ chart_arguments <- function() {
     ),
     sort_by = new_arg_spec(
       paste0(
-        "Category order for aggregated charts: \"value\" (default for ",
-        "bar/pie/treemap), \"data\" (default for boxplot/pointrange: the ",
-        "data's own order, factor levels when present, else first ",
-        "appearance, so visits and dose groups keep their order), ",
-        "\"alpha\", or a column name (per-category minimum of that column, ",
-        "e.g. a visit number). For gantt: \"onset\" (default), \"alpha\", ",
-        "or a column name. Ignored for scatter and line."
+        "Category order for aggregated charts: \"value\", \"data\" (the ",
+        "data's own order: factor levels when present, time or numeric ",
+        "order for a date or number, else first appearance), \"alpha\", ",
+        "or a column name (per-category minimum of that column, e.g. a ",
+        "visit number). Unset, bar/pie/treemap use \"data\" for a date, ",
+        "number or factor category and \"value\" for a text category; ",
+        "boxplot/pointrange use \"data\". A time label held as text ",
+        "(\"2025 Q1\", \"W03\") sorts by value: make it a factor in time ",
+        "order upstream, or set \"data\". For gantt: \"onset\" (default), ",
+        "\"alpha\", or a column name. Ignored for scatter and line."
       ),
       example = "value",
       type = arg_string()
     ),
     sort_dir = new_arg_spec(
-      "Direction for `sort_by`: \"asc\" or \"desc\".",
+      paste(
+        "Direction for `sort_by`: \"asc\" or \"desc\". Unset, \"desc\"",
+        "for \"value\", else \"asc\"."
+      ),
       example = "desc",
       type = arg_enum(c("asc", "desc"))
     ),

@@ -67,6 +67,62 @@ test('group order: value, alpha, factor levels, data, a column', () => {
                          [['Rash', 'Nausea', '', 'Fever']]);
 });
 
+test('data order: a date or a number in its own order, whatever the row order', () => {
+  const cols = [{ name: 'day', type: 'categorical', temporal: 'date' }, num('dose'), num('V')];
+  const rows = [
+    { day: '2025-03-01', dose: 20, V: 1 }, { day: '2025-01-01', dose: 5, V: 9 },
+    { day: null, dose: 10, V: 2 }, { day: '2025-02-01', dose: null, V: 4 }
+  ];
+  const sorted = (cfg) => groupsOf(build({ value: 'V', func: 'sum', sort_by: 'data',
+                                           sort_dir: 'asc', ...cfg }, rows, cols));
+  assert.deepStrictEqual(sorted({ group: 'day' }), [['2025-01-01', '2025-02-01', '2025-03-01', '']]);
+  assert.deepStrictEqual(sorted({ group: 'dose' }), [['5', '10', '20', '']]);
+  assert.deepStrictEqual(sorted({ group: 'dose', sort_dir: 'desc' }), [['', '20', '10', '5']]);
+});
+
+test('the default sort follows the category column', () => {
+  const cols = [cat('country'), cat('quarter', { levels: ['Q1', 'Q2'] }),
+                { name: 'day', type: 'categorical', temporal: 'date' }, num('year'), num('V')];
+  const dflt = (group, extra) => {
+    const cfg = { chart_type: 'bar', group, ...extra };
+    C.model.defaults(cfg, cols);
+    return [cfg.sort_by, cfg.sort_dir];
+  };
+  assert.deepStrictEqual(dflt('country'), ['value', 'desc']);
+  assert.deepStrictEqual(dflt('quarter'), ['data', 'asc']);
+  assert.deepStrictEqual(dflt('day'), ['data', 'asc']);
+  assert.deepStrictEqual(dflt('year'), ['data', 'asc']);
+  // A set sort stays; an unset direction follows it.
+  assert.deepStrictEqual(dflt('day', { sort_by: 'value' }), ['value', 'desc']);
+  assert.deepStrictEqual(dflt('country', { sort_by: 'data' }), ['data', 'asc']);
+  assert.deepStrictEqual(dflt('country', { sort_by: 'alpha' }), ['alpha', 'asc']);
+  // Boxplot keeps data order on a text category.
+  assert.deepStrictEqual(dflt('country', { chart_type: 'boxplot' }), ['data', 'asc']);
+
+  const fam = (group, extra) => {
+    const cfg = { chart_type: 'pie', group, ...extra };
+    C.model.familyDefaults(cfg, cols);
+    return [cfg.sort_by, cfg.sort_dir];
+  };
+  assert.deepStrictEqual(fam('day'), ['data', 'asc']);
+  assert.deepStrictEqual(fam('country'), ['value', 'desc']);
+});
+
+test('a new category re-sorts a default sort and keeps a picked one', () => {
+  const cols = [cat('country'), { name: 'day', type: 'categorical', temporal: 'date' }];
+  const after = (cfg, group) => {
+    const c = { chart_type: 'bar', ...cfg, group };
+    C.model.resortForGroup(c, cols);
+    return [c.sort_by, c.sort_dir];
+  };
+  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'desc' }, 'day'), ['data', 'asc']);
+  assert.deepStrictEqual(after({ sort_by: 'data', sort_dir: 'asc' }, 'country'), ['value', 'desc']);
+  assert.deepStrictEqual(after({ sort_by: 'alpha', sort_dir: 'asc' }, 'day'), ['alpha', 'asc']);
+  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'asc' }, 'day'), ['value', 'asc']);
+  assert.deepStrictEqual(after({ chart_type: 'boxplot', sort_by: 'data', sort_dir: 'asc' }, 'country'),
+                         ['data', 'asc']);
+});
+
 test('colour levels follow the scale order, then factor levels, then the alphabet', () => {
   assert.deepStrictEqual(plain(build({ color: 'SEV' }).colors), ['', 'MILD', 'SEVERE']);
   const scaled = build({ color: 'SEV', scales: { var: 'SEV', order: ['SEVERE', 'MILD'] } });
