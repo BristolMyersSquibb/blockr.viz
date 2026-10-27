@@ -125,5 +125,5 @@ JS: hand-written types,inst/js/types.d.ts,300
 JS: hand-written types,inst/js/derived.d.ts,300
 JS: hand-written types,inst/js/core/core.d.ts,300
 CSS,inst/css/**.css,2000
-not counted,inst/js/snapdom.js,0
+not counted,inst/js/vendor/**,0
 not counted,inst/js/spec/**,0

@@ -28,8 +28,7 @@ compact_payload <- function(d, compact) {
 }
 
 test_that("a compact tile matrix is as wide as its cells, on screen and in the picture", {
-  skip_on_cran()
-  skip_if_not(chromote_works(), "no headless browser here")
+  skip_without_browser()
   js_path <- system.file("js", "summarize-table.js", package = "blockr.viz")
   css_path <- system.file("css", "table.css", package = "blockr.viz")
   skip_if(!file.exists(js_path) || !file.exists(css_path),

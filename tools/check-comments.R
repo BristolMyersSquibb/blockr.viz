@@ -81,7 +81,7 @@ files <- c(
   list.files(file.path(pkg_dir, "inst/css"), "\\.css$", recursive = TRUE,
              full.names = TRUE)
 )
-files <- files[!grepl("snapdom\\.js$|/spec/", files)]
+files <- files[!grepl("/vendor/|/spec/", files)]
 
 hits <- do.call(rbind, lapply(files, function(f) {
   cm <- if (grepl("\\.[Rr]$", f)) r_comments(f) else

@@ -65,14 +65,10 @@ html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
 
   htmltools::tags$img(
     class = "blockr-exhibit-img",
-    src = if (requireNamespace("base64enc", quietly = TRUE)) {
-      base64enc::dataURI(file = f, mime = "image/png")
-    } else if (requireNamespace("knitr", quietly = TRUE)) {
-      knitr::image_uri(f)
-    } else {
-      stop("Writing a chart to HTML needs 'base64enc' or 'knitr'.",
-           call. = FALSE)
-    },
+    src = paste0("data:image/png;base64,", gsub(
+      "\n", "", jsonlite::base64_enc(readBin(f, "raw", file.size(f))),
+      fixed = TRUE
+    )),
     style = "max-width:100%;height:auto;display:block;"
   )
 }

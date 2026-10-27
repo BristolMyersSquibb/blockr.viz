@@ -15,3 +15,4 @@
 ^results$
 ^coverage$
 ^tsconfig\.core\.json$
+^\.git$

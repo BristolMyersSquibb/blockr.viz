@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "typecheck:core": "tsc -p tsconfig.core.json",
     "test": "node --test --test-concurrency=1 tests/js/*.test.js tests/js/chart/*.test.js tests/js/core/*.test.js",
-    "coverage": "c8 --all --src inst/js --include 'inst/js/**/*.js' --exclude 'inst/js/snapdom.js' --exclude 'inst/js/spec/**' --reporter text --reporter json-summary --report-dir coverage/js --check-coverage --lines 90 npm test"
+    "coverage": "c8 --all --src inst/js --include 'inst/js/**/*.js' --exclude 'inst/js/vendor/**' --exclude 'inst/js/spec/**' --reporter text --reporter json-summary --report-dir coverage/js --check-coverage --lines 90 npm test"
   },
   "devDependencies": {
     "acorn": "8.15.0",

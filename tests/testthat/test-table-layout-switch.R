@@ -21,12 +21,9 @@
 # minutes.
 
 run_layout_switch <-
-  !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) &&
-  requireNamespace("shinytest2", quietly = TRUE) &&
-  requireNamespace("chromote", quietly = TRUE) &&
+  run_browser_tests() &&
   requireNamespace("blockr.dock", quietly = TRUE) &&
-  requireNamespace("pkgload", quietly = TRUE) &&
-  chromote_works()
+  requireNamespace("pkgload", quietly = TRUE)
 
 test_that("one click on a layout tile switches, and the gear follows", {
   skip_if_not(run_layout_switch, "no headless browser, or under R CMD check")
