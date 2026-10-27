@@ -174,7 +174,7 @@ test_that("a new table drops the picture the browser took of the old one", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       scope$setInputs(summarize_table_block_capture = list(
         png = url, width = 7, height = 5

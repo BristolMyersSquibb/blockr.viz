@@ -101,7 +101,7 @@ test_that("a click on a column the script makes filters after the script", {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      scope <- session$makeScope("expr")
+      scope <- session$makeScope("expr-groups")
       session$flushReact()
       scope$setInputs(summarize_table_block_action = list(
         action = "filter", type = "categorical",
