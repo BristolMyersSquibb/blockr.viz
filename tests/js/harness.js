@@ -29,6 +29,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const vm = require('node:vm');
 const path = require('node:path');
 const { Window } = require('happy-dom');
 
@@ -54,14 +55,26 @@ const UI_DIR = () => uiDir || (uiDir = require('node:child_process').execFileSyn
   { encoding: 'utf8' }
 ).trim());
 
+const fileOf = (file) => path.join(UI_FILES.includes(file) ? UI_DIR() : JS_DIR, file);
+
 /** @type {Record<string, string>} */
 const sourceCache = {};
 const source = (file) => {
-  if (!(file in sourceCache)) {
-    const dir = UI_FILES.includes(file) ? UI_DIR() : JS_DIR;
-    sourceCache[file] = fs.readFileSync(path.join(dir, file), 'utf8');
-  }
+  if (!(file in sourceCache)) sourceCache[file] = fs.readFileSync(fileOf(file), 'utf8');
   return sourceCache[file];
+};
+
+/** @type {Record<string, vm.Script>} */
+const scriptCache = {};
+/**
+ * Run one of the page's scripts in a window. Compiled with its file name, so
+ * V8 (and with it c8) attributes the coverage to the file.
+ */
+const run = (win, file) => {
+  if (!(file in scriptCache)) {
+    scriptCache[file] = new vm.Script(source(file), { filename: fileOf(file) });
+  }
+  scriptCache[file].runInContext(win);
 };
 
 /** The head script controls_dep() writes: `Blockr.icons = {name: svg}`. */
@@ -524,8 +537,8 @@ function createEnv(opts = {}) {
   // controls_dep() writes Blockr.icons into the page head, one SVG per file
   // in blockr.ui's assets/icons, ahead of blockr-ui.js.
   win.eval(iconsScript());
-  for (const f of UI_FILES) win.eval(source(f));
-  for (const f of VIZ_FILES) win.eval(source(f));
+  for (const f of UI_FILES) run(win, f);
+  for (const f of VIZ_FILES) run(win, f);
 
   const binding = win.__binding;
   if (!binding) throw new Error('the chart scripts registered no input binding');
@@ -689,5 +702,5 @@ function draw(config, data, columns, opts = {}) {
 
 module.exports = {
   createEnv, mount, message, send, timeDraw, draw, normalize, domSummary, slotLogs,
-  source, JS_DIR, CHART_FILES, PRELUDE, UI_FILES, SHARED_FILES, iconsScript
+  source, run, JS_DIR, CHART_FILES, PRELUDE, UI_FILES, SHARED_FILES, iconsScript
 };

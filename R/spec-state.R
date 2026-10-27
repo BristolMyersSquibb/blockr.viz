@@ -24,7 +24,9 @@ viz_values <- function(state) {
 #'
 #' @param state A state from viz_state().
 #' @param values A named list of checked values.
-#' @param revs A revision counter from new_viz_revs(), or `NULL`.
+#' @param revs A revision counter from new_viz_revs(), or `NULL`. The values
+#'   are recorded as this client's own writes, which do not make a later
+#'   message from the same client stale.
 #' @return The names that changed, invisibly.
 #' @noRd
 viz_apply <- function(state, values, revs = NULL) {
@@ -37,32 +39,46 @@ viz_apply <- function(state, values, revs = NULL) {
     }
   }
   if (!is.null(revs) && length(changed)) {
-    revs$bump(changed)
+    revs$seen(values[changed])
   }
   invisible(changed)
 }
 
 #' A revision counter for a block's state
 #'
-#' Every change from any source (the gear, the assistant, a ctrl_send) bumps
-#' the revision and records it for the names that changed. The payload sends
-#' the current revision; the gear's settings message carries the revision it
-#' was built against. A name changed after that revision is stale in the
-#' message and is not applied.
+#' The payload sends the current revision; the gear's settings message
+#' carries the revision it was built against. A name that changed from
+#' another source (the assistant, a ctrl_send, core's revert of a frozen
+#' block) after that revision is stale in the message and is not applied.
+#' The client's own writes are recorded as known values and bump nothing,
+#' so a second quick edit of one setting is not dropped.
 #'
-#' @return A list of functions: `now()`, `bump(names)` and
-#'   `stale(names, rev)`.
+#' @param values The state's values when the block starts.
+#' @return A list of functions: `now()`, `seen(values)` (record known
+#'   values), `track(values)` (bump the names whose value differs from the
+#'   known one, return them) and `stale(names, rev)`.
 #' @noRd
-new_viz_revs <- function() {
+new_viz_revs <- function(values = list()) {
   env <- new.env(parent = emptyenv())
   env$rev <- 0L
   env$changed <- list()
+  env$known <- values
   list(
     now = function() env$rev,
-    bump = function(names) {
-      env$rev <- env$rev + 1L
-      env$changed[names] <- env$rev
-      invisible(env$rev)
+    seen = function(values) {
+      env$known[names(values)] <- values
+      invisible(NULL)
+    },
+    track = function(values) {
+      diff <- names(values)[!vapply(names(values), function(nm) {
+        nm %in% names(env$known) && identical(env$known[[nm]], values[[nm]])
+      }, logical(1L))]
+      if (length(diff)) {
+        env$rev <- env$rev + 1L
+        env$changed[diff] <- env$rev
+        env$known[diff] <- values[diff]
+      }
+      diff
     },
     stale = function(names, rev) {
       at <- vapply(names, function(nm) env$changed[[nm]] %||% 0L, integer(1L))

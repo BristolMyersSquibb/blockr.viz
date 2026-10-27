@@ -99,7 +99,7 @@ test_that("the input handlers are registered by type", {
 })
 
 test_that("the gates drop locked, script and stale settings", {
-  revs <- new_viz_revs()
+  revs <- new_viz_revs(list(color = NULL))
   msg <- viz_read_set(spec_set(), json(
     '{"rev": 0, "values": {"color": "cyl", "script": "system(1)",
       "script_values": {"a": 1}}}'
@@ -111,8 +111,8 @@ test_that("the gates drop locked, script and stale settings", {
                c("color", "script", "script_values"))
   expect_identical(viz_gate_set(msg, revs, locked = TRUE), list())
 
-  # the server changed color after the message's revision 0
-  revs$bump("color")
+  # color changed elsewhere after the message's revision 0
+  revs$track(list(color = "gear"))
   expect_length(viz_gate_set(msg, revs, locked = FALSE,
                              browser_script = FALSE), 0L)
   msg$rev <- revs$now()

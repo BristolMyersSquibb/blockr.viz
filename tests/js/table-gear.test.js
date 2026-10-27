@@ -21,7 +21,7 @@ function open(name, at) {
   win.eval(h.PRELUDE);
   win.document.body.innerHTML = c.chrome;
   win.eval(h.iconsScript());
-  for (const f of FILES) win.eval(h.source(f));
+  for (const f of FILES) h.run(win, f);
   win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
   const doc = win.document;
   win.__handlers['blockr-viz-table-layout'](c.layout);

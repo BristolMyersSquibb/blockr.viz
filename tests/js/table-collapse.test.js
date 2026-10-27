@@ -53,7 +53,7 @@ function open(head = ONE_ROW_HEAD) {
       </table>
     </div>`;
   win.eval(h.iconsScript());
-  for (const f of FILES) win.eval(h.source(f));
+  for (const f of FILES) h.run(win, f);
   win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
   return {
     win,

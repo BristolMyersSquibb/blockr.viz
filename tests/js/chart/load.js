@@ -24,7 +24,7 @@ function loadPure(opts = {}) {
   const ctx = vm.createContext({ console });
   ctx.window = ctx;
   const run = (f) => vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), ctx,
-                                     { filename: f });
+                                     { filename: path.join(JS_DIR, f) });
   for (const f of PURE) run(path.join('chart', f));
   if (opts.roles) {
     run('drilldown-agg.js');

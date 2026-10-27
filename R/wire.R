@@ -48,9 +48,22 @@ wire_value <- function(type, x) {
     } else {
       structure(list(), names = character())
     },
-    map = if (length(x)) x else structure(list(), names = character()),
+    map = if (length(x)) {
+      wire_map(x)
+    } else {
+      structure(list(), names = character())
+    },
     x
   )
+}
+
+# A map's atomic values always as arrays, so a single NA or value keeps its
+# place; map_canon() reads them back.
+wire_map <- function(x) {
+  if (is.list(x)) {
+    return(lapply(x, wire_map))
+  }
+  if (is.atomic(x) && length(x)) I(x) else x
 }
 
 # Values whose names are labels, as `[{value, label}]`; no name is `null`.

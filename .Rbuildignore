@@ -11,4 +11,7 @@
 ^node_modules$
 ^package(-lock)?\.json$
 ^tests/js$
+^tools$
+^results$
+^coverage$
 ^tsconfig\.core\.json$
