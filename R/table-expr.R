@@ -94,3 +94,45 @@ table_records_source <- function(ex, claim_cols, source) {
   if (!length(claim_cols)) call <- c(call, list(unclaimed = "all"))
   as.call(call)
 }
+
+#' The kit's selection as the records layout's click
+#'
+#' The kit holds one selection for every layout (kit-input.R): `filters`,
+#' column to values, and `columns`, the clicked cell's or header's column
+#' identity. A flat table claims one column; a structured or nested table
+#' its rows' identity columns, one value each.
+#' @param sel The kit's selection, or `NULL`.
+#' @param structured Whether the table drawn is structured.
+#' @return The click as table_records_expr() reads it.
+#' @noRd
+table_selection_records <- function(sel, structured = FALSE) {
+  f <- if (is.list(sel)) sel$filters
+  out <- list()
+  if (length(f) && isTRUE(structured)) {
+    out$group_cols <- names(f)
+    out$group_vals <- lapply(f, function(v) as.character(v)[[1L]])
+  } else if (length(f)) {
+    out$column <- names(f)[[1L]]
+    out$values <- as.character(f[[1L]])
+  }
+  ck <- if (is.list(sel)) sel$columns
+  if (length(ck)) {
+    out$col_keys <- unname(Map(function(cl, vl) {
+      list(column = cl, values = as.character(vl))
+    }, names(ck), ck))
+  }
+  out
+}
+
+#' The kit's selection as the groups layout's filters
+#' @param sel The kit's selection, or `NULL`.
+#' @return A named list, column to values, as summarize_drill_expr() reads
+#'   it; empty for no click.
+#' @noRd
+table_selection_groups <- function(sel) {
+  f <- if (is.list(sel)) sel$filters
+  if (!length(f)) {
+    return(list())
+  }
+  lapply(f, as.character)
+}
