@@ -618,7 +618,7 @@ test_that("delta CSS draws the clinical table style", {
 
   # The chevron: 12px with a constant 1.4px stroke.
   expect_match(rule(".drilldown-table-structured .blockr-chev"), "width: 12px;", fixed = TRUE)
-  # The sheet opens with a comment (inst/css/table-chev.css).
+  # The sheet opens with a comment (inst/css/exhibit-table-chev.css).
   chev_path <- squash(sub("(?s)^/[*].*?[*]/", "", html_table_chev_css(),
                           perl = TRUE))
   expect_match(chev_path, "^\\s*\\.blockr-html-table-container \\.blockr-chev path \\{")

@@ -31,7 +31,7 @@ viz_core_dep <- memoise0(function() {
 #' The table view's scripts and stylesheets
 #'
 #' After the core: the table's generated spec, the scripts in
-#' inst/js/table/scripts.txt, and the table's stylesheets, which the chart's
+#' inst/js/table/scripts.txt, and the view's stylesheets, which the chart's
 #' header and gear styles sit under.
 #' @noRd
 table_view_dep <- memoise0(function() {
@@ -43,10 +43,8 @@ table_view_dep <- memoise0(function() {
       version = as.character(utils::packageVersion("blockr.viz")),
       src = system.file(package = "blockr.viz"),
       script = file.path("js", c("spec/table.js", viz_scripts("table"))),
-      stylesheet = file.path("css", c("table-base.css", "table-delta.css",
-                                      "table-chev.css", "table-groups.css",
-                                      "table.css", "table-view.css",
-                                      "table-cards.css"))
+      stylesheet = file.path("css", c("table-structured.css",
+                                      "table-groups.css", "table-view.css"))
     )
   )
 })
