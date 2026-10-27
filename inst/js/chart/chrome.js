@@ -207,6 +207,7 @@
           // marked open until R repaints the sentence (B5).
           this._closeSlot();
           if (key === 'func') this._reconcileMetric();
+          if (key === 'group') NS.model.resortForGroup(this.config, this.columns);
           // A mapping onto a column the rows do not carry yet: R has to send
           // the data again, so hold the last picture until it does.
           if (this._mappingNeedsData()) this._awaitData = true;

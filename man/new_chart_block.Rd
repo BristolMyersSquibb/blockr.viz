@@ -112,13 +112,17 @@ such as a distinct count of a character id by a category.}
 \item{position}{Layout of a colour-split bar: \code{"stack"} (default),
 \code{"dodge"} (side by side) or \code{"fill"} (stacked to 100\%).}
 
-\item{sort_by}{Category order: \code{"value"} (default for bar, pie and
-treemap), \code{"data"} (default for boxplot and pointrange: factor levels,
-else first appearance), \code{"alpha"}, or a column name (the per-category
-minimum of that column). For gantt: \code{"onset"} (default), \code{"alpha"} or a
-column name. Ignored for scatter and line.}
+\item{sort_by}{Category order: \code{"value"}, \code{"data"} (factor levels; a
+date or numeric category in time or numeric order; else first
+appearance), \code{"alpha"}, or a column name (the per-category minimum of
+that column). The default for bar, pie and treemap follows the category
+column: \code{"data"} for a date, date-time, numeric or factor column,
+\code{"value"} for any other. Boxplot and pointrange default to \code{"data"}.
+For gantt: \code{"onset"} (default), \code{"alpha"} or a column name. Ignored for
+scatter and line.}
 
-\item{sort_dir}{\code{"asc"} or \code{"desc"}.}
+\item{sort_dir}{\code{"asc"} or \code{"desc"}. The default is \code{"desc"} for
+\code{sort_by = "value"}, \code{"asc"} otherwise.}
 
 \item{value_labels}{\code{TRUE} writes each bar's value at its end. A stacked bar
 labels the total, a dodged bar every bar, a filled bar each segment's

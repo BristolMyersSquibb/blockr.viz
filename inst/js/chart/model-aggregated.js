@@ -77,7 +77,8 @@
   /**
    * The order of a panel's groups on the category axis. A bridge keeps the
    * data order always (a value sort scrambles the running total); "data" is
-   * factor levels, else first appearance in the rows; "alpha" is factor
+   * factor levels, else time or numeric order for a date or number column,
+   * else first appearance in the rows; "alpha" is factor
    * levels, else by name; "value" is the total across colour cells; any
    * other value names a column whose smallest value per group orders it.
    * @param {any[]} cells the panel's aggregate cells @param {any[]} rows
@@ -102,6 +103,20 @@
         const present = new Set(groups);
         return levels.map(String).filter((/** @type {string} */ l) => present.has(l))
           .concat(groups.filter((g) => !idx.has(g)));
+      }
+      // A date or a number is ordered by itself: time order, small to
+      // large, whatever order the rows came in. Dates travel as ISO strings,
+      // which sort as text. A missing value goes last.
+      if (meta && (meta.temporal || meta.type === 'numeric')) {
+        const key = meta.temporal ? (/** @type {string} */ g) => g
+          : (/** @type {string} */ g) => Number(g);
+        const missing = (/** @type {string} */ g) => g === '' || (!meta.temporal && isNaN(Number(g)));
+        const known = groups.filter((g) => !missing(g));
+        known.sort((a, b) => {
+          const ka = key(a), kb = key(b);
+          return ka < kb ? -1 : ka > kb ? 1 : 0;
+        });
+        return known.concat(groups.filter(missing));
       }
       /** @type {string[]} */
       const seen = [];

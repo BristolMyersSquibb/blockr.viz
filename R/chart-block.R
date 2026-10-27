@@ -61,12 +61,16 @@
 #'   such as a distinct count of a character id by a category.
 #' @param position Layout of a colour-split bar: `"stack"` (default),
 #'   `"dodge"` (side by side) or `"fill"` (stacked to 100%).
-#' @param sort_by Category order: `"value"` (default for bar, pie and
-#'   treemap), `"data"` (default for boxplot and pointrange: factor levels,
-#'   else first appearance), `"alpha"`, or a column name (the per-category
-#'   minimum of that column). For gantt: `"onset"` (default), `"alpha"` or a
-#'   column name. Ignored for scatter and line.
-#' @param sort_dir `"asc"` or `"desc"`.
+#' @param sort_by Category order: `"value"`, `"data"` (factor levels; a
+#'   date or numeric category in time or numeric order; else first
+#'   appearance), `"alpha"`, or a column name (the per-category minimum of
+#'   that column). The default for bar, pie and treemap follows the category
+#'   column: `"data"` for a date, date-time, numeric or factor column,
+#'   `"value"` for any other. Boxplot and pointrange default to `"data"`.
+#'   For gantt: `"onset"` (default), `"alpha"` or a column name. Ignored for
+#'   scatter and line.
+#' @param sort_dir `"asc"` or `"desc"`. The default is `"desc"` for
+#'   `sort_by = "value"`, `"asc"` otherwise.
 #' @param value_labels `TRUE` writes each bar's value at its end. A stacked bar
 #'   labels the total, a dodged bar every bar, a filled bar each segment's
 #'   share. Labels that would overlap are left out. Bar and waterfall only.

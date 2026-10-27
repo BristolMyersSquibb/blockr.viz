@@ -61,6 +61,15 @@
   x grid and no y axis line.
 * With one line per entity (`series`, a trajectory per subject), hover still
   picks the nearest line, without the gradient area and the ring of dots.
+* A bar, pie or treemap without `sort_by` orders its categories by the
+  category column: a date, number or factor keeps its own order (time, size,
+  levels), and a text column sorts by value, largest first. Before, every
+  category sorted by value, so quarters and weeks came out of order. When
+  the gear switches the category, a sort still at one of these defaults
+  follows the new column. `sort_by = "data"` puts a date or number in time
+  or numeric order instead of first appearance, and without `sort_dir` it
+  runs ascending (it ran descending before). A chart whose state sets both
+  `sort_by` and `sort_dir` keeps its order.
 * `connect` defaults to `"straight"` for new charts. A saved chart keeps the
   value it was saved with, so existing boards stay smoothed.
 * `new_chart_block()` has new argument names, chosen to stay stable on CRAN
