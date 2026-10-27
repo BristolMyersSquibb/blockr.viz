@@ -505,6 +505,20 @@
         "selected": "Below"
        }
       ]
+     },
+     {
+      "role": "y_scale",
+      "label": "Y scale",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Linear",
+         "Log"
+        ],
+        "selected": "Linear"
+       }
+      ]
      }
     ]
    },

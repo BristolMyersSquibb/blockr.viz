@@ -61,12 +61,16 @@
 #'   such as a distinct count of a character id by a category.
 #' @param position Layout of a colour-split bar: `"stack"` (default),
 #'   `"dodge"` (side by side) or `"fill"` (stacked to 100%).
-#' @param sort_by Category order: `"value"` (default for bar, pie and
-#'   treemap), `"data"` (default for boxplot and pointrange: factor levels,
-#'   else first appearance), `"alpha"`, or a column name (the per-category
-#'   minimum of that column). For gantt: `"onset"` (default), `"alpha"` or a
-#'   column name. Ignored for scatter and line.
-#' @param sort_dir `"asc"` or `"desc"`.
+#' @param sort_by Category order: `"value"`, `"data"` (factor levels; a
+#'   date or numeric category in time or numeric order; else first
+#'   appearance), `"alpha"`, or a column name (the per-category minimum of
+#'   that column). The default for bar, pie and treemap follows the category
+#'   column: `"data"` for a date, date-time, numeric or factor column,
+#'   `"value"` for any other. Boxplot and pointrange default to `"data"`.
+#'   For gantt: `"onset"` (default), `"alpha"` or a column name. Ignored for
+#'   scatter and line.
+#' @param sort_dir `"asc"` or `"desc"`. The default is `"desc"` for
+#'   `sort_by = "value"`, `"asc"` otherwise.
 #' @param value_labels `TRUE` writes each bar's value at its end. A stacked bar
 #'   labels the total, a dodged bar every bar, a filled bar each segment's
 #'   share. Labels that would overlap are left out. Bar and waterfall only.
@@ -80,6 +84,13 @@
 #'   `unit` is free text after the number (`"CHF"`); the axis title carries
 #'   it once.
 #'   On scatter, line and area charts it applies to y.
+#' @param y_scale,x_scale `"linear"` (default) or `"log"`, a base-10 axis.
+#'   `y_scale` applies to scatter, line and band charts, `x_scale` to a
+#'   scatter; other types ignore them, and so does a date or category axis.
+#'   On a log axis values at or below zero are not drawn, and a note under
+#'   the chart counts them. The low end of an interval (`ymin`, a band)
+#'   that falls at or below zero is cut at the bottom of the axis. A
+#'   smoother is fitted on the scale that is drawn.
 #' @param tooltip Extra columns shown in each mark's tooltip.
 #' @param drill Column a click filters downstream on, `"auto"` for the type's
 #'   natural target, or `NULL` (default) for no filtering.
@@ -89,9 +100,14 @@
 #'   `"monotone"` (smoothed without overshoot), `"step-start"`,
 #'   `"step-middle"` or `"step-end"`. A saved chart keeps the value it was
 #'   saved with.
-#' @param y_lines,x_lines Numbers at which dashed guide lines are drawn.
-#'   `y_lines` run across the value axis (y on a scatter or line, the value
-#'   axis of a bar or boxplot either way round); `x_lines` across a numeric x.
+#' @param y_lines,x_lines Positions at which dashed guide lines are drawn. A
+#'   name labels its line: `x_lines = c(Listed = "2026-10-21")`. `y_lines`
+#'   are numbers across the value axis (y on a scatter or line, the value
+#'   axis of a bar or boxplot either way round). `x_lines` run across x on a
+#'   scatter, line or area, and across the category axis of a bar either way
+#'   round: numbers, dates or date-times, or category values, matching x, as
+#'   in `x_ranges`. On a bar over dates, a date between two bars marks the bar
+#'   whose period holds it.
 #' @param ymin,ymax Columns holding the lower and upper end of an interval per
 #'   row. On a line they draw a shaded band, on a scatter error bars. Several
 #'   columns draw several intervals, the first the outermost: `ymin =
@@ -104,7 +120,8 @@
 #'   the last observed point on. Line and area.
 #' @param x_ranges Named stretches of x shaded behind the marks, a named list
 #'   of `c(from, to)`: `list(Recession = c("2008-01-01", "2009-06-30"))`.
-#'   Dates, date-times or numbers, matching x.
+#'   Dates, date-times, numbers or category values, matching x. On a bar they
+#'   shade whole bars, along the category axis.
 #' @param legend Where the colour legend goes: `"bottom"` (default, under the
 #'   plot), `"top"` (between the subtitle and the plot), `"marks"` (the names
 #'   written on the marks: at a line's or an area's end, beside the last bar
@@ -112,6 +129,16 @@
 #'   `"none"`. Where a type has no place for names on its marks (dodged bars,
 #'   a histogram, a boxplot), `"marks"` keeps the legend under the plot. The
 #'   legend is titled only when the colour column has a label.
+#' @param highlight One column and some of its values, as
+#'   `list(country = "Switzerland")`. Marks whose rows hold one of the values
+#'   keep their colour and every other mark is drawn grey behind them. Without
+#'   `color` the highlighted marks take the chart's single colour; with it,
+#'   they keep their colour level, and the palette is spread over the
+#'   highlighted levels only. Highlighted marks are named: in semibold on a
+#'   bar's axis, beside a point (when its value picks out one or two points),
+#'   at a line's end. The legend lists only the highlighted levels. A title
+#'   can say it with `{highlight}`: `subtitle = "...[, {highlight}
+#'   highlighted]"`. Bar, scatter, line and area.
 #' @param smoother Trend line on a scatter: `"none"` (default), `"lm"` or
 #'   `"loess"`, fit per colour or series group and per facet panel.
 #' @param identity_line `TRUE` draws a dashed y = x line on a scatter.
@@ -218,6 +245,8 @@ new_chart_block <- function(
     value_labels = FALSE,
     format = "number",
     unit = "",
+    y_scale = "linear",
+    x_scale = "linear",
     tooltip = NULL,
     drill = NULL,
     line_width = 1,
@@ -230,6 +259,7 @@ new_chart_block <- function(
     linetype = NULL,
     x_ranges = NULL,
     legend = "bottom",
+    highlight = NULL,
     smoother = "none",
     identity_line = FALSE,
     box_points = "none",
@@ -281,6 +311,11 @@ new_chart_block <- function(
   if ("value" %in% call_names && !"value_labels" %in% call_names) {
     dots$value <- value_labels
     value_labels <- FALSE
+  }
+  # The same for the old `hi =` (now `ymax`), which lands in `highlight`.
+  if ("hi" %in% call_names && !"highlight" %in% call_names) {
+    dots$hi <- highlight
+    highlight <- NULL
   }
   old <- intersect(names(dots), CHART_LEGACY_ARGS)
   if (length(old)) {
@@ -360,6 +395,7 @@ new_chart_block <- function(
   }
   linetype <- chr_state(linetype)
   x_ranges <- chart_ranges_state(x_ranges)
+  highlight <- chart_highlight_state(highlight)
   legend <- chr_state(legend) %||% "bottom"
   if (!legend %in% CHART_LEGENDS) {
     stop("new_chart_block(): `legend` must be one of ",
@@ -396,7 +432,7 @@ new_chart_block <- function(
   # erroring, because this value also arrives from MCP and from saved state.
   facet_cols <- facet_cols_state(facet_cols)
   y_lines <- num_vec_state(y_lines)
-  x_lines <- num_vec_state(x_lines)
+  x_lines <- x_vec_state(x_lines)
   # Logicals. The gear's segmented controls send "on"/"off", and boards
   # saved before these were logicals stored that string.
   identity_line <- bool_state(identity_line)
@@ -416,7 +452,9 @@ new_chart_block <- function(
          "whole number of decimals from 0 to 6.", call. = FALSE)
   }
   unit <- as.character(unlist(unit %||% ""))[1L] %|NA|% ""
-  bins <- suppressWarnings(as.numeric(unlist(bins))[1L])
+  y_scale <- chart_scale_state(y_scale, "y_scale")
+  x_scale <- chart_scale_state(x_scale, "x_scale")
+  bins <-suppressWarnings(as.numeric(unlist(bins))[1L])
   if (!isTRUE(bins >= 1)) bins <- 30
   # The module server below takes `id` (its own namespace id), which would
   # shadow the id column.
@@ -741,12 +779,21 @@ new_chart_block <- function(
         r_linetype <- shiny::reactiveVal(linetype)
         r_x_ranges <- shiny::reactiveVal(x_ranges)
         r_legend <- shiny::reactiveVal(legend)
+        r_highlight <- shiny::reactiveVal(highlight)
+        # The column the gear picked, before any value of it is: the browser
+        # needs its values to offer them. The saved state is `r_highlight`.
+        r_highlight_by <- shiny::reactiveVal(names(highlight))
+        hl_by <- function() {
+          chart_highlight_json(r_highlight())$by %||% r_highlight_by()
+        }
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_bins <- shiny::reactiveVal(bins)
         # Number format of the values (axis, tooltips, labels), as on the
         # tile block.
         r_format <- shiny::reactiveVal(format)
         r_unit <- shiny::reactiveVal(unit)
+        r_y_scale <- shiny::reactiveVal(y_scale)
+        r_x_scale <- shiny::reactiveVal(x_scale)
         # Chart text. The public value is the template as written; the
         # internal one has its `{@arg}` slots renamed to what the resolver
         # and the gear know.
@@ -816,7 +863,7 @@ new_chart_block <- function(
             r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi(),
-            r_linetype(),
+            r_linetype(), hl_by(),
             # Count-label id column: not a mapped aesthetic, but the browser
             # needs its values to count distinct ids per label group.
             r_count_col(),
@@ -1005,9 +1052,11 @@ new_chart_block <- function(
           if (!identical(r_chart_type(), "scatter")) return(NULL)
           d <- plain_data()
           if (!is.data.frame(d)) return(NULL)
+          logs <- chart_log_axes("scatter", r_y_scale(), r_x_scale())
           args <- list(
             smoother = sm, x_col = r_x(), y_col = r_y(), color_by = r_color(),
-            series_by = r_series(), facet_by = col_in(d, r_facet())
+            series_by = r_series(), facet_by = col_in(d, r_facet()),
+            x_log = logs$x, y_log = logs$y
           )
           cols <- intersect(as.character(unlist(args[c(
             "x_col", "y_col", "color_by", "series_by", "facet_by"
@@ -1063,6 +1112,8 @@ new_chart_block <- function(
         r_titles_resolved <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
+          # What `{highlight}` prints, read off the frame like `{filters}`.
+          attr(d, "blockr_highlight") <- chart_highlight_text(r_highlight())
           auto <- r_data_titles()
           a <- title_args()
           # The subtitle is the block's sentence, so its pieces are read
@@ -1209,6 +1260,7 @@ new_chart_block <- function(
               # A number of decimals travels as text, the gear's value.
               bins = r_bins(), format = as.character(r_format()),
               unit = r_unit(),
+              y_scale = r_y_scale(), x_scale = r_x_scale(),
               xend = r_xend(), series = present_role(r_series()),
               label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -1337,6 +1389,9 @@ new_chart_block <- function(
               linetype = present_role(r_linetype()),
               x_ranges = chart_ranges_json(r_x_ranges()),
               legend = r_legend(),
+              # The column and its values apart, as the gear edits them.
+              highlight_by = hl_by(),
+              highlight = chart_highlight_json(r_highlight())$values,
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
@@ -1580,6 +1635,12 @@ new_chart_block <- function(
               if (!is.null(v)) upd(r_format, v)
             }
             if (!is.null(msg$unit)) upd(r_unit, trimws(as.character(msg$unit)))
+            if (!is.null(msg$y_scale)) {
+              upd(r_y_scale, chart_scale_msg(msg$y_scale, r_y_scale()))
+            }
+            if (!is.null(msg$x_scale)) {
+              upd(r_x_scale, chart_scale_msg(msg$x_scale, r_x_scale()))
+            }
             if (!is.null(msg$bins)) {
               v <- suppressWarnings(as.numeric(msg$bins))
               if (isTRUE(v >= 1)) upd(r_bins, v)
@@ -1595,19 +1656,25 @@ new_chart_block <- function(
             if (!is.null(msg$identity_line)) {
               upd(r_identity_line, bool_state(msg$identity_line))
             }
-            # Helper lines: the numlist control sends a comma-separated string
-            # ("2, 5"); num_vec_state parses it and drops non-numeric junk. ""
+            # Helper lines: the gear sends text ("Target: 4; 6"); the state
+            # helpers parse it, y_lines dropping non-numeric junk. ""
             # is a real value here (clearing every line), so it must reach the
             # slot as NULL rather than being skipped -- hence no nn() guard.
             if (!is.null(msg$value_lines)) {
               upd(r_value_lines, num_vec_state(msg$value_lines))
             }
             if (!is.null(msg$x_lines)) {
-              upd(r_x_lines, num_vec_state(msg$x_lines))
+              upd(r_x_lines, x_vec_state(msg$x_lines))
             }
             # Shaded ranges as [{name, from, to}]; [] clears them.
             if (!is.null(msg$x_ranges)) {
               upd(r_x_ranges, chart_ranges_state(msg$x_ranges))
+            }
+            # The column and its values; "" and [] clear them.
+            if (!is.null(msg$highlight_by) || !is.null(msg$highlight)) {
+              upd(r_highlight_by, nn(msg$highlight_by))
+              upd(r_highlight,
+                  chart_highlight_msg(msg$highlight_by, msg$highlight))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$summary))    upd(r_summary, msg$summary)
@@ -2173,6 +2240,8 @@ new_chart_block <- function(
             value_labels = r_value_labels,
             format = r_format,
             unit = r_unit,
+            y_scale = r_y_scale,
+            x_scale = r_x_scale,
             tooltip = r_tt_fields,
             drill = r_drill,
             line_width = r_line_width_mult,
@@ -2185,6 +2254,7 @@ new_chart_block <- function(
             linetype = r_linetype,
             x_ranges = r_x_ranges,
             legend = r_legend,
+            highlight = r_highlight,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2259,7 +2329,7 @@ new_chart_block <- function(
     allow_empty_state = c("x", "y", "color", "facet", "series", "xend",
       "label", "orientation", "sort_by", "sort_dir", "tooltip", "drill",
       "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
-      "smoother", "identity_line", "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
+      "highlight", "smoother", "identity_line", "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
       "waterfall_totals", "facet_cols", "title", "subtitle", "caption",
       "drill_target", "drill_table", "script", "script_values",
       "selection", "unit"),
@@ -2268,10 +2338,10 @@ new_chart_block <- function(
     # argument spec, so the assistant never sees it.
     external_ctrl = c("type", "x", "y", "func", "color", "facet", "series",
       "xend", "label", "orientation", "position", "sort_by", "sort_dir",
-      "value_labels", "format", "unit", "tooltip", "drill", "line_width",
-      "point_size",
+      "value_labels", "format", "unit", "y_scale", "x_scale", "tooltip",
+      "drill", "line_width", "point_size",
       "connect", "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
-      "legend", "smoother",
+      "legend", "highlight", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",
       "ref_lo", "ref_hi", "waterfall_totals", "bins", "show_n", "missing",
@@ -2329,6 +2399,9 @@ new_chart_block <- function(
 #'   most 0.3 where the exact fit's own error was 1.8; keeping every k-th
 #'   point instead moved it by 0.9. No randomness, so the same data draws the
 #'   same line. A group at or below the limit is fit exactly as before.
+#' @param x_log,y_log `TRUE` fits on log10 of that axis, as a chart with a
+#'   log axis draws it, so a straight fit stays straight. Rows at or below
+#'   zero on a log axis are left out; the line comes back in raw units.
 #' @return A named list or `NULL`.
 #' @examples
 #' compute_smoother_series(
@@ -2345,7 +2418,8 @@ new_chart_block <- function(
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,
                                      color_by, series_by, facet_by = NULL,
-                                     loess_max = 5000L) {
+                                     loess_max = 5000L, x_log = FALSE,
+                                     y_log = FALSE) {
   if (is.null(smoother) || identical(smoother, "none")) return(NULL)
   if (is.null(data) || nrow(data) == 0) return(NULL)
   if (is.null(x_col) || is.null(y_col)) return(NULL)
@@ -2358,10 +2432,15 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   data <- data[intersect(c(x_col, y_col, split_col, facet_by), names(data))]
 
   fit_one <- function(d) {
-    d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
+    keep <- !is.na(d[[x_col]]) & !is.na(d[[y_col]])
+    if (isTRUE(x_log)) keep <- keep & d[[x_col]] > 0
+    if (isTRUE(y_log)) keep <- keep & d[[y_col]] > 0
+    d <- d[keep, , drop = FALSE]
     if (nrow(d) < 3L) return(NULL)
     xv <- d[[x_col]]
     yv <- d[[y_col]]
+    if (isTRUE(x_log)) xv <- log10(xv)
+    if (isTRUE(y_log)) yv <- log10(yv)
     if (length(unique(xv)) < 2L) return(NULL)
     rng <- range(xv, na.rm = TRUE)
     xs <- seq(rng[1L], rng[2L], length.out = 100L)
@@ -2392,6 +2471,8 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
       }
     }, error = function(e) NULL)
     if (is.null(ys) || all(is.na(ys))) return(NULL)
+    if (isTRUE(x_log)) xs <- 10^xs
+    if (isTRUE(y_log)) ys <- 10^ys
     list(x = as.list(xs), y = as.list(unname(ys)))
   }
 

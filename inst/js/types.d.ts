@@ -80,8 +80,8 @@ interface VizDrilldownRole {
   hint?: string;
   hintBy?: Record<string, string>;
   /** A text role whose value is not a string: shown as, and read from, one line. */
-  toText?: (value: any) => string;
-  fromText?: (text: string) => any;
+  toText?: (value: any, cfg?: any) => string;
+  fromText?: (text: string, cfg?: any) => any;
   // Roles carry many host-specific, dynamically-shaped fields (colTypeBy,
   // optionsBy, options, pairedWith, maxUnique, placeholder, label, ...).
   [field: string]: any;

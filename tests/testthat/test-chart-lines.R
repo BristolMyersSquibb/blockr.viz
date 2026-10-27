@@ -115,6 +115,13 @@ test_that("a name in y_lines / x_lines labels its line", {
   expect_length(cfg$x_line_names, 0L)
 })
 
+test_that("a date in x_lines reaches the browser as ISO text with its name", {
+  cfg <- line_cfg(new_chart_block(type = "line", x = "d", y = "v",
+                                  x_lines = c(Listed = as.Date("2024-01-05"))))
+  expect_identical(unlist(cfg$x_lines), "2024-01-05")
+  expect_identical(unlist(cfg$x_line_names), "Listed")
+})
+
 test_that("the gear writes and clears x_ranges", {
   blk <- new_chart_block(
     type = "line", x = "d", y = "v",

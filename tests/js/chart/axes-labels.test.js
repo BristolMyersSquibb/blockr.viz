@@ -59,3 +59,26 @@ test('value lines: a markLine on the first series, the axis widened past it', ()
   A.addValueLines([{}], none, false, false, [], ink);
   assert.strictEqual(none.max, undefined);
 });
+
+test('catOf: a category by name, a date by the period that holds it', () => {
+  const weeks = ['2026-10-05', '2026-10-12', '2026-10-19'];
+  assert.strictEqual(A.catOf('2026-10-12', weeks), '2026-10-12');
+  // A Wednesday marks its week's bar; the last week runs as long as the one before.
+  assert.strictEqual(A.catOf('2026-10-21', weeks), '2026-10-19');
+  assert.strictEqual(A.catOf('2026-10-25', weeks), '2026-10-19');
+  assert.strictEqual(A.catOf('2026-10-26', weeks), null);
+  assert.strictEqual(A.catOf('2026-10-01', weeks), null);
+  // A range end past the axis takes that end.
+  assert.strictEqual(A.catOf('2026-10-01', weeks, true), '2026-10-05');
+  assert.strictEqual(A.catOf('2026-12-01', weeks, true), '2026-10-19');
+  // Newest first reads the same periods.
+  assert.strictEqual(A.catOf('2026-10-14', ['2026-10-19', '2026-10-12', '2026-10-05']), '2026-10-12');
+  // Dates out of order (bars sorted by value) have no periods: names only.
+  const mixed = ['2026-10-12', '2026-10-19', '2026-10-05'];
+  assert.strictEqual(A.catOf('2026-10-21', mixed), null);
+  assert.strictEqual(A.catOf('2026-10-19', mixed), '2026-10-19');
+  // Labels match as written; a number matches its category.
+  assert.strictEqual(A.catOf('W43 19 Oct', ['W42 12 Oct', 'W43 19 Oct']), 'W43 19 Oct');
+  assert.strictEqual(A.catOf('W43', ['W42 12 Oct', 'W43 19 Oct']), null);
+  assert.strictEqual(A.catOf(2024, ['2023', '2024']), '2024');
+});

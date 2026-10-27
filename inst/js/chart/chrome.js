@@ -208,6 +208,9 @@
           // marked open until R repaints the sentence (B5).
           this._closeSlot();
           if (key === 'func') this._reconcileMetric();
+          if (key === 'group') NS.model.resortForGroup(this.config, this.columns);
+          // Values of one column are no values of another.
+          if (key === 'highlight_by') this.config.highlight = [];
           // A mapping onto a column the rows do not carry yet: R has to send
           // the data again, so hold the last picture until it does.
           if (this._mappingNeedsData()) this._awaitData = true;
@@ -251,7 +254,7 @@
       const rows = this.data;
       if (!rows || !rows.length || !rows[0]) return false;
       const have = rows[0];
-      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet', 'label']
+      return ['group', 'value', 'x', 'y', 'xend', 'series', 'color', 'facet', 'label', 'highlight_by']
         .some((k) => {
           const v = this.config[k];
           return typeof v === 'string' && v && v !== '.count' && !(v in have);
@@ -344,8 +347,9 @@
         connect: c.connect || 'straight',
         identity_line: c.identity_line || 'off',
         // "" clears every line, so these are always sent.
-        value_lines: c.value_lines == null ? '' : String(c.value_lines),
-        x_lines: c.x_lines == null ? '' : String(c.x_lines),
+        // As text with the names ("Target: 4; 6"); R parses it.
+        value_lines: NS.linesText(c.value_lines, c.value_line_names),
+        x_lines: NS.linesText(c.x_lines, c.x_line_names),
         // [] clears every range, so this is always sent.
         x_ranges: Array.isArray(c.x_ranges) ? c.x_ranges : [],
         box_points: c.box_points || 'none',
@@ -359,6 +363,8 @@
         linetype: c.linetype || '',
         legend: NS.legendSetting(c),
         unit: c.unit ?? '',
+        y_scale: c.y_scale === 'log' ? 'log' : 'linear',
+        x_scale: c.x_scale === 'log' ? 'log' : 'linear',
         band_id: c.band_id || '',
         ref_hi: c.ref_hi || '',
         ref_lo: c.ref_lo || '',
@@ -370,6 +376,10 @@
         lo: c.lo || '',
         hi: c.hi || '',
         tt_fields: Array.isArray(c.tt_fields) ? c.tt_fields : [],
+        // "" and [] clear the highlight, so both are always sent.
+        highlight_by: c.highlight_by || '',
+        highlight: Array.isArray(c.highlight) ? c.highlight.map(String)
+          : (NS.hasVal(c.highlight) ? [String(c.highlight)] : []),
         // null is auto, "" is none.
         title: c.title ?? null,
         subtitle: c.subtitle ?? null,

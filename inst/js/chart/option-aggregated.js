@@ -24,7 +24,8 @@
   const OPTION_FIELDS = ['chart_type', 'bar_mode', 'orientation', 'value_labels', 'value_lines',
     'pct_of', 'waterfall_totals', 'connect_centers', 'drill', 'palette', 'scales', 'value',
     'func', 'count_on', 'summary', 'whiskers', 'box_points', 'group', 'color', 'facet',
-    'format', 'unit', 'value_line_names', 'title_resolved', 'legend', 'direct_labels'];
+    'format', 'unit', 'value_line_names', 'title_resolved', 'legend', 'direct_labels',
+    'x_lines', 'x_line_names', 'x_ranges'];
 
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
@@ -115,6 +116,13 @@
     if (m.distribution) levels = m.levels;
     else if (ct !== 'pie' && ct !== 'treemap' && !m.cumulative) levels = m.colors;
     if (!levels.length) return null;
+    // A highlight lists the levels it lights, in the colours the bars took.
+    if (m.hlColors && !m.distribution) {
+      const lit = NS.litLevelColors(levels, m.hlColors, m.colorScale, palette);
+      const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
+        ({ name, color: lit[i] })).filter((/** @type {any} */ it) => it.color);
+      return items.length ? { col: cfg.color, items } : null;
+    }
     const colors = NS.levelColors(levels, m.colorScale, palette);
     return { col: cfg.color,
              items: levels.map((/** @type {string} */ name, /** @type {number} */ i) =>

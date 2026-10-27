@@ -1,5 +1,21 @@
 # blockr.viz 0.3.0
 
+* `y_scale = "log"` draws a base-10 y axis on a scatter, line or band, and
+  `x_scale = "log"` the x axis of a scatter. Ticks run 1-2-5 up to three
+  decades and at powers of ten beyond. Values and guide lines at or below
+  zero are not drawn, and the footer counts them; an interval's low end
+  there is cut at the bottom of the axis. A smoother is fitted on the log
+  scale. The gear offers "Y scale" and "X scale" next to Unit.
+* `highlight` makes a few marks of a bar, scatter, line or area stand out:
+  `highlight = list(country = "Switzerland")` names one column and some of
+  its values. Marks holding one of the values keep their colour, every other
+  mark is grey and drawn behind them. With `color` the highlighted marks keep
+  their colour level, the palette is spread over the highlighted levels
+  only, and the legend lists only those. Highlighted marks are named: in
+  semibold on a bar's axis, beside a point, at a line's end. A title says it
+  with `{highlight}`: `"...[, {highlight} highlighted]"`. The gear offers it
+  under "Add mapping" as a column and a value picker. A drill selection
+  still dims by opacity on top.
 * `type = "histogram"` cuts `x` into about `bins` bins (default 30) at
   readable breaks and draws them as touching bars, empty bins included. A
   click on a bin filters `x` to its range.
@@ -15,6 +31,14 @@
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
   "2009-06-30"))`). The gear edits them as one line, "Shaded":
   `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.
+* `x_lines` take dates and category values as well as numbers, as
+  `x_ranges` does: `x_lines = c(Listed = "2026-10-21")`. A `Date` is placed
+  on a date axis; before, it landed in 1970 and a date string was dropped.
+  On a bar, `x_lines` and `x_ranges` mark the category axis either way
+  round: a value names its bar, and on bars over dates a date marks the bar
+  whose period holds it. The gear writes names the way the shaded ranges
+  do, `Listed: 2026-10-21; 2026-11-02`, for `y_lines` too, so a name set in
+  code survives an edit.
 * `label` on a scatter, line or area writes the column's value beside each
   point that has one, and the gear offers it under "Add mapping". On a bar,
   pie or treemap it writes the value on each bar, slice or tile whose rows
@@ -61,6 +85,15 @@
   x grid and no y axis line.
 * With one line per entity (`series`, a trajectory per subject), hover still
   picks the nearest line, without the gradient area and the ring of dots.
+* A bar, pie or treemap without `sort_by` orders its categories by the
+  category column: a date, number or factor keeps its own order (time, size,
+  levels), and a text column sorts by value, largest first. Before, every
+  category sorted by value, so quarters and weeks came out of order. When
+  the gear switches the category, a sort still at one of these defaults
+  follows the new column. `sort_by = "data"` puts a date or number in time
+  or numeric order instead of first appearance, and without `sort_dir` it
+  runs ascending (it ran descending before). A chart whose state sets both
+  `sort_by` and `sort_dir` keeps its order.
 * `connect` defaults to `"straight"` for new charts. A saved chart keeps the
   value it was saved with, so existing boards stay smoothed.
 * `new_chart_block()` has new argument names, chosen to stay stable on CRAN

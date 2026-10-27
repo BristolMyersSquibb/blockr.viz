@@ -16,6 +16,10 @@
 #                     `{label(value)}` follows the pick.
 #   {n}               the number of rows.
 #   {n_distinct(col)} the number of distinct values of `col`.
+#   {highlight}       the values a chart highlights ("Switzerland and
+#                     Germany"), "" when it highlights nothing. Read off the
+#                     frame's `blockr_highlight` attribute, which the chart
+#                     block sets; elsewhere it is a column name like any other.
 #   {filters}         the filter trail: what the filters upstream of this
 #                     block actually applied, in the order they applied it
 #                     ("SEX = F; TRTEMFL"). Written onto the data by the
@@ -271,6 +275,9 @@ resolve_title_token <- function(token, data, args = list()) {
   }
 
   if (identical(token, "n")) return(plain(format(nrow(data), big.mark = "")))
+
+  hl <- attr(data, "blockr_highlight", exact = TRUE)
+  if (identical(token, "highlight") && !is.null(hl)) return(plain(hl))
 
   if (identical(token, "filters")) {
     # Read straight off the frame rather than threaded in: every caller hands

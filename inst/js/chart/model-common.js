@@ -34,6 +34,47 @@
   };
 
   /**
+   * The default order of a bar, pie or treemap category, from its column:
+   * a date, number or factor keeps its own order (time, size, levels), any
+   * other column sorts by value, largest first.
+   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
+   * @returns {{ sort_by: string, sort_dir: string }}
+   */
+  const naturalSort = (cfg, columns) => {
+    const meta = /** @type {any} */ ((columns || []).find((c) => c.name === cfg.group));
+    const ordered = !!meta && (meta.type === 'numeric' || !!meta.temporal ||
+      (Array.isArray(meta.levels) && meta.levels.length > 0));
+    return ordered ? { sort_by: 'data', sort_dir: 'asc' } : { sort_by: 'value', sort_dir: 'desc' };
+  };
+
+  /**
+   * Fills an unset sort of an aggregated chart. An unset direction follows
+   * the sort: largest first by value, ascending otherwise, so a `sort_by =
+   * "data"` without a direction does not draw the data backwards.
+   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
+   */
+  const fillSort = (cfg, columns) => {
+    const has = NS.hasVal;
+    if (!has(cfg.sort_by)) cfg.sort_by = naturalSort(cfg, columns).sort_by;
+    if (!has(cfg.sort_dir)) cfg.sort_dir = cfg.sort_by === 'value' ? 'desc' : 'asc';
+  };
+
+  /**
+   * The gear picked a new category. A sort that is still the default of
+   * one column type (by value, descending; data order, ascending) follows
+   * the new column; any other sort is the builder's and stays. Mutates `cfg`.
+   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
+   */
+  const resortForGroup = (cfg, columns) => {
+    if (NS.familyOf(cfg.chart_type) !== 'aggregated') return;
+    if (NS.DISTRIBUTION_TYPES.includes(cfg.chart_type)) return;
+    const isDefault = (cfg.sort_by === 'value' && cfg.sort_dir === 'desc') ||
+      (cfg.sort_by === 'data' && cfg.sort_dir === 'asc');
+    if (!isDefault) return;
+    Object.assign(cfg, naturalSort(cfg, columns));
+  };
+
+  /**
    * The defaults a config from R gets before the first draw: the mapping
    * columns a family cannot draw without, and its sort. Mutates `cfg`.
    * @param {Record<string, any>} cfg @param {VizColumn[]} columns
@@ -50,8 +91,7 @@
         if (!cfg.func) cfg.func = 'count';
         if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
       }
-      if (!cfg.sort_by) cfg.sort_by = 'value';
-      if (!cfg.sort_dir) cfg.sort_dir = 'desc';
+      fillSort(cfg, columns);
     } else if (fam === 'timeline') {
       if (!cfg.x && columns.length > 0) {
         const num = columns.find((c) => c.type === 'numeric');
@@ -95,8 +135,7 @@
         if (!cfg.func) cfg.func = 'count';
         if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
       }
-      if (!has(cfg.sort_by)) cfg.sort_by = 'value';
-      if (!has(cfg.sort_dir)) cfg.sort_dir = 'desc';
+      fillSort(cfg, cols);
       if (!has(cfg.orientation)) cfg.orientation = 'horizontal';
       if (!has(cfg.bar_mode)) cfg.bar_mode = 'stacked';
     } else if (fam === 'timeline') {
@@ -201,6 +240,7 @@
     return m;
   };
 
-  Object.assign(model, { ensureDistributionMetric, defaults, familyDefaults, gate, emptyState,
+  Object.assign(model, { ensureDistributionMetric, naturalSort, resortForGroup, defaults,
+                         familyDefaults, gate, emptyState,
                          facetLabels, MAX_COLOR_LEVELS });
 })();

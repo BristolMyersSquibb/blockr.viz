@@ -149,6 +149,28 @@ chart_arguments <- function() {
       example = "CHF",
       type = arg_string()
     ),
+    y_scale = new_arg_spec(
+      paste0(
+        "\"linear\" (default) or \"log\", a base-10 y axis (scatter, line, ",
+        "band). Use log when values span orders of magnitude (GDP levels ",
+        "across countries, a long growth series, lab values): equal slopes ",
+        "then mean equal growth rates. Values at or below zero are not ",
+        "drawn and a note counts them; do not use log for data that is ",
+        "mostly zero or negative (growth rates, differences). Say it in the ",
+        "subtitle (\"..., log scale\")."
+      ),
+      example = "log",
+      type = arg_enum(CHART_SCALES)
+    ),
+    x_scale = new_arg_spec(
+      paste0(
+        "\"linear\" (default) or \"log\", a base-10 x axis on a scatter, ",
+        "e.g. income on x against life expectancy. Values at or below zero ",
+        "are not drawn. A smoother is fitted on the log scale."
+      ),
+      example = "log",
+      type = arg_enum(CHART_SCALES)
+    ),
     tooltip = new_arg_spec(
       paste0(
         "Extra column names appended to each mark's hover tooltip, beyond ",
@@ -328,9 +350,10 @@ chart_arguments <- function() {
     ),
     x_ranges = new_arg_spec(
       paste0(
-        "Named stretches of x shaded behind the marks (scatter/line/area), ",
+        "Named stretches of x shaded behind the marks (scatter/line/area/bar), ",
         "as an object of name -> [from, to], e.g. {\"Recession\": ",
-        "[\"2008-01-01\", \"2009-06-30\"]}. Dates or numbers, matching x."
+        "[\"2008-01-01\", \"2009-06-30\"]}. Dates, numbers or category ",
+        "values, matching x. On a bar they shade whole bars."
       ),
       example = NULL
     ),
@@ -344,6 +367,20 @@ chart_arguments <- function() {
       ),
       example = "marks",
       type = arg_enum(CHART_LEGENDS)
+    ),
+    highlight = new_arg_spec(
+      paste0(
+        "Make a few marks stand out (bar, scatter, line, area): an object ",
+        "of ONE column -> the values to highlight, e.g. {\"country\": ",
+        "[\"Switzerland\"]}. Every other mark turns grey; highlighted marks ",
+        "keep their colour (the chart's single colour without `color`, their ",
+        "colour level with it) and are named on the chart. Use this instead ",
+        "of adding a helper column and colouring by it. The column need not ",
+        "be mapped (a scatter of countries can highlight by country or ",
+        "region). Say it in the subtitle with {highlight}: \"...[, ",
+        "{highlight} highlighted]\"; no caption about colours is needed."
+      ),
+      example = NULL
     ),
     ref_lo = new_arg_spec(
       paste0(
@@ -449,12 +486,15 @@ chart_arguments <- function() {
     ),
     x_lines = new_arg_spec(
       paste0(
-        "Helper lines: each number draws one dashed VERTICAL guide line at ",
-        "that x position. Plain numbers, never column names. Empty = no ",
-        "lines. Scatter/line charts only."
+        "Helper lines across x: each value draws one dashed guide line at ",
+        "that x position, a number, a date (\"2026-10-21\") or a category ",
+        "value, matching x. On a bar they cross the category axis, either ",
+        "way round; on a bar over dates a date marks the bar whose period ",
+        "holds it. An object {\"Listed\": \"2026-10-21\"} labels the line. ",
+        "Values, never column names. Empty = no lines. Scatter, line, area ",
+        "and bar."
       ),
-      example = NULL,
-      type = arg_array(arg_number())
+      example = NULL
     ),
     line_width = new_arg_spec(
       paste0(
@@ -474,19 +514,25 @@ chart_arguments <- function() {
     ),
     sort_by = new_arg_spec(
       paste0(
-        "Category order for aggregated charts: \"value\" (default for ",
-        "bar/pie/treemap), \"data\" (default for boxplot/pointrange: the ",
-        "data's own order, factor levels when present, else first ",
-        "appearance, so visits and dose groups keep their order), ",
-        "\"alpha\", or a column name (per-category minimum of that column, ",
-        "e.g. a visit number). For gantt: \"onset\" (default), \"alpha\", ",
-        "or a column name. Ignored for scatter and line."
+        "Category order for aggregated charts: \"value\", \"data\" (the ",
+        "data's own order: factor levels when present, time or numeric ",
+        "order for a date or number, else first appearance), \"alpha\", ",
+        "or a column name (per-category minimum of that column, e.g. a ",
+        "visit number). Unset, bar/pie/treemap use \"data\" for a date, ",
+        "number or factor category and \"value\" for a text category; ",
+        "boxplot/pointrange use \"data\". A time label held as text ",
+        "(\"2025 Q1\", \"W03\") sorts by value: make it a factor in time ",
+        "order upstream, or set \"data\". For gantt: \"onset\" (default), ",
+        "\"alpha\", or a column name. Ignored for scatter and line."
       ),
       example = "value",
       type = arg_string()
     ),
     sort_dir = new_arg_spec(
-      "Direction for `sort_by`: \"asc\" or \"desc\".",
+      paste(
+        "Direction for `sort_by`: \"asc\" or \"desc\". Unset, \"desc\"",
+        "for \"value\", else \"asc\"."
+      ),
       example = "desc",
       type = arg_enum(c("asc", "desc"))
     ),
@@ -600,13 +646,19 @@ chart_guidance <- function() {
     "\n- \"estimates with confidence intervals\" (a forest plot) ->",
     "type=\"scatter\", x=\"estimate\", y=\"term\", or the other way round",
     "with ymin=\"lower\", ymax=\"upper\" for vertical error bars",
-    "\n- \"line at x = 3\" -> x_lines=[3]; \"line at y = 2\" or \"target",
+    "\n- \"line at x = 3\" -> x_lines=[3]; \"mark the launch on 2026-10-21\" ->",
+    "x_lines={\"Launch\": \"2026-10-21\"}, also on a bar over dates; on a",
+    "bar over labels (weeks) write the label exactly as the axis shows it;",
+    "\"line at y = 2\" or \"target",
     "of 2\" -> y_lines=[2], also on bar/boxplot charts either way round.",
     "\n- \"coloured by Z\" -> color=\"Z\"",
     "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",
     "default, which is what makes them comparable. Set facet_scales=\"free\"",
     "ONLY when the panels do not share a unit, or when the user asks for",
     "per-panel axes.",
+    "\n- \"on a log scale\", or levels that span orders of magnitude (GDP",
+    "per head across countries) -> y_scale=\"log\" on a line, scatter or",
+    "band; x_scale=\"log\" for income on a scatter's x.",
     "\n- \"bar of counts by X, click filters X\" -> type=\"bar\", y=\"X\",",
     "func=\"count\", drill=\"X\" (horizontal; x=\"X\" for vertical)",
     "\n- \"mean Y by X\" -> type=\"bar\", x=\"X\", y=\"Y\", func=\"mean\"",

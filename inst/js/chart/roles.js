@@ -68,6 +68,56 @@
     return out;
   };
 
+  // Helper lines as one line of text: "Listed: 2026-10-21; 3". A name is
+  // optional and labels its line, as in the shaded ranges. The positions and
+  // their names travel in two keys (`x_lines` / `x_line_names`).
+  /** @param {any} v @param {any} names @returns {string} */
+  const linesText = (v, names) => {
+    if (!Array.isArray(v)) return v == null ? '' : String(v);
+    const nm = Array.isArray(names) ? names : [];
+    const named = nm.some((n) => n);
+    return v.map((x, i) => (nm[i] ? nm[i] + ': ' : '') + x).join(named ? '; ' : ', ');
+  };
+  /** @param {string} text @returns {{ values: any[], names: string[] }} */
+  const parseLines = (text) => {
+    /** @type {any[]} */
+    const values = [];
+    /** @type {string[]} */
+    const names = [];
+    /** @param {string} t */
+    const val = (t) => (Number.isFinite(Number(t)) ? Number(t) : t);
+    for (const raw of String(text ?? '').split(/[;,]/)) {
+      const part = raw.trim();
+      if (!part) continue;
+      // The colon needs a space after it, so a time of day is no name.
+      const m = /^([^:]+):\s+(.*)$/.exec(part);
+      const nm = m ? m[1].trim() : '';
+      const v = (m ? m[2] : part).trim();
+      if (!v) continue;
+      // "2 5": numbers apart by spaces are two lines.
+      const tok = v.split(/\s+/);
+      if (tok.length > 1 && tok.every((t) => Number.isFinite(Number(t)))) {
+        tok.forEach((t, i) => { values.push(Number(t)); names.push(i ? '' : nm); });
+      } else {
+        values.push(val(v));
+        names.push(nm);
+      }
+    }
+    return { values, names };
+  };
+  /** A role's text hooks for lines whose names live in `namesKey`.
+   * @param {string} namesKey */
+  const linesHooks = (namesKey) => ({
+    toText: (/** @type {any} */ v, /** @type {any} */ cfg) => linesText(v, cfg && cfg[namesKey]),
+    fromText: (/** @type {string} */ text, /** @type {any} */ cfg) => {
+      const p = parseLines(text);
+      if (cfg) cfg[namesKey] = p.names;
+      return p.values;
+    }
+  });
+  NS.linesText = linesText;
+  NS.parseLines = parseLines;
+
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before this file.
@@ -129,6 +179,16 @@
     // not something the marks can predict. Left unnarrowed on purpose.
     drill:  { label: 'Drill',  kind: 'column', colType: 'any' },
     label:  { label: 'Label',  kind: 'column', colType: 'any', kinds: ['group', 'id'] },
+    // One column and the values of it that stand out; everything else turns
+    // grey. One row: the column, then its values beside it. Any column, as
+    // `drill`: a scatter of countries highlights by country or by region,
+    // neither of which it maps.
+    highlight_by: { label: 'Highlight', kind: 'column', colType: 'cat', kinds: ['group', 'id'],
+                    pairedWith: 'highlight' },
+    highlight: { label: 'Values', kind: 'multi', placeholder: 'Pick values',
+                 options: (/** @type {any} */ cfg, /** @type {any} */ h) =>
+                   (cfg.highlight_by && h && typeof h.levels === 'function'
+                     ? h.levels(cfg.highlight_by) : []) },
     // Extra columns to append to each mark's hover tooltip (beyond the mapped
     // roles). Multi-select; empty = none. Values are shipped and packed
     // per-bar, so this is bounded to the picked columns, never the whole row.
@@ -206,14 +266,20 @@
     // line rather than a line at NA.
     // `slot: 'entry'`: named in the block's sentence, the word is typed over
     // in place (a line at 32.5 is not in any list). See SentenceSlots._edit.
-    x_lines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5', slot: 'entry' },
+    // Across x on scatter/line, across the categories on a bar: a number, a
+    // date or a category, named or not ("Listed: 2026-10-21").
+    x_lines: { label: (/** @type {any} */ cfg) =>
+                 (cfg.chart_type === 'bar' ? 'Category lines' : 'Vertical'),
+               kind: 'text', ph: 'e.g. 3 or Listed: 2026-10-21', slot: 'entry',
+               ...linesHooks('x_line_names') },
     // Across the value axis. On scatter/line that is y, so the pair reads
     // Vertical / Horizontal; on the aggregated family it follows
     // `orientation` and is the only helper line, so it is named by its job.
     value_lines: { label: (/** @type {any} */ cfg) =>
                      (cfg.chart_type === 'scatter' || NS.isLineType(cfg.chart_type)
                        ? 'Horizontal' : 'Reference lines'),
-                   kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
+                   kind: 'text', ph: 'e.g. 2 or Target: 4', slot: 'entry',
+                   ...linesHooks('value_line_names') },
     // Named stretches of x, shaded behind the marks. The browser holds
     // [{name, from, to}]; the field edits it as one line (rangesText).
     x_ranges: { label: 'Shaded', kind: 'text',
@@ -370,6 +436,14 @@
                         { value: 'compact', label: '1.2K' },
                         { value: 'percent', label: '12.3%' }] },
     unit: { label: 'Unit', kind: 'text', ph: 'e.g. CHF' },
+    // A base-10 axis. Values at or below zero are not drawn; the footer
+    // counts them. Offered where the axis is a number (NS.logAxes).
+    y_scale: { label: 'Y scale', kind: 'segmented', dflt: 'linear',
+               options: [{ value: 'linear', label: 'Linear' },
+                         { value: 'log', label: 'Log' }] },
+    x_scale: { label: 'X scale', kind: 'segmented', dflt: 'linear',
+               options: [{ value: 'linear', label: 'Linear' },
+                         { value: 'log', label: 'Log' }] },
     band_id: { label: 'Subject id', kind: 'column', colType: 'any',
                ph: 'id counted distinct (blank = rows)' },
     ref_hi: { label: 'Upper limit', kind: 'column', colType: 'num',
@@ -511,16 +585,19 @@
         // Offered only on bar because only the bar tooltip formatter consumes
         // it (pie/treemap/boxplot/radar/waterfall have their own).
         { role: 'tt_fields', types: ['bar'] },
-        { role: 'label', types: ['bar', 'pie', 'treemap'] }
+        { role: 'label', types: ['bar', 'pie', 'treemap'] },
+        { role: 'highlight_by', types: ['bar'] }
       ],
       // Missing group sits next to Group: it decides whether rows without a
       // group are counted as their own category. Bar only, like the percent
       // denominator after the aggregation: both exist for the
       // population-as-rows pattern, which is a bar idea (a pie of "everyone,
       // including the ones with no category" is not a chart anyone wants).
+      // `highlight` is drawn in the highlight_by row (pairedWith); it is
+      // listed so the row knows it applies.
       mapping: [{ role: 'na_group', types: ['bar'] },
         'value', { role: 'func', types: ['bar', 'waterfall', 'pie', 'treemap', 'radar'] },
-        { role: 'pct_of', types: ['bar'] }],
+        { role: 'pct_of', types: ['bar'] }, { role: 'highlight', types: ['bar'] }],
       // orientation: bar + the distribution marks (which default vertical —
       // groups on x — while bar defaults horizontal; see
       // ensureDistributionMetric). Waterfall is vertical-only (a bridge
@@ -542,6 +619,9 @@
         { role: 'box_points', types: ['boxplot'] },
         // Across the value axis, whichever way the chart lies.
         { role: 'value_lines', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
+        // Across the categories: a date or week marked on the bars.
+        { role: 'x_lines', types: ['bar'] },
+        { role: 'x_ranges', types: ['bar'] },
         { role: 'format', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         { role: 'unit', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         // Count labels: the axis surface applies to the category-axis charts
@@ -562,8 +642,9 @@
       // each value is unambiguous (unlike an aggregated bar, a group of rows).
       optionalMap: ['series', 'color', 'facet', 'tt_fields',
         { role: 'label', types: ['scatter', 'line', 'area'] },
-        { role: 'linetype', types: ['line', 'area'] }],
-      mapping: [],
+        { role: 'linetype', types: ['line', 'area'] },
+        { role: 'highlight_by', types: ['scatter', 'line', 'area'] }],
+      mapping: [{ role: 'highlight', types: ['scatter', 'line', 'area'] }],
       presentation: [
         { role: 'smoother', types: ['scatter'] },
         // Band: the window is the only new idea; `summary` / `whiskers`
@@ -597,6 +678,8 @@
         'legend',
         { role: 'format', types: ['scatter', 'line', 'area'] },
         { role: 'unit', types: ['scatter', 'line', 'area'] },
+        { role: 'y_scale', types: ['scatter', 'line', 'band'] },
+        { role: 'x_scale', types: ['scatter'] },
         'line_width_mult', 'dot_size_mult',
         // Count labels: scatter/line have numeric axes, so only facet counts
         // apply here (the "axis" choice no-ops); shown for faceted charts.

@@ -21,6 +21,8 @@ new_chart_block(
   value_labels = FALSE,
   format = "number",
   unit = "",
+  y_scale = "linear",
+  x_scale = "linear",
   tooltip = NULL,
   drill = NULL,
   line_width = 1,
@@ -33,6 +35,7 @@ new_chart_block(
   linetype = NULL,
   x_ranges = NULL,
   legend = "bottom",
+  highlight = NULL,
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -112,13 +115,17 @@ such as a distinct count of a character id by a category.}
 \item{position}{Layout of a colour-split bar: \code{"stack"} (default),
 \code{"dodge"} (side by side) or \code{"fill"} (stacked to 100\%).}
 
-\item{sort_by}{Category order: \code{"value"} (default for bar, pie and
-treemap), \code{"data"} (default for boxplot and pointrange: factor levels,
-else first appearance), \code{"alpha"}, or a column name (the per-category
-minimum of that column). For gantt: \code{"onset"} (default), \code{"alpha"} or a
-column name. Ignored for scatter and line.}
+\item{sort_by}{Category order: \code{"value"}, \code{"data"} (factor levels; a
+date or numeric category in time or numeric order; else first
+appearance), \code{"alpha"}, or a column name (the per-category minimum of
+that column). The default for bar, pie and treemap follows the category
+column: \code{"data"} for a date, date-time, numeric or factor column,
+\code{"value"} for any other. Boxplot and pointrange default to \code{"data"}.
+For gantt: \code{"onset"} (default), \code{"alpha"} or a column name. Ignored for
+scatter and line.}
 
-\item{sort_dir}{\code{"asc"} or \code{"desc"}.}
+\item{sort_dir}{\code{"asc"} or \code{"desc"}. The default is \code{"desc"} for
+\code{sort_by = "value"}, \code{"asc"} otherwise.}
 
 \item{value_labels}{\code{TRUE} writes each bar's value at its end. A stacked bar
 labels the total, a dodged bar every bar, a filled bar each segment's
@@ -135,6 +142,14 @@ exactly (\code{2} prints 4.30). Each prints as on the table block.
 it once.
 On scatter, line and area charts it applies to y.}
 
+\item{y_scale, x_scale}{\code{"linear"} (default) or \code{"log"}, a base-10 axis.
+\code{y_scale} applies to scatter, line and band charts, \code{x_scale} to a
+scatter; other types ignore them, and so does a date or category axis.
+On a log axis values at or below zero are not drawn, and a note under
+the chart counts them. The low end of an interval (\code{ymin}, a band)
+that falls at or below zero is cut at the bottom of the axis. A
+smoother is fitted on the scale that is drawn.}
+
 \item{tooltip}{Extra columns shown in each mark's tooltip.}
 
 \item{drill}{Column a click filters downstream on, \code{"auto"} for the type's
@@ -148,9 +163,14 @@ default (1). Range 0.5 to 3.}
 \code{"step-middle"} or \code{"step-end"}. A saved chart keeps the value it was
 saved with.}
 
-\item{y_lines, x_lines}{Numbers at which dashed guide lines are drawn.
-\code{y_lines} run across the value axis (y on a scatter or line, the value
-axis of a bar or boxplot either way round); \code{x_lines} across a numeric x.}
+\item{y_lines, x_lines}{Positions at which dashed guide lines are drawn. A
+name labels its line: \code{x_lines = c(Listed = "2026-10-21")}. \code{y_lines}
+are numbers across the value axis (y on a scatter or line, the value
+axis of a bar or boxplot either way round). \code{x_lines} run across x on a
+scatter, line or area, and across the category axis of a bar either way
+round: numbers, dates or date-times, or category values, matching x, as
+in \code{x_ranges}. On a bar over dates, a date between two bars marks the bar
+whose period holds it.}
 
 \item{ymin, ymax}{Columns holding the lower and upper end of an interval per
 row. On a line they draw a shaded band, on a scatter error bars. Several
@@ -165,7 +185,8 @@ the last observed point on. Line and area.}
 
 \item{x_ranges}{Named stretches of x shaded behind the marks, a named list
 of \code{c(from, to)}: \code{list(Recession = c("2008-01-01", "2009-06-30"))}.
-Dates, date-times or numbers, matching x.}
+Dates, date-times, numbers or category values, matching x. On a bar they
+shade whole bars, along the category axis.}
 
 \item{legend}{Where the colour legend goes: \code{"bottom"} (default, under the
 plot), \code{"top"} (between the subtitle and the plot), \code{"marks"} (the names
@@ -174,6 +195,16 @@ of a stack, at the centre of a scatter group, on a pie slice) or
 \code{"none"}. Where a type has no place for names on its marks (dodged bars,
 a histogram, a boxplot), \code{"marks"} keeps the legend under the plot. The
 legend is titled only when the colour column has a label.}
+
+\item{highlight}{One column and some of its values, as
+\code{list(country = "Switzerland")}. Marks whose rows hold one of the values
+keep their colour and every other mark is drawn grey behind them. Without
+\code{color} the highlighted marks take the chart's single colour; with it,
+they keep their colour level, and the palette is spread over the
+highlighted levels only. Highlighted marks are named: in semibold on a
+bar's axis, beside a point (when its value picks out one or two points),
+at a line's end. The legend lists only the highlighted levels. A title
+can say it with \code{{highlight}}: \code{subtitle = "...[, {highlight} highlighted]"}. Bar, scatter, line and area.}
 
 \item{smoother}{Trend line on a scatter: \code{"none"} (default), \code{"lm"} or
 \code{"loess"}, fit per colour or series group and per facet panel.}

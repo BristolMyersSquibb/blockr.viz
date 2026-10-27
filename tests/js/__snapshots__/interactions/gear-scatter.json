@@ -747,7 +747,8 @@
        "Series",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]
@@ -795,6 +796,34 @@
          "None"
         ],
         "selected": "Below"
+       }
+      ]
+     },
+     {
+      "role": "y_scale",
+      "label": "Y scale",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Linear",
+         "Log"
+        ],
+        "selected": "Linear"
+       }
+      ]
+     },
+     {
+      "role": "x_scale",
+      "label": "X scale",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Linear",
+         "Log"
+        ],
+        "selected": "Linear"
        }
       ]
      }
@@ -953,7 +982,7 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 3 or 2, 5"
+        "placeholder": "e.g. 3 or Listed: 2026-10-21"
        }
       ]
      },
@@ -964,7 +993,7 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 2 or 1, 4"
+        "placeholder": "e.g. 2 or Target: 4"
        }
       ]
      }

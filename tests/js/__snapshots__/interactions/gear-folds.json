@@ -73,7 +73,8 @@
        "Color",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]
@@ -167,6 +168,17 @@
         "selected": "Stacked"
        }
       ]
+     },
+     {
+      "role": "x_ranges",
+      "label": "Shaded",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. Recession: 2008-01-01 to 2009-06-30"
+       }
+      ]
      }
     ]
    },
@@ -239,7 +251,18 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 2 or 1, 4"
+        "placeholder": "e.g. 2 or Target: 4"
+       }
+      ]
+     },
+     {
+      "role": "x_lines",
+      "label": "Category lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 3 or Listed: 2026-10-21"
        }
       ]
      }
@@ -436,7 +459,8 @@
        "Color",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]
@@ -530,6 +554,17 @@
         "selected": "Stacked"
        }
       ]
+     },
+     {
+      "role": "x_ranges",
+      "label": "Shaded",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. Recession: 2008-01-01 to 2009-06-30"
+       }
+      ]
      }
     ]
    },
@@ -602,7 +637,18 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 2 or 1, 4"
+        "placeholder": "e.g. 2 or Target: 4"
+       }
+      ]
+     },
+     {
+      "role": "x_lines",
+      "label": "Category lines",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. 3 or Listed: 2026-10-21"
        }
       ]
      }

@@ -28,6 +28,11 @@ CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
 # names on the marks, or none.
 CHART_LEGENDS <- c("bottom", "top", "marks", "none")
 
+# An axis scale (`y_scale`, `x_scale`), and the types each applies to.
+CHART_SCALES <- c("linear", "log")
+CHART_Y_SCALE_TYPES <- c("scatter", "line", "band")
+CHART_X_SCALE_TYPES <- "scatter"
+
 # position (public) <-> bar_mode (internal)
 CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
@@ -222,6 +227,30 @@ chart_roles_public <- function(type, group, value, x, y, orientation, func,
   out
 }
 
+# y_scale / x_scale: "linear" or "log". NULL is linear.
+chart_scale_state <- function(x, arg = "y_scale") {
+  v <- as.character(unlist(x %||% "linear"))[1L] %|NA|% "linear"
+  if (!v %in% CHART_SCALES) {
+    stop("`", arg, "` must be \"linear\" or \"log\". Got \"", v, "\".",
+         call. = FALSE)
+  }
+  v
+}
+
+# The scale the gear sent, or the current one when the value is not a scale.
+chart_scale_msg <- function(x, current) {
+  v <- as.character(unlist(x))[1L]
+  if (length(v) && !is.na(v) && v %in% CHART_SCALES) v else current
+}
+
+# Whether a chart draws a log axis: the scale says so and the type takes it.
+chart_log_axes <- function(type, y_scale, x_scale) {
+  list(
+    y = identical(y_scale, "log") && isTRUE(type %in% CHART_Y_SCALE_TYPES),
+    x = identical(x_scale, "log") && isTRUE(type %in% CHART_X_SCALE_TYPES)
+  )
+}
+
 # x_ranges: a named list of c(from, to), as the caller writes it, or the
 # list of {name, from, to} the browser sends back. NULL when empty. Dates
 # travel as ISO strings, numbers as numbers.
@@ -249,6 +278,75 @@ chart_ranges_state <- function(x_ranges) {
     out[[key]] <- unlist(v)
   }
   if (length(out)) out else NULL
+}
+
+# highlight: one column and the values of it that stand out, as
+# `list(country = "Switzerland")`. A named character vector is the same
+# thing. NULL when there is no column or no value. Saved boards and MCP
+# write it as given; the browser sends the column and the values apart,
+# see chart_highlight_msg().
+chart_highlight_state <- function(highlight) {
+  if (is.null(highlight) || !length(highlight)) {
+    return(NULL)
+  }
+  if (is.atomic(highlight)) {
+    highlight <- as.list(highlight)
+    if (length(unique(names(highlight))) == 1L) {
+      highlight <- stats::setNames(list(unlist(highlight)), names(highlight)[[1L]])
+    }
+  }
+  nms <- names(highlight)
+  if (!is.list(highlight) || is.null(nms) || !all(nzchar(nms))) {
+    stop("`highlight` names a column and its values, e.g. ",
+         "`list(country = \"Switzerland\")`.", call. = FALSE)
+  }
+  if (length(highlight) > 1L) {
+    stop("`highlight` names one column. Got ",
+         paste0("`", nms, "`", collapse = ", "), ".", call. = FALSE)
+  }
+  vals <- as.character(unlist(highlight[[1L]], use.names = FALSE))
+  vals <- unique(vals[!is.na(vals) & nzchar(vals)])
+  if (!length(vals)) {
+    return(NULL)
+  }
+  stats::setNames(list(vals), nms[[1L]])
+}
+
+# The highlight from the gear: the column and the values, either of which may
+# be "" or empty (cleared). A column without values is no highlight yet.
+chart_highlight_msg <- function(by, values) {
+  by <- chr_state(by)
+  vals <- chr_vec_state(values)
+  vals <- vals[nzchar(vals)]
+  if (is.null(by) || !length(vals)) {
+    return(NULL)
+  }
+  stats::setNames(list(vals), by)
+}
+
+# What the browser reads: the column and the values, or NULLs. State set
+# from outside (MCP, restore) is normalised here too; a shape that does not
+# read as a highlight draws none.
+chart_highlight_json <- function(highlight) {
+  hl <- tryCatch(chart_highlight_state(highlight), error = function(e) NULL)
+  if (is.null(hl)) {
+    return(list(by = NULL, values = NULL))
+  }
+  list(by = names(hl)[[1L]], values = as.list(hl[[1L]]))
+}
+
+# How a title's `{highlight}` prints the values: "Switzerland",
+# "Switzerland and Germany", "Switzerland, Germany and Japan". "" for none.
+chart_highlight_text <- function(highlight) {
+  hl <- tryCatch(chart_highlight_state(highlight), error = function(e) NULL)
+  if (is.null(hl)) {
+    return("")
+  }
+  v <- hl[[1L]]
+  if (length(v) == 1L) {
+    return(v)
+  }
+  paste(paste(utils::head(v, -1L), collapse = ", "), "and", utils::tail(v, 1L))
 }
 
 # What the browser reads: [{name, from, to}].

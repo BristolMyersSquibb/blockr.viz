@@ -345,6 +345,8 @@
       try { cd = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [px, py]); } catch (e) { return null; }
       if (!cd || cd[0] == null || cd[1] == null) return null;
       const cx = +cd[0], cy = +cd[1];
+      // On a log axis, near is measured in logs, as the screen shows it.
+      const yt = f.yLog ? (/** @type {number} */ v) => Math.log10(Math.max(v, 1e-300)) : (/** @type {number} */ v) => v;
       const xOrder = f.xAxisType === 'category' ? f.xOrder : null;
       const series = f.series;
       let bestSi = null, bestY = null, bestX = null, bestDy = Infinity;
@@ -354,7 +356,7 @@
             !Array.isArray(s.data) || !s.data.length) continue;
         const yv = NS.model.interpYAtX(s.data, cx, xOrder);
         if (yv == null) continue;
-        const dy = Math.abs(yv - cy);
+        const dy = Math.abs(yt(yv) - yt(cy));
         if (dy < bestDy) { bestDy = dy; bestSi = i; bestY = yv; bestX = s.data[0][0]; }
       }
       if (bestSi == null) return null;
