@@ -1,17 +1,16 @@
 // @ts-check
 /**
- * Chart block: the aggregated model (bar, waterfall, pie, treemap,
- * and the distribution marks boxplot and point range).
+ * Chart block: the aggregated model (bar, waterfall, pie, treemap, and the
+ * distribution marks boxplot and point range).
  *
- * Rows and config in, what to draw out: the cells of the shared aggregation
- * engine (drilldown-agg.js), the panels (one per facet level), the groups
- * of each panel in their sort order, the colour levels, the "(n)" counts,
- * and for the distribution marks the category slots with their summaries.
+ * Rows and config in, what to draw out: the cells of the aggregation engine
+ * (agg.js), the panels (one per facet level), each panel's groups in sort
+ * order, the colour levels, the "(n)" counts, and for the distribution marks
+ * the category slots with their summaries.
  *
  * A mark is addressed by (group, colour level) inside a panel; its keys are
- * the column values that define it (chart-keys.js): the group, the colour
- * where colour splits the mark (bar segments, boxes, point ranges), the
- * and the facet in a facet panel.
+ * the group, the colour where it splits the mark (bar segments, boxes, point
+ * ranges), and the facet in a facet panel.
  */
 (function () {
   'use strict';
@@ -31,16 +30,6 @@
   // boxes of one group into one slot.
   const BOX_CAT_SEP = '\u0000';
 
-  const DAgg = () => NS.agg;
-
-  /**
-   * {center, lo, hi} of a statistic over ascending values, or null for none.
-   * One implementation for the box body, its whiskers and the point range,
-   * so they cannot disagree. sd is the sample sd, 0 for one value.
-   * 'p10_p90' draws the 10th to 90th percentile around the median (B8).
-   * @param {number[]} vals @param {string} stat
-   * @returns {{center: number, lo: number, hi: number} | null}
-   */
   const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
     2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
     2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
@@ -55,6 +44,13 @@
       (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
   };
 
+  /**
+   * {center, lo, hi} of a statistic over ascending values, or null for none.
+   * One implementation for the box body, its whiskers and the point range.
+   * sd is the sample sd, 0 for one value.
+   * @param {number[]} vals @param {string} stat
+   * @returns {{center: number, lo: number, hi: number} | null}
+   */
   const summarizeStat = (vals, stat) => {
     const n = vals.length;
     if (n === 0) return null;
@@ -89,14 +85,13 @@
     }
   };
 
-
   /**
-   * The order of a panel's groups on the category axis. A bridge keeps the
-   * data order always (a value sort scrambles the running total); "data" is
-   * factor levels, else time or numeric order for a date or number column,
-   * else first appearance in the rows; "alpha" is factor
-   * levels, else by name; "value" is the total across colour cells; any
-   * other value names a column whose smallest value per group orders it.
+   * The order of a panel's groups on the category axis. A bridge always
+   * keeps the data order (a value sort scrambles the running total). "data"
+   * is factor levels, else time or numeric order for a date or number
+   * column, else first appearance in the rows. "alpha" is factor levels,
+   * else by name. "value" is the total across colour cells. Any other value
+   * names a column whose smallest value per group orders it.
    * @param {any[]} cells the panel's aggregate cells @param {any[]} rows
    * @param {VizColumn[]} columns @param {Record<string, any>} cfg
    * @returns {string[]}
@@ -107,42 +102,30 @@
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
     const groupCol = cfg.category;
     const meta = NS.axes.colMeta(columns, groupCol);
-    const levels = meta && Array.isArray(meta.levels) && meta.levels.length ? meta.levels : null;
+    const levels = meta && Array.isArray(meta.levels) && meta.levels.length
+      ? meta.levels.map(String) : null;
     // Every bin of a histogram, the empty ones too: a missing bin would
     // close the gap in the distribution it stands for.
-    if (cfg.type === 'histogram' && levels) return levels.map(String);
+    if (cfg.type === 'histogram' && levels) return levels;
+    const levelAt = new Map((levels || []).map((l, i) => [l, i]));
 
     const dataOrder = () => {
+      const present = new Set(groups);
       if (levels) {
-        const idx = new Map(levels.map((/** @type {any} */ l, /** @type {number} */ i) =>
-          [String(l), i]));
-        const present = new Set(groups);
-        return levels.map(String).filter((/** @type {string} */ l) => present.has(l))
-          .concat(groups.filter((g) => !idx.has(g)));
+        return levels.filter((l) => present.has(l)).concat(groups.filter((g) => !levelAt.has(g)));
       }
-      // A date or a number is ordered by itself: time order, small to
-      // large, whatever order the rows came in. Dates travel as ISO strings,
-      // which sort as text. A missing value goes last.
+      // A date or a number orders by itself, a missing value last. Dates
+      // travel as ISO strings, which sort as text.
       if (meta && (meta.temporal || meta.type === 'numeric')) {
-        const key = meta.temporal ? (/** @type {string} */ g) => g
-          : (/** @type {string} */ g) => Number(g);
-        const missing = (/** @type {string} */ g) => g === '' || (!meta.temporal && isNaN(Number(g)));
+        const num = !meta.temporal;
+        const key = (/** @type {string} */ g) => (num ? Number(g) : g);
+        const missing = (/** @type {string} */ g) => g === '' || (num && isNaN(Number(g)));
         const known = groups.filter((g) => !missing(g));
-        known.sort((a, b) => {
-          const ka = key(a), kb = key(b);
-          return ka < kb ? -1 : ka > kb ? 1 : 0;
-        });
+        known.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
         return known.concat(groups.filter(missing));
       }
-      /** @type {string[]} */
-      const seen = [];
-      const seenSet = new Set();
-      for (const r of rows) {
-        const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
-        if (!seenSet.has(g)) { seenSet.add(g); seen.push(g); }
-      }
-      const present = new Set(groups);
-      return seen.filter((g) => present.has(g)).concat(groups.filter((g) => !seenSet.has(g)));
+      const seen = new Set(rows.map((r) => (groupCol ? String(r[groupCol] ?? '') : 'Total')));
+      return [...seen].filter((g) => present.has(g)).concat(groups.filter((g) => !seen.has(g)));
     };
 
     if (cfg.type === 'waterfall') return dataOrder();
@@ -151,14 +134,8 @@
       return sortDir < 0 ? ord.reverse() : ord;
     }
     if (sortBy === 'alpha') {
-      if (levels) {
-        /** @type {Map<string, number>} */
-        const idx = new Map(levels.map((/** @type {any} */ l, /** @type {number} */ i) =>
-          /** @type {[string, number]} */ ([String(l), i])));
-        const at = (/** @type {string} */ g) => (idx.has(g) ? /** @type {number} */ (idx.get(g)) : 1e9);
-        return groups.sort((a, b) => ((at(a) - at(b)) || a.localeCompare(b)) * sortDir);
-      }
-      return groups.sort((a, b) => a.localeCompare(b) * sortDir);
+      const at = (/** @type {string} */ g) => levelAt.get(g) ?? 1e9;
+      return groups.sort((a, b) => ((at(a) - at(b)) || a.localeCompare(b)) * sortDir);
     }
     if (sortBy === 'value') {
       /** @type {Record<string, number>} */
@@ -183,13 +160,13 @@
     });
   };
 
-  /** Tooltip fields of a bar, in order. @param {Record<string, any>} cfg @returns {string[]} */
+  /** The tooltip fields of a bar. @param {Record<string, any>} cfg @returns {string[]} */
   const barTtFields = (cfg) => [].concat(cfg.tooltip || [])
     .map(String).filter((c) => c && c !== 'null' && c !== '(none)');
 
   /**
    * The first row's tooltip-field values per group, per facet ('__all__'
-   * for the whole frame), in one pass.
+   * for all rows).
    * @param {any[]} rows @param {Record<string, any>} cfg @param {string[]} ttFields
    * @returns {Map<string, Record<string, any[]>>}
    */
@@ -215,9 +192,9 @@
 
   /**
    * `label` on a bar, slice or tile: per facet, group and colour level, the
-   * one value the cell's rows carry. Rows that disagree leave the cell
-   * without a label (null); missing values do not count. Pie and treemap
-   * draw one mark per group, so `byColor` false keys every row '__all__'.
+   * one value the cell's rows carry; null when they disagree. Pie and
+   * treemap draw one mark per group, so `byColor` false keys every row
+   * '__all__'.
    * @param {any[]} rows @param {Record<string, any>} cfg @param {boolean} byColor
    * @returns {Map<string, string | null>} keyed facet|||group|||color
    */
@@ -241,10 +218,10 @@
   };
 
   /**
-   * The category slots of a distribution panel and what each one draws.
-   * One slot per group, or per (group, level) when colour splits the
-   * marks, group-major. An empty (group, level) slot is dropped unless a
-   * fixed facet grid needs every slot in every panel.
+   * The category slots of a distribution panel and what each one draws: one
+   * per group, or per (group, level) when colour splits the marks. An empty
+   * (group, level) slot is dropped unless a fixed facet grid needs every
+   * slot in every panel.
    * @param {{ rows: any[], ix: any, cfg: Record<string, any>, groups: string[],
    *           levels: string[], facet: string }} p
    */
@@ -253,8 +230,7 @@
     const isBox = cfg.type === 'boxplot';
     const bodyStat = cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se');
     const whiskerStat = cfg.whiskers || 'tukey';
-    // A facet's rows by the key every family uses, so a panel for a
-    // missing facet value holds its rows (B10).
+    // Keyed 'nz', so the panel of a missing facet value holds its rows.
     const facetRows = (facetCol && facet !== '__all__')
       ? ix.get(rows, facetCol, 'nz', String(facet)) : rows;
     const split = levels.length > 0;
@@ -323,8 +299,7 @@
    * @returns {AggregatedModel}
    */
   const aggregated = ({ rows, ix, columns, cfg }) => {
-    // A histogram is a bar over the bins R adds to the rows (`category`
-    // names the bin column), drawn with the bars touching.
+    // A histogram is a bar over the bins R adds to the rows.
     const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
     const { category, color, facet, measure, func } = cfg;
     const distribution = NS.DISTRIBUTION_TYPES.includes(ct);
@@ -337,8 +312,7 @@
       ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
-    // The engine's own words: the category is its `group`.
-    const agg = DAgg().aggregate(rows, {
+    const agg = NS.agg.aggregate(rows, {
       group: category, color, facet, value: measure, func, na_group: cfg.missing,
       pct_of: cfg.percent_of === 'category' ? 'group' : cfg.percent_of
     });
@@ -360,15 +334,14 @@
     }
     out.split = out.levels.length > 0;
 
-    // One category set in every panel under fixed scales, so a slot is the
-    // same category in each; pie and treemap label their own slices.
+    // Fixed scales give every panel the same categories; pie and treemap
+    // label their own slices.
     const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
       ? orderGroups(agg, rows, columns, cfg) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? barTtFields(cfg) : [];
-    // On-mark text: a bar (not a waterfall step or a histogram bin), a
-    // slice, a tile.
+    // On-mark text: a bar (not a waterfall step or histogram bin), slice or tile.
     if (cfg.label && ((ct === 'bar' && !out.cumulative && !out.histogram) ||
                       ct === 'pie' || ct === 'treemap')) {
       out.markLabels = markLabels(rows, cfg, ct === 'bar');
@@ -401,7 +374,7 @@
   /**
    * The highlight: whether a bar (or a segment of one) holds a highlighted
    * row, and with a colour split the colour levels that do, which alone get
-   * palette colours. Bars only (common.js HIGHLIGHT_TYPES).
+   * palette colours. Bars only.
    * @param {AggregatedModel} out @param {any[]} rows @param {any} ix
    * @param {Record<string, any>} cfg
    */
@@ -455,18 +428,9 @@
     ? (m.markLabels.get(panel.facet + '|||' + g + '|||' + (c == null ? '__all__' : c)) ?? null)
     : null);
 
-  // -- Marks, keys and clicks ---------------------------------------------------
-
-  /**
-   * Does colour split this chart's marks into marks of their own?
-   * @param {AggregatedModel} m
-   */
-  const colourSplitsMark = (m) => (m.type === 'bar' && !m.cumulative && m.colors.length > 0) ||
-    (m.distribution && m.split);
-
   /**
    * The keys of an aggregated mark: the group, the colour where colour
-   * splits the mark, and the facet in a facet panel. Values are as the aggregation keys them ('' for missing).
+   * splits the mark, and the facet in a facet panel. A missing value is ''.
    * @param {Record<string, any>} cfg @param {any} facetVal
    * @param {string | null} group @param {string | null} level
    * @returns {Record<string, string>}
@@ -481,9 +445,8 @@
   };
 
   /**
-   * The (group, level) a click landed on, or null when the click has no
-   * mark (a datum without a name). Bars read the colour off the series, a
-   * split distribution off its slot.
+   * The (group, level) a click landed on, or null when it has no mark. Bars
+   * read the colour off the series, a split distribution off its slot.
    * @param {AggregatedModel} m @param {Record<string, any>} cfg @param {any} params
    * @returns {{ group: string | null, level: string | null } | null}
    */
@@ -515,10 +478,8 @@
   };
 
   /**
-   * The filter a click on a mark sends, or null when it sends nothing.
-   * Auto: the mark's keys, a missing value sent as null (a missing value is
-   * a key too). An explicit drill column: that column's values in the rows
-   * under the mark.
+   * The filter a click on a mark sends, or null. Auto: the mark's keys. A
+   * drill column: its values in the rows under the mark.
    * @param {Record<string, any>} cfg @param {Record<string, string>} keys
    * @param {() => any[]} rows
    * @returns {Record<string, any[]> | null}
@@ -530,7 +491,6 @@
     return NS.keys.fromKeys(keys);
   };
 
-  Object.assign(model, { aggregated, summarizeStat, orderGroups, cellOf, cellsOf, labelOf,
-                         colourSplitsMark, aggregatedKeys, aggregatedMarkAt, aggregatedClick,
-                         rowsUnder, BOX_CAT_SEP });
+  Object.assign(model, { aggregated, summarizeStat, cellOf, cellsOf, labelOf, aggregatedKeys,
+                         aggregatedMarkAt, aggregatedClick, rowsUnder, BOX_CAT_SEP });
 })();

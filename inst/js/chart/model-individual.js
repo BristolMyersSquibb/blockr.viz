@@ -2,19 +2,19 @@
 /**
  * Chart block: the individual model (scatter, line, band).
  *
- * Rows and config in, what to draw out: the axes (type, categories), the
- * series levels (the series column, else the colour column) with their
- * colours, the legend, and per facet panel its rows and, for scatter and
- * line, one series per level holding the rows it draws and their points.
- * A band draws R's windowed statistics (derived.band.series), not rows, so
- * its panels carry rows only for clicks and highlights.
+ * Rows and config in, what to draw out: the axes, the series levels (the
+ * series column, else the colour column) with their colours, the legend,
+ * and per facet panel its rows and, for scatter and line, one series per
+ * level with the points it draws. A band draws R's windowed statistics
+ * (derived.band.series), so its panels carry rows only for clicks and
+ * highlights.
  *
  * A point is a tuple [x, y, ...tooltip values]; a series' `rows` line up
- * with its `pts` (a line's sorted by x), so a datum index is a row.
+ * with its `pts`, so a datum index is a row.
  *
- * A mark's keys: a line or a band level is keyed by its level and the
- * facet; a scatter point by its series (when one is set) and the facet,
- * and otherwise by itself, its x and y (D6). Colour never widens a point.
+ * A mark's keys: a line or band level is keyed by its level and the facet; a
+ * scatter point by its series (when set) and the facet, else by its x and y.
+ * Colour never widens a point.
  */
 (function () {
   'use strict';
@@ -29,9 +29,9 @@
     'derived.scales', 'derived.palette', 'show_n', 'id', 'func', 'highlight',
     'y_transform', 'x_transform'];
 
-  // Line charts: past TRAJ_FULL_MAX series the lines thin and drop their
-  // markers, past TRAJ_REDUCED_MAX they thin further, and past the cap the
-  // rest are not drawn (the footer says so).
+  // Line charts: past TRAJ_FULL_MAX series the lines thin and lose their
+  // markers, past TRAJ_REDUCED_MAX they thin further, past the cap the rest
+  // are not drawn (the footer says so).
   const TRAJ_FULL_MAX = 50;
   const TRAJ_REDUCED_MAX = 500;
   const TRAJ_HARD_CAP = 1000;
@@ -45,7 +45,7 @@
    * @typedef {{ facet: string, label: string | null, rows: any[],
    *             series: IndSeries[] }} IndividualPanel
    * @typedef {{ family: 'individual', empty: string | null, type: string,
-   *             isLine: boolean, isScatter: boolean, isBand: boolean,
+   *             isLine: boolean, isBand: boolean,
    *             x: { col: string, type: string, cats: string[] | null,
    *                  order: Map<string, number> | null, encode?: (v: any) => any,
    *                  period?: string | null },
@@ -67,25 +67,22 @@
    */
   const setAxes = (rows, columns, cfg, out) => {
     const { x, y } = cfg;
-    // A Date x is a time axis (a line over dates, a scatter against time);
-    // a Date y stays a category.
+    // A Date x is a time axis; a Date y stays a category.
     const xType = NS.axes.axisTypeFor(columns, rows, x, { temporal: true });
     const yType = NS.axes.axisTypeFor(columns, rows, y);
     const xCats = xType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
     const yCats = yType === 'category' ? NS.axes.orderedCategories(columns, rows, y) : null;
-    // A categorical x's axis positions: a line is drawn in axis order, or it
-    // zig-zags between visits.
+    // A line on a categorical x is drawn in axis order.
     const xOrder = xCats
       ? new Map(xCats.map((/** @type {any} */ c, /** @type {number} */ i) => [String(c), i]))
       : null;
-    // A date arrives as an ISO string; a time axis positions it in ms.
+    // A date arrives as an ISO string; a time axis places it in ms.
     const encodeX = (/** @type {any} */ v) => xType === 'category' ? String(v ?? '')
       : (xType === 'time' ? NS.axes.timeValue(v) : Number(v));
     out.x = { col: x, type: xType, cats: xCats, order: xOrder, encode: encodeX,
               period: xType === 'time' ? NS.axes.timePeriod(rows, x) : null };
     out.y = { col: y, type: yType, cats: yCats };
-    // A log axis on a number. A row at or below zero on it is not drawn
-    // and counted for the footer.
+    // A row at or below zero on a log axis is not drawn; the footer counts it.
     const logs = NS.logAxes(cfg);
     out.logX = logs.x && xType === 'value';
     out.logY = logs.y && yType === 'value';
@@ -123,13 +120,12 @@
           srows = order.map((i) => rs[i]);
         }
       }
-      // `src`: the rows in data order, which the error bars keep.
+      // `src` keeps the rows in data order, for the error bars.
       return { level, color: clr, rows: srows, pts, src: rs };
     };
     const labels = model.facetLabels(rows, cfg, facets);
     for (const fv of facets) {
-      // A facet's rows by the raw value, so the panel of a missing facet
-      // value holds none.
+      // Keyed 'raw': the panel of a missing facet value holds none.
       const prow = fv === '__all__' ? rows : ix.get(rows, /** @type {string} */ (facet), 'raw', fv);
       /** @type {IndSeries[]} */
       const series = [];
@@ -137,7 +133,7 @@
         if (!levels.length) {
           series.push(mkSeries(undefined, prow.filter(drawn), out.palette[0]));
         } else {
-          // Keyed like the levels: a null split value is the '' series.
+          // Keyed 'nz' like the levels: a null split value is the '' series.
           levels.forEach((lv, ci) => series.push(
             mkSeries(lv, ix.get(prow, splitCol, 'nz', lv).filter(drawn), out.levelColors[ci])));
         }
@@ -160,14 +156,14 @@
     const color = cfg.color || null;
     const facet = cfg.facet || null;
     const seriesCol = cfg.series || null;
-    // The series is the splitter; without one, a series per colour level.
+    // The series splits; without one, a series per colour level.
     const splitCol = seriesCol || color;
     const isLine = NS.isLineType(ct);
     const isBand = ct === 'band';
     /** @type {IndividualModel} */
     const out = {
       family: 'individual', empty: null, type: ct,
-      isLine, isScatter: ct === 'scatter', isBand,
+      isLine, isBand,
       x: { col: x, type: 'value', cats: null, order: null },
       y: { col: y, type: 'value', cats: null },
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
@@ -182,8 +178,7 @@
       return out;
     }
 
-    // Tooltip fields, less the ones the tooltip already shows (x is the
-    // header, y the value, the split column the series name).
+    // Tooltip fields, less x (the header), y (the value) and the split column.
     const shown = new Set([x, y, splitCol].filter(Boolean).map(String));
     out.ttFields = [].concat(cfg.tooltip || []).map(String)
       .filter((c) => c && c !== 'null' && c !== '(none)' && !shown.has(c));
@@ -209,12 +204,11 @@
       if (out.seriesCount > TRAJ_REDUCED_MAX) { out.lineOpacity = 0.15; out.symbol = 'none'; }
       else if (out.seriesCount > TRAJ_FULL_MAX) { out.lineOpacity = 0.35; out.symbol = 'none'; }
     }
-    // One line per entity (a subject, a store): hover picks the nearest line
-    // instead of listing every line at the crosshair.
+    // One line per entity: hover picks the nearest line.
     out.crowd = isLine && !!seriesCol && out.seriesCount > 1;
-    const colours = seriesColours(rows, ix, out, cfg);
+    const colours = seriesColours(rows, ix, out);
     out.levelColors = levels.map((lv, i) => colours.of(lv, i));
-    legendOf(rows, ix, out, colours.lookup);
+    legendOf(rows, ix, out, colours.legendColor);
     setAxes(rows, columns, cfg, out);
     buildPanels(rows, ix, cfg, out, facets);
     highlightSeries(out, rows, ix, cfg);
@@ -223,13 +217,12 @@
   individual.FIELDS = MODEL_FIELDS;
 
   /**
-   * The highlight on a scatter, line or area. A line is highlighted when one
-   * of its rows holds a highlighted value, a point by its own row. What is
-   * not highlighted is `muted` (drawn grey by the option) and comes first,
-   * so the highlighted marks are drawn over it: a scatter series splits into
-   * its muted points and its highlighted ones, both of the level. With a
-   * colour, the palette is counted over the highlighted colour values only,
-   * and the legend lists only those.
+   * The highlight on a scatter or line. A line is highlighted when one of
+   * its rows holds a highlighted value, a point by its own row. What is not
+   * highlighted is `muted` (drawn grey by the option) and comes first, so
+   * the highlighted marks draw over it: a scatter series splits into its
+   * muted and its highlighted points. With a colour, the palette is counted
+   * over the highlighted colour values only, and the legend lists only those.
    * @param {IndividualModel} m @param {any[]} rows @param {any} ix
    * @param {Record<string, any>} cfg
    */
@@ -243,7 +236,7 @@
     /** @param {IndSeries} s @param {any} facet */
     const lineLit = (s, facet) => NS.keys.markLit(individualKeys(m, facet, s.level), s.rows, hl);
 
-    // The colour values the highlighted marks carry, in level order.
+    // The colour values the highlighted marks carry.
     /** @type {Set<string>} */
     const litVals = new Set();
     for (const p of m.panels) {
@@ -318,16 +311,19 @@
   };
 
   /**
-   * The colour of each series level. With a series column apart from the
-   * colour column, a series takes the colour of its first row's colour
-   * value: the board scale's, else the next palette colour in the order
-   * the values come up (cycling, so a level keeps its colour under a
-   * filter). Otherwise a level takes the scale's colour or the palette's
-   * in level order.
-   * @param {any[]} rows @param {any} ix @param {IndividualModel} m @param {Record<string, any>} cfg
+   * The colour of each series level, and of each legend chip. With a series
+   * column apart from the colour column, a series takes the colour of its
+   * first row's colour value: the board scale's, else the next palette
+   * colour in the order the values come up (cycling, so a level keeps its
+   * colour under a filter). Otherwise a level takes the scale's colour or
+   * the palette's in level order.
+   * @param {any[]} rows @param {any} ix @param {IndividualModel} m
    */
-  const seriesColours = (rows, ix, m, cfg) => {
+  const seriesColours = (rows, ix, m) => {
     const { palette, colorScale, color, seriesCol } = m;
+    /** @param {string} v */
+    const fromScale = (v) => (colorScale && colorScale.color && colorScale.color[v] != null
+      ? colorScale.color[v] : null);
     /** @type {Map<string, string>} colour value -> its cycled colour */
     const lookup = new Map();
     /** @param {string} level @param {number} index */
@@ -336,53 +332,43 @@
       if (seriesCol && seriesCol !== color) {
         const rep = ix.get(rows, seriesCol, 'nz', level)[0];
         const cv = rep ? String(rep[color] ?? '') : '';
-        if (colorScale && colorScale.color && colorScale.color[cv] != null) {
-          return colorScale.color[cv];
-        }
+        const scaled = fromScale(cv);
+        if (scaled != null) return scaled;
         if (!lookup.has(cv)) lookup.set(cv, palette[lookup.size % palette.length]);
         return /** @type {string} */ (lookup.get(cv));
       }
-      if (colorScale && colorScale.color && colorScale.color[level] != null) {
-        return colorScale.color[level];
-      }
-      return palette[index % palette.length];
+      return fromScale(level) ?? palette[index % palette.length];
     };
-    return { of, lookup };
+    /** @param {string} level @param {number} index */
+    const legendColor = (level, index) =>
+      fromScale(level) ?? (lookup.get(level) || palette[index % palette.length]);
+    return { of, legendColor };
   };
 
   /**
    * The legend band's chips, when the colour column has a readable number
    * of levels. With a series column apart from the colour, the chips are
-   * the colour's values (sorted); the option adds an empty series per chip
+   * the colour's values, sorted; the option adds an empty series per chip
    * for the legend to bind to. Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   * @param {Map<string, string>} lookup
+   * @param {(level: string, index: number) => string} legendColor
    */
-  const legendOf = (rows, ix, m, lookup) => {
-    const { color, seriesCol, colorScale, palette } = m;
+  const legendOf = (rows, ix, m, legendColor) => {
+    const { color, seriesCol } = m;
     if (!color) return;
     const colorLevels = ix.levels(rows, color, 'nz');
     if (!colorLevels.length || colorLevels.length > LEGEND_MAX) return;
     m.byColor = !!seriesCol && seriesCol !== color;
-    if (!m.byColor) {
-      m.legend = { col: color, items: m.levels.map((lv, i) => ({ name: lv, color: m.levelColors[i] })) };
-      return;
-    }
-    const cbLevels = colorLevels.slice().sort();
-    const items = cbLevels.map((/** @type {string} */ lvl, /** @type {number} */ i) => ({
-      name: lvl,
-      color: (colorScale && colorScale.color && colorScale.color[lvl] != null)
-        ? colorScale.color[lvl] : (lookup.get(lvl) || palette[i % palette.length])
-    }));
+    const items = m.byColor
+      ? colorLevels.slice().sort().map((/** @type {string} */ lvl, /** @type {number} */ i) =>
+        ({ name: lvl, color: legendColor(lvl, i) }))
+      : m.levels.map((lv, i) => ({ name: lv, color: m.levelColors[i] }));
     m.legend = { col: color, items };
   };
 
-  // -- Marks, keys and clicks ---------------------------------------------------
-
   /**
    * The keys of a line, a band level or a scatter series: the split
-   * column's level and the facet in a facet panel. A missing level or
-   * facet value is a key too ('').
+   * column's level and the facet in a facet panel.
    * @param {IndividualModel} m @param {any} facetVal @param {any} level
    * @returns {Record<string, any>}
    */
@@ -399,8 +385,8 @@
     m.panels.find((p) => p.facet === facetVal) || null;
 
   /**
-   * The rows under a clicked point: the panel's rows at its x and y, in its
-   * series when the chart is split.
+   * The rows under a clicked point: the panel's rows at its x and y, within
+   * its series when the chart is split.
    * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} seriesName
    * @param {any[]} v the point's value
    */
@@ -414,19 +400,16 @@
   };
 
   /**
-   * What a click sends, or null when it sends nothing.
+   * What a click sends, or null.
    *
-   *   - A band (D7): its level when it is coloured; an uncoloured band is
-   *     not clickable.
-   *   - A split line: its level, the one the cursor hovers (`focusName`)
-   *     before the one ECharts' hit test names.
-   *   - A scatter point (D6): its series when one is set, else the point
-   *     itself, a zero-width range at its x and y. An unsplit line's point
-   *     is a range too.
+   *   - A band: its level; an uncoloured band is not clickable.
+   *   - A split line: its level, the hovered one (`focusName`) before the
+   *     one ECharts' hit test names.
+   *   - A scatter point: its series when one is set, else the point itself,
+   *     a zero-width range at its x and y. An unsplit line's point too.
    *
-   * Auto sends the keys (the facet with them, D3; a missing value as null).
-   * An explicit drill column sends that column's values in the rows under
-   * the mark. Nothing is sent when those rows hold none.
+   * Auto sends the mark's keys (the facet with them). A drill column sends
+   * its values in the rows under the mark, nothing when there are none.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any} params
    * @param {string} [focusName]
@@ -437,21 +420,20 @@
     const explicit = cfg.drill !== 'auto';
     /** @param {Record<string, any[]> | null} f */
     const wrap = (f) => (f ? { filters: f } : null);
-    /** @param {string} lv */
-    const levelRows = (lv) => m.ix.get(panel.rows, m.splitCol, 'nz', lv);
 
+    /** @type {string | null} */
+    let level = null;
     if (m.isBand) {
       if (!m.splitCol || params.seriesName == null) return null;
-      const lv = String(params.seriesName);
-      if (explicit) return wrap(NS.keys.fromRows(cfg.drill, levelRows(lv)));
-      return wrap(NS.keys.fromKeys(individualKeys(m, panel.facet, lv)));
+      level = String(params.seriesName);
+    } else if (m.isLine && m.splitCol) {
+      const name = focusName !== undefined ? focusName : params.seriesName;
+      if (name != null) level = String(name);
     }
-    const lineName = (m.isLine && m.splitCol)
-      ? (focusName !== undefined ? focusName : params.seriesName) : null;
-    if (lineName != null) {
-      const lv = String(lineName);
-      if (explicit) return wrap(NS.keys.fromRows(cfg.drill, levelRows(lv)));
-      return wrap(NS.keys.fromKeys(individualKeys(m, panel.facet, lv)));
+    if (level != null) {
+      return wrap(explicit
+        ? NS.keys.fromRows(cfg.drill, m.ix.get(panel.rows, m.splitCol, 'nz', level))
+        : NS.keys.fromKeys(individualKeys(m, panel.facet, level)));
     }
     const v = params.value;
     if (!Array.isArray(v) || v.length < 2) return null;
@@ -464,8 +446,8 @@
   };
 
   /**
-   * A range taken in a panel: in a facet panel it carries the panel's key
-   * as `filters`, as a click does (D10).
+   * A range taken in a panel; in a facet panel it carries the panel's key
+   * as `filters`.
    * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} range
    * @returns {{ range: any, filters?: Record<string, any[]> }}
    */
@@ -475,11 +457,10 @@
   };
 
   /**
-   * What a brush caught: the x and y of every brushed point (a dataIndex
-   * is its own series' index; one outside the series is skipped); with an
-   * explicit drill column, the panel's rows at those points, each (x, y)
-   * taken once however many of its points were caught; with a series
-   * column, the series of the brushed points.
+   * What a brush caught: the x and y of every brushed point (a dataIndex is
+   * its own series' index; one outside the series is skipped); with a drill
+   * column, the panel's rows at those points, each (x, y) taken once; with a
+   * series column, the series of the brushed points.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any[]} allSeries chart.getOption().series
    * @param {Array<{ seriesIndex: number, dataIndex: number }>} selected
@@ -487,8 +468,7 @@
    *             levels: string[] }}
    */
   const individualBrush = (m, cfg, panel, allSeries, selected) => {
-    // Colour never widens a brush (D9): only an explicit drill column
-    // reads the rows.
+    // Colour never widens a brush: only a drill column reads the rows.
     const drill = cfg.drill && cfg.drill !== 'auto' ? String(cfg.drill) : null;
     /** @type {Set<string>} */
     const levels = new Set();
@@ -509,7 +489,7 @@
     const taken = new Set();
     for (const sel of selected) {
       const drawn = allSeries[sel.seriesIndex];
-      // A name or a label written on the marks is no point of the data.
+      // A legend chip or a label series is no point of the data.
       if (drawn && typeof drawn.id === 'string' && /^__(legend|label)_/.test(drawn.id)) continue;
       const sData = drawn && drawn.data;
       if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
@@ -533,14 +513,10 @@
   };
 
   /**
-   * What a brush sends (D9), from what it caught, or null for nothing:
-   *
-   *   - an explicit drill column: its values in the rows at the points;
-   *   - a series column: the series of the brushed points;
-   *   - else the points' x (and, off a line, y) extent.
-   *
-   * Colour never widens it. In a facet panel the series and the range
-   * carry the panel's key, as a click does (D3, D10).
+   * What a brush sends, from what it caught, or null: a drill column's
+   * values in the rows at the points; else the series of the brushed points;
+   * else the points' x (and, off a line, y) extent. In a facet panel the
+   * series and the range carry the panel's key.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel
    * @param {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
@@ -569,8 +545,8 @@
 
   /**
    * y of a line at `x`, interpolated between its points, or null outside
-   * its range. On a category x the points' x are categories, compared by
-   * their axis position (`xOrder`), which is also what a pixel converts to.
+   * its range. On a category x the points are compared by axis position
+   * (`xOrder`).
    * @param {any[]} data @param {number} x @param {Map<string, number> | null} xOrder
    * @returns {number | null}
    */
@@ -595,6 +571,5 @@
   };
 
   Object.assign(model, { individual, individualKeys, individualClick, individualBrush,
-                         brushSelection, pointRows, panelOf, interpYAtX, lineOrder,
-                         TRAJ_FULL_MAX, TRAJ_REDUCED_MAX, TRAJ_HARD_CAP });
+                         brushSelection, panelOf, interpYAtX });
 })();

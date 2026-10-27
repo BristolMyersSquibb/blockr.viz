@@ -15,16 +15,13 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   /** @typedef {'nz' | 'raw'} KeyMode */
-  // The answer for a key with no rows, shared by every miss.
+  // Shared by every miss.
   const NO_ROWS = /** @type {any[]} */ (/** @type {unknown} */ (Object.freeze([])));
 
-  // Lookups over row arrays. Results are memoized on the rows array itself,
-  // so they live as long as that array does; callers share them and must not
-  // mutate what they get back.
-  //
-  // A key is the column value as a string in one of two forms: 'nz' is
-  // String(v ?? '') (null joins the '' level), 'raw' is String(v) (null is
-  // "null").
+  // Lookups over row arrays, memoized on the rows array itself. Callers
+  // share the results and must not mutate them. A key is the column value as
+  // a string: 'nz' is String(v ?? '') (null joins the '' level), 'raw' is
+  // String(v) (null is "null").
   class RowIndex {
     constructor() {
       /** @type {WeakMap<any[], Map<string, any>>} */
@@ -45,8 +42,7 @@
     }
 
     /**
-     * Rows by key of `col`, row order kept inside each bucket; Map order is
-     * first-seen key order.
+     * Rows by key of `col`, in row order; Map order is first-seen key order.
      * @param {any[]} rows @param {string} col @param {KeyMode} mode
      * @returns {Map<string, any[]>}
      */
@@ -65,8 +61,7 @@
     }
 
     /**
-     * Rows by key of `colA`, then of `colB`. Nested, so no separator can make
-     * two pairs collide.
+     * Rows by key of `colA`, then of `colB` (nested, so no two pairs collide).
      * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
      * @param {string} colB @param {KeyMode} modeB
      * @returns {Map<string, Map<string, any[]>>}
@@ -90,7 +85,7 @@
     }
 
     /**
-     * The rows whose `col` keys to `k`, in row order.
+     * The rows whose `col` keys to `k`.
      * @param {any[]} rows @param {string} col @param {KeyMode} mode @param {string} k
      * @returns {any[]}
      */
@@ -99,7 +94,7 @@
     }
 
     /**
-     * The rows keyed `a` on `colA` and `b` on `colB`, in row order.
+     * The rows keyed `a` on `colA` and `b` on `colB`.
      * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
      * @param {string} colB @param {KeyMode} modeB @param {string} a @param {string} b
      * @returns {any[]}
@@ -110,7 +105,7 @@
     }
 
     /**
-     * Distinct keys of `col` in first-seen order.
+     * Distinct keys of `col`, first-seen order.
      * @param {any[]} rows @param {string} col @param {KeyMode} mode
      * @returns {string[]}
      */
@@ -121,7 +116,7 @@
   }
 
   /**
-   * Rows from what R sends: a JSON string, a column object (columns may be
+   * Rows from what R sends: a JSON string, a column object (a column may be
    * dictionary-encoded as {__enc__: 'dict', levels, codes}) or rows already.
    * @param {any} data @returns {any[]}
    */
@@ -152,9 +147,9 @@
   };
 
   /**
-   * Count per value of `dimCol`, optionally within one facet: distinct
-   * `id` when set, else rows. A "None (as is)" chart shows the
-   * count column's first value per group as it is.
+   * Count per value of `dimCol`, optionally within one facet: distinct `id`
+   * when set, else rows. With func 'identity' it is the id column's first
+   * value per group as it is.
    * @param {any[]} rows @param {Record<string, any>} cfg
    * @param {string | null | undefined} dimCol
    * @param {string | null} [facetCol] @param {any} [facetVal]
@@ -162,47 +157,34 @@
    */
   const labelCounts = (rows, cfg, dimCol, facetCol, facetVal) => {
     const idCol = cfg.id;
+    const asIs = !!idCol && cfg.func === 'identity';
     const restrict = !!facetCol && facetVal != null && facetVal !== '__all__';
-    /** @param {any} r */
-    const skip = (r) => restrict &&
-      String(r[/** @type {string} */ (facetCol)] ?? '') !== String(facetVal);
-    if (idCol && cfg.func === 'identity') {
-      /** @type {Map<string, any>} */
-      const asis = new Map();
-      for (const r of rows) {
-        if (skip(r)) continue;
-        const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
-        if (!asis.has(dv)) {
-          const v = r[idCol];
-          if (v != null) asis.set(dv, v);
-        }
-      }
-      return asis;
-    }
-    /** @type {Map<string, Set<any> | number>} */
-    const acc = new Map();
-    for (const r of rows) {
-      if (skip(r)) continue;
-      const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
-      if (idCol) {
-        const id = r[idCol];
-        if (id == null) continue;
-        let s = acc.get(dv);
-        if (!(s instanceof Set)) { s = new Set(); acc.set(dv, s); }
-        s.add(id);
-      } else {
-        const cur = acc.get(dv);
-        acc.set(dv, (typeof cur === 'number' ? cur : 0) + 1);
-      }
-    }
-    /** @type {Map<string, number>} */
+    /** @type {Map<string, any>} */
     const out = new Map();
-    for (const [k, v] of acc) out.set(k, v instanceof Set ? v.size : v);
+    /** @type {Map<string, Set<any>>} */
+    const ids = new Map();
+    for (const r of rows) {
+      if (restrict && String(r[/** @type {string} */ (facetCol)] ?? '') !== String(facetVal)) {
+        continue;
+      }
+      const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
+      if (asIs) {
+        if (!out.has(dv) && r[idCol] != null) out.set(dv, r[idCol]);
+      } else if (idCol) {
+        if (r[idCol] == null) continue;
+        let s = ids.get(dv);
+        if (!s) { s = new Set(); ids.set(dv, s); }
+        s.add(r[idCol]);
+        out.set(dv, s.size);
+      } else {
+        out.set(dv, (out.get(dv) || 0) + 1);
+      }
+    }
     return out;
   };
 
   /**
-   * " (n)" after a label from a counts map; long floats rounded.
+   * " (n)" after a label, from a counts map; a non-integer rounds to 2 places.
    * @param {any} label @param {Map<string, any> | null | undefined} counts
    */
   const withCount = (label, counts) => {
