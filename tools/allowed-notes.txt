@@ -1,0 +1,4 @@
+# NOTEs that `R CMD check --as-cran` may give without failing the
+# exit-criteria job. One regular expression per line, matched against the
+# NOTE's text. Adding a line is a reviewed edit.
+New submission

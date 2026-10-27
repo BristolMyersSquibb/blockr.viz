@@ -14,7 +14,7 @@ function mount() {
   win.document.body.innerHTML =
     '<div id="stb" class="summary-table-block-container"></div>';
   win.eval(h.iconsScript());
-  for (const f of [...h.UI_FILES, 'summary-table-block.js']) win.eval(h.source(f));
+  for (const f of [...h.UI_FILES, 'summary-table-block.js']) h.run(win, f);
   const doc = win.document;
   const el = doc.getElementById('stb');
   win.__binding.initialize(el);

@@ -18,7 +18,7 @@ function mount(html, files) {
   win.eval(h.PRELUDE);
   win.document.body.innerHTML = html;
   win.eval(h.iconsScript());
-  for (const f of [...SHARED, ...files]) win.eval(h.source(f));
+  for (const f of [...SHARED, ...files]) h.run(win, f);
   win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
   return win;
 }

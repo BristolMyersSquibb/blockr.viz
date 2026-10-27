@@ -4,3 +4,5 @@
 
 # npm (tests/js)
 node_modules
+results/
+coverage/
