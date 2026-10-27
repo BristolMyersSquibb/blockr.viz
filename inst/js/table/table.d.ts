@@ -57,7 +57,85 @@ interface TableCol {
   bar_fill?: string | null;
   /** What a click on a cell of this column claims, with the row's claim. */
   keys?: TableClaim | null;
+  /** Groups: the percentage after a count, "(12%)". */
+  pct?: (string | null)[] | null;
+  /** Groups: the mark each cell draws (marks.js). */
+  mark?: TableMark | null;
+  /** Groups: the column's scale, printed once under its header. */
+  axis?: TableAxis | null;
+  /** Groups: a custom summary that failed; its cells hold the error. */
+  failed?: boolean;
 }
+
+/** A column axis: tick positions (0 to 100) and their labels. `foot`: the
+ *  strip goes under the table instead (a wide swimlane). */
+interface TableAxis {
+  at: number[];
+  labels: string[];
+  foot?: boolean;
+}
+
+type TableNums = (number | null)[];
+type TableTexts = (string | null)[];
+
+/** The marks of the groups layout, as R/table-model-cells*.R computes them.
+ *  Positions and widths are percentages of the cell. `dw`: the width of the
+ *  value slot beside the mark, in ch. `tt`: what the hover card adds. */
+interface TableMarkBase { dw?: number | null; tt?: unknown }
+
+interface TableMarkBar extends TableMarkBase {
+  kind: 'bar'; w: TableNums; sub?: boolean[] | null; fill?: string | null;
+}
+
+interface TableMarkSplit extends TableMarkBase {
+  kind: 'barsplit'; mode?: string; names: string[]; fills: string[];
+  seg: TableNums[]; segv: TableNums[]; ldisp?: TableTexts[] | null;
+  slab?: TableTexts[] | null; sink?: string[] | null;
+}
+
+interface TableMarkDiv extends TableMarkBase { kind: 'bardiv'; w: TableNums; pos: boolean[] }
+
+/** A box (wl w1 bl bw bc b2 w2 wh) or a point range (c l rw ol ow). */
+interface TableLaneGeom {
+  wl?: TableNums; w1?: TableNums; bl?: TableNums; bw?: TableNums; bc?: TableNums;
+  b2?: TableNums; w2?: TableNums; wh?: TableNums; c?: TableNums; l?: TableNums;
+  rw?: TableNums; ol?: TableNums; ow?: TableNums; nn?: TableNums;
+  tip?: TableTexts; r?: Record<string, TableNums>; bare?: boolean; disp?: TableTexts;
+}
+
+interface TableMarkLane extends TableMarkBase, TableLaneGeom {
+  kind: 'box' | 'pointrange'; multi?: boolean; levels?: string[]; fills?: string[];
+  lv?: TableLaneGeom[]; rf?: undefined;
+}
+
+/** A dumbbell: from `a` to `b`, the link `l`/`w`, the band `bl`/`bw`. */
+interface TablePairGeom {
+  a: TableNums; b: TableNums; l: TableNums; w: TableNums; bl: TableNums; bw: TableNums;
+  fill?: TableTexts; dash?: boolean[]; open?: boolean[]; tip?: TableTexts;
+  disp?: TableTexts; ab?: TableTexts;
+}
+
+interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
+  kind: 'pair'; rf?: number | null; multi?: boolean; levels?: string[]; fills?: string[];
+  lv?: TablePairGeom[];
+}
+
+/** Swimlane: per row, segments [left, width, level from 1, label?]. */
+interface TableMarkInterval extends TableMarkBase {
+  kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
+  d0: number; d1: number; dd?: boolean; lg?: boolean;
+}
+
+interface TableMarkSpark extends TableMarkBase {
+  kind: 'sparkline'; pl: string[]; bd?: TableTexts | null; dx: TableNums; dy: TableNums;
+  xs: string[]; ys: string[]; nn?: TableNums; rc?: number | null; rby?: number | null;
+  rbh?: number | null;
+}
+
+interface TableMarkTile extends TableMarkBase { kind: 'tile' }
+
+type TableMark = TableMarkBar | TableMarkSplit | TableMarkDiv | TableMarkLane | TableMarkPair |
+  TableMarkInterval | TableMarkSpark | TableMarkTile;
 
 /** A section header: a row above the rows it groups, from `at` on. */
 interface TableSection {
@@ -126,6 +204,8 @@ interface TableModel {
   /** Start with every group folded. */
   collapsed?: boolean;
   cards?: TableCards | null;
+  /** A line under the rows ("12 more in Other"). */
+  note?: string | null;
 }
 
 /** A title line as R resolves it (viz_titles()): its text, and the words
@@ -134,6 +214,10 @@ interface TableTitleBand {
   text?: string;
   parts?: { text: string; arg?: string; by?: string }[];
   offers?: string[];
+}
+
+interface TableLegend {
+  groups: { title: string; items: { color: string; label: string }[] }[];
 }
 
 /** The table block's `derived`, as R builds it. The table itself is
@@ -145,6 +229,8 @@ interface TableDerived {
   empty?: { kind: string; message: string } | null;
   /** The drill receipt line, "Filtered: Arm = Placebo". */
   receipt?: string | null;
+  /** Groups: one titled group of colours per colour column. */
+  legend?: TableLegend | null;
   downloads?: unknown;
 }
 
@@ -178,11 +264,22 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** A body cell drawn by the layout instead (the groups marks); null for
+   *  the plain cell. */
+  cell?(c: TableCol, i: number): string | null;
+  /** A column's axis strip (groups): under its header, or in the foot row. */
+  axis?(c: TableCol): string;
 }
 
 interface TableGridFlags {
   sortable?: boolean;
   collapsible?: boolean;
+  /** Extra classes and attributes of the <table>, and of the stub cells. */
+  cls?: string;
+  attrs?: Record<string, string>;
+  stubCls?: string;
+  /** Draw every row, never a window (a picture). */
+  all?: boolean;
 }
 
 interface TableGrid {
@@ -272,7 +369,8 @@ interface TableFrame {
   query(): string;
   onSearch(fn: (q: string) => void): void;
   titles(t: TableDerived['titles']): void;
-  showTools(o: { search: boolean; download: boolean; downloads?: unknown }): void;
+  showTools(o: { search: boolean; download: boolean; downloads?: unknown;
+                 onOpen?: () => void }): void;
   empty(e: TableDerived['empty']): boolean;
   structured(on: boolean): void;
   count(text: string): void;
@@ -317,14 +415,28 @@ interface VizTableNamespace {
   rowText(model: TableModel, i: number): string;
   Frame: new (el: HTMLElement, scope: VizScope) => TableFrame;
   View: VizViewClass;
+  /** Gear editors for keys the engine draws no control for, by
+   *  "<layout>.<key>" or "<key>". */
+  editors: Record<string, (el: HTMLElement, ctx: TableGearCtx) => void>;
+  variables: {
+    varOf(s: Record<string, unknown>): string | null;
+    withVars(summaries: Record<string, unknown>[], vars: string[],
+             columns: VizPayload['columns']): Record<string, unknown>[];
+  };
+  /** A picture of a groups table drawn off screen (groups.js). */
+  picture(payload: VizPayload, width: number, ratio?: number): Promise<VizPicture>;
+  /** The records layout; groups extends it. */
+  Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
   html: {
     th(model: TableModel, r: number, c: number,
-       f: { sortable: boolean; foldAll: boolean }): string;
+       f: { sortable: boolean; foldAll: boolean; axis?: (c: TableCol) => string }): string;
     td(c: TableCol, i: number): string;
     section(m: TableModel, s: number,
             o: { shut: boolean; fold: boolean; extra: string }): string;
     row(m: TableModel, st: TableStructure, i: number,
-        o: { last: boolean; shut: boolean; extra: string }): string;
+        o: { last: boolean; shut: boolean; extra: string; stubCls?: string;
+             cell?(c: TableCol, i: number): string | null }): string;
+    foot(m: TableModel, axis: (c: TableCol) => string): string;
   };
   drill: {
     same(a: TableSelection | null, b: TableSelection | null): boolean;
@@ -338,6 +450,19 @@ interface VizTableNamespace {
   cards: {
     render(host: HTMLElement, cards: TableCards, scope: VizScope,
            opts?: TableCardOpts): void;
+  };
+  marks: {
+    glyph(c: TableMark | null | undefined, i: number, labels: boolean): string;
+    cell(c: TableCol, i: number, o: { labels: boolean }): string;
+    axis(c: TableCol, labels: boolean): string;
+  };
+  summaries: {
+    shows(s: Record<string, unknown>, f: string): boolean;
+    title(s: Record<string, unknown>): string;
+  };
+  tooltip: {
+    wire(box: HTMLElement, scope: VizScope, model: () => TableModel | null): void;
+    card(model: TableModel, k: number, i: number, cell: Element, t: Element): string;
   };
   gear: {
     mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;

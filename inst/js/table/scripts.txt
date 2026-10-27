@@ -2,10 +2,15 @@
 # generated spec. Read by the table's html dependency and by
 # tests/js/table/load.js.
 html.js
+marks.js
+tooltip.js
 dom.js
 drill.js
 chrome.js
 cards.js
 gear.js
+summaries.js
 records.js
+groups.js
+variables.js
 view.js

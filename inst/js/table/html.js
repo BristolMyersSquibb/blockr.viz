@@ -43,7 +43,7 @@
    * @param {TableModel} model
    * @param {number} r
    * @param {number} c
-   * @param {{ sortable: boolean, foldAll: boolean }} f
+   * @param {{ sortable: boolean, foldAll: boolean, axis?: (c: TableCol) => string }} f
    */
   function th(model, r, c, f) {
     const h = model.head[r][c];
@@ -55,7 +55,7 @@
       col ? (col.num ? 'dt-col-num' : 'dt-col-txt') : '',
       sortable ? 'blockr-sortable' : '', h.keys ? 'dt-keyed' : '',
       h.stub && h.bold ? 'blockr-stub-header-bold' : ''];
-    let inner = headText(h, sortable);
+    let inner = headText(h, sortable) + (col && f.axis && !(col.axis && col.axis.foot) ? f.axis(col) : '');
     if (h.stub && f.foldAll) {
       cls.push('dt-has-foldall');
       inner = '<div class="dt-foldall-wrap"><button type="button" class="dt-foldall" ' +
@@ -128,8 +128,9 @@
    * @param {TableStructure} st
    * @param {number} i
    * @param {boolean} shut
+   * @param {string} [cls] The layout's own classes for the stub.
    */
-  function stub(m, st, i, shut) {
+  function stub(m, st, i, shut, cls) {
     const c = m.cols[/** @type {number} */ (m.stub)];
     const pad = (st.indent ? st.indent[i] - st.base : 0) + Math.max(0, st.levels - 1);
     /** @type {string[]} */
@@ -145,7 +146,7 @@
       ? '<button class="blockr-indent-btn" type="button" tabindex="-1" aria-expanded="' +
         !shut + '">' + CHEV + '</button>'
       : '';
-    return '<td class="blockr-stub' + (st.toggle[i] ? ' blockr-has-toggle' : '') +
+    return '<td class="blockr-stub' + (cls ? ' ' + cls : '') + (st.toggle[i] ? ' blockr-has-toggle' : '') +
       (tint ? ' blockr-row-bar' : '') + '"' +
       (style.length ? ' style="' + esc(style.join(';')) + '"' : '') + '>' + btn +
       (d == null ? '&mdash;' : esc(d)) + '</td>';
@@ -156,7 +157,8 @@
    * @param {TableModel} m
    * @param {TableStructure} st
    * @param {number} i
-   * @param {{ last: boolean, shut: boolean, extra: string }} o
+   * @param {{ last: boolean, shut: boolean, extra: string, stubCls?: string,
+   *           cell?: (c: TableCol, i: number) => string | null }} o
    */
   function row(m, st, i, o) {
     const r = m.rows || {};
@@ -170,11 +172,26 @@
     const ind = st.indent ? st.indent[i] : 0;
     let out = '<tr class="' + cls.join(' ') + '" data-i="' + i + '" data-indent="' + ind + '">';
     m.cols.forEach((c, j) => {
-      out += j === m.stub ? stub(m, st, i, o.shut) : td(c, i);
+      const own = j === m.stub || !o.cell ? null : o.cell(c, i);
+      out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls) : own != null ? own : td(c, i);
     });
     return out + '</tr>';
   }
 
+  /**
+   * The foot row: the axes of the columns that print theirs under the
+   * table. "" when none does.
+   * @param {TableModel} m
+   * @param {(c: TableCol) => string} axis
+   */
+  function foot(m, axis) {
+    if (!m.cols.some((c) => c.axis && c.axis.foot)) return '';
+    return '<tfoot><tr>' + m.cols.map((c, j) => j === m.stub
+      ? '<td class="blockr-summarize-axis-stub"></td>'
+      : c.axis && c.axis.foot ? '<td class="blockr-summarize-axis-cell">' + axis(c) + '</td>'
+        : '<td></td>').join('') + '</tr></tfoot>';
+  }
+
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row };
+  V.table.html = { th, td, section, row, foot };
 })();
