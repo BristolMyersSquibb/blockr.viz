@@ -1401,7 +1401,7 @@ table_arguments <- function() {
 }
 
 #' The `summaries` argument spec of the table block, under the public keys
-#' (R/lane-summaries.R).
+#' (R/table-model-groups.R).
 #' @noRd
 table_summaries_spec <- function() {
   funcs <- c("identity", "mean", "median", "min", "max")
@@ -1753,7 +1753,7 @@ new_table_block <- function(layout = "records",
   top_n <- null_state(top_n)
   summaries <- if (is.list(summaries)) summaries else list()
   # Old summary keys (stat, from / to, lo / hi, fields, ...) read as the
-  # public ones (R/lane-summaries.R).
+  # public ones (R/table-model-groups.R).
   summaries <- lapply(summaries, lane_public_summary)
   if (identical(layout, "groups") && !length(summaries)) {
     summaries <- table_groups_seed()

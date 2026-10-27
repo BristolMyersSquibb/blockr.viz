@@ -335,4 +335,3 @@ dt_onclick <- function(drill, all_cols) {
   if (is.na(m)) return(list(col = NULL, idx = NULL))
   list(col = drill, idx = m - 1L)
 }
-

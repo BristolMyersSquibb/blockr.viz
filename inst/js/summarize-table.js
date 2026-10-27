@@ -1412,7 +1412,7 @@
                       { value: "off", label: "No download" }];
 
   // The lane statistic vocabulary: MUST mirror R's LANE_STATS/LANE_STAT_META
-  // (R/lane-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
+  // (R/table-model-groups-stats.R, drift-tested) -- chart/roles.js SUMMARY_STATS plus
   // mean_ci95, which exists only on this surface because R has qt().
   var LANE_STATS = [
     { value: "median_q1_q3", label: "Median · Q1–Q3" },
@@ -1600,7 +1600,7 @@
   var NONE_OPT = { value: "none", label: "(none)" };
   var RANGE_OPT = [NONE_OPT].concat(LANE_STATS);
   var OUTER_OPT = [NONE_OPT].concat(LANE_WHISKERS);
-  // Public keys (R/lane-summaries.R): `summary` is the inner range (and a
+  // Public keys (R/table-model-groups.R): `summary` is the inner range (and a
   // text column's statistic), `whiskers` the outer one. The old names are
   // read too, for an entry written before the rename.
   function distInner(s) {

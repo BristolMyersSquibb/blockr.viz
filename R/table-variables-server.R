@@ -353,4 +353,3 @@ table_missing_levels <- function(data, cols) {
   }
   data
 }
-

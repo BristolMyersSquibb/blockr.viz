@@ -318,4 +318,3 @@ dt_unit_labels <- function(data, unit, stub = NULL) {
   }
   data
 }
-

@@ -255,4 +255,3 @@ dt_bg_paint <- function(sv, data, col) {
   }
   list(bg = bg, fg = fg)
 }
-

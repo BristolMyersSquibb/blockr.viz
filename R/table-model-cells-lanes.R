@@ -1,6 +1,6 @@
 # Table model: cells of the lane marks, the box, the point range and the pair
 # (dumbbell), each plain or colour-split. Every geometric number (positions
-# AND widths) is rounded here; the emitters only print. See lane-prepare.R
+# AND widths) is rounded here; the emitters only print. See table-model-groups-prepare.R
 # for the cell's statistics and _blockr.design/open/lane-chart/spec.md for the
 # glyph.
 

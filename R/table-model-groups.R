@@ -120,11 +120,45 @@ lane_public_summary <- function(s) {
   s
 }
 
+#' A summary entry written with the spec's keys (R/spec-table-summaries.R)
+#' under the keys the engine reads. A sparkline is a "series" whose band is
+#' `band = c(ymin, ymax)` and whose reference statistic is `ref`
+#' (`median_q1_q3` was `median_iqr`); a pair's reference range, guide line
+#' and dash column are `lo`, `hi`, `ref` and `dash`; a custom summary's `id`
+#' is its `denom`. A key the engine already has wins.
+#' @noRd
+lane_spec_summary <- function(s) {
+  type <- summarize_chr1(s[["type"]]) %||% "simple"
+  put <- function(key, v) {
+    if (is.null(s[[key]]) && length(v)) s[[key]] <<- v
+  }
+  if (identical(type, "sparkline")) {
+    s[["type"]] <- "series"
+    if (length(s[["ymin"]]) && length(s[["ymax"]])) {
+      put("band", c(summarize_chr1(s[["ymin"]]), summarize_chr1(s[["ymax"]])))
+    }
+    ref <- summarize_chr1(s[["summary"]])
+    put("ref", if (identical(ref, "median_q1_q3")) "median_iqr" else ref)
+    s[c("ymin", "ymax", "summary")] <- NULL
+  } else if (identical(type, "pair")) {
+    put("lo", s[["ref_min"]])
+    put("hi", s[["ref_max"]])
+    put("ref", unlist(s[["x_lines"]])[1L])
+    put("dash", s[["linetype"]])
+    s[c("ref_min", "ref_max", "x_lines", "linetype")] <- NULL
+  } else if (identical(type, "custom")) {
+    put("denom", s[["id"]])
+    s[["id"]] <- NULL
+  }
+  s
+}
+
 #' A summary entry under the engine's internal keys. Run first thing in
 #' lane_norm_summaries(); internal names already present win.
 #' @noRd
 lane_internal_summary <- function(s) {
   if (!is.list(s)) return(s)
+  s <- lane_spec_summary(s)
   type <- summarize_chr1(s[["type"]]) %||% "simple"
   if (identical(type, "dist")) {
     sm <- s[["summary"]]
