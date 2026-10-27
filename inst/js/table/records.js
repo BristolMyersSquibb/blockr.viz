@@ -103,7 +103,9 @@
       this.payload = p;
       const cfg = this.config();
       const d = /** @type {TableDerived} */ (p.derived || {});
-      const m = /** @type {TableModel | null} */ (/** @type {unknown} */ (p.data || null));
+      // No table is `data: {}`: a null `data` means "the rows you hold".
+      const data = /** @type {any} */ (p.data);
+      const m = /** @type {TableModel | null} */ (data && Array.isArray(data.cols) ? data : null);
       this.labels = Object.fromEntries((p.columns || []).map((c) => [c.name, c.label || c.name]));
       this.sel = asSelection(cfg.selection);
       if (!this.transient()) this.sent = null;
