@@ -221,27 +221,38 @@
     _addMenu(body, keys, values, scope) {
       const row = document.createElement('div');
       row.className = 'dd-form-row dd-add-wrap dd-add-mapping';
+      body.appendChild(row);
+      const add = (/** @type {string} */ key) => {
+        if (!key) return;
+        this._added.add(key);
+        this.render();
+      };
+      const labels = keys.map((k) => this.label(k, values));
+      const Sel = /** @type {VizUi} */ (root.Blockr).Select;
+      if (Sel) {
+        const inst = Sel.single(row, {
+          options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
+          label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
+        });
+        scope.own({ dispose: () => inst.destroy() });
+        return;
+      }
       const sel = document.createElement('select');
       sel.className = 'dd-select dd-add-select';
       sel.setAttribute('aria-label', 'Add a mapping');
       sel.setAttribute('data-gear-input', '.add');
       const first = document.createElement('option');
       first.value = '';
-      first.textContent = '+ Add';
+      first.textContent = '+ Add a mapping';
       sel.appendChild(first);
-      for (const key of keys) {
+      keys.forEach((key, i) => {
         const o = document.createElement('option');
         o.value = key;
-        o.textContent = this.label(key, values);
+        o.textContent = labels[i];
         sel.appendChild(o);
-      }
-      scope.on(sel, 'change', () => {
-        if (!sel.value) return;
-        this._added.add(sel.value);
-        this.render();
       });
+      scope.on(sel, 'change', () => add(sel.value));
       row.appendChild(sel);
-      body.appendChild(row);
     }
 
     /** A field being typed in, so a re-render can put it back. */

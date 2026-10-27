@@ -189,3 +189,14 @@ test('every chart type: the gear rows are the spec rows that apply to it', () =>
   }
   c.close();
 });
+
+test('the gear offers every column of the data, not only the shipped ones', () => {
+  const { F } = require('../cases');
+  const c = D.open(BAR);
+  const shipped = F.columns.filter((x) => x.name === 'AETERM');
+  require('../harness').send(c.env, D.ID, { columns: shipped, data: { AETERM: F.data.AETERM },
+                                            config: BAR, derived: { column_meta: F.columns } });
+  const names = c.block._gear.slot('color').options.map((o) => o.value);
+  assert.ok(names.includes('USUBJID') && names.includes('AVAL'), names.join(' '));
+  c.close();
+});

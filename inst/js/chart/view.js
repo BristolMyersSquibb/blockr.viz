@@ -215,8 +215,10 @@
       NS.model.defaults(this.config, this.columns);
       this._restoreSelection(p.config && p.config.selection);
       this._setTheme(d.theme);
-      // The gear first: the sentence's words open what the gear offers.
-      if (this._gear) this._gear.update(p);
+      // The gear first: the sentence's words open what the gear offers. It
+      // offers every column of the data, not only the ones R shipped rows
+      // for.
+      if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
       this._updateDownloads(d.downloads);
