@@ -11,7 +11,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const model = NS.model = NS.model || {};
 
   /**
@@ -60,106 +61,40 @@
   };
 
   /**
-   * The gear picked a new category. A sort that is still the default of
-   * one column type (by value, descending; data order, ascending) follows
-   * the new column; any other sort is the builder's and stays. Mutates `cfg`.
-   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
-   */
-  const resortForGroup = (cfg, columns) => {
-    if (NS.familyOf(cfg.chart_type) !== 'aggregated') return;
-    if (NS.DISTRIBUTION_TYPES.includes(cfg.chart_type)) return;
-    const isDefault = (cfg.sort_by === 'value' && cfg.sort_dir === 'desc') ||
-      (cfg.sort_by === 'data' && cfg.sort_dir === 'asc');
-    if (!isDefault) return;
-    Object.assign(cfg, naturalSort(cfg, columns));
-  };
-
-  /**
-   * The defaults a config from R gets before the first draw: the mapping
-   * columns a family cannot draw without, and its sort. Mutates `cfg`.
+   * The defaults a config gets before a draw: the distribution statistics
+   * and an aggregated chart's sort. A mapping is never picked here: an unset
+   * one asks for a pick (gate()). Mutates `cfg`.
    * @param {Record<string, any>} cfg @param {VizColumn[]} columns
    */
   const defaults = (cfg, columns) => {
     if (!cfg.chart_type) cfg.chart_type = 'bar';
     const fam = NS.familyOf(cfg.chart_type);
     if (fam === 'aggregated') {
-      if (!cfg.group && columns.length > 0) {
-        const cat = columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
-        cfg.group = cat ? cat.name : columns[0].name;
-      }
       if (!ensureDistributionMetric(cfg)) {
         if (!cfg.func) cfg.func = 'count';
         if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
       }
       fillSort(cfg, columns);
     } else if (fam === 'timeline') {
-      if (!cfg.x && columns.length > 0) {
-        const num = columns.find((c) => c.type === 'numeric');
-        cfg.x = num ? num.name : columns[0].name;
-      }
-      if (!cfg.y) {
-        const cat = columns.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique > 1);
-        cfg.y = cat ? cat.name : columns[0]?.name;
-      }
       if (!cfg.sort_by) cfg.sort_by = 'onset';
       if (!cfg.sort_dir) cfg.sort_dir = 'asc';
-    } else {
-      if (!cfg.x && columns.length > 0) {
-        const num = columns.find((c) => c.type === 'numeric');
-        cfg.x = num ? num.name : columns[0].name;
-      }
-      if (!cfg.y) {
-        const nums = columns.filter((c) => c.type === 'numeric');
-        const other = nums.find((c) => c.name !== cfg.x);
-        cfg.y = other ? other.name : (nums[0] ? nums[0].name : columns[0]?.name);
-      }
     }
   };
 
-  /**
-   * The defaults after the gear switched the chart type, so R learns the
-   * new mapping (and ships its columns) with the config it is sent next.
-   * Mutates `cfg`.
-   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
-   */
-  const familyDefaults = (cfg, columns) => {
+  /** The settings a family cannot draw without, as [setting, spec key].
+   * @param {Record<string, any>} cfg @returns {[string, string][]} */
+  const requiredOf = (cfg) => {
     const fam = NS.familyOf(cfg.chart_type);
-    const cols = columns || [];
-    const has = NS.hasVal;
-    if (fam === 'aggregated') {
-      if (!has(cfg.group) && cols.length) {
-        const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique <= 30);
-        cfg.group = cat ? cat.name : cols[0].name;
-      }
-      if (!ensureDistributionMetric(cfg)) {
-        if (!cfg.func) cfg.func = 'count';
-        if (!cfg.value && cfg.func === 'count') cfg.value = '.count';
-      }
-      fillSort(cfg, cols);
-      if (!has(cfg.orientation)) cfg.orientation = 'horizontal';
-      if (!has(cfg.bar_mode)) cfg.bar_mode = 'stacked';
-    } else if (fam === 'timeline') {
-      if (!has(cfg.x) && cols.length) {
-        const num = cols.find((c) => c.type === 'numeric');
-        cfg.x = num ? num.name : cols[0].name;
-      }
-      if (!has(cfg.y) && cols.length) {
-        const cat = cols.find((/** @type {any} */ c) => c.type === 'categorical' && c.n_unique > 1);
-        cfg.y = cat ? cat.name : cols[0].name;
-      }
-      if (!has(cfg.sort_by)) cfg.sort_by = 'onset';
-      if (!has(cfg.sort_dir)) cfg.sort_dir = 'asc';
-    } else {
-      if (!has(cfg.x) && cols.length) {
-        const num = cols.find((c) => c.type === 'numeric');
-        cfg.x = num ? num.name : cols[0].name;
-      }
-      if (!has(cfg.y) && cols.length) {
-        const nums = cols.filter((c) => c.type === 'numeric');
-        const other = nums.find((c) => c.name !== cfg.x);
-        cfg.y = other ? other.name : (nums[0] ? nums[0].name : cols[0].name);
-      }
-    }
+    if (cfg.chart_type === 'histogram') return [['x', 'x']];
+    if (fam === 'aggregated') return [['group', cfg.cat_key || 'x']];
+    return [['x', 'x'], ['y', 'y']];
+  };
+
+  /** The gear's label of a spec argument. @param {string} key */
+  const specLabel = (key) => {
+    const spec = V.spec && V.spec.chart;
+    const arg = spec && spec[key];
+    return arg && arg.gear ? arg.gear.label : key;
   };
 
   // Above this many colour levels a legend cannot be read.
@@ -176,20 +111,35 @@
    * @returns {string | null}
    */
   const gate = (rows, columns, cfg) => {
-    if (rows.length === 0) return emptyState('No data to chart');
     const fam = NS.familyOf(cfg.chart_type);
-
-    // xend is required only as an always-shown row: a gantt without an end
-    // draws dots.
-    const required = NS.roles.FAMILY_ROLES[fam].requiredMap
-      .filter((/** @type {string} */ k) => k !== 'xend');
-    const unset = required.filter((/** @type {string} */ k) => !NS.hasVal(cfg[k]));
+    const unset = requiredOf(cfg).filter(([k]) => !NS.hasVal(cfg[k]));
     if (unset.length) {
-      return emptyState('Pick ' + unset.map((/** @type {string} */ k) => {
-        const l = NS.roles.ROLES[k].label;
-        return (typeof l === 'function') ? l(cfg) : l;
-      }).join(' and ') + ' to plot.');
+      return emptyState('Pick ' + unset.map(([, key]) => specLabel(key)).join(' and ') +
+                        ' to plot.');
     }
+
+    const colSet = new Set((columns || []).map((c) => c.name));
+    // A histogram's category is the bin column R adds beside x.
+    const req = cfg.chart_type === 'histogram' ? [[specLabel('x'), cfg.x]]
+      : fam === 'aggregated'
+        ? [[specLabel(cfg.cat_key || 'x'), cfg.group],
+           [specLabel(cfg.val_key || 'y'), cfg.value !== '.count' ? cfg.value : null]]
+        : [['X', cfg.x], ['Y', cfg.y]];
+    const missing = req
+      .filter(([, v]) => v && !colSet.has(v))
+      .map(([lbl, v]) => `${lbl} = "${v}"`);
+    if (missing.length) {
+      const avail = (columns || []).map((c) => c.name);
+      const availTxt = avail.length
+        ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
+          (avail.length > 30 ? ', …' : '') + '.'
+        : '';
+      return emptyState('Mapped column not in data: ' + missing.join(', ') + '.' + availTxt +
+        ' A rename, flatten or pivot upstream may have changed the column ' +
+        'name — re-pick it in the gear.');
+    }
+
+    if (rows.length === 0) return emptyState('No data to chart');
 
     // A band whose series R could not compute says why.
     if (cfg.chart_type === 'band' && !cfg.band_series && cfg.band_note) {
@@ -205,24 +155,6 @@
             '<code>color</code> for low-cardinality grouping (e.g. ARM).';
         return emptyState(`Too many color levels (${nColors}). ${hint}`);
       }
-    }
-
-    const colSet = new Set((columns || []).map((c) => c.name));
-    const req = fam === 'aggregated'
-      ? [['Group', cfg.group], ['Metric', cfg.value !== '.count' ? cfg.value : null]]
-      : [['X', cfg.x], ['Y', cfg.y]];
-    const missing = req
-      .filter(([, v]) => v && !colSet.has(v))
-      .map(([lbl, v]) => `${lbl} = "${v}"`);
-    if (missing.length) {
-      const avail = (columns || []).map((c) => c.name);
-      const availTxt = avail.length
-        ? ' Columns available here: ' + avail.slice(0, 30).join(', ') +
-          (avail.length > 30 ? ', …' : '') + '.'
-        : '';
-      return emptyState('Mapped column not in data: ' + missing.join(', ') + '.' + availTxt +
-        ' A rename, flatten or pivot upstream may have changed the column ' +
-        'name — re-pick it in the gear.');
     }
     return null;
   };
@@ -240,7 +172,6 @@
     return m;
   };
 
-  Object.assign(model, { ensureDistributionMetric, naturalSort, resortForGroup, defaults,
-                         familyDefaults, gate, emptyState,
+  Object.assign(model, { ensureDistributionMetric, naturalSort, defaults, gate, emptyState,
                          facetLabels, MAX_COLOR_LEVELS });
 })();

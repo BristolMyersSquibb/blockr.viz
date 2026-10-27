@@ -14,7 +14,8 @@
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const NS = /** @type {any} */ (B.chart = B.chart || {});
+  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
+  const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -86,6 +87,43 @@
   };
 
   /**
+   * The centre line of one level: a halo under it, so lines crossing a
+   * ribbon read, then the line itself. Returns the index of the line in
+   * `series`.
+   * @param {any} k @param {any[]} series @param {any} b @param {string} clr
+   * @param {string | undefined} nm
+   */
+  const bandCenterLines = (k, series, b, clr, nm) => {
+    const { ink, lm, named } = k;
+    /** @type {any[]} */
+    const cpts = [];
+    for (let i = 0; i < b.x.length; i++) cpts.push([b.x[i], b.center[i] == null ? null : b.center[i]]);
+    // A halo under every centre line, so lines crossing a ribbon read.
+    series.push({
+      type: 'line', name: nm, data: cpts, symbol: 'none', showSymbol: false,
+      z: 6, silent: true, legendHoverLink: false,
+      itemStyle: { color: clr },
+      lineStyle: { color: ink.surface, width: (BASE_LINE_WIDTH + 2) * lm },
+      emphasis: { disabled: true }
+    });
+    const at = series.length;
+    series.push({
+      type: 'line', name: nm, data: cpts, symbol: 'none', showSymbol: false,
+      z: 7, triggerLineEvent: true,
+      itemStyle: { color: clr, cursor: 'pointer' },
+      lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
+      emphasis: { disabled: true },
+      ...(named && nm ? {
+        endLabel: { show: true, formatter: '{a}', distance: 6,
+                    color: ink.text || '#111827', fontSize: ink.fontSize || 12,
+                    fontWeight: 600 },
+        labelLayout: { moveOverlap: 'shiftY' }
+      } : {})
+    });
+    return at;
+  };
+
+  /**
    * The band series of one panel.
    * @param {any} m the individual model @param {any} panel @param {any} look
    * @returns {{ series: any[], band: any, markLineIdx: number, many: boolean, levelsDrawn: string[],
@@ -145,32 +183,9 @@
           series.push(ri);
         }
       }
-      /** @type {any[]} */
-      const cpts = [];
-      for (let i = 0; i < b.x.length; i++) cpts.push([b.x[i], b.center[i] == null ? null : b.center[i]]);
-      // A halo under every centre line, so lines crossing a ribbon read.
-      series.push({
-        type: 'line', name: nm, data: cpts, symbol: 'none', showSymbol: false,
-        z: 6, silent: true, legendHoverLink: false,
-        itemStyle: { color: clr },
-        lineStyle: { color: ink.surface, width: (BASE_LINE_WIDTH + 2) * lm },
-        emphasis: { disabled: true }
-      });
-      centerIdx[cl] = series.length;
-      if (firstCenter < 0) firstCenter = series.length;
-      series.push({
-        type: 'line', name: nm, data: cpts, symbol: 'none', showSymbol: false,
-        z: 7, triggerLineEvent: true,
-        itemStyle: { color: clr, cursor: 'pointer' },
-        lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
-        emphasis: { disabled: true },
-        ...(named && nm ? {
-          endLabel: { show: true, formatter: '{a}', distance: 6,
-                      color: ink.text || '#111827', fontSize: ink.fontSize || 12,
-                      fontWeight: 600 },
-          labelLayout: { moveOverlap: 'shiftY' }
-        } : {})
-      });
+      const at = bandCenterLines({ ink, lm, named }, series, b, clr, nm);
+      centerIdx[cl] = at;
+      if (firstCenter < 0) firstCenter = at;
     }
     // Room on the right for the end labels.
     let labelPad = 0;

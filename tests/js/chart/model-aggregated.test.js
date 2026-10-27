@@ -99,28 +99,6 @@ test('the default sort follows the category column', () => {
   // Boxplot keeps data order on a text category.
   assert.deepStrictEqual(dflt('country', { chart_type: 'boxplot' }), ['data', 'asc']);
 
-  const fam = (group, extra) => {
-    const cfg = { chart_type: 'pie', group, ...extra };
-    C.model.familyDefaults(cfg, cols);
-    return [cfg.sort_by, cfg.sort_dir];
-  };
-  assert.deepStrictEqual(fam('day'), ['data', 'asc']);
-  assert.deepStrictEqual(fam('country'), ['value', 'desc']);
-});
-
-test('a new category re-sorts a default sort and keeps a picked one', () => {
-  const cols = [cat('country'), { name: 'day', type: 'categorical', temporal: 'date' }];
-  const after = (cfg, group) => {
-    const c = { chart_type: 'bar', ...cfg, group };
-    C.model.resortForGroup(c, cols);
-    return [c.sort_by, c.sort_dir];
-  };
-  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'desc' }, 'day'), ['data', 'asc']);
-  assert.deepStrictEqual(after({ sort_by: 'data', sort_dir: 'asc' }, 'country'), ['value', 'desc']);
-  assert.deepStrictEqual(after({ sort_by: 'alpha', sort_dir: 'asc' }, 'day'), ['alpha', 'asc']);
-  assert.deepStrictEqual(after({ sort_by: 'value', sort_dir: 'asc' }, 'day'), ['value', 'asc']);
-  assert.deepStrictEqual(after({ chart_type: 'boxplot', sort_by: 'data', sort_dir: 'asc' }, 'country'),
-                         ['data', 'asc']);
 });
 
 test('colour levels follow the scale order, then factor levels, then the alphabet', () => {
@@ -158,13 +136,6 @@ test('tooltip fields: the first row of each group in the panel', () => {
   assert.deepStrictEqual(plain(m.ttFields), ['ID', 'SEV']);
   assert.deepStrictEqual(plain(m.panels[0].ttRep.Rash), ['S02', '']);
   assert.deepStrictEqual(plain(m.panels[1].ttRep.Rash), ['S01', 'MILD']);
-});
-
-test('a radar shares its spoke max across a fixed grid, not a free one', () => {
-  const cfg = { chart_type: 'radar', color: 'SEV', facet: 'ARM', value: 'V', func: 'sum' };
-  // The largest cell of any panel: '' / MILD in A.
-  assert.strictEqual(build(cfg).sharedMax, 7);
-  assert.strictEqual(build({ ...cfg, facet_scales: 'free' }).sharedMax, null);
 });
 
 test('summarizeStat: quartiles, Tukey fences clipped to the data, sd and se', () => {
@@ -232,7 +203,7 @@ test('a fixed facet grid keeps every distribution slot in every panel', () => {
                          [[['a\u0000x', 1]], [['b\u0000y', 1]]]);
 });
 
-test('the mark a click lands on: a bar segment, a split box, a radar shape', () => {
+test('the mark a click lands on: a bar segment, a split box', () => {
   const bar = build({ color: 'SEV' });
   const at = (m, cfg, p) => plain(C.model.aggregatedMarkAt(m, { ...BASE, ...cfg }, p));
   assert.deepStrictEqual(at(bar, { color: 'SEV' },
@@ -246,11 +217,6 @@ test('the mark a click lands on: a bar segment, a split box, a radar shape', () 
   const box = build({ chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV' });
   assert.deepStrictEqual(at(box, { chart_type: 'boxplot', color: 'SEV' }, { name: 'Rash\u0000MILD' }),
                          { group: 'Rash', level: 'MILD' });
-  const radar = build({ chart_type: 'radar', color: 'SEV' });
-  assert.deepStrictEqual(at(radar, { chart_type: 'radar', color: 'SEV' }, { name: 'MILD' }),
-                         { group: null, level: 'MILD' });
-  assert.strictEqual(at(build({ chart_type: 'radar' }), { chart_type: 'radar' }, { name: 'Count' }),
-                     null);
 });
 
 test('keys: group, colour where it splits the mark, facet in a panel (D2, D3)', () => {
@@ -258,8 +224,6 @@ test('keys: group, colour where it splits the mark, facet in a panel (D2, D3)', 
   assert.deepStrictEqual(keys({}, '__all__', 'Rash', null), { T: 'Rash' });
   assert.deepStrictEqual(keys({ color: 'SEV', facet: 'ARM' }, 'A', 'Rash', 'MILD'),
                          { T: 'Rash', SEV: 'MILD', ARM: 'A' });
-  assert.deepStrictEqual(keys({ chart_type: 'radar', color: 'SEV' }, '__all__', null, 'MILD'),
-                         { SEV: 'MILD' });
 });
 
 test('a click sends the keys, a missing one as null; a drill column its values', () => {
@@ -284,7 +248,6 @@ test('the model reads only the config fields it lists', () => {
   const configs = [
     {}, { color: 'SEV', facet: 'ARM', count_on: 'both', count_col: 'ID', tt_fields: ['ID'] },
     { chart_type: 'waterfall', value: 'V', func: 'sum' }, { chart_type: 'pie', facet: 'ARM' },
-    { chart_type: 'radar', color: 'SEV', facet: 'ARM' },
     { chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV', box_points: 'outliers' },
     { chart_type: 'pointrange', value: 'V', func: 'mean', summary: 'mean_sd', facet: 'ARM' },
     { sort_by: 'D' }, { sort_by: 'data' }, { func: 'pct_distinct', value: 'ID', pct_of: 'color' }

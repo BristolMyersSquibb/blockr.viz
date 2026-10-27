@@ -20,7 +20,7 @@ const AE = { group: 'AETERM' };
 const LAB = { x: 'ADY', y: 'AVAL' };
 
 /** Draw a config and keep the window open for the test. */
-const draw = (config) => h.draw({ ...BASE, ...config }, F.data, F.columns, { keepOpen: true });
+const draw = (config) => h.drawInternal({ ...BASE, ...config }, F.data, F.columns, { keepOpen: true });
 
 /** The last full option each panel was given. */
 const lastOption = (r, slot = 0) => {
@@ -55,9 +55,9 @@ test('the band sits below the plot by default and above it with legend = "top"',
 
 test('the band moves back below when the setting returns to bottom', () => {
   const config = { ...BASE, chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' };
-  const r = h.draw(config, F.data, F.columns, { keepOpen: true });
+  const r = h.drawInternal(config, F.data, F.columns, { keepOpen: true });
   assert.strictEqual(band(r).nextElementSibling, r.block.chartGrid);
-  h.send(r.env, r.id, { columns: F.columns, data: F.data, config: { ...config, legend: 'bottom' } });
+  h.sendInternal(r.env, r.id, { columns: F.columns, data: F.data, settings: { ...config, legend: 'bottom' } });
   assert.strictEqual(band(r).previousElementSibling, r.block.chartGrid);
   assert.ok(!band(r).classList.contains('dd-legend-band--top'));
   r.env.close();
@@ -102,7 +102,7 @@ test('the swatch follows the mark', () => {
 test('a chip still filters its level, and a second click sends again', () => {
   const r = draw({ chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' });
   const chip = band(r).querySelector('.dd-legend-chip');
-  const sent = () => r.env.win.__inputs.filter((i) => /_action$|_filter$/.test(i.name)).length;
+  const sent = () => r.env.win.__inputs.filter((i) => /_select:/.test(i.name)).length;
   const before = sent();
   chip.click();
   chip.click();
@@ -122,13 +122,6 @@ test('marks on a line: end labels, room on the right, no band', () => {
   assert.strictEqual(ended[0].endLabel.fontWeight, 600);
   assert.strictEqual(ended[0].endLabel.color, '#111827');
   assert.ok(opt.grid.right > 5);
-  assert.strictEqual(band(r), null);
-  r.env.close();
-});
-
-test('the old direct_labels = "on" means marks', () => {
-  const r = draw({ chart_type: 'line', ...LAB, color: 'SEX', direct_labels: 'on' });
-  assert.ok(lastOption(r).series.some((s) => s.endLabel && s.endLabel.show));
   assert.strictEqual(band(r), null);
   r.env.close();
 });
@@ -280,7 +273,7 @@ const CROSS = {
 };
 
 test('marks through the view on a stacked bar hide the band', () => {
-  const r = h.draw({ ...BASE, chart_type: 'bar', group: 'T', color: 'G', orientation: 'vertical',
+  const r = h.drawInternal({ ...BASE, chart_type: 'bar', group: 'T', color: 'G', orientation: 'vertical',
                      legend: 'marks' }, CROSS.data, CROSS.columns, { keepOpen: true });
   try {
     assert.strictEqual(band(r), null);
@@ -323,17 +316,3 @@ test('legendSetting: the value, bottom when missing, marks for an old direct_lab
   assert.strictEqual(C.legendSetting({ legend: 'none', direct_labels: 'on' }), 'none');
 });
 
-test('the gear offers Legend for the types with a colour legend', () => {
-  const spec = C.roles.FAMILY_ROLES;
-  const has = (fam, type) => (spec[fam].presentation || []).some((e) =>
-    (typeof e === 'string' ? e === 'legend' : e.role === 'legend' && (!e.types || e.types.includes(type))));
-  for (const t of ['bar', 'boxplot', 'pointrange', 'radar']) assert.ok(has('aggregated', t), t);
-  for (const t of ['scatter', 'line', 'area', 'band']) assert.ok(has('individual', t), t);
-  assert.ok(has('histogram', 'histogram'));
-  assert.ok(has('timeline', 'gantt'));
-  assert.ok(!has('aggregated', 'pie'));
-  const role = C.roles.ROLES.legend;
-  assert.deepStrictEqual(plain(role.options.map((o) => o.value)), ['bottom', 'top', 'marks', 'none']);
-  assert.strictEqual(role.when({ color: 'ARM' }), true);
-  assert.strictEqual(role.when({}), false);
-});

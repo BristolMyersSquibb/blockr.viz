@@ -1,9 +1,9 @@
-# Golden cross-test: the JS aggregation engine (Blockr.DrilldownAgg.aggregate,
-# inst/js/drilldown-agg.js -- the chart's client-side path) and the R engine
+# Golden cross-test: the JS aggregation engine (aggregate() in
+# inst/js/chart/agg.js -- the chart's client-side path) and the R engine
 # (dd_table_aggregate / dd_metric_plan, R/table-block.R -- the table + tile
 # server-side path) MUST produce the same numbers for the same data. The
 # name-drift tests (test-agg-fns-drift.R) only tie the vocabulary; this test
-# ties the SEMANTICS by executing inst/js/drilldown-agg.js as shipped in plain
+# ties the SEMANTICS by executing inst/js/chart/agg.js as shipped in plain
 # node (fixtures/agg-golden-runner.js) and comparing cell by cell.
 #
 # Alignment contract (R is the source of truth):
@@ -29,7 +29,7 @@ skip_if_no_node <- function() {
 
 js_aggregate <- function(rows, config) {
   runner <- testthat::test_path("fixtures", "agg-golden-runner.js")
-  engine <- system.file("js", "drilldown-agg.js", package = "blockr.viz")
+  engine <- system.file("js", "chart", "agg.js", package = "blockr.viz")
   payload <- jsonlite::toJSON(
     list(rows = rows, config = config),
     dataframe = "rows", na = "null", auto_unbox = TRUE

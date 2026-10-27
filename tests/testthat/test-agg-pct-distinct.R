@@ -19,7 +19,7 @@ skip_if_no_node <- function() {
 
 js_aggregate <- function(rows, config) {
   runner <- testthat::test_path("fixtures", "agg-golden-runner.js")
-  engine <- system.file("js", "drilldown-agg.js", package = "blockr.viz")
+  engine <- system.file("js", "chart", "agg.js", package = "blockr.viz")
   payload <- jsonlite::toJSON(
     list(rows = rows, config = config),
     dataframe = "rows", na = "null", auto_unbox = TRUE

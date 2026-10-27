@@ -518,15 +518,19 @@
     const groups = (ctx.host.tiles && ctx.host.tiles(ctx.key, ctx.values)) ||
       [{ values: choices.map((c) => c.value) }];
     for (const g of groups) {
+      // One block per group: its heading over its tiles.
+      const box = document.createElement('div');
+      box.className = 'dd-tile-group';
+      el.appendChild(box);
       if (g.label) {
         const head = document.createElement('div');
         head.className = 'dd-type-group-head';
         head.textContent = g.label;
-        el.appendChild(head);
+        box.appendChild(head);
       }
       const opts = choices.filter((c) => g.values.some((v) => same(v, c.value)))
         .map((c) => ({ value: String(c.value), label: c.label, icon: icon(c.value) }));
-      V.gear.tiles.build(el, opts, String(ctx.value), (v) => {
+      V.gear.tiles.build(box, opts, String(ctx.value), (v) => {
         const c = choices.find((x) => String(x.value) === v);
         if (c) ctx.set(c.value);
       }, ctx.scope);

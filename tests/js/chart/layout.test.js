@@ -20,9 +20,8 @@ const layout = (cfg) => {
 };
 
 const CASES = {
-  bar: { chart_type: 'bar', group: 'AVISIT', facet: 'SEX', orientation: 'vertical', drill: 'auto' },
-  line: { chart_type: 'line', x: 'AVISIT', y: 'AVAL', series: 'USUBJID', facet: 'SEX',
-          drill: 'auto' }
+  bar: { type: 'bar', x: 'AVISIT', facet: 'SEX', orientation: 'vertical', drill: 'auto' },
+  line: { type: 'line', x: 'AVISIT', y: 'AVAL', series: 'USUBJID', facet: 'SEX', drill: 'auto' }
 };
 
 for (const [name, cfg] of Object.entries(CASES)) {
