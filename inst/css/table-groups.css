@@ -1,17 +1,12 @@
-# Summarize table: the CSS delta on top of the shared html-table rules.
-#
-# Only what the bars, the legend, the expand caret and the footer add. Type,
-# padding, hover, sticky header and the scroll shadow all come from
-# html_table_shared_css_fallback(), so a summarize table and a table block are
-# the same object with a different cell.
-#
-# Colors read blockr.theme's --blockr-* tokens with a fallback, so a themed
-# board restyles the bars without touching this file. The diverging bar is one
-# colour both ways: the zero tick carries the direction, not the hue.
+/* The groups layout: what the bars, the legend, the expand caret and the
+   footer add to the base table rules. Type, padding, hover, the sticky
+   header and the scroll shadow come from table-base.css, so a groups table
+   and a records table are one object with a different cell.
 
-#' @noRd
-summarize_table_css <- function() {
-  "
+   Colours read blockr.theme's --blockr-* tokens with a fallback, so a themed
+   board restyles the bars without touching this file. The diverging bar is
+   one colour both ways: the zero tick carries the direction, not the hue. */
+
 .blockr-summarize-container {
   --blockr-summarize-fill: var(--blockr-color-bg-accent, #2563eb);
   --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
@@ -877,7 +872,7 @@ summarize_table_css <- function() {
 .blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-child:last-child > td {
   padding-bottom: 5px;
 }
-/* The header's grouping names read as the records layout's \"All\" next to
+/* The header's grouping names read as the records layout's "All" next to
    the fold-all chevron: small, normal weight, muted (html-table.R
    .dt-foldall). */
 .blockr-summarize-table[data-summarize-nested='1'] thead th.blockr-stub-header .blockr-col-name {
@@ -1066,6 +1061,4 @@ summarize_table_css <- function() {
   height: 24px;
   line-height: 24px;
   margin: 0 auto;
-}
-"
 }

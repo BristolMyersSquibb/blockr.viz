@@ -36,3 +36,19 @@ tm_payload <- function(messages, type) {
 tm_json <- function(x) {
   jsonlite::fromJSON(dt_payload_json(x), simplifyVector = FALSE)
 }
+
+# The groups table as the block builds it: the spec's state names in,
+# table_model_groups()'s list(prep, cells) out. `cells$cols` is the cell
+# model's columns, the ones table_groups_view() turns into marks. The
+# summaries go in as written (some fixtures use the legacy keys the
+# preparer still reads), so the state is not run through viz_check().
+# Missing groups drop and the sort runs descending, as summarize_prepare()
+# does by default.
+sum_model <- function(data, ...) {
+  st <- viz_check(viz_block_spec("table"), list(layout = "groups"))
+  st$missing <- "drop"
+  st$sort_dir <- "desc"
+  args <- list(...)
+  for (nm in names(args)) st[nm] <- list(args[[nm]])
+  table_model_groups(st, data)
+}

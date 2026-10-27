@@ -43,6 +43,7 @@ R: records,R/html-table.R,1400
 R: records,R/interactive-table.R,1400
 R: records,R/table-cards.R,1400
 R: records,R/table-structured*.R,1400
+R: records,R/table-css.R,1400
 R: groups,R/table-groups*.R,3600
 R: groups,R/table-model-groups*.R,3600
 R: groups,R/table-model-cells*.R,3600

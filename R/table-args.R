@@ -4,13 +4,6 @@
 # (blockr_deser.table_block()) and the old constructors, which now forward
 # (new_summarize_table_block()). See dev/table-block-rewrite.md.
 
-# Arguments of new_table_block() that hold the block's settings. Everything
-# else in `...` goes to blockr.core::new_transform_block() (block_name, ctor,
-# ...), or is an old name translated here.
-table_formal_names <- function() {
-  setdiff(names(formals(new_table_block)), "...")
-}
-
 # Old names, by the block they belong to. Names that exist in both the old
 # and the new signature with the same meaning (rowname, shadings, drill,
 # digits, title, ...) are not listed: they need no translation.

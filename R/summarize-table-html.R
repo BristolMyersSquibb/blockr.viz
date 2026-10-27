@@ -531,23 +531,3 @@ summarize_bar_width <- function(x) {
   if (x %in% c("narrow", "medium", "wide", "fit")) x else "fit"
 }
 
-#' The chrome alone: container, control row, empty bands, empty scroll wrapper.
-#'
-#' Rendered ONCE by the block (a one-shot `renderUI`, like the table block's
-#' chrome) so the gear, the search text and the scroll position outlive every
-#' body update. summarize-table.js fills the body and the bands from each pushed
-#' payload.
-#'
-#' @param max_height,search,drill,elem_id Same meaning as in
-#' `summarize_table()`.
-#' @return An [htmltools::tagList()].
-#' @noRd
-summarize_chrome_shell <- function(max_height = NULL, search = TRUE,
-                                   drill = NULL, elem_id = NULL,
-                                   download = NULL, ctrl_target = "") {
-  summarize_chrome(
-    inner = htmltools::HTML(""), prep = NULL, max_height = max_height,
-    search = search, drill = drill, elem_id = elem_id, shell = TRUE,
-    download = download, ctrl_target = ctrl_target
-  )
-}

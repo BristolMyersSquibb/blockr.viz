@@ -43,7 +43,9 @@ table_view_dep <- memoise0(function() {
       version = as.character(utils::packageVersion("blockr.viz")),
       src = system.file(package = "blockr.viz"),
       script = file.path("js", c("spec/table.js", viz_scripts("table"))),
-      stylesheet = file.path("css", c("table.css", "table-view.css",
+      stylesheet = file.path("css", c("table-base.css", "table-delta.css",
+                                      "table-chev.css", "table-groups.css",
+                                      "table.css", "table-view.css",
                                       "table-cards.css"))
     )
   )

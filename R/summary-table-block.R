@@ -19,19 +19,3 @@ new_summary_table_block <- function(...) {
   do.call(new_table_block, args)
 }
 
-summary_table_block_dep <- memoise0(function() {
-  htmltools::tagList(
-    htmltools::htmlDependency(
-      name = "summary-table-block-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".6"),
-      src = system.file("js", package = "blockr.viz"),
-      script = "summary-table-block.js"
-    ),
-    htmltools::htmlDependency(
-      name = "summary-table-block-css",
-      version = utils::packageVersion("blockr.viz"),
-      src = system.file("css", package = "blockr.viz"),
-      stylesheet = "summary-table-block.css"
-    )
-  )
-})

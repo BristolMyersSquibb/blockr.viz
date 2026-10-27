@@ -65,6 +65,9 @@ test_that("the web page writes the rows, or the picture", {
   page <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_match(page, "Counts")
   expect_match(page, "1.2")
+  # A self-contained page: a table and no script fetched from elsewhere.
+  expect_match(page, "<table", fixed = TRUE)
+  expect_false(grepl("<script[^>]+src=", page))
 
   pic <- new_chart_capture(tiny_png(), 600, 400)
   g <- withr::local_tempfile(fileext = ".html")
@@ -138,6 +141,30 @@ test_that("an exhibit that fails to build gives an empty menu", {
     exhibit = function() stop("no data"), enabled = function() TRUE
   ), {
     expect_identical(session$returned$menu(), list())
+  })
+})
+
+test_that("a format whose writer is not installed is left out of the menu", {
+  old <- as.list(viz_exporter_env)
+  withr::defer({
+    rm(list = ls(viz_exporter_env), envir = viz_exporter_env)
+    list2env(old, viz_exporter_env)
+  })
+  # The spreadsheet and the slides name the package they write with.
+  expect_identical(viz_exporters()$xlsx$needs, "openxlsx")
+  # The same formats on a machine without those packages.
+  for (nm in c("xlsx", "pptx")) {
+    f <- viz_exporters()[[nm]]
+    register_viz_exporter(nm, f$label, f$fun, ext = f$ext, accepts = f$accepts,
+                          needs = "notapkg9", order = f$order)
+  }
+  shiny::testServer(dl_server, args = list(exhibit = exhibit_table,
+                                           enabled = function() TRUE), {
+    menu <- session$returned$menu()
+    # No entry at all, not a disabled one; the web page needs no package, so
+    # the menu never empties.
+    expect_identical(vapply(menu, `[[`, "", "ext"), "html")
+    expect_named(menu[[1L]], c("id", "label", "ext"))
   })
 })
 

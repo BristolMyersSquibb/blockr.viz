@@ -118,11 +118,10 @@ test_that("a failing column is empty and the others still draw", {
   expect_true(all(prep$rows$.s2_t == "\u2013"))
   expect_match(summarize_table_html(prep), "blockr-summarize-txt is-failed",
                fixed = TRUE)
-  # The payload carries the errors for the block to raise as conditions.
-  p <- summarize_build_payload(d, by = c("SOC", "TERM"),
-                               summaries = list(
+  # The preparation carries the errors for the block to raise as conditions.
+  prep <- summarize_prepare(d, by = c("SOC", "TERM"), summaries = list(
     list(type = "custom", name = "Y", fn = "stop(\"nope\")")))
-  expect_identical(p$failed,
+  expect_identical(prep$failed,
                    "Summary \"Y\": the function failed on the whole data: nope")
 })
 

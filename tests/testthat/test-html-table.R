@@ -618,8 +618,10 @@ test_that("delta CSS draws the clinical table style", {
 
   # The chevron: 12px with a constant 1.4px stroke.
   expect_match(rule(".drilldown-table-structured .blockr-chev"), "width: 12px;", fixed = TRUE)
-  chev_path <- squash(html_table_chev_css())
-  expect_match(chev_path, "^\\.blockr-html-table-container \\.blockr-chev path \\{")
+  # The sheet opens with a comment (inst/css/table-chev.css).
+  chev_path <- squash(sub("(?s)^/[*].*?[*]/", "", html_table_chev_css(),
+                          perl = TRUE))
+  expect_match(chev_path, "^\\s*\\.blockr-html-table-container \\.blockr-chev path \\{")
   expect_match(chev_path, "vector-effect: non-scaling-stroke;", fixed = TRUE)
   expect_match(chev_path, "stroke-width: 1.4px;", fixed = TRUE)
   # Never under a :has() scope: with the descendant `path` it made every DOM

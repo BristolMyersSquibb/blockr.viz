@@ -1,10 +1,6 @@
-# Summarize table: the data-push cell model, and the R/JS drift guard.
-#
-# The payload exists so the body ships as ~40 KB of numbers instead of ~780 KB
-# of HTML, which only works if summarize-table.js assembles exactly the markup
-# summarize_cells_html() pastes. The last test in this file runs the REAL JS
-# assembler in a headless browser and compares the two strings byte for byte --
-# without it the two renderers would drift silently.
+# Summarize table: the cell model of the groups layout (summarize_cells())
+# and what the view makes of it. The cell model is what table_groups_view()
+# turns into marks; the rules below pin its numbers, labels and flags.
 
 push_fixture <- function() {
   subj <- sprintf("S%03d", seq_len(30))
@@ -48,56 +44,62 @@ push_bar <- function(func = "count", col = NULL, ...) {
     list(show = "bar"), list(...))
 }
 
-test_that("the flat payload carries the head and the per-column vectors", {
+test_that("a flat table has a row per group and a bar with its own label", {
   ae <- push_fixture()
-  p <- summarize_build_payload(
+  m <- sum_model(
     ae, by = "TERM", summaries = list(push_bar("count_distinct", "USUBJID")),
     drill = "TERM"
   )
-
-  expect_identical(p$kind, "flat")
-  expect_identical(p$n, 4L)
-  expect_true(p$pick)
-  # head is the <table> with its data attributes and an EMPTY tbody: the gear
-  # keeps reading its state off those attributes.
-  expect_match(p$head, "<tbody></tbody></table>$")
-  expect_match(p$head, "blockr-summarize-table")
-  # Row meta, full length and aligned.
-  expect_length(p$label, 4L)
-  # A constant vector is omitted, not shipped: a flat table has no levels, no
-  # parents and (unfiltered) no active row, which is ~14 KB at 790 rows. The
-  # assembler reads an absent vector as all-false / level 0.
-  expect_null(p$level)
-  expect_null(p$parent)
-  expect_null(p$parent_row)
-  expect_null(p$on)
+  cells <- m$cells
+  expect_identical(cells$n, 4L)
+  expect_true(cells$pick)
+  expect_length(cells$label, 4L)
+  # A flat table has no levels, no parent rows and (unfiltered) no active row.
+  expect_false(cells$nested)
+  expect_false(any(cells$level > 0L))
+  expect_false(any(cells$parent_row))
+  expect_false(any(cells$on))
   # One plan column by default: the bar, which carries its own value label
   # (disp + pct + the column's ONE label-slot width).
-  expect_identical(vapply(p$cols, function(c) c$kind, ""), "bar")
-  expect_length(p$cols[[1]]$w, 4L)
-  expect_length(p$cols[[1]]$disp, 4L)
-  expect_length(p$cols[[1]]$pct, 4L)
-  expect_true(is.numeric(p$cols[[1]]$dw))
+  expect_identical(vapply(cells$cols, function(c) c$kind, ""), "bar")
+  c1 <- cells$cols[[1]]
+  expect_length(c1$w, 4L)
+  expect_length(c1$disp, 4L)
+  expect_length(c1$pct, 4L)
+  expect_true(is.numeric(c1$dw))
+  # The view: the stub then the bar, one claim per row with the drill on.
+  v <- table_groups_view(m)
+  expect_identical(v$n, 4L)
+  expect_length(v$cols, 2L)
+  expect_identical(v$cols[[2]]$mark$kind, "bar")
+  expect_length(v$cols[[2]]$mark$width, 4L)
+  expect_length(v$rows$keys, 4L)
 })
 
-test_that("labels ship PLAIN and are escaped by each consumer, not the payload", {
+test_that("labels stay plain in the model and are escaped by each consumer", {
   ae <- push_fixture()
   S <- list(push_bar())
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
-  expect_true("T <1> & co" %in% p$label)     # raw in the payload
+  m <- sum_model(ae, by = "TERM", summaries = S)
+  expect_true("T <1> & co" %in% m$cells$label)
+  expect_true("T <1> & co" %in% table_groups_view(m)$cols[[1]]$disp)
   html <- as.character(htmltools::renderTags(
     summarize_table(ae, by = "TERM", summaries = S)
   )$html)
   expect_match(html, "T &lt;1&gt; &amp; co", fixed = TRUE)
 })
 
-test_that("nested tables DO ship the level and parent vectors", {
+test_that("a nested table has levels, parent rows and parent labels", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = c("SOC", "TERM"),
-                               summaries = list(push_bar()))
-  expect_true(any(as.integer(p$level) > 0L))
-  expect_true(any(as.logical(p$parent_row)))
-  expect_true("SOC A" %in% as.character(p$parent))
+  m <- sum_model(ae, by = c("SOC", "TERM"), summaries = list(push_bar()))
+  cells <- m$cells
+  expect_true(cells$nested)
+  expect_true(any(as.integer(cells$level) > 0L))
+  expect_true(any(as.logical(cells$parent_row)))
+  expect_true("SOC A" %in% as.character(cells$parent))
+  # The view indents the child rows and marks the parent rows strong.
+  rows <- table_groups_view(m)$rows
+  expect_identical(as.integer(rows$indent), as.integer(cells$level))
+  expect_identical(as.logical(rows$strong), as.logical(cells$parent_row))
 })
 
 test_that("section headers keep a raw key when their label carries N", {
@@ -114,11 +116,10 @@ test_that("section headers keep a raw key when their label carries N", {
                           parent = FALSE))
   )
   m <- summarize_cells(prep)
-  p <- summarize_flat_payload(m)
 
-  expect_true("A (N = 2)" %in% as.character(p$label))
-  expect_true("A (N = 2)" %in% as.character(p$parent))
-  expect_true("A" %in% as.character(p$parent_key))
+  expect_true("A (N = 2)" %in% as.character(m$label))
+  expect_true("A (N = 2)" %in% as.character(m$parent))
+  expect_true("A" %in% as.character(m$parent_key))
 
   html <- summarize_cells_html(m)
   expect_match(html, 'data-summarize-label="A \\(N = 2\\)"')
@@ -127,12 +128,11 @@ test_that("section headers keep a raw key when their label carries N", {
   expect_match(html, 'data-summarize-parent-key="A"')
 })
 
-test_that("a split column ships one width vector per series", {
+test_that("a split column has one width vector per series", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  c1 <- sum_model(ae, by = "TERM", summaries = list(
     push_bar(color = "SEV", position = "fill")
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells$cols[[1]]
   expect_identical(c1$kind, "barsplit")
   expect_identical(c1$mode, "percent")
   expect_identical(as.character(c1$names), c("MILD", "MODERATE"))
@@ -147,11 +147,10 @@ test_that("a grouped split with one level per row is stacked instead", {
   # COHORT is constant within USUBJID, and `max` is non-additive, so the plan
   # asks for side-by-side lanes -- with nothing to put beside anything. Every
   # row would draw one bar and one EMPTY lane, at twice the height.
-  deg <- summarize_build_payload(ae, by = "USUBJID", summaries = list(
+  c1 <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "simple", func = "max", col = "AVAL", show = "bar",
          color = "COHORT")
-  ))
-  c1 <- deg$cols[[1]]
+  ))$cells$cols[[1]]
   expect_identical(c1$kind, "barsplit")
   expect_identical(c1$mode, "stacked")
   # Stacked omits an empty segment, so the cell is one bar in the row's own
@@ -170,20 +169,21 @@ test_that("a grouped split with one level per row is stacked instead", {
 
   # A REAL split is untouched: SEV varies within a term, so the lanes carry
   # a comparison and grouped stays grouped.
-  keep <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  keep <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "simple", func = "max", col = "AVAL", show = "bar",
          color = "SEV")
   ))
-  expect_identical(keep$cols[[1]]$mode, "grouped")
+  expect_identical(keep$cells$cols[[1]]$mode, "grouped")
+  expect_identical(table_groups_view(keep)$cols[[2]]$mark$mode, "grouped")
 })
 
 test_that("the degenerate collapse leaves widths and the domain alone", {
   ae <- push_fixture()
   cfg <- list(type = "simple", func = "max", col = "AVAL", show = "bar")
-  plain <- summarize_build_payload(ae, by = "USUBJID", summaries = list(cfg))
-  split <- summarize_build_payload(ae, by = "USUBJID", summaries = list(
+  plain <- sum_model(ae, by = "USUBJID", summaries = list(cfg))$cells
+  split <- sum_model(ae, by = "USUBJID", summaries = list(
     c(cfg, list(color = "COHORT"))
-  ))
+  ))$cells
   # One level per row means the segment IS the bar: same numbers, same axis,
   # only the colour differs from the uncoloured column.
   expect_equal(as.numeric(split$cols[[1]]$v), as.numeric(plain$cols[[1]]$v))
@@ -191,69 +191,42 @@ test_that("the degenerate collapse leaves widths and the domain alone", {
   expect_equal(seg_w, as.numeric(plain$cols[[1]]$w), tolerance = 1e-8)
 })
 
-test_that("a non-renderable state ships as kind html, not a cell model", {
+test_that("a state that cannot be drawn says why and has no cells", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "GONE")
-  expect_identical(p$kind, "html")
-  expect_match(p$html, "Mapped column not in data")
-  # The chrome still travels: the footer and legend slots get cleared.
-  expect_true(!is.null(p$chrome))
+  m <- sum_model(ae, by = "GONE")
+  expect_match(m$prep$err, "Mapped column not in data")
+  expect_null(m$cells)
+  expect_null(table_groups_view(m))
+  # The legend and the footer slots clear.
+  expect_null(summarize_legend_spec(m$prep))
+  expect_null(summarize_foot_spec(m$prep)$note)
 })
 
-test_that("the chrome rides on the payload so the container is never rebuilt", {
+test_that("the legend maps the colour levels and a plain facet has none", {
   ae <- push_fixture()
-  p <- summarize_build_payload(
-    ae, chrome = list(title = "Ranked", subtitle = "N = 30", caption = "src"),
-    by = "TERM", summaries = list(
-      push_bar("count_distinct", "USUBJID", facet = "ARM", color = "SEV")
-    )
-  )
-  expect_identical(p$chrome$title, "Ranked")
-  expect_identical(p$chrome$caption, "src")
+  prep <- sum_model(ae, by = "TERM", summaries = list(
+    push_bar("count_distinct", "USUBJID", facet = "ARM", color = "SEV")
+  ))$prep
   # The legend maps the COLOUR levels; a plain facet carries none (its
   # column headers already name the levels).
-  expect_identical(p$chrome$legend$groups[[1L]]$title, "SEV")
-  expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
+  leg <- summarize_legend_spec(prep)
+  expect_identical(leg$groups[[1L]]$title, "SEV")
+  expect_length(leg$groups[[1L]]$items, 2L)
   # No row count in the footer: the fold row speaks for a Top N cut.
-  expect_null(p$chrome$foot$count)
-  plain <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  expect_null(summarize_foot_spec(prep)$count)
+  plain <- sum_model(ae, by = "TERM", summaries = list(
     push_bar("count_distinct", "USUBJID", facet = "ARM")
-  ))
-  expect_null(plain$chrome$legend)
-})
-
-test_that("the payload is smaller than the markup it replaces", {
-  ae <- push_fixture()
-  args <- list(by = "TERM", summaries = list(
-    push_bar("count_distinct", "USUBJID", facet = "ARM")
-  ))
-  json <- summarize_payload_json(
-    do.call(summarize_build_payload, c(list(ae), args))
-  )
-  html <- as.character(htmltools::renderTags(
-    do.call(summarize_table, c(list(ae), args))
-  )$html)
-  expect_lt(nchar(json, type = "bytes"), nchar(html, type = "bytes"))
-})
-
-test_that("json keeps single-row columns as arrays", {
-  ae <- push_fixture()
-  one <- ae[ae$TERM == "T3", , drop = FALSE]
-  p <- summarize_build_payload(one, by = "TERM", summaries = list(push_bar()))
-  j <- summarize_payload_json(p)
-  # A length-1 column must stay [x], never x: the JS assembler indexes it.
-  expect_match(j, '"label":\\[')
-  expect_match(j, '"w":\\[')
+  ))$prep
+  expect_null(summarize_legend_spec(plain))
 })
 
 # --- the lane marks ----------------------------------------------------------
 
-test_that("a box column ships pre-rounded positions AND widths", {
+test_that("a box column has pre-rounded positions AND widths", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  c1 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", show = "box")
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells$cols[[1]]
   expect_identical(c1$kind, "box")
   for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn", "tip")) {
     expect_length(c1[[nm]], 4L)
@@ -267,26 +240,25 @@ test_that("a box column ships pre-rounded positions AND widths", {
   for (nm in c("wl", "bl", "bc", "b2", "wh")) {
     expect_true(all(as.numeric(c1[[nm]]) <= 100))
   }
-  # Widths are shipped, never re-derived: left whisker ends where the box
-  # starts (within the 2dp rounding the payload carries).
+  # Widths are given, never re-derived: left whisker ends where the box
+  # starts (within the 2dp rounding the model carries).
   expect_true(all(abs(as.numeric(c1$wl) + as.numeric(c1$w1) -
                         as.numeric(c1$bl)) <= 0.02))
   # The tooltip carries the statistic's own words.
   expect_match(c1$tip[[1]], "Median .* Q1–Q3 .* 1\\.5×IQR")
 })
 
-test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
+test_that("a pointrange with n = 1 has NA bounds and a center-only cell", {
   ae <- push_fixture()
   one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
-  p <- summarize_build_payload(one, by = "TERM", summaries = list(
+  c1 <- sum_model(one, by = "TERM", summaries = list(
     list(type = "dist", col = "DUR", stat = "mean_ci95",
          show = "pointrange")
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells$cols[[1]]
   expect_identical(c1$kind, "pointrange")
   expect_true(all(is.na(as.numeric(c1$rw))))
   expect_false(anyNA(as.numeric(c1$c)))
-  # Tips ship pre-escaped (both consumers paste them into an attribute).
+  # Tips are pre-escaped (both consumers paste them into an attribute).
   expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
   # And the emitter draws the dot alone.
   html <- summarize_cells_html(summarize_cells(summarize_prepare(
@@ -299,17 +271,16 @@ test_that("a pointrange with n = 1 ships NA bounds and a center-only cell", {
   expect_false(grepl("lane-rng", html))
 })
 
-test_that("an interval column ships per-row segments on the observed domain", {
+test_that("an interval column has per-row segments on the observed domain", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "USUBJID",
-                               summaries = list(
+  cells <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
     list(type = "simple", name = "Events", func = "count", show = "number")
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells
+  c1 <- cells$cols[[1]]
   expect_identical(c1$kind, "interval")
-  expect_length(c1$segs, p$n)
-  expect_length(c1$tips, p$n)
+  expect_length(c1$segs, cells$n)
+  expect_length(c1$tips, cells$n)
   # Subjects appearing in all four terms carry four spans.
   expect_true(any(lengths(c1$segs) > 1L))
   # Fill index points into the level fills; tips carry the level name.
@@ -321,15 +292,15 @@ test_that("an interval column ships per-row segments on the observed domain", {
   expect_equal(c1$d0, 0)
   expect_equal(c1$d1, 60)
   # An Events count column rides beside the lane.
-  expect_identical(p$cols[[2]]$kind, "num")
+  expect_identical(cells$cols[[2]]$kind, "num")
 })
 
-test_that("a sparkline column ships pre-printed geometry plus hover values", {
+test_that("a sparkline column has pre-printed geometry plus hover values", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  cells <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells
+  c1 <- cells$cols[[1]]
   expect_identical(c1$kind, "sparkline")
   expect_length(c1$pl, 4L)
   expect_match(c1$pl[[1]], "^[0-9.,]+( [0-9.,]+)+$")
@@ -339,24 +310,24 @@ test_that("a sparkline column ships pre-printed geometry plus hover values", {
   expect_equal(as.numeric(c1$v),
                round(unname(vapply(split(ae, ae$TERM), function(d) {
                  d$DUR[order(d$AVAL)][nrow(d)]
-               }, numeric(1))[p$label]), 4))
+               }, numeric(1))[cells$label]), 4))
 })
 
 test_that("a leading rank bar beside a trajectory ranks the rows", {
   ae <- push_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  cells <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "simple", func = "mean", col = "DUR", show = "bar"),
     list(type = "series", x = "AVAL", col = "DUR")
-  ))
-  expect_identical(vapply(p$cols, function(c) c$kind, ""),
+  ))$cells
+  expect_identical(vapply(cells$cols, function(c) c$kind, ""),
                    c("bar", "sparkline"))
   # The bar ranks the rows: row order = mean(DUR) per term, descending.
   means <- vapply(split(ae$DUR, ae$TERM), mean, numeric(1))
-  expect_identical(as.character(p$label),
+  expect_identical(as.character(cells$label),
                    names(sort(means, decreasing = TRUE)))
   # The sparkline column itself still sorts by LAST value, not the mean.
-  expect_false(identical(as.numeric(p$cols[[2]]$v),
-                         as.numeric(p$cols[[1]]$v)))
+  expect_false(identical(as.numeric(cells$cols[[2]]$v),
+                         as.numeric(cells$cols[[1]]$v)))
 })
 
 test_that("negative lows extend the distribution domain below zero", {
@@ -379,14 +350,14 @@ test_that("negative lows extend the distribution domain below zero", {
 test_that("a signed simple column becomes a zero-centred diverging bar", {
   mk <- function(vals) {
     d <- data.frame(g = paste0("r", seq_along(vals)), v = vals)
-    summarize_build_payload(d, by = "g", summaries = list(
+    sum_model(d, by = "g", summaries = list(
       list(type = "simple", func = "median", col = "v", show = "bar")
-    ))$cols[[1]]
+    ))$cells$cols[[1]]
   }
   # No negatives: the plain bar is untouched, length from a zero baseline.
   c1 <- mk(c(30, 20, 10))
   expect_identical(c1$kind, "bar")
-  # Widths ship rounded to 2dp so both consumers print the same string.
+  # Widths are rounded to 2dp so both consumers print the same string.
   expect_equal(as.numeric(c1$w), c(100, 66.67, 33.33))
   expect_null(c1$pos)
 
@@ -427,199 +398,7 @@ test_that("the diverging bar's axis is centred on zero at the column max", {
   expect_equal(dom$d1, 30)
 })
 
-test_that("the JS assembles byte-identical markup to summarize_cells_html", {
-  skip_without_browser()
-
-  ae <- push_fixture()
-  # One case per bar shape, so every branch of the assembler is compared.
-  cases <- list(
-    plain = list(by = "TERM", summaries = list(
-      push_bar("count_distinct", "USUBJID")
-    )),
-    stacked = list(by = "TERM", summaries = list(push_bar(color = "SEV"))),
-    grouped = list(by = "TERM", summaries = list(
-      push_bar(color = "SEV", position = "dodge")
-    )),
-    percent = list(by = "TERM", summaries = list(
-      push_bar(color = "SEV", position = "fill")
-    )),
-    facet = list(by = "TERM", summaries = list(
-      push_bar("count_distinct", "USUBJID", facet = "ARM")
-    )),
-    facet_color = list(by = "TERM", summaries = list(
-      push_bar(facet = "ARM", color = "SEV")
-    )),
-    identity = list(by = "USUBJID", summaries = list(
-      push_bar("identity", "AVAL"),
-      list(type = "field", col = "SOC"), list(type = "field", col = "AVAL")
-    )),
-    sep_cols = list(by = "TERM", summaries = list(
-      push_bar(), list(type = "simple", func = "count", show = "number")
-    )),
-    nested = list(by = c("SOC", "TERM"), summaries = list(push_bar())),
-    capped = list(by = "TERM", summaries = list(push_bar()), top_n = 2L),
-    # One case per glyph, so every emitter is byte-compared too.
-    box = list(by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", show = "box")
-    )),
-    box_facet = list(by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", show = "box", facet = "ARM")
-    )),
-    box_nested = list(by = c("SOC", "TERM"), summaries = list(
-      list(type = "dist", col = "DUR", show = "box")
-    )),
-    # The colour dimension: one glyph per level inside the cell. Both
-    # assemblers must skip an absent level identically, or the lanes drift.
-    box_color = list(by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", show = "box", color = "SEV")
-    )),
-    pointrange_color = list(by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", stat = "mean_ci95",
-           show = "pointrange", color = "ARM")
-    )),
-    pointrange = list(by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", stat = "mean_ci95",
-           show = "pointrange")
-    )),
-    pr_n1 = list(by = "USUBJID", summaries = list(
-      list(type = "dist", col = "DUR", stat = "mean_ci95",
-           show = "pointrange")
-    )),
-    dot = list(by = "TERM", summaries = list(
-      list(type = "simple", func = "mean", col = "DUR", show = "dot")
-    )),
-    # A signed measure: the bar column becomes the diverging bar, so both
-    # assemblers must agree about polarity as well as width.
-    bardiv_signed = list(by = "TERM", summaries = list(
-      list(type = "simple", func = "mean", col = "CHG", show = "bar")
-    )),
-    # A grouped split with one level per row, collapsed to stacked: both
-    # assemblers have to DROP the empty segments, or one draws lanes the
-    # other does not.
-    barsplit_stacked_vals = list(by = "TERM", summaries = list(
-      list(type = "simple", func = "count", show = "bar", color = "SEV")
-    )),
-    barsplit_grouped_vals = list(by = "TERM", summaries = list(
-      list(type = "simple", func = "mean", col = "DUR", show = "bar",
-           color = "SEV")
-    )),
-    barsplit_degenerate = list(by = "USUBJID", summaries = list(
-      list(type = "simple", func = "max", col = "AVAL", show = "bar",
-           color = "COHORT")
-    )),
-    interval = list(by = "USUBJID", summaries = list(
-      list(type = "spans", x = "SDY", xend = "EDY", color = "SEV"),
-      list(type = "simple", name = "Events", func = "count",
-           show = "number")
-    )),
-    sparkline = list(by = "TERM", summaries = list(
-      list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
-    )),
-    sparkline_bar = list(by = "TERM", summaries = list(
-      list(type = "simple", func = "mean", col = "DUR", show = "bar"),
-      list(type = "series", x = "AVAL", col = "DUR")
-    )),
-    sparkline_ref = list(by = "TERM", summaries = list(
-      list(type = "series", x = "AVAL", col = "DUR", ref = "mean_sd")
-    )),
-    interval_rich = list(by = "USUBJID", summaries = list(
-      list(type = "spans", x = "SDY", xend = "EDY", color = "SEV",
-           label = "TERM", fields = "ARM", size = "lg")
-    )),
-    # The pair (dumbbell): band, reference, colour, dash and an open end.
-    pair = list(by = "USUBJID", summaries = list(
-      list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
-           to_func = "max", lo = 5, hi = "HI", ref = 10, dash = "SEV",
-           color = "ARM")
-    )),
-    pair_plain = list(by = c("SOC", "TERM"), summaries = list(
-      list(type = "pair", from = "CHG", to = "AVAL", to_func = "mean")
-    )),
-    # The colour split: one dumbbell per level, repeated per arm.
-    pair_split = list(by = "TERM", summaries = list(
-      list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-           to_func = "mean", ref = 20, color = "SEV", facet = "ARM")
-    )),
-    # The summarize-table path: every row type in one heterogeneous table,
-    # and the facet + pooled + field composition.
-    summaries_mixed = list(by = "TERM", summaries = list(
-      list(type = "simple", name = "Subjects", func = "count_distinct",
-           col = "USUBJID", show = "bar"),
-      list(type = "dist", name = "Duration", col = "DUR", show = "box"),
-      list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
-           show = "text"),
-      list(type = "field", name = "Arms", col = "ARM"),
-      list(type = "spans", name = "Episodes", x = "SDY", xend = "EDY",
-           color = "SEV"),
-      list(type = "series", name = "Traj", x = "AVAL", col = "DUR",
-           band = c("LO", "HI")),
-      list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
-    )),
-    summaries_facet = list(by = "TERM", summaries = list(
-      list(type = "simple", name = "Subjects", func = "count_distinct",
-           col = "USUBJID", show = "bar", facet = "ARM"),
-      list(type = "dist", name = "Overall", col = "DUR", stat = "mean_se",
-           show = "text", scope = "pooled"),
-      list(type = "field", name = "Arms", col = "ARM")
-    ))
-  )
-
-  js_path <- system.file("js", "summarize-table.js", package = "blockr.viz")
-  skip_if(!nzchar(js_path) || !file.exists(js_path),
-          "summarize-table.js not found")
-
-  sess <- chromote::ChromoteSession$new()
-  on.exit(try(sess$close(), silent = TRUE), add = TRUE)
-  page <- tempfile(fileext = ".html")
-  writeLines(c(
-    "<!doctype html><html><body>",
-    "<div class='blockr-summarize-container' data-summarize-elem-id='t1'>",
-    "<div class='dd-table-titles'><div class='dd-table-title'></div>",
-    "<div class='dd-table-subtitle'></div></div>",
-    "<div class='blockr-summarize-legend'></div>",
-    "<div class='blockr-table-wrapper'></div>",
-    "<div class='dd-table-caption'></div>",
-    "<div class='blockr-summarize-footer'>",
-    "<span class='blockr-summarize-note'></span>",
-    "<div class='dd-status-footer'></div></div></div>",
-    "<script>window.Shiny={addCustomMessageHandler:function(n,f){",
-    "window.__h=f}};</script>",
-    paste0("<script src='file://", js_path, "'></script>"),
-    "</body></html>"
-  ), page)
-  sess$Page$navigate(paste0("file://", page))
-  Sys.sleep(1.5)
-
-  for (nm in names(cases)) {
-    args <- cases[[nm]]
-    payload <- do.call(summarize_build_payload, c(list(ae), args))
-    r_html <- as.character(do.call(summarize_table_html, list(
-      do.call(summarize_prepare, c(list(ae), args))
-    )))
-    json <- summarize_payload_json(payload)
-    sess$Runtime$evaluate(paste0(
-      "window.__h({id:'t1', rev:", which(names(cases) == nm), ", payload:",
-      jsonlite::toJSON(json, auto_unbox = TRUE), "})"
-    ))
-    js_html <- sess$Runtime$evaluate(
-      "document.querySelector('.blockr-table-wrapper').innerHTML",
-      returnByValue = TRUE
-    )$result$value
-    # The browser normalises the head tag's attribute quoting, so compare the
-    # part the assembler builds: the tbody.
-    r_body <- sub(".*<tbody>", "", sub("</tbody>.*", "", r_html))
-    r_body <- sess$Runtime$evaluate(paste0(
-      "(function(){var t=document.createElement('table');",
-      "t.innerHTML='<tbody>' + ", jsonlite::toJSON(r_body, auto_unbox = TRUE),
-      " + '</tbody>';",
-      "return t.querySelector('tbody').innerHTML})()"
-    ), returnByValue = TRUE)$result$value
-    js_body <- sub(".*<tbody>", "", sub("</tbody>.*", "", js_html))
-    expect_identical(js_body, r_body, info = nm)
-  }
-})
-
-test_that("a pair column ships both ends, the band, the ref and the flags", {
+test_that("a pair column has both ends, the band, the ref and the flags", {
   ae <- push_fixture()
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
@@ -701,7 +480,7 @@ test_that("a coloured pair column draws one dumbbell per level", {
                             "[^>]*>.*?blockr-summarize-barval"))
 })
 
-test_that("a pair's tip ships as text and is escaped once, in the cell", {
+test_that("a pair's tip is text and is escaped once, in the cell", {
   ae <- push_fixture()
   # TERM's first level is "T <1> & co".
   prep <- summarize_prepare(ae, by = "SOC", summaries = list(
@@ -731,12 +510,13 @@ test_that("a coloured pair of one level per row labels that level", {
 
 test_that("value_labels = FALSE drops every value label", {
   ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+  S <- list(
     list(type = "simple", func = "count", show = "bar"),
     list(type = "dist", col = "DUR", show = "box"),
     list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
          to_func = "mean", color = "SEV")
-  ))
+  )
+  prep <- summarize_prepare(ae, by = "TERM", summaries = S)
   on <- summarize_cells(prep)
   off <- summarize_cells(prep, cfg = list(value_labels = FALSE))
   expect_false(is.null(on$cols[[1]]$disp))
@@ -747,9 +527,16 @@ test_that("value_labels = FALSE drops every value label", {
   }
   html <- summarize_cells_html(off)
   expect_false(grepl("blockr-summarize-barval", html, fixed = TRUE))
-  # The payload ships no label for the browser to draw either.
-  pl <- summarize_flat_payload(off)
-  expect_false(any(vapply(pl$cols, function(c) !is.null(c$dw), logical(1))))
+  # The view gives the browser no label slot to draw either, though every
+  # column keeps its plain text for the search.
+  v <- table_groups_view(sum_model(ae, by = "TERM", summaries = S,
+                                   value_labels = FALSE))
+  for (cc in v$cols[-1L]) {
+    expect_null(cc$mark$dw)
+    expect_false(is.null(cc$disp))
+  }
+  von <- table_groups_view(sum_model(ae, by = "TERM", summaries = S))
+  expect_false(is.null(von$cols[[2]]$mark$dw))
 })
 
 test_that("a grouped split bar prints one value per level", {

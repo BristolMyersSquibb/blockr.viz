@@ -309,8 +309,12 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   # Cells.
   b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
   expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
-  p <- dt_build_payload(d, "term", digits = "compact", unit = "CHF")
-  expect_match(p$head %||% jsonlite::toJSON(p), "amount \\(CHF\\)")
+  st <- viz_check(viz_block_spec("table"),
+                  list(layout = "records", rowname = "term",
+                       format = "compact", unit = "CHF"))
+  v <- table_records_view(table_model_records(st, d))
+  expect_identical(as.character(v$cols[[3]]$disp), c("1.5K", "2.5M"))
+  expect_identical(v$head[[1]][[3]]$sub, "amount (CHF)")
   # Cards: the unit after the number, not in the label.
   m <- table_cards_records(d, label_col = "term", digits = "compact",
                            unit = "CHF")

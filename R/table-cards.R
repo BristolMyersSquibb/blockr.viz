@@ -20,16 +20,6 @@
 # html_exhibit() (the same JS, inlined) and for the painted slide
 # (cards_paint_grob(), which reuses the summarize painter's glyphs).
 
-# The table block's three looks. `compact` is the matrix look (rotated titles,
-# square tile cells); `cards` is this file.
-TABLE_LOOKS <- c("table", "compact", "cards")
-
-#' @noRd
-table_look <- function(x) {
-  x <- chr_state(x) %||% "table"
-  if (x %in% TABLE_LOOKS) x else "table"
-}
-
 # The summary types a card cannot draw: a swimlane needs the width of a table
 # row, and an expr summary has no main value to print large.
 CARDS_SKIP_TYPES <- c("spans", "expr")
