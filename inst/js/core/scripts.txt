@@ -4,3 +4,8 @@ namespace.js
 util.js
 scope.js
 binding.js
+titles.js
+gear/sections.js
+gear/tiles.js
+gear/controls.js
+gear/engine.js
