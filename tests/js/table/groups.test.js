@@ -223,6 +223,18 @@ test('a row click claims the group and lights its row; again clears', () => {
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: ['Low'] } }, null]);
 });
 
+test('a click on a colour split\'s segment claims that level only', () => {
+  const m = groups();
+  m.cols[2].keys = { SEX: ['F', 'M'] };
+  const t = mount(payload({ data: m, config: G }));
+  t.click(t.cell(1, 2).querySelectorAll('.blockr-summarize-fill')[1]);
+  t.click(t.cell(0, 2));
+  assert.deepEqual(t.selects(), [
+    { type: 'categorical', filters: { ARM: ['Low'] }, columns: { SEX: ['M'] } },
+    { type: 'categorical', filters: { ARM: ['Placebo'] }, columns: { SEX: ['F', 'M'] } }
+  ]);
+});
+
 test('without by there is no search or header sorting', () => {
   const m = groups();
   const t = mount(payload({ data: m, config: { layout: 'groups', by: [] } }));
