@@ -46,13 +46,13 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
   lapply(segs, function(ss) {
     vapply(ss, function(sg) {
       summarize_esc(paste0(
-        if (!is.null(sg$lb)) paste0(sg$lb, " · "),
+        if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
         if (!is.null(lv)) {
-          paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " · ")
+          paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
         },
-        cells_fmt_x(sg$s, dd), "–", cells_fmt_x(sg$e, dd),
+        cells_fmt_x(sg$s, dd), "\u2013", cells_fmt_x(sg$e, dd),
         if (length(tf) && !is.null(sg$fv)) {
-          paste0(" · ", paste0(tf, ": ", sg$fv, collapse = " · "))
+          paste0(" \u00b7 ", paste0(tf, ": ", sg$fv, collapse = " \u00b7 "))
         } else {
           ""
         }

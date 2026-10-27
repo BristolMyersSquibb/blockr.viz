@@ -168,7 +168,7 @@ lane_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) {
     return(lane_blank_summary(target, s, sid))
   }
   if (!is.null(s$.failed)) {
-    target[[paste0(sid, "_t")]] <- rep("–", nrow(target))
+    target[[paste0(sid, "_t")]] <- rep("\u2013", nrow(target))
     return(target)
   }
   if (!is.null(s$.custom)) {

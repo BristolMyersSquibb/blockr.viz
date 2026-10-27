@@ -75,7 +75,7 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
   }
   # A split glyph's tooltip names its level first: colour is never the
   # only thing saying which level this is.
-  pre <- if (is.null(lvl)) "" else paste0(lvl, " · ")
+  pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
   wl <- cells_col_or_na(rows, cn, "wl")
   wh <- cells_col_or_na(rows, cn, "wh")
   tip <- cells_lane_tip(pre, lane$wd, nn, bc, bl, bh, wl, wh)
@@ -109,14 +109,14 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
 # zero-width interval, which would read as certainty.
 cells_lane_clause <- function(word, lo, hi) {
   if (is.null(word)) return("")
-  paste0(" · ", word, " ",
+  paste0(" \u00b7 ", word, " ",
          ifelse(is.na(lo) | is.na(hi), "undefined (n < 2)",
-                paste0(lane_fmt(lo), "–", lane_fmt(hi))))
+                paste0(lane_fmt(lo), "\u2013", lane_fmt(hi))))
 }
 
 cells_lane_tip <- function(pre, wd, nn, bc, bl, bh, wl, wh) {
   ifelse(is.na(bc), "", summarize_esc(paste0(
-    pre, ifelse(is.na(nn), "", paste0("n=", nn, " · ")),
+    pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
     wd$center, " ", lane_fmt(bc),
     cells_lane_clause(wd$range, bl, bh), cells_lane_clause(wd$whisk, wl, wh)
   )))
@@ -199,7 +199,7 @@ cells_pair_bell <- function(ctx, p, b, pr, cn, didx, fill, lvl = NULL,
   # the band asks, so the mark answers it without a tooltip.
   open <- band & !is.na(bb) & (bb < blo | bb > bhi)
   delta <- bb - a
-  pre <- if (is.null(lvl)) "" else paste0(lvl, " · ")
+  pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
   tip <- cells_pair_tip(pre, pr$wd, a, bb, lo, hi, nn, band, both, delta)
   disp <- if (pr$lab_on) {
     ifelse(both, paste0(ifelse(pr$signed & delta >= 0, "+", ""),
@@ -225,16 +225,16 @@ cells_pair_tip <- function(pre, wd, a, b, lo, hi, nn, band, both, delta) {
   ifelse(is.na(a) & is.na(b), "", paste0(
     pre,
     ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
-    ifelse(both, " → ", ""),
+    ifelse(both, " \u2192 ", ""),
     ifelse(is.na(b), "", paste0(wd$to, " ", lane_fmt(b))),
     ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
                         lane_fmt(delta), ")"), ""),
-    ifelse(band, paste0(" · range ",
-                        ifelse(is.na(lo), "", lane_fmt(lo)), "–",
+    ifelse(band, paste0(" \u00b7 range ",
+                        ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
                         ifelse(is.na(hi), "", lane_fmt(hi))), ""),
     # A parent row is the mean of the rows under it
     # (lane_pair_fill()), so its card says over how many.
-    ifelse(is.na(nn), "", paste0(" · mean of ", nn,
+    ifelse(is.na(nn), "", paste0(" \u00b7 mean of ", nn,
                                  ifelse(nn == 1L, " row", " rows")))
   ))
 }
@@ -244,7 +244,7 @@ cells_pair_tip <- function(pre, wd, a, b, lo, hi, nn, band, both, delta) {
 cells_pair_ends <- function(a, b, both, delta) {
   ifelse(is.na(a) & is.na(b), "", paste0(
     ifelse(is.na(a), "", lane_fmt(a)),
-    ifelse(both, " → ", ""),
+    ifelse(both, " \u2192 ", ""),
     ifelse(is.na(b), "", lane_fmt(b)),
     ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
                         lane_fmt(delta), ")"), "")
