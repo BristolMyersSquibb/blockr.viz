@@ -1013,7 +1013,7 @@
       },
       "nullable": true,
       "slot": false,
-      "ctrl": true
+      "ctrl": false
     }
   };
 })();

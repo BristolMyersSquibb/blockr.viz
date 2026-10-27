@@ -88,9 +88,11 @@ viz_shared_args <- function() {
       )
     ),
 
+    # Not externally controllable: core freezes external_ctrl fields on a
+    # locked board, and viewers must be able to drill there.
     selection = viz_arg(
       type = "map", default = NULL, null = "nothing selected",
-      slot = FALSE, ctrl = TRUE, ai = FALSE,
+      slot = FALSE, ctrl = FALSE, ai = FALSE,
       describe = paste(
         "What a click or brush selected. Written by the block, saved so a",
         "restored board keeps it; leave it NULL."
