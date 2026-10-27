@@ -60,103 +60,127 @@
   });
 
   /**
+   * What every part of a distribution's option reads: the slots, the colour
+   * levels and the layout.
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
-  const distribution = (m, panel, look, plotW) => {
+  const distributionContext = (m, panel, look, plotW) => {
     const { cfg, ink, measure } = look;
-    if (m.noValue) return null;
     const P = parts.common(look);
-    const { ax, esc } = P;
-    const SEP = NS.model.BOX_CAT_SEP;
     const isBox = cfg.chart_type === 'boxplot';
-    const vertical = cfg.orientation !== 'horizontal';
-    const bodyMeta = NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se'));
-    const whiskMeta = NS.agg.statMeta(cfg.whiskers || 'tukey');
     const palette = NS.paletteOf(cfg);
-    const levels = m.levels;
     const split = m.split;
     const scale = m.colorScale;
     const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>
       (scale && scale.color && scale.color[lv]) || NS.paletteAt(palette, i);
     const slots = panel.slots;
-    const cats = slots.map((/** @type {any} */ s) => s.cat);
-    const axisOn = NS.countOn(cfg, 'axis');
-    const seriesLevels = split ? levels : ['__all__'];
+    return {
+      m, look, cfg, ink, measure, plotW, P, ax: P.ax, esc: P.esc,
+      SEP: NS.model.BOX_CAT_SEP, isBox, palette, split, hexFor, slots,
+      vertical: cfg.orientation !== 'horizontal',
+      bodyMeta: NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se')),
+      whiskMeta: NS.agg.statMeta(cfg.whiskers || 'tukey'),
+      levels: m.levels,
+      cats: slots.map((/** @type {any} */ s) => s.cat),
+      axisOn: NS.countOn(cfg, 'axis'),
+      seriesLevels: split ? m.levels : ['__all__']
+    };
+  };
 
+  /** One boxplot series per level. @param {any} k */
+  const distBoxSeries = (k) => {
+    const { split, hexFor, palette, slots, vertical, seriesLevels } = k;
+    return seriesLevels.map((/** @type {string} */ lv, /** @type {number} */ li) => {
+      const hex = split ? hexFor(lv, li) : palette[0];
+      // ECharts reads datum.value unconditionally, so an empty slot is a
+      // NaN five-tuple: nothing draws and the slots stay aligned.
+      const EMPTY_BOX = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
+      const data = slots.map((/** @type {any} */ s) => (s.level === lv && s.body)
+        ? { value: [s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n }
+        : EMPTY_BOX());
+      return {
+        type: 'boxplot', name: split ? lv : undefined, data,
+        ...(split ? (vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
+        itemStyle: { color: hex + '22', borderColor: hex }
+      };
+    });
+  };
+
+  /**
+   * Per level: a silent interval under a clickable centre dot, and a line
+   * through the centres when connect_centers is on. All three share the
+   * level's name, so one legend chip hides them together.
+   * @param {any} k
+   */
+  const distRangeSeries = (k) => {
+    const { cfg, split, hexFor, palette, slots, cats, vertical, seriesLevels } = k;
+    const connect = cfg.connect_centers === 'on' || cfg.connect_centers === true;
     /** @type {any[]} */
-    let series;
-    if (isBox) {
-      series = seriesLevels.map((/** @type {string} */ lv, /** @type {number} */ li) => {
-        const hex = split ? hexFor(lv, li) : palette[0];
-        // ECharts reads datum.value unconditionally, so an empty slot is a
-        // NaN five-tuple: nothing draws and the slots stay aligned.
-        const EMPTY_BOX = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
-        const data = slots.map((/** @type {any} */ s) => (s.level === lv && s.body)
-          ? { value: [s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n }
-          : EMPTY_BOX());
-        return {
-          type: 'boxplot', name: split ? lv : undefined, data,
-          ...(split ? (vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
-          itemStyle: { color: hex + '22', borderColor: hex }
-        };
+    const series = [];
+    seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
+      const hex = split ? hexFor(lv, li) : palette[0];
+      /** @type {any[]} */
+      const centers = [];
+      /** @type {any[]} */
+      const whisks = [];
+      slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
+        if (s.level !== lv || !s.body) return;
+        const b = s.body;
+        // The slot rides as the datum name, as a box's does.
+        centers.push({ value: vertical ? [ci, b.center] : [b.center, ci], name: cats[ci],
+                       center: b.center, n: s.n, lo: b.lo, hi: b.hi });
+        whisks.push([ci, b.lo, b.hi]);
       });
-    } else {
-      // Per level: a silent interval under a clickable centre dot, and a
-      // line through the centres when connect_centers is on. All three share
-      // the level's name, so one legend chip hides them together.
-      const connect = cfg.connect_centers === 'on' || cfg.connect_centers === true;
-      series = [];
-      seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
-        const hex = split ? hexFor(lv, li) : palette[0];
-        /** @type {any[]} */
-        const centers = [];
-        /** @type {any[]} */
-        const whisks = [];
-        slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
-          if (s.level !== lv || !s.body) return;
-          const b = s.body;
-          // The slot rides as the datum name, as a box's does.
-          centers.push({ value: vertical ? [ci, b.center] : [b.center, ci], name: cats[ci],
-                         center: b.center, n: s.n, lo: b.lo, hi: b.hi });
-          whisks.push([ci, b.lo, b.hi]);
-        });
-        if (connect && centers.length > 1) {
-          series.push({
-            type: 'line', name: split ? lv : undefined, legendHoverLink: false, silent: true,
-            z: 2, data: centers.map((c) => c.value), showSymbol: false,
-            lineStyle: { color: hex, width: 1.4 }, itemStyle: { color: hex },
-            emphasis: { disabled: true }, tooltip: { show: false }
-          });
-        }
-        if (whisks.length) series.push(whiskerSeries(split ? lv : undefined, whisks, hex, !vertical));
+      if (connect && centers.length > 1) {
         series.push({
-          type: 'scatter', name: split ? lv : undefined, data: centers, z: 4, symbolSize: 7,
-          itemStyle: { color: hex, cursor: 'pointer' }, emphasis: { disabled: true }
+          type: 'line', name: split ? lv : undefined, legendHoverLink: false, silent: true,
+          z: 2, data: centers.map((c) => c.value), showSymbol: false,
+          lineStyle: { color: hex, width: 1.4 }, itemStyle: { color: hex },
+          emphasis: { disabled: true }, tooltip: { show: false }
         });
+      }
+      if (whisks.length) series.push(whiskerSeries(split ? lv : undefined, whisks, hex, !vertical));
+      series.push({
+        type: 'scatter', name: split ? lv : undefined, data: centers, z: 4, symbolSize: 7,
+        itemStyle: { color: hex, cursor: 'pointer' }, emphasis: { disabled: true }
       });
-    }
+    });
+    return series;
+  };
 
-    // `legend: "marks"` on a point range: each level's name at the centre of
-    // mass of its centres, over the points, apart from each other.
-    if (!isBox && split && NS.legendPlan(m, cfg).marks === 'centroid') {
-      seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
-        /** @type {number[][]} */
-        const at = [];
-        slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
-          if (s.level === lv && s.body) at.push(vertical ? [ci, s.body.center] : [s.body.center, ci]);
-        });
-        const c = NS.cloudCentre(at);
-        if (!c) return;
-        const mark = NS.nameMark('__legend_' + li, lv, c, vertical ? 'top' : 'right', ink,
-                                 { distance: 8 });
-        mark.labelLayout = { moveOverlap: 'shiftY' };
-        series.push(mark);
+  /**
+   * `legend: "marks"` on a point range: each level's name at the centre of
+   * mass of its centres, over the points, apart from each other.
+   * @param {any} k
+   */
+  const distCentroidMarks = (k) => {
+    const { ink, slots, vertical, seriesLevels } = k;
+    /** @type {any[]} */
+    const marks = [];
+    seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
+      /** @type {number[][]} */
+      const at = [];
+      slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
+        if (s.level === lv && s.body) at.push(vertical ? [ci, s.body.center] : [s.body.center, ci]);
       });
-    }
+      const c = NS.cloudCentre(at);
+      if (!c) return;
+      const mark = NS.nameMark('__legend_' + li, lv, c, vertical ? 'top' : 'right', ink,
+                               { distance: 8 });
+      mark.labelLayout = { moveOverlap: 'shiftY' };
+      marks.push(mark);
+    });
+    return marks;
+  };
 
-    // Outliers sit on their box's centre line, silent so the box keeps the
-    // click and the tooltip, one series per level like the boxes.
-    const pointSeries = !(isBox && cfg.box_points === 'outliers') ? []
+  /**
+   * Outliers sit on their box's centre line, silent so the box keeps the
+   * click and the tooltip, one series per level like the boxes.
+   * @param {any} k
+   */
+  const distOutlierSeries = (k) => {
+    const { cfg, isBox, split, hexFor, palette, slots, vertical, seriesLevels } = k;
+    return !(isBox && cfg.box_points === 'outliers') ? []
       : seriesLevels.map((/** @type {string} */ lv, /** @type {number} */ li) => {
         const hex = split ? hexFor(lv, li) : palette[0];
         /** @type {[number, number][]} */
@@ -171,7 +195,15 @@
           itemStyle: { color: hex, opacity: 0.85, borderColor: hex, borderWidth: 1 }
         };
       }).filter((/** @type {any} */ s) => s.data.length > 0);
+  };
 
+  /**
+   * The category labels of the slots and what the axes derive from them:
+   * the gutter, the x-label fit and the label formatter.
+   * @param {any} k
+   */
+  const distCategories = (k) => {
+    const { ink, measure, plotW, SEP, split, slots, cats, axisOn, vertical } = k;
     // What a slot shows: its group with the box's own "(n)", or the group.
     /** @type {Map<string, string> | null} */
     const catLabelMap = axisOn ? new Map() : null;
@@ -186,7 +218,15 @@
     const catFmt = catLabelMap
       ? (/** @type {string} */ v) => catLabelMap.get(v) || String(v).split(SEP)[0]
       : (split ? (/** @type {string} */ v) => String(v).split(SEP)[0] : null);
-    // The tooltip names the statistics it shows: they are configurable.
+    return { catLabels, gut, xlab, catFmt };
+  };
+
+  /**
+   * The tooltip formatter: the statistics it names are configurable.
+   * @param {any} k
+   */
+  const distTooltip = (k) => {
+    const { cfg, P, esc, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
     const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
     // A colour split lists every level of the group, one line each, the one
     // under the pointer marked and its n and whiskers under the list.
@@ -231,7 +271,16 @@
         NS.tipRow(esc(bodyMeta.center), NS.ddNum(d.center)) +
         NS.tipRow(esc(bodyMeta.range), NS.ddNum(d.lo) + ' – ' + NS.ddNum(d.hi));
     };
-    const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
+    return split ? splitTooltipFmt : isBox ? boxTooltipFmt : rangeTooltipFmt;
+  };
+
+  /**
+   * The value axis and the category axis (one per level on a split boxplot).
+   * @param {any} k @param {any} cat the result of `distCategories`
+   */
+  const distAxes = (k, cat) => {
+    const { cfg, ink, P, ax, isBox, split, cats, vertical, seriesLevels } = k;
+    const { xlab, gut, catFmt } = cat;
     // A distribution reads by position and spread, so the value axis fits
     // the data rather than holding zero.
     const valAxis = {
@@ -257,6 +306,25 @@
       ? seriesLevels.map((/** @type {any} */ _, /** @type {number} */ i) =>
           (i === 0 ? catAxis : { ...catAxis, show: false }))
       : catAxis;
+    return { valAxis, catAxes };
+  };
+
+  /**
+   * @param {any} m @param {any} panel @param {any} look @param {number} plotW
+   */
+  const distribution = (m, panel, look, plotW) => {
+    if (m.noValue) return null;
+    const k = distributionContext(m, panel, look, plotW);
+    const { cfg, ink, P, isBox, split, levels, cats, vertical } = k;
+    const series = isBox ? distBoxSeries(k) : distRangeSeries(k);
+    if (!isBox && split && NS.legendPlan(m, cfg).marks === 'centroid') {
+      series.push(...distCentroidMarks(k));
+    }
+    const pointSeries = distOutlierSeries(k);
+    const cat = distCategories(k);
+    const { xlab, gut, catFmt, catLabels } = cat;
+    const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
+    const { valAxis, catAxes } = distAxes(k, cat);
     NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.value_lines, ink,
       cfg.value_line_names);
     return {
@@ -271,7 +339,7 @@
       option: {
         ...(look.theme ? {} : { backgroundColor: 'transparent' }),
         textStyle: { fontFamily: ink.face },
-        tooltip: { trigger: 'item', confine: true, formatter: split ? splitTooltipFmt : isBox ? boxTooltipFmt : rangeTooltipFmt },
+        tooltip: { trigger: 'item', confine: true, formatter: distTooltip(k) },
         legend: split ? { show: false, data: levels } : undefined,
         grid: vertical
           ? { left: 55, right: 10, top: 30, bottom: bottomBase }

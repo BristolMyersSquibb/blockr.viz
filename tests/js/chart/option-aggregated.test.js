@@ -111,14 +111,6 @@ test('pie and treemap: a slice per group with a value, the board scale colours i
   assert.deepStrictEqual(plain(tm.series[0].data.map((d) => d.name)), ['Rash', 'Fever']);
 });
 
-test('radar: a shape per colour level on spokes sharing one max', () => {
-  const { opt } = build({ chart_type: 'radar', color: 'SEV', facet: 'ARM' });
-  assert.deepStrictEqual(plain(opt.radar.indicator.map((i) => [i.name, i.max])),
-                         [['Rash', 1], ['Nausea', 1], ['Fever', 1]]);
-  assert.deepStrictEqual(plain(opt.series[0].data.map((d) => [d.name, d.value])),
-                         [['MILD', [1, 0, 1]], ['SEVERE', [1, 0, 0]]]);
-});
-
 test('boxplot: five numbers per slot, a NaN box for an empty one, outliers beside', () => {
   const rows = [1, 2, 3, 4, 100].map((V) => ({ T: 'a', V })).concat([{ T: 'b', V: null }]);
   const { opt } = build({ chart_type: 'boxplot', value: 'V', func: 'mean', sort_by: 'data',
@@ -204,7 +196,7 @@ test('the option reads only the config fields the model and the option list', ()
     { func: 'pct_distinct', value: 'ID', pct_of: ['color'], color: 'SEV' },
     { chart_type: 'waterfall', value: 'V', func: 'sum', waterfall_totals: ['Fever'],
       value_labels: 'on', count_on: 'axis' },
-    { chart_type: 'pie' }, { chart_type: 'treemap' }, { chart_type: 'radar', color: 'SEV' },
+    { chart_type: 'pie' }, { chart_type: 'treemap' },
     { chart_type: 'boxplot', value: 'V', func: 'mean', color: 'SEV', box_points: 'outliers',
       count_on: 'axis', count_col: 'ID' },
     { chart_type: 'pointrange', value: 'V', func: 'mean', connect_centers: 'on',

@@ -11,6 +11,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const h = require('./harness');
+const { toPayload } = require('./chart/internal-config');
 const { synth } = require('./synth');
 
 const FACTOR = 4;
@@ -30,7 +31,10 @@ function measure(env, config, n, levels) {
     const meta = d.columns.find((c) => c.name === col);
     meta.levels = [...new Set(d.data[col])].sort();
   }
-  const run = () => h.timeDraw(env, { columns: d.columns, data: d.data, config: { ...config } });
+  // The cases are written in the builders' words (chart/internal-config.js).
+  const p = toPayload({ ...config });
+  const run = () => h.timeDraw(env, { columns: d.columns, data: d.data, config: p.config,
+                                      derived: p.derived });
   run();
   const ts = [];
   for (let i = 0; i < RUNS; i++) ts.push(run());
@@ -80,8 +84,6 @@ const CASES = [
   { name: 'bar percent, group = patient, colour = grade', n: 5000,
     config: { chart_type: 'bar', group: 'USUBJID', color: 'GRADE', bar_mode: 'percent',
               drill: 'auto' } },
-  { name: 'radar, group = patient, colour = arm', n: 6000,
-    config: { chart_type: 'radar', group: 'USUBJID', color: 'ARM', drill: 'auto' } },
   { name: 'pie, group = patient', n: 7000,
     config: { chart_type: 'pie', group: 'USUBJID', drill: 'auto' } },
   { name: 'treemap, group = patient', n: 7000,

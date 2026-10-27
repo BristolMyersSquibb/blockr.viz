@@ -20,7 +20,7 @@
   const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
-  const AGGREGATED_TYPES = ['bar', 'histogram', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
+  const AGGREGATED_TYPES = ['bar', 'histogram', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange'];
   const INDIVIDUAL_TYPES = ['scatter', 'line', 'area', 'band'];
   // An area is a line with its area filled: everything a line does, it does.
   /** @param {any} t */
@@ -296,7 +296,6 @@
     const d = cfg.drill;
     if (!d || d === '') return null;
     if (d !== 'auto') return d;
-    if (cfg.chart_type === 'radar') return cfg.color || null;
     const fam = familyOf(cfg.chart_type);
     if (fam === 'aggregated') return cfg.group || null;
     if (fam === 'timeline') return cfg.y || null;

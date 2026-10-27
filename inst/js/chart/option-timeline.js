@@ -52,11 +52,11 @@
   };
 
   /**
-   * @param {any} m the timeline model
-   * @param {Look} look
-   * @returns {{ panels: Array<{ option: any, height: string }> }}
+   * What every part of the timeline option reads: the axes, the colours and
+   * the shared styling.
+   * @param {any} m @param {Look} look
    */
-  const timeline = (m, look) => {
+  const timelineContext = (m, look) => {
     const { cfg, columns, ink, theme } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const { type: xAxisType, cats: xCats, col: x } = m.x;
@@ -67,10 +67,18 @@
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
     const onBarLabel = !!cfg.label;
+    return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y, palette, colorLevels,
+             showLegend, colors, ax, onBarLabel };
+  };
 
-    // A bar from start to end on its lane, at least 4px wide, clipped to the
-    // plot; the label column's value on it when the bar has room.
-    const renderItem = (/** @type {any} */ params, /** @type {any} */ api) => {
+  /**
+   * A bar from start to end on its lane, at least 4px wide, clipped to the
+   * plot; the label column's value on it when the bar has room.
+   * @param {any} k
+   */
+  const timelineRenderItem = (k) => {
+    const { ink, onBarLabel } = k;
+    return (/** @type {any} */ params, /** @type {any} */ api) => {
       const start = api.coord([api.value(0), api.value(2)]);
       const end = api.coord([api.value(1), api.value(2)]);
       const h = api.size([0, 1])[1] * 0.6;
@@ -100,11 +108,17 @@
       }
       return { type: 'group', children };
     };
+  };
 
-    // Every dimension mapped to the hovered bar: the most specific name as
-    // the headline (label, else series, else lane), then the lane, the
-    // interval and its length, the colour and the tooltip fields.
-    const formatter = (/** @type {any} */ p) => {
+  /**
+   * Every dimension mapped to the hovered bar: the most specific name as
+   * the headline (label, else series, else lane), then the lane, the
+   * interval and its length, the colour and the tooltip fields.
+   * @param {any} k
+   */
+  const timelineTooltip = (k) => {
+    const { m, title, xAxisType, xCats, x, y } = k;
+    return (/** @type {any} */ p) => {
       const v = p.value;
       const term = String(v[3] ?? '');
       const colorVal = String(v[4] ?? '');
@@ -131,8 +145,12 @@
       });
       return NS.rowTooltip(headline, pairs);
     };
+  };
 
-    const xAxis = {
+  /** The time axis, shared by every panel. @param {any} k */
+  const timelineXAxis = (k) => {
+    const { ink, ax, xAxisType, xCats, x, title } = k;
+    return {
       type: xAxisType,
       name: title(x),
       nameLocation: 'middle',
@@ -144,52 +162,72 @@
       scale: true,
       ...(xCats ? { data: xCats } : {})
     };
+  };
 
-    const panels = m.panels.map((/** @type {any} */ panel) => {
-      const layout = seriesMarks(m, panel);
-      const data = (/** @type {number[]} */ idx) =>
-        idx.map((i) => ({ value: panel.marks[i] }));
-      // One named series per colour level, so each legend chip has a series
-      // to toggle.
-      const series = showLegend
-        ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ si) => ({
-            type: 'custom', name: lvl, data: data(layout[si]),
-            encode: { x: [0, 1], y: 2 }, renderItem
-          }))
-        : [{ type: 'custom', data: data(layout[0]), encode: { x: [0, 1], y: 2 }, renderItem }];
+  /**
+   * One panel: its custom bar series, lanes axis and canvas height.
+   * @param {any} k @param {any} panel @param {any} renderItem
+   * @param {any} formatter @param {any} xAxis
+   */
+  const timelinePanel = (k, panel, renderItem, formatter, xAxis) => {
+    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors, ax } = k;
+    const layout = seriesMarks(m, panel);
+    const data = (/** @type {number[]} */ idx) =>
+      idx.map((i) => ({ value: panel.marks[i] }));
+    // One named series per colour level, so each legend chip has a series
+    // to toggle.
+    const series = showLegend
+      ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ si) => ({
+          type: 'custom', name: lvl, data: data(layout[si]),
+          encode: { x: [0, 1], y: 2 }, renderItem
+        }))
+      : [{ type: 'custom', data: data(layout[0]), encode: { x: [0, 1], y: 2 }, renderItem }];
 
-      const counts = panel.laneCounts;
-      const gut = NS.axes.yGutter(counts
-        ? panel.lanes.map((/** @type {string} */ t) => NS.withCount(t, counts)) : panel.lanes,
-        look.measure);
-      const opt = {
-        ...(theme ? {} : { backgroundColor: 'transparent' }),
-        color: (m.color && m.color.scale && m.color.scale.color && colors) ? colors : palette,
-        textStyle: { fontFamily: ink.face },
-        tooltip: { trigger: 'item', confine: true, formatter },
-        legend: showLegend ? { show: false, data: colorLevels } : { show: false },
-        grid: { left: gut.gridLeft, right: 10, top: 20, bottom: 48 },
-        xAxis,
-        yAxis: {
-          type: 'category',
-          data: panel.lanes,
-          inverse: true,
-          axisLabel: {
-            color: ax.labelColor, fontSize: ax.fontSize,
-            align: 'left', margin: gut.margin, width: gut.width,
-            overflow: 'truncate', ellipsis: '…',
-            ...(counts ? { formatter: (/** @type {any} */ v) => NS.withCount(v, counts) } : {})
-          },
-          axisLine: { show: false },
-          axisTick: { show: false },
-          splitLine: { show: false }
+    const counts = panel.laneCounts;
+    const gut = NS.axes.yGutter(counts
+      ? panel.lanes.map((/** @type {string} */ t) => NS.withCount(t, counts)) : panel.lanes,
+      look.measure);
+    const opt = {
+      ...(theme ? {} : { backgroundColor: 'transparent' }),
+      color: (m.color && m.color.scale && m.color.scale.color && colors) ? colors : palette,
+      textStyle: { fontFamily: ink.face },
+      tooltip: { trigger: 'item', confine: true, formatter },
+      legend: showLegend ? { show: false, data: colorLevels } : { show: false },
+      grid: { left: gut.gridLeft, right: 10, top: 20, bottom: 48 },
+      xAxis,
+      yAxis: {
+        type: 'category',
+        data: panel.lanes,
+        inverse: true,
+        axisLabel: {
+          color: ax.labelColor, fontSize: ax.fontSize,
+          align: 'left', margin: gut.margin, width: gut.width,
+          overflow: 'truncate', ellipsis: '…',
+          ...(counts ? { formatter: (/** @type {any} */ v) => NS.withCount(v, counts) } : {})
         },
-        series
-      };
-      const height = Math.max(PANEL_MIN_PX,
-        Math.min(NS.PANEL_H_CAP, panel.lanes.length * LANE_PX) + PANEL_EXTRA_PX) + 'px';
-      return { option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink), height };
-    });
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false }
+      },
+      series
+    };
+    const height = Math.max(PANEL_MIN_PX,
+      Math.min(NS.PANEL_H_CAP, panel.lanes.length * LANE_PX) + PANEL_EXTRA_PX) + 'px';
+    return { option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink), height };
+  };
+
+  /**
+   * @param {any} m the timeline model
+   * @param {Look} look
+   * @returns {{ panels: Array<{ option: any, height: string }> }}
+   */
+  const timeline = (m, look) => {
+    const k = timelineContext(m, look);
+    const renderItem = timelineRenderItem(k);
+    const formatter = timelineTooltip(k);
+    const xAxis = timelineXAxis(k);
+    const panels = m.panels.map((/** @type {any} */ panel) =>
+      timelinePanel(k, panel, renderItem, formatter, xAxis));
     return { panels };
   };
   timeline.FIELDS = OPTION_FIELDS;

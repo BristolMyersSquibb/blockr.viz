@@ -10,7 +10,7 @@ const bool = (v) => v === 'on' || v === true;
 const labelled = (vals, names) => (Array.isArray(vals) && vals.length
   ? vals.map((value, i) => ({ value, label: (names && names[i]) || null })) : null);
 const DIST = ['boxplot', 'pointrange'];
-const AGG = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange', 'radar'];
+const AGG = ['bar', 'waterfall', 'pie', 'treemap', 'boxplot', 'pointrange'];
 
 function toPayload(o) {
   const type = o.chart_type === 'bar' && o.baseline === 'cumulative' ? 'waterfall' : o.chart_type;

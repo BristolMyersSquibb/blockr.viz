@@ -22,7 +22,7 @@
   // the view's live state, never values captured at draw time, because an
   // instance outlives many draws.
   const handlers = {
-    // A click on a bar segment, slice, tile, radar shape, box or point range
+    // A click on a bar segment, slice, tile, box or point range
     // sends its mark's keys (D2, D3), or the drill column's values in the
     // rows under it.
     /** @param {any} view @param {any} slot */

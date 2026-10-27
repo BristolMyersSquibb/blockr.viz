@@ -21,6 +21,26 @@
   const S = V.gear.sections;
   const C = V.gear.controls;
 
+  /** Free text that takes more than one line (controls.js draws a textarea). */
+  const MULTILINE = ['script', 'expr', 'fn'];
+
+  /**
+   * How wide a row is in the section's grid (chart.css): tiles, editors,
+   * templates and multi-line text take the whole width; a control with a
+   * second one beside it (drill, highlight) two cells; a checkbox sits on
+   * the controls' line.
+   * @param {VizRowCtx} ctx @param {boolean} boxed
+   */
+  const rowClass = (ctx, boxed) => {
+    const control = ctx.arg.gear ? ctx.arg.gear.control : '';
+    if (control === 'tiles' || control === 'none' || control === 'template') return ' dd-role-tiles';
+    if (MULTILINE.includes(ctx.key)) return ' dd-script-row';
+    if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
+      return ' dd-role-paired';
+    }
+    return boxed ? ' dd-form-row--check' : '';
+  };
+
   /** A local edit not yet echoed by R: its value, the value R had, and how
    * many more payloads may still predate it. */
   /** @typedef {{ value: unknown, before: unknown, left: number }} Pending */
@@ -173,12 +193,12 @@
      * it repeats the section's title or where a checkbox carries it.
      * @param {HTMLElement} body @param {string} section @param {VizRowCtx} ctx */
     _row(body, section, ctx) {
-      const row = document.createElement('div');
-      row.className = 'dd-form-row';
-      row.setAttribute('data-role', ctx.key);
       const g = /** @type {VizGearField} */ (ctx.arg.gear);
       const boxed = g.control === 'toggle' ||
         (g.control === 'segmented' && ctx.arg.type.name === 'bool');
+      const row = document.createElement('div');
+      row.className = 'dd-form-row' + rowClass(ctx, boxed);
+      row.setAttribute('data-role', ctx.key);
       if (!boxed && ctx.label !== section) {
         const head = document.createElement('div');
         head.className = 'dd-row-head';
@@ -200,7 +220,7 @@
      * @param {VizScope} scope */
     _addMenu(body, keys, values, scope) {
       const row = document.createElement('div');
-      row.className = 'dd-form-row dd-add-mapping';
+      row.className = 'dd-form-row dd-add-wrap dd-add-mapping';
       const sel = document.createElement('select');
       sel.className = 'dd-select dd-add-select';
       sel.setAttribute('aria-label', 'Add a mapping');

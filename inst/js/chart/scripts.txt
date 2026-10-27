@@ -6,6 +6,7 @@ format.js
 agg.js
 chart-index.js
 chart-keys.js
+axes-time.js
 axes-labels.js
 model-common.js
 model-timeline.js
@@ -19,6 +20,7 @@ option-distribution.js
 option-aggregated.js
 option-points.js
 option-band.js
+option-domains.js
 option-individual.js
 config.js
 gear.js

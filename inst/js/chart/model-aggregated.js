@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Chart block: the aggregated model (bar, waterfall, pie, treemap,
- * radar, and the distribution marks boxplot and point range).
+ * and the distribution marks boxplot and point range).
  *
  * Rows and config in, what to draw out: the cells of the shared aggregation
  * engine (drilldown-agg.js), the panels (one per facet level), the groups
@@ -11,7 +11,7 @@
  * A mark is addressed by (group, colour level) inside a panel; its keys are
  * the column values that define it (chart-keys.js): the group, the colour
  * where colour splits the mark (bar segments, boxes, point ranges), the
- * colour alone for a radar shape, and the facet in a facet panel.
+ * and the facet in a facet panel.
  */
 (function () {
   'use strict';
@@ -313,7 +313,7 @@
    * @typedef {{ family: 'aggregated', empty: string | null, type: string,
    *             cumulative: boolean, colors: string[], colorScale: any,
    *             levels: string[], split: boolean, distribution: boolean,
-   *             noValue: boolean, sharedMax: number | null, ttFields: string[],
+   *             noValue: boolean, ttFields: string[],
    *             facet: string | null, nFacets: number, single: boolean,
    *             ix: any, panels: AggregatedPanel[], histogram: boolean,
    *             markLabels: Map<string, string | null> | null,
@@ -337,7 +337,7 @@
       family: 'aggregated', empty: null, type: ct, cumulative: isCumulative(cfg),
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
       distribution, noValue: distribution && (!value || value === '.count'),
-      sharedMax: null, ttFields: [], facet: facet || null, nFacets: 1, single: true,
+      ttFields: [], facet: facet || null, nFacets: 1, single: true,
       ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
@@ -364,9 +364,6 @@
     // same category in each; pie and treemap label their own slices.
     const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
       ? orderGroups(agg, rows, columns, cfg) : null;
-    // A radar's spokes share one max; fixed scales widen it to the grid.
-    out.sharedMax = (sharedGroups && ct === 'radar')
-      ? (Math.max(NS.maxOf(agg.map((/** @type {any} */ a) => a.value ?? 0)), 0) || 1) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? barTtFields(cfg) : [];
@@ -469,8 +466,7 @@
 
   /**
    * The keys of an aggregated mark: the group, the colour where colour
-   * splits the mark, the colour alone for a radar shape, and the facet in a
-   * facet panel. Values are as the aggregation keys them ('' for missing).
+   * splits the mark, and the facet in a facet panel. Values are as the aggregation keys them ('' for missing).
    * @param {Record<string, any>} cfg @param {any} facetVal
    * @param {string | null} group @param {string | null} level
    * @returns {Record<string, string>}
@@ -478,31 +474,21 @@
   const aggregatedKeys = (cfg, facetVal, group, level) => {
     /** @type {Record<string, string>} */
     const keys = {};
-    if (cfg.chart_type === 'radar') {
-      if (cfg.color && level != null) keys[cfg.color] = level;
-    } else {
-      if (group != null) keys[cfg.group] = group;
-      if (cfg.color && level != null) keys[cfg.color] = level;
-    }
+    if (group != null) keys[cfg.group] = group;
+    if (cfg.color && level != null) keys[cfg.color] = level;
     if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
     return keys;
   };
 
   /**
    * The (group, level) a click landed on, or null when the click has no
-   * mark (a radar without colour draws one shape of every row; a datum
-   * without a name). Bars read the colour off the series, a split
-   * distribution off its slot, a radar shape is its level.
+   * mark (a datum without a name). Bars read the colour off the series, a
+   * split distribution off its slot.
    * @param {AggregatedModel} m @param {Record<string, any>} cfg @param {any} params
    * @returns {{ group: string | null, level: string | null } | null}
    */
   const aggregatedMarkAt = (m, cfg, params) => {
     if (!params || (params.componentType && params.componentType !== 'series')) return null;
-    if (cfg.chart_type === 'radar') {
-      if (!cfg.color) return null;
-      const lv = params.name;
-      return (lv == null || lv === '') ? null : { group: null, level: String(lv) };
-    }
     const g = params.name || (params.value && params.value[0]);
     if (!g) return null;
     if (m.distribution && m.split && typeof g === 'string') {

@@ -32,11 +32,9 @@
   const HOVER_PX = 14;
   const BAND_HOVER_PX = 60;
 
-  /** @param {any} view @param {any} slot */
-  NS.interactHandlers.individual = (view, slot) => {
-    const chart = slot.chart;
-    const zr = chart.getZr();
-    // Band: show the nearest level's ribbon.
+  /** Band: show the nearest level's ribbon.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const bandHover = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
       if (view.config.chart_type !== 'band' || !slot.band) return;
       const lvl = view._nearestBandLevel(slot, chart, e.offsetX, e.offsetY);
@@ -50,7 +48,11 @@
       slot.bandFocus = null;
       view._applyBandFocus(slot, chart);
     });
-    // Line: promote the nearest line, demote when none is near.
+  };
+
+  /** Line: promote the nearest line, demote when none is near.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const lineHover = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
       if (!slot.focus) return;
       const si = view._nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
@@ -64,6 +66,12 @@
       slot.hover.si = null;
       view._demoteFocus(slot, chart);
     });
+  };
+
+  /** The zoom: a double-click resets it, the zoom window is kept for a
+   * redraw, and the reset button clears it.
+   * @param {any} view @param {any} slot @param {any} chart @param {any} zr */
+  const zoomEvents = (view, slot, chart, zr) => {
     // A double-click on a line chart resets the zoom, and cancels the line
     // click its two clicks queued.
     zr.on('dblclick', () => {
@@ -89,7 +97,10 @@
         if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
       });
     }
+  };
 
+  /** A click on a mark. @param {any} view @param {any} slot @param {any} chart */
+  const clickEvents = (view, slot, chart) => {
     chart.on('click', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (params.componentType !== 'series') return;
@@ -113,7 +124,11 @@
       }
       view._individualClick(slot, params);
     });
+  };
 
+  /** The brush: what it caught, and its clear.
+   * @param {any} view @param {any} slot @param {any} chart */
+  const brushEvents = (view, slot, chart) => {
     chart.on('brushSelected', (/** @type {any} */ params) => {
       if (NS.drillState(view.config) === 'off') return;
       if (!params.batch || params.batch.length === 0) return;
@@ -139,6 +154,17 @@
     chart.on('brush', (/** @type {any} */ params) => {
       if (!params.areas || params.areas.length === 0) view._brushCleared();
     });
+  };
+
+  /** @param {any} view @param {any} slot */
+  NS.interactHandlers.individual = (view, slot) => {
+    const chart = slot.chart;
+    const zr = chart.getZr();
+    bandHover(view, slot, chart, zr);
+    lineHover(view, slot, chart, zr);
+    zoomEvents(view, slot, chart, zr);
+    clickEvents(view, slot, chart);
+    brushEvents(view, slot, chart);
   };
 
   const individual = {
