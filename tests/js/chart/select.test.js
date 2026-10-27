@@ -152,3 +152,20 @@ test('a restored range survives the brush cursor being armed', () => {
   assert.deepStrictEqual(D.plain(c.selections()), [null]);
   c.close();
 });
+
+test('a drill column lights every bar holding a selected row, not only the clicked one (UX 14)', () => {
+  // Subject a has Rash and Fever, b Rash only, c Cough only.
+  const data = { T: ['Rash', 'Fever', 'Rash', 'Cough'], ID: ['a', 'a', 'b', 'c'] };
+  const columns = [{ name: 'T', type: 'categorical', n_unique: 3, label: '' },
+                   { name: 'ID', type: 'categorical', n_unique: 3, label: '' }];
+  const c = D.open({ type: 'bar', y: 'T', orientation: 'horizontal', drill: 'ID' },
+                   { data, columns });
+  c.clickWhere(0, D.at('Fever'));
+  assert.deepStrictEqual(D.plain(c.selections()[0].filters), { ID: ['a'] });
+  const patch = c.chart().log.filter((x) => x.op === 'setOption' && !x.notMerge).pop();
+  const cats = c.chart().getOption().yAxis[0].data;
+  const lit = patch.option.series[0].data.map((d, i) => [cats[i], d.itemStyle.opacity])
+    .filter(([, o]) => o === 1).map(([n]) => n).sort();
+  assert.deepStrictEqual(lit, ['Fever', 'Rash']);
+  c.close();
+});
