@@ -105,7 +105,8 @@
        "Series",
        "Color",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]

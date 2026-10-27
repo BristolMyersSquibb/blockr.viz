@@ -25,7 +25,7 @@
 
   // Config fields the model reads; a change to any other field reuses it.
   const MODEL_FIELDS = ['chart_type', 'x', 'y', 'color', 'facet', 'series', 'tt_fields',
-    'scales', 'palette', 'count_on', 'count_col', 'func'];
+    'scales', 'palette', 'count_on', 'count_col', 'func', 'highlight_by', 'highlight'];
 
   // Line charts: past TRAJ_FULL_MAX series the lines thin and drop their
   // markers, past TRAJ_REDUCED_MAX they thin further, and past the cap the
@@ -39,7 +39,7 @@
 
   /**
    * @typedef {{ level: string | undefined, color: string, rows: any[], pts: any[][],
-   *             src: any[] }} IndSeries
+   *             src: any[], muted?: boolean }} IndSeries
    * @typedef {{ facet: string, label: string | null, rows: any[],
    *             series: IndSeries[] }} IndividualPanel
    * @typedef {{ family: 'individual', empty: string | null, type: string,
@@ -55,7 +55,7 @@
    *             crowd: boolean,
    *             ttFields: string[], legend: any, byColor: boolean,
    *             nFacets: number, single: boolean, ix: any,
-   *             panels: IndividualPanel[] }} IndividualModel
+   *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
    */
 
   /**
@@ -82,7 +82,7 @@
       palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       ttFields: [], legend: null, byColor: false,
-      nFacets: 1, single: true, ix, panels: []
+      nFacets: 1, single: true, ix, panels: [], hl: null
     };
     if (!x || !y) {
       out.empty = model.emptyState('Select X and Y columns');
@@ -191,9 +191,88 @@
         rows: prow, series
       });
     }
+    highlightSeries(out, rows, ix, cfg);
     return out;
   };
   individual.FIELDS = MODEL_FIELDS;
+
+  /**
+   * The highlight on a scatter, line or area. A line is highlighted when one
+   * of its rows holds a highlighted value, a point by its own row. What is
+   * not highlighted is `muted` (drawn grey by the option) and comes first,
+   * so the highlighted marks are drawn over it: a scatter series splits into
+   * its muted points and its highlighted ones, both of the level. With a
+   * colour, the palette is counted over the highlighted colour values only,
+   * and the legend lists only those.
+   * @param {IndividualModel} m @param {any[]} rows @param {any} ix
+   * @param {Record<string, any>} cfg
+   */
+  const highlightSeries = (m, rows, ix, cfg) => {
+    const hl = NS.highlightOf(cfg);
+    if (!hl || m.isBand) return;
+    m.hl = hl;
+    const { color, palette, colorScale } = m;
+    /** @param {any} r */
+    const rowLit = (r) => NS.keys.rowMatches(r, hl);
+    /** @param {IndSeries} s @param {any} facet */
+    const lineLit = (s, facet) => NS.keys.markLit(individualKeys(m, facet, s.level), s.rows, hl);
+
+    // The colour values the highlighted marks carry, in level order.
+    /** @type {Set<string>} */
+    const litVals = new Set();
+    for (const p of m.panels) {
+      for (const s of p.series) {
+        const lr = m.isLine ? (lineLit(s, p.facet) ? s.rows : []) : s.rows.filter(rowLit);
+        if (color) for (const r of lr) litVals.add(String(r[color] ?? ''));
+      }
+    }
+    /** @type {Map<string, string>} */
+    const colourOf = new Map();
+    if (color) {
+      const order = m.splitCol === color ? m.levels
+        : ix.levels(rows, color, 'nz').slice().sort();
+      const lit = new Set(litVals);
+      const cols = NS.litLevelColors(order, lit, colorScale, palette);
+      order.forEach((/** @type {string} */ lv, /** @type {number} */ i) => {
+        if (cols[i]) colourOf.set(lv, /** @type {string} */ (cols[i]));
+      });
+      const items = order.filter((/** @type {string} */ lv) => colourOf.has(lv))
+        .map((/** @type {string} */ lv) => ({ name: lv, color: /** @type {string} */ (colourOf.get(lv)) }));
+      m.legend = items.length && items.length <= LEGEND_MAX ? { col: color, items } : null;
+    }
+    /** @param {IndSeries} s @param {any[]} rs */
+    const colourFor = (s, rs) => {
+      if (!color) return s.color;
+      const cv = rs.length ? String(rs[0][color] ?? '') : String(s.level ?? '');
+      return colourOf.get(cv) || s.color;
+    };
+
+    for (const p of m.panels) {
+      /** @type {IndSeries[]} */
+      const back = [];
+      /** @type {IndSeries[]} */
+      const front = [];
+      for (const s of p.series) {
+        if (m.isLine) {
+          if (lineLit(s, p.facet)) front.push({ ...s, color: colourFor(s, s.rows) });
+          else back.push({ ...s, muted: true });
+          continue;
+        }
+        const on = s.rows.map(rowLit);
+        /** @param {boolean} want @returns {IndSeries} */
+        const part = (want) => {
+          const idx = on.map((v, i) => (v === want ? i : -1)).filter((i) => i >= 0);
+          const rs = idx.map((i) => s.rows[i]);
+          return { level: s.level, color: s.color, rows: rs,
+                   pts: idx.map((i) => s.pts[i]), src: rs, muted: !want };
+        };
+        const mu = part(false), li = part(true);
+        if (mu.rows.length) back.push(mu);
+        if (li.rows.length) front.push({ ...li, color: colourFor(s, li.rows) });
+      }
+      p.series = back.concat(front);
+    }
+  };
 
   /**
    * The order a line's points are drawn in: by axis position on a

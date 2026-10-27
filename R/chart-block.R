@@ -122,6 +122,16 @@
 #'   `"none"`. Where a type has no place for names on its marks (dodged bars,
 #'   a histogram, a boxplot), `"marks"` keeps the legend under the plot. The
 #'   legend is titled only when the colour column has a label.
+#' @param highlight One column and some of its values, as
+#'   `list(country = "Switzerland")`. Marks whose rows hold one of the values
+#'   keep their colour and every other mark is drawn grey behind them. Without
+#'   `color` the highlighted marks take the chart's single colour; with it,
+#'   they keep their colour level, and the palette is spread over the
+#'   highlighted levels only. Highlighted marks are named: in semibold on a
+#'   bar's axis, beside a point (when its value picks out one or two points),
+#'   at a line's end. The legend lists only the highlighted levels. A title
+#'   can say it with `{highlight}`: `subtitle = "...[, {highlight}
+#'   highlighted]"`. Bar, scatter, line and area.
 #' @param smoother Trend line on a scatter: `"none"` (default), `"lm"` or
 #'   `"loess"`, fit per colour or series group and per facet panel.
 #' @param identity_line `TRUE` draws a dashed y = x line on a scatter.
@@ -240,6 +250,7 @@ new_chart_block <- function(
     linetype = NULL,
     x_ranges = NULL,
     legend = "bottom",
+    highlight = NULL,
     smoother = "none",
     identity_line = FALSE,
     box_points = "none",
@@ -291,6 +302,11 @@ new_chart_block <- function(
   if ("value" %in% call_names && !"value_labels" %in% call_names) {
     dots$value <- value_labels
     value_labels <- FALSE
+  }
+  # The same for the old `hi =` (now `ymax`), which lands in `highlight`.
+  if ("hi" %in% call_names && !"highlight" %in% call_names) {
+    dots$hi <- highlight
+    highlight <- NULL
   }
   old <- intersect(names(dots), CHART_LEGACY_ARGS)
   if (length(old)) {
@@ -370,6 +386,7 @@ new_chart_block <- function(
   }
   linetype <- chr_state(linetype)
   x_ranges <- chart_ranges_state(x_ranges)
+  highlight <- chart_highlight_state(highlight)
   legend <- chr_state(legend) %||% "bottom"
   if (!legend %in% CHART_LEGENDS) {
     stop("new_chart_block(): `legend` must be one of ",
@@ -751,6 +768,13 @@ new_chart_block <- function(
         r_linetype <- shiny::reactiveVal(linetype)
         r_x_ranges <- shiny::reactiveVal(x_ranges)
         r_legend <- shiny::reactiveVal(legend)
+        r_highlight <- shiny::reactiveVal(highlight)
+        # The column the gear picked, before any value of it is: the browser
+        # needs its values to offer them. The saved state is `r_highlight`.
+        r_highlight_by <- shiny::reactiveVal(names(highlight))
+        hl_by <- function() {
+          chart_highlight_json(r_highlight())$by %||% r_highlight_by()
+        }
         r_waterfall_totals <- shiny::reactiveVal(waterfall_totals)
         r_bins <- shiny::reactiveVal(bins)
         # Number format of the values (axis, tooltips, labels), as on the
@@ -826,7 +850,7 @@ new_chart_block <- function(
             r_group(), r_color(), r_facet(), r_value(),
             r_x(), r_y(), r_xend(), r_series(),
             r_label(), r_tt_fields(), r_drill(), r_lo(), r_hi(),
-            r_linetype(),
+            r_linetype(), hl_by(),
             # Count-label id column: not a mapped aesthetic, but the browser
             # needs its values to count distinct ids per label group.
             r_count_col(),
@@ -1073,6 +1097,8 @@ new_chart_block <- function(
         r_titles_resolved <- shiny::reactive({
           d <- plain_data()
           shiny::req(is.data.frame(d))
+          # What `{highlight}` prints, read off the frame like `{filters}`.
+          attr(d, "blockr_highlight") <- chart_highlight_text(r_highlight())
           auto <- r_data_titles()
           a <- title_args()
           # The subtitle is the block's sentence, so its pieces are read
@@ -1347,6 +1373,9 @@ new_chart_block <- function(
               linetype = present_role(r_linetype()),
               x_ranges = chart_ranges_json(r_x_ranges()),
               legend = r_legend(),
+              # The column and its values apart, as the gear edits them.
+              highlight_by = hl_by(),
+              highlight = chart_highlight_json(r_highlight())$values,
               # Board scale map, resolved for the chart type's colored role
               # (NULL when no map / no binding / no colored role -- JS then
               # keeps palette cycling).
@@ -1618,6 +1647,12 @@ new_chart_block <- function(
             # Shaded ranges as [{name, from, to}]; [] clears them.
             if (!is.null(msg$x_ranges)) {
               upd(r_x_ranges, chart_ranges_state(msg$x_ranges))
+            }
+            # The column and its values; "" and [] clear them.
+            if (!is.null(msg$highlight_by) || !is.null(msg$highlight)) {
+              upd(r_highlight_by, nn(msg$highlight_by))
+              upd(r_highlight,
+                  chart_highlight_msg(msg$highlight_by, msg$highlight))
             }
             if (!is.null(msg$box_points)) upd(r_box_points, msg$box_points)
             if (!is.null(msg$summary))    upd(r_summary, msg$summary)
@@ -2195,6 +2230,7 @@ new_chart_block <- function(
             linetype = r_linetype,
             x_ranges = r_x_ranges,
             legend = r_legend,
+            highlight = r_highlight,
             smoother = r_smoother,
             identity_line = r_identity_line,
             box_points = r_box_points,
@@ -2269,7 +2305,7 @@ new_chart_block <- function(
     allow_empty_state = c("x", "y", "color", "facet", "series", "xend",
       "label", "orientation", "sort_by", "sort_dir", "tooltip", "drill",
       "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
-      "smoother", "identity_line", "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
+      "highlight", "smoother", "identity_line", "box_points", "summary", "whiskers", "id", "ref_lo", "ref_hi",
       "waterfall_totals", "facet_cols", "title", "subtitle", "caption",
       "drill_target", "drill_table", "script", "script_values",
       "selection", "unit"),
@@ -2281,7 +2317,7 @@ new_chart_block <- function(
       "value_labels", "format", "unit", "tooltip", "drill", "line_width",
       "point_size",
       "connect", "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
-      "legend", "smoother",
+      "legend", "highlight", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
       "connect_centers", "band_window", "band_size", "band_min_n", "id",
       "ref_lo", "ref_hi", "waterfall_totals", "bins", "show_n", "missing",

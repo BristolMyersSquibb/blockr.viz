@@ -33,6 +33,7 @@ new_chart_block(
   linetype = NULL,
   x_ranges = NULL,
   legend = "bottom",
+  highlight = NULL,
   smoother = "none",
   identity_line = FALSE,
   box_points = "none",
@@ -184,6 +185,16 @@ of a stack, at the centre of a scatter group, on a pie slice) or
 \code{"none"}. Where a type has no place for names on its marks (dodged bars,
 a histogram, a boxplot), \code{"marks"} keeps the legend under the plot. The
 legend is titled only when the colour column has a label.}
+
+\item{highlight}{One column and some of its values, as
+\code{list(country = "Switzerland")}. Marks whose rows hold one of the values
+keep their colour and every other mark is drawn grey behind them. Without
+\code{color} the highlighted marks take the chart's single colour; with it,
+they keep their colour level, and the palette is spread over the
+highlighted levels only. Highlighted marks are named: in semibold on a
+bar's axis, beside a point (when its value picks out one or two points),
+at a line's end. The legend lists only the highlighted levels. A title
+can say it with \code{{highlight}}: \code{subtitle = "...[, {highlight} highlighted]"}. Bar, scatter, line and area.}
 
 \item{smoother}{Trend line on a scatter: \code{"none"} (default), \code{"lm"} or
 \code{"loess"}, fit per colour or series group and per facet panel.}

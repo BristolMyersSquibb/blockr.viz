@@ -346,6 +346,20 @@ chart_arguments <- function() {
       example = "marks",
       type = arg_enum(CHART_LEGENDS)
     ),
+    highlight = new_arg_spec(
+      paste0(
+        "Make a few marks stand out (bar, scatter, line, area): an object ",
+        "of ONE column -> the values to highlight, e.g. {\"country\": ",
+        "[\"Switzerland\"]}. Every other mark turns grey; highlighted marks ",
+        "keep their colour (the chart's single colour without `color`, their ",
+        "colour level with it) and are named on the chart. Use this instead ",
+        "of adding a helper column and colouring by it. The column need not ",
+        "be mapped (a scatter of countries can highlight by country or ",
+        "region). Say it in the subtitle with {highlight}: \"...[, ",
+        "{highlight} highlighted]\"; no caption about colours is needed."
+      ),
+      example = NULL
+    ),
     ref_lo = new_arg_spec(
       paste0(
         "Column holding a LOWER reference limit, drawn as a dashed line. ",

@@ -23,7 +23,8 @@
   // Config fields the model reads; a change to any other field reuses it.
   const MODEL_FIELDS = ['chart_type', 'group', 'color', 'facet', 'value', 'func', 'na_group',
     'pct_of', 'sort_by', 'sort_dir', 'baseline', 'facet_scales', 'scales', 'count_on',
-    'count_col', 'tt_fields', 'summary', 'whiskers', 'box_points', 'label'];
+    'count_col', 'tt_fields', 'summary', 'whiskers', 'box_points', 'label',
+    'highlight_by', 'highlight'];
 
   // A colour-split distribution slot is `group + SEP + level`: ECharts
   // dedupes a category axis by value, so the bare group would collapse the
@@ -296,7 +297,10 @@
    *             noValue: boolean, sharedMax: number | null, ttFields: string[],
    *             facet: string | null, nFacets: number, single: boolean,
    *             ix: any, panels: AggregatedPanel[], histogram: boolean,
-   *             markLabels: Map<string, string | null> | null }} AggregatedModel
+   *             markLabels: Map<string, string | null> | null,
+   *             hl: Record<string, string[]> | null,
+   *             hlLit: ((facet: string, group: string, level: string | null) => boolean) | null,
+   *             hlColors: Set<string> | null }} AggregatedModel
    */
 
   /**
@@ -315,7 +319,8 @@
       colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
       distribution, noValue: distribution && (!value || value === '.count'),
       sharedMax: null, ttFields: [], facet: facet || null, nFacets: 1, single: true,
-      ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null
+      ix, panels: [], histogram: cfg.chart_type === 'histogram', markLabels: null,
+      hl: null, hlLit: null, hlColors: null
     };
     const agg = DAgg().aggregate(rows, { group, color, facet, value, func, na_group, pct_of });
     if (agg.length === 0) {
@@ -373,7 +378,44 @@
           ? distributionSlots({ rows, ix, cfg, groups, levels: out.levels, facet: fv }) : null
       });
     }
+    highlightMarks(out, rows, ix, cfg);
     return out;
+  };
+
+  /**
+   * The highlight: whether a bar (or a segment of one) holds a highlighted
+   * row, and with a colour split the colour levels that do, which alone get
+   * palette colours. Bars only (common.js HIGHLIGHT_TYPES).
+   * @param {AggregatedModel} out @param {any[]} rows @param {any} ix
+   * @param {Record<string, any>} cfg
+   */
+  const highlightMarks = (out, rows, ix, cfg) => {
+    const hl = NS.highlightOf(cfg);
+    if (!hl || out.cumulative || out.histogram || out.type !== 'bar') return;
+    /** @type {Map<string, boolean>} */
+    const memo = new Map();
+    /** @param {string} fv @param {string} g @param {string | null} lv @returns {boolean} */
+    const hlLit = (fv, g, lv) => {
+      const k = fv + '\u0000' + g + '\u0000' + (lv == null ? '\u0001' : lv);
+      const seen = memo.get(k);
+      if (seen !== undefined) return seen;
+      const keys = aggregatedKeys(cfg, fv, g, lv);
+      const lit = !!NS.keys.markLit(keys, () => rowsUnder(rows, ix, keys), hl);
+      memo.set(k, lit);
+      return lit;
+    };
+    out.hl = hl;
+    out.hlLit = hlLit;
+    if (out.colors.length) {
+      /** @type {Set<string>} */
+      const lit = new Set();
+      for (const p of out.panels) {
+        for (const a of p.cells) {
+          if (a.value != null && hlLit(p.facet, a.group, a.color)) lit.add(a.color);
+        }
+      }
+      out.hlColors = lit;
+    }
   };
   aggregated.FIELDS = MODEL_FIELDS;
 

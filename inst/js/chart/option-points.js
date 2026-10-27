@@ -131,12 +131,18 @@
     const cloudLabels = !isLine && plan.marks === 'centroid';
     const encodeX = m.x.encode ||
       ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v));
+    // `highlight`: the muted series in grey; the highlighted lines named at
+    // their end.
+    const muted = NS.mutedMark(ink);
+    const clrOf = (/** @type {any} */ s) => (s.muted ? muted : s.color);
+    const hlNames = isLine && !!m.hl && !!m.splitCol;
 
     // A scatter's native emphasis is off: it would strobe a dense cloud. A
     // line keeps it without scaling or focus, which is what draws one dot
     // per line at the crosshair; the crowd's is off, its hover is the
     // overlay.
-    const mkSeries = (/** @type {any} */ name, /** @type {any[]} */ data, /** @type {string} */ clr) => ({
+    const mkSeries = (/** @type {any} */ name, /** @type {any[]} */ data, /** @type {string} */ clr,
+                      /** @type {boolean} */ isMuted = false) => /** @type {any} */ ({
       type: isLine ? 'line' : 'scatter',
       name,
       data,
@@ -157,7 +163,10 @@
         : { disabled: true },
       ...(isArea ? { areaStyle: { opacity: stackArea ? 0.7 : 0.25 },
                      ...(stackArea ? { stack: 'area' } : {}) } : {}),
-      ...(directLabels ? {
+      // The muted part of a highlight: the drill patch tells it from the
+      // highlighted part of the same level by this.
+      ...(isMuted ? { blockrMuted: true } : {}),
+      ...((m.hl ? (directLabels || hlNames) && !isMuted : directLabels) ? {
         endLabel: {
           show: true, formatter: '{a}', distance: 6,
           color: (ink && ink.text) || '#111827', fontSize: (ink && ink.fontSize) || 12,
@@ -188,7 +197,7 @@
       return ltLevels.map((L, k) => {
         const data = s.pts.map((/** @type {any} */ p, /** @type {number} */ i) =>
           (lv[i] === L || lv[i + 1] === L) ? p : [p[0], null]);
-        const sr = mkSeries(s.level, data, s.color);
+        const sr = mkSeries(s.level, data, clrOf(s), !!s.muted);
         sr.id = '__seg_' + si + '_' + k;
         if (k > 0) {
           sr.lineStyle = { ...sr.lineStyle, type: DASHES[(k - 1) % DASHES.length] };
@@ -204,7 +213,7 @@
     // Grey for a single line; in the line's colour when colour splits them.
     /** @param {any} s */
     const lineBands = (s) => {
-      const clr = m.splitCol ? s.color : ((ink && ink.muted) || '#6b7280');
+      const clr = m.splitCol ? clrOf(s) : ((ink && ink.muted) || '#6b7280');
       /** @type {any[]} */
       const out = [];
       for (const [loCol, hiCol] of pairs) {
@@ -242,15 +251,19 @@
       if (ltCol && ltLevels.length > 1) {
         for (const sr of lineSegments(s, si)) series.push(sr);
       } else {
-        series.push(mkSeries(s.level, s.pts, s.color));
+        series.push(mkSeries(s.level, s.pts, clrOf(s), !!s.muted));
       }
-      if (smoother !== 'none' && !isLine) {
+      // R fits one smoother per level: with a highlight it goes with the
+      // level's highlighted points when it has some.
+      const fitHere = !s.muted || !panel.series.some((/** @type {any} */ o) =>
+        !o.muted && o.level === s.level);
+      if (smoother !== 'none' && !isLine && fitHere) {
         const ln = smootherLine(s.level);
         if (ln) {
           series.push({
             type: 'line', name: s.level || 'fit', legendHoverLink: false, data: ln,
             silent: true, showSymbol: false,
-            lineStyle: { color: s.color, width: 2, type: 'solid', opacity: 0.9 }, z: 2
+            lineStyle: { color: clrOf(s), width: 2, type: 'solid', opacity: 0.9 }, z: 2
           });
         }
       }
@@ -262,7 +275,7 @@
             .filter((/** @type {any} */ r) => r[m.x.col] != null && r[loCol] != null && r[hiCol] != null)
             .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), Number(r[loCol]), Number(r[hiCol])]);
           if (errPts.length) {
-            series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, s.color, false));
+            series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, clrOf(s), false));
           }
         }
       }
@@ -291,17 +304,34 @@
     // a few named points stand out of a cloud. One label-only series per
     // panel, over the points, with a halo to read on them; its id keeps the
     // highlight patch and the brush off it.
-    const labelCol = cfg.label || null;
+    // A highlight on a scatter without `label` names its highlighted points
+    // by the highlighted value, where that value picks out one or two points
+    // of the panel (a region on 40 points is said once, in the subtitle).
+    const hlCol = !isLine && m.hl && !cfg.label ? Object.keys(m.hl)[0] : null;
+    const labelCol = cfg.label || hlCol;
+    /** @type {Map<string, number>} */
+    const hlCount = new Map();
+    if (hlCol) {
+      for (const s of panel.series) {
+        if (s.muted) continue;
+        for (const r of s.rows) {
+          const v = String(r[hlCol]);
+          hlCount.set(v, (hlCount.get(v) || 0) + 1);
+        }
+      }
+    }
     // Point labels and group names keep out of each other's way.
     const room = { placed: [], lastS: -1, lastD: -1 };
     if (labelCol) {
       /** @type {any[]} */
       const data = [];
       for (const s of panel.series) {
+        if (hlCol && s.muted) continue;
         s.rows.forEach((/** @type {any} */ r, /** @type {number} */ i) => {
           const v = r[labelCol];
           const p = s.pts[i];
           if (!NS.hasVal(v) || v === 'NA' || !p || p[0] == null || p[1] == null) return;
+          if (hlCol && (hlCount.get(String(v)) || 0) > 2) return;
           data.push([p[0], p[1], String(v)]);
         });
       }
@@ -315,7 +345,9 @@
           label: {
             show: true, position, distance,
             formatter: (/** @type {any} */ prm) => prm.value[2],
-            color: (ink && ink.secondary) || '#374151', fontSize: (ink && ink.fontSize) || 12,
+            color: hlCol ? ((ink && ink.text) || '#111827') : ((ink && ink.secondary) || '#374151'),
+            fontSize: (ink && ink.fontSize) || 12,
+            ...(hlCol ? { fontWeight: 600 } : {}),
             textBorderColor: surface, textBorderWidth: 3
           },
           labelLayout: labelSpacer(position, distance, room)
@@ -331,7 +363,7 @@
       const spacer = labelSpacer('inside', 0, room);
       panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
         const c = NS.cloudCentre(s.pts);
-        if (!c || s.level == null || s.level === '') return;
+        if (!c || s.muted || s.level == null || s.level === '') return;
         const mark = NS.nameMark('__legend_' + si, String(s.level), c, 'inside', ink);
         mark.labelLayout = spacer;
         series.push(mark);
@@ -340,8 +372,11 @@
 
     // Room on the right for the end labels.
     let labelPad = 0;
-    if (directLabels) {
-      for (const s of panel.series) labelPad = Math.max(labelPad, String(s.level ?? '').length);
+    if (directLabels || hlNames) {
+      for (const s of panel.series) {
+        if (m.hl && s.muted) continue;
+        labelPad = Math.max(labelPad, String(s.level ?? '').length);
+      }
       labelPad = labelPad ? Math.min(160, labelPad * 6.5 + 12) : 0;
     }
     return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };

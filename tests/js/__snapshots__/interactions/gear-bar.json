@@ -120,7 +120,8 @@
       "add": [
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]

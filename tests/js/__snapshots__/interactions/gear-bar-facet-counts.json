@@ -163,7 +163,8 @@
       "add": [
        "Color",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]

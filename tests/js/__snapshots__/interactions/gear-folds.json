@@ -56,7 +56,8 @@
        "Color",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]
@@ -345,7 +346,8 @@
        "Color",
        "Facet",
        "Tooltip fields",
-       "Label"
+       "Label",
+       "Highlight"
       ]
      }
     ]
