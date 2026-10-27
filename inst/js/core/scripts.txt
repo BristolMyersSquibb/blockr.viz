@@ -3,3 +3,4 @@
 namespace.js
 util.js
 scope.js
+binding.js

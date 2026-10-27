@@ -19,13 +19,45 @@ interface VizScope {
   dispose(): void;
 }
 
+/** What R sends a block view (R/kit-output.R, viz_payload()). */
+interface VizPayload {
+  state_rev: number;
+  data_rev: number;
+  columns: Array<{ name: string; class: string; label: string; n_unique: number;
+                   [meta: string]: unknown }>;
+  config: Record<string, unknown>;
+  derived: Record<string, unknown>;
+  data?: Record<string, unknown> | null;
+}
+
+/** A block view: built by the shared binding on its element's first value. */
+interface VizView {
+  render(payload: VizPayload): void;
+  dispose(): void;
+  /** Shows an error R sent; a silent req() never reaches it. */
+  error?(message: string): void;
+}
+
+type VizViewClass = new (el: HTMLElement, scope: VizScope) => VizView;
+
+/** A mounted view: what the binding keeps per element. */
+interface VizMount {
+  el: HTMLElement;
+  scope: VizScope;
+  view: VizView;
+  last: VizPayload | null;
+  needRev: number | null;
+}
+
 interface VizNamespace {
   /** The block specs, generated from R (inst/js/spec/). */
   spec: Record<string, unknown>;
   util: {
     esc(x: unknown): string;
-    send(id: string, kind: 'set' | 'select' | 'capture', value: unknown,
+    send(id: string, kind: 'set' | 'select' | 'capture' | 'need', value: unknown,
          block?: string): boolean;
   };
   Scope: { new (): VizScope; open(): number };
+  binding(name: string, view: string, View: VizViewClass,
+          opts?: { grace?: number }): boolean;
 }

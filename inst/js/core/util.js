@@ -24,10 +24,11 @@
 
   /**
    * Send one of a view's inputs to R: `<id>_set`, `<id>_select` or
-   * `<id>_capture`, typed so R's input handler checks it on arrival, with
-   * priority "event" so the same value sent twice arrives twice.
+   * `<id>_capture`, typed so R's input handler checks it on arrival, or
+   * `<id>_need` (the data revision the view holds no rows for). Priority
+   * "event", so the same value sent twice arrives twice.
    * @param {string} id The view's element id.
-   * @param {'set' | 'select' | 'capture'} kind
+   * @param {'set' | 'select' | 'capture' | 'need'} kind
    * @param {unknown} value
    * @param {string} [block] For `set`: the block whose spec reads it.
    * @returns {boolean} Whether Shiny took it.
@@ -35,8 +36,10 @@
   const send = (id, kind, value, block) => {
     const shiny = root.Shiny;
     if (!id || !shiny || typeof shiny.setInputValue !== 'function') return false;
-    const type = kind === 'set' ? 'blockr.viz.' + block : TYPES[kind];
-    shiny.setInputValue(id + '_' + kind + ':' + type, value, { priority: 'event' });
+    const type = kind === 'set' ? 'blockr.viz.' + block
+      : kind === 'need' ? null : TYPES[kind];
+    const name = id + '_' + kind + (type ? ':' + type : '');
+    shiny.setInputValue(name, value, { priority: 'event' });
     return true;
   };
 

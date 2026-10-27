@@ -28,15 +28,26 @@ function loadCore(opts = {}) {
   const win = new Window();
   windows.push(win);
   const sent = [];
+  const outputs = {};
   if (opts.shiny !== false) {
     win.Shiny = {
-      setInputValue: (name, value, o) => sent.push({ name, value, opts: o })
+      setInputValue: (name, value, o) => sent.push({ name, value, opts: o }),
+      OutputBinding: class {},
+      outputBindings: { register: (b, name) => { outputs[name] = b; } }
     };
+    // The few jQuery calls the binding makes: find, and on / off for
+    // Shiny's jQuery-only "shiny:unbound" event, which trigger() fires.
+    win.jQuery = (x) => ({
+      find: (sel) => Array.from(x.querySelectorAll(sel)),
+      on: (type, fn) => { (x.__jq = x.__jq || {})[type] = fn; },
+      off: (type) => { if (x.__jq) delete x.__jq[type]; }
+    });
   }
   for (const f of CORE_FILES) {
     win.eval(fs.readFileSync(path.join(CORE_DIR, f), 'utf8'));
   }
-  return { win, V: win.Blockr.viz, sent };
+  const trigger = (el, type) => { if (el.__jq && el.__jq[type]) el.__jq[type](); };
+  return { win, V: win.Blockr.viz, sent, outputs, trigger };
 }
 
 module.exports = { loadCore, CORE_FILES };
