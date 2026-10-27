@@ -25,7 +25,8 @@
 
   // Config fields the model reads; a change to any other field reuses it.
   const MODEL_FIELDS = ['chart_type', 'x', 'y', 'color', 'facet', 'series', 'tt_fields',
-    'scales', 'palette', 'count_on', 'count_col', 'func', 'highlight_by', 'highlight'];
+    'scales', 'palette', 'count_on', 'count_col', 'func', 'highlight_by', 'highlight',
+    'y_scale', 'x_scale'];
 
   // Line charts: past TRAJ_FULL_MAX series the lines thin and drop their
   // markers, past TRAJ_REDUCED_MAX they thin further, and past the cap the
@@ -52,7 +53,7 @@
    *             facet: string | null, levels: string[], levelColors: string[],
    *             palette: string[], colorScale: any, seriesCount: number,
    *             lineOpacity: number, symbol: string, capMessage: string | null,
-   *             crowd: boolean,
+   *             crowd: boolean, logX: boolean, logY: boolean, logDropped: number,
    *             ttFields: string[], legend: any, byColor: boolean,
    *             nFacets: number, single: boolean, ix: any,
    *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
@@ -81,6 +82,7 @@
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
       palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
+      logX: false, logY: false, logDropped: 0,
       ttFields: [], legend: null, byColor: false,
       nFacets: 1, single: true, ix, panels: [], hl: null
     };
@@ -142,6 +144,11 @@
               period: xType === 'time' ? NS.axes.timePeriod(rows, x) : null };
     out.y = { col: y, type: yType, cats: yCats };
 
+    // A log axis on a number. A row at or below zero on it is not drawn
+    // and counted for the footer.
+    const logs = NS.logAxes(cfg);
+    out.logX = logs.x && xType === 'value';
+    out.logY = logs.y && yType === 'value';
     const encodeY = (/** @type {any} */ v) => yType === 'category' ? String(v ?? '') : Number(v);
     const tt = out.ttFields;
     /** @param {any} r */
@@ -150,7 +157,14 @@
       for (const c of tt) p.push(r[c] ?? '');
       return p;
     };
-    const drawn = (/** @type {any} */ r) => r[x] != null && r[y] != null;
+    const drawn = (/** @type {any} */ r) => {
+      if (r[x] == null || r[y] == null) return false;
+      if ((out.logX && !(Number(r[x]) > 0)) || (out.logY && !(Number(r[y]) > 0))) {
+        out.logDropped++;
+        return false;
+      }
+      return true;
+    };
 
     /** @param {string | undefined} level @param {any[]} rs @param {string} clr @returns {IndSeries} */
     const mkSeries = (level, rs, clr) => {

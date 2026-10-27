@@ -341,6 +341,20 @@
     return m;
   };
 
+  /**
+   * Which axes a chart draws on a log scale: `y_scale` on a scatter, line or
+   * band, `x_scale` on a scatter. The model also needs the axis to be a
+   * number (not a date or a category).
+   * @param {Record<string, any>} cfg @returns {{ x: boolean, y: boolean }}
+   */
+  const logAxes = (cfg) => {
+    const t = cfg.chart_type;
+    return {
+      y: cfg.y_scale === 'log' && (t === 'scatter' || t === 'line' || t === 'band'),
+      x: cfg.x_scale === 'log' && t === 'scatter'
+    };
+  };
+
   // -- Legend ------------------------------------------------------------------
 
   // Where the colour legend goes: a band below the plot (the default) or above
@@ -492,7 +506,7 @@
     BLOCKR_PALETTE, PALETTE_OVERFLOW, paletteAt, paletteOf, scaleFor, levelColors,
     HIGHLIGHT_TYPES, highlightOf, mutedMark, litLevelColors,
     hasVal, maxOf, minOf, firstIndex, drillState, drillColumn, transientDrill,
-    applyDrillEmphasis, facetScales, PANEL_H_CAP,
+    applyDrillEmphasis, facetScales, logAxes, PANEL_H_CAP,
     LEGEND_MODES, MARKS_MAX_LEVELS, legendSetting, marksKind, swatchOf, legendPlan,
     cloudCentre, nameMark
   });

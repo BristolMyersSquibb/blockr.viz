@@ -892,6 +892,34 @@
       ]
      },
      {
+      "role": "y_scale",
+      "label": "Y scale",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Linear",
+         "Log"
+        ],
+        "selected": "Linear"
+       }
+      ]
+     },
+     {
+      "role": "x_scale",
+      "label": "X scale",
+      "controls": [
+       {
+        "kind": "segmented",
+        "options": [
+         "Linear",
+         "Log"
+        ],
+        "selected": "Linear"
+       }
+      ]
+     },
+     {
       "role": "line_width_mult",
       "label": "Line width",
       "controls": [

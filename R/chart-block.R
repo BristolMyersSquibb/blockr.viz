@@ -84,6 +84,13 @@
 #'   `unit` is free text after the number (`"CHF"`); the axis title carries
 #'   it once.
 #'   On scatter, line and area charts it applies to y.
+#' @param y_scale,x_scale `"linear"` (default) or `"log"`, a base-10 axis.
+#'   `y_scale` applies to scatter, line and band charts, `x_scale` to a
+#'   scatter; other types ignore them, and so does a date or category axis.
+#'   On a log axis values at or below zero are not drawn, and a note under
+#'   the chart counts them. The low end of an interval (`ymin`, a band)
+#'   that falls at or below zero is cut at the bottom of the axis. A
+#'   smoother is fitted on the scale that is drawn.
 #' @param tooltip Extra columns shown in each mark's tooltip.
 #' @param drill Column a click filters downstream on, `"auto"` for the type's
 #'   natural target, or `NULL` (default) for no filtering.
@@ -238,6 +245,8 @@ new_chart_block <- function(
     value_labels = FALSE,
     format = "number",
     unit = "",
+    y_scale = "linear",
+    x_scale = "linear",
     tooltip = NULL,
     drill = NULL,
     line_width = 1,
@@ -443,7 +452,9 @@ new_chart_block <- function(
          "whole number of decimals from 0 to 6.", call. = FALSE)
   }
   unit <- as.character(unlist(unit %||% ""))[1L] %|NA|% ""
-  bins <- suppressWarnings(as.numeric(unlist(bins))[1L])
+  y_scale <- chart_scale_state(y_scale, "y_scale")
+  x_scale <- chart_scale_state(x_scale, "x_scale")
+  bins <-suppressWarnings(as.numeric(unlist(bins))[1L])
   if (!isTRUE(bins >= 1)) bins <- 30
   # The module server below takes `id` (its own namespace id), which would
   # shadow the id column.
@@ -781,6 +792,8 @@ new_chart_block <- function(
         # tile block.
         r_format <- shiny::reactiveVal(format)
         r_unit <- shiny::reactiveVal(unit)
+        r_y_scale <- shiny::reactiveVal(y_scale)
+        r_x_scale <- shiny::reactiveVal(x_scale)
         # Chart text. The public value is the template as written; the
         # internal one has its `{@arg}` slots renamed to what the resolver
         # and the gear know.
@@ -1039,9 +1052,11 @@ new_chart_block <- function(
           if (!identical(r_chart_type(), "scatter")) return(NULL)
           d <- plain_data()
           if (!is.data.frame(d)) return(NULL)
+          logs <- chart_log_axes("scatter", r_y_scale(), r_x_scale())
           args <- list(
             smoother = sm, x_col = r_x(), y_col = r_y(), color_by = r_color(),
-            series_by = r_series(), facet_by = col_in(d, r_facet())
+            series_by = r_series(), facet_by = col_in(d, r_facet()),
+            x_log = logs$x, y_log = logs$y
           )
           cols <- intersect(as.character(unlist(args[c(
             "x_col", "y_col", "color_by", "series_by", "facet_by"
@@ -1245,6 +1260,7 @@ new_chart_block <- function(
               # A number of decimals travels as text, the gear's value.
               bins = r_bins(), format = as.character(r_format()),
               unit = r_unit(),
+              y_scale = r_y_scale(), x_scale = r_x_scale(),
               xend = r_xend(), series = present_role(r_series()),
               label = r_label(),
               # Extra tooltip columns. as.list() keeps a length-1 vector a JSON
@@ -1619,6 +1635,12 @@ new_chart_block <- function(
               if (!is.null(v)) upd(r_format, v)
             }
             if (!is.null(msg$unit)) upd(r_unit, trimws(as.character(msg$unit)))
+            if (!is.null(msg$y_scale)) {
+              upd(r_y_scale, chart_scale_msg(msg$y_scale, r_y_scale()))
+            }
+            if (!is.null(msg$x_scale)) {
+              upd(r_x_scale, chart_scale_msg(msg$x_scale, r_x_scale()))
+            }
             if (!is.null(msg$bins)) {
               v <- suppressWarnings(as.numeric(msg$bins))
               if (isTRUE(v >= 1)) upd(r_bins, v)
@@ -2218,6 +2240,8 @@ new_chart_block <- function(
             value_labels = r_value_labels,
             format = r_format,
             unit = r_unit,
+            y_scale = r_y_scale,
+            x_scale = r_x_scale,
             tooltip = r_tt_fields,
             drill = r_drill,
             line_width = r_line_width_mult,
@@ -2314,8 +2338,8 @@ new_chart_block <- function(
     # argument spec, so the assistant never sees it.
     external_ctrl = c("type", "x", "y", "func", "color", "facet", "series",
       "xend", "label", "orientation", "position", "sort_by", "sort_dir",
-      "value_labels", "format", "unit", "tooltip", "drill", "line_width",
-      "point_size",
+      "value_labels", "format", "unit", "y_scale", "x_scale", "tooltip",
+      "drill", "line_width", "point_size",
       "connect", "y_lines", "x_lines", "ymin", "ymax", "linetype", "x_ranges",
       "legend", "highlight", "smoother",
       "identity_line", "box_points", "summary", "whiskers",
@@ -2375,6 +2399,9 @@ new_chart_block <- function(
 #'   most 0.3 where the exact fit's own error was 1.8; keeping every k-th
 #'   point instead moved it by 0.9. No randomness, so the same data draws the
 #'   same line. A group at or below the limit is fit exactly as before.
+#' @param x_log,y_log `TRUE` fits on log10 of that axis, as a chart with a
+#'   log axis draws it, so a straight fit stays straight. Rows at or below
+#'   zero on a log axis are left out; the line comes back in raw units.
 #' @return A named list or `NULL`.
 #' @examples
 #' compute_smoother_series(
@@ -2391,7 +2418,8 @@ new_chart_block <- function(
 #' @export
 compute_smoother_series <- function(data, smoother, x_col, y_col,
                                      color_by, series_by, facet_by = NULL,
-                                     loess_max = 5000L) {
+                                     loess_max = 5000L, x_log = FALSE,
+                                     y_log = FALSE) {
   if (is.null(smoother) || identical(smoother, "none")) return(NULL)
   if (is.null(data) || nrow(data) == 0) return(NULL)
   if (is.null(x_col) || is.null(y_col)) return(NULL)
@@ -2404,10 +2432,15 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   data <- data[intersect(c(x_col, y_col, split_col, facet_by), names(data))]
 
   fit_one <- function(d) {
-    d <- d[!is.na(d[[x_col]]) & !is.na(d[[y_col]]), , drop = FALSE]
+    keep <- !is.na(d[[x_col]]) & !is.na(d[[y_col]])
+    if (isTRUE(x_log)) keep <- keep & d[[x_col]] > 0
+    if (isTRUE(y_log)) keep <- keep & d[[y_col]] > 0
+    d <- d[keep, , drop = FALSE]
     if (nrow(d) < 3L) return(NULL)
     xv <- d[[x_col]]
     yv <- d[[y_col]]
+    if (isTRUE(x_log)) xv <- log10(xv)
+    if (isTRUE(y_log)) yv <- log10(yv)
     if (length(unique(xv)) < 2L) return(NULL)
     rng <- range(xv, na.rm = TRUE)
     xs <- seq(rng[1L], rng[2L], length.out = 100L)
@@ -2438,6 +2471,8 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
       }
     }, error = function(e) NULL)
     if (is.null(ys) || all(is.na(ys))) return(NULL)
+    if (isTRUE(x_log)) xs <- 10^xs
+    if (isTRUE(y_log)) ys <- 10^ys
     list(x = as.list(xs), y = as.list(unname(ys)))
   }
 

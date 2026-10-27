@@ -21,6 +21,8 @@ new_chart_block(
   value_labels = FALSE,
   format = "number",
   unit = "",
+  y_scale = "linear",
+  x_scale = "linear",
   tooltip = NULL,
   drill = NULL,
   line_width = 1,
@@ -139,6 +141,14 @@ exactly (\code{2} prints 4.30). Each prints as on the table block.
 \code{unit} is free text after the number (\code{"CHF"}); the axis title carries
 it once.
 On scatter, line and area charts it applies to y.}
+
+\item{y_scale, x_scale}{\code{"linear"} (default) or \code{"log"}, a base-10 axis.
+\code{y_scale} applies to scatter, line and band charts, \code{x_scale} to a
+scatter; other types ignore them, and so does a date or category axis.
+On a log axis values at or below zero are not drawn, and a note under
+the chart counts them. The low end of an interval (\code{ymin}, a band)
+that falls at or below zero is cut at the bottom of the axis. A
+smoother is fitted on the scale that is drawn.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip.}
 
