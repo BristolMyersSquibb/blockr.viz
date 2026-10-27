@@ -255,6 +255,7 @@ interface BlockrNamespace {
   ): { set(open: boolean): void; toggle(): void; isOpen(): boolean };
   /** Groups for a long gear tray (blockr.ui's blockr-ui.js); absent on an
       older blockr.ui, where the tray stays one column. */
+  setRequiredEmpty(el: Element, empty: boolean): void;
   trayNav?(
     groups: {
       key: string;
