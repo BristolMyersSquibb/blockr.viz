@@ -14,9 +14,11 @@ jobs:
     permissions:
       contents: write
 
-  # The JS on its own: eslint (with the function and file length limits),
-  # tsc and the node tests. blockr.ui's controls load from a checkout of its
-  # default branch.
+  # The JS that must stay green while the rewrite runs: the node tests, and
+  # the strict gate on the rewritten core (eslint with the teardown rules,
+  # strict tsc with tsconfig.core.json). The whole-tree lint and tsc run in
+  # exit-criteria, red on the old code until the rewrite is done.
+  # blockr.ui's controls load from a checkout of its default branch.
   js:
     runs-on: ubuntu-latest
     steps:
@@ -30,9 +32,9 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint:core
         if: always()
-      - run: npm run typecheck
+      - run: npm run typecheck:core
         if: always()
       - run: npm test
         if: always()

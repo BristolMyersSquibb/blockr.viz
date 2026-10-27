@@ -1,0 +1,6 @@
+# The core scripts, in load order. Read by the core html dependency and by
+# tests/js/core/load.js.
+namespace.js
+util.js
+scope.js
+binding.js
