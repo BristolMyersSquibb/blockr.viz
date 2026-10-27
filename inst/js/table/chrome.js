@@ -118,8 +118,11 @@
     }
 
     /**
-     * Search and download, each only when on and there is a table.
-     * @param {{ search: boolean, download: boolean, downloads?: unknown }} o
+     * Search and download, each only when on and there is a table. The
+     * download control is core/download.js's; `onOpen` runs when the reader
+     * reaches for it.
+     * @param {{ search: boolean, download: boolean, downloads?: unknown,
+     *           onOpen?: () => void }} o
      */
     showTools(o) {
       const was = !this.searchInput.hidden;
@@ -129,9 +132,9 @@
         this._search.forEach((f) => f(''));
       }
       this.downloadSlot.hidden = !o.download;
-      const D = /** @type {any} */ (V).download;
-      if (o.download && D && typeof D.render === 'function') {
-        D.render(this.downloadSlot, o.downloads, this.id, this.scope);
+      if (typeof V.downloads === 'function') {
+        V.downloads(this.downloadSlot, /** @type {VizDownload[]} */ (o.download ? o.downloads : null),
+                    this.scope, o.onOpen ? { onOpen: o.onOpen } : {});
       }
     }
 

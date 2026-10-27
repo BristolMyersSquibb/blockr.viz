@@ -112,8 +112,7 @@
       const f = this.frame;
       f.titles(d.titles);
       const has = !!m && !d.empty;
-      f.showTools({ search: has && cfg.search !== false, download: has && cfg.download !== false,
-                    downloads: d.downloads });
+      f.showTools(this.tools(cfg, has, d));
       if (f.empty(d.empty) || !m) {
         this.model = null;
         this.drawnWith = '';
@@ -130,13 +129,52 @@
     }
 
     /**
+     * The header's tools: search and download, when on and there is a
+     * table.
+     * @param {TableConfig} cfg
+     * @param {boolean} has
+     * @param {TableDerived} d
+     * @returns {{ search: boolean, download: boolean, downloads?: unknown, onOpen?: () => void }}
+     */
+    tools(cfg, has, d) {
+      return { search: has && cfg.search !== false, download: has && cfg.download !== false,
+               downloads: d.downloads };
+    }
+
+    /**
+     * How the Grid draws the model; a change of this redraws it.
+     * @param {TableConfig} cfg
+     * @param {TableModel} m
+     * @returns {TableGridFlags}
+     */
+    flags(cfg, m) {
+      return { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false };
+    }
+
+    /** @returns {TableCardOpts} */
+    cardOpts() {
+      return {};
+    }
+
+    /**
+     * The left of the footer: the row count of a flat table.
+     * @param {TableModel} m
+     * @param {{ shown: number, total: number }} c
+     */
+    countLine(m, c) {
+      const structured = !!(m.sections && m.sections.length) || !!(m.rows && m.rows.indent);
+      return structured ? '' : countText(c.shown, c.total);
+    }
+
+    /**
      * Draw the model afresh when it or how it is drawn changed, else repaint
      * the drill only.
      * @param {TableModel} m
      * @param {TableConfig} cfg
      */
     draw(m, cfg) {
-      const how = [cfg.look, cfg.sortable, cfg.collapsible].join();
+      const flags = this.flags(cfg, m);
+      const how = cfg.look + JSON.stringify(flags);
       if (m === this.model && how === this.drawnWith) {
         this.repaint();
         return;
@@ -152,7 +190,7 @@
       this.cardsHost.hidden = true;
       this.cardsHost.innerHTML = '';
       this.grid.query = this.frame.query();
-      this.grid.set(m, { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false });
+      this.grid.set(m, flags);
     }
 
     /** The search applied to the card rows. */
@@ -168,7 +206,8 @@
       const m = /** @type {TableModel} */ (this.model);
       const order = this.cardOrder();
       T.cards.render(this.cardsHost, /** @type {TableCards} */ (m.cards), this.scope,
-                     { order, rowClass: (i) => this.drill.rowClass(i) });
+                     Object.assign({ order, rowClass: (/** @type {number} */ i) => this.drill.rowClass(i) },
+                                   this.cardOpts()));
       this.footer();
     }
 
@@ -184,10 +223,9 @@
       const m = this.model;
       const f = this.frame;
       if (!m) return;
-      const structured = !!(m.sections && m.sections.length) || !!(m.rows && m.rows.indent);
       const c = this.cardsOn() ? { shown: this.cardOrder().length, total: m.n }
         : this.grid.counts();
-      f.count(structured ? '' : countText(c.shown, c.total));
+      f.count(this.countLine(m, c));
       if (this.transient()) {
         f.receipt(this.sent ? 'Drilled down to ' + T.drill.label(this.sent, this.labels) : null,
                   null);
@@ -222,5 +260,6 @@
     }
   }
 
+  T.Records = Records;
   T.layouts.records = Records;
 })();

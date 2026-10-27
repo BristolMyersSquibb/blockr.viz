@@ -19,6 +19,7 @@
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const H = V.table.html;
+  const esc = V.util.esc;
 
   /** Above this many items only a window of them is in the DOM. */
   const VIRT_MIN = 400;
@@ -111,6 +112,47 @@
     return { num, str };
   }
 
+  /**
+   * The matching rows and the rows they sit under: an indented row's
+   * parents stay with it, so a match keeps its context.
+   * @param {number[]} view Rows in data order.
+   * @param {number[]} indent
+   */
+  function withParents(view, indent) {
+    const keep = new Set(view);
+    for (const i of view) {
+      let cur = indent[i];
+      for (let j = i - 1; j >= 0 && cur > 0; j--) {
+        if (indent[j] < cur) {
+          keep.add(j);
+          cur = indent[j];
+        }
+      }
+    }
+    return Array.from(keep).sort((a, b) => a - b);
+  }
+
+  /**
+   * Sort an indented list as a tree: siblings by `cmp`, each row followed
+   * by its own children, sorted the same way.
+   * @param {number[]} rows Rows in data order.
+   * @param {number[]} indent
+   * @param {(a: number, b: number) => number} cmp
+   * @returns {number[]}
+   */
+  function treeSort(rows, indent, cmp) {
+    if (rows.length < 2) return rows.slice();
+    const top = Math.min(...rows.map((i) => indent[i]));
+    /** @type {number[][]} */
+    const units = [];
+    for (const i of rows) {
+      if (indent[i] === top || !units.length) units.push([i]);
+      else units[units.length - 1].push(i);
+    }
+    units.sort((u, v) => cmp(u[0], v[0]));
+    return units.flatMap((u) => [u[0]].concat(treeSort(u.slice(1), indent, cmp)));
+  }
+
   class Grid {
     /**
      * @param {HTMLElement} box The scroll box the table goes in.
@@ -130,6 +172,7 @@
       this.table = null;
       /** @type {TableModel | null} */
       this.model = null;
+      /** @type {TableGridFlags & { sortable: boolean, collapsible: boolean }} */
       this.flags = { sortable: true, collapsible: true };
       this.query = '';
       /** @type {number | null} */
@@ -171,8 +214,8 @@
      */
     set(model, flags) {
       this.model = model;
-      this.flags = { sortable: !flags || flags.sortable !== false,
-                     collapsible: !flags || flags.collapsible !== false };
+      this.flags = Object.assign({}, flags, { sortable: !flags || flags.sortable !== false,
+                                              collapsible: !flags || flags.collapsible !== false });
       this.sortCol = null;
       this.sortDir = 0;
       this._st = structure(model, this.flags.collapsible);
@@ -255,7 +298,8 @@
     /** The table element and its header; the body comes from draw(). */
     _build() {
       const m = /** @type {TableModel} */ (this.model);
-      const f = { sortable: this.flags.sortable, foldAll: this.folds() };
+      const axis = this.hooks.axis;
+      const f = { sortable: !!this.flags.sortable, foldAll: this.folds(), axis };
       const widths = m.widths || null;
       const cols = widths
         ? '<colgroup>' + widths.map((w) => '<col style="width:' + Number(w) + 'px">').join('') +
@@ -264,8 +308,12 @@
       const head = m.head.map((row, r) =>
         '<tr>' + row.map((h, c) => H.th(m, r, c, f)).join('') + '</tr>').join('');
       this.host.hidden = false;
-      this.host.innerHTML = '<table class="blockr-table' + (widths ? ' dt-fixed' : '') + '">' +
-        cols + '<thead>' + head + '</thead><tbody></tbody></table>';
+      const fl = this.flags;
+      const attrs = Object.entries(fl.attrs || {})
+        .map(([k, v]) => ' ' + k.replace(/[^a-z0-9-]/gi, '') + '="' + esc(v) + '"').join('');
+      this.host.innerHTML = '<table class="blockr-table' + (widths ? ' dt-fixed' : '') +
+        (fl.cls ? ' ' + esc(fl.cls) : '') + '"' + attrs + '>' + cols + '<thead>' + head +
+        '</thead><tbody></tbody>' + (axis ? H.foot(m, axis) : '') + '</table>';
       this.table = /** @type {HTMLTableElement} */ (this.host.firstElementChild);
     }
 
@@ -279,10 +327,12 @@
         if (!this._text) this._text = Array.from({ length: m.n }, (_, i) => rowText(m, i));
         const text = this._text;
         for (let i = 0; i < m.n; i++) if (text[i].includes(this.query)) view.push(i);
+        this._shown = view.length;
+        if (st.indent) view = withParents(view, st.indent);
       } else {
         view = Array.from({ length: m.n }, (_, i) => i);
       }
-      this._shown = view.length;
+      if (!this.query) this._shown = view.length;
       if (this.sortCol != null && this.sortDir !== 0) view = this._sorted(view);
       return this._fold(view, st);
     }
@@ -299,12 +349,14 @@
       }
       const { num, str } = k;
       const dir = this.sortDir;
-      return view.slice().sort((a, b) => {
+      /** @param {number} a @param {number} b */
+      const cmp = (a, b) => {
         if (st.blk[a] !== st.blk[b]) return st.blk[a] - st.blk[b];
         const na = num[a];
         const nb = num[b];
         return dir * (na !== null && nb !== null ? na - nb : str[a].localeCompare(str[b]));
-      });
+      };
+      return st.indent ? treeSort(view, st.indent, cmp) : view.slice().sort(cmp);
     }
 
     /**
@@ -371,7 +423,7 @@
       const n = items.length;
       let start = 0;
       let end = n;
-      if (n > VIRT_MIN) {
+      if (n > VIRT_MIN && !this.flags.all) {
         const vis = Math.max(1, Math.ceil((this.box.clientHeight || 600) / this.rowH));
         start = Math.max(0, Math.floor(this.box.scrollTop / this.rowH) - OVERSCAN);
         end = Math.min(n, start + vis + 2 * OVERSCAN);
@@ -423,7 +475,8 @@
       const last = !next || (next.s != null && m.sections != null &&
                              m.sections[next.s].level === 1);
       return H.row(m, /** @type {TableStructure} */ (this._st), i,
-                   { last, shut: this.shutRows.has(i), extra: h.rowClass ? h.rowClass(i) : '' });
+                   { last, shut: this.shutRows.has(i), extra: h.rowClass ? h.rowClass(i) : '',
+                     stubCls: this.flags.stubCls, cell: h.cell });
     }
 
     /** The fold-all button follows the folds: open all, or fold all. */

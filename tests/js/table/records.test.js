@@ -126,9 +126,9 @@ test('the cards follow the width of their host', () => {
 
 test('another layout replaces the records view and its table', () => {
   const t = mount(payload({ data: flatModel(3) }));
-  t.render({ data: flatModel(3), config: { layout: 'groups' } });
+  t.render({ data: flatModel(3), config: { layout: 'pivot' } });
   assert.equal(t.$('table'), null);
-  assert.match(t.$('.vd-empty-text').textContent, /groups layout/);
+  assert.match(t.$('.vd-empty-text').textContent, /pivot layout/);
   t.render({ data: flatModel(3), config: { layout: 'records' } });
   assert.equal(t.$('.vd-empty-state'), null);
   assert.equal(t.$$('tbody tr.blockr-data-row').length, 3);
@@ -225,13 +225,13 @@ test('titles paint through the title slots when they are loaded', () => {
   assert.ok(t.$('.dd-table-subtitle').hidden);
 });
 
-test('the download menu, when loaded, renders into the tools', () => {
-  const log = [];
-  const env = loadTable({ before: (win) => {
-    win.Blockr.viz.download = { render: (slot, d, id) => log.push([slot.className, d, id]) };
-  } });
-  mount(payload({ data: flatModel(2), derived: { downloads: ['xlsx'] } }), env);
-  assert.deepEqual(JSON.parse(JSON.stringify(log)), [['dt-download-slot', ['xlsx'], 'tbl']]);
+test('the download control lists the formats R offers', () => {
+  const dl = [{ id: 'tbl_xlsx', label: 'Excel', ext: 'xlsx' }, { id: 'tbl_html', label: 'Web page', ext: 'html' }];
+  const t = mount(payload({ data: flatModel(2), derived: { downloads: dl }, dataRev: 4 }));
+  assert.deepEqual(t.$$('.dt-download-slot a.shiny-download-link').map((a) => a.id), ['tbl_xlsx', 'tbl_html']);
+  t.render({ dataRev: 4, config: { download: false }, derived: { downloads: dl } });
+  assert.ok(t.$('.dt-download-slot').hidden);
+  assert.equal(t.$$('.dt-download-slot a').length, 0);
 });
 
 /** Count what a page holds: listeners, observers, timers and frames. */
