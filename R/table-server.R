@@ -17,7 +17,7 @@
 #   expr(sel)      the emitted filter for the held selection
 #   claims(sel)    the conditions a drill target receives, NULL to hold
 #   receipt(sel)   the "Filtered: ..." line, or NULL
-#   exhibit(tt)    the downloads' viz_exhibit, with the resolved titles
+#   exhibit(tt)    the downloads' viz_exhibit, with the title texts
 #   title_args(v)  the settings a title can name, beyond the spec's slots
 
 table_server <- function(id, data, init) {
@@ -43,7 +43,9 @@ table_server <- function(id, data, init) {
         payload = table_payload(kit, src, part, titles),
         expr = table_expr(kit, part),
         exhibit = function() {
-          part()$exhibit(tryCatch(titles(), error = function(e) list()))
+          tt <- tryCatch(titles(), error = function(e) list())
+          part()$exhibit(lapply(tt[c("title", "subtitle", "caption")],
+                                function(b) b$text))
         },
         claims = table_claims(kit, part),
         cond = table_cond(kit, parts)

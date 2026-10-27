@@ -137,7 +137,8 @@ tg_rw_browser <- function(expr, cx) {
   }
   cx$last_view <- tg_view(
     n = if (length(m$n)) as.integer(m$n), labels = labels,
-    titles = d$titles[c("title", "subtitle", "caption")],
+    titles = lapply(d$titles[c("title", "subtitle", "caption")],
+                    function(b) b$text),
     receipt = d$receipt
   )
   cx$last_view
