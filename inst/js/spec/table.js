@@ -71,88 +71,730 @@
     },
     "summaries": {
       "type": {
-        "name": "records",
-        "fields": {
-          "type": {
-            "name": "string"
+        "name": "records_by",
+        "key": "type",
+        "variants": {
+          "simple": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "show": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "bar",
+              "values": ["bar", "number", "dot", "tile"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "tiles",
+                "label": "Show",
+                "labels": ["Bar", "Number", "Dot", "Tile"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "func": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "count",
+              "values": ["count", "count_distinct", "sum", "mean", "median", "min", "max", "identity"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "Aggregate",
+                "labels": ["Count", "Count distinct", "Sum", "Mean", "Median", "Min", "Max", "None (as is)"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "col": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Of column"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "position": {
+              "type": {
+                "name": "enum"
+              },
+              "values": ["stack", "dodge", "fill"],
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Stacking",
+                "labels": ["Stacked", "Side by side", "100%"],
+                "when": "color"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "fill": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Paint by"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "color": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Color"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "name": {
-            "name": "string"
+          "dist": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "show": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "pointrange",
+              "values": ["pointrange", "box", "text"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "tiles",
+                "label": "Show",
+                "labels": ["Dot range", "Box", "Text"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "col": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Value"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "summary": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "median_q1_q3",
+              "values": ["median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "mean_ci95", "p5_p95", "p10_p90", "min_max", "none"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "Inner range",
+                "labels": ["Median · Q1–Q3", "Mean ± SD", "Mean ± 2 SD", "Mean ± SE", "Mean · 95% CI", "5th–95th percentile", "10th–90th percentile", "Min–Max", "None"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "whiskers": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "tukey",
+              "values": ["tukey", "median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "mean_ci95", "p5_p95", "p10_p90", "min_max", "none"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "Outer range",
+                "labels": ["Tukey (1.5×IQR)", "Median · Q1–Q3", "Mean ± SD", "Mean ± 2 SD", "Mean ± SE", "Mean · 95% CI", "5th–95th percentile", "10th–90th percentile", "Min–Max", "None"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "color": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Color"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "facet": {
-            "name": "column"
+          "field": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "col": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Column"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "show": {
-            "name": "string"
+          "sparkline": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Order (x)"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "col": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Value (y)"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "ymin": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Band low"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "ymax": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Band high"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "summary": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "none",
+              "values": ["none", "mean", "mean_sd", "median_q1_q3"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "Reference",
+                "labels": ["None", "Mean", "Mean ± SD", "Median · Q1–Q3"]
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "func": {
-            "name": "string"
+          "spans": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Start"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "xend": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "End"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "label": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Label"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "tooltip": {
+              "type": {
+                "name": "columns"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "columns",
+                "label": "Tooltip fields"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "size": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "md",
+              "values": ["md", "lg"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Width",
+                "labels": ["Regular", "Wide"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "color": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Color"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "col": {
-            "name": "column"
-          },
-          "position": {
-            "name": "string"
-          },
-          "fill": {
-            "name": "column"
-          },
-          "color": {
-            "name": "column"
-          },
-          "summary": {
-            "name": "string"
-          },
-          "whiskers": {
-            "name": "string"
-          },
-          "x": {
-            "name": "column"
-          },
-          "ymin": {
-            "name": "column"
-          },
-          "ymax": {
-            "name": "column"
-          },
-          "xend": {
-            "name": "column"
-          },
-          "label": {
-            "name": "column"
-          },
-          "tooltip": {
-            "name": "columns"
-          },
-          "size": {
-            "name": "string"
-          },
-          "x_func": {
-            "name": "string"
-          },
-          "xend_func": {
-            "name": "string"
-          },
-          "ref_min": {
-            "name": "string"
-          },
-          "ref_max": {
-            "name": "string"
-          },
-          "x_lines": {
-            "name": "numbers"
-          },
-          "linetype": {
-            "name": "column"
+          "pair": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "From"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "xend": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "To"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_func": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "identity",
+              "values": ["identity", "mean", "median", "min", "max"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "From function",
+                "labels": ["None (as is)", "Mean", "Median", "Min", "Max"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "xend_func": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "max",
+              "values": ["identity", "mean", "median", "min", "max"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "select",
+                "label": "To function",
+                "labels": ["None (as is)", "Mean", "Median", "Min", "Max"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "ref_min": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Reference low"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "ref_max": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Reference high"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_lines": {
+              "type": {
+                "name": "numbers"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Reference line",
+                "parse": "lines"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "linetype": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Dash by"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "color": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Color"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
           "expr": {
-            "name": "string"
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "expr": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Expression"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           },
-          "fn": {
-            "name": "string"
-          },
-          "id": {
-            "name": "column"
+          "custom": {
+            "name": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Name"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "facet": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Facet"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "show": {
+              "type": {
+                "name": "enum"
+              },
+              "values": ["bar", "number", "dumbbell", "box", "pointrange", "text"],
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "tiles",
+                "label": "Show",
+                "labels": ["Bar", "Number", "Dumbbell", "Box", "Dot range", "Text"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "fn": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": false,
+              "required": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Summary of d"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "id": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Percent of"
+              },
+              "slot": false,
+              "ctrl": true
+            }
           }
         }
       },
@@ -243,13 +885,41 @@
         "name": "records",
         "fields": {
           "mode": {
-            "name": "string"
+            "type": {
+              "name": "enum"
+            },
+            "default": "diverging",
+            "values": ["diverging", "sequential", "bar"],
+            "nullable": false,
+            "gear": {
+              "group": "Color",
+              "control": "tiles",
+              "label": "Mode",
+              "labels": ["Diverging", "Sequential", "Data bar"]
+            },
+            "slot": false,
+            "ctrl": true
           },
           "columns": {
-            "name": "columns"
+            "type": {
+              "name": "columns"
+            },
+            "nullable": true,
+            "gear": {
+              "group": "Color",
+              "control": "columns",
+              "label": "on"
+            },
+            "slot": false,
+            "ctrl": true
           },
           "domain": {
-            "name": "numbers"
+            "type": {
+              "name": "numbers"
+            },
+            "nullable": true,
+            "slot": false,
+            "ctrl": true
           }
         }
       },

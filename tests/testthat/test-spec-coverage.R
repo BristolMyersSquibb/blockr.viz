@@ -50,8 +50,14 @@ DROPPED_ARGS <- list(chart = character(), table = "max_height")
 # Defaults the rewrite changes on purpose (spec-table.md section 1).
 CHANGED_DEFAULTS <- list(chart = character(), table = c("color", "sort_dir"))
 
-block_spec <- function(block) {
-  switch(block, chart = CHART_SPEC, table = TABLE_SPEC)
+block_spec <- function(block) viz_block_spec(block)
+
+# Every spec in the package: the two blocks, the summary types, the shading
+# rule.
+all_specs <- function() {
+  c(list(viz_block_spec("chart"), viz_block_spec("table"),
+         table_shading_spec()),
+    unname(table_summary_specs()))
 }
 
 # Where a reference argument lives now: its own name, or the LEGACY_NAMES
@@ -129,24 +135,21 @@ for (block in names(REFERENCE_FORMALS)) {
 }
 
 test_that("the documented default changes are the ones in the spec", {
-  expect_identical(TABLE_SPEC$args$color$default, "auto")
-  expect_null(TABLE_SPEC$args$sort_dir$default)
+  spec <- viz_block_spec("table")
+  expect_identical(spec$args$color$default, "auto")
+  expect_null(spec$args$sort_dir$default)
 })
 
 # Without viz_check() (not written yet) this checks the parts of a default
 # the spec itself states: enum values, bounds, NULL, logicals.
-# Summary keys such as a dist's `col` have no default and are marked
-# `null = "required"` for now, so the NULL check is for block arguments only.
-check_default <- function(arg, name, required_ok = FALSE) {
+check_default <- function(arg, name) {
   d <- arg$default
-  if (inherits(d, "viz_opt")) {
+  if (inherits(d, "viz_opt") || isTRUE(arg$required)) {
     return(invisible())
   }
   t <- arg$type$name
   if (is.null(d)) {
-    if (!required_ok) {
-      expect_false(isFALSE(arg$null), info = paste(name, "defaults to NULL"))
-    }
+    expect_false(isFALSE(arg$null), info = paste(name, "defaults to NULL"))
     return(invisible())
   }
   if (t %in% c("enum", "enums")) {
@@ -176,21 +179,15 @@ check_default <- function(arg, name, required_ok = FALSE) {
 }
 
 test_that("every default fits its own spec entry", {
-  specs <- c(list(CHART_SPEC, TABLE_SPEC, TABLE_SUMMARY_COMMON,
-                  TABLE_SHADING_SPEC), unname(TABLE_SUMMARY_SPECS))
-  for (spec in specs) {
-    keys <- !spec$block %in% c("chart", "table")
+  for (spec in all_specs()) {
     for (nm in names(spec$args)) {
-      check_default(spec$args[[nm]], paste0(spec$block, "$", nm),
-                    required_ok = keys)
+      check_default(spec$args[[nm]], paste0(spec$block, "$", nm))
     }
   }
 })
 
 test_that("gear option labels match the values they name", {
-  specs <- c(list(CHART_SPEC, TABLE_SPEC, TABLE_SUMMARY_COMMON,
-                  TABLE_SHADING_SPEC), unname(TABLE_SUMMARY_SPECS))
-  for (spec in specs) {
+  for (spec in all_specs()) {
     for (nm in names(spec$args)) {
       a <- spec$args[[nm]]
       labels <- a$gear$labels
@@ -201,18 +198,26 @@ test_that("gear option labels match the values they name", {
   }
 })
 
-test_that("every summary type has a spec", {
-  expect_setequal(names(TABLE_SUMMARY_SPECS), TABLE_SUMMARY_TYPES)
+test_that("every summary type has a spec and an Add column label", {
+  expect_setequal(names(table_summary_specs()), TABLE_SUMMARY_TYPES)
+  expect_setequal(names(TABLE_SUMMARY_TYPE_LABELS), TABLE_SUMMARY_TYPES)
+})
+
+test_that("the block specs and the nested specs pass viz_spec_check()", {
+  expect_s3_class(viz_block_spec("chart"), "viz_spec")
+  expect_s3_class(viz_block_spec("table"), "viz_spec")
+  for (spec in c(list(table_shading_spec()), unname(table_summary_specs()))) {
+    expect_s3_class(viz_spec_check(spec), "viz_spec")
+  }
 })
 
 test_that("LEGACY_NAMES points at names the specs have", {
   targets <- list(
-    chart = names(CHART_SPEC$args),
-    table = names(TABLE_SPEC$args),
-    summary = unique(c(names(TABLE_SUMMARY_COMMON$args),
-                       unlist(lapply(TABLE_SUMMARY_SPECS,
-                                     function(s) names(s$args))))),
-    shading = names(TABLE_SHADING_SPEC$args)
+    chart = names(viz_block_spec("chart")$args),
+    table = names(viz_block_spec("table")$args),
+    summary = unique(c("type", unlist(lapply(table_summary_specs(),
+                                             function(s) names(s$args))))),
+    shading = names(table_shading_spec()$args)
   )
   expect_setequal(unique(LEGACY_NAMES$block), names(targets))
   kept <- LEGACY_NAMES[!is.na(LEGACY_NAMES$new), ]
@@ -230,19 +235,24 @@ test_that("no spec entry keeps an old name", {
     rows <- LEGACY_NAMES[LEGACY_NAMES$block == block, ]
     rows$old[is.na(rows$new) | rows$old != rows$new]
   }
-  expect_length(intersect(renamed("chart"), names(CHART_SPEC$args)), 0L)
+  expect_length(intersect(renamed("chart"),
+                          names(viz_block_spec("chart")$args)), 0L)
   # `color`, `summaries` and `sort_by` map values only; `group` and `value`
   # are old table names that are not table arguments.
-  expect_length(intersect(renamed("table"), names(TABLE_SPEC$args)), 0L)
+  expect_length(intersect(renamed("table"),
+                          names(viz_block_spec("table")$args)), 0L)
 })
 
 test_that("viz_check() accepts every block default", {
   withr::local_options(blockr.viz.facet_cols = NULL,
                        blockr.viz.default_caption = NULL)
-  expect_named(viz_check(CHART_SPEC, list()), names(CHART_SPEC$args))
-  expect_named(viz_check(TABLE_SPEC, list()), names(TABLE_SPEC$args))
+  for (block in c("chart", "table")) {
+    spec <- viz_block_spec(block)
+    expect_named(viz_check(spec, list()), names(spec$args))
+  }
 })
 
 test_that("viz_check() refuses a British spelling with a hint", {
-  expect_error(viz_check(CHART_SPEC, list(colour = "x")), "Did you mean `color`")
+  expect_error(viz_check(viz_block_spec("chart"), list(colour = "x")),
+               "Did you mean `color`")
 })

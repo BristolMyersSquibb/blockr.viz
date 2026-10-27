@@ -6,12 +6,12 @@ interface TableConfig {
   by: string[];
   rowname: string | null;
   columns: string[] | null;
-  summaries: { type: string | null; name: string | null; facet: string | null; show: string | null; func: string | null; col: string | null; position: string | null; fill: string | null; color: string | null; summary: string | null; whiskers: string | null; x: string | null; ymin: string | null; ymax: string | null; xend: string | null; label: string | null; tooltip: string[] | null; size: string | null; x_func: string | null; xend_func: string | null; ref_min: string | null; ref_max: string | null; x_lines: { value: number; label: string | null }[] | null; linetype: string | null; expr: string | null; fn: string | null; id: string | null }[];
+  summaries: ({ type: 'simple'; name: string | null; facet: string | null; show: 'bar' | 'number' | 'dot' | 'tile'; func: 'count' | 'count_distinct' | 'sum' | 'mean' | 'median' | 'min' | 'max' | 'identity'; col: string | null; position: 'stack' | 'dodge' | 'fill' | null; fill: string | null; color: string | null } | { type: 'dist'; name: string | null; facet: string | null; show: 'pointrange' | 'box' | 'text'; col: string; summary: 'median_q1_q3' | 'mean_sd' | 'mean_2sd' | 'mean_se' | 'mean_ci95' | 'p5_p95' | 'p10_p90' | 'min_max' | 'none'; whiskers: 'tukey' | 'median_q1_q3' | 'mean_sd' | 'mean_2sd' | 'mean_se' | 'mean_ci95' | 'p5_p95' | 'p10_p90' | 'min_max' | 'none'; color: string | null } | { type: 'field'; name: string | null; col: string } | { type: 'sparkline'; name: string | null; facet: string | null; x: string; col: string; ymin: string | null; ymax: string | null; summary: 'none' | 'mean' | 'mean_sd' | 'median_q1_q3' } | { type: 'spans'; name: string | null; facet: string | null; x: string; xend: string; label: string | null; tooltip: string[] | null; size: 'md' | 'lg'; color: string | null } | { type: 'pair'; name: string | null; facet: string | null; x: string; xend: string; x_func: 'identity' | 'mean' | 'median' | 'min' | 'max'; xend_func: 'identity' | 'mean' | 'median' | 'min' | 'max'; ref_min: string | null; ref_max: string | null; x_lines: { value: number; label: string | null }[] | null; linetype: string | null; color: string | null } | { type: 'expr'; name: string | null; facet: string | null; expr: string } | { type: 'custom'; name: string | null; facet: string | null; show: 'bar' | 'number' | 'dumbbell' | 'box' | 'pointrange' | 'text' | null; fn: string; id: string | null })[];
   id: string | null;
   percent_of: 'facet' | 'total';
   missing: 'level' | 'drop';
   color: string | null;
-  shadings: { mode: string | null; columns: string[] | null; domain: { value: number; label: string | null }[] | null }[];
+  shadings: { mode: 'diverging' | 'sequential' | 'bar'; columns: string[] | null; domain: { value: number; label: string | null }[] | null }[];
   format: 'number' | 'compact' | 'percent' | number;
   unit: string;
   look: 'table' | 'compact' | 'cards';
