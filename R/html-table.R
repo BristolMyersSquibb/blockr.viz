@@ -467,7 +467,10 @@ stub_header_flags <- function(flags, n) {
 #' producer gave more labels than there are rows, the bottom ones are kept,
 #' so the label naming the innermost rows stays next to the body. A single
 #' label sits on the bottom row, where the writers always put it.
-#' @noRd
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 stub_header_rows <- function(col, n) {
   lbl <- attr(col, "label", exact = TRUE)
   if (!is.character(lbl) || !length(lbl)) {
@@ -742,7 +745,10 @@ nonempty_section_cols <- function(data, section_cols) {
 #' annotation column (including the synthetic one) that must stay out of the
 #' data cells. Shared by `html_table()`, the table block's structured path,
 #' the gt renderer, and the Excel writer.
-#' @noRd
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 annotated_structure_view <- function(data) {
   section_cols <- annotation_group_level_cols(data)
 

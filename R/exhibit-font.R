@@ -10,6 +10,14 @@
 # Below this nothing is legible on a projector, whatever a board asks for.
 MIN_FONT_FLOOR <- 5
 
+#' The smallest font size any exhibit goes down to
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @return A number of points.
+#' @keywords internal
+#' @export
+exhibit_font_floor <- function() MIN_FONT_FLOOR
+
 # First hit wins:
 #
 #   1. what the caller passed
@@ -23,6 +31,11 @@ MIN_FONT_FLOOR <- 5
 # PowerPoint download and a summarize block's all read the same value with no
 # plumbing between the packages, and cannot disagree about how small a table
 # may go. A script outside Shiny finds no session and falls through.
+#' The smallest font size an exhibit may use
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 exhibit_min_font_size <- function(x = NULL) {
 
   for (v in list(x, board_min_font_size(),
@@ -176,6 +189,11 @@ board_options.summarize_table_block <- function(x, ...) {
 # `fit_size` is the size at which it WOULD have been one slide, or NULL when
 # no legible size does. That number is the actionable half of the message:
 # it is exactly what to set the board option to.
+#' Tell the reader that an exhibit was split
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 exhibit_split_note <- function(what, pages = 1L, sets = 1L, size = NULL,
                                floor = NULL, fit_size = NULL) {
 

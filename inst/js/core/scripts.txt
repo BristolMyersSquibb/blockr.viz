@@ -4,3 +4,5 @@ namespace.js
 util.js
 scope.js
 binding.js
+download.js
+capture.js

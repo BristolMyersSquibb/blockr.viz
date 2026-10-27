@@ -183,7 +183,10 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
 #'   already-wide display frame.
 #' @return A wide display frame with dotted id columns + one formatted
 #'   column per `.group` level, each carrying a `label` attribute.
-#' @noRd
+#'
+#' For exporters in other blockr packages; not part of the user API.
+#' @keywords internal
+#' @export
 fmt_to_wide <- function(df) {
   if (!is.data.frame(df) || !".fmt" %in% names(df) ||
       !".group" %in% names(df)) {
