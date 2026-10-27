@@ -207,6 +207,16 @@
       });
     }
 
+    /** @returns {TableInfo} */
+    info() {
+      const m = this.model;
+      const structured = !!m && (!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys) ||
+                                 !!(m.rows && m.rows.indent));
+      const by = this.config().by;
+      return { structured, finished: structured && !(Array.isArray(by) && by.length),
+               numbers: !m || m.cols.some((c) => !!c.num) };
+    }
+
     dispose() {
       this.grid.clear();
     }

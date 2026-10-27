@@ -70,6 +70,8 @@
       this.clearBtn.setAttribute('data-blockr-tooltip', 'Clear filter');
       /** @type {(() => void) | null} */
       this._onClear = null;
+      /** @type {TableSlots | null} */
+      this.slots = null;
       scope.on(this.clearBtn, 'click', () => { if (this._onClear) this._onClear(); });
       /** @type {Array<(q: string) => void>} */
       this._search = [];
@@ -90,21 +92,29 @@
       this._search.push(fn);
     }
 
-    /** @param {TableDerived['titles']} t */
+    /**
+     * The title, subtitle and caption. With the title slots loaded, words
+     * that name an argument open its control.
+     * @param {TableDerived['titles']} t
+     */
     titles(t) {
       const x = t || {};
-      const T = /** @type {any} */ (V).titles;
-      if (T && typeof T.render === 'function') {
-        T.render(this.titleBox, this.capEl, x, this.id);
-        return;
+      /** @param {TableTitleBand | string | null | undefined} b */
+      const band = (b) => (typeof b === 'string' ? { text: b } : b || null);
+      const text = (/** @type {TableTitleBand | null} */ b) => (b && b.text) || '';
+      const [title, sub, cap] = [band(x.title), band(x.subtitle), band(x.caption)];
+      if (this.slots) {
+        this.slots.paint(this.titleEl, title);
+        this.slots.paint(this.subEl, sub);
+      } else {
+        this.titleEl.textContent = text(title);
+        this.subEl.textContent = text(sub);
       }
-      this.titleEl.textContent = x.title || '';
-      this.subEl.textContent = x.subtitle || '';
-      this.capEl.textContent = x.caption || '';
-      this.titleEl.hidden = !x.title;
-      this.subEl.hidden = !x.subtitle;
-      this.titleBox.hidden = !x.title && !x.subtitle;
-      this.capEl.hidden = !x.caption;
+      this.capEl.textContent = text(cap);
+      this.titleEl.hidden = !text(title);
+      this.subEl.hidden = !text(sub) && !(sub && sub.offers && sub.offers.length);
+      this.titleBox.hidden = this.titleEl.hidden && this.subEl.hidden;
+      this.capEl.hidden = !text(cap);
     }
 
     /**

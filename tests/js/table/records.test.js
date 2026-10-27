@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { loadTable, payload, flatModel, tick } = require('./load');
+const { loadTable, payload, flatModel, table1, tick } = require('./load');
 
 function mount(p, env = loadTable()) {
   const el = env.add();
@@ -135,19 +135,94 @@ test('another layout replaces the records view and its table', () => {
   assert.equal(t.$$('.dt-table-slot').length, 1);
 });
 
-test('the gear engine, when loaded, is mounted and updated with each payload', () => {
+test('the gear engine, when loaded, is mounted in a tray and updated after the layout', () => {
   const log = [];
+  let host;
   const env = loadTable({ before: (win) => {
     win.Blockr.viz.gear = {
-      mount: (o) => {
-        log.push(['mount', o.block, o.id, !!o.head]);
+      mount: (tray, o) => {
+        host = o.host;
+        log.push(['mount', tray.className, o.block, o.id, o.typeKey]);
         return { update: (p) => log.push(['update', p.config.layout]), dispose: () => log.push(['dispose']) };
       }
     };
   } });
   const t = mount(payload({ data: flatModel(2) }), env);
-  t.render({ data: flatModel(2) });
-  assert.deepEqual(log, [['mount', 'table', 'tbl', true], ['update', 'records'], ['update', 'records']]);
+  assert.deepEqual(log, [['mount', 'blockr-settings blockr-settings--beak', 'table', 'tbl', 'layout'],
+                         ['update', 'records']]);
+  const btn = t.$('.vz-head > .blockr-gear-btn');
+  t.click(btn);
+  assert.ok(t.$('.blockr-settings').classList.contains('blockr-settings--open'));
+  assert.equal(host.label('by', { layout: 'records' }), 'Nest by');
+  assert.equal(host.label('by', { layout: 'variables' }), 'One column per');
+  assert.equal(host.label('title', { layout: 'records' }), null);
+  const v = { layout: 'records', by: [], drill: null };
+  assert.equal(host.visible('shadings', v), true);
+  assert.equal(host.visible('collapsible', v), false);
+  assert.equal(host.visible('missing', v), false);
+  assert.equal(host.visible('drill_target', v), false);
+  assert.equal(host.visible('drill_target', Object.assign({}, v, { drill: 'ARM' })), true);
+  assert.equal(host.visible('missing', { layout: 'groups', by: [] }), true);
+});
+
+test('the gear hides what a finished input cannot change', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  mount(payload({ data: table1() }), env);
+  const v = { layout: 'records', by: [] };
+  for (const k of ['by', 'rowname', 'columns', 'color', 'shadings', 'missing']) {
+    assert.equal(host.visible(k, v), false, k);
+  }
+  assert.equal(host.visible('collapsible', v), true);
+  assert.equal(host.visible('format', v), true);
+});
+
+test('the shading editor round-trips every key of a rule', () => {
+  const { V, win } = loadTable();
+  const el = win.document.createElement('div');
+  const sets = [];
+  const ctx = {
+    values: { shadings: [{ mode: 'bar', columns: ['AGE'], domain: [{ value: -1, label: null }, { value: 1, label: null }] }] },
+    columns: [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'WT', class: 'numeric', label: 'Weight' },
+              { name: 'ARM', class: 'character', label: 'Arm' }],
+    set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
+  };
+  V.table.gear.shadings(el, ctx);
+  assert.equal(el.querySelectorAll('.vz-shade-cols label').length, 2);
+  const boxes = el.querySelectorAll('.vz-shade-cols input');
+  boxes[1].checked = true;
+  boxes[1].onchange();
+  const mode = el.querySelector('select');
+  mode.value = 'sequential';
+  mode.onchange();
+  el.querySelector('.vz-shade-add').onclick();
+  el.querySelector('.vz-shade-remove').onclick();
+  const dom = [{ value: -1, label: null }, { value: 1, label: null }];
+  assert.deepEqual(sets, [
+    [{ mode: 'bar', columns: ['AGE', 'WT'], domain: dom }],
+    [{ mode: 'sequential', columns: ['AGE'], domain: dom }],
+    [{ mode: 'bar', columns: ['AGE'], domain: dom }, { mode: 'diverging', columns: null, domain: null }],
+    []
+  ]);
+});
+
+test('titles paint through the title slots when they are loaded', () => {
+  const painted = [];
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { mount: () => ({ update() {}, dispose() {} }) };
+    win.Blockr.viz.titles = { slots: (o) => ({
+      paint: (el, band) => { painted.push([el.className, band && band.text]); el.textContent = band ? band.text : ''; },
+      dispose() {}
+    }) };
+  } });
+  const t = mount(payload({ data: flatModel(2), derived: { titles: {
+    title: { text: 'AEs by Arm', parts: [{ text: 'AEs by ' }, { text: 'Arm', arg: 'by' }] },
+    subtitle: null, caption: { text: 'Source' } } } }), env);
+  assert.deepEqual(painted, [['dd-table-title', 'AEs by Arm'], ['dd-table-subtitle', null]]);
+  assert.equal(t.$('.dd-table-caption').textContent, 'Source');
+  assert.ok(t.$('.dd-table-subtitle').hidden);
 });
 
 test('the download menu, when loaded, renders into the tools', () => {

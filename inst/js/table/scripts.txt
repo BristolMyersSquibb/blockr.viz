@@ -6,5 +6,6 @@ dom.js
 drill.js
 chrome.js
 cards.js
+gear.js
 records.js
 view.js

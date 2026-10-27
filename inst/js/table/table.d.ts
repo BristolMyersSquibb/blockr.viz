@@ -126,11 +126,19 @@ interface TableModel {
   cards?: TableCards | null;
 }
 
-/** The table block's `derived`, as R builds it. */
+/** A title line as R resolves it (viz_titles()): its text, and the words
+ *  that name an argument, which the title slots make clickable. */
+interface TableTitleBand {
+  text?: string;
+  parts?: { text: string; arg?: string; by?: string }[];
+  offers?: string[];
+}
+
+/** The table block's `derived`, as R builds it. The table itself is
+ *  `payload.data`. */
 interface TableDerived {
-  table?: TableModel | null;
-  titles?: { title?: string | null; subtitle?: string | null;
-             caption?: string | null } | null;
+  titles?: { title?: TableTitleBand | string | null; subtitle?: TableTitleBand | string | null;
+             caption?: TableTitleBand | string | null; [k: string]: unknown } | null;
   /** Say this instead of drawing a table. */
   empty?: { kind: string; message: string } | null;
   /** The drill receipt line, "Filtered: Arm = Placebo". */
@@ -205,6 +213,45 @@ interface TableGrid {
 interface TableLayoutView {
   render(payload: VizPayload): void;
   dispose(): void;
+  /** What it draws, for the gear's rules. */
+  info?(): TableInfo;
+}
+
+/** What a layout draws, as far as the gear's rules ask. */
+interface TableInfo {
+  /** Sections or keyed rows: a nested table, a Table 1, a finished input. */
+  structured: boolean;
+  /** A finished input: structured without `by`, shown as it came. */
+  finished: boolean;
+  /** Numeric columns, which `format` and `unit` change. */
+  numbers: boolean;
+}
+
+/** The hooks of the core gear engine the table uses (gear-api.md). */
+interface TableGearHost {
+  visible?(key: string, values: Record<string, unknown>): boolean;
+  label?(key: string, values: Record<string, unknown>): string | null | undefined;
+  custom?(key: string, el: HTMLElement, ctx: TableGearCtx): void;
+}
+
+interface TableGearCtx {
+  values: Record<string, unknown>;
+  columns: VizPayload['columns'];
+  scope: VizScope;
+  set(value: unknown): void;
+}
+
+/** The mounted gear: the engine, and a way to open its tray. */
+interface TableGearHandle {
+  engine: { update(p: VizPayload): void; dispose(): void };
+  open(): void;
+  update(p: VizPayload): void;
+}
+
+/** The title slots (core/titles.js): words of a title that open controls. */
+interface TableSlots {
+  paint(el: HTMLElement, band: TableTitleBand | null | undefined): void;
+  dispose(): void;
 }
 
 type TableLayoutClass = new (frame: TableFrame, scope: VizScope) => TableLayoutView;
@@ -218,6 +265,8 @@ interface TableFrame {
   readonly box: HTMLElement;
   readonly foot: HTMLElement;
   readonly searchInput: HTMLInputElement;
+  /** Set once the title slots are loaded; titles paint through them. */
+  slots: TableSlots | null;
   query(): string;
   onSearch(fn: (q: string) => void): void;
   titles(t: TableDerived['titles']): void;
@@ -287,6 +336,11 @@ interface VizTableNamespace {
   cards: {
     render(host: HTMLElement, cards: TableCards, scope: VizScope,
            opts?: TableCardOpts): void;
+  };
+  gear: {
+    mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
+    visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
+    shadings(el: HTMLElement, ctx: TableGearCtx): void;
   };
 }
 
