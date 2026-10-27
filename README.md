@@ -1,12 +1,17 @@
 # blockr.viz
 
-The render layer for blockr dashboards.
+Chart and table blocks for [blockr](https://github.com/BristolMyersSquibb/blockr.core)
+boards.
 
-blockr.viz draws rectangular data: interactive `chart` and `table`
-blocks (built on ECharts and HTML widgets), a static `gt` table
-renderer, and a `summary_table` shaper. Renderers never compute or reshape —
-they take an already-shaped data frame and turn it into pixels, with optional
-cell coloring and opt-in click-to-filter drill-down.
+| Block | What it shows |
+|---|---|
+| `new_chart_block()` | An interactive chart (ECharts): bar, histogram, waterfall, pie, treemap, box, point range, scatter, line, area, band and timeline. Aggregated types count or summarize the rows per category themselves. |
+| `new_table_block()` | An interactive table, in three layouts: the input's rows, one row per group with a column per summary, or a Table 1 with one row per statistic of each variable. Each drawn as a table, a compact matrix or cards. |
+
+A click on either block can filter the blocks downstream (`drill`). Both
+download as Excel, a web page, an image or PowerPoint. Settings live in a
+gear on the block; titles can name the block's settings, which the reader
+changes by clicking them.
 
 ## Installation
 
@@ -15,29 +20,10 @@ cell coloring and opt-in click-to-filter drill-down.
 pak::pak("BristolMyersSquibb/blockr.viz")
 ```
 
-## Blocks
+## A board
 
-| Block | Role | What it does |
-|---|---|---|
-| `new_chart_block()` | Renderer | Configurable ECharts chart (bar, line, scatter, pie, treemap, boxplot, radar, gantt, waterfall). |
-| `new_table_block()` | Renderer | Interactive HTML table — sticky header, sort, search, optional cell coloring. Renders flat *and* structured ("Table 1") input, as a table, a compact matrix, or KPI cards (`look = "cards"`). |
-| `new_gt_table_block()` | Renderer (static) | Renders a wide display table as a styled `gt` table for print / report / CSR output. |
-| `new_summary_table_block()` | Shaper | Wide, display-shaped multi-variable summary ("list of variables by Y"); emits a tidy `.fmt` frame for any renderer. |
-
-Drill-down (click a mark / row to emit a downstream filter) is an opt-in
-feature of `chart` and `table` — off by default; set the `drill` argument to a
-column name to enable it.
-
-Call `register_viz_blocks()` once to register all five with the block-adder and
-the assistant block universe.
-
-See `vignette("blockr-viz")` for the shaper / renderer model and the five-layer
-pipeline.
-
-## Demo
-
-A bar chart aggregates rows per category and, on click, filters the table
-below it; `new_dag_extension()` adds the workflow editor.
+A bar chart of mean mileage per number of gears filters the table below it
+when a bar is clicked.
 
 ```r
 library(blockr.core)
@@ -45,28 +31,21 @@ library(blockr.dock)
 library(blockr.dag)
 library(blockr.viz)
 
-register_viz_blocks()
-
 cars <- transform(mtcars, gear = factor(gear), name = rownames(mtcars))
 
 board <- new_dock_board(
   blocks = c(
-    data  = new_static_block(cars),
+    data = new_static_block(cars),
     chart = new_chart_block(
-      group = "gear", chart_type = "bar",
-      agg_fn = "count", drill = "gear"
+      type = "bar", x = "gear", y = "mpg", func = "mean", drill = "auto"
     ),
-    tbl   = new_table_block(
-      rowname = "name",
-      values  = c("mpg", "hp", "wt")
-    )
+    table = new_table_block(rowname = "name", columns = c("mpg", "hp", "wt"))
   ),
-  links = links(
-    from = c("data", "chart"),
-    to   = c("chart", "tbl")
-  ),
+  links = links(from = c("data", "chart"), to = c("chart", "table")),
   extensions = list(new_dag_extension())
 )
 
 serve(board)
 ```
+
+`vignette("chart")` and `vignette("table")` go through the arguments.
