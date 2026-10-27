@@ -22,6 +22,10 @@
 #' For pie and treemap `x` is the slice and `y` the value; for a gantt `x`
 #' and `xend` are the interval and `y` the lane; a histogram bins `x`.
 #'
+#' `ymin` and `ymax` name intervals in pairs, the first pair the outermost:
+#' bands on a line or an area, error bars on a scatter. They must name the
+#' same number of columns, or the block is an error.
+#'
 #' @section Clicks:
 #' A click filters only when `drill` is set: to a column, or to `"auto"`,
 #' the clicked mark's own category, bin or lane. The block's output is then
