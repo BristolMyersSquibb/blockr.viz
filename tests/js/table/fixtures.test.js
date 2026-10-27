@@ -2,9 +2,7 @@
 /* Replays viz-api's recorded payloads (tests/js/fixtures/table/<scenario>.json,
  * written by make-fixtures.R) through the table view, step by step, and
  * checks what every drawn table must satisfy. TABLE_FIXTURES points at
- * another folder of them; without any, the test skips. The groups
- * scenarios (grp_*, and layout_* which switch to groups) run with
- * TABLE_FIXTURES_GROUPS=1 until R writes the groups payload as agreed. */
+ * another folder of them; without any, the test skips. */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,8 +13,7 @@ const { loadTable } = require('./load');
 const DIR = process.env.TABLE_FIXTURES ||
   path.join(__dirname, '..', 'fixtures', 'table');
 const FILES = fs.existsSync(DIR)
-  ? fs.readdirSync(DIR).filter((f) => /^(rec|var)_.*\.json$/.test(f) ||
-                                      (!!process.env.TABLE_FIXTURES_GROUPS && /^(grp|layout)_.*\.json$/.test(f)))
+  ? fs.readdirSync(DIR).filter((f) => /^(rec|var|grp|layout)_.*\.json$/.test(f))
   : [];
 
 /** What every drawn step must satisfy. */
