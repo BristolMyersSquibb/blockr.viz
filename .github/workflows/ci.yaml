@@ -41,6 +41,50 @@ jobs:
         env:
           BLOCKR_UI_JS: ${{ github.workspace }}/_blockr.ui/inst/assets/js
 
+  # The browser tests (shinytest2 and chromote, with the runner's Chrome),
+  # outside R CMD check, which never starts a browser
+  # (tests/testthat/helper-chromote.R, run_browser_tests()). Fails when one
+  # was skipped, so a missing Chrome cannot pass for green.
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.BLOCKR_PAT || github.token }}
+      NOT_CRAN: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::shinytest2
+            any::chromote
+            any::pkgload
+            any::xml2
+      - name: Browser tests
+        run: |
+          mkdir -p results
+          Rscript -e '
+            r <- testthat::test_local(".",
+              filter = "^(shinytest2|table-drill|table-sweep|table-layout-switch|summarize-compact-width|summarize-push)$",
+              reporter = testthat::MultiReporter$new(list(
+                testthat::SummaryReporter$new(),
+                testthat::JunitReporter$new(file = file.path(getwd(), "results/browser.xml")))),
+              stop_on_failure = FALSE)
+            d <- as.data.frame(r)
+            quit(status = sum(d$failed) + sum(d$error) > 0)'
+      - name: No browser test skipped
+        if: always()
+        run: Rscript tools/check-skips.R results/browser.xml
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-tests
+          path: |
+            results/
+            tests/testthat/_snaps/
+
   # The rewrite's exit criteria (design.md section 11): dead code, lengths,
   # size budget, gates, coverage, feature links, browser tests, R CMD check.
   # tools/run-checks.sh runs every check and prints every report before it

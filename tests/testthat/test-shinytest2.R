@@ -14,10 +14,9 @@
 # this layer adds the real browser + custom-message handler + re-render path.
 #
 # Skipped where no headless browser exists, and under R CMD check (launching
-# chromium there leaves temp detritus -> a check NOTE, and is flaky). Runs
-# under devtools::test() / CI, which is where the JS is meant to be exercised.
-
-library(shinytest2)
+# chromium there leaves temp detritus -> a check NOTE, and is flaky); see
+# run_browser_tests() in helper-chromote.R. Runs under devtools::test() and in
+# the CI `browser` job.
 
 # ---------------------------------------------------------------------------
 # Shared app instance (test fixture). Built at file load like blockr.dplyr,
@@ -25,11 +24,7 @@ library(shinytest2)
 # stays NULL and every test skips via skip_if_no_app().
 # ---------------------------------------------------------------------------
 
-run_browser <-
-  !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) &&
-  requireNamespace("shinytest2", quietly = TRUE) &&
-  requireNamespace("chromote", quietly = TRUE) &&
-  chromote_works()
+run_browser <- run_browser_tests()
 
 app <- NULL
 if (run_browser) {
@@ -39,7 +34,7 @@ if (run_browser) {
   configure_chromote()
 
   app <- tryCatch(
-    AppDriver$new(
+    shinytest2::AppDriver$new(
       test_path("apps", "viz-e2e"),
       name         = "viz-e2e",
       load_timeout = 60 * 1000,

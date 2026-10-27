@@ -15,12 +15,9 @@
 # like test-shinytest2.R. Takes a few minutes.
 
 run_sweep <-
-  !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) &&
-  requireNamespace("shinytest2", quietly = TRUE) &&
-  requireNamespace("chromote", quietly = TRUE) &&
+  run_browser_tests() &&
   requireNamespace("blockr.dock", quietly = TRUE) &&
-  requireNamespace("pkgload", quietly = TRUE) &&
-  chromote_works()
+  requireNamespace("pkgload", quietly = TRUE)
 
 test_that("every control on the table sweep board does something", {
   skip_if_not(run_sweep, "no headless browser, or under R CMD check")

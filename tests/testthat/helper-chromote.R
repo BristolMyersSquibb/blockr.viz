@@ -40,3 +40,28 @@ chromote_works <- function() {
   }, error = function(e) FALSE)
   isTRUE(ok)
 }
+
+# Whether the browser tests run here. Never under R CMD check (Chrome leaves
+# temp detritus, a check NOTE, and CRAN runs no browser) and never under covr;
+# BLOCKR_VIZ_BROWSER_TESTS=false switches them off. Elsewhere they run when
+# shinytest2, chromote and a working Chrome are there: devtools::test(), the
+# CI `browser` job, and the exit-criteria job's R tests. Asked once per run,
+# since starting Chrome to find out is slow.
+run_browser_tests <- local({
+  answer <- NULL
+  function() {
+    if (is.null(answer)) {
+      answer <<- !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) &&
+        !identical(Sys.getenv("R_COVR"), "true") &&
+        !identical(tolower(Sys.getenv("BLOCKR_VIZ_BROWSER_TESTS")), "false") &&
+        requireNamespace("shinytest2", quietly = TRUE) &&
+        chromote_works()
+    }
+    answer
+  }
+})
+
+skip_without_browser <- function() {
+  testthat::skip_if_not(run_browser_tests(),
+                        "browser tests: not under R CMD check, needs Chrome")
+}

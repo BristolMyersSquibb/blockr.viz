@@ -27,7 +27,7 @@ const outsideScope = [
 ];
 
 export default [
-  { ignores: ['inst/js/snapdom.js', 'inst/js/spec/**'] },
+  { ignores: ['inst/js/vendor/**', 'inst/js/spec/**'] },
   {
     files: ['inst/js/**/*.js'],
     languageOptions: {

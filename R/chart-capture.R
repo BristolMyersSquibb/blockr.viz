@@ -135,23 +135,18 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
                                        max_height = NULL,
                                        default_expanded = NULL, ...) {
 
-  # Same shape as the rendered-plot method next door: the image inline as a
-  # data URI, so the page carries it. Through a file and base64enc rather
-  # than jsonlite, whose base64_enc() wraps its output at 80 columns -- a
-  # data URI with newlines in it silently does not load.
+  # The image inline as a data URI, so the page carries it. jsonlite's
+  # base64_enc() wraps its output at 80 columns, and a data URI with newlines
+  # does not load, so they are taken out.
   f <- chart_capture_file(x)
   on.exit(unlink(f), add = TRUE)
 
   htmltools::tags$img(
     class = "blockr-exhibit-img",
-    src = if (requireNamespace("base64enc", quietly = TRUE)) {
-      base64enc::dataURI(file = f, mime = "image/png")
-    } else if (requireNamespace("knitr", quietly = TRUE)) {
-      knitr::image_uri(f)
-    } else {
-      stop("Writing a chart to HTML needs 'base64enc' or 'knitr'.",
-           call. = FALSE)
-    },
+    src = paste0("data:image/png;base64,", gsub(
+      "\n", "", jsonlite::base64_enc(readBin(f, "raw", file.size(f))),
+      fixed = TRUE
+    )),
     style = "max-width:100%;height:auto;display:block;"
   )
 }

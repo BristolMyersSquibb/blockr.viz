@@ -18,7 +18,7 @@
 
   var BOUND = "summarizeTableBound";
 
-  // Where this file was served from: snapdom.js sits next to it and is loaded
+  // Where this file was served from: vendor/snapdom.js sits under it and is loaded
   // only when a picture is first asked for.
   var SUMMARIZE_JS_BASE = (function () {
     var sc = document.currentScript;
@@ -1222,7 +1222,7 @@
     if (!snapdomLoading) {
       snapdomLoading = new Promise(function (resolve, reject) {
         var sc = document.createElement("script");
-        sc.src = SUMMARIZE_JS_BASE + "snapdom.js";
+        sc.src = SUMMARIZE_JS_BASE + "vendor/snapdom.js";
         sc.onload = function () {
           if (window.snapdom) resolve(window.snapdom);
           else reject(new Error("snapdom.js loaded but defined nothing"));

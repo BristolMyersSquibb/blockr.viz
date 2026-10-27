@@ -11,8 +11,14 @@ res <- rcmdcheck::rcmdcheck(
   pkg_dir, args = c("--no-manual", "--as-cran"), error_on = "never",
   quiet = TRUE
 )
+# Every line of the NOTE, after its "checking ..." header, must be allowed;
+# one allowed line does not excuse the rest of the NOTE.
 ok_note <- vapply(res$notes, function(n) {
-  any(vapply(allowed, grepl, logical(1L), x = n))
+  body <- strsplit(n, "\n", fixed = TRUE)[[1L]][-1L]
+  body <- body[nzchar(trimws(body))]
+  all(vapply(body, function(l) {
+    any(vapply(allowed, grepl, logical(1L), x = l, perl = TRUE))
+  }, logical(1L)))
 }, logical(1L))
 notes <- res$notes[!ok_note]
 
