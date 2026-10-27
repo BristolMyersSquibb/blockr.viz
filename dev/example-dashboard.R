@@ -8,7 +8,7 @@
 #
 # Views (panel = tab strip)
 #   Charts        [bar|pie|treemap] [scatter+lm|line|boxplot] [radar|facet|waterfall]
-#   Tables        [flat|Table 1|gt publication] [crosstab heatmap|correlation]
+#   Tables        [flat|Table 1] [crosstab heatmap|correlation]
 #   Cards         [by arm] [one row]
 #   Interactions  drill: chart->table and cards->table (shown side by side)
 #
@@ -108,9 +108,6 @@ board <- new_dock_board(
                                 cell_color = drilldown_table_color(type = "diverging",
                                                                    domain = c(-1, 1)),
                                 block_name = "Correlation (diverging)"),
-    t_gt      = new_gt_table_block(title = "Table 1. Demographics",
-                                   subtitle = "Safety population",
-                                   block_name = "Publication (gt)"),
 
     # --- CARDS (the table block's cards look) ----------------------------
     k_arm      = new_table_block(
@@ -151,7 +148,7 @@ board <- new_dock_board(
     from = c(
       "adsl_d", "adsl_d", "orange_d", "adsl_d", "adsl_d", "adsl_d", "adsl_d",
       "adsl_d", "bridge_d",
-      "adsl_d", "adsl_d", "t_summ", "t_summ", "adsl_d", "xt_summ", "xt_wide",
+      "adsl_d", "adsl_d", "t_summ", "adsl_d", "xt_summ", "xt_wide",
       "cor_d",
       "adsl_d", "adsl_d",
       "adae_d", "ix_chart", "adsl_d", "ix_cards"
@@ -159,7 +156,7 @@ board <- new_dock_board(
     to = c(
       "c_bar", "c_scatter", "c_line", "c_pie", "c_treemap", "c_radar", "c_box",
       "c_facet", "c_wf",
-      "t_flat", "t_summ", "t_summtbl", "t_gt", "xt_summ", "xt_wide", "t_xt",
+      "t_flat", "t_summ", "t_summtbl", "xt_summ", "xt_wide", "t_xt",
       "t_cor",
       "k_arm", "k_strip",
       "ix_chart", "ix_tbl", "ix_cards", "ix_cardstbl"
@@ -174,9 +171,9 @@ board <- new_dock_board(
       panels("c_radar", "c_facet", "c_wf"),
       orientation = "horizontal", name = "Charts"),
     tables = dock_layout(
-      panels("t_flat", "t_summtbl", "t_gt"),
+      panels("t_flat", "t_summtbl"),
       panels("t_xt", "t_cor"),
-      orientation = "horizontal", name = "Tables (+ gt)"),
+      orientation = "horizontal", name = "Tables"),
     cards = dock_layout(
       panels("k_arm"),
       panels("k_strip"),

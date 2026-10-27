@@ -168,11 +168,10 @@ serve(
       # A genuine DOWNSTREAM consumer of the drill table: its result is the
       # table's filtered output flowing through a real board link.
       table_ds = new_head_block(n = 100L),
-      # Display-shaped summary + a gt render of a plain frame.
+      # A display-shaped summary.
       summary = new_summary_table_block(
         vars = c("revenue", "profit"), by = "region"
-      ),
-      gt = new_gt_table_block()
+      )
     ),
     links = c(
       new_link("data", "table", "data"),
@@ -192,8 +191,7 @@ serve(
       new_link("data", "cards_restored", "data"),
       new_link("data", "chart_restored", "data"),
       new_link("table", "table_ds", "data"),
-      new_link("data", "summary", "data"),
-      new_link("data", "gt", "data")
+      new_link("data", "summary", "data")
     )
   ),
   id = "board"

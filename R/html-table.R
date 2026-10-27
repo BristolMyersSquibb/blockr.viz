@@ -4,9 +4,7 @@
 #' produced upstream by composing `summarize` with `tidyr::pivot_wider`)
 #' as a hand-rolled HTML table with nested row-side section headers,
 #' multi-level column spanners, and client-side collapse/expand of
-#' sections. Designed as a dashboard-native alternative to
-#' [gt_table()] -- static gt is ideal for print / CSR output, while
-#' this renderer is tuned for interactive dashboards.
+#' sections.
 #'
 #' The input contract is the same dotted-column wide tibble that
 #' [summary_table()] produces (annotated-df v2):
@@ -29,9 +27,7 @@
 #'   carry HTML-wrapped display text for the leaf column header.
 #' - Cells are pre-formatted character strings.
 #'
-#' v1 deliberately supports only the new wide format. Legacy
-#' long-format input from `tidy_summary_block` is routed through
-#' [gt_table()] instead.
+#' Only the wide format is supported; legacy long-format input is an error.
 #'
 #' @param data A wide tibble following the dotted-column contract.
 #' @param title Optional table title (rendered as a `<caption>`).
@@ -74,16 +70,12 @@ html_table <- function(data,
   stopifnot(is.data.frame(data))
 
   # The contract is the wide display grid; summary_table()'s internal long
-  # dialect is rejected with an actionable error (pre-v2 it was silently
-  # pivoted here, making two shapes of the same table valid input).
+  # dialect is an error.
   reject_long_form(data)
 
   if (all(c("label", "depth") %in% names(data)) &&
       any(c("col_var", "n", "value") %in% names(data))) {
-    stop(
-      "html_table() does not support legacy long-format input. ",
-      "Use gt_table() instead."
-    )
+    stop("html_table() does not support legacy long-format input.")
   }
 
   view <- annotated_structure_view(data)
@@ -543,8 +535,8 @@ fold_all_header_content <- function(title = NULL) {
 
 #' Tag a header cell with its column claim, when the producer named one.
 #'
-#' No entry, no attribute, no `dd-col-drill` class: the header renders and
-#' behaves exactly as it did before column identity existed.
+#' No entry, no attribute, no `dd-col-drill` class: the header renders as a
+#' plain header.
 #' @noRd
 dd_col_header_attrs <- function(th_args, path, col_keys) {
 
@@ -578,9 +570,8 @@ looks_like_markup <- function(x) {
 #' `fmt_cells()` on the summarise path (`sprintf("%s\nN = %d", ...)`). What
 #' sits in front of it is the level value as the data spells it, so it can
 #' carry newlines of its own -- a long arm description the sponsor broke
-#' across lines. Splitting on the FIRST newline (what this did until
-#' 2026-09-22) then demoted the tail of the arm name into the quiet sub-line,
-#' where it rendered at 11px in the muted ink.
+#' across lines. Splitting on the FIRST newline would demote the tail of the
+#' arm name into the quiet sub-line.
 #'
 #' So: take the N off the END, and leave everything before it as the name.
 #' A label with no "N = " line has nothing to demote -- `arm__n` holds the
@@ -940,15 +931,10 @@ build_html_tbody <- function(data, section_cols, stub_col, data_cols,
   has_italic <- ".emph" %in% styling_cols
   indent_px  <- 16L
 
-  # Vectorized assembly: build the body as a single HTML string instead of
-  # one htmltools tag object per cell. The per-cell `tags$td()` construction
-  # plus the `renderTags()` tree walk was the render bottleneck (see the flat
-  # `drilldown_table()` path). This is the same structured builder kept in
-  # lock-step: section-header rows are still interleaved at section restarts,
-  # the group-end hairline still tags each group's last data row, and indent /
-  # bold / italic / missing handling is preserved byte-for-byte. Summary /
-  # pivot "Table 1" output is small today, but this keeps it scaling like the
-  # flat table if a large structured frame ever arrives.
+  # Build the body as a single HTML string instead of one htmltools tag per
+  # cell, which is slow to construct and to render. Section-header rows are
+  # interleaved at section restarts, and the group-end hairline tags each
+  # group's last data row.
   n_rows <- nrow(data)
   if (n_rows == 0L) return(htmltools::tags$tbody())
 

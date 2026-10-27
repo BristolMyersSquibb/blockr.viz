@@ -1,7 +1,7 @@
 # The chart-only "pct_distinct" aggregation ("% of panel"): the share of the
 # PANEL's distinct values, not of the bar (bar_mode "percent" already does
 # that) and not of the grid. Like `identity` it lives only in the JS engine and
-# is deliberately absent from the shared AGG_FNS, so it has no R twin and
+# is deliberately absent from the shared JS AGG_FNS, so it has no R twin and
 # cannot join the golden cross-test; this JS-only test guards it instead,
 # through the same shipped engine and node runner.
 #

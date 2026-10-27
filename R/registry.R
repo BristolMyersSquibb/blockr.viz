@@ -10,20 +10,6 @@
 #' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
 #'   arg_string arg_number arg_integer arg_boolean arg_enum arg_array arg_object
 register_viz_blocks <- function() {
-  # Removed outright (2026-06-14) -- superseded, with no compat shim kept since
-  # blockr.bi was renamed to blockr.viz (a conscious upgrade):
-  #   - new_kpi_block          -> new_tile_block, which went in its turn
-  #                               (2026-10): new_table_block(look = "cards")
-  #   - new_pivot_table_block  -> summarize + tidyr::pivot_wider (a composed
-  #                               reshape, not a bespoke block)
-  #   - new_waterfall_block    -> new_chart_block(chart_type = "waterfall")
-  #   - new_html_table_block / new_drilldown_table_block -> new_table_block
-  #     (renders flat + structured input via the html_table() builders)
-  #   - new_drilldown_chart_block -> new_chart_block
-  #   - new_gt_table_block     -> new_table_block (2026-10, table rewrite):
-  #                               the constructor stays for saved boards,
-  #                               off the block list
-  # See dev/table-and-chart-architecture.md.
   blockr.core::register_blocks(
     c(
       "new_chart_block",
@@ -39,10 +25,6 @@ register_viz_blocks <- function() {
     ),
     # Categories come from blockr.core::suggested_categories() (a fixed
     # vocabulary the pickers group by; anything else warns as discouraged).
-    # The two interactive renderers (chart / table) are display blocks
-    # (dev/table-and-chart-architecture.md): the chart is a visualization
-    # ("plot"), the table tabular display ("table"). summary_table stays
-    # "transform": it is a shaper whose output feeds the renderers.
     category = c(
       "plot",
       "table"

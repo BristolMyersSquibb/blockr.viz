@@ -153,7 +153,7 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
                                  max_height = NULL, default_expanded = NULL,
                                  ...) {
 
-  # Same entry sequence as static_table() and gt_table(): coerce, then spread
+  # Same entry sequence as static_table(): coerce, then spread
   # summary_table()'s long internals to the wide display grid (a no-op on
   # already-wide input).
   data <- fmt_to_wide(as_annotated_df(x))

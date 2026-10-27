@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# COPIED WHOLE from blockr.extra (R/code-block-expr.R) on 2026-09-08.
+# Copied from blockr.extra (R/code-block-expr.R).
 #
 # Why a copy and not a dependency: blockr.viz cannot import blockr.extra
 # without dragging broom, mirai, DT and evaluate into every deploy, and the
@@ -78,7 +78,7 @@ cb_literal <- function(v) {
 #' Scope is respected too. A `function()` formal rebinds the name for that
 #' body, so the substitution stops at the boundary; a `for` variable rebinds it
 #' in the same environment, so the declaration is demoted to code instead (see
-#' [cb_shadowed()]).
+#' [cb_demoted()]).
 #'
 #' @param e An expression.
 #' @param subs A named list of replacement nodes.
@@ -282,26 +282,6 @@ cb_assigned_names <- function(exprs) {
   }
   for (e in exprs) walk(e)
   unique(found)
-}
-
-
-#' Which declarations are demoted back to code by a body assignment?
-#'
-#' @param parsed The result of [cb_parse()].
-#' @noRd
-cb_shadowed <- function(parsed) {
-  if (!parsed$ok || !length(parsed$stmts)) {
-    return(character())
-  }
-  is_input <- vapply(parsed$stmts, `[[`, logical(1L), "input")
-  if (!any(is_input)) {
-    return(character())
-  }
-  body <- lapply(parsed$stmts[!is_input], `[[`, "expr")
-  intersect(
-    vapply(parsed$stmts[is_input], `[[`, character(1L), "name"),
-    cb_assigned_names(body)
-  )
 }
 
 

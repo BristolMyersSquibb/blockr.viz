@@ -433,24 +433,6 @@
       el.appendChild(row);
     }
 
-    // Every mapping role the block currently offers, in section order:
-    // required rows, the always-on mapping extras (the chart's value), then
-    // the optional ones. Type-conditional entries are resolved first, so a
-    // role the current chart type does not offer is neither pinnable nor
-    // rendered on the band -- switching a bar to a pie cannot leave an
-    // orphaned control behind.
-    /** @param {any} spec @returns {Array<string>} */
-    _mappingKeys(spec) {
-      const extra = this._filterEntries(spec.mapping || [])
-        .map((/** @type {any} */ e) => e.role)
-        .filter((/** @type {string} */ k) => !this.h.secondary || !this.h.secondary.has(k));
-      return /** @type {string[]} */ ([]).concat(
-        spec.requiredMap || [],
-        extra,
-        this._filterEntries(spec.optionalMap || []).map((/** @type {any} */ e) => e.role)
-      );
-    }
-
     // A "segmented" role whose two values are literally on/off is a plain
     // boolean data option — per the design-system rule (values -> pill, data
     // options -> checkbox) it renders as a .blockr-checkbox, not a pill.

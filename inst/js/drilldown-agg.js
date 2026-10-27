@@ -1,21 +1,18 @@
 // @ts-check
 /**
  * DrilldownAgg — the shared aggregation vocabulary for the blockr drilldown
- * renderers (chart, table, tile). One home for the three pieces that used to
- * be inlined in the chart's JS, so the table and tile render the identical control
- * and behave identically:
+ * renderers (chart and table), so both render the identical control and
+ * behave identically:
  *
  *   AGG_FNS
- *     The aggregation-function select options. MUST mirror the R
- *     `AGG_FNS` / `arg_enum(AGG_FNS)` in block-arguments.R (single source per
- *     side; a drift test guards it).
+ *     The aggregation-function select options. test-agg-golden.R checks
+ *     each one against its R twin.
  *
  *   aggRoles({ multiple })
  *     The `group` + `value` + `func` role-spec triple the DrilldownConfig
  *     engine renders. Hosts spread it into their ROLES dict. `multiple` widens
  *     `group` to a multi-column picker (the table groups by several columns;
- *     the chart and tile group by one). (`value`/`func` were `metric`/`agg_fn`;
- *     see dev/unified-arg-naming.md.)
+ *     the chart groups by one).
  *
  *   reconcileValue(cfg, columns)
  *     Keep `value` consistent with `func`: "count" ignores the value (force
@@ -48,7 +45,7 @@
   ];
 
   // One word per aggregation, for composed labels ("Mean AGE", axis titles,
-  // tooltips). Single home — the hosts used to duplicate this map.
+  // tooltips).
   /** @type {Record<string, string>} */
   const AGG_WORDS = {
     count: 'Count', count_distinct: 'Distinct', mean: 'Mean',
@@ -153,11 +150,7 @@
    *                   divides by, because that is built before any of this.
    *                   The distinction is the whole point: a subject something
    *                   did not happen to is not a category, and is still a
-   *                   subject.
-   *                   (All three roles, not just group: R's twin has always
-   *                   dropped on any of them, since the table passes facet,
-   *                   group and color as one grouping. JS checked group alone,
-   *                   so the engines disagreed whenever a FACET carried NAs.)
+   *                   subject. R's twin drops on all three roles too.
    *   pct_distinct    chart-only. distinct `value` in the cell divided by
    *                   distinct `value` in the surrounding population, as a
    *                   fraction (0..1, like bar_mode 'percent'). Absent from
@@ -272,7 +265,7 @@
       // intended use: precomputed bar heights) that IS the row's value. A cell
       // with no usable value stays null (a gap, like mean/min). Chart-only:
       // offered solely in the chart's `func` picker (chart/roles.js), never in the
-      // shared AGG_FNS, so the table/tile and the drift/golden tests are
+      // shared AGG_FNS, so the table and the golden test are
       // unaffected. Duplicate categories collapse to the first row (documented).
       else if (func === 'identity') out = g.values.length ? g.values[0] : null;
       // n = rows behind this (group, color) cell, for the tooltip's

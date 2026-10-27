@@ -1,5 +1,5 @@
-# The unified input contract across the renderer blocks (chart / table /
-# gt): ONE definition of "acceptable input" (a data frame or an
+# The unified input contract across the renderer blocks (chart and
+# table): ONE definition of "acceptable input" (a data frame or an
 # object with a real as_annotated_df() method) behind every block's
 # dat_valid, and as_plain_df() -- coerce + drop the reserved annotation
 # columns -- behind the chart, whose renderer chart a structured
@@ -82,15 +82,13 @@ test_that("as_plain_df drops the reserved annotation columns only", {
   expect_error(as_plain_df(garbage), "No as_annotated_df\\(\\) method")
 })
 
+# --- chart: byte-identical expr for plain frames, coercion otherwise -------
+
 test_that("every renderer block's dat_valid enforces the shared contract", {
   blocks <- list(
     chart = new_chart_block(),
     table = new_table_block()
   )
-  # gt is a Suggests; the renderer only exists where it is installed.
-  if (requireNamespace("gt", quietly = TRUE)) {
-    blocks$gt <- new_gt_table_block()
-  }
   plain <- data.frame(a = 1:3, b = letters[1:3], stringsAsFactors = FALSE)
   for (blk in blocks) {
     expect_no_error(blockr.core::validate_data_inputs(blk, list(data = plain)))
@@ -109,33 +107,6 @@ test_that("every renderer block's dat_valid enforces the shared contract", {
     )
   }
 })
-
-test_that("gt block accepts a tidy .fmt frame without .label", {
-  skip_if_not_installed("gt")
-  tidy <- data.frame(
-    .var   = c("AGE", "AGE"),
-    .fmt   = c("{mean} ({sd})", "{mean} ({sd})"),
-    .group = c("Placebo", "Drug"),
-    mean   = c(45.2, 47.8),
-    sd     = c(8.1, 9.3),
-    stringsAsFactors = FALSE
-  )
-  blk <- new_gt_table_block()
-  expect_no_error(blockr.core::validate_data_inputs(blk, list(data = tidy)))
-  # And the renderer actually handles it (fmt_to_wide spread).
-  tbl <- gt_table(tidy)
-  expect_s3_class(tbl, "gt_tbl")
-  html <- as.character(gt::as_raw_html(tbl))
-  expect_match(html, "45.20 (8.10)", fixed = TRUE)
-})
-
-test_that("gt_table coerces table-producing objects on entry", {
-  skip_if_not_installed("gt")
-  tbl <- gt_table(new_contract_composed(ann_df))
-  expect_s3_class(tbl, "gt_tbl")
-})
-
-# --- chart: byte-identical expr for plain frames, coercion otherwise -------
 
 test_that("chart expr is byte-identical for plain data frames", {
   df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)

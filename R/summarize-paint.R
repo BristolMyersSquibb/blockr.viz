@@ -30,7 +30,6 @@
 # Needs grid + systemfonts to measure and lay out, ragg to rasterise. All
 # Suggests: the callers check before they call (see summarize-exhibit.R).
 
-
 # --- colours -------------------------------------------------------------
 # The cascade does not exist in an export, so every token is resolved to a
 # literal here. Values from R/summarize-table-css.R.
@@ -947,11 +946,10 @@ rp_page_rows <- function(m, per_page, heights = NULL, budget = NULL) {
   pages <- list()
   at <- 1L
   while (at <= n) {
-    # A carried-over parent costs a slot, so it is decided BEFORE the cut,
-    # never by dropping a row afterwards. (Dropping was the first version and
-    # it could walk the cursor backwards: a one-row page whose only row was
-    # replaced by its parent restarted above where it began, and the loop
-    # never terminated.)
+    # A carried-over parent costs a slot, so it is decided BEFORE the cut.
+    # Dropping a row afterwards can walk the cursor backwards: a one-row page
+    # whose only row is replaced by its parent restarts above where it began,
+    # and the loop never ends.
     lead <- integer()
     take <- fit(at, if (is.null(heights)) per_page else budget)
     if (at > 1L && lvl[[at]] > 0L && take >= 2L) {
@@ -1101,24 +1099,6 @@ rp_write_png <- function(p, file, res = 300) {
   grid::grid.newpage()
   grid::grid.draw(p$grob)
   list(file = file, width = p$width, height = p$height)
-}
-
-summarize_paint_png <- function(m, prep, file, width_in = 12.5, res = 300,
-                                ...) {
-  invisible(rp_write_png(
-    summarize_paint_grob(m, prep, width_in = width_in, ...), file, res
-  ))
-}
-
-# Every page of a table as its own file: `<stem>.png`, `<stem>-2.png`, ...
-summarize_paint_pngs <- function(m, prep, stem, width_in = 12.5,
-                                 max_height = 5.4, res = 300, ...) {
-  pg <- summarize_paint_pages(m, prep, width_in = width_in,
-                              max_height = max_height, ...)
-  lapply(seq_along(pg), function(k) {
-    f <- if (k == 1L) paste0(stem, ".png") else paste0(stem, "-", k, ".png")
-    rp_write_png(pg[[k]], f, res)
-  })
 }
 
 # A tile column's title as the picture prints it on its side: long terms end

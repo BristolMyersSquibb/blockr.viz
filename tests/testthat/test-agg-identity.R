@@ -1,7 +1,7 @@
 # The chart-only "identity" aggregation ("None (as is)"): it plots the value
 # column directly, so a bar whose height is precomputed upstream needs no
 # fabricated Sum/Mean. It lives ONLY in the JS engine (the chart aggregates
-# client-side); it is deliberately absent from the shared AGG_FNS, so it has no
+# client-side); it is deliberately absent from the JS AGG_FNS, so it has no
 # R twin and cannot join the golden cross-test. This JS-only test guards its
 # behaviour instead, driven through the same shipped engine + node runner.
 

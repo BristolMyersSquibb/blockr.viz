@@ -131,7 +131,7 @@ declare class VizSentenceSlots {
    Blockr.DrilldownAgg (and window.DrilldownAgg). */
 
 interface VizDrilldownAgg {
-  /** Aggregation-function select options; mirrors R AGG_FNS (drift-tested). */
+  /** Aggregation-function select options. */
   AGG_FNS: Array<{ value: string; label: string }>;
   /** One word per aggregation for composed labels ("Mean AGE", axis titles). */
   AGG_WORDS: Record<string, string>;

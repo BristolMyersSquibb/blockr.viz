@@ -39,41 +39,6 @@ test_that("annotated_column_keys drops malformed entries, keeps good ones", {
   expect_null(annotated_column_keys(data.frame(a = 1)))
 })
 
-test_that("a named column gets header keys, an unnamed one stays inert", {
-  html <- paste(
-    as.character(drilldown_table(ck_frame(), drill = "auto", elem_id = "e",
-                                 gear = FALSE)),
-    collapse = "\n"
-  )
-  expect_match(html, "dd-col-drill")
-  expect_match(html, "data-dd-colkeys=", fixed = TRUE)
-  expect_match(html, "data-dd-colkeys-map")
-  # Two arms are named; Total is not, so exactly two leaf headers plus two
-  # spanners carry keys and the Total header carries none.
-  expect_equal(lengths(regmatches(html, gregexpr("dd-col-drill", html))), 4L)
-})
-
-test_that("no attribute renders exactly the markup it rendered before", {
-  d <- ck_frame()
-  attr(d, "column_keys") <- NULL
-  html <- paste(
-    as.character(drilldown_table(d, drill = "auto", elem_id = "e",
-                                 gear = FALSE)),
-    collapse = "\n"
-  )
-  expect_false(grepl("dd-col-drill", html))
-  expect_false(grepl("dd-colkeys", html))
-})
-
-test_that("the drill has to be on for a header to look clickable", {
-  html <- paste(
-    as.character(drilldown_table(ck_frame(), drill = NULL, elem_id = "e",
-                                 gear = FALSE)),
-    collapse = "\n"
-  )
-  expect_false(grepl("dd-col-drill", html))
-})
-
 test_that("the cell map is indexed the way cellIndex counts", {
   keys <- annotated_column_keys(ck_frame())
   # Stub at 0, then the three data columns; Total (the last) has no entry.

@@ -136,11 +136,11 @@ Renders an \link[=as_annotated_df]{annotated data frame} as a styled
 report / deck rendering (quarto pptx, docx). flextable is the one table
 engine whose \code{knit_print} emits real OpenXML tables in PowerPoint and
 Word output, so this is the renderer blockr.outline emits for
-table-kind blocks; \code{\link[=gt_table]{gt_table()}} remains the HTML-oriented sibling.
+table-kind blocks.
 }
 \details{
 Structure comes from the annotated-df contract (shared with
-\code{html_table()}, \code{\link[=gt_table]{gt_table()}} and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}): \code{.label} is
+\code{html_table()} and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}): \code{.label} is
 the row stub, \verb{.group<k>_level} runs and \code{.variable_label} blocks become
 bold section-header rows interleaved into the body (merged across the
 table width, exactly where the HTML renderer puts its colspan rows),
@@ -170,6 +170,6 @@ static_table(tbl, title = "Sepal length by species")
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=gt_table]{gt_table()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}},
+\code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}},
 \link{exhibit-options} for everything the renderer reads from \code{options()}
 }

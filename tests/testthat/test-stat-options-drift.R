@@ -1,8 +1,7 @@
 # Drift guard: the summary-table gear's JS stat catalog (STAT_OPTIONS in
 # inst/js/summary-table-block.js) MUST mirror the R SUMMARY_STATS_CATALOG
 # (R/summary-table.R) -- keys AND labels. Each side is the single source for
-# its language; this test is the only thing tying them (same recipe as the
-# AGG_FNS drift guard).
+# its language; this test is the only thing tying them.
 test_that("JS STAT_OPTIONS mirrors R SUMMARY_STATS_CATALOG", {
   js_path <- system.file("js", "summary-table-block.js", package = "blockr.viz")
   expect_true(nzchar(js_path))

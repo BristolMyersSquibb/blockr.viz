@@ -149,11 +149,8 @@ annotation_group_level_cols <- function(data) {
 }
 
 # Reject the summary_table-internal long dialect at the renderer boundary.
-# Pre-v2, renderers silently pivoted long input via fmt_to_wide(); that made
-# two shapes of the same table valid inter-block currency, which was
-# confusing. The long form (`.fmt` template + unspread `.group` dimension) is
-# now internal to summary_table() -- anything else holding those columns gets
-# an actionable error instead of a silent spread.
+# The long form (`.fmt` template + unspread `.group` dimension) is internal to
+# summary_table(); anything else holding those columns gets an error.
 reject_long_form <- function(data) {
   if (is.data.frame(data) &&
       all(c(".fmt", ".group") %in% names(data))) {
@@ -366,19 +363,6 @@ eval_row_filter <- function(expr_txt, src) {
   !is.na(ok) & ok
 }
 
-# Renderer-side input coercion for the chart / tile: a plain data frame
-# passes through UNTOUCHED (byte-identical to the pre-contract behavior,
-# dotted columns included); anything else is coerced + stripped via
-# as_plain_df(). Coercion failures return NULL so reader reactives park on
-# their `req(is.data.frame(d))` guards instead of erroring an observer (an
-# unhandled observer error is fatal to the Shiny session) -- the block
-# condition (from dat_valid / the block expr, which coerces the same way)
-# does the explaining.
-coerce_plain_df <- function(d) {
-  if (is.data.frame(d)) return(d)
-  tryCatch(as_plain_df(d), error = function(e) NULL)
-}
-
 # Rewrite an emitted `dplyr::filter(.(data), <cond>)` call so its data slot
 # is coerced: `dplyr::filter(blockr.viz::as_plain_df(.(data)), <cond>)`.
 # Used by the chart / tile exprs ONLY when the input is not already a data
@@ -410,9 +394,8 @@ wrap_plain_df_input <- function(ex) {
 #' itself up by its own name and a spanner by its prefix. A `values` vector
 #' of length > 1 is a pooled column (`ARM %in% c(...)`).
 #'
-#' Purely optional and read only here: absent, the renderer emits exactly the
-#' markup it emitted before this existed and every click keeps meaning "this
-#' row". Malformed entries are dropped one at a time rather than erroring --
+#' Purely optional and read only here: absent, the renderer emits no column
+#' claims and every click means "this row". Malformed entries are dropped one at a time rather than erroring --
 #' a producer bug must not take a table off the screen.
 #' @noRd
 annotated_column_keys <- function(data) {
@@ -452,8 +435,7 @@ annotated_column_keys <- function(data) {
 #' looks itself up by the same string it claims by. The text follows the leaf
 #' convention: a newline splits a strong name line from a quiet sub-line.
 #'
-#' Optional and read only here: absent, a group header renders its prefix,
-#' which is what it did before this existed.
+#' Optional and read only here: absent, a group header renders its prefix.
 #' @noRd
 annotated_spanner_labels <- function(data) {
 

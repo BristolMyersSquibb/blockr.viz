@@ -143,7 +143,8 @@ agg_fixture <- function() {
 test_that("golden: JS and R engines agree on facet x group x color", {
   skip_if_no_node()
   df <- agg_fixture()
-  for (func in AGG_FNS) {
+  for (func in c("count", "count_distinct", "mean", "median", "sum", "min",
+                  "max")) {
     value <- switch(func, count = ".count", count_distinct = "id", "val")
     expect_engines_agree(df, func, value,
                          group = "g", color = "c", facet = "f")
@@ -153,7 +154,8 @@ test_that("golden: JS and R engines agree on facet x group x color", {
 test_that("golden: JS and R engines agree on a single grouping", {
   skip_if_no_node()
   df <- agg_fixture()
-  for (func in AGG_FNS) {
+  for (func in c("count", "count_distinct", "mean", "median", "sum", "min",
+                  "max")) {
     value <- switch(func, count = ".count", count_distinct = "id", "val")
     expect_engines_agree(df, func, value, group = "g")
   }

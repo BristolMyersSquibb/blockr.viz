@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# COPIED from blockr.extra (R/code-block-inputs.R, lines 1-466) on 2026-09-08.
+# Copied from blockr.extra (R/code-block-inputs.R).
 #
 # The chart block's `script` argument reuses the code block's declaration
 # convention: a top-level assignment whose right-hand side is a plain value is
@@ -33,7 +33,6 @@
 #' @keywords internal
 NULL
 
-
 #' Calls whose result counts as a plain value
 #'
 #' Kept short on purpose. Every addition widens what silently becomes a control,
@@ -52,18 +51,6 @@ CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder")
 #' @noRd
 CB_ANN_CALLS <- c("number", "text", "select", "flag", "date", "input")
 
-#' The gutter glyph naming each widget
-#'
-#' Read off the gutter, these say what the whole UI is without a word of prose.
-#' Kept to glyphs that render legibly at gutter size in a UI font — the
-#' ballot-box and geometric-shape characters some of these would naturally use
-#' fall back to an emoji face or a hairline at 11px.
-#'
-#' @noRd
-CB_GLYPHS <- c(select = "\u25be", number = "#", text = "Aa", flag = "\u2713",
-               date = "\u25a4")
-
-
 #' Is this statement an assignment to a bare name?
 #'
 #' The shape a declaration has to have, whether or not it turns out to be one.
@@ -81,7 +68,6 @@ cb_is_assign_stmt <- function(e) {
   is.name(e[[2L]])
 }
 
-
 #' Is this a name the block keeps to itself?
 #'
 #' The escape hatch, and it is the one R already has: a leading dot means
@@ -94,7 +80,6 @@ cb_is_assign_stmt <- function(e) {
 cb_is_private_name <- function(name) {
   !is.na(name) && startsWith(name, ".")
 }
-
 
 #' Is this statement an input declaration?
 #'
@@ -110,7 +95,6 @@ cb_is_input_stmt <- function(e) {
   }
   cb_is_value_rhs(e[[3L]])
 }
-
 
 #' Is this right-hand side a plain value?
 #'
@@ -139,7 +123,6 @@ cb_is_value_rhs <- function(rhs) {
   !is.null(nm) && nm %in% CB_VALUE_CALLS
 }
 
-
 #' The bare name of a call head, following a `::` prefix.
 #' @noRd
 cb_call_name <- function(head) {
@@ -151,7 +134,6 @@ cb_call_name <- function(head) {
   }
   NULL
 }
-
 
 #' Split a script into input declarations and body statements
 #'
@@ -189,7 +171,6 @@ cb_parse <- function(text) {
   list(ok = TRUE, error = NULL, stmts = stmts,
        lines = strsplit(text, "\n", fixed = TRUE)[[1L]])
 }
-
 
 #' Read the `#|` annotation off a source line
 #'
@@ -236,7 +217,6 @@ cb_annotation <- function(line_text) {
   lapply(args, function(a) tryCatch(eval(a, baseenv()), error = function(e) NULL))
 }
 
-
 #' Derive the widget from a declaration's value
 #'
 #' The three facts a control needs — kind, choice pool, single or multiple —
@@ -280,7 +260,6 @@ cb_widget_for <- function(v) {
   }
   NULL
 }
-
 
 #' Build the input specs for a script
 #'
@@ -382,7 +361,6 @@ cb_specs <- function(parsed, data = NULL) {
   specs
 }
 
-
 #' Bind a name to an expression that is only evaluated if something reads it
 #'
 #' A declaration may legitimately depend on a helper line above it
@@ -437,7 +415,6 @@ cb_delay <- function(env, name, expr) {
   )
 }
 
-
 #' Coerce a value coming back from a widget to the declared type
 #'
 #' Shiny inputs arrive as strings from selects and as lists from JS arrays; the
@@ -480,7 +457,6 @@ cb_coerce <- function(value, spec) {
   )
 }
 
-
 #' Join a script given as lines into one string
 #'
 #' A board writes the script as a JSON array, one element per line, so that
@@ -497,15 +473,4 @@ cb_script_text <- function(x) {
     return(x)
   }
   paste(x, collapse = "\n")
-}
-
-
-#' Split a script into lines for serialization
-#' @noRd
-cb_script_lines <- function(x) {
-  x <- cb_script_text(x)
-  if (is.null(x)) {
-    return(NULL)
-  }
-  strsplit(x, "\n", fixed = TRUE)[[1L]]
 }
