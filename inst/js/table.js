@@ -1173,7 +1173,7 @@
   // The table block's layout by engine element id: the server pushes it on
   // every change ("blockr-viz-table-layout", R/table-block.R), to this engine
   // and to the groups engine (summarize-table.js reads the same object). The
-  // "Rows are" switch in either gear draws from it, never from its own last
+  // layout switch in either gear draws from it, never from its own last
   // click: a stale highlight on the wanted segment would swallow the click.
   /** @type {Record<string, string>} */
   var layoutOf = /** @type {any} */ (window).blockrTableLayouts =
@@ -1186,15 +1186,42 @@
   var gearPending = /** @type {any} */ (window).blockrTableGearPending =
     /** @type {any} */ (window).blockrTableGearPending || {};
 
-  // The table block's "Rows are" switch (R/table-block.R). The block's
-  // server reads it off this engine's action input.
-  var TABLE_LAYOUTS = [
-    { value: "records", label: "Records" },
-    { value: "groups", label: "Groups" },
-    { value: "variables", label: "Variables" }
-  ];
-  /** @param {*} spec @param {string} current @param {string | null} elemId */
-  function withLayoutSwitch(spec, current, elemId) {
+  // The table block's layout switch (R/table-block.R): three tiles, List,
+  // Per group and Per variable, defined with the gear engine
+  // (drilldown-config.js). The block's server reads the pick off this
+  // engine's action input.
+  /** @returns {Array<{value: string, label: string, icon?: string}>} */
+  function tableLayouts() {
+    return (typeof Blockr !== "undefined" && Blockr.TABLE_LAYOUTS) || [
+      { value: "records", label: "List" },
+      { value: "groups", label: "Per group" },
+      { value: "variables", label: "Per variable" }
+    ];
+  }
+
+  // What the chosen layout gives, in a line under the tiles: text parts, a
+  // { strong } part a column name. `by` is the layout's grouping.
+  /** @param {string} layout @param {string[]} by @returns {Array<string | {strong: string}>} */
+  function layoutHint(layout, by) {
+    var b = (by || []).filter(Boolean);
+    var who = { strong: b.join(" and ") };
+    if (layout === "records") {
+      return b.length ? ["Each input row as it is, nested under each ", who, "."]
+        : ["Each input row as it is."];
+    }
+    if (layout === "groups") {
+      return b.length ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."];
+    }
+    return b.length ? ["One row per statistic of each variable, one column per ", who, "."]
+      : ["One row per statistic of each variable."];
+  }
+
+  /** @param {*} spec @param {string} current @param {string | null} elemId @param {string[]} [by] */
+  function withLayoutSwitch(spec, current, elemId, by) {
+    // The hint's grouping: the records layout's `by`, or the variables
+    // layout's own (its settings widget).
+    var hintBy = by || [];
     // The records engine also draws the variables layout; that layout's
     // settings widget sits beside it and is shown only then.
     if (elemId) {
@@ -1214,10 +1241,11 @@
         // section, and the widget's own card (with its gear) stays hidden.
         var host = vw.querySelector(".summary-table-block-container");
         var stb = host && host._block;
+        if (stb && stb._state && stb._state.by) hintBy = stb._state.by;
         if (stb && stb.grid) {
           stb.card.classList.add("stb-card--in-gear");
           spec.customSections = (spec.customSections || []).concat([{
-            title: "Table 1",
+            title: "Variables",
             render: function (/** @type {HTMLElement} */ sec) {
               var body = document.createElement("div");
               body.className = "stb-in-gear";
@@ -1232,10 +1260,15 @@
     // What a row is sits under the switch, as in the groups gear: the
     // grouping, the row names and the columns.
     spec.layoutSwitch = {
+      title: "Table",
       fields: spec.mapping || [],
       value: current,
-      options: TABLE_LAYOUTS,
-      onPick: function (/** @type {string} */ v) { sendConfig(elemId, "layout", v); }
+      options: tableLayouts(),
+      hint: layoutHint(current, hintBy),
+      onPick: function (/** @type {string} */ v) {
+        if (elemId) /** @type {any} */ (window).blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
     };
     spec.mapping = [];
     // A Table 1 (the variables layout) has no card form, and a finished
@@ -1245,7 +1278,7 @@
       var off = (o.value === "cards" && (current === "variables" || finished)) ||
         (o.value === "compact" && finished);
       return off ? {
-        value: o.value, label: o.label, disabled: true,
+        value: o.value, label: o.label, icon: o.icon, disabled: true,
         title: current === "variables"
           ? "The variables layout has no card form"
           : "A finished table keeps its own layout"
@@ -1288,7 +1321,7 @@
                          { value: "off", label: "No download" }];
   // The table block's three looks (R: TABLE_LOOKS). withLayoutSwitch()
   // greys out what the current layout cannot draw.
-  var LOOK_OPT        = [{ value: "table", label: "Table" },
+  var LOOK_OPT        = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
                          { value: "compact", label: "Compact" },
                          { value: "cards", label: "Cards" }];
   var TABLE_ROLES = Object.assign({}, DAgg.aggRoles({ multiple: true }), {
@@ -1361,9 +1394,10 @@
                 } }
   });
   // The summarize word, as in the groups layout and dplyr's `.by`.
-  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Group by" });
+  // The records layout's grouping nests the rows under a header per group.
+  TABLE_ROLES.group = Object.assign({}, TABLE_ROLES.group, { label: "Nest by" });
   // The records and variables layouts' gear, in the groups gear's order:
-  // Rows are (with what a row is), Presentation, Color, Titles, Drill-down,
+  // Table (the layout tiles and their grouping), Presentation, Color, Titles, Drill-down,
   // Prepare script. `hasCols` is false for a structured frame (a Table 1, a
   // nested table, a finished input): its cells are not picked by column, so
   // Color leaves. A control shows only where it changes the table.
@@ -1606,8 +1640,14 @@
     // no-column case too.
     function hasCols() { return cols.length > 0; }
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state. Closed, one
+    // row; open, the gear alone on top, the tray, then titles and tools.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -1645,13 +1685,13 @@
       sections: function () {
         return withLayoutSwitch(
           tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
-          "records", elemId
+          "records", elemId, cfg.group
         );
       },
       sectionsForFamily: function () {
         return withLayoutSwitch(
           tableSections(cfg, hasCols(), cols.length ? cols[0].name : ""),
-          "records", elemId
+          "records", elemId, cfg.group
         );
       },
       // Paired-tail roles (e.g. func behind value) are rendered inside their
@@ -1709,12 +1749,14 @@
     // panel, not a menu; the gear is the only toggle.
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.classList.add("blockr-gear-active");
       btn.setAttribute("aria-expanded", "true");
       bandOpen[elemId] = true;
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.classList.remove("blockr-gear-active");
       btn.setAttribute("aria-expanded", "false");
       bandOpen[elemId] = false;
@@ -1737,16 +1779,24 @@
     // the block was open. The new layout's table arrives after the switch,
     // so an open gear redraws once more when it does (root._dtAfterPayload).
     var relayout = false;
+    // Until the new layout's table arrives, the tray keeps the height it had,
+    // so it does not shrink to the old table's gear and grow back.
+    var holdHeight = function (/** @type {number} */ h) {
+      pop.style.minHeight = h ? h + "px" : "";
+      if (h) setTimeout(function () { pop.style.minHeight = ""; }, 3000);
+    };
     document.addEventListener("blockr-table-layout", function (e) {
       var d = /** @type {CustomEvent} */ (e).detail;
       if (!d || d.id !== elemId || !root.isConnected) return;
       relayout = false;
       delete gearPending[elemId];
-      if (d.layout === "groups") { closePop(); return; }
+      if (d.layout === "groups") { closeWhenHidden(root, closePop); return; }
       if (!d.gearOpen) return;
+      var held = pop.classList.contains("blockr-settings--open") ? pop.offsetHeight : 0;
       refreshState();
       engine.refresh();
       openPop();
+      holdHeight(held);
       relayout = true;
     });
     /** @type {any} */ (root)._dtAfterPayload = function () {
@@ -1754,19 +1804,19 @@
       relayout = false;
       refreshState();
       engine.refresh();
+      holdHeight(0);
     };
 
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    // One control row, chart-style: the chrome's search + download MOVE UP
-    // into the gear row, sitting LEFT of the gear. The gear itself stays in
-    // its canonical top-right spot (the cross-block anchor — every block
-    // puts its gear there), which is why the toolbar comes to the gear and
-    // not the other way around. The vacated chrome header row would leave a
-    // stray padded border, so it is hidden once emptied.
+    header.appendChild(pop);
+    // The title band joins the header, on its left (applyTitles fills it).
+    header.insertBefore(titlesBand(root), header.firstChild);
+    // The chrome's search + download MOVE UP into the header's tools, left
+    // of the gear, which keeps its top-right spot. The vacated chrome header
+    // row would leave a stray padded border, so it is hidden once emptied.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = /** @type {HTMLElement | null} */ (
         root.querySelector(".blockr-html-table-header"));
       if (hdrRow) hdrRow.style.display = "none";
@@ -2259,6 +2309,165 @@
   // ensured lazily around the scroll wrapper so the chrome — which outlives
   // payloads — needs no rebuild. Hidden while empty: a title-less table is
   // pixel-identical to before. textContent, never innerHTML.
+  // The title and subtitle band: the container's own, or a new one, hidden
+  // until applyTitles has text for it.
+  /** @param {HTMLElement} root @returns {HTMLElement} */
+  function titlesBand(root) {
+    var band = /** @type {HTMLElement | null} */ (
+      root.querySelector(".dd-table-titles"));
+    if (band) { band.classList.add("vz-head__titles"); return band; }
+    band = document.createElement("div");
+    band.className = "dd-table-titles vz-head__titles";
+    band.style.display = "none";
+    var te = document.createElement("div");
+    te.className = "dd-table-title";
+    var se = document.createElement("div");
+    se.className = "dd-table-subtitle";
+    band.appendChild(te);
+    band.appendChild(se);
+    return band;
+  }
+
+  // A layout switch shows the other engine's container (the server's
+  // layout_css). The first time, that container is still empty: the server
+  // draws an engine's table only once its output is on screen. Until the new
+  // container has its table, and its tray if a gear was open, the old one
+  // stays on screen and the new one is laid out out of sight (hidden, out of
+  // the flow, so Shiny still renders into it); the block never shows
+  // nothing. Inline !important outranks the server's rule; it comes off when
+  // the new view is ready, or after two seconds.
+  // The element that holds a block's three engine containers.
+  /** @param {string[]} ids @returns {HTMLElement | null} */
+  function engineBox(ids) {
+    for (var i = 0; i < ids.length; i++) {
+      var sel = (window.CSS && CSS.escape) ? CSS.escape(ids[i]) : ids[i];
+      var c = document.querySelector('[data-dt-elem-id="' + sel + '"], [data-summarize-elem-id="' + sel + '"]');
+      var w = c && c.closest(".blockr-table-engine");
+      if (w) return /** @type {HTMLElement | null} */ (w.parentElement);
+    }
+    return null;
+  }
+
+  // While the engines swap, the block can be shorter for a moment (the
+  // records engine draws the new layout's table before the layout message,
+  // a tray is redrawn), and a scrolled panel would clamp its scroll and keep
+  // it there. From the click on a layout tile, the block keeps its height
+  // until the server is idle and its content has not changed for 300 ms, at
+  // most five seconds. One hold per block: a second call extends it.
+  /** @param {HTMLElement} box */
+  function holdBlockHeight(box) {
+    var held = /** @type {any} */ (box)._dtHold;
+    if (held) { held.extend(); return; }
+    var h0 = box.offsetHeight;
+    if (!h0) return;
+    var prev = box.style.minHeight;
+    box.style.minHeight = h0 + "px";
+    var t0 = Date.now(), since = t0, last = -1;
+    var natural = function () {
+      var sum = 0;
+      Array.prototype.forEach.call(box.children, function (/** @type {HTMLElement} */ c) {
+        if (c.offsetParent) sum += c.offsetHeight;
+      });
+      return sum;
+    };
+    /** @type {any} */ (box)._dtHold = {
+      extend: function () { t0 = Date.now(); since = t0; }
+    };
+    var check = function () {
+      var n = natural(), now = Date.now();
+      if (n !== last) { last = n; since = now; }
+      if (document.documentElement.classList.contains("shiny-busy")) since = now;
+      if ((now - since > 300 && now - t0 > 300) || now - t0 > 5000) {
+        box.style.minHeight = prev;
+        delete /** @type {any} */ (box)._dtHold;
+        return;
+      }
+      setTimeout(check, 50);
+    };
+    setTimeout(check, 50);
+  }
+  // For the groups engine's switch (summarize-table.js).
+  /** @type {any} */ (window).blockrTableHold = function (/** @type {string} */ id) {
+    var box = engineBox([id]);
+    if (box) holdBlockHeight(box);
+  };
+
+  /** @param {string[]} ids @param {string} layout @param {boolean} open */
+  function bridgeSwitch(ids, layout, open) {
+    var box = engineBox(ids);
+    if (!box) return;
+    var wraps = /** @type {HTMLElement[]} */ (Array.prototype.slice.call(
+      box.querySelectorAll(":scope > .blockr-table-engine")));
+    var kind = function (/** @type {HTMLElement} */ w) {
+      var m = /(records|groups|variables)_wrap$/.exec(w.id);
+      return m ? m[1] : "";
+    };
+    var shown = wraps.filter(function (w) { return !!w.offsetParent; });
+    if (!shown.length) return;
+    var engine = wraps.filter(function (w) {
+      return kind(w) === (layout === "groups" ? "groups" : "records");
+    })[0];
+    if (!engine) return;
+    var ready = function () {
+      return !!engine.querySelector("table") &&
+        (!open || !!engine.querySelector(".blockr-settings--open"));
+    };
+    if (ready()) return;
+    var hold = box;
+    var pos = hold.style.position;
+    if (getComputedStyle(hold).position === "static") hold.style.position = "relative";
+    var off = ["position", "visibility", "top", "left", "right", "pointer-events"];
+    wraps.forEach(function (w) {
+      if (shown.indexOf(w) >= 0) {
+        w.style.setProperty("display", "block", "important");
+      } else if (w === engine) {
+        w.style.setProperty("display", "block", "important");
+        w.style.setProperty("position", "absolute");
+        w.style.setProperty("visibility", "hidden");
+        w.style.setProperty("top", "0");
+        w.style.setProperty("left", "0");
+        w.style.setProperty("right", "0");
+        w.style.setProperty("pointer-events", "none");
+      } else {
+        w.style.setProperty("display", "none", "important");
+      }
+    });
+    var t0 = Date.now();
+    var check = function () {
+      if (ready() || Date.now() - t0 > 2000) {
+        wraps.forEach(function (w) {
+          w.style.removeProperty("display");
+          off.forEach(function (k) { w.style.removeProperty(k); });
+        });
+        hold.style.position = pos;
+        return;
+      }
+      setTimeout(check, 16);
+    };
+    setTimeout(check, 16);
+  }
+
+  // A layout switch hands the gear to the other engine. The server shows
+  // the other engine's container a moment after the layout message, so the
+  // tray closes only once its own container is off screen: closed earlier,
+  // the table would jump up for a few frames and back down. Gives up after
+  // three seconds.
+  /** @param {HTMLElement} root @param {() => void} close */
+  function closeWhenHidden(root, close) {
+    var t0 = Date.now();
+    var check = function () {
+      if (!root.isConnected || !root.offsetParent || Date.now() - t0 > 3000) {
+        close();
+        return;
+      }
+      // A timer, not requestAnimationFrame: a tab in the background runs
+      // no frames, and the tray would stay open behind the scenes.
+      setTimeout(check, 16);
+    };
+    check();
+  }
+  /** @type {any} */ (window).blockrCloseWhenHidden = closeWhenHidden;
+
   /** @param {HTMLElement} root @param {VizTablePayload} p */
   function applyTitles(root, p) {
     // No `titles` field at all: the sender paints its own band (the composer
@@ -2269,19 +2478,8 @@
       root.querySelector(".blockr-table-wrapper"));
     if (!wrap || !wrap.parentNode) return;
     var tl = /** @type {any} */ (p).titles || {};
-    var band = /** @type {HTMLElement | null} */ (
-      root.querySelector(".dd-table-titles"));
-    if (!band) {
-      band = document.createElement("div");
-      band.className = "dd-table-titles";
-      var te = document.createElement("div");
-      te.className = "dd-table-title";
-      var se = document.createElement("div");
-      se.className = "dd-table-subtitle";
-      band.appendChild(te);
-      band.appendChild(se);
-      wrap.parentNode.insertBefore(band, wrap);
-    }
+    var band = titlesBand(root);
+    if (!band.parentNode) wrap.parentNode.insertBefore(band, wrap);
     var capEl = /** @type {HTMLElement | null} */ (
       root.querySelector(".dd-table-caption"));
     if (!capEl) {
@@ -2500,6 +2698,9 @@
           var pop = document.querySelector('[data-dd-pop-for="' + sel + '"]');
           return !!pop && pop.classList.contains("blockr-settings--open");
         });
+        var box = engineBox(ids);
+        if (box) holdBlockHeight(box);
+        bridgeSwitch(ids, msg.layout, open);
         ids.forEach(function (id) {
           layoutOf[id] = msg.layout;
           gearPending[id] = open;

@@ -168,12 +168,12 @@
       this._varsWrap = varsWrap;
       this._setVarsAttention();
 
-      // Group by (max 2): one column per level
+      // One column per (max 2): one column per level of the grouping
       const byWrap = document.createElement('div');
       byWrap.className = 'stb-field stb-field--full';
       const byLabel = document.createElement('label');
       byLabel.className = 'blockr-label';
-      byLabel.textContent = 'Group by';
+      byLabel.textContent = 'One column per';
       byWrap.appendChild(byLabel);
       this._selects.by = BSelect.multi(byWrap, {
         options: [],

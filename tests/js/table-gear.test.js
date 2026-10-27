@@ -47,14 +47,19 @@ const segment = (band, key, label) => Array.from(
   band.querySelectorAll('.dd-role-' + key + ' [role=radio]'))
   .find((b) => b.textContent.trim() === label);
 
-test('the records gear reads Rows are, Presentation, Color, then the folds', async () => {
+test('the records gear: Data, Format, Titles, Interaction', async () => {
   const t = open('flat');
   const band = t.band();
   const titles = titlesOf(band);
-  assert.deepEqual(titles.slice(0, 3), ['Rows are', 'Presentation', 'Color']);
-  ['Titles', 'Drill-down', 'Prepare script'].forEach((w, k) => {
-    assert.ok(titles[3 + k].startsWith(w), titles[3 + k]);
-  });
+  // A flat records table has nothing to sort, so Sort leaves.
+  const tabs = Array.from(band.querySelectorAll('.blockr-tray-nav__tab')).map((e) => e.textContent);
+  assert.deepEqual(tabs, ['Data', 'Format', 'Titles', 'Interaction']);
+  const inGroup = (g) => Array.from(band.querySelectorAll('.dd-section'))
+    .filter((e) => e.dataset.trayGroup === g).map((e) => e.dataset.ddTitle);
+  assert.deepEqual(inGroup('data'), ['Table', 'Prepare script']);
+  assert.deepEqual(inGroup('format'), ['Look', 'Color', 'Numbers']);
+  assert.deepEqual(inGroup('interact'), ['Reader tools', 'Drill-down']);
+  assert.equal(titles.includes('Presentation'), false, 'no Presentation section');
   assert.equal(titles.includes('Mapping'), false, 'no Mapping section');
   assert.equal(titles.includes('Aggregation'), false, 'no Aggregation section');
   const layout = band.querySelector('.dd-section--layout');
@@ -124,5 +129,20 @@ test('a finished input keeps its badge and offers no row controls', async () => 
     assert.equal(has(band, key), false, key);
   }
   assert.ok(has(band, 'collapsible'));
+  await t.close();
+});
+
+test('a shading rule picks its mode from three drawn tiles', async () => {
+  const t = open('flat');
+  const add = t.band().querySelector('.dd-add-shading');
+  assert.ok(add, 'the records gear offers shading');
+  const before = t.band().querySelectorAll('.dd-shading').length;
+  click(add);
+  const rules = Array.from(t.band().querySelectorAll('.dd-shading'));
+  assert.equal(rules.length, before + 1);
+  const tiles = Array.from(rules[rules.length - 1].querySelectorAll('.dd-layout-tile'));
+  assert.deepEqual(tiles.map((b) => b.textContent.trim()), ['Diverging', 'Sequential', 'Bar']);
+  assert.ok(tiles.every((b) => b.querySelector('.dd-layout-tile-face svg')), 'each tile has its drawing');
+  assert.equal(tiles[0].getAttribute('aria-checked'), 'true', 'a new rule diverges');
   await t.close();
 });

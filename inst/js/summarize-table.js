@@ -1382,7 +1382,7 @@
                       { value: "asc", label: "Ascending" }];
   // The table block's three looks (R: TABLE_LOOKS). Cards need a row per
   // group; the variables layout has none, and its gear greys them out.
-  var LOOK_OPT = [{ value: "table", label: "Table" },
+  var LOOK_OPT = (typeof Blockr !== "undefined" && Blockr.TABLE_LOOKS) || [{ value: "table", label: "Table" },
                   { value: "compact", label: "Compact" },
                   { value: "cards", label: "Cards" }];
   var SEARCH_OPT = [{ value: "on", label: "Search bar" },
@@ -1460,7 +1460,7 @@
     // row over all input rows, so the placeholder says that. A change
     // re-renders the gear: sorting, search and drill show only with a
     // grouping.
-    by:     { label: "Group by", kind: "columns", colType: "cat",
+    by:     { label: "One row per", kind: "columns", colType: "cat",
               placeholder: "One Total row", rerender: true },
     // Words of the sentence only, never rows of the gear: a title can name
     // the outer grouping column and the first column's colour and facet
@@ -2016,10 +2016,11 @@
         inp.addEventListener("change", function () { onCommit(inp.value); });
       }
     }
-    // What the column draws: the segmented control for two or three marks,
-    // a select past that (design system, "Which control for which
-    // decision"). A tile is the compact look's mark, offered there and on a
-    // column that already draws one.
+    // What the column draws: a tile per mark, each a drawing of the column
+    // (Blockr.SHOW_TILE_ICONS). Without the drawings (an older engine, or a
+    // custom column's "auto"), the segmented control for two or three marks
+    // and a select past that. A tile is the compact look's mark, offered
+    // there and on a column that already draws one.
     function showCtl(parent, s, t) {
       var shows = ((SUMMARY_TYPES[t] || {}).shows || []).filter(function (sh) {
         return sh !== "tile" || cfg.look === "compact" || s.show === "tile";
@@ -2043,6 +2044,15 @@
         }
         edit();
       };
+      var icons = B && B.SHOW_TILE_ICONS;
+      if (B && B.buildTiles && icons &&
+          opts.every(function (o) { return !!icons[o.value]; })) {
+        var f = field(parent, "Show", { wide: true });
+        B.buildTiles(f, opts.map(function (o) {
+          return { value: o.value, label: o.label, icon: icons[o.value] };
+        }), cur, apply);
+        return;
+      }
       if (opts.length <= 3) segCtl(parent, "Show", opts, cur, apply);
       else selectCtl(parent, "Show", opts, cur, apply);
     }
@@ -2571,7 +2581,7 @@
       requiredMap: [],
       // Colour and facet are the COLUMN's mappings, set in the column list.
       // Only the grouping is the whole table's, optional. Under the layout
-      // switch it moves into the "Rows are" section (withLayoutSwitch()).
+      // switch it moves into the Table section (withLayoutSwitch()).
       optionalMap: [],
       mapping: ["by"],
       aggTitle: null,
@@ -2653,24 +2663,35 @@
     return { cfg: cfg, cols: cols };
   }
 
-  // The table block's "Rows are" switch (R/table-block.R): records or
+  // The table block's layout switch (R/table-block.R): records or
   // groups. The block's server reads it off this engine's action input.
   // The grouping is what the switch decides a row is, so it sits under the
   // switch, in the same section, rather than in a Mapping section of its
   // own (design system: a mode selector gates the fields below it).
   // The value is the block's layout as the server last pushed it
   // (table.js, window.blockrTableLayouts), not this gear's last click.
-  function withLayoutSwitch(spec, elemId) {
+  function withLayoutSwitch(spec, elemId, cfg) {
     var pushed = window.blockrTableLayouts && window.blockrTableLayouts[elemId];
+    var by = (cfg && cfg.by) || [];
+    var who = { strong: [].concat(by).filter(Boolean).join(" and ") };
     spec.layoutSwitch = {
+      title: "Table",
       fields: spec.mapping || [],
       value: pushed || "groups",
-      options: [
-        { value: "records", label: "Records" },
-        { value: "groups", label: "Groups" },
-        { value: "variables", label: "Variables" }
+      // List, Per group, Per variable, with their drawings
+      // (drilldown-config.js).
+      options: (window.Blockr && Blockr.TABLE_LAYOUTS) || [
+        { value: "records", label: "List" },
+        { value: "groups", label: "Per group" },
+        { value: "variables", label: "Per variable" }
       ],
-      onPick: function (v) { sendConfig(elemId, "layout", v); }
+      hint: who.strong ? ["One row per ", who, ", each column a summary."]
+        : ["One row for all rows, each column a summary."],
+      onPick: function (v) {
+        // The block keeps its height while the engines swap (table.js).
+        if (window.blockrTableHold) window.blockrTableHold(elemId);
+        sendConfig(elemId, "layout", v);
+      }
     };
     spec.mapping = [];
     return spec;
@@ -2716,8 +2737,13 @@
       stash: {}
     };
 
+    // The header, the chart's (layout E, chart.css .vz-head): titles, tools
+    // (search, download), gear and settings tray, placed by state.
     var header = document.createElement("div");
-    header.className = "blockr-gear-header";
+    header.className = "blockr-gear-header vz-head";
+    var tools = document.createElement("div");
+    tools.className = "vz-head__tools";
+    header.appendChild(tools);
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "blockr-gear-btn";
@@ -2756,10 +2782,10 @@
       context: function () { return "all"; },
       currentType: function () { return null; },
       sections: function () {
-        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
       },
       sectionsForFamily: function () {
-        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId);
+        return withLayoutSwitch(summarizeSections(cfg, ctx), elemId, cfg);
       },
       secondary: new Set(),
       // Outside the table block (no layout switch) the grouping keeps the
@@ -2934,10 +2960,12 @@
 
     function openPop() {
       pop.classList.add("blockr-settings--open");
+      header.classList.add("vz-head--open");
       btn.setAttribute("aria-expanded", "true");
     }
     function closePop() {
       pop.classList.remove("blockr-settings--open");
+      header.classList.remove("vz-head--open");
       btn.setAttribute("aria-expanded", "false");
       // Back to the server's state for everything the gear held.
       if (root._summarizeBand) root._summarizeBand();
@@ -2984,7 +3012,12 @@
       relayout = false;
       if (window.blockrTableGearPending) delete window.blockrTableGearPending[elemId];
       if (d.layout !== "groups") {
-        if (pop.classList.contains("blockr-settings--open")) closePop();
+        // Closed once this container is off screen (table.js,
+        // closeWhenHidden): earlier, the table would jump for a few frames.
+        if (pop.classList.contains("blockr-settings--open")) {
+          var cwh = window.blockrCloseWhenHidden;
+          if (cwh) cwh(root, closePop); else closePop();
+        }
         return;
       }
       if (!d.gearOpen) return;
@@ -2999,19 +3032,22 @@
     };
 
     root.insertBefore(header, root.firstChild);
-    root.insertBefore(pop, header.nextSibling);
-    root.insertBefore(band, pop.nextSibling);
-    // The title band stays with the table, under the tray: the settings
-    // never sit between a title and what it names.
+    header.appendChild(pop);
+    root.insertBefore(band, header.nextSibling);
+    // The title band joins the header, on its left; open, it sits under the
+    // tray with the tools (chart.css .vz-head--open).
+    var titles = root.querySelector(".dd-table-titles");
+    if (titles) {
+      titles.classList.add("vz-head__titles");
+      header.insertBefore(titles, header.firstChild);
+    }
     bindCapture(root, header);
-    // One control row, chart / table parity: the search box MOVES UP into the
-    // gear row and sits LEFT of the gear, which keeps its canonical top-right
-    // spot (the cross-block anchor). The emptied chrome row is hidden so it
-    // leaves no stray padded border. The legend is NOT in this row -- it has
-    // its own row below, so it can never push the search box around.
+    // The search box MOVES UP into the header's tools, left of the gear. The
+    // emptied chrome row is hidden so it leaves no stray padded border. The
+    // legend has its own row below.
     var toolbar = root.querySelector(".blockr-html-table-toolbar");
     if (toolbar) {
-      header.insertBefore(toolbar, btn);
+      tools.appendChild(toolbar);
       var hdrRow = root.querySelector(".blockr-html-table-header");
       if (hdrRow) hdrRow.style.display = "none";
     }

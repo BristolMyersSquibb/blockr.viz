@@ -727,7 +727,7 @@ summarize_table_css <- function() {
   gap: 12px;
   margin-top: 6px;
 }
-/* The Rows are section: the groups layout's Group by follows the switch on
+/* The Table section: the groups layout's One row per follows the tiles on
    a row of its own, the whole row as a select with tags takes. */
 .blockr-settings.dd-popover .dd-section--layout > .dd-form-row { grid-column: 1 / -1; }
 

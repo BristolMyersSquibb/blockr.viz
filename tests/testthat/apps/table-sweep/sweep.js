@@ -210,17 +210,16 @@
 
   // Custom checkboxes hide the native input; its label is what one clicks.
   const shown = (c) => vis(c) || (c.type === "checkbox" && vis(c.closest("label, .blockr-checkbox")));
-  const LAYOUTS = ["Records", "Groups", "Variables"];
-  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" &&
-    [...c.parentElement.querySelectorAll("[role=radio]")].map(txt).filter((t) => LAYOUTS.includes(t)).length >= 2;
+  // The layout tiles (List, Per group, Per variable).
+  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" && !!c.closest(".dd-layout-tiles");
   const keyOf = (c, i) => (c.type === "checkbox" ? "checkbox|" + txt(c.closest("label, .blockr-checkbox") || c) : ctrlKey(c, i));
 
-  // "Rows are": each other layout must draw something else, and its gear
+  // The layout tiles: each other layout must draw something else, and its gear
   // must be able to switch back.
   async function sweepLayouts(root, id) {
     let pop = await openGear(root);
     const segs = pop ? [...pop.querySelectorAll("[role=radio]")].filter((c) => vis(c) && isLayoutSeg(c)) : [];
-    const cur = segs.map((s) => (s.classList.contains("is-selected") ? txt(s) : null)).find(Boolean);
+    const cur = segs.map((s) => (s.getAttribute("aria-checked") === "true" ? txt(s) : null)).find(Boolean);
     for (const name of segs.map(txt).filter((t) => t !== cur)) {
       pop = await openGear(root);
       const s = pop && [...pop.querySelectorAll("[role=radio]")].filter(vis).find((x) => txt(x) === name && isLayoutSeg(x));
@@ -252,13 +251,50 @@
     push({ block: id, where: "gear", what: "gear", label: txt(gear), effect: "ok" });
     await unfold(pop, id, true);
     const seen = new Set();
+    // The grouped tray (blockr.ui's Blockr.trayNav) shows one group at a
+    // time. Its index and tabs are swept once each: a click must show
+    // another group. Controls are then taken group by group.
+    const navSel = ".blockr-tray-nav__group, .blockr-tray-nav__tab";
+    const groupNames = () => [...new Set([...(gearPopover() || document).querySelectorAll(navSel)]
+      .filter(vis).map(txt))];
+    const showGroup = async (name) => {
+      const b = [...(gearPopover() || document).querySelectorAll(navSel)].filter(vis).find((x) => txt(x) === name);
+      if (!b || b.classList.contains("is-current")) return false;
+      b.click();
+      await sleep(150);
+      return true;
+    };
+    for (const name of groupNames()) {
+      const p0 = gearPopover();
+      const pane = p0 && p0.querySelector(".blockr-tray-nav__pane");
+      const sig0 = pane ? [...pane.children].filter(vis).map(txt).join("|") : "";
+      const moved = await showGroup(name);
+      const sig1 = pane ? [...pane.children].filter(vis).map(txt).join("|") : "";
+      if (moved) push({ block: id, where: "gear", what: "group", label: name, effect: sig1 !== sig0 ? "ok" : "DEAD" });
+    }
     for (let guard = 0; guard < 200; guard++) {
       pop = await openGear(root);
       if (!pop) break;
       await unfold(pop, id, false);
-      const ctrls = [...pop.querySelectorAll(CTRL_SEL)].filter((c) => shown(c) && !isLayoutSeg(c));
-      const keyed = ctrls.map((c, i) => [keyOf(c, i), c]);
-      const next = keyed.find(([k]) => !seen.has(k));
+      const unseen = () => {
+        const ctrls = [...pop.querySelectorAll(CTRL_SEL)]
+          .filter((c) => shown(c) && !isLayoutSeg(c) && !c.closest(".blockr-tray-nav__index, .blockr-tray-nav__tabs"));
+        return { ctrls, keyed: ctrls.map((c, i) => [keyOf(c, i), c]) };
+      };
+      let { ctrls, keyed } = unseen();
+      let next = keyed.find(([k]) => !seen.has(k));
+      // Nothing new in the group on show: try the others, in order. A gear
+      // rebuilt from scratch opens on its first group again, so every pass
+      // looks through all of them.
+      const groupsLeft = groupNames();
+      while (!next && groupsLeft.length) {
+        await showGroup(groupsLeft.shift());
+        pop = gearPopover();
+        if (!pop) break;
+        await unfold(pop, id, false);
+        ({ ctrls, keyed } = unseen());
+        next = keyed.find(([k]) => !seen.has(k));
+      }
       state.log.push(`${id} gear: ${ctrls.length} visible of ${pop.querySelectorAll(CTRL_SEL).length}, next ${next ? next[0] : "none"}`);
       if (!next) break;
       const [key, c] = next;

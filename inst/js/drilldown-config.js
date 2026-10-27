@@ -55,6 +55,102 @@
 (() => {
   'use strict';
 
+  // The tray's groups (design system, "The gear tray"): every section of
+  // every block falls into one of these, in this order, so a user meets the
+  // same five in a table and in a chart. Blockr.trayNav (blockr.ui) draws
+  // them; without it the tray stays one long column.
+  const TRAY_GROUPS = [
+    ['data', 'Data'], ['sort', 'Sort'], ['format', 'Format'],
+    ['titles', 'Titles'], ['interact', 'Interaction']
+  ];
+  // Presentation, split into the subsections the grouped tray shows. A role
+  // missing here lands in Look.
+  /** @type {{ key: string, group: string, title: string, ord: number, roles: string[] }[]} */
+  const PRES_SUBSECTIONS = [
+    { key: 'order', group: 'sort', title: 'Order', ord: 0, roles: ['sort_by', 'sort_dir'] },
+    { key: 'shown', group: 'sort', title: 'Rows shown', ord: 10, roles: ['top_n', 'missing'] },
+    { key: 'look', group: 'format', title: 'Look', ord: 0,
+      roles: ['look', 'collapsible', 'orientation', 'bar_mode', 'facet_layout'] },
+    { key: 'numbers', group: 'format', title: 'Numbers', ord: 10, roles: ['format', 'unit', 'pct_of'] },
+    { key: 'bars', group: 'format', title: 'Bars', ord: 20,
+      roles: ['value_labels', 'axis', 'bar_width', 'baseline'] },
+    { key: 'marks', group: 'format', title: 'Marks', ord: 30,
+      roles: ['summary', 'whiskers', 'connect_centers', 'box_points', 'smoother',
+              'band_window', 'band_size', 'band_min_n', 'band_id', 'connect',
+              'lo', 'hi', 'line_width_mult', 'dot_size_mult'] },
+    { key: 'lines', group: 'format', title: 'Reference lines', ord: 40,
+      roles: ['value_lines', 'x_lines', 'identity_line', 'ref_hi', 'ref_lo'] },
+    { key: 'counts', group: 'format', title: 'Counts', ord: 50, roles: ['count_on', 'count_col'] },
+    { key: 'facets', group: 'format', title: 'Facets', ord: 60, roles: ['facet_scales', 'facet_cols'] },
+    { key: 'tools', group: 'interact', title: 'Reader tools', ord: 0,
+      roles: ['search', 'sortable', 'download'] }
+  ];
+
+  // Picker tiles (design: _scratch/icon-language), edge to edge: a drawing
+  // over its name, in an auto-fill grid. Like the segmented control, a click
+  // on the chosen tile does nothing. An option offered but not available
+  // here (`disabled`, `title` says why) is drawn greyed and skipped by the
+  // arrow keys. Exposed as Blockr.buildTiles for the summary column editor.
+  /**
+   * @param {HTMLElement} parent
+   * @param {Array<{ value: string, label: string, icon: string, disabled?: boolean, title?: string }>} options
+   * @param {string} current @param {(v: string) => void} onPick
+   * @returns {HTMLElement}
+   */
+  function buildTiles(parent, options, current, onPick) {
+    const row = document.createElement('div');
+    row.className = 'dd-layout-tiles';
+    row.setAttribute('role', 'radiogroup');
+    /** @type {HTMLButtonElement[]} */
+    const btns = [];
+    const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
+      b.classList.toggle('dd-layout-tile--on', j === i);
+      b.setAttribute('aria-checked', j === i ? 'true' : 'false');
+      b.tabIndex = j === i ? 0 : -1;
+    });
+    options.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dd-layout-tile';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('data-value', o.value);
+      const face = document.createElement('span');
+      face.className = 'dd-layout-tile-face';
+      face.innerHTML = o.icon;
+      const name = document.createElement('span');
+      name.className = 'dd-layout-tile-name';
+      name.textContent = o.label;
+      b.append(face, name);
+      if (o.disabled) {
+        b.setAttribute('aria-disabled', 'true');
+        b.classList.add('is-disabled');
+        if (o.title) b.setAttribute('data-blockr-tooltip', o.title);
+      }
+      b.addEventListener('click', () => {
+        if (o.disabled || b.classList.contains('dd-layout-tile--on')) return;
+        select(i);
+        onPick(o.value);
+      });
+      b.addEventListener('keydown', (e) => {
+        const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
+          : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        let j = i;
+        do { j = (j + step + btns.length) % btns.length; } while (j !== i && options[j].disabled);
+        const next = btns[j];
+        next.focus();
+        next.click();
+      });
+      btns.push(b);
+      row.appendChild(b);
+    });
+    const cur = options.findIndex((o) => o.value === current);
+    select(cur < 0 ? 0 : cur);
+    parent.appendChild(row);
+    return row;
+  }
+
   class DrilldownConfig {
     /** @param {VizDrilldownHost} host */
     constructor(host) {
@@ -75,6 +171,14 @@
       this._atLayer = null;
       /** @type {((e: Event) => void) | null} */
       this._atScrollSync = null;
+      // The grouped tray: whether this render groups its sections, the
+      // group the next section joins and its place there, and the group the
+      // user last opened (kept for the session, like the open folds).
+      this._grouped = false;
+      this._grp = 'data';
+      this._ord = 0;
+      /** @type {string | null} */
+      this._group = null;
     }
 
     // Rebuild the popover from the host's CURRENT config/columns, dropping
@@ -312,6 +416,14 @@
         role.options.every((/** @type {any} */ o) => o.value === 'on' || o.value === 'off');
     }
 
+    // A segmented role whose options all carry a drawing (`icon`) draws as
+    // tiles, on a row of its own (the table block's Look).
+    /** @param {any} role */
+    _isTileRole(role) {
+      return !!role && role.kind === 'segmented' && Array.isArray(role.options) &&
+        role.options.every((/** @type {any} */ o) => !!o.icon);
+    }
+
     /** @param {string} key @param {*} val */
     _rememberRole(key, val) {
       const role = this._role(key);
@@ -414,6 +526,10 @@
       }
 
       pop.innerHTML = '';
+      this._grouped = spec.groups !== false && typeof Blockr !== 'undefined' &&
+        typeof Blockr.trayNav === 'function';
+      this._grp = 'data';
+      this._ord = 0;
 
       // a11y: the gear tray is a configuration dialog. The design system
       // gives the tray no visible heading ("The gear tray"), so the host's
@@ -494,14 +610,35 @@
       // { value, options: [{ value, label }], onPick(value), fields? }.
       // `fields` are roles the switch gates (the groups layout's `by`): they
       // follow it in the same section, each on a row of its own.
+      // `title` names the section; `hint` (a list of text parts, a part
+      // { strong } drawn bold) says what the chosen layout gives. Options
+      // with an `icon` draw as tiles: a drawing of the table, the name below.
+      this._ord = 0;
       if (spec.layoutSwitch) {
         const ls = spec.layoutSwitch;
-        const sec = this._sectionEl('Rows are');
+        const sec = this._sectionEl(ls.title || 'Rows are');
         sec.classList.add('dd-section--layout');
         // The segmented control ignores a click on the selected segment.
         // ls.value is the layout when the tray was drawn and may be stale
         // by the time of the click, so it is no guard.
-        this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        if (ls.options.every((/** @type {any} */ o) => o.icon)) {
+          this._buildTiles(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        } else {
+          this._buildPill(sec, ls.options, ls.value, (/** @type {string} */ v) => ls.onPick(v));
+        }
+        if (ls.hint && ls.hint.length) {
+          const h = document.createElement('div');
+          h.className = 'dd-layout-hint';
+          for (const part of ls.hint) {
+            if (typeof part === 'string') h.appendChild(document.createTextNode(part));
+            else {
+              const b = document.createElement('strong');
+              b.textContent = part.strong;
+              h.appendChild(b);
+            }
+          }
+          sec.appendChild(h);
+        }
         for (const key of (ls.fields || [])) this._renderRole(sec, key);
       }
 
@@ -522,6 +659,7 @@
       // column list): the engine provides the section chrome, the host
       // renders the body. Rendered ABOVE Mapping — the summaries ARE the
       // block's substance; grouping follows them.
+      this._ord = 10;
       for (const cs of (spec.customSections || [])) {
         const sec = this._sectionEl(cs.title);
         // The host owns the body's layout, so it takes the whole row.
@@ -551,6 +689,7 @@
       // extras (chart: value + func) sit here unless the host splits them
       // into a trailing aggTitle section, or owns them in the Aggregation
       // checkbox section (aggregatable hosts — the group lives there).
+      this._ord = 20;
       const mapNeeded = spec.requiredMap.length || shownOpt.length ||
         remaining.length || (!spec.aggregatable && mapExtra.length);
       if (mapNeeded) {
@@ -582,7 +721,7 @@
       // order (Aggregation → Drill-down → Coloring → Row color), so every
       // block's gear reads the same top-to-bottom: what it shows, how it
       // looks, what it can do.
-      this._renderSection('Presentation', spec.presentation);
+      this._renderPresentation(spec.presentation);
 
       // COLOR (before the optional sections, so every tray ends with
       // Titles, the folds, then the prepare script) — a PLAIN section (deliberately NOT a checkbox capability:
@@ -594,6 +733,8 @@
       //   shadings — true renders the repeatable VALUE-encoding rules
       //     ("Shade cells [mode] on [cols]") via shadingsList()/
       //     onShadingsChange() (table only; a tile has no cell matrix).
+      this._grp = 'format';
+      this._ord = 5;
       if (spec.colorSection) {
         const sec = this._sectionEl('Color');
         this._renderRole(sec, spec.colorSection.colorKey);
@@ -605,6 +746,8 @@
       // Titles — chart/table text (title, subtitle, caption). Its own titled
       // section so the free-text rows don't read as layout options; hosts
       // opt in via spec.titles.
+      this._grp = 'titles';
+      this._ord = 0;
       if (spec.titles && spec.titles.length) {
         this._renderTitles(spec.titles);
       }
@@ -616,6 +759,8 @@
       // summaries reduce the whole frame to a single totals row (grand totals);
       // with a group, one row per group level. The group picker (mapExtra) and
       // the repeatable summaries list both render inside this section.
+      this._grp = 'data';
+      this._ord = 25;
       if (spec.aggregatable) {
         const hasMetrics = !!(cfg.summaries && cfg.summaries.length);
         // spec.aggSeedsFromGroup === false (the tile): the group is a MAPPING
@@ -659,6 +804,8 @@
       // the filter-column picker; unchecking clears it. The external-control
       // send (spec.ctrlSection) nests INSIDE the open section: it rides on the
       // drill's clicks, so without drill there is nothing to send.
+      this._grp = 'interact';
+      this._ord = 10;
       if (spec.drillToggle) {
         this._renderToggleColumnSection('Drill-down', 'drill', spec.drillToggle,
           spec.drillDefault,
@@ -673,9 +820,13 @@
       // The external-control send nests inside here too (see above).
       if (this.h.drillAutoLabel || this.h.drillHint) this._renderDrillSection();
 
+      this._grp = 'data';
+      this._ord = 90;
       this._renderScriptSection();
 
       if (this.h.afterTypeChange) this.h.afterTypeChange();
+
+      if (this._grouped) this._groupSections(pop);
 
       // Rebuild done, content height is back — restore the scroll position
       // captured before the wipe (see above).
@@ -832,7 +983,7 @@
           onToggle: (on) => { this._setSecOpen('titles', on); this._rerender(); }
         }
       });
-      if (!open) return;
+      if (!open && !this._grouped) return;
       sec.classList.add('dd-section--titles');
       for (const key of keys) this._renderTitleRow(sec, key);
     }
@@ -1334,8 +1485,14 @@
      *   when checked.
      */
     _sectionEl(titleText, opts = {}) {
+      // In the grouped tray a group is a page of its own, so nothing in it
+      // folds: a fold's section is drawn open, its title plain.
+      if (this._grouped && opts.fold) opts = Object.assign({}, opts, { fold: undefined });
       const sec = document.createElement('div');
       sec.className = 'dd-section';
+      sec.dataset.ddGroup = this._grp;
+      sec.dataset.ddOrder = String(this._ord);
+      sec.dataset.ddTitle = titleText || '';
       const h = document.createElement('div');
       h.className = 'dd-section-title';
       if (opts.toggle) {
@@ -1453,7 +1610,7 @@
           onToggle: (o) => { this._setSecOpen(foldKey, o); this._rerender(); }
         }
       });
-      return open ? sec : null;
+      return (open || this._grouped) ? sec : null;
     }
 
     // The checkbox that switches an optional section's feature on: the first
@@ -1589,6 +1746,78 @@
       }
     }
 
+    // Presentation: one section in the plain tray; in the grouped tray its
+    // roles split into the subsections of PRES_SUBSECTIONS, each joining its
+    // group (Sort, Format or Interaction).
+    /** @param {any[]} entries */
+    _renderPresentation(entries) {
+      if (!this._grouped) { this._renderSection('Presentation', entries); return; }
+      const list = this._filterEntries(entries || []);
+      const look = PRES_SUBSECTIONS.find(sub => sub.key === 'look');
+      /** @type {Map<any, any[]>} */
+      const buckets = new Map();
+      for (const e of list) {
+        const sub = PRES_SUBSECTIONS.find(x => x.roles.includes(e.role)) || look;
+        if (!buckets.has(sub)) buckets.set(sub, []);
+        /** @type {any[]} */ (buckets.get(sub)).push(e);
+      }
+      for (const sub of PRES_SUBSECTIONS) {
+        const items = buckets.get(sub);
+        if (!items) continue;
+        this._grp = sub.group;
+        this._ord = sub.ord;
+        this._renderEntries(this._sectionEl(sub.title), items);
+      }
+    }
+
+    // Hand the rendered sections to Blockr.trayNav, sorted into the five
+    // groups. Anything drawn straight into the tray (the chart's type tiles,
+    // the finished-table badge) becomes an untitled section at the top of
+    // Data first.
+    /** @param {HTMLElement} pop */
+    _groupSections(pop) {
+      const trayNav = Blockr.trayNav;
+      if (!trayNav) return;
+      // Moving a section into the navigation's pane takes the focus off
+      // whatever had it (a column row just moved with Alt+Down); it goes back
+      // once the pane is in place.
+      const active = document.activeElement;
+      let i = 0;
+      for (const ch of Array.from(pop.children)) {
+        if (!(ch instanceof HTMLElement) || ch.classList.contains('dd-section')) continue;
+        const s = document.createElement('div');
+        s.className = 'dd-section dd-section--custom';
+        s.dataset.ddGroup = 'data';
+        s.dataset.ddOrder = String(-10 + i++);
+        s.dataset.ddTitle = ch.classList.contains('dd-popover-types') ? 'Chart type' : '';
+        pop.insertBefore(s, ch);
+        s.appendChild(ch);
+      }
+      const secs = /** @type {HTMLElement[]} */ (Array.from(pop.children))
+        .filter(el => el.classList.contains('dd-section'));
+      const groups = TRAY_GROUPS.map(([key, title]) => ({
+        key, title,
+        sections: secs.map((el, idx) => ({ el, idx }))
+          .filter(o => o.el.dataset.ddGroup === key)
+          .sort((a, b) => (Number(a.el.dataset.ddOrder) - Number(b.el.dataset.ddOrder)) || (a.idx - b.idx))
+          .map(o => ({
+            el: o.el,
+            title: o.el.dataset.ddTitle || '',
+            titleEl: /** @type {HTMLElement | null} */ (o.el.querySelector(':scope > .dd-section-title'))
+          }))
+      }));
+      const nav = trayNav(groups, {
+        current: this._group || undefined,
+        onPick: (k) => { this._group = k; }
+      });
+      pop.appendChild(nav.el);
+      this._group = nav.current();
+      if (active instanceof HTMLElement && active !== document.activeElement &&
+          pop.contains(active)) {
+        active.focus({ preventScroll: true });
+      }
+    }
+
     /** @param {string} titleText @param {any[]} entries */
     _renderSection(titleText, entries) {
       const list = this._filterEntries(entries);
@@ -1617,7 +1846,7 @@
         !this._hasVal(this._cfg()[key]);
       row.className = 'dd-form-row dd-role-' + key +
         (paired ? ' dd-role-paired' : '') + (opts.band ? ' dd-band-row' : '') +
-        (unset ? ' dd-role-unset' : '');
+        (unset ? ' dd-role-unset' : '') + (this._isTileRole(role) ? ' dd-role-tiles' : '');
 
       // Boolean option -> a single self-describing checkbox row: the checkbox
       // label carries the affirmative meaning (the on-option label), so the
@@ -1992,20 +2221,37 @@
       lbl.textContent = 'Shade cells';
       wrap.appendChild(lbl);
 
+      // The mode is a tile each, drawn in colour (Blockr.SHADE_TILE_ICONS);
+      // the columns it shades follow on the line under the tiles.
+      const tileOpts = modeOpts.map((/** @type {any} */ o) => {
+        const value = typeof o === 'string' ? o : o.value;
+        const label = typeof o === 'string' ? o.charAt(0).toUpperCase() + o.slice(1) : o.label;
+        return { value, label, icon: SHADE_TILE_ICONS[value] || '' };
+      });
+      const tiled = tileOpts.every((/** @type {any} */ o) => !!o.icon);
+
       shadings.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
+        const entry = document.createElement('div');
+        entry.className = 'dd-shading';
+        if (tiled) {
+          buildTiles(entry, tileOpts, s.mode || 'diverging',
+            (/** @type {string} */ v) => { s.mode = v; commit(); });
+        }
         const row = document.createElement('div');
         row.className = 'dd-value-row dd-shading-row';
 
-        const modeWrap = document.createElement('div');
-        modeWrap.className = 'dd-picker-wrap dd-value-agg';
-        if (S && S.single) {
-          const lo = this._labelOnly(modeOpts, s.mode || 'diverging');
-          S.single(modeWrap, {
-            options: lo.options, selected: lo.selected,
-            onChange: (/** @type {string} */ v) => { s.mode = lo.toValue(v); commit(); }
-          });
+        if (!tiled) {
+          const modeWrap = document.createElement('div');
+          modeWrap.className = 'dd-picker-wrap dd-value-agg';
+          if (S && S.single) {
+            const lo = this._labelOnly(modeOpts, s.mode || 'diverging');
+            S.single(modeWrap, {
+              options: lo.options, selected: lo.selected,
+              onChange: (/** @type {string} */ v) => { s.mode = lo.toValue(v); commit(); }
+            });
+          }
+          row.appendChild(modeWrap);
         }
-        row.appendChild(modeWrap);
 
         const on = document.createElement('span');
         on.className = 'dd-pair-connector';
@@ -2035,7 +2281,8 @@
           shadings.splice(i, 1); commit(); this._rerender();
         });
         row.appendChild(rm);
-        wrap.appendChild(row);
+        entry.appendChild(row);
+        wrap.appendChild(entry);
       });
 
       const add = document.createElement('button');
@@ -2439,6 +2686,10 @@
           wrap.className = 'dd-pill-wrap';
           wrap.appendChild(box.el);
           parent.appendChild(wrap);
+        } else if (this._isTileRole(role)) {
+          this._buildTiles(parent, role.options, cur, (/** @type {string} */ val) => {
+            cfg[key] = val; cb(); this.h.onChange(key);
+          });
         } else {
           this._buildPill(parent, role.options, cur, (/** @type {string} */ val) => {
             cfg[key] = val; cb(); this.h.onChange(key);
@@ -2918,6 +3169,20 @@
       parent.appendChild(wrap);
     }
 
+    // A row of tiles, one per option: the option's drawing (`icon`, an SVG
+    // string, usually one of TILE_ICONS) over its name. Like the segmented
+    // control, a click on the chosen tile does nothing. An option offered but
+    // not available here (`disabled`, `title` says why) is drawn greyed and
+    // skipped by the arrow keys.
+    /**
+     * @param {HTMLElement} parent
+     * @param {Array<{ value: string, label: string, icon: string, disabled?: boolean, title?: string }>} options
+     * @param {string} current @param {(v: string) => void} onPick
+     */
+    _buildTiles(parent, options, current, onPick) {
+      return buildTiles(parent, options, current, onPick);
+    }
+
     // A fixed choice of two or three short values, all in view: blockr.ui's
     // segmented control, at the field height.
     /**
@@ -3361,6 +3626,139 @@
   const ns = /** @type {BlockrNamespace} */ (
     (typeof Blockr !== 'undefined') ? Blockr
       : (window.Blockr = window.Blockr || /** @type {BlockrNamespace} */ ({})));
+  // The picker tiles' drawings, one language for every tile in the package
+  // (_scratch/icon-language): a 48 x 32 box drawn at 48 x 32 px, marks inside
+  // a 4px inset, everything in currentColor so the tile's state colours it.
+  // Inks: solid marks; words and sub-marks at half; areas, boxes and the
+  // table header band as a 20% tint; row rules and grids as a faint line.
+  // Lines and outlines 1.5px with round ends, sub-marks 1px.
+  const TILE_ICONS = (() => {
+    /** @type {Record<string, string>} */
+    const INK = {
+      m: 'fill="currentColor"',
+      w: 'fill="currentColor" fill-opacity=".5"',
+      t: 'fill="currentColor" fill-opacity=".2"',
+      ln: 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"',
+      sub: 'fill="none" stroke="currentColor" stroke-opacity=".5"',
+      rule: 'fill="none" stroke="currentColor" stroke-opacity=".2"'
+    };
+    /** @param {number} x @param {number} y @param {number} w @param {number} h @param {string} k @param {number} [rx] */
+    const R = (x, y, w, h, k, rx) =>
+      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (rx == null ? 1 : rx) + '" ' + INK[k] + '/>';
+    /** @param {number} x @param {number} y @param {number} r @param {string} [k] */
+    const C = (x, y, r, k) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" ' + INK[k || 'm'] + '/>';
+    /** @param {string} d @param {string} k */
+    const P = (d, k) => '<path d="' + d + '" ' + INK[k] + '/>';
+    // A bar on the baseline: rounded top, square foot.
+    /** @param {number} x @param {number} y @param {number} w @param {number} h */
+    const B = (x, y, w, h) => P('M' + x + ' ' + (y + h) + 'V' + (y + 1) + 'a1 1 0 0 1 1-1h' + (w - 2) +
+      'a1 1 0 0 1 1 1V' + (y + h) + 'Z', 'm');
+    const BASE = P('M4 28.5H44', 'sub');
+    /** @param {number} [h] */
+    const HEAD = (h) => R(4, 4, 40, h || 5, 't', 1.5);
+    /** @param {number[]} xs @param {number[]} ws @param {number} y @param {string} k */
+    const words = (xs, ws, y, k) => ws.map((w, i) => R(xs[i], y, w, 2, k)).join('');
+    const C4 = [7, 18, 28, 37];
+    const RADAR = 'M24 5.2L30.85 13.77L29.64 23.77L20.47 20.85L16.01 13.4Z';
+
+    /** @type {Record<string, string>} */
+    const D = {
+      bar: B(7, 14, 8, 14) + B(20, 6, 8, 22) + B(33, 18, 8, 10) + BASE,
+      histogram: [[8, 7], [14, 14], [20, 22], [26, 17], [32, 10], [38, 4]]
+        .map(([x, h]) => R(x, 28 - h, 5, h, 'm', 0)).join('') + BASE,
+      waterfall: P('M13 14.5H16M23 8.5H26M33 16.5H36', 'sub') + B(6, 14, 7, 14) +
+        R(16, 8, 7, 6, 'm') + R(26, 8, 7, 9, 'w') + B(36, 17, 7, 11) + BASE,
+      pie: C(24, 16, 12, 't') + C(24, 16, 12, 'ln') + P('M24 16V4A12 12 0 0 1 34.39 22Z', 'm'),
+      treemap: R(6, 4, 18, 24, 'm') + R(26, 4, 16, 13, 'm') + R(26, 19, 7, 9, 'm') + R(35, 19, 7, 9, 'm'),
+      boxplot: [[15, 6, 11, 21, 26, 16], [33, 10, 14, 23, 27, 18]].map(([x, w0, q1, q3, w1, md]) =>
+        P('M' + x + ' ' + w0 + 'V' + q1 + 'M' + x + ' ' + q3 + 'V' + w1, 'sub') +
+        R(x - 5, q1, 10, q3 - q1, 't', 0) + R(x - 5, q1, 10, q3 - q1, 'ln', 0) +
+        P('M' + (x - 5) + ' ' + md + 'H' + (x + 5), 'ln')).join(''),
+      pointrange: P('M12 10V26M24 6V20M36 9V22', 'ln') + C(12, 18, 2.5) + C(24, 12, 2.5) + C(36, 15, 2.5),
+      radar: P('M24 4L35.41 12.29L31.05 25.71L16.95 25.71L12.59 12.29Z', 'rule') +
+        P('M24 16L24 4M24 16L35.41 12.29M24 16L31.05 25.71M24 16L16.95 25.71M24 16L12.59 12.29', 'rule') +
+        P(RADAR, 't') + P(RADAR, 'ln'),
+      scatter: [[8, 24], [14, 20], [22, 23], [30, 18], [38, 20], [11, 15], [19, 12], [27, 9], [34, 11], [41, 5]]
+        .map(([x, y]) => C(x, y, 2)).join(''),
+      line: P('M4 24L12 18L20 21L28 11L36 14L44 6', 'ln'),
+      area: P('M4 28V20L12 15L20 18L28 9L36 12L44 6V28Z', 't') + P('M4 20L12 15L20 18L28 9L36 12L44 6', 'ln') + BASE,
+      band: P('M4 14L12 10L20 13L28 5L36 8L44 4V16L36 20L28 17L20 25L12 22L4 26Z', 't') +
+        P('M4 20L12 16L20 19L28 11L36 14L44 10', 'ln'),
+      gantt: R(6, 5, 18, 5, 'm') + R(14, 13.5, 20, 5, 'm') + R(24, 22, 18, 5, 'm'),
+
+      // The table block: what a row is ...
+      records: HEAD() + words(C4, [7, 6, 6, 5], 5.5, 'm') +
+        /** @type {Array<[number, number[]]>} */ ([[12, [8, 5, 6, 4]], [16.5, [7, 6, 5, 5]], [21, [9, 4, 6, 4]], [25.5, [6, 5, 6, 5]]])
+          .map(([y, ws]) => words(C4, ws, y, 'w')).join(''),
+      groups: HEAD() + words([7, 20, 34], [8, 6, 6], 5.5, 'm') +
+        [[13.5, 8, 12, 0], [19.5, 9, 7, 1], [25.5, 7, 9, -1]].map(([c, lw, bw, o]) =>
+          R(7, c - 1, lw, 2, 'w') + R(20, c - 1.5, bw, 3, 'm') +
+          P('M' + (34 + o) + ' ' + c + 'H' + (43 + o), 'sub') +
+          R(36.5 + o, c - 2, 4, 4, 't', 0) + R(36.5 + o, c - 2, 4, 4, 'sub', 0)).join(''),
+      variables: HEAD() + words([24, 32, 40], [4, 4, 4], 5.5, 'm') +
+        /** @type {Array<[number, number, number[]]>} */ ([[11, 12, [14, 17]], [20.5, 9, [23.5, 26.5]]])
+          .map(([y, nw, ss]) => R(7, y, nw, 2, 'm') +
+            ss.map((sy, i) => R(10, sy, i ? 5 : 7, 2, 'w') + words([24, 32, 40], [4, 4, 4], sy, 'w')).join('')).join(''),
+
+      // ... and how it looks.
+      look_table: HEAD() + words(C4, [7, 6, 6, 5], 5.5, 'm') + P('M4 16H44M4 22H44', 'rule') +
+        /** @type {Array<[number, number[]]>} */ ([[12.5, [8, 5, 6, 4]], [18.5, [7, 6, 5, 5]], [24.5, [9, 4, 6, 4]]])
+          .map(([y, ws]) => words(C4, ws, y, 'w')).join(''),
+      look_compact: HEAD(4) + words([6, 15, 24, 33], [7, 6, 6, 5], 5, 'm') +
+        [10, 13, 16, 19, 22, 25].map((y, j) =>
+          words([6, 15, 24, 33], [8, 5, 6, 4].map((w) => w - (j % 2)), y, 'w')).join(''),
+      look_cards: [[4.5, 4.5], [25.5, 4.5], [4.5, 17], [25.5, 17]].map(([x, y], i) =>
+        R(x, y, 18, 10.5, 'sub', 2) + R(x + 3, y + 2.5, [8, 6, 9, 7][i], 2, 'w') +
+        R(x + 3, y + 6, [10, 8, 11, 9][i], 2.5, 'm')).join('')
+    };
+    /** @type {Record<string, string>} */
+    const out = {};
+    for (const k of Object.keys(D)) {
+      out[k] = '<svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true">' + D[k] + '</svg>';
+    }
+    return out;
+  })();
+  ns.TILE_ICONS = TILE_ICONS;
+  // The table gear's Show tiles (a summary column's mark) and Shade cells
+  // tiles, drawn in the same 48 x 32 box (_scratch/icon-language,
+  // table-tiles.js). A Show drawing is three rows of the column: a header
+  // band, a name per row, the mark. Sparkline, interval and dumbbell have
+  // one mark per summary type, so they are not offered as tiles; their
+  // drawings wait for the Add a column menu. The shading drawings are the
+  // one place a tile is drawn in colour, since the choice is about colour;
+  // red and blue stand in for the board theme's ramp, which stays in R.
+  ns.SHOW_TILE_ICONS = {
+    bar: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.25" width="22" height="3.5" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="18.75" width="14" height="3.5" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.25" width="8" height="3.5" rx="1" fill="currentColor"/></svg>',
+    number: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="33" y="12.75" width="9" height="2.5" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="36" y="19.25" width="6" height="2.5" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="31" y="25.75" width="11" height="2.5" rx="1" fill="currentColor"/></svg>',
+    dot: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 14H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="36" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 20.5H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="28" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 27H42" fill="none" stroke="currentColor" stroke-opacity=".2"/><circle cx="22" cy="27" r="2" fill="currentColor"/></svg>',
+    tile: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="11.25" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="17.75" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.45"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="24.25" width="24" height="5.5" rx="1" fill="currentColor" fill-opacity="0.2"/></svg>',
+    pointrange: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M20 14H38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="30" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M24 20.5H41" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 27H31" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="27" r="2" fill="currentColor"/></svg>',
+    box: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 14H24M33 14H40" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="24" y="12" width="9" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="24" y="12" width="9" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 12V16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M22 20.5H27M36 20.5H42" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="27" y="18.5" width="9" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="27" y="18.5" width="9" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 18.5V22.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 27H21M28 27H33" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="21" y="25" width="7" height="4" rx="0" fill="currentColor" fill-opacity=".2"/><rect x="21" y="25" width="7" height="4" rx="0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 25V29" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    text: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.75" width="8" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="12.75" width="9" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="19.25" width="7" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="19.25" width="8" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.75" width="9" height="2.5" rx="1" fill="currentColor"/><rect x="29" y="25.75" width="7" height="2.5" rx="1" fill="currentColor" fill-opacity=".5"/></svg>',
+    sparkline: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 15L22 13L26 14.5L30 12L34 15.5L38 13.5L42 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 19.5L22 20.5L26 22L30 21L34 19L38 18.5L42 20.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M18 29L22 28L26 26.5L30 27L34 26L38 25L42 25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    interval: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="12.5" width="6" height="3" rx="1" fill="currentColor"/><rect x="28" y="12.5" width="9" height="3" rx="1" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="21" y="19" width="12" height="3" rx="1" fill="currentColor"/><rect x="36" y="19" width="6" height="3" rx="1" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="18" y="25.5" width="4" height="3" rx="1" fill="currentColor"/><rect x="25" y="25.5" width="5" height="3" rx="1" fill="currentColor"/><rect x="33" y="25.5" width="8" height="3" rx="1" fill="currentColor"/></svg>',
+    dumbbell: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="40" height="5" rx="1.5" fill="currentColor" fill-opacity=".2"/><rect x="7" y="5.5" width="8" height="2" rx="1" fill="currentColor"/><rect x="22" y="5.5" width="10" height="2" rx="1" fill="currentColor"/><path d="M4 17.25H44M4 23.75H44" fill="none" stroke="currentColor" stroke-opacity=".2"/><rect x="7" y="13" width="8" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M21 14H37" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M21 11.8L23.2 14L21 16.2L18.8 14Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="37" cy="14" r="2" fill="currentColor"/><rect x="7" y="19.5" width="9" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M24 20.5H33" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M24 18.3L26.2 20.5L24 22.7L21.8 20.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="20.5" r="2" fill="currentColor"/><rect x="7" y="26" width="7" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M19 27H40" fill="none" stroke="currentColor" stroke-opacity=".5"/><path d="M19 24.8L21.2 27L19 29.2L16.8 27Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="27" r="2" fill="currentColor"/></svg>'
+  };
+  /** @type {Record<string, string>} */
+  const SHADE_TILE_ICONS = {
+    diverging: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="10" height="8" fill="#dc2626" fill-opacity="0.72"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="4" width="10" height="8" fill="#dc2626" fill-opacity="0.24"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.16"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.64"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="12" width="10" height="8" fill="#dc2626" fill-opacity="0.4"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.08"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.48"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.8"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.24"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="20" width="10" height="8" fill="#dc2626" fill-opacity="0.56"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.72"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="20" width="10" height="8" fill="#dc2626" fill-opacity="0.08"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>',
+    sequential: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.04"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.28"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.48"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="4" width="10" height="8" fill="#2563eb" fill-opacity="0.72"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.2"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.44"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.64"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="12" width="10" height="8" fill="#2563eb" fill-opacity="0.8"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.52"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.12"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.76"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="20" width="10" height="8" fill="#2563eb" fill-opacity="0.36"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>',
+    bar: '<svg viewBox="0 0 48 32" aria-hidden="true"><rect x="4" y="5.5" width="8.1" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="5.5" width="2.7" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="5.5" width="1.8" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="5.5" width="7.2" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="7" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="13.5" width="4.5" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="13.5" width="0.9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="13.5" width="5.4" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="13.5" width="9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="15" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="4" y="21.5" width="2.7" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="6.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="14" y="21.5" width="6.3" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="16.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="24" y="21.5" width="8.1" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="26.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><rect x="34" y="21.5" width="0.9" height="5" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="36.5" y="23" width="5" height="2" rx="1" fill="currentColor" fill-opacity=".5"/><path d="M4 12H44M4 20H44M14 4V28M24 4V28M34 4V28" fill="none" stroke="currentColor" stroke-opacity=".2"/></svg>'
+  };
+  ns.SHADE_TILE_ICONS = SHADE_TILE_ICONS;
+  ns.buildTiles = buildTiles;
+  // The table block's three layouts, for its two gears (table.js for
+  // records and variables, summarize-table.js for groups), and its looks.
+  ns.TABLE_LAYOUTS = [
+    { value: 'records', label: 'List', icon: TILE_ICONS.records },
+    { value: 'groups', label: 'Per group', icon: TILE_ICONS.groups },
+    { value: 'variables', label: 'Per variable', icon: TILE_ICONS.variables }
+  ];
+  ns.TABLE_LOOKS = [
+    { value: 'table', label: 'Table', icon: TILE_ICONS.look_table },
+    { value: 'compact', label: 'Compact', icon: TILE_ICONS.look_compact },
+    { value: 'cards', label: 'Cards', icon: TILE_ICONS.look_cards }
+  ];
   ns.DrilldownConfig = DrilldownConfig;
   ns.SentenceSlots = SentenceSlots;
   window.DrilldownConfig = DrilldownConfig;

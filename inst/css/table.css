@@ -361,7 +361,6 @@
 .dd-table-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
-  font-style: italic;
   padding: 4px 2px 0;
   white-space: pre-line;
 }
@@ -374,6 +373,22 @@
    preview's, which has no gear and keeps its own layout. */
 :is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
   gap: 6px;
+}
+/* A layout switch swaps the block's engine containers. Chrome's scroll
+   anchoring would then move a scrolled panel to keep some node in place, so
+   the table jumped by hundreds of pixels; the panel keeps its scroll. */
+.blockr-table-engine { overflow-anchor: none; }
+
+/* Layout E (chart.css .vz-head): the title band sits in the header, on its
+   left, laid out as the chart's. It wraps before the tools, and in the
+   header it has no hairline under it, as the chart's has none. */
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head > .dd-table-titles {
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head {
+  margin-bottom: 6px;
 }
 
 

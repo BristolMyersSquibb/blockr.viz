@@ -5,6 +5,10 @@
 # Loads blockr.viz from BLOCKR_VIZ_SRC (the source tree under test) when set;
 # library(blockr.viz) would test whatever version is installed.
 
+# BLOCKR_UI_SRC does the same for blockr.ui, for a viz branch that needs an
+# unreleased blockr.ui.
+ui_src <- Sys.getenv("BLOCKR_UI_SRC")
+if (nzchar(ui_src)) pkgload::load_all(ui_src, quiet = TRUE)
 src <- Sys.getenv("BLOCKR_VIZ_SRC")
 if (nzchar(src)) pkgload::load_all(src, quiet = TRUE) else library(blockr.viz)
 library(blockr.core)

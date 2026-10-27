@@ -16,8 +16,25 @@
    "line",
    "*gantt"
   ],
+  "groups": [
+   "*Data",
+   "Sort",
+   "Format",
+   "Titles",
+   "Interaction"
+  ],
   "sections": [
    {
+    "group": "data",
+    "rows": [
+     {
+      "other": "dd-popover-types dd-popover-types-tiles",
+      "text": "AggregatedbarpietreemapboxplotpointrangeradarbandIndividualscatterlinegantt"
+     }
+    ]
+   },
+   {
+    "group": "data",
     "title": "Mapping",
     "rows": [
      {
@@ -116,7 +133,23 @@
     ]
    },
    {
-    "title": "Presentation",
+    "group": "data",
+    "title": "Prepare script",
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Use a prepare script",
+        "checked": false
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "group": "sort",
+    "title": "Order",
     "rows": [
      {
       "role": "sort_by",
@@ -155,7 +188,13 @@
         "selected": "Ascending"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "group": "format",
+    "title": "Counts",
+    "rows": [
      {
       "role": "count_on",
       "label": "Group counts",
@@ -172,7 +211,61 @@
         ]
        }
       ]
+     }
+    ]
+   },
+   {
+    "group": "titles",
+    "title": "Titles",
+    "rows": [
+     {
+      "role": "title",
+      "label": "Title",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. AEs by {ARM}"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value"
+      ]
      },
+     {
+      "role": "subtitle",
+      "label": "Subtitle",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. {func} of {label(@y)}[, by {@color}]"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value. A setting becomes a control on the block. [ ] drops its clause when the setting is empty."
+      ]
+     },
+     {
+      "role": "caption",
+      "label": "Caption",
+      "controls": [
+       {
+        "kind": "text",
+        "value": "",
+        "placeholder": "e.g. {filters} or N = {n} records"
+       }
+      ],
+      "help": [
+       "Type @ for a setting or a value"
+      ]
+     }
+    ]
+   },
+   {
+    "group": "interact",
+    "title": "Reader tools",
+    "rows": [
      {
       "role": "download",
       "controls": [
@@ -186,22 +279,19 @@
     ]
    },
    {
-    "title": "Titles",
-    "fold": "closed",
-    "summary": "None",
-    "rows": []
-   },
-   {
+    "group": "interact",
     "title": "Drill-down",
-    "fold": "closed",
-    "summary": "Off",
-    "rows": []
-   },
-   {
-    "title": "Prepare script",
-    "fold": "closed",
-    "summary": "None",
-    "rows": []
+    "rows": [
+     {
+      "controls": [
+       {
+        "kind": "checkbox",
+        "label": "Filter downstream on a click",
+        "checked": false
+       }
+      ]
+     }
+    ]
    }
   ]
  },

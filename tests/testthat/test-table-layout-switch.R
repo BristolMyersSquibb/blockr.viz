@@ -1,4 +1,4 @@
-# The table block's "Rows are" switch, clicked around in a browser on the
+# The table block's layout tiles, clicked around in a browser on the
 # sweep board (apps/table-sweep, probe in layout-switch.js). After every
 # pick:
 #
@@ -9,6 +9,11 @@
 #   (c) closing and reopening the gear shows the same (after every second
 #       pick; the other picks go to the gear the switch left open)
 #   (d) the block's state (`layout`) is the pick
+#   (e) from the click until it settles, the block always shows one open
+#       tray and a table: the gear does not vanish and the table does not
+#       jump up for a few frames while the engines swap; and a scrolled
+#       panel keeps its scroll (the first picks run scrolled down 200px,
+#       the first visit to each engine among them)
 #
 # Each block starts in one layout (Listing: records, Groups: groups, Table 1:
 # variables). It runs a fixed sequence, then for each layout a seeded walk of
@@ -23,7 +28,7 @@ run_layout_switch <-
   requireNamespace("pkgload", quietly = TRUE) &&
   chromote_works()
 
-test_that("one click on \"Rows are\" switches, and the gear follows", {
+test_that("one click on a layout tile switches, and the gear follows", {
   skip_if_not(run_layout_switch, "no headless browser, or under R CMD check")
   Sys.setenv(NOT_CRAN = "true")
   withr::local_envvar(BLOCKR_VIZ_SRC = normalizePath(test_path("..", "..")))
@@ -75,7 +80,12 @@ test_that("one click on \"Rows are\" switches, and the gear follows", {
       },
       if (!identical(saved(id), want)) {
         sprintf("(d) state is %s", saved(id) %||% "NULL")
-      }
+      },
+      if (isTRUE(after$gaps > 0L) || isTRUE(after$blanks > 0L)) {
+        sprintf("(e) of %d samples, %d without one open tray, %d without a table",
+                after$samples, after$gaps, after$blanks)
+      },
+      if (isTRUE(after$scrollLost)) "(e) the panel lost its scroll"
     )
     if (length(bad)) {
       fails <<- c(fails, sprintf("%s, %s, pick %s: %s", id, step, pick,
@@ -132,6 +142,7 @@ test_that("one click on \"Rows are\" switches, and the gear follows", {
                      tolower(b$start))
     expect_identical(saved(b$id), tolower(b$start))
     js(sprintf("blockrLayout.openGear('%s')", b$id))
+    js(sprintf("blockrLayout.scroll('%s', 200)", b$id))
 
     # The sequence that showed the bug, from the groups layout.
     run(b$id, "Groups", "to start")
