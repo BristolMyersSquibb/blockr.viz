@@ -1,4 +1,4 @@
-# Lane chart: distribution statistics -----------------------------------------
+# Table model, groups layout: distribution statistics -----------------------
 #
 # The lane chart's marks draw FINISHED numbers: R computes every statistic and
 # ships positions as percentages plus display values; the JS only draws
