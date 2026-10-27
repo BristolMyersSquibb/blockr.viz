@@ -344,8 +344,9 @@
         connect: c.connect || 'straight',
         identity_line: c.identity_line || 'off',
         // "" clears every line, so these are always sent.
-        value_lines: c.value_lines == null ? '' : String(c.value_lines),
-        x_lines: c.x_lines == null ? '' : String(c.x_lines),
+        // As text with the names ("Target: 4; 6"); R parses it.
+        value_lines: NS.linesText(c.value_lines, c.value_line_names),
+        x_lines: NS.linesText(c.x_lines, c.x_line_names),
         // [] clears every range, so this is always sent.
         x_ranges: Array.isArray(c.x_ranges) ? c.x_ranges : [],
         box_points: c.box_points || 'none',

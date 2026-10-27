@@ -328,9 +328,10 @@ chart_arguments <- function() {
     ),
     x_ranges = new_arg_spec(
       paste0(
-        "Named stretches of x shaded behind the marks (scatter/line/area), ",
+        "Named stretches of x shaded behind the marks (scatter/line/area/bar), ",
         "as an object of name -> [from, to], e.g. {\"Recession\": ",
-        "[\"2008-01-01\", \"2009-06-30\"]}. Dates or numbers, matching x."
+        "[\"2008-01-01\", \"2009-06-30\"]}. Dates, numbers or category ",
+        "values, matching x. On a bar they shade whole bars."
       ),
       example = NULL
     ),
@@ -449,12 +450,15 @@ chart_arguments <- function() {
     ),
     x_lines = new_arg_spec(
       paste0(
-        "Helper lines: each number draws one dashed VERTICAL guide line at ",
-        "that x position. Plain numbers, never column names. Empty = no ",
-        "lines. Scatter/line charts only."
+        "Helper lines across x: each value draws one dashed guide line at ",
+        "that x position, a number, a date (\"2026-10-21\") or a category ",
+        "value, matching x. On a bar they cross the category axis, either ",
+        "way round; on a bar over dates a date marks the bar whose period ",
+        "holds it. An object {\"Listed\": \"2026-10-21\"} labels the line. ",
+        "Values, never column names. Empty = no lines. Scatter, line, area ",
+        "and bar."
       ),
-      example = NULL,
-      type = arg_array(arg_number())
+      example = NULL
     ),
     line_width = new_arg_spec(
       paste0(
@@ -606,7 +610,10 @@ chart_guidance <- function() {
     "\n- \"estimates with confidence intervals\" (a forest plot) ->",
     "type=\"scatter\", x=\"estimate\", y=\"term\", or the other way round",
     "with ymin=\"lower\", ymax=\"upper\" for vertical error bars",
-    "\n- \"line at x = 3\" -> x_lines=[3]; \"line at y = 2\" or \"target",
+    "\n- \"line at x = 3\" -> x_lines=[3]; \"mark the launch on 2026-10-21\" ->",
+    "x_lines={\"Launch\": \"2026-10-21\"}, also on a bar over dates; on a",
+    "bar over labels (weeks) write the label exactly as the axis shows it;",
+    "\"line at y = 2\" or \"target",
     "of 2\" -> y_lines=[2], also on bar/boxplot charts either way round.",
     "\n- \"coloured by Z\" -> color=\"Z\"",
     "\n- \"faceted by Z\" -> facet=\"Z\". The panels share one scale by",

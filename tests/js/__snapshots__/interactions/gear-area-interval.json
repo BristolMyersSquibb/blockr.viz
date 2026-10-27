@@ -98,7 +98,7 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 3 or 2, 5"
+        "placeholder": "e.g. 3 or Listed: 2026-10-21"
        }
       ]
      },
@@ -109,7 +109,7 @@
        {
         "kind": "text",
         "value": "",
-        "placeholder": "e.g. 2 or 1, 4"
+        "placeholder": "e.g. 2 or Target: 4"
        }
       ]
      },

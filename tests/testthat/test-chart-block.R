@@ -450,6 +450,28 @@ test_that("value_lines / x_lines parse numbers and drop junk", {
   expect_null(value_line_state(new_chart_block(y_lines = "junk")))
 })
 
+test_that("x_lines take dates and category values, named or not", {
+  expect_identical(x_line_state(new_chart_block(x_lines = "2026-10-21")),
+                   "2026-10-21")
+  expect_identical(
+    x_line_state(new_chart_block(x_lines = c(Listed = as.Date("2026-10-21")))),
+    c(Listed = "2026-10-21")
+  )
+  # The gear's text, named as in the shaded ranges.
+  expect_identical(
+    x_line_state(new_chart_block(x_lines = "Listed: 2026-10-21; W43 19 Oct")),
+    c(Listed = "2026-10-21", "W43 19 Oct")
+  )
+  # Numbers stay numbers, so saved boards read back unchanged.
+  expect_identical(x_line_state(new_chart_block(x_lines = "2, 5")), c(2, 5))
+  expect_identical(x_line_state(new_chart_block(x_lines = list(3))), 3)
+  expect_null(x_line_state(new_chart_block(x_lines = "")))
+
+  # y_lines take names from the gear's text too, and stay numeric.
+  expect_identical(value_line_state(new_chart_block(y_lines = "Target: 4; 6")),
+                   c(Target = 4, 6))
+})
+
 test_that("a board carrying the retired vlines/hlines/ref_x/ref_y loads", {
   # The old names are gone, not aliased: the board restores without its
   # lines, and a re-save does not write them back out.

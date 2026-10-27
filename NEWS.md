@@ -15,6 +15,14 @@
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
   "2009-06-30"))`). The gear edits them as one line, "Shaded":
   `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.
+* `x_lines` take dates and category values as well as numbers, as
+  `x_ranges` does: `x_lines = c(Listed = "2026-10-21")`. A `Date` is placed
+  on a date axis; before, it landed in 1970 and a date string was dropped.
+  On a bar, `x_lines` and `x_ranges` mark the category axis either way
+  round: a value names its bar, and on bars over dates a date marks the bar
+  whose period holds it. The gear writes names the way the shaded ranges
+  do, `Listed: 2026-10-21; 2026-11-02`, for `y_lines` too, so a name set in
+  code survives an edit.
 * `label` on a scatter, line or area writes the column's value beside each
   point that has one, and the gear offers it under "Add mapping". On a bar,
   pie or treemap it writes the value on each bar, slice or tile whose rows

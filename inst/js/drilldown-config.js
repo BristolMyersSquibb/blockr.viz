@@ -2511,9 +2511,10 @@
         const autoVal = (cfg[key] == null && typeof role.autoValue === 'function')
           ? String(role.autoValue(cfg) || '') : '';
         // `toText` / `fromText` (optional role hooks): a value that is not
-        // a string (the chart's shaded ranges) is edited as one line.
+        // a string (the chart's shaded ranges, its named lines) is edited as
+        // one line. They get the config too, for a value kept in two keys.
         inp.value = (cfg[key] == null) ? autoVal
-          : (typeof role.toText === 'function' ? role.toText(cfg[key]) : String(cfg[key]));
+          : (typeof role.toText === 'function' ? role.toText(cfg[key], cfg) : String(cfg[key]));
         if (role.ph) inp.placeholder = role.ph;
         const wrap = document.createElement('div');
         wrap.className = 'dd-text-wrap';
@@ -2559,7 +2560,7 @@
           if (inp.value === committed) return;
           committed = inp.value;
           everCommitted = true;
-          cfg[key] = typeof role.fromText === 'function' ? role.fromText(inp.value) : inp.value;
+          cfg[key] = typeof role.fromText === 'function' ? role.fromText(inp.value, cfg) : inp.value;
           cb();
           this.h.onChange(key);
           syncChip();
@@ -2916,7 +2917,8 @@
         this.h.onChange(key);
         this.h.onClearFilter();
       } else {
-        cfg[key] = role.kind === 'number' ? Number(val) : val;
+        cfg[key] = role.kind === 'number' ? Number(val)
+          : (typeof role.fromText === 'function' ? role.fromText(val, cfg) : val);
         this.h.onChange(key);
       }
       // The gear may be open on the same role: its row shows a stale value
@@ -3353,9 +3355,12 @@
      * @param {{key: string, role: any} | null} [num] */
     _edit(key, anchor, num = null) {
       const ddc = this.h.ddc();
-      const cur = this.h.config()[num ? num.key : key];
+      const cfgNow = this.h.config();
+      const cur = cfgNow[num ? num.key : key];
+      const textRole = num ? null : ddc._role(ddc._slotCfgKey(key));
       const before = cur == null ? ''
-        : (Array.isArray(cur) ? cur.join(', ') : String(cur));
+        : (textRole && typeof textRole.toText === 'function') ? textRole.toText(cur, cfgNow)
+          : (Array.isArray(cur) ? cur.join(', ') : String(cur));
       const input = document.createElement('input');
       // A number keeps type=number for the keyboard (design system, "Text and
       // number fields"); its spinner is hidden in chart.css.

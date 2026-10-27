@@ -93,9 +93,14 @@
 #'   `"monotone"` (smoothed without overshoot), `"step-start"`,
 #'   `"step-middle"` or `"step-end"`. A saved chart keeps the value it was
 #'   saved with.
-#' @param y_lines,x_lines Numbers at which dashed guide lines are drawn.
-#'   `y_lines` run across the value axis (y on a scatter or line, the value
-#'   axis of a bar or boxplot either way round); `x_lines` across a numeric x.
+#' @param y_lines,x_lines Positions at which dashed guide lines are drawn. A
+#'   name labels its line: `x_lines = c(Listed = "2026-10-21")`. `y_lines`
+#'   are numbers across the value axis (y on a scatter or line, the value
+#'   axis of a bar or boxplot either way round). `x_lines` run across x on a
+#'   scatter, line or area, and across the category axis of a bar either way
+#'   round: numbers, dates or date-times, or category values, matching x, as
+#'   in `x_ranges`. On a bar over dates, a date between two bars marks the bar
+#'   whose period holds it.
 #' @param ymin,ymax Columns holding the lower and upper end of an interval per
 #'   row. On a line they draw a shaded band, on a scatter error bars. Several
 #'   columns draw several intervals, the first the outermost: `ymin =
@@ -108,7 +113,8 @@
 #'   the last observed point on. Line and area.
 #' @param x_ranges Named stretches of x shaded behind the marks, a named list
 #'   of `c(from, to)`: `list(Recession = c("2008-01-01", "2009-06-30"))`.
-#'   Dates, date-times or numbers, matching x.
+#'   Dates, date-times, numbers or category values, matching x. On a bar they
+#'   shade whole bars, along the category axis.
 #' @param legend Where the colour legend goes: `"bottom"` (default, under the
 #'   plot), `"top"` (between the subtitle and the plot), `"marks"` (the names
 #'   written on the marks: at a line's or an area's end, beside the last bar
@@ -400,7 +406,7 @@ new_chart_block <- function(
   # erroring, because this value also arrives from MCP and from saved state.
   facet_cols <- facet_cols_state(facet_cols)
   y_lines <- num_vec_state(y_lines)
-  x_lines <- num_vec_state(x_lines)
+  x_lines <- x_vec_state(x_lines)
   # Logicals. The gear's segmented controls send "on"/"off", and boards
   # saved before these were logicals stored that string.
   identity_line <- bool_state(identity_line)
@@ -1599,15 +1605,15 @@ new_chart_block <- function(
             if (!is.null(msg$identity_line)) {
               upd(r_identity_line, bool_state(msg$identity_line))
             }
-            # Helper lines: the numlist control sends a comma-separated string
-            # ("2, 5"); num_vec_state parses it and drops non-numeric junk. ""
+            # Helper lines: the gear sends text ("Target: 4; 6"); the state
+            # helpers parse it, y_lines dropping non-numeric junk. ""
             # is a real value here (clearing every line), so it must reach the
             # slot as NULL rather than being skipped -- hence no nn() guard.
             if (!is.null(msg$value_lines)) {
               upd(r_value_lines, num_vec_state(msg$value_lines))
             }
             if (!is.null(msg$x_lines)) {
-              upd(r_x_lines, num_vec_state(msg$x_lines))
+              upd(r_x_lines, x_vec_state(msg$x_lines))
             }
             # Shaded ranges as [{name, from, to}]; [] clears them.
             if (!is.null(msg$x_ranges)) {

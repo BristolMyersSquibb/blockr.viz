@@ -503,6 +503,11 @@
       : 0;
     NS.axes.addValueLines(series, valAxis, !vertical, asFraction, cfg.value_lines, ink,
       cfg.value_line_names);
+    // A histogram's bins are ranges of a number, not categories to name.
+    if (!m.histogram) {
+      NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_line_names,
+        cfg.x_ranges, ink);
+    }
     // `legend: "marks"`: the level names on the stack's segments. After the
     // series the tooltip and the highlight read (the first `colors.length`).
     let namesRight = 0;

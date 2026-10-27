@@ -277,8 +277,13 @@
         itemStyle: { color: (ink && ink.muted) || '#6b7280', opacity: 0.08 },
         label: { position: 'insideTop', color: (ink && ink.muted) || '#6b7280',
                  fontSize: (ink && ink.fontSize) || 12 },
-        data: ranges.map((/** @type {any} */ r) =>
-          [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }])
+        // On a category axis an end names its category, or a date the one
+        // whose period holds it, as the x lines do.
+        data: ranges.map((/** @type {any} */ r) => (m.x.type === 'category'
+          ? [{ name: r.name || '', xAxis: NS.axes.catOf(r.from, m.x.cats || [], true) },
+             { xAxis: NS.axes.catOf(r.to, m.x.cats || [], true) }]
+          : [{ name: r.name || '', xAxis: encodeX(r.from) }, { xAxis: encodeX(r.to) }]))
+          .filter((/** @type {any} */ d) => d[0].xAxis != null && d[1].xAxis != null)
       };
     }
 

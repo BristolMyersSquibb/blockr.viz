@@ -129,6 +129,56 @@
     return out;
   };
 
+  // Helper lines as one line of text: "Listed: 2026-10-21; 3". A name is
+  // optional and labels its line, as in the shaded ranges. The positions and
+  // their names travel in two keys (`x_lines` / `x_line_names`).
+  /** @param {any} v @param {any} names @returns {string} */
+  const linesText = (v, names) => {
+    if (!Array.isArray(v)) return v == null ? '' : String(v);
+    const nm = Array.isArray(names) ? names : [];
+    const named = nm.some((n) => n);
+    return v.map((x, i) => (nm[i] ? nm[i] + ': ' : '') + x).join(named ? '; ' : ', ');
+  };
+  /** @param {string} text @returns {{ values: any[], names: string[] }} */
+  const parseLines = (text) => {
+    /** @type {any[]} */
+    const values = [];
+    /** @type {string[]} */
+    const names = [];
+    /** @param {string} t */
+    const val = (t) => (Number.isFinite(Number(t)) ? Number(t) : t);
+    for (const raw of String(text ?? '').split(/[;,]/)) {
+      const part = raw.trim();
+      if (!part) continue;
+      // The colon needs a space after it, so a time of day is no name.
+      const m = /^([^:]+):\s+(.*)$/.exec(part);
+      const nm = m ? m[1].trim() : '';
+      const v = (m ? m[2] : part).trim();
+      if (!v) continue;
+      // "2 5": numbers apart by spaces are two lines.
+      const tok = v.split(/\s+/);
+      if (tok.length > 1 && tok.every((t) => Number.isFinite(Number(t)))) {
+        tok.forEach((t, i) => { values.push(Number(t)); names.push(i ? '' : nm); });
+      } else {
+        values.push(val(v));
+        names.push(nm);
+      }
+    }
+    return { values, names };
+  };
+  /** A role's text hooks for lines whose names live in `namesKey`.
+   * @param {string} namesKey */
+  const linesHooks = (namesKey) => ({
+    toText: (/** @type {any} */ v, /** @type {any} */ cfg) => linesText(v, cfg && cfg[namesKey]),
+    fromText: (/** @type {string} */ text, /** @type {any} */ cfg) => {
+      const p = parseLines(text);
+      if (cfg) cfg[namesKey] = p.names;
+      return p.values;
+    }
+  });
+  NS.linesText = linesText;
+  NS.parseLines = parseLines;
+
   // Aggregation vocabulary + the group/value/func role triple + the
   // value-follows-agg reconcile now live in the shared drilldown-agg.js so the
   // table and tile render the identical control. Loaded before this file.
@@ -267,14 +317,20 @@
     // line rather than a line at NA.
     // `slot: 'entry'`: named in the block's sentence, the word is typed over
     // in place (a line at 32.5 is not in any list). See SentenceSlots._edit.
-    x_lines: { label: 'Vertical', kind: 'text', ph: 'e.g. 3 or 2, 5', slot: 'entry' },
+    // Across x on scatter/line, across the categories on a bar: a number, a
+    // date or a category, named or not ("Listed: 2026-10-21").
+    x_lines: { label: (/** @type {any} */ cfg) =>
+                 (cfg.chart_type === 'bar' ? 'Category lines' : 'Vertical'),
+               kind: 'text', ph: 'e.g. 3 or Listed: 2026-10-21', slot: 'entry',
+               ...linesHooks('x_line_names') },
     // Across the value axis. On scatter/line that is y, so the pair reads
     // Vertical / Horizontal; on the aggregated family it follows
     // `orientation` and is the only helper line, so it is named by its job.
     value_lines: { label: (/** @type {any} */ cfg) =>
                      (cfg.chart_type === 'scatter' || NS.isLineType(cfg.chart_type)
                        ? 'Horizontal' : 'Reference lines'),
-                   kind: 'text', ph: 'e.g. 2 or 1, 4', slot: 'entry' },
+                   kind: 'text', ph: 'e.g. 2 or Target: 4', slot: 'entry',
+                   ...linesHooks('value_line_names') },
     // Named stretches of x, shaded behind the marks. The browser holds
     // [{name, from, to}]; the field edits it as one line (rangesText).
     x_ranges: { label: 'Shaded', kind: 'text',
@@ -603,6 +659,9 @@
         { role: 'box_points', types: ['boxplot'] },
         // Across the value axis, whichever way the chart lies.
         { role: 'value_lines', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
+        // Across the categories: a date or week marked on the bars.
+        { role: 'x_lines', types: ['bar'] },
+        { role: 'x_ranges', types: ['bar'] },
         { role: 'format', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         { role: 'unit', types: ['bar', 'waterfall', 'boxplot', 'pointrange'] },
         // Count labels: the axis surface applies to the category-axis charts
