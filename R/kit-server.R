@@ -120,28 +120,34 @@ viz_capture_observer <- function(input, id, capture) {
 #' block's state, one reactiveVal per spec argument, and wires what every
 #' block has:
 #'
-#' - the revision tracker, the busy cue while the input recomputes;
+#' - the revision tracker;
 #' - the settings observer, which runs the block's `normalize()` over every
 #'   change from the gear;
 #' - the selection and capture observers;
-#' - the payload output;
+#' - the payload output, with the busy cue while the input recomputes, and
+#'   the download menu when the block gives an exhibit;
 #' - the drill sender, when the block gives claims.
 #'
 #' Everything particular to the block comes from `setup(kit)`: it builds the
 #' block's reactives from `kit` (`input`, `output`, `session`, `spec`,
 #' `state`, `revs`, `el`, the element id the view draws into, `data`,
 #' `claim` and `transient` for clicks sent to a drill target, and `capture`,
-#' the browser's last picture) and returns them in a list:
+#' the browser's last picture). A spec without `drill_target` never goes
+#' transient: it holds every click. `setup()` returns a list:
 #'
 #' - `payload`: a function of no arguments returning viz_payload()'s list;
 #' - `expr`: the reactive filter expression the block emits;
+#' - `exhibit`: a function of no arguments returning the block's
+#'   new_viz_exhibit(); optional. The kit registers the download handlers
+#'   (viz_downloads()) and puts the menu into the payload's
+#'   `derived$downloads`;
 #' - `normalize`: a function of the full value list, the block's rules
 #'   between arguments (chart_normalize(), table_normalize()); optional;
 #' - `claims`: a reactive of the conditions a drill target receives
 #'   (dd_ctrl_claims()); optional, no sender without it.
 #'
-#' Anything else, a capture service or a download menu, `setup()` wires
-#' itself with what `kit` holds.
+#' Anything else, a capture service say, `setup()` wires itself with what
+#' `kit` holds.
 #'
 #' @param id The block's module id.
 #' @param spec The block's `viz_spec`.
@@ -155,15 +161,16 @@ viz_capture_observer <- function(input, id, capture) {
 viz_block_server <- function(id, spec, data, init, view, setup) {
   shiny::moduleServer(id, function(input, output, session) {
     kit <- viz_kit(input, output, session, spec, data, init, view)
-    viz_busy_observer(kit)
     parts <- setup(kit)
-    stopifnot(is.function(parts$payload), is.function(parts$expr))
+    stopifnot(is.function(parts$payload), shiny::is.reactive(parts$expr))
     viz_settings_observer(input, view, spec, kit$state, kit$revs,
                           normalize = parts$normalize %||% identity)
     viz_selection_observer(input, view, kit$state, kit$revs, kit$transient,
                            kit$claim)
     viz_capture_observer(input, view, kit$capture)
-    viz_payload_output(output, input, view, parts$payload)
+    viz_payload_output(output, input, view,
+                       viz_with_downloads(kit, parts, view),
+                       session = session, el = kit$el)
     if (!is.null(parts$claims)) {
       viz_drill_sender(kit, parts$claims, init$selection)
     }
@@ -189,16 +196,24 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
   )
 }
 
-# The busy cue: the message goes out first and the input is read after it,
-# so a rerun tells the browser before the upstream recompute starts. The
-# view ends the cue once it has drawn; a failed input ends it here.
-viz_busy_observer <- function(kit) {
-  shiny::observe({
-    busy_cue_start(kit$session, kit$el, "drawing")
-    tryCatch(kit$data(), error = function(e) {
-      busy_cue_done(kit$session, kit$el)
-    })
-  }, priority = 200L)
+# The payload with the download menu in `derived$downloads`, when the block
+# gives an exhibit. `derived` stays a named list, an object on the wire.
+viz_with_downloads <- function(kit, parts, view) {
+  if (!is.function(parts$exhibit)) {
+    return(parts$payload)
+  }
+  enabled <- if (is.null(kit$state$download)) {
+    function() TRUE
+  } else {
+    function() isTRUE(kit$state$download())
+  }
+  menu <- viz_downloads(parts$exhibit, enabled = enabled,
+                        session = kit$session, filename = view)
+  function() {
+    p <- parts$payload()
+    if (!is.null(p)) p$derived$downloads <- menu()
+    p
+  }
 }
 
 # A drill target receives the claims over the control channel. With a

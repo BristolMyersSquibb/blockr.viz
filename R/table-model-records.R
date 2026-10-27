@@ -65,13 +65,15 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   body <- dt_flat_cells(data, value_cols, num_flag, shading_vis, raw_cols,
                         digits)
   onclick <- dt_onclick(drill, c(label_col, value_cols))
+  widths <- dt_flat_widths(data, label_col, value_cols, body$disp_by_col,
+                           toggles)
   list(
     kind = "flat", n = nrow(data),
     stub = dt_flat_stub(data, label_col, raw_cols, row_hex),
     cells = body$cells, nodrill = dt_flat_nodrill(data, raw_cols),
+    widths = widths, drill = drill,
     thead = thead,
-    colgroup = dt_flat_colgroup(data, label_col, value_cols,
-                                body$disp_by_col, toggles),
+    colgroup = dt_flat_colgroup(widths),
     attr_args = list(
       onclick_col = onclick$col, onclick_idx = onclick$idx, digits = digits,
       color = color, shadings = shadings, num_cols = value_cols[num_flag],
@@ -160,9 +162,31 @@ dt_flat_cell <- function(data, name, num, sv, raw, digits) {
     r[keep] <- as.character(col[keep])
     r
   }
-  list(cell = list(cls = td_cls, disp = disp_full,
-                   raw = raw_full, style = style_full),
+  paint <- if (num && !is.null(sv) && any(keep)) {
+    dt_flat_paint(sv, data, name, col, keep)
+  }
+  list(cell = c(list(cls = td_cls, disp = disp_full,
+                     raw = raw_full, style = style_full,
+                     name = name, label = dt_col_label(col, name), num = num),
+                paint),
        disp = disp_out)
+}
+
+# A shaded numeric column's paint as values, for a browser that draws the
+# cells: `bg` and `fg` per row for a heatmap, `bar` (a share of the cell, 0
+# to 1) and `bar_fill` for a data bar. NA where a cell is unpainted.
+dt_flat_paint <- function(sv, data, name, col, keep) {
+  n <- nrow(data)
+  if (identical(sv$kind, "bar")) {
+    w <- rep(NA_real_, n)
+    if (is.finite(sv$max) && sv$max > 0) {
+      w[keep] <- round(pmax(0, pmin(1, abs(as.numeric(col[keep])) / sv$max)),
+                       4L)
+    }
+    return(list(bar = w, bar_fill = sv$fill))
+  }
+  p <- dt_bg_paint(sv, data, name)
+  list(bg = p$bg, fg = p$fg)
 }
 
 # A shaded numeric column's per-row style chunks, "" where unpainted.
@@ -201,7 +225,9 @@ dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   stub_disp[is.na(stub_disp)] <- "NA"
   list(
     cls  = if (has_bar) "blockr-stub blockr-row-bar" else "blockr-stub",
-    disp = stub_disp,
+    disp = stub_disp, name = label_col,
+    label = dt_col_label(data[[label_col]], label_col),
+    tint = if (has_bar) row_hex,
     raw  = if (label_col %in% raw_cols) {
       r <- as.character(data[[label_col]])
       r
@@ -223,9 +249,8 @@ dt_flat_nodrill <- function(data, raw_cols) {
   }
 }
 
-# The <colgroup>: column widths from the header labels and the cells.
-dt_flat_colgroup <- function(data, label_col, value_cols, disp_by_col,
-                             toggles) {
+# Column widths in px, stub first, from the header labels and the cells.
+dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, toggles) {
   flat_labels <- c(
     dt_col_label(data[[label_col]], label_col) %||% "",
     vapply(value_cols, function(vc) {
@@ -246,19 +271,24 @@ dt_flat_colgroup <- function(data, label_col, value_cols, disp_by_col,
       w <- if (length(dd)) max(nchar(dd, type = "width"), 0L) else 0L
       max(28L, w * 8L + 12L)
     }, numeric(1))
-    htmltools::tags$colgroup(
-      lapply(round(c(stub_w, val_w)), function(w) {
-        htmltools::tags$col(style = sprintf("width: %dpx;", w))
-      })
-    )
-  } else {
-    dt_colgroup(
-      c(label_col, value_cols),
-      c(list(as.character(data[[label_col]])), disp_by_col),
-      labels = flat_labels,
-      wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
-    )
+    return(round(c(stub_w, val_w)))
   }
+  blockr.ui::column_widths_px(
+    col_names = c(label_col, value_cols),
+    col_labels = flat_labels,
+    formatted = lapply(c(list(as.character(data[[label_col]])), disp_by_col),
+                       as.character),
+    wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
+  )
+}
+
+# The <colgroup> from the widths.
+dt_flat_colgroup <- function(widths) {
+  htmltools::tags$colgroup(
+    lapply(widths, function(w) {
+      htmltools::tags$col(style = sprintf("width: %dpx;", as.integer(w)))
+    })
+  )
 }
 
 #' Differentiated message for the flat table's non-renderable states, or NULL
