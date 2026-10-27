@@ -44,6 +44,7 @@ Imports:
     tidyr,
     utils
 Suggests:
+    bit64,
     blockr.ai,
     blockr.assistant,
     blockr.dag,
@@ -52,6 +53,7 @@ Suggests:
     blockr.theme (>= 0.0.0.9002),
     callr,
     chromote,
+    codetools,
     flextable,
     ggplot2,
     grid,
