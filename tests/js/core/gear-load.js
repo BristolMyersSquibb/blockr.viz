@@ -28,6 +28,9 @@ const hasUi = () => {
   const d = findUi();
   return !!d && fs.existsSync(path.join(d, 'blockr-ui.js'));
 };
+/** blockr.ui main, the one with the grouped tray. */
+const hasTrayNav = () => hasUi() &&
+  fs.readFileSync(path.join(findUi(), 'blockr-ui.js'), 'utf8').includes('function trayNav');
 
 const windows = [];
 after(async () => {
@@ -139,4 +142,5 @@ function type(win, inp, text) {
   inp.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter' }));
 }
 
-module.exports = { loadGear, mountGear, payload, lastSet, rows, row, choose, type, hasUi, COLUMNS };
+module.exports = { loadGear, mountGear, payload, lastSet, rows, row, choose, type, hasUi,
+                   hasTrayNav, COLUMNS };

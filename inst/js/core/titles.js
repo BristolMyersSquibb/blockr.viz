@@ -312,7 +312,7 @@
 
     const menu = atMenu(inp, ctx);
     const sync = () => {
-      el.classList.toggle('dd-title-row--dirty', inp.value !== before);
+      (el.closest('.dd-form-row') || el).classList.toggle('dd-title-row--dirty', inp.value !== before);
       const bad = unknownTokens(inp.value, ctx.titles, ctx.columns);
       warn.hidden = !bad.length;
       warn.textContent = bad.length

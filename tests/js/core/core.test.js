@@ -12,7 +12,7 @@ test('the core defines Blockr.viz and nothing else', () => {
   const { win, V } = loadCore({ shiny: false });
   const added = Object.keys(win).filter((k) => !before.has(k));
   assert.deepEqual(added.sort(), ['Blockr']);
-  assert.deepEqual(Object.keys(V).sort(), ['Scope', 'binding', 'spec', 'util']);
+  assert.deepEqual(Object.keys(V).sort(), ['Scope', 'binding', 'gear', 'spec', 'titles', 'util']);
 });
 
 test('loading the core twice keeps the namespace', () => {
