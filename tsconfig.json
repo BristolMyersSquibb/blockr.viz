@@ -11,5 +11,7 @@
     "lib": ["es2021", "dom", "dom.iterable"],
     "types": []
   },
-  "include": ["inst/js/**/*.js", "inst/js/types.d.ts"]
+  "include": ["inst/js/**/*.js", "inst/js/types.d.ts"],
+  // The rewritten JS has its own strict config, tsconfig.core.json.
+  "exclude": ["inst/js/core", "inst/js/spec"]
 }

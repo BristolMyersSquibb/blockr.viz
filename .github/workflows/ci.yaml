@@ -25,6 +25,20 @@ jobs:
           node-version: 22
       - run: npx -y -p typescript@~6.0.0 tsc
 
+  # The rewritten JavaScript (inst/js/core and the generated specs): eslint
+  # with the teardown rules, strict tsc, and its node tests.
+  js-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:core
+
   # The chart's JavaScript in node with happy-dom: characterization
   # snapshots and scaling checks (tests/js/README.md). blockr.ui's controls
   # load from a checkout of its default branch.
