@@ -53,6 +53,7 @@
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
       this.capture = scope.debounce(() => this.sendPicture(), 50);
+      T.tooltip.wire(frame.box, scope, () => this.model);
       /** What the last picture was of. */
       this.pictured = '';
     }

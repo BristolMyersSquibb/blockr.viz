@@ -39,7 +39,7 @@ function groups() {
           { axis: { at: [0, 50, 100], labels: ['1', '15', '30'], foot: true } }),
       col('Trend', { kind: 'sparkline', pl: ['0,30 50,10 100,20', '', '0,10 100,30'],
                      bd: ['0,5 100,5 100,25 0,25', null, null], dx: [100, null, 100],
-                     dy: [55, null, 83], xs: ['1|2|3', '', '1|2'], ys: ['3|1|2', '', '1|3'], rc: 18 }),
+                     dy: [55, null, 83], xs: ['1,2,3', '', '1,2'], ys: ['3,1,2', '', '1,3'], rc: 18 }),
       col('Grade', { kind: 'tile' }, { bg: ['#fee', null, '#c00'], fg: ['#000', null, '#fff'] }),
       col('Mean', null, { num: true, disp: ['1.5', '2.5', null] }),
       col('Terms', null, { disp: ['Headache', '<b>x</b>', 'Nausea'] })
@@ -335,4 +335,84 @@ test('50 groups mounts and unmounts leave no scope open', async () => {
   }
   assert.equal(env.V.Scope.open(), open);
   assert.equal(env.win.document.querySelectorAll('.blockr-summarize-legend').length, 0);
+});
+
+/** Move the pointer onto `node` and return the card's text and node. */
+function hover(t, node) {
+  node.dispatchEvent(new t.win.MouseEvent('mousemove', { bubbles: true, clientX: 10, clientY: 10 }));
+  const tip = t.win.document.querySelector('.blockr-lane-tip');
+  return { tip, text: tip.hidden ? '' : tip.textContent, html: tip.innerHTML };
+}
+
+test('hover: a bar names its value under the row and the column context', () => {
+  const m = groups();
+  m.cols[1].mark.tt = { head: 'Count', meas: 'Rows' };
+  const t = mount(payload({ data: m, config: G }));
+  const c = hover(t, t.cell(1, 1).querySelector('.blockr-summarize-fill'));
+  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'Low');
+  assert.match(c.text, /Count/);
+  assert.match(c.text, /Rows20 \(33%\)/);
+  assert.equal(hover(t, t.cell(1, 1)).text, '');
+});
+
+test('hover: a colour split lists each level, the one under the pointer lit', () => {
+  const m = groups();
+  m.cols[2].mark.tt = { cvar: 'Sex', den: 10, meas: 'Rows' };
+  const t = mount(payload({ data: m, config: G }));
+  const segs = t.cell(1, 2).querySelectorAll('.blockr-summarize-fill');
+  const c = hover(t, segs[1]);
+  const rows = c.tip.querySelectorAll('.dd-tt-row');
+  assert.equal(rows[0].textContent, 'Sex F3 (30%)');
+  assert.ok(rows[0].classList.contains('is-dim'));
+  assert.ok(rows[1].classList.contains('is-hit'));
+  assert.match(c.text, /Rows20 of 10/);
+});
+
+test('hover: a box names its statistics; a pair its clauses', () => {
+  const m = groups();
+  Object.assign(m.cols[4].mark, { nn: [4, null, 2], r: { bc: [35, null, 25], bl: [30, null, 20], bh: [40, null, 30],
+                                                          wl: [10, null, 5], wh: [70, null, 45] },
+                                  tt: { words: { center: 'Median', range: 'Q1–Q3', whisk: 'Tukey' } } });
+  const t = mount(payload({ data: m, config: G }));
+  const box = hover(t, t.cell(0, 4).querySelector('.lane-box'));
+  assert.match(box.text, /n4/);
+  assert.match(box.text, /Median35/);
+  assert.match(box.text, /Box \(Q1–Q3\)30 – 40/);
+  assert.match(box.text, /Whiskers \(Tukey\)10 – 70/);
+  assert.equal(hover(t, t.cell(0, 4).querySelector('.blockr-summarize-boxcell')).text, '');
+  const pr = hover(t, t.cell(0, 6).querySelector('.lane-to'));
+  assert.match(pr.text, /10 to 60/);
+});
+
+test('hover: a swimlane segment says its text and lights its label everywhere', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const seg = t.cell(0, 7).querySelector('.lane-seg');
+  const c = hover(t, seg);
+  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'day 1 to 5');
+  assert.ok(seg.classList.contains('is-same'));
+  assert.ok(t.$('.blockr-table-wrapper').classList.contains('seg-hover'));
+  t.$('.blockr-table-wrapper').dispatchEvent(new t.win.MouseEvent('mouseleave'));
+  assert.ok(c.tip.hidden);
+  assert.equal(seg.classList.contains('is-same'), false);
+});
+
+test('hover: a sparkline names its point; the card goes with the view', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const c = hover(t, t.cell(0, 8).querySelector('.blockr-summarize-spcell'));
+  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, '1');
+  assert.equal(c.tip.querySelector('.dd-tt-row').textContent, '3');
+  t.el.remove();
+  t.trigger(t.el, 'shiny:unbound');
+  return tick(t.win, 5).then(() => {
+    assert.equal(t.win.document.querySelector('.blockr-lane-tip'), null);
+  });
+});
+
+test('hover: a card glyph gives its column\'s card', () => {
+  const m = groups();
+  m.cards = { n: 3, multi: true, label: m.cols[0].disp, cols: [{ label: 'Rows', main: ['10', '20', '30'], glyph: 1 }] };
+  const t = mount(payload({ data: m, config: Object.assign({ look: 'cards' }, G) }));
+  const c = hover(t, t.$$('.tc-row')[0].querySelector('.blockr-summarize-fill'));
+  assert.match(c.text, /^Placebo/);
+  assert.match(c.text, /10 \(17%\)/);
 });

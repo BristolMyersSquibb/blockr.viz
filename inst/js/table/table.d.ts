@@ -456,6 +456,10 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
   };
+  tooltip: {
+    wire(box: HTMLElement, scope: VizScope, model: () => TableModel | null): void;
+    card(model: TableModel, k: number, i: number, cell: Element, t: Element): string;
+  };
   gear: {
     mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;

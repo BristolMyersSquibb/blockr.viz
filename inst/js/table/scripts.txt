@@ -3,6 +3,7 @@
 # tests/js/table/load.js.
 html.js
 marks.js
+tooltip.js
 dom.js
 drill.js
 chrome.js
