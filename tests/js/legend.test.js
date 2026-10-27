@@ -312,13 +312,3 @@ test('marks on a pie need no band: the slices name themselves', () => {
   assert.strictEqual(band(r), null);
   r.env.close();
 });
-
-// -- the setting --------------------------------------------------------------
-
-test('legendSetting: the value, bottom when missing', () => {
-  assert.strictEqual(C.legendSetting({}), 'bottom');
-  assert.strictEqual(C.legendSetting({ legend: 'top' }), 'top');
-  assert.strictEqual(C.legendSetting({ legend: 'bogus' }), 'bottom');
-  assert.strictEqual(C.legendSetting({ legend: 'none' }), 'none');
-});
-

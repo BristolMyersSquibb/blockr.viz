@@ -1,16 +1,9 @@
 // @ts-check
 /**
  * Chart block: what the chart tells the core gear engine (gear-api.md)
- * beyond the spec. The engine builds every row from Blockr.viz.spec.chart;
- * these hooks add what depends on the chart type or the data:
- *
- * - the type tiles in two groups, by how a type treats rows;
- * - which axis is required (the category, and the aggregated column unless
- *   it is a count);
- * - choices drawn from the data or the board: the sort orders, a column's
- *   values for the totals and the highlight, the drill targets;
- * - per-type labels ("Timeline" on a band) and rows that wait for another
- *   setting (`percent_of` for a share, the drill target for a drill).
+ * beyond the spec: the type tiles, which axis is required, choices drawn
+ * from the data or the board (sort orders, column values, drill targets),
+ * per-type labels and rows that wait for another setting.
  */
 (function () {
   'use strict';
@@ -47,14 +40,11 @@
     return lie === 'horizontal' ? { cat: 'y', val: 'x' } : { cat: 'x', val: 'y' };
   };
 
-  /**
-   * @param {any} view The chart view: its rows, column meta and derived.
-   * @returns {VizGearHost}
-   */
+  /** @param {any} view The chart view: its rows, column meta and derived. @returns {VizGearHost} */
   function host(view) {
-    const meta = () => view.columns || [];
+    const meta = () => view.columns;
     /** @param {string} col */
-    const levels = (col) => (col && view.data && view._ix
+    const levels = (col) => (col
       ? view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '')
         .slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }))
       : []);
@@ -66,9 +56,7 @@
     return {
       required(key, v) {
         const type = v.type || 'bar';
-        const fam = NS.familyOf(type);
-        if (fam === 'individual') return key === 'x' || key === 'y';
-        if (fam === 'timeline') return key === 'x' || key === 'y';
+        if (NS.familyOf(type) !== 'aggregated') return key === 'x' || key === 'y';
         const r = roleKeys(v, meta());
         if (key === r.cat) return true;
         const counts = !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
@@ -99,14 +87,14 @@
         const type = v.type || 'bar';
         if (key === 'drill') return [{ value: 'auto', label: autoLabel(type) }];
         if (key === 'drill_target') {
-          const list = (view.derived && view.derived.ctrl_choices) || [];
+          const list = view.derived.ctrl_choices || [];
           return [{ value: '', label: 'None' }].concat(list);
         }
         if (key === 'facet_cols') return FACET_COLS.map((n) => ({ value: n, label: n + ' per row' }));
         if (key === 'sort_by') return sortChoices(type, meta());
         if (key === 'waterfall_totals') return levels(v.x);
         if (key === 'highlight') {
-          const h = v.highlight && typeof v.highlight === 'object' ? Object.keys(v.highlight)[0] : null;
+          const h = v.highlight && Object.keys(v.highlight)[0];
           return h ? levels(h) : [];
         }
         return null;
@@ -132,5 +120,5 @@
     return fixed.concat(cols);
   }
 
-  NS.gear = { host, autoLabel, TILES };
+  NS.gear = { host };
 })();
