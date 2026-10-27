@@ -87,22 +87,27 @@ test_that("compact marks the table and the export carries the paint", {
   expect_true(all(c("RASH", ".bg:RASH", ".fg:RASH") %in% names(df)))
 })
 
-test_that("the block's look is shared by both engines", {
+test_that("the block's look is one setting for every layout", {
   b <- new_table_block(layout = "groups", by = "SUBJ", look = "compact",
                        summaries = tile_summary(fill = "GRADE"))
-  shiny::testServer(b$expr_server,
-                    args = list(data = shiny::reactive(tile_fixture())), {
-    expect_identical(session$returned$state$look(), "compact")
-    session$setInputs(`groups-summarize_table_block_action` = list(
-      action = "config", param = "look", value = "table"
-    ))
-    expect_identical(session$returned$state$look(), "table")
-    # The records engine's rotated titles are the compact look.
-    session$setInputs(`records-drilldown_table_block_action` = list(
-      action = "config", param = "rotate_titles", value = "on"
-    ))
-    expect_identical(session$returned$state$look(), "compact")
-  })
+  set <- function(values) {
+    viz_read_set(viz_block_spec("table"), list(rev = 0L, values = values))
+  }
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", b),
+    {
+      session$flushReact()
+      expr <- session$makeScope("expr")
+      expect_identical(session$returned$state$look(), "compact")
+      expr$setInputs(table_set = set(list(look = "table")))
+      expect_identical(session$returned$state$look(), "table")
+      # The records layout reads the same setting.
+      expr$setInputs(table_set = set(list(look = "compact", layout = "records")))
+      expect_identical(session$returned$state$layout(), "records")
+      expect_identical(session$returned$state$look(), "compact")
+    },
+    args = list(x = b, data = list(data = shiny::reactive(tile_fixture())))
+  )
 })
 
 test_that("group rows of a tile matrix are headers without tiles", {

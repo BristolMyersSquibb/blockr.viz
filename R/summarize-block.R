@@ -21,7 +21,8 @@ new_summarize_table_block <- function(...) {
   args$layout <- "groups"
   # A restore hands over the saved ctor; the result is a table block and
   # saves as one.
-  args[c("ctor", "ctor_pkg")] <- NULL
+  args$ctor <- "new_table_block"
+  args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)
 }
 

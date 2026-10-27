@@ -1588,7 +1588,7 @@ table_guidance <- function() {
 #'   instead of rows (a subject identifier, so a count reads as "subjects
 #'   with at least one event"). In the groups layout a summary counts
 #'   subjects itself, with `func = "count_distinct"` and `col`.
-#' @param pct_of The base of a count's percentage: `"facet"` (the rows or
+#' @param percent_of The base of a count's percentage: `"facet"` (the rows or
 #'   subjects of the column's own facet level) or `"total"` (the table).
 #' @param missing Missing values of a grouping, colour or facet column, and
 #'   of a Table 1 variable: `"level"` (default; shown as "(Missing)", and a
@@ -1596,10 +1596,11 @@ table_guidance <- function() {
 #'   level of their own). The records layout keeps every row: `"level"` heads
 #'   the rows without a `by` value "(Missing)", `"drop"` leaves that header
 #'   blank. As on [new_chart_block()].
-#' @param color Records layout: column whose colours tint the rows. `NULL` =
-#'   the stub column when the board's scale map has it, `""` = off.
+#' @param color Records layout: column whose colors tint the rows.
+#'   `"auto"` (default) = the stub column when the board's scale map has it,
+#'   `NULL` = off.
 #' @param shadings Records layout: cell colour rules, a list of
-#'   `list(mode, cols, domain)` with `mode` one of `"sequential"`,
+#'   `list(mode, columns, domain)` with `mode` one of `"sequential"`,
 #'   `"diverging"`, `"bar"`.
 #' @param format,unit How the numbers print, as on [new_chart_block()]: in the
 #'   records layout's cells, the groups layout's number cells and the value
@@ -1622,10 +1623,11 @@ table_guidance <- function() {
 #'   and the records layout (one card per column); the variables layout has
 #'   no card form and draws as a table. `spans` and `expr` summaries are left
 #'   out of the cards. The old `compact = TRUE` reads as `look = "compact"`.
-#' @param facet_layout,sort_by,sort_dir,top_n,value_labels,axis,bar_width
+#' @param facet_layout,sort_by,sort_dir,top_n,value_labels,column_axis,bar_width
 #'   Groups layout: column order of faceted summaries, row order, a row cap,
 #'   value labels beside the marks, the domain strip under glyph columns, and
-#'   the mark length. See the summarize table.
+#'   the mark length. `sort_dir = NULL` sorts descending by value and
+#'   ascending otherwise.
 #' @param drill Turns the row click on. In the records layout the column the
 #'   click filters on (or `"auto"`, `"source"`); in the groups layout any
 #'   value turns it on and the click filters on the row's groups.
@@ -1634,8 +1636,6 @@ table_guidance <- function() {
 #'   table the claim is resolved in.
 #' @param search,sortable,collapsible Show the search input; allow sorting by
 #'   column headers; allow collapsing group rows.
-#' @param max_height `NULL` (default): the table runs its full length and
-#'   scrolls with its panel. A CSS length caps it.
 #' @param download `TRUE` (default) offers the table for download (xlsx,
 #'   html, pptx), as on [new_chart_block()].
 #' @param title,subtitle,caption Text above and below the table, as on
@@ -1677,436 +1677,71 @@ new_table_block <- function(layout = "records",
                             columns = NULL,
                             summaries = list(),
                             id = NULL,
-                            pct_of = "facet",
+                            percent_of = "facet",
                             missing = "level",
-                            color = NULL,
+                            color = "auto",
                             shadings = list(),
                             format = "number",
                             unit = "",
                             look = "table",
                             facet_layout = "by_summary",
                             sort_by = "value",
-                            sort_dir = "desc",
+                            sort_dir = NULL,
                             top_n = NULL,
                             value_labels = TRUE,
-                            axis = TRUE,
+                            column_axis = TRUE,
                             bar_width = "fit",
                             drill = NULL,
-                            drill_target = "",
-                            drill_table = "",
                             search = TRUE,
                             sortable = TRUE,
                             collapsible = TRUE,
-                            max_height = NULL,
                             download = TRUE,
-                            title = NULL,
-                            subtitle = NULL,
-                            caption = getOption("blockr.viz.default_caption"),
                             stats = "mean_sd",
                             sections = character(),
                             total = FALSE,
                             total_label = "Total",
                             nest = FALSE,
+                            title = NULL,
+                            subtitle = NULL,
+                            caption = getOption("blockr.viz.default_caption"),
+                            drill_target = "",
+                            drill_table = "",
                             script = NULL,
                             script_values = list(),
                             selection = NULL) {
-  # Old argument names in code (the table block's before the rewrite) are
-  # translated here, by the same table the board deserializer uses
-  # (R/table-args.R). Everything else in `...` goes to new_transform_block().
+
+  spec <- viz_block_spec("table")
+  given <- mget(intersect(as.character(names(match.call())[-1L]),
+                          names(spec$args)))
   dots <- list(...)
-  legacy <- intersect(names(dots), table_legacy_names("table"))
-  if (length(legacy)) {
-    cur <- mget(table_formal_names(), envir = environment())
-    tr <- table_legacy_args(c(cur, dots[legacy]), from = "table")
-    for (nm in intersect(names(tr), table_formal_names())) {
-      assign(nm, tr[[nm]])
-    }
-    dots <- dots[setdiff(names(dots), legacy)]
-  }
-  # An old aggregation list passed under the new name.
-  if (table_is_agg_summaries(summaries)) {
-    summaries <- table_agg_to_summaries(summaries)
-  }
+  core <- c("block_name", "block_metadata", "ctor", "ctor_pkg")
+  args <- legacy_ctor_args("table", c(given, dots[setdiff(names(dots), core)]))
+  values <- table_normalize(viz_check(spec, args))
+  # blockr.core reads the starting state from this frame, by argument name.
+  list2env(values, environment())
 
-  layout <- chr_state(layout) %||% "records"
-  if (!layout %in% c("records", "groups", "variables")) layout <- "records"
-  look <- table_look(look)
-  pct_of <- chr_state(pct_of) %||% "facet"
-  if (!pct_of %in% c("facet", "total")) pct_of <- "facet"
-  missing <- chr_state(missing) %||% "level"
-  if (!missing %in% c("drop", "level")) missing <- "level"
-  # Alphabetical order was "label" before it took the chart's "alpha".
-  sort_by <- summarize_sort_by(sort_by)
-  # Number format of the records layout's cells, the chart's set:
-  # "number" (up to two decimals), "compact", "percent" or a whole number of
-  # decimals. `unit` heads the numeric columns.
-  format <- table_format_state(format)
-  unit <- chr_state(trimws(as.character(unlist(unit)))) %||% ""
-  sections <- chr_vec_state(sections) %||% character()
-  # Heal state poisoned by a pre-#144 DAG copy/paste, where a NULL slot came
-  # back as list() (R/state-normalize.R). `color` only collapses the empty
-  # list: "" is meaningful there (tint explicitly off).
-  by <- chr_vec_state(by)
-  rowname <- chr_state(rowname)
-  columns <- chr_vec_state(columns)
-  color <- null_state(color)
-  top_n <- null_state(top_n)
-  summaries <- if (is.list(summaries)) summaries else list()
-  # Old summary keys (stat, from / to, lo / hi, fields, ...) read as the
-  # public ones (R/table-model-groups.R).
-  summaries <- lapply(summaries, lane_public_summary)
-  if (identical(layout, "groups") && !length(summaries)) {
-    summaries <- table_groups_seed()
-  }
-  shadings <- if (is.list(shadings)) shadings else list()
-  script_values <- if (is.list(script_values)) script_values else list()
-  # `id` is also the module id inside the server; keep the column apart.
-  id_col <- chr_state(id)
-  drill <- chr_state(drill)
-  drill_target <- chr_state(drill_target) %||% ""
-  drill_table <- chr_state(drill_table) %||% ""
-  max_height <- chr_state(max_height)
-  # LEGACY: the old table default. Every board saved before the table
-  # scrolled with its panel carries it, not a choice anyone made.
-  if (identical(max_height, "600px")) max_height <- NULL
-  title <- title_state(title)
-  subtitle <- title_state(subtitle)
-  caption <- title_state(caption)
-  selection <- if (is.list(selection) && length(selection)) selection
-
-  # Serialization identity, named because the call below goes through
-  # do.call(), where blockr.core's default (`sys.parent()`) would not find
-  # this function. A restore passes its own ctor / ctor_pkg in `...`.
-  if (!"ctor" %in% names(dots)) {
-    dots$ctor <- "new_table_block"
-    dots$ctor_pkg <- "blockr.viz"
-  }
-
-  args <- c(
-    list(
-      server = function(id, data) {
-        shiny::moduleServer(id, function(input, output, session) {
-          ns <- session$ns
-
-          r_layout <- shiny::reactiveVal(layout)
-
-          # The prepare script runs before every layout (R/table-prepare.R).
-          prep <- table_prepare(data, script, script_values)
-
-          # Settings both layouts share. The block owns them, so a layout
-          # switch keeps them.
-          shared <- list(
-            title = shiny::reactiveVal(title),
-            subtitle = shiny::reactiveVal(subtitle),
-            caption = shiny::reactiveVal(caption),
-            download = shiny::reactiveVal(isTRUE(download)),
-            search = shiny::reactiveVal(isTRUE(search)),
-            sortable = shiny::reactiveVal(isTRUE(sortable)),
-            drill = shiny::reactiveVal(drill),
-            max_height = shiny::reactiveVal(max_height),
-            ctrl_target = shiny::reactiveVal(drill_target),
-            ctrl_table = shiny::reactiveVal(drill_table),
-            # The groups and variables layouts read the same variables and
-            # grouping: switching between them transposes the table.
-            by = shiny::reactiveVal(by),
-            summaries = shiny::reactiveVal(summaries),
-            id = shiny::reactiveVal(id_col),
-            look = shiny::reactiveVal(look),
-            pct_of = shiny::reactiveVal(pct_of),
-            missing = shiny::reactiveVal(missing),
-            format = shiny::reactiveVal(format),
-            unit = shiny::reactiveVal(unit),
-            # The records engine draws cards only in the records layout: the
-            # variables layout has no card form.
-            layout = r_layout,
-            # The input before nesting: the records gear offers its columns
-            # for "Group by".
-            input = prep$data,
-            # The prepare script, for the records gear (the groups engine
-            # takes it as `prep`).
-            prep = prep
-          )
-
-          # Only the active engine sees data. The other one parks: its
-          # reactives stop at req(), so it neither computes nor pushes.
-          gate <- function(which) {
-            shiny::reactive({
-              shiny::req(identical(r_layout(), which))
-              prep$data()
-            })
-          }
-          sel_for <- function(which) if (layout %in% which) selection
-
-          var <- table_variables_server(
-            "variables", gate("variables"), shared = shared,
-            stats = stats, sections = sections, total = total,
-            total_label = total_label, nest = nest
-          )
-
-          # The records engine draws the records layout (the input rows) and
-          # the variables layout (the table summary_table() builds from them).
-          rec_data <- shiny::reactive({
-            lay <- r_layout()
-            shiny::req(lay %in% c("records", "variables"))
-            d <- prep$data()
-            if (identical(lay, "variables")) {
-              args <- table_variables_args(var$config())
-              if (!is.null(args)) d <- do.call(summary_table, c(list(d), args))
-            } else if (length(shared$by()) && is.data.frame(d)) {
-              # Records under headers: the tidy frame nested by `by`.
-              d <- table_nest(d, shared$by(), rec_rowname(),
-                              missing = shared$missing(),
-                              columns = rec$state$value())
-            }
-            d
-          })
-          # Read lazily: the records engine is built just below.
-          rec_rowname <- function() rec$state$rowname()
-
-          rec_sel <- sel_for(c("records", "variables"))
-          rec <- table_records_server(
-            "records", rec_data,
-            rowname = rowname, value = columns, color = color,
-            shadings = shadings, drill = drill, digits = format,
-            max_height = max_height,
-            filter_column = rec_sel$column, filter_values = rec_sel$values,
-            filter_group_cols = rec_sel$group_cols,
-            filter_group_vals = rec_sel$group_vals,
-            filter_col_keys = rec_sel$col_keys,
-            sortable = sortable, collapsible = collapsible, search = search,
-            download = download, title = title, subtitle = subtitle,
-            caption = caption, ctrl_target = drill_target,
-            ctrl_table = drill_table,
-            shared = shared
-          )
-
-          grp_sel <- sel_for("groups")
-          grp <- table_groups_server(
-            "groups", gate("groups"),
-            id_var = id_col, summaries = summaries, by = by,
-            facet_layout = facet_layout, sort_by = sort_by,
-            sort_dir = sort_dir, top_n = top_n, max_height = max_height,
-            search = search, sortable = sortable, axis = axis,
-            value_labels = value_labels, bar_width = bar_width,
-            download = download, title = title, subtitle = subtitle,
-            caption = caption, drill = drill, prep = prep,
-            look = look,
-            ctrl_target = drill_target,
-            ctrl_table = drill_table,
-            filter_column = grp_sel$column, filter_values = grp_sel$values,
-            shared = shared
-          )
-
-          # Layout switch. Either gear sends it as an ordinary config edit on
-          # its engine's action input; the engines ignore the key.
-          set_layout <- function(msg) {
-            if (is.null(msg) || !identical(msg$action %||% "config", "config") ||
-                  !identical(msg$param, "layout")) {
-              return()
-            }
-            v <- as.character(unlist(msg$value))[1L]
-            if (isTRUE(v %in% c("records", "groups", "variables")) &&
-                  !identical(shiny::isolate(r_layout()), v)) {
-              if (identical(v, "groups") &&
-                    !length(shiny::isolate(shared$summaries()))) {
-                shared$summaries(table_groups_seed())
-              }
-              r_layout(v)
-            }
-          }
-          # The records engine leaves the prepare script to the block.
-          shiny::observeEvent(input[["records-drilldown_table_block_action"]], {
-            msg <- input[["records-drilldown_table_block_action"]]
-            set_layout(msg)
-            if (identical(msg$action %||% "config", "config") &&
-                  is.character(msg$param)) {
-              prep$config(msg$param[[1L]], msg$value)
-            }
-          })
-          shiny::observeEvent(input[["groups-summarize_table_block_action"]],
-                              set_layout(input[["groups-summarize_table_block_action"]]))
-
-          output$layout_css <- shiny::renderUI({
-            table_layout_css(ns, r_layout())
-          })
-          # Both engines' layout switches draw the layout from this push,
-          # never from their own last click (table.js, layoutOf).
-          shiny::observe({
-            session$sendCustomMessage("blockr-viz-table-layout", list(
-              ids = c(ns("records-drilldown_table_block"),
-                      ns("groups-summarize_table_block")),
-              layout = r_layout()
-            ))
-          })
-          shiny::outputOptions(output, "layout_css", suspendWhenHidden = FALSE)
-
-          # The cards' script and stylesheet, asked for the first time the
-          # table turns to cards (a table that starts in cards ships them
-          # with its UI). Never withdrawn: a dependency stays loaded.
-          output$cards_dep <- shiny::renderUI({
-            if (identical(shared$look(), "cards")) table_cards_dep()
-          })
-          shiny::outputOptions(output, "cards_dep", suspendWhenHidden = FALSE)
-
-          # The groups engine reports failed custom summaries as conditions;
-          # they count only while that layout is on.
-          cond <- shiny::reactiveValues(error = list())
-          shiny::observe({
-            cond$error <- if (identical(r_layout(), "groups")) {
-              grp$cond$error
-            } else {
-              list()
-            }
-          })
-
-          rs <- rec$state
-          gs <- grp$state
-          r_selection <- function() {
-            sel <- if (identical(r_layout(), "groups")) {
-              list(column = gs$filter_column(), values = gs$filter_values())
-            } else {
-              list(column = rs$filter_column(), values = rs$filter_values(),
-                   group_cols = rs$filter_group_cols(),
-                   group_vals = rs$filter_group_vals(),
-                   col_keys = rs$filter_col_keys())
-            }
-            sel <- sel[!vapply(sel, function(x) is.null(x) || !length(x),
-                               logical(1L))]
-            if (length(sel)) sel
-          }
-
-          list(
-            expr = shiny::reactive({
-              lay <- r_layout()
-              if (identical(lay, "groups")) return(grp$expr())
-              ex <- rec$expr()
-              if (identical(lay, "variables")) {
-                # The drill filter applies to the built table, as it did
-                # when a summary table block fed a table block.
-                built <- table_variables_call(var$config())
-                if (!is.null(built)) {
-                  built[[2L]] <- quote(.(data))
-                  ex <- table_sub_data(ex, built)
-                }
-              } else if (length(shared$by())) {
-                # Records under headers: the output is the input rows, as
-                # without `by`. A header click claims `.group<k>_level`,
-                # which is the k-th `by` column. The nesting, `missing` and
-                # `columns` shape only what the table shows.
-                ex <- table_nest_drill_expr(shared$by(),
-                                            rs$filter_group_cols(),
-                                            rs$filter_group_vals())
-              }
-              # The script feeds the table; the click filters what it shows.
-              prep$wrap_after(ex)
-            }),
-            cond = cond,
-            state = list(
-              layout = r_layout,
-              by = gs$by,
-              rowname = rs$rowname,
-              columns = rs$value,
-              summaries = gs$summaries,
-              id = gs$id_var,
-              color = rs$color,
-              shadings = rs$shadings,
-              format = rs$digits,
-              unit = shared$unit,
-              pct_of = shared$pct_of,
-              missing = shared$missing,
-              look = shared$look,
-              facet_layout = gs$facet_layout,
-              sort_by = gs$sort_by,
-              sort_dir = gs$sort_dir,
-              top_n = gs$top_n,
-              value_labels = gs$value_labels,
-              axis = gs$axis,
-              bar_width = gs$bar_width,
-              drill = shared$drill,
-              drill_target = shared$ctrl_target,
-              drill_table = shared$ctrl_table,
-              search = shared$search,
-              sortable = shared$sortable,
-              collapsible = rs$collapsible,
-              max_height = shared$max_height,
-              download = shared$download,
-              title = shared$title,
-              subtitle = shared$subtitle,
-              caption = shared$caption,
-              stats = var$state$stats,
-              sections = var$state$sections,
-              total = var$state$total,
-              total_label = var$state$total_label,
-              nest = var$state$nest,
-              script = prep$script,
-              script_values = prep$values,
-              selection = r_selection
-            )
-          )
-        })
-      },
-      ui = function(id) {
-        ns <- shiny::NS(id)
-        shiny::tagList(
-          # Static first paint: hide the engine that is not on. The server's
-          # rule (layout_css) takes over from here.
-          table_layout_css(ns, layout),
-          shiny::uiOutput(ns("layout_css")),
-          if (identical(look, "cards")) table_cards_dep(),
-          shiny::uiOutput(ns("cards_dep")),
-          htmltools::tags$div(
-            id = ns("variables_wrap"), class = "blockr-table-engine",
-            table_variables_ui(ns("variables"))
-          ),
-          htmltools::tags$div(
-            id = ns("records_wrap"), class = "blockr-table-engine",
-            table_records_ui(ns("records"))
-          ),
-          htmltools::tags$div(
-            id = ns("groups_wrap"), class = "blockr-table-engine",
-            table_groups_ui(ns("groups"))
-          )
-        )
-      },
-      # Contract check only (dispatch lookup), as before: a composer table
-      # or anything with an as_annotated_df() method connects directly.
-      dat_valid = validate_annotated_df_input,
-      allow_empty_state = c(
-        "by", "rowname", "columns", "summaries", "id", "color", "shadings",
-        "unit",
-        "top_n", "drill", "drill_target", "drill_table", "max_height",
-        "title", "subtitle", "caption", "script", "script_values",
-        "selection", "sections"
-      ),
-      external_ctrl = c(
-        "layout", "by", "rowname", "columns", "summaries", "id", "color",
-        "shadings", "format", "unit", "pct_of", "missing", "look",
-        "facet_layout",
-        "sort_by",
-        "sort_dir", "top_n", "value_labels", "axis", "bar_width", "drill",
-        "drill_target", "drill_table", "search", "sortable", "collapsible",
-        "max_height", "download", "title", "subtitle", "caption",
-        "stats", "sections", "total", "total_label", "nest", "script",
-        "script_values"
-      ),
-      expr_type = "bquoted",
-      class = "table_block"
-    ),
-    dots
+  res <- blockr.core::new_transform_block(
+    server = function(id, data) table_server(id, data, values),
+    ui = table_ui,
+    # Contract check only (dispatch lookup): a composer table or anything
+    # with an as_annotated_df() method connects directly.
+    dat_valid = validate_annotated_df_input,
+    allow_empty_state = viz_empty_ok(spec),
+    external_ctrl = viz_ctrl_args(spec),
+    expr_type = "bquoted",
+    class = "table_block",
+    ...
   )
-  do.call(blockr.core::new_transform_block, args)
+  # blockr.core keeps other `...` as attributes, and would save old names
+  # back into every board.
+  for (nm in setdiff(names(dots), core)) attr(res, nm) <- NULL
+  res
 }
 
-# Show one engine, hide the other. `!important` so the rule from the server
-# beats the static first-paint rule in the UI.
-table_layout_css <- function(ns, layout) {
-  on <- switch(layout, groups = "groups", variables = c("variables", "records"),
-               "records")
-  off <- setdiff(c("records", "groups", "variables"), on)
-  htmltools::tags$style(htmltools::HTML(paste0(
-    paste0("#", ns(paste0(off, "_wrap")), "{display:none!important}",
-           collapse = ""),
-    paste0("#", ns(paste0(on, "_wrap")), "{display:block!important}",
-           collapse = "")
-  )))
+table_ui <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    table_view_dep(),
+    viz_output(ns("table"), "table")
+  )
 }

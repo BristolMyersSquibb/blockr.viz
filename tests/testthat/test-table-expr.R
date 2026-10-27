@@ -60,7 +60,8 @@ test_that("a table selection saved by the reference reads in the kit's shape", {
     column = "cat", values = list("a", "c")
   )))
   expect_identical(flat$selection,
-                   list(type = "categorical", filters = list(cat = c("a", "c"))))
+                   list(type = "categorical", filters = list(cat = c("a", "c")),
+                        columns = list()))
   st <- legacy_table_selection(list(selection = list(
     group_cols = list(".variable", ".variable_level"),
     group_vals = list("cat", "b"),

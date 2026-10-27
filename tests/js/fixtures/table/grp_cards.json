@@ -1,0 +1,273 @@
+{
+  "scenario": "grp_cards",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"number","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"spans","name":null,"facet":null,"x":"day","xend":"end","label":null,"tooltip":null,"size":"md","color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "grp",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "value": "num",
+            "func": "sum"
+          },
+          "slot_choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp",
+            "disp": ["g2", "g1"],
+            "num": false
+          },
+          {
+            "name": "Sum Numeric value (kg)",
+            "num": false,
+            "disp": ["42.5", "37.5"],
+            "key": [42.5, 37.5],
+            "mark": {
+              "kind": "bar",
+              "width": [100, 88.23999999999999],
+              "fill": "#0072B2",
+              "domain": {
+                "min": 0,
+                "max": 42.5
+              },
+              "ticks": {
+                "at": [0, 10, 20, 30, 40],
+                "labels": ["0", "10", "20", "30", "40"]
+              },
+              "dw": 4,
+              "hover": {
+                "head": "Sum Numeric value (kg)",
+                "measure": "Sum Numeric value"
+              }
+            }
+          },
+          {
+            "name": "Rows",
+            "num": true,
+            "disp": ["6", "6"],
+            "key": [6, 6],
+            "mark": {
+              "kind": "num",
+              "pct": ["(50%)", "(50%)"]
+            }
+          },
+          {
+            "name": "day → end",
+            "num": false,
+            "disp": ["2024-01-01–2024-01-09 | 2024-01-01–2024-01-04 | 2024-01-08–2024-01-13 | 2024-01-08–2024-01-10 | 2024-01-15–2024-01-19 | 2024-01-15–2024-01-22", "2024-01-01–2024-01-04 | 2024-01-01–2024-01-07 | 2024-01-08–2024-01-09 | 2024-01-08–2024-01-13 | 2024-01-15–2024-01-17 | 2024-01-15–2024-01-24"],
+            "key": [19723, 19723],
+            "mark": {
+              "kind": "interval",
+              "spans": [
+                [
+                  [
+                    0,
+                    34.78,
+                    0
+                  ],
+                  [
+                    0,
+                    13.04,
+                    0
+                  ],
+                  [
+                    30.43,
+                    21.74,
+                    0
+                  ],
+                  [
+                    30.43,
+                    8.699999999999999,
+                    0
+                  ],
+                  [
+                    60.87,
+                    17.39,
+                    0
+                  ],
+                  [
+                    60.87,
+                    30.43,
+                    0
+                  ]
+                ],
+                [
+                  [
+                    0,
+                    13.04,
+                    0
+                  ],
+                  [
+                    0,
+                    26.09,
+                    0
+                  ],
+                  [
+                    30.43,
+                    4.35,
+                    0
+                  ],
+                  [
+                    30.43,
+                    21.74,
+                    0
+                  ],
+                  [
+                    60.87,
+                    8.699999999999999,
+                    0
+                  ],
+                  [
+                    60.87,
+                    39.13,
+                    0
+                  ]
+                ]
+              ],
+              "tips": [
+                ["2024-01-01–2024-01-09", "2024-01-01–2024-01-04", "2024-01-08–2024-01-13", "2024-01-08–2024-01-10", "2024-01-15–2024-01-19", "2024-01-15–2024-01-22"],
+                ["2024-01-01–2024-01-04", "2024-01-01–2024-01-07", "2024-01-08–2024-01-09", "2024-01-08–2024-01-13", "2024-01-15–2024-01-17", "2024-01-15–2024-01-24"]
+              ],
+              "fills": ["#0072B2"],
+              "domain": {
+                "min": 19723,
+                "max": 19746,
+                "date": true
+              },
+              "ticks": {
+                "at": [19723, 19737],
+                "labels": ["01 Jan", "15 Jan"]
+              },
+              "hover": {
+                "head": "day → end",
+                "measure": "day → end"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Sum Numeric value (kg)",
+              "col": 1
+            },
+            {
+              "text": "Rows",
+              "sub": "N = 12",
+              "col": 2
+            },
+            {
+              "text": "day → end",
+              "col": 3
+            }
+          ]
+        ],
+        "cards": {
+          "n": 2,
+          "multi": true,
+          "label": ["g2", "g1"],
+          "cols": [
+            {
+              "label": "Sum Numeric value",
+              "range": "0 to 42",
+              "glyph": 0,
+              "main": ["42.5 kg", "37.5 kg"]
+            },
+            {
+              "label": "Rows",
+              "main": ["6", "6"],
+              "sub": ["50% of 12", "50% of 12"]
+            }
+          ],
+          "skipped": ["day → end"]
+        }
+      }
+    }
+  ]
+}

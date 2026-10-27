@@ -14,7 +14,8 @@
 #' @export
 new_summary_table_block <- function(...) {
   args <- table_legacy_args(list(...), from = "summary")
-  args[c("ctor", "ctor_pkg")] <- NULL
+  args$ctor <- "new_table_block"
+  args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)
 }
 

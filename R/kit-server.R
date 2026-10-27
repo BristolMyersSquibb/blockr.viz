@@ -51,7 +51,10 @@ viz_settings_observer <- function(input, id, spec, state, revs,
     if (!length(values)) {
       return()
     }
-    merged <- utils::modifyList(viz_values(state), values, keep.null = TRUE)
+    # Each setting replaces its value whole: modifyList() would merge a list
+    # value into the old one.
+    merged <- viz_values(state)
+    for (nm in names(values)) merged[nm] <- list(values[[nm]])
     viz_apply(state, normalize(merged), revs)
   })
   invisible(obs)

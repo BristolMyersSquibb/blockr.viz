@@ -109,57 +109,56 @@ test_that("block state round-trips constructor args", {
   )
 })
 
-test_that("cogwheel config actions update color, shadings, drill, format", {
-  # Legacy ctor args map into the unified vocabulary: a cell_color spec
-  # becomes one `shadings` rule; row_color becomes `color`.
+# What the gear sends: settings as `table_set`, a click as `table_select`.
+tb_set <- function(values, rev = 0L) {
+  viz_read_set(viz_block_spec("table"), list(rev = rev, values = values))
+}
+
+tb_click <- function(column, values, nonce = 1) {
+  viz_read_selection(list(
+    selection = list(type = "categorical",
+                     filters = stats::setNames(list(as.list(values)), column),
+                     columns = list()),
+    nonce = nonce
+  ))
+}
+
+test_that("cogwheel settings update color, shadings, drill, format", {
   blk <- new_table_block(
-    cell_color = drilldown_table_color("diverging", domain = c(-1, 1)),
-    row_color = "parameter"
+    shadings = list(list(mode = "diverging", columns = "ALT",
+                         domain = c(-1, 1))),
+    color = "parameter"
   )
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
+      expr <- session$makeScope("expr")
       sh <- session$returned$state$shadings()
       expect_length(sh, 1L)
       expect_equal(sh[[1]]$mode, "diverging")
       expect_equal(unlist(sh[[1]]$domain), c(-1, 1))
       expect_equal(session$returned$state$color(), "parameter")
-      # The legacy names are translated, not kept as state.
-      expect_false(any(c("cell_color", "row_color") %in%
-                         names(session$returned$state)))
 
-      # The gear talks to the records engine, a sub-module of the block.
-      es <- session$makeScope("expr-records")
-      # The gear sends the whole shadings list as JSON ("" rules = off).
-      es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "shadings", value = "[]"
-      ))
+      # The gear sends the whole shadings list; an empty one is off.
+      expr$setInputs(table_set = tb_set(list(shadings = list())))
       session$flushReact()
       expect_length(session$returned$state$shadings(), 0L)
 
-      es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "shadings",
-        value = '[{"mode":"bar","cols":["result"]}]'
-      ))
+      expr$setInputs(table_set = tb_set(list(
+        shadings = list(list(mode = "bar", columns = list("result")))
+      )))
       session$flushReact()
       sh2 <- session$returned$state$shadings()
       expect_equal(sh2[[1]]$mode, "bar")
-      expect_equal(sh2[[1]]$cols, "result")
+      expect_equal(sh2[[1]]$columns, "result")
 
-      # "(none)" from the Color-by picker = explicit off ("").
-      es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "color", value = "(none)"
-      ))
+      # The Color-by picker's "(none)" is NULL: the color is off.
+      expr$setInputs(table_set = tb_set(list(color = NULL)))
       session$flushReact()
-      expect_equal(session$returned$state$color(), "")
+      expect_null(session$returned$state$color())
 
-      es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "drill", value = "parameter"
-      ))
-      es$setInputs(drilldown_table_block_action = list(
-        action = "config", param = "digits", value = "0"
-      ))
+      expr$setInputs(table_set = tb_set(list(drill = "parameter", format = 0L)))
       session$flushReact()
       expect_equal(session$returned$state$drill(), "parameter")
       expect_equal(session$returned$state$format(), 0L)
@@ -176,11 +175,8 @@ test_that("no click = pass-through, click filters the data", {
       session$flushReact()
       expect_equal(nrow(session$returned$result()), 3L)
 
-      expr_scope <- session$makeScope("expr-records")
-      expr_scope$setInputs(drilldown_table_block_action = list(
-        action = "filter", column = "parameter",
-        values = list("AST"), filter_type = "categorical"
-      ))
+      expr <- session$makeScope("expr")
+      expr$setInputs(table_select = tb_click("parameter", "AST"))
       session$flushReact()
       res <- session$returned$result()
       expect_equal(nrow(res), 1L)
@@ -209,26 +205,37 @@ test_that("fmt_to_wide tolerates empty/NA group levels (no pivot crash)", {
   expect_false("(Missing)" %in% names(w))
 })
 
-test_that("empty-list state from a pre-#144 DAG paste normalizes back to NULL", {
+test_that("empty-list state from a pre-#144 DAG paste heals to the defaults", {
   # Where this bug was first diagnosed: a pasted `row_color` holding list()
   # reached nzchar() and threw "argument is of length zero" on first reconnect.
-  blk <- new_table_block(
+  blk <- suppressWarnings(new_table_block(
     rowname = list(), value = list(), group = list(), color = list(),
     row_color = list(), cell_color = list(), drill = list(),
     filter_column = list(), filter_values = list(), filter_range = list(),
     filter_group_cols = list(), filter_group_vals = list(),
     filter_spread_col = list(), filter_spread_from = list()
-  )
+  ))
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
 
   # `summaries` / `shadings` / `script_values` default to list(): that IS
   # their empty value, not corruption. Every other slot must have healed back
-  # to NULL. (The old names translate to the new ones on the way in.)
+  # to NULL or its default.
   empty_list <- vapply(payload, function(v) is.list(v) && !length(v), logical(1))
   expect_equal(sort(names(payload)[empty_list]),
                c("script_values", "shadings", "summaries"))
 
-  # "" is meaningful on `color` (tint explicitly OFF, as against NULL = smart
-  # default by rowname), so the heal must not collapse it to NULL.
-  expect_equal(blockr.core::blockr_ser(new_table_block(color = ""))[["payload"]]$color, "")
+  # `color` is "auto" by default and NULL is off, in code as in a saved board.
+  expect_identical(
+    blockr.core::blockr_ser(new_table_block(color = NULL))[["payload"]]$color,
+    NULL
+  )
+  expect_identical(
+    blockr.core::blockr_ser(new_table_block())[["payload"]]$color, "auto"
+  )
+})
+
+test_that("a pasted empty-list color from an old board restores as auto", {
+  # Before the rewrite NULL was the smart default and "" was off, so an
+  # emptied slot meant the default.
+  expect_identical(legacy_restore("table", list(color = list()))$color, "auto")
 })

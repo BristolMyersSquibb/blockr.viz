@@ -271,19 +271,12 @@ table_legacy_args <- function(args, from = NULL) {
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
-  payload <- table_legacy_args(data[["payload"]])
-  ctor <- blockr.core::blockr_deser(data[["constructor"]])
-  args <- c(
-    payload,
-    list(
-      ctor = blockr.core::coal(
-        blockr.core::ctor_name(ctor),
-        blockr.core::ctor_fun(ctor)
-      ),
-      ctor_pkg = blockr.core::ctor_pkg(ctor)
-    )
+  res <- legacy_deser("table_block", data)
+  do.call(
+    new_table_block,
+    c(res$args, res$attrs,
+      list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
-  do.call(blockr.core::ctor_fun(ctor), args)
 }
 
 #' Legacy deserialization for the summarize table block
@@ -301,8 +294,12 @@ blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
   payload <- table_legacy_args(data[["payload"]], from = "summarize")
   payload$layout <- "groups"
+  core <- c(names(formals(blockr.core::new_block)), "block_name")
+  attrs <- payload[intersect(names(payload), core)]
+  args <- legacy_restore("table", payload[setdiff(names(payload), core)],
+                         version = data[["constructor"]][["version"]])
   do.call(
     new_table_block,
-    c(payload, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
+    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
 }

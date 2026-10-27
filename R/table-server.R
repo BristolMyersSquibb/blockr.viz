@@ -38,6 +38,7 @@ table_server <- function(id, data, init) {
         kit$capture(NULL), ignoreInit = TRUE
       )
       list(
+        # The rules between arguments: R/table-normalize.R.
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles),
         expr = table_expr(kit, part),
@@ -68,30 +69,6 @@ table_sources <- function(data, state, session) {
     subject = function() dd_ctrl_subject(session),
     ctrl_choices = dd_ctrl_choices()
   )
-}
-
-#' The rules between the table's arguments
-#'
-#' A pure function of the full value list, run on every change from the
-#' gear and at construction.
-#'
-#' - A groups table has at least one column: no summaries become the count.
-#' - A change of layout or of the drill column drops the selection: the
-#'   click it holds was made on another table.
-#' - A groups table that loses its `by` is one row with nothing to drill.
-#'
-#' @param v The values after the change.
-#' @param old The values before it.
-#' @return `v` with the rules applied.
-#' @noRd
-table_normalize <- function(v, old = v) {
-  if (identical(v$layout, "groups") && !length(v$summaries)) {
-    v$summaries <- table_groups_seed()
-  }
-  drop <- !identical(v$layout, old$layout) || !identical(v$drill, old$drill) ||
-    (identical(v$layout, "groups") && !length(v$by) && length(old$by))
-  if (drop) v["selection"] <- list(NULL)
-  v
 }
 
 # The title bands, resolved against the frame the current layout builds its

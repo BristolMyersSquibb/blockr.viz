@@ -61,7 +61,7 @@ table_groups_payload <- function(m, v, d, src) {
   if (!is.null(m$prep$err)) {
     return(list(empty = list(kind = "message", message = m$prep$err)))
   }
-  model <- table_groups_view(m)
+  model <- table_groups_view(m, axis = isTRUE(v$column_axis))
   if (identical(v$look, "cards")) {
     model$cards <- cards_payload(table_cards_groups(
       m$cells, m$prep, data = d, scale_map = src$scale_map()

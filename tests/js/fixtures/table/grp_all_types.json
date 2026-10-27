@@ -1,0 +1,537 @@
+{
+  "scenario": "grp_all_types",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"N","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"dot","func":"sum","col":"num2","position":null,"fill":null,"color":null},{"type":"simple","name":"Subjects","facet":null,"show":"bar","func":"count_distinct","col":"id","position":null,"fill":null,"color":null},{"type":"dist","name":null,"facet":null,"show":"box","col":"num","summary":"median_q1_q3","whiskers":"min_max","color":null},{"type":"dist","name":null,"facet":null,"show":"pointrange","col":"num2","summary":"mean_se","whiskers":null,"color":null},{"type":"dist","name":null,"facet":null,"show":"text","col":"num","summary":"mean_sd","whiskers":null,"color":null},{"type":"field","name":null,"col":"fac"},{"type":"sparkline","name":null,"facet":null,"x":"int","col":"num","ymin":"num2","ymax":"num","summary":"mean"},{"type":"spans","name":null,"facet":null,"x":"day","xend":"end","label":"fac","tooltip":["id"],"size":"lg","color":null},{"type":"pair","name":null,"facet":null,"x":"num2","xend":"num","x_func":"min","xend_func":"max","ref_min":"llim","ref_max":"ulim","x_lines":[{"value":5,"label":null}],"linetype":"grp","color":null},{"type":"expr","name":"Range","facet":null,"expr":"max(num) - min(num)"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count"
+          },
+          "slot_choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "N",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "mark": {
+              "kind": "bar",
+              "width": [100, 100, 75, 25],
+              "fill": "#0072B2",
+              "domain": {
+                "min": 0,
+                "max": 33.3333
+              },
+              "ticks": {
+                "at": [0, 10, 20, 30],
+                "labels": ["0", "10", "20", "30%"]
+              },
+              "dw": 7,
+              "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+              "hover": {
+                "head": "N",
+                "sub": "N = 12",
+                "measure": "N",
+                "base": 12
+              }
+            }
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["5.62", "6.5", "6.5", "12"],
+            "key": [5.625, 6.5, 6.5, 12]
+          },
+          {
+            "name": "Sum num2",
+            "num": false,
+            "disp": ["9", "17", "18", "8"],
+            "key": [9, 17, 18, 8],
+            "mark": {
+              "kind": "pointrange",
+              "bare": true,
+              "center": [50, 94.44, 100, 44.44],
+              "inner_low": [null, null, null, null],
+              "inner_width": [null, null, null, null],
+              "n": [null, null, null, null],
+              "tip": ["Sum num2 9", "Sum num2 17", "Sum num2 18", "Sum num2 8"],
+              "stats": {
+                "center": [9, 17, 18, 8]
+              },
+              "domain": {
+                "min": 0,
+                "max": 18
+              },
+              "ticks": {
+                "at": [0, 5, 10, 15],
+                "labels": ["0", "5", "10", "15"]
+              },
+              "dw": 2,
+              "hover": {
+                "head": "Sum num2",
+                "measure": "Sum num2",
+                "words": {
+                  "center": "Sum num2"
+                }
+              }
+            }
+          },
+          {
+            "name": "Subjects",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [66.66670000000001, 66.66670000000001, 50, 16.6667],
+            "mark": {
+              "kind": "bar",
+              "width": [100, 100, 75, 25],
+              "fill": "#0072B2",
+              "domain": {
+                "min": 0,
+                "max": 66.66670000000001
+              },
+              "ticks": {
+                "at": [0, 20, 40, 60],
+                "labels": ["0", "20", "40", "60%"]
+              },
+              "dw": 7,
+              "pct": ["(67%)", "(67%)", "(50%)", "(17%)"],
+              "hover": {
+                "head": "Subjects",
+                "sub": "N = 6",
+                "measure": "Subjects",
+                "base": 6
+              }
+            }
+          },
+          {
+            "name": "Numeric value",
+            "num": false,
+            "disp": ["5.5", "6.5", "6.5", "12.0"],
+            "key": [5.5, 6.5, 6.5, 12],
+            "mark": {
+              "kind": "box",
+              "whisker_low": [3.7, 8.109999999999999, 19.14, 96.3],
+              "whisker_low_width": [16.53, 19.84, 14.33, 0],
+              "box_low": [20.24, 27.95, 33.47, 96.3],
+              "box_width": [38.58, 39.68, 28.66, 0],
+              "center": [38.98, 47.8, 47.8, 96.3],
+              "box_high": [58.82, 67.64, 62.13, 96.3],
+              "whisker_high_width": [19.84, 19.84, 14.33, 0],
+              "whisker_high": [78.66, 87.48, 76.45999999999999, 96.3],
+              "n": [4, 4, 3, 1],
+              "tip": ["n=4 · Median 5.5 · Q1–Q3 3.375–7.75 · Min–Max 1.5–10", "n=4 · Median 6.5 · Q1–Q3 4.25–8.75 · Min–Max 2–11", "n=3 · Median 6.5 · Q1–Q3 4.875–8.125 · Min–Max 3.25–9.75", "n=1 · Median 12 · Q1–Q3 12–12 · Min–Max 12–12"],
+              "stats": {
+                "center": [5.5, 6.5, 6.5, 12],
+                "low": [3.375, 4.25, 4.875, 12],
+                "high": [7.75, 8.75, 8.125, 12],
+                "whisker_low": [1.5, 2, 3.25, 12],
+                "whisker_high": [10, 11, 9.75, 12]
+              },
+              "domain": {
+                "min": 1.08,
+                "max": 12.42
+              },
+              "ticks": {
+                "at": [5, 10],
+                "labels": ["5", "10"]
+              },
+              "dw": 4,
+              "hover": {
+                "head": "Numeric value",
+                "measure": "Numeric value",
+                "words": {
+                  "center": "Median",
+                  "range": "Q1–Q3",
+                  "whisk": "Min–Max"
+                }
+              }
+            }
+          },
+          {
+            "name": "num2",
+            "num": false,
+            "disp": ["2.2", "4.2", "6.0", "8.0"],
+            "key": [2.25, 4.25, 6, 8],
+            "mark": {
+              "kind": "pointrange",
+              "bare": true,
+              "center": [10.82, 40.55, 66.56999999999999, 96.3],
+              "inner_low": [3.7, 24.07, 43.86, 96.3],
+              "inner_width": [14.23, 32.96, 45.41, 0],
+              "n": [4, 4, 3, 1],
+              "tip": ["n=4 · Mean 2.25 · ±1 SE 1.771–2.729", "n=4 · Mean 4.25 · ±1 SE 3.141–5.359", "n=3 · Mean 6 · ±1 SE 4.472–7.528", "n=1 · Mean 8 · ±1 SE 8–8"],
+              "stats": {
+                "center": [2.25, 4.25, 6, 8],
+                "low": [1.7713, 3.1413, 4.4725, 8],
+                "high": [2.7287, 5.3587, 7.5275, 8]
+              },
+              "domain": {
+                "min": 1.5221,
+                "max": 8.2491
+              },
+              "ticks": {
+                "at": [2, 4, 6, 8],
+                "labels": ["2", "4", "6", "8"]
+              },
+              "dw": 3,
+              "hover": {
+                "head": "num2",
+                "measure": "num2",
+                "words": {
+                  "center": "Mean",
+                  "range": "±1 SE"
+                }
+              }
+            }
+          },
+          {
+            "name": "Numeric value",
+            "num": true,
+            "disp": ["5.625 (1.942–9.308)", "6.5 (2.627–10.37)", "6.5 (3.25–9.75)", "12 (12–12)"],
+            "key": [5.625, 6.5, 6.5, 12]
+          },
+          {
+            "name": "fac",
+            "num": false,
+            "disp": ["lo", "hi", "mid", "mid"]
+          },
+          {
+            "name": "Numeric value",
+            "num": false,
+            "disp": ["10.00", "11.00", "9.75", "12.00"],
+            "key": [10, 11, 9.75, 12],
+            "mark": {
+              "kind": "sparkline",
+              "line": ["0,33.45 27.27,25.73 54.55,16.45 81.82,7.18", "9.09,31.91 36.36,22.64 63.64,13.36 90.91,4.09", "18.18,28.05 45.45,18 72.73,7.95", "100,1"],
+              "band": ["0,28.82 27.27,35 54.55,31.91 81.82,28.82 81.82,7.18 54.55,16.45 27.27,25.73 0,33.45", "9.09,35 36.36,22.64 63.64,19.55 90.91,22.64 90.91,4.09 63.64,13.36 36.36,22.64 9.09,31.91", "18.18,25.73 45.45,10.27 72.73,22.64 72.73,7.95 45.45,18 18.18,28.05", "100,13.36 100,1"],
+              "end_x": [81.81999999999999, 90.91, 72.73, 100],
+              "end_y": [19.94, 11.36, 22.08, 2.78],
+              "x_text": ["1,4,7,10", "2,5,8,11", "3,6,9", "12"],
+              "y_text": ["1.5,4,7,10", "2,5,8,11", "3.25,6.5,9.75", "12"],
+              "n": [4, 4, 3, 1],
+              "ref_line": 17.48,
+              "domain": {
+                "min": 1,
+                "max": 12
+              },
+              "ticks": {
+                "at": [2.5, 5, 7.5, 10],
+                "labels": ["2.5", "5", "7.5", "10"]
+              },
+              "dw": 5,
+              "hover": {
+                "head": "Numeric value",
+                "measure": "Numeric value"
+              }
+            }
+          },
+          {
+            "name": "day → end",
+            "num": false,
+            "disp": ["lo · 2024-01-01–2024-01-04 · id: S01 | lo · 2024-01-01–2024-01-09 · id: S02 | lo · 2024-01-01–2024-01-07 · id: S04 | lo · 2024-01-01–2024-01-04 · id: S05", "hi · 2024-01-08–2024-01-13 · id: S01 | hi · 2024-01-08–2024-01-09 · id: S03 | hi · 2024-01-08–2024-01-10 · id: S04 | hi · 2024-01-08–2024-01-13 · id: S06", "mid · 2024-01-15–2024-01-17 · id: S02 | mid · 2024-01-15–2024-01-19 · id: S03 | mid · 2024-01-15–2024-01-24 · id: S05", "mid · 2024-01-15–2024-01-22 · id: S06"],
+            "key": [19723, 19730, 19737, 19737],
+            "mark": {
+              "kind": "interval",
+              "spans": [
+                [
+                  [
+                    0,
+                    13.04,
+                    0,
+                    "lo"
+                  ],
+                  [
+                    0,
+                    34.78,
+                    0,
+                    "lo"
+                  ],
+                  [
+                    0,
+                    26.09,
+                    0,
+                    "lo"
+                  ],
+                  [
+                    0,
+                    13.04,
+                    0,
+                    "lo"
+                  ]
+                ],
+                [
+                  [
+                    30.43,
+                    21.74,
+                    0,
+                    "hi"
+                  ],
+                  [
+                    30.43,
+                    4.35,
+                    0,
+                    "hi"
+                  ],
+                  [
+                    30.43,
+                    8.699999999999999,
+                    0,
+                    "hi"
+                  ],
+                  [
+                    30.43,
+                    21.74,
+                    0,
+                    "hi"
+                  ]
+                ],
+                [
+                  [
+                    60.87,
+                    8.699999999999999,
+                    0,
+                    "mid"
+                  ],
+                  [
+                    60.87,
+                    17.39,
+                    0,
+                    "mid"
+                  ],
+                  [
+                    60.87,
+                    39.13,
+                    0,
+                    "mid"
+                  ]
+                ],
+                [
+                  [
+                    60.87,
+                    30.43,
+                    0,
+                    "mid"
+                  ]
+                ]
+              ],
+              "tips": [
+                ["lo · 2024-01-01–2024-01-04 · id: S01", "lo · 2024-01-01–2024-01-09 · id: S02", "lo · 2024-01-01–2024-01-07 · id: S04", "lo · 2024-01-01–2024-01-04 · id: S05"],
+                ["hi · 2024-01-08–2024-01-13 · id: S01", "hi · 2024-01-08–2024-01-09 · id: S03", "hi · 2024-01-08–2024-01-10 · id: S04", "hi · 2024-01-08–2024-01-13 · id: S06"],
+                ["mid · 2024-01-15–2024-01-17 · id: S02", "mid · 2024-01-15–2024-01-19 · id: S03", "mid · 2024-01-15–2024-01-24 · id: S05"],
+                ["mid · 2024-01-15–2024-01-22 · id: S06"]
+              ],
+              "fills": ["#0072B2"],
+              "large": true,
+              "domain": {
+                "min": 19723,
+                "max": 19746,
+                "date": true
+              },
+              "ticks": {
+                "at": [19723, 19737],
+                "labels": ["01 Jan", "15 Jan"]
+              },
+              "hover": {
+                "head": "day → end",
+                "measure": "day → end"
+              }
+            }
+          },
+          {
+            "name": "num2 → Numeric value",
+            "num": false,
+            "disp": ["9.0", "10.0", "5.8", "4.0"],
+            "key": [10, 11, 9.75, 12],
+            "mark": {
+              "kind": "pair",
+              "ref": 37.37,
+              "fill": [null, null, null, null],
+              "from": [3.7, 3.7, 28.96, 62.63],
+              "to": [79.45999999999999, 87.88, 77.36, 96.3],
+              "link_left": [3.7, 3.7, 28.96, 62.63],
+              "link_width": [75.76000000000001, 84.18000000000001, 48.4, 33.67],
+              "band_left": [12.12, 12.12, 12.12, 12.12],
+              "band_width": [58.92, 58.92, 58.92, 58.92],
+              "dash": [false, true, false, true],
+              "open": [true, true, true, true],
+              "tip": ["Min num2 ◇ 1 → Max Numeric value ● 10 (+9) · range 2–9", "Min num2 ◇ 1 → Max Numeric value ● 11 (+10) · range 2–9", "Min num2 ◇ 4 → Max Numeric value ● 9.75 (+5.75) · range 2–9", "Min num2 ◇ 8 → Max Numeric value ● 12 (+4) · range 2–9"],
+              "domain": {
+                "min": 0.5600000000000001,
+                "max": 12.44
+              },
+              "ticks": {
+                "at": [5, 10],
+                "labels": ["5", "10"]
+              },
+              "dw": 4,
+              "hover": {
+                "head": "num2 → Numeric value",
+                "sub": "Min num2 ◇ → Max Numeric value ● · dashed: grp ≠ g1",
+                "measure": "num2 → Numeric value",
+                "words": {
+                  "from": "Min num2 ◇",
+                  "to": "Max Numeric value ●"
+                }
+              }
+            }
+          },
+          {
+            "name": "Range",
+            "num": true,
+            "disp": ["8.5", "9", "6.5", "0"],
+            "key": [8.5, 9, 6.5, 0]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "N",
+              "sub": "N = 12",
+              "col": 1
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 2
+            },
+            {
+              "text": "Sum num2",
+              "col": 3
+            },
+            {
+              "text": "Subjects",
+              "sub": "N = 6",
+              "col": 4
+            },
+            {
+              "text": "Numeric value",
+              "col": 5
+            },
+            {
+              "text": "num2",
+              "col": 6
+            },
+            {
+              "text": "Numeric value",
+              "col": 7
+            },
+            {
+              "text": "fac",
+              "col": 8
+            },
+            {
+              "text": "Numeric value",
+              "col": 9
+            },
+            {
+              "text": "day → end",
+              "col": 10
+            },
+            {
+              "text": "num2 → Numeric value",
+              "sub": "Min num2 ◇ → Max Numeric value ● · dashed: grp ≠ g1",
+              "col": 11
+            },
+            {
+              "text": "Range",
+              "col": 12
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

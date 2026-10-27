@@ -1,0 +1,145 @@
+{
+  "scenario": "rec_shadings",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"records","by":[],"rowname":"cat","columns":["num","num2","int"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"grp","shadings":[{"mode":"sequential","columns":["num"],"domain":null},{"mode":"diverging","columns":["num2"],"domain":[{"value":1,"label":null},{"value":9,"label":null}]},{"mode":"bar","columns":["int"],"domain":null}],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "records",
+            "by": "",
+            "rowname": "cat",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "grp",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE"
+          },
+          "slot_choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          }
+        ]
+      },
+      "data": {
+        "n": 12,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "num": false,
+            "disp": ["a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "d"]
+          },
+          {
+            "name": "num",
+            "num": true,
+            "disp": ["1.5", "2", "3.25", "4", "5", "6.5", "7", "8", "9.75", "10", "11", "12"],
+            "bg": ["#EEF2FF", "#E4EAFD", "#CBD7F8", "#BCCBF6", "#A8BBF2", "#8AA4EC", "#819CEB", "#6D8CE7", "#4A71E0", "#456DDF", "#315EDC", "#1D4ED8"],
+            "fg": ["#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
+          },
+          {
+            "name": "num2",
+            "num": true,
+            "disp": ["3", "1", "4", "1", "5", "9", "2", "6", "5", "3", "5", "8"],
+            "bg": ["#ADBACE", "#E4E8EF", "#91A3BD", "#E4E8EF", "#768CAD", "#08306B", "#C8D1DE", "#5A759C", "#768CAD", "#ADBACE", "#768CAD", "#23477B"],
+            "fg": ["#111827", "#111827", "#111827", "#111827", "#ffffff", "#ffffff", "#111827", "#ffffff", "#ffffff", "#111827", "#ffffff", "#ffffff"]
+          },
+          {
+            "name": "int",
+            "num": true,
+            "disp": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+            "bar": [0.0833, 0.1667, 0.25, 0.3333, 0.4167, 0.5, 0.5833, 0.6667, 0.75, 0.8333, 0.9167, 1],
+            "bar_fill": "rgba(37, 99, 235, 0.22)"
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "num",
+              "sub": "Numeric value",
+              "col": 1
+            },
+            {
+              "text": "num2",
+              "col": 2
+            },
+            {
+              "text": "int",
+              "col": 3
+            }
+          ]
+        ],
+        "widths": [80, 110, 64, 60],
+        "rows": {
+          "tint": ["#0072B2", "#E69F00", "#0072B2", "#E69F00", "#0072B2", "#E69F00", "#0072B2", "#E69F00", "#0072B2", "#E69F00", "#0072B2", "#E69F00"]
+        }
+      }
+    }
+  ]
+}

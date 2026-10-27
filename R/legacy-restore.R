@@ -45,14 +45,7 @@ legacy_restore <- function(block, state, version = NULL) {
   state <- legacy_map_values(block, state)
   state <- legacy_values(block, state, version)
   if (identical(block, "table")) state <- legacy_table_selection(state)
-  if (identical(block, "table")) {
-    if (is.list(state[["summaries"]])) {
-      state$summaries <- lapply(state$summaries, legacy_summary_entry)
-    }
-    if (is.list(state[["shadings"]])) {
-      state$shadings <- lapply(state$shadings, legacy_shading_rule)
-    }
-  }
+  state <- legacy_entries(block, state)
   for (k in intersect(c("title", "subtitle", "caption"), names(state))) {
     state[k] <- list(legacy_template(block, state[[k]], state))
   }
@@ -71,13 +64,17 @@ legacy_ctor_args <- function(block, args) {
     table = legacy_table_selection(legacy_table_before_030(args))
   )
   named <- legacy_rename(block, named)
-  out <- legacy_map_values(block, named)
+  out <- legacy_drop(block, legacy_entries(block, legacy_map_values(block,
+                                                                    named)))
   if (is.character(out[["script"]]) && length(out$script) > 1L) {
     out$script <- paste(out$script, collapse = "\n")
   }
-  # The old names, and the current names given an old value.
+  # The old names, and the current names given an old value. A name that is
+  # neither is left to viz_check(), which says it is unknown.
   current <- names(viz_block_spec(block)$args)
-  old <- union(setdiff(names(args), current), Filter(function(nm) {
+  known <- LEGACY_NAMES$old[LEGACY_NAMES$block == block]
+  renamed <- intersect(setdiff(names(args), current), known)
+  old <- union(renamed, Filter(function(nm) {
     nm %in% names(args) && !identical(named[[nm]], out[[nm]]) &&
       !identical(nm, "script")
   }, names(out)))
@@ -135,7 +132,9 @@ legacy_chart_selection <- function(args) {
 # The table payloads before the rewrite of the table block: old table
 # names, an aggregation list where the typed summaries go.
 legacy_table_before_030 <- function(state) {
-  state <- table_legacy_args(state)
+  # `from = "table"`: a payload with `layout` can still carry old names
+  # (`compact`, `digits`, the download toggles).
+  state <- table_legacy_args(state, from = "table")
   if (table_is_agg_summaries(state[["summaries"]])) {
     state$summaries <- table_agg_to_summaries(state$summaries)
   }
@@ -213,6 +212,8 @@ legacy_values <- function(block, x, version) {
   }
   if (identical(block, "table")) {
     if (legacy_before_rewrite(version)) {
+      # An emptied slot from a pre-#144 paste (list()) is unset too.
+      if (is.list(x[["color"]]) && !length(x$color)) x["color"] <- list(NULL)
       x["color"] <- list(if (is.null(x[["color"]])) {
         "auto"
       } else if (!identical(x[["color"]], "")) {
@@ -272,6 +273,10 @@ legacy_summary_entry <- function(e) {
     }
   }
   e[["ref"]] <- NULL
+  # A reference range was numbers or columns; it is text now, either way.
+  for (k in intersect(c("ref_min", "ref_max"), names(e))) {
+    if (is.numeric(e[[k]])) e[[k]] <- format(e[[k]], trim = TRUE)
+  }
   if (identical(type, "dist") && !is.null(e[["style"]])) {
     style <- as.character(unlist(e$style))[[1L]]
     if (is.null(e[["show"]]) || !identical(e$show, "text")) {
@@ -301,6 +306,20 @@ legacy_shading_rule <- function(r) {
 
 # LEGACY: delete with this file
 # Names read and dropped on purpose: no warning for them.
+# The table's summary entries and shading rules under their current keys.
+legacy_entries <- function(block, x) {
+  if (!identical(block, "table")) {
+    return(x)
+  }
+  if (is.list(x[["summaries"]])) {
+    x$summaries <- lapply(x$summaries, legacy_summary_entry)
+  }
+  if (is.list(x[["shadings"]])) {
+    x$shadings <- lapply(x$shadings, legacy_shading_rule)
+  }
+  x
+}
+
 legacy_drop <- function(block, x) {
   dropped <- LEGACY_NAMES$old[LEGACY_NAMES$block == block &
                                 is.na(LEGACY_NAMES$new)]
@@ -516,9 +535,10 @@ legacy_table_selection <- function(state) {
   columns <- if (length(ck)) {
     stats::setNames(lapply(ck, `[[`, "values"), vapply(ck, `[[`, "", "column"))
   }
+  # The shape viz_read_selection() gives a click: `columns` always there.
   state["selection"] <- list(if (length(filters) || length(columns)) {
-    c(list(type = "categorical", filters = filters),
-      if (length(columns)) list(columns = columns))
+    list(type = "categorical", filters = filters %||% list(),
+         columns = columns %||% list())
   })
   state
 }

@@ -602,10 +602,10 @@ test_that("the ctor migrates the retired pair into the block's STATE", {
   # The pooled row was the "Overall" column: colour, but no facet.
   expect_identical(st$summaries[[2L]]$color, "SEV")
   expect_null(st$summaries[[2L]]$facet)
-  # Cleared, so a mapping the user then removes from a column stays removed
-  # instead of being re-applied on the next render.
+  # Cleared back to the default, so a mapping the user then removes from a
+  # column stays removed instead of being re-applied on the next render.
   # (`[[` because `$` would partially match `facet_layout`.)
-  expect_null(st[["color"]])
+  expect_identical(st[["color"]], "auto")
   expect_null(st[["facet"]])
 })
 
@@ -740,7 +740,15 @@ test_that("the constructor round-trips the summaries list", {
   S <- list(list(type = "dist", name = "D", col = "DUR", show = "box"))
   blk <- new_summarize_table_block(by = "TERM", summaries = S)
   expect_s3_class(blk, "table_block")
-  expect_identical(blockr.core::blockr_ser(blk)$payload$summaries, S)
+  # The constructor checks each entry, so the saved list carries every key
+  # of its type; the ones given come back as they were.
+  saved <- blockr.core::blockr_ser(blk)$payload$summaries
+  expect_identical(saved[[1L]][c("type", "name", "col", "show")], S[[1L]][
+    c("type", "name", "col", "show")
+  ])
+  again <- blockr.core::blockr_ser(new_table_block(by = "TERM",
+                                                   summaries = saved))
+  expect_identical(again$payload$summaries, saved)
   fmls <- names(formals(new_table_block))
   expect_true(all(c("summaries", "by", "facet_layout") %in% fmls))
 })

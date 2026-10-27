@@ -1,0 +1,302 @@
+{
+  "scenario": "grp_color_split",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":"stack","fill":null,"color":"grp"},{"type":"simple","name":null,"facet":null,"show":"bar","func":"sum","col":"num","position":"dodge","fill":null,"color":"fac"},{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":"fill","fill":null,"color":"grp"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "grp",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count"
+          },
+          "slot_choices": []
+        },
+        "legend": {
+          "groups": [
+            {
+              "title": "grp",
+              "items": [
+                {
+                  "label": "g1",
+                  "color": "#0072B2"
+                },
+                {
+                  "label": "g2",
+                  "color": "#E69F00"
+                }
+              ]
+            },
+            {
+              "title": "fac",
+              "items": [
+                {
+                  "label": "lo",
+                  "color": "#0072B2"
+                },
+                {
+                  "label": "mid",
+                  "color": "#E69F00"
+                },
+                {
+                  "label": "hi",
+                  "color": "#009E73"
+                }
+              ]
+            }
+          ]
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "mark": {
+              "kind": "barsplit",
+              "mode": "stacked",
+              "levels": [
+                {
+                  "name": "g1",
+                  "color": "#0072B2",
+                  "width": [50, 50, 50, 0],
+                  "amount": [2, 2, 2, 0],
+                  "inside": ["2", "2", "2", ""],
+                  "ink": "#ffffff"
+                },
+                {
+                  "name": "g2",
+                  "color": "#E69F00",
+                  "width": [50, 50, 25, 25],
+                  "amount": [2, 2, 1, 1],
+                  "inside": ["2", "2", "1", "1"],
+                  "ink": "#1f2937"
+                }
+              ],
+              "domain": {
+                "min": 0,
+                "max": 33.3333
+              },
+              "ticks": {
+                "at": [0, 10, 20, 30],
+                "labels": ["0", "10", "20", "30%"]
+              },
+              "dw": 7,
+              "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+              "hover": {
+                "head": "Rows",
+                "sub": "N = 12",
+                "measure": "Rows",
+                "color_by": "grp",
+                "base": 12
+              }
+            }
+          },
+          {
+            "name": "Sum Numeric value",
+            "num": false,
+            "disp": ["22.5", "26", "19.5", "12"],
+            "key": [22.5, 26, 19.5, 12],
+            "mark": {
+              "kind": "barsplit",
+              "mode": "stacked",
+              "levels": [
+                {
+                  "name": "lo",
+                  "color": "#0072B2",
+                  "width": [86.54000000000001, 0, 0, 0],
+                  "amount": [22.5, 0, 0, 0],
+                  "inside": ["22.5", "", "", ""],
+                  "ink": "#ffffff"
+                },
+                {
+                  "name": "mid",
+                  "color": "#E69F00",
+                  "width": [0, 0, 75, 46.15],
+                  "amount": [0, 0, 19.5, 12],
+                  "inside": ["", "", "19.5", "12.0"],
+                  "ink": "#1f2937"
+                },
+                {
+                  "name": "hi",
+                  "color": "#009E73",
+                  "width": [0, 100, 0, 0],
+                  "amount": [0, 26, 0, 0],
+                  "inside": ["", "26.0", "", ""],
+                  "ink": "#ffffff"
+                }
+              ],
+              "domain": {
+                "min": 0,
+                "max": 26
+              },
+              "ticks": {
+                "at": [0, 10, 20],
+                "labels": ["0", "10", "20"]
+              },
+              "dw": 4,
+              "hover": {
+                "head": "Sum Numeric value",
+                "measure": "Sum Numeric value",
+                "color_by": "fac"
+              }
+            }
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "mark": {
+              "kind": "barsplit",
+              "mode": "percent",
+              "levels": [
+                {
+                  "name": "g1",
+                  "color": "#0072B2",
+                  "width": [50, 50, 66.67, 0],
+                  "amount": [2, 2, 2, 0],
+                  "inside": ["50%", "50%", "67%", ""],
+                  "ink": "#ffffff"
+                },
+                {
+                  "name": "g2",
+                  "color": "#E69F00",
+                  "width": [50, 50, 33.33, 100],
+                  "amount": [2, 2, 1, 1],
+                  "inside": ["50%", "50%", "33%", "100%"],
+                  "ink": "#1f2937"
+                }
+              ],
+              "domain": {
+                "min": 0,
+                "max": 100
+              },
+              "ticks": {
+                "at": [0, 25, 50, 75, 100],
+                "labels": ["0", "25", "50", "75", "100%"]
+              },
+              "dw": 7,
+              "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+              "hover": {
+                "head": "Rows",
+                "sub": "N = 12",
+                "measure": "Rows",
+                "color_by": "grp",
+                "base": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Rows",
+              "sub": "N = 12",
+              "col": 1
+            },
+            {
+              "text": "Sum Numeric value",
+              "col": 2
+            },
+            {
+              "text": "Rows",
+              "sub": "N = 12",
+              "col": 3
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

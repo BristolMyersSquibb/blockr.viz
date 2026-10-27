@@ -148,28 +148,36 @@ test_that("unknown or empty stats error with the valid vocabulary", {
   )
 })
 
-test_that("block constructor normalizes legacy stats into state", {
-  blk <- new_summary_table_block(vars = "mpg", stats = "expanded")
+test_that("saved legacy stats restore into the catalog keys", {
+  got <- legacy_restore("table", list(layout = "variables", stats = "expanded"))
+  expect_identical(got$stats,
+                   c("n", "mean", "sd", "median", "q1_q3", "min_max"))
+  expect_identical(
+    legacy_restore("table", list(layout = "variables",
+                                 stats = "compact"))$stats,
+    "mean_sd"
+  )
+  # In code a key the catalog lacks is an error, not healed.
+  expect_error(new_summary_table_block(vars = "mpg", stats = "expanded"),
+               "stats")
+})
+
+test_that("a stats edit lands in the order it was picked", {
+  blk <- new_summary_table_block(vars = "mpg", stats = c("n", "mean"))
   shiny::testServer(
-    blk$expr_server,
-    args = list(data = shiny::reactive(mtcars)),
+    blockr.core:::get_s3_method("block_server", blk),
     {
-      expect_identical(
-        session$returned$state$stats(),
-        c("n", "mean", "sd", "median", "q1_q3", "min_max")
-      )
-      # A widget edit lands filtered, in the order it was picked.
-      session$setInputs(
-        `variables-summary_input` = list(
-          vars = list("mpg"),
-          stats = list("min_max", "n_pct", "nonsense")
-        )
-      )
-      expect_identical(
-        session$returned$state$stats(),
-        c("min_max", "n_pct")
-      )
-    }
+      session$flushReact()
+      expr <- session$makeScope("expr")
+      expect_identical(session$returned$state$stats(), c("n", "mean"))
+      expr$setInputs(table_set = viz_read_set(
+        viz_block_spec("table"),
+        list(rev = 0L, values = list(stats = list("min_max", "n_pct")))
+      ))
+      session$flushReact()
+      expect_identical(session$returned$state$stats(), c("min_max", "n_pct"))
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(mtcars)))
   )
 })
 

@@ -1,0 +1,312 @@
+{
+  "scenario": "rec_by_missing",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"records","by":["cat_na"],"rowname":"id","columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "records",
+            "by": "cat_na",
+            "rowname": "id",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE"
+          },
+          "slot_choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          }
+        ]
+      },
+      "data": {
+        "n": 12,
+        "stub": 0,
+        "cols": [
+          {
+            "name": ".label",
+            "disp": ["S01", "S02", "S04", "S05", "S06", "S01", "S03", "S05", "S02", "S03", "S04", "S06"]
+          },
+          {
+            "name": "cat",
+            "num": true,
+            "disp": ["a", "a", "a", "c", "d", "b", "c", "a", "c", "b", "b", "b"]
+          },
+          {
+            "name": "grp",
+            "num": true,
+            "disp": ["g1", "g2", "g1", "g1", "g2", "g2", "g2", "g2", "g1", "g1", "g2", "g1"]
+          },
+          {
+            "name": "fac",
+            "num": true,
+            "disp": ["lo", "lo", "lo", "mid", "mid", "hi", "mid", "lo", "mid", "hi", "hi", "hi"]
+          },
+          {
+            "name": "num",
+            "num": true,
+            "disp": ["1.5", "4", "7", "9.75", "12", "2", "6.5", "10", "3.25", "5", "8", "11"]
+          },
+          {
+            "name": "num2",
+            "num": true,
+            "disp": ["3", "1", "2", "5", "8", "1", "9", "3", "4", "5", "6", "5"]
+          },
+          {
+            "name": "int",
+            "num": true,
+            "disp": ["1", "4", "7", "9", "12", "2", "6", "10", "3", "5", "8", "11"]
+          },
+          {
+            "name": "day",
+            "num": true,
+            "disp": ["2024-01-01", "2024-01-01", "2024-01-01", "2024-01-15", "2024-01-15", "2024-01-08", "2024-01-15", "2024-01-01", "2024-01-15", "2024-01-08", "2024-01-08", "2024-01-08"]
+          },
+          {
+            "name": "flag",
+            "num": true,
+            "disp": ["TRUE", "TRUE", "TRUE", null, "TRUE", "FALSE", "TRUE", "TRUE", null, "FALSE", "FALSE", "FALSE"]
+          },
+          {
+            "name": "grade",
+            "num": true,
+            "disp": ["1", "1", "3", "2", "3", "2", "2", "1", "3", "1", "3", "2"]
+          },
+          {
+            "name": "end",
+            "num": true,
+            "disp": ["2024-01-04", "2024-01-09", "2024-01-07", "2024-01-24", "2024-01-22", "2024-01-13", "2024-01-19", "2024-01-04", "2024-01-17", "2024-01-09", "2024-01-10", "2024-01-13"]
+          },
+          {
+            "name": "ulim",
+            "num": true,
+            "disp": ["9", "9", "9", "9", "9", "9", "9", "9", "9", "9", "9", "9"]
+          },
+          {
+            "name": "llim",
+            "num": true,
+            "disp": ["2", "2", "2", "2", "2", "2", "2", "2", "2", "2", "2", "2"]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "",
+              "stub": true
+            },
+            {
+              "text": "cat",
+              "col": 1
+            },
+            {
+              "text": "grp",
+              "col": 2
+            },
+            {
+              "text": "fac",
+              "col": 3
+            },
+            {
+              "text": "num",
+              "col": 4
+            },
+            {
+              "text": "num2",
+              "col": 5
+            },
+            {
+              "text": "int",
+              "col": 6
+            },
+            {
+              "text": "day",
+              "col": 7
+            },
+            {
+              "text": "flag",
+              "col": 8
+            },
+            {
+              "text": "grade",
+              "col": 9
+            },
+            {
+              "text": "end",
+              "col": 10
+            },
+            {
+              "text": "ulim",
+              "col": 11
+            },
+            {
+              "text": "llim",
+              "col": 12
+            }
+          ]
+        ],
+        "widths": [68, 60, 60, 60, 64, 64, 60, 112, 72, 72, 112, 64, 64],
+        "sections": [
+          {
+            "at": 0,
+            "level": 1,
+            "value": "a"
+          },
+          {
+            "at": 5,
+            "level": 1,
+            "value": "(Missing)"
+          },
+          {
+            "at": 8,
+            "level": 1,
+            "value": "b"
+          }
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"records","by":["cat_na"],"rowname":"id","columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":{"type":["categorical"],"filters":{".group1_level":["(Missing)"]},"columns":[]}},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "records",
+            "by": "cat_na",
+            "rowname": "id",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE"
+          },
+          "slot_choices": []
+        },
+        "receipt": "Filtered: cat_na = (Missing)",
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "scenario": "grp_format",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"number","func":"sum","col":"num","position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":null,"show":"bar","func":"mean","col":"num2","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"compact","unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "compact",
+            "unit": "CHF",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "slot_choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["b", "a", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Sum Numeric value (CHF)",
+            "num": true,
+            "disp": ["26", "22.5", "19.5", "12"],
+            "key": [26, 22.5, 19.5, 12]
+          },
+          {
+            "name": "Mean num2 (CHF)",
+            "num": false,
+            "disp": ["4.25", "2.25", "6", "8"],
+            "key": [4.25, 2.25, 6, 8],
+            "mark": {
+              "kind": "bar",
+              "width": [53.12, 28.12, 75, 100],
+              "fill": "#0072B2",
+              "domain": {
+                "min": 0,
+                "max": 8
+              },
+              "ticks": {
+                "at": [0, 2.5, 5, 7.5],
+                "labels": ["0", "2.5", "5", "7.5"]
+              },
+              "dw": 4,
+              "hover": {
+                "head": "Mean num2 (CHF)",
+                "measure": "Mean num2"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Sum Numeric value (CHF)",
+              "col": 1
+            },
+            {
+              "text": "Mean num2 (CHF)",
+              "col": 2
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

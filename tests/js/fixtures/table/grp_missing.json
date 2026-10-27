@@ -1,0 +1,504 @@
+{
+  "scenario": "grp_missing",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat_na"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":"cat_na"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat_na","search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat_na",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "cat_na",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "cat_na",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat_na",
+            "func": "count"
+          },
+          "slot_choices": []
+        },
+        "legend": {
+          "groups": [
+            {
+              "title": "cat_na",
+              "items": [
+                {
+                  "label": "(Missing)",
+                  "color": "#0072B2"
+                },
+                {
+                  "label": "a",
+                  "color": "#E69F00"
+                },
+                {
+                  "label": "b",
+                  "color": "#009E73"
+                }
+              ]
+            }
+          ]
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 3,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat_na",
+            "disp": ["a", "b", "(Missing)"],
+            "num": false
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["5", "4", "3"],
+            "key": [41.6667, 33.3333, 25],
+            "mark": {
+              "kind": "barsplit",
+              "mode": "stacked",
+              "levels": [
+                {
+                  "name": "(Missing)",
+                  "color": "#0072B2",
+                  "width": [0, 0, 60],
+                  "amount": [0, 0, 3],
+                  "inside": ["", "", "3"],
+                  "ink": "#ffffff"
+                },
+                {
+                  "name": "a",
+                  "color": "#E69F00",
+                  "width": [100, 0, 0],
+                  "amount": [5, 0, 0],
+                  "inside": ["5", "", ""],
+                  "ink": "#1f2937"
+                },
+                {
+                  "name": "b",
+                  "color": "#009E73",
+                  "width": [0, 80, 0],
+                  "amount": [0, 4, 0],
+                  "inside": ["", "4", ""],
+                  "ink": "#ffffff"
+                }
+              ],
+              "level_col": "cat_na",
+              "domain": {
+                "min": 0,
+                "max": 41.6667
+              },
+              "ticks": {
+                "at": [0, 10, 20, 30, 40],
+                "labels": ["0", "10", "20", "30", "40%"]
+              },
+              "dw": 7,
+              "pct": ["(42%)", "(33%)", "(25%)"],
+              "hover": {
+                "head": "Rows",
+                "sub": "N = 12",
+                "measure": "Rows",
+                "color_by": "cat_na",
+                "base": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat_na",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Rows",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "keys": [
+            {
+              "cat_na": ["a"]
+            },
+            {
+              "cat_na": ["b"]
+            },
+            {
+              "cat_na": ["(Missing)"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat_na"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":"cat_na"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat_na","search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":{"type":["categorical"],"filters":{"cat_na":["(Missing)"]},"columns":[]}},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat_na",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "cat_na",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "cat_na",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat_na",
+            "func": "count"
+          },
+          "slot_choices": []
+        },
+        "receipt": "Filtered: cat_na = (Missing)",
+        "legend": {
+          "groups": [
+            {
+              "title": "cat_na",
+              "items": [
+                {
+                  "label": "(Missing)",
+                  "color": "#0072B2"
+                },
+                {
+                  "label": "a",
+                  "color": "#E69F00"
+                },
+                {
+                  "label": "b",
+                  "color": "#009E73"
+                }
+              ]
+            }
+          ]
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 2,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat_na"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":"cat_na"}],"id":null,"percent_of":"facet","missing":"drop","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat_na","search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":{"type":["categorical"],"filters":{"cat_na":["(Missing)"]},"columns":[]}},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "parts": {
+            "title": null,
+            "subtitle": null,
+            "caption": null
+          },
+          "offers": {
+            "title": [],
+            "subtitle": [],
+            "caption": []
+          },
+          "sentence_args": [],
+          "arg_values": {
+            "layout": "groups",
+            "by": "cat_na",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "drop",
+            "color": "cat_na",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "cat_na",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat_na",
+            "func": "count"
+          },
+          "slot_choices": []
+        },
+        "receipt": "Filtered: cat_na = (Missing)",
+        "legend": {
+          "groups": [
+            {
+              "title": "cat_na",
+              "items": [
+                {
+                  "label": "a",
+                  "color": "#0072B2"
+                },
+                {
+                  "label": "b",
+                  "color": "#E69F00"
+                }
+              ]
+            }
+          ]
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat_na",
+            "disp": ["a", "b"],
+            "num": false
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["5", "4"],
+            "key": [41.6667, 33.3333],
+            "mark": {
+              "kind": "barsplit",
+              "mode": "stacked",
+              "levels": [
+                {
+                  "name": "a",
+                  "color": "#0072B2",
+                  "width": [100, 0],
+                  "amount": [5, 0],
+                  "inside": ["5", ""],
+                  "ink": "#ffffff"
+                },
+                {
+                  "name": "b",
+                  "color": "#E69F00",
+                  "width": [0, 80],
+                  "amount": [0, 4],
+                  "inside": ["", "4"],
+                  "ink": "#1f2937"
+                }
+              ],
+              "level_col": "cat_na",
+              "domain": {
+                "min": 0,
+                "max": 41.6667
+              },
+              "ticks": {
+                "at": [0, 10, 20, 30, 40],
+                "labels": ["0", "10", "20", "30", "40%"]
+              },
+              "dw": 7,
+              "pct": ["(42%)", "(33%)"],
+              "hover": {
+                "head": "Rows",
+                "sub": "N = 12",
+                "measure": "Rows",
+                "color_by": "cat_na",
+                "base": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat_na",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Rows",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "keys": [
+            {
+              "cat_na": ["a"]
+            },
+            {
+              "cat_na": ["b"]
+            }
+          ]
+        }
+      }
+    },
+    null
+  ]
+}

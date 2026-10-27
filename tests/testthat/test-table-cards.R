@@ -38,14 +38,15 @@ cards_payload_of <- function(data, by = "ARM", ...) {
 }
 
 test_that("look takes table, compact or cards; compact = TRUE still works", {
-  look_of <- function(b) get("look", envir = environment(b$expr_server))
+  look_of <- function(b) blockr.core::blockr_ser(b)$payload$look
   expect_identical(look_of(new_table_block()), "table")
   expect_identical(look_of(new_table_block(look = "cards")), "cards")
-  expect_identical(look_of(new_table_block(look = "nonsense")), "table")
-  expect_identical(look_of(new_table_block(compact = TRUE)), "compact")
-  expect_identical(look_of(new_table_block(rotate_titles = TRUE)), "compact")
-  p <- blockr.core::blockr_ser(new_table_block(compact = TRUE))$payload
-  expect_identical(p$look, "compact")
+  expect_error(new_table_block(look = "nonsense"), "look")
+  expect_warning(b <- new_table_block(compact = TRUE), "compact")
+  expect_identical(look_of(b), "compact")
+  expect_warning(b <- new_table_block(rotate_titles = TRUE), "rotate_titles")
+  expect_identical(look_of(b), "compact")
+  p <- blockr.core::blockr_ser(b)$payload
   expect_false("compact" %in% names(p))
 })
 

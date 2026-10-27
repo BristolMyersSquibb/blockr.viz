@@ -12,10 +12,36 @@
 viz_registry_args <- function(spec) {
   args <- Filter(function(a) a$ai, spec$args)
   specs <- lapply(args, function(a) {
-    blockr.core::new_arg_spec(a$describe, example = a$example,
+    blockr.core::new_arg_spec(a$describe, example = registry_example(a),
                               type = registry_type(a$type, a$values))
   })
   do.call(blockr.core::new_arg_specs, specs)
+}
+
+# An example as blockr.core reads it: an array is a list, whatever its
+# length, here and in the fields of a record.
+registry_example <- function(a) {
+  registry_example_value(a$type, a$example)
+}
+
+registry_example_value <- function(type, x) {
+  if (is.null(x)) {
+    return(x)
+  }
+  arrays <- c("columns", "enums", "strings", "numbers", "values")
+  switch(
+    type$name,
+    record = registry_example_record(type, x),
+    records = lapply(x, function(r) registry_example_record(type, r)),
+    if (type$name %in% arrays) as.list(x) else x
+  )
+}
+
+registry_example_record <- function(type, x) {
+  for (nm in intersect(names(x), names(type$fields))) {
+    x[nm] <- list(registry_example_value(type$fields[[nm]]$type, x[[nm]]))
+  }
+  x
 }
 
 registry_type <- function(type, values = NULL, required = TRUE) {
