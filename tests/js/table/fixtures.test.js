@@ -28,7 +28,7 @@ function check(el, p, where) {
     if (p.derived && p.derived.empty) assert.ok(empty, where + ': the empty message shows');
     return;
   }
-  if (p.config.look === 'cards' && m.cards && p.config.layout === 'records') {
+  if (p.config.look === 'cards' && m.cards && p.config.layout !== 'variables') {
     assert.ok(el.querySelector('.blockr-cards-host:not([hidden])'), where + ': cards drawn');
     return;
   }
