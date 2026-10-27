@@ -62,7 +62,8 @@ Suggests:
     shinytest2,
     systemfonts,
     testthat (>= 3.0.0),
-    withr
+    withr,
+    xml2
 Remotes:
     BristolMyersSquibb/blockr.core,
     BristolMyersSquibb/blockr.assistant,
