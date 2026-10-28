@@ -567,7 +567,16 @@ tg_rw_known <- list(
   grp_facet = list(
     why = "row 6: the reference sorted a facet level descending by default",
     skip = list(from = 4L, parts = c("state", "browser"))
-  )
+  ),
+  # The groups and cards Web page carries the table view's payload, which
+  # the view draws (table_static()); the reference wrote the table's markup.
+  # test-summarize-exhibit.R and test-table-cards.R read the payload.
+  rec_download_cards = list(why = "web page drawn by the table view",
+                            skip = list(from = 3L, parts = "download")),
+  grp_download = list(why = "web page drawn by the table view",
+                      skip = list(from = 3L, parts = "download")),
+  grp_download_cards = list(why = "web page drawn by the table view",
+                            skip = list(from = 3L, parts = "download"))
 )
 
 tg_rw_apply_known <- function(want, got, nm, sc) {

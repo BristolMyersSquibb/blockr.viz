@@ -38,14 +38,14 @@ different order.
 | records with a finished table as input (annotated data frame): drawn with its structure | G:rec_structured, G:rec_source, G:rec_download_structured |
 | records with an object that has an `as_annotated_df()` method | G:rec_input_tbl; R:test-table-block-annotated.R |
 | `layout = "groups"`: one row per level of `by`, one column per summary | G:grp_default, G:grp_all_types |
-| groups without `by`: one Total row, no sort, search or drill | G:grp_no_by, G:grp_cards_no_by; R:test-table-groups-no-by.R; JS:summarize-table.test.js |
-| groups with two `by` columns: parent rows that fold | G:grp_two_by; JS:summarize-table.test.js ("a parent row folds") |
+| groups without `by`: one Total row, no sort, search or drill | G:grp_no_by, G:grp_cards_no_by; R:test-table-groups-no-by.R; JS:table/groups.test.js ("without by there is no search or header sorting") |
+| groups with two `by` columns: parent rows that fold | G:grp_two_by; JS:table/groups.test.js ("nested groups: parents fold their terms") |
 | `layout = "variables"`: Table 1, one column per level of `by` | G:var_default, G:var_options |
 | variables with no variable picked: the input passes through | G:var_none |
 | layout switch keeps `by`, `summaries`, titles and toggles | G:layout_switch |
-| switching to groups with no summaries seeds one count column | G:layout_switch_seed; JS:summarize-table.test.js ("a new groups table opens on its one count column") |
+| switching to groups with no summaries seeds one count column | G:layout_switch_seed |
 | an unknown layout value is ignored by the switch, healed to records by the constructor | G:layout_switch (last step), G:ctor:bad_layout |
-| layout tiles in the gear follow the pushed layout | JS:summarize-table.test.js ("the layout tiles follow"); R:test-table-layout-switch.R (browser) |
+| layout tiles in the gear follow the pushed layout | R:test-table-layout-switch.R (browser) |
 
 ## Looks
 
@@ -58,7 +58,7 @@ different order.
 | `look = "cards"`, groups: one row of cards per level, spans left out | G:grp_cards, G:grp_cards_no_by; R:test-table-cards.R |
 | `look = "cards"` in the variables layout draws a table | G:var_cards |
 | an unknown look reads as `"table"` | G:ctor:bad_look, G:rec_gear |
-| the cards' browser rendering (`inst/js/table-cards.js`) | **none** |
+| the cards' browser rendering (`inst/js/table/cards.js`) | JS:table/records.test.js ("the cards look draws a card per column"), JS:table/static.test.js |
 
 ## Arguments
 
@@ -75,7 +75,7 @@ different order.
 | type `field` | G:grp_all_types, G:grp_facet |
 | type `series`: `band`, `ref` | G:grp_all_types; R:test-lane-summaries.R |
 | type `spans`: `label`, `tooltip`, `size` | G:grp_all_types, G:grp_cards |
-| type `pair`: `x_func`, `xend_func`, `ref_lo`, `ref_hi`, `ref`, `dash` | G:grp_all_types; JS:summarize-table.test.js (pair tooltip) |
+| type `pair`: `x_func`, `xend_func`, `ref_lo`, `ref_hi`, `ref`, `dash` | G:grp_all_types; JS:table/groups.test.js ("hover: a box names its statistics; a pair its clauses") |
 | type `expr`, including a failing expression | G:grp_all_types, G:grp_custom_error; R:test-lane-summaries.R |
 | type `custom` | G:grp_custom_error; R:test-lane-custom.R |
 | `denom` key | R:test-agg-pct-distinct.R |
@@ -101,8 +101,8 @@ different order.
 | `drill`: records column, `"auto"`, `"source"`; groups any value; variables | G:rec_drill, G:rec_structured, G:rec_source, G:grp_drill, G:var_drill |
 | `drill_target`, `drill_table` | G:rec_drill_target, G:grp_drill_target; R:test-table-drill.R (browser) |
 | `search`, `sortable` | G:rec_toggles, G:grp_display; R:test-table-display-toggles.R |
-| `collapsible` | G:rec_toggles, G:rec_download_by; R:test-table-display-toggles.R; JS:table-collapse.test.js |
-| `max_height`, `NULL`, the old `"600px"` dropped | G:rec_toggles, G:grp_display, G:ctor:max_height_legacy; JS:summarize-table.test.js ("a height makes the table scroll") |
+| `collapsible` | G:rec_toggles, G:rec_download_by; R:test-table-display-toggles.R; JS:table/dom.test.js ("without collapsible the sections are plain labels") |
+| `max_height`, `NULL`, the old `"600px"` dropped | G:rec_toggles, G:grp_display, G:ctor:max_height_legacy |
 | `download` | G:rec_toggles, G:rec_download, G:grp_download; R:test-table-gear-state.R |
 | `title`, `subtitle`, `caption`: `NULL` auto, `""` none, template | G:rec_titles, G:rec_titles_auto, G:grp_titles; R:test-title-template.R |
 | `caption` default `getOption("blockr.viz.default_caption")` | G:rec_default_caption, G:grp_default_caption |
@@ -122,15 +122,15 @@ the key, the value) and record the state that results.
 
 | Control | Covered by |
 |---|---|
-| records gear: Row names, Columns, Color by, shading rules, Numbers, Unit, Missing, Header sorting, Sections, Search, Download, Look, Filter on, Title, Subtitle, Caption | G:rec_gear; JS:table-gear.test.js |
+| records gear: Row names, Columns, Color by, shading rules, Numbers, Unit, Missing, Header sorting, Sections, Search, Download, Look, Filter on, Title, Subtitle, Caption | G:rec_gear; JS:table/records.test.js ("the gear hides what a finished input cannot change") |
 | records gear: Nest by (`group` key) and its Missing | G:rec_by |
 | records gear: the old `digits` and `rotate_titles` keys | G:rec_gear |
-| records gear sections and field order | JS:table-gear.test.js |
-| groups gear: One row per, the columns list, Facet layout, Sort, Order, Top, Search, Header sorting, Column axis, Values, Bar width, Percent of, Missing, Numbers, Unit, Download, Look, Filter on, Title, Subtitle, Caption | G:grp_gear, G:grp_sort, G:grp_display, G:grp_facet, G:grp_missing, G:grp_drill; JS:summarize-table.test.js |
+| records gear sections and field order | **none** |
+| groups gear: One row per, the columns list, Facet layout, Sort, Order, Top, Search, Header sorting, Column axis, Values, Bar width, Percent of, Missing, Numbers, Unit, Download, Look, Filter on, Title, Subtitle, Caption | G:grp_gear, G:grp_sort, G:grp_display, G:grp_facet, G:grp_missing, G:grp_drill |
 | groups gear: unknown and empty keys are ignored | G:grp_gear |
-| groups gear column editor in the browser: colour split, show, reorder, remove | JS:summarize-table.test.js |
+| groups gear column editor in the browser: colour split, show, reorder, remove | JS:table/summaries.test.js ("move, remove, add and fold") |
 | groups gear column editor in the browser: `func`, `col`, `facet` and the type-specific fields | **none** |
-| variables widget: Variables, Group by, Section by, Statistics, Total and label, Nest, Subject id | G:var_widget (R side); JS:summary-table-block.test.js (Statistics only) |
+| variables widget: Variables, Group by, Section by, Statistics, Total and label, Nest, Subject id | G:var_widget (R side); JS:table/variables.test.js ("the gear's Variables row picks among the columns not in by") |
 | variables widget pickers other than Statistics, in the browser | **none** |
 | Send to filter: target and table | G:rec_drill_target, G:grp_drill_target |
 | Send to filter: the list of target blocks on the board | **none** for the table |
@@ -148,12 +148,12 @@ the key, the value) and record the state that results.
 | records nested: a header click claims the group, `(Missing)` claims NA rows | G:rec_by, G:rec_by_missing; R:test-table-missing-drill.R |
 | structured input: a cell or header click with its column half | G:rec_structured, G:var_drill |
 | `drill = "source"`: the click resolves to source rows (`drill_source()`) | G:rec_source |
-| groups: a row click, a parent path, clear, `clear_filter` | G:grp_drill, G:grp_two_by; JS:summarize-table.test.js ("a latched drill", "a nested drill") |
+| groups: a row click, a parent path, clear, `clear_filter` | G:grp_drill, G:grp_two_by; JS:table/groups.test.js ("a row click claims the group and lights its row; again clears") |
 | groups: a click on `(Missing)` keeps the NA rows | G:grp_missing; R:test-table-missing-drill.R |
 | re-aiming or clearing the drill drops the filter; removing `by` drops it | G:grp_drill, G:rec_drill |
 | a click with a prepare script filters before or after the script | G:grp_script, G:rec_script; R:test-summarize-prepare.R |
 | status line "Filtered: ..." (records) | G:rec_drill, G:rec_by (output `records-dt_status`) |
-| status line (groups, drawn in the browser) | JS:summarize-table.test.js |
+| status line (groups, drawn in the browser) | JS:table/drill.test.js ("the clear button on the receipt clears the drill") |
 | transient drill: every click sends, the same row twice sends twice, a clear is inert, nothing filters here | G:rec_drill_target, G:grp_drill_target |
 | pooled groups of an overlap definition | R:test-expand-groups.R |
 
@@ -251,7 +251,7 @@ protocol fails there and nowhere else.
 
 ## Without a test
 
-- the cards' browser rendering (`table-cards.js`)
+- records gear sections and field order in the browser
 - `color = NULL` tinting rows from the board's scale map
 - `bar_width = "medium"`
 - groups gear column editor in the browser: `func`, `col`, `facet` and the type-specific fields

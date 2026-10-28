@@ -204,7 +204,7 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
   has_title <- is.character(title) && length(title) == 1L && nzchar(title)
   can_title <- pptx_layout_has_title(doc, layout, master)
 
-  # A picture the browser cut into pages (inst/js/capture-pages.js) goes out
+  # A picture cut into pages (`x$pages`, new_chart_capture()) goes out
   # one page per slide, every page at the same scale so the rows line up
   # when the reader flips. Page 1 opens with the picture's own title band;
   # the later ones say whose continuation they are in the slide title.

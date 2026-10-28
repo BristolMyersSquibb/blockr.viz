@@ -62,6 +62,8 @@ read.
 * `new_tile_block()`. A tile is `new_table_block(look = "cards")`. Saved
   tile boards restore as table blocks in the cards look: a tile with
   `summaries` in the groups layout, any other in the records layout.
+* `interactive_table()` and `update_interactive_table()`. The table block
+  draws tables.
 * `new_summary_table_block()` and `new_summarize_table_block()` are
   superseded: they translate their arguments and return a table block in
   the variables and the groups layout.

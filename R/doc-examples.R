@@ -144,11 +144,6 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name interactive_table
-#' @rdname interactive_table
-#' @keywords internal
-NULL
-
 #' @name new_drilldown_theme_option
 #' @rdname new_drilldown_theme_option
 #' @keywords internal

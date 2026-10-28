@@ -26,8 +26,6 @@
      panel's slack stays blank instead of stretching the marks. */
   --blockr-summarize-lane-max: 320px;
 }
-/* Title / subtitle / caption: the canonical .dd-table-* bands, styled by
-   inst/css/table.css (shipped with the table dep). Nothing to add here. */
 .blockr-summarize-table { width: 100%; }
 /* Column widths ride on the CELLS: the header cells come from the table
    block's dt_th(), so they carry its classes, not ours. */
@@ -254,17 +252,18 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.blockr-summarize-seglab.w1, .blockr-summarize-seglab.w2,
-.blockr-summarize-seglab.w3, .blockr-summarize-seglab.w4,
-.blockr-summarize-seglab.w5, .blockr-summarize-seglab.w6,
-.blockr-summarize-seglab.w7 { display: inline; }
-@container (max-width: 11px) { .blockr-summarize-seglab.w1 { display: none; } }
-@container (max-width: 17px) { .blockr-summarize-seglab.w2 { display: none; } }
-@container (max-width: 23px) { .blockr-summarize-seglab.w3 { display: none; } }
-@container (max-width: 29px) { .blockr-summarize-seglab.w4 { display: none; } }
-@container (max-width: 35px) { .blockr-summarize-seglab.w5 { display: none; } }
-@container (max-width: 41px) { .blockr-summarize-seglab.w6 { display: none; } }
-@container (max-width: 47px) { .blockr-summarize-seglab.w7 { display: none; } }
+.blockr-summarize-seglab.lw-1, .blockr-summarize-seglab.lw-2,
+.blockr-summarize-seglab.lw-3, .blockr-summarize-seglab.lw-4,
+.blockr-summarize-seglab.lw-5, .blockr-summarize-seglab.lw-6,
+.blockr-summarize-seglab.lw-7 { display: inline; }
+@container (max-width: 11px) { .blockr-summarize-seglab.lw-1 { display: none; } }
+@container (max-width: 17px) { .blockr-summarize-seglab.lw-2 { display: none; } }
+@container (max-width: 23px) { .blockr-summarize-seglab.lw-3 { display: none; } }
+@container (max-width: 29px) { .blockr-summarize-seglab.lw-4 { display: none; } }
+@container (max-width: 35px) { .blockr-summarize-seglab.lw-5 { display: none; } }
+@container (max-width: 41px) { .blockr-summarize-seglab.lw-6 { display: none; } }
+@container (max-width: 47px) { .blockr-summarize-seglab.lw-7 { display: none; } }
+
 /* The value end. In a plain bar the fill is the only child; in a stack it is
    the outermost segment; in a grouped bar each row3 holds one. Zero-width
    segments are never emitted, so :last-child is always a segment that shows. */
@@ -471,15 +470,13 @@
   width: 55%;
   min-width: 320px;
 }
-/* Same-event emphasis, from hover (seg-hover + is-same) or from a live
-   search query (seg-search + is-hit). NOT opacity: translucency stacks
+/* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
    multiplicatively, so a subject with many overlapping events re-darkens
    however low the alpha. Instead the non-matches are repainted with ONE
    flat opaque near-track shade (!important beats the inline fill) --
    identical opaque rectangles overlap invisibly, so only the matched
    event carries colour no matter how dense the timeline is. */
-.blockr-summarize-container.seg-hover .lane-seg:not(.is-same),
-.blockr-summarize-container.seg-search .lane-seg:not(.is-hit) {
+.blockr-summarize-container.seg-hover .lane-seg:not(.is-same) {
   background: color-mix(in srgb, var(--blockr-summarize-track) 88%,
                         var(--blockr-summarize-tick)) !important;
   transition: background 0.1s ease;
@@ -586,7 +583,7 @@
 .lane-sum-addcol { align-self: flex-start; }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
-   per page, positioned by summarize-table.js. It follows the pointer, so it is
+   per page, positioned by table/tooltip.js. It follows the pointer, so it is
    not a Blockr.tooltip, but it wears the same light card. */
 .blockr-lane-tip {
   position: fixed;
@@ -674,9 +671,9 @@
   transform: rotate(-90deg);
 }
 
-/* Fold all: the table block's corner chevron (summarize-table.js
-   syncFoldAll), hung into the stub header's padding exactly as the parent
-   rows hang theirs, so the title keeps the labels' left edge. */
+/* Fold all: the table block's corner chevron (table/html.js), hung into
+   the stub header's padding exactly as the parent rows hang theirs, so the
+   title keeps the labels' left edge. */
 .blockr-summarize-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
@@ -742,7 +739,6 @@
 .blockr-summarize-table[data-summarize-compact='1'] tr.is-parent td.blockr-summarize-label-col {
   white-space: nowrap;
 }
-.blockr-summarize-table tr.is-child.collapsed-hidden { display: none; }
 .blockr-summarize-table tr.is-parent .blockr-summarize-label {
   font-weight: 600;
 }
@@ -751,41 +747,6 @@
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
-}
-.blockr-summarize-table tr.is-pick { cursor: pointer; }
-.blockr-summarize-table tr.is-on {
-  background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
-}
-/* A cell click claims the row and the cell column: that cell, one step
-   stronger than its row. */
-.blockr-summarize-table tr.is-on td.is-on-cell {
-  background: color-mix(in srgb, var(--blockr-summarize-fill) 22%, transparent);
-}
-/* Transient drill (a ctrl_target is set): the row is lit, held, released --
-   there is nothing to un-set. A LAYER whose opacity fades, not the row's own
-   background: the bars behind it are the data, and a background-image fade
-   would animate discretely anyway (see the note in table.css). Same clock as
-   the table's flash. */
-.blockr-summarize-table tr.summarize-flash td {
-  position: relative;
-  z-index: 0;
-}
-.blockr-summarize-table tr.summarize-flash td::after {
-  /* Single quotes: this stylesheet lives inside an R string literal. */
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--blockr-summarize-fill) 10%, transparent);
-  animation: summarize-flash-out 900ms linear 300ms both;
-}
-.blockr-summarize-table tr.summarize-flash td:first-child::after {
-  box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
-}
-@keyframes summarize-flash-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 .blockr-summarize-table tr.blockr-summarize-fold td {
   font-style: italic;

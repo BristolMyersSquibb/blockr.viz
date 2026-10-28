@@ -136,18 +136,6 @@ test_that("LANE_STATS and the chart's STAT_META follow the spec's stats", {
   expect_identical(js_enum(js, "const STAT_META"), c("tukey", SPEC_STATS))
 })
 
-test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {
-  js <- system.file("js", "summarize-table.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "summarize-table.js not found")
-  expect_identical(js_enum(js, "var LANE_STATS"), LANE_STATS)
-  src <- paste(readLines(js, warn = FALSE), collapse = "\n")
-  for (nm in LANE_STATS) {
-    lbl <- LANE_STAT_META[[nm]]$label
-    expect_true(grepl(lbl, src, fixed = TRUE),
-                info = paste0(nm, " label '", lbl, "' missing in JS"))
-  }
-})
-
 test_that("the table's summary and whiskers specs are the chart's enums", {
   props <- table_summary_specs()$dist$args
   expect_identical(as.character(props$summary$values), c(LANE_STATS, "none"))
