@@ -1,11 +1,7 @@
-/* ===== Data tooltip =====
-   The content of every data tooltip: the ECharts ones (chart/common.js
-   tipHead / tipRow, the card set on the option by cardTooltip), the summarize
-   table's and the heatmap's, and blockr.pharma's patient profile. One file
-   so each of them loads the same rules (tooltip_card_dep()). Headline
-   13px/600, rows 12px with the label muted and the value at 500 in tabular
-   figures, a swatch where a headline or a row stands for one series (design
-   system, Charts). */
+/* ===== Data tooltip ===== The content of every data tooltip: the ECharts
+   ones (chart/common.js tipHead / tipRow, the card set on the option by
+   cardTooltip), the summarize table's and the heatmap's, and blockr.pharma's
+   patient profile. */
 .dd-tt-head {
   display: flex;
   align-items: center;
