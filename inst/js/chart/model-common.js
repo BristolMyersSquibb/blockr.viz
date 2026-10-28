@@ -184,17 +184,24 @@
   };
 
   /**
-   * Facet value -> its strip label, with "(n)" when show_n covers facets.
-   * @param {any[]} rows @param {Record<string, any>} cfg @param {any[]} facets
-   * @returns {Map<string, any>}
+   * A panel's strip label: the facet value, with "(n)" when show_n covers
+   * facets; null for a single panel.
+   * @param {any[]} rows @param {Record<string, any>} cfg @param {number} nFacets
+   * @returns {(facet: string) => string | null}
    */
-  const facetLabels = (rows, cfg, facets) => {
-    /** @type {Map<string, any>} */
-    const m = new Map();
-    const counts = NS.countOn(cfg, 'facet') ? NS.labelCounts(rows, cfg, cfg.facet, null, null) : null;
-    for (const f of facets) m.set(f, counts ? NS.withCount(f, counts) : f);
-    return m;
+  const facetLabels = (rows, cfg, nFacets) => {
+    const counts = NS.countOn(cfg, 'facet') ? NS.labelCounts(rows, cfg, cfg.facet) : null;
+    return (fv) => (nFacets === 1 || fv === '__all__' ? null
+      : (counts ? NS.withCount(fv, counts) : fv));
   };
 
-  Object.assign(model, { settings, inferLie, FIXED, defaults, gate, emptyState, facetLabels });
+  /**
+   * The tooltip columns of a config, less `drop` (columns the tooltip shows anyway).
+   * @param {Record<string, any>} cfg @param {string[]} [drop] @returns {string[]}
+   */
+  const tooltipFields = (cfg, drop = []) => [].concat(cfg.tooltip || []).map(String)
+    .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
+
+  Object.assign(model, { settings, inferLie, FIXED, defaults, gate, emptyState, facetLabels,
+                         tooltipFields });
 })();

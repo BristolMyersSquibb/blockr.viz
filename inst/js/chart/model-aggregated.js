@@ -86,17 +86,6 @@
   };
 
   /**
-   * A histogram's bin labels from R's edges (derived.hist), in order: a
-   * data frame as rows or as columns. Null without them.
-   * @param {any} edges @returns {string[] | null}
-   */
-  const histBins = (edges) => {
-    const labels = Array.isArray(edges) ? edges.map((e) => e && e.label)
-      : (edges && Array.isArray(edges.label) ? edges.label : null);
-    return labels && labels.length ? labels.map(String) : null;
-  };
-
-  /**
    * The order of a panel's groups on the category axis. A bridge always
    * keeps the data order (a value sort scrambles the running total). "data"
    * is factor levels, else time or numeric order for a date or number
@@ -118,7 +107,9 @@
     // Every bin of a histogram, the empty ones too: a missing bin would
     // close the gap in the distribution it stands for. R's edges list them.
     if (cfg.type === 'histogram') {
-      const bins = histBins(cfg.derived.hist) || levels;
+      // R's edges, a data frame sent as columns.
+      const edges = cfg.derived.hist && cfg.derived.hist.label;
+      const bins = Array.isArray(edges) && edges.length ? edges.map(String) : levels;
       if (bins) return bins;
     }
     const levelAt = new Map((levels || []).map((l, i) => [l, i]));
@@ -174,10 +165,6 @@
     });
   };
 
-  /** The tooltip fields of a bar. @param {Record<string, any>} cfg @returns {string[]} */
-  const barTtFields = (cfg) => [].concat(cfg.tooltip || [])
-    .map(String).filter((c) => c && c !== 'null' && c !== '(none)');
-
   /**
    * The first row's tooltip-field values per group, per facet ('__all__'
    * for all rows).
@@ -187,19 +174,16 @@
   const ttRepValues = (rows, cfg, ttFields) => {
     const groupCol = cfg.category, facetCol = cfg.facet;
     /** @type {Map<string, Record<string, any[]>>} */
-    const byFacet = new Map();
-    /** @type {Record<string, any[]>} */
-    const all = {};
-    byFacet.set('__all__', all);
+    const byFacet = new Map([['__all__', {}]]);
     for (const r of rows) {
       const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
-      if (!(g in all)) all[g] = ttFields.map((c) => r[c] ?? '');
+      const recs = [byFacet.get('__all__')];
       if (facetCol) {
         const fv = String(r[facetCol] ?? '');
-        let rec = byFacet.get(fv);
-        if (!rec) { rec = {}; byFacet.set(fv, rec); }
-        if (!(g in rec)) rec[g] = ttFields.map((c) => r[c] ?? '');
+        if (!byFacet.has(fv)) byFacet.set(fv, {});
+        recs.push(byFacet.get(fv));
       }
+      for (const rec of recs) if (rec && !(g in rec)) rec[g] = ttFields.map((c) => r[c] ?? '');
     }
     return byFacet;
   };
@@ -354,7 +338,7 @@
       ? orderGroups(agg, rows, columns, cfg) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
-    out.ttFields = (isBar && !out.cumulative) ? barTtFields(cfg) : [];
+    out.ttFields = (isBar && !out.cumulative) ? model.tooltipFields(cfg) : [];
     // On-mark text: a bar (not a waterfall step or histogram bin), slice or tile.
     if (cfg.label && ((ct === 'bar' && !out.cumulative && !out.histogram) ||
                       ct === 'pie' || ct === 'treemap')) {
@@ -362,7 +346,7 @@
     }
     const ttRep = out.ttFields.length ? ttRepValues(rows, cfg, out.ttFields) : null;
     const countAxis = isBar && NS.countOn(cfg, 'axis');
-    const labels = model.facetLabels(rows, cfg, facets);
+    const facetLabel = model.facetLabels(rows, cfg, out.nFacets);
 
     for (const fv of facets) {
       const cells = ix.get(agg, 'facet', 'raw', fv);
@@ -374,7 +358,7 @@
       }
       out.panels.push({
         facet: fv,
-        label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
+        label: facetLabel(fv),
         groups, cells, axisCounts,
         ttRep: ttRep ? (ttRep.get(restrict ? String(fv) : '__all__') || {}) : null,
         slots: (distribution && !out.noValue)
