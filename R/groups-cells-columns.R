@@ -8,7 +8,9 @@ cells_bar <- function(ctx, p) {
     v <- v / p$denom * 100
   }
   c(list(kind = "bar", w = cells_pct_w(v, p$dmax %||% ctx$mx),
-         v = cells_sortv(v), fill = p$fill, sub = ctx$rows$.level > 0L), lab)
+         v = cells_sortv(v), fill = p$fill,
+         # A child row's bar is drawn lighter.
+         child = ctx$rows$.level > 0L), lab)
 }
 
 cells_tile <- function(ctx, p) {
