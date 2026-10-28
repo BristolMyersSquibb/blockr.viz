@@ -29,6 +29,15 @@ test('the gear shows the rows the spec offers for the chart type', () => {
   c.close();
 });
 
+test('the type tiles name their types with a capital, as 0.2 did', () => {
+  const c = D.open(BAR);
+  const tile = (v) => row(c.block, 'type').querySelector('[data-value="' + v + '"]').textContent.trim();
+  assert.strictEqual(tile('bar'), 'Bar');
+  assert.strictEqual(tile('boxplot'), 'Boxplot');
+  assert.strictEqual(tile('scatter'), 'Scatter');
+  c.close();
+});
+
 test('a gear edit goes to R as the changed key, with the payload revision', () => {
   const c = D.open(BAR);
   c.send(c.config, { stateRev: 7 });

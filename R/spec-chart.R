@@ -9,6 +9,10 @@ chart_arg <- function(..., slot = TRUE) viz_arg(..., slot = slot)
 SPEC_CHART_TYPES <- c("bar", "histogram", "waterfall", "pie", "treemap",
                       "boxplot", "pointrange", "scatter", "line", "area",
                       "band", "gantt")
+# The type tiles' words, in SPEC_CHART_TYPES order.
+SPEC_CHART_TYPE_LABELS <- c("Bar", "Histogram", "Waterfall", "Pie", "Treemap",
+                            "Boxplot", "Pointrange", "Scatter", "Line", "Area",
+                            "Band", "Gantt")
 SPEC_CHART_AGGREGATED <- c("bar", "waterfall", "pie", "treemap",
                            "boxplot", "pointrange")
 SPEC_CHART_INDIVIDUAL <- c("scatter", "line", "area", "band")
@@ -19,7 +23,8 @@ chart_spec_mapping <- function() {
   list(
     type = chart_arg(
       type = "enum", default = "bar", values = SPEC_CHART_TYPES,
-      gear = gear("Chart type", "tiles", "Chart type"),
+      gear = gear("Chart type", "tiles", "Chart type",
+                  labels = SPEC_CHART_TYPE_LABELS),
       example = "scatter",
       describe = paste(
         "Chart type. Aggregated: bar, waterfall, pie, treemap, boxplot,",
