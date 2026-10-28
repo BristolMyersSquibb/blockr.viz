@@ -290,7 +290,7 @@ writeLines(c(
   '<h1>Summarize table painted as one picture for PowerPoint</h1>',
   paste0('<p class="lede">Painted exhibit first (what lands on the slide),',
          ' then the same table drawn by <code>summarize_table()</code> in a',
-         ' browser. Both read the same <code>summarize_cells()</code> output.',
+         ' browser. Both read the same <code>groups_cells()</code> output.',
          ' Slide box: ', FIT_WIDTH, ' x ', BODY_H, 'in. Deck: ',
          '<a href="summarize-tables.pptx">summarize-tables.pptx</a>',
          ' (', length(pngs), ' slides).</p>'),

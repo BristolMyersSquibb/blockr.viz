@@ -1,6 +1,6 @@
 # Golden cross-test: the JS aggregation engine (aggregate() in
 # inst/js/chart/agg.js -- the chart's client-side path) and the R engine
-# (dd_table_aggregate / dd_metric_plan, R/table-block.R -- the table + tile
+# (table_aggregate / table_metric_plan, R/table-block.R -- the table + tile
 # server-side path) MUST produce the same numbers for the same data. The
 # name-drift tests (test-agg-fns-drift.R) only tie the vocabulary; this test
 # ties the SEMANTICS by executing inst/js/chart/agg.js as shipped in plain
@@ -9,7 +9,7 @@
 # Alignment contract (R is the source of truth):
 #   * mean/median/min/max of a cell with no usable numeric value: null (JS) /
 #     NA (R; mean gives NaN, which is.na covers; min/max go through
-#     dd_agg_min/dd_agg_max so they yield NA instead of warning +/-Inf).
+#     table_agg_min/table_agg_max so they yield NA instead of warning +/-Inf).
 #   * sum of such a cell: 0 on both sides (sum(x, na.rm = TRUE)).
 #   * count = rows in the cell; count_distinct = distinct non-missing values
 #     (n_distinct(x, na.rm = TRUE) <-> JS Set over non-null values).
@@ -46,7 +46,7 @@ js_aggregate <- function(rows, config) {
 }
 
 # The R engine, driven exactly as the table/tile drive it (summaries list ->
-# dd_metric_plan -> dd_table_aggregate). A count summary rides along (except
+# table_metric_plan -> table_aggregate). A count summary rides along (except
 # for func == "count" itself) so the JS per-cell `n` is cross-checked too.
 r_aggregate <- function(df, group, func, value, na_group = NULL) {
   summaries <- if (identical(func, "count")) {
@@ -57,7 +57,7 @@ r_aggregate <- function(df, group, func, value, na_group = NULL) {
       list(func = "count", cols = character())
     )
   }
-  dd_table_aggregate(df, group, summaries, na_group = na_group %||% "level")
+  table_aggregate(df, group, summaries, na_group = na_group %||% "level")
 }
 
 `%||%` <- function(x, y) if (is.null(x)) y else x

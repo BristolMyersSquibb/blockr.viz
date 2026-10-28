@@ -9,31 +9,31 @@
 test_that("each statistic matches hand-computed values (x = 1,2,3,4,10)", {
   x <- c(1, 2, 3, 4, 10)
 
-  s <- lane_summarize(x, "median_q1_q3")
+  s <- groups_summarize(x, "median_q1_q3")
   expect_identical(s$n, 5L)
   expect_equal(c(s$center, s$lo, s$hi), c(3, 2, 4))
 
-  s <- lane_summarize(x, "mean_sd")
+  s <- groups_summarize(x, "mean_sd")
   expect_equal(s$center, 4)
   expect_equal(s$lo, 4 - sqrt(50 / 4))
   expect_equal(s$hi, 4 + sqrt(50 / 4))
 
-  s <- lane_summarize(x, "mean_2sd")
+  s <- groups_summarize(x, "mean_2sd")
   expect_equal(s$hi, 4 + 2 * sqrt(50 / 4))
 
-  s <- lane_summarize(x, "mean_se")
+  s <- groups_summarize(x, "mean_se")
   expect_equal(s$hi - s$center, sqrt(50 / 4) / sqrt(5))
 
   # Quantile type 7 IS the JS formula p * (n - 1) + linear interpolation.
-  s <- lane_summarize(x, "p5_p95")
+  s <- groups_summarize(x, "p5_p95")
   expect_equal(c(s$center, s$lo, s$hi), c(3, 1.2, 8.8))
 
-  s <- lane_summarize(x, "min_max")
+  s <- groups_summarize(x, "min_max")
   expect_equal(c(s$center, s$lo, s$hi), c(3, 1, 10))
 
   # Tukey fences clamp to the observed extremes: lo fence -1 -> min 1,
   # hi fence 7 stays (10 is an outlier past it).
-  s <- lane_summarize(x, "tukey")
+  s <- groups_summarize(x, "tukey")
   expect_equal(c(s$center, s$lo, s$hi), c(3, 1, 7))
 })
 
@@ -41,7 +41,7 @@ test_that("mean_ci95 uses the t quantile, never 1.96", {
   # n = 6, where the two intervals differ by 31%: a future 'optimization'
   # back to the normal approximation must fail loudly here.
   x <- c(1, 2, 3, 4, 5, 6)
-  s <- lane_summarize(x, "mean_ci95")
+  s <- groups_summarize(x, "mean_ci95")
   se <- stats::sd(x) / sqrt(6)
   expect_equal(s$hi - s$center, stats::qt(0.975, 5) * se)
   expect_gt((s$hi - s$lo) / 2, 1.25 * 1.96 * se)
@@ -50,25 +50,25 @@ test_that("mean_ci95 uses the t quantile, never 1.96", {
 test_that("degenerate n: NA bounds below n = 2, sd 0 at n = 1, NA at n = 0", {
   # n = 1: the CI is undefined -- NA bounds, so the cell renders the center
   # alone rather than a zero-width interval, which would read as certainty.
-  s <- lane_summarize(5, "mean_ci95")
+  s <- groups_summarize(5, "mean_ci95")
   expect_equal(s$center, 5)
   expect_true(is.na(s$lo) && is.na(s$hi))
   expect_identical(s$n, 1L)
 
   # n = 1 arithmetic stats: sd is 0 (chart parity), a zero-width interval.
-  s <- lane_summarize(5, "mean_sd")
+  s <- groups_summarize(5, "mean_sd")
   expect_equal(c(s$center, s$lo, s$hi), c(5, 5, 5))
 
   # Empty / all-NA input.
-  s <- lane_summarize(numeric(), "median_q1_q3")
+  s <- groups_summarize(numeric(), "median_q1_q3")
   expect_identical(s$n, 0L)
   expect_true(is.na(s$center))
-  s <- lane_summarize(c(NA_real_, NA_real_), "mean_se")
+  s <- groups_summarize(c(NA_real_, NA_real_), "mean_se")
   expect_identical(s$n, 0L)
 })
 
-test_that("lane_q is BIT-identical to stats::quantile(type = 7)", {
-  # lane_q reads quantiles off the pre-sorted basis instead of calling
+test_that("groups_q is BIT-identical to stats::quantile(type = 7)", {
+  # groups_q reads quantiles off the pre-sorted basis instead of calling
   # stats::quantile once per probability. `expect_equal` is not enough here:
   # an algebraically equal interpolation that differs in the last ULP flips a
   # displayed digit (31.59 -> 31.6) on ~2.5% of a real AE table's cells, so
@@ -78,37 +78,37 @@ test_that("lane_q is BIT-identical to stats::quantile(type = 7)", {
   for (i in seq_len(200L)) {
     n <- sample(1:60, 1L)
     x <- stats::rnorm(n) * 10^sample(-3:3, 1L)
-    b <- lane_stat_basis(x)
+    b <- groups_stat_basis(x)
     for (p in probs) {
       expect_identical(
-        lane_q(b, p),
+        groups_q(b, p),
         unname(stats::quantile(sort(x), p, type = 7, names = FALSE))
       )
     }
   }
-  expect_true(is.na(lane_q(lane_stat_basis(numeric()), 0.5)))
+  expect_true(is.na(groups_q(groups_stat_basis(numeric()), 0.5)))
 })
 
-test_that("lane_stat_basis drops non-finite values and sorts", {
-  b <- lane_stat_basis(c(3, NA, 1, Inf, 2, -Inf, NaN))
+test_that("groups_stat_basis drops non-finite values and sorts", {
+  b <- groups_stat_basis(c(3, NA, 1, Inf, 2, -Inf, NaN))
   expect_identical(b$x, c(1, 2, 3))
   expect_identical(b$n, 3L)
   expect_equal(b$mean, 2)
   # sd: 0 at n = 1 (sample sd is undefined), NA only when there is nothing.
-  expect_equal(lane_stat_basis(5)$sd, 0)
-  expect_true(is.na(lane_stat_basis(numeric())$sd))
+  expect_equal(groups_stat_basis(5)$sd, 0)
+  expect_true(is.na(groups_stat_basis(numeric())$sd))
 })
 
 test_that("an unknown statistic falls back to median_q1_q3 (chart parity)", {
   x <- c(1, 2, 3, 4, 10)
-  expect_equal(lane_summarize(x, "no_such_stat"),
-               lane_summarize(x, "median_q1_q3"))
+  expect_equal(groups_summarize(x, "no_such_stat"),
+               groups_summarize(x, "median_q1_q3"))
 })
 
-test_that("lane_stat_agg computes per group, box shape carries both stats", {
+test_that("groups_stat_agg computes per group, box shape carries both stats", {
   d <- data.frame(g = rep(c("a", "b"), each = 5),
                   v = c(1, 2, 3, 4, 10, 2, 4, 6, 8, 10))
-  out <- lane_stat_agg(d, "g", "v", list(.b = "median_q1_q3", .w = "tukey"))
+  out <- groups_stat_agg(d, "g", "v", list(.b = "median_q1_q3", .w = "tukey"))
   expect_setequal(names(out), c("g", ".bc", ".bl", ".bh", ".wc", ".wl",
                                 ".wh", ".n"))
   a <- out[out$g == "a", ]
@@ -129,18 +129,18 @@ js_enum <- function(path, anchor) {
   sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1", vals, perl = TRUE)
 }
 
-test_that("LANE_STATS and the chart's STAT_META follow the spec's stats", {
+test_that("GROUPS_STATS and the chart's STAT_META follow the spec's stats", {
   js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
   expect_true(file.exists(js))
-  expect_identical(LANE_STATS, SPEC_STATS)
+  expect_identical(GROUPS_STATS, SPEC_STATS)
   expect_identical(js_enum(js, "const STAT_META"), c("tukey", SPEC_STATS))
 })
 
 test_that("the table's summary and whiskers specs are the chart's enums", {
   props <- table_summary_specs()$dist$args
-  expect_identical(as.character(props$summary$values), c(LANE_STATS, "none"))
+  expect_identical(as.character(props$summary$values), c(GROUPS_STATS, "none"))
   expect_identical(as.character(props$whiskers$values),
-                   c(LANE_WHISKERS, "none"))
+                   c(GROUPS_WHISKERS, "none"))
   # The chart's values are all there; the table adds mean_ci95 and "none".
   chart <- c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "p5_p95",
              "p10_p90", "min_max")

@@ -237,9 +237,9 @@ test_that("a slide row grows to hold every colour level and its number", {
   d$EDY <- d$SDY + as.integer(d$GRADE) * 3L
   sm <- list(list(type = "pair", x = "SDY", x_func = "mean",
                   xend = "EDY", xend_func = "mean", color = "GRADE"))
-  prep <- summarize_prepare(d, by = "TERM", summaries = sm)
-  on <- summarize_cells(prep)
-  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))
+  prep <- groups_prepare(d, by = "TERM", summaries = sm)
+  on <- groups_cells(prep)
+  off <- groups_cells(prep, cfg = list(value_labels = FALSE))
   lay <- rp_layout(on, prep, 9)
   h_on <- rp_heights(on, prep, lay, 9)
   h_off <- rp_heights(off, prep, rp_layout(off, prep, 9), 9)

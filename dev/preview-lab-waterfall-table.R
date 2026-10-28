@@ -13,7 +13,7 @@
 # subjects have a negative extreme, so 39% of the rows were wrong, and all of
 # them sat below the fold of a descending sort. A bar column whose values go
 # negative now becomes the zero-centred diverging bar instead
-# (lane_summary_domains(), R/table-model-groups-domains.R).
+# (groups_summary_domains(), R/table-model-groups-domains.R).
 options(blockr.tabular_display = blockr.ui::html_table_display)
 options(blockr.dock_is_locked = FALSE)
 .self <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]

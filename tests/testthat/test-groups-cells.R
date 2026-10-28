@@ -1,4 +1,4 @@
-# Summarize table: the cell model of the groups layout (summarize_cells())
+# Summarize table: the cell model of the groups layout (groups_cells())
 # and what the view makes of it. The cell model is what table_groups_view()
 # turns into marks; the rules below pin its numbers, labels and flags.
 
@@ -160,7 +160,7 @@ test_that("an interval column has per-row segments on the observed domain", {
   expect_true(any(lengths(c1$segs) > 1L))
   # Fill index points into the level fills; tips carry the level name.
   expect_identical(as.character(c1$fills),
-                   unname(summarize_level_colors(NULL, "SEV",
+                   unname(groups_level_colors(NULL, "SEV",
                                                  c("MILD", "MODERATE"))))
   expect_match(c1$tips[[1]][[1]], "^SEV (MILD|MODERATE) · ")
   # Nonnegative timelines use a readable study-day scale.
@@ -208,12 +208,12 @@ test_that("a leading rank bar beside a trajectory ranks the rows", {
 test_that("negative lows extend the distribution domain below zero", {
   d <- data.frame(g = rep(c("a", "b"), each = 6),
                   v = c(-5, -2, 0, 1, 2, 3, 1, 2, 3, 4, 5, 6))
-  prep <- summarize_prepare(d, by = "g", summaries = list(
+  prep <- groups_prepare(d, by = "g", summaries = list(
     list(type = "dist", col = "v", show = "box")
   ))
   # The domain rides on the plan entry now (per-summary scales).
   expect_lt(prep$plan[[1]]$dmin, 0)
-  m <- summarize_cells(prep)
+  m <- groups_cells(prep)
   c1 <- m$cols[[1]]
   # Everything still renders inside the track.
   expect_true(all(as.numeric(c1$wl) >= 0, na.rm = TRUE))
@@ -260,7 +260,7 @@ test_that("a signed simple column becomes a zero-centred diverging bar", {
 
 test_that("the diverging bar's axis is centred on zero at the column max", {
   d <- data.frame(g = c("a", "b", "c"), v = c(10, 0, -30))
-  prep <- summarize_prepare(d, by = "g", summaries = list(
+  prep <- groups_prepare(d, by = "g", summaries = list(
     list(type = "simple", func = "median", col = "v", show = "bar")
   ))
   p <- prep$plan[[1]]
@@ -268,14 +268,14 @@ test_that("the diverging bar's axis is centred on zero at the column max", {
   # The axis prints the same numbers the geometry is scaled with.
   expect_equal(p$dmax, 30)
   expect_equal(p$dmin, -30)
-  dom <- summarize_axis_domain(p, prep)
+  dom <- cells_axis_domain(p, prep)
   expect_equal(dom$d0, -30)
   expect_equal(dom$d1, 30)
 })
 
 test_that("a pair column has both ends, the band, the ref and the flags", {
   ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- groups_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", x = "AVAL", x_func = "min", xend = "DUR",
          xend_func = "max", ref_min = 5, x_lines = 10, linetype = "SEV")
   ))
@@ -283,7 +283,7 @@ test_that("a pair column has both ends, the band, the ref and the flags", {
   p <- prep$plan[[1]]
   expect_identical(p$kind, "pair")
   expect_match(p$sub_label, "dashed: SEV")
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   expect_identical(c1$kind, "pair")
   rows <- prep$rows
   a <- rows[[p$cols[["a"]]]]
@@ -300,11 +300,11 @@ test_that("a pair column with a negative change signs every label", {
   ae <- push_fixture()
   t2 <- ae$TERM == "T2"
   ae$EDY[t2] <- ae$SDY[t2] - 50
-  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
+  prep <- groups_prepare(ae, by = "TERM", summaries = list(
     list(type = "pair", x = "SDY", x_func = "mean", xend = "EDY",
          xend_func = "mean")
   ))
-  d <- summarize_cells(prep)$cols[[1]]$disp
+  d <- groups_cells(prep)$cols[[1]]$disp
   d <- d[nzchar(d)]
   expect_true(all(grepl("^[+-]", d)))
 })
@@ -312,10 +312,10 @@ test_that("a pair column with a negative change signs every label", {
 test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
-  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- groups_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", x = "AVAL", xend = "DUR", color = "ARM")
   ))
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
   labs <- Reduce(function(x, g) ifelse(nzchar(g$disp), g$disp, x),
                  c1$lv, rep("", length(c1$v)))
@@ -324,20 +324,20 @@ test_that("a coloured pair of one level per row labels that level", {
 
 test_that("value labels print one decimal finer than the column axis", {
   # Ticks every 10 (0..50): one decimal.
-  expect_identical(summarize_val_digits(c(17.6667, 4.33), 0, 50), 1L)
-  expect_identical(summarize_val_str(c(17.6667, NA), 1L), c("17.7", ""))
+  expect_identical(cells_val_digits(c(17.6667, 4.33), 0, 50), 1L)
+  expect_identical(cells_val_str(c(17.6667, NA), 1L), c("17.7", ""))
   # Ticks every 0.5: two.
-  expect_identical(summarize_val_digits(c(1.234, 2.5), 0, 2), 2L)
+  expect_identical(cells_val_digits(c(1.234, 2.5), 0, 2), 2L)
   # Whole numbers stay whole, whatever the axis.
-  expect_identical(summarize_val_digits(c(3, 12, 40), 0, 1), 0L)
-  # No axis: lane_fmt's significant digits.
-  expect_true(is.na(summarize_val_digits(c(1.23456), NULL, NULL)))
-  expect_identical(summarize_val_str(1.23456, NA_integer_), lane_fmt(1.23456))
+  expect_identical(cells_val_digits(c(3, 12, 40), 0, 1), 0L)
+  # No axis: groups_fmt's significant digits.
+  expect_true(is.na(cells_val_digits(c(1.23456), NULL, NULL)))
+  expect_identical(cells_val_str(1.23456, NA_integer_), groups_fmt(1.23456))
 })
 
 test_that("a pair row names a missing column", {
   ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- groups_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", x = "AVAL", xend = "NOPE")
   ))
   expect_match(prep$err, "NOPE")
@@ -348,7 +348,7 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
   # ARM = Placebo rows are all MILD, so the Placebo copy's own levels would
   # be MILD alone and MODERATE rows elsewhere would be numbered wrongly.
   ae$SEV[ae$ARM == "Placebo"] <- "MILD"
-  prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+  prep <- groups_prepare(ae, by = "USUBJID", summaries = list(
     list(type = "pair", x = "AVAL", xend = "DUR", linetype = "SEV",
          facet = "ARM")
   ))
@@ -370,7 +370,7 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
   # Baseline to peak per subject, read at the arm: the mean of the subjects'
   # baselines to the mean of their peaks, not the first subject's baseline to
   # the arm's single highest value.
-  prep <- summarize_prepare(ae, by = c("ARM", "USUBJID"), summaries = list(
+  prep <- groups_prepare(ae, by = c("ARM", "USUBJID"), summaries = list(
     list(type = "pair", x = "AVAL", xend = "DUR", ref_min = "LO", ref_max = "HI")
   ))
   expect_null(prep$err)
@@ -399,7 +399,7 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
   expect_true(all(is.na(leaf[[p$ncol]])))
 
   # The card says what the parent's ends are.
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   n_par <- par[[p$ncol]]
   expect_match(c1$tip[rows$.is_parent], "mean of [0-9]+ rows$")
   expect_match(c1$tip[rows$.is_parent][[1]],
@@ -409,7 +409,7 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
 
 test_that("a colour-split nested pair averages each level's rows", {
   ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = list(
+  prep <- groups_prepare(ae, by = c("SOC", "TERM"), summaries = list(
     list(type = "pair", x = "SDY", x_func = "mean", xend = "EDY",
          xend_func = "max", color = "SEV")
   ))
@@ -428,7 +428,7 @@ test_that("a colour-split nested pair averages each level's rows", {
       expect_identical(par[[p$lncol[[j]]]][[k]], length(terms))
     }
   }
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
   expect_match(c1$lv[[1]]$tip[rows$.is_parent], "mean of [0-9]+ rows$")
 })

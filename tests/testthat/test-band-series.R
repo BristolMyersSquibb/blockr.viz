@@ -4,7 +4,7 @@
 # inst/js/chart/model-aggregated.js. The two are mirrored, not shared (one
 # language per surface), so the values are pinned here by hand and the
 # vocabulary is drift-tested against the JS enum -- the same arrangement
-# test-lane-stats.R uses for LANE_STATS.
+# test-groups-stats.R uses for GROUPS_STATS.
 
 # Values on 1:10 under quantile type 7, which is what BOTH sides compute:
 # i = p * (n - 1), interpolate between the bracketing order statistics.

@@ -196,3 +196,32 @@ dt_bg_paint <- function(sv, data, col) {
   }
   list(bg = bg, fg = fg)
 }
+
+#' Cell-colour spec for a table
+#'
+#' How numeric cells are painted; the data is never changed. `"diverging"`
+#' is a scale centred on 0 (a correlation matrix), `"sequential"` a low to
+#' high ramp, `"bar"` an in-cell bar scaled per column on absolute values.
+#'
+#' @param type `"diverging"`, `"sequential"`, or `"bar"`.
+#' @param domain `NULL` to infer from the data (symmetric around 0 for
+#'   diverging), or `c(min, max)`. Ignored for `"bar"`.
+#' @param palette `NULL` for the defaults, or colours: three for diverging
+#'   (low, mid, high), two for sequential, one for the bar.
+#' @param columns `NULL` for every numeric column, re-resolved on new data,
+#'   or the columns to paint. A missing column is skipped.
+#' @param source `NULL` to paint by the cell's own value, a column name to
+#'   paint every shaded column by that column, or a template such as
+#'   `"{col} (sev)"` for one companion per column. Source columns are hidden
+#'   and must be numeric. Diverging and sequential only.
+#' @return A cell-colour spec list.
+#' @examples
+#' drilldown_table_color("sequential", domain = c(0, 100))
+#' @export
+drilldown_table_color <- function(type = c("diverging", "sequential", "bar"),
+                                   domain = NULL, palette = NULL,
+                                   columns = NULL, source = NULL) {
+  type <- match.arg(type)
+  list(type = type, domain = domain, palette = palette, columns = columns,
+       source = source)
+}

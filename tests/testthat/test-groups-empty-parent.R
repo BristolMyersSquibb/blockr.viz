@@ -10,7 +10,7 @@ ep_data <- function(soc) {
 }
 
 ep_prep <- function(d) {
-  lane_prepare_summaries(
+  groups_prepare_summaries(
     d, by = c("AEBODSYS", "AEDECOD"),
     summaries = list(list(type = "simple", name = "n",
                           func = "count_distinct", col = "USUBJID",

@@ -8,7 +8,7 @@ cells_interval <- function(ctx, p) {
   bb <- cells_bounds(dom[[1L]], dom[[2L]])
   lv <- p$levels %||% prep$series
   tf <- as.character(p$tlabels %||% p$tfields %||% character())
-  cvar <- summarize_chr1(p$cvar)
+  cvar <- chr_state(p$cvar)
   out_segs <- cells_interval_segs(segs, bb)
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
   list(kind = "interval", segs = out_segs, tips = out_tips,
@@ -20,7 +20,7 @@ cells_interval <- function(ctx, p) {
 
 # An x value as the card prints it: a date for a date domain.
 cells_fmt_x <- function(v, dd) {
-  if (dd) format(as.Date(v, origin = "1970-01-01")) else lane_fmt(v)
+  if (dd) format(as.Date(v, origin = "1970-01-01")) else groups_fmt(v)
 }
 
 # Segment tuples [left, width, fill-index (, escaped label)]; the optional 4th
@@ -74,7 +74,7 @@ cells_sparkline <- function(ctx, p) {
   # that bar's aggregate.
   last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
   lab <- if (ctx$vals_on && isTRUE(p$show_val)) {
-    disp <- summarize_val_str(last_y, summarize_val_digits(
+    disp <- cells_val_str(last_y, cells_val_digits(
       last_y, yd[[1L]], yd[[2L]]
     ))
     list(disp = disp, dw = max(c(1L, nchar(disp))))
@@ -124,7 +124,7 @@ cells_spark_row <- function(p1, xd, yd, dd) {
     pl = paste0(xs, ",", ys, collapse = " "), bd = bd,
     dx = xs[[n1]], dy = round(ys[[n1]] / CELLS_SPARK_H * 100, 2L),
     xs = paste(cells_fmt_x(p1$x, dd), collapse = ","),
-    ys = paste(lane_fmt(p1$y), collapse = ",")
+    ys = paste(groups_fmt(p1$y), collapse = ",")
   )
 }
 

@@ -1,3 +1,5 @@
+# The cell model of the bar, split bar, tile and text columns.
+
 cells_bar <- function(ctx, p) {
   vraw <- ctx$rows[[p$key]]
   lab <- cells_val_parts(ctx, p, vraw)
@@ -12,9 +14,9 @@ cells_bar <- function(ctx, p) {
 cells_tile <- function(ctx, p) {
   # The matrix cell. An empty count is an empty cell: no square, no "0".
   v <- ctx$rows[[p$key]]
-  paint <- lane_tile_paint(p, ctx$rows)
+  paint <- groups_tile_paint(p, ctx$rows)
   disp <- if (ctx$vals_on) {
-    ifelse(paint$has, lane_fmt(v), "")
+    ifelse(paint$has, groups_fmt(v), "")
   } else {
     rep("", ctx$n)
   }
@@ -55,7 +57,7 @@ cells_barsplit <- function(ctx, p) {
          # which level is which.
          fills = fills,
          seg = seg, segv = segv,
-         slab = inside, sink = if (!is.null(inside)) summarize_ink(fills),
+         slab = inside, sink = if (!is.null(inside)) cells_ink(fills),
          v = cells_sortv(v)), lab)
 }
 
@@ -95,10 +97,10 @@ cells_split_seg <- function(p, mat, tot, emx) {
 # width. Stacked and 100% keep the one total.
 cells_split_label <- function(ctx, p, segv, vraw) {
   if (identical(p$mode, "grouped") && ctx$vals_on && isTRUE(p$show_val)) {
-    dom <- summarize_axis_domain(p, ctx$prep)
-    dig <- summarize_val_digits(unlist(segv), dom$d0, dom$d1)
+    dom <- cells_axis_domain(p, ctx$prep)
+    dig <- cells_val_digits(unlist(segv), dom$d0, dom$d1)
     ldisp <- lapply(segv, function(v) {
-      ifelse(!is.na(v) & v > 0, summarize_val_str(v, dig), "")
+      ifelse(!is.na(v) & v > 0, cells_val_str(v, dig), "")
     })
     list(ldisp = ldisp,
          dw = max(c(1L, nchar(unlist(ldisp)))))
@@ -116,10 +118,10 @@ cells_split_inside <- function(ctx, p, seg, segv) {
         ifelse(!is.na(s) & s > 0, paste0(round(s), "%"), "")
       })
     } else {
-      dom <- summarize_axis_domain(p, ctx$prep)
-      dig <- summarize_val_digits(unlist(segv), dom$d0, dom$d1)
+      dom <- cells_axis_domain(p, ctx$prep)
+      dig <- cells_val_digits(unlist(segv), dom$d0, dom$d1)
       lapply(segv, function(v) {
-        ifelse(!is.na(v) & v > 0, summarize_val_str(v, dig), "")
+        ifelse(!is.na(v) & v > 0, cells_val_str(v, dig), "")
       })
     }
   }
@@ -151,9 +153,9 @@ cells_dist_text <- function(ctx, p) {
   hh <- ctx$rows[[p$hi]]
   disp <- ifelse(
     is.na(cc), "",
-    paste0(lane_fmt(cc),
+    paste0(groups_fmt(cc),
            ifelse(is.na(ll) | is.na(hh), "",
-                  paste0(" (", lane_fmt(ll), "\u2013", lane_fmt(hh), ")")))
+                  paste0(" (", groups_fmt(ll), "\u2013", groups_fmt(hh), ")")))
   )
   list(kind = "num", v = cells_sortv(cc), disp = disp)
 }
@@ -168,7 +170,7 @@ cells_alt_text <- function(ctx, p) {
 cells_num <- function(ctx, p) {
   prep <- ctx$prep
   v <- ctx$rows[[p$key]]
-  parts <- summarize_num_parts(v, denom = p$denom,
+  parts <- cells_num_parts(v, denom = p$denom,
                                combined = isTRUE(p$combined),
                                signed = isTRUE(p$signed),
                                pct_only = isTRUE(p$pct_only),
@@ -176,4 +178,47 @@ cells_num <- function(ctx, p) {
                                  function(x) dt_format_num(x, prep$format)
                                })
   c(list(kind = "num", v = cells_sortv(v)), parts)
+}
+
+#' The two parts of a numeric cell: the value string, and the percent string
+#' when the column shows both.
+#' @noRd
+cells_num_parts <- function(v, denom = NULL, combined = FALSE,
+                                signed = FALSE, pct_only = FALSE,
+                                fmt = NULL) {
+  if (isTRUE(signed)) {
+    return(list(disp = ifelse(
+      is.na(v), "",
+      paste0(ifelse(v > 0, "+", ifelse(v < 0, "\u2212", "")),
+             formatC(abs(v), format = "f", digits = 1L))
+    )))
+  }
+  pct <- if (!is.null(denom) && is.finite(denom) && denom > 0) {
+    v / denom * 100
+  } else {
+    NULL
+  }
+  if (isTRUE(pct_only)) {
+    if (is.null(pct)) return(list(disp = rep("", length(v))))
+    return(list(disp = ifelse(
+      is.na(v), "", paste0(formatC(pct, format = "f", digits = 1L), "%")
+    )))
+  }
+  # Four significant digits, the budget groups_fmt() prints a statistic at, so a
+  # split bar's label and a box's centre read alike. "fg" keeps whole numbers
+  # whole. `fmt`, when given, is the label's own precision
+  # (cells_val_digits()).
+  n <- ifelse(is.na(v), "", if (is.null(fmt)) {
+    formatC(v, format = "fg", digits = 4L, big.mark = "")
+  } else {
+    fmt(v)
+  })
+  if (isTRUE(combined) && !is.null(pct)) {
+    return(list(
+      disp = n,
+      pct = ifelse(is.na(v), "",
+                   paste0("(", formatC(pct, format = "f", digits = 0L), "%)"))
+    ))
+  }
+  list(disp = n)
 }

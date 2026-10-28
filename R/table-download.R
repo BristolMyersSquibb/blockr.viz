@@ -286,3 +286,18 @@ dl_guard <- function(what, expr) {
     }
   )
 }
+
+# Whether a download format's packages are installed: system.file(), since
+# requireNamespace() would load officer and flextable (0.5 s, 53 MB) just to
+# grey out a menu entry. A seam, so tests can mock it.
+dt_pkg_installed <- function(...) {
+  all(vapply(c(...), function(p) nzchar(system.file(package = p)), logical(1L)))
+}
+
+dt_has_openxlsx <- function() {
+  dt_pkg_installed("openxlsx")
+}
+
+dt_has_officer <- function() {
+  dt_pkg_installed("officer", "flextable")
+}

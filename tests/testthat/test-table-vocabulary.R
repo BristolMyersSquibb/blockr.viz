@@ -37,11 +37,11 @@ test_that("old summary keys read as the spec's", {
 
 test_that("the engine reads the spec's keys", {
   d <- data.frame(g = c("a", "a", "b"), BASE = c(1, 2, 3), AVAL = c(2, 4, 5))
-  p <- lane_prepare_summaries(d, by = "g", summaries = list(
+  p <- groups_prepare_summaries(d, by = "g", summaries = list(
     list(type = "pair", x = "BASE", xend = "AVAL", ref_min = 0, ref_max = 4)
   ))
   expect_null(p$err)
-  q <- lane_prepare_summaries(d, by = "g", summaries = list(
+  q <- groups_prepare_summaries(d, by = "g", summaries = list(
     list(type = "dist", col = "AVAL", summary = "mean_sd", show = "text")
   ))
   expect_null(q$err)
@@ -51,7 +51,7 @@ test_that("the engine reads the spec's keys", {
 test_that("position sets a colour split's layout", {
   d <- vocab_df()[!is.na(vocab_df()$ARM), ]
   plan_mode <- function(pos) {
-    p <- lane_prepare_summaries(d, by = "ARM", summaries = list(
+    p <- groups_prepare_summaries(d, by = "ARM", summaries = list(
       list(type = "simple", func = "count", show = "bar", color = "SEV",
            position = pos)
     ))
@@ -66,8 +66,8 @@ test_that("pct_of = total takes a facet copy's share of the whole table", {
   d <- vocab_df()[!is.na(vocab_df()$ARM), ]
   S <- list(list(type = "simple", func = "count", show = "bar",
                  facet = "SEV"))
-  facet <- lane_prepare_summaries(d, by = "ARM", summaries = S)
-  total <- lane_prepare_summaries(d, by = "ARM", summaries = S,
+  facet <- groups_prepare_summaries(d, by = "ARM", summaries = S)
+  total <- groups_prepare_summaries(d, by = "ARM", summaries = S,
                                   pct_of = "total")
   expect_identical(facet$plan[[1L]]$val_denom, 3L)  # three mild rows
   expect_identical(total$plan[[1L]]$val_denom, 4L)  # four rows in all
@@ -75,8 +75,8 @@ test_that("pct_of = total takes a facet copy's share of the whole table", {
 
 test_that("missing = level shows a missing group as its own row", {
   S <- list(list(type = "simple", func = "count", show = "bar"))
-  drop <- summarize_prepare(vocab_df(), by = "ARM", summaries = S)
-  level <- summarize_prepare(vocab_df(), by = "ARM", summaries = S,
+  drop <- groups_prepare(vocab_df(), by = "ARM", summaries = S)
+  level <- groups_prepare(vocab_df(), by = "ARM", summaries = S,
                              missing = "level")
   expect_false("(Missing)" %in% drop$rows$.label)
   expect_true("(Missing)" %in% level$rows$.label)
