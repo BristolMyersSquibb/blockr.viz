@@ -104,8 +104,10 @@ viz_selection_observer <- function(input, id, state, revs, transient,
   name <- paste0(id, "_select")
   obs <- shiny::observeEvent(input[[name]], {
     msg <- input[[name]]
+    # With a drill target a clear is an event too: the reader took back a
+    # latched point or brush, and the claim it sent goes with it.
     if (isTRUE(transient())) {
-      if (!is.null(msg$selection)) claim(msg)
+      if (!is.null(msg)) claim(msg)
       return()
     }
     viz_apply(state, list(selection = msg$selection), revs)

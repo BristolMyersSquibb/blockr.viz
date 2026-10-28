@@ -158,6 +158,70 @@ test_that("a drill target gets every click and the chart holds none", {
   })
 })
 
+# The control channel with a recording update, so a test sees what reaches the
+# target: each entry is the `state` one update set on `vf1`.
+srv_channel <- function(session) {
+  log <- new.env(parent = emptyenv())
+  log$sent <- list()
+  install_ctrl_send(function(x) {
+    log$sent <- c(log$sent, list(x$blocks$mod$vf1$state))
+  }, session = session)
+  log
+}
+
+test_that("a clear with a drill target releases the chart's claim", {
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm",
+                         drill_target = "vf1")
+  srv_run(blk, function(session, expr, visit) {
+    log <- srv_channel(session)
+    chart_input_click(expr, arm = "A", nonce = 1L)
+    session$flushReact()
+    expect_length(log$sent, 1L)
+    expect_identical(log$sent[[1L]]$columns[[1L]]$values, "A")
+    chart_input_click(expr, nonce = 2L)
+    session$flushReact()
+    expect_length(log$sent, 2L)
+    expect_identical(log$sent[[2L]], list(columns = list()))
+  })
+})
+
+test_that("a range with a drill target sends nothing and clears nothing", {
+  blk <- new_chart_block(type = "scatter", x = "day", y = "val", drill = "arm",
+                         drill_target = "vf1")
+  srv_run(blk, function(session, expr, visit) {
+    log <- srv_channel(session)
+    chart_input_click(expr, arm = "B", nonce = 1L)
+    session$flushReact()
+    expect_length(log$sent, 1L)
+    expr$setInputs(chart_select = viz_read_selection(list(
+      selection = list(type = "range", x = "day", y = "val",
+                       x_range = list(1, 10), y_range = list(-1, 1)),
+      nonce = 2L
+    )))
+    session$flushReact()
+    expect_length(log$sent, 1L)
+    # The claim is still this chart's, so its clear releases it.
+    chart_input_click(expr, nonce = 3L)
+    session$flushReact()
+    expect_length(log$sent, 2L)
+    expect_identical(log$sent[[2L]], list(columns = list()))
+  })
+})
+
+test_that("a clear with a drill target leaves another sender's claim", {
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm",
+                         drill_target = "vf1")
+  srv_run(blk, function(session, expr, visit) {
+    log <- srv_channel(session)
+    session$userData$blockr_ctrl_send("vf1", list(state = list(columns = list(
+      list(name = "id", mode = "multi", values = "S1")
+    ))), author = "other-block")
+    chart_input_click(expr, nonce = 1L)
+    session$flushReact()
+    expect_length(log$sent, 1L)
+  })
+})
+
 test_that("the default_caption option captions a new chart that sets none", {
   withr::local_options(blockr.viz.default_caption = "{filters}")
   st <- blockr.core:::initial_block_state(new_chart_block(type = "bar"))

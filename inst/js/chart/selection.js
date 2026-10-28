@@ -19,6 +19,10 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
 
+  // How long a redraw's brush clear is ignored: ECharts reports it on the
+  // draw or the frame after.
+  const REDRAW_MS = 150;
+
   /** The same columns with the same values, in any order.
    * @param {Record<string, any[]>} a @param {Record<string, any[]>} b */
   const sameFilters = (a, b) => {
@@ -99,6 +103,14 @@
       this.brushDrawn = true;
       this.refresh();
       this.send(sel);
+    }
+
+    /** A redraw empties the brush before the family draws it again, and
+     * ECharts reports that as a clear. For a moment, it is not the reader's:
+     * with a drill target it would release the claim the brush sent. */
+    redrawing() {
+      this.suppressBrushClear = true;
+      this.view.scope.timeout(() => { this.suppressBrushClear = false; }, REDRAW_MS);
     }
 
     /** The brush was cleared: so is the selection, unless a click just made

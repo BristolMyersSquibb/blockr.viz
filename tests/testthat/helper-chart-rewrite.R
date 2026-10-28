@@ -243,7 +243,9 @@ record_rw_warnings <- function(w) {
 # behaviour-changes.md. They skip until Christoph decides; an accepted change
 # becomes a translation above, a rejected one a fix.
 record_rw_open <- c(
-  heal_missing_column = "row 1: clearing a column the data lacks clears it"
+  heal_missing_column = "row 1: clearing a column the data lacks clears it",
+  drill_transient = paste("a clear with a drill target releases the claim",
+                          "(test-chart-server.R)")
 )
 
 # Messages that changed with an open behaviour change (behaviour-changes.md),
