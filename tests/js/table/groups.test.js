@@ -482,3 +482,22 @@ test("the picture takes R's pixel ratio, else 2", async () => {
   await env.V.table.picture(payload({ data: groups(), config: G, derived: { capture_ratio: 3 } }), 500, 1);
   assert.deepEqual(scales, [3, 2, 1]);
 });
+
+test('a compact title cut by its cap carries its full text as the tooltip', async () => {
+  const env = loadTable();
+  const style = env.win.document.createElement('style');
+  style.textContent = '.blockr-col-name { max-height: 50px; font: 12px sans-serif; }';
+  env.win.document.head.appendChild(style);
+  // happy-dom has no canvas: ten pixels a character.
+  env.win.HTMLCanvasElement.prototype.getContext = () => ({
+    font: '', measureText: (s) => ({ width: s.length * 10 })
+  });
+  const data = groups();
+  data.head = [[{ text: 'ARM', stub: true, col: 0 }, { text: 'Rows', col: 1 },
+                { text: 'A title longer than its cap', col: 2 }]];
+  const t = mount(payload({ data, config: Object.assign({ look: 'compact' }, G) }), env);
+  await tick(env.win, 10);
+  const ths = t.$$('thead th.vz-table-col-header');
+  assert.equal(ths[0].getAttribute('data-blockr-tooltip'), null);
+  assert.equal(ths[1].getAttribute('data-blockr-tooltip'), 'A title longer than its cap');
+});

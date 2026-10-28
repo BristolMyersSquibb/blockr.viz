@@ -112,6 +112,10 @@
       super.render(p);
       const d = /** @type {TableDerived} */ (p.derived || {});
       paintLegend(this.legend, this.model && !this.cardsOn() ? d.legend : null);
+      const grid = /** @type {TableGrid} */ (this.grid);
+      const fonts = root.document.fonts && root.document.fonts.ready
+        ? root.document.fonts.ready : Promise.resolve();
+      fonts.then(() => tipCutTitles(grid.table));
     }
 
     /**
@@ -192,6 +196,30 @@
         () => { this.pictured = ''; });
       return this.sending;
     }
+  }
+
+  /**
+   * A compact matrix's rotated titles stop at their cap (max-height) with an
+   * ellipsis; each one cut gets its full text as the tooltip. The text is
+   * measured on a canvas, so a table drawn in a hidden panel gets them too
+   * (blockr.ui's own cut-off check reads widths, and these overflow upwards).
+   * @param {HTMLTableElement | null | undefined} table
+   */
+  function tipCutTitles(table) {
+    if (!table || !table.isConnected || table.getAttribute('data-summarize-compact') !== '1') return;
+    const canvas = table.ownerDocument.createElement('canvas');
+    const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+    if (!ctx) return;
+    table.querySelectorAll('thead th.vz-table-col-header .blockr-col-name').forEach((n) => {
+      const th = n.closest('th');
+      const cs = root.getComputedStyle(n);
+      const cap = parseFloat(cs.maxHeight);
+      if (!th || !isFinite(cap)) return;
+      ctx.font = cs.font || [cs.fontStyle, cs.fontWeight, cs.fontSize, cs.fontFamily].join(' ');
+      const text = (n.textContent || '').trim();
+      if (ctx.measureText(text).width > cap) th.setAttribute('data-blockr-tooltip', text);
+      else th.removeAttribute('data-blockr-tooltip');
+    });
   }
 
   /**
