@@ -280,7 +280,7 @@
     const before = ctx.value == null ? '' : String(ctx.value);
     const inp = document.createElement('input');
     inp.type = 'text';
-    inp.className = 'blockr-input dd-text dd-template';
+    inp.className = 'blockr-text-input dd-text dd-template';
     inp.value = before;
     inp.spellcheck = false;
     inp.setAttribute('aria-label', ctx.label);

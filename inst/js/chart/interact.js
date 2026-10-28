@@ -78,7 +78,7 @@
       if (NS.transientDrill(this.config)) {
         this._flashMark(slot, params);
         this._showReceipt(filters);
-        this._sendFilter(filters);
+        this._sendSelection({ type: 'categorical', filters });
         return;
       }
       const f = this._filter;
@@ -88,11 +88,6 @@
       }
       this._filter = { type: 'categorical', filters };
       this._updateHighlight();
-      this._sendFilter(filters);
-    },
-
-    /** @this {any} @param {Record<string, any[]>} filters */
-    _sendFilter(filters) {
       this._sendSelection({ type: 'categorical', filters });
     },
 

@@ -70,18 +70,14 @@
     return title ? title + ' (' + unit + ')' : unit;
   };
 
-  /**
-   * An axis name. `title` is the column's label (or name, axes.axisTitle),
-   * `col` the column. Labelled: label and unit, "Growth (%)". Else the unit
-   * alone, else the column name. Empty when the chart's title carries it.
-   * @param {string} title @param {any} col @param {Record<string, any>} cfg
-   * @param {{ unit?: boolean }} [opts]
-   */
+  /** An axis name. `title` is the column's label (or name, axes.axisTitle), `col` the column.
+   * Labelled: label and unit, "Growth (%)". Else the unit alone, else the column name. Empty when
+   * the chart's title carries it. @param {string} title @param {any} col
+   * @param {Record<string, any>} cfg @param {{ unit?: boolean }} [opts] */
   const axisName = (title, col, cfg, opts = {}) => {
     const unit = opts.unit !== false && cfg.unit ? String(cfg.unit) : '';
     const labelled = !!title && title !== col;
-    const name = labelled ? unitTitle(title, unit ? cfg : {})
-      : (unit || title || '');
+    const name = labelled ? (unit ? unitTitle(title, cfg) : title) : (unit || title || '');
     const t = cfg.derived && cfg.derived.titles && cfg.derived.titles.title;
     const head = String((t && t.text) || '').toLowerCase();
     if (name && head.includes(name.toLowerCase())) return '';

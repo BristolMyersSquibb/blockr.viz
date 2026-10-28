@@ -32,6 +32,23 @@
   // The id of a `linetype` segment: the tooltip folds a line's segments into one row.
   const SEG_ID = /^__seg_(\d+)_/;
 
+  /** The name at a line's end, nudged apart from its neighbours' names.
+   * @param {any} ink */
+  const endLabelOf = (ink) => ({
+    endLabel: {
+      show: true, formatter: '{a}', distance: 6,
+      color: ink.text, fontSize: ink.fontSize, fontWeight: 600
+    },
+    labelLayout: { moveOverlap: 'shiftY' }
+  });
+
+  /** Room on the right for end labels: the longest name, 6.5 px a character, up to 160.
+   * @param {any[]} names */
+  const endLabelPad = (names) => {
+    const n = Math.max(0, ...names.map((s) => String(s ?? '').length));
+    return n ? Math.min(160, n * 6.5 + 12) : 0;
+  };
+
   /** Whether a panel's lines are sparse enough to carry dots.
    * @param {any} panel @param {number} plotW the plot's width in px, 0 if unknown */
   const sparseLines = (panel, plotW) => {
@@ -42,14 +59,11 @@
     return n <= SPARSE_DOT_N;
   };
 
-  /**
-   * A `labelLayout` that moves a label up or down, a line at a time, until it
-   * covers no label placed before it (`moveOverlap` ignores scatter labels).
-   * Spacers sharing a `room` place their labels around each other; a label
-   * that comes before the last one seen starts a new layout pass.
+  /** A `labelLayout` that moves a label up or down, a line at a time, until it covers no label
+   * placed before it (`moveOverlap` ignores scatter labels). Spacers sharing a `room` place their
+   * labels around each other; a label that comes before the last one seen starts a new layout pass.
    * @param {string} position 'right', 'top' or 'inside' @param {number} distance
-   * @param {{ placed: any[], lastS: number, lastD: number }} [room]
-   */
+   * @param {{ placed: any[], lastS: number, lastD: number }} [room] */
   const labelSpacer = (position, distance, room) => {
     const r = room || { placed: [], lastS: -1, lastD: -1 };
     return (/** @type {any} */ p) => {
@@ -69,11 +83,8 @@
     };
   };
 
-  /**
-   * What every part of a panel's points reads.
-   * @param {any} m the individual model @param {any} panel @param {any} look
-   * @param {number} plotW the plot's width in px
-   */
+  /** What every part of a panel's points reads. @param {any} m the individual model
+   * @param {any} panel @param {any} look @param {number} plotW the plot's width in px */
   const pointsContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const isLine = m.isLine;
@@ -121,13 +132,10 @@
     };
   };
 
-  /**
-   * One scatter or line series. A scatter's native emphasis is off (it would
-   * strobe a dense cloud); a line keeps it, without scaling, for the dot at the
-   * crosshair; the crowd's hover is the overlay.
-   * @param {any} k @param {any} name @param {any[]} data @param {string} clr
-   * @param {boolean} [isMuted]
-   */
+  /** One scatter or line series. A scatter's native emphasis is off (it would strobe a dense
+   * cloud); a line keeps it, without scaling, for the dot at the crosshair; the crowd's hover is
+   * the overlay. @param {any} k @param {any} name @param {any[]} data @param {string} clr
+   * @param {boolean} [isMuted] */
   const mkSeries = (k, name, data, clr, isMuted = false) => {
     const { isLine, stepMode, smoothOn, crowd, lineMarkerPx, dm, dots, surface, lineW, m, isArea,
             stackArea, directLabels, hlNames, ink } = k;
@@ -154,14 +162,7 @@
                      ...(stackArea ? { stack: 'area' } : {}) } : {}),
       // The drill patch tells the muted part of a highlight from the lit part by this.
       ...(isMuted ? { blockrMuted: true } : {}),
-      ...((m.hl ? (directLabels || hlNames) && !isMuted : directLabels) ? {
-        endLabel: {
-          show: true, formatter: '{a}', distance: 6,
-          color: ink.text, fontSize: ink.fontSize, fontWeight: 600
-        },
-        // Lines that end close together push their names apart.
-        labelLayout: { moveOverlap: 'shiftY' }
-      } : {})
+      ...((m.hl ? (directLabels || hlNames) && !isMuted : directLabels) ? endLabelOf(ink) : {})
     });
   };
 
@@ -173,11 +174,9 @@
     return [...seen];
   };
 
-  /**
-   * One line split at its linetype levels; a segment takes the level of the
-   * point it leads to, so a forecast is dashed from the last observed point on.
-   * @param {any} k @param {string[]} ltLevels @param {any} s @param {number} si
-   */
+  /** One line split at its linetype levels; a segment takes the level of the point it leads to, so
+   * a forecast is dashed from the last observed point on. @param {any} k @param {string[]} ltLevels
+   * @param {any} s @param {number} si */
   const lineSegments = (k, ltLevels, s, si) => {
     const { ltCol, clrOf } = k;
     const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
@@ -292,15 +291,12 @@
     };
   };
 
-  /**
-   * `label`: the column's value beside each point that has one, as one
-   * label-only series per panel (its id keeps the patch and the brush off it).
-   * A highlight without `label` names its points by the highlighted value,
-   * where that value picks out one or two points of the panel.
-   * @param {any} k @param {any[]} series @param {any} room
-   */
+  /** `label`: the column's value beside each point that has one, as one label-only series per panel
+   * (its id keeps the patch and the brush off it). A highlight without `label` names its points by
+   * the highlighted value, where that value picks out one or two points of the panel.
+   * @param {any} k @param {any[]} series @param {any} room */
   const pointLabels = (k, series, room) => {
-    const { isLine, m, cfg, panel, lineMarkerPx, dm, ink, surface } = k;
+    const { isLine, m, cfg, panel, lineMarkerPx, dm, ink } = k;
     const hlCol = !isLine && m.hl && !cfg.label ? Object.keys(m.hl)[0] : null;
     const labelCol = cfg.label || hlCol;
     if (!labelCol) return;
@@ -330,17 +326,11 @@
     const position = isLine ? 'top' : 'right';
     const distance = isLine ? lineMarkerPx / 2 + 2 : (BASE_SCATTER_SIZE * dm) / 2 + 3;
     series.push({
-      id: '__label__', type: 'scatter', data, silent: true,
-      symbolSize: 0, z: 11, legendHoverLink: false, animation: false,
-      tooltip: { show: false }, emphasis: { disabled: true },
-      label: {
-        show: true, position, distance,
-        formatter: (/** @type {any} */ prm) => prm.value[2],
-        color: hlCol ? ink.text : ink.secondary,
-        fontSize: ink.fontSize,
-        ...(hlCol ? { fontWeight: 600 } : {}),
-        textBorderColor: surface, textBorderWidth: 3
-      },
+      ...NS.nameMark('__label__', /** @type {any} */ ((/** @type {any} */ prm) => prm.value[2]),
+                     [], position, ink, {
+        distance, color: hlCol ? ink.text : ink.secondary, fontWeight: hlCol ? 600 : undefined
+      }),
+      data,
       labelLayout: labelSpacer(position, distance, room)
     });
   };
@@ -360,11 +350,8 @@
     });
   };
 
-  /**
-   * The scatter or line series of one panel, with their overlays.
-   * @param {any} m the individual model @param {any} panel @param {any} look
-   * @param {number} [plotW] the plot's width in px
-   */
+  /** The scatter or line series of one panel, with their overlays. @param {any} m the individual
+   * model @param {any} panel @param {any} look @param {number} [plotW] the plot's width in px */
   const points = (m, panel, look, plotW = 0) => {
     const k = pointsContext(m, panel, look, plotW);
     const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
@@ -373,24 +360,16 @@
     const room = { placed: [], lastS: -1, lastD: -1 };
     pointLabels(k, series, room);
     cloudNames(k, series, room);
-    // Room on the right for the end labels.
-    let labelPad = 0;
-    if (directLabels || hlNames) {
-      for (const s of panel.series) {
-        if (m.hl && s.muted) continue;
-        labelPad = Math.max(labelPad, String(s.level ?? '').length);
-      }
-      labelPad = labelPad ? Math.min(160, labelPad * 6.5 + 12) : 0;
-    }
+    const labelPad = (directLabels || hlNames)
+      ? endLabelPad(panel.series.filter((/** @type {any} */ s) => !(m.hl && s.muted))
+        .map((/** @type {any} */ s) => s.level))
+      : 0;
     return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
   };
 
-  /**
-   * The hover overlay, on every line chart (empty until a line is hovered) so
-   * the series keep one shape: a veil on its own hidden 0..1 axes, then the
-   * hovered line and its dots. `state.veil` is the fill, set on promotion.
-   * @param {{ veil?: string }} state
-   */
+  /** The hover overlay, on every line chart (empty until a line is hovered) so the series keep one
+   * shape: a veil on its own hidden 0..1 axes, then the hovered line and its dots. `state.veil` is
+   * the fill, set on promotion. @param {{ veil?: string }} state */
   const lineOverlay = (state) => [{
     id: '__scrim__', type: 'custom', xAxisIndex: 1, yAxisIndex: 1, data: [],
     silent: true, legendHoverLink: false, z: 8, animation: false,
@@ -407,19 +386,20 @@
     legendHoverLink: false, z: 10, animation: false
   }];
 
+  /** The tooltip fields of a point's value (they follow x and y) as [title, text] pairs.
+   * @param {any} m @param {any} look @param {any} val @returns {Array<[string, any]>} */
+  const ttPairs = (m, look, val) => (Array.isArray(val) ? m.ttFields : [])
+    .map((/** @type {string} */ c, /** @type {number} */ i) => /** @type {[string, any]} */ ([
+      NS.axes.axisTitle(look.columns, c) || c,
+      typeof val[2 + i] === 'number' ? NS.ddNum3(val[2 + i]) : val[2 + i]
+    ])).filter(([, v]) => v != null && v !== '');
+
   /** The tooltip fields as a "  (col: v, col2: v2)" suffix on a line's row.
    * @param {any} m @param {any} look */
   const ttSuffixOf = (m, look) => (/** @type {any} */ val) => {
-    if (!m.ttFields.length || !Array.isArray(val)) return '';
-    const out = [];
-    for (let i = 0; i < m.ttFields.length; i++) {
-      const v = val[2 + i];
-      if (v != null && v !== '') {
-        out.push(NS.esc(NS.axes.axisTitle(look.columns, m.ttFields[i]) || m.ttFields[i]) + ': ' +
-                 NS.esc(typeof v === 'number' ? NS.ddNum3(v) : v));
-      }
-    }
-    return out.length ? '  (' + out.join(', ') + ')' : '';
+    const pairs = ttPairs(m, look, val);
+    return pairs.length
+      ? '  (' + pairs.map(([t, v]) => NS.esc(t) + ': ' + NS.esc(v)).join(', ') + ')' : '';
   };
 
   /**
@@ -493,14 +473,11 @@
           [title(m.y.col) || 'Y', vf ? vf(p.value[1]) : NS.ddNum3(p.value[1])]
         ];
         if (lvl) pairs.push([title(m.splitCol) || 'Series', lvl]);
-        m.ttFields.forEach((/** @type {string} */ c, /** @type {number} */ i) => {
-          const v = p.value[2 + i];
-          pairs.push([title(c) || c, typeof v === 'number' ? NS.ddNum3(v) : v]);
-        });
+        pairs.push(...ttPairs(m, look, p.value));
         return NS.rowTooltip(headline, pairs, lvl ? p.color : null);
       }
     };
   };
 
-  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip });
+  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip, endLabelOf, endLabelPad });
 })();

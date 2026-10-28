@@ -60,11 +60,9 @@
    *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
    */
 
-  /**
-   * The x and y axes (type, categories, how a value is placed) and whether
-   * each is logarithmic, set on the model.
-   * @param {any[]} rows @param {VizColumn[]} columns @param {any} cfg @param {IndividualModel} out
-   */
+  /** The x and y axes (type, categories, how a value is placed) and whether each is logarithmic,
+   * set on the model. @param {any[]} rows @param {VizColumn[]} columns @param {any} cfg
+   * @param {IndividualModel} out */
   const setAxes = (rows, columns, cfg, out) => {
     const { x, y } = cfg;
     // A Date x is a time axis; a Date y stays a category.
@@ -88,12 +86,9 @@
     out.logY = logs.y && yType === 'value';
   };
 
-  /**
-   * The facet panels: per panel its rows and, for scatter and line, one
-   * series per level.
+  /** The facet panels: per panel its rows and, for scatter and line, one series per level.
    * @param {any[]} rows @param {any} ix @param {any} cfg @param {IndividualModel} out
-   * @param {string[]} facets
-   */
+   * @param {string[]} facets */
   const buildPanels = (rows, ix, cfg, out, facets) => {
     const { isLine, isBand, splitCol, facet, levels } = out;
     const { col: x, type: xType, order: xOrder, encode: encodeX } = out.x;
@@ -123,7 +118,7 @@
       // `src` keeps the rows in data order, for the error bars.
       return { level, color: clr, rows: srows, pts, src: rs };
     };
-    const labels = model.facetLabels(rows, cfg, facets);
+    const facetLabel = model.facetLabels(rows, cfg, out.nFacets);
     for (const fv of facets) {
       // Keyed 'raw': the panel of a missing facet value holds none.
       const prow = fv === '__all__' ? rows : ix.get(rows, /** @type {string} */ (facet), 'raw', fv);
@@ -140,16 +135,14 @@
       }
       out.panels.push({
         facet: fv,
-        label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
+        label: facetLabel(fv),
         rows: prow, series
       });
     }
   };
 
-  /**
-   * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
-   * @returns {IndividualModel}
-   */
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+   * @returns {IndividualModel} */
   const individual = ({ rows, ix, columns, cfg }) => {
     const ct = cfg.type;
     const { x, y } = cfg;
@@ -179,9 +172,7 @@
     }
 
     // Tooltip fields, less x (the header), y (the value) and the split column.
-    const shown = new Set([x, y, splitCol].filter(Boolean).map(String));
-    out.ttFields = [].concat(cfg.tooltip || []).map(String)
-      .filter((c) => c && c !== 'null' && c !== '(none)' && !shown.has(c));
+    out.ttFields = model.tooltipFields(cfg, [x, y, splitCol].filter(Boolean).map(String));
 
     const facets = facet ? ix.levels(rows, facet, 'nz').slice().sort() : ['__all__'];
     out.nFacets = facets.length;
@@ -216,47 +207,42 @@
   };
   individual.FIELDS = MODEL_FIELDS;
 
-  /**
-   * The highlight on a scatter or line. A line is highlighted when one of
-   * its rows holds a highlighted value, a point by its own row. What is not
-   * highlighted is `muted` (drawn grey by the option) and comes first, so
-   * the highlighted marks draw over it: a scatter series splits into its
-   * muted and its highlighted points. With a colour, the palette is counted
-   * over the highlighted colour values only, and the legend lists only those.
-   * @param {IndividualModel} m @param {any[]} rows @param {any} ix
-   * @param {Record<string, any>} cfg
-   */
+  /** The highlight on a scatter or line. A line is highlighted when one of its rows holds a
+   * highlighted value, a point by its own row. What is not highlighted is `muted` (drawn grey by
+   * the option) and comes first, so the highlighted marks draw over it: a scatter series splits
+   * into its muted and its highlighted points. With a colour, the palette is counted over the
+   * highlighted colour values only, and the legend lists only those. @param {IndividualModel} m
+   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg */
   const highlightSeries = (m, rows, ix, cfg) => {
     const hl = NS.highlightOf(cfg);
     if (!hl || m.isBand) return;
     m.hl = hl;
-    const { color, palette, colorScale } = m;
+    const { color } = m;
     /** @param {any} r */
     const rowLit = (r) => NS.keys.rowMatches(r, hl);
     /** @param {IndSeries} s @param {any} facet */
     const lineLit = (s, facet) => NS.keys.markLit(individualKeys(m, facet, s.level), s.rows, hl);
 
-    // The colour values the highlighted marks carry.
-    /** @type {Set<string>} */
-    const litVals = new Set();
-    for (const p of m.panels) {
-      for (const s of p.series) {
-        const lr = m.isLine ? (lineLit(s, p.facet) ? s.rows : []) : s.rows.filter(rowLit);
-        if (color) for (const r of lr) litVals.add(String(r[color] ?? ''));
-      }
-    }
     /** @type {Map<string, string>} */
     const colourOf = new Map();
     if (color) {
-      const order = m.splitCol === color ? m.levels
-        : ix.levels(rows, color, 'nz').slice().sort();
-      const lit = new Set(litVals);
-      const cols = NS.litLevelColors(order, lit, colorScale, palette);
+      // The colour values the highlighted marks carry.
+      /** @type {Set<string>} */
+      const lit = new Set();
+      for (const p of m.panels) {
+        for (const s of p.series) {
+          const lr = m.isLine ? (lineLit(s, p.facet) ? s.rows : []) : s.rows.filter(rowLit);
+          for (const r of lr) lit.add(String(r[color] ?? ''));
+        }
+      }
+      const order = m.splitCol === color ? m.levels : ix.levels(rows, color, 'nz').slice().sort();
+      const cols = NS.litLevelColors(order, lit, m.colorScale, m.palette);
+      /** @type {{ name: string, color: string }[]} */
+      const items = [];
       order.forEach((/** @type {string} */ lv, /** @type {number} */ i) => {
-        if (cols[i]) colourOf.set(lv, /** @type {string} */ (cols[i]));
+        const c = cols[i];
+        if (c) { colourOf.set(lv, c); items.push({ name: lv, color: c }); }
       });
-      const items = order.filter((/** @type {string} */ lv) => colourOf.has(lv))
-        .map((/** @type {string} */ lv) => ({ name: lv, color: /** @type {string} */ (colourOf.get(lv)) }));
       m.legend = items.length && items.length <= LEGEND_MAX ? { col: color, items } : null;
     }
     /** @param {IndSeries} s @param {any[]} rs */
@@ -310,15 +296,11 @@
     return null;
   };
 
-  /**
-   * The colour of each series level, and of each legend chip. With a series
-   * column apart from the colour column, a series takes the colour of its
-   * first row's colour value: the board scale's, else the next palette
-   * colour in the order the values come up (cycling, so a level keeps its
-   * colour under a filter). Otherwise a level takes the scale's colour or
-   * the palette's in level order.
-   * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   */
+  /** The colour of each series level, and of each legend chip. With a series column apart from the
+   * colour column, a series takes the colour of its first row's colour value: the board scale's,
+   * else the next palette colour in the order the values come up (cycling, so a level keeps its
+   * colour under a filter). Otherwise a level takes the scale's colour or the palette's in level
+   * order. @param {any[]} rows @param {any} ix @param {IndividualModel} m */
   const seriesColours = (rows, ix, m) => {
     const { palette, colorScale, color, seriesCol } = m;
     /** @param {string} v */
@@ -345,14 +327,11 @@
     return { of, legendColor };
   };
 
-  /**
-   * The legend band's chips, when the colour column has a readable number
-   * of levels. With a series column apart from the colour, the chips are
-   * the colour's values, sorted; the option adds an empty series per chip
-   * for the legend to bind to. Fills m.legend and m.byColor.
+  /** The legend band's chips, when the colour column has a readable number of levels. With a series
+   * column apart from the colour, the chips are the colour's values, sorted; the option adds an
+   * empty series per chip for the legend to bind to. Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   * @param {(level: string, index: number) => string} legendColor
-   */
+   * @param {(level: string, index: number) => string} legendColor */
   const legendOf = (rows, ix, m, legendColor) => {
     const { color, seriesCol } = m;
     if (!color) return;
@@ -366,12 +345,9 @@
     m.legend = { col: color, items };
   };
 
-  /**
-   * The keys of a line, a band level or a scatter series: the split
-   * column's level and the facet in a facet panel.
-   * @param {IndividualModel} m @param {any} facetVal @param {any} level
-   * @returns {Record<string, any>}
-   */
+  /** The keys of a line, a band level or a scatter series: the split column's level and the facet
+   * in a facet panel. @param {IndividualModel} m @param {any} facetVal @param {any} level
+   * @returns {Record<string, any>} */
   const individualKeys = (m, facetVal, level) => {
     /** @type {Record<string, any>} */
     const keys = {};
@@ -384,12 +360,9 @@
   const panelOf = (m, facetVal) =>
     m.panels.find((p) => p.facet === facetVal) || null;
 
-  /**
-   * The rows under a clicked point: the panel's rows at its x and y, within
-   * its series when the chart is split.
-   * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} seriesName
-   * @param {any[]} v the point's value
-   */
+  /** The rows under a clicked point: the panel's rows at its x and y, within its series when the
+   * chart is split. @param {IndividualModel} m @param {IndividualPanel} panel
+   * @param {any} seriesName @param {any[]} v the point's value */
   const pointRows = (m, panel, seriesName, v) => {
     const pool = (m.splitCol && seriesName != null)
       ? m.ix.get(panel.rows, m.splitCol, 'nz', String(seriesName)) : panel.rows;
@@ -448,11 +421,11 @@
   /**
    * A range taken in a panel; in a facet panel it carries the panel's key
    * as `filters`.
-   * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} range
+   * @param {IndividualModel} m @param {IndividualPanel | null} panel @param {any} range
    * @returns {{ range: any, filters?: Record<string, any[]> }}
    */
   const withPanel = (m, panel, range) => {
-    const keys = individualKeys(m, panel.facet, null);
+    const keys = panel ? individualKeys(m, panel.facet, null) : {};
     return Object.keys(keys).length ? { range, filters: NS.keys.fromKeys(keys) } : { range };
   };
 
@@ -472,20 +445,22 @@
     const drill = cfg.drill && cfg.drill !== 'auto' ? String(cfg.drill) : null;
     /** @type {Set<string>} */
     const levels = new Set();
-    const xc = cfg.x, yc = cfg.y;
     const encX = m.x.encode || ((/** @type {any} */ x) => x);
-    /** @type {Map<string, any[]> | null} */
-    let rowIndex = null;
+    /** @param {any} x @param {any} y */
+    const ptKey = (x, y) => String(x) + '|||' + String(y);
+    // The panel's rows by (x, y), for a drill column.
+    /** @type {Map<string, any[]>} */
+    const rowIndex = new Map();
     if (drill && panel) {
-      rowIndex = new Map();
       for (const r of panel.rows) {
-        const k = String(encX(r[xc])) + '|||' + String(r[yc]);
+        const k = ptKey(encX(r[cfg.x]), r[cfg.y]);
         const b = rowIndex.get(k);
         if (b) b.push(r); else rowIndex.set(k, [r]);
       }
     }
     /** @type {any[]} */
-    const xVals = [], yVals = [], rows = [];
+    const xVals = [], yVals = [];
+    /** @type {Set<string>} */
     const taken = new Set();
     for (const sel of selected) {
       const drawn = allSeries[sel.seriesIndex];
@@ -499,16 +474,13 @@
       const vy = Array.isArray(pt) ? pt[1] : pt.value && pt.value[1];
       if (vx != null) xVals.push(vx);
       if (vy != null) yVals.push(vy);
-      if (m.seriesCol) levels.add(String(allSeries[sel.seriesIndex].name ?? ''));
-      if (rowIndex) {
-        const k = String(vx) + '|||' + String(vy);
-        const hit = taken.has(k) ? null : rowIndex.get(k);
-        if (hit) {
-          taken.add(k);
-          for (const r of hit) rows.push(r);
-        }
-      }
+      if (m.seriesCol) levels.add(String(drawn.name ?? ''));
+      taken.add(ptKey(vx, vy));
     }
+    // Each (x, y) once.
+    /** @type {any[]} */
+    const rows = [];
+    for (const k of taken) for (const r of rowIndex.get(k) || []) rows.push(r);
     return { xVals, yVals, rows, drill, levels: [...levels] };
   };
 
@@ -535,12 +507,11 @@
                           ...NS.keys.fromKeys(keys) } };
     }
     if (!b.xVals.length) return null;
-    const range = {
+    return withPanel(m, panel, {
       x_col: cfg.x, y_col: cfg.y,
       x_range: [NS.minOf(b.xVals), NS.maxOf(b.xVals)],
       y_range: (!m.isLine && b.yVals.length) ? [NS.minOf(b.yVals), NS.maxOf(b.yVals)] : null
-    };
-    return Object.keys(keys).length ? { range, filters: NS.keys.fromKeys(keys) } : { range };
+    });
   };
 
   /**
