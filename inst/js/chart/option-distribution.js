@@ -12,7 +12,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   /** The interval of a point range as a custom series: a line from lo to hi with caps. `encode`
    * maps both ends to the value axis. @param {any} name @param {any[]} pts [slot, lo, hi] each
@@ -53,7 +52,7 @@
    */
   const distributionContext = (m, panel, look, plotW) => {
     const { cfg } = look;
-    const P = parts.common(look);
+    const P = option.aggregatedCommon(look);
     const isBox = cfg.type === 'boxplot';
     const palette = NS.paletteOf(cfg);
     const split = m.split;
@@ -181,7 +180,7 @@
     const catFmt = catLabelMap
       ? (/** @type {string} */ v) => catLabelMap.get(v) || short(v)
       : (split ? short : null);
-    const fit = vertical ? parts.fitXLabels(catLabels, plotW, look, catFmt) : null;
+    const fit = vertical ? option.barMarkParts.fitXLabels(catLabels, plotW, look, catFmt) : null;
     return { catLabels, gut: NS.axes.yGutter(catLabels, look.measure), catFmt,
              xlab: fit && fit.xlab, xFit: fit ? fit.xFit : undefined };
   };
@@ -289,5 +288,5 @@
     };
   };
 
-  Object.assign(parts, { distribution, whiskerSeries });
+  option.distributionParts = { distribution, whiskerSeries };
 })();

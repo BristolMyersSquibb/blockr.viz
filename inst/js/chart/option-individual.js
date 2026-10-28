@@ -15,7 +15,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -31,7 +30,7 @@
     ({ show: true, itemSize: 0, itemGap: 0, right: -40, top: -40, feature });
   const BRUSH_TOOLS = ['rect', 'lineX', 'clear'];
 
-  const { identityDomain, pos, logDomains, clampBand } = parts.log;
+  const { identityDomain, pos, logDomains, clampBand } = option.domainParts;
 
   /** What every part of a panel's option reads: config, colours, the panel's
    * log domains (null on a linear axis) and the measured x labels.
@@ -55,12 +54,12 @@
     if (k.isBand) {
       // On a log axis the band's series are clamped above the axis's floor.
       const band = cfg.derived.band || {};
-      const b = parts.band(m, panel, ly ? { ...look, cfg: { ...cfg, derived: { ...cfg.derived,
+      const b = option.bandParts.band(m, panel, ly ? { ...look, cfg: { ...cfg, derived: { ...cfg.derived,
         band: { ...band, series: clampBand(band.series, ly.min) } } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
                band: b.band, pts: null, labelPad: b.labelPad };
     }
-    const pts = parts.points(m, panel, (lx || ly)
+    const pts = option.pointParts.points(m, panel, (lx || ly)
       ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
       width > X_INSET ? width - X_INSET : 0);
     return { series: pts.series, mlTarget: 0, bandMany: false, band: null, pts,
@@ -96,7 +95,7 @@
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
-    if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
+    if (isBand) for (const r of option.bandParts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
     // y = x is a diagonal only when both axes use the same scale.
     const identityOn = cfg.identity_line === true && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
@@ -174,7 +173,7 @@
 
     // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
-      ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
+      ? (ly ? { lo: ly.min, hi: ly.max } : option.bandParts.bandExtent(cfg, panel, bandMany)) : null;
 
     // One markLine per series is all ECharts allows, so they share one.
     const { refData, idDom, idLog } = panelRefData(k, ext, series);
@@ -206,7 +205,7 @@
     const hover = { si: null };
     /** @type {{ veil?: string }} */
     const scrimState = {};
-    if (isLine) for (const s of parts.lineOverlay(scrimState)) series.push(s);
+    if (isLine) for (const s of option.pointParts.lineOverlay(scrimState)) series.push(s);
     // The line picker's registry, only for a crowd of lines. A few lines are
     // read off the crosshair's tooltip instead.
     const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
@@ -223,7 +222,7 @@
       // Only the first draw animates: a merge-patch morphs lines while the
       // dots jump to the new layout.
       animationDurationUpdate: 0,
-      tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
+      tooltip: isLine ? option.pointParts.lineTooltip(m, look, hover) : option.pointParts.pointTooltip(m, look),
       // Hidden: its selection model is what the chips toggle.
       legend: { show: false },
       grid: { left: 66, right: 5 + labelPad, top: 30,

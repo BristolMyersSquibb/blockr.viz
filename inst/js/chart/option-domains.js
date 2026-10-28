@@ -10,7 +10,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   /** A domain rounded outward to a nice step (an explicit min/max turns off
    * ECharts' own rounding). @param {number} lo @param {number} hi */
@@ -153,5 +152,5 @@
     return out;
   };
 
-  parts.log = { niceDomain, identityDomain, pos, intervalPairs, bandBucket, bandValues, logDomains, clampBand };
+  option.domainParts = { niceDomain, identityDomain, pos, intervalPairs, bandBucket, bandValues, logDomains, clampBand };
 })();

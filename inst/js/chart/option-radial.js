@@ -9,7 +9,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   /** A slice or tile per group: its total, the rows behind it, its colour and `label` text. Groups
    * with nothing to show drop out. @param {any} m @param {any} panel
@@ -35,7 +34,7 @@
   const builder = (pie) => (/** @type {any} */ m, /** @type {any} */ panel,
     /** @type {any} */ look) => {
     const { cfg, ink } = look;
-    const P = parts.common(look);
+    const P = option.aggregatedCommon(look);
     const data = groupTotals(m, panel, cfg);
     const label = { show: true, fontSize: ink.fontSize };
     const shadow = (/** @type {number} */ a) =>
@@ -63,5 +62,5 @@
     };
   };
 
-  Object.assign(parts, { pie: builder(true), treemap: builder(false) });
+  option.radialParts = { pie: builder(true), treemap: builder(false) };
 })();

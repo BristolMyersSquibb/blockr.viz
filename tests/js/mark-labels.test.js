@@ -92,7 +92,7 @@ test('pie and treemap write the label in place of the slice name', () => {
 
 // -- spacing ------------------------------------------------------------------
 
-const P = C.option.indParts;
+const P = C.option.pointParts;
 const rectAt = (x, y) => ({ x, y, width: 0, height: 0 });
 
 test('names that would cover each other move apart a line, across series', () => {

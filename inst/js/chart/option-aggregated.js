@@ -1,10 +1,15 @@
 // @ts-check
 /**
  * Chart block: the aggregated option. One ECharts option per panel, built by
- * the chart type's builder (option-bar.js, option-radial.js,
- * option-distribution.js), with its canvas height, the `xFit` inputs a resize
- * re-fits and a thinned-label note. Also the legend chips and the highlight
- * patch, which dims the marks a filter does not light.
+ * the chart type's builder, with its canvas height, the `xFit` inputs a
+ * resize re-fits and a thinned-label note. Also the legend chips and the
+ * highlight patch, which dims the marks a filter does not light.
+ *
+ * Each builder file exports under its own name: option.barParts (bar,
+ * waterfall), option.radialParts (pie, treemap), option.distributionParts
+ * (box plot, point range), with option.barMarkParts beside them. Here the
+ * part they all share, option.aggregatedCommon(), and builderOf(), which
+ * names the builder of each type.
  */
 (function () {
   'use strict';
@@ -12,8 +17,7 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
-  const { withItemStyle } = parts;
+  const { withItemStyle } = option.barMarkParts;
 
   // The opacity of a mark a filter does not light.
   const DIM = 0.15;
@@ -24,7 +28,7 @@
    * the tooltip's rows.
    * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme?: string | null }} look
    */
-  parts.common = (look) => {
+  option.aggregatedCommon = (look) => {
     const { cfg, columns, ink } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const fn = cfg.func || 'count';
@@ -54,10 +58,10 @@
   /** The builder for a chart type. @param {any} m */
   const builderOf = (m) => {
     const ct = m.type;
-    if (ct === 'pie') return parts.pie;
-    if (NS.DISTRIBUTION_TYPES.includes(ct)) return parts.distribution;
-    if (ct === 'treemap') return parts.treemap;
-    return m.cumulative ? parts.waterfall : parts.bar;
+    if (ct === 'pie') return option.radialParts.pie;
+    if (NS.DISTRIBUTION_TYPES.includes(ct)) return option.distributionParts.distribution;
+    if (ct === 'treemap') return option.radialParts.treemap;
+    return m.cumulative ? option.barParts.waterfall : option.barParts.bar;
   };
 
   /**

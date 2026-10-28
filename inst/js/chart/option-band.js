@@ -13,7 +13,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   const BASE_LINE_WIDTH = 1.4;
 
@@ -92,7 +91,7 @@
       itemStyle: { color: clr, cursor: 'pointer' },
       lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
       emphasis: { disabled: true },
-      ...(named && nm ? parts.endLabelOf(ink) : {})
+      ...(named && nm ? option.pointParts.endLabelOf(ink) : {})
     });
     return at;
   };
@@ -106,7 +105,7 @@
     const dm = cfg.point_size;
     const lm = cfg.line_width;
     /** @type {any[]} */ const series = [];
-    const panelBand = parts.log.bandBucket(cfg, panel);
+    const panelBand = option.domainParts.bandBucket(cfg, panel);
     if (!panelBand) return { series, band: null, markLineIdx: -1, many: false, labelPad: 0 };
     // `legend: "marks"`: each centre line carries its name at its end.
     const named = NS.legendPlan(m, cfg).marks === 'end';
@@ -153,7 +152,7 @@
       // Helper lines hang off a centre line, which the hover never empties.
       markLineIdx: firstCenter,
       many,
-      labelPad: named ? parts.endLabelPad(levels) : 0
+      labelPad: named ? option.pointParts.endLabelPad(levels) : 0
     };
   };
 
@@ -177,7 +176,7 @@
       drawn.push('olo', 'ohi');
       if (cfg.box_points === 'outliers') drawn.push('out_y');
     }
-    const vals = parts.log.bandValues(cfg, panel, drawn)
+    const vals = option.domainParts.bandValues(cfg, panel, drawn)
       .filter((/** @type {any} */ v) => v != null).map(Number).filter(Number.isFinite);
     let lo = NS.minOf(vals), hi = NS.maxOf(vals);
     if (!(Number.isFinite(lo) && Number.isFinite(hi) && hi > lo)) return null;
@@ -188,7 +187,7 @@
       if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
     }
     const pad = (hi - lo) * 0.06;
-    const [aLo, aHi] = parts.log.niceDomain(lo - pad, hi + pad);
+    const [aLo, aHi] = option.domainParts.niceDomain(lo - pad, hi + pad);
     return { lo: aLo, hi: aHi };
   };
 
@@ -220,5 +219,5 @@
     return out;
   };
 
-  Object.assign(parts, { band, bandExtent, bandRefLines, ribbon });
+  option.bandParts = { band, bandExtent, bandRefLines, ribbon };
 })();

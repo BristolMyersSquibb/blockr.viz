@@ -248,7 +248,7 @@ test('a line chart past its series cap names the series column by label', () => 
 test('a band\'s reference line names its column by label', () => {
   const cfg = C.model.settings({}, { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8,
                                                           n_distinct: 1 } } } }, COLUMNS);
-  const lines = C.option.indParts.bandRefLines(cfg, null, C.INK_DEFAULT, COLUMNS);
+  const lines = C.option.bandParts.bandRefLines(cfg, null, C.INK_DEFAULT, COLUMNS);
   assert.strictEqual(lines[0].label.formatter, 'Upper Limit 8');
 });
 
