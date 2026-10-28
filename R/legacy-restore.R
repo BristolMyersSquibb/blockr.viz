@@ -229,7 +229,9 @@ legacy_drop <- function(block, x) {
 # stay: they name the first summary's keys.
 legacy_slot_names <- function(block, state) {
   if (identical(block, "table")) {
-    return(c(group = "by", parent = "by", id_var = "id",
+    # `parent` stays: the summarize table's outer column is the groups
+    # layout's `parent` word (groups_title_roles()), the outer `by`.
+    return(c(group = "by", id_var = "id",
              pct_of = "percent_of", axis = "column_axis"))
   }
   rows <- legacy_rows("chart")

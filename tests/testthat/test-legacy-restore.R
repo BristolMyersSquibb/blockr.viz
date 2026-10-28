@@ -63,7 +63,7 @@ test_that("title templates come out with the new slot names", {
   tb <- legacy_restore("table", list(
     layout = "groups", title = "{@group} within {@parent}, {@id_var}"
   ))
-  expect_identical(tb$title, "{@by} within {@by}, {@id}")
+  expect_identical(tb$title, "{@by} within {@parent}, {@id}")
 })
 
 test_that("names dropped on purpose go without a warning", {
