@@ -8,7 +8,7 @@
 # and pair. In each of those specs rather than in the common keys.
 summary_color_arg <- function() {
   viz_arg(
-    type = "column", default = NULL, null = "no color split",
+    type = "column", null = "no color split",
     gear = gear("Columns", "column", "Color"),
     describe = "Color split, at most 15 levels."
   )
@@ -17,7 +17,7 @@ summary_color_arg <- function() {
 # Keys every summary type takes.
 summary_name_arg <- function() {
   viz_arg(
-    type = "string", default = NULL, null = "auto (\"Rows\", \"Mean AGE\")",
+    type = "string", null = "auto (\"Rows\", \"Mean AGE\")",
     gear = gear("Columns", "text", "Name"),
     describe = "Column header."
   )
@@ -26,7 +26,7 @@ summary_name_arg <- function() {
 # Every type but field.
 summary_facet_arg <- function() {
   viz_arg(
-    type = "column", default = NULL, null = "no facet",
+    type = "column", null = "no facet",
     gear = gear("Columns", "column", "Facet"),
     describe = paste(
       "Repeats the column once per level, on one scale. At most 15 levels,",
@@ -44,7 +44,6 @@ table_summary_specs <- function() {
       facet = summary_facet_arg(),
       show = viz_arg(
         type = "enum", default = "bar", values = c("bar", "number", "dot", "tile"),
-        null = FALSE,
         gear = gear("Columns", "tiles", "Show",
                     labels = c("Bar", "Number", "Dot", "Tile")),
         describe = "The mark. \"tile\" is a square cell, offered with look = \"compact\"."
@@ -53,19 +52,18 @@ table_summary_specs <- function() {
         type = "enum", default = "count",
         values = c("count", "count_distinct", "sum", "mean", "median", "min",
                    "max", "identity"),
-        null = FALSE,
         gear = gear("Columns", "select", "Aggregate",
                     labels = c("Count", "Count distinct", "Sum", "Mean",
                                "Median", "Min", "Max", "None (as is)")),
         describe = "Aggregation per row group. An unknown value is an error."
       ),
       col = viz_arg(
-        type = "column", default = NULL, null = "only with func = \"count\"",
+        type = "column", null = "only with func = \"count\"",
         gear = gear("Columns", "column", "Of column"),
         describe = "The column aggregated. Required unless func is \"count\"."
       ),
       position = viz_arg(
-        type = "enum", default = NULL, values = c("stack", "dodge", "fill"),
+        type = "enum", values = c("stack", "dodge", "fill"),
         null = "by the measure",
         gear = gear("Columns", "segmented", "Stacking",
                     labels = c("Stacked", "Side by side", "100%"),
@@ -73,7 +71,7 @@ table_summary_specs <- function() {
         describe = "Layout of a color split on a bar."
       ),
       fill = viz_arg(
-        type = "column", default = NULL, null = "value ramp",
+        type = "column", null = "value ramp",
         gear = gear("Columns", "column", "Paint by"),
         describe = paste(
           "Tile only. The cell is painted by the worst level of this column",
@@ -89,7 +87,7 @@ table_summary_specs <- function() {
       facet = summary_facet_arg(),
       show = viz_arg(
         type = "enum", default = "pointrange",
-        values = c("pointrange", "box", "text"), null = FALSE,
+        values = c("pointrange", "box", "text"),
         gear = gear("Columns", "tiles", "Show",
                     labels = c("Dot range", "Box", "Text")),
         describe = "The mark, or the statistic as text."
@@ -101,7 +99,6 @@ table_summary_specs <- function() {
       ),
       summary = viz_arg(
         type = "enum", default = "median_q1_q3", values = c(SPEC_STATS, "none"),
-        null = FALSE,
         gear = gear("Columns", "select", "Inner range",
                     labels = c(SPEC_STAT_LABELS, "None")),
         describe = paste(
@@ -110,7 +107,7 @@ table_summary_specs <- function() {
         )
       ),
       whiskers = viz_arg(
-        type = "enum", default = NULL, values = c("tukey", SPEC_STATS, "none"),
+        type = "enum", values = c("tukey", SPEC_STATS, "none"),
         null = "Tukey on a box, none on a dot range",
         gear = gear("Columns", "select", "Outer range",
                     labels = c("Tukey (1.5\u00d7IQR)", SPEC_STAT_LABELS, "None")),
@@ -147,18 +144,18 @@ table_summary_specs <- function() {
         describe = "Numeric column drawn."
       ),
       ymin = viz_arg(
-        type = "column", default = NULL, null = "no band",
+        type = "column", null = "no band",
         gear = gear("Columns", "column", "Band low"),
         describe = "Lower end of a band behind the line. Both or neither."
       ),
       ymax = viz_arg(
-        type = "column", default = NULL, null = "no band",
+        type = "column", null = "no band",
         gear = gear("Columns", "column", "Band high"),
         describe = "Upper end of the band."
       ),
       summary = viz_arg(
         type = "enum", default = "none",
-        values = c("none", "mean", "mean_sd", "median_q1_q3"), null = FALSE,
+        values = c("none", "mean", "mean_sd", "median_q1_q3"),
         gear = gear("Columns", "select", "Reference",
                     labels = c("None", "Mean", "Mean \u00b1 SD",
                                "Median \u00b7 Q1\u2013Q3")),
@@ -181,17 +178,17 @@ table_summary_specs <- function() {
         describe = "Interval end."
       ),
       label = viz_arg(
-        type = "column", default = NULL, null = "no label",
+        type = "column", null = "no label",
         gear = gear("Columns", "column", "Label"),
         describe = "Headlines the tooltip and keys the same-event highlight."
       ),
       tooltip = viz_arg(
-        type = "columns", default = NULL, null = "no extra columns",
+        type = "columns", null = "no extra columns",
         gear = gear("Columns", "columns", "Tooltip fields"),
         describe = "Extra columns in the tooltip."
       ),
       size = viz_arg(
-        type = "enum", default = "md", values = c("md", "lg"), null = FALSE,
+        type = "enum", default = "md", values = c("md", "lg"),
         gear = gear("Columns", "segmented", "Width",
                     labels = c("Regular", "Wide")),
         describe = "Segment thickness."
@@ -215,20 +212,20 @@ table_summary_specs <- function() {
       ),
       x_func = viz_arg(
         type = "enum", default = "identity",
-        values = c("identity", "mean", "median", "min", "max"), null = FALSE,
+        values = c("identity", "mean", "median", "min", "max"),
         gear = gear("Columns", "select", "From function",
                     labels = c("None (as is)", "Mean", "Median", "Min", "Max")),
         describe = "How `x` is read per group."
       ),
       xend_func = viz_arg(
         type = "enum", default = "max",
-        values = c("identity", "mean", "median", "min", "max"), null = FALSE,
+        values = c("identity", "mean", "median", "min", "max"),
         gear = gear("Columns", "select", "To function",
                     labels = c("None (as is)", "Mean", "Median", "Min", "Max")),
         describe = "How `xend` is read per group."
       ),
       ref_min = viz_arg(
-        type = "string", default = NULL, null = "no range",
+        type = "string", null = "no range",
         gear = gear("Columns", "text", "Reference low"),
         describe = paste(
           "A number or a column: the low end of a shaded reference range. An",
@@ -236,17 +233,17 @@ table_summary_specs <- function() {
         )
       ),
       ref_max = viz_arg(
-        type = "string", default = NULL, null = "no range",
+        type = "string", null = "no range",
         gear = gear("Columns", "text", "Reference high"),
         describe = "A number or a column: the high end of the range."
       ),
       x_lines = viz_arg(
-        type = "numbers", default = NULL, null = "no line",
+        type = "numbers", null = "no line",
         gear = gear("Columns", "text", "Reference line", parse = "lines"),
         describe = "Dashed guide lines, as the chart's `x_lines`."
       ),
       linetype = viz_arg(
-        type = "column", default = NULL, null = "all solid",
+        type = "column", null = "all solid",
         gear = gear("Columns", "column", "Dash by"),
         describe = "Non-first levels of this column are drawn dashed."
       ),
@@ -272,7 +269,7 @@ table_summary_specs <- function() {
       name = summary_name_arg(),
       facet = summary_facet_arg(),
       show = viz_arg(
-        type = "enum", default = NULL,
+        type = "enum",
         values = c("bar", "number", "dumbbell", "box", "pointrange", "text"),
         null = "read off the result",
         gear = gear("Columns", "tiles", "Show",
@@ -290,7 +287,7 @@ table_summary_specs <- function() {
         )
       ),
       id = viz_arg(
-        type = "column", default = NULL, null = "count rows",
+        type = "column", null = "count rows",
         gear = gear("Columns", "column", "Percent of"),
         describe = "A count prints \"n (pct%)\" with N the distinct values of this column."
       )
@@ -304,7 +301,7 @@ table_shading_spec <- function() {
 
     mode = viz_arg(
       type = "enum", default = "diverging",
-      values = c("diverging", "sequential", "bar"), null = FALSE,
+      values = c("diverging", "sequential", "bar"),
       gear = gear("Color", "tiles", "Mode",
                   labels = c("Diverging", "Sequential", "Data bar")),
       describe = paste(
@@ -314,14 +311,14 @@ table_shading_spec <- function() {
     ),
 
     columns = viz_arg(
-      type = "columns", default = NULL,
+      type = "columns",
       null = "every numeric column no earlier rule claims",
       gear = gear("Color", "columns", "on"),
       describe = "Numeric columns the rule paints."
     ),
 
     domain = viz_arg(
-      type = "numbers", default = NULL,
+      type = "numbers",
       null = "the data range; diverging is symmetric around 0",
       describe = "`c(low, high)` the colors span, e.g. `c(-1, 1)` for correlations."
     )
