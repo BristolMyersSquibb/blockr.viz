@@ -82,7 +82,8 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
     vapply(ss, function(sg) {
       paste0(
         if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
-        if (!is.null(lv)) {
+        # The colour level is left out when the label already says it.
+        if (!is.null(lv) && !identical(sg$lb, lv[[sg$f]])) {
           paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
         },
         cells_fmt_x(sg$s, dd), "\u2013", cells_fmt_x(sg$e, dd),
