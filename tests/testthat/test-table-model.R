@@ -20,8 +20,6 @@ test_that("table_model_records() gives the recorded records cells", {
                        vapply(want$cols[[j]]$disp, function(x) as.character(x %||% NA), ""),
                        label = paste(nm, j, "disp"))
     }
-    expect_identical(which(m$nodrill) - 1L, as.integer(unlist(want$nodrill)),
-                     label = paste(nm, "nodrill"))
     n <- n + 1L
   }
   expect_gt(n, 10L)

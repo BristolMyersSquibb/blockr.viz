@@ -8,10 +8,8 @@
 
 # The records layout's cell model: dt_flat_build()'s (`kind` "flat" or
 # "message"), or list(kind = "structured", data) for a frame that carries its
-# own structure. `tint` is table_model_tint()'s list(col, hex); `gear_cols` is
-# JSON, NULL reads the columns off `data`.
-table_model_records <- function(state, data, tint = NULL, active = NULL,
-                                gear_cols = NULL) {
+# own structure. `tint` is table_model_tint()'s list(col, hex).
+table_model_records <- function(state, data, tint = NULL) {
   if (length(state$by) && is.data.frame(data)) {
     data <- table_nest(data, state$by, state$rowname,
                        missing = state$missing %||% "level",
@@ -20,17 +18,11 @@ table_model_records <- function(state, data, tint = NULL, active = NULL,
   if (table_is_structured(data)) {
     return(list(kind = "structured", data = data))
   }
-  toggles <- list(
-    sortable = isTRUE(state$sortable), collapsible = isTRUE(state$collapsible),
-    search = isTRUE(state$search), download = isTRUE(state$download),
-    rotate_titles = identical(state$look, "compact"), unit = state$unit
-  )
   data <- dt_unit_labels(data, state$unit, state$rowname)
   dt_flat_build(
     data, state$rowname, state$columns, dd_parse_shadings(state$shadings),
     state$drill, state$format %||% "number", row_hex = tint$hex,
-    color = tint$col, toggles = toggles, active = active,
-    gear_cols = gear_cols
+    rotate = identical(state$look, "compact")
   )
 }
 
