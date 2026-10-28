@@ -41,7 +41,7 @@
       /** @type {{ sc: Element, top: number, to: string, release: () => void } | null} */
       this.held = null;
       this.gear = opts.gear === false ? null
-        : T.gear.mount(this.frame, scope, () => this.info(), (to) => this.hold(to));
+        : T.gear.mount(this.frame, scope, (layout) => this.info(layout), (to) => this.hold(to));
       // The prepare script's controls, under the header.
       this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
       if (this.script) this.frame.body.before(this.script.el);
@@ -117,9 +117,9 @@
       this.view = this.viewScope.own(new Layout(this.frame, this.viewScope, { still: this.still }));
     }
 
-    /** @returns {TableInfo} */
-    info() {
-      const v = this.view;
+    /** @param {string} [layout] Nothing special until R draws it. @returns {TableInfo} */
+    info(layout) {
+      const v = layout == null || layout === this.layout ? this.view : null;
       return v && v.info ? v.info() : { structured: false, finished: false, numbers: true };
     }
 

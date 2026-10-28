@@ -42,6 +42,21 @@ test('a pick of variables becomes entries; kept entries keep their keys', () => 
                          { type: 'dist', col: 'WT' }]);
 });
 
+test('the gear does not judge a picked layout by what this one draws', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  mount(payload({ data: table1(), config: VAR }), env);
+  // A Table 1 is structured and has no number columns; a list picked in the
+  // gear, before R draws it, is neither.
+  const v = { layout: 'records', by: [] };
+  assert.equal(host.visible('format', v), true);
+  assert.equal(host.visible('collapsible', v), false);
+  assert.equal(host.visible('color', v), true);
+});
+
 test('the gear\'s Variables row picks among the columns not in by', () => {
   let rowCtx;
   let host;
