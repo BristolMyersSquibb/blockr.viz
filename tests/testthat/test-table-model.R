@@ -12,10 +12,16 @@ test_that("table_model_records() gives the recorded records cells", {
     if (!identical(want$kind, "flat")) next
     tint <- table_model_tint(cs$state, cs$data)
     m <- table_model_records(cs$state, cs$data, tint = tint)
-    got <- tm_json(dt_flat_payload(m))
-    for (k in c("n", "cols", "nodrill")) {
-      expect_identical(got[[k]], want[[k]], label = paste(nm, k))
+    expect_identical(m$n, want$n, label = paste(nm, "n"))
+    cols <- c(list(m$stub), m$cells)
+    expect_length(cols, length(want$cols))
+    for (j in seq_along(cols)) {
+      expect_identical(as.character(unname(cols[[j]]$disp)),
+                       vapply(want$cols[[j]]$disp, function(x) as.character(x %||% NA), ""),
+                       label = paste(nm, j, "disp"))
     }
+    expect_identical(which(m$nodrill) - 1L, as.integer(unlist(want$nodrill)),
+                     label = paste(nm, "nodrill"))
     n <- n + 1L
   }
   expect_gt(n, 10L)

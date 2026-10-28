@@ -963,59 +963,6 @@ summarize_drop_null <- function(x) {
   })
 }
 
-#' Build the body payload for the block server: the same dispatch the render
-#' path uses. A non-renderable state (no group picked, a vanished column, no
-#' rows) is small, so it ships as `kind = "html"` -- the complete message table
-#' from the existing builder, injected as-is, zero markup duplication. Only the
-#' row path, the one that scales, ships the cell model.
-#'
-#' `chrome` carries what the container's own slots show: the resolved title /
-#' subtitle / caption (plus the raw states the gear needs), the legend, and the
-#' footer's count line and note.
-#' @noRd
-summarize_build_payload <- function(data, chrome = list(), drill = NULL,
-                                    active = NULL, cfg = NULL, ...) {
-  prep <- summarize_prepare(data, ...)
-  body <- if (!is.null(prep$err)) {
-    list(kind = "html",
-         html = paste0(
-           "<table class=\"blockr-table blockr-summarize-table\"",
-           summarize_table_attrs(prep, cfg),
-           "><tbody><tr><td class=\"blockr-data\">",
-           summarize_esc(prep$err), "</td></tr></tbody></table>"
-         ))
-  } else {
-    m <- summarize_cells(prep, drill = drill, active = active, cfg = cfg)
-    out <- summarize_flat_payload(m)
-    # The cards look draws from the same cell model; the payload adds the
-    # cards' text (R/table-cards.R).
-    if (identical(cfg$look, "cards")) {
-      out$cards <- cards_payload(table_cards_groups(
-        m, prep, data = data, scale_map = list(...)$scale_map
-      ))
-    }
-    out
-  }
-  if (!is.null(cfg$look)) body$look <- cfg$look
-  body$chrome <- summarize_drop_null(c(chrome, list(
-    legend = summarize_legend_spec(prep),
-    foot = summarize_foot_spec(prep, drill = drill, active = active)
-  )))
-  # The errors of failed custom summaries: the block raises them as blockr
-  # conditions and drops the field before the payload is sent.
-  body$failed <- prep$failed
-  body
-}
-
-#' Serialize a payload ONCE, R-side. The server sends the string, not the list:
-#' pre-serializing dodges Shiny's auto_unbox scalar-collapse on the envelope,
-#' gives the server a plain string-identity re-send guard (the chart block's
-#' last_msg pattern), and lets the browser skip JSON.parse on an unchanged rev.
-#' @noRd
-summarize_payload_json <- function(p) {
-  as.character(jsonlite::toJSON(p, auto_unbox = TRUE, na = "null"))
-}
-
 #' A tile cell's mark: a painted square with the value in it, or nothing.
 #' Vectorised over rows; NA paint = an empty cell.
 #' @noRd

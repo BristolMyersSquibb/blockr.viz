@@ -106,7 +106,8 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
   skip_if_not_installed("flextable")
 
   d <- xt_frame()
-  blk <- new_table_block(rowname = "cyl", cell_color = seq_rule(),
+  blk <- new_table_block(rowname = "cyl",
+                         shadings = list(list(mode = "sequential")),
                          download = TRUE,
                          title = "Cars by cylinders and gears")
   bg <- unique(unlist(lapply(c("3", "4", "5"), function(cn) {
@@ -114,20 +115,24 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
   })))
   hex <- toupper(sub("^#", "", bg))
 
-  shiny::testServer(blk$expr_server,
-                    args = list(data = shiny::reactive(d)), {
-    session$flushReact()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expr <- session$makeScope("expr")
 
-    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
-    for (b in bg) expect_match(h, paste0("background:", b), fixed = TRUE)
-    expect_false(grepl(".bg:", h, fixed = TRUE))
+      h <- paste(readLines(expr$output$dl_html, warn = FALSE), collapse = "")
+      for (b in bg) expect_match(h, paste0("background:", b), fixed = TRUE)
+      expect_false(grepl(".bg:", h, fixed = TRUE))
 
-    st <- xlsx_styles(output[["records-dl_xlsx"]])
-    for (x in hex) expect_match(st, x, fixed = TRUE)
+      st <- xlsx_styles(expr$output$dl_xlsx)
+      for (x in hex) expect_match(st, x, fixed = TRUE)
 
-    sl <- toupper(slide_xml(output[["records-dl_pptx"]]))
-    for (x in hex) expect_match(sl, x, fixed = TRUE)
-  })
+      sl <- toupper(slide_xml(expr$output$dl_pptx))
+      for (x in hex) expect_match(sl, x, fixed = TRUE)
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(d)))
+  )
 })
 
 # --- digits (#37) -------------------------------------------------------------
@@ -205,25 +210,29 @@ test_that("the block's downloads round to its digits (#37)", {
   skip_if_not_installed("officer")
   skip_if_not_installed("flextable")
 
-  blk <- new_table_block(digits = 2L, download = TRUE)
-  shiny::testServer(blk$expr_server,
-                    args = list(data = shiny::reactive(coef_frame())), {
-    session$flushReact()
+  blk <- new_table_block(format = 2L, download = TRUE)
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expr <- session$makeScope("expr")
 
-    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
-    expect_match(h, ">3.81<", fixed = TRUE)
-    expect_match(h, ">2.7<", fixed = TRUE)
-    expect_false(grepl("3.8142", h, fixed = TRUE))
+      h <- paste(readLines(expr$output$dl_html, warn = FALSE), collapse = "")
+      expect_match(h, ">3.81<", fixed = TRUE)
+      expect_match(h, ">2.70<", fixed = TRUE)
+      expect_false(grepl("3.8142", h, fixed = TRUE))
 
-    sl <- slide_xml(output[["records-dl_pptx"]])
-    expect_match(sl, ">3.81<", fixed = TRUE)
-    expect_match(sl, ">2.7<", fixed = TRUE)
-    expect_false(grepl("3.8142", sl, fixed = TRUE))
+      sl <- slide_xml(expr$output$dl_pptx)
+      expect_match(sl, ">3.81<", fixed = TRUE)
+      expect_match(sl, ">2.70<", fixed = TRUE)
+      expect_false(grepl("3.8142", sl, fixed = TRUE))
 
-    fx <- output[["records-dl_xlsx"]]
-    expect_equal(openxlsx::read.xlsx(fx)$times_more, 3.81427057462906)
-    expect_identical(xlsx_num_formats(fx)[["2"]], "0.00")
-  })
+      fx <- expr$output$dl_xlsx
+      expect_equal(openxlsx::read.xlsx(fx)$times_more, 3.81427057462906)
+      expect_identical(xlsx_num_formats(fx)[["2"]], "0.00")
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(coef_frame())))
+  )
 })
 
 test_that("table_exhibit() is the block as a printed table", {
@@ -247,8 +256,8 @@ test_that("table_exhibit() is the block as a printed table", {
 })
 
 test_that("the table block's report call carries format, text and colours (#37)", {
-  blk <- new_table_block(digits = 1L, title = "Area effect", subtitle = "",
-                         cell_color = drilldown_table_color("sequential"))
+  blk <- new_table_block(format = 1L, title = "Area effect", subtitle = "",
+                         shadings = list(list(mode = "sequential")))
   cl <- report_call(blk, "gtbl")
   expect_identical(cl[[1]], quote(blockr.viz::static_exhibit))
   inner <- cl[[2]]
@@ -300,8 +309,12 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   # Cells.
   b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
   expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
-  p <- dt_build_payload(d, "term", digits = "compact", unit = "CHF")
-  expect_match(p$head %||% jsonlite::toJSON(p), "amount \\(CHF\\)")
+  st <- viz_check(viz_block_spec("table"),
+                  list(layout = "records", rowname = "term",
+                       format = "compact", unit = "CHF"))
+  v <- table_records_view(table_model_records(st, d))
+  expect_identical(as.character(v$cols[[3]]$disp), c("1.5K", "2.5M"))
+  expect_identical(v$head[[1]][[3]]$sub, "amount (CHF)")
   # Cards: the unit after the number, not in the label.
   m <- table_cards_records(d, label_col = "term", digits = "compact",
                            unit = "CHF")
@@ -330,8 +343,8 @@ test_that("fixed decimals print exactly, number keeps small values", {
   # An old `digits = 2` ("up to two decimals") reads as "number".
   expect_identical(table_digits_format(2L), "number")
   expect_identical(table_digits_format(1L), 1L)
-  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
-  expect_identical(p$format, "number")
+  expect_warning(blk <- new_table_block(digits = 2L), "digits")
+  expect_identical(blockr.core::blockr_ser(blk)$payload$format, "number")
 })
 
 test_that("fixed decimals print exactly, number keeps small values", {
@@ -342,8 +355,8 @@ test_that("fixed decimals print exactly, number keeps small values", {
   # An old `digits = 2` ("up to two decimals") reads as "number".
   expect_identical(table_digits_format(2L), "number")
   expect_identical(table_digits_format(1L), 1L)
-  p <- blockr.core::blockr_ser(new_table_block(digits = 2L))$payload
-  expect_identical(p$format, "number")
+  expect_warning(blk <- new_table_block(digits = 2L), "digits")
+  expect_identical(blockr.core::blockr_ser(blk)$payload$format, "number")
 })
 
 test_that("format and unit reach the groups layout's number cells and labels", {

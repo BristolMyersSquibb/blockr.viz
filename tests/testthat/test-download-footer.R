@@ -120,25 +120,30 @@ test_that("the table block's downloads carry the footer in every format", {
   attr(d, "blockr_provenance") <- list(dataset = "AQ-001")
   blk <- new_table_block(download = TRUE)
 
-  shiny::testServer(blk$expr_server, args = list(data = shiny::reactive(d)), {
-    session$userData$board_options <- list(
-      download_footer = shiny::reactiveVal("Exported from {dataset}")
-    )
-    session$flushReact()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$board_options <- list(
+        download_footer = shiny::reactiveVal("Exported from {dataset}")
+      )
+      session$flushReact()
+      expr <- session$makeScope("expr")
 
-    h <- paste(readLines(output[["records-dl_html"]], warn = FALSE), collapse = "")
-    expect_match(h, "Exported from AQ-001", fixed = TRUE)
+      h <- paste(readLines(expr$output$dl_html, warn = FALSE), collapse = "")
+      expect_match(h, "Exported from AQ-001", fixed = TRUE)
 
-    x <- openxlsx::read.xlsx(output[["records-dl_xlsx"]], colNames = FALSE,
-                             skipEmptyRows = FALSE)
-    expect_true("Exported from AQ-001" %in% x[[1L]])
+      x <- openxlsx::read.xlsx(expr$output$dl_xlsx, colNames = FALSE,
+                               skipEmptyRows = FALSE)
+      expect_true("Exported from AQ-001" %in% x[[1L]])
 
-    td <- withr::local_tempdir()
-    utils::unzip(output[["records-dl_pptx"]], exdir = td)
-    sl <- paste(unlist(lapply(
-      list.files(file.path(td, "ppt/slides"), "xml$", full.names = TRUE),
-      readLines, warn = FALSE
-    )), collapse = "")
-    expect_match(sl, "Exported from AQ-001", fixed = TRUE)
-  })
+      td <- withr::local_tempdir()
+      utils::unzip(expr$output$dl_pptx, exdir = td)
+      sl <- paste(unlist(lapply(
+        list.files(file.path(td, "ppt/slides"), "xml$", full.names = TRUE),
+        readLines, warn = FALSE
+      )), collapse = "")
+      expect_match(sl, "Exported from AQ-001", fixed = TRUE)
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(d)))
+  )
 })

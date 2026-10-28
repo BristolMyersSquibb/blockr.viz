@@ -29,23 +29,30 @@ cards_summaries <- function() {
   )
 }
 
-cards_payload_of <- function(data, by = "ARM", ...) {
-  summarize_build_payload(
-    data, cfg = list(look = "cards"),
-    summaries = cards_summaries(), by = by, sort_by = "alpha",
-    sort_dir = "asc", ...
-  )
+# The groups model in the cards look, and what the view adds to the table
+# (table_groups_payload()): the TableModel with the card model on it.
+cards_model_of <- function(data, by = "ARM", summaries = cards_summaries(),
+                           look = "cards", ...) {
+  sum_model(data, summaries = summaries, by = by, sort_by = "alpha",
+            sort_dir = "asc", look = look, ...)
+}
+
+cards_view_of <- function(m, look = "cards") {
+  v <- list(look = look, column_axis = TRUE)
+  src <- list(scale_map = function() NULL)
+  table_groups_payload(m, v, NULL, src)$model
 }
 
 test_that("look takes table, compact or cards; compact = TRUE still works", {
-  look_of <- function(b) get("look", envir = environment(b$expr_server))
+  look_of <- function(b) blockr.core::blockr_ser(b)$payload$look
   expect_identical(look_of(new_table_block()), "table")
   expect_identical(look_of(new_table_block(look = "cards")), "cards")
-  expect_identical(look_of(new_table_block(look = "nonsense")), "table")
-  expect_identical(look_of(new_table_block(compact = TRUE)), "compact")
-  expect_identical(look_of(new_table_block(rotate_titles = TRUE)), "compact")
-  p <- blockr.core::blockr_ser(new_table_block(compact = TRUE))$payload
-  expect_identical(p$look, "compact")
+  expect_error(new_table_block(look = "nonsense"), "look")
+  expect_warning(b <- new_table_block(compact = TRUE), "compact")
+  expect_identical(look_of(b), "compact")
+  expect_warning(b <- new_table_block(rotate_titles = TRUE), "rotate_titles")
+  expect_identical(look_of(b), "compact")
+  p <- blockr.core::blockr_ser(b)$payload
   expect_false("compact" %in% names(p))
 })
 
@@ -63,10 +70,10 @@ test_that("a board saved with `compact` restores in the compact look", {
   expect_identical(p$layout, "groups")
 })
 
-test_that("the groups payload carries one card per drawable summary", {
-  p <- cards_payload_of(cards_df())
-  expect_identical(p$look, "cards")
-  cards <- p$cards
+test_that("the groups view carries one card per drawable summary", {
+  m <- cards_model_of(cards_df())
+  model <- cards_view_of(m)
+  cards <- model$cards
   expect_identical(cards$n, 3L)
   expect_true(cards$multi)
   expect_identical(as.character(cards$label), c("A", "B", "C"))
@@ -77,12 +84,16 @@ test_that("the groups payload carries one card per drawable summary", {
 
   col <- function(nm) cards$cols[[match(nm, labels)]]
   expect_identical(as.character(col("Rows")$main), c("3", "2", "1"))
-  # A glyph points at the column of the payload the table draws it from,
-  # so a column of cards shares that column's scale.
+  # A glyph points at the column of the table the card draws it from, so a
+  # column of cards shares that column's scale. It is the column's index in
+  # the view, where the stub is 0.
   for (nm in c("Rows", "Events", "Age", "SBP", "Trend")) {
     k <- col(nm)$glyph
     expect_true(is.numeric(k))
-    expect_identical(p$cols[[k + 1L]]$kind,
+    expect_identical(m$cells$cols[[k]]$kind,
+                     c(Rows = "bar", Events = "barsplit", Age = "box",
+                       SBP = "pair", Trend = "sparkline")[[nm]])
+    expect_identical(model$cols[[k + 1L]]$mark$kind,
                      c(Rows = "bar", Events = "barsplit", Age = "box",
                        SBP = "pair", Trend = "sparkline")[[nm]])
   }
@@ -101,42 +112,43 @@ test_that("the groups payload carries one card per drawable summary", {
 })
 
 test_that("a summary with a facet draws one card per level", {
-  p <- summarize_build_payload(
-    cards_df(), cfg = list(look = "cards"), by = "ARM",
-    summaries = list(list(type = "simple", name = "Rows", func = "count",
-                          facet = "SEV", show = "bar"))
+  m <- cards_model_of(
+    cards_df(), summaries = list(list(type = "simple", name = "Rows",
+                                      func = "count", facet = "SEV",
+                                      show = "bar"))
   )
-  expect_identical(vapply(p$cards$cols, `[[`, "", "label"),
+  cards <- cards_view_of(m)$cards
+  expect_identical(vapply(cards$cols, `[[`, "", "label"),
                    c("Rows · mild", "Rows · severe"))
 })
 
 test_that("a faceted count's head names the count scale, not the share", {
   # The bar is drawn as a share of its level's N; the card's number is the
   # count, so the head reads in counts.
-  p <- summarize_build_payload(
-    cards_df(), cfg = list(look = "cards"), by = "ARM",
-    summaries = list(list(type = "simple", name = "Rows", func = "count",
-                          facet = "SEV", show = "bar"))
+  m <- cards_model_of(
+    cards_df(), summaries = list(list(type = "simple", name = "Rows",
+                                      func = "count", facet = "SEV",
+                                      show = "bar"))
   )
-  rng <- vapply(p$cards$cols, `[[`, "", "range")
+  rng <- vapply(cards_view_of(m)$cards$cols, `[[`, "", "range")
   expect_false(any(grepl("%", rng, fixed = TRUE)))
   # mild: 4 rows, at most 2 per arm.
   expect_identical(rng[[1L]], "0 to 2")
 })
 
 test_that("without `by` the cards draw one row and no drill", {
-  p <- cards_payload_of(cards_df(), by = character(), drill = "ARM")
-  expect_identical(p$cards$n, 1L)
-  expect_false(p$cards$multi)
-  expect_identical(as.character(p$cards$cols[[1L]]$main), "6")
-  expect_false(isTRUE(p$pick))
+  m <- cards_model_of(cards_df(), by = character(), drill = "ARM")
+  cards <- cards_view_of(m)$cards
+  expect_identical(cards$n, 1L)
+  expect_false(cards$multi)
+  expect_identical(as.character(cards$cols[[1L]]$main), "6")
+  expect_false(isTRUE(m$cells$pick))
 })
 
-test_that("the table look's payload carries no cards", {
-  p <- summarize_build_payload(cards_df(), cfg = list(look = "table"),
-                               by = "ARM", summaries = cards_summaries())
-  expect_null(p$cards)
-  expect_identical(p$look, "table")
+test_that("only the cards look carries cards", {
+  m <- cards_model_of(cards_df(), look = "table")
+  expect_null(cards_view_of(m, look = "table")$cards)
+  expect_false(is.null(cards_view_of(m, look = "cards")$cards))
 })
 
 test_that("the records model draws each column as a plain number", {
@@ -165,22 +177,20 @@ test_that("the records model draws each column as a plain number", {
   expect_match(js, "\"label\":[\"P\"]", fixed = TRUE)
 })
 
-test_that("the records engine pushes cards in the records layout only", {
+test_that("the records view carries cards in the records layout only", {
   d <- data.frame(Arm = c("P", "X"), N = c(12, 9))
-  layout <- shiny::reactiveVal("records")
-  look <- shiny::reactiveVal("cards")
-  blk <- records_engine(shared = list(look = look, layout = layout))
-  shiny::testServer(blk, args = list(data = shiny::reactive(d)), {
-    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
-    expect_identical(p$look, "cards")
-    expect_identical(p$look_state, "cards")
-    expect_identical(p$cards$cols[[1L]]$label, "N")
-    layout("variables")
-    session$flushReact()
-    p <- jsonlite::fromJSON(r_body_payload(), simplifyVector = FALSE)
-    expect_null(p$cards)
-    expect_identical(p$look_state, "cards")
-  })
+  v <- list(look = "cards", digits = "number", format = "number", unit = "",
+            collapsible = TRUE, drill = NULL, color = NULL, by = character(),
+            rowname = NULL, columns = NULL)
+  src <- list(scale_map = function() NULL)
+  p <- table_frame_view(v, d, src, "records")
+  expect_identical(p$model$cards$cols[[1L]]$label, "N")
+  expect_identical(p$model$cards$n, 2L)
+  # Another layout draws the frame without them.
+  expect_null(table_frame_view(v, d, src, "variables")$model$cards)
+  # The table look has none either.
+  v$look <- "table"
+  expect_null(table_frame_view(v, d, src, "records")$model$cards)
 })
 
 test_that("the cards exhibit writes html with the model and a painted slide", {

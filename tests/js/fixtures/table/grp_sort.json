@@ -1,0 +1,827 @@
+{
+  "scenario": "grp_sort",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"asc","top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "alpha",
+            "sort_dir": "asc",
+            "top_n": "2",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["22.5", "26"],
+            "key": [22.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [86.54000000000001, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ],
+        "note": "Other — 2 rows below the cut, each with a value ≤ 19.5"
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"data","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "data",
+            "sort_dir": "",
+            "top_n": "2",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 2,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"Total","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "Total",
+            "sort_dir": "",
+            "top_n": "2",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["d", "c"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["12", "19.5"],
+            "key": [12, 19.5],
+            "axis": {
+              "at": [0, 25.64, 51.28, 76.92],
+              "labels": ["0", "5", "10", "15"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [61.54, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ],
+        "note": "Other — 2 rows below the cut, each with a value ≤ 26"
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 3,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "alpha",
+            "sort_dir": "",
+            "top_n": "2",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["22.5", "26"],
+            "key": [22.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [86.54000000000001, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ],
+        "note": "Other — 2 rows below the cut, each with a value ≤ 19.5"
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 4,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "alpha",
+            "sort_dir": "desc",
+            "top_n": "2",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 2,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["d", "c"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["12", "19.5"],
+            "key": [12, 19.5],
+            "axis": {
+              "at": [0, 25.64, 51.28, 76.92],
+              "labels": ["0", "5", "10", "15"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [61.54, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ],
+        "note": "Other — 2 rows below the cut, each with a value ≤ 26"
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 5,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":3,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "alpha",
+            "sort_dir": "desc",
+            "top_n": "3",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 3,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["d", "c", "b"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["12", "19.5", "26"],
+            "key": [12, 19.5, 26],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [46.15, 75, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ],
+        "note": "Other — 1 rows below the cut, each with a value ≤ 22.5"
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 6,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "alpha",
+            "sort_dir": "desc",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "sum"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["d", "c", "b", "a"],
+            "num": false
+          },
+          {
+            "name": "Total",
+            "num": false,
+            "disp": ["12", "19.5", "26", "22.5"],
+            "key": [12, 19.5, 26, 22.5],
+            "axis": {
+              "at": [0, 38.46, 76.92],
+              "labels": ["0", "10", "20"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [46.15, 75, 100, 86.54000000000001],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Total",
+                "meas": "Total"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Total",
+              "col": 1
+            }
+          ]
+        ]
+      }
+    },
+    null
+  ]
+}

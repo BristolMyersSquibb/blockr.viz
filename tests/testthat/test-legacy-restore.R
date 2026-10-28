@@ -246,3 +246,29 @@ test_that("blocks dropped for good have no restore", {
   expect_error(legacy_deser("summarize_table_block", list(payload = list())),
                "No restore")
 })
+
+test_that("an old table with group and typed summaries keeps its summaries", {
+  s <- list(
+    list(type = "simple", func = "count", show = "bar", name = "Subjects"),
+    list(type = "dist", col = "AGE", style = "box", name = "Age")
+  )
+  r <- legacy_restore("table", list(group = "ARM", summaries = s))
+  expect_identical(r$layout, "groups")
+  expect_identical(r$by, "ARM")
+  expect_identical(vapply(r$summaries, `[[`, "", "name"), c("Subjects", "Age"))
+  expect_identical(r$summaries[[2L]]$show, "box")
+})
+
+test_that("a 0.3.0 summary key reads in code as in a saved board", {
+  make <- function() {
+    new_table_block(
+      layout = "groups", by = "ARM",
+      summaries = list(list(type = "dist", col = "AGE", style = "box"))
+    )
+  }
+  expect_warning(make(), "from blockr.viz < 0.3.0")
+  b <- suppressWarnings(make())
+  s <- blockr.core::blockr_ser(b)$payload$summaries[[1L]]
+  expect_null(s$style)
+  expect_identical(s$show, "box")
+})

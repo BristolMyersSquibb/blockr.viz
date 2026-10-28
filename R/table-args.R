@@ -4,13 +4,6 @@
 # (blockr_deser.table_block()) and the old constructors, which now forward
 # (new_summarize_table_block()). See dev/table-block-rewrite.md.
 
-# Arguments of new_table_block() that hold the block's settings. Everything
-# else in `...` goes to blockr.core::new_transform_block() (block_name, ctor,
-# ...), or is an old name translated here.
-table_formal_names <- function() {
-  setdiff(names(formals(new_table_block)), "...")
-}
-
 # Old names, by the block they belong to. Names that exist in both the old
 # and the new signature with the same meaning (rowname, shadings, drill,
 # digits, title, ...) are not listed: they need no translation.
@@ -171,8 +164,12 @@ table_legacy_args <- function(args, from = NULL) {
     if (length(group)) {
       out$layout <- "groups"
       out$by <- group
+      # An aggregation list becomes summaries; summaries already in the
+      # groups layout's form are kept; none is one count.
       out$summaries <- if (table_is_agg_summaries(out[["summaries"]])) {
         table_agg_to_summaries(out[["summaries"]])
+      } else if (is.list(out[["summaries"]]) && length(out$summaries)) {
+        out$summaries
       } else {
         list(list(type = "simple", func = "count", show = "number"))
       }
@@ -271,19 +268,12 @@ table_legacy_args <- function(args, from = NULL) {
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
-  payload <- table_legacy_args(data[["payload"]])
-  ctor <- blockr.core::blockr_deser(data[["constructor"]])
-  args <- c(
-    payload,
-    list(
-      ctor = blockr.core::coal(
-        blockr.core::ctor_name(ctor),
-        blockr.core::ctor_fun(ctor)
-      ),
-      ctor_pkg = blockr.core::ctor_pkg(ctor)
-    )
+  res <- legacy_deser("table_block", data)
+  do.call(
+    new_table_block,
+    c(res$args, res$attrs,
+      list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
-  do.call(blockr.core::ctor_fun(ctor), args)
 }
 
 #' Legacy deserialization for the summarize table block
@@ -301,8 +291,12 @@ blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
   payload <- table_legacy_args(data[["payload"]], from = "summarize")
   payload$layout <- "groups"
+  core <- c(names(formals(blockr.core::new_block)), "block_name")
+  attrs <- payload[intersect(names(payload), core)]
+  args <- legacy_restore("table", payload[setdiff(names(payload), core)],
+                         version = data[["constructor"]][["version"]])
   do.call(
     new_table_block,
-    c(payload, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
+    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
 }

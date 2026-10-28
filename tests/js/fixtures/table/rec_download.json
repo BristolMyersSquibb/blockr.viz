@@ -1,0 +1,226 @@
+{
+  "scenario": "rec_download",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"records","by":[],"rowname":"cat","columns":["num","num2"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":1,"unit":"kg","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Records","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": {
+            "text": "Records",
+            "parts": [
+              {
+                "text": "Records"
+              }
+            ],
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
+              {
+                "text": "Sub"
+              }
+            ],
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
+              {
+                "text": "Cap"
+              }
+            ],
+            "offers": []
+          },
+          "args": {
+            "layout": "records",
+            "by": "",
+            "rowname": "cat",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "1",
+            "unit": "kg",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          }
+        ]
+      },
+      "data": {
+        "n": 12,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "num": false,
+            "disp": ["a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "d"]
+          },
+          {
+            "name": "num",
+            "num": true,
+            "disp": ["1.5", "2.0", "3.2", "4.0", "5.0", "6.5", "7.0", "8.0", "9.8", "10.0", "11.0", "12.0"],
+            "bg": ["#EEF2FF", "#E4EAFD", "#CBD7F8", "#BCCBF6", "#A8BBF2", "#8AA4EC", "#819CEB", "#6D8CE7", "#4A71E0", "#456DDF", "#315EDC", "#1D4ED8"],
+            "fg": ["#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#111827", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
+          },
+          {
+            "name": "num2",
+            "num": true,
+            "disp": ["3.0", "1.0", "4.0", "1.0", "5.0", "9.0", "2.0", "6.0", "5.0", "3.0", "5.0", "8.0"]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "num",
+              "sub": "Numeric value (kg)",
+              "col": 1
+            },
+            {
+              "text": "num2",
+              "sub": "num2 (kg)",
+              "col": 2
+            }
+          ]
+        ],
+        "widths": [80, 140, 86]
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"records","by":[],"rowname":"cat","columns":["num","num2"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":1,"unit":"kg","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Records","subtitle":"Sub","caption":"Cap","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": {
+            "text": "Records",
+            "parts": [
+              {
+                "text": "Records"
+              }
+            ],
+            "offers": []
+          },
+          "subtitle": {
+            "text": "Sub",
+            "parts": [
+              {
+                "text": "Sub"
+              }
+            ],
+            "offers": []
+          },
+          "caption": {
+            "text": "Cap",
+            "parts": [
+              {
+                "text": "Cap"
+              }
+            ],
+            "offers": []
+          },
+          "args": {
+            "layout": "records",
+            "by": "",
+            "rowname": "cat",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "1",
+            "unit": "kg",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "FALSE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": []
+      }
+    },
+    null
+  ]
+}

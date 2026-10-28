@@ -53,7 +53,7 @@ register_viz_blocks <- function() {
     ),
     arguments = list(
       viz_registry_args(viz_block_spec("chart")),
-      table_arguments()
+      viz_registry_args(viz_block_spec("table"))
     ),
     guidance = c(
       chart_guidance(),

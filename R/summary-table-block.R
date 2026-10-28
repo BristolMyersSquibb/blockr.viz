@@ -14,23 +14,8 @@
 #' @export
 new_summary_table_block <- function(...) {
   args <- table_legacy_args(list(...), from = "summary")
-  args[c("ctor", "ctor_pkg")] <- NULL
+  args$ctor <- "new_table_block"
+  args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)
 }
 
-summary_table_block_dep <- memoise0(function() {
-  htmltools::tagList(
-    htmltools::htmlDependency(
-      name = "summary-table-block-js",
-      version = paste0(utils::packageVersion("blockr.viz"), ".6"),
-      src = system.file("js", package = "blockr.viz"),
-      script = "summary-table-block.js"
-    ),
-    htmltools::htmlDependency(
-      name = "summary-table-block-css",
-      version = utils::packageVersion("blockr.viz"),
-      src = system.file("css", package = "blockr.viz"),
-      stylesheet = "summary-table-block.css"
-    )
-  )
-})

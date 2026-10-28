@@ -1,0 +1,769 @@
+{
+  "scenario": "grp_facet",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"total","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_level","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "total",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_level",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count",
+            "facet": "grp"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "fac",
+            "num": false,
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["2", "2", "2", null],
+            "key": [16.6667, 16.6667, 16.6667, null],
+            "pct": ["(17%)", "(17%)", "(17%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "5", "10", "15%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 100, null],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Rows",
+                "meas": "Rows",
+                "den": 12
+              }
+            }
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["4.25", "8", "6.5", null],
+            "key": [4.25, 8, 6.5, null]
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["2", "2", "1", "1"],
+            "key": [16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "5", "10", "15%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 50, 50],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Rows",
+                "meas": "Rows",
+                "den": 12
+              }
+            }
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["7", "5", "6.5", "12"],
+            "key": [7, 5, 6.5, 12]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true,
+              "rows": 2
+            },
+            {
+              "text": "fac",
+              "col": 1,
+              "rows": 2
+            },
+            {
+              "text": "g1",
+              "sub": "N = 6",
+              "span": 2
+            },
+            {
+              "text": "g2",
+              "sub": "N = 6",
+              "span": 2
+            }
+          ],
+          [
+            {
+              "text": "Rows",
+              "col": 2
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 3
+            },
+            {
+              "text": "Rows",
+              "col": 4
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 5
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 2,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_level","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_level",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count",
+            "facet": "grp"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "fac",
+            "num": false,
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["2", "2", "2", null],
+            "key": [33.3333, 33.3333, 33.3333, null],
+            "pct": ["(33%)", "(33%)", "(33%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 100, null],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Rows",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["4.25", "8", "6.5", null],
+            "key": [4.25, 8, 6.5, null]
+          },
+          {
+            "name": "Rows",
+            "num": false,
+            "disp": ["2", "2", "1", "1"],
+            "key": [33.3333, 33.3333, 16.6667, 16.6667],
+            "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 50, 50],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Rows",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["7", "5", "6.5", "12"],
+            "key": [7, 5, 6.5, 12]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true,
+              "rows": 2
+            },
+            {
+              "text": "fac",
+              "col": 1,
+              "rows": 2
+            },
+            {
+              "text": "g1",
+              "sub": "N = 6",
+              "span": 2
+            },
+            {
+              "text": "g2",
+              "sub": "N = 6",
+              "span": 2
+            }
+          ],
+          [
+            {
+              "text": "Rows",
+              "col": 2
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 3
+            },
+            {
+              "text": "Rows",
+              "col": 4
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 5
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 3,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count",
+            "facet": "grp"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "g1",
+            "num": false,
+            "disp": ["2", "2", "2", null],
+            "key": [33.3333, 33.3333, 33.3333, null],
+            "pct": ["(33%)", "(33%)", "(33%)", null],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 100, null],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "g1",
+                "sub": "Rows · N = 6",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "g2",
+            "num": false,
+            "disp": ["2", "2", "1", "1"],
+            "key": [33.3333, 33.3333, 16.6667, 16.6667],
+            "pct": ["(33%)", "(33%)", "(17%)", "(17%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 50, 50],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "g2",
+                "sub": "Rows · N = 6",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "g1",
+            "num": true,
+            "disp": ["4.25", "8", "6.5", null],
+            "key": [4.25, 8, 6.5, null]
+          },
+          {
+            "name": "g2",
+            "num": true,
+            "disp": ["7", "5", "6.5", "12"],
+            "key": [7, 5, 6.5, 12]
+          },
+          {
+            "name": "fac",
+            "num": false,
+            "disp": ["lo", "hi", "mid", "mid"],
+            "key": ["lo", "hi", "mid", "mid"]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "g1",
+              "sub": "Rows · N = 6",
+              "col": 1
+            },
+            {
+              "text": "g2",
+              "sub": "Rows · N = 6",
+              "col": 2
+            },
+            {
+              "text": "g1",
+              "sub": "Mean Numeric value · N = 6",
+              "col": 3
+            },
+            {
+              "text": "g2",
+              "sub": "Mean Numeric value · N = 6",
+              "col": 4
+            },
+            {
+              "text": "fac",
+              "col": 5
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 4,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"g2","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "g2",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count",
+            "facet": "grp"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["c", "d", "a", "b"],
+            "num": false
+          },
+          {
+            "name": "g1",
+            "num": false,
+            "disp": ["2", null, "2", "2"],
+            "key": [33.3333, null, 33.3333, 33.3333],
+            "pct": ["(33%)", null, "(33%)", "(33%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, null, 100, 100],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "g1",
+                "sub": "Rows · N = 6",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "g2",
+            "num": false,
+            "disp": ["1", "1", "2", "2"],
+            "key": [16.6667, 16.6667, 33.3333, 33.3333],
+            "pct": ["(17%)", "(17%)", "(33%)", "(33%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [50, 50, 100, 100],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "g2",
+                "sub": "Rows · N = 6",
+                "meas": "Rows",
+                "den": 6
+              }
+            }
+          },
+          {
+            "name": "g1",
+            "num": true,
+            "disp": ["6.5", null, "4.25", "8"],
+            "key": [6.5, null, 4.25, 8]
+          },
+          {
+            "name": "g2",
+            "num": true,
+            "disp": ["6.5", "12", "7", "5"],
+            "key": [6.5, 12, 7, 5]
+          },
+          {
+            "name": "fac",
+            "num": false,
+            "disp": ["mid", "mid", "lo", "hi"],
+            "key": ["mid", "mid", "lo", "hi"]
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "g1",
+              "sub": "Rows · N = 6",
+              "col": 1
+            },
+            {
+              "text": "g2",
+              "sub": "Rows · N = 6",
+              "col": 2
+            },
+            {
+              "text": "g1",
+              "sub": "Mean Numeric value · N = 6",
+              "col": 3
+            },
+            {
+              "text": "g2",
+              "sub": "Mean Numeric value · N = 6",
+              "col": 4
+            },
+            {
+              "text": "fac",
+              "col": 5
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

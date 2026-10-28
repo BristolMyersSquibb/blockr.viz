@@ -1,0 +1,136 @@
+{
+  "scenario": "grp_custom_error",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"expr","name":"boom","facet":null,"expr":"no_such_fn(num)"},{"type":"custom","name":"Custom","facet":null,"show":null,"fn":"\\(d) dplyr::summarise(d, value = mean(num))","id":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "boom",
+            "num": false,
+            "disp": ["(error)", "(error)", "(error)", "(error)"],
+            "key": ["(error)", "(error)", "(error)", "(error)"]
+          },
+          {
+            "name": "Custom",
+            "num": false,
+            "disp": ["5.62", "6.5", "6.5", "12"],
+            "key": [5.625, 6.5, 6.5, 12],
+            "axis": {
+              "at": [0, 41.67, 83.33],
+              "labels": ["0", "5", "10"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [46.88, 54.17, 54.17, 100],
+              "fill": "#0072B2",
+              "dw": 4,
+              "tt": {
+                "head": "Custom",
+                "meas": "Custom"
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "boom",
+              "col": 1
+            },
+            {
+              "text": "Custom",
+              "col": 2
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

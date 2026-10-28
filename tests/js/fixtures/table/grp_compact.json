@@ -1,0 +1,210 @@
+{
+  "scenario": "grp_compact",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","id"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"cat","show":"tile","func":"count","col":null,"position":null,"fill":"grade","color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"compact","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "id",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "compact",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count",
+            "facet": "cat",
+            "fill": "grade"
+          },
+          "choices": []
+        },
+        "legend": {
+          "groups": [
+            {
+              "title": "Worst grade",
+              "items": [
+                {
+                  "label": "1",
+                  "color": "#CDD9F7"
+                },
+                {
+                  "label": "2",
+                  "color": "#7FA2EE"
+                },
+                {
+                  "label": "3",
+                  "color": "#2F5BD3"
+                }
+              ]
+            }
+          ]
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 14,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp / id",
+            "disp": ["g1", "S01", "S02", "S03", "S04", "S05", "S06", "g2", "S01", "S02", "S03", "S04", "S05", "S06"],
+            "num": false
+          },
+          {
+            "name": "a",
+            "num": false,
+            "disp": [null, "1", null, null, "1", null, null, null, null, "1", null, null, "1", null],
+            "key": [2, 1, null, null, 1, null, null, 2, null, 1, null, null, 1, null],
+            "bg": [null, "#CDD9F7", null, null, "#2F5BD3", null, null, null, null, "#CDD9F7", null, null, "#CDD9F7", null],
+            "fg": [null, "#111827", null, null, "#ffffff", null, null, null, null, "#111827", null, null, "#111827", null],
+            "mark": {
+              "kind": "tile",
+              "tt": {
+                "head": "a",
+                "meas": "Rows",
+                "den": 4
+              }
+            }
+          },
+          {
+            "name": "b",
+            "num": false,
+            "disp": [null, null, null, "1", null, null, "1", null, "1", null, null, "1", null, null],
+            "key": [2, null, null, 1, null, null, 1, 2, 1, null, null, 1, null, null],
+            "bg": [null, null, null, "#CDD9F7", null, null, "#7FA2EE", null, "#7FA2EE", null, null, "#2F5BD3", null, null],
+            "fg": [null, null, null, "#111827", null, null, "#111827", null, "#111827", null, null, "#ffffff", null, null],
+            "mark": {
+              "kind": "tile",
+              "tt": {
+                "head": "b",
+                "meas": "Rows",
+                "den": 4
+              }
+            }
+          },
+          {
+            "name": "c",
+            "num": false,
+            "disp": [null, null, "1", null, null, "1", null, null, null, null, "1", null, null, null],
+            "key": [2, null, 1, null, null, 1, null, 1, null, null, 1, null, null, null],
+            "bg": [null, null, "#2F5BD3", null, null, "#7FA2EE", null, null, null, null, "#7FA2EE", null, null, null],
+            "fg": [null, null, "#ffffff", null, null, "#111827", null, null, null, null, "#111827", null, null, null],
+            "mark": {
+              "kind": "tile",
+              "tt": {
+                "head": "c",
+                "meas": "Rows",
+                "den": 3
+              }
+            }
+          },
+          {
+            "name": "d",
+            "num": false,
+            "disp": [null, null, null, null, null, null, null, null, null, null, null, null, null, "1"],
+            "key": [null, null, null, null, null, null, null, 1, null, null, null, null, null, 1],
+            "bg": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#2F5BD3"],
+            "fg": [null, null, null, null, null, null, null, null, null, null, null, null, null, "#ffffff"],
+            "mark": {
+              "kind": "tile",
+              "tt": {
+                "head": "d",
+                "meas": "Rows",
+                "den": 1
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp / id",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "a",
+              "col": 1
+            },
+            {
+              "text": "b",
+              "col": 2
+            },
+            {
+              "text": "c",
+              "col": 3
+            },
+            {
+              "text": "d",
+              "col": 4
+            }
+          ]
+        ],
+        "rows": {
+          "indent": [0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+          "strong": [true, false, false, false, false, false, false, true, false, false, false, false, false, false]
+        }
+      }
+    }
+  ]
+}

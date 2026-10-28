@@ -155,14 +155,14 @@ test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {
 })
 
 test_that("the table's summary and whiskers specs are the chart's enums", {
-  props <- unclass(table_summaries_spec())$type$items$properties
-  expect_identical(as.character(props$summary$enum), c(LANE_STATS, "none"))
-  expect_identical(as.character(props$whiskers$enum),
+  props <- table_summary_specs()$dist$args
+  expect_identical(as.character(props$summary$values), c(LANE_STATS, "none"))
+  expect_identical(as.character(props$whiskers$values),
                    c(LANE_WHISKERS, "none"))
   # The chart's values are all there; the table adds mean_ci95 and "none".
   chart <- c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "p5_p95",
              "p10_p90", "min_max")
-  expect_setequal(setdiff(props$summary$enum, chart), c("mean_ci95", "none"))
-  expect_setequal(setdiff(props$whiskers$enum, c("tukey", chart)),
+  expect_setequal(setdiff(props$summary$values, chart), c("mean_ci95", "none"))
+  expect_setequal(setdiff(props$whiskers$values, c("tukey", chart)),
                   c("mean_ci95", "none"))
 })

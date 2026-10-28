@@ -1,0 +1,1302 @@
+{
+  "scenario": "grp_gear",
+  "steps": [
+    {
+      "state_rev": 0,
+      "data_rev": 1,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 75, 25],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 2,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":null,"show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"dist","name":null,"facet":null,"show":"box","col":"num","summary":"mean_sd","whiskers":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "value": "num",
+            "func": "mean"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["d", "b", "c", "a"],
+            "num": false
+          },
+          {
+            "name": "Mean Numeric value",
+            "num": true,
+            "disp": ["12", "6.5", "6.5", "5.62"],
+            "key": [12, 6.5, 6.5, 5.625]
+          },
+          {
+            "name": "Numeric value",
+            "num": false,
+            "disp": ["12.0", "6.5", "6.5", "5.6"],
+            "key": [12, 6.5, 6.5, 5.625],
+            "axis": {
+              "at": [34.57, 78.66],
+              "labels": ["5", "10"]
+            },
+            "mark": {
+              "kind": "box",
+              "wl": [96.3, 8.109999999999999, 19.14, 3.7],
+              "w1": [0, 5.53, 0, 3.9],
+              "bl": [96.3, 13.64, 19.14, 7.6],
+              "bw": [0, 68.31, 57.32, 64.95],
+              "bc": [96.3, 47.8, 47.8, 40.08],
+              "b2": [96.3, 81.95, 76.45999999999999, 72.55],
+              "w2": [0, 5.53, 0, 6.1],
+              "wh": [96.3, 87.48, 76.45999999999999, 78.66],
+              "nn": [1, 4, 3, 4],
+              "tip": ["n=1 · Mean 12 · ±1 SD 12–12 · 1.5×IQR 12–12", "n=4 · Mean 6.5 · ±1 SD 2.627–10.37 · 1.5×IQR 2–11", "n=3 · Mean 6.5 · ±1 SD 3.25–9.75 · 1.5×IQR 3.25–9.75", "n=4 · Mean 5.625 · ±1 SD 1.942–9.308 · 1.5×IQR 1.5–10"],
+              "r": {
+                "bc": [12, 6.5, 6.5, 5.625],
+                "bl": [12, 2.627, 3.25, 1.9423],
+                "bh": [12, 10.373, 9.75, 9.307700000000001],
+                "wl": [12, 2, 3.25, 1.5],
+                "wh": [12, 11, 9.75, 10]
+              },
+              "dw": 4,
+              "tt": {
+                "head": "Numeric value",
+                "meas": "Numeric value",
+                "words": {
+                  "center": "Mean",
+                  "range": "±1 SD",
+                  "whisk": "1.5×IQR"
+                }
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Mean Numeric value",
+              "col": 1
+            },
+            {
+              "text": "Numeric value",
+              "col": 2
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 3,
+      "columns": null,
+      "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "cat",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 4,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "cat",
+            "disp": ["a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["4", "4", "3", "1"],
+            "key": [33.3333, 33.3333, 25, 8.333299999999999],
+            "pct": ["(33%)", "(33%)", "(25%)", "(8%)"],
+            "axis": {
+              "at": [0, 30, 60, 90],
+              "labels": ["0", "10", "20", "30%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 100, 75, 25],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "cat",
+              "sub": "Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 4,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "table",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 9,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp / cat",
+            "disp": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["6", "2", "2", "2", "6", "2", "2", "1", "1"],
+            "key": [50, 16.6667, 16.6667, 16.6667, 50, 16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "sub": [false, true, true, true, false, true, true, true, true],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp / cat",
+              "sub": "grp / Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "indent": [0, 1, 1, 1, 0, 1, 1, 1, 1],
+          "strong": [true, false, false, false, true, false, false, false, false]
+        },
+        "collapsed": true
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 5,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"compact","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "compact",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 9,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp / cat",
+            "disp": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["6", "2", "2", "2", "6", "2", "2", "1", "1"],
+            "key": [50, 16.6667, 16.6667, 16.6667, 50, 16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "sub": [false, true, true, true, false, true, true, true, true],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp / cat",
+              "sub": "grp / Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "indent": [0, 1, 1, 1, 0, 1, 1, 1, 1],
+          "strong": [true, false, false, false, true, false, false, false, false]
+        }
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 6,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "number",
+            "unit": "",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 9,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp / cat",
+            "disp": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["6", "2", "2", "2", "6", "2", "2", "1", "1"],
+            "key": [50, 16.6667, 16.6667, 16.6667, 50, 16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "sub": [false, true, true, true, false, true, true, true, true],
+              "fill": "#0072B2",
+              "dw": 7,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp / cat",
+              "sub": "grp / Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "indent": [0, 1, 1, 1, 0, 1, 1, 1, 1],
+          "strong": [true, false, false, false, true, false, false, false, false]
+        },
+        "collapsed": true,
+        "cards": {
+          "n": 9,
+          "multi": true,
+          "label": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+          "cols": [
+            {
+              "label": "Count",
+              "range": "0 to 6",
+              "glyph": 1,
+              "main": ["6", "2", "2", "2", "6", "2", "2", "1", "1"],
+              "sub": ["50% of 12", "17% of 12", "17% of 12", "17% of 12", "50% of 12", "17% of 12", "17% of 12", "8% of 12", "8% of 12"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      },
+      "data": {
+        "n": 9,
+        "stub": 0,
+        "cols": [
+          {
+            "name": "grp / cat",
+            "disp": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+            "num": false
+          },
+          {
+            "name": "Count",
+            "num": false,
+            "disp": ["6.00", "2.00", "2.00", "2.00", "6.00", "2.00", "2.00", "1.00", "1.00"],
+            "key": [50, 16.6667, 16.6667, 16.6667, 50, 16.6667, 16.6667, 8.333299999999999, 8.333299999999999],
+            "pct": ["(50%)", "(17%)", "(17%)", "(17%)", "(50%)", "(17%)", "(17%)", "(8%)", "(8%)"],
+            "axis": {
+              "at": [0, 40, 80],
+              "labels": ["0", "20", "40%"]
+            },
+            "mark": {
+              "kind": "bar",
+              "w": [100, 33.33, 33.33, 33.33, 100, 33.33, 33.33, 16.67, 16.67],
+              "sub": [false, true, true, true, false, true, true, true, true],
+              "fill": "#0072B2",
+              "dw": 10,
+              "tt": {
+                "head": "Count",
+                "sub": "N = 12",
+                "meas": "Count",
+                "den": 12
+              }
+            }
+          }
+        ],
+        "head": [
+          [
+            {
+              "text": "grp / cat",
+              "sub": "grp / Category",
+              "col": 0,
+              "stub": true
+            },
+            {
+              "text": "Count",
+              "sub": "N = 12",
+              "col": 1
+            }
+          ]
+        ],
+        "rows": {
+          "indent": [0, 1, 1, 1, 0, 1, 1, 1, 1],
+          "strong": [true, false, false, false, true, false, false, false, false]
+        },
+        "collapsed": true,
+        "cards": {
+          "n": 9,
+          "multi": true,
+          "label": ["g1", "a", "b", "c", "g2", "a", "b", "c", "d"],
+          "cols": [
+            {
+              "label": "Count",
+              "range": "0 to 6",
+              "glyph": 1,
+              "main": ["6.00", "2.00", "2.00", "2.00", "6.00", "2.00", "2.00", "1.00", "1.00"],
+              "sub": ["50% of 12", "17% of 12", "17% of 12", "17% of 12", "50% of 12", "17% of 12", "17% of 12", "8% of 12", "8% of 12"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "TRUE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": [
+          {
+            "id": "proxy1-expr-dl_xlsx",
+            "label": "Excel",
+            "ext": "xlsx"
+          },
+          {
+            "id": "proxy1-expr-dl_html",
+            "label": "Web page",
+            "ext": "html"
+          },
+          {
+            "id": "proxy1-expr-dl_pptx",
+            "label": "PowerPoint",
+            "ext": "pptx"
+          },
+          {
+            "id": "proxy1-expr-dl_png",
+            "label": "Image",
+            "ext": "png"
+          }
+        ]
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": null,
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "FALSE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": []
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"{n} rows","subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": {
+            "text": "12 rows",
+            "parts": [
+              {
+                "text": "12 rows"
+              }
+            ],
+            "offers": []
+          },
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "FALSE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": []
+      }
+    },
+    null,
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"{n} rows","subtitle":null,"caption":"","drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": {
+            "text": "12 rows",
+            "parts": [
+              {
+                "text": "12 rows"
+              }
+            ],
+            "offers": []
+          },
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "FALSE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": []
+      }
+    },
+    {
+      "state_rev": 0,
+      "data_rev": 7,
+      "columns": null,
+      "config": {"layout":"groups","by":["grp","cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Count","facet":null,"show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":2,"unit":"kg","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"{n} rows","subtitle":null,"caption":"","drill_target":"","drill_table":"adsl","script":null,"script_values":{},"selection":null},
+      "derived": {
+        "titles": {
+          "title": {
+            "text": "12 rows",
+            "parts": [
+              {
+                "text": "12 rows"
+              }
+            ],
+            "offers": []
+          },
+          "subtitle": null,
+          "caption": null,
+          "args": {
+            "layout": "groups",
+            "by": "cat",
+            "rowname": "",
+            "id": "",
+            "percent_of": "facet",
+            "missing": "level",
+            "color": "auto",
+            "format": "2",
+            "unit": "kg",
+            "look": "cards",
+            "facet_layout": "by_summary",
+            "sort_by": "value",
+            "sort_dir": "",
+            "top_n": "",
+            "value_labels": "TRUE",
+            "column_axis": "TRUE",
+            "bar_width": "fit",
+            "drill": "",
+            "search": "TRUE",
+            "sortable": "TRUE",
+            "collapsible": "TRUE",
+            "download": "FALSE",
+            "total": "FALSE",
+            "total_label": "Total",
+            "nest": "FALSE",
+            "group": "grp",
+            "parent": "grp",
+            "func": "count"
+          },
+          "choices": []
+        },
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2,
+        "downloads": []
+      }
+    },
+    null,
+    null
+  ]
+}

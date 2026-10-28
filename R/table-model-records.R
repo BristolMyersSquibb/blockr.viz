@@ -39,7 +39,7 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   if (!is.null(msg)) {
     # The gear must still offer the (current) input columns on a message
     # table -- fixing a vanished-column config happens through it.
-    return(list(kind = "message",
+    return(list(kind = "message", message = msg,
                 tag = dt_table_attrs(dt_message_table(msg), NULL, NULL,
                                      digits, color = color, toggles = toggles,
                                      gear_cols = gear_cols)))

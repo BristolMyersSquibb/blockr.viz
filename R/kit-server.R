@@ -51,7 +51,10 @@ viz_settings_observer <- function(input, id, spec, state, revs,
     if (!length(values)) {
       return()
     }
-    merged <- utils::modifyList(viz_values(state), values, keep.null = TRUE)
+    # Each setting replaces its value whole: modifyList() would merge a list
+    # value into the old one.
+    merged <- viz_values(state)
+    for (nm in names(values)) merged[nm] <- list(values[[nm]])
     viz_apply(state, normalize(merged), revs)
   })
   invisible(obs)
@@ -144,7 +147,9 @@ viz_capture_observer <- function(input, id, capture) {
 #' - `normalize`: a function of the full value list, the block's rules
 #'   between arguments (chart_normalize(), table_normalize()); optional;
 #' - `claims`: a reactive of the conditions a drill target receives
-#'   (dd_ctrl_claims()); optional, no sender without it.
+#'   (dd_ctrl_claims()); optional, no sender without it;
+#' - `cond`: a reactiveValues of the block's own conditions (`error`,
+#'   `warning`, `message`), which blockr.core shows with the block; optional.
 #'
 #' Anything else, a capture service say, `setup()` wires itself with what
 #' `kit` holds.
@@ -156,7 +161,8 @@ viz_capture_observer <- function(input, id, capture) {
 #' @param view The view's id inside the module (`"chart"`, `"table"`): the
 #'   output and the `<view>_set`, `<view>_select`, `<view>_capture` inputs.
 #' @param setup A function of `kit`, as above.
-#' @return blockr.core's `list(expr, state)`.
+#' @return blockr.core's `list(expr, state)`, and `cond` when `setup()`
+#'   gives one.
 #' @noRd
 viz_block_server <- function(id, spec, data, init, view, setup) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -174,7 +180,8 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
     if (!is.null(parts$claims)) {
       viz_drill_sender(kit, parts$claims, init$selection)
     }
-    list(expr = parts$expr, state = kit$state)
+    c(list(expr = parts$expr, state = kit$state),
+      if (!is.null(parts$cond)) list(cond = parts$cond))
   })
 }
 

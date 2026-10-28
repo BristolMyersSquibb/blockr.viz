@@ -1072,6 +1072,31 @@ table_golden_strip <- function(x) {
   x
 }
 
+# The session's custom messages and control-channel sends, kept instead of
+# sent.
+table_golden_mock <- function(session) {
+  sent <- new.env(parent = emptyenv())
+  sent$msgs <- list()
+  root <- session$rootScope()
+  root$sendCustomMessage <- function(type, message) {
+    sent$msgs <- c(sent$msgs, list(list(type = type, message = message)))
+    invisible(NULL)
+  }
+  sends <- new.env(parent = emptyenv())
+  sends$log <- list()
+  log <- function(op) {
+    function(target, args, author = NULL) {
+      sends$log <- c(sends$log, list(list(
+        op = op, target = target, args = args, author = author
+      )))
+      invisible(TRUE)
+    }
+  }
+  session$userData$blockr_ctrl_send <- log("send")
+  session$userData$blockr_ctrl_clear <- log("clear")
+  list(sent = sent, sends = sends)
+}
+
 table_golden_run <- function(sc) {
   table_golden_register_tbl()
   withr::local_options(utils::modifyList(
@@ -1102,29 +1127,9 @@ table_golden_run <- function(sc) {
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
-      sent <- new.env(parent = emptyenv())
-      sent$msgs <- list()
-      root <- session$rootScope()
-      root$sendCustomMessage <- function(type, message) {
-        sent$msgs <- c(sent$msgs, list(list(type = type, message = message)))
-        invisible(NULL)
-      }
-      sends <- new.env(parent = emptyenv())
-      sends$log <- list()
-      session$userData$blockr_ctrl_send <- function(target, args,
-                                                    author = NULL) {
-        sends$log <- c(sends$log, list(list(
-          op = "send", target = target, args = args, author = author
-        )))
-        invisible(TRUE)
-      }
-      session$userData$blockr_ctrl_clear <- function(target, args,
-                                                     author = NULL) {
-        sends$log <- c(sends$log, list(list(
-          op = "clear", target = target, args = args, author = author
-        )))
-        TRUE
-      }
+      m <- table_golden_mock(session)
+      sent <- m$sent
+      sends <- m$sends
       expr <- session$makeScope("expr")
 
       from <- 1L

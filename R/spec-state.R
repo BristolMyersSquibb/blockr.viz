@@ -91,12 +91,12 @@ new_viz_revs <- function(values = list()) {
 #'
 #' blockr.core holds a block's result back while a state field is empty,
 #' unless the block lists it: every argument that takes NULL, or whose
-#' default is empty ("", an empty list).
+#' default is empty ("", a zero-length vector or list).
 #' @noRd
 viz_empty_ok <- function(spec) {
   ok <- vapply(spec$args, function(a) {
     d <- a$default
-    !isFALSE(a$null) || is.null(d) || (is.list(d) && !length(d)) ||
+    !isFALSE(a$null) || is.null(d) || !length(d) ||
       (is.character(d) && length(d) == 1L && !nzchar(d))
   }, logical(1L))
   names(spec$args)[ok]

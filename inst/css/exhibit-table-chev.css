@@ -1,0 +1,6 @@
+/* The chevron stroke: a constant 1.4px at any size. Kept out of
+   table-delta.css, so a scoped copy of that sheet leaves it alone. */
+.blockr-html-table-container .blockr-chev path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.4px;
+}

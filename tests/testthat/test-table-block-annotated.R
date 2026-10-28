@@ -96,12 +96,22 @@ test_that("drill filter applies to the coerced frame", {
   blk <- new_table_block(drill = ".label")
   obj <- new_fake_composed(fake_df)
 
-  testServer(blk$expr_server, args = list(data = reactive(obj)), {
-    session$setInputs(`records-drilldown_table_block_action` = list(
-      action = "filter", column = ".label", values = list("Age")
-    ))
-    out <- eval_block_expr(session$returned$expr(), obj)
-    expect_equal(nrow(out), 1L)
-    expect_equal(out$.label, "Age")
-  })
+  testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      expr <- session$makeScope("expr")
+      expr$setInputs(table_select = viz_read_selection(list(
+        selection = list(type = "categorical",
+                         filters = list(.label = list("Age")),
+                         columns = list()),
+        nonce = 1
+      )))
+      session$flushReact()
+      out <- eval_block_expr(session$returned$expr(), obj)
+      expect_equal(nrow(out), 1L)
+      expect_equal(out$.label, "Age")
+    },
+    args = list(x = blk, data = list(data = reactive(obj)))
+  )
 })

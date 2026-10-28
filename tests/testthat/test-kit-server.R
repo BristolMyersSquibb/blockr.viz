@@ -60,6 +60,29 @@ test_that("settings are gated, normalized and written", {
   })
 })
 
+test_that("a list setting replaces the old value whole", {
+  spec <- viz_spec(
+    "chart",
+    highlight = viz_arg(type_named(viz_arg("strings")), default = NULL,
+                        null = "none"),
+    rules = viz_arg(type_records(mode = viz_arg("string")), default = list(),
+                    null = FALSE),
+    script = viz_arg("string", null = "none", ai = FALSE)
+  )
+  shiny::testServer(kit_server, args = list(spec = spec), {
+    st <- session$returned$state
+    set <- function(values) {
+      session$setInputs(chart_set = viz_read_set(spec, list(rev = 0,
+                                                            values = values)))
+    }
+    set(list(highlight = list(country = list("CH"))))
+    set(list(highlight = list(region = list("EU"))))
+    expect_identical(st$highlight(), list(region = "EU"))
+    set(list(rules = list(list(mode = "bar"))))
+    expect_identical(st$rules(), list(list(mode = "bar")))
+  })
+})
+
 test_that("a quick second edit of the same setting lands", {
   shiny::testServer(kit_server, args = list(spec = kit_spec()), {
     st <- session$returned$state

@@ -243,7 +243,28 @@
     if (!tr || !claim) return null;
     const td = /** @type {HTMLTableCellElement | null} */ (t.closest('td'));
     const col = td && td.cellIndex !== m.stub ? m.cols[td.cellIndex] : null;
-    return { sel: selection(claim, col && col.keys), tr, cell: td };
+    return { sel: selection(claim, col && segmentKeys(col, t)), tr, cell: td };
+  }
+
+  /**
+   * A column's claim, narrowed to one level on a colour split's segment:
+   * the column claims every level, the segment its own.
+   * @param {TableCol} col
+   * @param {Element} t
+   * @returns {TableClaim | null | undefined}
+   */
+  function segmentKeys(col, t) {
+    const m = col.mark;
+    const seg = t.closest('[data-seg]');
+    if (!col.keys || !seg || !m || m.kind !== 'barsplit') return col.keys;
+    const level = m.names[Number(seg.getAttribute('data-seg'))];
+    const all = JSON.stringify(m.names.slice().sort());
+    /** @type {TableClaim} */
+    const out = {};
+    for (const [k, v] of Object.entries(col.keys)) {
+      out[k] = level != null && JSON.stringify(v.slice().sort()) === all ? [level] : v;
+    }
+    return out;
   }
 
   class Drill {

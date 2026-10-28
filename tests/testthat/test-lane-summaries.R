@@ -354,21 +354,23 @@ test_that("a mixed column list renders every row type through one table", {
          band = c("LO", "HI")),
     list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
-  expect_identical(p$kind, "flat")
+  m <- sum_model(ae, by = "TERM", summaries = S)
+  expect_null(m$prep$err)
+  cols <- m$cells$cols
   expect_identical(
-    vapply(p$cols, function(c) c$kind, ""),
+    vapply(cols, function(c) c$kind, ""),
     c("bar", "box", "num", "num", "interval", "sparkline", "num")
   )
   # dist as TEXT: "center (lo–hi)", sorted numerically by the center.
-  expect_match(p$cols[[3]]$disp[[1]], "^[0-9.]+ \\([0-9.]+–[0-9.]+\\)$")
-  expect_true(is.numeric(p$cols[[3]]$v))
+  expect_match(cols[[3]]$disp[[1]], "^[0-9.]+ \\([0-9.]+–[0-9.]+\\)$")
+  expect_true(is.numeric(cols[[3]]$v))
   # The field sees both arms (subjects span arms in this fixture): the
   # broken-constancy case is VISIBLE, not silently truncated to one row.
-  expect_match(p$cols[[4]]$disp[[1]], ", ")
+  expect_match(cols[[4]]$disp[[1]], ", ")
   # The legend comes from the spans colour: one group, titled by its column.
-  expect_length(p$chrome$legend$groups, 1L)
-  expect_identical(p$chrome$legend$groups[[1L]]$title, "SEV")
+  leg <- summarize_legend_spec(m$prep)
+  expect_length(leg$groups, 1L)
+  expect_identical(leg$groups[[1L]]$title, "SEV")
 })
 
 test_that("per-column domains: mixed units never share a scale", {
@@ -380,10 +382,10 @@ test_that("per-column domains: mixed units never share a scale", {
     list(type = "simple", name = "Big", func = "mean", col = "BIG",
          show = "bar")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
+  cols <- sum_model(ae, by = "TERM", summaries = S)$cells$cols
   # Each bar column scales to its OWN max: both hit 100 somewhere.
-  expect_equal(max(as.numeric(p$cols[[1]]$w)), 100)
-  expect_equal(max(as.numeric(p$cols[[2]]$w)), 100)
+  expect_equal(max(as.numeric(cols[[1]]$w)), 100)
+  expect_equal(max(as.numeric(cols[[2]]$w)), 100)
 })
 
 test_that("facet repeats cell rows, pooled rows and fields render once", {
@@ -395,14 +397,14 @@ test_that("facet repeats cell rows, pooled rows and fields render once", {
          show = "text", scope = "pooled"),
     list(type = "field", name = "Arms", col = "ARM")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
+  cols <- sum_model(ae, by = "TERM", summaries = S)$cells$cols
   # Subjects repeats per level (2), Overall and Arms render once: 4 columns.
-  expect_length(p$cols, 4L)
-  expect_identical(vapply(p$cols, function(c) c$kind, ""),
+  expect_length(cols, 4L)
+  expect_identical(vapply(cols, function(c) c$kind, ""),
                    c("bar", "bar", "num", "num"))
   # The facet copies share ONE scale: their union hits 100 exactly once
   # per... at least once, and no width exceeds it.
-  w <- c(as.numeric(p$cols[[1]]$w), as.numeric(p$cols[[2]]$w))
+  w <- c(as.numeric(cols[[1]]$w), as.numeric(cols[[2]]$w))
   expect_equal(max(w, na.rm = TRUE), 100)
 })
 
@@ -415,21 +417,28 @@ test_that("by_level reorders into level groups with a two-row header", {
          show = "text", facet = "ARM"),
     list(type = "field", name = "Arms", col = "ARM")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S,
-                               facet_layout = "by_level")
+  m <- sum_model(ae, by = "TERM", summaries = S, facet_layout = "by_level")
   # Leading field first, then per-level groups of (bar, num): 5 columns.
-  expect_length(p$cols, 5L)
-  expect_identical(vapply(p$cols, function(c) c$kind, ""),
+  expect_length(m$cells$cols, 5L)
+  expect_identical(vapply(m$cells$cols, function(c) c$kind, ""),
                    c("num", "bar", "num", "bar", "num"))
-  # The spanning header row: one colspan cell per level, label + leading
-  # columns span both rows.
-  expect_match(p$head, "blockr-th-group\" colspan=\"2\"")
-  expect_match(p$head, "rowspan=\"2\"")
-  expect_match(p$head, ">Placebo<")
-  expect_match(p$head, ">Active<")
+  # The spanning header row: one cell per level over its two columns, the
+  # label and the leading column reaching down both rows.
+  head <- table_groups_view(m)$head
+  expect_length(head, 2L)
+  spans <- Filter(function(h) !is.null(h$span), head[[1L]])
+  expect_setequal(vapply(spans, function(h) h$text, ""),
+                  c("Placebo", "Active"))
+  expect_identical(vapply(spans, function(h) h$span, 1L), c(2L, 2L))
+  expect_identical(
+    vapply(Filter(function(h) !is.null(h$rows), head[[1L]]), function(h) {
+      h$rows
+    }, 1L),
+    c(2L, 2L)
+  )
   # by_summary (the default) keeps the single header row.
-  p2 <- summarize_build_payload(ae, by = "TERM", summaries = S)
-  expect_false(grepl("blockr-th-group", p2$head))
+  m2 <- sum_model(ae, by = "TERM", summaries = S)
+  expect_length(table_groups_view(m2)$head, 1L)
 })
 
 test_that("by_level with one summary per level keeps a single header row", {
@@ -466,15 +475,13 @@ test_that("two colour columns give two titled legend groups", {
     list(type = "dist", name = "By severity", col = "DUR", color = "SEV"),
     list(type = "dist", name = "By arm", col = "DUR", color = "ARM")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
-  expect_identical(
-    vapply(p$chrome$legend$groups, function(g) g$title, ""),
-    c("SEV", "ARM")
-  )
-  expect_length(p$chrome$legend$groups[[1L]]$items, 2L)
+  leg <- summarize_legend_spec(sum_model(ae, by = "TERM", summaries = S)$prep)
+  expect_identical(vapply(leg$groups, function(g) g$title, ""),
+                   c("SEV", "ARM"))
+  expect_length(leg$groups[[1L]]$items, 2L)
 })
 
-test_that("a colour column with BLANK values still builds its payload", {
+test_that("a colour column with BLANK values still builds its table", {
   # Adding a colour field on real data used to abort the whole render with
   # "subscript out of bounds": `pal[[""]]` finds nothing, because the empty
   # string matches no name in R.
@@ -482,9 +489,11 @@ test_that("a colour column with BLANK values still builds its payload", {
   ae$SEV[seq(1L, nrow(ae), by = 5L)] <- ""
   S <- list(list(type = "dist", name = "By severity", col = "DUR",
                  color = "SEV"))
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S)
+  m <- sum_model(ae, by = "TERM", summaries = S)
+  expect_null(m$prep$err)
+  leg <- summarize_legend_spec(m$prep)
   expect_identical(
-    vapply(p$chrome$legend$groups[[1L]]$items, `[[`, character(1L), "label"),
+    vapply(leg$groups[[1L]]$items, `[[`, character(1L), "label"),
     c("(Missing)", "MILD", "MOD")
   )
 })
@@ -602,10 +611,10 @@ test_that("the ctor migrates the retired pair into the block's STATE", {
   # The pooled row was the "Overall" column: colour, but no facet.
   expect_identical(st$summaries[[2L]]$color, "SEV")
   expect_null(st$summaries[[2L]]$facet)
-  # Cleared, so a mapping the user then removes from a column stays removed
-  # instead of being re-applied on the next render.
+  # Cleared back to the default, so a mapping the user then removes from a
+  # column stays removed instead of being re-applied on the next render.
   # (`[[` because `$` would partially match `facet_layout`.)
-  expect_null(st[["color"]])
+  expect_identical(st[["color"]], "auto")
   expect_null(st[["facet"]])
 })
 
@@ -635,40 +644,39 @@ test_that("by nests one level: outer parent rows plus inner leaves", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Rows", func = "count",
                  show = "bar"))
-  p <- summarize_build_payload(ae, by = c("SOC", "TERM"),
-                               summaries = S)
-  expect_true(any(as.logical(p$parent_row)))
-  expect_identical(sum(as.logical(p$parent_row)), 2L)
+  m <- sum_model(ae, by = c("SOC", "TERM"), summaries = S)
+  expect_identical(sum(as.logical(m$cells$parent_row)), 2L)
+  # The view marks the parents: indent 0 and strong, children indent 1.
+  rows <- table_groups_view(m)$rows
+  expect_identical(sum(unlist(rows$strong)), 2L)
   # Three or more grouping columns is a config error, said plainly.
-  p2 <- summarize_build_payload(ae, by = c("SOC", "TERM", "USUBJID"), summaries = S)
-  expect_identical(p2$kind, "html")
-  expect_match(p2$html, "at most two")
+  m2 <- sum_model(ae, by = c("SOC", "TERM", "USUBJID"), summaries = S)
+  expect_null(m2$cells)
+  expect_match(m2$prep$err, "at most two")
 })
 
 test_that("expr rows evaluate per group and fail as a cell, not a crash", {
   ae <- sum_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  c1 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "expr", name = "n2", expr = "dplyr::n() * 2")
-  ))
-  expect_identical(p$cols[[1]]$kind, "num")
-  expect_true(is.numeric(p$cols[[1]]$v))
+  ))$cells$cols[[1]]
+  expect_identical(c1$kind, "num")
+  expect_true(is.numeric(c1$v))
   # A broken expression degrades to an error cell.
-  p2 <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  c2 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "expr", name = "boom", expr = "no_such_fn(DUR)")
-  ))
-  expect_true(all(as.character(p2$cols[[1]]$disp) == "(error)"))
+  ))$cells$cols[[1]]
+  expect_true(all(as.character(c2$disp) == "(error)"))
 })
 
 test_that("spans label/fields enrich tips and key the highlight", {
   ae <- sum_fixture()
   ae$TERM2 <- ae$TERM   # the event label column
   ae$SER <- rep(c("Y", "N"), length.out = nrow(ae))
-  p <- summarize_build_payload(ae, by = "USUBJID",
-                               summaries = list(
+  c1 <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
          label = "TERM2", fields = "SER", size = "lg")
-  ))
-  c1 <- p$cols[[1]]
+  ))$cells$cols[[1]]
   # The tooltip headlines the event, then level, span, field pairs.
   expect_match(c1$tips[[1]][[1]], "^Term[0-9] · SEV (MILD|MOD) · ")
   expect_match(c1$tips[[1]][[1]], "SER: (Y|N)")
@@ -677,49 +685,47 @@ test_that("spans label/fields enrich tips and key the highlight", {
   expect_length(c1$segs[[1]][[1]], 4L)
   expect_match(c1$segs[[1]][[1]][[4L]], "^Term")
   expect_true(isTRUE(c1$lg))
-  p2 <- summarize_build_payload(ae, by = "USUBJID",
-                                summaries = list(
+  c2 <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV")
-  ))
-  expect_length(p2$cols[[1]]$segs[[1]][[1]], 3L)
-  expect_null(p2$cols[[1]]$lg)
+  ))$cells$cols[[1]]
+  expect_length(c2$segs[[1]][[1]], 3L)
+  expect_false(isTRUE(c2$lg))
 })
 
 test_that("a series ref computes a pooled line, mean_sd adds the band", {
   ae <- sum_fixture()
-  p <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  c1 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "series", x = "ASTDY", col = "DUR", ref = "mean")
-  ))
-  c1 <- p$cols[[1]]
-  expect_true(is.numeric(c1$rc))
-  expect_null(c1$rby)                      # mean = line only
-  p2 <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  ))$cells$cols[[1]]
+  expect_false(is.na(c1$rc))
+  expect_true(is.na(c1$rby))               # mean = line only
+  c2 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "series", x = "ASTDY", col = "DUR", ref = "mean_sd")
-  ))
-  c2 <- p2$cols[[1]]
-  expect_true(is.numeric(c2$rby) && is.numeric(c2$rbh) && c2$rbh > 0)
+  ))$cells$cols[[1]]
+  expect_true(!is.na(c2$rby) && !is.na(c2$rbh) && c2$rbh > 0)
   # The reference rides INSIDE the svg: band can exceed the observed range,
   # so the y-domain must have grown to keep it on canvas.
   expect_true(c2$rby >= 0)
-  # No ref -> no coordinates shipped.
-  p3 <- summarize_build_payload(ae, by = "TERM", summaries = list(
+  # No ref -> no coordinates.
+  c3 <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "series", x = "ASTDY", col = "DUR")
-  ))
-  expect_null(p3$cols[[1]]$rc)
+  ))$cells$cols[[1]]
+  expect_true(is.na(c3$rc))
 })
 
 test_that("identity rides through simple rows: the value as-is", {
   d <- data.frame(g = c("a", "b", "c"), v = c(3, 9, 6))
-  p <- summarize_build_payload(d, by = "g", summaries = list(
+  m <- sum_model(d, by = "g", summaries = list(
     list(type = "simple", name = "V", func = "identity", col = "v",
          show = "bar"),
     list(type = "simple", name = "Vn", func = "identity", col = "v",
          show = "number")
   ))
-  expect_identical(vapply(p$cols, function(c) c$kind, ""), c("bar", "num"))
-  expect_identical(as.character(p$label), c("b", "c", "a"))   # ranked as-is
-  expect_equal(max(as.numeric(p$cols[[1]]$w)), 100)
-  expect_identical(trimws(as.character(p$cols[[2]]$disp)),
+  cols <- m$cells$cols
+  expect_identical(vapply(cols, function(c) c$kind, ""), c("bar", "num"))
+  expect_identical(as.character(m$cells$label), c("b", "c", "a"))   # ranked as-is
+  expect_equal(max(as.numeric(cols[[1]]$w)), 100)
+  expect_identical(trimws(as.character(cols[[2]]$disp)),
                    c("9", "6", "3"))
 })
 
@@ -730,9 +736,8 @@ test_that("sort_by a summary's name orders by that column", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR", show = "box")
   )
-  p <- summarize_build_payload(ae, by = "TERM", summaries = S,
-                               sort_by = "Duration")
-  meds <- as.numeric(p$cols[[2]]$v)
+  m <- sum_model(ae, by = "TERM", summaries = S, sort_by = "Duration")
+  meds <- as.numeric(m$cells$cols[[2]]$v)
   expect_true(all(diff(meds) <= 0))
 })
 
@@ -740,7 +745,15 @@ test_that("the constructor round-trips the summaries list", {
   S <- list(list(type = "dist", name = "D", col = "DUR", show = "box"))
   blk <- new_summarize_table_block(by = "TERM", summaries = S)
   expect_s3_class(blk, "table_block")
-  expect_identical(blockr.core::blockr_ser(blk)$payload$summaries, S)
+  # The constructor checks each entry, so the saved list carries every key
+  # of its type; the ones given come back as they were.
+  saved <- blockr.core::blockr_ser(blk)$payload$summaries
+  expect_identical(saved[[1L]][c("type", "name", "col", "show")], S[[1L]][
+    c("type", "name", "col", "show")
+  ])
+  again <- blockr.core::blockr_ser(new_table_block(by = "TERM",
+                                                   summaries = saved))
+  expect_identical(again$payload$summaries, saved)
   fmls <- names(formals(new_table_block))
   expect_true(all(c("summaries", "by", "facet_layout") %in% fmls))
 })
@@ -979,8 +992,10 @@ test_that("a table whose every row lacks a group says so instead of failing", {
   p2 <- summarize_prepare(ae, by = c("ARM", "TERM"),
                           summaries = S)
   expect_false(is.null(p2$err) && anyNA(p2$rows$.label))
-  # the payload the block builds carries the message, it does not throw
-  expect_silent(summarize_build_payload(ae, by = "TERM", summaries = S))
+  # the model the block builds carries the message, it does not throw
+  m <- expect_silent(sum_model(ae, by = "TERM", summaries = S))
+  expect_identical(m$prep$err, "No rows to display")
+  expect_null(table_groups_view(m))
 })
 
 test_that("facet columns with nothing to draw are left out, as the chart does", {

@@ -28,17 +28,22 @@ test_that("a grouped tile with summaries restores as grouped cards", {
   expect_identical(p$summaries[[1L]]$col, "revenue")
   # The drill and the saved click carry over.
   expect_identical(p$drill, "region")
-  expect_identical(p$selection$column, "region")
-  expect_identical(unlist(p$selection$values), "North")
+  expect_identical(names(p$selection$filters), "region")
+  expect_identical(unlist(p$selection$filters$region), "North")
   expect_identical(p$block_name, "Revenue by region")
 
   d <- data.frame(region = c("North", "North", "South"),
                   revenue = c(1, 2, 3))
-  shiny::testServer(b$expr_server, args = list(data = shiny::reactive(d)), {
-    session$flushReact()
-    expect_identical(session$returned$state$look(), "cards")
-    expect_identical(session$returned$state$selection()$column, "region")
-  })
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", b),
+    {
+      session$flushReact()
+      expect_identical(session$returned$state$look(), "cards")
+      expect_identical(names(session$returned$state$selection()$filters),
+                       "region")
+    },
+    args = list(x = b, data = list(data = shiny::reactive(d)))
+  )
 })
 
 test_that("a tile with summaries and no group restores as one row of cards", {
