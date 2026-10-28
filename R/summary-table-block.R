@@ -14,6 +14,8 @@
 #' @export
 new_summary_table_block <- function(...) {
   args <- legacy_table_args(list(...), from = "summary")
+  # A summary table is the variables layout, also when nothing old was set.
+  args$layout <- "variables"
   args$ctor <- "new_table_block"
   args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)
