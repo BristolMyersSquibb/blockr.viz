@@ -429,30 +429,3 @@ claim_label <- function(claims) {
   }, character(1L))
   paste(parts, collapse = "; ")
 }
-
-#' The column half of a structured click, as claims
-#'
-#' The browser sends the source column and its value straight off the column
-#' header (`TRT01P = "Placebo"`), so this reshapes the click into conditions.
-#' A pooled column ("All Active") sends its members.
-#'
-#' @param col_keys A list of `list(column=, values=)`, as the click sent it.
-#' @param table Name of the table the claim applies to, `""` for none.
-#' @return A list of filter conditions, `list()` when there is no column half.
-#' @noRd
-col_claims <- function(col_keys, table = "") {
-
-  out <- list()
-
-  for (k in col_keys) {
-
-    nme <- as.character(k[["column"]] %||% "")[1L]
-    vals <- as.character(unlist(k[["values"]], use.names = FALSE))
-
-    if (!is.na(nme) && nzchar(nme) && length(vals)) {
-      out[[length(out) + 1L]] <- claim_cond(nme, vals, table)
-    }
-  }
-
-  out
-}

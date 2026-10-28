@@ -298,7 +298,9 @@
         glyph(m, i, o.labels) + '</td>';
     }
     const g = glyph(m, i, o.labels);
-    const own = m.kind === 'barsplit' || (/** @type {any} */ (m).multi);
+    // A grouped split and a multi lane label each level; a stacked split
+    // keeps its one total beside the bar.
+    const own = (m.kind === 'barsplit' && m.mode === 'grouped') || (/** @type {any} */ (m).multi);
     const lab = o.labels && !own && 'dw' in m && m.dw != null && c.disp[i] != null;
     return '<td class="blockr-summarize-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (lab
       ? '<div class="blockr-summarize-barwrap">' + g + barval(value(c, i), /** @type {any} */ (m).dw) +

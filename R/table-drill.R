@@ -82,11 +82,12 @@ table_group_filter_call <- function(cols, vals) {
 }
 
 # A nested records claim as a filter on the input: `.group<k>_level` stands
-# for the k-th `by` column; a real column (the drill column) is kept.
-table_nest_drill_expr <- function(by, gc, gv) {
+# for the k-th `by` column; a real column (the drill column) is kept. `f` is
+# the click's filters, one value per column.
+table_nest_drill_expr <- function(by, f) {
+  gc <- as.character(names(f))
+  gv <- as.character(unlist(f))
   by <- as.character(unlist(by))
-  gc <- as.character(unlist(gc))
-  gv <- as.character(unlist(gv))
   if (!length(gc) || length(gc) != length(gv)) {
     return(table_drill_expr(list()))
   }
@@ -103,10 +104,11 @@ table_nest_drill_expr <- function(by, gc, gv) {
 
 # A claim in the data's words, outermost first: `.variable` /
 # `.variable_level` read "AEDECOD = ABDOMINAL PAIN", `.group<k>_level` reads
-# "ARM = Placebo" given `group_names` (table_group_names()).
-table_claim_label <- function(gc, gv, group_names = character()) {
-  gc <- as.character(unlist(gc))
-  gv <- as.character(unlist(gv))
+# "ARM = Placebo" given `group_names` (table_group_names()). `f` is the
+# click's filters, one value per column.
+table_claim_label <- function(f, group_names = character()) {
+  gc <- as.character(names(f))
+  gv <- as.character(unlist(f))
   if (!length(gc) || length(gc) != length(gv)) {
     return(character())
   }
@@ -140,35 +142,17 @@ table_group_names <- function(data) {
   out
 }
 
-# A column claim as `list(list(column, values))`, or NULL.
-table_col_keys_state <- function(x) {
-  if (!is.list(x) || !length(x)) return(NULL)
-  out <- lapply(x, function(k) {
-    if (!is.list(k)) return(NULL)
-    cl <- as.character(unlist(k[["column"]]))
-    vl <- as.character(unlist(k[["values"]]))
-    if (length(cl) != 1L || !nzchar(cl) || !length(vl)) return(NULL)
-    list(column = cl, values = vl)
-  })
-  out <- Filter(Negate(is.null), out)
-  if (length(out)) out
-}
-
-# "ARM = Low dose" for each column claim.
-table_col_keys_label <- function(ck) {
-  ck <- table_col_keys_state(ck)
-  vapply(ck %||% list(), function(k) {
-    paste0(k$column, " = ", paste(k$values, collapse = ", "))
-  }, character(1L))
+# "ARM = Low dose" for each column claim (column to values).
+table_col_keys_label <- function(columns) {
+  vapply(names(columns), function(cl) {
+    paste0(cl, " = ", paste(columns[[cl]], collapse = ", "))
+  }, character(1L), USE.NAMES = FALSE)
 }
 
 # `dplyr::filter(<ex>, ARM %in% "Low dose")` for a column claim.
-table_col_keys_filter <- function(ex, ck) {
-  ck <- table_col_keys_state(ck)
-  if (!length(ck)) return(ex)
-  f <- stats::setNames(lapply(ck, `[[`, "values"),
-                       vapply(ck, `[[`, "", "column"))
-  out <- table_drill_expr(f)
+table_col_keys_filter <- function(ex, columns) {
+  if (!length(columns)) return(ex)
+  out <- table_drill_expr(columns)
   out[[2L]] <- ex
   out
 }

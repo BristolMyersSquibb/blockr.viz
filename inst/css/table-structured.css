@@ -9,27 +9,6 @@
 .drilldown-table-structured .blockr-table-wrapper {
   max-height: none;
 }
-.blockr-html-table-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
-}
-.blockr-html-table-title {
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  color: var(--blockr-color-text-default, #111827);
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.blockr-html-table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
 input.blockr-search {
   appearance: none;
   -webkit-appearance: none;
@@ -239,8 +218,9 @@ input.blockr-search:focus {
    `row_indent * 16px` on top (table/html.js), so level 1 sits at 40px,
    level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
    makes the indentation visible. 3px above and below the 20px line is a
-   26px row, as in the preview. */
-.drilldown-table-structured .blockr-table tbody td.blockr-stub {
+   26px row, as in the preview. A groups table keeps its row labels on one
+   line (table-groups.css). */
+.drilldown-table-structured .blockr-table:not(.blockr-summarize-table) tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
   white-space: normal;
@@ -451,16 +431,6 @@ input.blockr-search:focus {
 }
 .drilldown-table-structured .blockr-table-wrapper.scrolled thead th {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
-}
-.blockr-html-table-caption {
-  white-space: pre-line;
-  padding: 8px 4px 4px;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.blockr-hidden-collapse,
-.blockr-hidden-search {
-  display: none !important;
 }
 .blockr-html-table-container .blockr-chev path {
   vector-effect: non-scaling-stroke;

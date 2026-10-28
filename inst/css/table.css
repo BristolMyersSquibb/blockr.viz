@@ -355,12 +355,6 @@ input.blockr-search:focus {
 :is(.drilldown-table-container, .blockr-summarize-container) {
   position: relative;
 }
-:is(.drilldown-table-container, .blockr-summarize-container) .blockr-html-table-header {
-  padding-right: 36px;
-}
-:is(.drilldown-table-container, .blockr-summarize-container) .blockr-hidden-search {
-  display: none !important;
-}
 
 /* Zero-match search feedback (table/dom.js): shown under the
    header when an active query hides every data row, removed with matches. */
@@ -417,10 +411,6 @@ input.blockr-search:focus {
 :is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
   gap: 6px;
 }
-/* A layout switch swaps the block's engine containers. Chrome's scroll
-   anchoring would then move a scrolled panel to keep some node in place, so
-   the table jumped by hundreds of pixels; the panel keeps its scroll. */
-.blockr-table-engine { overflow-anchor: none; }
 
 /* Layout E (chart.css .vz-head): the title band sits in the header, on its
    left, laid out as the chart's. It wraps before the tools, and in the
@@ -555,31 +545,15 @@ input.blockr-search:focus {
    caller puts in the container stays on the card's inset. Outside a card
    the inset is 0. */
 .drilldown-table-container > .blockr-table-wrapper,
-.drilldown-table-container > .dt-table-footer,
-.drilldown-table-container > .blockr-html-table-header {
+.drilldown-table-container > .dt-table-footer{
   margin-left: calc(-1 * var(--blockr-card-inset, 0px));
   margin-right: calc(-1 * var(--blockr-card-inset, 0px));
-}
-.drilldown-table-container > .blockr-html-table-header {
-  padding-left: calc(4px + var(--blockr-card-inset, 0px));
-  padding-right: calc(4px + var(--blockr-card-inset, 0px));
 }
 .drilldown-table-container .blockr-table tr > :first-child {
   padding-left: calc(12px + var(--blockr-card-inset, 0px));
 }
 .drilldown-table-container .blockr-table tr > :last-child {
   padding-right: calc(12px + var(--blockr-card-inset, 0px));
-}
-
-/* ===== Summarize table: drill line ===== */
-/* The drill line takes the rest of the footer row, as under a chart and
-   under the table block. It is empty, and gone, while no filter is set. */
-.blockr-summarize-footer > .dd-status-footer {
-  flex: 1 1 auto;
-  padding: 0;
-}
-.blockr-summarize-footer > .dd-status-footer:empty {
-  display: none;
 }
 
 /* The export picture (table/groups.js picture()): the block without its

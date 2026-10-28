@@ -4,13 +4,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadTable } = require('./load');
 
-const COLS = [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
+const COLS = [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
 
 /** The Columns editor with a recording stand-in for the gear's controls. */
 function editor(summaries) {
   const built = [];
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { controls: { build: (el, ctx) => built.push(ctx) } };
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+                            controls: { ...win.Blockr.viz.gear.controls, build: (el, ctx) => built.push(ctx) } };
   } });
   const sets = [];
   const el = env.win.document.createElement('div');
@@ -89,4 +90,16 @@ test('move, remove, add and fold', () => {
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
   e.draw(list);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+});
+
+test('the Show tiles have a drawing for every value and the editor width', () => {
+  const e = editor([{ type: 'simple', func: 'count', show: 'bar' }]);
+  const show = e.built.find((c) => c.key === 'show');
+  for (const v of ['bar', 'number', 'dot', 'tile', 'box', 'pointrange', 'text', 'dumbbell']) {
+    assert.match(show.host.icon('show', v), /^<svg/, v);
+  }
+  assert.equal(show.host.icon('func', 'mean'), '');
+  const row = e.el.querySelector('.lane-sum-field--wide');
+  assert.ok(row);
+  assert.equal(row.querySelector('.blockr-label').textContent, show.label);
 });

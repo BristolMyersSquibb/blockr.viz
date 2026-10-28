@@ -118,6 +118,16 @@ test('a colour split: one segment per level with a value, its label inside', () 
   assert.equal(t.cell(2, 2).querySelectorAll('.blockr-summarize-fill').length, 1);
 });
 
+test('a stacked split keeps its total beside the bar; a grouped one has none', () => {
+  const m = groups();
+  m.cols[2].mark.dw = 2;
+  const t = mount(payload({ data: m, config: G }));
+  assert.equal(t.cell(0, 2).querySelector('.blockr-summarize-barwrap > .blockr-summarize-barval').textContent, '10');
+  Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']] });
+  t.render({ data: m, config: G });
+  assert.equal(t.cell(0, 2).querySelector(':scope > .blockr-summarize-barwrap'), null);
+});
+
 test('a grouped split with labels draws one labelled track per level', () => {
   const m = groups();
   Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']], dw: 2 });
@@ -435,4 +445,18 @@ test('bar_width: narrow, medium and wide set the table width; fit leaves it', ()
     const t = mount(payload({ data: groups(), config: Object.assign({ bar_width: w }, G) }));
     assert.equal(t.$('table').getAttribute('data-summarize-width'), w === 'fit' ? null : w, w);
   }
+});
+
+test("the picture takes R's pixel ratio, else 2", async () => {
+  const scales = [];
+  const env = loadTable({ before: (win) => {
+    win.snapdom = { toCanvas: (el, o) => {
+      scales.push(o.scale);
+      return Promise.resolve({ toDataURL: () => 'data:image/png;base64,AAA' });
+    } };
+  } });
+  await env.V.table.picture(payload({ data: groups(), config: G, derived: { capture_ratio: 3 } }), 500);
+  await env.V.table.picture(payload({ data: groups(), config: G }), 500);
+  await env.V.table.picture(payload({ data: groups(), config: G, derived: { capture_ratio: 3 } }), 500, 1);
+  assert.deepEqual(scales, [3, 2, 1]);
 });

@@ -43,8 +43,8 @@ table_groups_part <- function(kit, src) {
   )
 }
 
-# The view of a prepared groups table: the TableModel, or what to say
-# instead, and the legend and the note under it.
+# The view of a prepared groups table: the TableModel (its `note` is the
+# line under the rows), or what to say instead, and the legend.
 table_groups_payload <- function(m, v, d, src) {
   if (is.null(m)) {
     return(list(empty = list(kind = "no_data", message = "No data")))

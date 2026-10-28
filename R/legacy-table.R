@@ -291,6 +291,20 @@ legacy_table_selection <- function(state) {
   state
 }
 
+# An old board's column claim as `list(list(column, values))`, or NULL.
+table_col_keys_state <- function(x) {
+  if (!is.list(x) || !length(x)) return(NULL)
+  out <- lapply(x, function(k) {
+    if (!is.list(k)) return(NULL)
+    cl <- as.character(unlist(k[["column"]]))
+    vl <- as.character(unlist(k[["values"]]))
+    if (length(cl) != 1L || !nzchar(cl) || !length(vl)) return(NULL)
+    list(column = cl, values = vl)
+  })
+  out <- Filter(Negate(is.null), out)
+  if (length(out)) out
+}
+
 # 0.3.0's `drill = TRUE` (saved as "TRUE") is "auto"; FALSE is off.
 legacy_table_drill <- function(x) {
   d <- x[["drill"]]
