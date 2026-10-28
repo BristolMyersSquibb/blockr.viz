@@ -46,16 +46,19 @@ wire_value <- function(type, x) {
     named = if (length(x)) {
       lapply(x, wire_value, type = type$value$type)
     } else {
-      structure(list(), names = character())
+      empty_object()
     },
     map = if (length(x)) {
       wire_map(x)
     } else {
-      structure(list(), names = character())
+      empty_object()
     },
     x
   )
 }
+
+# An empty list that JSON writes as `{}`, not `[]`.
+empty_object <- function() structure(list(), names = character())
 
 # A map's atomic values always as arrays, so a single NA or value keeps its
 # place; map_canon() reads them back.
