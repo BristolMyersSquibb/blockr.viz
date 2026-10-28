@@ -1,9 +1,8 @@
 # The cards look as an EXHIBIT -------------------------------------------------
 #
 # The downloads of a table block in the cards look draw the cards: the web
-# page with the browser's own renderer (table-cards.js and the summarize
-# table's glyph emitters, inlined by write_exhibit_html()), the slide and the
-# image as a picture painted here. The spreadsheet keeps the table's values;
+# page with the table view (table_static(), inlined by write_exhibit_html()),
+# the slide and the image as a picture painted here. The spreadsheet keeps the table's values;
 # it never sees this object.
 #
 # The painter reuses the summarize painter's glyph functions (rp_bar(),
@@ -20,15 +19,15 @@
 cards_exhibit <- function(x, title = NULL, subtitle = NULL, caption = NULL) {
   if (inherits(x, "summarize_exhibit")) {
     return(structure(
-      list(model = x$cards, cells = x$cells,
+      list(model = x$cards, cells = x$cells, prep = x$prep, args = x$args,
            title = title %||% x$title, subtitle = subtitle %||% x$subtitle,
            caption = caption %||% x$caption),
       class = c("cards_exhibit", "blockr_exhibit")
     ))
   }
   structure(
-    list(model = x, cells = NULL, title = title, subtitle = subtitle,
-         caption = caption),
+    list(model = x, cells = NULL, prep = NULL, args = NULL, title = title,
+         subtitle = subtitle, caption = caption),
     class = c("cards_exhibit", "blockr_exhibit")
   )
 }
@@ -48,48 +47,20 @@ print.cards_exhibit <- function(x, ...) {
 #' @export
 html_exhibit.cards_exhibit <- function(x, title = NULL, subtitle = NULL,
                                        caption = NULL, ...) {
-  title <- title %||% x$title
-  subtitle <- subtitle %||% x$subtitle
-  caption <- caption %||% x$caption
-  data <- list(
-    cards = cards_payload(x$model),
-    # The glyphs' geometry: the summarize table's columns, which the
-    # browser's emitters draw from.
-    cols = if (!is.null(x$cells)) summarize_flat_payload(x$cells)$cols
-  )
-  json <- as.character(jsonlite::toJSON(summarize_drop_null(data),
-                                        auto_unbox = TRUE, na = "null"))
-  # A "</script>" inside a label must not end the block.
-  json <- gsub("</", "<\\/", json, fixed = TRUE)
-  htmltools::tagList(
-    htmltools::tags$style(htmltools::HTML(html_table_shared_css_fallback())),
-    htmltools::tags$style(htmltools::HTML(summarize_table_css())),
-    summarize_table_dep(),
-    table_cards_dep(),
-    htmltools::tags$div(
-      class = paste("blockr-html-table-container blockr-summarize-container",
-                    "blockr-cards-static"),
-      if (summarize_nz(title) || summarize_nz(subtitle)) {
-        htmltools::tags$div(
-          class = "dd-table-titles",
-          if (summarize_nz(title)) {
-            htmltools::tags$div(class = "dd-table-title", title)
-          },
-          if (summarize_nz(subtitle)) {
-            htmltools::tags$div(class = "dd-table-subtitle", subtitle)
-          }
-        )
-      },
-      htmltools::tags$div(
-        class = "blockr-cards-host", `data-cards-static` = "1",
-        htmltools::tags$script(type = "application/json",
-                               htmltools::HTML(json))
-      ),
-      if (summarize_nz(caption)) {
-        htmltools::tags$div(class = "dd-table-caption", caption)
-      }
-    )
-  )
+  titles <- table_static_titles(title %||% x$title, subtitle %||% x$subtitle,
+                                caption %||% x$caption)
+  if (!is.null(x$cells)) {
+    # A groups table's cards: their glyphs are the table's columns.
+    g <- table_static_groups(x)
+    g$model$cards <- cards_payload(x$model)
+    g$config$look <- "cards"
+    g$derived$titles <- titles
+    return(table_static(g$model, g$config, g$derived))
+  }
+  model <- list(n = x$model$n, cols = list(), head = list(),
+                cards = cards_payload(x$model))
+  table_static(model, list(layout = "records", look = "cards"),
+               list(titles = titles))
 }
 
 #' @export

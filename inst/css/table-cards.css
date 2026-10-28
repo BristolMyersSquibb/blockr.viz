@@ -1,22 +1,18 @@
-/* The cards look of the table block (R/table-cards.R, js/table-cards.js).
+/* The cards look of the table block (R/table-cards.R, js/table/cards.js).
    The glyphs inside a card are the summarize table's own markup and keep
    its stylesheet; this file lays out the cards around them. The grid's
-   data-tc-mode is set by table-cards.js from the host's width. */
+   data-tc-mode is set by table/cards.js from the host's width. */
 
 .blockr-cards-host {
   padding: 2px 0 4px;
   font-variant-numeric: tabular-nums;
 }
-/* The table the engine still mounts for its settings and its drill state:
-   it carries the attributes the gear reads, and draws nothing. */
-.blockr-table-wrapper.tc-on table.blockr-table { display: none; }
 /* The records table's rows run to the panel edge and inset their cells;
    the cards take the same inset. */
 .drilldown-table-container .blockr-cards-host {
   padding-left: var(--blockr-card-inset, 0px);
   padding-right: var(--blockr-card-inset, 0px);
 }
-.blockr-table-wrapper.tc-on { overflow: visible !important; max-height: none !important; }
 
 .tc-grid { display: grid; gap: 8px; align-items: stretch; }
 .tc-grid .tc-row { display: contents; }
@@ -196,28 +192,21 @@
 .tc-grid[data-tc-mode="narrow"] .tc-val { font-size: 20px; }
 
 /* row states: the engines' classes (drill, search, collapse) */
-.tc-grid .tc-row.collapsed-hidden,
 .tc-grid .tc-row.blockr-summarize-hidden-search,
 .tc-grid .tc-row.blockr-hidden-search { display: none !important; }
-.tc-row.is-pick > .tc,
-.tc-row.is-pick > .tc-rowhead,
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc,
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc-rowhead { cursor: pointer; }
-.tc-row.is-pick:hover > .tc,
 .dt-clickable .tc-row:not(.dt-row-nodrill):hover > .tc {
   border-color: var(--blockr-color-border-strong, #d1d5db);
 }
-.tc-row.is-on > .tc,
 .tc-row.dt-row-active > .tc {
   outline: 2px solid var(--blockr-color-border-accent, #1d4ed8);
   outline-offset: -1px;
 }
-.tc-row.is-on > .tc-rowhead,
 .tc-row.dt-row-active > .tc-rowhead {
   background: var(--blockr-color-bg-accent-subtle, #eff6ff);
   color: var(--blockr-color-text-accent, #1d4ed8);
 }
-.tc-row.summarize-flash > .tc,
 .tc-row.dt-flash-row > .tc {
   animation: tc-flash 1200ms ease-out both;
 }
