@@ -23,5 +23,15 @@ Useful links:
 \author{
 \strong{Maintainer}: Christoph Sax \email{christoph@cynkra.com} (\href{https://orcid.org/0000-0002-7192-7044}{ORCID})
 
+Authors:
+\itemize{
+  \item Christoph Sax \email{christoph@cynkra.com} (\href{https://orcid.org/0000-0002-7192-7044}{ORCID})
+}
+
+Other contributors:
+\itemize{
+  \item ZumerLab (SnapDOM, bundled in inst/js/vendor/snapdom.js) [copyright holder]
+}
+
 }
 \keyword{internal}

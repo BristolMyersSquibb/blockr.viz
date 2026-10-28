@@ -47,7 +47,7 @@ table. The heatmap passes one: it is a graphic table, exported like the
 chart and the summarize table. The spreadsheet always gets values.}
 }
 \value{
-A \code{\link[shiny:htmlOutput]{shiny::uiOutput()}} to place on the toolbar.
+A \code{\link[shiny:uiOutput]{shiny::uiOutput()}} to place on the toolbar.
 }
 \description{
 Registers the download handlers for every format this machine can write and

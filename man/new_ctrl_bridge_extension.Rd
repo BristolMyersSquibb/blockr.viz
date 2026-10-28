@@ -52,9 +52,9 @@ give two senders two disjoint views of who owns what.
 Dock serializes an extension by constructor name and package and rebuilds it
 on restore, which is why this is an exported constructor rather than the
 handful of lines it wraps: a closure defined in an \code{app.R} has no package to
-record, and would not survive a board round-trip. Note that boards saved
-\emph{before} the bridge was added to the app carry their old extension list and
-come back without a channel -- they need one re-save.
+record, and would not survive a board round-trip. A board saved by an app
+without the bridge carries that app's extension list and comes back without
+a channel; it needs one re-save.
 }
 
 \examples{

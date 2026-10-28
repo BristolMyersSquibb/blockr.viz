@@ -7,7 +7,7 @@
 \method{blockr_deser}{summary_table_block}(x, data, ...)
 }
 \arguments{
-\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_ser]{blockr.core::blockr_deser()}}.}
+\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
 Restores boards saved before \code{\link[=new_summary_table_block]{new_summary_table_block()}} was flattened.

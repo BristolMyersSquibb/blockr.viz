@@ -15,7 +15,7 @@ new_download_footer_option(
 
 \item{category}{Settings sidebar category.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Forwarded to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
 }
 \value{
 A \code{board_option} object.

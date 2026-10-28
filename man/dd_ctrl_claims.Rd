@@ -48,15 +48,14 @@ user which column was drilled -- it knows.
 }
 \section{Cannot resolve is not an un-drill}{
 
-Two very different things used to return the same \code{list()}, and the sender
-reads \code{list()} as "clear the target": the user having no drill selection at
-all, and this block being unable to resolve the selection it has. Only the
-first is an un-drill. The second is temporary -- a \code{ctrl_send()} IS a board
+The sender reads \code{list()} as "clear the target". That is right when the user
+has no drill selection at all, and wrong when this block cannot resolve the
+selection it has. The second is temporary -- a \code{ctrl_send()} IS a board
 update and a board update re-evaluates every block, so the frame a claim is
-read off is being rebuilt at exactly the moment the claim is re-read. For
-the one flush where it does not line up, the target was cleared to
-everything and then re-narrowed: a cohort of 53 patients became all 254 and
-back, which on a slow pipeline is plainly visible and reads as a bug.
+read off is being rebuilt at exactly the moment the claim is re-read.
+Returning \code{list()} for that one flush would clear the target to everything
+and then re-narrow it: a cohort of 53 patients would become all 254 and
+back, which on a slow pipeline is plainly visible.
 
 So anything that means "I do not know right now" returns \code{NULL} and the
 target keeps what it has, which is the treatment a \code{NULL} input already got

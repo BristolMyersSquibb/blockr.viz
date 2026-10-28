@@ -18,7 +18,7 @@ e.g. \code{"Cohort"}. Shown in the heading.}
 state) or how to start (idle state).}
 }
 \value{
-An \code{\link[htmltools:builder]{htmltools::tag()}}, carrying its own stylesheet dependency.
+An \code{\link[htmltools:tag]{htmltools::tag()}}, carrying its own stylesheet dependency.
 }
 \description{
 Builds the status card a sender block returns as its output, so a
