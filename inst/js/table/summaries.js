@@ -187,8 +187,10 @@
       else open.add(k);
       el.classList.toggle('is-open');
       body.hidden = !open.has(k);
+      name.setAttribute('aria-expanded', String(open.has(k)));
     }, ctx.scope);
     name.removeAttribute('data-blockr-tooltip');
+    name.setAttribute('aria-expanded', String(open.has(k)));
     headText(name, s);
     const move = (/** @type {number} */ d) => {
       const next = list.slice();

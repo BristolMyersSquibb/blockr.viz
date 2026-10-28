@@ -88,9 +88,10 @@ table_click <- function(sel, structured = FALSE) {
 }
 
 # The kit's selection as the groups layout's filters, column to values, as
-# table_drill_expr() reads them; empty for no click.
+# table_drill_expr() reads them; empty for no click. A cell claims its row's
+# groups and its column's: the facet level, the colour split's level.
 table_selection_groups <- function(sel) {
-  f <- if (is.list(sel)) sel$filters
+  f <- if (is.list(sel)) c(sel$filters, sel$columns)
   if (!length(f)) {
     return(list())
   }

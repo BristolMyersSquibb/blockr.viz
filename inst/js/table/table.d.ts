@@ -374,6 +374,7 @@ interface TableFrame extends VizFrame {
   showTools(o: { search: boolean; download: boolean; downloads?: VizDownload[] | null;
                  onOpen?: () => void }): void;
   structured(on: boolean): void;
+  scroller(): Element | null;
 }
 
 interface TableCardOpts {
