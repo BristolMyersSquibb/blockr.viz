@@ -63,15 +63,17 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' @param session The block's Shiny session.
 #' @param filename The word a file is named by when the exhibit has no
 #'   title.
+#' @param before A function of no arguments run when a format is clicked,
+#'   before the exhibit is read (the kit's capture sync).
 #' @return A reactive: a list of `list(id, label, ext)`, empty when
 #'   downloads are off.
 #' @noRd
 viz_downloads <- function(exhibit, enabled = function() TRUE,
                           session = shiny::getDefaultReactiveDomain(),
-                          filename = "table") {
+                          filename = "table", before = function() NULL) {
   formats <- viz_exporters()
   for (f in formats) {
-    viz_download_handler(f, exhibit, session, filename)
+    viz_download_handler(f, exhibit, session, filename, before)
   }
   shiny::reactive({
     if (!isTRUE(enabled())) {
@@ -90,10 +92,13 @@ viz_downloads <- function(exhibit, enabled = function() TRUE,
 
 # One format's handler. It is not suspended when hidden, because the menu that
 # links to it is drawn by the view.
-viz_download_handler <- function(f, exhibit, session, filename) {
+viz_download_handler <- function(f, exhibit, session, filename,
+                                 before = function() NULL) {
   id <- paste0("dl_", f$format)
   session$output[[id]] <- shiny::downloadHandler(
+    # The file name is asked for first, so the picture is taken here.
     filename = function() {
+      before()
       x <- tryCatch(exhibit(), error = function(e) NULL)
       if (!inherits(x, "viz_exhibit")) {
         return(paste0(filename, ".", f$ext))
@@ -102,6 +107,7 @@ viz_download_handler <- function(f, exhibit, session, filename) {
                   filename, f$ext)
     },
     content = function(file) {
+      before()
       dl_guard(f$label, f$fun(exhibit_footed(exhibit(), session), file))
     }
   )

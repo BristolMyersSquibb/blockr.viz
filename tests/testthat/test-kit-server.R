@@ -186,3 +186,20 @@ test_that("the last capture is kept outside the state, decoded", {
     expect_identical(c(pic$width, pic$height), c(1, 0.5))
   })
 })
+
+test_that("a download takes a picture the observer has not run for yet", {
+  input <- shiny::reactiveValues()
+  capture <- shiny::reactiveVal(NULL)
+  sync <- viz_capture_observer(input, "chart", capture)
+  cap <- viz_read_capture(list(png = "data:image/png;base64,AAAA",
+                               width = 96, height = 48))
+  # The input holds the picture; no flush has run the observer.
+  input$chart_capture <- cap
+  expect_null(shiny::isolate(capture()))
+  sync()
+  expect_s3_class(shiny::isolate(capture()), "chart_capture")
+  # A picture dropped for new rows is not taken back from the input.
+  capture(NULL)
+  sync()
+  expect_null(shiny::isolate(capture()))
+})

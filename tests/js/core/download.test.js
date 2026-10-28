@@ -64,11 +64,32 @@ test('reaching for the menu runs onOpen', () => {
   V.downloads(host, FORMATS, scope, { onOpen: () => { opened += 1; } });
   const trigger = host.querySelector('.blockr-action-menu__trigger');
   trigger.dispatchEvent(new win.Event('pointerenter'));
-  trigger.dispatchEvent(new win.Event('click'));
+  trigger.dispatchEvent(new win.Event('pointerdown'));
   assert.equal(opened, 2);
   V.downloads(host, [FORMATS[0]], scope, { onOpen: () => { opened += 10; } });
-  trigger.dispatchEvent(new win.Event('click'));
+  trigger.dispatchEvent(new win.Event('pointerdown'));
   assert.equal(opened, 2);
+});
+
+test('a click on a format waits for the picture onOpen is sending', async () => {
+  const { V, host, scope, win } = setup();
+  /** @type {() => void} */ let sent = () => {};
+  V.downloads(host, FORMATS, scope, { onOpen: () => new Promise((r) => { sent = r; }) });
+  const trigger = host.querySelector('.blockr-action-menu__trigger');
+  trigger.dispatchEvent(new win.Event('pointerdown'));
+  const png = host.querySelector('#b-dl_png');
+  const clicks = [];
+  png.addEventListener('click', (e) => clicks.push(e.defaultPrevented));
+  const first = new win.MouseEvent('click', { bubbles: true, cancelable: true });
+  png.dispatchEvent(first);
+  assert.equal(first.defaultPrevented, true, 'held while the picture is on its way');
+  assert.deepEqual(clicks, []);
+  sent();
+  await new Promise((r) => win.setTimeout(r, 60));
+  assert.deepEqual(clicks, [false], 'followed once the picture went out');
+  // Sent: the next click goes straight through.
+  png.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  assert.deepEqual(clicks, [false, false]);
 });
 
 test('the control goes with its scope, unbound', () => {
@@ -82,7 +103,7 @@ test('the control goes with its scope, unbound', () => {
   scope.dispose();
   assert.equal(host.childNodes.length, 0);
   assert.equal(bound.at(-1)[0], 'unbind');
-  trigger.dispatchEvent(new win.Event('click'));
+  trigger.dispatchEvent(new win.Event('pointerdown'));
   assert.equal(opened, 0);
   assert.ok(size <= 1 + 0, 'one cleanup per host, listeners only with onOpen');
 });

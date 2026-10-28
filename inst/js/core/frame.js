@@ -161,9 +161,11 @@
 
     /**
      * The download control (core/download.js) with the formats R offers,
-     * hidden without any. `onOpen` runs when the reader reaches for it.
+     * hidden without any. `onOpen` runs when the reader reaches for it; a
+     * promise it returns (the picture on its way to R) holds a click on a
+     * format until it settles.
      * @param {VizDownload[] | null | undefined} list
-     * @param {() => void} [onOpen]
+     * @param {() => unknown} [onOpen]
      */
     downloads(list, onOpen) {
       const offer = Array.isArray(list) ? list : [];

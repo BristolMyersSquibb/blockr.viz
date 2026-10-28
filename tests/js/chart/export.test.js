@@ -193,7 +193,7 @@ test('compose: reaching for the download sends the picture as <id>_capture', asy
   const { c } = prepare({ ...BAR, download: true }, { width: 300, derived: { downloads,
                                                                              capture_ratio: 4 } });
   const tool = c.block.frame.downloadSlot.querySelector('.blockr-tool, .blockr-action-menu__trigger');
-  tool.dispatchEvent(new c.env.win.Event('click'));
+  tool.dispatchEvent(new c.env.win.Event('pointerdown'));
   await c.clock.advanceAsync(0);
   const sent = c.inputs().filter((x) => x.name === D.ID + '_capture:blockr.viz.capture');
   assert.strictEqual(sent.length, 1);
