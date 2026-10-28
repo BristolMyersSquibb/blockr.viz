@@ -11,8 +11,7 @@ seq_rule <- function() drilldown_table_color(type = "sequential")
 # The background / text colours the screen styles a column with, NA where the
 # cell is unpainted -- read off the same cell model the browser renders.
 screen_paint <- function(data, label_col, shadings, col) {
-  b <- dt_flat_build(data, label_col, NULL, dd_parse_shadings(shadings),
-                     toggles = list())
+  b <- dt_flat_build(data, label_col, NULL, dd_parse_shadings(shadings))
   cc <- b$cells[[match(col, vapply(b$cells, `[[`, "", "name"))]]
   list(bg = unname(cc$bg %||% rep(NA_character_, b$n)),
        fg = unname(cc$fg %||% rep(NA_character_, b$n)))
@@ -166,7 +165,7 @@ test_that("exports format numbers like the screen (#37)", {
   expect_identical(out$n, "12")
   expect_identical(attr(out$times_more, "label"), "Times more")
   # the screen's own formatter, cell for cell
-  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = 2L)
+  b <- dt_flat_build(d, "term", NULL, digits = 2L)
   expect_identical(b$cells[[1]]$disp, "3.81")
   expect_identical(b$cells[[2]]$disp, "2.70")
 
@@ -306,7 +305,7 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   d <- data.frame(term = c("a", "b"), share = c(0.25, 0.5),
                   amount = c(1500, 2.5e6))
   # Cells.
-  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
+  b <- dt_flat_build(d, "term", NULL, digits = "percent")
   expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
   st <- viz_check(viz_block_spec("table"),
                   list(layout = "records", rowname = "term",
@@ -363,14 +362,14 @@ test_that("format and unit reach the groups layout's number cells and labels", {
   S <- list(list(type = "simple", func = "mean", col = "x", show = "number"),
             list(type = "simple", func = "sum", col = "x", show = "bar"),
             list(type = "simple", func = "count", show = "number"))
-  p <- summarize_prepare(d, by = "g", summaries = S, format = "compact",
+  p <- groups_prepare(d, by = "g", summaries = S, format = "compact",
                          unit = "CHF")
   # The unit heads the columns in the data's unit, not the count.
   labs <- vapply(p$plan, function(q) q$label, "")
   expect_match(labs[[1L]], "(CHF)", fixed = TRUE)
   expect_match(labs[[2L]], "(CHF)", fixed = TRUE)
   expect_false(grepl("CHF", labs[[3L]]))
-  m <- summarize_cells(p, cfg = list(value_labels = TRUE))
+  m <- groups_cells(p, cfg = list(value_labels = TRUE))
   expect_identical(m$cols[[1L]]$disp, c("750.62", "0.0021"))
   # The value label beside the bar.
   expect_identical(m$cols[[2L]]$disp, c("1.5K", "0.0021"))
@@ -379,6 +378,24 @@ test_that("format and unit reach the groups layout's number cells and labels", {
   expect_identical(cards$cols[[1L]]$main, c("750.62 CHF", "0.0021 CHF"))
   expect_false(grepl("CHF", cards$cols[[1L]]$label))
   # Without a format the engine keeps its own digits.
-  p0 <- summarize_prepare(d, by = "g", summaries = S)
+  p0 <- groups_prepare(d, by = "g", summaries = S)
   expect_null(p0$format)
+})
+
+test_that("a groups block's report call carries its settings by spec name", {
+  b <- new_table_block(layout = "groups", by = "Species",
+                       column_axis = FALSE, percent_of = "total")
+  cl <- as.list(report_call(b, "d"))
+  expect_identical(cl$by, "Species")
+  expect_false(cl$column_axis)
+  expect_identical(cl$percent_of, "total")
+  # At the spec's default, a setting is left out; set otherwise, it is kept.
+  expect_null(cl$missing)
+  cl <- as.list(report_call(new_table_block(layout = "groups", by = "Species",
+                                            missing = "drop"), "d"))
+  expect_identical(cl$missing, "drop")
+  # The rebuilt table is the block's: missing groups shown, as on screen.
+  d <- data.frame(Species = c("a", NA, "b"))
+  ex <- static_summarize_table(d, by = "Species")
+  expect_true("(Missing)" %in% ex$prep$rows$.label)
 })

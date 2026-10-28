@@ -178,9 +178,12 @@ viz_input_handlers <- function(specs) {
 #'
 #' Three gates, in order. On a locked board nothing applies: the browser can
 #' forge any input, so the refusal happens here. The prepare script is R
-#' code the server runs, so `script` and `script_values` apply only where the
-#' `blockr.viz.browser_script` option allows it. A key changed on the server
-#' after the revision the message was built against is stale and skipped.
+#' code the server runs, so `script` applies only where the
+#' `blockr.viz.browser_script` option allows it. Its controls' values
+#' (`script_values`) are data and pass; the settings observer checks them
+#' against the script's controls (viz_script_values()). A key changed on the
+#' server after the revision the message was built against is stale and
+#' skipped.
 #'
 #' @param msg A settings message from viz_read_set().
 #' @param revs The block's counter from new_viz_revs().
@@ -197,7 +200,7 @@ viz_gate_set <- function(msg, revs, locked = viz_locked(),
   }
   values <- msg$values
   if (!browser_script) {
-    values <- values[setdiff(names(values), c("script", "script_values"))]
+    values <- values[setdiff(names(values), "script")]
   }
   values[setdiff(names(values), revs$stale(names(values), msg$rev))]
 }

@@ -42,7 +42,7 @@ tm_json <- function(x) {
 # model's columns, the ones table_groups_view() turns into marks. The
 # summaries go in as written (some fixtures use the legacy keys the
 # preparer still reads), so the state is not run through viz_check().
-# Missing groups drop and the sort runs descending, as summarize_prepare()
+# Missing groups drop and the sort runs descending, as groups_prepare()
 # does by default.
 sum_model <- function(data, ...) {
   st <- viz_check(viz_block_spec("table"), list(layout = "groups"))

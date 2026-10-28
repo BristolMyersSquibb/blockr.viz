@@ -90,7 +90,7 @@ send_table_action <- function(block_id, payload) {
 }
 
 # Fire a GENUINE click on an ECharts chart at a data point's pixel, driving the
-# real chart/interact.js `chart.on('click')` handler in headless chromium.
+# real chart/family-aggregated.js `chart.on('click')` handler in headless chromium.
 # ECharts paints to <canvas> and its high-level click is synthesized from
 # native press/release (a bare DOM event or zrender handler.dispatch doesn't
 # trigger it), so we use a true CDP Input.dispatchMouseEvent through
@@ -477,7 +477,7 @@ test_that("chart: a real ECharts canvas click drills the bar (no Playwright)", {
   expect_equal(nrow(get_block_result("chart")), 6L)
 
   # Click the middle of the "North" bar (sum revenue 150; value 75 is mid-bar).
-  # This runs chart/interact.js chart.on('click') -> _select path for real.
+  # This runs the chart.on('click') -> selection.click() path for real.
   echarts_canvas_click("chart", at = list(75, "North"))
 
   res <- get_block_result("chart")

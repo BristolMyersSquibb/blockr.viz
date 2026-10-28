@@ -9,9 +9,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
   const { withItemStyle } = parts;
@@ -29,7 +28,8 @@
   const DEFAULT_PANEL_H = 350;
 
   /** What every builder shares: the option's base, the value's title, the aggregation's name and
-   * the tooltip's rows. @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
+   * the tooltip's rows.
+   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme?: string | null }} look
    */
   parts.common = (look) => {
     const { cfg, columns, ink } = look;
@@ -50,7 +50,7 @@
       aggPairs: (/** @type {number} */ value, /** @type {number} */ n,
                  /** @type {number} */ percent) => {
         /** @type {Array<[string, any]>} */
-        const pairs = [[aggLabel, NS.ddNum(value)]];
+        const pairs = [[aggLabel, V.util.num(value)]];
         if (percent != null) pairs.push(['Share', Math.round(percent) + '%']);
         if (cfg.func !== 'count' && cfg.func !== 'identity' && n != null) pairs.push(['n', n]);
         return pairs;

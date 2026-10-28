@@ -185,7 +185,7 @@ test('the shading editor round-trips every key of a rule', () => {
   const sets = [];
   const ctx = {
     values: { shadings: [{ mode: 'bar', columns: ['AGE'], domain: [{ value: -1, label: null }, { value: 1, label: null }] }] },
-    columns: [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'WT', class: 'numeric', label: 'Weight' },
+    columns: [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'WT', class: 'number', label: 'Weight' },
               { name: 'ARM', class: 'character', label: 'Arm' }],
     set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
   };
@@ -197,7 +197,7 @@ test('the shading editor round-trips every key of a rule', () => {
   boxes[1].checked = true;
   fire(boxes[1], 'change');
   const mode = el.querySelector('select');
-  mode.value = 'sequential';
+  mode.value = 'Sequential';
   fire(mode, 'change');
   fire(el.querySelector('.vz-shade-add'), 'click');
   fire(el.querySelector('.vz-shade-remove'), 'click');
@@ -342,4 +342,38 @@ test('table.css rotates the titles the compact look marks', () => {
   assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
   const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
   assert.match(dep, /"table\.css"/);
+});
+
+test('the gear offers the blocks a drill can be sent to', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  const targets = [{ value: 'b2', label: 'Listing' }, { value: 'b3', label: 'Chart' }];
+  mount(payload({ data: flatModel(2), derived: { ctrl_choices: targets } }), env);
+  assert.deepEqual(JSON.parse(JSON.stringify(host.choices('drill_target', {}))),
+                   [{ value: '', label: 'None' }].concat(targets));
+  assert.equal(host.choices('format', {}), null);
+  // An empty picker says what it means.
+  assert.equal(host.placeholder('columns', { layout: 'records' }), 'All columns');
+  assert.equal(host.placeholder('by', { layout: 'records' }), 'All');
+  assert.equal(host.placeholder('by', { layout: 'groups' }), null);
+});
+
+test('a prepare script draws its controls and its error under the header', () => {
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: () => ({ update() {}, dispose() {}, values: () => ({}), set() {} }) };
+  } });
+  const script = { inputs: [{ key: 'n', name: 'n', label: 'Rows', kind: 'number' }],
+                   values: { n: 10 }, error: 'boom' };
+  const t = mount(payload({ data: flatModel(2), derived: { script } }), env);
+  const band = t.$('.vz-table > .dd-mapping-band');
+  assert.ok(band);
+  assert.equal(band.hidden, false);
+  assert.equal(band.querySelector('[data-role="n"] .blockr-label').textContent, 'Rows');
+  assert.equal(band.querySelector('.dd-script-failed').textContent, 'Script failed: boom');
+  t.render({ data: flatModel(2), derived: {} });
+  assert.equal(band.hidden, true);
 });

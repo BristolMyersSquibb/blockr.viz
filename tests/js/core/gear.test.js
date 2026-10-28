@@ -83,7 +83,7 @@ test('column on a columns argument sends an array', () => {
 test('optional mappings wait in the Add menu until set or added', () => {
   const t = setup({ type: 'bar', x: 'ARM' });
   assert.ok(!rows(t.el).includes('color'));
-  const add = t.el.querySelector('.dd-add-select');
+  const add = t.el.querySelector('.dd-add-wrap select');
   const offered = Array.from(add.options).map((o) => o.textContent);
   assert.ok(offered.includes('Color') && offered.includes('Facet'));
   assert.ok(!offered.includes('Series'), 'series does not apply to a bar');
@@ -137,7 +137,7 @@ test('highlight: a column, then its values', () => {
     { host: { choices: (k, v) => (k === 'highlight' ? [{ value: 'A', label: 'A' },
                                                         { value: 'B', label: 'B' }] : null) } });
   const valSel = row(t.el, 'highlight').querySelectorAll('select')[1];
-  assert.deepEqual(picked(valSel).map((o) => o.value), ['0']);
+  assert.deepEqual(picked(valSel).map((o) => o.value), ['A']);
   valSel.options[1].selected = true;
   valSel.dispatchEvent(new t.win.Event('change'));
   assert.deepEqual(lastSet(t).values, { highlight: { ARM: [{ value: 'A', label: null },

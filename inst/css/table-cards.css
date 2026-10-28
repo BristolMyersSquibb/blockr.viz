@@ -1,4 +1,7 @@
-/* The cards look of the table block (R/table-cards.R, js/table/cards.js). */
+/* The cards look of the table block (R/table-cards.R, js/table/cards.js).
+   The glyphs inside a card are the summarize table's own markup and keep
+   its stylesheet; this file lays out the cards around them. The grid's
+   data-tc-mode is set by table/cards.js from the host's width. */
 
 .blockr-cards-host {
   padding: 2px 0 4px;
@@ -188,9 +191,6 @@
 }
 .tc-grid[data-tc-mode="narrow"] .tc-val { font-size: 20px; }
 
-/* row states: the engines' classes (drill, search, collapse) */
-.tc-grid .tc-row.blockr-summarize-hidden-search,
-.tc-grid .tc-row.blockr-hidden-search { display: none !important; }
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc,
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc-rowhead { cursor: pointer; }
 .dt-clickable .tc-row:not(.dt-row-nodrill):hover > .tc {

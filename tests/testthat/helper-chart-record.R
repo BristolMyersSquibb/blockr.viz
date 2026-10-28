@@ -549,7 +549,6 @@ record_run <- function(sc, target = record_target()) {
   withr::local_options(list(
     blockr.viz.facet_cols = NULL,
     blockr.viz.default_caption = NULL,
-    blockr.viz.browser_script = TRUE,
     useFancyQuotes = FALSE
   ))
   src <- new.env(parent = emptyenv())
@@ -632,10 +631,16 @@ record_run <- function(sc, target = record_target()) {
           cx$data <- src$d
           cx$sent <- sent$msgs
           inputs <- target$inputs(s, cx)
-          for (k in seq_along(inputs)) {
-            do.call(expr$setInputs, inputs[k])
-            session$flushReact()
-          }
+          # The browser may set the script text only where a deployment
+          # allows it. Its controls' values need no option, so a step that
+          # turns a knob runs without it.
+          sets_script <- identical(s$kind, "set") && "script" %in% names(s$args)
+          withr::with_options(list(blockr.viz.browser_script = sets_script), {
+            for (k in seq_along(inputs)) {
+              do.call(expr$setInputs, inputs[k])
+              session$flushReact()
+            }
+          })
         } else if (identical(s$kind, "data")) {
           src$d <- record_data(s$name)
           tick(i)

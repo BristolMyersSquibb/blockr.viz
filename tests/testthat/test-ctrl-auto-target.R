@@ -93,7 +93,7 @@ test_that("the sender resolves auto, and clears the block it actually sent to", 
           list(list(table = "adsl", column = "SEX", values = list("F")))
         )
 
-        dd_ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
+        ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
                        session = session)
 
         session$flushReact()
@@ -118,7 +118,7 @@ test_that("the gear's picker offers auto first, labelled with what it found", {
           value_filter_block = c(`Patient Drill` = "pt_drill",
                                  `Global Population Filter` = "global_filter")
         ))
-        choices <- dd_ctrl_choices(session = session)
+        choices <- ctrl_choices(session = session)
         session$flushReact()
 
         expect_identical(
@@ -132,7 +132,7 @@ test_that("the gear's picker offers auto first, labelled with what it found", {
         # the alternative is a picker that looks broken.
         fake_targets(session, list())
         expect_identical(
-          dd_ctrl_auto_choice(session = session),
+          ctrl_auto_choice(session = session),
           c(`Automatic (no filter block found)` = "auto")
         )
       })

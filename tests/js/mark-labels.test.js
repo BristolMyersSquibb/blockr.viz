@@ -9,8 +9,8 @@ const { loadPure, measure } = require('./chart/load');
 const C = loadPure({ roles: true });
 
 const COLUMNS = [
-  { name: 'G', type: 'categorical' }, { name: 'K', type: 'categorical' },
-  { name: 'L', type: 'categorical' }, { name: 'V', type: 'numeric' }
+  { name: 'G', class: 'string' }, { name: 'K', class: 'string' },
+  { name: 'L', class: 'string' }, { name: 'V', class: 'number' }
 ];
 // One label per G, except c, whose rows disagree.
 const ROWS = [
@@ -116,8 +116,8 @@ test('scatter cloud names share one spacer', () => {
   for (let i = 0; i < 10; i++) {
     rows.push({ X: i, Y: i, K: 'one' }, { X: i + 0.1, Y: i + 0.1, K: 'two' });
   }
-  const cols = [{ name: 'X', type: 'numeric' }, { name: 'Y', type: 'numeric' },
-                { name: 'K', type: 'categorical' }];
+  const cols = [{ name: 'X', class: 'number' }, { name: 'Y', class: 'number' },
+                { name: 'K', class: 'string' }];
   const c = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', color: 'K', legend: 'marks',
                                drill: 'auto' }, {}, cols);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg: c });

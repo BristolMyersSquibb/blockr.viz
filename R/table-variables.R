@@ -1,5 +1,9 @@
-# The variables layout of the table block on the kit: one row per statistic or
-# level of each variable, one column per level of `by` (a Table 1).
+# The variables layout of the table block on the kit: one row per statistic
+# or level of each variable, one column per level of `by` (a Table 1). The
+# variables are the summaries' columns, shared with the groups layout, so a
+# switch between the two transposes the table. summary_table() builds the
+# frame; the structured table draws it (table_frame_part(),
+# R/table-records.R), and a click filters the built table.
 
 #' The variables layout on the kit
 #' @param kit The kit (viz_block_server()).
@@ -24,7 +28,7 @@ table_variables_part <- function(kit, src) {
       return(ex)
     }
     built[[2L]] <- quote(.(data))
-    table_sub_data(ex, built)
+    dd_splice_slot(ex, built)
   }
   table_frame_part(kit, src, shown, layout = "variables", filter = built_from)
 }
@@ -53,6 +57,7 @@ table_summaries_vars <- function(summaries) {
 # Rewrite `summaries` so it names exactly `vars`: entries for variables that
 # stay are kept as they are (whatever the groups layout drew them with),
 # entries for dropped variables go, new variables get a default entry.
+# Entries that name no variable (a plain row count) are kept.
 table_vars_to_summaries <- function(summaries, vars, data = NULL) {
   summaries <- summaries %||% list()
   keep <- list()
@@ -79,7 +84,8 @@ table_vars_to_summaries <- function(summaries, vars, data = NULL) {
 }
 
 # Entries made without the data (a constructor call or a restore) default to
-# the categorical shape.
+# the categorical shape. Once the data is known, turn those that name a
+# numeric column into `dist` summaries. Entries a user shaped are left alone.
 table_fix_var_types <- function(summaries, data) {
   if (!is.data.frame(data) || !length(summaries)) return(summaries)
   lapply(summaries, function(s) {
@@ -119,21 +125,6 @@ table_variables_call <- function(cfg) {
   args <- table_variables_args(cfg)
   if (is.null(args)) return(NULL)
   as.call(c(list(quote(blockr.viz::summary_table), quote(data)), args))
-}
-
-# Replace every `.(data)` placeholder in a bquoted block expression with
-# `repl`, so the records engine's drill filter applies to the built table.
-table_sub_data <- function(expr, repl) {
-  if (is.call(expr)) {
-    if (identical(expr[[1L]], as.name(".")) && length(expr) == 2L &&
-          identical(expr[[2L]], as.name("data"))) {
-      return(repl)
-    }
-    for (i in seq_along(expr)[-1L]) {
-      if (!is.null(expr[[i]])) expr[[i]] <- table_sub_data(expr[[i]], repl)
-    }
-  }
-  expr
 }
 
 #' Nest a tidy frame into a finished table
@@ -198,10 +189,13 @@ table_nest <- function(data, by, rowname = NULL, missing = "drop",
 }
 
 # The name of the level that missing values become with `missing = "level"`.
+# A drill on it claims the rows whose value is missing (summarize_drill_expr(),
+# drill_source()).
 MISSING_LEVEL <- "(Missing)"
 
 # Missing values of the given columns as a level of their own, "(Missing)":
-# `missing = "level"` in every layout.
+# `missing = "level"` in every layout. Factors get the level appended; other
+# columns turn character. Columns without a missing value stay as they are.
 table_missing_levels <- function(data, cols) {
   cols <- intersect(unique(as.character(cols)), names(data))
   for (cl in cols) {

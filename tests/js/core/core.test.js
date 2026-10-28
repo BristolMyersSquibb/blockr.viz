@@ -13,7 +13,7 @@ test('the core defines Blockr.viz and nothing else', () => {
   const added = Object.keys(win).filter((k) => !before.has(k));
   assert.deepEqual(added.sort(), ['Blockr']);
   assert.deepEqual(Object.keys(V).sort(),
-                   ['Scope', 'binding', 'capture', 'captureReply', 'downloads', 'gear', 'spec', 'titles', 'util']);
+                   ['Frame', 'Scope', 'binding', 'capture', 'captureReply', 'downloads', 'gear', 'scriptBand', 'spec', 'titles', 'tooltip', 'util']);
 });
 
 test('loading the core twice keeps the namespace', () => {

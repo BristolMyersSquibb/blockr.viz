@@ -41,6 +41,28 @@
   const FUNC = { count_distinct: 'distinct count', mean: 'mean', median: 'median', sum: 'sum',
                  min: 'min', max: 'max', sd: 'sd' };
 
+  /** @param {string} body The drawing inside the gear tiles' 48 x 32 box. */
+  const svg = (body) => '<svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true">' +
+    body + '</svg>';
+  /** The Show tiles' drawings: the gear's chart drawings where one fits. */
+  const SHOW = {
+    bar: 'type:bar', box: 'type:boxplot', pointrange: 'type:pointrange', dot: 'type:scatter',
+    number: svg('<text x="24" y="22" text-anchor="middle" font-size="15" font-weight="600" ' +
+                'fill="currentColor">12</text>'),
+    text: svg('<text x="24" y="22" text-anchor="middle" font-size="15" fill="currentColor">Aa</text>'),
+    tile: svg([[8, 6, 1], [20, 6, 0.5], [32, 6, 0.2], [8, 17, 0.35], [20, 17, 0.8], [32, 17, 0.5]]
+      .map(([x, y, o]) => '<rect x="' + x + '" y="' + y + '" width="9" height="9" rx="1" ' +
+                          'fill="currentColor" fill-opacity="' + o + '"/>').join('')),
+    dumbbell: svg('<path d="M12 16H36" stroke="currentColor" stroke-opacity=".5" stroke-width="1.5"/>' +
+                  '<circle cx="12" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+                  '<circle cx="36" cy="16" r="4" fill="currentColor"/>')
+  };
+  /** @param {string} key @param {unknown} value */
+  const showIcon = (key, value) => {
+    const d = key === 'show' ? SHOW[/** @type {'bar'} */ (String(value))] : null;
+    return !d ? '' : d.startsWith('<') ? d : V.gear.icons[d] || '';
+  };
+
   /**
    * An entry's title: its name, else its type.
    * @param {Entry} s
@@ -81,8 +103,7 @@
    * @param {Entry} s
    */
   function headText(b, s) {
-    const icons = /** @type {any} */ (V).gear && /** @type {any} */ (V).gear.icons;
-    const icon = icons && icons[ICON[/** @type {'simple'} */ (s.type)]];
+    const icon = V.gear.icons[ICON[/** @type {'simple'} */ (s.type)]];
     b.textContent = '';
     const part = (/** @type {string} */ cls, /** @type {string} */ text) => {
       const x = b.appendChild(document.createElement('span'));
@@ -116,16 +137,18 @@
    * @param {HTMLElement} body
    * @param {Entry} s
    * @param {Record<string, any>} variant
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    * @param {(next: Entry) => void} put
    */
   function fields(body, s, variant, ctx, put) {
-    const C = /** @type {any} */ (V).gear.controls;
+    const C = V.gear.controls;
     const keys = Object.keys(variant).filter((f) => variant[f].gear && shows(s, f));
     for (const f of keys.filter((x) => x !== 'name').concat(keys.includes('name') ? ['name'] : [])) {
       const arg = variant[f];
       const el = document.createElement('div');
-      el.className = 'dd-form-row lane-sum-field';
+      // Tiles take the editor's width, as in the gear's own sections.
+      el.className = 'dd-form-row lane-sum-field' +
+        (arg.gear.control === 'tiles' ? ' lane-sum-field--wide' : '');
       const lab = document.createElement('label');
       lab.className = 'blockr-label';
       lab.textContent = arg.gear.label;
@@ -136,7 +159,8 @@
       C.build(control, {
         key: f, arg, label: arg.gear.label, value: s[f] === undefined ? arg.default : s[f],
         values: Object.assign({}, ctx.values, s), columns: ctx.columns, required: false,
-        scope: ctx.scope, host: {}, titles: {}, labelOf: (/** @type {string} */ x) => x,
+        scope: ctx.scope, host: { icon: showIcon }, titles: {},
+        labelOf: (/** @type {string} */ x) => x,
         set: (/** @type {unknown} */ v) => put(Object.assign({}, s, { [f]: v }))
       });
     }
@@ -148,7 +172,7 @@
    * @param {Entry[]} list
    * @param {number} k
    * @param {Record<string, any>} variants
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    * @param {Set<number>} open
    */
   function entry(list, k, variants, ctx, open) {
@@ -198,12 +222,12 @@
   /**
    * The Columns row.
    * @param {HTMLElement} el
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    */
   function editor(el, ctx) {
     const spec = /** @type {any} */ (V.spec.table);
     const variants = spec && spec.summaries && spec.summaries.type.variants;
-    if (!variants || !(/** @type {any} */ (V).gear && /** @type {any} */ (V).gear.controls)) return;
+    if (!variants) return;
     const list = /** @type {Entry[]} */ (Array.isArray(ctx.values.summaries) ? ctx.values.summaries : []);
     const box = /** @type {Element} */ (el.closest('.blockr-settings') || el);
     let open = opened.get(box);

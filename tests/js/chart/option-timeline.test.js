@@ -8,9 +8,9 @@ const { loadPure, plain, measure } = require('./load');
 const C = loadPure();
 
 const COLUMNS = [
-  { name: 'T', type: 'categorical', label: 'Term' }, { name: 'SEV', type: 'categorical' },
-  { name: 'ID', type: 'categorical' }, { name: 'S', type: 'numeric', label: 'Start' },
-  { name: 'E', type: 'numeric' }, { name: 'V', type: 'categorical' }
+  { name: 'T', class: 'string', label: 'Term' }, { name: 'SEV', class: 'string' },
+  { name: 'ID', class: 'string' }, { name: 'S', class: 'number', label: 'Start' },
+  { name: 'E', class: 'number' }, { name: 'V', class: 'string' }
 ];
 const ROWS = [
   { T: 'Rash', SEV: 'MILD', ID: 'S01', S: 4, E: 9, V: 'Week 1' },

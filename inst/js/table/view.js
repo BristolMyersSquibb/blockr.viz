@@ -5,9 +5,9 @@
  * layout named in `config.layout`; a layout switch disposes the old
  * layout's view and everything it set up. Loaded last of the table scripts.
  *
- * The gear (gear.js) and the title slots come from the core gear engine
- * and core/titles.js when they are loaded; without them the view has no
- * gear and plain titles.
+ * The gear (gear.js) is the core gear engine; with it the titles carry
+ * core/titles.js's slots. A view built with `gear: false` (a printed page)
+ * has neither.
  */
 (function () {
   'use strict';
@@ -34,10 +34,12 @@
       /** @type {VizScope | null} */
       this.viewScope = null;
       this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
-      const S = /** @type {any} */ (V).titles;
-      if (this.gear && S && typeof S.slots === 'function') {
+      // The prepare script's controls, under the header.
+      this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
+      if (this.script) this.frame.box.before(this.script.el);
+      if (this.gear) {
         const gear = this.gear;
-        this.frame.slots = scope.own(S.slots({ gear: gear.engine, scope, openGear: gear.open }));
+        this.frame.slots = scope.own(V.titles.slots({ gear: gear.engine, scope, openGear: gear.open }));
       }
     }
 
@@ -52,6 +54,7 @@
       }
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
+      if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
       this.busyDone();
     }
 
@@ -71,8 +74,7 @@
       const Layout = T.layouts[layout];
       if (!Layout) return;
       this.viewScope = new V.Scope();
-      this.view = this.viewScope.own(new Layout(this.frame, this.viewScope));
-      if (this.still) /** @type {TableLayoutView & { still?: boolean }} */ (this.view).still = true;
+      this.view = this.viewScope.own(new Layout(this.frame, this.viewScope, { still: this.still }));
     }
 
     /** @returns {TableInfo} */

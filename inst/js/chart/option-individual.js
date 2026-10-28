@@ -12,9 +12,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -83,7 +82,7 @@
     // An unnamed line at 0 needs no label: the axis prints its value.
     /** @param {any} v @param {any} nm */
     const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
-    NS.labelled(cfg.x_lines).forEach(({ value: v, label: nm }) => {
+    /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(cfg.x_lines)).forEach(({ value: v, label: nm }) => {
       if (lx && !pos(v)) return;
       if (m.x.type === 'category') {
         const c = NS.axes.catOf(v, m.x.cats || []);
@@ -99,7 +98,7 @@
         : refText(v, nm);
       refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
     });
-    NS.labelled(cfg.y_lines).forEach(({ value: v, label: nm }) => {
+    /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(cfg.y_lines)).forEach(({ value: v, label: nm }) => {
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });

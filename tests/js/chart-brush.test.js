@@ -17,9 +17,9 @@ function cloud() {
     ID[i] = 'R' + i;
   }
   const columns = [
-    { name: 'X', type: 'numeric', n_unique: SIDE },
-    { name: 'Y', type: 'numeric', n_unique: SIDE },
-    { name: 'ID', type: 'categorical', n_unique: N }
+    { name: 'X', class: 'number', n_unique: SIDE },
+    { name: 'Y', class: 'number', n_unique: SIDE },
+    { name: 'ID', class: 'string', n_unique: N }
   ];
   return { columns, data: { X, Y, ID } };
 }

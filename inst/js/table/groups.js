@@ -17,8 +17,6 @@
   const T = V.table;
   const esc = V.util.esc;
 
-  /** The picture's pixel ratio unless R says otherwise. */
-  const RATIO = 2;
 
   /**
    * The legend: one titled group per colour column.
@@ -34,13 +32,47 @@
         esc(it.color) + '"></i>' + esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
+  /**
+   * The nearest ancestor that scrolls up and down. One that only scrolls
+   * sideways computes overflow-y to auto as well, so the style alone is not
+   * enough.
+   * @param {Element} el
+   * @returns {Element | null}
+   */
+  function scrollParent(el) {
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+    }
+    return null;
+  }
+
+  /**
+   * Keeps the header in view while the panel scrolls: moves it down by as
+   * much of the table as has scrolled out of view, and stops at the last row.
+   * @param {HTMLElement} box
+   */
+  function followHeader(box) {
+    const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
+    const table = thead && thead.parentElement;
+    if (!thead || !table) return;
+    const sp = scrollParent(box);
+    const top = sp ? sp.getBoundingClientRect().top : 0;
+    // offsetHeight, not a rect: a rect would include the transform set here.
+    const max = table.offsetHeight - thead.offsetHeight;
+    const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
+    thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+    box.classList.toggle('scrolled', y > 0);
+  }
+
   class Groups extends /** @type {any} */ (T.Records) {
     /**
      * @param {TableFrame} frame
      * @param {VizScope} scope
+     * @param {TableLayoutOpts} [opts]
      */
-    constructor(frame, scope) {
-      super(frame, scope);
+    constructor(frame, scope, opts = {}) {
+      super(frame, scope, opts);
       frame.el.classList.add('blockr-summarize-container');
       scope.own({ dispose: () => frame.el.classList.remove('blockr-summarize-container') });
       this.legend = scope.node(document.createElement('div'));
@@ -52,6 +84,13 @@
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
       this.capture = scope.debounce(() => this.sendPicture(), 50);
       T.tooltip.wire(frame.box, scope, () => this.model);
+      // One capture listener on the document sees every scroller's scroll:
+      // the dock moves a card between containers after it is drawn.
+      const follow = () => followHeader(frame.box);
+      if (!this.still) {
+        scope.on(document, 'scroll', follow, { capture: true, passive: true });
+        scope.on(window, 'resize', follow);
+      }
       /** What the last picture was of. */
       this.pictured = '';
     }
@@ -175,6 +214,14 @@
   }
 
   /**
+   * The picture's pixel ratio: R's (`derived.capture_ratio`, the board's
+   * option), 2 on a payload without one.
+   * @param {VizPayload} p
+   */
+  const pictureRatio = (p) =>
+    Number(/** @type {TableDerived} */ (p.derived || {}).capture_ratio) || 2;
+
+  /**
    * A picture of a groups table drawn off screen from `payload`: every row,
    * the titles, legend and caption, no tools. For the Image and PowerPoint
    * downloads, at the width the export asks for.
@@ -193,11 +240,11 @@
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
       frame.el.classList.add('blockr-summarize-capture');
-      const view = new Groups(frame, scope);
-      view.still = true;
+      const view = new Groups(frame, scope, { still: true });
       view.render(payload);
       return settled(scope)
-        .then(() => snap.toCanvas(frame.el, { scale: ratio || RATIO, dpr: 1, embedFonts: true,
+        .then(() => snap.toCanvas(frame.el, { scale: ratio || pictureRatio(payload), dpr: 1,
+                                              embedFonts: true,
                                               backgroundColor: '#ffffff' }))
         .then((/** @type {HTMLCanvasElement} */ canvas) => ({
           png: canvas.toDataURL('image/png'),

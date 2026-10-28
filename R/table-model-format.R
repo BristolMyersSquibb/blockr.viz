@@ -234,7 +234,7 @@ dt_format_num <- function(v, format = "number", big.mark = "") {
 # structured or non-data-frame input.
 dt_unit_labels <- function(data, unit, stub = NULL) {
   unit <- chr_state(trimws(as.character(unlist(unit))))
-  if (is.null(unit) || !is.data.frame(data) || dt_is_structured(data)) {
+  if (is.null(unit) || !is.data.frame(data) || table_is_structured(data)) {
     return(data)
   }
   if (is.null(stub) || !stub %in% names(data)) {
@@ -246,6 +246,26 @@ dt_unit_labels <- function(data, unit, stub = NULL) {
   for (cn in cols) {
     lbl <- dt_col_label(data[[cn]], cn) %||% cn
     attr(data[[cn]], "label") <- paste0(lbl, " (", unit, ")")
+  }
+  data
+}
+
+# Numeric cells of a structured frame as text in the number format, the unit
+# in their header. Text cells (a Table 1) pass unchanged.
+table_structured_numbers <- function(data, data_cols, digits = "number",
+                                  unit = NULL) {
+  num <- data_cols[vapply(data[data_cols], is.numeric, logical(1L))]
+  unit <- chr_state(trimws(as.character(unlist(unit))))
+  for (cn in num) {
+    x <- data[[cn]]
+    lbl <- dt_col_label(x, cn) %||% cn
+    out <- rep(NA_character_, length(x))
+    ok <- !is.na(x)
+    out[ok] <- dt_format_num(x[ok], digits)
+    attributes(out) <- attributes(x)[setdiff(names(attributes(x)),
+                                             c("class", "levels"))]
+    if (!is.null(unit)) attr(out, "label") <- paste0(lbl, " (", unit, ")")
+    data[[cn]] <- out
   }
   data
 }

@@ -58,7 +58,7 @@ test_that("the summarize table colors follow provenance too", {
   d$AENDY <- c(5, 6, 7, 8)
 
   # The colour-split bar path.
-  p <- summarize_prepare(
+  p <- groups_prepare(
     d, by = "VISIT",
     summaries = list(list(type = "simple", func = "count", show = "bar",
                           color = "color")),
@@ -68,7 +68,7 @@ test_that("the summarize table colors follow provenance too", {
                c("#0072B2", "#E69F00", "#999999"))
 
   # The swimlane fills (a spans summary) and the legend beside them.
-  p <- lane_prepare_summaries(
+  p <- groups_prepare_summaries(
     d, by = "VISIT",
     summaries = list(list(type = "spans", name = "Episodes", x = "ASTDY",
                           xend = "AENDY", color = "color")),

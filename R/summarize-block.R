@@ -16,7 +16,7 @@
 #' )
 #' @export
 new_summarize_table_block <- function(...) {
-  args <- table_legacy_args(list(...), from = "summarize")
+  args <- legacy_table_args(list(...), from = "summarize")
   args$layout <- "groups"
   # The result saves as a table block, also after a restore.
   args$ctor <- "new_table_block"

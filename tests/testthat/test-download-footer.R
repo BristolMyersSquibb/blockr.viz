@@ -147,3 +147,28 @@ test_that("the table block's downloads carry the footer in every format", {
     args = list(x = blk, data = list(data = shiny::reactive(d)))
   )
 })
+
+test_that("the chart block's footer reads the chart's input, not its numbers", {
+  skip_if_not_installed("openxlsx")
+
+  d <- data.frame(term = c("A", "B", "B"), n = 1:3)
+  attr(d, "blockr_provenance") <- list(dataset = "AQ-001")
+  attr(d, "blockr_filters") <- c(sex = "Sex = F")
+  blk <- new_chart_block(type = "bar", x = "term", download = TRUE)
+
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$board_options <- list(
+        download_footer = shiny::reactiveVal("Exported from {dataset}; {filters}")
+      )
+      session$flushReact()
+      expr <- session$makeScope("expr")
+
+      x <- openxlsx::read.xlsx(expr$output$dl_xlsx, colNames = FALSE,
+                               skipEmptyRows = FALSE)
+      expect_true("Exported from AQ-001; Sex = F" %in% x[[1L]])
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(d)))
+  )
+})

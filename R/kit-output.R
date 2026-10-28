@@ -91,14 +91,18 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
 #' @param derived What the server computes for the view (resolved titles,
 #'   series, download formats, an empty state). The client does not send it
 #'   back.
+#' @param columns The column description the view reads, viz_wire_columns()
+#'   shape. By default the shipped rows' columns; a view whose gear picks
+#'   from every column of its input passes that frame's.
 #' @return A list: `state_rev`, `data_rev`, `columns`, `config`, `derived`,
 #'   `data`.
 #' @noRd
-viz_payload <- function(spec, values, rows, revs, derived = list()) {
+viz_payload <- function(spec, values, rows, revs, derived = list(),
+                        columns = rows$columns) {
   list(
     state_rev = revs$now(),
     data_rev = rows$rev,
-    columns = rows$columns,
+    columns = columns,
     config = viz_wire(spec, values),
     derived = if (length(derived)) {
       derived
