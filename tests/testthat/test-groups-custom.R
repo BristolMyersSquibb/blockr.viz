@@ -28,7 +28,7 @@ n_fn <- "dplyr::summarise(d, value = dplyr::n())"
 row_of <- function(rows, label) rows[rows$.label == label, , drop = FALSE]
 
 test_that("a worst-grade count nests: the SOC row reduces its own rows", {
-  prep <- summarize_prepare(custom_fixture(), by = c("SOC", "TERM"),
+  prep <- groups_prepare(custom_fixture(), by = c("SOC", "TERM"),
                             summaries = list(list(type = "custom",
                                                   name = "Patients",
                                                   fn = worst_fn)))
@@ -46,7 +46,7 @@ test_that("a worst-grade count nests: the SOC row reduces its own rows", {
 })
 
 test_that("a split dumbbell draws one pair per level, the pooled pair sorts", {
-  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+  prep <- groups_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Onset to end",
          fn = paste("d |> dplyr::group_by(GR, .add = TRUE) |>",
                     "dplyr::summarise(from = mean(S), to = mean(E),",
@@ -60,14 +60,14 @@ test_that("a split dumbbell draws one pair per level, the pooled pair sorts", {
   # Erythema: grade 3 (5 -> 9), grade 1 (10 -> 11), grade 2 (12 -> 20).
   expect_equal(ery[[p$lcols[[3]][["a"]]]], 5)
   expect_equal(ery[[p$lcols[[2]][["b"]]]], 20)
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
 })
 
 test_that("the mark is read off the returned columns, or named", {
   d <- custom_fixture()
   kinds <- function(...) {
-    prep <- summarize_prepare(d, by = "TERM", summaries = list(...))
+    prep <- groups_prepare(d, by = "TERM", summaries = list(...))
     expect_null(prep$err)
     vapply(prep$plan, function(p) p$kind, character(1))
   }
@@ -84,14 +84,14 @@ test_that("the mark is read off the returned columns, or named", {
 })
 
 test_that("a bare body using `d` works like a function", {
-  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+  prep <- groups_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Rows", fn = n_fn)
   ))
   expect_equal(row_of(prep$rows, "Erythema")$.s1_v, 3)
 })
 
 test_that("a function that drops the grouping says so, without an error", {
-  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+  prep <- groups_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "X", fn = "c(value = nrow(d))")
   ))
   expect_null(prep$err)
@@ -117,7 +117,7 @@ test_that("the block raises a failed custom summary as a blockr error", {
 })
 
 test_that("a facet runs the function per facet level", {
-  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+  prep <- groups_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Patients", fn = worst_fn, facet = "ARM")
   ))
   expect_null(prep$err)
@@ -131,7 +131,7 @@ test_that("a facet runs the function per facet level", {
 test_that("a broken function says which column and why", {
   d <- custom_fixture()
   bad <- function(fn, show = NULL) {
-    summarize_prepare(d, by = "TERM", summaries = list(
+    groups_prepare(d, by = "TERM", summaries = list(
       c(list(type = "custom", name = "X", fn = fn), if (!is.null(show))
         list(show = show))
     ))$failed
@@ -148,7 +148,7 @@ test_that("a custom count with `denom` prints n (%) against the slice's N", {
   d <- custom_fixture()
   d <- rbind(d, data.frame(SOC = NA, TERM = NA, USUBJID = "P4", ARM = "B",
                            GR = NA, S = NA, E = NA))
-  prep <- summarize_prepare(d, by = "TERM", summaries = list(
+  prep <- groups_prepare(d, by = "TERM", summaries = list(
     list(type = "custom", name = "Patients", id = "USUBJID",
          fn = "\\(d) d |> dplyr::filter(!is.na(GR)) |> dplyr::summarise(value = dplyr::n_distinct(USUBJID))")
   ))
@@ -156,13 +156,13 @@ test_that("a custom count with `denom` prints n (%) against the slice's N", {
   p <- prep$plan[[1]]
   # N = 4 patients, the one without an AE included.
   expect_equal(p$denom, 4)
-  c1 <- summarize_cells(prep)$cols[[1]]
+  c1 <- groups_cells(prep)$cols[[1]]
   ery <- which(prep$rows$.label == "Erythema")
   expect_match(c1$pct[[ery]], "50%")
 })
 
 test_that("a custom count with `denom` keeps N on its header", {
-  prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
+  prep <- groups_prepare(custom_fixture(), by = "TERM", summaries = list(
     list(type = "custom", name = "Patients", id = "USUBJID",
          fn = "dplyr::summarise(d, value = dplyr::n_distinct(USUBJID))",
          facet = "ARM")
@@ -179,7 +179,7 @@ test_that("a custom summary that fails only on the parent rows is one failed col
   fn <- paste("\\(d) if (length(dplyr::group_vars(d)) == 1) stop('parent boom')",
               "else dplyr::summarise(d, value = dplyr::n())")
   for (facet in list(NULL, "arm")) {
-    prep <- suppressMessages(lane_prepare_summaries(d, by = c("soc", "term"),
+    prep <- suppressMessages(groups_prepare_summaries(d, by = c("soc", "term"),
       summaries = list(
         list(type = "simple", func = "count", show = "bar"),
         c(list(type = "custom", fn = fn, name = "pf"),

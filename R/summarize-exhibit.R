@@ -55,9 +55,9 @@ static_summarize_table <- function(data, ...) {
   targs <- args$.title_args %||% summarize_title_args(args)
   args$.title_args <- NULL
 
-  prep <- do.call(summarize_prepare,
+  prep <- do.call(groups_prepare,
                   c(list(data), args[summarize_prep_args(args)]))
-  cells <- summarize_cells(
+  cells <- groups_cells(
     prep,
     cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
                value_labels = args$value_labels %||% TRUE,
@@ -76,13 +76,13 @@ static_summarize_table <- function(data, ...) {
                            scale_map = args$scale_map)
       },
       title = resolve_block_title(args$title, data,
-                                  auto = summarize_attr(data, "label"),
+                                  auto = groups_attr(data, "label"),
                                   args = targs),
       subtitle = resolve_block_title(args$subtitle, data,
-                                     auto = summarize_attr(data, "subtitle"),
+                                     auto = groups_attr(data, "subtitle"),
                                      args = targs),
       caption = resolve_block_title(args$caption, data,
-                                    auto = summarize_attr(data, "caption"),
+                                    auto = groups_attr(data, "caption"),
                                     args = targs)
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
@@ -118,11 +118,11 @@ summarize_title_args <- function(args) {
   out[!vapply(out, is.null, logical(1L))]
 }
 
-# Which of the caller's arguments summarize_prepare() takes. The rest belongs
+# Which of the caller's arguments groups_prepare() takes. The rest belongs
 # to the chrome and goes to the renderer.
 #' @noRd
 summarize_prep_args <- function(args) {
-  names(args) %in% names(formals(summarize_prepare))
+  names(args) %in% names(formals(groups_prepare))
 }
 
 #' @export

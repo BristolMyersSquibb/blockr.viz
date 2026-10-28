@@ -47,7 +47,7 @@ table_is_agg_summaries <- function(summaries) {
 # function and column, as the old table drew them.
 table_agg_to_summaries <- function(summaries) {
   out <- list()
-  for (s in dd_parse_summaries(summaries)) {
+  for (s in table_parse_summaries(summaries)) {
     cols <- as.character(unlist(s$cols))
     if (!length(cols) || identical(s$func, "count")) cols <- NA_character_
     for (cl in cols) {
@@ -201,12 +201,12 @@ table_legacy_args <- function(args, from = NULL) {
     if (length(summaries)) {
       if (!is.null(color) || !is.null(facet)) {
         # Old keys renamed, `scope` kept: a pooled row takes no facet.
-        norm <- lane_norm_summaries(lapply(summaries, function(e) {
+        norm <- groups_norm_summaries(lapply(summaries, function(e) {
           if (!is.list(e)) return(e)
           legacy_map_values("summary", legacy_rename("summary", e))
         }))
         if (is.null(norm$err)) {
-          mig <- lane_migrate_globals(norm, color, facet)
+          mig <- groups_migrate_globals(norm, color, facet)
           for (i in seq_along(summaries)) {
             summaries[[i]]$color <- mig[[i]]$color
             summaries[[i]]$facet <- mig[[i]]$facet
@@ -225,7 +225,7 @@ table_legacy_args <- function(args, from = NULL) {
     # The block-level split layout is each colour split's `position` now.
     # The old word ("stacked") is mapped by LEGACY_NAMES.
     pos <- chr_state(get("bar_mode"))
-    if (!is.null(pos) && pos %in% LANE_POSITIONS) {
+    if (!is.null(pos) && pos %in% GROUPS_POSITIONS) {
       summaries <- lapply(summaries, function(x) {
         if (is.list(x) && identical(x[["type"]], "simple") &&
               !is.null(x[["color"]]) && is.null(x[["position"]])) {

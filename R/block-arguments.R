@@ -10,8 +10,8 @@
 # `register_blocks()` call in registry.R.
 
 # One word per aggregation, for composed labels ("Mean: Baseline BMI", metric
-# headers, tooltips). MUST mirror `AGG_WORDS` in inst/js/chart/agg.js. Single R-side home -- dd_metric_plan()
-# (R/table-block.R) reads it; do not re-inline per consumer.
+# headers, tooltips). MUST mirror `AGG_WORDS` in inst/js/chart/agg.js. Single R-side home -- table_metric_plan()
+# (R/table-aggregate.R) reads it; do not re-inline per consumer.
 AGG_WORDS <- c(
   count = "Count", count_distinct = "Distinct", mean = "Mean",
   median = "Median", sum = "Sum", min = "Min", max = "Max"

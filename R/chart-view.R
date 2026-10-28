@@ -212,6 +212,6 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
   } else {
     list(func = func, cols = value)
   }
-  dd_table_aggregate(data, unique(keys), list(summary),
+  table_aggregate(data, unique(keys), list(summary),
                      na_group = na_group %||% "level")$data
 }

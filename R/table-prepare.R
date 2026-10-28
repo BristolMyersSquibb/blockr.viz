@@ -57,7 +57,7 @@ table_prepare <- function(data, r_script, r_values) {
     src <- if (!is.null(sx) && length(filters)) {
       tryCatch(names(raw()), error = function(e) NULL)
     }
-    summarize_drill_wrap(sx, filters, members, src)
+    table_drill_wrap(sx, filters, members, src)
   }
   list(specs = r_specs, prepared = r_prepared, data = r_data,
        wrap_after = wrap_after, wrap_drill = wrap_drill)

@@ -169,7 +169,7 @@ test_that("heatmap rows repeat per group under an overlap definition", {
   # it belongs to.
   d <- grouped_df()
   d$AEDECOD <- "Headache"
-  p <- summarize_prepare(
+  p <- groups_prepare(
     d, by = c("Group", "USUBJID"),
     summaries = list(list(type = "simple", func = "count", show = "tile",
                           facet = "AEDECOD"))
@@ -182,7 +182,7 @@ test_that("heatmap rows repeat per group under an overlap definition", {
 
 test_that("summarize table counts per group, percent over subjects", {
   d <- grouped_df()
-  p <- summarize_prepare(d, by = "Group", summaries = list(
+  p <- groups_prepare(d, by = "Group", summaries = list(
     list(type = "simple", func = "count_distinct", col = "USUBJID",
          show = "bar")
   ))

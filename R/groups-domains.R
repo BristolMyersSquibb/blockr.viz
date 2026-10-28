@@ -1,10 +1,13 @@
+# The scales the groups marks are drawn against: one domain per column, or
+# shared across a facet.
+
 #' Is a `grouped` colour split degenerate: no row anywhere carries more than
 #' one level? Grouped would draw one bar and N-1 empty lanes (a colour that is
 #' a group-level fact, such as arm on a per-subject row), so the caller stacks;
 #' with one part per row both layouts draw the same numbers. Decided over the
 #' assembled rows, since the plan is built before any value exists.
 #' @noRd
-lane_split_degenerate <- function(plan, idx, rows) {
+groups_split_degenerate <- function(plan, idx, rows) {
   for (i in idx) {
     p <- plan[[i]]
     if (!identical(p$kind, "barsplit") || !identical(p$mode, "grouped")) {
@@ -28,7 +31,7 @@ lane_split_degenerate <- function(plan, idx, rows) {
 #' Per-entry domains, computed over the assembled rows and SHARED across a
 #' summary's facet copies (same `sid` stem before the `f<j>` suffix).
 #' @noRd
-lane_summary_domains <- function(plan, rows) {
+groups_summary_domains <- function(plan, rows) {
   stem <- function(sid) sub("f[0-9]+$", "", sid)
   groups <- split(seq_along(plan), vapply(plan, function(p) {
     stem(p$sid %||% "")
@@ -37,15 +40,15 @@ lane_summary_domains <- function(plan, rows) {
     kinds <- unique(vapply(plan[idx], function(p) p$kind, character(1L)))
     kind <- kinds[[1L]]
     plan <- if (identical(kind, "tile")) {
-      lane_dom_tile(plan, idx, rows)
+      groups_dom_tile(plan, idx, rows)
     } else if (kind %in% c("bar", "barsplit", "box", "pointrange")) {
-      lane_dom_value(plan, idx, rows, kind)
+      groups_dom_value(plan, idx, rows, kind)
     } else if (identical(kind, "sparkline")) {
-      lane_dom_spark(plan, idx, rows)
+      groups_dom_spark(plan, idx, rows)
     } else if (identical(kind, "pair")) {
-      lane_dom_pair(plan, idx, rows)
+      groups_dom_pair(plan, idx, rows)
     } else if (identical(kind, "interval")) {
-      lane_dom_interval(plan, idx, rows)
+      groups_dom_interval(plan, idx, rows)
     } else {
       plan
     }
@@ -55,7 +58,7 @@ lane_summary_domains <- function(plan, rows) {
 
 # A hair of padding so a glyph at the extreme is not flush against the cell
 # edge, and a degenerate (all-equal) column still draws.
-lane_dom_pad <- function(rng) {
+groups_dom_pad <- function(rng) {
   if (rng[[2L]] > rng[[1L]]) {
     (rng[[2L]] - rng[[1L]]) * 0.04
   } else {
@@ -65,7 +68,7 @@ lane_dom_pad <- function(rng) {
 
 # A tile without a paint column is painted by its value: one ramp across
 # the summary's copies, from zero.
-lane_dom_tile <- function(plan, idx, rows) {
+groups_dom_tile <- function(plan, idx, rows) {
   # Leaf rows only: a group row's total would turn every cell under it pale;
   # it clamps at the darkest step.
   leaf <- if (!is.null(rows$.level) && any(rows$.level > 0L)) {
@@ -84,7 +87,7 @@ lane_dom_tile <- function(plan, idx, rows) {
 
 # Value-axis columns of a bar, box or point range. A box's `n` (group size)
 # is left out: it is not a position.
-lane_dom_cols <- function(p, kind) {
+groups_dom_cols <- function(p, kind) {
   if (kind %in% c("bar", "barsplit")) {
     # The split bar scales on its TOTAL, like the plain bar; side-by-side
     # segments are read one at a time, so the axis must reach the widest.
@@ -100,12 +103,12 @@ lane_dom_cols <- function(p, kind) {
   }
 }
 
-lane_dom_vals <- function(plan, idx, rows, kind) {
+groups_dom_vals <- function(plan, idx, rows, kind) {
   vals <- numeric()
   for (i in idx) {
     p <- plan[[i]]
-    cols <- lane_dom_cols(p, kind)
-    # A count with an N is drawn as a percentage (summarize_cells()), so its
+    cols <- groups_dom_cols(p, kind)
+    # A count with an N is drawn as a percentage (groups_cells()), so its
     # domain is too.
     scale <- if (is.numeric(p$denom) && length(p$denom) == 1L &&
                    is.finite(p$denom) && p$denom > 0) 100 / p$denom else 1
@@ -114,13 +117,13 @@ lane_dom_vals <- function(plan, idx, rows, kind) {
   vals[is.finite(vals)]
 }
 
-lane_dom_value <- function(plan, idx, rows, kind) {
+groups_dom_value <- function(plan, idx, rows, kind) {
   # Decided before the domain (grouped and stacked read different columns) and
   # for the whole stem, so facet copies keep one layout.
-  if (identical(kind, "barsplit") && lane_split_degenerate(plan, idx, rows)) {
+  if (identical(kind, "barsplit") && groups_split_degenerate(plan, idx, rows)) {
     for (i in idx) plan[[i]]$mode <- "stacked"
   }
-  vals <- lane_dom_vals(plan, idx, rows, kind)
+  vals <- groups_dom_vals(plan, idx, rows, kind)
   # A bar encodes value as length from zero, so negatives cannot be drawn. A
   # signed measure becomes the zero-centred DIVERGING bar (`bardiv`); consumers
   # switch on `kind`. `barsplit` is excluded: it has no diverging form.
@@ -133,7 +136,7 @@ lane_dom_value <- function(plan, idx, rows, kind) {
     }
     return(plan)
   }
-  ext <- lane_dom_extent(vals, kind, plan, idx)
+  ext <- groups_dom_extent(vals, kind, plan, idx)
   for (i in idx) {
     plan[[i]]$dmax <- ext$dmax
     plan[[i]]$dmin <- ext$dmin
@@ -144,7 +147,7 @@ lane_dom_value <- function(plan, idx, rows, kind) {
 # Zero belongs to marks that encode value as length from a baseline (the bar,
 # the simple dot). A box or mean CI encodes position, read against other rows,
 # so pinning zero would squash data far from it (chart parity: `scale: true`).
-lane_dom_extent <- function(vals, kind, plan, idx) {
+groups_dom_extent <- function(vals, kind, plan, idx) {
   zero <- kind %in% c("bar", "barsplit") ||
     any(vapply(plan[idx], function(p) isTRUE(p$zero), logical(1L)))
   if (zero) {
@@ -156,14 +159,14 @@ lane_dom_extent <- function(vals, kind, plan, idx) {
     }
   } else {
     rng <- if (length(vals)) range(vals) else c(0, 1)
-    pad <- lane_dom_pad(rng)
+    pad <- groups_dom_pad(rng)
     dmin <- rng[[1L]] - pad
     dmax <- rng[[2L]] + pad
   }
   list(dmin = dmin, dmax = dmax)
 }
 
-lane_dom_spark <- function(plan, idx, rows) {
+groups_dom_spark <- function(plan, idx, rows) {
   allx <- numeric()
   ally <- numeric()
   for (i in idx) {
@@ -188,7 +191,7 @@ lane_dom_spark <- function(plan, idx, rows) {
   plan
 }
 
-lane_dom_pair <- function(plan, idx, rows) {
+groups_dom_pair <- function(plan, idx, rows) {
   # Value as POSITION, like the box: the data range plus padding, widened to
   # take in the band and the reference line.
   vals <- numeric()
@@ -199,7 +202,7 @@ lane_dom_pair <- function(plan, idx, rows) {
   }
   vals <- vals[is.finite(vals)]
   rng <- if (length(vals)) range(vals) else c(0, 1)
-  pad <- lane_dom_pad(rng)
+  pad <- groups_dom_pad(rng)
   for (i in idx) {
     plan[[i]]$dmin <- rng[[1L]] - pad
     plan[[i]]$dmax <- rng[[2L]] + pad
@@ -207,7 +210,7 @@ lane_dom_pair <- function(plan, idx, rows) {
   plan
 }
 
-lane_dom_interval <- function(plan, idx, rows) {
+groups_dom_interval <- function(plan, idx, rows) {
   ext <- numeric()
   for (i in idx) {
     for (ss in rows[[plan[[i]]$segs]]) {
@@ -231,7 +234,7 @@ lane_dom_interval <- function(plan, idx, rows) {
   if (xd[[2L]] <= xd[[1L]]) xd[[2L]] <- xd[[1L]] + 1
   if (!has_preset && !is_date && xd[[1L]] >= 0) {
     xd[[1L]] <- 0
-    at <- summarize_axis_ticks(xd[[1L]], xd[[2L]], k = 7L)
+    at <- cells_axis_ticks(xd[[1L]], xd[[2L]], k = 7L)
     if (length(at) >= 2L) {
       step <- at[[2L]] - at[[1L]]
       if (is.finite(step) && step > 0) {

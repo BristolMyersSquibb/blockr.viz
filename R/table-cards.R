@@ -27,8 +27,8 @@ cards_num <- function(x, dig = NA_integer_) {
 
 #' The card model of a groups-layout table.
 #'
-#' @param m The cell model, [summarize_cells()].
-#' @param prep The prepared table, [summarize_prepare()].
+#' @param m The cell model, [groups_cells()].
+#' @param prep The prepared table, [groups_prepare()].
 #' @param data The table's input, for the row colours' scale-map lookup.
 #' @param scale_map The board scale map, or `NULL`.
 #' @return A list: `n`, `multi` (draw row heads and column heads), `label`
@@ -76,9 +76,9 @@ cards_groups_col <- function(p, c, k, rows, prep) {
       rows[[nm]]
     }
   }
-  dom <- summarize_axis_domain(p, prep)
+  dom <- cells_axis_domain(p, prep)
   digits <- function(...) {
-    summarize_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
+    cells_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
   }
   sub <- NULL
   # The statistic the grey line holds ("Q1-Q3", "95% CI"): a card in a
@@ -119,7 +119,7 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     bc <- get(p$key)
     bl <- get(p$lo)
     bh <- get(p$hi)
-    dig <- summarize_val_digits(c(bc, bl, bh))
+    dig <- cells_val_digits(c(bc, bl, bh))
     main <- cards_num(bc, dig)
     sub <- ifelse(is.na(bl) | is.na(bh), "",
                   paste0(cards_num(bl, dig), " to ", cards_num(bh, dig)))
@@ -138,7 +138,7 @@ cards_groups_col <- function(p, c, k, rows, prep) {
       get(p$key)
     }
     main <- if (is.null(prep$format)) {
-      cards_num(v, summarize_val_digits(v))
+      cards_num(v, cells_val_digits(v))
     } else {
       out <- rep("", n)
       ok <- !is.na(v)
@@ -179,8 +179,8 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     }
     # The column's domain in two significant digits: the cards have no
     # axis, so the head says what the marks are drawn against.
-    paste0(lane_fmt(signif(d0, 2L)), unit, " to ",
-           lane_fmt(signif(d1, 2L)), unit)
+    paste0(groups_fmt(signif(d0, 2L)), unit, " to ",
+           groups_fmt(signif(d1, 2L)), unit)
   }
   legend <- if (identical(kind, "barsplit")) {
     cards_legend(c$names, c$fills)
@@ -300,13 +300,13 @@ table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
 cards_payload <- function(model) {
   if (is.null(model)) return(NULL)
   arr <- function(x) I(unname(as.character(x)))
-  summarize_drop_null(list(
+  groups_drop_null(list(
     n = model$n,
     multi = isTRUE(model$multi),
     label = arr(model$label),
     hex = if (!is.null(model$hex)) arr(model$hex),
     cols = lapply(model$cols, function(c) {
-      summarize_drop_null(list(
+      groups_drop_null(list(
         label = c$label, range = c$range, word = c$word,
         legend = c$legend, glyph = c$glyph,
         text = if (isTRUE(c$text)) TRUE,

@@ -1,8 +1,10 @@
+# Summary entries: the types and their marks, and each entry normalized
+# under the spec's keys (R/spec-table-summaries.R) before the engine reads it.
+
 # Row types and the displays each allows; the first is the default. `dot` is a
-# single value as a positioned point on the zero-based lane. `dist` keeps its
-# legacy `show` values because saved boards carry them; they are sugar over
-# `style` / `inner` / `outer` (LANE_DIST_STYLES).
-LANE_ROW_TYPES <- list(
+# single value as a positioned point on the zero-based lane. A dist's `show`
+# is sugar over `style`, `summary` and `whiskers` (GROUPS_DIST_STYLES).
+GROUPS_ROW_TYPES <- list(
   simple = c("bar", "number", "dot", "tile"),
   dist = c("pointrange", "box", "text"),
   field = "text",
@@ -16,7 +18,7 @@ LANE_ROW_TYPES <- list(
 # The pair row: two summaries of one group drawn as a segment, a hollow diamond
 # at `from` and a dot at `to`. `from_func` / `to_func` default to "identity"
 # and "max".
-LANE_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
+GROUPS_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
 
 # A distribution glyph is ONE mark: a centre, an optional inner range and an
 # optional outer range, drawn in a `style`:
@@ -25,29 +27,29 @@ LANE_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
 #   "box"  outer as a capped whisker, inner as a rectangle, centre as a tick.
 # Both ranges take "none": an IQR bar is a box with no outer, a plain
 # pointrange a dot with no outer, a bare dot a centre alone. The statistics are
-# LANE_STATS / LANE_WHISKERS.
-LANE_DIST_STYLES <- c("dot", "box")
+# GROUPS_STATS / GROUPS_WHISKERS.
+GROUPS_DIST_STYLES <- c("dot", "box")
 
 # Ceiling on a mapped dimension's levels, the chart block's (MAX_COLOR_LEVELS
 # in chart/model-common.js). In a facet a level is a COLUMN, so a wide table is
 # no reading either. Pointing either at a subject id must fail loudly, naming
 # the column.
-LANE_MAX_LEVELS <- 15L
+GROUPS_MAX_LEVELS <- 15L
 
 # A tile column is a matrix: an AE heatmap lays many terms side by side as
 # square cells, so its facet takes more levels. The cap still stops a facet on
 # a subject id.
-LANE_MAX_TILE_LEVELS <- 300L
+GROUPS_MAX_TILE_LEVELS <- 300L
 
 # A summary entry is read under the spec's keys (R/spec-table-summaries.R).
 # The colour split's `position` is drawn as the mark's mode.
-LANE_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
+GROUPS_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
 #' Normalize a summaries list: types, required fields, `show` within the type's
 #' set, `color` / `facet`, an auto `name`. Returns the list, or `list(err =)`
 #' naming the first broken row.
 #' @noRd
-lane_norm_summaries <- function(summaries, data = NULL) {
+groups_norm_summaries <- function(summaries, data = NULL) {
   if (!is.list(summaries)) return(list(err = "`summaries` must be a list"))
   out <- vector("list", length(summaries))
   for (i in seq_along(summaries)) {
@@ -55,7 +57,7 @@ lane_norm_summaries <- function(summaries, data = NULL) {
     if (!is.list(s)) {
       return(list(err = paste0("Summary ", i, " is not a list")))
     }
-    r <- lane_norm_row(s, i, data)
+    r <- groups_norm_row(s, i, data)
     if (!is.null(r$err)) return(r)
     out[[i]] <- r$s
   }
@@ -64,7 +66,7 @@ lane_norm_summaries <- function(summaries, data = NULL) {
 
 #' Normalize one summary row. Returns `list(s =)` or `list(err =)`.
 #' @noRd
-lane_norm_row <- function(s, i, data = NULL) {
+groups_norm_row <- function(s, i, data = NULL) {
   # An unset field is ABSENT. A typed tool call delivers the array as a table,
   # so unused fields arrive as NA, which a per-type branch would read as a
   # value (a pair row threw "invalid 'times'").
@@ -72,11 +74,11 @@ lane_norm_row <- function(s, i, data = NULL) {
     is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
   }, logical(1L))]
   type <- chr_state(s$type) %||% "simple"
-  if (!type %in% names(LANE_ROW_TYPES)) {
+  if (!type %in% names(GROUPS_ROW_TYPES)) {
     return(list(err = paste0("Summary ", i, ": unknown type \"", type,
                              "\"")))
   }
-  shows <- LANE_ROW_TYPES[[type]]
+  shows <- GROUPS_ROW_TYPES[[type]]
   show_given <- chr_state(s$show)
   show <- show_given %||% shows[[1L]]
   if (!show %in% shows) show <- shows[[1L]]
@@ -85,7 +87,7 @@ lane_norm_row <- function(s, i, data = NULL) {
   # Fields are group facts: always pooled (they stand outside faceting).
   if (identical(type, "field")) scope <- "pooled"
 
-  for (nm in lane_required_fields(type, s)) {
+  for (nm in groups_required_fields(type, s)) {
     if (is.null(chr_state(s[[nm]]))) {
       return(list(err = paste0("Summary ", i, " (", type, "): `", nm,
                                "` is required")))
@@ -95,7 +97,7 @@ lane_norm_row <- function(s, i, data = NULL) {
   s$type <- type
   s$show <- show
   pos <- chr_state(s[["position"]])
-  s$position <- if (!is.null(pos) && pos %in% names(LANE_POSITIONS)) pos
+  s$position <- if (!is.null(pos) && pos %in% names(GROUPS_POSITIONS)) pos
   # The tile: a square cell painted by the worst level of `fill`, else by the
   # value. Facet levels order by row count by default (commonest terms first).
   if (identical(type, "simple") && identical(show, "tile")) {
@@ -108,22 +110,22 @@ lane_norm_row <- function(s, i, data = NULL) {
   s$scope <- scope
   # Colour and facet are the summary's OWN optional mappings. `scope` survives
   # only to seed `facet` for boards saved under the table-level pair
-  # (lane_migrate_globals()).
+  # (groups_migrate_globals()).
   s$color <- chr_state(s$color)
   # Fields are group facts: outside faceting.
   s$facet <- if (identical(type, "field")) NULL else chr_state(s$facet)
   if (identical(type, "dist") && !identical(show, "text")) {
-    s <- lane_norm_dist(s, show_given)
+    s <- groups_norm_dist(s, show_given)
   }
-  if (identical(type, "sparkline")) s <- lane_norm_sparkline(s)
-  if (identical(type, "spans")) s <- lane_norm_spans(s)
-  if (identical(type, "pair")) s <- lane_norm_pair(s)
-  s$name <- chr_state(s$name) %||% lane_summary_auto_name(s, data)
+  if (identical(type, "sparkline")) s <- groups_norm_sparkline(s)
+  if (identical(type, "spans")) s <- groups_norm_spans(s)
+  if (identical(type, "pair")) s <- groups_norm_pair(s)
+  s$name <- chr_state(s$name) %||% groups_summary_auto_name(s, data)
   list(s = s)
 }
 
 # The fields a row of this type cannot do without.
-lane_required_fields <- function(type, s) {
+groups_required_fields <- function(type, s) {
   switch(type,
     simple = if (!identical(chr_state(s$func) %||% "count", "count")) {
       "col"
@@ -141,15 +143,15 @@ lane_required_fields <- function(type, s) {
 # The distribution glyph's three axes. `show` is sugar: it seeds the style and,
 # for "pointrange", the absent outer range. An explicit `style` / `inner` /
 # `outer` wins.
-lane_norm_dist <- function(s, show_given) {
+groups_norm_dist <- function(s, show_given) {
   style <- chr_state(s$style) %||%
     if (identical(show_given, "box")) "box" else "dot"
-  if (!style %in% LANE_DIST_STYLES) style <- "dot"
+  if (!style %in% GROUPS_DIST_STYLES) style <- "dot"
   inner <- chr_state(s$summary) %||% "median_q1_q3"
-  if (!inner %in% c("none", LANE_STATS)) inner <- "median_q1_q3"
+  if (!inner %in% c("none", GROUPS_STATS)) inner <- "median_q1_q3"
   outer <- chr_state(s$whiskers) %||%
     if (identical(show_given, "pointrange")) "none" else "tukey"
-  if (!outer %in% c("none", LANE_WHISKERS)) outer <- "tukey"
+  if (!outer %in% c("none", GROUPS_WHISKERS)) outer <- "tukey"
   s$style <- style
   s$summary <- inner
   s$whiskers <- outer
@@ -158,7 +160,7 @@ lane_norm_dist <- function(s, show_given) {
 }
 
 # The sparkline's reference `summary` (pooled lines or bands); "none" = off.
-lane_norm_sparkline <- function(s) {
+groups_norm_sparkline <- function(s) {
   ref <- chr_state(s$summary) %||% "none"
   if (!ref %in% c("none", "mean", "mean_sd", "median_q1_q3")) ref <- "none"
   s$summary <- ref
@@ -167,7 +169,7 @@ lane_norm_sparkline <- function(s) {
 
 # The spans row's event identity: `label` headlines each segment's tooltip,
 # `tooltip` adds columns, `size` opts into the tall exhibit form.
-lane_norm_spans <- function(s) {
+groups_norm_spans <- function(s) {
   s$tooltip <- as.character(s$tooltip %||% character())
   size <- chr_state(s$size) %||% "md"
   if (!size %in% c("md", "lg")) size <- "md"
@@ -179,15 +181,15 @@ lane_norm_spans <- function(s) {
 # The pair row: the two functions, an optional band (`ref_min` / `ref_max`,
 # number or column), one reference line (`x_lines`, a number) and a
 # `linetype` column whose non-first levels draw dashed.
-lane_norm_pair <- function(s) {
+groups_norm_pair <- function(s) {
   ff <- chr_state(s$x_func) %||% "identity"
-  if (!ff %in% LANE_PAIR_FUNCS) ff <- "identity"
+  if (!ff %in% GROUPS_PAIR_FUNCS) ff <- "identity"
   tf <- chr_state(s$xend_func) %||% "max"
-  if (!tf %in% LANE_PAIR_FUNCS) tf <- "max"
+  if (!tf %in% GROUPS_PAIR_FUNCS) tf <- "max"
   s$x_func <- ff
   s$xend_func <- tf
-  s$ref_min <- lane_pair_bound(s$ref_min)
-  s$ref_max <- lane_pair_bound(s$ref_max)
+  s$ref_min <- groups_pair_bound(s$ref_min)
+  s$ref_max <- groups_pair_bound(s$ref_max)
   ref <- suppressWarnings(as.numeric(unlist(s$x_lines) %||% NA_real_))[1L]
   s$x_lines <- if (is.finite(ref)) ref
   s$linetype <- chr_state(s$linetype)
@@ -198,9 +200,9 @@ lane_norm_pair <- function(s) {
 #' dots and pairs draw one mark per level. A simple bar draws stacked segments
 #' (`barsplit`), since colour on a magnitude is its composition; with one level
 #' per group it degenerates to a single bar in that level's colour. Numbers and
-#' text have nothing to colour. lane_summary_plan() decides the shape.
+#' text have nothing to colour. groups_summary_plan() decides the shape.
 #' @noRd
-lane_takes_color <- function(s) {
+groups_takes_color <- function(s) {
   if (identical(s$type, "dist")) return(!identical(s$show, "text"))
   if (identical(s$type, "pair")) return(TRUE)
   identical(s$type, "simple") && s$show %in% c("dot", "bar")
@@ -210,14 +212,14 @@ lane_takes_color <- function(s) {
 #' their cell, plus the swimlane, whose segments are coloured by the event
 #' attribute rather than split into lanes.
 #' @noRd
-lane_color_capable <- function(s) {
-  lane_takes_color(s) || identical(s$type, "spans")
+groups_color_capable <- function(s) {
+  groups_takes_color(s) || identical(s$type, "spans")
 }
 
 #' A pair row's band bound: a finite number, a column name, or NULL. Numbers
 #' may arrive as strings from the gear's text input.
 #' @noRd
-lane_pair_bound <- function(x) {
+groups_pair_bound <- function(x) {
   if (is.null(x) || !length(x)) return(NULL)
   x <- x[[1L]]
   if (is.numeric(x)) return(if (is.finite(x)) as.numeric(x))
@@ -231,11 +233,11 @@ lane_pair_bound <- function(x) {
 #' onto every column that can carry one, the facet onto every column whose
 #' legacy `scope` was "cell". A row that names its own keeps it.
 #' @noRd
-lane_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
+groups_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
   if (is.null(color) && is.null(facet)) return(summaries)
   for (i in seq_along(summaries)) {
     s <- summaries[[i]]
-    if (!is.null(color) && is.null(s$color) && lane_color_capable(s)) {
+    if (!is.null(color) && is.null(s$color) && groups_color_capable(s)) {
       s$color <- color
     }
     if (!is.null(facet) && is.null(s$facet) && !identical(s$type, "field") &&
@@ -248,15 +250,15 @@ lane_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
 }
 
 #' The statistic that supplies a distribution glyph's CENTRE: the inner range's,
-#' else the outer range's (every LANE_STATS entry is a centre plus bounds), else
+#' else the outer range's (every GROUPS_STATS entry is a centre plus bounds), else
 #' the median. A centre is never absent.
 #' @noRd
-lane_dist_centre_stat <- function(s) {
+groups_dist_centre_stat <- function(s) {
   inner <- chr_state(s$summary)
   if (!is.null(inner) && !identical(inner, "none")) return(inner)
   outer <- chr_state(s$whiskers)
   if (!is.null(outer) && !identical(outer, "none") &&
-        outer %in% LANE_STATS) {
+        outer %in% GROUPS_STATS) {
     return(outer)
   }
   "median_q1_q3"
@@ -265,13 +267,13 @@ lane_dist_centre_stat <- function(s) {
 # The header of an unnamed column: the variable label where the data column
 # has one ("Mean Start Day", not "Mean ASTDY"), else its name.
 #' @noRd
-lane_summary_auto_name <- function(s, data = NULL) {
+groups_summary_auto_name <- function(s, data = NULL) {
   nm <- function(col) {
     col <- chr_state(col)
     if (is.null(col) || !is.data.frame(data) || !col %in% names(data)) {
       return(col)
     }
-    summarize_col_name(data, col)
+    groups_col_name(data, col)
   }
   switch(s$type,
     simple = {
@@ -296,22 +298,22 @@ lane_summary_auto_name <- function(s, data = NULL) {
   )
 }
 
-# Fold cap for field cells: join up to LANE_FIELD_JOIN distinct values, then
-# "+n more"; past LANE_FIELD_MANY say how many. Never first(): an arbitrary
+# Fold cap for field cells: join up to GROUPS_FIELD_JOIN distinct values, then
+# "+n more"; past GROUPS_FIELD_MANY say how many. Never first(): an arbitrary
 # representative presented as data is a silent lie.
-LANE_FIELD_JOIN <- 3L
-LANE_FIELD_MANY <- 8L
+GROUPS_FIELD_JOIN <- 3L
+GROUPS_FIELD_MANY <- 8L
 
 #' @noRd
-lane_field_join <- function(x) {
+groups_field_join <- function(x) {
   u <- unique(as.character(x))
   u <- u[!is.na(u) & nzchar(u)]
   n <- length(u)
   if (n == 0L) return("")
-  if (n > LANE_FIELD_MANY) return(paste0(n, " values"))
-  if (n > LANE_FIELD_JOIN) {
-    return(paste0(paste(u[seq_len(LANE_FIELD_JOIN)], collapse = ", "),
-                  ", +", n - LANE_FIELD_JOIN, " more"))
+  if (n > GROUPS_FIELD_MANY) return(paste0(n, " values"))
+  if (n > GROUPS_FIELD_JOIN) {
+    return(paste0(paste(u[seq_len(GROUPS_FIELD_JOIN)], collapse = ", "),
+                  ", +", n - GROUPS_FIELD_JOIN, " more"))
   }
   paste(u, collapse = ", ")
 }

@@ -9,7 +9,7 @@
 #' `.group<k>_level` columns (and the blocks of `.variable_label`) are the
 #' sections, and every other dotted column stays out of the cells.
 #'
-#' @param data A structured frame (`dt_is_structured()`), a Table 1 or the
+#' @param data A structured frame (`table_is_structured()`), a Table 1 or the
 #'   rows nested under `by` (`table_nest()`).
 #' @param drill The drill state; a value other than `NULL` or `""` puts the
 #'   claims on the rows, the sections, the headers and the columns. A column
@@ -27,7 +27,7 @@
 table_structured_view <- function(data, drill = NULL, digits = "number",
                                   unit = NULL, collapsible = TRUE) {
   p <- table_structured_parts(data)
-  data <- dt_structured_numbers(p$data, p$data_cols, digits, unit)
+  data <- table_structured_numbers(p$data, p$data_cols, digits, unit)
   if (length(p$data_cols) == 0L || nrow(data) == 0L) {
     return(NULL)
   }

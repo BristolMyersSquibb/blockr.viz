@@ -4,7 +4,7 @@ cells_lane <- function(ctx, p, b) {
   wd <- p$words %||% list(center = "Center", range = "Range")
   # Column-level: TRUE when the mark draws no outer range, so the lane keeps a
   # hairline. Other lanes are bare because the whisker or fence band is the
-  # rail (LANE_DIST_STYLES). Derived from the leaf columns when the plan is silent.
+  # rail (GROUPS_DIST_STYLES). Derived from the leaf columns when the plan is silent.
   bare <- if (is.null(p$bare)) {
     !("wl" %in% names(p$cols %||% character()))
   } else {
@@ -16,7 +16,7 @@ cells_lane <- function(ctx, p, b) {
     centres <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
       if (!is.na(cn["bc"])) rows[[cn[["bc"]]]]
     }))
-    summarize_val_digits(centres, p$dmin, p$dmax)
+    cells_val_digits(centres, p$dmin, p$dmax)
   }
   lane <- list(wd = wd, bare = bare, lab_on = lab_on, dig = dig)
   base <- cells_lane_glyph(ctx, p, b, lane, p$cols)
@@ -35,7 +35,7 @@ cells_lane <- function(ctx, p, b) {
     })
     c(list(kind = p$kind, multi = TRUE, levels = as.character(p$levels),
            fills = as.character(p$fills), v = base$v, lv = lv),
-      if (lab_on) list(dw = summarize_multi_dw(lv)))
+      if (lab_on) list(dw = cells_multi_dw(lv)))
   }
 }
 
@@ -56,7 +56,7 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
   bh <- cells_col_or_na(rows, cn, "bh")
   nn <- cells_col_or_na(rows, cn, "n")
   lab <- if (lane$lab_on) {
-    disp <- summarize_val_str(bc, lane$dig)
+    disp <- cells_val_str(bc, lane$dig)
     list(disp = disp, dw = max(c(1L, nchar(disp))))
   }
   # A split glyph's tooltip names its level first.
@@ -92,13 +92,13 @@ cells_lane_clause <- function(word, lo, hi) {
   if (is.null(word)) return("")
   paste0(" \u00b7 ", word, " ",
          ifelse(is.na(lo) | is.na(hi), "undefined (n < 2)",
-                paste0(lane_fmt(lo), "\u2013", lane_fmt(hi))))
+                paste0(groups_fmt(lo), "\u2013", groups_fmt(hi))))
 }
 
 cells_lane_tip <- function(pre, wd, nn, bc, bl, bh, wl, wh) {
   ifelse(is.na(bc), "", paste0(
     pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
-    wd$center, " ", lane_fmt(bc),
+    wd$center, " ", groups_fmt(bc),
     cells_lane_clause(wd$range, bl, bh), cells_lane_clause(wd$whisk, wl, wh)
   ))
 }
@@ -122,7 +122,7 @@ cells_pair <- function(ctx, p, b) {
   deltas <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
     rows[[cn[["b"]]]] - rows[[cn[["a"]]]]
   }))
-  dig <- if (lab_on) summarize_val_digits(deltas, p$dmin, p$dmax)
+  dig <- if (lab_on) cells_val_digits(deltas, p$dmin, p$dmax)
   signed <- any(deltas < 0, na.rm = TRUE)
   pr <- list(dmn = p$dmin %||% ctx$mn, dmx = p$dmax %||% ctx$mx, wd = wd,
              lab_on = lab_on, dig = dig, signed = signed)
@@ -147,7 +147,7 @@ cells_pair <- function(ctx, p, b) {
     list(kind = "pair", multi = TRUE,
          levels = as.character(p$levels), fills = fills,
          rf = base$rf, v = base$v, lv = lv,
-         dw = if (lab_on) summarize_multi_dw(lv))
+         dw = if (lab_on) cells_multi_dw(lv))
   }
 }
 
@@ -178,7 +178,7 @@ cells_pair_bell <- function(ctx, p, b, pr, cn, didx, fill, lvl = NULL,
   tip <- cells_pair_tip(pre, pr$wd, a, bb, lo, hi, nn, band, both, delta)
   disp <- if (pr$lab_on) {
     ifelse(both, paste0(ifelse(pr$signed & delta >= 0, "+", ""),
-                        summarize_val_str(delta, pr$dig)), "")
+                        cells_val_str(delta, pr$dig)), "")
   }
   ab <- cells_pair_ends(a, bb, both, delta)
   list(kind = "pair",
@@ -198,15 +198,15 @@ cells_pair_bell <- function(ctx, p, b, pr, cn, didx, fill, lvl = NULL,
 cells_pair_tip <- function(pre, wd, a, b, lo, hi, nn, band, both, delta) {
   ifelse(is.na(a) & is.na(b), "", paste0(
     pre,
-    ifelse(is.na(a), "", paste0(wd$from, " ", lane_fmt(a))),
+    ifelse(is.na(a), "", paste0(wd$from, " ", groups_fmt(a))),
     ifelse(both, " \u2192 ", ""),
-    ifelse(is.na(b), "", paste0(wd$to, " ", lane_fmt(b))),
+    ifelse(is.na(b), "", paste0(wd$to, " ", groups_fmt(b))),
     ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
-                        lane_fmt(delta), ")"), ""),
+                        groups_fmt(delta), ")"), ""),
     ifelse(band, paste0(" \u00b7 range ",
-                        ifelse(is.na(lo), "", lane_fmt(lo)), "\u2013",
-                        ifelse(is.na(hi), "", lane_fmt(hi))), ""),
-    # A parent row is the mean of its rows (lane_pair_fill()); say over how many.
+                        ifelse(is.na(lo), "", groups_fmt(lo)), "\u2013",
+                        ifelse(is.na(hi), "", groups_fmt(hi))), ""),
+    # A parent row is the mean of its rows (groups_pair_fill()); say over how many.
     ifelse(is.na(nn), "", paste0(" \u00b7 mean of ", nn,
                                  ifelse(nn == 1L, " row", " rows")))
   ))
@@ -215,10 +215,10 @@ cells_pair_tip <- function(pre, wd, a, b, lo, hi, nn, band, both, delta) {
 # The ends without their words, for the split card's one line per level.
 cells_pair_ends <- function(a, b, both, delta) {
   ifelse(is.na(a) & is.na(b), "", paste0(
-    ifelse(is.na(a), "", lane_fmt(a)),
+    ifelse(is.na(a), "", groups_fmt(a)),
     ifelse(both, " \u2192 ", ""),
-    ifelse(is.na(b), "", lane_fmt(b)),
+    ifelse(is.na(b), "", groups_fmt(b)),
     ifelse(both, paste0(" (", ifelse(delta >= 0, "+", ""),
-                        lane_fmt(delta), ")"), "")
+                        groups_fmt(delta), ")"), "")
   ))
 }
