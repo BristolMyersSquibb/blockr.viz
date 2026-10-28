@@ -805,8 +805,10 @@
   display: inline-block;
 }
 /* The tile: a square mark with its value, painted by the cell's level. An
-   empty cell is truly empty. */
-.vz-table-groups-table td.vz-table-groups-tile-col {
+   empty cell is truly empty. The selector outranks the table's body-cell
+   padding (table.css, `.vz-table .blockr-table tbody td`), which would push
+   the tile 12px into its column and clip it. */
+.vz-table-groups-table.blockr-table tbody td.vz-table-groups-tile-col {
   width: 28px;
   min-width: 28px;
   padding: 1px;
