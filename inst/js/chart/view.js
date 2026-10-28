@@ -56,7 +56,7 @@
   /** @type {any} */ let measureCtx = null;
 
   const Mixins = /** @type {any} */ (function Mixins() {});
-  Object.assign(Mixins.prototype, NS.chrome, NS.interact, NS.exporter);
+  Object.assign(Mixins.prototype, NS.chrome, NS.scriptBand, NS.interact, NS.exporter);
 
   class ChartView extends Mixins {
     /** @param {HTMLElement & Record<string, any>} el @param {VizScope} scope */
@@ -72,6 +72,7 @@
       this._rowsGen = 0;
       /** @type {VizColumn[]} */ this.columns = [];
       /** @type {Record<string, any>} */ this.config = {};
+      /** @type {Record<string, any>} */ this.derived = {};
       /** @type {any[]} */ this.charts = [];
       /** @type {any[]} */ this._slots = [];
       /** @type {string | null} */ this._renderShape = null;
@@ -138,9 +139,10 @@
       if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
-      this._updateDownloads(d.downloads);
+      this._updateScriptBand(d.script);
       this.drawn = false;
       this._render();
+      this._updateDownloads(d.downloads);
       this._busyDone();
     }
 
@@ -167,6 +169,7 @@
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
       this._showEmpty(NS.model.emptyState(NS.esc(message)));
+      this._updateDownloads(this.derived.downloads);
       this._busyDone();
     }
 
@@ -175,6 +178,7 @@
       const empty = NS.model.gate(this.data, this.columns, this.config);
       if (empty) { this._showEmpty(empty); return; }
       const fam = this._family();
+      this._blank = false;
       this._draw(fam, FAMILIES[fam]);
       // Once more after layout settles.
       if (this._settle) this._settle();
@@ -314,6 +318,7 @@
       this.chartGrid.innerHTML = html;
       this._updateStatus();
       this.drawn = true;
+      this._blank = true;
     }
 
     // Instances survive a redraw unless the family, panel count or theme

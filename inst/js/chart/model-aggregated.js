@@ -86,6 +86,17 @@
   };
 
   /**
+   * A histogram's bin labels from R's edges (derived.hist), in order: a
+   * data frame as rows or as columns. Null without them.
+   * @param {any} edges @returns {string[] | null}
+   */
+  const histBins = (edges) => {
+    const labels = Array.isArray(edges) ? edges.map((e) => e && e.label)
+      : (edges && Array.isArray(edges.label) ? edges.label : null);
+    return labels && labels.length ? labels.map(String) : null;
+  };
+
+  /**
    * The order of a panel's groups on the category axis. A bridge always
    * keeps the data order (a value sort scrambles the running total). "data"
    * is factor levels, else time or numeric order for a date or number
@@ -105,8 +116,11 @@
     const levels = meta && Array.isArray(meta.levels) && meta.levels.length
       ? meta.levels.map(String) : null;
     // Every bin of a histogram, the empty ones too: a missing bin would
-    // close the gap in the distribution it stands for.
-    if (cfg.type === 'histogram' && levels) return levels;
+    // close the gap in the distribution it stands for. R's edges list them.
+    if (cfg.type === 'histogram') {
+      const bins = histBins(cfg.derived.hist) || levels;
+      if (bins) return bins;
+    }
     const levelAt = new Map((levels || []).map((l, i) => [l, i]));
 
     const dataOrder = () => {
