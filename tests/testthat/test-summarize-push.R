@@ -173,7 +173,7 @@ test_that("an interval column has per-row segments on the observed domain", {
 test_that("a sparkline column has pre-printed geometry plus hover values", {
   ae <- push_fixture()
   cells <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "AVAL", col = "DUR", band = c("LO", "HI"))
+    list(type = "sparkline", x = "AVAL", col = "DUR", ymin = "LO", ymax = "HI")
   ))$cells
   c1 <- cells$cols[[1]]
   expect_identical(c1$kind, "sparkline")
@@ -192,7 +192,7 @@ test_that("a leading rank bar beside a trajectory ranks the rows", {
   ae <- push_fixture()
   cells <- sum_model(ae, by = "TERM", summaries = list(
     list(type = "simple", func = "mean", col = "DUR", show = "bar"),
-    list(type = "series", x = "AVAL", col = "DUR")
+    list(type = "sparkline", x = "AVAL", col = "DUR")
   ))$cells
   expect_identical(vapply(cells$cols, function(c) c$kind, ""),
                    c("bar", "sparkline"))
@@ -276,8 +276,8 @@ test_that("the diverging bar's axis is centred on zero at the column max", {
 test_that("a pair column has both ends, the band, the ref and the flags", {
   ae <- push_fixture()
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
-    list(type = "pair", from = "AVAL", from_func = "min", to = "DUR",
-         to_func = "max", lo = 5, ref = 10, dash = "SEV")
+    list(type = "pair", x = "AVAL", x_func = "min", xend = "DUR",
+         xend_func = "max", ref_min = 5, x_lines = 10, linetype = "SEV")
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]
@@ -301,8 +301,8 @@ test_that("a pair column with a negative change signs every label", {
   t2 <- ae$TERM == "T2"
   ae$EDY[t2] <- ae$SDY[t2] - 50
   prep <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "mean")
+    list(type = "pair", x = "SDY", x_func = "mean", xend = "EDY",
+         xend_func = "mean")
   ))
   d <- summarize_cells(prep)$cols[[1]]$disp
   d <- d[nzchar(d)]
@@ -313,7 +313,7 @@ test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
-    list(type = "pair", from = "AVAL", to = "DUR", color = "ARM")
+    list(type = "pair", x = "AVAL", xend = "DUR", color = "ARM")
   ))
   c1 <- summarize_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
@@ -338,7 +338,7 @@ test_that("value labels print one decimal finer than the column axis", {
 test_that("a pair row names a missing column", {
   ae <- push_fixture()
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
-    list(type = "pair", from = "AVAL", to = "NOPE")
+    list(type = "pair", x = "AVAL", xend = "NOPE")
   ))
   expect_match(prep$err, "NOPE")
 })
@@ -349,7 +349,7 @@ test_that("a pair column's dash levels come from the full data, not the facet", 
   # be MILD alone and MODERATE rows elsewhere would be numbered wrongly.
   ae$SEV[ae$ARM == "Placebo"] <- "MILD"
   prep <- summarize_prepare(ae, by = "USUBJID", summaries = list(
-    list(type = "pair", from = "AVAL", to = "DUR", dash = "SEV",
+    list(type = "pair", x = "AVAL", xend = "DUR", linetype = "SEV",
          facet = "ARM")
   ))
   expect_null(prep$err)
@@ -371,7 +371,7 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
   # baselines to the mean of their peaks, not the first subject's baseline to
   # the arm's single highest value.
   prep <- summarize_prepare(ae, by = c("ARM", "USUBJID"), summaries = list(
-    list(type = "pair", from = "AVAL", to = "DUR", lo = "LO", hi = "HI")
+    list(type = "pair", x = "AVAL", xend = "DUR", ref_min = "LO", ref_max = "HI")
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]
@@ -410,8 +410,8 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
 test_that("a colour-split nested pair averages each level's rows", {
   ae <- push_fixture()
   prep <- summarize_prepare(ae, by = c("SOC", "TERM"), summaries = list(
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "max", color = "SEV")
+    list(type = "pair", x = "SDY", x_func = "mean", xend = "EDY",
+         xend_func = "max", color = "SEV")
   ))
   expect_null(prep$err)
   p <- prep$plan[[1]]

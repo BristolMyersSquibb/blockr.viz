@@ -96,11 +96,11 @@ cells_lane_clause <- function(word, lo, hi) {
 }
 
 cells_lane_tip <- function(pre, wd, nn, bc, bl, bh, wl, wh) {
-  ifelse(is.na(bc), "", summarize_esc(paste0(
+  ifelse(is.na(bc), "", paste0(
     pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
     wd$center, " ", lane_fmt(bc),
     cells_lane_clause(wd$range, bl, bh), cells_lane_clause(wd$whisk, wl, wh)
-  )))
+  ))
 }
 
 # The statistics for the hover card; the geometry is percent of the lane and

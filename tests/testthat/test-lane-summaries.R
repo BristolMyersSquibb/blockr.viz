@@ -28,8 +28,8 @@ test_that("normalization fills defaults and names the broken row", {
   # The house default is the dot style with both ranges on; `show` is the
   # legacy mirror of the style, not the axis itself.
   expect_identical(s[[1L]]$style, "dot")
-  expect_identical(s[[1L]]$inner, "median_q1_q3")
-  expect_identical(s[[1L]]$outer, "tukey")
+  expect_identical(s[[1L]]$summary, "median_q1_q3")
+  expect_identical(s[[1L]]$whiskers, "tukey")
   expect_identical(s[[1L]]$show, "pointrange")
   expect_identical(s[[1L]]$scope, "cell")
   expect_identical(s[[1L]]$name, "DUR")
@@ -57,24 +57,24 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   # same three pieces.
   for (st in LANE_DIST_STYLES) {
     s <- dist(style = st)
-    expect_identical(s$inner, "median_q1_q3")
-    expect_identical(s$outer, "tukey")
+    expect_identical(s$summary, "median_q1_q3")
+    expect_identical(s$whiskers, "tukey")
   }
   # Either range switches off, which is where the degenerate family lives.
-  expect_identical(dist(outer = "none")$outer, "none")
-  expect_identical(dist(inner = "none")$inner, "none")
+  expect_identical(dist(whiskers = "none")$whiskers, "none")
+  expect_identical(dist(summary = "none")$summary, "none")
   # A centre is never absent: with the inner range off, the outer range's
   # centre stands in; with both off, the median.
-  expect_identical(lane_dist_centre_stat(dist(inner = "none",
-                                              outer = "min_max")),
+  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+                                              whiskers = "min_max")),
                    "min_max")
-  expect_identical(lane_dist_centre_stat(dist(inner = "none",
-                                              outer = "none")),
+  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+                                              whiskers = "none")),
                    "median_q1_q3")
   # Unknown values fall back rather than throwing: a bad style is a dot.
   expect_identical(dist(style = "banana")$style, "dot")
-  expect_identical(dist(inner = "banana")$inner, "median_q1_q3")
-  expect_identical(dist(outer = "banana")$outer, "tukey")
+  expect_identical(dist(summary = "banana")$summary, "median_q1_q3")
+  expect_identical(dist(whiskers = "banana")$whiskers, "tukey")
 })
 
 test_that("legacy `show` still restores the mark it always drew", {
@@ -85,14 +85,14 @@ test_that("legacy `show` still restores the mark it always drew", {
   # restores as the dot style with no outer, not as the new default.
   pr <- dist(show = "pointrange")
   expect_identical(pr$style, "dot")
-  expect_identical(pr$outer, "none")
+  expect_identical(pr$whiskers, "none")
   # "box" kept its whiskers, and the legacy stat fields still seed the axes.
-  bx <- dist(show = "box", stat = "mean_sd", whiskers = "min_max")
+  bx <- dist(show = "box", summary = "mean_sd", whiskers = "min_max")
   expect_identical(bx$style, "box")
-  expect_identical(bx$inner, "mean_sd")
-  expect_identical(bx$outer, "min_max")
+  expect_identical(bx$summary, "mean_sd")
+  expect_identical(bx$whiskers, "min_max")
   # An explicit axis wins over the sugar.
-  expect_identical(dist(show = "pointrange", outer = "tukey")$outer, "tukey")
+  expect_identical(dist(show = "pointrange", whiskers = "tukey")$whiskers, "tukey")
   expect_identical(dist(show = "box", style = "dot")$style, "dot")
 })
 
@@ -109,11 +109,11 @@ test_that("the ground follows the mark: only a bare mark keeps a hairline", {
   expect_false(plan1()$bare)
   expect_false(plan1(style = "box")$bare)
   # Nothing spanning the cell: the hairline comes back.
-  expect_true(plan1(outer = "none")$bare)
-  expect_true(plan1(inner = "none", outer = "none")$bare)
+  expect_true(plan1(whiskers = "none")$bare)
+  expect_true(plan1(summary = "none", whiskers = "none")$bare)
   # The leaf columns follow the pieces that are on.
-  expect_false("wl" %in% names(plan1(outer = "none")$cols))
-  expect_false("bl" %in% names(plan1(inner = "none")$cols))
+  expect_false("wl" %in% names(plan1(whiskers = "none")$cols))
+  expect_false("bl" %in% names(plan1(summary = "none")$cols))
   expect_true(all(c("bl", "bh", "wl", "wh") %in% names(plan1()$cols)))
 })
 
@@ -198,9 +198,9 @@ test_that("hover text names columns by their labels", {
   attr(ae$AENDY, "label") <- "End Day"
   S <- list(
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
-         color = "SEV", fields = "ARM"),
-    list(type = "pair", name = "Onset to end", from = "ASTDY",
-         from_func = "mean", to = "AENDY", to_func = "mean")
+         color = "SEV", tooltip = "ARM"),
+    list(type = "pair", name = "Onset to end", x = "ASTDY",
+         x_func = "mean", xend = "AENDY", xend_func = "mean")
   )
   m <- summarize_cells(summarize_prepare(ae, by = "TERM", summaries = S))
   expect_match(m$cols[[1L]]$tips[[1L]][[1L]],
@@ -331,13 +331,13 @@ test_that("a mixed column list renders every row type through one table", {
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR", show = "box"),
-    list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+    list(type = "dist", name = "Mean", col = "DUR", summary = "mean_ci95",
          show = "text"),
     list(type = "field", name = "Arms", col = "ARM"),
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV"),
-    list(type = "series", name = "Traj", x = "ASTDY", col = "DUR",
-         band = c("LO", "HI")),
+    list(type = "sparkline", name = "Traj", x = "ASTDY", col = "DUR",
+         ymin = "LO", ymax = "HI"),
     list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
   )
   m <- sum_model(ae, by = "TERM", summaries = S)
@@ -379,7 +379,7 @@ test_that("facet repeats cell rows, pooled rows and fields render once", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Overall", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Overall", col = "DUR", summary = "mean_se",
          show = "text", scope = "pooled"),
     list(type = "field", name = "Arms", col = "ARM")
   )
@@ -399,7 +399,7 @@ test_that("by_level reorders into level groups with a two-row header", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Duration", col = "DUR", summary = "mean_se",
          show = "text", facet = "ARM"),
     list(type = "field", name = "Arms", col = "ARM")
   )
@@ -511,7 +511,7 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Duration", col = "DUR", summary = "mean_se",
          show = "text", facet = "SEV")
   )
   p <- summarize_prepare(ae, by = "TERM", summaries = S,
@@ -640,7 +640,7 @@ test_that("spans label/fields enrich tips and key the highlight", {
   ae$SER <- rep(c("Y", "N"), length.out = nrow(ae))
   c1 <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
-         label = "TERM2", fields = "SER", size = "lg")
+         label = "TERM2", tooltip = "SER", size = "lg")
   ))$cells$cols[[1]]
   # The tooltip headlines the event, then level, span, field pairs.
   expect_match(c1$tips[[1]][[1]], "^Term[0-9] · SEV (MILD|MOD) · ")
@@ -660,12 +660,12 @@ test_that("spans label/fields enrich tips and key the highlight", {
 test_that("a series ref computes a pooled line, mean_sd adds the band", {
   ae <- sum_fixture()
   c1 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean")
+    list(type = "sparkline", x = "ASTDY", col = "DUR", summary = "mean")
   ))$cells$cols[[1]]
   expect_false(is.na(c1$rc))
   expect_true(is.na(c1$rby))               # mean = line only
   c2 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean_sd")
+    list(type = "sparkline", x = "ASTDY", col = "DUR", summary = "mean_sd")
   ))$cells$cols[[1]]
   expect_true(!is.na(c2$rby) && !is.na(c2$rbh) && c2$rbh > 0)
   # The reference rides INSIDE the svg: band can exceed the observed range,
@@ -673,7 +673,7 @@ test_that("a series ref computes a pooled line, mean_sd adds the band", {
   expect_true(c2$rby >= 0)
   # No ref -> no coordinates.
   c3 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR")
+    list(type = "sparkline", x = "ASTDY", col = "DUR")
   ))$cells$cols[[1]]
   expect_true(is.na(c3$rc))
 })
@@ -829,7 +829,7 @@ test_that("colour is a table-level dimension every glyph column inherits", {
   ae <- sum_fixture()
   S <- list(
     list(type = "dist", name = "Duration", col = "DUR", show = "box"),
-    list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+    list(type = "dist", name = "Mean", col = "DUR", summary = "mean_ci95",
          show = "pointrange"),
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV")

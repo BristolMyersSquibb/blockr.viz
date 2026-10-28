@@ -29,7 +29,7 @@ cells_interval_segs <- function(segs, bb) {
   lapply(segs, function(ss) {
     lapply(ss, function(sg) {
       base <- list(bb$pos(sg$s)[[1L]], bb$span(sg$s, sg$e)[[1L]], sg$f)
-      if (!is.null(sg$lb)) c(base, list(summarize_esc(sg$lb))) else base
+      if (!is.null(sg$lb)) c(base, list(sg$lb)) else base
     })
   })
 }
@@ -38,7 +38,7 @@ cells_interval_segs <- function(segs, bb) {
 cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
   lapply(segs, function(ss) {
     vapply(ss, function(sg) {
-      summarize_esc(paste0(
+      paste0(
         if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
         if (!is.null(lv)) {
           paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
@@ -49,7 +49,7 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
         } else {
           ""
         }
-      ))
+      )
     }, character(1L))
   })
 }

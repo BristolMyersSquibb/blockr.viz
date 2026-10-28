@@ -149,7 +149,7 @@ test_that("a custom count with `denom` prints n (%) against the slice's N", {
   d <- rbind(d, data.frame(SOC = NA, TERM = NA, USUBJID = "P4", ARM = "B",
                            GR = NA, S = NA, E = NA))
   prep <- summarize_prepare(d, by = "TERM", summaries = list(
-    list(type = "custom", name = "Patients", denom = "USUBJID",
+    list(type = "custom", name = "Patients", id = "USUBJID",
          fn = "\\(d) d |> dplyr::filter(!is.na(GR)) |> dplyr::summarise(value = dplyr::n_distinct(USUBJID))")
   ))
   expect_null(prep$err)
@@ -163,7 +163,7 @@ test_that("a custom count with `denom` prints n (%) against the slice's N", {
 
 test_that("a custom count with `denom` keeps N on its header", {
   prep <- summarize_prepare(custom_fixture(), by = "TERM", summaries = list(
-    list(type = "custom", name = "Patients", denom = "USUBJID",
+    list(type = "custom", name = "Patients", id = "USUBJID",
          fn = "dplyr::summarise(d, value = dplyr::n_distinct(USUBJID))",
          facet = "ARM")
   ))
