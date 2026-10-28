@@ -171,7 +171,7 @@ legacy_values <- function(block, x, version) {
       })
     }
     st <- x[["stats"]]
-    if (is.character(st) || is.list(st)) {
+    if (legacy_before_rewrite(version) && (is.character(st) || is.list(st))) {
       st <- as.character(unlist(st))
       st[st == "compact"] <- "mean_sd"
       if ("expanded" %in% st) {

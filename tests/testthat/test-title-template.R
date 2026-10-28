@@ -362,7 +362,7 @@ test_that("the groups layout's slots print its settings and its first summary", 
     drill = "auto",
     summaries = list(list(type = "simple", col = "AGE", func = "mean",
                           color = "RACE", facet = "SITE", fill = "GRADE")),
-    title = paste("{@group} {@parent} {@by} {@value} {@id_var} {@color}",
+    title = paste("{@group} {@parent} {@by} {@value} {@id} {@color}",
                   "{@facet} {@fill} {@sort_by} {@top_n} {@drill}")
   )
   args <- table_groups_title_args(viz_block_spec("table"), v)
