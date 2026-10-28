@@ -21,20 +21,23 @@
   const S = V.gear.sections;
   const C = V.gear.controls;
 
+  /** Controls taller than the control line: they take the whole row and
+   * grow with their content. @param {string} control */
+  const isTall = (control) => ['tiles', 'custom', 'template', 'code', 'script'].includes(control);
+
   /**
    * How wide a row is in the section's grid (gear.css): tiles, editors,
    * templates, multi-line text and segments of four or more icons (so their
    * words have room) take the whole width; a control with a second one
-   * beside it (drill, highlight) two cells; a checkbox sits on the
-   * controls' line.
+   * beside it (drill, highlight) two cells. Every other row is one cell.
    * @param {VizRowCtx} ctx @param {boolean} boxed
    */
   const rowClass = (ctx, boxed) => {
     const g = ctx.arg.gear;
     const control = g ? g.control : '';
-    if (control === 'tiles' || control === 'custom' || control === 'template') return ' vz-row--wide';
+    if (control === 'code' || control === 'script') return ' vz-row--code vz-row--tall';
+    if (isTall(control)) return ' vz-row--wide vz-row--tall';
     if (g && g.icons && (ctx.arg.values || []).length >= 4) return ' vz-row--wide';
-    if (control === 'code' || control === 'script') return ' vz-row--code';
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' vz-row--paired';
     }
@@ -195,7 +198,8 @@
         (k) => C.isSet(values[k]) || this._added.has(k));
       const built = plan.map((p) => {
         const sec = S.sectionEl(p.title);
-        for (const key of p.keys) this._row(sec.body, p.title, this._ctx(key, values, rs));
+        const alone = p.keys.length === 1 && !p.adds.length;
+        for (const key of p.keys) this._row(sec.body, alone, this._ctx(key, values, rs));
         if (p.adds.length) this._addMenu(sec.body, p.adds, values, rs);
         return { plan: p, el: sec.el, titleEl: sec.titleEl };
       });
@@ -203,17 +207,21 @@
       this._restoreFocus(focus);
     }
 
-    /** One row: its label over its controls. The label is left out where
-     * it repeats the section's title or where a checkbox carries it.
-     * @param {HTMLElement} body @param {string} section @param {VizRowCtx} ctx */
-    _row(body, section, ctx) {
+    /** One row: its label over its controls. A checkbox has a label too,
+     * with a short verb beside the box. The one row without a label is a
+     * tall control alone in its section (the chart type, the table's
+     * columns, the prepare script): the section's title names it.
+     * @param {HTMLElement} body @param {boolean} alone Whether the row is
+     *   its section's only one. @param {VizRowCtx} ctx */
+    _row(body, alone, ctx) {
       const g = /** @type {VizGearField} */ (ctx.arg.gear);
       const boxed = g.control === 'toggle' ||
         (g.control === 'segmented' && ctx.arg.type.name === 'bool');
+      const labelled = !(alone && isTall(g.control));
       const row = document.createElement('div');
-      row.className = 'vz-row' + rowClass(ctx, boxed);
+      row.className = 'vz-row' + rowClass(ctx, boxed) + (labelled ? '' : ' vz-row--nolabel');
       row.setAttribute('data-role', ctx.key);
-      if (!boxed && ctx.label !== section) {
+      if (labelled) {
         const head = document.createElement('div');
         head.className = 'vz-row-head';
         const lbl = document.createElement('span');

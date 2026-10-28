@@ -203,7 +203,8 @@ test_that("gear option labels match the values they name", {
       a <- spec$args[[nm]]
       labels <- a$gear$labels
       if (is.null(labels)) next
-      n <- if (a$type$name == "bool") 2L else length(a$values)
+      checkbox <- a$type$name == "bool" || identical(a$gear$control, "toggle")
+      n <- if (checkbox) 2L else length(a$values)
       expect_length(labels, n)
     }
   }

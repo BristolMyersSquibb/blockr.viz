@@ -167,9 +167,11 @@ type_fields <- function(fields, spec) {
 #'   segmented, toggle, number, text, code (text over several lines), script
 #'   (the prepare script, behind a checkbox), template, slider, or custom (the
 #'   view draws the row itself).
-#' @param label The row's label.
+#' @param label The row's label, drawn above its control. It should not
+#'   repeat the section's name.
 #' @param labels Option labels: for an enum, in the order of its `values`;
-#'   for a bool, the labels of `TRUE` and `FALSE`.
+#'   for a bool or a toggle, the words beside the checkbox (a short verb,
+#'   "Show") and the word for off.
 #' @param parse For `text`, the rule that reads the typed text ("lines",
 #'   "ranges").
 #' @param when Another argument that must be set for the row to show.

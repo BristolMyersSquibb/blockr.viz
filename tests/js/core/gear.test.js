@@ -39,8 +39,43 @@ test('sections come in tray order with spec labels', () => {
   assert.ok(titles.indexOf('Look') < titles.indexOf('Titles'));
   assert.ok(titles.indexOf('Titles') < titles.indexOf('Drill-down'));
   assert.equal(row(t.el, 'func').querySelector('.blockr-label').textContent, 'Aggregate');
-  // A row label equal to its section title is left out.
+  // The chart type is alone in its section, and its header names it.
   assert.equal(row(t.el, 'type').querySelector('.blockr-label'), null);
+  assert.ok(row(t.el, 'type').classList.contains('vz-row--nolabel'));
+});
+
+test('every row has a label, checkboxes and dropped-label rows included', () => {
+  const label = (el, key) => {
+    const l = row(el, key).querySelector('.vz-row-head .blockr-label');
+    return l ? l.textContent : null;
+  };
+  const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', color: 'SEX',
+                    sort_by: 'value', drill: 'auto' });
+  // These used to have none: a label equal to the section, and checkboxes.
+  assert.equal(label(t.el, 'format'), 'Number format');
+  assert.equal(label(t.el, 'sort_dir'), 'Direction');
+  assert.equal(label(t.el, 'value_labels'), 'Value labels');
+  assert.equal(label(t.el, 'download'), 'Download');
+  assert.equal(label(t.el, 'drill'), 'On click');
+  // A checkbox's own words are a short verb.
+  assert.equal(row(t.el, 'drill').querySelector('.blockr-checkbox__label').textContent, 'Filter on');
+  const unlabelled = rows(t.el).filter((k) => label(t.el, k) == null);
+  assert.deepEqual(unlabelled, ['type', 'script']);
+});
+
+test('short sections are merged: counts, facets and shading join their neighbours', () => {
+  const titles = (el) => Array.from(el.querySelectorAll('.vz-section-title')).map((e) => e.textContent);
+  const section = (el, key) => row(el, key).closest('.vz-section').getAttribute('data-section');
+  const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', facet: 'SEX' });
+  for (const gone of ['Counts', 'Facets', 'Bars', 'Color']) assert.ok(!titles(t.el).includes(gone), gone);
+  assert.equal(section(t.el, 'show_n'), 'Numbers');
+  assert.equal(section(t.el, 'value_labels'), 'Numbers');
+  assert.equal(section(t.el, 'facet_cols'), 'Look');
+  assert.equal(section(t.el, 'x_ranges'), 'Reference lines');
+  // The two-cell field goes last in its section.
+  const refs = Array.from(row(t.el, 'x_ranges').parentElement.querySelectorAll('.vz-row[data-role]'))
+    .map((r) => r.getAttribute('data-role'));
+  assert.equal(refs[refs.length - 1], 'x_ranges');
 });
 
 test('a change sends only the changed key, with the payload revision', () => {
@@ -195,7 +230,7 @@ test('segmented: an enum picks, a bool is a checkbox with its first label', () =
   segs[1].click();
   assert.deepEqual(lastSet(t).values, { position: 'dodge' });
   const vl = row(t.el, 'value_labels');
-  assert.equal(vl.querySelector('.blockr-checkbox__label').textContent, 'Show values');
+  assert.equal(vl.querySelector('.blockr-checkbox__label').textContent, 'Show');
   const box = vl.querySelector('input');
   box.checked = true;
   box.dispatchEvent(new t.win.Event('change'));

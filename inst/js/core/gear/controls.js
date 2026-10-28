@@ -279,7 +279,8 @@
       const room = el.getBoundingClientRect().width;
       if (!room) return;
       seg.classList.remove('vz-seg--bare');
-      const bare = seg.getBoundingClientRect().width > room + 0.5;
+      // The control fills its cell, so words that do not fit overflow it.
+      const bare = Math.max(seg.scrollWidth, seg.getBoundingClientRect().width) > room + 0.5;
       seg.classList.toggle('vz-seg--bare', bare);
       btns.forEach((b, i) => {
         if (bare) {
@@ -412,16 +413,18 @@
   }
 
   /** A checkbox; on a column it switches the setting on with its first
-   * keyword (drill "auto") and shows the column picker beside it.
+   * keyword (drill "auto") and shows the column picker beside it. The box's
+   * words are the first of the gear's labels, the row's label above it.
    * @param {HTMLElement} el @param {VizRowCtx} ctx */
   function toggle(el, ctx) {
+    const words = ((ctx.arg.gear && ctx.arg.gear.labels) || [])[0] || ctx.label;
     if (ctx.arg.type.name === 'bool') {
-      checkbox(el, ctx.label, ctx.value === true, (on) => ctx.set(on), ctx);
+      checkbox(el, words, ctx.value === true, (on) => ctx.set(on), ctx);
       return;
     }
     const on = isSet(ctx.value);
     const choices = choicesFor(ctx);
-    checkbox(el, ctx.label, on, (now) =>
+    checkbox(el, words, on, (now) =>
       ctx.set(now ? (choices[0] ? choices[0].value : null) : null), ctx);
     if (!on) return;
     const sub = document.createElement('div');

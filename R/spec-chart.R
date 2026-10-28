@@ -245,7 +245,7 @@ chart_spec_look <- function() {
     x_ranges = chart_arg(
       type = type_named(type_values()), null = "no ranges",
       applies = c("bar", "scatter", "line", "area"),
-      gear = gear("Look", "text", "Shaded", parse = "ranges"),
+      gear = gear("Reference lines", "text", "Shaded", parse = "ranges"),
       slot = FALSE,
       describe = paste(
         "Named stretches of x shaded behind the marks, as",
@@ -283,7 +283,7 @@ chart_spec_sorting <- function() {
       type = "enum", values = c("asc", "desc"),
       null = "desc for sort_by = \"value\", else asc",
       applies = c(SPEC_CHART_AGGREGATED, "gantt"),
-      gear = gear("Order", "segmented", "Order",
+      gear = gear("Order", "segmented", "Direction",
                   labels = c("Ascending", "Descending"), icons = TRUE),
       example = "desc",
       describe = "Sort direction."
@@ -296,8 +296,8 @@ chart_spec_numbers <- function() {
     value_labels = chart_arg(
       type = "bool", default = FALSE,
       applies = c("bar", "waterfall", "histogram"),
-      gear = gear("Bars", "segmented", "Values",
-                  labels = c("Show values", "Off")),
+      gear = gear("Numbers", "segmented", "Value labels",
+                  labels = c("Show", "Off")),
       example = TRUE,
       describe = paste(
         "TRUE writes each bar's value at its end: a stack its total, a",
@@ -326,7 +326,7 @@ chart_spec_numbers <- function() {
     show_n = chart_arg(
       type = "enum", default = "none",
       values = c("none", "axis", "facet", "both"),
-      gear = gear("Counts", "select", "Group counts",
+      gear = gear("Numbers", "select", "Group counts",
                   labels = c("Off", "On category axis", "On facet labels",
                              "On axis + facets")),
       example = "none",
@@ -335,7 +335,7 @@ chart_spec_numbers <- function() {
 
     id = chart_arg(
       type = "column", null = "count rows",
-      gear = gear("Counts", "column", "Individual id"),
+      gear = gear("Numbers", "column", "Individual id"),
       example = "customer_id",
       describe = paste(
         "Column that identifies an individual, counted distinct by the band",
@@ -372,8 +372,8 @@ chart_spec_lines <- function() {
     identity_line = chart_arg(
       type = "bool", default = FALSE,
       applies = "scatter",
-      gear = gear("Reference lines", "segmented", "Identity",
-                  labels = c("Identity line (y = x)", "Off")),
+      gear = gear("Reference lines", "segmented", "Identity line",
+                  labels = c("Show y = x", "Off")),
       example = FALSE,
       describe = "TRUE draws a dashed y = x line."
     ),
@@ -401,7 +401,7 @@ chart_spec_facets <- function() {
   list(
     facet_scales = chart_arg(
       type = "enum", default = "fixed", values = c("fixed", "free", "free_y"),
-      gear = gear("Facets", "select", "Panel scales",
+      gear = gear("Look", "select", "Panel scales",
                   labels = c("Shared across panels", "Free x and y per panel",
                              "Free y per panel"),
                   when = "facet"),
@@ -415,7 +415,7 @@ chart_spec_facets <- function() {
     facet_cols = chart_arg(
       type = "integer", default = opt("blockr.viz.facet_cols"),
       bounds = bounds(1), null = "fit the width",
-      gear = gear("Facets", "select", "Panel columns", when = "facet"),
+      gear = gear("Look", "select", "Panel columns", when = "facet"),
       describe = "Panels per row. NULL fits as many as the card is wide."
     )
   )
@@ -426,7 +426,8 @@ chart_spec_interact <- function() {
     drill = chart_arg(
       type = "column", also = "auto",
       null = "a click does nothing",
-      gear = gear("Drill-down", "toggle", "Filter on"),
+      gear = gear("Drill-down", "toggle", "On click",
+                  labels = c("Filter on", "Off")),
       example = "Species",
       describe = paste(
         "Column a click filters downstream on, or \"auto\" for the type's",

@@ -251,7 +251,7 @@
       "gear": {
         "group": "Order",
         "control": "segmented",
-        "label": "Order",
+        "label": "Direction",
         "labels": ["Ascending", "Descending"],
         "icons": true
       },
@@ -268,10 +268,10 @@
         "only": ["bar", "waterfall", "histogram"]
       },
       "gear": {
-        "group": "Bars",
+        "group": "Numbers",
         "control": "segmented",
-        "label": "Values",
-        "labels": ["Show values", "Off"]
+        "label": "Value labels",
+        "labels": ["Show", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -288,7 +288,7 @@
       "gear": {
         "group": "Numbers",
         "control": "select",
-        "label": "Numbers"
+        "label": "Number format"
       },
       "slot": true,
       "ctrl": true
@@ -375,7 +375,8 @@
       "gear": {
         "group": "Drill-down",
         "control": "toggle",
-        "label": "Filter on"
+        "label": "On click",
+        "labels": ["Filter on", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -545,7 +546,7 @@
         "only": ["bar", "scatter", "line", "area"]
       },
       "gear": {
-        "group": "Look",
+        "group": "Reference lines",
         "control": "text",
         "label": "Shaded",
         "parse": "ranges"
@@ -629,8 +630,8 @@
       "gear": {
         "group": "Reference lines",
         "control": "segmented",
-        "label": "Identity",
-        "labels": ["Identity line (y = x)", "Off"]
+        "label": "Identity line",
+        "labels": ["Show y = x", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -704,7 +705,7 @@
         "group": "Marks",
         "control": "segmented",
         "label": "Centers",
-        "labels": ["Connect centers", "Off"]
+        "labels": ["Connect", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -778,7 +779,7 @@
       },
       "nullable": true,
       "gear": {
-        "group": "Counts",
+        "group": "Numbers",
         "control": "column",
         "label": "Individual id"
       },
@@ -864,7 +865,7 @@
       "values": ["none", "axis", "facet", "both"],
       "nullable": false,
       "gear": {
-        "group": "Counts",
+        "group": "Numbers",
         "control": "select",
         "label": "Group counts",
         "labels": ["Off", "On category axis", "On facet labels", "On axis + facets"]
@@ -918,7 +919,7 @@
       "values": ["fixed", "free", "free_y"],
       "nullable": false,
       "gear": {
-        "group": "Facets",
+        "group": "Look",
         "control": "select",
         "label": "Panel scales",
         "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"],
@@ -939,7 +940,7 @@
       },
       "nullable": true,
       "gear": {
-        "group": "Facets",
+        "group": "Look",
         "control": "select",
         "label": "Panel columns",
         "when": "facet"
@@ -957,7 +958,7 @@
         "group": "Reader tools",
         "control": "segmented",
         "label": "Download",
-        "labels": ["Download", "No download"]
+        "labels": ["Show button", "Off"]
       },
       "slot": true,
       "ctrl": false
