@@ -41,10 +41,23 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: 7px;
+  margin-top: 4px;
   padding-left: 2px;
 }
 .vz-row--dirty .vz-template-shows { opacity: 0.45; }
+/* No line where it would only repeat the field: plain text, no slots. */
+.vz-template-shows.is-same { display: none; }
+/* A template row stacks: the field, what the card shows, a warning. Side by
+   side they wrapped in narrow columns and stretched the field to their
+   height. */
+.vz-section--titles .vz-row-controls {
+  flex-direction: column;
+  gap: 0;
+}
+/* The help is the same for every row, so the section shows it once, under
+   its last row. */
+.vz-section--titles > .vz-row:not(:last-child) .vz-help { display: none; }
+.vz-section--titles > .vz-row:last-child .vz-help { margin-top: 10px; }
 /* The only chrome: a turn, saying that the line above becomes this one. */
 .vz-template-turn {
   flex: 0 0 auto;
