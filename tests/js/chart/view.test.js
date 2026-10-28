@@ -83,6 +83,18 @@ test('downloads: the formats R offers, while download is on', () => {
   c.close();
 });
 
+test('an empty state offers no Image: there is no picture to take', () => {
+  const downloads = [{ id: 'blk-dl_xlsx', ext: 'xlsx', label: 'Excel' },
+                     { id: 'blk-dl_png', ext: 'png', label: 'Image' }];
+  const c = D.open({ ...BAR, y: null, download: true }, { derived: { downloads } });
+  assert.match(c.block.chartGrid.textContent, /^Pick/);
+  assert.ok(c.block.downloadEl.querySelector('#blk-dl_xlsx'));
+  assert.strictEqual(c.block.downloadEl.querySelector('#blk-dl_png'), null);
+  c.send({ ...c.config, y: 'AETERM' }, { derived: { downloads } });
+  assert.ok(c.block.downloadEl.querySelector('#blk-dl_png'), 'drawn again: Image is back');
+  c.close();
+});
+
 test('the theme R names is the ECharts theme; a new one draws new instances', () => {
   const c = D.open(BAR, { derived: { theme: 'dark' } });
   assert.strictEqual(c.chart().theme, 'dark');

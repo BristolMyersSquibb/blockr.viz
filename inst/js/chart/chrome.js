@@ -83,12 +83,15 @@
       this.titleWrap.style.display = shows(t) || shows(s) ? '' : 'none';
     },
 
-    // The formats R offers (core/download.js). Opening the control sends the picture to R.
+    // The formats R offers (core/download.js). Opening the control sends the
+    // picture to R; an empty state has none, so Image is left out.
     /** @this {any} @param {any} list */
     _updateDownloads(list) {
-      const show = this.config.download !== false && Array.isArray(list) && list.length > 0;
+      const offer = (Array.isArray(list) ? list : [])
+        .filter((/** @type {any} */ f) => !(this._blank && f.ext === 'png'));
+      const show = this.config.download !== false && offer.length > 0;
       this.downloadEl.hidden = !show;
-      V.downloads(this.downloadEl, show ? list : [], this.scope,
+      V.downloads(this.downloadEl, show ? offer : [], this.scope,
                   { onOpen: () => this._downloadImage(true) });
     },
 
