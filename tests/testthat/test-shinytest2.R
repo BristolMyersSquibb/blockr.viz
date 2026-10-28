@@ -643,20 +643,6 @@ test_that("summary_table: produces the wide annotated summary frame", {
   expect_setequal(res$.label, c("revenue", "profit"))
 })
 
-test_that("gt_table: registers and binds its gt output", {
-  skip_if_no_app()
-
-  # The gt widget itself renders into the (lazily-evaluated) block-output pane,
-  # which a headless board leaves suspended; asserting the bound gt output is a
-  # stable smoke that the block constructs, registers and wires without error.
-  # Full gt rendering is covered by gt's own tests.
-  bound <- app$get_js(
-    "!!document.querySelector(
-       '#board-block_gt-result.shiny-bound-output.gt_shiny')"
-  )
-  expect_true(bound)
-})
-
 # ===========================================================================
 # DRILL LIFECYCLE (table and cards parity with the chart): real row clicks,
 # click-to-toggle, Reset, raw-value fidelity, gear uncheck, ctor restore.

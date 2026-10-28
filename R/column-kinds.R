@@ -140,7 +140,5 @@ column_kinds <- function(x) {
 }
 
 # The vocabulary. Deliberately four and deliberately short: they describe what
-# a column IS, and every role's accept list is written in these terms
-# (chart/roles.js ROLES `kinds`). See mark_column_kinds() for what each one
-# covers.
+# a column IS. See mark_column_kinds() for what each one covers.
 COLUMN_KINDS <- c("group", "time", "value", "id")

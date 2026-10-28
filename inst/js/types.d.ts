@@ -125,20 +125,18 @@ declare class VizSentenceSlots {
   close(): void;
 }
 
-/* --- Shared aggregation vocabulary (drilldown-agg.js) ---
-   The group/value/func role triple + AGG_FNS + value-follows-agg reconcile,
-   consumed identically by the chart (chart/) and table.js. Exposed as
-   Blockr.DrilldownAgg (and window.DrilldownAgg). */
+/* --- Aggregation vocabulary (drilldown-agg.js) ---
+   The group/value/func role triple, AGG_FNS and AGG_WORDS, consumed by
+   table.js and the gear. Exposed as Blockr.DrilldownAgg (and
+   window.DrilldownAgg). */
 
 interface VizDrilldownAgg {
-  /** Aggregation-function select options; mirrors R AGG_FNS (drift-tested). */
+  /** Aggregation-function select options. */
   AGG_FNS: Array<{ value: string; label: string }>;
   /** One word per aggregation for composed labels ("Mean AGE", axis titles). */
   AGG_WORDS: Record<string, string>;
   /** The group + value + func role-spec triple hosts spread into their ROLES. */
   aggRoles(opts?: { multiple?: boolean }): Record<string, VizDrilldownRole>;
-  /** Keep `value` consistent with `func`; mutates cfg in place. */
-  reconcileValue(cfg: Record<string, any>, columns: VizColumn[] | null | undefined): void;
 }
 
 /* --- Blockr namespace: the subset blockr.viz consumes from blockr.dplyr --- */

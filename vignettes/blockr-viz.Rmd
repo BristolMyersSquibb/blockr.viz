@@ -27,8 +27,8 @@ Blocks come in two kinds.
   blockr.viz ships one, `summary_table`; you compose it with the dplyr verbs
   (`summarize`, `filter`, `pivot_wider`) from blockr.dplyr. Model fitting and
   `broom` adapters are in blockr.stats.
-- Noun blocks render: they take a data frame and draw it (`chart`, `table`,
-  `gt`).
+- Noun blocks render: they take a data frame and draw it (`chart`,
+  `table`).
 
 Two rules follow. A verb-named block returns a data frame; a noun-named block
 draws. And a renderer only ever receives a rectangular data frame, tidy or wide.
@@ -46,12 +46,11 @@ right, and a renderer receives a rectangular data frame.
 | Reshape | tidy to a wide display grid | wide df | dplyr `pivot_wider` |
 | Fit | fit a statistical model | model object | `model` |
 | Adapt | model to tidy df | tidy df | `broom` (tidy, glance, augment) |
-| Render | df to pixels | UI | `table`, `chart`, `gt` |
+| Render | df to pixels | UI | `table`, `chart` |
 
 Example pipelines:
 
 - `summary_table → table`: summarise variables by a group, shown as a Table 1
-- `summary_table → gt`: the same table, rendered for print
 - correlation matrix `→ table`: a diverging, cell-colored heatmap
 - `summarize → pivot_wider → chart`: a crosstab plotted
 - `model → broom → table`: a coefficient table (`model` and `broom` from blockr.stats)
@@ -67,13 +66,13 @@ static renderer for print or report output.
 
 | Medium | Interactive | Static |
 |---|---|---|
-| table | `new_table_block()` | `new_gt_table_block()` |
+| table | `new_table_block()` | `static_table()` (flextable), `html_exhibit()` |
 | chart | `new_chart_block()` (ECharts) | `ggplot` (separate package) |
 | KPI cards | `new_table_block(look = "cards")` | the cards, as html or a slide |
 
-Dashboards use `table` and `chart`; print output uses `gt`. blockr.viz
-provides the interactive renderers and a convention-aware `gt` adapter; the
-`ggplot` static renderer lives with its own package.
+Dashboards use `table` and `chart`. In a report, `static_exhibit()` prints a
+block's result as a flextable (pptx, docx) or as the HTML table. The `ggplot`
+static renderer lives with its own package.
 
 ### Drill-down
 

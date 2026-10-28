@@ -1,10 +1,3 @@
-/* Drill-Down Chart */
-
-.drilldown-chart-container {
-  font: inherit;
-  position: relative;
-}
-
 /* ===== Settings popover form =====
    All configuration lives in the gear popover. Each field is a vertical
    unit (label on top, full-width control, muted help below). Fields flow
@@ -12,9 +5,8 @@
    to 1 on a narrow one. flex-wrap + min(), no media/container queries
    (see blockr.docs design-system/design-system-prompt.md). Spec:
    blockr.docs design-system/components/blockr-popover.md. */
-/* Portaled to <body>, so styled by its own class, not by a
-   .drilldown-chart-container ancestor. max-height/top/left are set
-   inline by _positionPopover (viewport-clamped). */
+/* Portaled to <body>, so styled by its own class. max-height/top/left
+   are set inline by _positionPopover (viewport-clamped). */
 .blockr-popover.dd-popover {
   width: min(680px, 92vw);
   overflow-y: auto;
@@ -1631,8 +1623,8 @@
 }
 
 /* On the elements themselves, so the output fades back in as well as out. */
-.drilldown-chart-container .dd-chart-grid,
-.drilldown-chart-container .dd-legend-band,
+.dd-chart-grid,
+.dd-legend-band,
 [data-dt-elem-id] .blockr-table-wrapper {
   transition: opacity 0.15s ease;
 }

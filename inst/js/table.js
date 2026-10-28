@@ -2316,8 +2316,8 @@
   // Title / caption bands (chart parity). Filled from the RESOLVED text on
   // the payload (R substitutes the {...} tokens and applies the auto tier);
   // ensured lazily around the scroll wrapper so the chrome — which outlives
-  // payloads — needs no rebuild. Hidden while empty: a title-less table is
-  // pixel-identical to before. textContent, never innerHTML.
+  // payloads — needs no rebuild. Hidden while empty, so a title-less table
+  // takes no space. textContent, never innerHTML.
   // The title and subtitle band: the container's own, or a new one, hidden
   // until applyTitles has text for it.
   /** @param {HTMLElement} root @returns {HTMLElement} */

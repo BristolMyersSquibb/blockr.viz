@@ -73,7 +73,6 @@ R: shared plumbing,R/title-template.R,3000
 R: shared plumbing,R/ctrl-send.R,3000
 R: shared plumbing,R/busy-cue.R,3000
 R: shared plumbing,R/chart-capture.R,3000
-R: shared plumbing,R/viz-block-dep.R,3000
 R: shared plumbing,R/theme-palette.R,3000
 R: shared plumbing,R/drilldown-theme.R,3000
 R: shared plumbing,R/prepare-*.R,3000
@@ -104,7 +103,6 @@ R: PowerPoint and the table painter,R/summarize-paint.R,1800
 R: legacy,R/legacy.R,400
 R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400
-R: legacy,R/gt-table-block.R,400
 R: legacy,R/summarize-block.R,400
 JS: core,inst/js/core/*.js,1300
 JS: core,inst/js/busy-cue.js,1300

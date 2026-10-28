@@ -2,9 +2,6 @@
 # on a block's exposed band) reads to build its options, and what the
 # renderers read for category order.
 #
-# Pulled out of the chart block's server so it can be tested directly -- the
-# reactive it used to live in is unreachable from testServer.
-#
 # No nrow gate: a 0-row frame still HAS columns (names/types/labels/levels),
 # and the pickers must stay usable while an upstream filter has emptied the
 # data.

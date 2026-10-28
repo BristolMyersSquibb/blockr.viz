@@ -497,9 +497,13 @@ legacy_restore_summary <- function(payload, version = NULL) {
 legacy_deser <- function(class, data) {
   payload <- data[["payload"]]
   version <- data[["constructor"]][["version"]]
-  core <- c(names(formals(blockr.core::new_block)), "block_name")
-  attrs <- payload[intersect(names(payload), core)]
-  state <- payload[setdiff(names(payload), core)]
+  is_attr <- if (identical(class, "chart_block")) {
+    !names(payload) %in% legacy_arg_names("chart")
+  } else {
+    names(payload) %in% c(names(formals(blockr.core::new_block)), "block_name")
+  }
+  attrs <- payload[is_attr]
+  state <- payload[!is_attr]
   label <- chr_state(attrs[["block_name"]])
   args <- switch(
     class,
@@ -511,6 +515,14 @@ legacy_deser <- function(class, data) {
   )
   list(block = if (identical(class, "chart_block")) "chart" else "table",
        args = args, attrs = attrs)
+}
+
+# LEGACY: delete with this file
+# The names a saved chart owns: its arguments and every old name. Anything
+# else in a payload is a block attribute, such as blockr.dock's `visible`.
+legacy_arg_names <- function(block) {
+  unique(c(names(viz_block_spec(block)$args), CHART_LEGACY_ARGS,
+           CHART_RETIRED_ARGS, LEGACY_NAMES$old[LEGACY_NAMES$block == block]))
 }
 
 # LEGACY: delete with this file

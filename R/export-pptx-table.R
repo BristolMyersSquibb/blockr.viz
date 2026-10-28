@@ -5,10 +5,10 @@
 #' report / deck rendering (quarto pptx, docx). flextable is the one table
 #' engine whose `knit_print` emits real OpenXML tables in PowerPoint and
 #' Word output, so this is the renderer blockr.outline emits for
-#' table-kind blocks; [gt_table()] remains the HTML-oriented sibling.
+#' table-kind blocks.
 #'
 #' Structure comes from the annotated-df contract (shared with
-#' `html_table()`, [gt_table()] and [write_annotated_xlsx()]): `.label` is
+#' `html_table()` and [write_annotated_xlsx()]): `.label` is
 #' the row stub, `.group<k>_level` runs and `.variable_label` blocks become
 #' bold section-header rows interleaved into the body (merged across the
 #' table width, exactly where the HTML renderer puts its colspan rows),
@@ -125,7 +125,7 @@
 #' @examplesIf requireNamespace("flextable", quietly = TRUE)
 #' tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")
 #' static_table(tbl, title = "Sepal length by species")
-#' @seealso [as_annotated_df()], [gt_table()], [write_annotated_xlsx()],
+#' @seealso [as_annotated_df()], [write_annotated_xlsx()],
 #'   [exhibit-options] for everything the renderer reads from `options()`
 #' @export
 static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
@@ -150,7 +150,7 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   # Shared input contract: a data frame passes through untouched; a
   # table-producing object (composer et al.) is coerced first. Long-form
   # summary_table internals spread to the wide display grid (no-op on
-  # already-wide input) -- same entry sequence as gt_table().
+  # already-wide input).
   data <- as_annotated_df(data)
   data <- fmt_to_wide(data)
 

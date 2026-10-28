@@ -196,7 +196,7 @@ reaches R, by `rec:set_roles`, `rec:set_aesthetics`, `rec:set_distribution`,
 | 106 | Names from blockr.viz < 0.3.0 in code: translated with a warning | rec:ctor_legacy, rec:ctor_legacy_hi; R: test-chart-legacy.R:17 [test: test-chart-record.R :: chart recording: ctor_legacy] [test: test-chart-record.R :: chart recording: ctor_legacy_hi] [test: test-chart-legacy.R :: old names in code are translated, with a warning] |
 | 107 | A board saved with 0.2.x restores silently, old names never come back on re-save | R: test-chart-legacy.R:105, :115, :135 [test: test-chart-legacy.R :: old names never come back on a re-save] [test: test-chart-legacy.R :: a board saved with direct_labels restores as legend = marks] |
 | 108 | Starting state of an unserved block (what a board saves before it runs) | rec (each scenario's `initial`) [test: test-chart-record.R :: chart recording: bar_count] [test: test-chart-record.R :: chart recording: scatter_full] |
-| 109 | Registry entry for the block list and the assistant | rec registry (test-chart-record.R); R: test-block-arguments.R, test-block-arguments-drift.R [test: test-chart-record.R :: chart recording: constructor cases fail and warn as before] [test: test-block-arguments.R :: gt_table_arguments() names match new_gt_table_block() formals exactly] |
+| 109 | Registry entry for the block list and the assistant | rec registry (test-chart-record.R) [test: test-chart-record.R :: chart recording: constructor cases fail and warn as before] |
 | 110 | Description for the assistant | R: test-describe-chart.R [test: test-describe-chart.R :: the description names what is mapped, in chart vocabulary] |
 
 ## Without a test, or only in the browser suite

@@ -67,8 +67,10 @@ new_chart_block <- function(
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  core <- c("block_name", "block_metadata", "ctor", "ctor_pkg")
-  args <- legacy_ctor_args("chart", c(given, dots[setdiff(names(dots), core)]))
+  # Old argument names; any other name is a block attribute (block_name,
+  # blockr.dock's `visible`) that blockr.core keeps.
+  old <- intersect(names(dots), legacy_arg_names("chart"))
+  args <- legacy_ctor_args("chart", c(given, dots[old]))
   values <- viz_check(spec, args)
   if (length(values$ymin) != length(values$ymax)) {
     stop("`ymin` and `ymax` must name the same number of columns.",
@@ -88,9 +90,9 @@ new_chart_block <- function(
     class = "chart_block",
     ...
   )
-  # blockr.core keeps other `...` as attributes, and would save old names
-  # back into every board.
-  for (nm in setdiff(names(dots), core)) attr(res, nm) <- NULL
+  # blockr.core keeps `...` as attributes, and would save old names back into
+  # every board.
+  for (nm in old) attr(res, nm) <- NULL
   res
 }
 

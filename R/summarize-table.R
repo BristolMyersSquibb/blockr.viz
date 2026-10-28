@@ -55,7 +55,7 @@ summarize_level_colors <- function(map, col, levels, column = NULL) {
 }
 
 # The aggregation vocabulary, as a summarise expression over one group.
-# Mirrors the chart's AGG_FNS plus its chart-only "identity" ("None (as is)"):
+# Mirrors the JS AGG_FNS plus the chart-only "identity" ("None (as is)"):
 # `count` needs no value column, everything else reduces `value`
 # (count_distinct reduces `id_var`).
 #' @noRd

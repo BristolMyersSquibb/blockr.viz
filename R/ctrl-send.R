@@ -686,9 +686,9 @@ ctrl_receipt_dep <- memoise0(function() {
 #' Dock serializes an extension by constructor name and package and rebuilds it
 #' on restore, which is why this is an exported constructor rather than the
 #' handful of lines it wraps: a closure defined in an `app.R` has no package to
-#' record, and would not survive a board round-trip. Note that boards saved
-#' *before* the bridge was added to the app carry their old extension list and
-#' come back without a channel -- they need one re-save.
+#' record, and would not survive a board round-trip. A board saved by an app
+#' without the bridge carries that app's extension list and comes back without
+#' a channel; it needs one re-save.
 #'
 #' @param ... Forwarded to `blockr.dock::new_dock_extension()`. On restore, dock
 #'   calls this constructor with the `ctor`/`pkg` it recorded, so the dots must
@@ -764,15 +764,14 @@ new_ctrl_bridge_extension <- function(...) {
 #' user which column was drilled -- it knows.
 #'
 #' @section Cannot resolve is not an un-drill:
-#' Two very different things used to return the same `list()`, and the sender
-#' reads `list()` as "clear the target": the user having no drill selection at
-#' all, and this block being unable to resolve the selection it has. Only the
-#' first is an un-drill. The second is temporary -- a `ctrl_send()` IS a board
+#' The sender reads `list()` as "clear the target". That is right when the user
+#' has no drill selection at all, and wrong when this block cannot resolve the
+#' selection it has. The second is temporary -- a `ctrl_send()` IS a board
 #' update and a board update re-evaluates every block, so the frame a claim is
-#' read off is being rebuilt at exactly the moment the claim is re-read. For
-#' the one flush where it does not line up, the target was cleared to
-#' everything and then re-narrowed: a cohort of 53 patients became all 254 and
-#' back, which on a slow pipeline is plainly visible and reads as a bug.
+#' read off is being rebuilt at exactly the moment the claim is re-read.
+#' Returning `list()` for that one flush would clear the target to everything
+#' and then re-narrow it: a cohort of 53 patients would become all 254 and
+#' back, which on a slow pipeline is plainly visible.
 #'
 #' So anything that means "I do not know right now" returns `NULL` and the
 #' target keeps what it has, which is the treatment a `NULL` input already got
@@ -1151,8 +1150,8 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     # NULL claims = the block has no evaluated data to read a claim off (its
     # input is gated while off screen under lazy evaluation) -- HOLD. This is
     # not an un-drill: the user's selection is still latched block-side, and
-    # the target keeps whatever was last pushed. Clearing here wiped the
-    # cohort the moment the user navigated to the view that consumes it.
+    # the target keeps whatever was last pushed. Clearing here would wipe the
+    # cohort the moment the user navigates to the view that consumes it.
     # `last_key` deliberately stays as it is, so coming back on screen
     # re-evaluates to the same claim and the identical()-skip below swallows
     # the redundant re-send.
