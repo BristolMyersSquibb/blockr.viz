@@ -1,24 +1,24 @@
-# ---------------------------------------------------------------------------
-# Copied from blockr.extra (R/code-block-inputs.R).
-#
-# The chart block's `script` argument uses the code block's declaration
-# convention: a top-level assignment whose right-hand side is a plain value is
-# a control, everything else is code. The copy has the parsing half only. The
-# chart's script sits in a plain textarea in the gear, and the band's own JS
-# renderer draws the controls.
-# ---------------------------------------------------------------------------
+# The prepare script's parse layer: which statements of a block's `script`
+# are controls. The convention is blockr.extra's code block: a top-level
+# assignment whose right-hand side is a plain value is a control, everything
+# else is code. The `cb_` prefix ("code block") and the function names are
+# blockr.extra's (R/code-block-inputs.R, R/code-block-expr.R), so the two
+# can be compared; blockr.viz keeps its own copy because importing
+# blockr.extra would add broom, mirai, DT and evaluate to every deploy. It
+# has the parsing half only: the script sits in a plain textarea in the
+# gear, and the view's script band draws the controls.
 
-#' The inputs layer of the chart block's prepare script
+#' The inputs layer of a block's prepare script
 #'
 #' The script is ordinary R. A top-level assignment whose right-hand side is a
-#' *plain value* ([CB_VALUE_CALLS]) becomes a control on the card; every other
-#' statement is code. A name starting with a dot is never a control.
+#' *plain value* ([CB_VALUE_CALLS]) becomes a control on the block; every
+#' other statement is code. A name starting with a dot is never a control.
 #'
 #' Both are decided by reading the line, without evaluating anything and
 #' wherever it sits in the script. There is no fenced region or marker
 #' comment.
 #'
-#' @name chart-prepare-parse
+#' @name prepare-parse
 #' @keywords internal
 NULL
 
@@ -38,21 +38,21 @@ CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder")
 #' @noRd
 CB_ANN_CALLS <- c("number", "text", "select", "flag", "date", "input")
 
-#' Is this statement an assignment to a bare name?
+#' Is this an assignment to a bare name?
 #'
-#' The shape a declaration has, whether or not it is one.
+#' The shape a declaration has, whether or not it is one. `<<-` binds a name
+#' too, which the substitution in R/prepare-expr.R has to know, but never
+#' declares a control, so it counts only with `super = TRUE`.
 #'
-#' @param e A top-level expression from [parse()].
+#' @param e An expression.
+#' @param super Whether `<<-` counts.
 #' @noRd
-cb_is_assign_stmt <- function(e) {
-  if (!is.call(e) || length(e) != 3L) {
+cb_binds_name <- function(e, super = FALSE) {
+  if (!is.call(e) || length(e) != 3L || !is.name(e[[2L]])) {
     return(FALSE)
   }
-  op <- e[[1L]]
-  if (!identical(op, quote(`<-`)) && !identical(op, quote(`=`))) {
-    return(FALSE)
-  }
-  is.name(e[[2L]])
+  ops <- c("<-", "=", if (super) "<<-")
+  as.character(e[[1L]])[[1L]] %in% ops
 }
 
 #' Is this a name the block keeps to itself?
@@ -72,7 +72,7 @@ cb_is_private_name <- function(name) {
 #' @return `TRUE` for `name <- <plain value>`, the name not starting with a dot.
 #' @noRd
 cb_is_input_stmt <- function(e) {
-  cb_is_assign_stmt(e) && !cb_is_private_name(as.character(e[[2L]])) &&
+  cb_binds_name(e) && !cb_is_private_name(as.character(e[[2L]])) &&
     cb_is_value_rhs(e[[3L]])
 }
 
@@ -263,7 +263,7 @@ cb_specs <- function(parsed, data = NULL) {
     st <- parsed$stmts[[i]]
     if (!st$input || demoted[[i]]) {
       # Bound lazily: forced only if a later declaration reads it.
-      if (cb_is_assign_stmt(st$expr)) {
+      if (cb_binds_name(st$expr)) {
         cb_delay(env, as.character(st$expr[[2L]]), st$expr[[3L]])
       } else if (i < last_decl) {
         # A failure here is not reported: a declaration below that depends on

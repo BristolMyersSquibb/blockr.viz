@@ -106,7 +106,7 @@ test_that("declared kinds reach the browser in the engine's vocabulary", {
     "data"
   )
   ps <- parsed_of(txt)
-  roles <- dd_script_roles(ps$specs)
+  roles <- script_control_records(ps$specs)
   names(roles) <- vapply(roles, `[[`, character(1L), "name")
 
   expect_equal(roles$num$kind, "number")
@@ -133,7 +133,7 @@ test_that("a declaration that cannot become a control says why", {
   # levels. Carried through with its message rather than dropped: a knob that
   # quietly fails to appear is the hardest kind to debug.
   ps <- parsed_of("site <- factor(character(), levels = unique(data$NOPE))\ndata")
-  roles <- dd_script_roles(ps$specs)
+  roles <- script_control_records(ps$specs)
   expect_length(roles, 1L)
   expect_equal(roles[[1L]]$kind, "error")
   expect_true(nzchar(roles[[1L]]$error))
@@ -142,11 +142,11 @@ test_that("a declaration that cannot become a control says why", {
 
 test_that("a control the user has not touched shows what the script says", {
   ps <- parsed_of(script_of("n <- 7", "flag <- FALSE", "data"))
-  cfg <- dd_script_cfg(ps$specs, list())
+  cfg <- script_control_values(ps$specs, list())
   expect_equal(cfg$sv_n, 7)
   expect_equal(cfg$sv_flag, "off")
 
-  cfg <- dd_script_cfg(ps$specs, list(n = 2, flag = TRUE))
+  cfg <- script_control_values(ps$specs, list(n = 2, flag = TRUE))
   expect_equal(cfg$sv_n, 2)
   expect_equal(cfg$sv_flag, "on")
 })

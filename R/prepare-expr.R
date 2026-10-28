@@ -1,10 +1,8 @@
-# ---------------------------------------------------------------------------
-# Copied from blockr.extra (R/code-block-expr.R), which blockr.viz does not
-# import because that would add broom, mirai, DT and evaluate to every deploy.
-# The names stay identical to blockr.extra's.
-# ---------------------------------------------------------------------------
+# The prepare script's compile layer: the script as part of the block's
+# expression, with the controls' values written in. Copied from blockr.extra
+# with the parse layer (see the header of R/prepare-parse.R).
 
-#' Compiling a prepare script into part of the chart block's expression
+#' Compiling a prepare script into part of a block's expression
 #'
 #' The block does not wrap the user's code in a function. It substitutes the
 #' current input values into the body as literals. So:
@@ -15,7 +13,7 @@
 #' * The exported code is the code an analyst would have written, with the
 #'   control values written in: `dplyr::filter(block_1, Species == "setosa")`.
 #'
-#' @name chart-prepare-expr
+#' @name prepare-expr
 #' @keywords internal
 NULL
 
@@ -104,7 +102,7 @@ cb_subst <- function(e, subs) {
   # `x <- v`: the left side is the name being bound, not a reference. An
   # indexed target (`x[i] <- v`) is a call whose index is a reference, so only
   # a bare name is skipped.
-  if (cb_binds_name(e)) {
+  if (cb_binds_name(e, super = TRUE)) {
     e[[3L]] <- cb_subst(e[[3L]], subs)
     return(e)
   }
@@ -137,15 +135,6 @@ cb_map_args <- function(e, f) {
     }
   }
   e
-}
-
-
-#' Is this call an assignment to a bare name?
-#' @noRd
-cb_binds_name <- function(e) {
-  length(e) == 3L && is.name(e[[2L]]) &&
-    (identical(e[[1L]], quote(`<-`)) || identical(e[[1L]], quote(`=`)) ||
-       identical(e[[1L]], quote(`<<-`)))
 }
 
 
@@ -232,7 +221,7 @@ cb_assigned_names <- function(exprs) {
     if (!is.call(e)) {
       return(invisible(NULL))
     }
-    if (cb_binds_name(e)) {
+    if (cb_binds_name(e, super = TRUE)) {
       found <<- c(found, as.character(e[[2L]]))
     }
     # A loop variable is an assignment in the same environment, so a
@@ -305,16 +294,14 @@ cb_demoted <- function(parsed) {
 #' @param parsed The result of [cb_parse()].
 #' @param specs Input specs from [cb_specs()].
 #' @param values Named list of current input values.
-#' @param data_name Name of the block's data slot.
-#' @param slot Emit the `.(data)` bquote marker for the data name (`TRUE`, for a
+#' @param slot Emit the `.(data)` bquote marker for `data` (`TRUE`, for a
 #'   block expression), or leave the bare symbol (`FALSE`, for local
-#'   evaluation). The chart block needs both forms: one to run the script on
-#'   the frame it draws, one for its expression.
+#'   evaluation). A block needs both forms: one to run the script on the
+#'   frame it draws, one for its expression.
 #' @return A quoted expression carrying the `.(data)` slot, or `NULL` when the
 #'   script has no body.
 #' @noRd
-cb_expr <- function(parsed, specs, values = list(), data_name = "data",
-                    slot = TRUE) {
+cb_expr <- function(parsed, specs, values = list(), slot = TRUE) {
   if (!parsed$ok) {
     return(NULL)
   }
@@ -340,7 +327,7 @@ cb_expr <- function(parsed, specs, values = list(), data_name = "data",
   }
 
   subs <- list()
-  subs[[data_name]] <- if (slot) call(".", as.name(data_name)) else as.name(data_name)
+  subs$data <- if (slot) quote(.(data)) else quote(data)
   for (s in specs) {
     # A restored board returns what survived JSON, so the declaration drives
     # the coercion before the value is inlined.
