@@ -150,10 +150,12 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
     model$cols <- lapply(model$cols, html_exhibit_col, data)
     # No row-name column: the first column is printed like any other.
     model$stub <- NULL
-    model$head <- lapply(model$head, function(r) lapply(r, function(h) {
-      h$stub <- NULL
-      h
-    }))
+    model$head <- lapply(model$head, function(r) {
+      lapply(r, function(h) {
+        h$stub <- NULL
+        h
+      })
+    })
   }
   # Nothing can unfold a table with no chevrons, so it cannot start folded.
   if (!is.null(model) && !isTRUE(default_expanded) && isTRUE(collapsible)) {
