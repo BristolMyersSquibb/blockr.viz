@@ -10,35 +10,35 @@ vocab_df <- function() {
   )
 }
 
-test_that("old summary keys read as the public ones", {
-  dist <- lane_public_summary(list(type = "dist", col = "x",
-                                   inner = "mean_sd", outer = "min_max"))
+test_that("old summary keys read as the spec's", {
+  dist <- legacy_summary_entry(list(type = "dist", col = "x",
+                                    inner = "mean_sd", outer = "min_max"))
   expect_identical(dist$summary, "mean_sd")
   expect_identical(dist$whiskers, "min_max")
   expect_false(any(c("inner", "outer", "stat") %in% names(dist)))
 
-  pair <- lane_public_summary(list(type = "pair", from = "BASE", to = "AVAL",
-                                   from_func = "identity", to_func = "max",
-                                   lo = "ANRLO", hi = 20))
-  expect_identical(pair[c("x", "xend", "x_func", "xend_func", "ref_lo",
-                          "ref_hi")],
+  pair <- legacy_summary_entry(list(type = "pair", from = "BASE", to = "AVAL",
+                                    from_func = "identity", to_func = "max",
+                                    lo = "ANRLO", hi = 20))
+  expect_identical(pair[c("x", "xend", "x_func", "xend_func", "ref_min",
+                          "ref_max")],
                    list(x = "BASE", xend = "AVAL", x_func = "identity",
-                        xend_func = "max", ref_lo = "ANRLO", ref_hi = 20))
+                        xend_func = "max", ref_min = "ANRLO", ref_max = "20"))
   expect_false(any(c("from", "to", "lo", "hi") %in% names(pair)))
 
-  spans <- lane_public_summary(list(type = "spans", x = "S", xend = "E",
-                                    fields = c("A", "B")))
+  spans <- legacy_summary_entry(list(type = "spans", x = "S", xend = "E",
+                                     fields = c("A", "B")))
   expect_identical(spans$tooltip, c("A", "B"))
 
-  bar <- lane_public_summary(list(type = "simple", color = "SEV",
-                                  position = "grouped"))
+  bar <- legacy_summary_entry(list(type = "simple", color = "SEV",
+                                   position = "grouped"))
   expect_identical(bar$position, "dodge")
 })
 
-test_that("the engine reads public keys", {
+test_that("the engine reads the spec's keys", {
   d <- data.frame(g = c("a", "a", "b"), BASE = c(1, 2, 3), AVAL = c(2, 4, 5))
   p <- lane_prepare_summaries(d, by = "g", summaries = list(
-    list(type = "pair", x = "BASE", xend = "AVAL", ref_lo = 0, ref_hi = 4)
+    list(type = "pair", x = "BASE", xend = "AVAL", ref_min = 0, ref_max = 4)
   ))
   expect_null(p$err)
   q <- lane_prepare_summaries(d, by = "g", summaries = list(

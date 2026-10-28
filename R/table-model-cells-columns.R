@@ -137,10 +137,10 @@ cells_bardiv <- function(ctx, p) {
 }
 
 cells_text_raw <- function(ctx, p) {
-  # The value is the display (escaped once here); the sort key is the text.
+  # The value is the display and the sort key.
   v <- as.character(ctx$rows[[p$key]])
   v[is.na(v)] <- ""
-  c(list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v)),
+  c(list(kind = "num", text = TRUE, v = v, disp = v),
     if (!is.null(p$failed)) list(failed = TRUE))
 }
 
@@ -162,7 +162,7 @@ cells_alt_text <- function(ctx, p) {
   # An expr summary that evaluated to text: sorted as text.
   v <- as.character(ctx$rows[[p$alt_text]])
   v[is.na(v)] <- ""
-  list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v))
+  list(kind = "num", text = TRUE, v = v, disp = v)
 }
 
 cells_num <- function(ctx, p) {

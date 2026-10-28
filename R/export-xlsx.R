@@ -250,8 +250,8 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
   invisible(file)
 }
 
-# Section-header rows for the interleaved body, placed where the HTML renderer
-# puts its colspan rows (see build_html_tbody()): for each data row, the
+# Section-header rows for the interleaved body, placed where the table view
+# puts its section rows: for each data row, the
 # outermost changed section level and every level below it emit a header.
 # Header text carries the section column's label prefix when one is set.
 # Returns positions within the body block: `data_pos` for the data rows,

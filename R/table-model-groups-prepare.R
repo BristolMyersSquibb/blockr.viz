@@ -150,11 +150,11 @@ lane_prep_norm <- function(summaries, data, color, facet) {
 # The message for the first summary that maps a missing column, else NULL.
 lane_missing_columns <- function(summaries, data) {
   for (s in summaries) {
-    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "band", "from",
-                                            "to", "dash", "fill"))])
+    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "ymin", "ymax",
+                                            "linetype", "fill"))])
     cols <- as.character(cols)
     if (identical(s$type, "pair")) {
-      cols <- c(cols, Filter(is.character, list(s$lo, s$hi)))
+      cols <- c(cols, Filter(is.character, list(s$ref_min, s$ref_max)))
       cols <- as.character(unlist(cols))
     }
     miss <- setdiff(cols[nzchar(cols)], names(data))
@@ -255,10 +255,10 @@ lane_map_levels <- function(s, data) {
   }
   # Dash levels come from the full data, so a slice missing a level does not
   # renumber which rows draw dashed.
-  if (identical(s$type, "pair") && !is.null(lane_present(s$dash, data))) {
-    s$.dlevels <- summarize_levels(data[[s$dash]])
+  if (identical(s$type, "pair") && !is.null(lane_present(s$linetype, data))) {
+    s$.dlevels <- summarize_levels(data[[s$linetype]])
   }
-  if (s$type %in% c("series", "spans")) {
+  if (s$type %in% c("sparkline", "spans")) {
     s$.date <- inherits(data[[summarize_chr1(s$x)]], "Date")
   }
   s
@@ -411,7 +411,7 @@ lane_primary_col <- function(s, sid) {
     dist = paste0(sid, "_bc"),
     field = paste0(sid, "_t"),
     expr = paste0(sid, "_v"),
-    series = paste0(sid, "_last"),
+    sparkline = paste0(sid, "_last"),
     spans = paste0(sid, "_start"),
     pair = paste0(sid, "_to"),
     paste0(sid, "_v")

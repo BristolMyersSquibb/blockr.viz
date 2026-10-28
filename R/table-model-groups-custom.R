@@ -85,7 +85,7 @@ lane_custom_setup <- function(s, data) {
   keep <- s[intersect(names(s), c("name", "facet", "scope", "fn"))]
   # `denom`: a column whose distinct values in the slice are the N, so a count
   # reads "54 (18%)".
-  denom <- summarize_chr1(s$denom)
+  denom <- summarize_chr1(s$id)
   if (!is.null(denom) && !denom %in% names(data)) {
     return(list(err = paste0(who, "the percent column \"", denom,
                              "\" is not in the data.")))
@@ -141,17 +141,13 @@ lane_custom_preset <- function(mark, cols, denom) {
     bar = c(list(type = "simple", show = "bar"), count),
     number = c(list(type = "simple", show = "number"), count),
     text = list(type = "expr", expr = "(custom)", show = "text"),
-    dumbbell = list(type = "pair", show = "dumbbell", from = "from",
-                    to = "to", from_func = "identity", to_func = "identity"),
-    {
-      inner <- if (all(c("q1", "q3") %in% cols)) "median_q1_q3" else "none"
-      outer <- if (all(c("lo", "hi") %in% cols)) "min_max" else "none"
-      list(type = "dist", col = "mid", style = if (identical(mark, "box"))
-             "box" else "dot", inner = inner, outer = outer,
-           stat = if (identical(inner, "none")) NULL else inner,
-           whiskers = if (identical(outer, "none")) NULL else outer,
-           show = mark)
-    }
+    dumbbell = list(type = "pair", show = "dumbbell", x = "from",
+                    xend = "to", x_func = "identity", xend_func = "identity"),
+    list(type = "dist", col = "mid",
+         style = if (identical(mark, "box")) "box" else "dot",
+         summary = if (all(c("q1", "q3") %in% cols)) "median_q1_q3" else "none",
+         whiskers = if (all(c("lo", "hi") %in% cols)) "min_max" else "none",
+         show = mark)
   )
 }
 
@@ -313,8 +309,8 @@ lane_custom_plan <- function(entry, s, cp) {
   if (cu$mark %in% c("box", "pointrange")) {
     entry$words <- list(
       center = "mid",
-      range = if (!identical(s$inner, "none")) "q1\u2013q3",
-      whisk = if (!identical(s$outer, "none")) "lo\u2013hi"
+      range = if (!identical(s$summary, "none")) "q1\u2013q3",
+      whisk = if (!identical(s$whiskers, "none")) "lo\u2013hi"
     )
   }
   if (identical(cu$mark, "dumbbell")) {

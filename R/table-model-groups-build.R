@@ -122,17 +122,17 @@ lane_replace_failed <- function(st, s, sid1, n0, ctx) {
   st
 }
 
-# The series reference is computed per copy over its slice, so every sparkline
-# in the column is oriented against the same line.
+# The sparkline reference is computed per copy over its slice, so every
+# sparkline in the column is oriented against the same line.
 lane_series_ref <- function(cp, s) {
-  if (identical(s$type, "series") &&
-        !identical(s$ref %||% "none", "none")) {
+  if (identical(s$type, "sparkline") &&
+        !identical(s$summary %||% "none", "none")) {
     ys <- as.numeric(cp$slice[[summarize_chr1(s$col)]])
     ys <- ys[is.finite(ys)]
-    cp$ref <- switch(s$ref,
+    cp$ref <- switch(s$summary,
       mean = list(center = mean(ys)),
       mean_sd = lane_summarize(ys, "mean_sd"),
-      median_iqr = lane_summarize(ys, "median_q1_q3")
+      median_q1_q3 = lane_summarize(ys, "median_q1_q3")
     )
   }
   cp
@@ -157,7 +157,7 @@ lane_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) {
     dist = lane_fill_dist(target, tkeys, slice, s, sid),
     field = lane_fill_field(target, tkeys, slice, s, sid),
     expr = lane_fill_expr(target, tkeys, slice, s, sid),
-    series = lane_fill_series(target, tkeys, slice, s, sid),
+    sparkline = lane_fill_series(target, tkeys, slice, s, sid),
     pair = lane_pair_fill(target, tkeys, keys, slice, s, sid),
     spans = lane_fill_spans(target, tkeys, slice, s, sid),
     target
@@ -214,8 +214,8 @@ lane_fill_dist <- function(target, tkeys, slice, s, sid) {
   # `.b` is the centre and (unless inner is off) the inner range, `.w` the
   # outer range. Both styles compute both; the style only decides the drawing.
   stats <- list(.b = lane_dist_centre_stat(s))
-  if (!identical(s$outer %||% "none", "none")) {
-    stats$.w <- s$outer
+  if (!identical(s$whiskers %||% "none", "none")) {
+    stats$.w <- s$whiskers
   }
   # The pooled glyph is the sort key and the fallback when no colour splits it.
   target <- lane_put_stats(target, slice, sid, tkeys, s, stats)
@@ -312,7 +312,7 @@ lane_as_num <- function(v) {
 lane_series_split <- function(slice, target, tkeys, s) {
   xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
   ys <- as.numeric(slice[[summarize_chr1(s$col)]])
-  band <- as.character(s$band %||% character())
+  band <- as.character(c(s$ymin, s$ymax))
   band <- band[nzchar(band)]
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
     is.numeric(slice[[band[[1L]]]]) && is.numeric(slice[[band[[2L]]]])
@@ -343,7 +343,7 @@ lane_spans_split <- function(slice, target, tkeys, s) {
   # hover highlight; fields add columns.
   lbcol <- summarize_chr1(s$label)
   lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
-  fcols <- intersect(as.character(s$fields %||% character()), names(slice))
+  fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
   ok <- if (is.null(xs) || is.null(xe)) {
     rep(FALSE, nrow(slice))
   } else {
@@ -482,21 +482,21 @@ lane_pair_band <- function(target, sl, b, tkeys, keys, parent_row) {
 # pooled pair, or one colour level).
 lane_pair_ends <- function(target, sl, prefix, s, tkeys, keys, parent_row) {
   target[[paste0(prefix, "_from")]] <- lane_pair_per(
-    target, sl, s$from_func, s$from, tkeys, keys, parent_row
+    target, sl, s$x_func, s$x, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_to")]] <- lane_pair_per(
-    target, sl, s$to_func, s$to, tkeys, keys, parent_row
+    target, sl, s$xend_func, s$xend, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_lo")]] <- lane_pair_band(
-    target, sl, s$lo, tkeys, keys, parent_row
+    target, sl, s$ref_min, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_hi")]] <- lane_pair_band(
-    target, sl, s$hi, tkeys, keys, parent_row
+    target, sl, s$ref_max, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_n")]] <- lane_pair_n_leaf(
     target, sl, tkeys, keys, parent_row
   )
-  dash <- s$dash
+  dash <- s$linetype
   target[[paste0(prefix, "_d")]] <- if (!is.null(dash) &&
                                           length(s$.dlevels)) {
     lane_pair_level_idx(target, sl, dash, s$.dlevels, tkeys)

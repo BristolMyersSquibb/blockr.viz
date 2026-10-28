@@ -200,7 +200,11 @@ table_legacy_args <- function(args, from = NULL) {
     if (!length(by)) by <- unique(c(parent, group))
     if (length(summaries)) {
       if (!is.null(color) || !is.null(facet)) {
-        norm <- lane_norm_summaries(summaries)
+        # Old keys renamed, `scope` kept: a pooled row takes no facet.
+        norm <- lane_norm_summaries(lapply(summaries, function(e) {
+          if (!is.list(e)) return(e)
+          legacy_map_values("summary", legacy_rename("summary", e))
+        }))
         if (is.null(norm$err)) {
           mig <- lane_migrate_globals(norm, color, facet)
           for (i in seq_along(summaries)) {
@@ -219,9 +223,9 @@ table_legacy_args <- function(args, from = NULL) {
       )
     }
     # The block-level split layout is each colour split's `position` now.
-    bm <- chr_state(get("bar_mode"))
-    if (!is.null(bm) && bm %in% LANE_POSITIONS) {
-      pos <- names(LANE_POSITIONS)[match(bm, LANE_POSITIONS)]
+    # The old word ("stacked") is mapped by LEGACY_NAMES.
+    pos <- chr_state(get("bar_mode"))
+    if (!is.null(pos) && pos %in% LANE_POSITIONS) {
       summaries <- lapply(summaries, function(x) {
         if (is.list(x) && identical(x[["type"]], "simple") &&
               !is.null(x[["color"]]) && is.null(x[["position"]])) {
@@ -232,7 +236,7 @@ table_legacy_args <- function(args, from = NULL) {
     }
     out$layout <- "groups"
     out$by <- by
-    out$summaries <- lapply(summaries, lane_public_summary)
+    out$summaries <- summaries
     if (is.null(out[["id"]]) && !is.null(get("id_var"))) out$id <- get("id_var")
     if (!length(out[["script_values"]]) && length(get("values"))) {
       out$script_values <- get("values")

@@ -99,15 +99,16 @@ exhibit_html_output <- function() {
 #' @param title,subtitle,caption Table title / subtitle / footnote. `NULL`
 #'   (default) takes them from the annotated data frame's display attributes,
 #'   `""` switches them off: the same title-tier convention as
-#'   [static_table()]. The default HTML table renderer currently ignores
-#'   `subtitle`.
+#'   [static_table()]. The default method ignores `subtitle`.
 #' @param max_height CSS max-height of the scroll container, or `NULL`
 #'   (default) for none. A report exhibit is printed rather than scrolled.
 #' @param default_expanded Logical, or `NULL` (default) to decide from the
 #'   table's height: a table that fits opens expanded, one that does not opens
 #'   at its section rows. The threshold is
 #'   `getOption("blockr.viz.html_exhibit_expanded_max_rows")` (24).
-#' @param ... Passed to the underlying renderer.
+#' @param sortable,collapsible Logical. Whether the default method's table
+#'   keeps its click-to-sort headers and its fold chevrons.
+#' @param ... Passed to the method.
 #'
 #' @return A [htmltools::tagList()].
 #' @seealso [static_exhibit()], [static_table()]
@@ -122,7 +123,7 @@ html_exhibit <- function(x, title = NULL, subtitle = NULL, caption = NULL,
 html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
                                  caption = NULL,
                                  max_height = NULL, default_expanded = NULL,
-                                 ...) {
+                                 sortable = TRUE, collapsible = TRUE, ...) {
 
   # Same entry as static_table(): coerce, then spread to the wide grid.
   data <- fmt_to_wide(as_annotated_df(x))
@@ -134,16 +135,51 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
     default_expanded <- html_exhibit_expanded(data)
   }
 
-  html_table(
-    data,
-    title = title,
-    caption = caption,
-    max_height = max_height,
-    default_expanded = default_expanded,
-    # A printed exhibit cannot be searched, so it does not offer to be.
-    search = FALSE,
-    ...
-  )
+  # The table view draws it (table_static()), as the block's records layout
+  # does. A printed exhibit cannot be searched or downloaded from.
+  spec <- viz_block_spec("table")
+  v <- viz_check(spec, list(layout = "records", sortable = isTRUE(sortable),
+                            collapsible = isTRUE(collapsible), search = FALSE,
+                            download = FALSE))
+  flat <- !dt_is_structured(data)
+  shown <- if (flat) data[!grepl(ANNOTATION_PAINT_RE, names(data))] else data
+  built <- table_frame_view(v, shown, list(scale_map = function() NULL),
+                            "records")
+  model <- built$model
+  if (!is.null(model) && flat) {
+    model$cols <- lapply(model$cols, html_exhibit_col, data)
+    # No row-name column: the first column is printed like any other.
+    model$stub <- NULL
+    model$head <- lapply(model$head, function(r) {
+      lapply(r, function(h) {
+        h$stub <- NULL
+        h
+      })
+    })
+  }
+  # Nothing can unfold a table with no chevrons, so it cannot start folded.
+  if (!is.null(model) && !isTRUE(default_expanded) && isTRUE(collapsible)) {
+    model$collapsed <- TRUE
+  }
+  table_static(model, v,
+               list(titles = table_static_titles(title, NULL, caption),
+                    empty = built$empty),
+               max_height = max_height)
+}
+
+# A flat exhibit's column as printed: numbers as R prints them (an exhibit
+# carries the precision it was given; the block's own downloads arrive
+# formatted), and the frame's own paint (`.bg:<col>`, the block's shading as
+# exported).
+html_exhibit_col <- function(cc, data) {
+  x <- data[[cc$name]]
+  if (is.numeric(x)) {
+    cc$num <- TRUE
+    cc$disp <- I(ifelse(is.na(x), NA_character_, as.character(x)))
+  }
+  p <- annotation_cell_paint(data, cc$name)
+  if (!is.null(p)) cc[c("bg", "fg")] <- list(I(p$bg), I(p$fg))
+  cc
 }
 
 # Should a printed table open expanded? Decided from height: a table of at
@@ -174,8 +210,8 @@ html_exhibit_expanded <- function(data) {
   !html_table_collapsible(view$data, view$section_cols)
 }
 
-# Does this display grid render any collapsible row? Mirrors the two rules in
-# build_html_tbody(): a non-empty section axis, or a row immediately followed
+# Does this display grid render any collapsible row? The structured table's
+# two rules: a non-empty section axis, or a row immediately followed
 # by a more deeply indented one.
 html_table_collapsible <- function(data, section_cols = character()) {
 

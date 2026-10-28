@@ -17,7 +17,10 @@
 
 # --- running ------------------------------------------------------------------
 
-tg_rw_run <- function(sc) {
+# `page`, a function of a downloaded file's path, replaces the recorded form
+# of a download (scripts stripped): the step's download is then
+# `list(page = page(path), block = <the table model the block drew>)`.
+tg_rw_run <- function(sc, page = NULL) {
   table_golden_register_tbl()
   # The reference took the prepare script and its values from the gear; the
   # kit does so only where a deployment allows it.
@@ -65,9 +68,15 @@ tg_rw_run <- function(sc) {
           tick(i)
         } else if (!is.null(s$download)) {
           session$flushReact()
-          dl <- tg_rw_download(table_golden_download(
-          expr$output, sub("^(records|groups)-", "", s$download)
-        ))
+          id <- sub("^(records|groups)-", "", s$download)
+          dl <- if (is.null(page)) {
+            tg_rw_download(table_golden_download(expr$output, id))
+          } else {
+            session$flushReact()
+            tg_rw_browser(expr, cx)
+            list(page = page(table_golden_value(function() expr$output[[id]])),
+                 block = cx$model)
+          }
         }
         session$flushReact()
         rec <- tg_rw_record(session, expr, m$sends, cx)
@@ -568,9 +577,20 @@ tg_rw_known <- list(
     why = "row 6: the reference sorted a facet level descending by default",
     skip = list(from = 4L, parts = c("state", "browser"))
   ),
-  # The groups and cards Web page carries the table view's payload, which
-  # the view draws (table_static()); the reference wrote the table's markup.
-  # test-summarize-exhibit.R and test-table-cards.R read the payload.
+  # Every Web page download carries the table view's payload, which the
+  # view draws (table_static()); the reference wrote the table's markup.
+  # test-table-golden.R ("the Web page downloads draw the table the block
+  # shows") checks the records and variables pages against the block;
+  # test-summarize-exhibit.R and test-table-cards.R read the groups and cards
+  # payloads.
+  rec_download = list(why = "web page drawn by the table view",
+                      skip = list(from = 3L, parts = "download")),
+  rec_download_by = list(why = "web page drawn by the table view",
+                         skip = list(from = 3L, parts = "download")),
+  rec_download_structured = list(why = "web page drawn by the table view",
+                                 skip = list(from = 3L, parts = "download")),
+  var_download = list(why = "web page drawn by the table view",
+                      skip = list(from = 3L, parts = "download")),
   rec_download_cards = list(why = "web page drawn by the table view",
                             skip = list(from = 3L, parts = "download")),
   grp_download = list(why = "web page drawn by the table view",

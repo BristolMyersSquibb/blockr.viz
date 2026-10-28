@@ -22,7 +22,7 @@ cards_summaries <- function() {
     list(type = "dist", name = "Age", col = "AGE", style = "box",
          summary = "median_q1_q3"),
     list(type = "pair", name = "SBP", x = "BASE", xend = "AVAL"),
-    list(type = "series", name = "Trend", x = "WK", col = "AGE"),
+    list(type = "sparkline", name = "Trend", x = "WK", col = "AGE"),
     list(type = "simple", name = "N", func = "count", show = "number"),
     list(type = "spans", name = "Spans", x = "WK", xend = "WK"),
     list(type = "expr", name = "Code", expr = "n()")
