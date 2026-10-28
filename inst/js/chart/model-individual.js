@@ -142,13 +142,9 @@
     const ct = cfg.type;
     // gate() let only a chart with x and y through.
     const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
-    // A colour, facet or series column the data does not hold (a board adds
-    // its Subgroup column only once a subgroup is picked) is left unset.
-    const held = (/** @type {string | null | undefined} */ c) =>
-      c && (!columns.length || columns.some((m) => m.name === c)) ? c : null;
-    const color = held(cfg.color);
-    const facet = held(cfg.facet);
-    const seriesCol = held(cfg.series);
+    const color = cfg.color || null;
+    const facet = cfg.facet || null;
+    const seriesCol = cfg.series || null;
     // The series splits; without one, a series per colour level.
     const splitCol = seriesCol || color;
     const isLine = NS.isLineType(ct);
