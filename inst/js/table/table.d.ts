@@ -379,6 +379,10 @@ interface TableFrame extends VizFrame {
                  onOpen?: () => void }): void;
   structured(on: boolean): void;
   scroller(): Element | null;
+  /** The panel's scroll from its last scroll event, or null. */
+  scrollPlace(): { sc: Element; top: number } | null;
+  /** The frame's height, from its ResizeObserver. */
+  height: number;
 }
 
 interface TableCardOpts {
