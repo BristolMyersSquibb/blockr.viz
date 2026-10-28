@@ -11,10 +11,13 @@ viz_state <- function(values) {
   lapply(values, shiny::reactiveVal)
 }
 
-#' The current values of a state, outside a reactive context
+#' The current values of a state
+#'
+#' Read reactively: a reactive context that calls it depends on every value.
+#' Wrap it in shiny::isolate() to read without depending.
 #' @noRd
 viz_values <- function(state) {
-  shiny::isolate(lapply(state, function(rv) rv()))
+  lapply(state, function(rv) rv())
 }
 
 #' Write values into a state

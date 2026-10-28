@@ -117,7 +117,7 @@ table_frame_part <- function(kit, src, shown, layout, filter = identity) {
     },
     receipt = function(sel) table_frame_receipt(sel, frame()),
     exhibit = function(tt) {
-      table_frame_exhibit(table_state_values(st), shown(), tt, src, layout)
+      table_frame_exhibit(viz_values(st), shown(), tt, src, layout)
     },
     title_args = function(v) viz_slot_values(kit$spec, v)
   )
@@ -197,8 +197,7 @@ table_frame_exhibit <- function(v, d, tt, src, layout) {
   shiny::req(is.data.frame(d))
   structured <- table_is_structured(d)
   frame <- dt_unit_labels(
-    dt_exhibit_frame(d, v$rowname, v$columns,
-                     shadings = dd_parse_shadings(v$shadings)),
+    dt_exhibit_frame(d, v$rowname, v$columns, dd_parse_shadings(v$shadings)),
     v$unit
   )
   cards <- if (identical(v$look, "cards") && identical(layout, "records") &&

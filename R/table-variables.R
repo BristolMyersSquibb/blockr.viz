@@ -23,7 +23,7 @@ table_variables_part <- function(kit, src) {
   # place of the input in the filter.
   built_from <- function(ex) {
     d <- tryCatch(src$rows(), error = function(e) NULL)
-    built <- table_variables_call(table_variables_cfg(table_state_values(st), d))
+    built <- table_variables_call(table_variables_cfg(viz_values(st), d))
     if (is.null(built)) {
       return(ex)
     }
