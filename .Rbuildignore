@@ -16,3 +16,6 @@
 ^coverage$
 ^tsconfig\.core\.json$
 ^\.git$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

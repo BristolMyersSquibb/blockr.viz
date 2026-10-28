@@ -1,3 +1,106 @@
+# blockr.viz 0.3.0.9000
+
+The first release for CRAN. The package is down to two blocks, the chart
+and the table, rewritten on one specification of their arguments that the
+constructors, the gear, saved boards, title slots and the assistant all
+read.
+
+## The blocks
+
+* `new_chart_block()` draws bar, histogram, waterfall, pie, treemap, box,
+  point range, scatter, line, area, band and timeline charts with ECharts.
+* `new_table_block()` has three layouts, `"records"` (the input's rows),
+  `"groups"` (one row per group, one column per summary) and
+  `"variables"` (a Table 1), each drawn as a `"table"`, a `"compact"`
+  matrix or `"cards"`. It replaces the tile, summarize, summary and gt
+  table blocks.
+* `vignette("chart")` and `vignette("table")` go through the arguments.
+
+## Arguments
+
+* One name per concept in both blocks, in US spelling, as in ggplot2 where
+  the concept is the same: `type`, `x`, `y`, `position`, `y_transform`,
+  `percent_of`, `drill_target`, `selection`, `columns`, `by`. The Legacy
+  section lists the old names.
+* In code, an unknown argument or a value an argument does not take is an
+  error that names the nearest argument. Old names still work, with a
+  warning.
+* A saved board is healed instead: a value the block does not take is reset
+  to its default, with one warning naming it.
+
+## Changes in behaviour
+
+* The chart keeps `x`, `y` and `color` when its type changes; a setting a
+  type does not use is hidden in the gear, not cleared. Picking
+  `func = "count"` no longer clears `y`.
+* Clearing a mapped column that the data lacks clears it.
+* Data-driven defaults, such as the first text column on `x` or the sort
+  order, are worked out when the chart is drawn and are not saved.
+* The table's `color = NULL` now means no color; the default is `"auto"`.
+  Boards saved before this version keep their old meaning.
+* The table's default sort direction follows the chart's rule: descending
+  for `sort_by = "value"`, else ascending.
+* In the groups layout, a custom summary that fails only on the parent rows
+  of a nested `by` shows as one failed column with its error; the table
+  still draws.
+
+## Downloads
+
+* Downloads go through one registry: `register_viz_exporter()` adds a
+  format, and a block offers every registered format that can write it.
+  blockr.viz registers Excel, a web page, an image and PowerPoint; a block
+  hands its downloads an exhibit (`new_viz_exhibit()`).
+
+## Security
+
+* On a locked board (`options(blockr.locked = TRUE)`) the blocks take no
+  settings from the browser; clicks still filter.
+* The prepare script (`script`) runs R code on the server, so the browser
+  can set it only with `options(blockr.viz.browser_script = TRUE)`. Code and
+  saved boards set it as before.
+
+## Legacy
+
+`R/legacy.R` and `R/legacy-restore.R` keep what older code and boards need,
+and nothing else does. They go when the support for blockr.viz before 0.3.0
+goes.
+
+* Chart arguments: `chart_type` and `baseline` are `type`, `group` is `x`,
+  `value` and `metric` are `y`, `agg_fn` is `func`, `bar_mode` is
+  `position`, `tt_fields` is `tooltip`, `line_width_mult` and
+  `dot_size_mult` are `line_width` and `point_size`, `value_lines` is
+  `y_lines`, `lo` and `hi` are `ymin` and `ymax`, `band_id` and `count_col`
+  are `id`, `count_on` is `show_n`, `na_group` is `missing`, `pct_of` is
+  `percent_of`, `ref_lo` and `ref_hi` are `ref_min` and `ref_max`,
+  `y_scale` and `x_scale` are `y_transform` and `x_transform`,
+  `direct_labels` is `legend = "marks"`, `ctrl_target` and `ctrl_table`
+  are `drill_target` and `drill_table`, `values` is `script_values`, and
+  the `filter_*` fields are `selection`. `func_toggle` is dropped.
+* Chart values: `type = "radar"` becomes a bar chart, with a warning;
+  `show_n = "off"` is `"none"`; `connect = "step-start"` and its siblings
+  are `"step_start"`; `"on"` and `"off"` are `TRUE` and `FALSE`.
+* Table arguments: `value` and `values` are `columns`, `group` is `by`,
+  `cell_color` is `shadings`, `row_color` is `color`, `rotate_titles` and
+  `compact` are `look`, `digits` is `format`, the three `*_download`
+  switches are `download`, `ctrl_target` and `ctrl_table` are
+  `drill_target` and `drill_table`, the `filter_*` fields are `selection`,
+  `pct_of` is `percent_of`, `axis` is `column_axis`, and the summary
+  table's `vars`, `add_overall`, `overall_label`, `nest_hierarchies` and
+  `id_var` are `summaries`, `total`, `total_label`, `nest` and `id`.
+  `max_height`, `indent_details` and `state` are dropped.
+* Summary keys: `band` is `ymin`, `ref` is `summary` or `x_lines`,
+  `ref_lo`, `ref_hi`, `lo` and `hi` are `ref_min` and `ref_max`, `dash` is
+  `linetype`, `from` and `to` are `x` and `xend`, `fields` is `tooltip`,
+  `stat` and `inner` are `summary`, `outer` is `whiskers`, `style` is
+  `show`, `denom` is `id`, `type = "series"` is `"sparkline"`, and
+  `position = "stacked"` is `"stack"`.
+* Shading keys: `cols` is `columns` and `type` is `mode`.
+* Saved boards: chart and table blocks restore under the new names, title
+  templates included (`{@group}` becomes `{@x}` or `{@y}`). Tile and
+  summary table blocks restore as table blocks. gt, summarize,
+  `drilldown_chart`, `waterfall` and `drilldown_table` blocks no longer
+  restore.
+
 # blockr.viz 0.3.0
 
 * `y_scale = "log"` draws a base-10 y axis on a scatter, line or band, and
