@@ -201,6 +201,14 @@
   font-weight: var(--blockr-font-weight-semibold, 600);
   text-transform: uppercase;
 }
+/* The groups as a plain list, when blockr.ui has no trayNav
+   (sections.js, plainList()): a group's name over its sections. */
+.vz-tray-group-title {
+  font-size: var(--blockr-font-size-sm, 0.875rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  margin: 16px 0 8px;
+}
+.vz-tray-group-title:first-child { margin-top: 0; }
 /* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link (a
    subtle grey text link with a plus icon, blue on hover) from the shared
    blockr-blocks.css; .vz-add-trigger only resets the <button> chrome. */
