@@ -22,6 +22,15 @@ read.
   the concept is the same: `type`, `x`, `y`, `position`, `y_transform`,
   `percent_of`, `drill_target`, `selection`, `columns`, `by`. The Legacy
   section lists the old names.
+* The chart's aggregated types (bar, waterfall, pie, treemap, boxplot,
+  pointrange) map `category` and `value`, with `func`, as boards before
+  0.3.0 did with `group` and `value`. `orientation` only turns the marks;
+  switching it never swaps the two. `x` and `y` are the screen axes of
+  scatter, line, area and band, the histogram's binned column and the
+  gantt's interval and lane. In code, an aggregated type mapped with `x` or
+  `y` and no `category` is an error. 0.3.0's screen-axis `x`/`y` for these
+  types and its orientation inference are gone, and `y_lines` is
+  `value_lines` again.
 * In code, a value an argument does not take is an error. Old names still
   work, with a warning. Any other name is kept as a block attribute, so
   another package's attribute (blockr.dock's `visible`) survives a
@@ -31,9 +40,9 @@ read.
 
 ## Changes in behaviour
 
-* The chart keeps `x`, `y` and `color` when its type changes; a setting a
-  type does not use is hidden in the gear, not cleared. Picking
-  `func = "count"` no longer clears `y`.
+* The chart keeps `category`, `value`, `x`, `y` and `color` when its type
+  changes; a setting a type does not use is hidden in the gear, not
+  cleared. Picking `func = "count"` no longer clears `value`.
 * Clearing a mapped column that the data lacks clears it.
 * Data-driven defaults, such as the first text column on `x` or the sort
   order, are worked out when the chart is drawn and are not saved.
@@ -88,18 +97,19 @@ read.
 and nothing else does. They go when the support for blockr.viz before 0.3.0
 goes.
 
-* Chart arguments: `chart_type` and `baseline` are `type`, `group` is `x`,
-  `value` and `metric` are `y`, `agg_fn` is `func`, `bar_mode` is
+* Chart arguments: `chart_type` and `baseline` are `type`, `group` is
+  `category`, `metric` is `value`, `agg_fn` is `func`, `bar_mode` is
   `position`, `tt_fields` is `tooltip`, `line_width_mult` and
-  `dot_size_mult` are `line_width` and `point_size`, `value_lines` is
-  `y_lines`, `lo` and `hi` are `ymin` and `ymax`, `band_id` and `count_col`
+  `dot_size_mult` are `line_width` and `point_size`, `lo` and `hi` are
+  `ymin` and `ymax`, `band_id` and `count_col`
   are `id`, `count_on` is `show_n`, `na_group` is `missing`, `pct_of` is
   `percent_of`, `ref_lo` and `ref_hi` are `ref_min` and `ref_max`,
   `y_scale` and `x_scale` are `y_transform` and `x_transform`,
   `direct_labels` is `legend = "marks"`, `ctrl_target` and `ctrl_table`
   are `drill_target` and `drill_table`, `values` is `script_values`, and
   the `filter_*` fields are `selection`. `func_toggle` is dropped.
-* Chart values: `type = "radar"` becomes a bar chart, with a warning;
+* Chart values: `value = ".count"` is a row count (`value` unset);
+  `type = "radar"` becomes a bar chart, with a warning;
   `baseline = "cumulative"` on a bar is `type = "waterfall"`; `bar_mode`
   `"stacked"`, `"grouped"` and `"percent"` are `position` `"stack"`,
   `"dodge"` and `"fill"`; `pct_of = "group"` is `"category"`; `y_scale`
@@ -132,7 +142,7 @@ goes.
 * Shading keys: `cols` is `columns` and `type` is `mode`. `palette` and
   `source` are dropped.
 * Saved boards: chart and table blocks restore under the new names, title
-  templates included (`{@group}` becomes `{@x}` or `{@y}`). Tile, summary
+  templates included (`{@group}` becomes `{@category}`). Tile, summary
   table and summarize table blocks restore as table blocks. gt,
   `drilldown_chart`, `waterfall` and `drilldown_table` blocks no longer
   restore.

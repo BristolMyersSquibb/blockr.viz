@@ -7,10 +7,12 @@
 new_chart_block(
   type = "bar",
   ...,
+  category = NULL,
+  value = NULL,
+  func = "count",
   x = NULL,
   xend = NULL,
   y = NULL,
-  func = "count",
   color = NULL,
   facet = NULL,
   series = NULL,
@@ -29,7 +31,7 @@ new_chart_block(
   line_width = 1,
   point_size = 1,
   connect = "straight",
-  y_lines = NULL,
+  value_lines = NULL,
   x_lines = NULL,
   ymin = NULL,
   ymax = NULL,
@@ -72,13 +74,17 @@ new_chart_block(
 
 \item{...}{Arguments for \code{\link[blockr.core:new_block]{blockr.core::new_block()}} (\code{block_name}, ...), and argument names of blockr.viz before 0.3.0, which are translated with a warning.}
 
-\item{x}{Column on the horizontal axis. For an aggregated type one of x and y is the category and the other the column \code{func} aggregates. Gantt: the interval start. Histogram: the column that is binned. Default \code{NULL}: unset.}
+\item{category}{Column whose values become the bars, slices, tiles, boxes or points: one mark per value. The same whichever way a bar lies. Default \code{NULL}: unset.}
+
+\item{value}{Column \code{func} aggregates per category; unused by \code{func = "count"}. Boxplot and pointrange: the column whose spread each box or point range shows. Default \code{NULL}: unset.}
+
+\item{func}{Aggregation of \code{value} per category. "identity" draws the value as is; "pct_distinct" is the share of the panel's distinct values (see \code{percent_of}). One of \code{"count"}, \code{"count_distinct"}, \code{"pct_distinct"}, \code{"mean"}, \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}, \code{"identity"}. Default: \code{"count"}.}
+
+\item{x}{Column on the horizontal axis of a scatter, line, area or band. Histogram: the column that is binned. Gantt: the interval start. Default \code{NULL}: unset.}
 
 \item{xend}{Interval end. A row without an end is drawn as a dot at \code{x}. Default \code{NULL}: dots at x.}
 
-\item{y}{Column on the vertical axis. With \code{func = "count"} set only the category column. Gantt: the lane. Pie and treemap: the value. Default \code{NULL}: unset.}
-
-\item{func}{Aggregation of the value column per category. "identity" draws the value as is; "pct_distinct" is the share of the panel's distinct values (see \code{percent_of}). One of \code{"count"}, \code{"count_distinct"}, \code{"pct_distinct"}, \code{"mean"}, \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}, \code{"identity"}. Default: \code{"count"}.}
+\item{y}{Column on the vertical axis. Gantt: the lane. Default \code{NULL}: unset.}
 
 \item{color}{Column mapped to color, at most 15 levels. Default \code{NULL}: no color.}
 
@@ -88,7 +94,7 @@ new_chart_block(
 
 \item{label}{Column written on the marks. A bar, slice or tile shows it only when its rows agree on one value. Default \code{NULL}: no labels.}
 
-\item{orientation}{Which way a bar, boxplot or pointrange lies. Leave NULL: it is inferred. Needed only when both columns are non-numeric. One of \code{"horizontal"}, \code{"vertical"}. Default \code{NULL}: inferred.}
+\item{orientation}{Which way a bar, boxplot or pointrange lies. It changes no mapping: \code{category} stays the category either way. One of \code{"horizontal"}, \code{"vertical"}. Default \code{NULL}: horizontal for bar, vertical for boxplot and pointrange.}
 
 \item{position}{Layout of a color split: stacked, side by side, or to 100\%. One of \code{"stack"}, \code{"dodge"}, \code{"fill"}. Default: \code{"stack"}.}
 
@@ -116,9 +122,9 @@ new_chart_block(
 
 \item{connect}{How a line connects its points. One of \code{"straight"}, \code{"monotone"}, \code{"step_start"}, \code{"step_middle"}, \code{"step_end"}. Default: \code{"straight"}.}
 
-\item{y_lines}{Positions of dashed guide lines across the value axis. Names are labels. Text form: "Target: 4; 6". Default \code{NULL}: no lines.}
+\item{value_lines}{Positions of dashed guide lines across the value axis: \code{value}'s axis, y on a scatter, line, area or histogram. Names are labels. Text form: "Target: 4; 6". Default \code{NULL}: no lines.}
 
-\item{x_lines}{Positions of dashed guide lines across x: numbers, dates or category values. Names are labels. Default \code{NULL}: no lines.}
+\item{x_lines}{Positions of dashed guide lines across x, or across a bar's category axis: numbers, dates or category values. Names are labels. Default \code{NULL}: no lines.}
 
 \item{ymin}{Columns holding the lower end of an interval per row, the first the outermost. A line draws shaded bands, a scatter error bars. Default \code{NULL}: no interval.}
 
@@ -201,20 +207,20 @@ Every argument that names a column names a data column, never a literal
 value. Each does one thing: \code{color} colors, \code{series} splits into series,
 \code{facet} splits into panels, \code{label} writes on the marks.
 }
-\section{The axes}{
+\section{Mapping}{
 
-\code{x} and \code{y} are the screen axes for every type, as in ggplot2. The
-aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange) count
-or aggregate rows per category: one of \code{x} and \code{y} is the category, the
-other the column \code{func} aggregates, and which way the chart lies follows
-from that. \code{x = "class"} draws vertical bars of counts, \code{y = "class"}
-horizontal ones, and \verb{x = "sales", y = "region", func = "sum"} horizontal
-bars of summed sales. With one column and a count that column is the
-category; with two, a numeric column beside a non-numeric one is the
-value; otherwise the chart is vertical. \code{orientation} decides when the
-data cannot, for instance a distinct count of one text column by another.
-For pie and treemap \code{x} is the slice and \code{y} the value; for a gantt \code{x}
-and \code{xend} are the interval and \code{y} the lane; a histogram bins \code{x}.
+The aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange)
+draw one mark per value of \code{category}. A bar, waterfall, pie or treemap
+aggregates \code{value} with \code{func}; \code{func = "count"} counts rows and needs no
+\code{value}. A boxplot or pointrange shows the spread of \code{value}.
+\code{orientation} only turns the marks: bars lie horizontal and boxes stand
+vertical unless it says otherwise, and \code{category} stays the category
+either way.
+
+\code{x} and \code{y} are the screen axes of the types that draw one mark per row
+(scatter, line, area, band). A histogram bins \code{x}; a gantt draws \code{x} to
+\code{xend} on one lane per value of \code{y}. An aggregated type mapped with \code{x}
+or \code{y} and no \code{category} is an error.
 
 \code{ymin} and \code{ymax} name intervals in pairs, the first pair the outermost:
 bands on a line or an area, error bars on a scatter. They must name the
@@ -246,16 +252,20 @@ in it is empty.
 \section{Older code and boards}{
 
 Argument names and values of blockr.viz before 0.3.0 (\code{chart_type},
-\code{group}, \code{value}, \code{bar_mode}, \code{y_scale}, ...) still work in code, with a
+\code{group}, \code{bar_mode}, \code{y_scale}, ...) still work in code, with a
 warning, and boards saved with them restore unchanged. A value an
 argument does not take is an error. Any other name is kept as a block
 attribute, for blockr.core and other packages (blockr.dock's \code{visible}).
 }
 
 \examples{
-# Aggregated: mean sepal length per species, as vertical bars
-new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
+# Aggregated: mean sepal length per species, as horizontal bars
+new_chart_block(type = "bar", category = "Species", value = "Sepal.Length",
                 func = "mean")
+
+# The same standing up
+new_chart_block(type = "bar", category = "Species", value = "Sepal.Length",
+                func = "mean", orientation = "vertical")
 
 # One mark per row: a scatter colored by species, filtering on click
 new_chart_block(type = "scatter", x = "Sepal.Length", y = "Petal.Length",
@@ -265,7 +275,7 @@ new_chart_block(type = "scatter", x = "Sepal.Length", y = "Petal.Length",
 new_chart_block(type = "line", x = "date", y = "unemploy")
 
 # Distribution: a box per category
-new_chart_block(type = "boxplot", x = "cyl", y = "mpg")
+new_chart_block(type = "boxplot", category = "cyl", value = "mpg")
 
 # Histogram: one numeric column, cut into bins
 new_chart_block(type = "histogram", x = "mpg", bins = 10)
@@ -275,8 +285,8 @@ new_chart_block(type = "gantt", x = "start", xend = "end", y = "task")
 
 if (interactive()) {
   blockr.core::serve(
-    new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
-                    func = "mean", drill = "auto"),
+    new_chart_block(type = "bar", category = "Species",
+                    value = "Sepal.Length", func = "mean", drill = "auto"),
     data = list(data = iris)
   )
 }

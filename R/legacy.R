@@ -45,7 +45,7 @@ LEGACY_NAMES <- legacy_table(list(
              rule = "warns: radar is no longer offered"),
   legacy_row("chart", "group", "category"),
   legacy_row("chart", "value", "value",
-             rule = "\".count\" is dropped: `func = \"count\"` needs no column"),
+             rule = "\".count\" is dropped: a count needs no column"),
   legacy_row("chart", "metric", "value"),
   legacy_row("chart", "agg_fn", "func"),
   legacy_row("chart", "bar_mode", "position",

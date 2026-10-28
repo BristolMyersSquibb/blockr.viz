@@ -23,8 +23,8 @@ library(blockr.core)
 library(blockr.viz)
 
 serve(
-  new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
-                  func = "mean"),
+  new_chart_block(type = "bar", category = "Species",
+                  value = "Sepal.Length", func = "mean"),
   data = list(data = iris)
 )
 ```
@@ -33,34 +33,37 @@ serve(
 
 | type | draws | set |
 |---|---|---|
-| `"bar"`, `"waterfall"`, `"pie"`, `"treemap"` | one mark per category, aggregated | `x`, `y`, `func` |
-| `"boxplot"`, `"pointrange"` | the spread of a column per category | `x`, `y`, `summary` |
+| `"bar"`, `"waterfall"`, `"pie"`, `"treemap"` | one mark per category, aggregated | `category`, `value`, `func` |
+| `"boxplot"`, `"pointrange"` | the spread of a column per category | `category`, `value`, `summary` |
 | `"histogram"` | the rows of one numeric column, binned | `x`, `bins` |
 | `"scatter"`, `"line"`, `"area"` | one mark per row | `x`, `y` |
 | `"band"` | a running quantile band across individuals | `x`, `y`, `id` |
 | `"gantt"` | intervals on lanes | `x`, `xend`, `y` |
 
-## The axes
+## Category and value
 
-`x` and `y` are the screen axes. On an aggregated type one of them is the
-category and the other the column `func` aggregates, and the chart lies the
-way that puts the category on its axis:
+An aggregated type draws one mark per value of `category`, and aggregates
+`value` with `func`. A row count needs no `value`. `orientation` turns the
+marks and changes nothing else:
 
 ```{r}
-# counts per class, vertical bars
-new_chart_block(type = "bar", x = "class")
-
 # counts per class, horizontal bars
-new_chart_block(type = "bar", y = "class")
+new_chart_block(type = "bar", category = "class")
 
-# summed sales per region, horizontal bars
-new_chart_block(type = "bar", x = "sales", y = "region", func = "sum")
+# counts per class, vertical bars
+new_chart_block(type = "bar", category = "class", orientation = "vertical")
+
+# summed sales per region
+new_chart_block(type = "bar", category = "region", value = "sales",
+                func = "sum")
 ```
+
+`x` and `y` are for the types that draw one mark per row (scatter, line,
+area, band), the histogram and the gantt.
 
 `func` is one of `"count"`, `"count_distinct"`, `"pct_distinct"`,
 `"mean"`, `"median"`, `"sum"`, `"min"`, `"max"` or `"identity"` (the value
-as it is). `orientation` is needed only when both columns are text, as in a
-distinct count of one text column per another.
+as it is).
 
 ## Splitting the marks
 
@@ -68,8 +71,8 @@ distinct count of one text column per another.
 draws one panel per level, and `label` writes a column on the marks.
 
 ```{r}
-new_chart_block(type = "bar", x = "class", y = "hwy", func = "mean",
-                color = "drv", position = "dodge")
+new_chart_block(type = "bar", category = "class", value = "hwy",
+                func = "mean", color = "drv", position = "dodge")
 
 new_chart_block(type = "line", x = "date", y = "value", color = "country",
                 facet = "region", facet_cols = 3, legend = "marks")
@@ -94,7 +97,7 @@ new_chart_block(type = "line", x = "date", y = "fc",
 
 # a target line and a shaded period
 new_chart_block(type = "line", x = "date", y = "rate",
-                y_lines = c(Target = 2),
+                value_lines = c(Target = 2),
                 x_ranges = list(Recession = c("2008-01-01", "2009-06-30")))
 
 # a scatter with a linear trend per group, on a log axis
@@ -109,8 +112,8 @@ new_chart_block(type = "scatter", x = "gdp", y = "life", color = "continent",
 to 6. `unit` is text after the number.
 
 ```{r}
-new_chart_block(type = "bar", x = "region", y = "share", func = "mean",
-                format = "percent", value_labels = TRUE)
+new_chart_block(type = "bar", category = "region", value = "share",
+                func = "mean", format = "percent", value_labels = TRUE)
 ```
 
 ## Titles
@@ -121,9 +124,9 @@ chart. A part in `[...]` disappears when it would be empty.
 
 ```{r}
 new_chart_block(
-  type = "bar", x = "class", y = "hwy", func = "mean",
+  type = "bar", category = "class", value = "hwy", func = "mean",
   title = "Highway mileage by class",
-  subtitle = "{@func in mean, median} of {label(@y)}[ by {@color}]"
+  subtitle = "{@func in mean, median} of {label(@value)}[ by {@color}]"
 )
 ```
 
@@ -135,7 +138,7 @@ category. Blocks linked below the chart then show only those rows. A brush
 on a scatter or a line filters to the brushed range.
 
 ```{r}
-new_chart_block(type = "bar", x = "region", drill = "auto")
+new_chart_block(type = "bar", category = "region", drill = "auto")
 ```
 
 ## Downloads
