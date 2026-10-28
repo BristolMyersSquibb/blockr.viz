@@ -348,6 +348,7 @@ interface ChartSelectionState {
   restore(saved: unknown): void;
   click(slot: ChartSlot | null, params: any, filters: ChartSelectionFilters): void;
   latch(sel: ChartSelection, brush: boolean): void;
+  redrawing(): void;
   brushCleared(): void;
   clear(): void;
   words(): string | null;
