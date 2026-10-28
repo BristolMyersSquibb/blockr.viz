@@ -1,7 +1,6 @@
 # The Image download.
 
-# The picture when the browser drew one; else the render object's own
-# painted image (the groups table and cards draw themselves in R).
+# The browser's picture, else the render object's own painted image.
 export_png <- function(x, file) {
   p <- exhibit_picture(x)
   if (!is.null(p)) {
@@ -14,8 +13,8 @@ export_png <- function(x, file) {
   write_exhibit_png(obj, file)
 }
 
-# A chart always has a picture to give: when the menu opens the view sends
-# one. A table has an image only when its render object paints one.
+# A chart always gets a picture when the menu opens. A table has an image only
+# when its render object paints one.
 png_accepts <- function(x) {
   !is.null(exhibit_picture(x)) || identical(exhibit_kind(x), "chart") ||
     !is.null(exhibit_render(x))

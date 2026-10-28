@@ -7,22 +7,12 @@
 \method{blockr_deser}{summary_table_block}(x, data, ...)
 }
 \arguments{
-\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_ser]{blockr.core::blockr_deser()}}.}
+\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
-Restores boards saved before \code{\link[=new_summary_table_block]{new_summary_table_block()}} was flattened.
-}
-\details{
-The block used to take a single opaque \code{state = list(...)} constructor
-argument and serialize it under one \code{state} payload key. It now takes flat
-top-level arguments (\code{vars}, \code{sections}, \code{by}, ...) and serializes them as
-flat sibling payload entries. This deserializer unwraps the interim
-single-\code{state} blob back to flat constructor arguments; current (flat)
-payloads pass straight through.
-
-Block attributes (\code{block_name}, ...) ride along as sibling payload entries
-next to the state fields, so unwrapping only the \code{state} key preserves them.
-
-Drop this file when backwards compatibility is no longer needed.
+Restores boards saved before \code{\link[=new_summary_table_block]{new_summary_table_block()}} took flat
+arguments. Those boards carry one \code{state} payload key with the constructor
+arguments inside; this method lifts them up next to the block attributes
+(\code{block_name}, ...). Flat payloads pass straight through.
 }
 \keyword{internal}

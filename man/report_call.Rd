@@ -24,15 +24,14 @@ generated document.}
 A call, or \code{NULL} for the bare print.
 }
 \description{
-How a block's result should be printed in a rendered document (a
-blockr.outline report or deck). Returns a call object over \code{var}, the
-variable the generated script binds the block's result to -- e.g.
-\code{blockr.viz::static_table(tbl1)} -- or \code{NULL} when the bare result prints
-fine as-is. Consumers (blockr.outline) deparse the call into the document,
-so it must be self-qualified and contain only literal values.
+How a block's result is printed in a rendered document (a blockr.outline
+report or deck). Returns a call over \code{var}, the variable the generated
+script binds the block's result to, such as
+\code{blockr.viz::static_table(tbl1)}, or \code{NULL} when the bare result prints
+as is. Consumers deparse the call into the document, so it is
+self-qualified and holds only literal values.
 }
 \details{
-The chart block has no method: its picture is drawn in the browser, and a
-document carries the picture the browser captured (see
-\code{\link[=chart_capture_ids]{chart_capture_ids()}}).
+The chart block has no method: a document carries the picture the browser
+captured (see \code{\link[=chart_capture_ids]{chart_capture_ids()}}).
 }

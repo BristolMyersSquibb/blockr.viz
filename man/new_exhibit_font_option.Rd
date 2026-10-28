@@ -11,7 +11,7 @@ new_exhibit_font_option(value = 11, category = "Table options", ...)
 
 \item{category}{Settings sidebar category.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Forwarded to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
 }
 \value{
 A \code{board_option} object.
@@ -21,25 +21,15 @@ Board option that adds "Smallest table font" to the board sidebar: the
 size an exported table shrinks to before it is split over several slides.
 }
 \details{
-A table carried over two slides is read by flipping back and forth, and a
-table dealt left-half then right-half is worse. Both are avoidable most of
-the time by setting the table a point or two smaller, so the paginator
-shrinks before it splits -- but how small is too small is a house style
-question, not something a package can answer. This is where a board
-answers it.
-
-It governs both axes, so it is the whole setting: there is no separate
-"fit on one slide" switch, because that is what the ladder already tries
-to do. Set it to the base size (13pt) to forbid shrinking altogether, or
-down to 8pt for a deck that must not split its tables. When even the
-smallest allowed size does not fit -- a two hundred row listing never
-will -- the table is still split, and the download says so rather than
-shrinking past what anyone can read.
+The paginator shrinks a table to this size on both axes before it carries
+rows onto another slide or deals columns over several. Set it to the base
+size (13pt) to forbid shrinking, or down to 8pt for a deck that must not
+split its tables. When even the smallest allowed size does not fit, the
+table is split and the download says so.
 
 One value serves every route out of the app: the deck built by
 blockr.outline's slide builder and the PowerPoint download on a table,
-summarize table or chart block all read it, so a slide and the block it
-came from stay the same table.
+summarize table or chart block.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

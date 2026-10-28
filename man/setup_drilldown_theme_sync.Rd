@@ -7,15 +7,14 @@
 setup_drilldown_theme_sync(session = NULL)
 }
 \arguments{
-\item{session}{Shiny session; ignored -- the helper uses
-\code{blockr.core::get_session()} to reach the session that carries the
-board options.}
+\item{session}{Ignored. The session that carries the board options comes
+from \code{blockr.core::get_session()}.}
 }
 \value{
 A reactive resolving to a theme name (e.g. \code{"default"}, \code{"blockr"}).
 }
 \description{
-Returns a reactive that tracks the board's \code{echart_theme} option. Used by
-the drill-down block to re-render charts when the theme changes.
+Returns a reactive that tracks the board's \code{echart_theme} option, so the
+drill-down block re-renders when the theme changes.
 }
 \keyword{internal}

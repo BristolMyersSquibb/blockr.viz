@@ -4,16 +4,16 @@
 \alias{chart-prepare-expr}
 \title{Compiling a prepare script into part of the chart block's expression}
 \description{
-The block does not wrap the user's code in a function and call it. It
-substitutes the current input values into the body as literals and returns
-that. Two consequences follow, and they are the point of the block:
+The block does not wrap the user's code in a function. It substitutes the
+current input values into the body as literals. So:
 }
 \details{
 \itemize{
-\item The expression contains no assignment, so \code{blockr.code}'s \code{has_assignment()}
-is false and the exported script is emitted bare — no \code{local({...})} wrapper.
-\item The exported code is the code an analyst would have written, with the knob
-positions written in: \code{dplyr::filter(block_1, Species == "setosa")}.
+\item The expression contains no assignment, \code{blockr.code}'s \code{has_assignment()}
+is false and the exported script is emitted bare, with no \code{local({...})}
+wrapper.
+\item The exported code is the code an analyst would have written, with the
+control values written in: \code{dplyr::filter(block_1, Species == "setosa")}.
 }
 }
 \keyword{internal}

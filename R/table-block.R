@@ -535,14 +535,16 @@ dd_active_filter_json <- function(active) {
   ck <- dd_col_keys_state(active$ckeys)
   # The column half rides along: the view marks that column.
   col_filters <- if (length(ck)) {
-    lapply(ck, function(k) list(column = jsonlite::unbox(k$column),
-                                values = k$values))
+    lapply(ck, function(k) {
+      list(column = jsonlite::unbox(k$column), values = k$values)
+    })
   }
   if (length(gcols) && length(gcols) == length(gvals)) {
     return(as.character(jsonlite::toJSON(
       c(list(filters = unname(Map(
-        function(cl, vl) list(column = jsonlite::unbox(cl),
-                              value = jsonlite::unbox(vl)),
+        function(cl, vl) {
+          list(column = jsonlite::unbox(cl), value = jsonlite::unbox(vl))
+        },
         gcols, gvals
       ))), if (length(col_filters)) list(col_filters = col_filters))
     )))

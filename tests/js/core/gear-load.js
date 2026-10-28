@@ -81,10 +81,10 @@ function loadGear(opts = {}) {
     win.Blockr.icons = win.Blockr.icons || {};
   }
   const listeners = countListeners(win);
-  for (const f of CORE_FILES) win.eval(fs.readFileSync(path.join(JS, 'core', f), 'utf8'));
-  for (const f of ['chart.js', 'table.js']) {
-    win.eval(fs.readFileSync(path.join(JS, 'spec', f), 'utf8'));
-  }
+  // With a sourceURL, so c8 maps the coverage to the file.
+  const run = (file) => win.eval(fs.readFileSync(file, 'utf8') + '\n//# sourceURL=file://' + file);
+  for (const f of CORE_FILES) run(path.join(JS, 'core', f));
+  for (const f of ['chart.js', 'table.js']) run(path.join(JS, 'spec', f));
   return { win, doc: win.document, V: win.Blockr.viz, sent, listeners };
 }
 

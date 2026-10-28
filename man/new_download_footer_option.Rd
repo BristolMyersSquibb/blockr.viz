@@ -15,7 +15,7 @@ new_download_footer_option(
 
 \item{category}{Settings sidebar category.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Forwarded to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
 }
 \value{
 A \code{board_option} object.
@@ -24,9 +24,9 @@ A \code{board_option} object.
 A line of text printed under every download of a chart or table: drawn
 under the picture for an image (and the PowerPoint and web page that carry
 it), added as the last caption line for a table written as a table.
-\code{{user}}, \code{{time}}, \code{{filters}} and
-the fields of the data's \code{blockr_provenance} attribute (\code{{dataset}},
-\code{{note}}, ...) are filled in when the file is downloaded.
+\code{{user}}, \code{{time}}, \code{{filters}} and the fields of the data's
+\code{blockr_provenance} attribute (\code{{dataset}}, \code{{note}}, ...) are filled in
+when the file is downloaded.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

@@ -15,22 +15,19 @@ be here for a saved board to come back.}
 A \code{dock_extension} (see \code{blockr.dock::new_dock_extension()}).
 }
 \description{
-A dock extension with no UI whose only job is to install the cross-block
-control channel (\code{\link[=install_ctrl_send]{install_ctrl_send()}}) on the board, so that blocks can
-call \code{\link[=ctrl_send]{ctrl_send()}} / \code{\link[=ctrl_clear]{ctrl_clear()}} and senders can offer a target picker
+A dock extension with no UI that installs the cross-block control channel
+(\code{\link[=install_ctrl_send]{install_ctrl_send()}}) on the board, so that blocks can call
+\code{\link[=ctrl_send]{ctrl_send()}} / \code{\link[=ctrl_clear]{ctrl_clear()}} and senders can offer a target picker
 (\code{\link[=ctrl_targets]{ctrl_targets()}}).
 }
 \details{
-A block server only ever receives \verb{(id, data)} -- it never sees the board's
-\code{update} reactive, so it cannot open the channel for itself. Board
-callbacks, plugins and dock extensions do see it; an extension is the one of
-those that a board carries with it, which is what makes this the piece to
-add to an app.
+A block server cannot open the channel itself because it never sees the
+board's \code{update} reactive. A dock extension does, and a board carries it.
 }
 \section{Wiring}{
 
-Add it to the board's \code{extensions}, and to \strong{no} grid -- it renders an
-empty div, and putting it on screen would just add a blank panel:
+Add it to the board's \code{extensions} and to no grid, since it renders an empty
+div:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{new_dock_board(
   extensions = list(
@@ -41,20 +38,16 @@ empty div, and putting it on screen would just add a blank panel:
 )
 }\if{html}{\out{</div>}}
 
-One instance serves every sender on the board, and there must only be one:
-the last-author registry that makes \code{\link[=ctrl_clear]{ctrl_clear()}} clear only its own claim
-lives inside the closure \code{install_ctrl_send()} builds, so two bridges would
-give two senders two disjoint views of who owns what.
+A board needs exactly one bridge. The registry that lets \code{\link[=ctrl_clear]{ctrl_clear()}}
+clear only its own claim lives inside the closure \code{install_ctrl_send()}
+builds, so two bridges give two senders separate views of who owns what.
 }
 
 \section{Saved boards}{
 
-Dock serializes an extension by constructor name and package and rebuilds it
-on restore, which is why this is an exported constructor rather than the
-handful of lines it wraps: a closure defined in an \code{app.R} has no package to
-record, and would not survive a board round-trip. Note that boards saved
-\emph{before} the bridge was added to the app carry their old extension list and
-come back without a channel -- they need one re-save.
+Dock rebuilds an extension from its constructor name and package, so the
+bridge is an exported constructor. A board saved by an app without the
+bridge comes back without a channel and needs one re-save.
 }
 
 \examples{

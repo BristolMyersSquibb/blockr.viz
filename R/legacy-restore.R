@@ -6,22 +6,18 @@
 # arguments) in any older vocabulary and returns the block's arguments under
 # the current names, healed through the spec. In order:
 #
-#   1. names from before 0.3.0, through the reference translators that still
-#      live in R/chart-args.R and R/table-args.R (chart_legacy_args(),
-#      table_legacy_args(); they move here when those files go);
+#   1. names from before 0.3.0, through chart_legacy_args() and
+#      table_legacy_args() (R/chart-args.R, R/table-args.R);
 #   2. the renames and value maps of LEGACY_NAMES;
-#   3. the rules a map cannot say (orientation-free ones only; see
-#      legacy_values());
+#   3. the rules a map cannot say (legacy_values());
 #   4. summary entries and shading rules, by their own rows;
 #   5. title templates, so a re-saved board carries only new slot names;
 #   6. names dropped on purpose, without a warning;
 #   7. viz_heal(): any other unknown name or bad value warns and heals.
 
 # LEGACY: delete with this file
-# Boards saved by the rewritten blocks carry at least this version. It sets
-# the one value whose meaning changed under the same name: the table's
-# `color = NULL` meant "auto" before. The DESCRIPTION version has to reach it
-# before the rewrite saves boards.
+# Boards saved by the rewritten blocks carry at least this version. Older
+# boards read the table's `color = NULL` as "auto".
 VIZ_REWRITE_VERSION <- "0.3.0.9000"
 
 # LEGACY: delete with this file
@@ -54,9 +50,9 @@ legacy_restore <- function(block, state, version = NULL) {
 }
 
 # LEGACY: delete with this file
-# The constructor's hook. Old names and old values in code are translated
+# The constructor's hook: old names and old values in code are translated
 # with one warning that names them. Values the spec refuses are left for
-# viz_check(): in code they are errors, not healed.
+# viz_check() and are errors.
 legacy_ctor_args <- function(block, args) {
   named <- switch(
     block,
@@ -70,8 +66,8 @@ legacy_ctor_args <- function(block, args) {
   if (is.character(out[["script"]]) && length(out$script) > 1L) {
     out$script <- paste(out$script, collapse = "\n")
   }
-  # The old names, and the current names given an old value. A name that is
-  # neither is left to viz_check(), which says it is unknown.
+  # Old names, and current names given an old value. Any other name is left
+  # to viz_check().
   current <- names(viz_block_spec(block)$args)
   known <- LEGACY_NAMES$old[LEGACY_NAMES$block == block]
   renamed <- intersect(setdiff(names(args), current), known)
@@ -107,9 +103,9 @@ legacy_ctor_args <- function(block, args) {
 }
 
 # LEGACY: delete with this file
-# The chart's selection as the reference saved it, `{type, filters, range,
-# point}`, in the shape the kit reads (kit-input.R): categorical, or a range;
-# a point becomes a range with equal ends.
+# The chart selection `{type, filters, range, point}` in the shape the kit
+# reads (kit-input.R): categorical, or a range. A point becomes a range with
+# equal ends.
 legacy_chart_selection <- function(args) {
   s <- args[["selection"]]
   if (!is.list(s) || !length(s)) {
@@ -139,16 +135,14 @@ legacy_chart_selection <- function(args) {
 }
 
 # LEGACY: delete with this file
-# The table payloads before the rewrite of the table block: old table
-# names, an aggregation list where the typed summaries go.
+# Table state from before 0.3.0: old table names, and an aggregation list
+# where the typed summaries go.
 legacy_table_before_030 <- function(state) {
-  # `from = "table"`: a payload with `layout` can still carry old names
-  # (`compact`, `digits`, the download toggles).
   state <- table_legacy_args(state, from = "table")
   if (table_is_agg_summaries(state[["summaries"]])) {
     state$summaries <- table_agg_to_summaries(state$summaries)
   }
-  # `values` was never a table argument; code passed it for `columns`.
+  # Code passed `values` for `columns`.
   if (is.character(state[["values"]]) && is.null(state[["columns"]])) {
     state$columns <- state$values
   }
@@ -180,7 +174,7 @@ legacy_rename <- function(block, x) {
 }
 
 # LEGACY: delete with this file
-# Old values under the current names: "stacked" is "stack", "off" is "none".
+# Old values under the current names, such as "stacked" to "stack".
 legacy_map_values <- function(block, x) {
   rows <- legacy_rows(block, renamed = FALSE)
   rows <- rows[lengths(rows$values) > 0L, ]
@@ -202,16 +196,15 @@ legacy_map_values <- function(block, x) {
 # LEGACY: delete with this file
 # Rules a value map cannot say.
 legacy_values <- function(block, x, version) {
-  # A script arrived as a vector of lines.
+  # A script saved as a vector of lines.
   if (is.character(x[["script"]]) && length(x$script) > 1L) {
     x$script <- paste(x$script, collapse = "\n")
   }
   if (identical(block, "chart")) {
-    # The reference took several roles; the spec takes one.
     if (length(x[["percent_of"]]) > 1L) {
       x$percent_of <- x$percent_of[[1L]]
     }
-    # The reference saved panel columns as text.
+    # Panel columns saved as text.
     fc <- x[["facet_cols"]]
     if (is.character(fc)) {
       n <- suppressWarnings(as.numeric(fc[[1L]]))
@@ -223,7 +216,7 @@ legacy_values <- function(block, x, version) {
   if (identical(block, "table")) {
     x <- legacy_table_drill(x)
     if (legacy_before_rewrite(version)) {
-      # An emptied slot from a pre-#144 paste (list()) is unset too.
+      # An emptied slot (list()) is unset too.
       if (is.list(x[["color"]]) && !length(x$color)) x["color"] <- list(NULL)
       x["color"] <- list(if (is.null(x[["color"]])) {
         "auto"
@@ -315,7 +308,7 @@ legacy_summary_entry <- function(e) {
     }
   }
   e[["ref"]] <- NULL
-  # A reference range was numbers or columns; it is text now, either way.
+  # A reference range is text, whether it was saved as numbers or columns.
   for (k in intersect(c("ref_min", "ref_max"), names(e))) {
     if (is.numeric(e[[k]])) e[[k]] <- format(e[[k]], trim = TRUE)
   }
@@ -326,13 +319,11 @@ legacy_summary_entry <- function(e) {
     }
   }
   e[["style"]] <- NULL
-  # One mark each: the type fixes it.
+  # The type fixes the mark.
   if (type %in% c("field", "sparkline", "spans", "pair", "expr")) {
     e[["show"]] <- NULL
   }
-  dropped <- LEGACY_NAMES$old[LEGACY_NAMES$block == "summary" &
-                                is.na(LEGACY_NAMES$new)]
-  e[setdiff(names(e), dropped)]
+  legacy_drop("summary", e)
 }
 
 # LEGACY: delete with this file
@@ -340,14 +331,10 @@ legacy_shading_rule <- function(r) {
   if (!is.list(r) || is.null(names(r))) {
     return(r)
   }
-  r <- legacy_rename("shading", r)
-  dropped <- LEGACY_NAMES$old[LEGACY_NAMES$block == "shading" &
-                                is.na(LEGACY_NAMES$new)]
-  r[setdiff(names(r), dropped)]
+  legacy_drop("shading", legacy_rename("shading", r))
 }
 
 # LEGACY: delete with this file
-# Names read and dropped on purpose: no warning for them.
 # The table's summary entries and shading rules under their current keys.
 legacy_entries <- function(block, x) {
   if (!identical(block, "table")) {
@@ -362,6 +349,8 @@ legacy_entries <- function(block, x) {
   x
 }
 
+# LEGACY: delete with this file
+# Names dropped on purpose, without a warning.
 legacy_drop <- function(block, x) {
   dropped <- LEGACY_NAMES$old[LEGACY_NAMES$block == block &
                                 is.na(LEGACY_NAMES$new)]
@@ -371,13 +360,12 @@ legacy_drop <- function(block, x) {
 # Title templates ------------------------------------------------------------
 
 # LEGACY: delete with this file
-# Slot names a saved template may carry, old name = new name. The chart's
-# `group` and `value` depend on the orientation and are added per state.
+# Slot names a saved template may carry, as old = new. The chart's `group` and
+# `value` depend on the orientation and are added per state.
 legacy_slot_names <- function(block, state) {
   if (identical(block, "table")) {
-    # `value`, `func`, `color`, `facet` and `fill` named the first summary's
-    # keys in the groups layout; the spec has no slot for them, so they stay
-    # and print nothing.
+    # The groups layout's `value`, `func`, `color`, `facet` and `fill` have no
+    # slot in the spec; they stay and print nothing.
     return(c(group = "by", parent = "by", id_var = "id",
              pct_of = "percent_of", axis = "column_axis"))
   }
@@ -390,8 +378,8 @@ legacy_slot_names <- function(block, state) {
 }
 
 # LEGACY: delete with this file
-# Whether an aggregated chart lies horizontally, as the reference read its
-# `group` and `value` slots. Without data a numeric column cannot be told.
+# Whether an aggregated chart lies horizontally, which decides what `group`
+# and `value` mean. Without data a numeric column cannot be told.
 legacy_chart_horizontal <- function(state) {
   type <- state[["type"]] %||% "bar"
   if (!type %in% c("bar", "boxplot", "pointrange")) {
@@ -404,8 +392,8 @@ legacy_chart_horizontal <- function(state) {
 }
 
 # LEGACY: delete with this file
-# `{@old}`, `{label(@old)}` and `{@old in a, b}` under the new names, with
-# the values of an `in` list mapped as well.
+# `{@old}`, `{label(@old)}` and `{@old in a, b}` under the new names, with the
+# values of an `in` list mapped too.
 legacy_template <- function(block, tpl, state) {
   if (!is.character(tpl) || length(tpl) != 1L || is.na(tpl) ||
         !grepl("@", tpl, fixed = TRUE)) {
@@ -442,16 +430,15 @@ legacy_template_values <- function(tpl, name, map) {
 # Removed blocks ---------------------------------------------------------------
 #
 # The blocks that no longer exist restore as table blocks. Each returns the
-# table's arguments under the current names; the deser methods pass them to
-# new_table_block() once the constructors take the new names.
+# table's arguments under the current names.
 
 # LEGACY: delete with this file
 #' A saved tile as a table
 #'
 #' A tile that aggregated in place becomes the groups layout in the cards
-#' look; a wide tile frame the records layout in cards; the long tile frame
-#' a plain records table. Settings the table has no counterpart for are
-#' dropped with one warning.
+#' look; a wide tile frame becomes the records layout in cards; the long tile
+#' frame becomes a plain records table. Settings the table has no counterpart
+#' for are dropped with one warning.
 #' @param payload The tile's saved payload.
 #' @param label How the warning names the block.
 #' @return The table's arguments, under the current names.
@@ -615,8 +602,8 @@ legacy_deser <- function(class, data) {
 }
 
 # LEGACY: delete with this file
-# The names a saved chart owns: its arguments and every old name. Anything
-# else in a payload is a block attribute, such as blockr.dock's `visible`.
+# The names a saved chart owns: its arguments and every old name. Anything else
+# in a payload is a block attribute, such as blockr.dock's `visible`.
 legacy_arg_names <- function(block) {
   block <- sub("_block$", "", block)
   table <- c(names(viz_block_spec("table")$args),
@@ -668,7 +655,7 @@ legacy_table_selection <- function(state) {
   columns <- if (length(ck)) {
     stats::setNames(lapply(ck, `[[`, "values"), vapply(ck, `[[`, "", "column"))
   }
-  # The shape viz_read_selection() gives a click: `columns` always there.
+  # `columns` is always present, as viz_read_selection() gives it.
   state["selection"] <- list(if (length(filters) || length(columns)) {
     list(type = "categorical", filters = filters %||% list(),
          columns = columns %||% list())

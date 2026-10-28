@@ -1,18 +1,11 @@
+# LEGACY: delete with this file.
+
 #' Legacy deserialization for old block formats
 #'
-#' Restores boards saved before [new_summary_table_block()] was flattened.
-#'
-#' The block used to take a single opaque `state = list(...)` constructor
-#' argument and serialize it under one `state` payload key. It now takes flat
-#' top-level arguments (`vars`, `sections`, `by`, ...) and serializes them as
-#' flat sibling payload entries. This deserializer unwraps the interim
-#' single-`state` blob back to flat constructor arguments; current (flat)
-#' payloads pass straight through.
-#'
-#' Block attributes (`block_name`, ...) ride along as sibling payload entries
-#' next to the state fields, so unwrapping only the `state` key preserves them.
-#'
-#' Drop this file when backwards compatibility is no longer needed.
+#' Restores boards saved before [new_summary_table_block()] took flat
+#' arguments. Those boards carry one `state` payload key with the constructor
+#' arguments inside; this method lifts them up next to the block attributes
+#' (`block_name`, ...). Flat payloads pass straight through.
 #'
 #' @param x,data,... Passed through from [blockr.core::blockr_deser()].
 #' @keywords internal
@@ -23,8 +16,7 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 
   payload <- data[["payload"]]
   if ("state" %in% names(payload)) {
-    # Interim single-blob format: lift the state fields up next to the block
-    # attributes (which are stored as siblings of `state`).
+    # Lift the state fields up next to the block attributes.
     extras <- payload[setdiff(names(payload), "state")]
     payload <- c(payload[["state"]], extras)
   }
@@ -46,19 +38,15 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 
 #' Legacy deserialization for the tile block
 #'
-#' The tile block is gone: a tile is a table block in the cards look
-#' (`new_table_block(look = "cards")`). A board saved with a tile restores as
-#' a table block. A tile that aggregated in place (`summaries`, with or
-#' without a `group`) becomes the groups layout in the cards look, one card
-#' per summary and one row of cards per group (one row without a group); its
-#' drill and click state carry over. Any other tile read a precomputed frame:
-#' a wide one (several `value` columns, no `name`) becomes the records layout
-#' in the cards look, one card per column; the long tile frame (`name` /
-#' `value` / `secondary`) becomes a plain records table. Settings the table
-#' has no counterpart for (`format`, `unit`, `secondary`, `style`, ...) are
-#' dropped with a warning. The board saves as a table block from then on.
-#'
-#' Drop this method when backwards compatibility is no longer needed.
+#' A board saved with a tile block restores as a table block. A tile that
+#' aggregated in place (`summaries`, with or without a `group`) becomes the
+#' groups layout in the cards look, one card per summary and one row of cards
+#' per group; its drill and click state carry over. Any other tile read a
+#' precomputed frame: a wide one (several `value` columns, no `name`) becomes
+#' the records layout in the cards look, one card per column; the long frame
+#' (`name`, `value`, `secondary`) becomes a plain records table. Settings the
+#' table has no counterpart for (`format`, `unit`, `secondary`, `style`, ...)
+#' are dropped with one warning.
 #'
 #' @param x,data,... Passed through from [blockr.core::blockr_deser()].
 #' @keywords internal
@@ -103,9 +91,9 @@ legacy_new_table <- function(res) {
 
 #' Restore a saved chart block
 #'
-#' Boards saved with any earlier blockr.viz restore through the legacy
-#' tables (R/legacy.R): old names and values are translated, bad values
-#' healed with one warning.
+#' Boards saved with any earlier blockr.viz restore through the legacy tables
+#' (R/legacy.R): old names and values are translated, bad values are healed
+#' with one warning.
 #'
 #' @param x,data,... Passed through from [blockr.core::blockr_deser()].
 #' @keywords internal

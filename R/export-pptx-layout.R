@@ -1,7 +1,7 @@
 # PowerPoint: how a table is cut into slides, and what the template's
 # layouts offer. Used by write_exhibit_pptx() (R/export-pptx-common.R).
 
-# "Title (2 of 3)" on the continuation slides, plain on a table that fits.
+# "Title (2 of 3)" for page = c(2, 3); the plain title when `page` is NULL.
 pptx_page_title <- function(title, page = NULL) {
   if (is.null(page) || !is.character(title) || !length(title)) {
     return(title)
@@ -9,27 +9,22 @@ pptx_page_title <- function(title, page = NULL) {
   sprintf("%s (%d of %d)", title, page[[1L]], page[[2L]])
 }
 
-# How tall the whole thing is, header band and footnote included.
+# Height in inches: header band, body and footnote.
 pptx_table_height <- function(ft) {
   sum(ft_part_heights(ft, "header"), ft_part_heights(ft, "body"),
       ft_part_heights(ft, "footer"))
 }
 
-# Does it clear the vertical budget?
+# Does the table fit within `budget` inches?
 pptx_fits <- function(ft, budget) {
   h <- pptx_table_height(ft)
   !is.finite(h) || h <= budget
 }
 
-# The size at which this table WOULD have been one slide, or NULL when no
-# legible size is.
-#
-# Asked only of a table that has already been split, and answered with one
-# extra measurement rather than a walk down the ladder: heights scale with
-# the type, so `size * budget / height` is a guess that is never too small --
-# a smaller font also unwraps rows, which the guess does not count. One probe
-# confirms it. Walking the ladder from the floor downward would build the
-# table five more times to learn the same thing.
+# The font size at which a split table would fit one slide, or NULL when none
+# at or above `hard` does. Heights scale with the type, so
+# `size * budget / height` is the estimate. One call to `build(est)` confirms
+# it.
 pptx_fit_size <- function(ft, build, budget, size,
                           hard = exhibit_font_floor()) {
 
@@ -48,31 +43,18 @@ pptx_fit_size <- function(ft, build, budget, size,
   if (pptx_fits(build(est), budget)) est else NULL
 }
 
-# Did the width allocator run out of slide? Either half counts: a data cell
-# narrower than its own characters is cut off, and a header narrower than its
-# longest word breaks inside it. Splitting ROWS helps with neither, which is
-# why this is asked apart from the height, and it is what the font ladder
-# tries to clear: a point smaller and nothing wraps.
+# Did the width allocator run out of slide? True when a data cell is narrower
+# than its longest word or a header breaks inside a word. Splitting rows does
+# not help with either, so this is separate from the height check.
 pptx_width_squeezed <- function(ft) {
   sq <- attr(ft, "width_squeeze")
   isTRUE(sq[["cell"]]) || isTRUE(sq[["header"]])
 }
 
-# The narrower question, and the only one worth dealing the columns over two
-# sets of slides for: are the DATA CELLS cut off -- narrower than their own
-# longest word, so a number is broken mid-token and, below that, PowerPoint
-# stacks the characters one per line?
-#
-# Nothing else. A table carried over two slides is read by flipping back and
-# forth with the stub in the middle, and almost nothing is worth that: a
-# header taking a second line is read at a glance, a header breaking after a
-# syllable is read with a moment's pause, and a table that pages downward is
-# read straight through. The columns come apart only when a reader could not
-# follow them at all.
-#
-# `blockr.viz.ft_header_break_tol` defaults to 0, off. At 0.6 a header word
-# losing a third of itself deals the columns, which puts seven-column tables
-# on two sets of slides.
+# The condition for dealing the columns over several slide sets: the data
+# cells are cut off (narrower than their longest word). A header that only
+# wraps does not count, unless `blockr.viz.ft_header_break_tol` (default 0,
+# off) is set and a header word keeps less than that share of itself.
 pptx_width_broken <- function(ft, tol = getOption(
                                 "blockr.viz.ft_header_break_tol", 0)) {
   sq <- attr(ft, "width_squeeze")
@@ -82,11 +64,10 @@ pptx_width_broken <- function(ft, tol = getOption(
        is.numeric(fit) && length(fit) == 1L && is.finite(fit) && fit < tol)
 }
 
-# Last input row of each page, decided on the measured height of the rendered
-# rows rather than on a row count. Every page re-emits the header band and the
-# footnote (that is the point of splitting rather than overflowing), and every
-# page after the first also re-emits the section headers it opens inside, so
-# the budget for a continuation page is smaller than for the first.
+# Last input row of each page, from the measured height of the rendered rows.
+# Every page repeats the header band and the footnote, and every page after
+# the first also repeats the section headers it opens inside, so a
+# continuation page has a smaller budget.
 pptx_page_breaks <- function(ft, budget) {
 
   h <- ft_part_heights(ft, "body")
@@ -119,8 +100,7 @@ pptx_page_breaks <- function(ft, budget) {
       j <- j + 1L
     }
     if (is.na(last)) {
-      # A single row taller than the whole slide: take it anyway rather than
-      # loop forever, and let it overflow.
+      # A single row taller than the slide: take it and let it overflow.
       last <- min(map[!is.na(map) & seq_len(n) >= i])
     }
     out <- c(out, last)
@@ -137,14 +117,9 @@ pptx_fixed_breaks <- function(n_row, per) {
   unique(c(seq(per, n_row, by = per), n_row))
 }
 
-# The section each input row belongs to, or NULL when the table has none.
-#
-# The key is read off the view's OWN frame, not off the input: a table whose
-# only row axis is `.variable_label` has its sections named by the synthetic
-# `.variable_block` column, which the view adds and the input never carries.
-# Reading `x[[".variable_block"]]` there gave NULL -- a zero-length key that is
-# not NULL, so every guard downstream let it through and the first
-# continuation page asked it for row 11 of nothing.
+# The section each input row belongs to, or NULL when the table has none. The
+# key is read from the structure view's frame, because that view can add
+# section columns (such as `.variable_block`) that `x` does not carry.
 pptx_section_key <- function(x) {
   view <- tryCatch(annotated_structure_view(x), error = function(e) NULL)
   cols <- view$section_cols
@@ -159,9 +134,8 @@ pptx_section_key <- function(x) {
   key
 }
 
-# Move a break back when it would leave a section with one or two rows
-# stranded at the top of the next slide. The whole section goes over instead,
-# which is the same fix as not leaving a heading alone at the foot of a slide.
+# Move a break back when it would leave fewer than `keep` rows of a section at
+# the top of the next slide. The whole section goes over instead.
 pptx_hold_sections <- function(breaks, key, keep = 2L) {
 
   if (is.null(key) || length(breaks) < 2L) {
@@ -180,8 +154,7 @@ pptx_hold_sections <- function(breaks, key, keep = 2L) {
     if (start > lower) breaks[[i]] <- start - 1L
   }
 
-  # Trailing breaks can repeat or run backwards here; keep the ones that are
-  # still boundaries.
+  # Drop breaks that now repeat or run backwards.
   breaks <- breaks[c(TRUE, diff(breaks) > 0)]
   if (utils::tail(breaks, 1L) < n) breaks <- c(breaks, n)
   breaks
@@ -195,8 +168,7 @@ pptx_data_cols <- function(x) {
 }
 
 # The column groups a split may cut between: the spanner groups, so an arm is
-# never dealt half onto one slide and half onto the next. Without spanners
-# every column is its own group.
+# never cut in half. Without spanners every column is its own group.
 pptx_col_groups <- function(x) {
   cols <- pptx_data_cols(x)
   top <- vapply(strsplit(cols, "||", fixed = TRUE), function(p) {
@@ -208,15 +180,11 @@ pptx_col_groups <- function(x) {
 
 #' Deal a table's columns over several slides
 #'
-#' Called when no font the exporter is allowed to use makes the columns fit:
-#' 36 toxicity-grade columns do not fit a widescreen slide in any orientation,
-#' and the alternatives are cells cut off or headers stacked one character per
-#' line. Each set of slides repeats the row stub, so every one is a readable
-#' table on its own.
+#' Called when no allowed font size makes the columns fit. Each set of slides
+#' repeats the row stub.
 #'
-#' @param fits A predicate taking a candidate frame and saying whether its
-#'   cells fit, which is the exporter's own width pass rather than a second
-#'   copy of the arithmetic.
+#' @param fits A predicate taking a candidate frame and returning whether its
+#'   cells fit.
 #' @return A list of frames, each the stub plus a contiguous run of the
 #'   spanner groups.
 #' @noRd
@@ -238,8 +206,7 @@ pptx_split_columns <- function(x, fits, max_sets = 12L) {
     }
   }
 
-  # Nothing worked: hand back the whole thing and let the caller say so,
-  # rather than dealing it into slivers.
+  # No split works: return the whole table and let the caller warn.
   list(x)
 }
 
@@ -270,13 +237,9 @@ pptx_deal <- function(n, k) {
   Map(seq, c(1L, utils::head(ends, -1L) + 1L), ends)
 }
 
-# Column subset that keeps the structure columns and the frame's own display
-# attributes; `keep` names the data columns to hold on to.
-pptx_subset_cols <- function(x, keep) {
-
-  nm <- names(x)
-  out <- x[, nm %in% keep | startsWith(nm, "."), drop = FALSE]
-
+# Copy the column and frame attributes (labels, title, caption, ...) that
+# `[.data.frame` drops from `x` onto its subset `out`.
+pptx_restore_attrs <- function(out, x) {
   for (cn in names(out)) {
     a <- attributes(x[[cn]])
     for (k in setdiff(names(a), c("names", "dim", "dimnames", "class",
@@ -284,50 +247,35 @@ pptx_subset_cols <- function(x, keep) {
       attr(out[[cn]], k) <- a[[k]]
     }
   }
-  for (k in setdiff(names(attributes(x)),
-                    c("names", "row.names", "class"))) {
+  for (k in setdiff(names(attributes(x)), c("names", "row.names", "class"))) {
     attr(out, k) <- attr(x, k)
   }
-
   out
 }
 
-# Row subset that keeps what `[.data.frame` throws away: the column labels the
-# annotated-df contract carries, and the table's own title / subtitle /
-# caption attributes.
+# Column subset that keeps the structure columns (dot-prefixed) and `keep`,
+# with the display attributes.
+pptx_subset_cols <- function(x, keep) {
+  nm <- names(x)
+  pptx_restore_attrs(x[, nm %in% keep | startsWith(nm, "."), drop = FALSE], x)
+}
+
+# Row subset with the display attributes kept.
 pptx_slice_rows <- function(x, i) {
-
-  out <- x[i, , drop = FALSE]
-
-  for (nm in names(x)) {
-    a <- attributes(x[[nm]])
-    for (k in setdiff(names(a), c("names", "dim", "dimnames", "class",
-                                  "levels", "row.names"))) {
-      attr(out[[nm]], k) <- a[[k]]
-    }
-  }
-  for (nm in setdiff(names(attributes(x)),
-                     c("names", "row.names", "class"))) {
-    attr(out, nm) <- attr(x, nm)
-  }
-
+  out <- pptx_restore_attrs(x[i, , drop = FALSE], x)
   rownames(out) <- NULL
   out
 }
 
-# The reference deck this export styles against: the caller's, the app's, the
-# outline's, or none. A path that no longer exists counts as none -- state
-# saved on one machine and opened on another carries absolute paths that
-# resolve nowhere, and silently styling against a stale one is not a thing to
-# diagnose from a slide.
+# The reference deck to style against: the first existing file among the
+# argument, the two options and blockr.outline's bundled template, else "".
 pptx_template <- function(template = NULL) {
 
   candidates <- list(
     template,
     getOption("blockr.viz.pptx_template"),
     getOption("blockr.outline.template"),
-    # A soft dependency: system.file() returns "" when the package is absent,
-    # so this costs nothing when it is.
+    # "" when blockr.outline is not installed.
     system.file("templates", "widescreen-default.pptx",
                 package = "blockr.outline")
   )
@@ -341,9 +289,8 @@ pptx_template <- function(template = NULL) {
   ""
 }
 
-# Remove every slide, keeping the masters, layouts and theme. Best effort: an
-# officer without remove_slide(), or a deck it refuses to shrink, leaves the
-# slides in place rather than failing the download.
+# Remove every slide, keeping masters, layouts and theme. Best effort: when
+# officer cannot remove them the slides stay.
 pptx_strip_slides <- function(doc) {
   tryCatch(
     {
@@ -356,6 +303,38 @@ pptx_strip_slides <- function(doc) {
   )
 }
 
+# TRUE for a single non-empty string.
+pptx_has_title <- function(title) {
+  is.character(title) && length(title) == 1L && nzchar(title)
+}
+
+# Layout, master and slide size (inches) for a new slide. `layout` defaults to
+# "Title and Content" when the deck has it, else the first layout.
+pptx_slide_setup <- function(doc, layout = NULL, master = NULL) {
+  layouts <- officer::layout_summary(doc)
+  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
+    "Title and Content"
+  } else {
+    layouts$layout[[1L]]
+  }
+  list(
+    layout = layout,
+    master = master %||% layouts$master[match(layout, layouts$layout)],
+    width = tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333),
+    height = tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
+  )
+}
+
+# Put `title` in the layout's title placeholder; `doc` unchanged on failure.
+pptx_set_title <- function(doc, title) {
+  tryCatch(
+    officer::ph_with(doc, title,
+                     location = officer::ph_location_type(type = "title")),
+    error = function(e) doc
+  )
+}
+
+# Does the layout have a title placeholder?
 pptx_layout_has_title <- function(doc, layout, master) {
   tryCatch(
     {
@@ -367,10 +346,9 @@ pptx_layout_has_title <- function(doc, layout, master) {
   )
 }
 
-# Usable table width (inches): the master's body placeholder, or a 16:9
-# widescreen fallback. Read straight out of the package's XML (`ext cx` in
-# EMU, 914400 = 1in) rather than through officer, so a template officer cannot
-# fully parse still contributes its geometry.
+# Usable table width in inches: the master's body placeholder, or 12 when it
+# cannot be read. Read from the XML (`ext cx` in EMU, 914400 per inch) so a
+# template officer cannot fully parse still counts.
 pptx_content_width <- function(template) {
 
   fallback <- 12.0
@@ -396,15 +374,9 @@ pptx_content_width <- function(template) {
   if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
 }
 
-# How far down the slide a table may run, in inches from the top.
-#
-# The limit is the top of whatever the layout puts at the foot -- the
-# footer, the date, the slide number -- and never below `slide_h - 0.4`. A
-# constant alone does not know the template: the BMS layout starts its footer
-# band at 6.95in of a 7.5in slide, so `slide_h - 0.4` would print the last
-# row or two over the company line. The date and slide-number placeholders count: they are usually
-# level with the footer, and a table over the page number is as wrong as a
-# table over the company name.
+# How far down the slide a table may run, in inches from the top: the top of
+# the layout's footer, date or slide-number placeholder minus `gap`, but never
+# below `slide_h - 0.4`.
 pptx_body_bottom <- function(doc, layout, master, slide_h,
                              gap = getOption("blockr.viz.ft_footer_gap",
                                              0.05)) {
@@ -416,10 +388,7 @@ pptx_body_bottom <- function(doc, layout, master, slide_h,
       ph <- officer::layout_properties(doc, layout = layout, master = master)
       foot <- ph[ph$type %in% c("ftr", "dt", "sldNum"), , drop = FALSE]
       tops <- foot$offy[is.finite(foot$offy) & foot$offy > slide_h / 2]
-      # A gap, because stopping exactly ON the footer still reads as one
-      # thing touching another, and because a stated row height is a floor:
-      # PowerPoint grows a row whose text needs more lines than the measuring
-      # font predicted, and the growth all comes out of the bottom.
+      # The gap absorbs rows that PowerPoint grows beyond the measured height.
       if (length(tops)) min(tops - gap, fallback) else fallback
     },
     error = function(e) fallback
@@ -429,17 +398,12 @@ pptx_body_bottom <- function(doc, layout, master, slide_h,
 }
 
 # Where the title placeholder's text ends, in inches from the top of the
-# slide. The table is placed below THAT rather than at a constant, because a
-# title long enough to wrap runs down into the table: the BMS layout puts its
-# title at 0.4in with 1.25in of box, so a fixed 1.1in top sits inside it once
-# a "(55 of 57)" page marker wraps a long title.
-#
-# NULL when the layout has no title placeholder or the geometry cannot be
-# read, and the caller keeps its default.
+# slide, allowing for wrapping. NULL when the layout has no title placeholder
+# or its geometry cannot be read.
 pptx_title_bottom <- function(doc, layout, master, template, title,
                               gap = 0.1) {
 
-  if (!is.character(title) || length(title) != 1L || !nzchar(title)) {
+  if (!pptx_has_title(title)) {
     return(NULL)
   }
 
@@ -461,7 +425,7 @@ pptx_title_bottom <- function(doc, layout, master, template, title,
   )
 }
 
-# Point size of the layout's title text, from the master's own title style.
+# Point size of the title text, from the master's title style.
 pptx_title_size <- function(template, fallback = 24) {
 
   xml <- pptx_part(template, "ppt/slideMasters/slideMaster1.xml")
@@ -477,24 +441,19 @@ pptx_title_size <- function(template, fallback = 24) {
     return(fallback)
   }
 
-  # OOXML states point sizes in hundredths.
+  # OOXML sizes are in hundredths of a point.
   out <- as.numeric(gsub("\\D", "", sz)) / 100
   if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
 }
 
-# The deck's body typeface (the theme's MINOR latin font; the major one is for
-# titles). NULL when the template carries no readable font scheme.
-#
-# Worth reading at all because a flextable writes an explicit typeface on every
-# run: everything the template draws itself resolves against the theme, and the
-# exported table would be the one thing on the slide that does not match its
-# own master -- invisibly so on the machine that authored it.
+# The deck's body typeface: the theme's minor latin font. NULL when the
+# template has no readable font scheme.
 pptx_body_font <- function(template) {
   pptx_theme_font(template, "minor")
 }
 
-# Either half of the theme's font scheme: "minor" is the body face, "major"
-# the one titles are set in.
+# Half of the theme's font scheme: "minor" is the body face, "major" the
+# title face.
 pptx_theme_font <- function(template, which = c("minor", "major")) {
 
   which <- match.arg(which)
@@ -519,8 +478,8 @@ pptx_theme_font <- function(template, which = c("minor", "major")) {
   if (!length(face) || !nzchar(face)) NULL else face
 }
 
-# One part of a pptx (a zip), as a single string. NULL when the file, the part
-# or the unzip is not there.
+# One part of a pptx (a zip) as a single string, or NULL when the file or the
+# part is missing.
 pptx_part <- function(template, part) {
 
   if (!is.character(template) || length(template) != 1L ||
