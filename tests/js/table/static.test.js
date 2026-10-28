@@ -35,9 +35,9 @@ test('a printed groups table is drawn on load: every row, no gear, no tools', ()
                                           derived: { titles: { title: 'Arms' } } }),
                   { 'data-viz-gear': 'off' });
   } });
-  assert.ok(el.querySelector('.blockr-summarize-container'));
-  assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 3);
-  assert.equal(el.querySelectorAll('.blockr-summarize-fill').length, 3);
+  assert.ok(el.querySelector('.vz-table-groups'));
+  assert.equal(el.querySelectorAll('tbody tr.vz-table-row').length, 3);
+  assert.equal(el.querySelectorAll('.vz-table-groups-fill').length, 3);
   assert.equal(el.querySelector('.blockr-gear-btn'), null);
   assert.ok(el.querySelector('input[type="search"], .vz-search, input').hidden);
   assert.match(el.textContent, /Arms/);
@@ -49,7 +49,7 @@ test('a table added later is drawn once; a printed one draws past the window', a
   const el = staticEl(env.win.document, payload({ data: flatModel(600) }), { 'data-viz-gear': 'off' });
   await tick(env.win, 2);
   env.V.table.mount();
-  assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 600);
+  assert.equal(el.querySelectorAll('tbody tr.vz-table-row').length, 600);
   // A printed table has no search to count rows against.
   assert.equal(el.querySelector('.vz-count').textContent, '');
   assert.equal(el.querySelectorAll('.blockr-gear-btn').length, 0);
@@ -60,7 +60,7 @@ test('data-viz-still="off" keeps the row window, the tools and the gear', async 
   const el = staticEl(env.win.document, payload({ data: flatModel(600) }),
                       { 'data-viz-still': 'off', 'data-viz-gear': 'on' });
   await tick(env.win, 2);
-  assert.ok(el.querySelectorAll('tbody tr.blockr-data-row').length < 600);
+  assert.ok(el.querySelectorAll('tbody tr.vz-table-row').length < 600);
   assert.equal(el.querySelector('input').hidden, false);
   assert.ok(el.querySelector('.blockr-gear-btn'));
 });
@@ -80,7 +80,7 @@ test('renderStatic again redraws through the same view and keeps the search', ()
   assert.equal(el.querySelector('input'), input);
   assert.equal(input.value, 'S2');
   assert.match(el.textContent, /Kept rows/);
-  assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 5);
+  assert.equal(el.querySelectorAll('tbody tr.vz-table-row').length, 5);
   // Rows of another revision are not held: nothing is drawn from them.
   T.renderStatic(el, payload({ data: null, dataRev: first.data_rev + 99,
                                derived: { titles: { title: 'Other rows' } } }));
@@ -94,7 +94,7 @@ test('a click on a static table goes out as <id>_select', () => {
   const m = flatModel(3);
   m.drill = 'ARM';
   env.V.table.renderStatic(el, payload({ data: m, config: { drill: 'ARM' } }), { gear: false });
-  el.querySelector('tbody tr.blockr-data-row').dispatchEvent(
+  el.querySelector('tbody tr.vz-table-row').dispatchEvent(
     new env.win.MouseEvent('click', { bubbles: true }));
   assert.deepEqual(env.selects(), [{ type: 'categorical', filters: { ARM: ['Placebo'] } }]);
 });
@@ -108,7 +108,7 @@ test("R's blockr-viz-static message redraws the element with that id", () => {
   el.id = 'it';
   env.V.table.mount();
   handlers['blockr-viz-static']({ id: 'it', payload: payload({ data: flatModel(4) }) });
-  assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 4);
+  assert.equal(el.querySelectorAll('tbody tr.vz-table-row').length, 4);
   handlers['blockr-viz-static']({ id: 'gone', payload: payload({ data: flatModel(4) }) });
 });
 
@@ -120,8 +120,8 @@ test('the cards look draws its cards', () => {
   const el = staticEl(env.win.document, payload({ data: m, config: { look: 'cards' } }),
                       { 'data-viz-gear': 'off' });
   env.V.table.mount(env.win.document);
-  assert.equal(el.querySelector('.blockr-cards-host').hidden, false);
-  assert.match(el.querySelector('.blockr-cards-host').textContent, /45/);
+  assert.equal(el.querySelector('.vz-table-cards').hidden, false);
+  assert.match(el.querySelector('.vz-table-cards').textContent, /45/);
 });
 
 test('an unknown layout says so; bad JSON or no payload draws nothing', () => {

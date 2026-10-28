@@ -55,7 +55,7 @@
       this.scope = scope;
       this.grid = new T.Grid(frame.box, scope);
       this.cardsHost = scope.node(document.createElement('div'));
-      this.cardsHost.className = 'blockr-cards-host';
+      this.cardsHost.className = 'vz-table-cards';
       this.cardsHost.hidden = true;
       frame.box.appendChild(this.cardsHost);
       /** @type {TableModel | null} */
@@ -88,7 +88,7 @@
       });
       scope.on(this.cardsHost, 'click', (e) => {
         const t = /** @type {Element | null} */ (e.target);
-        const row = t && t.closest ? t.closest('.tc-row[data-i]') : null;
+        const row = t && t.closest ? t.closest('.vz-table-card-row[data-i]') : null;
         if (row) this.drill.clickRow(Number(row.getAttribute('data-i')), row);
       });
     }
@@ -127,13 +127,13 @@
         this.drawnWith = '';
         this.grid.clear();
         this.cardsHost.hidden = true;
-        f.el.classList.remove('dt-clickable');
+        f.el.classList.remove('vz-table-clickable');
         f.count('');
         f.status(null);
         return;
       }
       f.structured(isStructured(m));
-      f.el.classList.toggle('dt-clickable', T.drill.clickable(m));
+      f.el.classList.toggle('vz-table-clickable', T.drill.clickable(m));
       this.draw(m, cfg);
     }
 

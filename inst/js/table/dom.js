@@ -164,7 +164,7 @@
       this.scope = scope;
       /** The Grid's part of the box: the table and its no-match line. */
       this.host = scope.node(document.createElement('div'));
-      this.host.className = 'dt-table-slot';
+      this.host.className = 'vz-table-slot';
       box.appendChild(this.host);
       /** @type {TableGridHooks} */
       this.hooks = hooks || {};
@@ -311,7 +311,7 @@
       const fl = this.flags;
       const attrs = Object.entries(fl.attrs || {})
         .map(([k, v]) => ' ' + k.replace(/[^a-z0-9-]/gi, '') + '="' + esc(v) + '"').join('');
-      this.host.innerHTML = '<table class="blockr-table' + (widths ? ' dt-fixed' : '') +
+      this.host.innerHTML = '<table class="blockr-table' + (widths ? ' vz-table-fixed' : '') +
         (fl.cls ? ' ' + esc(fl.cls) : '') + '"' + attrs + '>' + cols + '<thead>' + head +
         '</thead><tbody></tbody>' + (axis ? H.foot(m, axis) : '') + '</table>';
       this.table = /** @type {HTMLTableElement} */ (this.host.firstElementChild);
@@ -403,10 +403,10 @@
       this._window();
       this._foldAllButton();
       const empty = !!this.query && this._shown === 0;
-      let msg = this.host.querySelector('.blockr-search-empty');
+      let msg = this.host.querySelector('.vz-table-search-empty');
       if (empty && !msg) {
         msg = document.createElement('div');
-        msg.className = 'blockr-search-empty';
+        msg.className = 'vz-table-search-empty';
         msg.setAttribute('role', 'status');
         msg.textContent = 'No matching rows';
         this.host.appendChild(msg);
@@ -429,7 +429,7 @@
         end = Math.min(n, start + vis + 2 * OVERSCAN);
       }
       const ncol = /** @type {TableModel} */ (this.model).cols.length || 1;
-      const spacer = (/** @type {number} */ k) => '<tr class="dt-vspacer" aria-hidden="true">' +
+      const spacer = (/** @type {number} */ k) => '<tr class="vz-table-vspacer" aria-hidden="true">' +
         '<td colspan="' + ncol + '" style="padding:0;border:0;height:' +
         Math.round(k * this.rowH) + 'px"></td></tr>';
       /** @type {string[]} */
@@ -441,7 +441,7 @@
       this.win = [start, end];
       if (n > VIRT_MIN && !this._measured) {
         this._measured = true;
-        const r0 = /** @type {HTMLElement | null} */ (tbody.querySelector('tr.blockr-data-row'));
+        const r0 = /** @type {HTMLElement | null} */ (tbody.querySelector('tr.vz-table-row'));
         if (r0 && r0.offsetHeight > 0 && Math.abs(r0.offsetHeight - this.rowH) > 0.5) {
           this.rowH = r0.offsetHeight;
           this._window();
@@ -481,7 +481,7 @@
 
     /** The fold-all button follows the folds: open all, or fold all. */
     _foldAllButton() {
-      const btn = this.host.querySelector('.dt-foldall');
+      const btn = this.host.querySelector('.vz-table-foldall');
       if (!btn) return;
       const open = this.shut.size === 0 && this.shutRows.size === 0;
       const act = open ? 'Collapse all groups' : 'Expand all groups';
@@ -531,11 +531,11 @@
       const t = /** @type {Element | null} */ (e.target);
       if (!t || !this.model || !t.closest) return;
       const drills = !!this.hooks.drills && this.hooks.drills();
-      if (t.closest('.dt-foldall')) {
+      if (t.closest('.vz-table-foldall')) {
         this.foldAll(this.shut.size === 0 && this.shutRows.size === 0);
         return;
       }
-      const ib = t.closest('.blockr-indent-btn');
+      const ib = t.closest('.vz-table-indent-btn');
       if (ib) {
         const i = Number((/** @type {Element} */ (ib.closest('tr'))).getAttribute('data-i'));
         if (this.shutRows.has(i)) this.shutRows.delete(i);
@@ -543,12 +543,12 @@
         this.draw();
         return;
       }
-      const sec = t.closest('tr.blockr-section-header');
+      const sec = t.closest('tr.vz-table-section-header');
       if (sec && this.flags.collapsible) {
         const s = Number(sec.getAttribute('data-s'));
         const keyed = drills && !!(/** @type {TableSection[]} */ (this.model.sections)[s].keys);
         if (e.altKey) return this.foldAll(!this.shut.has(s));
-        if (!(keyed && t.closest('.blockr-section-value'))) return this.fold(s, !this.shut.has(s));
+        if (!(keyed && t.closest('.vz-table-section-value'))) return this.fold(s, !this.shut.has(s));
       }
       const hit = this.headAt(t);
       if (hit && hit.th.classList.contains('blockr-sortable') &&

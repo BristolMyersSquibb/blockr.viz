@@ -12,7 +12,7 @@
   const esc = V.util.esc;
 
   const INDENT_PX = 16;
-  const CHEV = '<svg class="blockr-chev" viewBox="0 0 24 24" fill="none" ' +
+  const CHEV = '<svg class="vz-table-chev" viewBox="0 0 24 24" fill="none" ' +
     'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
@@ -23,19 +23,19 @@
    * @param {boolean} sortable
    */
   function headText(h, sortable) {
-    const name = '<span class="blockr-col-name arm__name">' +
+    const name = '<span class="blockr-col-name vz-table-arm-name">' +
       String(h.text == null ? '' : h.text).split('\n').map(esc).join('<br>') + '</span>';
     const icon = sortable ? '<span class="blockr-sort-icon"></span>' : '';
     // A spanner aligns by its cell's text-align, which a flex row would undo.
     if (h.col == null && !h.stub) {
-      return name + (h.sub ? '<div class="dt-th-subrow"><span class="blockr-col-label arm__n">' +
+      return name + (h.sub ? '<div class="vz-table-th-subrow"><span class="blockr-col-label vz-table-arm-n">' +
         esc(h.sub) + '</span></div>' : '');
     }
     if (h.sub) {
-      return name + '<div class="dt-th-subrow"><span class="blockr-col-label arm__n">' +
+      return name + '<div class="vz-table-th-subrow"><span class="blockr-col-label vz-table-arm-n">' +
         esc(h.sub) + '</span>' + icon + '</div>';
     }
-    return '<div class="dt-th-namerow">' + name + icon + '</div>';
+    return '<div class="vz-table-th-namerow">' + name + icon + '</div>';
   }
 
   /**
@@ -49,19 +49,19 @@
     const h = model.head[r][c];
     const col = h.col != null ? model.cols[h.col] : null;
     const sortable = f.sortable && h.col != null && (h.span || 1) === 1;
-    const cls = [h.stub ? 'blockr-stub-header' : 'blockr-col-header',
+    const cls = [h.stub ? 'vz-table-stub-header' : 'vz-table-col-header',
       h.stub ? '' : (h.col != null ? 'leaf' : 'group'),
       !h.stub && h.col == null && r > 0 ? 'group-inner' : '',
-      col ? (col.num ? 'dt-col-num' : 'dt-col-txt') : '',
-      sortable ? 'blockr-sortable' : '', h.keys ? 'dt-keyed' : '',
-      h.stub && h.bold ? 'blockr-stub-header-bold' : ''];
+      col ? (col.num ? 'vz-table-col-num' : 'vz-table-col-txt') : '',
+      sortable ? 'blockr-sortable' : '', h.keys ? 'vz-table-keyed' : '',
+      h.stub && h.bold ? 'vz-table-stub-header-bold' : ''];
     let inner = headText(h, sortable) + (col && f.axis && !(col.axis && col.axis.foot) ? f.axis(col) : '');
     if (h.stub && f.foldAll) {
-      cls.push('dt-has-foldall');
-      inner = '<div class="dt-foldall-wrap"><button type="button" class="dt-foldall" ' +
+      cls.push('vz-table-has-foldall');
+      inner = '<div class="vz-table-foldall-wrap"><button type="button" class="vz-table-foldall" ' +
         'aria-expanded="true" aria-label="Collapse all groups">' + CHEV +
-        (h.text ? '' : '<span class="dt-foldall-all">All</span>') + '</button>' +
-        (h.text ? '<span class="dt-stub-title">' + inner + '</span>' : '') + '</div>';
+        (h.text ? '' : '<span class="vz-table-foldall-all">All</span>') + '</button>' +
+        (h.text ? '<span class="vz-table-stub-title">' + inner + '</span>' : '') + '</div>';
     }
     return '<th class="' + cls.filter(Boolean).join(' ') + '" data-h="' + r + ',' + c + '"' +
       ((h.span || 1) > 1 ? ' colspan="' + h.span + '"' : '') +
@@ -77,7 +77,7 @@
    */
   function td(c, i) {
     const d = c.disp[i];
-    const base = 'blockr-data ' + (c.num ? 'dt-num' : 'dt-txt');
+    const base = 'vz-table-data ' + (c.num ? 'vz-table-num' : 'vz-table-txt');
     /** @type {string[]} */
     const style = [];
     const bg = c.bg ? c.bg[i] : null;
@@ -94,7 +94,7 @@
     // A painted empty cell is part of the picture, not missing data.
     if (d == null) {
       return bg ? '<td class="' + base + '"' + st + '></td>'
-        : '<td class="' + base + ' blockr-dash">&mdash;</td>';
+        : '<td class="' + base + ' vz-table-dash">&mdash;</td>';
     }
     return '<td class="' + base + '"' + st + '>' + esc(d) + '</td>';
   }
@@ -107,17 +107,17 @@
    */
   function section(m, s, o) {
     const sec = /** @type {TableSection[]} */ (m.sections)[s];
-    const label = sec.label ? '<span class="blockr-section-label">' + esc(sec.label + ': ') +
+    const label = sec.label ? '<span class="vz-table-section-label">' + esc(sec.label + ': ') +
       '</span>' : '';
     const btn = o.fold
-      ? '<button class="blockr-section-btn" type="button" aria-expanded="' + !o.shut + '">' + CHEV
-      : '<span class="blockr-section-btn blockr-section-btn-static">' +
-        '<span class="blockr-chev" aria-hidden="true"></span>';
-    return '<tr class="blockr-section-header' + (o.shut ? ' collapsed' : '') +
-      (sec.keys ? ' dt-keyed' : '') + (o.extra ? ' ' + o.extra : '') + '" data-s="' + s +
-      '" data-level="' + sec.level + '"><td class="blockr-section-cell level-' + sec.level +
-      ' blockr-section-nest" colspan="' + (m.cols.length || 1) + '">' + btn + label +
-      '<span class="blockr-section-value">' + esc(sec.value) + '</span>' +
+      ? '<button class="vz-table-section-btn" type="button" aria-expanded="' + !o.shut + '">' + CHEV
+      : '<span class="vz-table-section-btn vz-table-section-btn-static">' +
+        '<span class="vz-table-chev" aria-hidden="true"></span>';
+    return '<tr class="vz-table-section-header' + (o.shut ? ' collapsed' : '') +
+      (sec.keys ? ' vz-table-keyed' : '') + (o.extra ? ' ' + o.extra : '') + '" data-s="' + s +
+      '" data-level="' + sec.level + '"><td class="vz-table-section-cell level-' + sec.level +
+      ' vz-table-section-nest" colspan="' + (m.cols.length || 1) + '">' + btn + label +
+      '<span class="vz-table-section-value">' + esc(sec.value) + '</span>' +
       (o.fold ? '</button>' : '</span>') + '</td></tr>';
   }
 
@@ -143,10 +143,10 @@
     if (tint) style.push('box-shadow:inset 3px 0 0 0 ' + tint);
     const d = c.disp[i];
     const btn = st.toggle[i]
-      ? '<button class="blockr-indent-btn" type="button" tabindex="-1" aria-expanded="' +
+      ? '<button class="vz-table-indent-btn" type="button" tabindex="-1" aria-expanded="' +
         !shut + '">' + CHEV + '</button>'
       : '';
-    return '<td class="blockr-stub' + (cls ? ' ' + cls : '') + (st.toggle[i] ? ' blockr-has-toggle' : '') +
+    return '<td class="vz-table-stub' + (cls ? ' ' + cls : '') + (st.toggle[i] ? ' blockr-has-toggle' : '') +
       (tint ? ' blockr-row-bar' : '') + '"' +
       (style.length ? ' style="' + esc(style.join(';')) + '"' : '') + '>' + btn +
       (d == null ? '&mdash;' : esc(d)) + '</td>';
@@ -162,11 +162,11 @@
    */
   function row(m, st, i, o) {
     const r = m.rows || {};
-    const cls = ['blockr-data-row'];
-    if (r.strong && r.strong[i]) cls.push('blockr-bold');
-    if (r.emph && r.emph[i]) cls.push('blockr-italic');
-    if (o.last) cls.push('blockr-group-last');
-    if (st.toggle[i]) cls.push('blockr-indent-toggle');
+    const cls = ['vz-table-row'];
+    if (r.strong && r.strong[i]) cls.push('vz-table-bold');
+    if (r.emph && r.emph[i]) cls.push('vz-table-italic');
+    if (o.last) cls.push('vz-table-group-last');
+    if (st.toggle[i]) cls.push('vz-table-indent-toggle');
     if (st.toggle[i] && o.shut) cls.push('collapsed');
     if (o.extra) cls.push(o.extra);
     const ind = st.indent ? st.indent[i] : 0;
@@ -187,8 +187,8 @@
   function foot(m, axis) {
     if (!m.cols.some((c) => c.axis && c.axis.foot)) return '';
     return '<tfoot><tr>' + m.cols.map((c, j) => j === m.stub
-      ? '<td class="blockr-summarize-axis-stub"></td>'
-      : c.axis && c.axis.foot ? '<td class="blockr-summarize-axis-cell">' + axis(c) + '</td>'
+      ? '<td class="vz-table-groups-axis-stub"></td>'
+      : c.axis && c.axis.foot ? '<td class="vz-table-groups-axis-cell">' + axis(c) + '</td>'
         : '<td></td>').join('') + '</tr></tfoot>';
   }
 

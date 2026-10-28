@@ -24,7 +24,7 @@
   /** @param {TableCardCol['legend']} items */
   function legendHtml(items) {
     if (!items || !items.length) return '';
-    return '<div class="tc-legend">' + items.map((it) =>
+    return '<div class="vz-table-card-legend">' + items.map((it) =>
       '<span><i style="background:' + esc(it.color) + '"></i>' + esc(it.label) + '</span>')
       .join('') + '</div>';
   }
@@ -40,26 +40,26 @@
     const main = c.main ? c.main[i] : null;
     const sub = c.sub ? c.sub[i] : null;
     const g = c.glyph != null && glyph ? glyph(c.glyph, i) : '';
-    let out = '<div class="tc' + (c.text ? ' is-text' : '') + '">' +
-      '<div class="tc-lab" title="' + esc(c.label) + '">' + esc(c.label) + '</div>' +
-      '<div class="tc-val">' + (main == null || main === ''
-        ? '<span class="tc-na">—</span>' : esc(main)) + '</div>';
+    let out = '<div class="vz-table-card' + (c.text ? ' is-text' : '') + '">' +
+      '<div class="vz-table-card-lab" title="' + esc(c.label) + '">' + esc(c.label) + '</div>' +
+      '<div class="vz-table-card-val">' + (main == null || main === ''
+        ? '<span class="vz-table-card-na">—</span>' : esc(main)) + '</div>';
     if (c.sub) {
       // A single row's card names its statistic; a column of cards names it
       // once in its head.
-      out += '<div class="tc-sub">' + (sub && c.word
-        ? '<span class="tc-word">' + esc(c.word) + ': </span>' : '') + esc(sub || '') + '</div>';
+      out += '<div class="vz-table-card-sub">' + (sub && c.word
+        ? '<span class="vz-table-card-word">' + esc(c.word) + ': </span>' : '') + esc(sub || '') + '</div>';
     }
-    if (g) out += '<div class="tc-glyph" data-k="' + c.glyph + '">' + g + '</div>';
+    if (g) out += '<div class="vz-table-card-glyph" data-k="' + c.glyph + '">' + g + '</div>';
     if (!cards.multi) out += legendHtml(c.legend);
     return out + '</div>';
   }
 
   /** @param {TableCards} cards */
   function headHtml(cards) {
-    return '<div class="tc-corner"></div>' + cards.cols.map((c) => {
+    return '<div class="vz-table-card-corner"></div>' + cards.cols.map((c) => {
       const note = [c.word, c.range].filter(Boolean).join(' · ');
-      return '<div class="tc-colhead"><b title="' + esc(c.label) + '">' + esc(c.label) +
+      return '<div class="vz-table-card-colhead"><b title="' + esc(c.label) + '">' + esc(c.label) +
         '</b>' + (note ? '<span>' + esc(note) + '</span>' : '') + legendHtml(c.legend) + '</div>';
     }).join('');
   }
@@ -71,13 +71,13 @@
    */
   function rowHtml(cards, i, opts) {
     const cls = opts.rowClass ? opts.rowClass(i) : '';
-    let out = '<div class="tc-row' + (cls ? ' ' + cls : '') + '" data-i="' + i + '">';
+    let out = '<div class="vz-table-card-row' + (cls ? ' ' + cls : '') + '" data-i="' + i + '">';
     if (cards.multi) {
       const hex = cards.hex ? cards.hex[i] : null;
       const strip = !cards.hex ? ''
-        : '<i class="tc-strip" style="' + (hex ? 'background:' + esc(hex) : 'visibility:hidden') +
+        : '<i class="vz-table-card-strip" style="' + (hex ? 'background:' + esc(hex) : 'visibility:hidden') +
           '"></i>';
-      out += '<div class="tc-rowhead">' + strip + '<span class="tc-rowlab">' +
+      out += '<div class="vz-table-card-rowhead">' + strip + '<span class="vz-table-card-rowlab">' +
         esc(cards.label ? cards.label[i] : '') + '</span></div>';
     }
     for (let k = 0; k < cards.cols.length; k++) out += cardHtml(cards, k, i, opts.glyph);
@@ -90,12 +90,12 @@
    * @param {TableCards} cards
    */
   function fit(host, cards) {
-    const grid = host.querySelector('.tc-grid');
+    const grid = host.querySelector('.vz-table-card-grid');
     if (!grid) return;
     const w = host.clientWidth || 0;
     const mode = w > 0 && w < NARROW ? 'narrow'
       : cards.multi && w > 0 && w < HEAD_W + cards.cols.length * CARD_MIN ? 'medium' : 'wide';
-    if (grid.getAttribute('data-tc-mode') !== mode) grid.setAttribute('data-tc-mode', mode);
+    if (grid.getAttribute('data-cards-mode') !== mode) grid.setAttribute('data-cards-mode', mode);
   }
 
   /** Hosts watched for width, with the model each shows. */
@@ -113,12 +113,12 @@
     const order = o.order || Array.from({ length: cards.n || 0 }, (_, i) => i);
     let out;
     if (!cards.cols.length) {
-      out = '<div class="tc-empty">No summary to show as a card.</div>';
+      out = '<div class="vz-table-card-empty">No summary to show as a card.</div>';
     } else {
-      out = '<div class="tc-grid' + (cards.multi ? ' is-multi' : '') + '" style="--tc-k:' +
+      out = '<div class="vz-table-card-grid' + (cards.multi ? ' is-multi' : '') + '" style="--vz-table-card-k:' +
         cards.cols.length + '">' + (cards.multi ? headHtml(cards) : '') +
         order.map((i) => rowHtml(cards, i, o)).join('') + '</div>' +
-        (cards.fold ? '<div class="tc-fold">' + esc(cards.fold) + '</div>' : '');
+        (cards.fold ? '<div class="vz-table-card-fold">' + esc(cards.fold) + '</div>' : '');
     }
     host.innerHTML = out;
     const w = watched.get(host);

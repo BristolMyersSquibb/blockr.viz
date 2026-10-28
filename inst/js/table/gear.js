@@ -150,14 +150,14 @@
    */
   function ruleEl(rule, numeric, put, scope) {
     const el = document.createElement('div');
-    el.className = 'vz-shade-rule';
+    el.className = 'vz-table-shade-rule';
     const mode = el.appendChild(document.createElement('div'));
-    mode.className = 'vz-shade-mode';
+    mode.className = 'vz-table-shade-mode';
     pick(mode, MODES.map(([value, label]) => ({ value, label })), String(rule.mode || ''),
          { label: 'Mode' }, (v) => put(Object.assign({}, rule, { mode: v })), scope);
     const on = new Set(/** @type {string[]} */ (rule.columns || []));
     const cols = el.appendChild(document.createElement('div'));
-    cols.className = 'vz-shade-cols';
+    cols.className = 'vz-table-shade-cols';
     for (const c of numeric) {
       check(cols, c.label || c.name, on.has(c.name), (now) => {
         if (now) on.add(c.name);
@@ -166,7 +166,7 @@
         put(Object.assign({}, rule, { columns: picked.length ? picked : null }));
       }, scope);
     }
-    el.appendChild(button('blockr-btn--quiet blockr-btn--xs vz-shade-remove', '×', 'Remove rule',
+    el.appendChild(button('blockr-btn--quiet blockr-btn--xs vz-table-shade-remove', '×', 'Remove rule',
                           () => put(null), scope));
     return el;
   }
@@ -182,7 +182,7 @@
       Array.isArray(ctx.values.shadings) ? ctx.values.shadings : []);
     const numeric = ctx.columns.filter(isNumeric);
     el.textContent = '';
-    el.classList.add('vz-shadings');
+    el.classList.add('vz-table-shadings');
     rules.forEach((rule, k) => {
       el.appendChild(ruleEl(rule, numeric, (next) => {
         const out = rules.slice();
@@ -191,7 +191,7 @@
         ctx.set(out);
       }, ctx.scope));
     });
-    el.appendChild(button('blockr-btn--secondary blockr-btn--s vz-shade-add',
+    el.appendChild(button('blockr-btn--secondary blockr-btn--s vz-table-shade-add',
                           rules.length ? 'Add a rule' : 'Shade cells', 'Add a shading rule',
                           () => ctx.set(rules.concat([{ mode: 'diverging', columns: null, domain: null }])),
                           ctx.scope));

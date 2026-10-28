@@ -15,8 +15,8 @@ function mount(p) {
   const $$ = (sel) => Array.from(el.querySelectorAll(sel));
   const click = (node, init = {}) => node.dispatchEvent(
     new env.win.MouseEvent('click', Object.assign({ bubbles: true }, init)));
-  const row = (k) => $$('tbody tr.blockr-data-row')[k];
-  const lit = () => $$('tbody tr.dt-row-active').map((r) => Number(r.getAttribute('data-i')));
+  const row = (k) => $$('tbody tr.vz-table-row')[k];
+  const lit = () => $$('tbody tr.vz-table-row-active').map((r) => Number(r.getAttribute('data-i')));
   const render = (q) => env.b.renderValue(el, payload(q));
   return Object.assign(env, { el, $, $$, click, row, lit, render });
 }
@@ -33,7 +33,7 @@ test('a row click claims the drill value and lights every row with it', () => {
   assert.deepEqual(t.lit(), [0, 3]);
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo');
   assert.equal(t.$('.dd-status-footer').hidden, false);
-  assert.ok(t.$('.vz-table').classList.contains('dt-clickable'));
+  assert.ok(t.$('.vz-table').classList.contains('vz-table-clickable'));
 });
 
 test('a second click on a lit row clears the drill', () => {
@@ -55,7 +55,7 @@ test('the clear button on the receipt clears the drill', () => {
 
 test('a row without a drill value does not click', () => {
   const t = mount(payload({ data: flatModel(4, { na: true }) }));
-  assert.ok(t.row(1).classList.contains('dt-row-nodrill'));
+  assert.ok(t.row(1).classList.contains('vz-table-row-nodrill'));
   t.click(t.row(1));
   assert.deepEqual(t.selects(), []);
 });
@@ -64,8 +64,8 @@ test('without a drill column nothing clicks or looks clickable', () => {
   const t = mount(payload({ data: flatModel(4, { drill: null }) }));
   t.click(t.row(0));
   assert.deepEqual(t.selects(), []);
-  assert.equal(t.$$('tr.dt-row-nodrill').length, 0);
-  assert.equal(t.$('.vz-table').classList.contains('dt-clickable'), false);
+  assert.equal(t.$$('tr.vz-table-row-nodrill').length, 0);
+  assert.equal(t.$('.vz-table').classList.contains('vz-table-clickable'), false);
 });
 
 test("R's selection lights its rows and writes R's receipt", () => {
@@ -78,9 +78,9 @@ test("R's selection lights its rows and writes R's receipt", () => {
 test('a payload with the same rows keeps the sort and shows the new selection', () => {
   const t = mount(payload({ data: flatModel(6), dataRev: 7 }));
   t.click(t.$('th[data-col-index="2"]'));
-  const order = t.$$('tbody tr.blockr-data-row').map((r) => r.getAttribute('data-i'));
+  const order = t.$$('tbody tr.vz-table-row').map((r) => r.getAttribute('data-i'));
   t.render({ dataRev: 7, config: { selection: cat({ ARM: ['High'] }) } });
-  assert.deepEqual(t.$$('tbody tr.blockr-data-row').map((r) => r.getAttribute('data-i')), order);
+  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.getAttribute('data-i')), order);
   assert.deepEqual(t.lit().sort(), [2, 5]);
 });
 
@@ -93,15 +93,15 @@ test('Table 1: a row claims its level, a cell adds its column', () => {
     cat({ '.variable': ['SEX'], '.variable_level': ['M'] }, { ARM: ['Active'] })
   ]);
   assert.deepEqual(t.lit(), [1]);
-  assert.deepEqual(t.$$('th.dt-col-active').map((e) => e.getAttribute('data-h')), ['1,1']);
-  assert.deepEqual(t.$$('td.dt-col-active').map((e) => e.textContent),
+  assert.deepEqual(t.$$('th.vz-table-col-active').map((e) => e.getAttribute('data-h')), ['1,1']);
+  assert.deepEqual(t.$$('td.vz-table-col-active').map((e) => e.textContent),
                    ['11', '9', '72 (9)', '8', '12']);
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Sex = M, Arm = Active');
 });
 
 test('Table 1: a stat row is inert', () => {
   const t = mount(payload({ data: table1() }));
-  assert.ok(t.row(2).classList.contains('dt-row-nodrill'));
+  assert.ok(t.row(2).classList.contains('vz-table-row-nodrill'));
   t.click(t.row(2).children[1]);
   assert.deepEqual(t.selects(), []);
 });
@@ -120,7 +120,7 @@ test('a keyed header claims its column; its arrow still sorts', () => {
   const th = t.$('th[data-col-index="1"]');
   t.click(th.querySelector('.blockr-col-name'));
   assert.deepEqual(t.selects(), [cat({}, { ARM: ['Placebo'] })]);
-  assert.ok(t.$('th[data-col-index="1"]').classList.contains('dt-col-active'));
+  assert.ok(t.$('th[data-col-index="1"]').classList.contains('vz-table-col-active'));
   assert.equal(t.$('th[data-col-index="1"]').getAttribute('aria-sort'), 'none');
   t.click(t.$('th[data-col-index="1"] .blockr-sort-icon'));
   assert.equal(t.selects().length, 1);
@@ -131,24 +131,24 @@ test('a spanner claim lights the leaves under it', () => {
   const m = table1();
   m.head[0][1].keys = { ARM: ['Placebo'] };
   const t = mount(payload({ data: m, config: { selection: cat({}, { ARM: ['Placebo'] }) } }));
-  const active = t.$$('th.dt-col-active').map((th) => th.getAttribute('data-h'));
+  const active = t.$$('th.vz-table-col-active').map((th) => th.getAttribute('data-h'));
   assert.deepEqual(active, ['0,1', '1,0']);
 });
 
 test('a keyed section value claims the section; its chevron still folds', () => {
   const t = mount(payload({ data: nested(), columns: COLUMNS }));
-  const sec = t.$$('tr.blockr-section-header')[1];
-  t.click(sec.querySelector('.blockr-section-value'));
+  const sec = t.$$('tr.vz-table-section-header')[1];
+  t.click(sec.querySelector('.vz-table-section-value'));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'], SEX: ['F'] })]);
-  assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
+  assert.ok(t.$$('tr.vz-table-section-header')[1].classList.contains('vz-table-row-active'));
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
   // R echoes a click without a column half as `columns: {}`.
   t.render({ data: nested(), columns: COLUMNS,
              config: { selection: { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['F'] }, columns: {} } } });
-  assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
-  t.click(t.$$('tr.blockr-section-header')[1].querySelector('.blockr-chev'));
+  assert.ok(t.$$('tr.vz-table-section-header')[1].classList.contains('vz-table-row-active'));
+  t.click(t.$$('tr.vz-table-section-header')[1].querySelector('.vz-table-chev'));
   assert.equal(t.selects().length, 1);
-  assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('collapsed'));
+  assert.ok(t.$$('tr.vz-table-section-header')[1].classList.contains('collapsed'));
 });
 
 test('nested records: a row claims its groups and its drill value', () => {
@@ -169,31 +169,31 @@ test('with a drill target every click is sent and nothing stays lit', () => {
   assert.equal(t.selects().length, 2);
   assert.deepEqual(t.selects()[0], t.selects()[1]);
   assert.deepEqual(t.lit(), []);
-  assert.ok(t.row(0).classList.contains('dt-flash-row'));
-  assert.ok(t.row(0).children[1].classList.contains('dt-flash-cross'));
-  assert.ok(t.row(1).children[1].classList.contains('dt-flash-col'));
+  assert.ok(t.row(0).classList.contains('vz-table-flash-row'));
+  assert.ok(t.row(0).children[1].classList.contains('vz-table-flash-cross'));
+  assert.ok(t.row(1).children[1].classList.contains('vz-table-flash-col'));
   assert.match(t.$('.dd-status-receipt').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
   assert.equal(t.$('.dd-status-clear'), null);
   t.row(0).dispatchEvent(new t.win.Event('animationend'));
-  assert.equal(t.row(0).classList.contains('dt-flash-row'), false);
+  assert.equal(t.row(0).classList.contains('vz-table-flash-row'), false);
 });
 
 test('hover previews a cell claim: row and column faint, the cell strong', () => {
   const t = mount(payload({ data: table1() }));
   const cell = t.row(0).children[2];
   cell.dispatchEvent(new t.win.MouseEvent('mouseover', { bubbles: true }));
-  assert.ok(t.row(0).classList.contains('dt-hot-row'));
-  assert.ok(cell.classList.contains('dt-hot-cell'));
-  assert.ok(t.row(1).children[2].classList.contains('dt-hot-col'));
+  assert.ok(t.row(0).classList.contains('vz-table-hot-row'));
+  assert.ok(cell.classList.contains('vz-table-hot-cell'));
+  assert.ok(t.row(1).children[2].classList.contains('vz-table-hot-col'));
   t.$('.blockr-table-wrapper').dispatchEvent(new t.win.MouseEvent('mouseleave'));
-  assert.equal(t.$$('.dt-hot-row, .dt-hot-cell, .dt-hot-col').length, 0);
+  assert.equal(t.$$('.vz-table-hot-row, .vz-table-hot-cell, .vz-table-hot-col').length, 0);
 });
 
 test('hover on a keyed header previews its column', () => {
   const t = mount(payload({ data: table1() }));
   t.$('th[data-col-index="2"] .blockr-col-name')
     .dispatchEvent(new t.win.MouseEvent('mouseover', { bubbles: true }));
-  assert.equal(t.$$('td.dt-hot-col').length, 5);
+  assert.equal(t.$$('td.vz-table-hot-col').length, 5);
 });
 
 test('the drill helpers compare claims', () => {

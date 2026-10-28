@@ -32,8 +32,8 @@
      * @param {VizScope} scope
      */
     constructor(host, scope) {
-      super(host, scope, { cls: 'blockr-html-table-container drilldown-table-container vz-table' });
-      this.searchInput = /** @type {HTMLInputElement} */ (el('input', 'blockr-search'));
+      super(host, scope, { cls: 'vz-table' });
+      this.searchInput = /** @type {HTMLInputElement} */ (el('input', 'vz-table-search'));
       this.searchInput.type = 'search';
       this.searchInput.placeholder = 'Search…';
       this.searchInput.setAttribute('aria-label', 'Search table');
@@ -89,7 +89,7 @@
 
     /** @param {boolean} on A table with sections or keyed rows. */
     structured(on) {
-      this.el.classList.toggle('drilldown-table-structured', on);
+      this.el.classList.toggle('vz-table-structured', on);
     }
   }
 

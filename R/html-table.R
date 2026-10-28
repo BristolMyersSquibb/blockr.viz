@@ -92,9 +92,9 @@ looks_like_markup <- function(x) {
 #' arm name into the quiet sub-line.
 #'
 #' So: take the N off the END, and leave everything before it as the name.
-#' A label with no "N = " line has nothing to demote -- `arm__n` holds the
-#' count, not "whatever came after the first line" -- and renders as one name
-#' wrapped across its own breaks.
+#' A label with no "N = " line has nothing to demote -- `vz-table-arm-n`
+#' holds the count, not "whatever came after the first line" -- and renders
+#' as one name wrapped across its own breaks.
 #' @noRd
 header_label_split <- function(lbl) {
   parts <- strsplit(lbl, "\n", fixed = TRUE)[[1L]]
