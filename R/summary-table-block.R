@@ -13,7 +13,7 @@
 #' new_summary_table_block(vars = c("AGE", "SEX"), by = "ARM")
 #' @export
 new_summary_table_block <- function(...) {
-  args <- table_legacy_args(list(...), from = "summary")
+  args <- legacy_table_args(list(...), from = "summary")
   args$ctor <- "new_table_block"
   args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)

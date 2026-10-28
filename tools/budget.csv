@@ -11,7 +11,6 @@ R: specs,R/spec-base.R,1200
 R: specs,R/chart-args.R,1200
 R: specs,R/chart-arguments.R,1200
 R: specs,R/block-arguments.R,1200
-R: specs,R/table-args.R,1200
 R: specs,R/state-normalize.R,1200
 R: chart,R/chart-block.R,1800
 R: chart,R/chart-roles.R,1800
@@ -98,6 +97,8 @@ R: exports,R/summarize-exhibit.R,1500
 R: PowerPoint and the table painter,R/export-pptx-*.R,1800
 R: PowerPoint and the table painter,R/summarize-paint.R,1800
 R: legacy,R/legacy.R,400
+R: legacy,R/legacy-chart.R,400
+R: legacy,R/legacy-table.R,400
 R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400
 R: legacy,R/summarize-block.R,400

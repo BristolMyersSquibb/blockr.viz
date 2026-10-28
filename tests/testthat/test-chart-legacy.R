@@ -115,8 +115,10 @@ test_that("old names never come back on a re-save", {
     chart_type = "bar", group = "ARM", bar_mode = "percent", metric = ".count"
   ))
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
-  expect_length(intersect(names(payload), CHART_LEGACY_ARGS), 0L)
-  expect_false(any(CHART_LEGACY_ARGS %in% names(attributes(blk))))
+  old <- LEGACY_NAMES$old[LEGACY_NAMES$block == "chart" &
+                             LEGACY_NAMES$old != LEGACY_NAMES$new]
+  expect_length(intersect(names(payload), old), 0L)
+  expect_false(any(old %in% names(attributes(blk))))
   expect_equal(payload$position, "fill")
 })
 

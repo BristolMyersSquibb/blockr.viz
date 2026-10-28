@@ -68,7 +68,7 @@ static_summarize_table <- function(data, ...) {
 # The arguments of a static groups table as the block's state: old names
 # translated, every unset argument at the spec's default.
 groups_exhibit_state <- function(args) {
-  args <- table_legacy_args(args, from = "summarize")
+  args <- legacy_table_args(args, from = "summarize")
   args$layout <- "groups"
   table_normalize(viz_check(viz_block_spec("table"),
                             legacy_ctor_args("table", args)))
