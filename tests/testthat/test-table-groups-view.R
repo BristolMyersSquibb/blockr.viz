@@ -11,7 +11,16 @@ tg_vec <- function(x) {
   unlist(lapply(x, function(e) if (is.null(e)) NA else e), use.names = FALSE)
 }
 
-# The recorded mark with the text the cell model escaped as plain text.
+# The reference escaped its text for markup; the view sends it plain.
+table_groups_plain <- function(x) {
+  x <- as.character(x)
+  x <- gsub("&quot;", "\"", x, fixed = TRUE)
+  x <- gsub("&lt;", "<", x, fixed = TRUE)
+  x <- gsub("&gt;", ">", x, fixed = TRUE)
+  gsub("&amp;", "&", x, fixed = TRUE)
+}
+
+# The recorded mark with its text plain.
 tg_unescape <- function(w) {
   plain <- function(x) lapply(x, function(e) table_groups_plain(e))
   if (!is.null(w[["tip"]])) w$tip <- plain(w[["tip"]])

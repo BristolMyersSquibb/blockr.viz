@@ -37,17 +37,6 @@ summarize_nz <- function(x) {
   !is.null(x) && length(x) == 1L && !is.na(x) && nzchar(x)
 }
 
-# Escape as htmltools does for a text child: & < > and the attribute quote.
-#' @noRd
-summarize_esc <- function(x) {
-  x <- as.character(x)
-  x[is.na(x)] <- ""
-  x <- gsub("&", "&amp;", x, fixed = TRUE)
-  x <- gsub("<", "&lt;", x, fixed = TRUE)
-  x <- gsub(">", "&gt;", x, fixed = TRUE)
-  gsub("\"", "&quot;", x, fixed = TRUE)
-}
-
 # A data-frame-level display attribute, or NULL when absent / not a string.
 #' @noRd
 summarize_attr <- function(data, nm) {

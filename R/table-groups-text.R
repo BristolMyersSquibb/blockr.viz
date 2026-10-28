@@ -1,15 +1,6 @@
-# The text the cell model escaped for markup, as the text it stands for.
-table_groups_plain <- function(x) {
+# Text per row, `NA` (null on the wire) where the cell is empty.
+table_groups_text <- function(x) {
   x <- as.character(x)
-  x <- gsub("&quot;", "\"", x, fixed = TRUE)
-  x <- gsub("&lt;", "<", x, fixed = TRUE)
-  x <- gsub("&gt;", ">", x, fixed = TRUE)
-  gsub("&amp;", "&", x, fixed = TRUE)
-}
-
-# Plain text per row, `NA` (null on the wire) where the cell is empty.
-table_groups_text <- function(x, escaped = FALSE) {
-  x <- if (escaped) table_groups_plain(x) else as.character(x)
   x[!nzchar(x)] <- NA_character_
   x
 }
@@ -19,11 +10,11 @@ table_groups_text <- function(x, escaped = FALSE) {
 # it draws none. A swimlane's text is its segment tooltips.
 table_groups_disp <- function(c, p, ctx) {
   if (identical(c$kind, "num")) {
-    return(table_groups_text(c$disp, escaped = isTRUE(c$text)))
+    return(table_groups_text(c$disp))
   }
   if (identical(c$kind, "interval")) {
     return(table_groups_text(vapply(c$tips, function(tt) {
-      paste(unique(table_groups_plain(tt)), collapse = " | ")
+      paste(unique(as.character(tt)), collapse = " | ")
     }, character(1L))))
   }
   lab <- table_groups_labels(c)
@@ -67,9 +58,8 @@ table_groups_join_levels <- function(levels, labs) {
 
 # The mark of a column: the cell model's own fields less what the TableCol
 # holds itself (`disp`, `v`, `pct`, tile paint, claims), per-row vectors as
-# arrays. Flags travel only when true, empty references not at all. Text the
-# cell model escaped is plain here; the browser escapes. A number or text has
-# no mark.
+# arrays. Flags travel only when true, empty references not at all. A number
+# or text has no mark.
 table_groups_mark <- function(c) {
   if (identical(c$kind, "num")) {
     return(NULL)
@@ -84,16 +74,8 @@ table_groups_mark <- function(c) {
   labelled <- !is.null(c$disp) || isTRUE(c$multi) ||
     (identical(c$kind, "barsplit") && !is.null(c$ldisp))
   if (!labelled) g$dw <- NULL
-  out <- table_groups_pack(table_groups_fence(g), c$kind, top = TRUE)
-  out$tip <- table_groups_tips(out[["tip"]])
-  if (identical(c$kind, "interval")) {
-    out$tips <- lapply(out$tips, table_groups_tips)
-    out$segs <- lapply(out$segs, lapply, function(sg) {
-      if (length(sg) >= 4L) sg[[4L]] <- table_groups_plain(sg[[4L]])
-      sg
-    })
-  }
-  summarize_drop_null(out)
+  summarize_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
+                                        top = TRUE))
 }
 
 # A point range's fence band only where it has an outer range, per level.
@@ -121,11 +103,7 @@ table_groups_pack <- function(g, kind, top) {
     } else if (nm == "segs") {
       lapply(x, function(ss) if (length(ss)) ss else summarize_arr(list()))
     } else if (nm == "lv") {
-      lapply(x, function(l) {
-        l <- table_groups_pack(l, kind, top = FALSE)
-        l$tip <- table_groups_tips(l[["tip"]])
-        l
-      })
+      lapply(x, table_groups_pack, kind = kind, top = FALSE)
     } else if (is.list(x)) {
       lapply(x, summarize_arr)
     } else {
@@ -133,10 +111,6 @@ table_groups_pack <- function(g, kind, top) {
     }
   }
   out
-}
-
-table_groups_tips <- function(x) {
-  if (!is.null(x)) summarize_arr(table_groups_plain(x))
 }
 
 # The column axis the header draws: tick positions (percent of the cell) and
