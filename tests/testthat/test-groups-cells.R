@@ -170,6 +170,14 @@ test_that("an interval column has per-row segments on the observed domain", {
   expect_identical(cells$cols[[2]]$kind, "num")
 })
 
+test_that("an interval tooltip names the colour level once when it is the label", {
+  ae <- push_fixture()
+  cells <- sum_model(ae, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "SDY", xend = "EDY", color = "SEV", label = "SEV")
+  ))$cells
+  expect_match(cells$cols[[1]]$tips[[1]][[1]], "^(MILD|MODERATE) · [0-9]")
+})
+
 test_that("a sparkline column has pre-printed geometry plus hover values", {
   ae <- push_fixture()
   cells <- sum_model(ae, by = "TERM", summaries = list(
