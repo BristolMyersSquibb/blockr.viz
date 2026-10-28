@@ -158,12 +158,20 @@ chart_filter_parts <- function(v, src, members) {
 # What a drill target receives: the click's conditions. With a target set a
 # click is an event (the kit's `claim`); without, the held selection is the
 # claim. The kit sends them.
+#
+# With a target set, a clear (`selection` NULL) releases what this chart sent,
+# and a range holds: a value filter takes values, not an interval, so a point
+# or a brush with no drill column has nothing to send and must not clear
+# either.
 chart_claims <- function(kit, src) {
   shiny::reactive({
     d <- tryCatch(src$prep$prepared(), error = function(e) NULL)
     if (kit$transient()) {
       c1 <- kit$claim()
       if (is.null(c1)) {
+        return(NULL)
+      }
+      if (identical(c1$selection$type, "range")) {
         return(NULL)
       }
       filters <- chart_selection_filters(c1$selection)
