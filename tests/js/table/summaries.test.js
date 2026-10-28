@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadTable } = require('./load');
 
-const COLS = [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
+const COLS = [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
 
 /** The Columns editor with a recording stand-in for the gear's controls. */
 function editor(summaries) {

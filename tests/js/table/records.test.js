@@ -185,7 +185,7 @@ test('the shading editor round-trips every key of a rule', () => {
   const sets = [];
   const ctx = {
     values: { shadings: [{ mode: 'bar', columns: ['AGE'], domain: [{ value: -1, label: null }, { value: 1, label: null }] }] },
-    columns: [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'WT', class: 'numeric', label: 'Weight' },
+    columns: [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'WT', class: 'number', label: 'Weight' },
               { name: 'ARM', class: 'character', label: 'Arm' }],
     set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
   };

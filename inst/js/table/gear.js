@@ -50,6 +50,13 @@
     return true;
   }
 
+  /**
+   * A number column, as R writes the columns (`class` "number" or
+   * "duration", R/wire.R).
+   * @param {{ class?: unknown }} c
+   */
+  const isNumeric = (c) => c.class === 'number' || c.class === 'duration';
+
   /** blockr.ui's controls, when the page has them. */
   const ui = () => /** @type {any} */ (root.Blockr || {});
 
@@ -173,7 +180,7 @@
   function shadings(el, ctx) {
     const rules = /** @type {Record<string, unknown>[]} */ (
       Array.isArray(ctx.values.shadings) ? ctx.values.shadings : []);
-    const numeric = ctx.columns.filter((c) => /^(numeric|integer|double)$/.test(String(c.class)));
+    const numeric = ctx.columns.filter(isNumeric);
     el.textContent = '';
     el.classList.add('vz-shadings');
     rules.forEach((rule, k) => {
@@ -232,5 +239,6 @@
 
   V.table.gear = { mount, visible, shadings };
   V.table.ui = { pick, check, button };
+  V.table.isNumeric = isNumeric;
   V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();

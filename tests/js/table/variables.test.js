@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { loadTable, payload, table1 } = require('./load');
 
 const VAR = { layout: 'variables', by: ['ARM'] };
-const COLS = [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' },
+const COLS = [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' },
               { name: 'ARM', class: 'character', label: 'Arm' }];
 
 function mount(p, env = loadTable()) {
@@ -37,7 +37,7 @@ test('a pick of variables becomes entries; kept entries keep their keys', () => 
   assert.equal(V.table.variables.varOf({ type: 'simple', col: 'X' }), 'X');
   assert.equal(V.table.variables.varOf({ type: 'expr', expr: '1' }), null);
   const out = JSON.parse(JSON.stringify(V.table.variables.withVars(s, ['RACE', 'AGE', 'WT'],
-    COLS.concat([{ name: 'RACE', class: 'factor' }, { name: 'WT', class: 'integer' }]))));
+    COLS.concat([{ name: 'RACE', class: 'string' }, { name: 'WT', class: 'number' }]))));
   assert.deepEqual(out, [{ type: 'simple', color: 'RACE' }, { type: 'dist', col: 'AGE', summary: 'mean_sd' },
                          { type: 'dist', col: 'WT' }]);
 });

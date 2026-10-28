@@ -469,6 +469,8 @@ interface VizTableNamespace {
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
     shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };
+  /** A number column of the payload's `columns` (gear.js). */
+  isNumeric(c: { class?: unknown }): boolean;
   /** blockr.ui's controls for the table's own gear rows, with native
    *  fallbacks (gear.js). */
   ui: {
