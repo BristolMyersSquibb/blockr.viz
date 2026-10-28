@@ -121,6 +121,17 @@ test('a restored filter: its filters, with missing values; a range is not one', 
   assert.strictEqual(K.restore({ type: 'range', filters: { ARM: ['Placebo'] } }), null);
 });
 
+test('a range comes back from R as R sends a map: every value an array', () => {
+  // R's echo of a point click (wire_map()).
+  const echo = { type: ['range'], x: ['AGE'], y: ['WEIGHTBL'], x_range: [71, 71],
+                 y_range: [54.9, 54.9], filters: [] };
+  assert.deepStrictEqual(plain(K.restore(echo)), {
+    type: 'range', x: 'AGE', y: 'WEIGHTBL', x_range: [71, 71], y_range: [54.9, 54.9]
+  });
+  assert.deepStrictEqual(plain(K.restore({ type: ['categorical'], filters: { ARM: ['A'] } })),
+                         { type: 'categorical', filters: { ARM: ['A'] } });
+});
+
 test('a restored range carries the facet key it was taken in (D10, D11)', () => {
   const saved = { type: 'range', filters: { ARM: ['Placebo'] }, x: 'ADY', y: 'AVAL',
                   x_range: [2, 9], y_range: [1, 3] };
