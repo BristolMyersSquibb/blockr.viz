@@ -225,51 +225,6 @@ dd_script_key <- function(name) {
 }
 
 
-#' Read the script values back out of a config message
-#'
-#' @param msg The `config` action message.
-#' @param specs Input specs from [cb_specs()].
-#' @param current The current values list.
-#' @return The updated values list.
-#' @noRd
-dd_script_values <- function(msg, specs, current = list()) {
-
-  for (s in specs) {
-
-    if (!is.null(s$error) || is.na(s$kind)) {
-      next
-    }
-
-    key <- dd_script_key(s$name)
-
-    if (is.null(msg[[key]])) {
-      next
-    }
-
-    v <- msg[[key]]
-
-    # The engine speaks "on"/"off" for a boolean; the declaration is a logical.
-    if (identical(s$kind, "flag")) {
-      current[[s$name]] <- identical(as.character(v), "on")
-      next
-    }
-
-    # Emptying a multi-select is a real value, not an absent one, and an empty
-    # JS array arrives here as NULL -- indistinguishable from "this key was not
-    # in the message", so the write would be skipped and the control would
-    # refuse to be cleared. The band sends the literal "" for it, exactly as
-    # the expose handler does, and it lands as the declared type's empty value.
-    if (isTRUE(s$multiple) && identical(as.character(v), "")) {
-      current[[s$name]] <- character()
-      next
-    }
-
-    current[[s$name]] <- cb_coerce(v, s) %||% character()
-  }
-
-  current
-}
-
 
 #' Current script values, in the engine's vocabulary
 #'

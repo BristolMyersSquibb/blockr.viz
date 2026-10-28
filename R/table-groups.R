@@ -1,14 +1,5 @@
-# The groups layout of the table block on the kit: one row per level of
-# `by`, one column per summary. table_model_groups() (R/table-model.R)
-# prepares the rows and the cell model; table_groups_view()
-# (R/table-groups-view.R) turns them into the TableModel, marks as numbers
-# the browser lays out. A click claims the row's path, outer to inner.
-
 #' The groups layout on the kit
-#' @param kit The kit (viz_block_server()).
-#' @param src table_sources()'s list.
-#' @return A part, as R/table-server.R describes it, plus `failed()`: the
-#'   errors of failed custom summaries.
+#' @return A part, as R/table-server.R describes it, plus `failed()`.
 #' @noRd
 table_groups_part <- function(kit, src) {
   st <- kit$state
@@ -73,10 +64,8 @@ table_groups_payload <- function(m, v, d, src) {
                                                 logical(1L))])
 }
 
-# The settings a groups title can name: the spec's slots, and the first
-# summary's roles, which stand in for the settings the single ranked bar
-# had (summarize_title_args()). `by` is the innermost column, the one each
-# row is.
+# The settings a groups title can name: the spec's slots plus the first
+# summary's roles (summarize_title_args()). `by` is the innermost column.
 table_groups_title_args <- function(spec, v) {
   a <- viz_slot_values(spec, v)
   g <- summarize_title_args(list(
@@ -87,9 +76,8 @@ table_groups_title_args <- function(spec, v) {
   a
 }
 
-# The downloads' exhibit: the table's values for the spreadsheet, the
-# groups table with its marks (or its cards) for the web page and the deck,
-# and the browser's picture when it drew one.
+# The downloads' exhibit: values for the spreadsheet, the table with its marks
+# (or cards) for the page and deck, and the browser's picture when it drew one.
 table_groups_exhibit <- function(v, d, tt, src, picture) {
   shiny::req(is.data.frame(d))
   e <- static_summarize_table(

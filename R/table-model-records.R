@@ -1,19 +1,17 @@
 # The records layout's cell model: what the table shows for each row and
-# column (display strings, shading styles, raw drill values, the stub with
-# its row tint), plus its header and column widths. dt_flat_build() is the
-# one builder; R/table-push.R turns its result into the JSON payload and the
-# historical HTML.
+# column (display strings, paint, raw drill values, the stub with its row
+# tint) and the column widths. table_records_view() turns it into the
+# TableModel.
 
-#' Compute the flat table's cell model: per-column display strings, shading
-#' style chunks and drill raw values, plus the (small) thead/colgroup tags and
-#' the data-attribute args. Returns `kind = "message"` (with the rendered
-#' message-table tag) for the non-renderable states, else `kind = "flat"`.
+#' Compute the flat table's cell model: per-column display strings, paint
+#' and drill raw values, and the column widths. Returns `kind = "message"`
+#' (with the rendered message-table tag) for the non-renderable states, else
+#' `kind = "flat"`.
 #'
-#' Vectors are FULL-LENGTH aligned to rows: `disp` is NA where the cell is NA
-#' (both consumers render the em-dash cell and skip raw/style there), `raw`
-#' is NULL for non-drill columns, `style` is NULL for unshaded columns and
-#' "" on NA rows. Display strings are PLAIN (unescaped); each consumer
-#' escapes with the htmltools rules at assembly time.
+#' Vectors are FULL-LENGTH aligned to rows: `disp` is NA where the cell is NA,
+#' `raw` is NULL for non-drill columns, `bg` / `fg` / `bar` are NULL for
+#' unshaded columns and NA on unpainted rows. Display strings are plain
+#' (unescaped).
 #' @noRd
 dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
                           shadings = list(), drill = NULL, digits = "number",
@@ -37,12 +35,7 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   # with three different fixes -- one generic "No data" hid all of them.
   msg <- dt_state_message(data, label_col, value_cols, value_cols_raw)
   if (!is.null(msg)) {
-    # The gear must still offer the (current) input columns on a message
-    # table -- fixing a vanished-column config happens through it.
-    return(list(kind = "message", message = msg,
-                tag = dt_table_attrs(dt_message_table(msg), NULL, NULL,
-                                     digits, color = color, toggles = toggles,
-                                     gear_cols = gear_cols)))
+    return(list(kind = "message", message = msg))
   }
 
   # ---- cell visuals: value-encoding `shadings` rules ------------------
@@ -58,8 +51,6 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   # Per-column numeric flag drives type-based alignment for both the header
   # and the body cells (numeric right, text left).
   num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
-  thead <- dt_flat_thead(data, label_col, value_cols, num_flag,
-                         sortable = isTRUE(toggles$sortable %||% TRUE))
 
   raw_cols <- dt_flat_raw_cols(drill, group_cols, c(label_col, value_cols))
   body <- dt_flat_cells(data, value_cols, num_flag, shading_vis, raw_cols,
@@ -71,19 +62,7 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
     kind = "flat", n = nrow(data),
     stub = dt_flat_stub(data, label_col, raw_cols, row_hex),
     cells = body$cells, nodrill = dt_flat_nodrill(data, raw_cols),
-    widths = widths, drill = drill,
-    thead = thead,
-    colgroup = dt_flat_colgroup(widths),
-    attr_args = list(
-      onclick_col = onclick$col, onclick_idx = onclick$idx, digits = digits,
-      color = color, shadings = shadings, num_cols = value_cols[num_flag],
-      toggles = toggles, group_cols = group_cols, group = group,
-      summaries = summaries, active = active, gear_cols = gear_cols,
-      # Aggregated tables drill on their group keys, so `drill` is a mode
-      # word there too, not a column.
-      drill_mode = if (length(group_cols) && !is.null(drill) &&
-                         nzchar(drill)) drill
-    )
+    widths = widths, drill = drill, onclick_col = onclick$col
   )
 }
 
@@ -100,25 +79,8 @@ dt_flat_raw_cols <- function(drill, group_cols, shown) {
             shown)
 }
 
-# The <thead>: the stub's header, then one per value column.
-dt_flat_thead <- function(data, label_col, value_cols, num_flag, sortable) {
-  th_cells <- list(dt_th(label_col, 0L, stub = TRUE,
-                         label = dt_col_label(data[[label_col]], label_col),
-                         sortable = sortable))
-  for (i in seq_along(value_cols)) {
-    th_cells[[length(th_cells) + 1L]] <- dt_th(
-      value_cols[i], i,
-      label = dt_col_label(data[[value_cols[i]]], value_cols[i]),
-      numeric = num_flag[i],
-      sortable = sortable
-    )
-  }
-  htmltools::tags$thead(htmltools::tags$tr(th_cells))
-}
-
 # The value columns' cells, and their display strings per column (non-NA
-# only), kept for the server-side width estimation in dt_flat_colgroup()
-# (same strings the cells render, no second formatting pass).
+# only) for the width estimate.
 dt_flat_cells <- function(data, value_cols, num_flag, shading_vis, raw_cols,
                           digits) {
   cells <- vector("list", length(value_cols))
@@ -133,16 +95,13 @@ dt_flat_cells <- function(data, value_cols, num_flag, shading_vis, raw_cols,
   list(cells = cells, disp_by_col = disp_by_col)
 }
 
-# One value column: its cell class, display strings, raw drill values and
-# shading styles, full length over the rows.
+# One value column: its display strings, raw drill values and paint, full
+# length over the rows.
 dt_flat_cell <- function(data, name, num, sv, raw, digits) {
   n <- nrow(data)
   col  <- data[[name]]
   keep <- !is.na(col)
-  # Type-based cell alignment matches the header (numeric right, text left).
-  td_cls <- if (num) "blockr-data dt-num" else "blockr-data dt-txt"
   disp_full  <- rep(NA_character_, n)
-  style_full <- NULL
   disp_out <- character(0L)
   if (any(keep)) {
     vk <- col[keep]
@@ -153,9 +112,6 @@ dt_flat_cell <- function(data, name, num, sv, raw, digits) {
     }
     disp_out <- disp
     disp_full[keep] <- disp
-    if (num && !is.null(sv)) {
-      style_full <- dt_flat_style(sv, data, name, vk, keep, n)
-    }
   }
   raw_full <- if (raw) {
     r <- rep(NA_character_, n)
@@ -165,9 +121,8 @@ dt_flat_cell <- function(data, name, num, sv, raw, digits) {
   paint <- if (num && !is.null(sv) && any(keep)) {
     dt_flat_paint(sv, data, name, col, keep)
   }
-  list(cell = c(list(cls = td_cls, disp = disp_full,
-                     raw = raw_full, style = style_full,
-                     name = name, label = dt_col_label(col, name), num = num),
+  list(cell = c(list(disp = disp_full, raw = raw_full, name = name,
+                     label = dt_col_label(col, name), num = num),
                 paint),
        disp = disp_out)
 }
@@ -189,33 +144,12 @@ dt_flat_paint <- function(sv, data, name, col, keep) {
   list(bg = p$bg, fg = p$fg)
 }
 
-# A shaded numeric column's per-row style chunks, "" where unpainted.
-dt_flat_style <- function(sv, data, name, vk, keep, n) {
-  style_full <- rep("", n)
-  if (identical(sv$kind, "bar")) {
-    # Data bar: left-anchored gradient, width = |v| / column-abs-max.
-    # A CSS style-chunk string keeps both consumers on plain string
-    # concatenation (no per-cell DOM node / object).
-    style_full[keep] <- dt_bar_style(as.numeric(vk), sv$max, sv$fill)
-  } else {
-    # Heatmap: one vectorized paint call for the whole column (see
-    # dt_bg_paint, which the downloads read too).
-    p <- dt_bg_paint(sv, data, name)
-    on <- !is.na(p$bg)
-    style_full[on] <- paste0(" style=\"background:", p$bg[on],
-                             ";color:", p$fg[on], ";\"")
-  }
-  style_full
-}
-
 # The stub column.
 #
-# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) drawn as
-# a subtle accent bar on the left of the row, matching the chart's legend
-# and reading like a selected-row indicator. `row_hex` is a per-row vector
-# (the `color` column resolved through the scale map); NA rows get no bar.
-# Drawn with an inset box-shadow so it adds no width (no layout shift) and
-# is independent of the numeric heatmap above.
+# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) as the
+# row's `tint`, which the view draws as an accent bar on the left of the
+# row. `row_hex` is a per-row vector (the `color` column resolved through
+# the scale map); NA rows get no bar.
 dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   n <- nrow(data)
   has_bar <- !is.null(row_hex) && length(row_hex) == n
@@ -224,18 +158,10 @@ dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   # paste0() semantics); make that explicit so both consumers agree.
   stub_disp[is.na(stub_disp)] <- "NA"
   list(
-    cls  = if (has_bar) "blockr-stub blockr-row-bar" else "blockr-stub",
     disp = stub_disp, name = label_col,
     label = dt_col_label(data[[label_col]], label_col),
     tint = if (has_bar) row_hex,
-    raw  = if (label_col %in% raw_cols) {
-      r <- as.character(data[[label_col]])
-      r
-    },
-    style = if (has_bar) {
-      ifelse(is.na(row_hex), "",
-             paste0(" style=\"box-shadow:inset 3px 0 0 0 ", row_hex, ";\""))
-    }
+    raw  = if (label_col %in% raw_cols) as.character(data[[label_col]])
   )
 }
 
@@ -279,15 +205,6 @@ dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, toggles) {
     formatted = lapply(c(list(as.character(data[[label_col]])), disp_by_col),
                        as.character),
     wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
-  )
-}
-
-# The <colgroup> from the widths.
-dt_flat_colgroup <- function(widths) {
-  htmltools::tags$colgroup(
-    lapply(widths, function(w) {
-      htmltools::tags$col(style = sprintf("width: %dpx;", as.integer(w)))
-    })
   )
 }
 

@@ -1,12 +1,5 @@
-# LEGACY: delete with this file.
-#
-# The one place for argument names and values of blockr.viz < 0.3.0, with
-# R/legacy-restore.R, which applies them. The specs (R/spec-chart.R,
-# R/spec-table.R) carry only the current names.
-# Written from the legacy tables in _scratch/viz-cran-review/spec-chart.md
-# and spec-table.md.
-#
-# LEGACY_NAMES has one row per old name or old value:
+# LEGACY: argument names and values of blockr.viz < 0.3.0, applied by
+# R/legacy-restore.R. LEGACY_NAMES has one row per old name or old value:
 #
 #   block   "chart", "table", "summary" (a table summary entry), "shading"
 #           or "heatmap" (the retired heatmap block, restored as a table)
@@ -15,18 +8,13 @@
 #   values  old value = new value, as a named character vector; empty when
 #           the value is taken as it is
 #   rule    NA for a plain rename, else what the translation does beyond it
-#   since   the version that replaced it
 #
 # A row with the same name in `old` and `new` maps values only.
 
-# LEGACY: delete with this file
-legacy_row <- function(block, old, new, values = character(), rule = NA,
-                       since = "0.3.0") {
-  list(block = block, old = old, new = new, values = values, rule = rule,
-       since = since)
+legacy_row <- function(block, old, new, values = character(), rule = NA) {
+  list(block = block, old = old, new = new, values = values, rule = rule)
 }
 
-# LEGACY: delete with this file
 legacy_table <- function(rows) {
   data.frame(
     block = vapply(rows, `[[`, "", "block"),
@@ -34,12 +22,10 @@ legacy_table <- function(rows) {
     new = vapply(rows, function(r) as.character(r$new), ""),
     values = I(lapply(rows, `[[`, "values")),
     rule = vapply(rows, function(r) as.character(r$rule), ""),
-    since = vapply(rows, `[[`, "", "since"),
     stringsAsFactors = FALSE
   )
 }
 
-# LEGACY: delete with this file
 LEGACY_NAMES <- legacy_table(list(
 
   # chart -------------------------------------------------------------------

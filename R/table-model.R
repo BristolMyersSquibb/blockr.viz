@@ -1,31 +1,15 @@
-# The table model: what each layout of the table block shows, computed from
-# the block's state under the spec's names (TABLE_SPEC) and the data. Pure
-# functions, no Shiny; the layout servers read the state, call these, and
-# send the result.
+# The table model: what each layout shows, computed from the block's state
+# (under TABLE_SPEC's names) and the data. Pure functions, no Shiny.
 #
 #   table_model_records()    the records layout's cell model
 #   table_model_tint()       the records layout's row tint
 #   table_model_groups()     the groups layout's prepared rows and cells
 #   table_model_variables()  the variables layout's Table 1
-#
-# The compute behind them: R/table-model-records.R (cells),
-# R/table-model-format.R (number formats), R/table-model-shading.R (cell
-# shading), R/table-model-groups*.R (the groups preparation) and
-# R/table-model-cells*.R (the groups cell model).
 
-#' The records layout's cell model
-#'
-#' @param state The table's state, under the spec's names.
-#' @param data The input rows.
-#' @param tint The row tint, from table_model_tint(): `list(col, hex)`.
-#' @param active The current selection, to mark the selected rows.
-#' @param gear_cols The columns the gear offers, as JSON; `NULL` reads them
-#'   off `data`.
-#' @return dt_flat_build()'s cell model (`kind = "flat"`, or `"message"`
-#'   for a state with nothing to show), or `list(kind = "structured", data)`
-#'   for a frame that carries its own structure (a Table 1, the rows nested
-#'   under `by`), which the structured renderer draws.
-#' @noRd
+# The records layout's cell model: dt_flat_build()'s (`kind` "flat" or
+# "message"), or list(kind = "structured", data) for a frame that carries its
+# own structure. `tint` is table_model_tint()'s list(col, hex); `gear_cols` is
+# JSON, NULL reads the columns off `data`.
 table_model_records <- function(state, data, tint = NULL, active = NULL,
                                 gear_cols = NULL) {
   if (length(state$by) && is.data.frame(data)) {
@@ -50,16 +34,9 @@ table_model_records <- function(state, data, tint = NULL, active = NULL,
   )
 }
 
-#' The records layout's row tint
-#'
-#' `color = "auto"` tints by the stub column where the board's scale map
-#' has it; a column tints by that column's levels; `NULL` is no tint.
-#' @param state The table's state, under the spec's names.
-#' @param data The input rows.
-#' @param scale_map The board's scale map, or `NULL`.
-#' @return `list(col, hex)`: the column the tint reads and one colour per
-#'   row, `NA` where a row has none; both `NULL` without a tint.
-#' @noRd
+# The records layout's row tint, list(col, hex): `color = "auto"` tints by the
+# stub column where the scale map has it, a column name by that column's
+# levels, NULL not at all. `hex` is NA where a row has none.
 table_model_tint <- function(state, data, scale_map = NULL) {
   color <- state$color
   if (is.null(color) || !is.data.frame(data)) {
@@ -72,17 +49,8 @@ table_model_tint <- function(state, data, scale_map = NULL) {
   list(col = color, hex = dd_ident_hex(scale_map, color, data))
 }
 
-#' The groups layout's rows and cells
-#'
-#' @param state The table's state, under the spec's names.
-#' @param data The input rows.
-#' @param scale_map The board's scale map, or `NULL`.
-#' @param subject The board's subject column for distinct counts, or `NULL`.
-#' @param active The current selection, to mark the selected rows.
-#' @return `list(prep, cells)`: summarize_prepare()'s rows and plan, and
-#'   summarize_cells()'s cell model; `cells` is `NULL` when `prep` carries
-#'   an error (`prep$err`).
-#' @noRd
+# The groups layout's list(prep, cells): summarize_prepare()'s rows and plan,
+# and summarize_cells()'s cell model, which is NULL when `prep$err` is set.
 table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
                                active = NULL) {
   prep <- summarize_prepare(
@@ -110,25 +78,15 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
                                cfg = cfg))
 }
 
-#' The groups layout's sort direction
-#'
-#' Unset, it is descending for `sort_by = "value"` and ascending otherwise.
-#' @param state The table's state, under the spec's names.
-#' @return `"asc"` or `"desc"`.
-#' @noRd
+# The groups layout's sort direction; unset, descending for `sort_by = "value"`
+# and ascending otherwise.
 table_sort_dir <- function(state) {
   state$sort_dir %||%
     (if (identical(state$sort_by %||% "value", "value")) "desc" else "asc")
 }
 
-#' The variables layout's Table 1
-#'
-#' The variables are the summaries' variables less the `by` columns.
-#' @param state The table's state, under the spec's names.
-#' @param data The input rows.
-#' @return summary_table()'s annotated frame, or `data` unchanged while no
-#'   summary names a variable.
-#' @noRd
+# The variables layout's Table 1: summary_table()'s frame for the summaries'
+# variables less the `by` columns, or `data` while no summary names a variable.
 table_model_variables <- function(state, data) {
   args <- table_variables_args(table_variables_cfg(state, data))
   if (is.null(args)) {
@@ -137,14 +95,9 @@ table_model_variables <- function(state, data) {
   do.call(summary_table, c(list(data), args))
 }
 
-#' The variables layout's settings as summary_table() reads them
-#'
-#' A variable listed as a row count that the data holds as a number is
-#' summarised as a distribution (table_fix_var_types()).
-#' @param state The table's state, under the spec's names.
-#' @param data The input rows, or `NULL`.
-#' @return The settings list table_variables_args() reads.
-#' @noRd
+# The variables layout's settings as summary_table() reads them. A variable
+# listed as a row count that the data holds as a number is summarised as a
+# distribution (table_fix_var_types()).
 table_variables_cfg <- function(state, data = NULL) {
   summaries <- table_fix_var_types(state$summaries, data)
   list(

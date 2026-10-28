@@ -457,20 +457,3 @@ cb_coerce <- function(value, spec) {
   )
 }
 
-#' Join a script given as lines into one string
-#'
-#' A board writes the script as a JSON array, one element per line, so that
-#' editing it shows up in a git diff as the lines that changed rather than as
-#' one long replaced string. Both forms are accepted on the way back in.
-#'
-#' @param x A single string with embedded newlines, or a character vector.
-#' @noRd
-cb_script_text <- function(x) {
-  if (is.null(x)) {
-    return(NULL)
-  }
-  if (length(x) == 1L) {
-    return(x)
-  }
-  paste(x, collapse = "\n")
-}

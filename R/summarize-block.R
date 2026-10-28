@@ -17,10 +17,8 @@
 #' @export
 new_summarize_table_block <- function(...) {
   args <- table_legacy_args(list(...), from = "summarize")
-  # A summarize table is the groups layout, also when nothing old was set.
   args$layout <- "groups"
-  # A restore hands over the saved ctor; the result is a table block and
-  # saves as one.
+  # The result saves as a table block, also after a restore.
   args$ctor <- "new_table_block"
   args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)

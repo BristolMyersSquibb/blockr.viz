@@ -140,41 +140,6 @@ test_that("a declaration that cannot become a control says why", {
 })
 
 
-test_that("values coming back from the band are coerced by the declaration", {
-  txt <- script_of(
-    "num <- 10",
-    "flag <- TRUE",
-    # Two picks, so the declaration says multi-select: exactly one pick is how
-    # a script declares a SINGLE select.
-    "many <- factor(c(\"a\", \"b\"), levels = c(\"a\", \"b\", \"c\"))",
-    "data"
-  )
-  ps <- parsed_of(txt)
-
-  # Numbers arrive as strings from the DOM; the declaration knows better.
-  vals <- dd_script_values(list(sv_num = "42"), ps$specs, list())
-  expect_identical(vals$num, 42)
-
-  # The engine speaks on/off for a boolean; the script declared a logical.
-  expect_false(dd_script_values(list(sv_flag = "off"), ps$specs, list())$flag)
-  expect_true(dd_script_values(list(sv_flag = "on"), ps$specs, list())$flag)
-
-  # A JS array arrives as an R list.
-  vals <- dd_script_values(list(sv_many = list("a", "c")), ps$specs, list())
-  expect_identical(vals$many, c("a", "c"))
-
-  # Emptying a multi-select is a REAL value, and an empty JS array arrives here
-  # as NULL -- indistinguishable from an absent key. The band sends "" for it,
-  # exactly as the expose handler does.
-  vals <- dd_script_values(list(sv_many = ""), ps$specs, list(many = c("a")))
-  expect_identical(vals$many, character())
-
-  # A key the message does not carry leaves the current value alone.
-  vals <- dd_script_values(list(sv_num = 1), ps$specs, list(flag = FALSE))
-  expect_false(vals$flag)
-})
-
-
 test_that("a control the user has not touched shows what the script says", {
   ps <- parsed_of(script_of("n <- 7", "flag <- FALSE", "data"))
   cfg <- dd_script_cfg(ps$specs, list())
