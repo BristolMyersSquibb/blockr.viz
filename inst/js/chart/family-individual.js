@@ -129,7 +129,8 @@
     return [255, 255, 255];
   };
 
-  /** Fill the overlay with the hovered line, a little wider, and the veil fading the rest.
+  /** Fill the overlay with the hovered line, a little wider, a dot at each of its points
+   * (where the measurements are; as 0.2 drew them), and the veil fading the rest.
    * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {number} si */
   const promoteFocus = (view, slot, chart, si) => {
     const f = slot.focus;
@@ -152,7 +153,8 @@
         showSymbol: false, lineStyle: { color: clr, width: f.focusW, opacity: 1 },
         areaStyle: null
       }, {
-        id: '__focus_dots__', data: []
+        id: '__focus_dots__', data: s.data, symbol: 'circle', symbolSize: 8,
+        itemStyle: { color: clr, opacity: 0.8, borderColor: 'rgb(' + bg.join(',') + ')', borderWidth: 2 }
       }]
     });
   };

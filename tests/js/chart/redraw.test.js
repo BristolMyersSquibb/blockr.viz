@@ -60,10 +60,17 @@ test('the line under the cursor takes the focus; leaving the plot drops it', () 
   const overlay = (id) => c.chart().getOption().series.find((s) => s.id === id);
   assert.ok(overlay('__focus__').data.length > 1, 'the hovered line on top');
   assert.strictEqual(overlay('__scrim__').data.length, 1, 'the veil over the rest');
+  // A dot at each of its points, in its colour, ringed in the surface colour.
+  const dots = overlay('__focus_dots__');
+  assert.strictEqual(dots.data.length, overlay('__focus__').data.length);
+  assert.strictEqual(dots.symbolSize, 8);
+  assert.strictEqual(dots.itemStyle.borderWidth, 2);
+  assert.strictEqual(dots.itemStyle.color, overlay('__focus__').lineStyle.color);
   c.zr('globalout', {});
   assert.strictEqual(slot.hover.si, null);
   assert.strictEqual(overlay('__focus__').data.length, 0);
   assert.strictEqual(overlay('__scrim__').data.length, 0);
+  assert.strictEqual(overlay('__focus_dots__').data.length, 0);
   c.close();
 });
 

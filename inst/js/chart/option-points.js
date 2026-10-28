@@ -364,7 +364,7 @@
       ? endLabelPad(panel.series.filter((/** @type {any} */ s) => !(m.hl && s.muted))
         .map((/** @type {any} */ s) => s.level))
       : 0;
-    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
+    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.5 * lm, labelPad };
   };
 
   /** The hover overlay of a crowd of lines (empty until a line is hovered): a veil on its own
