@@ -133,7 +133,7 @@ paint_bar <- function(c, i, x, w, ytop, gl) {
   h <- gl$lane
   y <- paint_lane_y(ytop, gl)
   fill <- (if (length(c$fill)) c$fill[[min(i, length(c$fill))]]) %||% PAINT_FILL
-  if (isTRUE(c$sub[[min(i, length(c$sub))]])) fill <- paint_sub(fill)
+  if (isTRUE(c$child[[min(i, length(c$child))]])) fill <- paint_sub(fill)
   list(paint_rect(x, w, y, h, PAINT_TRACK, gl),
        if (paint_pos(c$w[[i]])) paint_rect(x, c$w[[i]] / 100 * w, y, h, fill, gl))
 }

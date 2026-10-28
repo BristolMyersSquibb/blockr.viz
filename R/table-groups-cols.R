@@ -17,7 +17,7 @@ table_groups_mark <- function(c) {
     return(NULL)
   }
   g <- c[setdiff(names(c), c("fkey", "scol", "disp", "v", "pct", "bg", "fg"))]
-  if (!any(c$sub %in% TRUE)) g$sub <- NULL
+  if (!any(c$child %in% TRUE)) g$child <- NULL
   for (k in c("rf", "rc", "rby", "rbh")) {
     if (length(g[[k]]) && is.na(g[[k]])) g[[k]] <- NULL
   }
@@ -38,7 +38,7 @@ table_groups_mark <- function(c) {
 TABLE_GROUPS_KEYS <- list(
   all = c(dw = "valueWidth", tt = "hover", nn = "count", lv = "lanes",
           rf = "reference", ab = "fromTo", r = "raw"),
-  bar = c(w = "width"),
+  bar = c(w = "width", child = "sub"),
   bardiv = c(w = "width", pos = "positive"),
   barsplit = c(seg = "segWidths", segv = "segValues", slab = "segLabels",
                sink = "segInk", ldisp = "levelValues"),
