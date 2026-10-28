@@ -77,6 +77,26 @@ dd_resolve_scales <- function(map, var, column) {
 # already holds takes the first palette colour no level holds. Pinned colours
 # never move, and with more levels than colours the hash stands. `skip`:
 # levels that take part in neither (a pool, which borrows a member's colour).
+# A channel's entries split into pins (named) and pool (unnamed). blockr.theme
+# allows both in one vector, e.g. c("01-701-1015" = "#d55e00", pool), where the
+# pool's names are "". An all-named or all-unnamed vector reads as before.
+dd_spec_pinned <- function(spec) {
+  nm <- names(spec)
+  if (is.null(nm)) {
+    return(rep(FALSE, length(spec)))
+  }
+  !is.na(nm) & nzchar(nm)
+}
+
+dd_spec_fixed <- function(spec) {
+  as.character(names(spec)[dd_spec_pinned(spec)])
+}
+
+dd_spec_pool <- function(spec) {
+  pool <- unname(spec[!dd_spec_pinned(spec)])
+  if (length(pool)) pool
+}
+
 dd_dodge_scales <- function(res, map, var, column, skip = character()) {
   vals <- res$color
   if (is.null(vals)) {
@@ -86,9 +106,8 @@ dd_dodge_scales <- function(res, map, var, column, skip = character()) {
   src <- attr(column, "blockr_source", exact = TRUE)
   bind <- if (var %in% names(m)) var else src
   spec <- if (is.character(bind) && length(bind) == 1L) m[[bind]]$color
-  fixed <- names(spec)
-  pool <- if (length(spec) && is.null(fixed)) spec
-  pool <- pool %||% attr(m, "palette", exact = TRUE) %||% dd_palette()
+  fixed <- dd_spec_fixed(spec)
+  pool <- dd_spec_pool(spec) %||% attr(m, "palette", exact = TRUE) %||% dd_palette()
   if (sum(!names(vals) %in% skip) > length(pool)) {
     return(res)
   }
@@ -128,7 +147,7 @@ dd_resolve_group_scales <- function(map, var, column, reps) {
 
   for (ch in setdiff(names(res), "order")) {
     vals <- res[[ch]]
-    fixed <- names(binding[[ch]])
+    fixed <- dd_spec_fixed(binding[[ch]])
     for (g in names(reps)) {
       if (g %in% fixed || !reps[[g]] %in% names(vals)) {
         next
