@@ -70,13 +70,10 @@
     return title ? title + ' (' + unit + ')' : unit;
   };
 
-  /**
-   * An axis name. `title` is the column's label (or name, axes.axisTitle),
-   * `col` the column. Labelled: label and unit, "Growth (%)". Else the unit
-   * alone, else the column name. Empty when the chart's title carries it.
-   * @param {string} title @param {any} col @param {Record<string, any>} cfg
-   * @param {{ unit?: boolean }} [opts]
-   */
+  /** An axis name. `title` is the column's label (or name, axes.axisTitle), `col` the column.
+   * Labelled: label and unit, "Growth (%)". Else the unit alone, else the column name. Empty when
+   * the chart's title carries it. @param {string} title @param {any} col
+   * @param {Record<string, any>} cfg @param {{ unit?: boolean }} [opts] */
   const axisName = (title, col, cfg, opts = {}) => {
     const unit = opts.unit !== false && cfg.unit ? String(cfg.unit) : '';
     const labelled = !!title && title !== col;

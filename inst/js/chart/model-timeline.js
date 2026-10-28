@@ -40,10 +40,8 @@
    *             ttFields: string[], panels: TimelinePanel[] }} TimelineModel
    */
 
-  /**
-   * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
-   * @returns {TimelineModel}
-   */
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+   * @returns {TimelineModel} */
   const timeline = ({ rows, ix, columns, cfg }) => {
     const { x, xend, y, color, facet, sort_by, series, label } = cfg;
     const ttFields = model.tooltipFields(cfg);
@@ -146,12 +144,9 @@
   };
   timeline.FIELDS = MODEL_FIELDS;
 
-  /**
-   * The keys of a timeline mark: its lane, and the facet in a facet panel.
-   * The colour is no key.
+  /** The keys of a timeline mark: its lane, and the facet in a facet panel. The colour is no key.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
-   * @returns {Record<string, any>}
-   */
+   * @returns {Record<string, any>} */
   const timelineKeys = (cfg, facetVal, mark) => {
     /** @type {Record<string, any>} */
     const keys = { [cfg.y]: mark[3] };

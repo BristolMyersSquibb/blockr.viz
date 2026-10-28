@@ -28,10 +28,8 @@
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
 
-  /**
-   * What every builder shares: the option's base, the value's title, the
-   * aggregation's name and the tooltip's rows.
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
+  /** What every builder shares: the option's base, the value's title, the aggregation's name and
+   * the tooltip's rows. @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
    */
   parts.common = (look) => {
     const { cfg, columns, ink } = look;

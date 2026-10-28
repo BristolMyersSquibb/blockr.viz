@@ -15,12 +15,9 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
-  /**
-   * The interval of a point range as a custom series: a line from lo to hi
-   * with caps. `encode` maps both ends to the value axis.
-   * @param {any} name @param {any[]} pts [slot, lo, hi] each @param {string} clr
-   * @param {boolean} horizontal
-   */
+  /** The interval of a point range as a custom series: a line from lo to hi with caps. `encode`
+   * maps both ends to the value axis. @param {any} name @param {any[]} pts [slot, lo, hi] each
+   * @param {string} clr @param {boolean} horizontal */
   const whiskerSeries = (name, pts, clr, horizontal) => ({
     type: 'custom',
     name,
@@ -81,10 +78,8 @@
     };
   };
 
-  /**
-   * The slots of a level that drew a body, with their category position.
-   * @param {any} k @param {string} lv
-   */
+  /** The slots of a level that drew a body, with their category position. @param {any} k
+   * @param {string} lv */
   const drawnSlots = (k, lv) => k.slots
     .map((/** @type {any} */ s, /** @type {number} */ ci) => ({ s, ci }))
     .filter((/** @type {any} */ e) => e.s.level === lv && e.s.body);
@@ -102,11 +97,8 @@
     itemStyle: { color: hex + '22', borderColor: hex }
   }));
 
-  /**
-   * Per level: a silent interval under a clickable centre dot, and a line
-   * through the centres with connect_centers, all under the level's name.
-   * @param {any} k
-   */
+  /** Per level: a silent interval under a clickable centre dot, and a line through the centres with
+   * connect_centers, all under the level's name. @param {any} k */
   const distRangeSeries = (k) => {
     const { cfg, cats, vertical } = k;
     /** @type {any[]} */
@@ -136,11 +128,8 @@
     return series;
   };
 
-  /**
-   * `legend: "marks"` on a point range: each level's name at the centre of
-   * its centres.
-   * @param {any} k
-   */
+  /** `legend: "marks"` on a point range: each level's name at the centre of its centres.
+   * @param {any} k */
   const distCentroidMarks = (k) => {
     const { ink, vertical } = k;
     /** @type {any[]} */
@@ -158,10 +147,7 @@
     return marks;
   };
 
-  /**
-   * Outliers on their box's centre line, silent so the box keeps the click.
-   * @param {any} k
-   */
+  /** Outliers on their box's centre line, silent so the box keeps the click. @param {any} k */
   const distOutlierSeries = (k) => {
     const { cfg, isBox, slots, vertical } = k;
     if (!(isBox && cfg.box_points === 'outliers')) return [];
@@ -246,10 +232,8 @@
     return split ? splitTooltipFmt : pointTooltipFmt;
   };
 
-  /**
-   * The value axis and the category axis (one per level on a split boxplot).
-   * @param {any} k @param {any} cat the result of `distCategories`
-   */
+  /** The value axis and the category axis (one per level on a split boxplot). @param {any} k
+   * @param {any} cat the result of `distCategories` */
   const distAxes = (k, cat) => {
     const { cfg, ink, P, isBox, split, cats, vertical, levelInfo } = k;
     // The value axis fits the data rather than holding zero.

@@ -41,11 +41,8 @@
       return mode === 'nz' ? (v) => String(v ?? '') : (v) => String(v);
     }
 
-    /**
-     * Rows by key of `col`, in row order; Map order is first-seen key order.
-     * @param {any[]} rows @param {string} col @param {KeyMode} mode
-     * @returns {Map<string, any[]>}
-     */
+    /** Rows by key of `col`, in row order; Map order is first-seen key order. @param {any[]} rows
+     * @param {string} col @param {KeyMode} mode @returns {Map<string, any[]>} */
     buckets(rows, col, mode) {
       return this._cached(rows, 'b\u0000' + mode + '\u0000' + col, () => {
         const key = RowIndex.keyFn(mode);
@@ -60,12 +57,9 @@
       });
     }
 
-    /**
-     * Rows by key of `colA`, then of `colB` (nested, so no two pairs collide).
-     * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
-     * @param {string} colB @param {KeyMode} modeB
-     * @returns {Map<string, Map<string, any[]>>}
-     */
+    /** Rows by key of `colA`, then of `colB` (nested, so no two pairs collide). @param {any[]} rows
+     * @param {string} colA @param {KeyMode} modeA @param {string} colB @param {KeyMode} modeB
+     * @returns {Map<string, Map<string, any[]>>} */
     buckets2(rows, colA, modeA, colB, modeB) {
       return this._cached(rows,
         'b2\u0000' + modeA + '\u0000' + colA + '\u0000' + modeB + '\u0000' + colB, () => {
@@ -84,42 +78,30 @@
         });
     }
 
-    /**
-     * The rows whose `col` keys to `k`.
-     * @param {any[]} rows @param {string} col @param {KeyMode} mode @param {string} k
-     * @returns {any[]}
-     */
+    /** The rows whose `col` keys to `k`. @param {any[]} rows @param {string} col
+     * @param {KeyMode} mode @param {string} k @returns {any[]} */
     get(rows, col, mode, k) {
       return this.buckets(rows, col, mode).get(k) || NO_ROWS;
     }
 
-    /**
-     * The rows keyed `a` on `colA` and `b` on `colB`.
-     * @param {any[]} rows @param {string} colA @param {KeyMode} modeA
-     * @param {string} colB @param {KeyMode} modeB @param {string} a @param {string} b
-     * @returns {any[]}
-     */
+    /** The rows keyed `a` on `colA` and `b` on `colB`. @param {any[]} rows @param {string} colA
+     * @param {KeyMode} modeA @param {string} colB @param {KeyMode} modeB @param {string} a
+     * @param {string} b @returns {any[]} */
     get2(rows, colA, modeA, colB, modeB, a, b) {
       const inner = this.buckets2(rows, colA, modeA, colB, modeB).get(a);
       return (inner && inner.get(b)) || NO_ROWS;
     }
 
-    /**
-     * Distinct keys of `col`, first-seen order.
-     * @param {any[]} rows @param {string} col @param {KeyMode} mode
-     * @returns {string[]}
-     */
+    /** Distinct keys of `col`, first-seen order. @param {any[]} rows @param {string} col
+     * @param {KeyMode} mode @returns {string[]} */
     levels(rows, col, mode) {
       return this._cached(rows, 'l\u0000' + mode + '\u0000' + col,
         () => Array.from(this.buckets(rows, col, mode).keys()));
     }
   }
 
-  /**
-   * Rows from what R sends: a JSON string, a column object (a column may be
-   * dictionary-encoded as {__enc__: 'dict', levels, codes}) or rows already.
-   * @param {any} data @returns {any[]}
-   */
+  /** Rows from what R sends: a JSON string, a column object (a column may be dictionary-encoded as
+   * {__enc__: 'dict', levels, codes}) or rows already. @param {any} data @returns {any[]} */
   const rowsFromPayload = (data) => {
     if (typeof data === 'string') data = JSON.parse(data);
     if (!data) return [];

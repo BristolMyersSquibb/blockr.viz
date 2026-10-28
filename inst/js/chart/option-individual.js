@@ -172,10 +172,8 @@
     return { xAxis, yAxis, scrimAxis };
   };
 
-  /**
-   * One panel's option and the state its slot gets.
-   * @param {any} m @param {any} panel @param {any} look @param {number} width
-   */
+  /** One panel's option and the state its slot gets. @param {any} m @param {any} panel
+   * @param {any} look @param {number} width */
   const panelOption = (m, panel, look, width) => {
     const k = panelContext(m, look, width);
     const { cfg, ink, theme, ly, isLine, isBand, isTime, xlab, xCats } = k;

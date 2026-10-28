@@ -39,12 +39,9 @@
     return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
   };
 
-  /**
-   * An aggregated chart's axes: the category column, the column it
-   * aggregates (`measure`, ".count" for a row count), the statistic, the
-   * way it lies, and which of x and y holds each.
-   * @param {Record<string, any>} c @param {VizColumn[]} columns
-   */
+  /** An aggregated chart's axes: the category column, the column it aggregates (`measure`, ".count"
+   * for a row count), the statistic, the way it lies, and which of x and y holds each.
+   * @param {Record<string, any>} c @param {VizColumn[]} columns */
   const axes = (c, columns) => {
     if (c.type === 'histogram') {
       return { category: set(c.x) ? c.x + '_bin' : null, measure: '.count', func: 'count',
@@ -61,14 +58,11 @@
              val_key: count ? null : (onY ? 'x' : 'y') };
   };
 
-  /**
-   * The defaults that depend on the chart: the statistics of a box and a
-   * point range, and the sort. A date, number or factor category keeps its
-   * own order, any other sorts by value; an unset direction is descending
-   * by value and ascending otherwise. A mapping is never picked here: an
-   * unset one asks for a pick (gate()). Mutates `cfg`.
-   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
-   */
+  /** The defaults that depend on the chart: the statistics of a box and a point range, and the
+   * sort. A date, number or factor category keeps its own order, any other sorts by value; an unset
+   * direction is descending by value and ascending otherwise. A mapping is never picked here: an
+   * unset one asks for a pick (gate()). Mutates `cfg`. @param {Record<string, any>} cfg
+   * @param {VizColumn[]} columns */
   const defaults = (cfg, columns) => {
     const fam = NS.familyOf(cfg.type);
     if (NS.DISTRIBUTION_TYPES.includes(cfg.type)) {
@@ -89,14 +83,10 @@
     if (!set(cfg.sort_dir)) cfg.sort_dir = cfg.sort_by === 'value' ? 'desc' : 'asc';
   };
 
-  /**
-   * The settings the model and option builders read: each spec argument,
-   * its default where the config leaves it out, R's `derived`, and an
-   * aggregated chart's axes (axes()).
+  /** The settings the model and option builders read: each spec argument, its default where the
+   * config leaves it out, R's `derived`, and an aggregated chart's axes (axes()).
    * @param {Record<string, any>} config @param {Record<string, any>} [derived]
-   * @param {VizColumn[]} [columns]
-   * @returns {Record<string, any>}
-   */
+   * @param {VizColumn[]} [columns] @returns {Record<string, any>} */
   const settings = (config, derived, columns = []) => {
     const spec = (V.spec && V.spec.chart) || {};
     /** @type {Record<string, any>} */
@@ -194,10 +184,8 @@
       : (counts ? NS.withCount(fv, counts) : fv));
   };
 
-  /**
-   * The tooltip columns of a config, less `drop` (columns the tooltip shows anyway).
-   * @param {Record<string, any>} cfg @param {string[]} [drop] @returns {string[]}
-   */
+  /** The tooltip columns of a config, less `drop` (columns the tooltip shows anyway).
+   * @param {Record<string, any>} cfg @param {string[]} [drop] @returns {string[]} */
   const tooltipFields = (cfg, drop = []) => [].concat(cfg.tooltip || []).map(String)
     .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
 

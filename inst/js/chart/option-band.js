@@ -18,12 +18,9 @@
 
   const BASE_LINE_WIDTH = 1.4;
 
-  /**
-   * A ribbon between two edges: one polygon per run where both exist, so a
-   * band cut for thin n breaks. Null when no run has two points.
-   * @param {any} name @param {any} b @param {string} loKey @param {string} hiKey
-   * @param {string} clr @param {number} op
-   */
+  /** A ribbon between two edges: one polygon per run where both exist, so a band cut for thin n
+   * breaks. Null when no run has two points. @param {any} name @param {any} b @param {string} loKey
+   * @param {string} hiKey @param {string} clr @param {number} op */
   const ribbon = (name, b, loKey, hiKey, clr, op) => {
     const lo = b[loKey], hi = b[hiKey];
     if (!Array.isArray(lo) || !Array.isArray(hi)) return null;
@@ -101,9 +98,8 @@
     return at;
   };
 
-  /**
-   * The band series of one panel.
-   * @param {any} m the individual model @param {any} panel @param {any} look
+  /** The band series of one panel. @param {any} m the individual model @param {any} panel
+   * @param {any} look
    * @returns {{ series: any[], band: any, markLineIdx: number, many: boolean, labelPad: number }}
    */
   const band = (m, panel, look) => {

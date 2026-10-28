@@ -60,11 +60,9 @@
    *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
    */
 
-  /**
-   * The x and y axes (type, categories, how a value is placed) and whether
-   * each is logarithmic, set on the model.
-   * @param {any[]} rows @param {VizColumn[]} columns @param {any} cfg @param {IndividualModel} out
-   */
+  /** The x and y axes (type, categories, how a value is placed) and whether each is logarithmic,
+   * set on the model. @param {any[]} rows @param {VizColumn[]} columns @param {any} cfg
+   * @param {IndividualModel} out */
   const setAxes = (rows, columns, cfg, out) => {
     const { x, y } = cfg;
     // A Date x is a time axis; a Date y stays a category.
@@ -88,12 +86,9 @@
     out.logY = logs.y && yType === 'value';
   };
 
-  /**
-   * The facet panels: per panel its rows and, for scatter and line, one
-   * series per level.
+  /** The facet panels: per panel its rows and, for scatter and line, one series per level.
    * @param {any[]} rows @param {any} ix @param {any} cfg @param {IndividualModel} out
-   * @param {string[]} facets
-   */
+   * @param {string[]} facets */
   const buildPanels = (rows, ix, cfg, out, facets) => {
     const { isLine, isBand, splitCol, facet, levels } = out;
     const { col: x, type: xType, order: xOrder, encode: encodeX } = out.x;
@@ -146,10 +141,8 @@
     }
   };
 
-  /**
-   * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
-   * @returns {IndividualModel}
-   */
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+   * @returns {IndividualModel} */
   const individual = ({ rows, ix, columns, cfg }) => {
     const ct = cfg.type;
     const { x, y } = cfg;
@@ -214,16 +207,12 @@
   };
   individual.FIELDS = MODEL_FIELDS;
 
-  /**
-   * The highlight on a scatter or line. A line is highlighted when one of
-   * its rows holds a highlighted value, a point by its own row. What is not
-   * highlighted is `muted` (drawn grey by the option) and comes first, so
-   * the highlighted marks draw over it: a scatter series splits into its
-   * muted and its highlighted points. With a colour, the palette is counted
-   * over the highlighted colour values only, and the legend lists only those.
-   * @param {IndividualModel} m @param {any[]} rows @param {any} ix
-   * @param {Record<string, any>} cfg
-   */
+  /** The highlight on a scatter or line. A line is highlighted when one of its rows holds a
+   * highlighted value, a point by its own row. What is not highlighted is `muted` (drawn grey by
+   * the option) and comes first, so the highlighted marks draw over it: a scatter series splits
+   * into its muted and its highlighted points. With a colour, the palette is counted over the
+   * highlighted colour values only, and the legend lists only those. @param {IndividualModel} m
+   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg */
   const highlightSeries = (m, rows, ix, cfg) => {
     const hl = NS.highlightOf(cfg);
     if (!hl || m.isBand) return;
@@ -307,15 +296,11 @@
     return null;
   };
 
-  /**
-   * The colour of each series level, and of each legend chip. With a series
-   * column apart from the colour column, a series takes the colour of its
-   * first row's colour value: the board scale's, else the next palette
-   * colour in the order the values come up (cycling, so a level keeps its
-   * colour under a filter). Otherwise a level takes the scale's colour or
-   * the palette's in level order.
-   * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   */
+  /** The colour of each series level, and of each legend chip. With a series column apart from the
+   * colour column, a series takes the colour of its first row's colour value: the board scale's,
+   * else the next palette colour in the order the values come up (cycling, so a level keeps its
+   * colour under a filter). Otherwise a level takes the scale's colour or the palette's in level
+   * order. @param {any[]} rows @param {any} ix @param {IndividualModel} m */
   const seriesColours = (rows, ix, m) => {
     const { palette, colorScale, color, seriesCol } = m;
     /** @param {string} v */
@@ -342,14 +327,11 @@
     return { of, legendColor };
   };
 
-  /**
-   * The legend band's chips, when the colour column has a readable number
-   * of levels. With a series column apart from the colour, the chips are
-   * the colour's values, sorted; the option adds an empty series per chip
-   * for the legend to bind to. Fills m.legend and m.byColor.
+  /** The legend band's chips, when the colour column has a readable number of levels. With a series
+   * column apart from the colour, the chips are the colour's values, sorted; the option adds an
+   * empty series per chip for the legend to bind to. Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   * @param {(level: string, index: number) => string} legendColor
-   */
+   * @param {(level: string, index: number) => string} legendColor */
   const legendOf = (rows, ix, m, legendColor) => {
     const { color, seriesCol } = m;
     if (!color) return;
@@ -363,12 +345,9 @@
     m.legend = { col: color, items };
   };
 
-  /**
-   * The keys of a line, a band level or a scatter series: the split
-   * column's level and the facet in a facet panel.
-   * @param {IndividualModel} m @param {any} facetVal @param {any} level
-   * @returns {Record<string, any>}
-   */
+  /** The keys of a line, a band level or a scatter series: the split column's level and the facet
+   * in a facet panel. @param {IndividualModel} m @param {any} facetVal @param {any} level
+   * @returns {Record<string, any>} */
   const individualKeys = (m, facetVal, level) => {
     /** @type {Record<string, any>} */
     const keys = {};
@@ -381,12 +360,9 @@
   const panelOf = (m, facetVal) =>
     m.panels.find((p) => p.facet === facetVal) || null;
 
-  /**
-   * The rows under a clicked point: the panel's rows at its x and y, within
-   * its series when the chart is split.
-   * @param {IndividualModel} m @param {IndividualPanel} panel @param {any} seriesName
-   * @param {any[]} v the point's value
-   */
+  /** The rows under a clicked point: the panel's rows at its x and y, within its series when the
+   * chart is split. @param {IndividualModel} m @param {IndividualPanel} panel
+   * @param {any} seriesName @param {any[]} v the point's value */
   const pointRows = (m, panel, seriesName, v) => {
     const pool = (m.splitCol && seriesName != null)
       ? m.ix.get(panel.rows, m.splitCol, 'nz', String(seriesName)) : panel.rows;

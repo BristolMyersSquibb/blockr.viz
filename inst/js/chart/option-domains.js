@@ -87,12 +87,9 @@
     return Number.isFinite(lo) ? [lo, hi] : null;
   };
 
-  /**
-   * Each panel's log domain per axis (null on a linear axis), shared across
-   * the panels where the facet scales are, and the count of guide lines and
-   * band outliers at or below zero a log axis leaves out.
-   * @param {any} m @param {Record<string, any>} cfg
-   */
+  /** Each panel's log domain per axis (null on a linear axis), shared across the panels where the
+   * facet scales are, and the count of guide lines and band outliers at or below zero a log axis
+   * leaves out. @param {any} m @param {Record<string, any>} cfg */
   const logDomains = (m, cfg) => {
     const mode = NS.facetScales(cfg);
     const n = m.panels.length;
@@ -124,11 +121,9 @@
     };
   };
 
-  /**
-   * A band on a log axis: a low edge at or below zero is cut at the floor, a
-   * high edge or centre there is a gap, outliers there are dropped.
-   * @param {any} bs the band's series @param {number} floor
-   */
+  /** A band on a log axis: a low edge at or below zero is cut at the floor, a high edge or centre
+   * there is a gap, outliers there are dropped. @param {any} bs the band's series
+   * @param {number} floor */
   const clampBand = (bs, floor) => {
     if (!bs) return bs;
     /** @param {any} b */

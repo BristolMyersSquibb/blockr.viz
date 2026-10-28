@@ -28,12 +28,9 @@
    *             measure: (s: string) => number }} Look
    */
 
-  /**
-   * Which marks each series of a panel draws, as mark positions in series
-   * order: one series per colour level (marks of no level are not drawn),
-   * else one series of every mark. The option and the patch share it.
-   * @param {any} m @param {any} panel @returns {number[][]}
-   */
+  /** Which marks each series of a panel draws, as mark positions in series order: one series per
+   * colour level (marks of no level are not drawn), else one series of every mark. The option and
+   * the patch share it. @param {any} m @param {any} panel @returns {number[][]} */
   const seriesMarks = (m, panel) => {
     if (!m.color) return [panel.marks.map((/** @type {any} */ _, /** @type {number} */ i) => i)];
     /** @type {Map<string, number[]>} */
@@ -164,11 +161,8 @@
     return { option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink), height };
   };
 
-  /**
-   * @param {any} m the timeline model
-   * @param {Look} look
-   * @returns {{ panels: Array<{ option: any, height: string }> }}
-   */
+  /** @param {any} m the timeline model @param {Look} look
+   * @returns {{ panels: Array<{ option: any, height: string }> }} */
   const timeline = (m, look) => {
     const k = timelineContext(m, look);
     const renderItem = timelineRenderItem(k);

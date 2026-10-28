@@ -85,17 +85,13 @@
     }
   };
 
-  /**
-   * The order of a panel's groups on the category axis. A bridge always
-   * keeps the data order (a value sort scrambles the running total). "data"
-   * is factor levels, else time or numeric order for a date or number
-   * column, else first appearance in the rows. "alpha" is factor levels,
-   * else by name. "value" is the total across colour cells. Any other value
-   * names a column whose smallest value per group orders it.
-   * @param {any[]} cells the panel's aggregate cells @param {any[]} rows
-   * @param {VizColumn[]} columns @param {Record<string, any>} cfg
-   * @returns {string[]}
-   */
+  /** The order of a panel's groups on the category axis. A bridge always keeps the data order (a
+   * value sort scrambles the running total). "data" is factor levels, else time or numeric order
+   * for a date or number column, else first appearance in the rows. "alpha" is factor levels, else
+   * by name. "value" is the total across colour cells. Any other value names a column whose
+   * smallest value per group orders it. @param {any[]} cells the panel's aggregate cells
+   * @param {any[]} rows @param {VizColumn[]} columns @param {Record<string, any>} cfg
+   * @returns {string[]} */
   const orderGroups = (cells, rows, columns, cfg) => {
     const groups = [...new Set(cells.map((a) => a.group))];
     const sortBy = cfg.sort_by || 'alpha';
@@ -165,12 +161,9 @@
     });
   };
 
-  /**
-   * The first row's tooltip-field values per group, per facet ('__all__'
-   * for all rows).
+  /** The first row's tooltip-field values per group, per facet ('__all__' for all rows).
    * @param {any[]} rows @param {Record<string, any>} cfg @param {string[]} ttFields
-   * @returns {Map<string, Record<string, any[]>>}
-   */
+   * @returns {Map<string, Record<string, any[]>>} */
   const ttRepValues = (rows, cfg, ttFields) => {
     const groupCol = cfg.category, facetCol = cfg.facet;
     /** @type {Map<string, Record<string, any[]>>} */
@@ -292,10 +285,8 @@
    *             hlColors: Set<string> | null }} AggregatedModel
    */
 
-  /**
-   * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
-   * @returns {AggregatedModel}
-   */
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+   * @returns {AggregatedModel} */
   const aggregated = ({ rows, ix, columns, cfg }) => {
     // A histogram is a bar over the bins R adds to the rows.
     const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
@@ -369,13 +360,10 @@
     return out;
   };
 
-  /**
-   * The highlight: whether a bar (or a segment of one) holds a highlighted
-   * row, and with a colour split the colour levels that do, which alone get
-   * palette colours. Bars only.
+  /** The highlight: whether a bar (or a segment of one) holds a highlighted row, and with a colour
+   * split the colour levels that do, which alone get palette colours. Bars only.
    * @param {AggregatedModel} out @param {any[]} rows @param {any} ix
-   * @param {Record<string, any>} cfg
-   */
+   * @param {Record<string, any>} cfg */
   const highlightMarks = (out, rows, ix, cfg) => {
     const hl = NS.highlightOf(cfg);
     if (!hl || out.cumulative || out.histogram || out.type !== 'bar') return;
@@ -461,11 +449,8 @@
     return { group: String(g), level };
   };
 
-  /**
-   * The rows under a mark: the rows whose columns hold the mark's keys.
-   * @param {any[]} rows @param {any} ix @param {Record<string, any>} keys
-   * @returns {any[]}
-   */
+  /** The rows under a mark: the rows whose columns hold the mark's keys. @param {any[]} rows
+   * @param {any} ix @param {Record<string, any>} keys @returns {any[]} */
   const rowsUnder = (rows, ix, keys) => {
     let cur = rows;
     for (const col of Object.keys(keys)) {

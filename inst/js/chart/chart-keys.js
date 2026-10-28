@@ -23,10 +23,8 @@
   /** Is a key value missing? The aggregation keys it as ''. @param {any} v */
   const isMissing = (v) => v == null || v === '';
 
-  /**
-   * A filter from a mark's keys: one value per column, null when missing.
-   * @param {Record<string, any>} keys @returns {Filters}
-   */
+  /** A filter from a mark's keys: one value per column, null when missing.
+   * @param {Record<string, any>} keys @returns {Filters} */
   const fromKeys = (keys) => {
     /** @type {Filters} */
     const out = {};
@@ -111,10 +109,8 @@
   // Above this many values a column is named with its count, not its values.
   const MAX_LISTED = 3;
 
-  /**
-   * The words for a filter, in column labels: "Reported Term = Rash",
-   * "Severity = (missing)", "Patient, 214 values".
-   * @param {Filters} filters @param {VizColumn[]} columns @returns {string}
+  /** The words for a filter, in column labels: "Reported Term = Rash", "Severity = (missing)",
+   * "Patient, 214 values". @param {Filters} filters @param {VizColumn[]} columns @returns {string}
    */
   const describe = (filters, columns) => Object.keys(filters).map((col) => {
     const label = NS.axes.axisTitle(columns, col);
@@ -123,11 +119,8 @@
     return label + ' = ' + vals.map((v) => (isMissing(v) ? '(missing)' : v)).join(', ');
   }).join(', ');
 
-  /**
-   * Decimals that show a number to three significant digits; none for a
-   * whole number.
-   * @param {number} v
-   */
+  /** Decimals that show a number to three significant digits; none for a whole number.
+   * @param {number} v */
   const decimalsOf = (v) => {
     if (!Number.isFinite(v) || Number.isInteger(v)) return 0;
     const s = String(Number(v.toPrecision(3)));
@@ -136,11 +129,8 @@
     return dot < 0 ? 0 : s.length - dot - 1;
   };
 
-  /**
-   * A range in words: "2 to 86", "21.4 to 30.0" (both ends at the same
-   * decimals), "= 15" for a single value. Dates on a time axis.
-   * @param {any[]} r @param {string} [axisType]
-   */
+  /** A range in words: "2 to 86", "21.4 to 30.0" (both ends at the same decimals), "= 15" for a
+   * single value. Dates on a time axis. @param {any[]} r @param {string} [axisType] */
   const rangeWords = (r, axisType) => {
     const [lo, hi] = r;
     /** @param {any} v @param {number} d */
@@ -190,11 +180,8 @@
     return s;
   };
 
-  /**
-   * Does a row satisfy every column of the filter? A null in the filter
-   * takes the rows where the column is missing.
-   * @param {any} row @param {Filters} filters
-   */
+  /** Does a row satisfy every column of the filter? A null in the filter takes the rows where the
+   * column is missing. @param {any} row @param {Filters} filters */
   const rowMatches = (row, filters) => {
     const sets = setsOf(filters);
     for (const col of Object.keys(sets)) {

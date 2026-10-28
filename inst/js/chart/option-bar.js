@@ -16,11 +16,8 @@
           WATERFALL_COLORS, withItemStyle, fitXLabels } = parts;
   const { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET } = parts.BAR;
 
-  /**
-   * What every part of a bar's option reads: groups, colour levels, layout
-   * and colours.
-   * @param {any} m @param {any} panel @param {any} look @param {number} plotW
-   */
+  /** What every part of a bar's option reads: groups, colour levels, layout and colours.
+   * @param {any} m @param {any} panel @param {any} look @param {number} plotW */
   const barContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const groups = panel.groups;
@@ -128,12 +125,9 @@
     };
   };
 
-  /**
-   * The category axis. "(n)" comes from a formatter, so the axis data stays
-   * the bare group clicks and tooltips key off. A highlighted bar's name is
-   * semibold; `decorate` reapplies that after a resize.
-   * @param {any} k
-   */
+  /** The category axis. "(n)" comes from a formatter, so the axis data stays the bare group clicks
+   * and tooltips key off. A highlighted bar's name is semibold; `decorate` reapplies that after a
+   * resize. @param {any} k */
   const barCategoryAxis = (k) => {
     const { panel, groups, colors, vertical, hlLit, ink, look } = k;
     const { catLabels, catFmt } = countLabels(panel);
@@ -153,9 +147,7 @@
     return { axis, catLabels, gut, xlab, xFit: fit && fit.xFit };
   };
 
-  /**
-   * The value axis: ticks in `format`, the unit once in the title.
-   * @param {any} k @param {any} P
+  /** The value axis: ticks in `format`, the unit once in the title. @param {any} k @param {any} P
    */
   const barValueAxis = (k, P) => {
     const { cfg, asFraction, showPercent, pctFunc, vertical, ink } = k;
@@ -172,11 +164,9 @@
     };
   };
 
-  /**
-   * Value labels, mark text, reference lines and ranges and stack level
-   * names. Returns the px each needs on the grid's right.
-   * @param {any} k @param {any[]} series @param {any} valAxis @param {any} cat
-   */
+  /** Value labels, mark text, reference lines and ranges and stack level names. Returns the px each
+   * needs on the grid's right. @param {any} k @param {any[]} series @param {any} valAxis
+   * @param {any} cat */
   const barSides = (k, series, valAxis, cat) => {
     const { m, panel, cfg, ink, groups, colors, vertical, isGrouped, isPercent } = k;
     const { measure } = k.look;
@@ -215,14 +205,10 @@
     return { labelRight, markRight, namesRight };
   };
 
-  /**
-   * The tooltip. A split bar's card lists every level of the hovered
-   * category with the hovered segment marked (the item trigger knows which).
-   * A 100% bar shows each level's share, its value after it; any other bar
-   * the value named by its aggregation, with n, and the total only where
-   * segments add up (a count, a sum).
-   * @param {any} k @param {any} P @param {any[]} series
-   */
+  /** The tooltip. A split bar's card lists every level of the hovered category with the hovered
+   * segment marked (the item trigger knows which). A 100% bar shows each level's share, its value
+   * after it; any other bar the value named by its aggregation, with n, and the total only where
+   * segments add up (a count, a sum). @param {any} k @param {any} P @param {any[]} series */
   const barTooltip = (k, P, series) => {
     const { m, panel, cfg, colors, showPercent, pctFunc } = k;
     const { title, aggLabel } = P;
@@ -286,10 +272,8 @@
       : { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true, formatter };
   };
 
-  /**
-   * A plain, stacked, grouped or percent bar.
-   * @param {any} m @param {any} panel @param {any} look @param {number} plotW
-   */
+  /** A plain, stacked, grouped or percent bar. @param {any} m @param {any} panel @param {any} look
+   * @param {number} plotW */
   const bar = (m, panel, look, plotW) => {
     const k = barContext(m, panel, look, plotW);
     const P = parts.common(look);
@@ -388,10 +372,8 @@
     return { base, delta, lo, hi };
   };
 
-  /**
-   * A waterfall: a transparent base series carries each step's offset, a
-   * visible delta series the step. Vertical only.
-   * @param {any} m @param {any} panel @param {any} look @param {number} plotW
+  /** A waterfall: a transparent base series carries each step's offset, a visible delta series the
+   * step. Vertical only. @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
   const waterfall = (m, panel, look, plotW) => {
     const { cfg, ink, measure } = look;

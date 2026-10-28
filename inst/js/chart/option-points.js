@@ -59,14 +59,11 @@
     return n <= SPARSE_DOT_N;
   };
 
-  /**
-   * A `labelLayout` that moves a label up or down, a line at a time, until it
-   * covers no label placed before it (`moveOverlap` ignores scatter labels).
-   * Spacers sharing a `room` place their labels around each other; a label
-   * that comes before the last one seen starts a new layout pass.
+  /** A `labelLayout` that moves a label up or down, a line at a time, until it covers no label
+   * placed before it (`moveOverlap` ignores scatter labels). Spacers sharing a `room` place their
+   * labels around each other; a label that comes before the last one seen starts a new layout pass.
    * @param {string} position 'right', 'top' or 'inside' @param {number} distance
-   * @param {{ placed: any[], lastS: number, lastD: number }} [room]
-   */
+   * @param {{ placed: any[], lastS: number, lastD: number }} [room] */
   const labelSpacer = (position, distance, room) => {
     const r = room || { placed: [], lastS: -1, lastD: -1 };
     return (/** @type {any} */ p) => {
@@ -86,11 +83,8 @@
     };
   };
 
-  /**
-   * What every part of a panel's points reads.
-   * @param {any} m the individual model @param {any} panel @param {any} look
-   * @param {number} plotW the plot's width in px
-   */
+  /** What every part of a panel's points reads. @param {any} m the individual model
+   * @param {any} panel @param {any} look @param {number} plotW the plot's width in px */
   const pointsContext = (m, panel, look, plotW) => {
     const { cfg, ink } = look;
     const isLine = m.isLine;
@@ -138,13 +132,10 @@
     };
   };
 
-  /**
-   * One scatter or line series. A scatter's native emphasis is off (it would
-   * strobe a dense cloud); a line keeps it, without scaling, for the dot at the
-   * crosshair; the crowd's hover is the overlay.
-   * @param {any} k @param {any} name @param {any[]} data @param {string} clr
-   * @param {boolean} [isMuted]
-   */
+  /** One scatter or line series. A scatter's native emphasis is off (it would strobe a dense
+   * cloud); a line keeps it, without scaling, for the dot at the crosshair; the crowd's hover is
+   * the overlay. @param {any} k @param {any} name @param {any[]} data @param {string} clr
+   * @param {boolean} [isMuted] */
   const mkSeries = (k, name, data, clr, isMuted = false) => {
     const { isLine, stepMode, smoothOn, crowd, lineMarkerPx, dm, dots, surface, lineW, m, isArea,
             stackArea, directLabels, hlNames, ink } = k;
@@ -183,11 +174,9 @@
     return [...seen];
   };
 
-  /**
-   * One line split at its linetype levels; a segment takes the level of the
-   * point it leads to, so a forecast is dashed from the last observed point on.
-   * @param {any} k @param {string[]} ltLevels @param {any} s @param {number} si
-   */
+  /** One line split at its linetype levels; a segment takes the level of the point it leads to, so
+   * a forecast is dashed from the last observed point on. @param {any} k @param {string[]} ltLevels
+   * @param {any} s @param {number} si */
   const lineSegments = (k, ltLevels, s, si) => {
     const { ltCol, clrOf } = k;
     const lv = s.rows.map((/** @type {any} */ r) => String(r[ltCol] ?? ''));
@@ -302,13 +291,10 @@
     };
   };
 
-  /**
-   * `label`: the column's value beside each point that has one, as one
-   * label-only series per panel (its id keeps the patch and the brush off it).
-   * A highlight without `label` names its points by the highlighted value,
-   * where that value picks out one or two points of the panel.
-   * @param {any} k @param {any[]} series @param {any} room
-   */
+  /** `label`: the column's value beside each point that has one, as one label-only series per panel
+   * (its id keeps the patch and the brush off it). A highlight without `label` names its points by
+   * the highlighted value, where that value picks out one or two points of the panel.
+   * @param {any} k @param {any[]} series @param {any} room */
   const pointLabels = (k, series, room) => {
     const { isLine, m, cfg, panel, lineMarkerPx, dm, ink } = k;
     const hlCol = !isLine && m.hl && !cfg.label ? Object.keys(m.hl)[0] : null;
@@ -364,11 +350,8 @@
     });
   };
 
-  /**
-   * The scatter or line series of one panel, with their overlays.
-   * @param {any} m the individual model @param {any} panel @param {any} look
-   * @param {number} [plotW] the plot's width in px
-   */
+  /** The scatter or line series of one panel, with their overlays. @param {any} m the individual
+   * model @param {any} panel @param {any} look @param {number} [plotW] the plot's width in px */
   const points = (m, panel, look, plotW = 0) => {
     const k = pointsContext(m, panel, look, plotW);
     const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
@@ -384,12 +367,9 @@
     return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
   };
 
-  /**
-   * The hover overlay, on every line chart (empty until a line is hovered) so
-   * the series keep one shape: a veil on its own hidden 0..1 axes, then the
-   * hovered line and its dots. `state.veil` is the fill, set on promotion.
-   * @param {{ veil?: string }} state
-   */
+  /** The hover overlay, on every line chart (empty until a line is hovered) so the series keep one
+   * shape: a veil on its own hidden 0..1 axes, then the hovered line and its dots. `state.veil` is
+   * the fill, set on promotion. @param {{ veil?: string }} state */
   const lineOverlay = (state) => [{
     id: '__scrim__', type: 'custom', xAxisIndex: 1, yAxisIndex: 1, data: [],
     silent: true, legendHoverLink: false, z: 8, animation: false,

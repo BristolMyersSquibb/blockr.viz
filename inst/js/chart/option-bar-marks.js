@@ -41,11 +41,9 @@
   /** Text style of a label on the marks. @param {any} ink */
   const labelStyle = (ink) => ({ color: ink.muted, fontSize: ink.fontSize, fontFamily: ink.face });
 
-  /**
-   * The tallest positive stack, which ECharts scales the value axis from,
-   * and the value one px of the axis spans (0 without a length).
-   * @param {any[]} series @param {number} n groups @param {number} valuePx
-   */
+  /** The tallest positive stack, which ECharts scales the value axis from, and the value one px of
+   * the axis spans (0 without a length). @param {any[]} series @param {number} n groups
+   * @param {number} valuePx */
   const stackScale = (series, n, valuePx) => {
     let top = 0;
     for (let g = 0; g < n; g++) {
@@ -59,11 +57,8 @@
     return { top, perPx: top > 0 && valuePx > 0 ? top / valuePx : 0 };
   };
 
-  /**
-   * A group's drawn segments, bottom up: the series index, the datum, its
-   * value and the middle of its stretch on the axis.
-   * @param {any[]} series @param {number} gi
-   */
+  /** A group's drawn segments, bottom up: the series index, the datum, its value and the middle of
+   * its stretch on the axis. @param {any[]} series @param {number} gi */
   const segmentsAt = (series, gi) => {
     let pos = 0, neg = 0;
     /** @type {Array<{ si: number, d: any, v: number, at: number }>} */
@@ -79,12 +74,10 @@
     return out;
   };
 
-  /**
-   * Headroom for labels past the bars: sets the axis boundary gap and returns
-   * the px a grid needs on its right for the widest end label.
-   * @param {Array<{ v: number, text: string }>} ends @param {any} valAxis
-   * @param {boolean} vertical @param {number} plotPx @param {(s: string) => number} textW
-   */
+  /** Headroom for labels past the bars: sets the axis boundary gap and returns the px a grid needs
+   * on its right for the widest end label. @param {Array<{ v: number, text: string }>} ends
+   * @param {any} valAxis @param {boolean} vertical @param {number} plotPx
+   * @param {(s: string) => number} textW */
   const endRoom = (ends, valAxis, vertical, plotPx, textW) => {
     const hasPos = ends.some((e) => e.v > 0);
     const hasNeg = ends.some((e) => e.v < 0);
@@ -100,11 +93,8 @@
     return Math.max(0, Math.ceil(w + 8 - room));
   };
 
-  /**
-   * The formatter of a label at a bar's end; `fraction`: values are shares.
-   * @param {Record<string, any>} cfg @param {boolean} fraction
-   * @returns {(v: number) => string}
-   */
+  /** The formatter of a label at a bar's end; `fraction`: values are shares.
+   * @param {Record<string, any>} cfg @param {boolean} fraction @returns {(v: number) => string} */
   const endFormat = (cfg, fraction) => {
     // `|| 0` folds a negative zero, which would print as "-0".
     if (fraction) return (v) => (Math.round(v * 1000) / 10 || 0) + '%';
@@ -322,23 +312,18 @@
     return Math.max(0, Math.ceil(widest + 6 + o.barPx / 2 + 4 - o.bandPx / 2));
   };
 
-  /**
-   * The x labels of a vertical category axis fitted to the plot, with the
-   * `xFit` inputs a resize re-fits them from.
-   * @param {any[]} labels @param {number} plotW @param {any} look
-   * @param {any} display maps a category to its label (or null) @param {any} [decorate]
-   */
+  /** The x labels of a vertical category axis fitted to the plot, with the `xFit` inputs a resize
+   * re-fits them from. @param {any[]} labels @param {number} plotW @param {any} look
+   * @param {any} display maps a category to its label (or null) @param {any} [decorate] */
   const fitXLabels = (labels, plotW, look, display, decorate) => {
     const xlab = NS.axes.xAxisLabels(labels, (plotW || 0) - X_INSET, false, look.measure, look.ink);
     return { xlab, xFit: { labels, inset: X_INSET, decimate: false, gutter: xlab.bottom,
                            key: xlab.key, formatter: display, decorate } };
   };
 
-  /**
-   * An axis label that sets the names in `lit` in semibold text ink, line by
-   * line. A name holding rich-text syntax stays as it is.
-   * @param {any} axisLabel @param {Set<string>} lit @param {any} ink
-   */
+  /** An axis label that sets the names in `lit` in semibold text ink, line by line. A name holding
+   * rich-text syntax stays as it is. @param {any} axisLabel @param {Set<string>} lit
+   * @param {any} ink */
   const boldNames = (axisLabel, lit, ink) => {
     const base = axisLabel || {};
     const fmt = base.formatter;

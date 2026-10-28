@@ -116,11 +116,8 @@
       this.theme = name;
     }
 
-    /**
-     * A payload from R (core/binding.js hands it over with its rows). The
-     * rows are parsed only when their revision changed.
-     * @param {VizPayload} p
-     */
+    /** A payload from R (core/binding.js hands it over with its rows). The rows are parsed only
+     * when their revision changed. @param {VizPayload} p */
     render(p) {
       const d = /** @type {Record<string, any>} */ (p.derived || {});
       this.derived = d;

@@ -12,11 +12,9 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
-  /**
-   * A slice or tile per group: its total, the rows behind it, its colour and
-   * `label` text. Groups with nothing to show drop out.
-   * @param {any} m @param {any} panel @param {Record<string, any>} cfg
-   */
+  /** A slice or tile per group: its total, the rows behind it, its colour and `label` text. Groups
+   * with nothing to show drop out. @param {any} m @param {any} panel
+   * @param {Record<string, any>} cfg */
   const groupTotals = (m, panel, cfg) => {
     const gScale = NS.scaleFor(cfg, cfg.category);
     const palette = NS.paletteOf(cfg);
