@@ -245,23 +245,7 @@
     return false;
   };
 
-  /**
-   * A filter as one column and its value: the array of values when there are
-   * several; with several columns, their names and the filter itself.
-   * @param {Filters | null} filters
-   * @returns {{ column: any, selected: any }}
-   */
-  const selectionView = (filters) => {
-    if (!filters) return { column: null, selected: null };
-    const cols = Object.keys(filters);
-    if (cols.length === 1) {
-      const v = filters[cols[0]];
-      return { column: cols[0], selected: v.length === 1 ? v[0] : v };
-    }
-    return { column: cols, selected: filters };
-  };
-
   NS.keys = { isMissing, fromKeys, fromRows, restored, restoredRange, rangeSelection,
-              describe, describeRange, rowMatches, pointInRange, markLit, selectionView,
+              describe, describeRange, rowMatches, pointInRange, markLit,
               MAX_LISTED };
 })();

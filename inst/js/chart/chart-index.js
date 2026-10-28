@@ -147,26 +147,20 @@
   };
 
   /**
-   * Count per value of `dimCol`, optionally within one facet: distinct `id`
-   * when set, else rows. With func 'identity' it is the id column's first
-   * value per group as it is.
+   * Count per value of `dimCol`: distinct `id` when set, else rows. With
+   * func 'identity' it is the id column's first value per group as it is.
    * @param {any[]} rows @param {Record<string, any>} cfg
    * @param {string | null | undefined} dimCol
-   * @param {string | null} [facetCol] @param {any} [facetVal]
    * @returns {Map<string, any>}
    */
-  const labelCounts = (rows, cfg, dimCol, facetCol, facetVal) => {
+  const labelCounts = (rows, cfg, dimCol) => {
     const idCol = cfg.id;
     const asIs = !!idCol && cfg.func === 'identity';
-    const restrict = !!facetCol && facetVal != null && facetVal !== '__all__';
     /** @type {Map<string, any>} */
     const out = new Map();
     /** @type {Map<string, Set<any>>} */
     const ids = new Map();
     for (const r of rows) {
-      if (restrict && String(r[/** @type {string} */ (facetCol)] ?? '') !== String(facetVal)) {
-        continue;
-      }
       const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
       if (asIs) {
         if (!out.has(dv) && r[idCol] != null) out.set(dv, r[idCol]);
