@@ -565,7 +565,7 @@ receipt_hint <- function(hint) {
 ctrl_receipt_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-ctrl-receipt",
-    version = as.character(utils::packageVersion("blockr.viz")),
+    version = js_version("ctrl-receipt.css", "css"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "ctrl-receipt.css"
   )

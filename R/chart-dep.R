@@ -21,14 +21,13 @@ chart_js_dep <- memoise0(function() {
   )
 })
 
-# chart.css, shared with the table block. The suffix is the cache buster:
-# bump it when inst/css/chart.css changes.
+# chart.css, shared with the table block, versioned by its contents.
 chart_css_dep <- memoise0(function() {
   htmltools::tagList(
     tooltip_card_dep(),
     htmltools::htmlDependency(
       name = "chart-css",
-      version = paste0(utils::packageVersion("blockr.viz"), ".59"),
+      version = js_version("chart.css", "css"),
       src = system.file("css", package = "blockr.viz"),
       stylesheet = "chart.css"
     )
@@ -48,7 +47,7 @@ chart_css_dep <- memoise0(function() {
 tooltip_card_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-tooltip",
-    version = paste0(utils::packageVersion("blockr.viz"), ".1"),
+    version = js_version("tooltip.css", "css"),
     src = system.file("css", package = "blockr.viz"),
     stylesheet = "tooltip.css"
   )
