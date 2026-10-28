@@ -225,3 +225,16 @@ test('a histogram stands its bins on x', () => {
   assert.deepStrictEqual(D.plain(o.xAxis[0].data), ['0-30', '30-90']);
   c.close();
 });
+
+test('facet_cols sets the panels per row; unset, the grid fills by width', () => {
+  const grid = (c) => c.block.chartGrid.style.gridTemplateColumns;
+  const c = D.open({ ...BAR, facet: 'ARM', facet_cols: 2 });
+  assert.match(grid(c), /^repeat\(2, /);
+  c.send({ ...BAR, facet: 'ARM', facet_cols: null });
+  assert.strictEqual(grid(c), '');
+  c.send({ ...BAR, facet: 'ARM', facet_cols: 9 });
+  const panels = c.block._slots.length;
+  assert.ok(panels > 1);
+  assert.match(grid(c), new RegExp('^repeat\\(' + Math.min(9, panels) + ', '));
+  c.close();
+});

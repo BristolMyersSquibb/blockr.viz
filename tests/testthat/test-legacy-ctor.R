@@ -118,3 +118,14 @@ test_that("a chart keeps block attributes it does not own through a restore", {
   expect_null(attr(out, "smooth"))
   expect_identical(attr(out, "visible"), "outputs")
 })
+
+test_that("the table's pct_of reads as percent_of, in code and in a saved board", {
+  expect_warning(
+    out <- legacy_ctor_args("table", list(pct_of = "total")),
+    "`pct_of` is from"
+  )
+  expect_identical(out$percent_of, "total")
+  st <- legacy_restore("table", list(layout = "groups", pct_of = "total"))
+  expect_identical(st$percent_of, "total")
+  expect_false("pct_of" %in% names(st))
+})

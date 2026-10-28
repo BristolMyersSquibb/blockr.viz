@@ -418,3 +418,20 @@ test_that("dd_drill_post sends only script-made columns after the script", {
   expect_identical(dd_drill_post(cols, NULL), c(FALSE, FALSE, FALSE))
   expect_identical(dd_drill_post(list(), c("SEX")), logical())
 })
+
+test_that("a script's values are title slots, at the script's default until set", {
+  ps <- parsed_of(script_of("n <- 6", "utils::head(data, n)"))
+  roles <- list(by = "Species")
+  args <- script_title_args(roles, ps$specs, list())
+  expect_equal(args$n, 6)
+  expect_identical(args$by, "Species")
+  args <- script_title_args(roles, ps$specs, list(n = 3))
+  expect_equal(args$n, 3)
+  expect_identical(
+    resolve_block_title("Top {@n} by {@by}", datasets::iris, args = args),
+    "Top 3 by Species"
+  )
+  # A value never shadows a block setting of the same name.
+  expect_identical(script_title_args(roles, ps$specs, list(by = "x"))$by,
+                   "Species")
+})

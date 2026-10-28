@@ -1065,3 +1065,19 @@ test_that("every facet copy carries its level's N, counted in subjects", {
   expect_identical(vapply(pm$plan, function(x) x$sub_label, ""),
                    c("Age · N = 2", "Age · N = 3"))
 })
+
+test_that("simple rows take median, min and max of their column", {
+  d <- data.frame(g = c("a", "a", "a", "b", "b"), v = c(1, 2, 9, 4, 6))
+  num <- function(func) {
+    m <- sum_model(d, by = "g", summaries = list(
+      list(type = "simple", name = "V", func = func, col = "v",
+           show = "number")
+    ))
+    x <- stats::setNames(trimws(as.character(m$cells$cols[[1L]]$disp)),
+                         as.character(m$cells$label))
+    x[order(names(x))]
+  }
+  expect_identical(num("median"), c(a = "2", b = "5"))
+  expect_identical(num("min"), c(a = "1", b = "4"))
+  expect_identical(num("max"), c(a = "9", b = "6"))
+})
