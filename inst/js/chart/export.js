@@ -259,8 +259,9 @@
         view.render(msg);
         whenDrawn(view, scope, () => {
           try {
+            // The density comes from the payload's derived.capture_ratio.
             /** @type {any} */ (view)._downloadImage(false, {
-              pixelRatio: msg.ratio, fail: reject,
+              fail: reject,
               done: (/** @type {string} */ png, /** @type {number} */ width,
                      /** @type {number} */ height) => resolve({ png, width, height })
             });
