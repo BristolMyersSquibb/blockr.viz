@@ -55,12 +55,12 @@
       const b = option.bandParts.band(m, panel, ly ? { ...look, derived: { ...look.derived,
         band: { ...band, series: clampBand(band.series, ly.min) } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
-               band: b.band, labelPad: b.labelPad };
+               band: b.band, pts: null, labelPad: b.labelPad };
     }
     const pts = option.pointParts.points(m, panel, (lx || ly)
       ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
       width > X_INSET ? width - X_INSET : 0);
-    return { series: pts.series, mlTarget: 0, bandMany: false, band: null,
+    return { series: pts.series, mlTarget: 0, bandMany: false, band: null, pts,
              labelPad: pts.labelPad };
   };
 
@@ -158,7 +158,8 @@
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }
     if (ly) NS.axes.logAxis(yAxis, idLog || ly);
-    return { xAxis, yAxis };
+    const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
+    return { xAxis, yAxis, scrimAxis };
   };
 
   /** One panel's option and the state its slot gets. @param {any} m @param {any} panel
@@ -166,7 +167,7 @@
   const panelOption = (m, panel, look, width) => {
     const k = panelContext(m, look, width);
     const { cfg, ink, theme, ly, isLine, isBand, isTime, xlab, xCats } = k;
-    const { series, mlTarget, bandMany, band, labelPad } = panelSeries(k, panel);
+    const { series, mlTarget, bandMany, band, pts, labelPad } = panelSeries(k, panel);
 
     // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
@@ -194,18 +195,25 @@
       }
     }
 
-    const { xAxis, yAxis } = panelAxes(k, ext, idDom, idLog);
+    const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
 
     // A line, a band and a scatter with series are clicked, not brushed (a
     // brush would race the click on a point).
     const brushable = m.x.type !== 'category' && !isLine && !isBand && !m.seriesCol;
     const hover = { si: null };
-    // The line picker's registry, only for a crowd of lines: the line nearest
-    // the cursor is what the tooltip names and a click takes. A few lines are
-    // read off the tooltip at the cursor's x instead.
-    const focus = (isLine && m.crowd) ? {
-      series, xAxisType: m.x.type, xOrder: m.x.order, yLog: !!ly
-    } : null;
+    // A crowd of lines (one per series): the line nearest the cursor is what
+    // the tooltip names and a click takes, and hover promotes it over a veil
+    // (family-individual.js). A few lines are read off the tooltip at the
+    // cursor's x, and hover draws nothing.
+    const crowd = isLine && m.crowd && pts;
+    /** @type {{ veil?: string }} */
+    const scrimState = {};
+    if (crowd) for (const s of option.pointParts.lineOverlay(scrimState)) series.push(s);
+    const focus = crowd ? Object.assign(scrimState, {
+      series, stepMode: pts.stepMode || null, smoothOn: pts.smoothOn,
+      xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW,
+      yLog: !!ly
+    }) : null;
 
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
@@ -220,10 +228,10 @@
       legend: { show: false },
       grid: { left: 66, right: 5 + labelPad, top: 30,
               bottom: 52 + (xlab ? xlab.bottom : 0) },
-      xAxis,
-      yAxis,
+      xAxis: crowd ? [xAxis, scrimAxis] : xAxis,
+      yAxis: crowd ? [yAxis, scrimAxis] : yAxis,
       toolbox: brushable ? hiddenToolbox({ brush: { type: BRUSH_TOOLS } })
-        // Drag-to-zoom on x only.
+        // Drag-to-zoom on the data x axis only, not the veil's hidden one.
         : (isLine ? hiddenToolbox({
           dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' } }) : undefined),
       brush: brushable ? {

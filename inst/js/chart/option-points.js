@@ -354,7 +354,7 @@
    * model @param {any} panel @param {any} look @param {number} [plotW] the plot's width in px */
   const points = (m, panel, look, plotW = 0) => {
     const k = pointsContext(m, panel, look, plotW);
-    const { directLabels, hlNames } = k;
+    const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
     const series = panelSeries(k);
     addRanges(k, series);
     const room = { placed: [], lastS: -1, lastD: -1 };
@@ -364,8 +364,27 @@
       ? endLabelPad(panel.series.filter((/** @type {any} */ s) => !(m.hl && s.muted))
         .map((/** @type {any} */ s) => s.level))
       : 0;
-    return { series, labelPad };
+    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
   };
+
+  /** The hover overlay of a crowd of lines (empty until a line is hovered): a veil on its own
+   * hidden 0..1 axes, then the hovered line and its dots. `state.veil` is the fill, set on
+   * promotion. @param {{ veil?: string }} state */
+  const lineOverlay = (state) => [{
+    id: '__scrim__', type: 'custom', xAxisIndex: 1, yAxisIndex: 1, data: [],
+    silent: true, legendHoverLink: false, z: 8, animation: false,
+    renderItem: (/** @type {any} */ params) => {
+      const cs = params.coordSys;
+      return { type: 'rect', shape: { x: cs.x, y: cs.y, width: cs.width, height: cs.height },
+               style: { fill: state.veil || 'rgba(255,255,255,0.6)' } };
+    }
+  }, {
+    id: '__focus__', name: '__focus__', type: 'line', data: [], silent: true,
+    showSymbol: false, legendHoverLink: false, z: 9, animation: false
+  }, {
+    id: '__focus_dots__', name: '__focus_dots__', type: 'scatter', data: [], silent: true,
+    legendHoverLink: false, z: 10, animation: false
+  }];
 
   /** The tooltip fields of a point's value (they follow x and y) as [title, text] pairs.
    * @param {any} m @param {any} look @param {any} val @returns {Array<[string, any]>} */
@@ -400,7 +419,7 @@
       formatter: (/** @type {any} */ ps) => {
         if (!Array.isArray(ps)) ps = [ps];
         let rows = ps.filter((/** @type {any} */ p) =>
-          p && p.seriesType === 'line' && Array.isArray(p.value));
+          p && p.seriesType === 'line' && Array.isArray(p.value) && p.seriesName !== '__focus__');
         if (m.crowd) {
           if (hover.si == null) return '';
           rows = rows.filter((/** @type {any} */ p) => p.seriesIndex === hover.si);
@@ -459,5 +478,5 @@
     };
   };
 
-  option.pointParts = { points, labelSpacer, lineTooltip, pointTooltip, endLabelOf, endLabelPad };
+  option.pointParts = { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip, endLabelOf, endLabelPad };
 })();

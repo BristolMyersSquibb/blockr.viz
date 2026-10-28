@@ -56,8 +56,23 @@ test('the line under the cursor takes the focus; leaving the plot drops it', () 
   const [x, y] = [].concat(series[si].data[0].value || series[si].data[0]);
   c.zr('mousemove', { offsetX: x, offsetY: y });
   assert.notStrictEqual(slot.focusSi, null, 'a line has the focus');
+  // In a crowd of lines the hovered line is drawn over a veil.
+  const overlay = (id) => c.chart().getOption().series.find((s) => s.id === id);
+  assert.ok(overlay('__focus__').data.length > 1, 'the hovered line on top');
+  assert.strictEqual(overlay('__scrim__').data.length, 1, 'the veil over the rest');
   c.zr('globalout', {});
   assert.strictEqual(slot.hover.si, null);
+  assert.strictEqual(overlay('__focus__').data.length, 0);
+  assert.strictEqual(overlay('__scrim__').data.length, 0);
+  c.close();
+});
+
+test('a colour split of a few lines: hover draws nothing', () => {
+  const c = D.open({ ...LINE, series: null, color: 'ARM' });
+  const before = c.chart().log.length;
+  c.zr('mousemove', { offsetX: 10, offsetY: 10 });
+  assert.strictEqual(c.block._slots[0].focus, null);
+  assert.strictEqual(c.chart().log.length, before, 'nothing redrawn');
   c.close();
 });
 

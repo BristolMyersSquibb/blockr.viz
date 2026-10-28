@@ -101,62 +101,84 @@
        "top": 30,
        "bottom": 52
       },
-      "xAxis": {
-       "type": "value",
-       "name": "Analysis Relative Day",
-       "nameLocation": "middle",
-       "nameGap": 28,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12,
+         "hideOverlap": true
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "show": false
+        },
+        "scale": true
        },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12,
-        "hideOverlap": true
-       },
-       "axisLine": {
-        "lineStyle": {
-         "color": "#d1d5db"
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLine": {
+         "show": false
+        },
+        "nameRotate": 90,
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "solid",
+          "width": 1
+         }
+        },
+        "scale": true
        },
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "show": false
-       },
-       "scale": true
-      },
-      "yAxis": {
-       "type": "value",
-       "name": "Analysis Value",
-       "nameLocation": "middle",
-       "nameGap": 46,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLine": {
-        "show": false
-       },
-       "nameRotate": 90,
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "lineStyle": {
-         "color": "#e5e7eb",
-         "type": "solid",
-         "width": 1
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
-       },
-       "scale": true
-      },
+       }
+      ],
       "toolbox": {
        "show": true,
        "itemSize": 0,
@@ -548,6 +570,54 @@
          "scale": false
         },
         "cursor": "pointer"
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -631,62 +701,84 @@
        "top": 30,
        "bottom": 52
       },
-      "xAxis": {
-       "type": "value",
-       "name": "Analysis Relative Day",
-       "nameLocation": "middle",
-       "nameGap": 28,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12,
+         "hideOverlap": true
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "show": false
+        },
+        "scale": true
        },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12,
-        "hideOverlap": true
-       },
-       "axisLine": {
-        "lineStyle": {
-         "color": "#d1d5db"
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLine": {
+         "show": false
+        },
+        "nameRotate": 90,
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "solid",
+          "width": 1
+         }
+        },
+        "scale": true
        },
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "show": false
-       },
-       "scale": true
-      },
-      "yAxis": {
-       "type": "value",
-       "name": "Analysis Value",
-       "nameLocation": "middle",
-       "nameGap": 46,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLine": {
-        "show": false
-       },
-       "nameRotate": 90,
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "lineStyle": {
-         "color": "#e5e7eb",
-         "type": "solid",
-         "width": 1
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
-       },
-       "scale": true
-      },
+       }
+      ],
       "toolbox": {
        "show": true,
        "itemSize": 0,
@@ -1141,6 +1233,54 @@
          "scale": false
         },
         "cursor": "pointer"
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -1230,62 +1370,84 @@
        "top": 30,
        "bottom": 52
       },
-      "xAxis": {
-       "type": "value",
-       "name": "Analysis Relative Day",
-       "nameLocation": "middle",
-       "nameGap": 28,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12,
+         "hideOverlap": true
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "show": false
+        },
+        "scale": true
        },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12,
-        "hideOverlap": true
-       },
-       "axisLine": {
-        "lineStyle": {
-         "color": "#d1d5db"
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLine": {
+         "show": false
+        },
+        "nameRotate": 90,
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "solid",
+          "width": 1
+         }
+        },
+        "scale": true
        },
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "show": false
-       },
-       "scale": true
-      },
-      "yAxis": {
-       "type": "value",
-       "name": "Analysis Value",
-       "nameLocation": "middle",
-       "nameGap": 46,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLine": {
-        "show": false
-       },
-       "nameRotate": 90,
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "lineStyle": {
-         "color": "#e5e7eb",
-         "type": "solid",
-         "width": 1
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
-       },
-       "scale": true
-      },
+       }
+      ],
       "toolbox": {
        "show": true,
        "itemSize": 0,
@@ -1761,6 +1923,54 @@
          "scale": false
         },
         "cursor": "pointer"
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -1850,62 +2060,84 @@
        "top": 30,
        "bottom": 52
       },
-      "xAxis": {
-       "type": "value",
-       "name": "Analysis Relative Day",
-       "nameLocation": "middle",
-       "nameGap": 28,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
+      "xAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Relative Day",
+        "nameLocation": "middle",
+        "nameGap": 28,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12,
+         "hideOverlap": true
+        },
+        "axisLine": {
+         "lineStyle": {
+          "color": "#d1d5db"
+         }
+        },
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "show": false
+        },
+        "scale": true
        },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12,
-        "hideOverlap": true
-       },
-       "axisLine": {
-        "lineStyle": {
-         "color": "#d1d5db"
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
+       }
+      ],
+      "yAxis": [
+       {
+        "type": "value",
+        "name": "Analysis Value",
+        "nameLocation": "middle",
+        "nameGap": 46,
+        "nameTextStyle": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLabel": {
+         "color": "#6b7280",
+         "fontSize": 12
+        },
+        "axisLine": {
+         "show": false
+        },
+        "nameRotate": 90,
+        "axisTick": {
+         "show": false
+        },
+        "splitLine": {
+         "lineStyle": {
+          "color": "#e5e7eb",
+          "type": "solid",
+          "width": 1
+         }
+        },
+        "scale": true
        },
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "show": false
-       },
-       "scale": true
-      },
-      "yAxis": {
-       "type": "value",
-       "name": "Analysis Value",
-       "nameLocation": "middle",
-       "nameGap": 46,
-       "nameTextStyle": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLabel": {
-        "color": "#6b7280",
-        "fontSize": 12
-       },
-       "axisLine": {
-        "show": false
-       },
-       "nameRotate": 90,
-       "axisTick": {
-        "show": false
-       },
-       "splitLine": {
-        "lineStyle": {
-         "color": "#e5e7eb",
-         "type": "solid",
-         "width": 1
+       {
+        "type": "value",
+        "min": 0,
+        "max": 1,
+        "show": false,
+        "axisPointer": {
+         "show": false
         }
-       },
-       "scale": true
-      },
+       }
+      ],
       "toolbox": {
        "show": true,
        "itemSize": 0,
@@ -2376,6 +2608,54 @@
          "join": "round",
          "cursor": "pointer"
         },
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__scrim__",
+        "type": "custom",
+        "xAxisIndex": 1,
+        "yAxisIndex": 1,
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 8,
+        "animation": false,
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus__",
+        "name": "__focus__",
+        "type": "line",
+        "data": [],
+        "silent": true,
+        "showSymbol": false,
+        "legendHoverLink": false,
+        "z": 9,
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
+       },
+       {
+        "id": "__focus_dots__",
+        "name": "__focus_dots__",
+        "type": "scatter",
+        "data": [],
+        "silent": true,
+        "legendHoverLink": false,
+        "z": 10,
+        "animation": false,
         "emphasis": {
          "disabled": true,
          "scale": false
