@@ -177,7 +177,7 @@
     } else if (m.kind === 'barsplit') {
       body = splitLines(c, m, i, cell, t, tt);
     } else if (m.kind === 'box' || m.kind === 'pointrange') {
-      const mark = t.closest('.vz-table-lane-wh, .vz-table-lane-cap, .vz-table-lane-box, .vz-table-lane-med, .vz-table-lane-fence, .vz-table-lane-rng, .vz-table-lane-ctr');
+      const mark = t.closest('.vz-table-lane-wh, .vz-table-lane-box, .vz-table-lane-med, .vz-table-lane-fence, .vz-table-lane-rng, .vz-table-lane-ctr');
       body = !mark ? '' : m.multi ? multiLines(m, i, cell, mark, tt)
         : m.raw && m.raw.center && m.raw.center[i] != null ? dist(m.kind, m, i, tt.words || {}) : '';
     } else if (m.kind === 'pair') {
