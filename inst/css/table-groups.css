@@ -33,7 +33,7 @@
    sideways, so groups.js moves it down instead. Separate borders, because
    with collapsed ones the table paints the line under the moved header in
    place, and a strip of rows shows through. */
-.blockr-summarize-container > .blockr-table-wrapper {
+.blockr-summarize-container > .vz-body > .blockr-table-wrapper {
   max-height: none;
   overflow-y: hidden;
 }

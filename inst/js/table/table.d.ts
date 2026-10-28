@@ -216,8 +216,7 @@ interface TableLegend {
 /** The table block's `derived`, as R builds it. The table itself is
  *  `payload.data`. */
 interface TableDerived {
-  titles?: { title?: VizTitleBand | string | null; subtitle?: VizTitleBand | string | null;
-             caption?: VizTitleBand | string | null; [k: string]: unknown } | null;
+  titles?: Record<string, VizTitleBand | string | null> | null;
   /** Say this instead of drawing a table. */
   empty?: { kind: string; message: string } | null;
   /** The drill receipt line, "Filtered: Arm = Placebo". */
@@ -348,26 +347,16 @@ interface TableLayoutOpts {
 
 type TableLayoutClass = new (frame: TableFrame, scope: VizScope, opts?: TableLayoutOpts) => TableLayoutView;
 
-/** The block's frame: header, scroll box, footer (chrome.js). */
-interface TableFrame {
-  readonly id: string;
-  readonly el: HTMLElement;
-  readonly head: HTMLElement;
-  readonly tools: HTMLElement;
+/** The block's frame (chrome.js): the core frame with a search box and the
+ * scroll box the layout draws into. */
+interface TableFrame extends VizFrame {
   readonly box: HTMLElement;
-  readonly foot: HTMLElement;
   readonly searchInput: HTMLInputElement;
-  /** Set once the title slots are loaded; titles paint through them. */
-  slots: VizSlots | null;
   query(): string;
   onSearch(fn: (q: string) => void): void;
-  titles(t: TableDerived['titles']): void;
-  showTools(o: { search: boolean; download: boolean; downloads?: unknown;
+  showTools(o: { search: boolean; download: boolean; downloads?: VizDownload[] | null;
                  onOpen?: () => void }): void;
-  empty(e: TableDerived['empty']): boolean;
   structured(on: boolean): void;
-  count(text: string): void;
-  receipt(text: string | null, onClear: (() => void) | null): void;
 }
 
 interface TableCardOpts {
