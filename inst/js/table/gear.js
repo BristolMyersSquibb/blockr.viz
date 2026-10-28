@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The table's gear: the core gear engine (`Blockr.viz.gear`, gear-api.md)
+ * The table's gear: the core gear engine (`Blockr.viz.gear`, core/gear/)
  * in a tray under the frame's header, opened by the gear button with
  * `Blockr.viz.gear.tray`. The engine builds every row from the spec;
  * this file adds what the spec cannot say:
