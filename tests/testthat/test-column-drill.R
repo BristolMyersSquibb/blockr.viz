@@ -39,24 +39,15 @@ test_that("annotated_column_keys drops malformed entries, keeps good ones", {
   expect_null(annotated_column_keys(data.frame(a = 1)))
 })
 
-test_that("col_claims reshapes the column half without touching the data", {
-  keys <- list(list(column = "ARM", values = "Placebo"),
-               list(column = "SEX", values = "F"))
-
+test_that("a column claim names its column, table and every pooled value", {
   expect_equal(
-    col_claims(keys),
-    list(list(name = "ARM", mode = "multi", values = "Placebo"),
-         list(name = "SEX", mode = "multi", values = "F"))
+    claim_cond("ARM", "Placebo"),
+    list(name = "ARM", mode = "multi", values = "Placebo")
   )
   # A dm-backed target needs the table named.
-  expect_equal(col_claims(keys[1], "adsl")[[1]]$table, "adsl")
+  expect_equal(claim_cond("ARM", "Placebo", "adsl")$table, "adsl")
   # Pools arrive as several values and stay multi.
-  expect_equal(
-    col_claims(list(list(column = "ARM", values = c("A", "B"))))[[1]]$values,
-    c("A", "B")
-  )
-  expect_equal(col_claims(NULL), list())
-  expect_equal(col_claims(list(list(column = "", values = "x"))), list())
+  expect_equal(claim_cond("ARM", c("A", "B"))$values, c("A", "B"))
 })
 
 # --- cannot resolve is not an un-drill --------------------------------------
