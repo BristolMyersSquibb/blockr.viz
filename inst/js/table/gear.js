@@ -2,7 +2,7 @@
 /**
  * The table's gear: the core gear engine (`Blockr.viz.gear`, gear-api.md)
  * in a tray under the frame's header, opened by the gear button with
- * blockr.ui's `Blockr.gearTray`. The engine builds every row from the spec;
+ * `Blockr.viz.gear.tray`. The engine builds every row from the spec;
  * this file adds what the spec cannot say:
  *
  * - which rows a layout shows for its input (`visible`): a finished input
@@ -124,40 +124,6 @@
   }
 
   /**
-   * The gear button and its tray, in the frame's header. Fallback without
-   * blockr.ui: the button toggles the tray.
-   * @param {TableFrame} frame
-   * @param {VizScope} scope
-   */
-  function tray(frame, scope) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'blockr-gear-btn';
-    btn.innerHTML = root.Blockr.icons ? root.Blockr.icons.gear : '⚙';
-    const band = document.createElement('div');
-    band.className = 'blockr-settings blockr-settings--beak';
-    frame.head.append(btn, band);
-    const B = root.Blockr;
-    const handle = B.gearTray ? B.gearTray(band, btn, { label: 'Table settings' }) : {
-      open: false,
-      /** @param {boolean} on */
-      set(on) {
-        this.open = on;
-        band.classList.toggle('blockr-settings--open', on);
-        btn.setAttribute('aria-expanded', String(on));
-      }
-    };
-    if (!B.gearTray) scope.on(btn, 'click', () => handle.set(!handle.open));
-    // The header's layout follows the tray: open, the gear sits alone on top.
-    const sync = () => frame.head.classList.toggle('vz-head--open',
-                                                   btn.getAttribute('aria-expanded') === 'true');
-    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
-    // A tray left open is a layer on blockr.ui's dismiss stack: close it.
-    scope.own({ dispose: () => handle.set(false) });
-    return { band, open: () => handle.set(true) };
-  }
-
-  /**
    * Mount the gear, or nothing without the engine.
    * @param {TableFrame} frame
    * @param {VizScope} scope
@@ -167,7 +133,7 @@
   function mount(frame, scope, info) {
     const G = /** @type {any} */ (V).gear;
     if (!G || typeof G.mount !== 'function') return null;
-    const t = tray(frame, scope);
+    const t = G.tray(frame.head, scope, 'Table settings');
     /** @type {TableGearHost} */
     const host = {
       visible: (key, v) => visible(key, v, info()),
@@ -182,7 +148,7 @@
     const engine = scope.own(G.mount(t.band, {
       block: 'table', id: frame.id, scope, typeKey: 'layout', title: 'Table settings', host
     }));
-    return { engine, open: t.open, update: (p) => engine.update(p) };
+    return { engine, open: () => t.set(true), update: (p) => engine.update(p) };
   }
 
   V.table.gear = { mount, visible, shadings };

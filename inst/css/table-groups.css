@@ -555,7 +555,6 @@
    table, on the design system's rows (1px border, radius 8, 6px apart). An
    entry is its title with move and remove buttons; open, its fields sit
    below on a grid of their own. The row spans its section. */
-.dd-section-body.lane-sum-wide { grid-column: 1 / -1; }
 .lane-summaries { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .lane-sum-row {
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);

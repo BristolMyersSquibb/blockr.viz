@@ -139,7 +139,7 @@ test('the gear engine, when loaded, is mounted in a tray and updated after the l
   const log = [];
   let host;
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
       mount: (tray, o) => {
         host = o.host;
         log.push(['mount', tray.className, o.block, o.id, o.typeKey]);
@@ -148,7 +148,7 @@ test('the gear engine, when loaded, is mounted in a tray and updated after the l
     };
   } });
   const t = mount(payload({ data: flatModel(2) }), env);
-  assert.deepEqual(log, [['mount', 'blockr-settings blockr-settings--beak', 'table', 'tbl', 'layout'],
+  assert.deepEqual(log, [['mount', 'blockr-settings blockr-settings--beak dd-popover', 'table', 'tbl', 'layout'],
                          ['update', 'records']]);
   const btn = t.$('.vz-head > .blockr-gear-btn');
   t.click(btn);
@@ -168,7 +168,7 @@ test('the gear engine, when loaded, is mounted in a tray and updated after the l
 test('the gear hides what a finished input cannot change', () => {
   let host;
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear, mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
   } });
   mount(payload({ data: table1() }), env);
   const v = { layout: 'records', by: [] };
@@ -211,7 +211,7 @@ test('the shading editor round-trips every key of a rule', () => {
 test('titles paint through the title slots when they are loaded', () => {
   const painted = [];
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { mount: () => ({ update() {}, dispose() {} }) };
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear, mount: () => ({ update() {}, dispose() {} }) };
     win.Blockr.viz.titles = { slots: (o) => ({
       paint: (el, band) => { painted.push([el.className, band && band.text]); el.textContent = band ? band.text : ''; },
       dispose() {}

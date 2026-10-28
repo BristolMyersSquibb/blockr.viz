@@ -46,7 +46,7 @@ test('the gear\'s Variables row picks among the columns not in by', () => {
   let rowCtx;
   let host;
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
       mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; },
       controls: { build: (el, ctx) => { rowCtx = ctx; } }
     };
