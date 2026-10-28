@@ -189,7 +189,7 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
   any_col <- function(f) any(vapply(md$cols, f, logical(1L)))
   # Glyph band: a sparkline wants height, every other mark a lane.
   has_sp <- any_col(function(cl) {
-    !is.null(cl$glyph) && identical(cells$cols[[cl$glyph + 1L]]$kind,
+    !is.null(cl$glyph) && identical(cells$cols[[cl$glyph]]$kind,
                                      "sparkline")
   })
   any_glyph <- any_col(function(cl) !is.null(cl$glyph))
@@ -303,7 +303,7 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
       cy <- cy + sub_h
     }
     if (gly_h && !is.null(cl$glyph)) {
-      cc <- cells$cols[[cl$glyph + 1L]]
+      cc <- cells$cols[[cl$glyph]]
       g1 <- gl
       g1$row_h <- gly_h
       if (identical(cc$kind, "sparkline")) g1$lane <- px * 30
