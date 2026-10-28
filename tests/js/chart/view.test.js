@@ -281,3 +281,37 @@ test('facet_cols sets the panels per row; unset, the grid fills by width', () =>
   assert.match(grid(c), new RegExp('^repeat\\(' + Math.min(9, panels) + ', '));
   c.close();
 });
+
+test('a type switch leaves no listener on the reset button of a chart it took down', () => {
+  const c = D.open(BAR);
+  const win = c.env.win;
+  // Click listeners on zoom reset buttons, by button.
+  const live = new Map();
+  // The prototype that holds addEventListener, as the window's elements see it.
+  let proto = win.document.createElement('button');
+  while (!Object.prototype.hasOwnProperty.call(proto, 'addEventListener')) proto = Object.getPrototypeOf(proto);
+  const add = proto.addEventListener;
+  const rm = proto.removeEventListener;
+  proto.addEventListener = function (t, f, o) {
+    if (this.classList && this.classList.contains('vz-chart-zoom-reset')) {
+      live.set(this, (live.get(this) || 0) + 1);
+    }
+    return add.call(this, t, f, o);
+  };
+  proto.removeEventListener = function (t, f, o) {
+    if (live.has(this)) live.set(this, live.get(this) - 1);
+    return rm.call(this, t, f, o);
+  };
+  const SCATTER = { type: 'scatter', x: 'ADY', y: 'AVAL', drill: 'auto' };
+  for (let i = 0; i < 3; i++) {
+    c.send({ ...SCATTER });
+    c.send({ ...SCATTER, type: 'line' });
+    c.send(BAR);
+  }
+  const held = [...live].filter(([btn, n]) => n > 0 && !btn.isConnected);
+  proto.addEventListener = add;
+  proto.removeEventListener = rm;
+  assert.ok(live.size > 0, 'the switches built reset buttons');
+  assert.strictEqual(held.length, 0);
+  c.close();
+});
