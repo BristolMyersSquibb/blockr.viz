@@ -77,8 +77,8 @@ viz_script_sources <- function(raw, state) {
       cb_expr(parsed(), specs(), state$script_values(), slot = TRUE)
     },
     derived = function() {
-      list(inputs = dd_script_roles(specs()),
-           values = dd_script_cfg(specs(), state$script_values()),
+      list(inputs = script_control_records(specs()),
+           values = script_control_values(specs(), state$script_values()),
            error = run()$error)
     }
   )
@@ -104,7 +104,7 @@ viz_script_values <- function(incoming, specs, current = list()) {
     return(out)
   }
   for (s in specs) {
-    if (!is.null(s$error) || is.na(s$kind) || !s$name %in% names(incoming)) {
+    if (!script_spec_ok(s) || !s$name %in% names(incoming)) {
       next
     }
     v <- script_value_read(incoming[[s$name]], s)
