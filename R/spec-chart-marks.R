@@ -76,7 +76,7 @@ chart_spec_marks <- function() {
       type = "bool", default = FALSE,
       applies = "pointrange",
       gear = gear("Marks", "segmented", "Centers",
-                  labels = c("Connect centers", "Off")),
+                  labels = c("Connect", "Off")),
       example = TRUE,
       describe = "TRUE joins a pointrange's centers in category order."
     ),

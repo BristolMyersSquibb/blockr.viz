@@ -27,9 +27,8 @@
     'Chart type': ['data', 0], 'Table': ['data', 0], 'Columns': ['data', 10],
     'Variables': ['data', 15], 'Mapping': ['data', 20], 'Prepare script': ['data', 90],
     'Order': ['sort', 0], 'Rows shown': ['sort', 10],
-    'Look': ['format', 0], 'Color': ['format', 5], 'Numbers': ['format', 10],
-    'Bars': ['format', 20], 'Marks': ['format', 30], 'Reference lines': ['format', 40],
-    'Counts': ['format', 50], 'Facets': ['format', 60],
+    'Look': ['format', 0], 'Numbers': ['format', 10], 'Bars': ['format', 20],
+    'Marks': ['format', 30], 'Reference lines': ['format', 40],
     'Titles': ['titles', 0],
     'Reader tools': ['interact', 0], 'Drill-down': ['interact', 10]
   };
@@ -83,6 +82,12 @@
         section(g.group).keys.push(key);
       }
     }
+    // A two-cell text field goes last in its section, so it leaves no hole
+    // in the row before it.
+    const late = (/** @type {string} */ k) => spec[k].type.name === 'named';
+    for (const s of out.values()) {
+      s.keys = s.keys.filter((k) => !late(k)).concat(s.keys.filter(late));
+    }
     const order = GROUPS.map((x) => x[0]);
     return Array.from(out.values())
       .filter((s) => s.keys.length || s.adds.length)
@@ -108,7 +113,9 @@
 
   /**
    * Put the built sections into the tray, grouped through blockr.ui's
-   * Blockr.trayNav.
+   * Blockr.trayNav. The index lists the groups only: a section goes in
+   * without a title, which trayNav leaves out of the index. Its header in
+   * the pane stays.
    * @param {HTMLElement} pop
    * @param {{ plan: VizSectionPlan, el: HTMLElement, titleEl: HTMLElement }[]} built
    * @param {string | null} current The group to show.
@@ -120,7 +127,7 @@
     const groups = GROUPS.map(([key, title]) => ({
       key, title,
       sections: built.filter((b) => b.plan.group === key)
-        .map((b) => ({ el: b.el, title: b.plan.title, titleEl: b.titleEl }))
+        .map((b) => ({ el: b.el, title: '', titleEl: b.titleEl }))
     }));
     const nav = ui.trayNav(groups, { current: current || undefined, onPick, label });
     pop.appendChild(nav.el);

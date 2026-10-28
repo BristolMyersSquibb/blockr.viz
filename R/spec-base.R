@@ -105,7 +105,7 @@ viz_download_arg <- function(ctrl = TRUE) {
   viz_arg(
     type = "bool", default = TRUE,
     gear = gear("Reader tools", "segmented", "Download",
-                labels = c("Download", "No download")),
+                labels = c("Show button", "Off")),
     slot = TRUE, ctrl = ctrl,
     describe = "TRUE offers the block for download."
   )
@@ -114,7 +114,7 @@ viz_download_arg <- function(ctrl = TRUE) {
 viz_format_arg <- function(applies = NULL, example = "number") {
   viz_arg(
     type = "format", default = "number", applies = applies,
-    gear = gear("Numbers", "select", "Numbers"),
+    gear = gear("Numbers", "select", "Number format"),
     slot = TRUE,
     example = example,
     describe = paste(

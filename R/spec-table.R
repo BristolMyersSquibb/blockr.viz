@@ -109,7 +109,7 @@ table_spec_color <- function() {
     color = table_arg(
       type = "column", default = "auto", also = "auto", null = "no tint",
       applies = "records",
-      gear = gear("Color", "column", "Color"),
+      gear = gear("Look", "column", "Color by"),
       example = "SEX",
       describe = paste(
         "Column whose colors tint the rows, from the board's scale map.",
@@ -120,7 +120,7 @@ table_spec_color <- function() {
     shadings = table_arg(
       type = type_records(spec = table_shading_spec()), default = list(),
       applies = "records",
-      gear = gear("Color", "custom", "Shade cells"),
+      gear = gear("Look", "custom", "Shade cells"),
       slot = FALSE,
       example = list(list(mode = "diverging", columns = character())),
       describe = paste(
@@ -136,7 +136,7 @@ table_spec_look <- function() {
   list(
     look = table_arg(
       type = "enum", default = "table", values = c("table", "compact", "cards"),
-      gear = gear("Look", "tiles", "Look",
+      gear = gear("Look", "tiles", "Style",
                   labels = c("Table", "Compact", "Cards")),
       example = "cards",
       describe = paste(
@@ -161,8 +161,8 @@ table_spec_look <- function() {
     collapsible = table_arg(
       type = "bool", default = TRUE,
       applies = c("records", "variables"),
-      gear = gear("Look", "segmented", "Collapse groups",
-                  labels = c("Collapsible", "Not collapsible")),
+      gear = gear("Look", "segmented", "Group rows",
+                  labels = c("Collapsible", "Off")),
       describe = "Allow collapsing the group rows of a nested table."
     )
   )
@@ -185,7 +185,7 @@ table_spec_sorting <- function() {
       type = "enum", default = NULL, values = c("asc", "desc"),
       null = "desc for sort_by = \"value\", else asc",
       applies = "groups",
-      gear = gear("Order", "segmented", "Order",
+      gear = gear("Order", "segmented", "Direction",
                   labels = c("Ascending", "Descending"), icons = TRUE),
       example = "desc",
       describe = "Sort direction."
@@ -206,8 +206,8 @@ table_spec_bars <- function() {
     value_labels = table_arg(
       type = "bool", default = TRUE,
       applies = "groups",
-      gear = gear("Bars", "segmented", "Values",
-                  labels = c("Show values", "Off")),
+      gear = gear("Bars", "segmented", "Value labels",
+                  labels = c("Show", "Off")),
       example = TRUE,
       describe = "TRUE writes each mark's number beside it."
     ),
@@ -216,7 +216,7 @@ table_spec_bars <- function() {
       type = "bool", default = TRUE,
       applies = "groups",
       gear = gear("Bars", "segmented", "Column axis",
-                  labels = c("Column axis", "No column axis")),
+                  labels = c("Show", "Off")),
       example = TRUE,
       describe = "TRUE draws the domain strip under each glyph column."
     ),
@@ -237,7 +237,8 @@ table_spec_interact <- function() {
     drill = table_arg(
       type = "column", default = NULL, also = c("auto", "source"),
       null = "off",
-      gear = gear("Drill-down", "toggle", "Filter on"),
+      gear = gear("Drill-down", "toggle", "On click",
+                  labels = c("Filter on", "Off")),
       example = "Region",
       describe = paste(
         "Turns the row click on. Records: the column a click filters on,",
@@ -248,15 +249,15 @@ table_spec_interact <- function() {
 
     search = table_arg(
       type = "bool", default = TRUE,
-      gear = gear("Reader tools", "segmented", "Search",
-                  labels = c("Search bar", "No search bar")),
+      gear = gear("Reader tools", "segmented", "Search bar",
+                  labels = c("Show", "Off")),
       describe = "Show the search input."
     ),
 
     sortable = table_arg(
       type = "bool", default = TRUE,
       gear = gear("Reader tools", "segmented", "Header sorting",
-                  labels = c("Header sorting", "No header sorting")),
+                  labels = c("Allow", "Off")),
       describe = "Allow sorting by the column headers."
     ),
 
@@ -292,7 +293,8 @@ table_spec_variables <- function() {
     total = table_arg(
       type = "bool", default = FALSE,
       applies = "variables",
-      gear = gear("Variables", "toggle", "Overall column"),
+      gear = gear("Variables", "toggle", "Overall column",
+                  labels = c("Add", "Off")),
       example = TRUE,
       describe = "TRUE adds a column over all levels of `by`."
     ),
@@ -308,7 +310,8 @@ table_spec_variables <- function() {
     nest = table_arg(
       type = "bool", default = FALSE,
       applies = "variables",
-      gear = gear("Variables", "toggle", "Nest hierarchy"),
+      gear = gear("Variables", "toggle", "Nest hierarchy",
+                  labels = c("Nest", "Off")),
       example = FALSE,
       describe = "TRUE nests adjacent categorical hierarchies."
     )

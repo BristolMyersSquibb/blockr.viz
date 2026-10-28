@@ -258,14 +258,51 @@
 .blockr-settings.vz-tray .vz-section-title:last-child { margin-bottom: 0; }
 .blockr-settings.vz-tray .vz-row,
 .blockr-settings.vz-tray .vz-add { margin: 0; }
-/* A checkbox in the grid: the box and its words, no field shell, on the
-   controls' line of its grid row. */
-.blockr-settings.vz-tray .vz-row--check {
-  align-self: end;
-  min-height: var(--blockr-control-h, 42px);
-  justify-content: center;
+/* One cell shape: an 18px label line, 4px, then the 42px control line, so
+   the labels and the controls of a grid row line up whatever the widget. A
+   control fills the line; a checkbox and a slider sit in its middle. A
+   control that wraps (narrow) or grows (tiles, editors, templates, the
+   script) makes its own row taller and moves nothing else. */
+.blockr-settings.vz-tray .vz-section > .vz-row:where(:not(.vz-add)) {
+  display: grid;
+  grid-template-rows: 18px minmax(var(--blockr-control-h, 42px), auto);
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 4px;
+  align-content: start;
 }
-.blockr-settings.vz-tray .vz-row--check > .vz-help { margin-top: -4px; }
+.blockr-settings.vz-tray .vz-section > .vz-row.vz-row--tall { grid-template-rows: 18px auto; }
+.blockr-settings.vz-tray .vz-section > .vz-row.vz-row--nolabel { grid-template-rows: auto; }
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-head {
+  height: 18px;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-head > .blockr-label {
+  margin: 0;
+  line-height: 18px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row:not(.vz-row--tall) > .vz-row-controls {
+  align-items: center;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-segmented,
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-text-input,
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .vz-slider {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-text-input {
+  height: var(--blockr-control-h, 42px);
+  box-sizing: border-box;
+}
+/* The column picker beside a drill or highlight checkbox takes the rest. */
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .vz-row-sub {
+  flex: 1 1 0;
+  min-width: 0;
+}
 /* An option that exists but does not apply here (the table's Cards look in
    the variables layout): drawn, greyed, inert. */
 .blockr-settings.vz-tray .blockr-segmented__seg.is-disabled {

@@ -955,9 +955,9 @@
         "only": ["records"]
       },
       "gear": {
-        "group": "Color",
+        "group": "Look",
         "control": "column",
-        "label": "Color"
+        "label": "Color by"
       },
       "slot": true,
       "ctrl": true
@@ -1012,7 +1012,7 @@
         "only": ["records"]
       },
       "gear": {
-        "group": "Color",
+        "group": "Look",
         "control": "custom",
         "label": "Shade cells"
       },
@@ -1031,7 +1031,7 @@
       "gear": {
         "group": "Numbers",
         "control": "select",
-        "label": "Numbers"
+        "label": "Number format"
       },
       "slot": true,
       "ctrl": true
@@ -1063,7 +1063,7 @@
       "gear": {
         "group": "Look",
         "control": "tiles",
-        "label": "Look",
+        "label": "Style",
         "labels": ["Table", "Compact", "Cards"]
       },
       "slot": true,
@@ -1118,7 +1118,7 @@
       "gear": {
         "group": "Order",
         "control": "segmented",
-        "label": "Order",
+        "label": "Direction",
         "labels": ["Ascending", "Descending"],
         "icons": true
       },
@@ -1158,8 +1158,8 @@
       "gear": {
         "group": "Bars",
         "control": "segmented",
-        "label": "Values",
-        "labels": ["Show values", "Off"]
+        "label": "Value labels",
+        "labels": ["Show", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1177,7 +1177,7 @@
         "group": "Bars",
         "control": "segmented",
         "label": "Column axis",
-        "labels": ["Column axis", "No column axis"]
+        "labels": ["Show", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1210,7 +1210,8 @@
       "gear": {
         "group": "Drill-down",
         "control": "toggle",
-        "label": "Filter on"
+        "label": "On click",
+        "labels": ["Filter on", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1224,8 +1225,8 @@
       "gear": {
         "group": "Reader tools",
         "control": "segmented",
-        "label": "Search",
-        "labels": ["Search bar", "No search bar"]
+        "label": "Search bar",
+        "labels": ["Show", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1240,7 +1241,7 @@
         "group": "Reader tools",
         "control": "segmented",
         "label": "Header sorting",
-        "labels": ["Header sorting", "No header sorting"]
+        "labels": ["Allow", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1257,8 +1258,8 @@
       "gear": {
         "group": "Look",
         "control": "segmented",
-        "label": "Collapse groups",
-        "labels": ["Collapsible", "Not collapsible"]
+        "label": "Group rows",
+        "labels": ["Collapsible", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1273,7 +1274,7 @@
         "group": "Reader tools",
         "control": "segmented",
         "label": "Download",
-        "labels": ["Download", "No download"]
+        "labels": ["Show button", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1328,7 +1329,8 @@
       "gear": {
         "group": "Variables",
         "control": "toggle",
-        "label": "Overall column"
+        "label": "Overall column",
+        "labels": ["Add", "Off"]
       },
       "slot": true,
       "ctrl": true
@@ -1362,7 +1364,8 @@
       "gear": {
         "group": "Variables",
         "control": "toggle",
-        "label": "Nest hierarchy"
+        "label": "Nest hierarchy",
+        "labels": ["Nest", "Off"]
       },
       "slot": true,
       "ctrl": true

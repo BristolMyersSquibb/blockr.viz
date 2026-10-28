@@ -27,6 +27,20 @@ test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav,
   assert.ok(!names.includes('Sort'));
 });
 
+test('the index lists the groups only, and the open group keeps its section headers', noNav, () => {
+  const env = loadGear({ ui: true });
+  const m = mountGear(env);
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical' }));
+  const index = m.el.querySelector('.blockr-tray-nav__index');
+  index.querySelectorAll('.blockr-tray-nav__group')[2].click();
+  assert.equal(index.querySelectorAll('.blockr-tray-nav__section').length, 0);
+  assert.deepEqual(Array.from(index.children).map((b) => b.textContent),
+    ['Data', 'Sort', 'Format', 'Titles', 'Interaction']);
+  const shown = Array.from(m.el.querySelectorAll('.vz-section:not(.blockr-tray-nav__off) .vz-section-title'))
+    .filter((t) => !t.classList.contains('blockr-tray-nav__hidden-title')).map((t) => t.textContent);
+  assert.deepEqual(shown, ['Look', 'Numbers', 'Reference lines']);
+});
+
 test('with blockr.ui the controls are its widgets and still send', noUi, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env);
