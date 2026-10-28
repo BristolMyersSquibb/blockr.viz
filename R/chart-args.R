@@ -44,38 +44,9 @@ chart_pct_of_public <- function(pct_of) {
   if (length(x) != 1L || is.na(x)) y else x
 }
 
-# Which way an oriented chart lies when `orientation` is not given. The column
-# `func` aggregates sits on the value axis, the one it groups by on the
-# category axis.
-# - One of `x`/`y` set: with a row count (bar, `func = "count"`) that column is
-#   the category; otherwise (a sum, a boxplot) it is the value.
-# - Both set: a numeric column beside a non-numeric one is the value. Any other
-#   pair is vertical, the category on `x`, as in ggplot2. A pair that reads the
-#   other way (a distinct count of a character id by a category) needs an
-#   explicit `orientation`.
-# - Neither set: the type's default, as the browser draws it (bar horizontal,
-#   boxplot and pointrange vertical).
-# `is_num(col)` answers TRUE / FALSE, or NA when the data is not there yet.
-chart_infer_orientation <- function(type, x, y, func, is_num) {
-  has_x <- length(x) > 0L
-  has_y <- length(y) > 0L
-  count <- identical(type, "bar") && identical(func %||% "count", "count")
-  if (has_x && !has_y) {
-    return(if (count) "vertical" else "horizontal")
-  }
-  if (has_y && !has_x) {
-    return(if (count) "horizontal" else "vertical")
-  }
-  if (has_x && has_y) {
-    horizontal <- isTRUE(is_num(x)) && isFALSE(is_num(y))
-    return(if (horizontal) "horizontal" else "vertical")
-  }
-  if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal"
-}
-
 # Public roles -> the internal ones the server and the browser read.
-chart_roles_internal <- function(type, x, y, func, orientation,
-                                 is_num = function(col) NA) {
+# `kinds` (viz_column_kinds()) is NULL when the data is not there.
+chart_roles_internal <- function(type, x, y, func, orientation, kinds = NULL) {
   if (identical(type, "histogram")) {
     return(list(group = chart_bin_col(x), value = ".count", x = x, y = NULL,
                 orientation = "vertical"))
@@ -85,7 +56,8 @@ chart_roles_internal <- function(type, x, y, func, orientation,
                 orientation = orientation))
   }
   orient <- if (type %in% CHART_ORIENTED_TYPES) {
-    orientation %||% chart_infer_orientation(type, x, y, func, is_num)
+    orientation %||%
+      chart_infer_lie(list(type = type, x = x, y = y, func = func), kinds)
   }
   horizontal <- identical(orient, "horizontal")
   group <- if (horizontal) y else x
@@ -219,8 +191,9 @@ chart_legacy_args <- function(args) {
         args$x <- group
         args$y <- value
       }
-      inferred <- chart_infer_orientation(type, args[["x"]], args[["y"]],
-                                          func, function(col) NA)
+      inferred <- chart_infer_lie(
+        list(type = type, x = args[["x"]], y = args[["y"]], func = func), NULL
+      )
       # A distinct count reads a character column: without data the inference
       # cannot tell which side is the category, so keep the orientation the
       # board was drawn with.

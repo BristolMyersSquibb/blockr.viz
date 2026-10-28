@@ -132,9 +132,9 @@ record_ref_set <- function(a, cx) {
     cur <- cx$state
     for (nm in roles) if (nm %in% names(a)) cur[nm] <- list(a[[nm]])
     d <- cx$data
-    is_num <- function(v) if (!v %in% names(d)) NA else is.numeric(d[[v]])
     r <- chart_roles_internal(cur$type, cur$x, cur$y, cur$func,
-                              cur$orientation, is_num)
+                              cur$orientation,
+                              if (is.data.frame(d)) viz_column_kinds(d))
     msg <- put("chart_type", cur$type)
     msg <- put("func", cur$func)
     msg <- put("group", col(r$group))

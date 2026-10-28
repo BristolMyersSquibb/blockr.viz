@@ -150,9 +150,10 @@ test_that("a board saved with direct_labels restores as legend = marks", {
 })
 
 test_that("the orientation is inferred from x and y", {
-  num <- function(col) col %in% c("sales", "AVAL")
+  kinds <- c(sales = "numeric", AVAL = "numeric", class = "character",
+             region = "character", ARM = "character")
   inf <- function(type, x, y, func = "count") {
-    chart_infer_orientation(type, x, y, func, num)
+    chart_infer_lie(list(type = type, x = x, y = y, func = func), kinds)
   }
   # one column: the category for a count, the value otherwise
   expect_equal(inf("bar", "class", NULL), "vertical")
@@ -163,8 +164,8 @@ test_that("the orientation is inferred from x and y", {
   expect_equal(inf("bar", "sales", "region", "sum"), "horizontal")
   expect_equal(inf("bar", "region", "sales", "sum"), "vertical")
   expect_equal(inf("boxplot", "AVAL", "ARM"), "horizontal")
-  # none: the type's default
-  expect_equal(inf("bar", NULL, NULL), "horizontal")
+  # none: vertical, for every type
+  expect_equal(inf("bar", NULL, NULL), "vertical")
   expect_equal(inf("pointrange", NULL, NULL), "vertical")
 })
 

@@ -340,9 +340,7 @@ legacy_chart_horizontal <- function(state) {
   if (!type %in% c("bar", "boxplot", "pointrange")) {
     return(FALSE)
   }
-  orient <- state[["orientation"]] %||%
-    chart_infer_orientation(type, state[["x"]], state[["y"]],
-                            state[["func"]], function(col) NA)
+  orient <- state[["orientation"]] %||% chart_infer_lie(state, NULL)
   identical(orient, "horizontal")
 }
 
