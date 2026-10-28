@@ -82,10 +82,10 @@
         this.drill.paint();
         this.footer();
       };
-      frame.onSearch((q) => {
+      scope.own({ dispose: frame.onSearch((q) => {
         if (this.cardsOn()) this.drawCards();
         else this.grid.search(q);
-      });
+      }) });
       scope.on(this.cardsHost, 'click', (e) => {
         const t = /** @type {Element | null} */ (e.target);
         const row = t && t.closest ? t.closest('.vz-table-card-row[data-i]') : null;

@@ -374,7 +374,7 @@ interface TableFrame extends VizFrame {
   readonly box: HTMLElement;
   readonly searchInput: HTMLInputElement;
   query(): string;
-  onSearch(fn: (q: string) => void): void;
+  onSearch(fn: (q: string) => void): () => void;
   showTools(o: { search: boolean; download: boolean; downloads?: VizDownload[] | null;
                  onOpen?: () => void }): void;
   structured(on: boolean): void;

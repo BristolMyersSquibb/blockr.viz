@@ -409,3 +409,13 @@ test('a layout pick keeps the panel scroll the reader had at the click', () => {
   assert.equal(sc.scrollTop, 200);
   assert.equal(frame.style.minHeight, '');
 });
+
+test('a layout switch lets go of the old layout: one search handler', () => {
+  const t = mount(payload({ data: flatModel(3) }));
+  const frame = t.el._viz.view.frame;
+  for (let i = 0; i < 4; i++) {
+    t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
+    t.render({ data: flatModel(3), config: { layout: 'records' } });
+  }
+  assert.equal(frame._search.length, 1);
+});

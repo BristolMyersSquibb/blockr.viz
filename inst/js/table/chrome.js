@@ -52,9 +52,17 @@
       return this.searchInput.hidden ? '' : this.searchInput.value.trim().toLowerCase();
     }
 
-    /** @param {(q: string) => void} fn Called after a pause in typing. */
+    /**
+     * @param {(q: string) => void} fn Called after a pause in typing.
+     * @returns {() => void} Stops calling it; a layout's scope owns it, so a
+     *   layout switch lets go of the old view.
+     */
     onSearch(fn) {
       this._search.push(fn);
+      return () => {
+        const k = this._search.indexOf(fn);
+        if (k >= 0) this._search.splice(k, 1);
+      };
     }
 
     /**
