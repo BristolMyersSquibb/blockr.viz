@@ -12,22 +12,19 @@
   const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
-  /** @type {any} */ let measureCtx = null;
-
   /** A function that breaks a text block into lines at the picture width:
    * newlines first, then word wrap.
-   * @param {number} W @param {number} pad */
-  const lineWrapper = (W, pad) => {
-    const meas = measureCtx || (measureCtx = document.createElement('canvas').getContext('2d'));
+   * @param {number} W @param {number} pad @param {(font: string) => (s: string) => number} measureFont */
+  const lineWrapper = (W, pad, measureFont) => {
     /** @param {{ text: string, font: string, color: string }} b */
     return (b) => {
-      meas.font = b.font;
+      const width = measureFont(b.font);
       const lines = [];
       for (const src of String(b.text).split(/\r?\n/)) {
         let cur = '';
         for (const w of src.split(/\s+/).filter(Boolean)) {
           const cand = cur ? cur + ' ' + w : w;
-          if (cur && meas.measureText(cand).width > W - 2 * pad) {
+          if (cur && width(cand) > W - 2 * pad) {
             lines.push(cur);
             cur = w;
           } else {
@@ -57,7 +54,7 @@
     /** @param {Element} el @param {string} fb */
     const colorOf = (el, fb) => getComputedStyle(el).color || fb;
     const W = Math.round(gridR.width);
-    const wrapLines = lineWrapper(W, pad);
+    const wrapLines = lineWrapper(W, pad, (font) => view._measureFont(font));
     /** @param {string} key @param {Element} el @param {string} font @param {string} color */
     const block = (key, el, font, color) => {
       if (!view._titleText[key]) return null;

@@ -80,8 +80,7 @@
   const axisName = (title, col, cfg, opts = {}) => {
     const unit = opts.unit !== false && cfg.unit ? String(cfg.unit) : '';
     const labelled = !!title && title !== col;
-    const name = labelled ? unitTitle(title, unit ? cfg : {})
-      : (unit || title || '');
+    const name = labelled ? (unit ? unitTitle(title, cfg) : title) : (unit || title || '');
     const t = cfg.derived && cfg.derived.titles && cfg.derived.titles.title;
     const head = String((t && t.text) || '').toLowerCase();
     if (name && head.includes(name.toLowerCase())) return '';
