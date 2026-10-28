@@ -168,6 +168,18 @@ test('a table that starts collapsed starts folded', () => {
   assert.equal(t.stubs().length, 0);
 });
 
+test('a collapsed table opens the sections around a restored section selection', () => {
+  const m = nested();
+  m.collapsed = true;
+  const sel = { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['M'] } };
+  const t = mount(payload({ data: m, config: { selection: sel } }));
+  const heads = () => t.$$('tr.vz-table-section-header').map((r) => r.querySelector('.vz-table-section-value').textContent);
+  assert.deepEqual(heads(), ['Placebo', 'F', 'M', 'Active']);
+  assert.ok(t.$$('tr.vz-table-section-header')[2].classList.contains('vz-table-row-active'));
+  // Its own fold stays shut.
+  assert.deepEqual(t.stubs(), []);
+});
+
 test('spanners span their leaves, and the stub header spans the header rows', () => {
   const t = mount(payload({ data: table1() }));
   const top = t.$$('thead tr')[0].children;

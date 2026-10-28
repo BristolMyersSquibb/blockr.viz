@@ -208,7 +208,9 @@
     }
 
     /**
-     * Draw a new model. Sort and folds start over; the search stays.
+     * Draw a new model. Sort and folds start over, less the folds over what
+     * the selection lights (a saved board opens on its selection); the
+     * search stays.
      * @param {TableModel} model
      * @param {TableGridFlags} [flags]
      */
@@ -225,6 +227,10 @@
       this.shut = new Set();
       this.shutRows = new Set();
       if (model.collapsed && this.flags.collapsible) this._shutAll(true);
+      if (this.hooks.lit) {
+        const lit = this.hooks.lit();
+        this.reveal(lit.rows, lit.sections);
+      }
       this._build();
       this.draw();
     }
@@ -266,6 +272,26 @@
     foldAll(shut) {
       this._shutAll(shut);
       this.draw();
+    }
+
+    /**
+     * Open the sections and parent rows above these rows and section
+     * headers, not their own folds; the next draw() shows them.
+     * @param {Iterable<number>} rows
+     * @param {Iterable<number>} [sections]
+     */
+    reveal(rows, sections = []) {
+      const st = this._st;
+      const secs = (this.model && this.model.sections) || [];
+      if (!st) return;
+      const lit = Array.from(rows);
+      for (const i of lit) for (const s of st.path.get(st.blk[i]) || []) this.shut.delete(s);
+      const own = new Set(lit);
+      if (st.indent) withParents(lit, st.indent).forEach((j) => own.has(j) || this.shutRows.delete(j));
+      for (const s of sections) {
+        const p = secs[s] ? st.path.get(secs[s].at) || [] : [];
+        p.slice(0, Math.max(p.indexOf(s), 0)).forEach((a) => this.shut.delete(a));
+      }
     }
 
     /** Rows that pass the search, of all rows. */
