@@ -1,0 +1,144 @@
+---
+title: "The chart block"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The chart block}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+`new_chart_block()` draws the data it receives as an interactive chart and
+passes the data on, filtered by the reader's last click if `drill` is set.
+Everything below can also be set in the block's gear; the gear and the code
+write the same arguments.
+
+Run any of these with a data frame of your own:
+
+```{r}
+library(blockr.core)
+library(blockr.viz)
+
+serve(
+  new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
+                  func = "mean"),
+  data = list(data = iris)
+)
+```
+
+## Types
+
+| type | draws | set |
+|---|---|---|
+| `"bar"`, `"waterfall"`, `"pie"`, `"treemap"` | one mark per category, aggregated | `x`, `y`, `func` |
+| `"boxplot"`, `"pointrange"` | the spread of a column per category | `x`, `y`, `summary` |
+| `"histogram"` | the rows of one numeric column, binned | `x`, `bins` |
+| `"scatter"`, `"line"`, `"area"` | one mark per row | `x`, `y` |
+| `"band"` | a running quantile band across individuals | `x`, `y`, `id` |
+| `"gantt"` | intervals on lanes | `x`, `xend`, `y` |
+
+## The axes
+
+`x` and `y` are the screen axes. On an aggregated type one of them is the
+category and the other the column `func` aggregates, and the chart lies the
+way that puts the category on its axis:
+
+```{r}
+# counts per class, vertical bars
+new_chart_block(type = "bar", x = "class")
+
+# counts per class, horizontal bars
+new_chart_block(type = "bar", y = "class")
+
+# summed sales per region, horizontal bars
+new_chart_block(type = "bar", x = "sales", y = "region", func = "sum")
+```
+
+`func` is one of `"count"`, `"count_distinct"`, `"pct_distinct"`,
+`"mean"`, `"median"`, `"sum"`, `"min"`, `"max"` or `"identity"` (the value
+as it is). `orientation` is needed only when both columns are text, as in a
+distinct count of one text column per another.
+
+## Splitting the marks
+
+`color` colors, `series` splits rows into lines or point groups, `facet`
+draws one panel per level, and `label` writes a column on the marks.
+
+```{r}
+new_chart_block(type = "bar", x = "class", y = "hwy", func = "mean",
+                color = "drv", position = "dodge")
+
+new_chart_block(type = "line", x = "date", y = "value", color = "country",
+                facet = "region", facet_cols = 3, legend = "marks")
+```
+
+`position` is `"stack"`, `"dodge"` or `"fill"` (shares of 100 percent).
+`legend` is `"bottom"`, `"top"`, `"marks"` (names at the end of the lines or
+on the slices) or `"none"`. `highlight` keeps a few marks in color and grays
+the rest:
+
+```{r}
+new_chart_block(type = "line", x = "year", y = "gdp", color = "country",
+                highlight = list(country = "Switzerland"))
+```
+
+## Lines, bands and ranges
+
+```{r}
+# a forecast fan: nested bands, the first the outermost
+new_chart_block(type = "line", x = "date", y = "fc",
+                ymin = c("lo95", "lo80"), ymax = c("hi95", "hi80"))
+
+# a target line and a shaded period
+new_chart_block(type = "line", x = "date", y = "rate",
+                y_lines = c(Target = 2),
+                x_ranges = list(Recession = c("2008-01-01", "2009-06-30")))
+
+# a scatter with a linear trend per group, on a log axis
+new_chart_block(type = "scatter", x = "gdp", y = "life", color = "continent",
+                smoother = "lm", x_transform = "log10")
+```
+
+## Numbers
+
+`format` prints the values on the axis, in tooltips and in value labels:
+`"number"`, `"compact"` (1.2K), `"percent"`, or a number of decimals from 0
+to 6. `unit` is text after the number.
+
+```{r}
+new_chart_block(type = "bar", x = "region", y = "share", func = "mean",
+                format = "percent", value_labels = TRUE)
+```
+
+## Titles
+
+`title`, `subtitle` and `caption` take templates. `{@arg}` prints one of the
+block's own settings, and the reader can change it by clicking it on the
+chart. A part in `[...]` disappears when it would be empty.
+
+```{r}
+new_chart_block(
+  type = "bar", x = "class", y = "hwy", func = "mean",
+  title = "Highway mileage by class",
+  subtitle = "{@func in mean, median} of {label(@y)}[ by {@color}]"
+)
+```
+
+## Clicks
+
+With `drill`, a click filters the block's output to the rows behind the
+clicked mark: set it to a column, or to `"auto"` for the mark's own
+category. Blocks linked below the chart then show only those rows. A brush
+on a scatter or a line filters to the brushed range.
+
+```{r}
+new_chart_block(type = "bar", x = "region", drill = "auto")
+```
+
+## Downloads
+
+With `download = TRUE` (the default) the block offers Excel (the rows),
+an image, a web page and PowerPoint (the chart as drawn).

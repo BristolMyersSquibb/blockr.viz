@@ -4,7 +4,6 @@ R: spec machinery,R/kit-input.R,900
 R: spec machinery,R/wire.R,900
 R: spec machinery,R/spec-check.R,900
 R: spec machinery,R/spec-state.R,900
-R: spec machinery,R/spec-validate.R,900
 R: spec machinery,R/spec-registry.R,900
 R: specs,R/spec-chart*.R,1200
 R: specs,R/spec-table*.R,1200

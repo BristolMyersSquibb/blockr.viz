@@ -1,6 +1,8 @@
 # What the chart sends the browser: one payload with the state as the spec
-# writes it, the rows the current mapping needs, and `derived`: what R
-# computes for the drawing. The pieces are cached on exactly their inputs.
+# writes it (viz_wire()), the rows the current mapping needs, and `derived`:
+# what R computes for the drawing and never takes back. The pieces are cached
+# on exactly their inputs, so a setting that changes only the drawing reuses
+# them.
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
@@ -77,9 +79,10 @@ chart_view <- function(kit, src) {
 }
 
 # The columns the payload carries: the mapped ones, and those a reader can
-# switch a role to from the sentence.
+# switch a role to from the sentence, so the switch needs no new payload.
 chart_needed_cols <- function(v, d, kinds) {
-  # An aggregated chart draws its category and the column it aggregates.
+  # An aggregated chart draws its category and the column it aggregates; a
+  # count aggregates none.
   axes <- if ((v$type %||% "bar") %in% setdiff(CHART_AGGREGATED_TYPES,
                                                CHART_DISTRIBUTION_TYPES)) {
     c(chart_category(v, kinds), chart_value_col(v, kinds))
@@ -109,9 +112,11 @@ chart_needed_cols <- function(v, d, kinds) {
 }
 
 # The chart text resolved against the data, in the shape core/titles.js
-# reads: each band its text, its pieces and the settings offered where a
-# clause dropped; NULL with nothing to show. `args` is what each `{@arg}`
-# prints now, `choices` the lists a sentence gives its words.
+# reads: each band its text, its pieces (the words a reader may set) and the
+# settings offered where a clause dropped; NULL with nothing to show. `args` is
+# what each `{@arg}` prints now, `choices` the lists a sentence gives its
+# words. Slots name the spec's arguments, plus the prepare script's declared
+# values.
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
@@ -150,9 +155,10 @@ chart_capture_service <- function(session, el, payload) {
   })
 }
 
-# What the downloads write: the numbers the chart shows, the browser's
-# picture when it has sent one, and the resolved text. Read when a format is
-# clicked.
+# What the downloads write (export-registry.R): the numbers the chart shows,
+# one row per mark for the aggregated types and the rows for the rest; the
+# browser's picture, when it has sent one; the resolved text. Read when a
+# format is clicked.
 chart_exhibit <- function(kit, src, view) {
   function() {
     v <- chart_state_values(kit$state)

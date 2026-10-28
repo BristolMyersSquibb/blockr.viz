@@ -146,12 +146,16 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
   built <- table_frame_view(v, shown, list(scale_map = function() NULL),
                             "records")
   model <- built$model
-  # A frame's own paint (`.bg:<col>`, the block's shading as exported).
   if (!is.null(model) && flat) {
-    for (k in seq_along(model$cols)) {
-      p <- annotation_cell_paint(data, model$cols[[k]]$name)
-      if (!is.null(p)) model$cols[[k]][c("bg", "fg")] <- list(I(p$bg), I(p$fg))
-    }
+    model$cols <- lapply(model$cols, html_exhibit_col, data)
+    # No row-name column: the first column is printed like any other.
+    model$stub <- NULL
+    model$head <- lapply(model$head, function(r) {
+      lapply(r, function(h) {
+        h$stub <- NULL
+        h
+      })
+    })
   }
   # Nothing can unfold a table with no chevrons, so it cannot start folded.
   if (!is.null(model) && !isTRUE(default_expanded) && isTRUE(collapsible)) {
@@ -161,6 +165,21 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
                list(titles = table_static_titles(title, NULL, caption),
                     empty = built$empty),
                max_height = max_height)
+}
+
+# A flat exhibit's column as printed: numbers as R prints them (an exhibit
+# carries the precision it was given; the block's own downloads arrive
+# formatted), and the frame's own paint (`.bg:<col>`, the block's shading as
+# exported).
+html_exhibit_col <- function(cc, data) {
+  x <- data[[cc$name]]
+  if (is.numeric(x)) {
+    cc$num <- TRUE
+    cc$disp <- I(ifelse(is.na(x), NA_character_, as.character(x)))
+  }
+  p <- annotation_cell_paint(data, cc$name)
+  if (!is.null(p)) cc[c("bg", "fg")] <- list(I(p$bg), I(p$fg))
+  cc
 }
 
 # Should a printed table open expanded? Decided from height: a table of at

@@ -1,32 +1,21 @@
 # The block spec: every argument of a block, written once.
 #
 # A spec is a plain list built with viz_spec() and viz_arg(). The builders
-# only assemble lists; viz_spec_check() (spec-validate.R) checks a spec, and
-# viz_block_spec() builds and checks a block's spec the first time it is
-# asked for. A block's spec file therefore defines a function,
+# only assemble lists. A block's spec file defines a function,
 # `chart_spec <- function() viz_spec("chart", ...)`, and calls no viz_*()
-# builder at top level: package load does no spec work and does not depend
-# on the order R sources the files in.
+# builder at top level, so package load does no spec work and does not
+# depend on the order R sources the files in. viz_block_spec() builds the
+# spec the first time it is asked for. The rules a spec must keep are checked
+# by the tests (helper-spec-check.R).
 #
-# The interpreters in spec-check.R, spec-state.R, spec-registry.R, wire.R
-# and kit-input.R read a spec; dev/gen-spec.R writes the JS spec and its
-# TypeScript types from it.
+# Interpreters of a spec: spec-check.R (values), spec-state.R (state),
+# spec-registry.R (assistant registry, title slots), wire.R (to the browser),
+# kit-input.R (from the browser). dev/gen-spec.R writes the JS spec and its
+# TypeScript types.
 
-# The value types an argument can have.
-VIZ_TYPES <- c(
-  "column", "columns", "enum", "enums", "string", "template", "number",
-  "integer", "bool", "numbers", "strings", "values", "format", "record",
-  "records", "records_by", "named", "map"
-)
-
-# Types built with a type_*() function because they have parts.
-VIZ_COMPOUND_TYPES <- c("values", "record", "records", "records_by", "named")
-
-# The gear controls an argument can be edited with.
-VIZ_CONTROLS <- c(
-  "column", "columns", "values", "select", "tiles", "segmented", "toggle",
-  "number", "text", "template", "slider", "none"
-)
+# Types whose value is a vector or a list of single values, sent and
+# described to the assistant as an array whatever its length.
+VIZ_ARRAY_TYPES <- c("columns", "enums", "strings", "numbers", "values")
 
 # The keywords a `format` takes besides a number of decimals (0 to 6).
 VIZ_FORMATS <- c("number", "compact", "percent")
@@ -53,7 +42,7 @@ viz_spec <- function(.block, ...) {
 }
 
 # Named entries pass through; an unnamed list is spliced in. Anything else
-# keeps an empty name, which viz_spec_check() reports.
+# keeps an empty name, which the spec check reports.
 spec_flatten <- function(x) {
   nms <- names(x) %||% rep("", length(x))
   out <- list()
@@ -71,7 +60,7 @@ spec_flatten <- function(x) {
 
 #' One argument of a block spec
 #'
-#' @param type One of [VIZ_TYPES] as a string, or a type from
+#' @param type One of the names in `SPEC_CHECKERS` as a string, or a type from
 #'   `type_values()`, `type_record()`, `type_records()` or
 #'   `type_records_by()`.
 #' @param default The default: a literal, or `opt()` for a value read from an
@@ -113,44 +102,37 @@ spec_type <- function(x) {
   if (is.character(x)) structure(list(name = x), class = "viz_type") else x
 }
 
-#' Compound types
-#'
-#' - `type_values(of)`: values of the column another argument names
-#'   (reference lines on x). With `of = NULL`, of a column named elsewhere,
-#'   such as the entry name of a `type_named()` list.
-#' - `type_record(...)`: one record, or `NULL`. The fields are given by name
-#'   as types (`column = "column"`), as `viz_arg()` entries when a field
-#'   needs values, a default or `required`, or all at once as a spec
-#'   (`spec = table_shading_spec()`).
-#' - `type_records(...)`: a list of such records.
-#' - `type_records_by(key, specs)`: a list of records whose fields depend on
-#'   the value of `key`; `specs` is a named list of specs, one per value
-#'   (the table's summaries, by `type`).
-#' - `type_named(value, max)`: a list whose names are free text, a column or
-#'   a label, and whose values have the type `value` (a type, or a
-#'   `viz_arg()`): `highlight = list(country = "Switzerland")`,
-#'   `x_ranges = list(Recession = c(from, to))`. `max` caps the entries.
-#' @noRd
+# Compound types
+#
+# - `type_values(of)`: values of the column another argument names
+#   (reference lines on x). With `of = NULL`, of a column named elsewhere,
+#   such as the entry name of a `type_named()` list.
+# - `type_record(...)`: one record, or `NULL`. The fields are given by name
+#   as types (`column = "column"`), as `viz_arg()` entries when a field
+#   needs values, a default or `required`, or all at once as a spec
+#   (`spec = table_shading_spec()`).
+# - `type_records(...)`: a list of such records.
+# - `type_records_by(key, specs)`: a list of records whose fields depend on
+#   the value of `key`; `specs` is a named list of specs, one per value
+#   (the table's summaries, by `type`).
+# - `type_named(value, max)`: a list whose names are free text, a column or
+#   a label, and whose values have the type `value` (a type, or a
+#   `viz_arg()`): `highlight = list(country = "Switzerland")`,
+#   `x_ranges = list(Recession = c(from, to))`. `max` caps the entries.
 type_values <- function(of = NULL) {
   structure(list(name = "values", of = of), class = "viz_type")
 }
 
-#' @rdname type_values
-#' @noRd
 type_record <- function(..., spec = NULL) {
   structure(list(name = "record", fields = type_fields(list(...), spec)),
             class = "viz_type")
 }
 
-#' @rdname type_values
-#' @noRd
 type_records <- function(..., spec = NULL) {
   structure(list(name = "records", fields = type_fields(list(...), spec)),
             class = "viz_type")
 }
 
-#' @rdname type_values
-#' @noRd
 type_records_by <- function(key, specs) {
   structure(
     list(name = "records_by", key = key,
@@ -159,8 +141,6 @@ type_records_by <- function(key, specs) {
   )
 }
 
-#' @rdname type_values
-#' @noRd
 type_named <- function(value, max = NULL) {
   if (!inherits(value, "viz_arg")) {
     value <- viz_arg(value, required = TRUE)
@@ -183,7 +163,8 @@ type_fields <- function(fields, spec) {
 #' Where an argument sits in the gear
 #'
 #' @param group The tray section ("Mapping", "Look", ...).
-#' @param control One of [VIZ_CONTROLS].
+#' @param control The row's control: column, columns, values, select, tiles,
+#'   segmented, toggle, number, text, template, slider or none.
 #' @param label The row's label.
 #' @param labels Option labels: for an enum, in the order of its `values`;
 #'   for a bool, the labels of `TRUE` and `FALSE`.
@@ -221,7 +202,7 @@ bounds <- function(min = -Inf, max = Inf, min_open = FALSE) {
             class = "viz_bounds")
 }
 
-#' A block's spec, built and checked once
+#' A block's spec, built once
 #'
 #' @param block A name in `VIZ_BLOCK_SPECS`.
 #' @return The block's `viz_spec`.
@@ -232,7 +213,7 @@ viz_block_spec <- function(block) {
     if (is.null(build)) {
       stop("No spec for block `", block, "`.", call. = FALSE)
     }
-    spec_cache[[block]] <- viz_spec_check(build())
+    spec_cache[[block]] <- build()
   }
   spec_cache[[block]]
 }

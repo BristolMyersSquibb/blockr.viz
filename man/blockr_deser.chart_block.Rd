@@ -22,7 +22,7 @@
 \method{blockr_deser}{summarize_table_block}(x, data, ...)
 }
 \arguments{
-\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_ser]{blockr.core::blockr_deser()}}.}
+\item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
 Old names and values are translated (R/legacy.R), bad values healed with
