@@ -113,3 +113,14 @@ test_that("html_table_collapsible reads both collapsible structures", {
     html_table_collapsible(data.frame(a = 1:3, .indent = c(2L, 1L, 0L)))
   )
 })
+
+test_that("a flat exhibit prints its numbers as given, with no row-name column", {
+  d <- head(mtcars[1:6])
+  p <- static_payloads(htmltools::renderTags(html_exhibit(d))$html)[[1L]]
+  m <- p$data
+  expect_null(m$stub)
+  expect_false(any(vapply(m$head[[1L]], function(h) isTRUE(h$stub), logical(1L))))
+  wt <- m$cols[[which(vapply(m$cols, `[[`, "", "name") == "wt")]]
+  expect_true(wt$num)
+  expect_identical(unlist(wt$disp), as.character(d$wt))
+})
