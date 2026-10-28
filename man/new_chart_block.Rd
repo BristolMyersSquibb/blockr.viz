@@ -30,7 +30,7 @@ new_chart_block(
   drill = NULL,
   line_width = 1,
   point_size = 1,
-  connect = "monotone",
+  connect = "straight",
   value_lines = NULL,
   x_lines = NULL,
   ymin = NULL,
@@ -120,7 +120,7 @@ new_chart_block(
 
 \item{point_size}{Marker size relative to the default (1). Default: \code{1}.}
 
-\item{connect}{How a line connects its points. One of \code{"straight"}, \code{"monotone"}, \code{"step_start"}, \code{"step_middle"}, \code{"step_end"}. Default: \code{"monotone"}.}
+\item{connect}{How a line connects its points. One of \code{"straight"}, \code{"monotone"}, \code{"step_start"}, \code{"step_middle"}, \code{"step_end"}. Default: \code{"straight"}.}
 
 \item{value_lines}{Positions of dashed guide lines across the value axis: \code{value}'s axis, y on a scatter, line, area or histogram. Names are labels. Text form: "Target: 4; 6". Default \code{NULL}: no lines.}
 

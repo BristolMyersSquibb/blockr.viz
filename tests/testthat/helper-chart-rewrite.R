@@ -171,16 +171,12 @@ record_computed <- function(x) {
 
 # A recording as the rewrite is compared with it: the reference's browser
 # view in computed terms, its saved selections in the kit's shape.
-record_rw_expected <- function(rec, sc = NULL) {
-  # `connect` defaults to "monotone" again, as in production; the reference
-  # (0.3.0) had "straight" (behaviour-changes.md row 32).
-  default_connect <- !is.null(sc) && is.null(sc$args[["connect"]])
+record_rw_expected <- function(rec) {
   sel <- function(st) {
     if (!is.null(st$selection)) {
       st["selection"] <- list(legacy_chart_selection(st)$selection)
     }
     st <- legacy_values("chart", st, NULL)
-    if (default_connect && identical(st[["connect"]], "straight")) st[["connect"]] <- "monotone"
     st[sort(names(st))]
   }
   rec$warnings <- record_rw_warnings(rec$warnings)
