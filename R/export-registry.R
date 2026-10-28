@@ -1,9 +1,8 @@
 # The download formats, registered by whoever can write them.
 #
 # A block's download menu lists every registered format that can write the
-# block's exhibit and whose packages are installed. blockr.viz registers
-# Excel, Image and Web page (and PowerPoint until blockr.outline takes it
-# over); another package registers its own in .onLoad.
+# block's exhibit and whose packages are installed. Other packages register
+# their own formats in .onLoad.
 
 viz_exporter_env <- new.env(parent = emptyenv())
 
@@ -56,8 +55,8 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' Registers one download handler per registered format, `dl_<format>` in
 #' the block's namespace, and returns the menu entries for the view's
 #' payload (`derived$downloads`). The exhibit is read when a format is
-#' clicked, so a file never holds a stale snapshot, and the board's download
-#' footer is put on it once, before the exporter writes it.
+#' clicked, and the board's download footer is put on it before the exporter
+#' writes it.
 #'
 #' @param exhibit A function of no arguments returning a `viz_exhibit`.
 #' @param enabled A function returning whether downloads are on.
@@ -89,9 +88,8 @@ viz_downloads <- function(exhibit, enabled = function() TRUE,
   })
 }
 
-# One format's handler. Registered whether or not the format is on offer
-# now: what is installed does not change within a session. Not suspended
-# when hidden, because the menu that links to it is drawn by the view.
+# One format's handler. It is not suspended when hidden, because the menu that
+# links to it is drawn by the view.
 viz_download_handler <- function(f, exhibit, session, filename) {
   id <- paste0("dl_", f$format)
   session$output[[id]] <- shiny::downloadHandler(

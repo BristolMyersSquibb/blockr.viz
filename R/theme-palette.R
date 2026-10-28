@@ -1,34 +1,29 @@
-# Colour by ROLE, resolved through the board theme.
+# Colour by role, resolved through the board theme.
 #
-# Series colours, header bands and heatmap ramps ask blockr.theme for the
-# role they mean, so one theme entry recolours every renderer that shares it.
+# Series colours, header bands and heatmap ramps ask blockr.theme for the role
+# they mean, so one theme entry recolours every renderer that shares it.
 #
-# blockr.theme stays in Suggests: with the package absent, an older version
+# blockr.theme is in Suggests. With the package absent, an older version
 # without theme_palette(), or no theme applied, every call returns the
 # hard-coded fallback.
 
-# Mirrors the JS BLOCKR_PALETTE (inst/js/chart/common.js) -- the pool the
-# chart cycles when no scale applies, so hash assignment draws from the same
-# colours. Now only the FALLBACK: an applied theme's `categorical` role wins,
-# and the resolved vector is sent to JS with the chart config so both sides
-# stay in step without hand-syncing.
-# The same six colours as blockr.theme's "Blockr" palette (Okabe-Ito without
-# black and yellow; the yellow is 1.3:1 on white), so a chart looks the same
-# with and without blockr.theme installed.
+# Fallback series colours, mirroring BLOCKR_PALETTE in inst/js/chart/common.js.
+# An applied theme's `categorical` role wins, and the resolved vector is sent
+# to JS with the chart config. The six colours are blockr.theme's "Blockr"
+# palette (Okabe-Ito without black and yellow, since yellow is 1.3:1 on
+# white), so a chart looks the same with and without blockr.theme.
 DD_PALETTE_FALLBACK <- c(
   "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"
 )
 
-# Mirrors PALETTE_OVERFLOW / paletteAt() in inst/js/chart/common.js. Static
-# exports (PPTX, report code) go through here, so a deck agrees with the
-# screen.
+# Mirrors PALETTE_OVERFLOW and paletteAt() in inst/js/chart/common.js, so
+# static exports (PPTX, report code) agree with the screen.
 DD_PALETTE_OVERFLOW <- "#9AA0A6"
 
 #' Colours for `n` levels: the palette while it lasts, then grey
 #'
-#' The one place the rule lives on this side. Correct for any `n`, including
-#' 0 and n far past the palette -- padding first and cutting to length means
-#' there is no branch to get wrong.
+#' Pads with grey and cuts to length, so it is correct for any `n`, including
+#' 0 and `n` past the palette.
 #'
 #' @param n Number of levels needing a colour.
 #' @param pal The palette to draw from; defaults to the resolved theme palette.
@@ -41,39 +36,29 @@ dd_level_palette <- function(n, pal = dd_palette()) {
   c(pal, rep(DD_PALETTE_OVERFLOW, n))[seq_len(n)]
 }
 
-# Interpolation endpoints for the numeric cell heatmap: two points low-to-high,
+# Interpolation endpoints for the numeric cell heatmap: two points low to high,
 # three for diverging (pole, neutral midpoint, pole). dt_color_fun() lerps
-# between them, so these are endpoints and not discrete steps -- the ramp's
-# step-separation ceiling does not apply.
+# between them.
 DT_SEQUENTIAL_FALLBACK <- c("#eef2ff", "#1d4ed8")
 DT_DIVERGING_FALLBACK <- c("#99000d", "#ffffff", "#08306b")
 
-# Keep in step with the blockr.theme version in DESCRIPTION's Suggests. The
-# constraint has to be restated at runtime because requireNamespace() does not
-# read Suggests: a stale install passes a bare presence check and then fails on
-# the first missing export -- a namespace error mid-render instead of the
-# documented fall back to blockr defaults.
+# Keep in step with the blockr.theme version in DESCRIPTION's Suggests. It is
+# restated at runtime because requireNamespace() does not read Suggests, and a
+# stale install would fail on the first missing export.
 BLOCKR_THEME_MIN <- "0.0.0.9002"
 
-# The single presence guard for the whole package. Every blockr.theme entry
-# point we call (current_theme(), theme_palette(), resolve_scales_col()) landed
-# by BLOCKR_THEME_MIN, so one version gate covers them all and callers stay a
-# plain if().
-#
-# Compared by hand rather than through requireNamespace(versionCheck=), which
-# enforces the bound only while LOADING: once anything has loaded the namespace
-# -- use_theme() at app startup, say -- it short-circuits to TRUE and waves a
-# stale install straight through, i.e. it fails in exactly the case that bites.
+# The presence guard for every blockr.theme entry point used (current_theme(),
+# theme_palette(), resolve_scales_col()), all present from BLOCKR_THEME_MIN.
+# The version is compared by hand because requireNamespace(versionCheck=)
+# enforces the bound only while loading the namespace.
 has_blockr_theme <- function() {
   requireNamespace("blockr.theme", quietly = TRUE) &&
     utils::packageVersion("blockr.theme") >= BLOCKR_THEME_MIN
 }
 
-# Gated on a theme having been APPLIED, not merely on blockr.theme being
+# Whether a theme has been applied, not merely whether blockr.theme is
 # installed. theme_palette() answers with the blockr defaults when no theme is
-# current, which is right for its own callers but would mean that installing
-# blockr.theme silently recoloured every existing board. Appearance changes
-# only when an app calls use_theme().
+# current, so installing blockr.theme alone would recolour existing boards.
 has_theme_palette <- function() {
   has_blockr_theme() && !is.null(blockr.theme::current_theme())
 }
@@ -93,8 +78,7 @@ has_theme_palette <- function() {
 viz_palette <- function(role, n = NULL, fallback = NULL) {
   if (has_theme_palette()) {
     # Unguarded: theme_palette() answers NULL (with a warning) for anything a
-    # theme cannot supply, and errors only on an unknown ROLE -- a typo in the
-    # literal we passed, which must surface rather than silently fall back.
+    # theme cannot supply, and errors on an unknown role, which should surface.
     out <- blockr.theme::theme_palette(role, n)
     if (length(out)) {
       return(out)
@@ -106,9 +90,8 @@ viz_palette <- function(role, n = NULL, fallback = NULL) {
   rep_len(fallback, n)
 }
 
-# The series pool. A function rather than a constant so a theme applied after
-# this package loads still wins -- app.R calls use_theme() at startup, which is
-# after the namespace is sealed.
+# The series pool. A function so that a theme applied after this package loads
+# still wins.
 dd_palette <- function(n = NULL) {
   viz_palette("categorical", n, DD_PALETTE_FALLBACK)
 }

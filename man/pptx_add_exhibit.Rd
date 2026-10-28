@@ -27,17 +27,15 @@ pptx_add_exhibit(doc, x, ...)
 \item{doc}{An \code{rpptx} document from \code{\link[officer:read_pptx]{officer::read_pptx()}}.}
 
 \item{x}{A data frame, an \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object, or a
-flextable built by \code{\link[=static_table]{static_table()}} -- which carries the frame it was
-built from, so an already-rendered exhibit can still be paged. A
-flextable from anywhere else is placed whole on one slide, since there is
-nothing to re-cut.}
+flextable built by \code{\link[=static_table]{static_table()}}, which carries its source frame and
+so can still be paged. A flextable from anywhere else is placed whole on
+one slide.}
 
 \item{...}{Passed to \code{\link[=static_table]{static_table()}}.}
 
 \item{title, subtitle, caption}{Slide title, table subtitle and footnote.
-\code{NULL} or \code{""} omits each. The title goes into the layout's own title
-placeholder when the template has one (so it inherits the deck's title
-styling and stays editable as a title), and into the table's own header
+\code{NULL} or \code{""} omits each. The title goes into the layout's title
+placeholder when the template has one and into the table's own header
 otherwise.}
 
 \item{template}{Path to a reference \code{.pptx}, or \code{NULL} (default) to resolve
@@ -50,92 +48,65 @@ picks "Title and Content" when the deck has it, else the first layout.}
 \code{NULL} (default) measures it from the layout's own title placeholder, so
 a wrapped title cannot land on the table.}
 
-\item{max_rows}{How a table too tall for its slide is handled.
-\code{"auto"} (default) carries it onto further slides, cutting where the
-measured height of the rendered rows runs out of slide rather than at a
-row count, since a wrapped label costs a line that no row count knows
-about. A number cuts every \code{max_rows} input rows instead. \code{NULL} never
-splits, and a long table overflows the slide.
+\item{max_rows}{How a table too tall for its slide is handled. \code{"auto"}
+(default) carries it onto further slides, cutting where the measured
+height of the rendered rows runs out of slide. A number cuts every
+\code{max_rows} input rows instead. \code{NULL} never splits.
 
-Every page repeats the title, the column header band and the footnote,
-because a slide pulled out of the deck has to stand on its own; the title
-is marked \verb{(2 of 3)} and a section carried across a break repeats its
-heading marked \code{(continued)}. Column widths are measured once on the
-whole table and reused on every page, so the columns line up when the
-reader flips between slides. Breaks avoid stranding one or two rows of a
-section at the top of a slide by moving the whole section over.}
+Every page repeats the title, the column header band and the footnote.
+The title is marked \verb{(2 of 3)} and a section carried across a break
+repeats its heading marked \code{(continued)}. Column widths are measured once
+on the whole table, so the columns line up across slides. A break never
+leaves one or two rows of a section at the top of a slide: the whole
+section moves over.}
 
 \item{max_cols}{How a table too wide for its slide is handled, once the
 font has stepped down as far as \code{min_font_size} allows and the columns
 still do not fit. \code{"auto"} (default) deals them over several sets of
-slides, each repeating the row stub, so every slide is a readable table
-on its own; a set is a whole number of spanner groups, so an arm is never
-cut in half. A number puts at most that many data columns on a slide.
-\code{NULL} never splits, and the columns are squeezed as far as they will go.
+slides, each repeating the row stub. A set is a whole number of spanner
+groups. A number puts at most that many data columns on a slide. \code{NULL}
+never splits and squeezes the columns as far as they go.
 
-It is the LAST resort, and a distant one. A table carried left-half then
-right-half is read by flipping back and forth with the stub in the
-middle; the same table carried over more slides is read top to bottom.
-So the columns come apart on one condition only: the DATA CELLS no
-longer fit their own longest word, which is the point at which
-PowerPoint starts stacking characters one per line. Thirty-six
-toxicity-grade columns of counts do that on a widescreen slide at any
-legible size.
-
-Everything short of that is absorbed instead. The font steps down to
-\code{min_font_size}, the stub wraps
-(\code{getOption("blockr.viz.ft_stub_share")}, the share of the width it
-claims while the data columns are still short), the cells wrap between
-words and the headers break inside them. A wrapped header is not a
-reason to split unless an app sets
-\code{getOption("blockr.viz.ft_header_break_tol")} (default 0, off) to deal
-the columns when a header word is cut past that share of itself.}
+This is the last resort. The columns come apart only when the data cells
+no longer fit their own longest word. Everything short of that is
+absorbed: the font steps down to \code{min_font_size}, the stub wraps
+(\code{getOption("blockr.viz.ft_stub_share")} is the share of the width it
+claims while the data columns are short), cells wrap between words and
+headers break inside words. Set \code{getOption("blockr.viz.ft_header_break_tol")}
+(default 0, off) to also deal the columns when a header word is cut past
+that share of itself.}
 
 \item{min_font_size}{Points. The floor for the two shrink passes. \code{NULL}
 (default) resolves it, first hit wins, from the board's
-\code{exhibit_min_font_size} option (\code{\link[=new_exhibit_font_option]{new_exhibit_font_option()}}, which is how
-an app lets its users say how small a table may go), then
-\code{getOption("blockr.viz.ft_min_font_size")}, then 11pt. Width first,
-because a table whose columns are narrower than their contents is
-illegible at any height and splitting rows does not help; the font steps
-down until the cells fit and the headers stop breaking inside words, and
+\code{exhibit_min_font_size} option (\code{\link[=new_exhibit_font_option]{new_exhibit_font_option()}}), then
+\code{getOption("blockr.viz.ft_min_font_size")}, then 11pt. The font steps
+down first until cells fit and headers stop breaking inside words, and
 \code{max_cols} takes over from there. A shrink that does not clear the wrap
-is undone -- a smaller wrapped table is only smaller -- unless it is what
-keeps the columns on one slide. Height second: it steps down again if
-that avoids a row split altogether, since one slide at 11pt beats two at
-13pt.
+is undone unless it keeps the columns on one slide. It then steps down
+again if that avoids a row split.
 
-One floor, both axes: it is the whole of "keep this table on one slide",
-and lowering it is what a deck that must not split its tables asks for.
-A table that still does not fit at the floor is split rather than shrunk
-past it, and signals a \code{blockr_exhibit_split} message naming the size
-that would have kept it whole.}
+A table that does not fit at the floor is split rather than shrunk past
+it, and signals a \code{blockr_exhibit_split} message naming the size that
+would have kept it whole.}
 }
 \value{
 The document, with the exhibit's slides appended.
 }
 \description{
-The paginating half of \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}, with the file taken away: it
-receives an \code{\link[officer:read_pptx]{officer::read_pptx()}} document, appends one slide per page of
-the table, and returns the document. Everything the file writer does about
-fitting a table to a slide -- measured column widths, the font step-down,
-the row and column splits, the repeated header band, the \verb{(2 of 8)} page
-titles -- happens here, so a caller assembling a deck of its own gets the
-same slides as a caller downloading one table.
-}
-\details{
-That caller is blockr.outline's slide builder, which places many blocks'
-exhibits into one deck. A single \code{officer::ph_with()} would run a table
-longer than the slide off the bottom of it.
+The paginating half of \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}, without the file: it takes
+an \code{\link[officer:read_pptx]{officer::read_pptx()}} document, appends one slide per page of the
+table, and returns the document. Column widths, font step-down, row and
+column splits, repeated header bands and \verb{(2 of 8)} page titles all happen
+here, so a caller assembling its own deck (blockr.outline's slide builder)
+gets the same slides as a single-table download.
 }
 \section{What the caller owns}{
 
-The two options that size and typeset the table
-(\code{blockr.viz.ft_fit_width}, \code{blockr.viz.ft_font}) are NOT set here:
-a deck sets them once, around all of its slides, from its own template.
-\code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} sets them for the single-table case. Passing a
-\code{template} here is only about geometry the layout cannot report (the title's
-point size and typeface, to measure where it ends).
+The options that size and typeset the table (\code{blockr.viz.ft_fit_width},
+\code{blockr.viz.ft_font}) are not set here. A deck sets them once around all
+of its slides, from its own template. \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} sets them for
+the single-table case. A \code{template} passed here only supplies the title's
+point size and typeface, used to measure where the title ends.
 }
 
 \examples{

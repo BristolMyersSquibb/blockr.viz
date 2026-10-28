@@ -18,8 +18,8 @@ A \code{board_option} object.
 }
 \description{
 Board option that adds an "ECharts Theme" selector to the board sidebar.
-Matches \code{blockr.echarts::new_echart_theme_option()} so boards can mix the
-two mechanisms without collision.
+It matches \code{blockr.echarts::new_echart_theme_option()}, so boards can use
+both.
 }
 \examples{
 new_drilldown_theme_option()

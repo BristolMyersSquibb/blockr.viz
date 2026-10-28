@@ -21,27 +21,17 @@ state) or how to start (idle state).}
 An \code{\link[htmltools:tag]{htmltools::tag()}}, carrying its own stylesheet dependency.
 }
 \description{
-Builds the status card a sender block returns as its output, so a
-function block driving another block via \code{\link[=ctrl_send]{ctrl_send()}} shows a
-readable summary instead of a debug data frame. Function block outputs
-render HTML when the result is html-renderable, so returning this as the
-last expression of the \code{fn} is all it takes.
+Builds the status card a sender block returns as its output, so a function
+block driving another block via \code{\link[=ctrl_send]{ctrl_send()}} shows a readable summary.
+Return it as the last expression of the \code{fn}.
 }
 \section{It never reads the target}{
 
-\code{ctrl_receipt()} is a pure function of its arguments: it formats \code{cols},
-which the caller has just computed, and knows nothing else. It does not
-read the target block's state, the board, or any reactive -- there is no
-back-edge from target to sender, and there must not be one: a function
-block's \code{fn} re-runs as a whole, so a reactive read of the target would
-re-trigger the \code{\link[=ctrl_send]{ctrl_send()}} in the same body, which re-triggers any
-sibling sender, forever.
-
-That is why the card is written in the past tense ("Sent to Cohort"). It
-reports what this block pushed, which stays true whatever happens to the
-target afterwards -- including a later sender replacing this claim
-(\code{ctrl_send()} is last-write-wins). What the target currently \emph{holds} is
-the target's own business to display.
+\code{ctrl_receipt()} is a pure function of its arguments. It reads neither the
+target block's state nor any reactive. A reactive read of the target would
+re-trigger the \code{\link[=ctrl_send]{ctrl_send()}} in the same function body and loop. The card
+says "Sent to Cohort" in the past tense because it reports what this block
+pushed, which stays true if another sender later replaces the claim.
 }
 
 \examples{

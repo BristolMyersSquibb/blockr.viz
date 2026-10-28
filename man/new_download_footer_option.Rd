@@ -24,9 +24,9 @@ A \code{board_option} object.
 A line of text printed under every download of a chart or table: drawn
 under the picture for an image (and the PowerPoint and web page that carry
 it), added as the last caption line for a table written as a table.
-\code{{user}}, \code{{time}}, \code{{filters}} and
-the fields of the data's \code{blockr_provenance} attribute (\code{{dataset}},
-\code{{note}}, ...) are filled in when the file is downloaded.
+\code{{user}}, \code{{time}}, \code{{filters}} and the fields of the data's
+\code{blockr_provenance} attribute (\code{{dataset}}, \code{{note}}, ...) are filled in
+when the file is downloaded.
 }
 \examples{
 new_download_footer_option("Exported by {user} on {time}")

@@ -18,7 +18,7 @@ test_that("old names in code are translated, with a warning", {
   expect_warning(
     blk <- new_chart_block(chart_type = "bar", group = "ARM",
                            value = ".count", func = "count"),
-    "blockr.viz < 0.3.0"
+    "from an earlier blockr.viz"
   )
   st <- chart_state(blk)
   # A bar saved without an orientation was drawn horizontal.

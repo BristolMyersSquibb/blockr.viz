@@ -16,78 +16,44 @@ filters a plain data frame (or when the target resolves the table itself).}
 together. An \code{NA} value (or a table's "(Missing)" level) is a missing
 one: it takes the rows where the column is missing or empty, and the
 claim names them with the value filter's tokens \code{"<NA>"} / \code{"<empty>"}.
-A value on a column
-carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) is a group name; it
-is matched against the group's members, and the claim is the SET of
-source values the group holds (\code{mode = "multi"}), so a pooled bar claims
-\code{source \%in\% members} instead of nothing.}
+A value on a column carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}})
+is a group name. It is matched against the group's members, and the claim
+is the set of source values the group holds (\code{mode = "multi"}).}
 
 \item{subject}{The board's subject column (\code{\link[=dd_ctrl_subject]{dd_ctrl_subject()}}), or \code{NULL}.
-When given, the claim becomes the subjects behind the click: see
-"Claiming subjects" below.}
+When given, the claim becomes the subjects behind the click, with the
+column clause kept as its \code{label}. A target re-applies a column claim to
+its own data, which may differ from the data this block counted (a flag
+filter or a worst-grade reduction in between), whereas subject ids
+resolved here are exact. A structured table resolves them through its
+stamped \code{source_data} (\code{\link[=drill_source]{drill_source()}}). A frame that carries the
+subject column neither way keeps the column claim.}
 }
 \value{
 A list of filter conditions, \code{list()} when the user has no drill,
 \code{NULL} when the claim cannot be resolved right now (hold).
 }
 \description{
-\code{filters} is a named list, column -> drilled value(s), taken from the
-block's filter reactives (the state its drill click wrote). The input is
-subset on those pairs and the claim is read off the subset with
-\code{\link[=drill_claim_columns]{drill_claim_columns()}} -- so the one-value-per-dimension rule (and the
-un-drill propagation it buys) is the same one a hand-rolled downstream
-sender reading the drilled output would apply.
+\code{filters} is a named list, column -> drilled value(s), from the block's
+filter reactives. The input is subset on those pairs and the claim is read
+off the subset, so the one-value-per-dimension rule of
+\code{\link[=drill_claim_columns]{drill_claim_columns()}} and its un-drill propagation apply.
 }
 \details{
-Which claim mode applies falls out of the filter columns themselves: a
-structured table drills on its dot-prefixed identity columns
-(\code{.variable}, \verb{.group<k>}, ...), so all-dot filters read the ARD identity
-off the subset (\code{columns = NULL}); a chart / tile / flat table drills on a
-real source column, which IS the claim column. The block never asks the
-user which column was drilled -- it knows.
+All-dot filter columns (a structured table's \code{.variable}, \verb{.group<k>}, ...)
+read the ARD identity off the subset. Any other column is a real source
+column and is the claim column.
 }
-\section{Cannot resolve is not an un-drill}{
+\section{Hold versus clear}{
 
-The sender reads \code{list()} as "clear the target". That is right when the user
-has no drill selection at all, and wrong when this block cannot resolve the
-selection it has. The second is temporary -- a \code{ctrl_send()} IS a board
-update and a board update re-evaluates every block, so the frame a claim is
-read off is being rebuilt at exactly the moment the claim is re-read.
-Returning \code{list()} for that one flush would clear the target to everything
-and then re-narrow it: a cohort of 53 patients would become all 254 and
-back, which on a slow pipeline is plainly visible.
-
-So anything that means "I do not know right now" returns \code{NULL} and the
-target keeps what it has, which is the treatment a \code{NULL} input already got
-for the lazy-evaluation case. \code{list()} is reserved for the one case that
-really is a claim: the user has no drill, so the cohort should open up.
-
-Returns \code{NULL} -- no opinion, distinct from the evaluated no-claim
-\code{list()} -- when there is no data frame to read. Under lazy evaluation a
-block's input is gated to \code{NULL} whenever the block leaves the screen, so
-"no data" says nothing about the drill: the user's selection is still
-latched in the block's filter state and comes back with the view. Only an
-evaluated frame may speak -- \code{list()} from real data is what propagates an
-un-drill (see \code{\link[=dd_ctrl_sender]{dd_ctrl_sender()}}, which holds on \code{NULL}). Without this
-distinction a mere view switch cleared the target filter and re-sent the
-claim on return, one board-wide update each way.
-}
-
-\section{Claiming subjects}{
-
-A column claim is re-applied by the target to ITS data, which is not the
-data this block counted. An AE table fed through a treatment-emergent flag
-counts 69 patients with a gastrointestinal event; \code{AEBODSYS = GI} applied
-to the unflagged AE table finds 70. Every step between the data model and
-this block (a flag filter, a group filter, a worst-grade reduction, a
-prepare script) is lost the same way.
-
-With \code{subject}, the clicked rows are resolved to their subjects here, where
-all those steps have already happened, and the claim is
-\verb{subject \%in\% <those ids>}, with the column clause kept as its \code{label}. A
-structured table resolves through the \code{source_data} its producer stamped
-(\code{\link[=drill_source]{drill_source()}}'s frame). A frame that carries the subject column
-neither way keeps the column claim.
+The sender reads \code{list()} as "clear the target" and \code{NULL} as "keep what the
+target has". \code{list()} is returned only when the user has no drill. \code{NULL} is
+returned when the block cannot resolve its selection right now: there is no
+data frame (under lazy evaluation the input is gated to \code{NULL} while the
+block is off screen), the frame lacks a filtered column (it is being rebuilt
+during a board update), or nothing in the subset resolves to a claim.
+Clearing in those cases would widen the target to everything and re-narrow
+it a moment later.
 }
 
 \keyword{internal}

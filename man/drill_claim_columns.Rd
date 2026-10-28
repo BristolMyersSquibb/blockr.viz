@@ -8,18 +8,16 @@ drill_claim_columns(data, table, mode = "multi", columns = NULL)
 }
 \arguments{
 \item{data}{A data frame, typically the drilled output of a table, chart or
-tile block. Anything that resolves no dimension yields an empty list rather
-than an error.}
+tile block. Anything that resolves no dimension yields an empty list.}
 
 \item{table}{Character(1). Name of the table in the target's \code{dm} that the
-conditions apply to. Empty (\code{""}) for a value filter fed a plain data
-frame: its conditions name no table.}
+conditions apply to. \code{""} for a value filter fed a plain data frame.}
 
 \item{mode}{Character(1). Filter mode for each condition, e.g. \code{"multi"}.}
 
-\item{columns}{Character vector of \emph{source} column names to claim, for
-drilled output that carries no ARD identity (charts, tiles). \code{NULL} (the
-default) reads the ARD identity columns instead.}
+\item{columns}{Character vector of source column names to claim, for
+drilled output that carries no ARD identity. \code{NULL} reads the ARD identity
+columns instead.}
 }
 \value{
 A list of \code{list(name=, table=, mode=, values=)} entries, one per
@@ -27,39 +25,31 @@ claimed dimension. Empty when nothing is claimed.
 }
 \description{
 Turns the drilled subset of an annotated (ARD-shaped) data frame into the
-\code{columns} payload a value filter takes, so a sender can push it with
-\code{\link[=ctrl_send]{ctrl_send()}}. This is the claim logic behind the drill senders, exported
-so a function block prototyping a bespoke sender can call it instead of
-carrying its own copy.
+\code{columns} payload a value filter takes, ready for \code{\link[=ctrl_send]{ctrl_send()}}. This is the
+claim logic behind the drill senders.
 }
 \section{Two claim modes}{
 
-\strong{Annotated (\code{columns = NULL}, the default) -- table and summary drills.}
-The drilled data frame is read on its ARD identity columns: \code{.variable} is
-the source column \emph{name}, \code{.variable_level} the raw source \emph{value} on that
-row, and each \verb{.group<k>} / \verb{.group<k>_level} pair is an enclosing grouping
-dimension. Dimensions come back outermost first (\code{.group1}, \code{.group2}, ...),
-with the \code{.variable} leaf last.
+\strong{Annotated (\code{columns = NULL}).} The data frame is read on its ARD identity
+columns: \code{.variable} is the source column name, \code{.variable_level} the source
+value on that row, and each \verb{.group<k>} / \verb{.group<k>_level} pair is an
+enclosing grouping dimension. Dimensions come back outermost first, with the
+\code{.variable} leaf last. A \code{.filter} column (a row defined by a predicate, see
+\code{\link[=drill_source]{drill_source()}}) counts as a leaf for the purpose of reading its enclosing
+groups.
 
-\strong{Source columns (\code{columns} given) -- chart and tile drills.} A chart does
-not carry the ARD identity: it coerces its input with \code{as_plain_df()}, which
-\emph{drops} the \code{.variable} columns, and its drilled output is a plain row subset
-of the source data. There is nothing in that subset saying which column was
-drilled, so the caller names the candidates -- \code{columns = "SEX"}, or several
-if the chart's drill column varies -- and each is claimed from the subset.
+\strong{Source columns (\code{columns} given).} Chart and tile drills carry no ARD
+identity, so the caller names the candidate columns, e.g. \code{columns = "SEX"},
+and each is claimed from the subset.
 }
 
 \section{What counts as a claim}{
 
-Either way, a dimension becomes a filter condition only when the subset
-resolves it to \strong{exactly one} value: one value is a decision, many are not.
-
-That single rule is what makes an un-drill propagate. Clicking one bar (or
-one level row) leaves \code{SEX} single-valued -- a claim. An \emph{undrilled} chart or
-table passes all its rows through, so \code{SEX} still holds both \code{F} and \code{M} --
-no claim, and the caller's cue to \code{\link[=ctrl_clear]{ctrl_clear()}}. A brush across several bars
-is likewise deliberately \emph{not} a claim, and neither is a header row in a
-nested table whose leaf stays multi-valued (its outer group is still claimed).
+A dimension becomes a filter condition only when the subset resolves it to
+exactly one value. Clicking one bar leaves \code{SEX} single-valued, which is a
+claim. An undrilled chart passes all its rows through, \code{SEX} holds both \code{F}
+and \code{M}, and nothing is claimed: the caller's cue to \code{\link[=ctrl_clear]{ctrl_clear()}}. A brush
+across several bars is not a claim either.
 }
 
 \examples{

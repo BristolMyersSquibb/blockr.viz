@@ -7,9 +7,7 @@
 CB_VALUE_CALLS
 }
 \description{
-Kept short on purpose. Every addition widens what silently becomes a control,
-so this is a deliberate list rather than a heuristic. \code{factor()} is the
-important one: its levels are the choice list, which is how a select is
-expressed without any blockr vocabulary.
+Every addition widens what silently becomes a control, so the list is short.
+The levels of \code{factor()} are the choice list of a select.
 }
 \keyword{internal}

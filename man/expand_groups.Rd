@@ -35,10 +35,9 @@ group order. A subject in two groups appears twice.
 
 The result keeps every data-frame attribute and every attribute of the
 other columns. The group column keeps its \code{blockr_source} and \code{label}, and
-its \code{blockr_groups} becomes the identity partition (each name maps to
-itself), so calling \code{expand_groups()} a second time changes nothing. The
-definition that was applied is kept in \code{blockr_groups_expanded}, so drill
-claims and colours can still map a group back to its members.
+its \code{blockr_groups} becomes the identity partition, so a second call changes
+nothing. The applied definition is kept in \code{blockr_groups_expanded}, so
+drill claims and colours can map a group back to its members.
 
 Use it only in code that splits by the column. Anything that counts across
 groups (a total, an overall N) must read the unexpanded data.

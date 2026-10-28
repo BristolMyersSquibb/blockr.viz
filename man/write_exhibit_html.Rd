@@ -18,8 +18,8 @@ write_exhibit_html(
 }
 \arguments{
 \item{x}{A data frame, an \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object, or an
-exhibit that renders itself -- a \code{summarize_exhibit} from
-\code{\link[=static_summarize_table]{static_summarize_table()}}, whose glyphs exist only in this markup.}
+exhibit that renders itself, such as a \code{summarize_exhibit} from
+\code{\link[=static_summarize_table]{static_summarize_table()}}.}
 
 \item{file}{Path to write the \code{.html} to.}
 
@@ -28,15 +28,13 @@ exhibit that renders itself -- a \code{summarize_exhibit} from
 
 \item{caption}{Trailing footnote, rendered under the table.}
 
-\item{default_expanded}{Logical. \code{TRUE} (default) opens every section, which
-is what a downloaded file is for: the page scrolls, so there is no height
-to budget, and a reader who asked for the table wants the numbers, not
-nine headers to click. \code{FALSE} opens it at its section rows.}
+\item{default_expanded}{Logical. \code{TRUE} (default) opens every section, since
+the page scrolls and has no height to budget. \code{FALSE} opens it at its
+section rows.}
 
 \item{collapsible, sortable}{Logical. Whether the saved page keeps the
 collapse chevrons and the click-to-sort headers (both \code{TRUE} by default).
-The table block passes its own display toggles through here, so a table
-shown without collapsing downloads without it.}
+The table block passes its own display toggles through here.}
 
 \item{...}{Passed to \code{\link[=html_exhibit]{html_exhibit()}}.}
 }
@@ -44,20 +42,17 @@ shown without collapsing downloads without it.}
 \code{file}, invisibly.
 }
 \description{
-The HTML sibling of \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}: one
-annotated data frame, one file, nothing to unpack. The table is drawn by
-\code{\link[=html_exhibit]{html_exhibit()}} -- the same markup, CSS and collapse script the app itself
-shows -- wrapped in a minimal document shell that carries the title,
-subtitle and caption.
+The HTML sibling of \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}. The
+table is drawn by \code{\link[=html_exhibit]{html_exhibit()}} (the markup, CSS and collapse script the
+app shows) inside a minimal document shell that carries the title, subtitle
+and caption.
 }
 \details{
-The file is self-contained, always. The display table inlines its own \verb{<style>}
-and \verb{<script>} next to the table and talks to nothing outside them (no
-Shiny, no CDN, no sidecar \verb{lib/} folder), so for a display table there is
-nothing to bundle. A renderer that does carry dependencies -- the summarize
-table's shared script bundle -- has them read off disk and written into the
-document. Section collapse and column sorting keep working in the saved
-file, offline, which is the difference between this and a screenshot.
+The file is self-contained: no Shiny, no CDN, no sidecar \verb{lib/} folder.
+The display table inlines its own \verb{<style>} and \verb{<script>}. A renderer that
+carries dependencies, such as the summarize table's script bundle, has them
+read off disk and written into the document. Section collapse and column
+sorting work in the saved file, offline.
 }
 \examples{
 f <- tempfile(fileext = ".html")

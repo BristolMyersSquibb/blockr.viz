@@ -1,15 +1,12 @@
 # Download footer -------------------------------------------------------------
 #
-# One line a board prints under everything it lets out. Under a picture (the
-# chart, summarize table and heatmap images, and the decks and web pages that
-# carry them) it is drawn into the image; under a table written as a table
-# (xlsx, html, pptx of the table block, composer tables, the summarize table's
-# table formats) it is the last line of the caption.
+# One line a board prints under everything it lets out. Under a picture it is
+# drawn into the image; under a table written as a table (xlsx, html, pptx)
+# it is the last line of the caption.
 #
 # Set per board as the `download_footer` option (Downloads in the settings
-# sidebar), so the builder sets it and a locked board keeps it. The default
-# for a new board is `getOption("blockr.viz.download_footer")`, which is how a
-# deployment puts its disclaimer on every board. Empty, nothing is printed.
+# sidebar). The default for a new board is
+# `getOption("blockr.viz.download_footer")`. Empty, nothing is printed.
 #
 # The text may name:
 #
@@ -18,7 +15,6 @@
 #   {filters}   the filter trail, as in a caption
 #   {dataset}, {note}, {path}, ...
 #               any field of the data's `blockr_provenance` attribute
-#               (see `blockr.dm::provenance()`)
 #
 # A name the data does not have prints nothing.
 
@@ -27,9 +23,9 @@
 #' A line of text printed under every download of a chart or table: drawn
 #' under the picture for an image (and the PowerPoint and web page that carry
 #' it), added as the last caption line for a table written as a table.
-#' `{user}`, `{time}`, `{filters}` and
-#' the fields of the data's `blockr_provenance` attribute (`{dataset}`,
-#' `{note}`, ...) are filled in when the file is downloaded.
+#' `{user}`, `{time}`, `{filters}` and the fields of the data's
+#' `blockr_provenance` attribute (`{dataset}`, `{note}`, ...) are filled in
+#' when the file is downloaded.
 #'
 #' @param value Default text. Empty prints nothing.
 #' @param category Settings sidebar category.
@@ -79,10 +75,7 @@ new_download_footer_option <- function(
   )
 }
 
-# The blocks whose downloads carry a picture contribute the option, so a
-# board with one of them on it shows the setting without the app naming it
-# (as with the exhibit font). Duplicates are dropped by
-# `combine_board_options()`.
+# Chart blocks contribute the option, so a board with one shows the setting.
 
 #' @exportS3Method blockr.core::board_options
 board_options.chart_block <- function(x, ...) {
@@ -90,10 +83,7 @@ board_options.chart_block <- function(x, ...) {
                                      NextMethod())
 }
 
-# The table and summarize table blocks already contribute the exhibit font
-# (R/exhibit-font.R); their methods add both. blockr.sandbox's composer
-# block, which downloads through `dt_download_control()`, adds it in its own
-# package.
+# The table and summarize table blocks add this option in R/exhibit-font.R.
 
 # The footer text for one download, or NULL when there is none.
 #' @noRd
@@ -138,7 +128,7 @@ download_footer_text <- function(template, data, user = NULL,
 }
 
 # The board's footer template, or NULL: no session, no board options, or a
-# board without this one. Never an error, as for the exhibit font.
+# board without this one.
 #' @noRd
 board_download_footer <- function(session = blockr.core::get_session()) {
   tryCatch(
@@ -147,15 +137,21 @@ board_download_footer <- function(session = blockr.core::get_session()) {
   )
 }
 
-# The caption with the board's footer as its last line, for a download
-# written as a table rather than a picture. `data` as below.
-#' @noRd
-download_footer_caption <- function(caption, data, session) {
-  txt <- download_footer_text(
+# The footer text for a download, or NULL. `data` is the block's input, for
+# the provenance and the filter trail.
+download_footer_for <- function(data, session) {
+  download_footer_text(
     board_download_footer(session),
     tryCatch(data, error = function(e) NULL),
     user = session$user
   )
+}
+
+# The caption with the board's footer as its last line, for a download
+# written as a table rather than a picture.
+#' @noRd
+download_footer_caption <- function(caption, data, session) {
+  txt <- download_footer_for(data, session)
   if (is.null(txt)) {
     return(caption)
   }
@@ -163,36 +159,20 @@ download_footer_caption <- function(caption, data, session) {
   if (is.null(cap) || is.na(cap) || !nzchar(cap)) txt else paste(cap, txt, sep = "\n")
 }
 
-# A picture with the board's footer under it, or the picture as it was when
-# there is no footer to print. `data` is the block's input, for the
-# provenance and the filter trail.
+# A picture with the board's footer under it, or the picture itself when
+# there is no footer.
 #' @noRd
 download_footer_stamp <- function(x, data, session) {
-
   if (!inherits(x, "chart_capture")) {
     return(x)
   }
-
-  txt <- download_footer_text(
-    board_download_footer(session),
-    tryCatch(data, error = function(e) NULL),
-    user = session$user
-  )
+  txt <- download_footer_for(data, session)
   if (is.null(txt)) {
     return(x)
   }
-
-  stamp <- function(cap) {
-    out <- png_add_footer(cap$png, txt, css_width = cap$width * 96)
-    cap$png <- out$png
-    cap$height <- cap$height + out$band / 96
-    cap
-  }
-
-  x <- stamp(x)
-  if (length(x$pages)) {
-    x$pages <- lapply(x$pages, stamp)
-  }
+  out <- png_add_footer(x$png, txt, css_width = x$width * 96)
+  x$png <- out$png
+  x$height <- x$height + out$band / 96
   x
 }
 
@@ -215,9 +195,8 @@ png_add_footer <- function(png, text, css_width, font_px = 11, pad = 12) {
   file <- tempfile(fileext = ".png")
   on.exit(unlink(file), add = TRUE)
 
-  # Measured on the device the text is drawn with, so the wrap is the one
-  # the reader sees. A first device to measure, since the band's height
-  # depends on how many lines there are.
+  # A first device measures the wrap, since the band's height depends on the
+  # number of lines.
   ragg::agg_png(file, width = w, height = h, units = "px", res = res)
   graphics::par(mar = c(0, 0, 0, 0), ps = ps)
   graphics::plot.new()

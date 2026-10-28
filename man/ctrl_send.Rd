@@ -29,60 +29,50 @@ plugins and dock extension servers.}
 
 \item{board}{The board reactive values, as handed to the same components
 (\code{board$board} is the current board). Optional: without it the channel
-still sends, but \code{\link[=ctrl_targets]{ctrl_targets()}} finds no candidates and senders fall
-back to typing a block id.}
+still sends, but \code{\link[=ctrl_targets]{ctrl_targets()}} finds no candidates.}
 }
 \value{
 \code{ctrl_send()} returns \code{TRUE} (invisibly) when the payload was
 handed to the update channel, \code{FALSE} when no channel is installed
 (a warning is emitted once per session). \code{ctrl_clear()} returns \code{TRUE}
 (invisibly) when the caller owned the target's last claim and the reset
-was sent, \code{FALSE} otherwise (not the owner, or no channel installed).
-\code{install_ctrl_send()} returns the send closure, invisibly.
+was sent, \code{FALSE} otherwise. \code{install_ctrl_send()} returns the send
+closure, invisibly.
 }
 \description{
-A pair of helpers that let one block set the externally controllable
-arguments (see the \code{external_ctrl} argument to \code{\link[blockr.core:new_block]{blockr.core::new_block()}})
-of another block on the same board, through the board's regular update
-channel. Typical use: a drill-down chart feeds a function block whose
-function calls \code{ctrl_send()} to push the clicked patient into a
-patient-profile block -- no data link between sender and target, so lazy
-evaluation never drags the sender's upstream into the target's closure.
+Helpers that let one block set the externally controllable arguments (see
+the \code{external_ctrl} argument to \code{\link[blockr.core:new_block]{blockr.core::new_block()}}) of another block
+on the same board, through the board's regular update channel. A drill-down
+chart can feed a function block whose function calls \code{ctrl_send()} to push
+the clicked patient into a patient-profile block. Sender and target share
+no data link.
 }
 \details{
-\code{install_ctrl_send()} wires the channel up. It must be called once per
-session by any board component that holds the board's \code{update} reactive:
-a board callback, a plugin, or a dock extension server. It stashes a send
-closure in \code{session$userData}, where \code{ctrl_send()} -- called from block
-code, e.g. inside a function block's \code{fn} -- picks it up.
+\code{install_ctrl_send()} wires the channel up. Call it once per session from
+any board component that holds the board's \code{update} reactive: a board
+callback, a plugin or a dock extension server. It stores a send closure in
+\code{session$userData}, where \code{ctrl_send()} finds it.
 
-Updates pushed this way go through the board's full validation:
-arguments that are not externally controllable on the target block are
-rejected with a user-facing notification (see
+Updates go through the board's full validation. Arguments that are not
+externally controllable on the target are rejected with a notification (see
 \code{blockr.core:::validate_board_update}).
 }
 \section{Semantics under lazy evaluation}{
 
-\code{ctrl_send()} writes state; it never reads another block's result, so it
-adds nothing to any evaluation closure. A function block calling it is
-re-evaluated (and thus sends) only while it is on screen, which is
-exactly when its upstream chart can be clicked. Repeated sends of an
-unchanged value are no-ops (\code{apply_block_mod_delta()} compares with
-\code{identical()}).
+\code{ctrl_send()} writes state and never reads another block's result, so it
+adds nothing to any evaluation closure. A function block calling it sends
+only while it is on screen. Repeated sends of an unchanged value are no-ops
+(\code{apply_block_mod_delta()} compares with \code{identical()}).
 }
 
 \section{Clearing (\code{ctrl_clear()})}{
 
-The undo side of \code{ctrl_send()}, with ownership semantics: it resets the
-target's controllable arguments \strong{only if the last \code{ctrl_send()} to that
-target came from the same block}. This is what lets a data-driven sender
-propagate an un-drill (its input reverts to the no-claim shape, so it
-calls \code{ctrl_clear()}) without ever clobbering state it does not own: a
-sender that merely re-evaluates undrilled -- at startup, on a board
-restore, or while a \emph{different} sender's claim (or a manual edit riding
-on one) is active on the target -- finds it owns nothing and no-ops.
-Named values passed via \code{...} are what "cleared" means for the target
-(e.g. \code{state = list(columns = list())} empties a value filter).
+The undo side of \code{ctrl_send()}. It resets the target's controllable
+arguments only if the last \code{ctrl_send()} to that target came from the same
+block. A sender that re-evaluates without a drill (at startup, on a board
+restore, or while a different sender's claim is active on the target) owns
+nothing and does nothing. The values passed via \code{...} define "cleared" for
+the target, e.g. \code{state = list(columns = list())} empties a value filter.
 }
 
 \examples{

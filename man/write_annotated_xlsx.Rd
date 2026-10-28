@@ -33,32 +33,30 @@ table.}
 \item{digits}{Optional number format, the table block's \code{format}. A number
 of decimals gives every numeric data column that cell number format
 (\code{"0.00"} for \code{digits = 2}, so 3 shows as 3.00): the cell keeps the full
-value, so Excel computes on it, and displays it rounded. \code{"number"}
-shows two decimals on columns that hold fractions and leaves
-whole-number columns in the general format. \code{"compact"} (1.2K, 3.4M) and
-\code{"percent"} (12.3\%) format every numeric column. \code{NULL} (default) writes
-every number in the general format.}
+value and displays it rounded. \code{"number"} shows two decimals on columns
+that hold fractions and leaves whole-number columns in the general
+format. \code{"compact"} (1.2K, 3.4M) and \code{"percent"} (12.3\%) format every
+numeric column. \code{NULL} (default) writes every number in the general
+format.}
 }
 \value{
 \code{file}, invisibly.
 }
 \description{
 Renders an \link[=as_annotated_df]{annotated data frame} to an Excel worksheet
-that preserves the table's \emph{structure}: row indentation (\code{.indent} ->
-native cell indent), bold header rows (\code{.strong}), and two-level column
-spanners (\code{Top||Leaf} -> merged header cells). The same frame that drives the
-blockr.viz table renderer also drives this export -- one structured artifact,
-two outputs.
+that keeps the table's structure: row indentation (\code{.indent} becomes the
+cell indent), bold rows (\code{.strong}), and two-level column spanners
+(\code{Top||Leaf} becomes merged header cells). The frame that drives the
+blockr.viz table renderer drives this export too.
 }
 \details{
 Input is the annotated-data-frame contract:
 \itemize{
-\item \code{.label} -> the row-stub (first) column; \code{.indent} -> the Excel cell
-indent level (the hierarchy reads in the spreadsheet outline, not via
-faked spaces); \code{.strong} rows are bold.
-\item \verb{.section_1, ..., .section_k} -> bold section-header rows
-interleaved at each section restart (mirroring the HTML renderer);
-these and any other dot-prefixed columns are structure, never exported
+\item \code{.label} is the row-stub (first) column; \code{.indent} is the Excel
+cell indent level; \code{.strong} rows are bold.
+\item \verb{.section_1, ..., .section_k} become bold section-header rows
+interleaved at each section restart (as in the HTML renderer). These
+and any other dot-prefixed columns are structure and are not exported
 as data columns.
 \item data columns carry their pre-formatted strings. A column named with a
 \code{"||"} (\code{"Placebo||CAT1"}) is a two-level spanner: the part before the
@@ -66,7 +64,7 @@ as data columns.
 (\code{"Placebo\\nN = 86"}) is the leaf header text.
 }
 The header is frozen, bordered, and bold; numbers right-align, the stub
-left-aligns. No blockr / Shiny dependency -- just the data frame and openxlsx.
+left-aligns. Only the data frame and openxlsx are needed.
 }
 \examples{
 \dontshow{if (requireNamespace("openxlsx", quietly = TRUE)) withAutoprint(\{ # examplesIf}

@@ -1,40 +1,32 @@
-# The summarize table as an EXHIBIT ------------------------------------------
+# The summarize table as an exhibit -------------------------------------------
 #
-# One object, rendered by whichever back end the target needs. The block
-# itself cannot be that object: `new_summarize_table_block()` is a transform
-# block whose result is its (filtered) INPUT, and the table exists only as a
-# payload to the browser. A report or a deck evaluating the board would
-# print the input frame.
-#
-# So the block states how to rebuild its table (report_call), and the rebuilt
-# table carries everything every target needs:
+# The block is a transform block whose result is its input; the table exists
+# only as a payload to the browser. So the block states how to rebuild its
+# table (report_call), and the rebuilt table carries what every target needs:
 #
 #   static_summarize_table(data, ...)   -> summarize_exhibit
-#     html_exhibit()      -> the hand-rolled HTML table, marks and all
+#     html_exhibit()      -> the HTML table, marks and all
 #     pptx_add_exhibit()  -> painted pages, one slide each
 #     print()             -> the picture, for an interactive session
 #
-# Same shape as static_table(), which stashes `exhibit_data` on the flextable
-# so the HTML deck can re-render it rather than screenshot it. The rule is the
-# same one: an exhibit carries its SOURCE, and each target renders from that.
+# As with static_table(), an exhibit carries its source and each target
+# renders from that.
 
 #' A Summarize Table as a Printable Exhibit
 #'
 #' The groups layout of the table block (`new_table_block(layout = "groups")`)
-#' rebuilt outside Shiny,
-#' as an object a report, a deck or a download can render. The block draws the
-#' table by pushing a cell model to the browser, so its result is only the
-#' data; this is what puts the table itself into a document.
+#' rebuilt outside Shiny, as an object a report, a deck or a download can
+#' render. The block's own result is only its input data; this puts the table
+#' itself into a document.
 #'
-#' The returned object renders per target and never re-derives the marks:
 #' [html_exhibit()] gives the same HTML table the app draws, and
 #' [pptx_add_exhibit()] paints it and places it on as many slides as it needs.
 #' Both read one cell model, computed here.
 #'
-#' On a slide the exhibit is a PICTURE, because PowerPoint's table cells hold
+#' On a slide the exhibit is a picture, because PowerPoint's table cells hold
 #' text runs only and a distribution glyph cannot live in one. The text is
 #' therefore not selectable or editable on those slides. A plain display table
-#' has no such constraint and keeps [static_table()].
+#' keeps [static_table()].
 #'
 #' @param data A data frame (or [as_annotated_df()]-coercible object), the
 #'   table's input.
@@ -58,17 +50,11 @@
 #' @export
 static_summarize_table <- function(data, ...) {
 
-  # The single ranked bar's arguments (`group`, `func`, `value`, ...) read
-  # as the column list they map to.
   args <- summarize_legacy_args(list(...))
-  # The block hands over the settings its text names, script values
-  # included; a direct call names only the table's own arguments.
+  # The block hands over the settings its text names, script values included.
   targs <- args$.title_args %||% summarize_title_args(args)
   args$.title_args <- NULL
 
-  # The block resolves its title tier against the data before calling; doing
-  # it again is a no-op for a plain string and gives a direct call the same
-  # automatic tier (see summarize_table()).
   prep <- do.call(summarize_prepare,
                   c(list(data), args[summarize_prep_args(args)]))
   cells <- summarize_cells(
@@ -84,8 +70,7 @@ static_summarize_table <- function(data, ...) {
       args = args,
       prep = prep,
       cells = cells,
-      # The cards look's text, beside the cell model it draws from
-      # (R/table-cards.R). The spreadsheet ignores it.
+      # The cards look's text (R/table-cards.R); the spreadsheet ignores it.
       cards = if (identical(args$look, "cards") && is.null(prep$err)) {
         table_cards_groups(cells, prep, data = data,
                            scale_map = args$scale_map)
@@ -104,18 +89,13 @@ static_summarize_table <- function(data, ...) {
   )
 }
 
-# The settings a summarize table's title, subtitle and caption can name as
-# `{@arg}` / `{label(@arg)}`: the chart block's title_args(), for this block's
-# roles. `by` names its innermost column, the one each row is: the outer one
-# is the parent a row sits under. The block and the exhibit both call this,
-# so a downloaded table says what the one on screen says.
+# The settings a title, subtitle or caption can name as `{@arg}` /
+# `{label(@arg)}`, for this block's roles. `by` is the innermost grouping
+# column (each row); an outer one is the parent. The first summary stands in
+# for the settings the single ranked bar had at block level.
 #' @noRd
 summarize_title_args <- function(args) {
   by <- as.character(unlist(args$by %||% character()))
-  # The first summary stands in for the settings the single ranked bar had
-  # at block level, so a sentence written for it still reads: a heatmap's
-  # "painted by {label(@fill)}, by {label(@group)}", an old board's
-  # "{label(@value)} by {label(@group)}".
   s1 <- if (length(args$summaries) && is.list(args$summaries[[1L]])) {
     args$summaries[[1L]]
   } else {
@@ -134,14 +114,12 @@ summarize_title_args <- function(args) {
     sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
   )
-  # Unset roles go, so a prepare script's value of the same name (a
-  # heatmap's `top_n`) can stand in for them in a sentence.
+  # Unset roles go, so a prepare script's value of the same name can stand in.
   out[!vapply(out, is.null, logical(1L))]
 }
 
-# Which of the caller's arguments summarize_prepare() takes. Everything else
-# (display text, heights, the search toggle) belongs to the chrome and is
-# passed on to whichever renderer draws it.
+# Which of the caller's arguments summarize_prepare() takes. The rest belongs
+# to the chrome and goes to the renderer.
 #' @noRd
 summarize_prep_args <- function(args) {
   names(args) %in% names(formals(summarize_prepare))
@@ -159,9 +137,7 @@ format.summarize_exhibit <- function(x, ...) {
 
 #' @export
 print.summarize_exhibit <- function(x, ...) {
-  # An interactive session gets the picture; without a device to draw on
-  # (a script, a knit chunk with no plot) the one-line summary still says
-  # what the object is.
+  # The picture needs an open device; otherwise print the one-line summary.
   ok <- summarize_paint_ready() &&
     !identical(grDevices::dev.cur()[[1L]], 1L)
   if (ok) {
@@ -175,8 +151,7 @@ print.summarize_exhibit <- function(x, ...) {
   invisible(x)
 }
 
-# knitr prints the HTML table in an HTML document and the picture elsewhere,
-# through the same routing every other exhibit uses.
+# The HTML table in an HTML document, the picture elsewhere.
 #' @exportS3Method knitr::knit_print
 knit_print.summarize_exhibit <- function(x, ...) {
   if (exhibit_html_output()) {
@@ -208,18 +183,8 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                res = getOption(
                                                  "blockr.viz.paint_res", 300),
                                                # Accepted and ignored: a
-                                               # painted table has no column
-                                               # deal -- its marks are
-                                               # positioned in percent, so
-                                               # they narrow with the column
-                                               # instead of overflowing it --
-                                               # and it pages by row height
-                                               # rather than by a row count.
-                                               # The file writer passes both
-                                               # to whichever method it
-                                               # reaches. `min_font_size` is
-                                               # honoured: see the ladder
-                                               # below.
+                                               # painted table pages by row
+                                               # height and has no column deal.
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
@@ -243,9 +208,8 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   has_title <- is.character(title) && length(title) == 1L && nzchar(title)
   slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
 
-  # Same geometry the flextable paginator uses: the picture starts below the
-  # title's own rendered text rather than at a constant that may sit inside
-  # it, and what is left of the slide is the row budget.
+  # The picture starts below the title's rendered text; the rest of the slide,
+  # down to the top of the layout's footer, is the row budget.
   top <- top %||% max(
     1.1,
     if (slide_title) {
@@ -256,9 +220,6 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
     }
   )
   width <- pptx_content_width(template) %||% (slide_w - 0.8)
-  # Down to the top of whatever the layout puts at the foot, not to a
-  # constant that may sit inside it -- a painted page overprints a footer as
-  # readily as a typeset one.
   budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
 
   common <- list(
@@ -269,15 +230,8 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
     caption = caption %||% x$caption
   )
 
-  # The same trade the flextable paginator makes, and for the same reason:
-  # one slide at 9pt beats two at 10pt. Here it is cheaper -- the rows are
-  # uniform by construction, so a candidate size is a division rather than a
-  # measured table -- and it matters as much, since a board that has asked to
-  # keep its tables on one slide means the summarize tables too.
-  #
-  # Nothing is painted until the size is settled. `min_font_size` is the same
-  # floor the typeset tables use, so the two kinds of table on one deck
-  # shrink alike.
+  # One slide at a smaller size beats two at the full size, down to
+  # `min_font_size`. Nothing is painted until the size is settled.
   min_font_size <- exhibit_min_font_size(min_font_size)
   fits_one <- function(fs) {
     do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
@@ -295,8 +249,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
 
   if (length(pages) > 1L) {
-    # Below the floor only to say what it would have taken: the deck still
-    # gets the pages it got, and the reader gets the number to set.
+    # Search below the floor only to tell the reader the size that would fit.
     fit <- NULL
     below <- seq_len(max(0, min(font_size, min_font_size) - MIN_FONT_FLOOR))
     for (s in min(font_size, min_font_size) - below) {
@@ -313,7 +266,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   for (k in seq_along(pages)) {
     p <- pages[[k]]
     f <- tempfile(fileext = ".png")
-    summarize_paint_png_file(p, f, res = res)
+    rp_write_png(p, f, res = res)
     doc <- officer::add_slide(doc, layout = layout, master = master)
     if (slide_title) {
       doc <- tryCatch(
@@ -322,8 +275,7 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
           location = officer::ph_location_type(type = "title")),
         error = function(e) doc)
     }
-    # Never scaled: the type was sized for this box, so a picture that does
-    # not fit is a paging failure, not something to shrink away.
+    # Never scaled: the type was sized for this box.
     doc <- officer::ph_with(
       doc, officer::external_img(f, width = p$width, height = p$height),
       location = officer::ph_location(
@@ -334,9 +286,8 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
   doc
 }
 
-# The single ranked bar's arguments, as the column list they map to
-# (table_legacy_args()). `id_var` alone is not one of them: the block's
-# report call passes it for the sentence.
+# The single ranked bar's arguments as the column list they map to
+# (table_legacy_args()). `id_var` alone is passed through for the sentence.
 #' @noRd
 summarize_legacy_args <- function(args) {
   ranked <- c("group", "value", "func", "parent", "color", "bar_mode",

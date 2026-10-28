@@ -42,27 +42,22 @@ table's height: a table that fits opens expanded, one that does not opens
 at its section rows. The threshold is
 \code{getOption("blockr.viz.html_exhibit_expanded_max_rows")} (24).}
 
-\item{...}{Passed to the underlying renderer.
-
-Generic since 0.2.53: an exhibit that carries its own renderer (the
-summarize table's glyph model, say) answers for itself, and everything
-else falls to the default -- an annotated data frame drawn as the display
-table. That is the seam that lets ONE report call serve an HTML target and
-a PowerPoint one without the caller knowing which it is.}
+\item{...}{Passed to the underlying renderer.}
 }
 \value{
 A \code{\link[htmltools:tagList]{htmltools::tagList()}}.
 }
 \description{
 The HTML counterpart of \code{\link[=static_table]{static_table()}}: the same annotated data frame,
-rendered as the hand-rolled HTML display table the app itself draws, with
-its styles and its collapse / search script inlined. Nothing in the
-output talks to Shiny, so the result is a self-contained exhibit that
-survives being written to a standalone HTML file.
+rendered as the HTML display table the app draws, with its styles and its
+collapse / search script inlined. Nothing in the output talks to Shiny, so
+it can be written to a standalone HTML file.
 }
 \details{
-Called by \code{\link[=static_exhibit]{static_exhibit()}} when the render target is HTML; exported so a
-document can ask for it explicitly.
+Called by \code{\link[=static_exhibit]{static_exhibit()}} when the render target is HTML. It is a
+generic: an exhibit that carries its own renderer (the summarize table's
+glyph model) answers for itself, and everything else falls to the default,
+an annotated data frame drawn as the display table.
 }
 \examples{
 tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")

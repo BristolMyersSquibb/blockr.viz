@@ -28,140 +28,113 @@ static_table(
 }
 \arguments{
 \item{data}{A data frame (or an object with an \code{\link[=as_annotated_df]{as_annotated_df()}}
-method, e.g. a composer table -- coerced on entry).}
+method, e.g. a composer table, coerced on entry).}
 
 \item{title, subtitle, caption}{Table title / subtitle (header lines) and
 caption (footer line). \code{NULL} (default) auto-fills from the annotated
 df's \code{label} / \code{subtitle} / \code{caption} attributes; \code{""} suppresses.}
 
 \item{na_rep}{Character. Text for missing (\code{NA}) cells. Defaults to an em
-dash, the clinical-table convention.}
+dash.}
 
 \item{font, font_size, font_color}{Base typography, applied to all parts.
 \code{font_size} is in points and defaults from
-\code{getOption("blockr.viz.ft_font_size")}, 13 unset: a deck table is read
-from a screen, and the two points under the old 14 are two more rows on
-the slide.
-\code{font} defaults from \code{getOption("blockr.viz.ft_font")}, which a theme
-sets (\code{exhibits = list(ft_font = ...)}) and which the blockr.outline pptx
-render sets from the reference deck's own font scheme -- so a table
-printed into a house deck is set in that deck's face rather than in a
-font the renderer picked. Unset, the blockr default applies.}
+\code{getOption("blockr.viz.ft_font_size")}, 13 unset. \code{font} defaults from
+\code{getOption("blockr.viz.ft_font")}, which a theme sets
+(\code{exhibits = list(ft_font = ...)}) and which the pptx export sets from the
+reference deck's font scheme. Unset, the blockr default applies.}
 
 \item{indent_width}{Points of left padding per \code{.indent} level (section
 headers indent at their nesting depth with the same step).}
 
 \item{first_col_width, other_cols_width}{Column widths in inches, used
 unless \code{fit_width} or \code{auto_width} is set. Defaults fit the 13.33in
-widescreen template the topline decks use; pass smaller values for the
-10in quarto default reference doc.}
+widescreen template; pass smaller values for the 10in quarto default.}
 
-\item{fit_width}{Optional total table width in inches (usually the
-slide's usable content width). When set, the columns are distributed to
-fill it exactly, so a wide table fits the slide instead of overflowing
-(\code{col_widths} says how). Defaults from
-\code{getOption("blockr.viz.ft_fit_width")}, which the blockr.outline pptx /
-docx render sets from the reference template's slide size, so a table
-printed in a deck fits without the caller sizing it. Unset for html /
-pdf, where the natural widths apply.}
+\item{fit_width}{Optional total table width in inches (usually the slide's
+usable content width). When set, the columns are distributed to fill it
+exactly (\code{col_widths} says how). Defaults from
+\code{getOption("blockr.viz.ft_fit_width")}, which the pptx / docx render sets
+from the reference template. Unset for html / pdf.}
 
 \item{col_widths}{How \code{fit_width} is split, \code{"measured"} (default) or
 \code{"even"}. Measured asks every column what its own text needs at the
 current font. When the slide can hold them all, the data columns get
 enough that no cell wraps and no header breaks inside a word, and the
-rest goes to the row stub, which is the one column whose text is prose
-and wraps gracefully. While the data columns are still short of their
-full headers the stub takes at most
-\code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width and wraps; it
-grows past that only with what is left over.
+rest goes to the row stub. While the data columns are still short of
+their full headers the stub takes at most
+\code{getOption("blockr.viz.ft_stub_share")} (0.3) of the width and wraps.
 
-When the slide cannot hold them all, every column gives a little rather
-than one being crushed: the stub and the data columns are filled to a
-common level, from the width each cannot go below -- its longest word,
-in a cell or a header, since nothing may break inside a word -- toward
-its whole text. A count is very nearly one word, so a column of counts
-reaches its full width almost at once and does not wrap; a column whose
-cells are several short words gives room back and reads as two lines,
-which is what a header has always been allowed to do.
-Even is the older positional rule (the stub takes \code{first_col_width}
-capped at half the slide, the data columns share the remainder equally),
-which is wrong whenever the stub is shorter or the data columns wider
-than those constants assume. Defaults from
+When the slide cannot hold them all, the stub and the data columns are
+filled to a common level, from the width each cannot go below (its
+longest word) toward its whole text. A column of counts reaches its full
+width almost at once, and a column of several short words gives room back
+and wraps.
+
+Even gives the stub \code{first_col_width} capped at half the slide and splits
+the remainder equally over the data columns. Defaults from
 \code{getOption("blockr.viz.ft_col_widths")}.
 
-A numeric vector of widths (one per column, stub first) is also accepted
-and used as given. That is how \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} gives every page of
-a split table the widths measured on the whole of it.}
+A numeric vector of widths (one per column, stub first) is used as given.
+\code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}} uses this to give every page of a split table the
+widths measured on the whole of it.}
 
 \item{cell_padding}{Points of left and right padding per cell, or \code{NULL}
 (default) for the flextable default of 5. Set automatically to a tighter
-value when a table cannot fit any other way: across 36 columns the
-default spends 5in of a widescreen slide on padding alone.}
+value when a table cannot fit any other way.}
 
 \item{auto_width}{Logical. \code{TRUE} runs \code{\link[flextable:autofit]{flextable::autofit()}} instead of
-the manual widths. flextable never fits to the slide on its own, so
-manual widths (the default) are the safe choice for pptx.}
+the manual widths.}
 
 \item{continued}{Logical. \code{TRUE} marks the section headings this table
-opens with as \code{(continued)}, for a page of a table split across slides
-whose first rows carry on a section from the page before.}
+opens with as \code{(continued)}, for a page of a split table.}
 
 \item{header_bg}{Header band colors, keyed on the column-group structure
 the annotated df carries. A color vector (hex or R color names):
 \itemize{
-\item \strong{Named} entries pin a group -- the name is a by-level value
-(the spanner top for a nested \code{by}, else the data-column name), and
-\code{".stub"} pins the row-stub header. \code{c(Placebo = "grey", Drug = "#33D6F1")} colors those arms explicitly, whatever their
-position.
+\item \strong{Named} entries pin a group. The name is a by-level value (the
+spanner top for a nested \code{by}, else the data-column name), and
+\code{".stub"} pins the row-stub header.
 \item \strong{Unnamed} entries are the cycle pool for the remaining,
-unpinned groups, in order -- \code{c("#A59F9F", "#33D6F1")} bands them.
+unpinned groups, in order.
 \item The two mix: \code{c(.stub = "#EEE", Placebo = "grey", "#33D6F1")}.
 }
 Defaults from \code{getOption("blockr.viz.ft_header_bg")}; unset (or \code{NULL} /
 \code{"none"}) leaves the header unfilled. blockr.viz ships no palette of its
-own -- the app supplies the colors (a deck sets the option to its house
-style), so nothing house-specific lives in the renderer.}
+own.}
 
-\item{pptx_left, pptx_top}{Slide placement in inches, stashed as
-\code{pptx_left} / \code{pptx_top} attributes on the result (consumed by an
-officer-based pptx pipeline; inert under the quarto render, where the
-reference template's content placeholder sets the table position).}
+\item{pptx_left, pptx_top}{Slide placement in inches, stashed as attributes
+on the result for the officer-based pptx pipeline. Inert under the quarto
+render.}
 }
 \value{
 A \code{flextable} object (with \code{pptx_left} / \code{pptx_top} attributes).
 }
 \description{
 Renders an \link[=as_annotated_df]{annotated data frame} as a styled
-\link[flextable:flextable]{flextable} -- the static table output for
-report / deck rendering (quarto pptx, docx). flextable is the one table
-engine whose \code{knit_print} emits real OpenXML tables in PowerPoint and
-Word output, so this is the renderer blockr.outline emits for
-table-kind blocks.
+\link[flextable:flextable]{flextable}, the static table output for report and
+deck rendering (quarto pptx, docx). flextable emits real OpenXML tables in
+PowerPoint and Word output.
 }
 \details{
-Structure comes from the annotated-df contract (shared with
-\code{html_table()} and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}): \code{.label} is
-the row stub, \verb{.group<k>_level} runs and \code{.variable_label} blocks become
-bold section-header rows interleaved into the body (merged across the
-table width, exactly where the HTML renderer puts its colspan rows),
-\code{.indent} / \code{.strong} / \code{.emph} style rows, \code{Top||Leaf} column names
-become a merged spanner header row, and \code{attr(col, "label")} carries the
-leaf header text (\code{"\\n"} renders as a line break -- the Big-N
-convention). The identity columns (\verb{.variable*}, raw \verb{.group<k>} pairs)
-drive interactive drilling only and are ignored here.
+Structure comes from the annotated-df contract (shared with \code{html_table()}
+and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}): \code{.label} is the row stub, \verb{.group<k>_level}
+runs and \code{.variable_label} blocks become bold section-header rows merged
+across the table width, \code{.indent} / \code{.strong} / \code{.emph} style rows,
+\code{Top||Leaf} column names become a merged spanner header row, and
+\code{attr(col, "label")} carries the leaf header text (\code{"\\n"} renders as a line
+break). The identity columns (\verb{.variable*}, raw \verb{.group<k>} pairs) are
+ignored here.
 
 Columns can carry emphasis, the column analogue of the row \code{.strong} /
-\code{.emph} flags: \code{attr(col, "strong")} / \code{attr(col, "emph")}. When any
-column is flagged, the header band follows an emphasis ramp -- normal
-light gray, \code{emph} dark gray (and italic), \code{strong} an accent -- so a
-treatment arm stands out against a reference arm the same way row
-emphasis works. This overrides the identity palette (\code{header_bg}).
+\code{.emph} flags: \code{attr(col, "strong")} / \code{attr(col, "emph")}. When any column
+is flagged, the header band follows an emphasis ramp (normal light gray,
+\code{emph} dark gray and italic, \code{strong} an accent) and \code{header_bg} is
+ignored.
 
-The look is the blockr.topline flextable theme: dense bordered grid,
-first column left-aligned and wide, data columns right-aligned, optional
-colored header bands, manual column widths (PowerPoint never autofits --
-size for the slide, don't reflow). Every aspect is parameterized; the
-defaults reproduce the topline deck look.
+The look is a dense bordered grid, first column left-aligned and wide, data
+columns right-aligned, optional colored header bands and manual column
+widths, since PowerPoint never autofits.
 }
 \examples{
 \dontshow{if (requireNamespace("flextable", quietly = TRUE)) withAutoprint(\{ # examplesIf}

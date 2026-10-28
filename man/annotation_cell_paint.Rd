@@ -7,6 +7,8 @@
 annotation_cell_paint(data, col)
 }
 \description{
-For exporters in other blockr packages; not part of the user API.
+For exporters in other blockr packages. Returns \code{list(bg =, fg =)}, one
+entry per row with \code{NA} where unpainted, or \code{NULL} when the column carries
+no paint.
 }
 \keyword{internal}

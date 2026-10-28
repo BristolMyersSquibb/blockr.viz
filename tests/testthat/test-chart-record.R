@@ -35,6 +35,6 @@ test_that("chart recording: constructor cases fail and warn as before", {
     vapply(x, function(r) inherits(r$value, "record_error"), logical(1L))
   }
   expect_identical(failed(got), failed(want))
-  expect_identical(lapply(got, `[[`, "warnings"),
-                   lapply(want, `[[`, "warnings"))
+  warns <- function(x) lapply(x, function(r) record_rw_warnings(r$warnings))
+  expect_identical(warns(got), warns(want))
 })

@@ -60,13 +60,18 @@ table_server <- function(id, data, init) {
 table_sources <- function(data, state, session) {
   prep <- table_prepare(data, r_script = state$script,
                         r_values = state$script_values)
+  rows <- shiny::reactive({
+    d <- prep$data()
+    if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
+  })
   list(
     prep = prep,
     values = table_view_values(state),
-    rows = shiny::reactive({
-      d <- prep$data()
-      if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
-    }),
+    rows = rows,
+    # The gear's column pickers read the prepared input's columns.
+    columns = shiny::reactive(
+      viz_wire_columns(tryCatch(rows(), error = function(e) NULL))
+    ),
     scale_map = dd_board_scale_map(),
     subject = function() dd_ctrl_subject(session),
     ctrl_choices = dd_ctrl_choices()
@@ -110,7 +115,7 @@ table_payload <- function(kit, src, part, titles) {
         capture_ratio = canvas_capture_ratio()
       )
     )
-    viz_payload(kit$spec, v, rows(built$model), kit$revs,
+    viz_payload(kit$spec, v, rows(built$model, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }
 }
@@ -120,19 +125,19 @@ table_payload <- function(kit, src, part, titles) {
 #' The model goes into `payload.data`; its revision goes up only when the
 #' model changes, so a click or a title edit sends the state and the
 #' browser keeps the table it drew, with its sort and folds. No table is
-#' `{}`.
+#' `{}`. `columns` are the input's columns, for the gear.
 #' @noRd
 table_model_rows <- function() {
   last <- new.env(parent = emptyenv())
   last$rev <- 0L
   last$data <- NULL
-  function(model) {
+  function(model, columns = NULL) {
     data <- model %||% structure(list(), names = character())
     if (!identical(data, last$data)) {
       last$rev <- last$rev + 1L
       last$data <- data
     }
-    list(data = data, rev = last$rev, columns = NULL)
+    list(data = data, rev = last$rev, columns = columns)
   }
 }
 

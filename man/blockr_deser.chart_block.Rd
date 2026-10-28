@@ -10,8 +10,8 @@
 \item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
-Boards saved with any earlier blockr.viz restore through the legacy
-tables (R/legacy.R): old names and values are translated, bad values
-healed with one warning.
+Boards saved with any earlier blockr.viz restore through the legacy tables
+(R/legacy.R): old names and values are translated, bad values are healed
+with one warning.
 }
 \keyword{internal}

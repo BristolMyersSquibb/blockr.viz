@@ -116,7 +116,7 @@ test('enums in a columns control (table stats)', () => {
   const m = mountGear(env, { block: 'table', id: 'tb' });
   m.gear.update(payload({ layout: 'variables', stats: ['mean_sd'] }));
   const s = sel(m.el, 'stats');
-  assert.deepEqual(picked(s).map((o) => o.textContent), ['mean_sd']);
+  assert.deepEqual(picked(s).map((o) => o.textContent), ['Mean (SD)']);
   s.options[0].selected = true;
   s.dispatchEvent(new env.win.Event('change'));
   assert.deepEqual(env.sent[0].value.values, { stats: ['n', 'mean_sd'] });
