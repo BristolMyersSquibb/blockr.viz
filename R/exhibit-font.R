@@ -93,13 +93,6 @@ board_options.table_block <- function(x, ...) {
                                      NextMethod())
 }
 
-#' @exportS3Method blockr.core::board_options
-board_options.summarize_table_block <- function(x, ...) {
-  blockr.core::combine_board_options(new_exhibit_font_option(),
-                                     new_download_footer_option(),
-                                     NextMethod())
-}
-
 # --- what a split table reports ----------------------------------------------
 
 # A table that could not be kept on one slide, signalled as a classed message

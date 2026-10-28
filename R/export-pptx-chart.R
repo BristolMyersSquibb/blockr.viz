@@ -57,21 +57,41 @@ html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
 
   htmltools::tags$img(
     class = "blockr-exhibit-img",
-    src = paste0("data:image/png;base64,", gsub(
-      "\n", "", jsonlite::base64_enc(readBin(f, "raw", file.size(f))),
-      fixed = TRUE
-    )),
+    src = png_data_uri(readBin(f, "raw", file.size(f))),
     style = "max-width:100%;height:auto;display:block;"
   )
 }
 
-# A new slide with `make(w, h)` placed centred below `top`, scaled to fill the
-# slide while keeping the aspect of `size` (width and height in inches). The
-# fit is capped at `cap` and multiplied by `scale`.
-pptx_place_fitted <- function(doc, ctx, make, size, top, title = NULL,
-                              scale = 1, cap = Inf) {
-  fit <- min((ctx$width - 0.8) / size$width,
-             (ctx$height - top - 0.4) / size$height, cap) * scale
+# PNG bytes as a data URI. base64_enc() wraps at 80 columns and a data URI
+# with newlines does not load, so the newlines are removed.
+#' @noRd
+png_data_uri <- function(png) {
+  paste0("data:image/png;base64,",
+         gsub("\n", "", jsonlite::base64_enc(png), fixed = TRUE))
+}
+
+# How much a capture is scaled to fit a box in inches, keeping its aspect.
+# The browser composes it at canvas_capture_ratio() device pixels per CSS
+# pixel, at least 2, so it may grow to twice its on-screen size and stay
+# sharp; no further.
+#' @noRd
+capture_fit <- function(x, max_width = NULL, max_height = NULL) {
+  fit <- min(
+    if (is.null(max_width)) Inf else max_width / x$width,
+    if (is.null(max_height)) Inf else max_height / x$height,
+    2
+  )
+  if (is.finite(fit)) fit else 1
+}
+
+# The box below `top` a picture is fitted into: the slide less its margins.
+pptx_fit_box <- function(ctx, top) {
+  list(width = ctx$width - 0.8, height = ctx$height - top - 0.4)
+}
+
+# A new slide with `make(w, h)` placed centred below `top`, `size` (width and
+# height in inches) scaled by `fit`.
+pptx_place_fitted <- function(doc, ctx, make, size, top, title = NULL, fit) {
   w <- size$width * fit
   h <- size$height * fit
   officer::ph_with(
@@ -124,8 +144,11 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
         fill <= 0) {
     fill <- 1
   }
-  pptx_place_fitted(doc, ctx, function(w, h) x, gg_exhibit_size(x), top,
-                    if (slide_title) title, scale = fill)
+  size <- gg_exhibit_size(x)
+  box <- pptx_fit_box(ctx, top)
+  fit <- min(box$width / size$width, box$height / size$height) * fill
+  pptx_place_fitted(doc, ctx, function(w, h) x, size, top,
+                    if (slide_title) title, fit = fit)
 }
 
 # A chart the browser drew, as one slide.
@@ -150,13 +173,13 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
     1.1
   }
 
-  # The capture was drawn at pixel ratio 2, so it may grow to twice its size
-  # and no further.
+  box <- pptx_fit_box(ctx, top)
   pptx_place_fitted(
     doc, ctx,
     function(w, h) {
       officer::external_img(chart_capture_file(x), width = w, height = h)
     },
-    x[c("width", "height")], top, if (slide_title) title, cap = 2
+    x[c("width", "height")], top, if (slide_title) title,
+    fit = capture_fit(x, box$width, box$height)
   )
 }
