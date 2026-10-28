@@ -264,6 +264,9 @@ interface TableStructure {
   base: number;
   /** The deepest section level. */
   levels: number;
+  /** Whether a row heads a group that folds (its chevron hangs left of its
+   * label). */
+  folds: boolean;
 }
 
 /** An item of the drawn body: a section header or a row. */
@@ -298,6 +301,9 @@ interface TableGridFlags {
   cls?: string;
   attrs?: Record<string, string>;
   stubCls?: string;
+  /** A child row starts on its folding parent's label edge (the groups
+   * layout); without it a child is one step in (a structured table). */
+  flush?: boolean;
   /** Draw every row, never a window (a picture). */
   all?: boolean;
 }
@@ -445,10 +451,11 @@ interface VizTableNamespace {
     th(model: TableModel, r: number, c: number,
        f: { sortable: boolean; foldAll: boolean; axis?: (c: TableCol) => string }): string;
     td(c: TableCol, i: number): string;
+    indentSteps(st: TableStructure, i: number, flush?: boolean): number;
     section(m: TableModel, s: number,
             o: { shut: boolean; fold: boolean; extra: string }): string;
     row(m: TableModel, st: TableStructure, i: number,
-        o: { last: boolean; shut: boolean; extra: string; stubCls?: string;
+        o: { last: boolean; shut: boolean; extra: string; stubCls?: string; flush?: boolean;
              cell?(c: TableCol, i: number): string | null }): string;
     foot(m: TableModel, axis: (c: TableCol) => string): string;
   };

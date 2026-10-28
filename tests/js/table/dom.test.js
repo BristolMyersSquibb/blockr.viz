@@ -226,11 +226,30 @@ test('an indented row folds the rows under it', () => {
   const t = mount(payload({ data: m }));
   const parent = t.$('tr.vz-table-indent-toggle');
   assert.ok(parent.classList.contains('vz-table-bold'));
-  assert.match(t.$$('tbody tr')[1].children[0].getAttribute('style'), /padding-left:calc\(40px/);
+  // A structured table keeps a child one step inside its parent's label.
+  assert.equal(t.$$('tbody tr')[1].children[0].getAttribute('style'), '--vz-indent:1');
   t.click(parent.querySelector('.vz-table-indent-btn'));
   assert.deepEqual(t.stubs(), ['Cardiac', 'Skin']);
   t.click(t.$('tr.vz-table-indent-toggle .vz-table-indent-btn'));
   assert.equal(t.stubs().length, 4);
+});
+
+test('indent steps: in groups a child takes its folding parent\'s label edge; one step per real level', () => {
+  const { V } = loadTable();
+  const steps = (st, flush) => st.indent.map((_, i) => V.table.html.indentSteps(st, i, flush));
+  // SOC > term > subject, every parent folding.
+  const folds = { indent: [0, 1, 2, 2, 1, 0], base: 0, levels: 0, folds: true,
+                  toggle: [true, true, false, false, false, false] };
+  // Groups (flush, as 0.2 drew it): the term under a SOC starts on the SOC's
+  // label, the subjects on the term's; a leaf term on its SOC's label too.
+  assert.deepEqual(steps(folds, true), [0, 1, 1, 1, 0, 0]);
+  // A structured table keeps each child one step in, folds or not.
+  assert.deepEqual(steps(folds, false), [0, 1, 2, 2, 1, 0]);
+  assert.deepEqual(steps({ ...folds, folds: false, toggle: folds.toggle.map(() => false) }, true),
+                   [0, 1, 2, 2, 1, 0]);
+  // Rows of a second section level are a step in.
+  assert.deepEqual(steps({ indent: [0, 1], base: 0, levels: 2, folds: false, toggle: [false, false] }),
+                   [1, 2]);
 });
 
 test('a bold stub header keeps its class; leaves without sorting are not sortable', () => {

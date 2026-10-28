@@ -290,6 +290,13 @@ test('a restored selection opens the parents of its rows, and nothing else', () 
   assert.deepEqual(u.$$('tbody tr.vz-table-row').map((r) => r.children[0].textContent), ['Cardiac', 'Skin']);
 });
 
+test('nested groups: a child label starts on its parent\'s label edge', () => {
+  const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  // No indent step anywhere: the parents' chevrons hang left of the shared edge.
+  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.children[0].getAttribute('style')),
+                   [null, null, null, null, null]);
+});
+
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   t.click(t.$('th[data-col-index="1"]'));

@@ -90,7 +90,7 @@
     }
     const base = indent && n ? Math.min(...indent) : 0;
     const levels = secs.length ? Math.max(...secs.map((x) => x.level)) : 0;
-    return { blk, path, indent, toggle, base, levels };
+    return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
   /**
@@ -502,7 +502,7 @@
                              m.sections[next.s].level === 1);
       return H.row(m, /** @type {TableStructure} */ (this._st), i,
                    { last, shut: this.shutRows.has(i), extra: h.rowClass ? h.rowClass(i) : '',
-                     stubCls: this.flags.stubCls, cell: h.cell });
+                     stubCls: this.flags.stubCls, flush: this.flags.flush, cell: h.cell });
     }
 
     /** The fold-all button follows the folds: open all, or fold all. */

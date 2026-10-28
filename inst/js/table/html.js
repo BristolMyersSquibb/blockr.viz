@@ -11,7 +11,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const esc = V.util.esc;
 
-  const INDENT_PX = 16;
   const CHEV = '<svg class="vz-table-chev" viewBox="0 0 24 24" fill="none" ' +
     'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -123,23 +122,37 @@
   }
 
   /**
+   * How many indent steps row `i`'s label takes: one per level below the
+   * shallowest row and per section level past the first. With `flush` (the
+   * groups layout, as 0.2 drew it) a row under a folding parent takes one
+   * fewer, so it starts on its parent's label edge, right after the
+   * parent's chevron; a structured table keeps its child one step in.
+   * @param {TableStructure} st @param {number} i @param {boolean} [flush]
+   */
+  function indentSteps(st, i, flush) {
+    const depth = st.indent ? st.indent[i] - st.base : 0;
+    const under = flush && st.folds && depth > 0 && !st.toggle[i] ? 1 : 0;
+    return depth - under + Math.max(0, st.levels - 1);
+  }
+
+  /**
    * The stub cell: indented under its sections and its parent rows, with
-   * the fold button of an indented group and the row tint.
+   * the fold button of an indented group and the row tint. The indent goes
+   * to CSS as a number of steps (`--vz-indent`), which each layout turns
+   * into its own padding (indentSteps()).
    * @param {TableModel} m
    * @param {TableStructure} st
    * @param {number} i
    * @param {boolean} shut
    * @param {string} [cls] The layout's own classes for the stub.
+   * @param {boolean} [flush] See indentSteps().
    */
-  function stub(m, st, i, shut, cls) {
+  function stub(m, st, i, shut, cls, flush) {
     const c = m.cols[/** @type {number} */ (m.stub)];
-    const pad = (st.indent ? st.indent[i] - st.base : 0) + Math.max(0, st.levels - 1);
+    const steps = indentSteps(st, i, flush);
     /** @type {string[]} */
     const style = [];
-    if (pad > 0) {
-      style.push('padding-left:calc(' + (24 + pad * INDENT_PX) +
-                 'px + var(--blockr-card-inset, 0px))');
-    }
+    if (steps > 0) style.push('--vz-indent:' + steps);
     const tint = m.rows && m.rows.tint ? m.rows.tint[i] : null;
     if (tint) style.push('box-shadow:inset 3px 0 0 0 ' + tint);
     const d = c.disp[i];
@@ -158,7 +171,7 @@
    * @param {TableModel} m
    * @param {TableStructure} st
    * @param {number} i
-   * @param {{ last: boolean, shut: boolean, extra: string, stubCls?: string,
+   * @param {{ last: boolean, shut: boolean, extra: string, stubCls?: string, flush?: boolean,
    *           cell?: (c: TableCol, i: number) => string | null }} o
    */
   function row(m, st, i, o) {
@@ -174,7 +187,7 @@
     let out = '<tr class="' + cls.join(' ') + '" data-i="' + i + '" data-indent="' + ind + '">';
     m.cols.forEach((c, j) => {
       const own = j === m.stub || !o.cell ? null : o.cell(c, i);
-      out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls) : own != null ? own : td(c, i);
+      out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls, o.flush) : own != null ? own : td(c, i);
     });
     return out + '</tr>';
   }
@@ -194,5 +207,5 @@
   }
 
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, foot };
+  V.table.html = { th, td, section, row, foot, indentSteps };
 })();

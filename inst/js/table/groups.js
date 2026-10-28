@@ -147,7 +147,7 @@
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
-               cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', attrs };
+               cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', flush: true, attrs };
     }
 
     /** A card draws its column's mark, without the value it prints itself. */
