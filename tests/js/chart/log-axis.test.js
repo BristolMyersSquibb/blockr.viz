@@ -89,7 +89,7 @@ test('a line takes y_transform and ignores x_transform; an area ignores both', (
 
 test('a guide line at or below zero is left out and counted', () => {
   const { o, opt } = build({ type: 'line', x: 'YEAR', y: 'GDP', series: 'CTRY', y_transform: 'log10',
-                             y_lines: [{ value: 0, label: null }, { value: 1000, label: null }] });
+                             value_lines: [{ value: 0, label: null }, { value: 1000, label: null }] });
   const ml = opt.series.find((s) => s.markLine).markLine.data;
   assert.strictEqual(ml.length, 1);
   assert.strictEqual(o.labelNote, 'Log scale: 3 values at or below zero not shown.');

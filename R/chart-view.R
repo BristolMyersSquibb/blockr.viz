@@ -49,7 +49,7 @@ chart_view <- function(kit, src) {
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(viz_values(state), d, src$kinds())
+    cols <- chart_needed_cols(viz_values(state), d)
     d[, cols, drop = FALSE]
   })
 
@@ -66,7 +66,7 @@ chart_view <- function(kit, src) {
       hist = src$hist()$edges,
       scales = shiny_json(dd_scales_config(
         scale_map(), v$type, color = v$color,
-        group = chart_category(v, src$kinds()), data = d
+        group = chart_category(v), data = d
       )),
       palette = as.list(dd_palette()),
       theme = board_theme()
@@ -77,12 +77,11 @@ chart_view <- function(kit, src) {
 
 # The columns the payload carries: the mapped ones, and those a reader can
 # switch a role to from the sentence, so the switch needs no new payload.
-chart_needed_cols <- function(v, d, kinds) {
+chart_needed_cols <- function(v, d) {
   # An aggregated chart draws its category and the column it aggregates; a
   # count aggregates none.
-  axes <- if ((v$type %||% "bar") %in% setdiff(CHART_AGGREGATED_TYPES,
-                                               CHART_DISTRIBUTION_TYPES)) {
-    c(chart_category(v, kinds), chart_value_col(v, kinds))
+  axes <- if ((v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
+    c(chart_category(v), chart_value_col(v))
   } else if (identical(v$type, "histogram")) {
     c(v$x, if (length(v$x)) chart_bin_col(v$x))
   } else {
@@ -94,7 +93,7 @@ chart_needed_cols <- function(v, d, kinds) {
     v$ref_min, v$ref_max,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",
                                                "onset")) v$sort_by,
-    if (identical(v$x, "AVISIT")) "AVISITN"
+    if ("AVISIT" %in% c(v$x, chart_category(v))) "AVISITN"
   )
   if (length(v$subtitle) && grepl("@", v$subtitle, fixed = TRUE)) {
     needed <- c(needed, names(column_kinds(d)))
@@ -123,11 +122,10 @@ chart_titles <- function(spec, v, d, auto, specs) {
 chart_exhibit <- function(kit, src, view) {
   function() {
     v <- viz_values(kit$state)
-    kinds <- src$kinds()
     data <- chart_xlsx_frame(
-      src$plain(), chart_type = v$type, group = chart_category(v, kinds),
+      src$plain(), chart_type = v$type, group = chart_category(v),
       color = v$color, facet = v$facet, func = v$func,
-      value = chart_value_col(v, kinds), na_group = v$missing
+      value = chart_value_col(v), na_group = v$missing
     )
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
@@ -144,14 +142,16 @@ chart_exhibit <- function(kit, src, view) {
   }
 }
 
-# The aggregated column of an aggregated chart: the axis opposite the
-# category. NULL for a count.
-chart_value_col <- function(v, kinds) {
-  cat <- chart_category(v, kinds)
-  if (is.null(cat) || identical(v$func %||% "count", "count")) {
+# The aggregated column of an aggregated chart: `value`, NULL for a count.
+# A boxplot or point range always reads it.
+chart_value_col <- function(v) {
+  type <- v$type %||% "bar"
+  if (!type %in% CHART_AGGREGATED_TYPES ||
+        (!type %in% CHART_DISTRIBUTION_TYPES &&
+           identical(v$func %||% "count", "count"))) {
     return(NULL)
   }
-  if (identical(cat, v$x)) v$y else v$x
+  v$value
 }
 
 # What the Excel download holds: one row per mark for the aggregated types

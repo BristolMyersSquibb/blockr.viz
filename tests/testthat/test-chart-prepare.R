@@ -154,7 +154,7 @@ test_that("a control the user has not touched shows what the script says", {
 
 test_that("script and values round-trip through block state", {
   blk <- new_chart_block(
-    y = "Species",
+    category = "Species",
     func = "count",
     script = "n <- 5\nutils::head(data, n)",
     script_values = list(n = 3)
@@ -172,7 +172,7 @@ test_that("script and values round-trip through block state", {
 
 
 test_that("script is externally controllable but may be empty", {
-  blk <- new_chart_block(y = "Species", func = "count")
+  blk <- new_chart_block(category = "Species", func = "count")
   for (nm in c("script", "script_values")) {
     expect_true(nm %in% blockr.core::external_ctrl_vars(blk))
     # No script is the default, and a state field that is empty and NOT in
@@ -197,7 +197,7 @@ test_that("the gear's textarea writes the script, and the band writes its knobs"
   # The browser may send a script only where the option allows it.
   withr::local_options(blockr.viz.browser_script = TRUE)
   blk <- new_chart_block(
-    y = "Species",
+    category = "Species",
     func = "count",
     script = "n <- 6\nutils::head(data, n)"
   )
@@ -232,7 +232,7 @@ test_that("the gear's textarea writes the script, and the band writes its knobs"
 
 test_that("the block's expression carries the script and the filter together", {
   blk <- new_chart_block(
-    y = "Species",
+    category = "Species",
     func = "count",
     drill = "Species",
     script = "dplyr::mutate(data, ratio = Sepal.Length / Sepal.Width)"

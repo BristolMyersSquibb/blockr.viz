@@ -39,7 +39,7 @@ srv_run <- function(blk, code) {
 }
 
 test_that("a setting goes out without rows, changed data with them", {
-  blk <- new_chart_block(type = "bar", x = "arm")
+  blk <- new_chart_block(type = "bar", category = "arm")
   srv_run(blk, function(session, expr, visit) {
     first <- srv_payload(expr)
     expect_false(is.null(first[["data"]]))
@@ -53,7 +53,7 @@ test_that("a setting goes out without rows, changed data with them", {
 })
 
 test_that("a panel visit sends nothing new and keeps the expr object", {
-  blk <- new_chart_block(type = "bar", x = "arm", drill = "arm")
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm")
   srv_run(blk, function(session, expr, visit) {
     chart_input_click(expr, arm = "A")
     session$flushReact()
@@ -105,7 +105,7 @@ test_that("a panel visit or a setting does not refit the band or the smoother", 
 test_that("a highlight is one column and its values", {
   blk <- new_chart_block(highlight = list())
   expect_null(blockr.core:::initial_block_state(blk)$highlight)
-  blk <- new_chart_block(type = "bar", x = "arm",
+  blk <- new_chart_block(type = "bar", category = "arm",
                          highlight = list(arm = "A"))
   expect_identical(blockr.core:::initial_block_state(blk)$highlight,
                    list(arm = "A"))
@@ -116,7 +116,7 @@ test_that("a highlight is one column and its values", {
   expect_warning(
     blk <- blockr.core::blockr_deser(
       structure(list(), class = "chart_block"),
-      list(payload = list(type = "bar", x = "arm",
+      list(payload = list(type = "bar", category = "arm",
                           highlight = list(arm = "A", id = "S1")),
            constructor = list(version = "0.3.0"))
     ),
@@ -139,7 +139,7 @@ test_that("a click on a histogram bin filters x inside the bin", {
 })
 
 test_that("a drill target gets every click and the chart holds none", {
-  blk <- new_chart_block(type = "bar", x = "arm", drill = "arm",
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm",
                          drill_target = "vf1")
   sends <- new.env(parent = emptyenv())
   sends$n <- 0L
@@ -200,7 +200,7 @@ test_that("a deck asks a live chart for a picture and collects the reply", {
   url <- paste0("data:image/png;base64,",
                 gsub("\n", "", jsonlite::base64_enc(readBin(f, "raw",
                                                             file.size(f)))))
-  blk <- new_chart_block(type = "bar", x = "arm")
+  blk <- new_chart_block(type = "bar", category = "arm")
   srv_run(blk, function(session, expr, visit) {
     root <- session$rootScope()
     sent <- list()
@@ -251,7 +251,7 @@ test_that("the board's ECharts theme option reaches the chart", {
                fixed = TRUE)
   expect_match(ui, "purple-passion", fixed = TRUE)
 
-  blk <- new_chart_block(type = "bar", x = "arm")
+  blk <- new_chart_block(type = "bar", category = "arm")
   srv_run(blk, function(session, expr, visit) {
     expect_identical(srv_payload(expr)$derived$theme, "default")
   })

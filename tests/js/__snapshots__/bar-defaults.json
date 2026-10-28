@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "y": null,
-  "x": null,
+  "category": null,
+  "value": null,
   "orientation": "horizontal",
   "func": "count"
  },
@@ -29,7 +29,7 @@
   "legend": null,
   "status": "",
   "empty": [
-   "Pick Y to plot."
+   "Pick Category to plot."
   ],
   "grid": {
    "single": false,

@@ -19,7 +19,7 @@ const TITLES = {
 const setup = (opts = {}) => {
   const env = loadGear(opts);
   const m = mountGear(env);
-  m.gear.update(payload({ type: 'bar', x: 'ARM', func: 'count', title: 'Count of {@x}',
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count', title: 'Count of {@x}',
                           value_labels: false }, { derived: { titles: TITLES } }));
   return Object.assign(env, m);
 };
@@ -143,7 +143,7 @@ test('the line under a field is marked when it would only repeat the field', () 
     .classList.contains('is-same');
   assert.equal(same('title'), false, 'a slot: the line says what it prints');
   assert.equal(same('caption'), false, 'an empty field: the line shows the auto text');
-  t.gear.update(payload({ type: 'bar', x: 'ARM', func: 'count', title: 'Adverse events',
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count', title: 'Adverse events',
                           value_labels: false }, { derived: { titles: TITLES } }));
   assert.equal(same('title'), true, 'plain text: nothing to add');
 });

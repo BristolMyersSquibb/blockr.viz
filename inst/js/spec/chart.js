@@ -23,11 +23,65 @@
       "slot": true,
       "ctrl": true
     },
+    "category": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["bar", "waterfall", "pie", "treemap", "boxplot", "pointrange"]
+      },
+      "gear": {
+        "group": "Mapping",
+        "control": "column",
+        "label": "Category"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "value": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["bar", "waterfall", "pie", "treemap", "boxplot", "pointrange"]
+      },
+      "gear": {
+        "group": "Mapping",
+        "control": "column",
+        "label": "Value"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "func": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "count",
+      "values": ["count", "count_distinct", "pct_distinct", "mean", "median", "sum", "min", "max", "identity"],
+      "nullable": false,
+      "applies": {
+        "only": ["bar", "waterfall", "pie", "treemap"]
+      },
+      "gear": {
+        "group": "Mapping",
+        "control": "select",
+        "label": "Aggregate",
+        "labels": ["Count", "Count distinct", "% of panel", "Mean", "Median", "Sum", "Min", "Max", "None (as is)"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "x": {
       "type": {
         "name": "column"
       },
       "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area", "band", "histogram", "gantt"]
+      },
       "gear": {
         "group": "Mapping",
         "control": "column",
@@ -58,31 +112,12 @@
       },
       "nullable": true,
       "applies": {
-        "except": ["histogram"]
+        "only": ["scatter", "line", "area", "band", "gantt"]
       },
       "gear": {
         "group": "Mapping",
         "control": "column",
         "label": "Y"
-      },
-      "slot": true,
-      "ctrl": true
-    },
-    "func": {
-      "type": {
-        "name": "enum"
-      },
-      "default": "count",
-      "values": ["count", "count_distinct", "pct_distinct", "mean", "median", "sum", "min", "max", "identity"],
-      "nullable": false,
-      "applies": {
-        "only": ["bar", "waterfall", "pie", "treemap"]
-      },
-      "gear": {
-        "group": "Mapping",
-        "control": "select",
-        "label": "Aggregate",
-        "labels": ["Count", "Count distinct", "% of panel", "Mean", "Median", "Sum", "Min", "Max", "None (as is)"]
       },
       "slot": true,
       "ctrl": true
@@ -403,7 +438,7 @@
       "slot": true,
       "ctrl": true
     },
-    "y_lines": {
+    "value_lines": {
       "type": {
         "name": "numbers"
       },
@@ -776,7 +811,7 @@
     "waterfall_totals": {
       "type": {
         "name": "values",
-        "of": "x"
+        "of": "category"
       },
       "nullable": true,
       "applies": {

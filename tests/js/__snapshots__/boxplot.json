@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "boxplot",
-  "x": "AVISIT",
-  "y": "AVAL",
+  "category": "AVISIT",
+  "value": "AVAL",
   "orientation": "vertical",
   "drill": "auto"
  },

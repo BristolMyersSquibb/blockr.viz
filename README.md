@@ -37,7 +37,8 @@ board <- new_dock_board(
   blocks = c(
     data = new_static_block(cars),
     chart = new_chart_block(
-      type = "bar", x = "gear", y = "mpg", func = "mean", drill = "auto"
+      type = "bar", category = "gear", value = "mpg", func = "mean",
+      drill = "auto"
     ),
     table = new_table_block(rowname = "name", columns = c("mpg", "hp", "wt"))
   ),

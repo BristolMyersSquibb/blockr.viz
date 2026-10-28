@@ -12,13 +12,13 @@ const TITLES = { title: { parts: [{ text: 'ARM', arg: 'x' }] }, args: { x: 'ARM'
 test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env, { title: 'Chart settings' });
-  m.gear.update(payload({ type: 'bar', x: 'ARM' }));
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical' }));
   const nav = m.el.querySelector('.blockr-tray-nav');
   assert.ok(nav);
   const tabs = Array.from(nav.querySelectorAll('.blockr-tray-nav__tab'));
   assert.deepEqual(tabs.map((t) => t.textContent), ['Data', 'Sort', 'Format', 'Titles', 'Interaction']);
   tabs[2].click();
-  m.gear.update(payload({ type: 'bar', x: 'SEX' }));
+  m.gear.update(payload({ type: 'bar', category: 'SEX', orientation: 'vertical' }));
   const cur = m.el.querySelector('.blockr-tray-nav__tab.is-current');
   assert.equal(cur.textContent, 'Format', 'a re-render keeps the group');
   // A scatter has no Sort group.
@@ -30,15 +30,15 @@ test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav,
 test('with blockr.ui the controls are its widgets and still send', noUi, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env);
-  m.gear.update(payload({ type: 'bar', x: 'ARM', color: 'SEX', position: 'stack' }));
-  const x = row(m.el, 'x');
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', color: 'SEX', position: 'stack' }));
+  const x = row(m.el, 'category');
   assert.ok(x.querySelector('.blockr-select'), 'Blockr.Select');
   x.querySelector('.blockr-select__control').click();
   const opt = Array.from(env.doc.querySelectorAll('.blockr-select__option'))
     .find((o) => o.getAttribute('data-value') === 'AGE');
   assert.ok(opt);
   opt.click();
-  assert.deepEqual(lastSet(env).values, { x: 'AGE' });
+  assert.deepEqual(lastSet(env).values, { category: 'AGE' });
   const seg = row(m.el, 'position').querySelector('.blockr-segmented');
   seg.querySelectorAll('button')[2].click();
   assert.deepEqual(lastSet(env).values, { position: 'fill' });
@@ -55,7 +55,7 @@ test('with blockr.ui the controls are its widgets and still send', noUi, () => {
 async function cycles(env, n) {
   for (let i = 0; i < n; i++) {
     const m = mountGear(env);
-    m.gear.update(payload({ type: 'bar', x: 'ARM', title: 'T', color: 'SEX' },
+    m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', title: 'T', color: 'SEX' },
       { derived: { titles: TITLES } }));
     m.gear.set({ func: 'mean' });
     const inp = row(m.el, 'title').querySelector('input');

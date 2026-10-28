@@ -51,11 +51,6 @@ norm_ctor_input <- function(block, args, version) {
   st
 }
 
-norm_kinds <- function(d) {
-  if (!is.data.frame(d) && is.list(d) && is.data.frame(d$df)) d <- d$df
-  viz_column_kinds(d)
-}
-
 test_that("chart_normalize() reproduces the recorded chart states", {
   record_register_tbl()
   withr::local_options(blockr.viz.facet_cols = NULL,
@@ -69,8 +64,6 @@ test_that("chart_normalize() reproduces the recorded chart states", {
     r <- readRDS(f)
     if (!all(c("initial", "steps") %in% names(r))) next
     sc <- record_scenarios()[[nm]]
-    kinds <- norm_kinds(record_data(sc$data %||% "df"))
-    # The constructor runs before the data exists: no column kinds.
     got <- chart_normalize(norm_ctor_input("chart", sc$args %||% list(),
                                            "0.3.0"))
     expect_identical(norm_comparable(got), norm_comparable(restore(r$initial)),
@@ -79,14 +72,13 @@ test_that("chart_normalize() reproduces the recorded chart states", {
     for (i in seq_along(sc$steps)) {
       st <- sc$steps[[i]]
       want <- restore(r$steps[[i + 1L]]$state)
-      if (identical(st$kind, "data")) kinds <- norm_kinds(record_data(st$name))
       if (!i %in% NORM_SKIP[[nm]]) {
         input <- if (identical(st$kind, "set")) {
           norm_apply_set(spec, prev, st$args)
         } else {
           want
         }
-        expect_identical(norm_comparable(chart_normalize(input, prev, kinds)),
+        expect_identical(norm_comparable(chart_normalize(input, prev)),
                          norm_comparable(want),
                          label = paste(nm, "step", i, st$kind))
         n <- n + 1L
@@ -115,8 +107,6 @@ test_that("table_normalize() reproduces the recorded table states", {
     restore_new <- function(s) {
       suppressWarnings(legacy_restore("table", s, VIZ_REWRITE_VERSION))
     }
-    kinds <- norm_kinds(tryCatch(table_golden_data(sc$data %||% "df"),
-                                 error = function(e) NULL))
     args <- sc$args %||% list()
     args$.fn <- NULL
     got <- table_normalize(norm_ctor_input("table", args, "0.3.0"))
@@ -127,7 +117,7 @@ test_that("table_normalize() reproduces the recorded table states", {
     prev <- want
     for (i in seq_along(r$steps)) {
       want <- restore_new(r$steps[[i]]$state)
-      got <- table_normalize(want, prev, kinds)
+      got <- table_normalize(want, prev)
       expect_identical(norm_sort_resolved(norm_comparable(got)),
                        norm_sort_resolved(norm_comparable(want)),
                        label = paste(nm, "step", i))
@@ -138,28 +128,30 @@ test_that("table_normalize() reproduces the recorded table states", {
   expect_gt(n, 20L)
 })
 
-test_that("an oriented chart keeps orientation only against the inference", {
-  kinds <- c(cat = "character", num = "numeric")
-  base <- list(type = "bar", x = "num", y = "cat", func = "mean")
-  expect_null(chart_normalize(c(base, orientation = "horizontal"),
-                              kinds = kinds)$orientation)
-  expect_identical(chart_normalize(c(base, orientation = "vertical"),
-                                   kinds = kinds)$orientation, "vertical")
-  # Without the data the inference cannot be checked: the setting stays.
-  expect_identical(chart_normalize(c(base, orientation = "horizontal"))$orientation,
+test_that("an oriented chart keeps orientation only against its type's way", {
+  base <- list(type = "bar", category = "cat", value = "num", func = "mean")
+  expect_null(chart_normalize(c(base, orientation = "horizontal"))$orientation)
+  expect_identical(chart_normalize(c(base, orientation = "vertical"))$orientation,
+                   "vertical")
+  box <- list(type = "boxplot", category = "cat", value = "num")
+  expect_null(chart_normalize(c(box, orientation = "vertical"))$orientation)
+  expect_identical(chart_normalize(c(box, orientation = "horizontal"))$orientation,
                    "horizontal")
 })
 
-test_that("a horizontal bar switched to a waterfall keeps its category", {
-  kinds <- c(cat = "character", num = "numeric")
-  prev <- list(type = "bar", x = "num", y = "cat", func = "sum")
+test_that("a type switch keeps the category and the value", {
+  prev <- list(type = "bar", category = "cat", value = "num", func = "sum",
+               orientation = "vertical")
   got <- chart_normalize(utils::modifyList(prev, list(type = "waterfall")),
-                         prev, kinds)
-  expect_identical(c(got$x, got$y), c("cat", "num"))
-  # Unless the change set the columns too.
-  set <- utils::modifyList(prev, list(type = "waterfall", x = "cat2"))
-  got <- chart_normalize(set, prev, kinds)
-  expect_identical(c(got$x, got$y), c("cat2", "cat"))
+                         prev)
+  expect_identical(c(got$category, got$value), c("cat", "num"))
+  expect_null(got$orientation)
+  # A scatter's x and y sit beside them, unused until the type comes back.
+  got <- chart_normalize(utils::modifyList(prev, list(type = "scatter",
+                                                      x = "a", y = "b")),
+                         prev)
+  expect_identical(c(got$category, got$value, got$x, got$y),
+                   c("cat", "num", "a", "b"))
 })
 
 test_that("a histogram has no y, orientation or sort", {
@@ -180,9 +172,11 @@ test_that("interval ends come in pairs", {
 
 test_that("the selection goes with a mapping change or a drill target", {
   sel <- list(type = "categorical", filters = list(cat = "a"))
-  prev <- list(type = "bar", x = "cat", drill = "cat", selection = sel)
+  prev <- list(type = "bar", category = "cat", drill = "cat", selection = sel)
   expect_identical(chart_normalize(prev, prev)$selection, sel)
-  expect_null(chart_normalize(utils::modifyList(prev, list(x = "grp")),
+  expect_null(chart_normalize(utils::modifyList(prev, list(category = "grp")),
+                              prev)$selection)
+  expect_null(chart_normalize(utils::modifyList(prev, list(value = "num")),
                               prev)$selection)
   expect_null(chart_normalize(c(prev, drill_target = "f1"), prev)$selection)
   tprev <- list(layout = "groups", by = "grp", drill = "auto",
@@ -217,14 +211,4 @@ test_that("data order sorts ascending", {
 test_that("free text settings are trimmed", {
   got <- chart_normalize(list(type = "bar", unit = " kg ", drill_table = " t "))
   expect_identical(c(got$unit, got$drill_table), c("kg", "t"))
-})
-
-test_that("column kinds come from the data", {
-  d <- data.frame(n = 1:2, s = c("a", "b"), f = factor(c("a", "b")),
-                  d = as.Date(c("2020-01-01", "2020-01-02")),
-                  l = c(TRUE, FALSE), stringsAsFactors = FALSE)
-  expect_identical(viz_column_kinds(d),
-                   c(n = "numeric", s = "character", f = "factor",
-                     d = "date", l = "logical"))
-  expect_null(viz_column_kinds(NULL))
 })

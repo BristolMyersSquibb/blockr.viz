@@ -27,16 +27,14 @@ workspace).
 - **Public names follow ggplot2 and blockr.ggplot** where the concept is the
   same, use one name per concept across the viz blocks, and use no
   abbreviations.
-- **`x` and `y` are the screen axes for every type**, as in ggplot2 3.3+. A
-  horizontal bar is `y = "category", x = "amount"`. For an aggregated type
-  the category axis holds the column `func` groups by and the value axis the
-  column it aggregates. Which way the chart lies is inferred: with one column
-  and a row count that column is the category; with two, a numeric column
-  beside a non-numeric one is the value; otherwise vertical.
-- **`orientation` stays as an override**, `NULL` by default, as ggplot2 keeps
-  `orientation = NA`. It is needed only when both columns are non-numeric (a
-  distinct count of a character id by a category), where the data cannot
-  say which one is the category.
+- **Aggregated types map `category` and `value`** (changed on 2026-10-28;
+  0.3.0 made `x` and `y` the screen axes for every type, which made the
+  gear's orientation switch read the category as the value). This is the
+  block-config-ui decision of June 2026 and what boards before 0.3.0 saved
+  as `group` and `value`. `orientation` only turns the marks, `NULL` being
+  horizontal for a bar and vertical for a boxplot or pointrange. `x` and
+  `y` stay for scatter, line, area and band, the histogram (`x`) and the
+  gantt (`x`, `xend`, `y`). `y_lines` is `value_lines` again.
 - **The internals keep their names.** The R server and the JavaScript
   (`inst/js/chart/`) still use `chart_type`, `group`/`value`/`orientation`,
   `bar_mode` and so on. `R/chart-args.R` translates at the constructor, the
@@ -51,11 +49,10 @@ workspace).
 | Before 0.3.0 | Now | Note |
 |---|---|---|
 | `chart_type` | `type` | As in blockr.ggplot. |
-| `group`, `value` | `x`, `y` | Screen axes, see above. `value = ".count"` becomes `func = "count"` with only the category column set. |
+| `group`, `value` | `category`, `value` | See above. `value = ".count"` is a row count, `value` unset. |
 | `bar_mode` = stacked / grouped / percent | `position` = `"stack"` / `"dodge"` / `"fill"` | Values as in blockr.ggplot. |
 | `tt_fields` | `tooltip` | |
 | `line_width_mult`, `dot_size_mult` | `line_width`, `point_size` | Still relative, 1 = default. |
-| `value_lines` | `y_lines` | Pairs with `x_lines`. |
 | `lo`, `hi` | `ymin`, `ymax` | Interval columns, drawn as error bars on a scatter or a line (a forest plot). |
 | `band_id`, `count_col` | `id` | One column that identifies an individual. |
 | `count_on` | `show_n` | |
@@ -79,8 +76,8 @@ Unchanged: `func`, `color`, `facet`, `series`, `xend`, `label`, `drill`,
 
 - Saved boards: `blockr_deser.chart_block()` translates the old payload
   keys with `chart_legacy_args()`, silently. A bar saved without an
-  orientation was drawn horizontal and a boxplot vertical; the translation
-  keeps that, and keeps the orientation explicit for distinct counts.
+  orientation was drawn horizontal and a boxplot vertical, which is what
+  `orientation = NULL` means now.
 - Code: the constructor still accepts the old names through `...`,
   translates them with the same function and warns. The old names never
   reach the block's attributes, so a re-save writes the new names.

@@ -8,19 +8,19 @@
 #' value. Each does one thing: `color` colors, `series` splits into series,
 #' `facet` splits into panels, `label` writes on the marks.
 #'
-#' @section The axes:
-#' `x` and `y` are the screen axes for every type, as in ggplot2. The
-#' aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange) count
-#' or aggregate rows per category: one of `x` and `y` is the category, the
-#' other the column `func` aggregates, and which way the chart lies follows
-#' from that. `x = "class"` draws vertical bars of counts, `y = "class"`
-#' horizontal ones, and `x = "sales", y = "region", func = "sum"` horizontal
-#' bars of summed sales. With one column and a count that column is the
-#' category; with two, a numeric column beside a non-numeric one is the
-#' value; otherwise the chart is vertical. `orientation` decides when the
-#' data cannot, for instance a distinct count of one text column by another.
-#' For pie and treemap `x` is the slice and `y` the value; for a gantt `x`
-#' and `xend` are the interval and `y` the lane; a histogram bins `x`.
+#' @section Mapping:
+#' The aggregated types (bar, waterfall, pie, treemap, boxplot, pointrange)
+#' draw one mark per value of `category`. A bar, waterfall, pie or treemap
+#' aggregates `value` with `func`; `func = "count"` counts rows and needs no
+#' `value`. A boxplot or pointrange shows the spread of `value`.
+#' `orientation` only turns the marks: bars lie horizontal and boxes stand
+#' vertical unless it says otherwise, and `category` stays the category
+#' either way.
+#'
+#' `x` and `y` are the screen axes of the types that draw one mark per row
+#' (scatter, line, area, band). A histogram bins `x`; a gantt draws `x` to
+#' `xend` on one lane per value of `y`. An aggregated type mapped with `x`
+#' or `y` and no `category` is an error.
 #'
 #' `ymin` and `ymax` name intervals in pairs, the first pair the outermost:
 #' bands on a line or an area, error bars on a scatter. They must name the
@@ -46,7 +46,7 @@
 #'
 #' @section Older code and boards:
 #' Argument names and values of blockr.viz before 0.3.0 (`chart_type`,
-#' `group`, `value`, `bar_mode`, `y_scale`, ...) still work in code, with a
+#' `group`, `bar_mode`, `y_scale`, ...) still work in code, with a
 #' warning, and boards saved with them restore unchanged. A value an
 #' argument does not take is an error. Any other name is kept as a block
 #' attribute, for blockr.core and other packages (blockr.dock's `visible`).
@@ -59,9 +59,13 @@
 #' @return A chart block (class `chart_block`), for a blockr board.
 #' @seealso [new_table_block()]
 #' @examples
-#' # Aggregated: mean sepal length per species, as vertical bars
-#' new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
+#' # Aggregated: mean sepal length per species, as horizontal bars
+#' new_chart_block(type = "bar", category = "Species", value = "Sepal.Length",
 #'                 func = "mean")
+#'
+#' # The same standing up
+#' new_chart_block(type = "bar", category = "Species", value = "Sepal.Length",
+#'                 func = "mean", orientation = "vertical")
 #'
 #' # One mark per row: a scatter colored by species, filtering on click
 #' new_chart_block(type = "scatter", x = "Sepal.Length", y = "Petal.Length",
@@ -71,7 +75,7 @@
 #' new_chart_block(type = "line", x = "date", y = "unemploy")
 #'
 #' # Distribution: a box per category
-#' new_chart_block(type = "boxplot", x = "cyl", y = "mpg")
+#' new_chart_block(type = "boxplot", category = "cyl", value = "mpg")
 #'
 #' # Histogram: one numeric column, cut into bins
 #' new_chart_block(type = "histogram", x = "mpg", bins = 10)
@@ -81,8 +85,8 @@
 #'
 #' if (interactive()) {
 #'   blockr.core::serve(
-#'     new_chart_block(type = "bar", x = "Species", y = "Sepal.Length",
-#'                     func = "mean", drill = "auto"),
+#'     new_chart_block(type = "bar", category = "Species",
+#'                     value = "Sepal.Length", func = "mean", drill = "auto"),
 #'     data = list(data = iris)
 #'   )
 #' }

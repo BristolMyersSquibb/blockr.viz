@@ -5,10 +5,10 @@
 # generic at load; without blockr.ai, or with a version that does not export
 # config_effect, registration is a no-op.
 
-# Column-valued roles of the chart block, in display order. y_lines and
+# Column-valued roles of the chart block, in display order. value_lines and
 # x_lines hold line positions, not column names, and are reported separately.
-dd_chart_roles <- c("x", "y", "xend", "color", "facet", "series", "label",
-                    "drill", "ymin", "ymax", "id")
+dd_chart_roles <- c("category", "value", "x", "y", "xend", "color", "facet",
+                    "series", "label", "drill", "ymin", "ymax", "id")
 
 # The first element of `v` as a string; "" for NULL.
 first_chr <- function(v) as.character(v %||% "")[1]
@@ -31,7 +31,7 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
     }
   }
   # Helper line positions are echoed as given.
-  for (r in c("y_lines", "x_lines")) {
+  for (r in c("value_lines", "x_lines")) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }

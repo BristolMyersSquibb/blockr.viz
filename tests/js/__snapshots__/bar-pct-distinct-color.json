@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "y": "AETERM",
-  "x": "USUBJID",
+  "category": "AETERM",
+  "value": "USUBJID",
   "orientation": "horizontal",
   "func": "pct_distinct",
   "color": "ARM",
@@ -127,7 +127,6 @@
         "fontSize": 12,
         "formatter": "[fn]"
        },
-       "max": 1,
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -138,7 +137,8 @@
          "color": "#e5e7eb",
          "type": "dashed"
         }
-       }
+       },
+       "max": 1
       },
       "yAxis": {
        "type": "category",

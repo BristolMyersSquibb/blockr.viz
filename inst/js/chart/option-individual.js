@@ -91,7 +91,7 @@
         : refText(v, nm);
       refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
     });
-    /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(cfg.y_lines)).forEach(({ value: v, label: nm }) => {
+    /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(cfg.value_lines)).forEach(({ value: v, label: nm }) => {
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });

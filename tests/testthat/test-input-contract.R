@@ -110,7 +110,7 @@ test_that("every renderer block's dat_valid enforces the shared contract", {
 
 test_that("chart expr is byte-identical for plain data frames", {
   df <- data.frame(grp = c("A", "B"), val = c(1, 2), stringsAsFactors = FALSE)
-  blk <- new_chart_block(y = "grp")
+  blk <- new_chart_block(category = "grp")
 
   testServer(blk$expr_server, args = list(data = reactive(df)), {
     # Golden: the exact pre-contract emitted code, no coercion wrapper.
@@ -131,10 +131,9 @@ test_that("chart expr is byte-identical for plain data frames", {
 
 test_that("chart expr coerces a table-producing input to the plain df", {
   blk <- new_chart_block(
-    x = "n",
-    y = "grp",
-    func = "sum",
-    orientation = "horizontal"
+    category = "grp",
+    value = "n",
+    func = "sum"
   )
   obj <- new_contract_composed(ann_df)
 
@@ -150,7 +149,7 @@ test_that("chart expr coerces a table-producing input to the plain df", {
 })
 
 test_that("chart mapped to a coercion-dropped column still emits a valid expr", {
-  blk <- new_chart_block(y = ".label")
+  blk <- new_chart_block(category = ".label")
   obj <- new_contract_composed(ann_df)
   testServer(blk$expr_server, args = list(data = reactive(obj)), {
     # `.label` is an annotation column, dropped by the coercion -- so the

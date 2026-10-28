@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "y": "AVISIT",
-  "x": "AVAL",
+  "category": "AVISIT",
+  "value": "AVAL",
   "orientation": "horizontal",
   "func": "mean",
   "drill": "auto"

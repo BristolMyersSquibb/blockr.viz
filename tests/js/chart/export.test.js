@@ -13,7 +13,7 @@ const assert = require('node:assert');
 const D = require('./drive');
 const { F } = require('../cases');
 
-const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
+const BAR = { type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto' };
 
 const LABEL_H = 20;   // facet label height in the stub layout
 const LEGEND_H = 24;  // legend band height in the stub layout
@@ -203,7 +203,7 @@ test('compose: reaching for the download sends the picture as <id>_capture', asy
 });
 
 test('compose: a chart with nothing drawn says so', async () => {
-  const { c } = prepare({ ...BAR, y: 'NOPE' }, { width: 300 });
+  const { c } = prepare({ ...BAR, category: 'NOPE' }, { width: 300 });
   let err = null;
   c.env.win.Blockr.viz.chart.picture(c.block).then(() => { err = 'drawn'; }, (e) => { err = e.message; });
   await c.clock.advanceAsync(0);
@@ -244,7 +244,7 @@ test('capture: a picture once the panels finished rendering, one reply, the host
 
 test('capture: a chart that cannot draw answers at once with why', async () => {
   const { c } = prepare(BAR, { width: 800 });
-  c.env.handlers['blockr-viz:capture'](captureMsg(c.env, { ...BAR, y: 'NOPE' }, { req: 'tok-2' }));
+  c.env.handlers['blockr-viz:capture'](captureMsg(c.env, { ...BAR, category: 'NOPE' }, { req: 'tok-2' }));
   await c.clock.advanceAsync(6000);
   const r = replies(c);
   assert.strictEqual(r.length, 1);
@@ -257,7 +257,7 @@ test('capture: a chart that cannot draw answers at once with why', async () => {
 test('capture: two requests in flight get their own replies', async () => {
   const { c } = prepare(BAR, { width: 800 });
   c.env.handlers['blockr-viz:capture'](captureMsg(c.env, BAR, { req: 'a', width: 300, height: 200 }));
-  c.env.handlers['blockr-viz:capture'](captureMsg(c.env, { type: 'pie', x: 'AESEV' },
+  c.env.handlers['blockr-viz:capture'](captureMsg(c.env, { type: 'pie', category: 'AESEV' },
                                                   { req: 'b', width: 500, height: 300 }));
   assert.strictEqual(hosts(c), 2);
   await c.clock.advanceAsync(1500);

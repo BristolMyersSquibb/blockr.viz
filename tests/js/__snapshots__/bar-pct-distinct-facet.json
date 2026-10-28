@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "y": "AETERM",
-  "x": "USUBJID",
+  "category": "AETERM",
+  "value": "USUBJID",
   "orientation": "horizontal",
   "func": "pct_distinct",
   "facet": "SEX",
@@ -102,7 +102,6 @@
         "fontSize": 12,
         "formatter": "[fn]"
        },
-       "max": 1,
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -114,6 +113,7 @@
          "type": "dashed"
         }
        },
+       "max": 1,
        "boundaryGap": [
         0,
         "12%"
@@ -340,7 +340,6 @@
         "fontSize": 12,
         "formatter": "[fn]"
        },
-       "max": 1,
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
@@ -352,6 +351,7 @@
          "type": "dashed"
         }
        },
+       "max": 1,
        "boundaryGap": [
         0,
         "12%"

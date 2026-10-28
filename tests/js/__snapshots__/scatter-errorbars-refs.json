@@ -17,7 +17,7 @@
   "x": "ADY",
   "y": "AVAL",
   "drill": "auto",
-  "y_lines": [
+  "value_lines": [
    {
     "value": 25,
     "label": null
@@ -116,13 +116,13 @@
         "fontSize": 12,
         "hideOverlap": true
        },
-       "axisTick": {
-        "show": false
-       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
         }
+       },
+       "axisTick": {
+        "show": false
        },
        "splitLine": {
         "lineStyle": {
@@ -138,7 +138,6 @@
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 46,
-       "nameRotate": 90,
        "nameTextStyle": {
         "color": "#6b7280",
         "fontSize": 12
@@ -147,13 +146,14 @@
         "color": "#6b7280",
         "fontSize": 12
        },
-       "axisTick": {
-        "show": false
-       },
        "axisLine": {
         "lineStyle": {
          "color": "#d1d5db"
         }
+       },
+       "nameRotate": 90,
+       "axisTick": {
+        "show": false
        },
        "splitLine": {
         "lineStyle": {

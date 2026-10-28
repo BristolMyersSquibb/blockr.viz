@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "waterfall",
-  "x": "AVISIT",
-  "y": "CHG",
+  "category": "AVISIT",
+  "value": "CHG",
   "func": "sum",
   "drill": "auto",
   "waterfall_totals": [

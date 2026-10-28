@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "boxplot",
-  "x": "AVISIT",
-  "y": null,
+  "category": "AVISIT",
+  "value": null,
   "orientation": "vertical"
  },
  "derived": null,

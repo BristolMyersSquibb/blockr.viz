@@ -10,10 +10,17 @@
 # The default method's `str()` of the constructor's 50-odd arguments is mostly
 # NULL defaults, so this reports what is set, in chart vocabulary.
 
-# Column-valued arguments, in the order a reader wants them.
-chart_mapping_args <- function() {
-  c("x", "y", "xend", "series", "color", "facet", "label", "ymin", "ymax",
-    "id", "tooltip")
+# Column-valued arguments, in the order a reader wants them. An aggregated
+# chart's `x`/`y` (left from a scatter it once was) are unused, and so are a
+# scatter's `category`/`value`.
+chart_mapping_args <- function(type = NULL) {
+  roles <- if ((type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
+    c("category", "value")
+  } else {
+    c("x", "y", "xend")
+  }
+  c(roles, "series", "color", "facet", "label", "ymin", "ymax", "id",
+    "tooltip")
 }
 
 chart_ctor_defaults <- function() {
@@ -72,7 +79,7 @@ describe_block.chart_block <- function(x, board, id, ..., state = NULL) {
     return(NextMethod())
   }
   defaults <- chart_ctor_defaults()
-  maps <- chart_set_args(state, chart_mapping_args())
+  maps <- chart_set_args(state, chart_mapping_args(state$type))
 
   c(
     sprintf("Block id: %s", id),
@@ -163,22 +170,16 @@ chart_value_line <- function(state, defaults) {
         is.null(func)) {
     return(NULL)
   }
-  # With both columns set and no orientation, which one is aggregated depends
-  # on the column types, which this method does not see.
-  if (length(state$x) && length(state$y) && is.null(state$orientation) &&
-        !identical(func, "count") && typ %in% CHART_ORIENTED_TYPES) {
-    return(sprintf(
-      "Aggregation: %s of the numeric one of x (%s) and y (%s), by the other",
-      func, state$x, state$y
-    ))
-  }
-  roles <- chart_roles_internal(typ, state$x, state$y, func,
-                                state$orientation)
-  group <- coal_chr(roles$group, "nothing")
-  if (is.null(roles$value) || identical(as.character(roles$value), ".count")) {
+  hist <- identical(typ, "histogram")
+  group <- coal_chr(
+    if (hist && length(state$x)) chart_bin_col(state$x) else state$category,
+    "nothing"
+  )
+  value <- if (!hist) state$value
+  if (identical(func, "count") || is.null(value)) {
     return(sprintf("Aggregation: %s (row counts) by %s", func, group))
   }
-  sprintf("Aggregation: %s of %s by %s", func, roles$value, group)
+  sprintf("Aggregation: %s of %s by %s", func, value, group)
 }
 
 # The one piece of state that is neither creation-time config nor visible in
@@ -215,8 +216,9 @@ chart_chrome_lines <- function(state) {
 chart_other_lines <- function(state, defaults) {
   # `selection` is runtime interaction state, not creation-time config; it has
   # its own lines above.
-  known <- c(chart_mapping_args(), "selection", "title", "subtitle", "caption",
-             "type", "orientation", "position", "func")
+  known <- c(chart_mapping_args("bar"), chart_mapping_args("scatter"),
+             "selection", "title", "subtitle", "caption", "type",
+             "orientation", "position", "func")
   rest <- setdiff(intersect(names(state), names(defaults)), known)
   changed <- Filter(function(nm) !identical(state[[nm]], defaults[[nm]]), rest)
   if (!length(changed)) {

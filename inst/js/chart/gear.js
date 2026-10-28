@@ -30,14 +30,12 @@
     return NS.isLineType(type) ? 'Auto, the clicked series' : 'Auto, the selected point';
   };
 
-  /** The keys of an aggregated chart's category and aggregated column.
-   * @param {Record<string, any>} v @param {VizColumn[]} meta */
-  const roleKeys = (v, meta) => {
-    const type = String(v.type || 'bar');
-    if (NS.model.FIXED.includes(type) || type === 'histogram') return { cat: 'x', val: 'y' };
-    const lie = v.orientation || NS.model.inferLie(v, meta);
-    return lie === 'horizontal' ? { cat: 'y', val: 'x' } : { cat: 'x', val: 'y' };
-  };
+  // Aggregations that read any column (they count distinct values); the others need numbers.
+  const ANY_COLUMN = ['count_distinct', 'pct_distinct'];
+
+  /** Whether an aggregated chart only counts rows, so `value` is unused.
+   * @param {string} type @param {Record<string, any>} v */
+  const counts = (type, v) => !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
 
   /** @param {any} view The chart view: its rows, column meta and derived. @returns {VizGearHost} */
   function host(view) {
@@ -54,23 +52,23 @@
     return {
       required(key, v) {
         const type = String(v.type || 'bar');
+        if (type === 'histogram') return key === 'x';
         if (NS.familyOf(type) !== 'aggregated') return key === 'x' || key === 'y';
-        const r = roleKeys(v, meta());
-        if (key === r.cat) return true;
-        const counts = !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
-        return key === r.val && type !== 'histogram' && !counts;
+        return key === 'category' || (key === 'value' && !counts(type, v));
       },
       label(key, v) {
         const type = String(v.type || 'bar');
         if (type === 'band' && key === 'x') return 'Timeline';
         if (type === 'band' && key === 'y') return 'Value';
-        if (type === 'bar' && key === 'y_lines') return 'Reference lines';
+        if (key === 'value_lines' && NS.familyOf(type) === 'aggregated' &&
+            type !== 'histogram') return 'Value lines';
         if (type === 'bar' && key === 'x_lines') return 'Category lines';
         if (key === 'band_size' && v.band_window === 'fixed') return 'Half-width (x units)';
         return null;
       },
       visible(key, v) {
         if (key === 'percent_of') return v.func === 'pct_distinct';
+        if (key === 'value') return !counts(String(v.type || 'bar'), v);
         if (key === 'drill_target' || key === 'drill_table') return !!v.drill;
         return true;
       },
@@ -78,7 +76,8 @@
       columns(key, v, cols) {
         const type = String(v.type || 'bar');
         const num = ['ref_min', 'ref_max', 'ymin', 'ymax'].includes(key) ||
-          (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram');
+          (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram') ||
+          (key === 'value' && !ANY_COLUMN.includes(String(v.func || 'count')));
         return num ? cols.filter((c) => numeric(c.name)) : cols;
       },
       choices(key, v) {
@@ -90,7 +89,7 @@
         }
         if (key === 'facet_cols') return FACET_COLS.map((n) => ({ value: n, label: n + ' per row' }));
         if (key === 'sort_by') return sortChoices(type, meta());
-        if (key === 'waterfall_totals') return levels(String(v.x ?? ''));
+        if (key === 'waterfall_totals') return levels(String(v.category ?? ''));
         if (key === 'highlight') {
           const h = v.highlight ? Object.keys(/** @type {object} */ (v.highlight))[0] : null;
           return h ? levels(h) : [];
@@ -100,7 +99,7 @@
       placeholder(key) {
         if (key === 'unit') return 'e.g. CHF';
         if (key === 'title') return 'e.g. AEs by {ARM}';
-        if (key === 'subtitle') return 'e.g. {@func} of {label(@y)}[, by {label(@color)}]';
+        if (key === 'subtitle') return 'e.g. {@func} of {label(@value)}[, by {label(@color)}]';
         if (key === 'caption') return 'e.g. {filters} or N = {n} records';
         return null;
       }

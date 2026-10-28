@@ -97,7 +97,7 @@ test_that("input_display_attrs reads label, subtitle and caption from raw input"
 test_that("chart block round-trips the three title tiers through state", {
   df <- data.frame(ARM = c("Placebo", "Drug A"), AVAL = c(1, 2))
   blk <- new_chart_block(
-    y = "ARM",
+    category = "ARM",
     title = "AEs by {ARM}",
     subtitle = "",
     caption = NULL
@@ -311,21 +311,21 @@ test_that("an empty label(@arg) is still that argument's slot", {
 
 test_that("reference lines print as a list and drop their clause when unset", {
   d <- data.frame(a = 1)
-  tpl <- "Count[, target {@y_lines}]"
+  tpl <- "Count[, target {@value_lines}]"
   spec <- viz_block_spec("chart")
 
   set <- title_template_parts(
-    tpl, d, args = viz_slot_values(spec, list(y_lines = c(40, 32.5)))
+    tpl, d, args = viz_slot_values(spec, list(value_lines = c(40, 32.5)))
   )
   expect_identical(paste0(vapply(set, `[[`, "", "text"), collapse = ""),
                    "Count, target 40, 32.5")
-  expect_identical(set[[2L]]$arg, "y_lines")
+  expect_identical(set[[2L]]$arg, "value_lines")
 
   unset <- title_template_parts(
-    tpl, d, args = viz_slot_values(spec, list(y_lines = NULL))
+    tpl, d, args = viz_slot_values(spec, list(value_lines = NULL))
   )
   expect_identical(unset[[1L]]$text, "Count")
-  expect_identical(attr(unset, "offers"), "y_lines")
+  expect_identical(attr(unset, "offers"), "value_lines")
 })
 
 test_that("a slot's choice list narrows its menu, not its word", {

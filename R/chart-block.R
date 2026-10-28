@@ -4,10 +4,12 @@
 new_chart_block <- function(
     type = "bar",
     ...,
+    category = NULL,
+    value = NULL,
+    func = "count",
     x = NULL,
     xend = NULL,
     y = NULL,
-    func = "count",
     color = NULL,
     facet = NULL,
     series = NULL,
@@ -26,7 +28,7 @@ new_chart_block <- function(
     line_width = 1,
     point_size = 1,
     connect = "straight",
-    y_lines = NULL,
+    value_lines = NULL,
     x_lines = NULL,
     ymin = NULL,
     ymax = NULL,
@@ -72,6 +74,7 @@ new_chart_block <- function(
   old <- setdiff(names(dots), VIZ_CORE_BLOCK_ARGS)
   args <- legacy_ctor_args("chart", c(given, dots[old]))
   values <- viz_check(spec, args)
+  if (!"ctor" %in% names(dots)) chart_check_roles(values)
   # In code a mismatched pair is a mistake (chart-normalize.R's header).
   if (length(values$ymin) != length(values$ymax)) {
     stop("`ymin` and `ymax` must name the same number of columns.",
@@ -95,6 +98,20 @@ new_chart_block <- function(
   # into every board.
   for (nm in old) attr(res, nm) <- NULL
   res
+}
+
+# In code, an aggregated type mapped with `x`/`y` (the ggplot2 habit) and no
+# `category` is a mistake worth naming. A restored board may hold `x`/`y`
+# from a scatter it once was, so the check is for code only.
+chart_check_roles <- function(values) {
+  type <- values$type %||% "bar"
+  if (type %in% CHART_AGGREGATED_TYPES && is.null(values$category) &&
+        (length(values$x) || length(values$y))) {
+    stop("new_chart_block(): a ", type, " takes `category` and `value`; ",
+         "`x` and `y` are for scatter, line, area, band, histogram and ",
+         "gantt.", call. = FALSE)
+  }
+  invisible()
 }
 
 chart_ui <- function(id) {

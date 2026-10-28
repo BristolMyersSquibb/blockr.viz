@@ -14,13 +14,13 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "boxplot",
-  "x": "AVISIT",
-  "y": "AVAL",
+  "category": "AVISIT",
+  "value": "AVAL",
   "orientation": "vertical",
   "summary": "mean_sd",
   "whiskers": "min_max",
   "drill": "auto",
-  "y_lines": [
+  "value_lines": [
    {
     "value": 30,
     "label": null

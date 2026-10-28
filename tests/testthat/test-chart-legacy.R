@@ -1,5 +1,4 @@
-# Arguments of blockr.viz < 0.3.0 and the public <-> internal translation
-# (R/chart-args.R).
+# Arguments of blockr.viz < 0.3.0 (R/legacy.R, R/legacy-chart.R).
 
 chart_state <- function(blk, data = data.frame(a = 1)) {
   out <- NULL
@@ -21,17 +20,17 @@ test_that("old names in code are translated, with a warning", {
     "from an earlier blockr.viz"
   )
   st <- chart_state(blk)
-  # A bar saved without an orientation was drawn horizontal.
+  # A bar saved without an orientation was drawn horizontal, as it is now.
   expect_equal(st$type, "bar")
-  expect_null(st$x)
-  expect_equal(st$y, "ARM")
+  expect_equal(st$category, "ARM")
+  expect_null(st$value)
   expect_null(st$orientation)
 
   st <- chart_state(suppressWarnings(new_chart_block(
     chart_type = "boxplot", group = "ARM", value = "AVAL"
   )))
-  expect_equal(st[c("type", "x", "y")],
-               list(type = "boxplot", x = "ARM", y = "AVAL"))
+  expect_equal(st[c("type", "category", "value")],
+               list(type = "boxplot", category = "ARM", value = "AVAL"))
 
   st <- chart_state(suppressWarnings(new_chart_block(
     chart_type = "bar", group = "ARM", value = "AVAL", func = "mean",
@@ -40,9 +39,9 @@ test_that("old names in code are translated, with a warning", {
     ctrl_target = "flt", ctrl_table = "adsl", pct_of = "group",
     value_lines = 2, line_width_mult = 2, dot_size_mult = 0.5
   )))
-  expect_equal(st$x, "ARM")
-  expect_equal(st$y, "AVAL")
-  expect_null(st$orientation)
+  expect_equal(st$category, "ARM")
+  expect_equal(st$value, "AVAL")
+  expect_equal(st$orientation, "vertical")
   expect_equal(st$position, "dodge")
   expect_equal(st$tooltip, "SEX")
   expect_equal(st$show_n, "axis")
@@ -51,7 +50,7 @@ test_that("old names in code are translated, with a warning", {
   expect_equal(st$drill_target, "flt")
   expect_equal(st$drill_table, "adsl")
   expect_equal(st$percent_of, "category")
-  expect_equal(st$y_lines, 2)
+  expect_equal(st$value_lines, 2)
   expect_equal(st$line_width, 2)
   expect_equal(st$point_size, 0.5)
 })
@@ -90,7 +89,7 @@ test_that("a cumulative bar is a waterfall, a radar a bar", {
     baseline = "cumulative"
   )))
   expect_equal(st$type, "waterfall")
-  expect_equal(st[c("x", "y")], list(x = "step", y = "v"))
+  expect_equal(st[c("category", "value")], list(category = "step", value = "v"))
 
   w <- capture_warnings(
     new_chart_block(chart_type = "radar", group = "g", color = "c")
@@ -99,15 +98,14 @@ test_that("a cumulative bar is a waterfall, a radar a bar", {
   expect_error(new_chart_block(type = "radar"), "must be one of")
 })
 
-test_that("a distinct count keeps the orientation it was drawn with", {
-  # Two non-numeric columns: the data cannot say which one is the category.
+test_that("a distinct count keeps its roles and its orientation", {
   st <- chart_state(suppressWarnings(new_chart_block(
     chart_type = "bar", group = "AEDECOD", value = "USUBJID",
     func = "count_distinct"
   )))
-  expect_equal(st$y, "AEDECOD")
-  expect_equal(st$x, "USUBJID")
-  expect_equal(st$orientation, "horizontal")
+  expect_equal(st$category, "AEDECOD")
+  expect_equal(st$value, "USUBJID")
+  expect_null(st$orientation)
 })
 
 test_that("old names never come back on a re-save", {
@@ -137,8 +135,9 @@ test_that("a board saved with 0.2.x restores silently", {
   expect_no_warning(blk <- blockr.core::blockr_deser(ser))
   st <- chart_state(blk, data.frame(region = c("N", "S"),
                                     total_sales = c(1, 2)))
-  expect_equal(st$x, "total_sales")
-  expect_equal(st$y, "region")
+  expect_equal(st$category, "region")
+  expect_equal(st$value, "total_sales")
+  expect_null(st$orientation)
   expect_equal(st$func, "sum")
 })
 
@@ -151,26 +150,25 @@ test_that("a board saved with direct_labels restores as legend = marks", {
   expect_null(blockr.core::blockr_ser(blk)$payload$direct_labels)
 })
 
-test_that("the orientation is inferred from x and y", {
-  kinds <- c(sales = "numeric", AVAL = "numeric", class = "character",
-             region = "character", ARM = "character")
-  inf <- function(type, x, y, func = "count") {
-    chart_infer_lie(list(type = type, x = x, y = y, func = func), kinds)
-  }
-  # one column: the category for a count, the value otherwise
-  expect_equal(inf("bar", "class", NULL), "vertical")
-  expect_equal(inf("bar", NULL, "class"), "horizontal")
-  expect_equal(inf("bar", NULL, "sales", "sum"), "vertical")
-  expect_equal(inf("boxplot", NULL, "AVAL"), "vertical")
-  # two: the numeric one is the value
-  expect_equal(inf("bar", "sales", "region", "sum"), "horizontal")
-  expect_equal(inf("bar", "region", "sales", "sum"), "vertical")
-  expect_equal(inf("boxplot", "AVAL", "ARM"), "horizontal")
-  # none: vertical, for every type
-  expect_equal(inf("bar", NULL, NULL), "vertical")
-  expect_equal(inf("pointrange", NULL, NULL), "vertical")
+test_that("an aggregated type in code takes category and value, not x and y", {
+  expect_error(new_chart_block(type = "bar", y = "class"),
+               "takes `category` and `value`")
+  expect_error(new_chart_block(type = "boxplot", x = "g", y = "v"),
+               "takes `category` and `value`")
+  # A scatter's x and y left in the state are fine beside a category, and a
+  # restore never asks.
+  expect_s3_class(new_chart_block(type = "bar", category = "class", x = "a"),
+                  "chart_block")
+  ser <- blockr.core::blockr_ser(new_chart_block(type = "scatter", x = "a",
+                                                 y = "b"))
+  ser$payload$type <- "bar"
+  expect_s3_class(blockr.core::blockr_deser(ser), "chart_block")
 })
 
+test_that("value = \".count\" means a row count", {
+  st <- chart_state(new_chart_block(category = "g", value = ".count"))
+  expect_null(st$value)
+})
 
 test_that("title slots take the public names, and a saved old one is renamed", {
   blk <- suppressWarnings(blockr.core::blockr_deser(
@@ -180,6 +178,6 @@ test_that("title slots take the public names, and a saved old one is renamed", {
          constructor = list(version = "0.2.9"))
   ))
   st <- blockr.core:::initial_block_state(blk)
-  expect_identical(st$subtitle, "{@type}: {label(@y)}")
-  expect_identical(st$y, "region")
+  expect_identical(st$subtitle, "{@type}: {label(@category)}")
+  expect_identical(st$category, "region")
 })

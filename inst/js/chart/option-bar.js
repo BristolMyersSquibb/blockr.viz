@@ -187,7 +187,7 @@
           valueLabels, valuePx, bandPx: k.bandPx, ink, measure
         })
       : 0;
-    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.y_lines, ink);
+    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.value_lines, ink);
     // A histogram's bins are ranges, not categories to name.
     if (!m.histogram) {
       NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_ranges, ink);
@@ -405,7 +405,7 @@
       for (const d of delta) if (d && d.label) w = Math.max(w, measure(d.label.formatter));
       labelRight = Math.max(0, Math.ceil(w / 2 - 10));
     }
-    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.y_lines, ink);
+    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink);
     return {
       panelH: 350 + xlab.bottom,
       xFit,

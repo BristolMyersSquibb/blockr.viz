@@ -47,6 +47,13 @@ REFERENCE_FORMALS <- list(
 # Reference arguments the rewrite drops (spec-table.md section 4).
 DROPPED_ARGS <- list(chart = character(), table = "max_height")
 
+# The aggregated types map `category` and `value`, as before 0.3.0, and the
+# value-axis lines are `value_lines` again (behaviour-changes.md row 31).
+# The reference's names were never released, so LEGACY_NAMES has no row.
+ADDED_ARGS <- list(chart = c("category", "value"), table = character())
+REFERENCE_RENAMES <- list(chart = c(y_lines = "value_lines"),
+                          table = character())
+
 # Defaults the rewrite changes on purpose (spec-table.md section 1).
 CHANGED_DEFAULTS <- list(chart = character(), table = c("color", "sort_dir"))
 
@@ -66,6 +73,9 @@ current_name <- function(block, old) {
   spec <- block_spec(block)
   if (old %in% names(spec$args)) {
     return(old)
+  }
+  if (old %in% names(REFERENCE_RENAMES[[block]])) {
+    return(REFERENCE_RENAMES[[block]][[old]])
   }
   hit <- LEGACY_NAMES[LEGACY_NAMES$block == block & LEGACY_NAMES$old == old, ]
   if (!nrow(hit)) {
@@ -115,7 +125,8 @@ for (block in names(REFERENCE_FORMALS)) {
     known <- vapply(names(REFERENCE_FORMALS[[block]]), function(old) {
       current_name(block, old) %||% NA_character_
     }, "")
-    expect_setequal(names(spec$args), stats::na.omit(known))
+    expect_setequal(names(spec$args),
+                    c(stats::na.omit(known), ADDED_ARGS[[block]]))
   })
 
   test_that(paste("the", block, "spec keeps the reference defaults"), {

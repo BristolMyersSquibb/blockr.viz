@@ -10,11 +10,11 @@ test_that("a chart's effect names its bindings and flags columns it lacks", {
   skip_if_not_installed("blockr.ai")
   skip_if_not("config_effect" %in% getNamespaceExports("blockr.ai"))
   ok <- effect(new_chart_block(), list(
-    type = "bar", x = "cyl", color = "gear", func = "mean", drill = "auto",
-    y_lines = list(10, 20)
+    type = "bar", category = "cyl", value = "mpg", color = "gear",
+    func = "mean", drill = "auto", value_lines = list(10, 20)
   ))
-  expect_match(ok, "^bar chart configured: x=cyl, color=gear")
-  expect_match(ok, "y_lines=10,20", fixed = TRUE)
+  expect_match(ok, "^bar chart configured: category=cyl, value=mpg, color=gear")
+  expect_match(ok, "value_lines=10,20", fixed = TRUE)
   expect_match(ok, "agg=mean", fixed = TRUE)
   expect_no_match(ok, "INVALID|drill OFF")
 
@@ -26,7 +26,7 @@ test_that("a chart's effect names its bindings and flags columns it lacks", {
   expect_match(bad, "Available columns: mpg", fixed = TRUE)
 
   box <- effect(new_chart_block(), list(
-    type = "boxplot", x = "cyl", y = "mpg", summary = "mean_sd",
+    type = "boxplot", category = "cyl", value = "mpg", summary = "mean_sd",
     whiskers = "min_max", connect_centers = TRUE
   ))
   expect_match(box, "summary=mean_sd, whiskers=min_max, connect_centers=on",

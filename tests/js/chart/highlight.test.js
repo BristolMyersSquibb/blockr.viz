@@ -36,7 +36,7 @@ const look = (c) => ({ cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, th
 const H = (col, ...values) => ({ [col]: values.map((value) => ({ value, label: null })) });
 
 const bar = (cfg) => {
-  const c = C.model.settings({ type: 'bar', y: 'country', x: 'x', orientation: 'horizontal',
+  const c = C.model.settings({ type: 'bar', category: 'country', value: 'x', orientation: 'horizontal',
                                func: 'sum', drill: 'auto', sort_by: 'alpha', sort_dir: 'asc',
                                ...cfg }, COLUMNS);
   const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });

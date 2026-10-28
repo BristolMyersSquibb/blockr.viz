@@ -48,7 +48,7 @@ test('"number" prints up to two decimals, as the table block', () => {
 test('bar value labels and ticks follow the fixed decimals', () => {
   const rows = [{ G: 'a', V: 4.3587 }, { G: 'b', V: 1.2 }];
   const cols = [{ name: 'G', class: 'string' }, { name: 'V', class: 'number' }];
-  const c = C.model.settings({ type: 'bar', y: 'G', x: 'V', orientation: 'horizontal',
+  const c = C.model.settings({ type: 'bar', category: 'G', value: 'V', orientation: 'horizontal',
                                func: 'identity', value_labels: true, format: '2', drill: 'auto',
                                sort_by: 'alpha', sort_dir: 'asc' }, cols);
   const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: cols, cfg: c, derived });
