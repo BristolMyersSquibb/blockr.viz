@@ -1,24 +1,15 @@
 # Summary entries: the types and their marks, and each entry normalized
 # under the spec's keys (R/spec-table-summaries.R) before the engine reads it.
 
-# Row types and the displays each allows; the first is the default. `dot` is a
-# single value as a positioned point on the zero-based lane. A dist's `show`
-# is sugar over `style`, `summary` and `whiskers` (GROUPS_DIST_STYLES).
-GROUPS_ROW_TYPES <- list(
-  simple = c("bar", "number", "dot", "tile"),
-  dist = c("pointrange", "box", "text"),
-  field = "text",
-  sparkline = "sparkline",
-  spans = "interval",
-  pair = "dumbbell",
-  expr = "text",
-  custom = c("bar", "number", "dumbbell", "box", "pointrange", "text")
-)
+# The summary types, their keys, allowed values and defaults are the spec's
+# (table_summary_specs(), R/spec-table-summaries.R), read once per process.
+groups_summary_specs <- memoise0(function() table_summary_specs())
 
-# The pair row: two summaries of one group drawn as a segment, a hollow diamond
-# at `from` and a dot at `to`. `from_func` / `to_func` default to "identity"
-# and "max".
-GROUPS_PAIR_FUNCS <- c("identity", "mean", "median", "min", "max")
+# The mark of a type whose spec has no `show`: it draws one. `dot` (simple) is
+# a single value as a positioned point on the zero-based lane. A dist's `show`
+# is sugar over `style`, `summary` and `whiskers` (GROUPS_DIST_STYLES).
+GROUPS_ONE_MARK <- c(field = "text", sparkline = "sparkline",
+                     spans = "interval", pair = "dumbbell", expr = "text")
 
 # A distribution glyph is ONE mark: a centre, an optional inner range and an
 # optional outer range, drawn in a `style`:
@@ -41,8 +32,8 @@ GROUPS_MAX_LEVELS <- 15L
 # a subject id.
 GROUPS_MAX_TILE_LEVELS <- 300L
 
-# A summary entry is read under the spec's keys (R/spec-table-summaries.R).
-# The colour split's `position` is drawn as the mark's mode.
+# The colour split's `position` (the spec's values) is drawn as the mark's
+# mode.
 GROUPS_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
 
 #' Normalize a summaries list: types, required fields, `show` within the type's
@@ -74,14 +65,19 @@ groups_norm_row <- function(s, i, data = NULL) {
     is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
   }, logical(1L))]
   type <- chr_state(s$type) %||% "simple"
-  if (!type %in% names(GROUPS_ROW_TYPES)) {
+  if (!type %in% names(groups_summary_specs())) {
     return(list(err = paste0("Summary ", i, ": unknown type \"", type,
                              "\"")))
   }
-  shows <- GROUPS_ROW_TYPES[[type]]
   show_given <- chr_state(s$show)
-  show <- show_given %||% shows[[1L]]
-  if (!show %in% shows) show <- shows[[1L]]
+  r <- groups_norm_enums(s, type, i)
+  if (!is.null(r$err)) return(r)
+  s <- r$s
+  show <- if (type %in% names(GROUPS_ONE_MARK)) {
+    GROUPS_ONE_MARK[[type]]
+  } else {
+    s$show
+  }
   scope <- chr_state(s$scope) %||% "cell"
   if (!scope %in% c("cell", "pooled")) scope <- "cell"
   # Fields are group facts: always pooled (they stand outside faceting).
@@ -96,8 +92,6 @@ groups_norm_row <- function(s, i, data = NULL) {
 
   s$type <- type
   s$show <- show
-  pos <- chr_state(s[["position"]])
-  s$position <- if (!is.null(pos) && pos %in% names(GROUPS_POSITIONS)) pos
   # The tile: a square cell painted by the worst level of `fill`, else by the
   # value. Facet levels order by row count by default (commonest terms first).
   if (identical(type, "simple") && identical(show, "tile")) {
@@ -117,10 +111,28 @@ groups_norm_row <- function(s, i, data = NULL) {
   if (identical(type, "dist") && !identical(show, "text")) {
     s <- groups_norm_dist(s, show_given)
   }
-  if (identical(type, "sparkline")) s <- groups_norm_sparkline(s)
   if (identical(type, "spans")) s <- groups_norm_spans(s)
   if (identical(type, "pair")) s <- groups_norm_pair(s)
   s$name <- chr_state(s$name) %||% groups_summary_auto_name(s, data)
+  list(s = s)
+}
+
+# The type's enum keys against its spec: an unknown value is an error, as in
+# the spec check; an absent one takes the spec's default. Returns `list(s =)`
+# or `list(err =)`.
+groups_norm_enums <- function(s, type, i) {
+  args <- groups_summary_specs()[[type]]$args
+  for (nm in names(args)) {
+    a <- args[[nm]]
+    if (!identical(a$type$name, "enum")) next
+    v <- chr_state(s[[nm]])
+    if (is.null(v)) {
+      s[[nm]] <- a$default
+    } else if (!v %in% a$values) {
+      return(list(err = paste0("Summary ", i, " (", type, "): unknown `", nm,
+                               "` \"", v, "\"")))
+    }
+  }
   list(s = s)
 }
 
@@ -147,47 +159,28 @@ groups_norm_dist <- function(s, show_given) {
   style <- chr_state(s$style) %||%
     if (identical(show_given, "box")) "box" else "dot"
   if (!style %in% GROUPS_DIST_STYLES) style <- "dot"
-  inner <- chr_state(s$summary) %||% "median_q1_q3"
-  if (!inner %in% c("none", GROUPS_STATS)) inner <- "median_q1_q3"
-  outer <- chr_state(s$whiskers) %||%
+  # The spec leaves `whiskers` unset: Tukey on a box, none on a dot range.
+  s$whiskers <- s$whiskers %||%
     if (identical(show_given, "pointrange")) "none" else "tukey"
-  if (!outer %in% c("none", GROUPS_WHISKERS)) outer <- "tukey"
   s$style <- style
-  s$summary <- inner
-  s$whiskers <- outer
   s$show <- if (identical(style, "box")) "box" else "pointrange"
   s
 }
 
-# The sparkline's reference `summary` (pooled lines or bands); "none" = off.
-groups_norm_sparkline <- function(s) {
-  ref <- chr_state(s$summary) %||% "none"
-  if (!ref %in% c("none", "mean", "mean_sd", "median_q1_q3")) ref <- "none"
-  s$summary <- ref
-  s
-}
-
 # The spans row's event identity: `label` headlines each segment's tooltip,
-# `tooltip` adds columns, `size` opts into the tall exhibit form.
+# `tooltip` adds columns.
 groups_norm_spans <- function(s) {
   s$tooltip <- as.character(s$tooltip %||% character())
-  size <- chr_state(s$size) %||% "md"
-  if (!size %in% c("md", "lg")) size <- "md"
-  s$size <- size
   s$parent <- if (is.null(s$parent)) TRUE else isTRUE(s$parent)
   s
 }
 
-# The pair row: the two functions, an optional band (`ref_min` / `ref_max`,
-# number or column), one reference line (`x_lines`, a number) and a
-# `linetype` column whose non-first levels draw dashed.
+# The pair row: two summaries of one group drawn as a segment, a hollow
+# diamond at `x` and a dot at `xend`, each read by its function (`x_func`,
+# `xend_func`). An optional band (`ref_min` / `ref_max`, number or column),
+# one reference line (`x_lines`, a number) and a `linetype` column whose
+# non-first levels draw dashed.
 groups_norm_pair <- function(s) {
-  ff <- chr_state(s$x_func) %||% "identity"
-  if (!ff %in% GROUPS_PAIR_FUNCS) ff <- "identity"
-  tf <- chr_state(s$xend_func) %||% "max"
-  if (!tf %in% GROUPS_PAIR_FUNCS) tf <- "max"
-  s$x_func <- ff
-  s$xend_func <- tf
   s$ref_min <- groups_pair_bound(s$ref_min)
   s$ref_max <- groups_pair_bound(s$ref_max)
   ref <- suppressWarnings(as.numeric(unlist(s$x_lines) %||% NA_real_))[1L]

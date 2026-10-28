@@ -77,10 +77,14 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   expect_identical(groups_dist_centre_stat(dist(summary = "none",
                                               whiskers = "none")),
                    "median_q1_q3")
-  # Unknown values fall back rather than throwing: a bad style is a dot.
+  # The engine's own `style` falls back to a dot; a value the spec does not
+  # allow is an error, as in the spec check.
   expect_identical(dist(style = "banana")$style, "dot")
-  expect_identical(dist(summary = "banana")$summary, "median_q1_q3")
-  expect_identical(dist(whiskers = "banana")$whiskers, "tukey")
+  bad <- function(...) {
+    groups_norm_summaries(list(list(type = "dist", col = "DUR", ...)))$err
+  }
+  expect_match(bad(summary = "banana"), "unknown `summary` \"banana\"")
+  expect_match(bad(whiskers = "banana"), "unknown `whiskers`")
 })
 
 test_that("legacy `show` still restores the mark it always drew", {
@@ -146,7 +150,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_identical(p$plan[[2L]]$kind, "barsplit")
   expect_null(p$plan[[2L]]$lcols)
   expect_identical(p$plan[[2L]]$series, lv)
-  expect_true(all(paste0(p$plan[[2L]]$prefix, lv) %in% names(p$rows)))
+  expect_true(all(p$plan[[2L]]$scols %in% names(p$rows)))
   expect_identical(p$plan[[3L]]$levels, lv)
   # Every level of a split column is read against ONE scale.
   m <- groups_cells(p)
@@ -225,7 +229,7 @@ test_that("a split bar only stacks an additive measure", {
   # the pooled mean instead would clamp every larger arm at full width).
   expect_identical(e$kind, "barsplit")
   expect_identical(e$mode, "grouped")
-  segs <- unlist(p$rows[, paste0(e$prefix, e$series)])
+  segs <- unlist(p$rows[, e$scols])
   expect_equal(e$dmax, max(c(p$rows[[e$key]], segs), na.rm = TRUE))
   segw <- unlist(groups_cells(p)$cols[[1L]]$seg)
   expect_true(max(segw, na.rm = TRUE) <= 100)

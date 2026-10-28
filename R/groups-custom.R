@@ -151,41 +151,77 @@ groups_custom_preset <- function(mark, cols, denom) {
   )
 }
 
-#' The function's frames for every cell of `slice`, keyed by `tkeys`. `d`
-#' arrives grouped by `tkeys`. A failure is a `groups_custom_error`, turned into
-#' the table's error message by groups_prepare_summaries().
+#' Run every custom summary's function on each of its facet copies, grouped
+#' by the leaf keys and, in a nested table, by the parent: everything the fill
+#' reads (`s$.custom$cells[[<copy sid>]]`, `leaf` and `par`). A function that
+#' fails on any of them makes the summary a failed one
+#' (groups_failed_summary()), the only place a failure is detected after
+#' groups_custom_setup().
+#' @noRd
+groups_custom_runs <- function(summaries, ctx) {
+  for (i in seq_along(summaries)) {
+    s <- summaries[[i]]
+    if (is.null(s$.custom)) next
+    runs <- list()
+    for (cp in groups_summary_copies(s, i, ctx)) {
+      # The user's function sees the input's columns, not the row tag.
+      slice <- cp$slice
+      slice[[GROUPS_ROW_ID]] <- NULL
+      # A frame, or the failure's message.
+      failed <- function(x) if (!is.data.frame(x)) x$err
+      one <- list(leaf = groups_custom_cells(slice, ctx$keys, s))
+      err <- failed(one$leaf)
+      if (!is.null(ctx$parent) && is.null(err)) {
+        one$par <- groups_custom_cells(slice, ctx$parent, s)
+        err <- failed(one$par)
+      }
+      if (!is.null(err)) break
+      runs[[cp$suffix]] <- one
+    }
+    summaries[[i]] <- if (is.null(err)) {
+      s$.custom$cells <- runs
+      s
+    } else {
+      groups_failed_summary(s, err)
+    }
+  }
+  summaries
+}
+
+#' The function's frame for every cell of `slice`, keyed by `tkeys`. `d`
+#' arrives grouped by `tkeys`. A failure is `list(err =)`.
 #' @noRd
 groups_custom_cells <- function(slice, tkeys, s) {
   fail <- function(...) {
-    stop(errorCondition(paste0("Summary \"", s$name, "\": ", ...),
-                        class = "groups_custom_error"))
+    list(err = paste0("Summary \"", s$name, "\": ", ...))
   }
   g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
   r <- groups_custom_run(s$.custom$fn, g)
   if (inherits(r, "error")) {
-    fail("the function failed: ", conditionMessage(r))
+    return(fail("the function failed: ", conditionMessage(r)))
   }
   miss <- setdiff(tkeys, names(r))
   if (length(miss)) {
-    fail("the function dropped the grouping by ",
-         paste(miss, collapse = ", "), ". Keep it: add groups with ",
-         "group_by(..., .add = TRUE) and summarise with dplyr, not d$.")
+    return(fail(
+      "the function dropped the grouping by ", paste(miss, collapse = ", "),
+      ". Keep it: add groups with group_by(..., .add = TRUE) and summarise ",
+      "with dplyr, not d$."
+    ))
   }
   r
 }
 
-#' Fill a custom row's columns: the `<sid>_*` columns its preset would write.
+#' Fill a custom row's columns from its runs (groups_custom_runs()): the
+#' `<sid>_*` columns its preset would write.
 #' @noRd
-groups_custom_fill <- function(target, tkeys, slice, s, sid) {
-  # The user's function sees the input's columns, not the row tag.
-  slice[[GROUPS_ROW_ID]] <- NULL
+groups_custom_fill <- function(target, tkeys, s, sid, parent_row = FALSE) {
   cu <- s$.custom
-  cells <- groups_custom_cells(slice, tkeys, s)
+  cells <- cu$cells[[sid]][[if (parent_row) "par" else "leaf"]]
   split_on <- !is.null(s$.color)
   switch(cu$mark,
     bar = groups_cfill_bar(target, tkeys, cells, cu, sid, split_on),
     number = {
-      target[[paste0(sid, "_v")]] <- groups_custom_per(
+      target[[groups_col(sid, "v")]] <- groups_custom_per(
         target, cells, "value", groups_sum_na, tkeys
       )
       target
@@ -219,11 +255,11 @@ groups_custom_level_rows <- function(cells, cu, j) {
 }
 
 groups_cfill_bar <- function(target, tkeys, cells, cu, sid, split_on) {
-  target[[paste0(sid, "_v")]] <- groups_custom_per(target, cells, "value",
+  target[[groups_col(sid, "v")]] <- groups_custom_per(target, cells, "value",
                                                  groups_sum_na, tkeys)
   if (split_on) {
     for (j in seq_along(cu$levels)) {
-      target[[paste0(sid, "_S_", cu$levels[[j]])]] <- groups_custom_per(
+      target[[groups_split_col(sid, cu$levels[[j]])]] <- groups_custom_per(
         target, groups_custom_level_rows(cells, cu, j), "value", groups_sum_na,
         tkeys
       )
@@ -243,30 +279,30 @@ groups_cfill_text <- function(target, tkeys, cells, sid) {
     m <- rep(NA_character_, nrow(target))
   }
   m[is.na(m)] <- ""
-  target[[paste0(sid, "_t")]] <- m
+  target[[groups_col(sid, "t")]] <- m
   target
 }
 
 groups_cfill_ends <- function(target, rows, prefix, tkeys) {
   n <- nrow(target)
-  target[[paste0(prefix, "_from")]] <- groups_custom_per(target, rows, "from",
+  target[[groups_col(prefix, "from")]] <- groups_custom_per(target, rows, "from",
                                                        groups_mean_na, tkeys)
-  target[[paste0(prefix, "_to")]] <- groups_custom_per(target, rows, "to",
+  target[[groups_col(prefix, "to")]] <- groups_custom_per(target, rows, "to",
                                                      groups_mean_na, tkeys)
-  target[[paste0(prefix, "_lo")]] <- rep(NA_real_, n)
-  target[[paste0(prefix, "_hi")]] <- rep(NA_real_, n)
-  target[[paste0(prefix, "_d")]] <- rep(NA_integer_, n)
+  target[[groups_col(prefix, "lo")]] <- rep(NA_real_, n)
+  target[[groups_col(prefix, "hi")]] <- rep(NA_real_, n)
+  target[[groups_col(prefix, "d")]] <- rep(NA_integer_, n)
   target
 }
 
 groups_cfill_dumbbell <- function(target, tkeys, cells, cu, sid, split_on) {
   # The pooled pair (sort key, value label) is the mean of the cell's rows.
   target <- groups_cfill_ends(target, cells, sid, tkeys)
-  target[[paste0(sid, "_f")]] <- rep(NA_integer_, nrow(target))
+  target[[groups_col(sid, "f")]] <- rep(NA_integer_, nrow(target))
   if (split_on) {
     for (j in seq_along(cu$levels)) {
       target <- groups_cfill_ends(target, groups_custom_level_rows(cells, cu, j),
-                                paste0(sid, "_L", j), tkeys)
+                                groups_level_sid(sid, j), tkeys)
     }
   }
   target
@@ -275,7 +311,7 @@ groups_cfill_dumbbell <- function(target, tkeys, cells, cu, sid, split_on) {
 groups_cfill_put <- function(target, rows, prefix, tkeys) {
   stats <- c(bc = "mid", bl = "q1", bh = "q3", wl = "lo", wh = "hi")
   for (k in names(stats)) {
-    target[[paste0(prefix, "_", k)]] <- groups_custom_per(
+    target[[groups_col(prefix, k)]] <- groups_custom_per(
       target, rows, stats[[k]], groups_mean_na, tkeys
     )
   }
@@ -287,7 +323,7 @@ groups_cfill_dist <- function(target, tkeys, cells, cu, sid, split_on) {
   if (split_on) {
     for (j in seq_along(cu$levels)) {
       target <- groups_cfill_put(target, groups_custom_level_rows(cells, cu, j),
-                               paste0(sid, "_L", j), tkeys)
+                               groups_level_sid(sid, j), tkeys)
     }
   }
   target
@@ -301,7 +337,6 @@ groups_custom_plan <- function(entry, s, cp) {
   # A count keeps the preset's second header line (its N); the other marks'
   # would name statistics the function did not compute.
   if (!cu$mark %in% c("bar", "number")) {
-    entry[names(entry) == "sub_label"] <- NULL
     entry$sub_label <- if (!is.null(cp$level)) {
       if (is.null(cp$pop)) s$name else paste0(s$name, " \u00b7 N = ", cp$pop)
     }

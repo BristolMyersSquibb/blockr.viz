@@ -128,6 +128,7 @@ groups_prepare_summaries <- function(data, by, summaries,
     qualify = fi$qualify, n_faceted = fi$n_faceted, scale_map = scale_map,
     subject = subject
   )
+  summaries <- groups_custom_runs(summaries, ctx)
   st <- groups_build_columns(summaries, sk$leaf, sk$par_rows, ctx)
   summaries <- st$summaries
   st <- groups_primary_values(st, ctx)
@@ -449,8 +450,8 @@ groups_primary_values <- function(st, ctx) {
   # A faceted tile column is a matrix row: its sort key is the row's total
   # across the copies (a subject's AE burden), not its first term's count.
   if (identical(ps$show, "tile") && length(ps$.flevels)) {
-    stem <- sub("f[0-9]+$", "", st$primary$sid)
-    vcols <- paste0(stem, "f", seq_along(ps$.flevels), "_v")
+    stem <- groups_sid_stem(st$primary$sid)
+    vcols <- groups_col(paste0(stem, "f", seq_along(ps$.flevels)), "v")
     st$leaf$.v <- groups_tile_row_total(st$leaf, vcols)
     if (!is.null(st$par_rows)) {
       st$par_rows$.v <- groups_tile_row_total(st$par_rows, vcols)
@@ -460,7 +461,7 @@ groups_primary_values <- function(st, ctx) {
 }
 
 groups_pool_value <- function(t, tkeys, ps0, ctx, parent_row = FALSE) {
-  sid0 <- ".sP"
+  sid0 <- groups_copy_sid("P")
   t0 <- groups_fill(t, tkeys, ctx$keys, ctx$data, ps0, sid0,
                   parent_row = parent_row)
   groups_primary_value(t0, ps0, groups_primary_col(ps0, sid0))
@@ -485,9 +486,9 @@ groups_failed_summary <- function(s, msg) {
 groups_blank_summary <- function(target, s, sid) {
   n <- nrow(target)
   if (identical(s$type, "spans")) {
-    target[[paste0(sid, "_segs")]] <- I(rep(list(list()), n))
-    target[[paste0(sid, "_start")]] <- rep(NA_real_, n)
-    target[[paste0(sid, "_nseg")]] <- rep(0L, n)
+    target[[groups_col(sid, "segs")]] <- I(rep(list(list()), n))
+    target[[groups_col(sid, "start")]] <- rep(NA_real_, n)
+    target[[groups_col(sid, "nseg")]] <- rep(0L, n)
   }
   target
 }
@@ -495,14 +496,14 @@ groups_blank_summary <- function(target, s, sid) {
 #' @noRd
 groups_primary_col <- function(s, sid) {
   switch(s$type,
-    simple = paste0(sid, "_v"),
-    dist = paste0(sid, "_bc"),
-    field = paste0(sid, "_t"),
-    expr = paste0(sid, "_v"),
-    sparkline = paste0(sid, "_last"),
-    spans = paste0(sid, "_start"),
-    pair = paste0(sid, "_to"),
-    paste0(sid, "_v")
+    simple = groups_col(sid, "v"),
+    dist = groups_col(sid, "bc"),
+    field = groups_col(sid, "t"),
+    expr = groups_col(sid, "v"),
+    sparkline = groups_col(sid, "last"),
+    spans = groups_col(sid, "start"),
+    pair = groups_col(sid, "to"),
+    groups_col(sid, "v")
   )
 }
 

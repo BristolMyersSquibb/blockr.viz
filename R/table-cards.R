@@ -147,14 +147,7 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     main <- v
     text <- TRUE
   } else {
-    v <- if (identical(kind, "barsplit") && is.null(p$key)) {
-      rowSums(vapply(p$series, function(lv) {
-        x <- rows[[paste0(p$prefix %||% ".s_", lv)]]
-        if (is.null(x)) rep(0, n) else as.numeric(x)
-      }, numeric(n)))
-    } else {
-      get(p$key)
-    }
+    v <- get(p$key)
     main <- if (is.null(prep$format)) {
       cards_num(v, cells_val_digits(v))
     } else {

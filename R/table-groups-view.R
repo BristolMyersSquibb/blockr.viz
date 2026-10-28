@@ -9,11 +9,11 @@ table_groups_view <- function(m, axis = TRUE) {
   }
   prep <- m$prep
   pick <- isTRUE(cells$pick)
-  ctx <- table_groups_ctx(prep)
   stub <- list(name = groups_label_header(prep), disp = cells$label,
                num = FALSE)
   cols <- lapply(seq_along(cells$cols), function(i) {
-    table_groups_col(cells$cols[[i]], prep$plan[[i]], prep, ctx, pick, axis)
+    text <- cells$text[[i]] %||% rep(NA_character_, cells$n)
+    table_groups_col(cells$cols[[i]], text, prep$plan[[i]], prep, pick, axis)
   })
   nested <- isTRUE(cells$nested)
   out <- list(
@@ -26,21 +26,15 @@ table_groups_view <- function(m, axis = TRUE) {
   table_view_arrays(table_groups_compact(out))
 }
 
-# The context groups_cells() hands its column builders, with value labels
-# on, so a column that draws none can have its labels rebuilt for `disp`.
-table_groups_ctx <- function(prep) {
-  list(rows = prep$rows, n = nrow(prep$rows), prep = prep, mx = prep$bar_max,
-       mn = prep$bar_min %||% 0, vals_on = TRUE)
-}
-
 # One body column. A plain number is `num` (right-aligned); other kinds sort on
-# `key`. `keys` is what a click adds to the row's claim; `pct` the "(43%)" tail.
-table_groups_col <- function(c, p, prep, ctx, pick, axis) {
+# `key`. `disp` is the column's text (cells_text()), `keys` what a click adds
+# to the row's claim, `pct` the "(43%)" tail.
+table_groups_col <- function(c, text, p, prep, pick, axis) {
   pct <- if (!is.null(c$pct)) table_groups_text(c$pct)
   table_groups_compact(list(
     name = as.character(p$label %||% "")[[1L]],
     num = identical(c$kind, "num") && !isTRUE(c$text),
-    disp = table_groups_disp(c, p, ctx),
+    disp = table_groups_text(text),
     key = c$v,
     pct = if (!is.null(pct)) groups_arr(pct),
     bg = if (identical(c$kind, "tile")) c$bg,

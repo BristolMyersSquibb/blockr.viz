@@ -9,14 +9,15 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
   plan <- prep$plan
   n <- nrow(rows)
 
-  # Shared by every column builder. `vals_on` is the Values switch: off drops
-  # value labels beside marks (number and text columns are untouched).
-  ctx <- list(
-    rows = rows, n = n, prep = prep, mx = prep$bar_max,
-    mn = prep$bar_min %||% 0, vals_on = !isFALSE(cfg$value_labels)
-  )
+  # Shared by every column builder.
+  ctx <- list(rows = rows, n = n, prep = prep, mx = prep$bar_max,
+              mn = prep$bar_min %||% 0)
 
   cols <- lapply(seq_along(plan), function(i) cells_column(ctx, plan[[i]]))
+  # Each column's text per row, which the view prints and sorts by; built
+  # from the value labels before the Values switch drops them.
+  text <- lapply(cols, cells_text)
+  if (isFALSE(cfg$value_labels)) cols <- lapply(cols, cells_drop_labels)
   cols <- cells_annotate(cols, plan)
 
   # A table without `by` has no group to drill on.
@@ -40,8 +41,69 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     # Columns a row click claims, outer to inner (R/table-drill.R).
     path = c(chr_state(prep$parent), chr_state(prep$group)),
     cols = cols,
+    text = text,
     fold = cells_fold_text(prep)
   )
+}
+
+# A column's text per row: a number or text is its own, a mark its value
+# label, a swimlane its segment tooltips. A colour split with one label per
+# level reads "level label, level label".
+cells_text <- function(c) {
+  if (identical(c$kind, "num")) {
+    return(c$disp)
+  }
+  if (identical(c$kind, "interval")) {
+    return(vapply(c$tips, function(tt) {
+      paste(unique(as.character(tt)), collapse = " | ")
+    }, character(1L)))
+  }
+  if (isTRUE(c$multi)) {
+    return(cells_join_levels(c$levels, lapply(c$lv, `[[`, "disp")))
+  }
+  if (identical(c$kind, "barsplit") && !is.null(c$ldisp)) {
+    return(cells_join_levels(c$names, c$ldisp))
+  }
+  c$disp
+}
+
+# One text per row from one label vector per level (`NULL` for a level that
+# prints none): the levels with a label, in order, each led by its name.
+cells_join_levels <- function(levels, labs) {
+  keep <- !vapply(labs, is.null, logical(1L))
+  if (!any(keep)) {
+    return(NULL)
+  }
+  parts <- Map(function(lv, d) {
+    d <- as.character(d)
+    ifelse(nzchar(d), paste(lv, d), "")
+  }, as.character(levels)[keep], labs[keep])
+  vapply(seq_along(parts[[1L]]), function(i) {
+    one <- vapply(parts, function(x) x[[i]], character(1L))
+    paste(one[nzchar(one)], collapse = ", ")
+  }, character(1L))
+}
+
+# The Values switch off: a mark draws no value label beside it (`disp`, `pct`
+# and the slot width `dw`), inside its segments (`ldisp`, `slab`, `sink`) or
+# per colour level. A tile keeps an empty text per square. Number and text
+# columns are untouched.
+cells_drop_labels <- function(c) {
+  if (identical(c$kind, "num")) {
+    return(c)
+  }
+  if (identical(c$kind, "tile")) {
+    c$disp <- rep("", length(c$disp))
+    return(c)
+  }
+  c[c("disp", "pct", "dw", "ldisp", "slab", "sink")] <- NULL
+  if (!is.null(c$lv)) {
+    c$lv <- lapply(c$lv, function(g) {
+      g$disp <- NULL
+      g
+    })
+  }
+  c
 }
 
 # One plan entry to its column. The first matching branch wins.
@@ -121,7 +183,6 @@ cells_bounds <- function(e_mn, e_mx) {
 # measures that carry a base.
 cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
   prep <- ctx$prep
-  if (!ctx$vals_on || !isTRUE(p$show_val)) return(NULL)
   dom <- cells_axis_domain(p, prep)
   dig <- cells_val_digits(vraw, dom$d0, dom$d1)
   parts <- cells_num_parts(vraw, denom = p$val_denom,

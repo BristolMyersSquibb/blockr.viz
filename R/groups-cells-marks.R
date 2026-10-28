@@ -73,12 +73,8 @@ cells_sparkline <- function(ctx, p) {
   # Sorts and labels by the last value; with a companion rank bar, `.v` carries
   # that bar's aggregate.
   last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
-  lab <- if (ctx$vals_on && isTRUE(p$show_val)) {
-    disp <- cells_val_str(last_y, cells_val_digits(
-      last_y, yd[[1L]], yd[[2L]]
-    ))
-    list(disp = disp, dw = max(c(1L, nchar(disp))))
-  }
+  disp <- cells_val_str(last_y, cells_val_digits(last_y, yd[[1L]], yd[[2L]]))
+  lab <- list(disp = disp, dw = max(c(1L, nchar(disp))))
   list(kind = "sparkline", pl = cells_pull(per, "pl"),
        bd = cells_pull(per, "bd"),
        dx = cells_pull(per, "dx"), dy = cells_pull(per, "dy"),

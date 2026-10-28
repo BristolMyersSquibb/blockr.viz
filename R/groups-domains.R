@@ -13,8 +13,7 @@ groups_split_degenerate <- function(plan, idx, rows) {
     if (!identical(p$kind, "barsplit") || !identical(p$mode, "grouped")) {
       return(FALSE)
     }
-    cn <- paste0(p$prefix %||% ".s_", p$series)
-    cn <- cn[cn %in% names(rows)]
+    cn <- p$scols[p$scols %in% names(rows)]
     # Summed across level columns, not tabulated per row: safe for a one-row
     # table, where apply() would collapse to a vector.
     per_row <- NULL
@@ -32,9 +31,8 @@ groups_split_degenerate <- function(plan, idx, rows) {
 #' summary's facet copies (same `sid` stem before the `f<j>` suffix).
 #' @noRd
 groups_summary_domains <- function(plan, rows) {
-  stem <- function(sid) sub("f[0-9]+$", "", sid)
   groups <- split(seq_along(plan), vapply(plan, function(p) {
-    stem(p$sid %||% "")
+    groups_sid_stem(p$sid %||% "")
   }, character(1L)))
   for (idx in groups) {
     kinds <- unique(vapply(plan[idx], function(p) p$kind, character(1L)))
@@ -92,7 +90,7 @@ groups_dom_cols <- function(p, kind) {
     # The split bar scales on its TOTAL, like the plain bar; side-by-side
     # segments are read one at a time, so the axis must reach the widest.
     if (identical(p$mode, "grouped")) {
-      c(p$key, paste0(p$prefix, p$series))
+      c(p$key, p$scols)
     } else {
       p$key
     }
