@@ -321,3 +321,25 @@ test('50 mounts and unmounts leave nothing behind', async () => {
   // One timer stays from the binding: it drops the last block's rows.
   assert.deepEqual(one, Object.assign({}, base, { timers: base.timers + 1 }));
 });
+
+test('the compact look turns the column titles on their side', () => {
+  const p = payload({ data: flatModel(3), config: { look: 'compact' } });
+  const t = mount(p);
+  assert.equal(t.$('table.blockr-table').getAttribute('data-dt-rotate-titles'), 'on');
+  t.render({ data: null, dataRev: p.data_rev, config: { look: 'table' } });
+  assert.equal(t.$('table.blockr-table').getAttribute('data-dt-rotate-titles'), null);
+  const el = t.win.document.body.appendChild(t.win.document.createElement('div'));
+  t.V.table.renderStatic(el, payload({ data: flatModel(3), config: { look: 'compact' } }),
+                         { gear: false, still: true });
+  assert.equal(el.querySelector('table.blockr-table').getAttribute('data-dt-rotate-titles'), 'on');
+});
+
+test('table.css rotates the titles the compact look marks', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'table.css'), 'utf8');
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \{/);
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
+  const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
+  assert.match(dep, /"table\.css"/);
+});
