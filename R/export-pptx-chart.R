@@ -65,6 +65,22 @@ html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
   )
 }
 
+# A new slide with `make(w, h)` placed centred below `top`, scaled to fill the
+# slide while keeping the aspect of `size` (width and height in inches). The
+# fit is capped at `cap` and multiplied by `scale`.
+pptx_place_fitted <- function(doc, ctx, make, size, top, title = NULL,
+                              scale = 1, cap = Inf) {
+  fit <- min((ctx$width - 0.8) / size$width,
+             (ctx$height - top - 0.4) / size$height, cap) * scale
+  w <- size$width * fit
+  h <- size$height * fit
+  officer::ph_with(
+    pptx_blank_slide(doc, ctx, title), make(w, h),
+    location = officer::ph_location(left = (ctx$width - w) / 2, top = top,
+                                    width = w, height = h)
+  )
+}
+
 #' @export
 pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
                                 caption = NULL, template = NULL, layout = NULL,
@@ -77,23 +93,11 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
   }
 
-  setup <- pptx_slide_setup(doc, layout, master)
-  layout <- setup$layout
-  master <- setup$master
-  slide_w <- setup$width
-  slide_h <- setup$height
+  ctx <- pptx_slide_context(doc, title, layout, master)
+  slide_title <- ctx$slide_title
 
-  slide_title <- pptx_has_title(title) &&
-    pptx_layout_has_title(doc, layout, master)
-
-  top <- top %||% max(
-    attr(x, "pptx_top") %||% 1.1,
-    if (slide_title) {
-      pptx_title_bottom(doc, layout, master, template %||% "", title) %||% 0
-    } else {
-      0
-    }
-  )
+  top <- top %||% pptx_table_top(doc, ctx, template %||% "", title,
+                                 attr(x, "pptx_top"))
 
   # When the slide title and the plot's own title are the same line, the
   # placeholder keeps it and the plot drops its copy. Different titles both
@@ -112,8 +116,6 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     }
   }
 
-  size <- gg_exhibit_size(x)
-
   # The plot scales up or down to fill the box below `top`, keeping its
   # aspect. officer re-renders it at the placed size, so type stays at its
   # point size. `blockr.viz.gg_slide_fill` multiplies the fitted size.
@@ -122,23 +124,8 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
         fill <= 0) {
     fill <- 1
   }
-
-  fit <- min((slide_w - 0.8) / size$width,
-             (slide_h - top - 0.4) / size$height) * fill
-  w <- size$width * fit
-  h <- size$height * fit
-
-  doc <- officer::add_slide(doc, layout = layout, master = master)
-
-  if (slide_title) {
-    doc <- pptx_set_title(doc, title)
-  }
-
-  officer::ph_with(
-    doc, x,
-    location = officer::ph_location(left = (slide_w - w) / 2, top = top,
-                                    width = w, height = h)
-  )
+  pptx_place_fitted(doc, ctx, function(w, h) x, gg_exhibit_size(x), top,
+                    if (slide_title) title, scale = fill)
 }
 
 # A chart the browser drew, as one slide.
@@ -154,36 +141,22 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
   }
 
-  setup <- pptx_slide_setup(doc, layout, master)
-  layout <- setup$layout
-  master <- setup$master
-  slide_w <- setup$width
-  slide_h <- setup$height
-
-  slide_title <- pptx_has_title(title) &&
-    pptx_layout_has_title(doc, layout, master)
+  ctx <- pptx_slide_context(doc, title, layout, master)
+  slide_title <- ctx$slide_title
 
   top <- top %||% if (slide_title) {
-    pptx_title_bottom(doc, layout, master, template %||% "", title) %||% 1.1
+    pptx_title_bottom(doc, ctx$layout, ctx$master, template %||% "", title) %||% 1.1
   } else {
     1.1
   }
 
-  # Fit the box, keeping the captured aspect. The capture was drawn at pixel
-  # ratio 2, so it may grow to twice its size and no further.
-  fit <- min((slide_w - 0.8) / x$width, (slide_h - top - 0.4) / x$height, 2)
-  w <- x$width * fit
-  h <- x$height * fit
-
-  doc <- officer::add_slide(doc, layout = layout, master = master)
-
-  if (slide_title) {
-    doc <- pptx_set_title(doc, title)
-  }
-
-  officer::ph_with(
-    doc, officer::external_img(chart_capture_file(x), width = w, height = h),
-    location = officer::ph_location(left = (slide_w - w) / 2, top = top,
-                                    width = w, height = h)
+  # The capture was drawn at pixel ratio 2, so it may grow to twice its size
+  # and no further.
+  pptx_place_fitted(
+    doc, ctx,
+    function(w, h) {
+      officer::external_img(chart_capture_file(x), width = w, height = h)
+    },
+    x[c("width", "height")], top, if (slide_title) title, cap = 2
   )
 }

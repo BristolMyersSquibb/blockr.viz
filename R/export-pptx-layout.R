@@ -22,9 +22,8 @@ pptx_fits <- function(ft, budget) {
 }
 
 # The font size at which a split table would fit one slide, or NULL when none
-# at or above `hard` does. Heights scale with the type, so
-# `size * budget / height` is the estimate. One call to `build(est)` confirms
-# it.
+# at or above `hard` does. Heights scale with the type, so `size * budget /
+# height` is the estimate, confirmed by one call to `build(est)`.
 pptx_fit_size <- function(ft, build, budget, size,
                           hard = exhibit_font_floor()) {
 
@@ -44,17 +43,16 @@ pptx_fit_size <- function(ft, build, budget, size,
 }
 
 # Did the width allocator run out of slide? True when a data cell is narrower
-# than its longest word or a header breaks inside a word. Splitting rows does
-# not help with either, so this is separate from the height check.
+# than its longest word or a header breaks inside a word.
 pptx_width_squeezed <- function(ft) {
   sq <- attr(ft, "width_squeeze")
   isTRUE(sq[["cell"]]) || isTRUE(sq[["header"]])
 }
 
 # The condition for dealing the columns over several slide sets: the data
-# cells are cut off (narrower than their longest word). A header that only
-# wraps does not count, unless `blockr.viz.ft_header_break_tol` (default 0,
-# off) is set and a header word keeps less than that share of itself.
+# cells are cut off. A header that only wraps does not count, unless
+# `blockr.viz.ft_header_break_tol` is set and a header word keeps less than
+# that share of itself.
 pptx_width_broken <- function(ft, tol = getOption(
                                 "blockr.viz.ft_header_break_tol", 0)) {
   sq <- attr(ft, "width_squeeze")
@@ -171,23 +169,15 @@ pptx_data_cols <- function(x) {
 # never cut in half. Without spanners every column is its own group.
 pptx_col_groups <- function(x) {
   cols <- pptx_data_cols(x)
-  top <- vapply(strsplit(cols, "||", fixed = TRUE), function(p) {
-    if (length(p) > 1L) p[[1L]] else ""
-  }, character(1L))
+  top <- st_spanner_top(cols)
   key <- ifelse(nzchar(top), top, cols)
   unname(split(cols, factor(key, levels = unique(key))))
 }
 
-#' Deal a table's columns over several slides
-#'
-#' Called when no allowed font size makes the columns fit. Each set of slides
-#' repeats the row stub.
-#'
-#' @param fits A predicate taking a candidate frame and returning whether its
-#'   cells fit.
-#' @return A list of frames, each the stub plus a contiguous run of the
-#'   spanner groups.
-#' @noRd
+# Deal a table's columns over several slides, called when no allowed font size
+# makes the columns fit. Each set repeats the row stub. `fits` takes a
+# candidate frame and says whether its cells fit. Returns a list of frames,
+# each the stub plus a contiguous run of the spanner groups.
 pptx_split_columns <- function(x, fits, max_sets = 12L) {
 
   groups <- pptx_col_groups(x)
@@ -308,23 +298,6 @@ pptx_has_title <- function(title) {
   is.character(title) && length(title) == 1L && nzchar(title)
 }
 
-# Layout, master and slide size (inches) for a new slide. `layout` defaults to
-# "Title and Content" when the deck has it, else the first layout.
-pptx_slide_setup <- function(doc, layout = NULL, master = NULL) {
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  list(
-    layout = layout,
-    master = master %||% layouts$master[match(layout, layouts$layout)],
-    width = tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333),
-    height = tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-  )
-}
-
 # Put `title` in the layout's title placeholder; `doc` unchanged on failure.
 pptx_set_title <- function(doc, title) {
   tryCatch(
@@ -346,32 +319,60 @@ pptx_layout_has_title <- function(doc, layout, master) {
   )
 }
 
+# Layout, master and slide size (inches) for a new slide, and whether `title`
+# goes into the layout's title placeholder (a title put in a missing
+# placeholder is lost, and one put in the table as well prints twice).
+# `layout` defaults to "Title and Content" when the deck has it, else the
+# first layout.
+pptx_slide_context <- function(doc, title, layout = NULL, master = NULL) {
+  layouts <- officer::layout_summary(doc)
+  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
+    "Title and Content"
+  } else {
+    layouts$layout[[1L]]
+  }
+  master <- master %||% layouts$master[match(layout, layouts$layout)]
+  list(
+    layout = layout, master = master,
+    width = tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333),
+    height = tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5),
+    slide_title = pptx_has_title(title) &&
+      pptx_layout_has_title(doc, layout, master)
+  )
+}
+
+# A new slide from the context, with `title` in the title placeholder.
+pptx_blank_slide <- function(doc, ctx, title = NULL) {
+  doc <- officer::add_slide(doc, layout = ctx$layout, master = ctx$master)
+  if (!is.null(title)) doc <- pptx_set_title(doc, title)
+  doc
+}
+
+# The value of the first `attr="..."` inside the first match of `block` in a
+# part of the template, or NA when the part or the match is missing.
+pptx_xml_attr <- function(template, part, block, attr) {
+  xml <- pptx_part(template, part)
+  if (is.null(xml)) {
+    return(NA_character_)
+  }
+  tryCatch(
+    {
+      blk <- regmatches(xml, regexpr(block, xml))
+      m <- regmatches(blk, regexpr(sprintf("%s=\"[^\"]*\"", attr), blk))
+      if (length(m) == 1L) sub("^[^\"]*\"(.*)\"$", "\\1", m) else NA_character_
+    },
+    error = function(e) NA_character_
+  )
+}
+
 # Usable table width in inches: the master's body placeholder, or 12 when it
 # cannot be read. Read from the XML (`ext cx` in EMU, 914400 per inch) so a
 # template officer cannot fully parse still counts.
 pptx_content_width <- function(template) {
-
-  fallback <- 12.0
-  xml <- pptx_part(template, "ppt/slideMasters/slideMaster1.xml")
-
-  if (is.null(xml)) {
-    return(fallback)
-  }
-
-  out <- tryCatch(
-    {
-      body <- regmatches(
-        xml,
-        regexpr("type=\"body\".*?<a:ext cx=\"[0-9]+\"", xml)
-      )
-      cx <- regmatches(body, regexpr("cx=\"[0-9]+\"", body))
-      cx <- as.numeric(gsub("\\D", "", cx))
-      if (length(cx) == 1L && is.finite(cx) && cx > 0) cx / 914400 else fallback
-    },
-    error = function(e) fallback
-  )
-
-  if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
+  cx <- pptx_xml_attr(template, "ppt/slideMasters/slideMaster1.xml",
+                      "type=\"body\".*?<a:ext cx=\"[0-9]+\"", "cx")
+  out <- suppressWarnings(as.numeric(cx)) / 914400
+  if (is.finite(out) && out > 0) out else 12.0
 }
 
 # How far down the slide a table may run, in inches from the top: the top of
@@ -425,57 +426,24 @@ pptx_title_bottom <- function(doc, layout, master, template, title,
   )
 }
 
-# Point size of the title text, from the master's title style.
+# Point size of the title text, from the master's title style. OOXML sizes
+# are in hundredths of a point.
 pptx_title_size <- function(template, fallback = 24) {
-
-  xml <- pptx_part(template, "ppt/slideMasters/slideMaster1.xml")
-
-  if (is.null(xml)) {
-    return(fallback)
-  }
-
-  style <- regmatches(xml, regexpr("<p:titleStyle>.*?</p:titleStyle>", xml))
-  sz <- regmatches(style, regexpr("sz=\"[0-9]+\"", style))
-
-  if (!length(sz)) {
-    return(fallback)
-  }
-
-  # OOXML sizes are in hundredths of a point.
-  out <- as.numeric(gsub("\\D", "", sz)) / 100
-  if (length(out) == 1L && is.finite(out) && out > 0) out else fallback
-}
-
-# The deck's body typeface: the theme's minor latin font. NULL when the
-# template has no readable font scheme.
-pptx_body_font <- function(template) {
-  pptx_theme_font(template, "minor")
+  sz <- pptx_xml_attr(template, "ppt/slideMasters/slideMaster1.xml",
+                      "<p:titleStyle>.*?</p:titleStyle>", "sz")
+  out <- suppressWarnings(as.numeric(sz)) / 100
+  if (is.finite(out) && out > 0) out else fallback
 }
 
 # Half of the theme's font scheme: "minor" is the body face, "major" the
-# title face.
+# title face. NULL when the template has no readable font scheme.
 pptx_theme_font <- function(template, which = c("minor", "major")) {
-
   which <- match.arg(which)
-  xml <- pptx_part(template, "ppt/theme/theme1.xml")
-
-  if (is.null(xml)) {
-    return(NULL)
-  }
-
-  block <- regmatches(
-    xml,
-    regexpr(sprintf("<a:%sFont>.*?<a:latin typeface=\"[^\"]*\"", which), xml)
+  face <- pptx_xml_attr(
+    template, "ppt/theme/theme1.xml",
+    sprintf("<a:%sFont>.*?<a:latin typeface=\"[^\"]*\"", which), "typeface"
   )
-
-  if (!length(block)) {
-    return(NULL)
-  }
-
-  face <- regmatches(block, regexpr("typeface=\"[^\"]*\"", block))
-  face <- sub("\"$", "", sub("^typeface=\"", "", face))
-
-  if (!length(face) || !nzchar(face)) NULL else face
+  if (is.na(face) || !nzchar(face)) NULL else face
 }
 
 # One part of a pptx (a zip) as a single string, or NULL when the file or the
