@@ -2,25 +2,15 @@
 #'
 #' Helpers that let one block set the externally controllable arguments (see
 #' the `external_ctrl` argument to [blockr.core::new_block()]) of another block
-#' on the same board, through the board's regular update channel. A drill-down
-#' chart can feed a function block whose function calls `ctrl_send()` to push
-#' the clicked patient into a patient-profile block. Sender and target share
-#' no data link.
+#' on the same board, through the board's regular update channel. Sender and
+#' target share no data link.
 #'
 #' `install_ctrl_send()` wires the channel up. Call it once per session from
-#' any board component that holds the board's `update` reactive: a board
-#' callback, a plugin or a dock extension server. It stores a send closure in
-#' `session$userData`, where `ctrl_send()` finds it.
-#'
-#' Updates go through the board's full validation. Arguments that are not
-#' externally controllable on the target are rejected with a notification (see
-#' `blockr.core:::validate_board_update`).
-#'
-#' @section Semantics under lazy evaluation:
-#' `ctrl_send()` writes state and never reads another block's result, so it
-#' adds nothing to any evaluation closure. A function block calling it sends
-#' only while it is on screen. Repeated sends of an unchanged value are no-ops
-#' (`apply_block_mod_delta()` compares with `identical()`).
+#' any board component that holds the board's `update` reactive. It stores a
+#' send closure in `session$userData`, where `ctrl_send()` finds it. Updates go
+#' through the board's full validation. `ctrl_send()` writes state and never
+#' reads another block's result. Repeated sends of an unchanged value are
+#' no-ops.
 #'
 #' @param target Character(1). Block id of the target block on the board.
 #' @param ... Named values to set, one per externally controllable argument
@@ -47,16 +37,8 @@
 #' @export
 ctrl_send <- function(target, ..., session = shiny::getDefaultReactiveDomain()) {
 
-  stopifnot(
-    is.character(target), length(target) == 1L, nzchar(target),
-    !is.null(session)
-  )
-
-  args <- list(...)
-
-  if (length(args) == 0L || is.null(names(args)) || !all(nzchar(names(args)))) {
-    stop("`ctrl_send()` expects named values, one per controllable argument.")
-  }
+  ctrl_check(target, session)
+  args <- ctrl_named_args(list(...), "ctrl_send", "named values")
 
   send <- session$userData$blockr_ctrl_send
 
@@ -81,26 +63,15 @@ ctrl_send <- function(target, ..., session = shiny::getDefaultReactiveDomain()) 
 #' @section Clearing (`ctrl_clear()`):
 #' The undo side of `ctrl_send()`. It resets the target's controllable
 #' arguments only if the last `ctrl_send()` to that target came from the same
-#' block. A sender that re-evaluates without a drill (at startup, on a board
-#' restore, or while a different sender's claim is active on the target) owns
-#' nothing and does nothing. The values passed via `...` define "cleared" for
-#' the target, e.g. `state = list(columns = list())` empties a value filter.
+#' block. The values passed via `...` define "cleared" for the target, e.g.
+#' `state = list(columns = list())` empties a value filter.
 #'
 #' @rdname ctrl_send
 #' @export
 ctrl_clear <- function(target, ..., session = shiny::getDefaultReactiveDomain()) {
 
-  stopifnot(
-    is.character(target), length(target) == 1L, nzchar(target),
-    !is.null(session)
-  )
-
-  args <- list(...)
-
-  if (length(args) == 0L || is.null(names(args)) || !all(nzchar(names(args)))) {
-    stop("`ctrl_clear()` expects named reset values, one per controllable ",
-         "argument.")
-  }
+  ctrl_check(target, session)
+  args <- ctrl_named_args(list(...), "ctrl_clear", "named reset values")
 
   clear <- session$userData$blockr_ctrl_clear
 
@@ -111,8 +82,22 @@ ctrl_clear <- function(target, ..., session = shiny::getDefaultReactiveDomain())
   invisible(clear(target, args, author = ctrl_author(session)))
 }
 
-# The calling block's identity: the module namespace of its session. Scopes
-# clears to their author.
+ctrl_check <- function(target, session) {
+  stopifnot(
+    is.character(target), length(target) == 1L, nzchar(target),
+    !is.null(session)
+  )
+}
+
+ctrl_named_args <- function(args, fn, what) {
+  if (length(args) == 0L || is.null(names(args)) || !all(nzchar(names(args)))) {
+    stop("`", fn, "()` expects ", what, ", one per controllable argument.",
+         call. = FALSE)
+  }
+  args
+}
+
+# The calling block's identity: the module namespace of its session.
 ctrl_author <- function(session) {
   ns <- tryCatch(session$ns(""), error = function(e) NULL)
   if (is.null(ns) || !nzchar(ns)) "(root)" else ns
@@ -131,8 +116,8 @@ install_ctrl_send <- function(update, board = NULL,
 
   stopifnot(is.function(update), !is.null(session))
 
-  # Last author per target block id: `ctrl_send()` claims, `ctrl_clear()`
-  # acts only for the current holder and releases it.
+  # Last author per target block id: `ctrl_clear()` acts only for the current
+  # holder and releases it.
   authors <- new.env(parent = emptyenv())
 
   push <- function(target, args) {
@@ -195,11 +180,7 @@ install_ctrl_send <- function(update, board = NULL,
 #'
 #' What `ctrl_target = "auto"` resolves to: the one
 #' `blockr.dm::new_drill_filter_block()` on the board or, on a board without
-#' one, the one value filter block.
-#'
-#' Two or more candidates resolve to nothing, so the sender stays quiet until
-#' the gear's target picker names one. A board that carries any drill filter
-#' ignores value filters, even when its drill filters are ambiguous.
+#' one, the one value filter block. Two or more candidates resolve to nothing.
 #'
 #' @param session Shiny session (defaults to the current reactive domain).
 #'
@@ -221,7 +202,6 @@ ctrl_auto_target <- function(session = shiny::getDefaultReactiveDomain()) {
 
 # `ctrl_target` as a sender reads it: the block id, or the board's answer for
 # the sentinel "auto".
-#' @noRd
 dd_ctrl_resolve <- function(target, session) {
   target <- trimws(target %||% "")
   if (identical(target, "auto")) ctrl_auto_target(session) else target
@@ -231,8 +211,7 @@ dd_ctrl_resolve <- function(target, session) {
 #'
 #' The column a drill claims when the board says what a subject is: the
 #' `subject` field of the "study_roles" board option, or `USUBJID` when the
-#' option exists and the field is empty. Read by option id, so this package
-#' does not depend on blockr.pharma. A board without the option has no
+#' option exists and the field is empty. A board without the option has no
 #' subjects and its senders claim columns.
 #'
 #' @param session Shiny session (defaults to the current reactive domain).
@@ -263,15 +242,11 @@ dd_ctrl_subject <- function(session = shiny::getDefaultReactiveDomain()) {
 #' Controllable blocks on the board
 #'
 #' The block ids a sender may point at: every block on the board of the given
-#' class. It populates the target picker of the drill senders and is available
-#' to a hand-rolled sender that wants one too.
-#'
-#' Returns `character()` when no channel is installed, or when
+#' class. Returns `character()` when no channel is installed, or when
 #' [install_ctrl_send()] was called without `board`.
 #'
 #' @param class Character(1). Block class to look for. The default is the value
-#'   filter block, the target shape the senders in this package push (a
-#'   `state` of filter conditions).
+#'   filter block.
 #' @param session Shiny session (defaults to the current reactive domain).
 #'
 #' @return A named character vector of block ids, named by block name (falling
@@ -295,28 +270,20 @@ ctrl_targets <- function(class = "value_filter_block",
 #' Read filter conditions off a drilled annotated data frame
 #'
 #' Turns the drilled subset of an annotated (ARD-shaped) data frame into the
-#' `columns` payload a value filter takes, ready for [ctrl_send()]. This is the
-#' claim logic behind the drill senders.
+#' `columns` payload a value filter takes, ready for [ctrl_send()].
 #'
-#' @section Two claim modes:
-#' **Annotated (`columns = NULL`).** The data frame is read on its ARD identity
-#' columns: `.variable` is the source column name, `.variable_level` the source
-#' value on that row, and each `.group<k>` / `.group<k>_level` pair is an
-#' enclosing grouping dimension. Dimensions come back outermost first, with the
-#' `.variable` leaf last. A `.filter` column (a row defined by a predicate, see
-#' [drill_source()]) counts as a leaf for the purpose of reading its enclosing
-#' groups.
+#' With `columns = NULL` the data frame is read on its ARD identity columns:
+#' `.variable` is the source column name, `.variable_level` the source value on
+#' that row, and each `.group<k>` / `.group<k>_level` pair is an enclosing
+#' grouping dimension. Dimensions come back outermost first, with the
+#' `.variable` leaf last. A `.filter` column (see [drill_source()]) counts as a
+#' leaf for reading its enclosing groups. Chart and tile drills carry no ARD
+#' identity, so the caller names the candidate `columns` and each is claimed
+#' from the subset.
 #'
-#' **Source columns (`columns` given).** Chart and tile drills carry no ARD
-#' identity, so the caller names the candidate columns, e.g. `columns = "SEX"`,
-#' and each is claimed from the subset.
-#'
-#' @section What counts as a claim:
 #' A dimension becomes a filter condition only when the subset resolves it to
-#' exactly one value. Clicking one bar leaves `SEX` single-valued, which is a
-#' claim. An undrilled chart passes all its rows through, `SEX` holds both `F`
-#' and `M`, and nothing is claimed: the caller's cue to [ctrl_clear()]. A brush
-#' across several bars is not a claim either.
+#' exactly one value. An undrilled chart passes all its rows through and
+#' nothing is claimed, which is the caller's cue to [ctrl_clear()].
 #'
 #' @param data A data frame, typically the drilled output of a table, chart or
 #'   tile block. Anything that resolves no dimension yields an empty list.
@@ -359,16 +326,19 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
 
   nms <- names(data)
 
+  # Appends the claim for `name` / `value` when both resolved to one value.
+  add <- function(claims, name, value) {
+    if (is.null(name) || is.null(value)) {
+      return(claims)
+    }
+    c(claims, list(claim_cond(name, value, table, mode)))
+  }
+
   if (length(columns)) {
     claims <- list()
-
     for (col in columns[columns %in% nms]) {
-      value <- single_value(as.character(data[[col]]))
-      if (!is.null(value)) {
-        claims[[length(claims) + 1L]] <- claim_cond(col, value, table, mode)
-      }
+      claims <- add(claims, col, single_value(as.character(data[[col]])))
     }
-
     return(claims)
   }
 
@@ -378,10 +348,10 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
     return(list())
   }
 
-  var <- if (has_leaf) as.character(data$.variable) else character(nrow(data))
-  lvl <- if (has_leaf) as.character(data$.variable_level) else
-    character(nrow(data))
-  fil <- if (has_fil) as.character(data$.filter) else character(nrow(data))
+  blank <- character(nrow(data))
+  var <- if (has_leaf) as.character(data$.variable) else blank
+  lvl <- if (has_leaf) as.character(data$.variable_level) else blank
+  fil <- if (has_fil) as.character(data$.filter) else blank
 
   # A mixed table fills the leaf columns on some rows and `.filter` on others,
   # so a row carries a claim if either is usable.
@@ -397,23 +367,14 @@ drill_claim_columns <- function(data, table, mode = "multi", columns = NULL) {
 
   for (g in group_level_cols(nms)) {
     gname <- substr(g, 1L, nchar(g) - 6L)
-    if (!gname %in% nms) {
-      next
-    }
-    name <- single_value(as.character(data[[gname]])[keep])
-    value <- single_value(as.character(data[[g]])[keep])
-    if (!is.null(name) && !is.null(value)) {
-      cols[[length(cols) + 1L]] <- claim_cond(name, value, table, mode)
+    if (gname %in% nms) {
+      cols <- add(cols, single_value(as.character(data[[gname]])[keep]),
+                  single_value(as.character(data[[g]])[keep]))
     }
   }
 
   if (any(leaf_ok)) {
-    name <- single_value(var[leaf_ok])
-    value <- single_value(lvl[leaf_ok])
-
-    if (!is.null(name) && !is.null(value)) {
-      cols[[length(cols) + 1L]] <- claim_cond(name, value, table, mode)
-    }
+    cols <- add(cols, single_value(var[leaf_ok]), single_value(lvl[leaf_ok]))
   }
 
   cols
@@ -478,12 +439,9 @@ single_value <- function(x) {
 #' block driving another block via [ctrl_send()] shows a readable summary.
 #' Return it as the last expression of the `fn`.
 #'
-#' @section It never reads the target:
-#' `ctrl_receipt()` is a pure function of its arguments. It reads neither the
-#' target block's state nor any reactive. A reactive read of the target would
-#' re-trigger the [ctrl_send()] in the same function body and loop. The card
-#' says "Sent to Cohort" in the past tense because it reports what this block
-#' pushed, which stays true if another sender later replaces the claim.
+#' `ctrl_receipt()` is a pure function of its arguments. It reads no reactive,
+#' since a read of the target would re-trigger the [ctrl_send()] in the same
+#' function body and loop.
 #'
 #' @param cols Columns pushed to the target, in the shape a value filter
 #'   takes: a list of `list(name=, table=, mode=, values=)` entries. Empty
@@ -576,33 +534,9 @@ ctrl_receipt_dep <- memoise0(function() {
 #' A dock extension with no UI that installs the cross-block control channel
 #' ([install_ctrl_send()]) on the board, so that blocks can call
 #' [ctrl_send()] / [ctrl_clear()] and senders can offer a target picker
-#' ([ctrl_targets()]).
-#'
-#' A block server cannot open the channel itself because it never sees the
-#' board's `update` reactive. A dock extension does, and a board carries it.
-#'
-#' @section Wiring:
-#' Add it to the board's `extensions` and to no grid, since it renders an empty
-#' div:
-#'
-#' ```r
-#' new_dock_board(
-#'   extensions = list(
-#'     dag = blockr.dag::new_dag_extension(),
-#'     ctrl_bridge = blockr.viz::new_ctrl_bridge_extension()
-#'   ),
-#'   grids = list(Main = dock_grid(ext("dag")))
-#' )
-#' ```
-#'
-#' A board needs exactly one bridge. The registry that lets [ctrl_clear()]
-#' clear only its own claim lives inside the closure `install_ctrl_send()`
-#' builds, so two bridges give two senders separate views of who owns what.
-#'
-#' @section Saved boards:
-#' Dock rebuilds an extension from its constructor name and package, so the
-#' bridge is an exported constructor. A board saved by an app without the
-#' bridge comes back without a channel and needs one re-save.
+#' ([ctrl_targets()]). Add it to the board's `extensions` and to no grid. A
+#' board needs exactly one bridge, since the registry behind [ctrl_clear()]
+#' lives in the closure `install_ctrl_send()` builds.
 #'
 #' @param ... Forwarded to `blockr.dock::new_dock_extension()`. On restore, dock
 #'   calls this constructor with the `ctor`/`pkg` it recorded, so the dots must
@@ -644,56 +578,42 @@ new_ctrl_bridge_extension <- function(...) {
 }
 
 # ---------------------------------------------------------------------------
-# Drill sender glue: the block-side wiring behind the table, chart and tile
-# blocks' "Send to filter" gear section. Each block server supplies its own
-# drill-filter state; dd_ctrl_claims() turns it into a claim and
-# dd_ctrl_sender() keeps the target block in sync.
-#
-# Exported as plumbing (`@keywords internal`) because drill senders also live
-# outside this package (blockr.sandbox's composer table). They need the same
-# send guard in dd_ctrl_sender(), which stops a send -> board update ->
-# re-evaluation -> send loop.
+# Drill sender glue: the block-side wiring behind the "Send to filter" gear
+# section of the table, chart and tile blocks. dd_ctrl_claims() turns a
+# block's drill state into a claim and dd_ctrl_sender() keeps the target block
+# in sync. Both are exported because drill senders also live outside this
+# package.
 # ---------------------------------------------------------------------------
 
 #' Claims from a block's own drill-filter state.
 #'
-#' `filters` is a named list, column -> drilled value(s), from the block's
-#' filter reactives. The input is subset on those pairs and the claim is read
-#' off the subset, so the one-value-per-dimension rule of
-#' [drill_claim_columns()] and its un-drill propagation apply.
+#' The input is subset on the `filters` pairs and the claim is read off the
+#' subset, so the one-value-per-dimension rule of [drill_claim_columns()]
+#' applies. All-dot filter columns (a structured table's `.variable`,
+#' `.group<k>`, ...) read the ARD identity off the subset. Any other column is
+#' a real source column and is the claim column.
 #'
-#' All-dot filter columns (a structured table's `.variable`, `.group<k>`, ...)
-#' read the ARD identity off the subset. Any other column is a real source
-#' column and is the claim column.
-#'
-#' @section Hold versus clear:
 #' The sender reads `list()` as "clear the target" and `NULL` as "keep what the
 #' target has". `list()` is returned only when the user has no drill. `NULL` is
 #' returned when the block cannot resolve its selection right now: there is no
-#' data frame (under lazy evaluation the input is gated to `NULL` while the
-#' block is off screen), the frame lacks a filtered column (it is being rebuilt
-#' during a board update), or nothing in the subset resolves to a claim.
-#' Clearing in those cases would widen the target to everything and re-narrow
-#' it a moment later.
+#' data frame (the block is off screen), the frame lacks a filtered column (it
+#' is being rebuilt), or nothing in the subset resolves to a claim.
 #'
 #' @param data The block's (annotated) input, as a data frame.
 #' @param table Name of the table the claim applies to, `""` when the target
 #'   filters a plain data frame (or when the target resolves the table itself).
-#' @param filters Named list, column -> drilled value(s); the columns AND
-#'   together. An `NA` value (or a table's "(Missing)" level) is a missing
-#'   one: it takes the rows where the column is missing or empty, and the
-#'   claim names them with the value filter's tokens `"<NA>"` / `"<empty>"`.
-#'   A value on a column carrying a group definition (see [expand_groups()])
-#'   is a group name. It is matched against the group's members, and the claim
-#'   is the set of source values the group holds (`mode = "multi"`).
+#' @param filters Named list, column -> drilled value(s) from the block's
+#'   filter reactives; the columns AND together. An `NA` value (or a table's
+#'   "(Missing)" level) takes the rows where the column is missing or empty,
+#'   and the claim names them with the tokens `"<NA>"` / `"<empty>"`. A value
+#'   on a column carrying a group definition (see [expand_groups()]) is a group
+#'   name, matched against the group's members, and the claim is the set of
+#'   source values the group holds.
 #' @param subject The board's subject column ([dd_ctrl_subject()]), or `NULL`.
 #'   When given, the claim becomes the subjects behind the click, with the
-#'   column clause kept as its `label`. A target re-applies a column claim to
-#'   its own data, which may differ from the data this block counted (a flag
-#'   filter or a worst-grade reduction in between), whereas subject ids
-#'   resolved here are exact. A structured table resolves them through its
-#'   stamped `source_data` ([drill_source()]). A frame that carries the
-#'   subject column neither way keeps the column claim.
+#'   column clause kept as its `label`. A structured table resolves them
+#'   through its stamped `source_data` ([drill_source()]). A frame that carries
+#'   the subject column neither way keeps the column claim.
 #' @return A list of filter conditions, `list()` when the user has no drill,
 #'   `NULL` when the claim cannot be resolved right now (hold).
 #' @keywords internal
@@ -713,58 +633,11 @@ dd_ctrl_claims <- function(data, table, filters, subject = NULL) {
   }
 
   table <- table %||% ""
-
-  # A click on a group of an overlap definition names the group, while an
-  # unexpanded group column holds raw levels, so match the group's members.
-  # An NA filter value takes the rows where the column is missing or empty.
-  keep <- rep(TRUE, nrow(data))
-  for (col in names(filters)) {
-    x <- as.character(data[[col]])
-    vals <- as.character(unlist(filters[[col]]))
-    vals[vals %in% MISSING_LEVEL] <- NA_character_
-    hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
-    if (anyNA(vals)) {
-      hit <- hit | is.na(x) | x == ""
-    }
-    keep <- keep & hit
-  }
-
+  keep <- dd_claim_rows(data, filters)
   cols <- names(filters)[!startsWith(names(filters), ".")]
+  claim_col <- dd_claim_source_cols(data, cols)
 
-  # A picker-made copy (`Color` <- `RACE`) carries its origin in
-  # `blockr_source`; the claim names the original column, which the target
-  # filter sees. A copy whose source is gone claims under its own name.
-  claim_col <- vapply(cols, function(col) {
-    src <- attr(data[[col]], "blockr_source", exact = TRUE)
-    if (is.character(src) && length(src) == 1L && nzchar(src) &&
-          src %in% names(data)) src else col
-  }, character(1L), USE.NAMES = FALSE)
-
-  grouped <- vapply(cols, function(col) has_group_def(data[[col]]), logical(1L))
-  group_claims <- dd_group_claims(data, keep, filters, cols[grouped],
-                                  claim_col[grouped])
-
-  # Plain columns claim the set of values the clicked rows hold: a click can
-  # cover several (the patients under a bar segment). With no named column the
-  # ARD identity columns speak. With only group columns, only they claim.
-  plain_cols <- setdiff(unique(claim_col[!grouped]), names(group_claims))
-  rows <- data[keep, , drop = FALSE]
-  out <- if (length(plain_cols)) {
-    drilled_value_claims(rows, table, plain_cols)
-  } else if (!length(cols)) {
-    drill_claim_columns(rows, table = table)
-  } else {
-    list()
-  }
-
-  if (length(group_claims)) {
-    out <- c(out, unname(Map(function(name, values) {
-      claim_cond(name, values, table)
-    }, names(group_claims), unname(group_claims))))
-    ord <- match(vapply(out, function(e) as.character(e$name), character(1L)),
-                 unique(claim_col))
-    out <- out[order(ord)]
-  }
+  out <- dd_claim_conditions(data, keep, filters, cols, claim_col, table)
 
   # A structured table's "(Missing)" level names the missing value.
   out <- lapply(out, function(cl) {
@@ -788,6 +661,69 @@ dd_ctrl_claims <- function(data, table, filters, subject = NULL) {
   # it, which is a hold.
   if (!length(out)) {
     return(NULL)
+  }
+
+  out
+}
+
+# The rows the filters select. A click on a group of an overlap definition
+# names the group, while an unexpanded group column holds raw levels, so match
+# the group's members. An NA filter value takes the rows where the column is
+# missing or empty.
+dd_claim_rows <- function(data, filters) {
+  keep <- rep(TRUE, nrow(data))
+  for (col in names(filters)) {
+    x <- as.character(data[[col]])
+    vals <- as.character(unlist(filters[[col]]))
+    vals[vals %in% MISSING_LEVEL] <- NA_character_
+    hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
+    if (anyNA(vals)) {
+      hit <- hit | is.na(x) | x == ""
+    }
+    keep <- keep & hit
+  }
+  keep
+}
+
+# The column each of `cols` claims under. A picker-made copy (`Color` <-
+# `RACE`) carries its origin in `blockr_source`, and the claim names the
+# original column, which the target filter sees. A copy whose source is gone
+# claims under its own name.
+dd_claim_source_cols <- function(data, cols) {
+  vapply(cols, function(col) {
+    src <- attr(data[[col]], "blockr_source", exact = TRUE)
+    if (is.character(src) && length(src) == 1L && nzchar(src) &&
+          src %in% names(data)) src else col
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+# The column conditions of a click, in the order of the claim columns. Plain
+# columns claim the set of values the clicked rows hold (a click can cover
+# several, e.g. the patients under a bar segment). With no named column the
+# ARD identity columns speak. With only group columns, only they claim.
+dd_claim_conditions <- function(data, keep, filters, cols, claim_col, table) {
+
+  grouped <- vapply(cols, function(col) has_group_def(data[[col]]), logical(1L))
+  group_claims <- dd_group_claims(data, keep, filters, cols[grouped],
+                                  claim_col[grouped])
+
+  plain_cols <- setdiff(unique(claim_col[!grouped]), names(group_claims))
+  rows <- data[keep, , drop = FALSE]
+  out <- if (length(plain_cols)) {
+    drilled_value_claims(rows, table, plain_cols)
+  } else if (!length(cols)) {
+    drill_claim_columns(rows, table = table)
+  } else {
+    list()
+  }
+
+  if (length(group_claims)) {
+    out <- c(out, unname(Map(function(name, values) {
+      claim_cond(name, values, table)
+    }, names(group_claims), unname(group_claims))))
+    ord <- match(vapply(out, function(e) as.character(e$name), character(1L)),
+                 unique(claim_col))
+    out <- out[order(ord)]
   }
 
   out
@@ -822,7 +758,6 @@ dd_group_claims <- function(data, keep, filters, cols, claim_col) {
 # subject column, else off the stamped `source_data` narrowed by the column
 # claims (a structured table's rows are display rows). NULL when neither
 # frame knows the subject.
-#' @noRd
 dd_claim_subjects <- function(data, keep, claims, subject) {
 
   ids <- if (subject %in% names(data)) {
@@ -848,7 +783,6 @@ dd_claim_subjects <- function(data, keep, claims, subject) {
 
 # What the user clicked, in the words a filter trail uses:
 # "AEBODSYS = Nausea; TRT = Placebo".
-#' @noRd
 dd_claim_label <- function(claims) {
   parts <- vapply(claims, function(cl) {
     vals <- as.character(unlist(cl$values))
@@ -863,22 +797,11 @@ dd_claim_label <- function(claims) {
 }
 
 # Has the user drilled yet? A latch: TRUE until the drill selection first
-# differs from the constructor's, FALSE afterwards. A live comparison would
-# read a drill cleared back to the constructor's selection as pristine again
-# and swallow the clear.
-#
-# It is a plain closure that flips when the sender calls it. A `reactiveVal`
-# set from a separate observer would race the sender's observer, which
-# invalidates on the same drill in an undefined order.
-#
-# `r_state` must report every piece of drill state the block has and `initial`
-# the constructor's value for each. State the closure cannot see leaves the
-# latch pristine and the sender never pushes. Add a drill dimension to a
-# block, add it here.
-#
-# `r_state`: function returning the block's current drill state, as a list.
-# `initial`: the same shape, as the constructor was given it.
-#' @noRd
+# differs from the constructor's, FALSE afterwards, so a drill cleared back to
+# the constructor's selection does not read as pristine and swallow the clear.
+# `r_state` returns the block's current drill state as a list and must report
+# every piece of it; `initial` is the same shape as the constructor was given
+# it.
 dd_ctrl_pristine <- function(r_state, initial) {
 
   touched <- FALSE
@@ -899,16 +822,13 @@ dd_ctrl_pristine <- function(r_state, initial) {
 #'
 #' The observer shared by the three drill senders: a claim sends, no claim
 #' clears. [ctrl_clear()] only acts when this block still owns the target's
-#' last claim, so an un-drill never clobbers a sibling sender's cohort.
-#' Re-aiming or un-setting the target releases the old target's claim the same
-#' way.
+#' last claim. Re-aiming or un-setting the target releases the old target's
+#' claim the same way.
 #'
-#' A send is a board update, which re-evaluates every block, including this
-#' one, and `r_claims` invalidates on that re-evaluation. The observer
-#' therefore sends only a payload that differs from the last one. `r_pristine`
-#' suppresses the push of a restored claim: the target comes back from the
-#' same saved board already holding it. The claim is recorded as sent, so the
-#' first real drill diffs against it.
+#' A send is a board update, which re-evaluates this block, so the observer
+#' sends only a payload that differs from the last one. `r_pristine`
+#' suppresses the push of a restored claim, since the target comes back from
+#' the same saved board already holding it.
 #'
 #' @param r_target Reactive returning the target block id (`""` for none).
 #' @param r_claims Reactive returning the claim list (`NULL` = hold, see
@@ -917,10 +837,8 @@ dd_ctrl_pristine <- function(r_state, initial) {
 #'   restorable drill state may omit it.
 #' @param session Shiny session.
 #' @param r_nonce Optional reactive returning a click counter minted in the
-#'   browser. It is part of the send-once key and never part of the payload.
-#'   It lets a re-click of the same mark in transient-drill mode send again,
-#'   since the claim is identical, while a board re-evaluation, which does not
-#'   change the counter, does not.
+#'   browser. It is part of the send-once key, not of the payload. A re-click
+#'   of the same mark sends again, a board re-evaluation does not.
 #' @return The observer, invisibly.
 #' @keywords internal
 #' @export
@@ -951,8 +869,8 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     pristine <- is.function(r_pristine) && isTRUE(r_pristine())
     nonce <- if (is.function(r_nonce)) r_nonce() else NULL
 
-    # No claims: hold. `last_key` stays, so coming back on screen re-reads the
-    # same claim and the skip below swallows the re-send.
+    # Hold. `last_key` stays, so coming back on screen re-reads the same claim
+    # and the skip below swallows the re-send.
     if (is.null(claims)) {
       return()
     }
@@ -984,9 +902,7 @@ dd_ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
 }
 
 # The board's candidate targets as a reactiveVal with an identical() skip, so
-# the gear's picker re-renders only when the candidate set changes, not on
-# every board update.
-#' @noRd
+# the gear's picker re-renders only when the candidate set changes.
 dd_ctrl_choices <- function(session = shiny::getDefaultReactiveDomain()) {
 
   rv <- shiny::reactiveVal(character())
@@ -1006,7 +922,6 @@ dd_ctrl_choices <- function(session = shiny::getDefaultReactiveDomain()) {
 
 # The "auto" entry at the head of the picker, labelled with the block the
 # board currently resolves it to.
-#' @noRd
 dd_ctrl_auto_choice <- function(session = shiny::getDefaultReactiveDomain()) {
 
   id <- ctrl_auto_target(session)
@@ -1023,7 +938,6 @@ dd_ctrl_auto_choice <- function(session = shiny::getDefaultReactiveDomain()) {
 }
 
 # Candidate targets for the gear, `[{value: blockId, label: blockName}]`.
-#' @noRd
 dd_ctrl_choices_list <- function(choices) {
   if (!length(choices)) {
     return(list())
@@ -1036,9 +950,8 @@ dd_ctrl_choices_list <- function(choices) {
 
 #' The column half of a structured click, as claims.
 #'
-#' The browser sends the source column and its value straight off the column
-#' header (`TRT01P = "Placebo"`), so this reshapes the click into conditions.
-#' A pooled column ("All Active") sends its members.
+#' The browser sends the source column and its value off the column header
+#' (`TRT01P = "Placebo"`). A pooled column ("All Active") sends its members.
 #'
 #' @param col_keys A list of `list(column=, values=)`, as the click sent it.
 #' @param table Name of the table the claim applies to, `""` for none.
