@@ -201,7 +201,7 @@
 
   // Fold sections close again when the gear re-renders: open them all.
   async function unfold(pop, id, record) {
-    for (const f of [...pop.querySelectorAll(".dd-section-title--fold")].filter(vis)) {
+    for (const f of [...pop.querySelectorAll(".vz-section-title--fold")].filter(vis)) {
       if (f.getAttribute("aria-expanded") === "true") continue;
       const changed = await probe(f, [pop], 300);
       if (record) push({ block: id, where: "gear", what: "section", label: txt(f), effect: changed ? "ok" : "DEAD" });
@@ -211,7 +211,7 @@
   // Custom checkboxes hide the native input; its label is what one clicks.
   const shown = (c) => vis(c) || (c.type === "checkbox" && vis(c.closest("label, .blockr-checkbox")));
   // The layout tiles (List, Per group, Per variable).
-  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" && !!c.closest(".dd-layout-tiles");
+  const isLayoutSeg = (c) => c.getAttribute("role") === "radio" && !!c.closest(".vz-tiles");
   const keyOf = (c, i) => (c.type === "checkbox" ? "checkbox|" + txt(c.closest("label, .blockr-checkbox") || c) : ctrlKey(c, i));
 
   // The layout tiles: each other layout must draw something else, and its gear
@@ -304,13 +304,13 @@
       const what = c.type === "checkbox" ? "checkbox" : role === "radio" ? "segment" :
         role === "combobox" || c.classList.contains("blockr-select__search") ? "select" :
         c.tagName === "INPUT" || c.tagName === "TEXTAREA" ? "input" :
-        c.classList.contains("dd-section-title--fold") ? "section" : "button";
+        c.classList.contains("vz-section-title--fold") ? "section" : "button";
       if (c.disabled || c.getAttribute("aria-disabled") === "true") {
         push({ block: id, where: "gear", what, label, effect: "disabled" });
         continue;
       }
       if (what === "section") continue;
-      if (/remove|✕|delete/i.test(label + " " + c.className) || /add-link|dd-add-trigger/.test(c.className)) {
+      if (/remove|✕|delete/i.test(label + " " + c.className) || /add-link|vz-add-trigger/.test(c.className)) {
         push({ block: id, where: "gear", what, label, effect: "skipped" });
         continue;
       }

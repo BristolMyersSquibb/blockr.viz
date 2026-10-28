@@ -30,7 +30,7 @@ test('the script band draws a control per declared value, and names one it could
                          ['sv_top_n', 'sv_serious', 'sv_arm']);
   assert.strictEqual(input(c, 'sv_top_n').value, '10');
   assert.strictEqual(input(c, 'sv_serious').checked, false);
-  assert.match(band.querySelector('.dd-script-input-error').textContent, /Lvl.*no column "X"/);
+  assert.match(band.querySelector('.vz-script-input-error').textContent, /Lvl.*no column "X"/);
   c.close();
 });
 
@@ -50,7 +50,7 @@ test('a script control writes script_values by name, a flag as true or false', (
 
 test('a failing script is said above the chart; no script, no band', () => {
   const c = D.open(BAR, { derived: { script: { inputs: [], values: {}, error: 'object x not found' } } });
-  assert.strictEqual(c.block.band.el.querySelector('.dd-script-failed').textContent,
+  assert.strictEqual(c.block.band.el.querySelector('.vz-script-failed').textContent,
                      'Script failed: object x not found');
   assert.strictEqual(c.block.band.el.hidden, false);
   c.send(BAR, { derived: { script: { inputs: [], values: {}, error: null } } });

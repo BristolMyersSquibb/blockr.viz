@@ -91,16 +91,16 @@
 
   /**
    * An empty section: its title, then its rows as the section's own
-   * children, which the stylesheet lays out in a grid (chart.css,
-   * `.dd-section`). `body` is the section itself.
+   * children, which the stylesheet lays out in a grid (gear.css,
+   * `.vz-section`). `body` is the section itself.
    * @param {string} title
    */
   function sectionEl(title) {
     const el = document.createElement('div');
-    el.className = 'dd-section' + (title === 'Titles' ? ' dd-section--titles' : '');
+    el.className = 'vz-section' + (title === 'Titles' ? ' vz-section--titles' : '');
     el.setAttribute('data-section', title);
     const titleEl = document.createElement('div');
-    titleEl.className = 'dd-section-title';
+    titleEl.className = 'vz-section-title';
     titleEl.textContent = title;
     el.appendChild(titleEl);
     return { el, titleEl, body: el };

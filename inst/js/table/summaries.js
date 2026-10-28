@@ -147,7 +147,7 @@
       const arg = variant[f];
       const el = document.createElement('div');
       // Tiles take the editor's width, as in the gear's own sections.
-      el.className = 'dd-form-row vz-table-sum-field' +
+      el.className = 'vz-row vz-table-sum-field' +
         (arg.gear.control === 'tiles' ? ' vz-table-sum-field--wide' : '');
       const lab = document.createElement('label');
       lab.className = 'blockr-label';

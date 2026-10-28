@@ -617,7 +617,7 @@
   white-space: nowrap;
 }
 /* The hover card over a bar, box, dot range or dumbbell: the chart tooltip
-   card (chart.css .dd-tt-*), at its padding and width. */
+   card (tooltip.css .vz-tt-*), at its padding and width. */
 .vz-table-lane-tip.is-card {
   padding: 6px 10px;
   min-width: 160px;

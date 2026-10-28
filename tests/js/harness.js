@@ -518,11 +518,11 @@ function createEnv(opts = {}) {
     configurable: true,
     get() {
       if (!this.isConnected) return 0;
-      if (this.classList && this.classList.contains('dd-chart')) {
-        const facet = this.closest('.dd-facet');
+      if (this.classList && this.classList.contains('vz-chart-panel')) {
+        const facet = this.closest('.vz-chart-facet');
         if (facet) {
           const grid = facet.parentElement;
-          const n = grid ? grid.querySelectorAll(':scope > .dd-facet').length : 1;
+          const n = grid ? grid.querySelectorAll(':scope > .vz-chart-facet').length : 1;
           const m = /repeat\((\d+)/.exec((grid && grid.style.gridTemplateColumns) || '');
           const cols = m ? Number(m[1]) : Math.max(1, Math.min(n, Math.floor(layout.width / 300)));
           return Math.floor(layout.width / cols);
@@ -644,15 +644,15 @@ const text = (el) => (el && !el.hidden ? el.textContent : null);
 function domSummary(block) {
   const legend = block.legend && !block.legend.el.hidden
     ? {
-        title: (block.legend.el.querySelector('.dd-legend-title') || {}).textContent || null,
-        chips: Array.from(block.legend.el.querySelectorAll('.dd-legend-chip')).map((c) => ({
+        title: (block.legend.el.querySelector('.vz-chart-legend-title') || {}).textContent || null,
+        chips: Array.from(block.legend.el.querySelectorAll('.vz-chart-legend-chip')).map((c) => ({
           name: c.textContent,
-          color: c.querySelector('.dd-legend-swatch').style.background,
-          off: c.classList.contains('dd-legend-chip-off')
+          color: c.querySelector('.vz-chart-legend-swatch').style.background,
+          off: c.classList.contains('vz-chart-legend-chip-off')
         }))
       }
     : null;
-  const empty = Array.from(block.chartGrid.querySelectorAll('.vd-empty-text'))
+  const empty = Array.from(block.chartGrid.querySelectorAll('.vz-empty-text'))
     .map((e) => e.textContent);
   return {
     title: text(block.frame.titleEl),
@@ -661,11 +661,11 @@ function domSummary(block) {
     legend,
     // The footer's words; its clear button is not text.
     status: block.frame.statusEl ? Array.from(block.frame.statusEl.childNodes)
-      .filter((n) => !(n.classList && n.classList.contains('dd-status-clear')))
+      .filter((n) => !(n.classList && n.classList.contains('vz-status-clear')))
       .map((n) => n.textContent).join('') : null,
     empty,
     grid: {
-      single: block.chartGrid.classList.contains('dd-chart-grid-single'),
+      single: block.chartGrid.classList.contains('vz-chart-grid--single'),
       columns: block.chartGrid.style.gridTemplateColumns || null
     },
     slots: Array.from(block._slots || [], (s) => ({

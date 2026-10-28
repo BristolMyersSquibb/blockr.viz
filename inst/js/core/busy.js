@@ -13,7 +13,7 @@
  *
  * Nothing shows for the first BUSY_AFTER ms: a cue that flashes for a few
  * frames is noise. The class goes on the element with the output's id; the
- * line is its `.blockr-busy-line` descendant, looked up on every tick since a
+ * line is its `.vz-busy-line` descendant, looked up on every tick since a
  * view may rebuild its DOM.
  *
  * Exposed as `Blockr.viz.busy` and, for the views and other packages,
@@ -40,6 +40,10 @@
   /** Ids R has spoken about: never watched, since an idle one would tick on. */
   /** @type {Record<string, boolean>} */
   const heard = {};
+  /** Ids whose cue a drawn view has ended. A view built again under such an
+   * id draws Shiny's last value at once; no wait comes, so it is not watched. */
+  /** @type {Record<string, boolean>} */
+  const ended = {};
   /** @type {Record<string, string>} */
   const watched = {};
 
@@ -80,8 +84,8 @@
       if (pending[id] !== p) return;
       const el = root.document.getElementById(id);
       if (!el) return;
-      el.classList.add('blockr-busy');
-      const line = el.querySelector('.blockr-busy-line');
+      el.classList.add('vz-busy');
+      const line = el.querySelector('.vz-busy-line');
       if (line) {
         line.textContent = (label || 'computing') + '… ' +
           ((performance.now() - t0) / 1000).toFixed(1) + ' s';
@@ -96,10 +100,11 @@
 
   /** @param {string} id */
   function stop(id) {
+    ended[id] = true;
     clear(id);
     delete watched[id];
     const el = root.document.getElementById(id);
-    if (el) el.classList.remove('blockr-busy');
+    if (el) el.classList.remove('vz-busy');
   }
 
   /** @param {string} id */
@@ -143,10 +148,12 @@
    * An output R has not spoken about yet starts its clock the moment it
    * comes on screen. A board that builds blocks lazily makes one only when
    * its panel shows, and R's "blockr-busy" follows a second or more later.
+   * An output that has drawn before is not watched: a dock that builds its
+   * panel again sends no new value, so nothing would stop the clock.
    * @param {string} id @param {string} label
    */
   function watch(id, label) {
-    if (heard[id] || pending[id]) return;
+    if (heard[id] || ended[id] || pending[id]) return;
     watched[id] = label;
   }
 

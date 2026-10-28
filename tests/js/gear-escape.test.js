@@ -76,7 +76,7 @@ test('Escape closes the table gear tray', async () => {
                 config: { layout: 'records', search: true, download: false },
                 data: { n: 1, stub: 0, cols: [{ name: 'n', disp: ['1'] }],
                         head: [[{ text: 'n', stub: true, col: 0 }]] } });
-  const band = el.querySelector('.blockr-settings.dd-popover');
+  const band = el.querySelector('.blockr-settings.vz-tray');
   const gear = el.querySelector('.blockr-gear-btn');
   assert.ok(band && gear, 'the table has a gear');
   check(win, band, gear, onGear);

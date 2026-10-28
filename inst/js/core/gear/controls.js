@@ -265,7 +265,7 @@
     const inp = /** @type {HTMLInputElement} */ (document.createElement(
       opts.multiline ? 'textarea' : 'input'));
     if (!opts.multiline) inp.type = opts.type || 'text';
-    inp.className = 'blockr-text-input dd-text' + (opts.multiline ? ' dd-script-editor' : '');
+    inp.className = 'blockr-text-input vz-text' + (opts.multiline ? ' vz-script-editor' : '');
     const before = ctx.arg.type.name === 'template' ? String(ctx.value ?? '')
       : toText(ctx.arg, ctx.value);
     inp.value = before;
@@ -327,7 +327,7 @@
     const all = offered.concat(vals.filter((v) => !offered.some((o) => same(o.value, v)))
       .map((v) => ({ value: v, label: String(v) })));
     const sub = document.createElement('div');
-    sub.className = 'dd-row-sub';
+    sub.className = 'vz-row-sub';
     el.appendChild(sub);
     pickMany(sub, all, vals, (vs) =>
       ctx.set({ [col]: vs.map((value) => ({ value, label: null })) }), ctx);
@@ -381,7 +381,7 @@
       ctx.set(now ? (choices[0] ? choices[0].value : null) : null), ctx);
     if (!on) return;
     const sub = document.createElement('div');
-    sub.className = 'dd-row-sub';
+    sub.className = 'vz-row-sub';
     el.appendChild(sub);
     pickOne(sub, choices, ctx.value, (v) => ctx.set(v), ctx);
   }
@@ -415,7 +415,7 @@
    * @param {HTMLElement} el @param {VizRowCtx} ctx */
   function scriptCtl(el, ctx) {
     const box = document.createElement('div');
-    box.className = 'dd-script-wrap';
+    box.className = 'vz-script-wrap';
     const show = (/** @type {boolean} */ on) => { box.style.display = on ? '' : 'none'; };
     show(isSet(ctx.value));
     checkbox(el, 'Use a prepare script', isSet(ctx.value), (on) => {
@@ -442,7 +442,7 @@
     const { min, max, step } = bounds(ctx.arg);
     const inp = document.createElement('input');
     inp.type = 'range';
-    inp.className = 'dd-slider';
+    inp.className = 'vz-slider';
     inp.min = String(Number.isFinite(min) ? min : 0);
     inp.max = String(Number.isFinite(max) ? max : 10);
     inp.step = String(step);
@@ -450,7 +450,7 @@
     inp.setAttribute('aria-label', ctx.label);
     inp.setAttribute('data-gear-input', ctx.key);
     const out = document.createElement('span');
-    out.className = 'dd-slider-value';
+    out.className = 'vz-slider-value';
     out.textContent = inp.value + '×';
     ctx.scope.on(inp, 'input', () => { out.textContent = inp.value + '×'; });
     ctx.scope.on(inp, 'change', () => ctx.set(Number(inp.value)));
@@ -467,11 +467,11 @@
     for (const g of groups) {
       // One block per group: its heading over its tiles.
       const box = document.createElement('div');
-      box.className = 'dd-tile-group';
+      box.className = 'vz-tile-group';
       el.appendChild(box);
       if (g.label) {
         const head = document.createElement('div');
-        head.className = 'dd-type-group-head';
+        head.className = 'vz-tile-group-head';
         head.textContent = g.label;
         box.appendChild(head);
       }

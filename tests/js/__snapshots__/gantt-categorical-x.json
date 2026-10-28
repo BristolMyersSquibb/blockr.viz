@@ -956,10 +956,10 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div>",
-       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div>",
-       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div>",
-       "<div class=\"dd-tt-head\"><span>S01</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div>"
+       "<div class=\"vz-tt-head\"><span>S01</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Baseline</span></div>",
+       "<div class=\"vz-tt-head\"><span>S01</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 2</span></div>",
+       "<div class=\"vz-tt-head\"><span>S01</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 4</span></div>",
+       "<div class=\"vz-tt-head\"><span>S01</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 8</span></div>"
       ]
      }
     }

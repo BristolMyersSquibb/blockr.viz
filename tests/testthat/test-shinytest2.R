@@ -170,7 +170,7 @@ echarts_canvas_click <- function(block_id, at) {
   cat_or_val <- if (is.character(at[[2]])) sprintf("'%s'", at[[2]]) else at[[2]]
   pt <- jsonlite::fromJSON(app$get_js(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
        var inst = window.echarts.getInstanceByDom(div);
        var px   = inst.convertToPixel({gridIndex: 0}, [%s, %s]);
        var r    = div.getBoundingClientRect();
@@ -188,7 +188,7 @@ echarts_pie_click <- function(block_id, slice_name) {
   sel <- chart_settle(block_id)
   pt <- jsonlite::fromJSON(app$get_js(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
        var inst = window.echarts.getInstanceByDom(div);
        var dt   = inst.getModel().getSeriesByIndex(0).getData();
        var idx = -1; for (var k = 0; k < dt.count(); k++) if (dt.getName(k) === '%s') idx = k;
@@ -210,7 +210,7 @@ echarts_brush <- function(block_id, xrange, yrange) {
   sel <- chart_settle(block_id)
   app$run_js(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .dd-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
        var inst = window.echarts.getInstanceByDom(div);
        inst.dispatchAction({type: 'brush', areas: [{
          brushType: 'rect', xAxisIndex: 0, yAxisIndex: 0,
@@ -662,7 +662,7 @@ dt_click_raw <- function(block_id, raw) {
 
 dt_status_text <- function(block_id) {
   app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .dd-status-text');
+    "(function(){var s=document.querySelector('%s .vz-status-text');
        return s ? s.textContent : null;})()",
     dt_result(block_id)
   ))
@@ -747,10 +747,10 @@ test_that("table drill: unchecking the gear's Drill-down clears the filter", {
   ))
   app$wait_for_idle()
   app$run_js(sprintf(
-    "(function(){var s=Array.from(document.querySelectorAll('%s .dd-section'))
-       .filter(function(x){var t=x.querySelector('.dd-section-title');
+    "(function(){var s=Array.from(document.querySelectorAll('%s .vz-section'))
+       .filter(function(x){var t=x.querySelector('.vz-section-title');
          return t && /Drill-down/.test(t.textContent);})[0];
-     s.querySelector('.dd-section-enable input[type=checkbox]').click();})()",
+     s.querySelector('.vz-section-enable input[type=checkbox]').click();})()",
     scope
   ))
   app$wait_for_idle()
@@ -788,7 +788,7 @@ test_that("cards drill: re-clicking the active row clears (toggle)", {
   expect_equal(app$get_js(sprintf(
     "document.querySelectorAll('%s .tc-row.is-on').length", scope)), 0)
   expect_null(app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .dd-status-text');
+    "(function(){var s=document.querySelector('%s .vz-status-text');
        return s ? s.textContent : null;})()", scope)))
 })
 
@@ -821,7 +821,7 @@ test_that("restore: cards with a saved selection mark the row + footer", {
     scope
   ), timeout = 5000)
   expect_equal(app$get_js(sprintf(
-    "document.querySelector('%s .dd-status-text').textContent", scope)),
+    "document.querySelector('%s .vz-status-text').textContent", scope)),
     "Filtered: region = South")
 
   # No Reset: a click on the selected card clears the restored selection.
@@ -850,7 +850,7 @@ test_that("restore: a chart with ctor filter state labels its footer", {
   chart_settle("chart_restored")
   txt <- app$get_js(
     "document.querySelector(
-       '#board-block_chart_restored-expr-drilldown_block .dd-status-text'
+       '#board-block_chart_restored-expr-drilldown_block .vz-status-text'
      ).textContent"
   )
   expect_equal(txt, "Filtered: region = North")
@@ -877,10 +877,10 @@ test_that("cards drill: unchecking the gear's Drill-down clears the filter", {
   app$wait_for_idle()
   Sys.sleep(0.3)
   app$run_js(sprintf(
-    "(function(){var s=Array.from(document.querySelectorAll('%s .dd-section'))
-       .filter(function(x){var t=x.querySelector('.dd-section-title');
+    "(function(){var s=Array.from(document.querySelectorAll('%s .vz-section'))
+       .filter(function(x){var t=x.querySelector('.vz-section-title');
          return t && /Drill-down/.test(t.textContent);})[0];
-     s.querySelector('.dd-section-enable input[type=checkbox]').click();})()",
+     s.querySelector('.vz-section-enable input[type=checkbox]').click();})()",
     scope
   ))
   app$wait_for_idle()
@@ -906,7 +906,7 @@ test_that("cards drill: unchecking the gear's Drill-down clears the filter", {
 facet_axes <- function(block_id) {
   sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
   jsonlite::fromJSON(app$get_js(sprintf(
-    "JSON.stringify(Array.from(document.querySelectorAll('%s .dd-chart'))
+    "JSON.stringify(Array.from(document.querySelectorAll('%s .vz-chart-panel'))
        .map(function(d) {
          var c = echarts.getInstanceByDom(d);
          var m = c.getModel();
@@ -976,7 +976,7 @@ box_geometry <- function(block_id) {
   sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
   jsonlite::fromJSON(app$get_js(sprintf(
     "JSON.stringify((function() {
-       var c = echarts.getInstanceByDom(document.querySelector('%s .dd-chart'));
+       var c = echarts.getInstanceByDom(document.querySelector('%s .vz-chart-panel'));
        var m = c.getModel();
        var out = { series: 0, x_axes: 0, shown_x_axes: 0, offsets: [] };
        m.eachComponent('xAxis', function(a) {
@@ -1027,7 +1027,7 @@ test_that("a colour-split boxplot centres every box on its own slot", {
 
 chart_cap_text <- function(block_id) {
   app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .dd-status-cap');
+    "(function(){var s=document.querySelector('%s .vz-status-note');
        return s ? s.textContent : null;})()",
     sprintf("#board-block_%s-expr-drilldown_block", block_id)
   ))

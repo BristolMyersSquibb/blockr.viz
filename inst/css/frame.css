@@ -1,0 +1,186 @@
+/* The frame every block view draws in (core/frame.js): header, titles,
+   footer and status line, the busy cue and the empty state. Part of the core
+   dependency, so the chart and the table both load it. */
+
+/* ===== Frame =====
+   Positions the gear tray. */
+.vz-frame { position: relative; }
+/* The frame hides a part with `hidden`; a part's own display rule must not
+   show it again. */
+.vz-frame [hidden] { display: none !important; }
+
+/* ===== Title, subtitle, caption =====
+   Painted by core/frame.js titles() from the resolved title text. A band
+   hides while empty, so a block without titles has no gap. */
+.vz-title {
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: 600;
+  color: var(--blockr-color-text-default, #111827);
+  white-space: pre-line;
+}
+.vz-subtitle {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  margin-top: 1px;
+  white-space: pre-line;
+}
+/* `pre-line`, like the title and subtitle: a newline in the text is a line
+   break, which is how a caption carries a second note (a pooling rule, a
+   denominator) on its own line. `\n` in the template is that newline
+   (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and the
+   text stays a text node: bands are data-derived, never HTML. */
+.vz-caption {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  padding: 6px 2px 0;
+  white-space: pre-line;
+}
+
+/* ===== Status footer ===== */
+.vz-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.vz-status-text {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+/* The receipt for a transient drill: past tense, this block's own act, and it
+   fades. One step darker than the muted status line it replaces, and not the
+   primary blue: the blue read as a link and outlived the flash, leaving a
+   coloured sentence with nothing coloured left on screen. The change of words
+   is the signal; the mark carries the colour.
+   It leaves the way the mark does, hold then fade, rather than being cut. It
+   is held longer than the mark (1400ms against 400ms) because a sentence takes
+   longer to read than a lit bar takes to notice.
+   The fade is linear, not the mark's ease-in. Grey text is invisible around
+   opacity 0.3, so only the top two thirds of the ramp are seen; under ease-in
+   that stretch was squeezed into the last ~350ms and the line read as cut.
+   The `animation` shorthand is set inline by core/frame.js, not here: the
+   frame repaints this element on every change of the line, and a fresh
+   element would restart the animation. The delay is computed from the age of
+   the receipt, so a rebuild resumes the fade instead of replaying it. Only
+   the keyframes and the colour belong in CSS. */
+.vz-status-receipt { color: var(--blockr-color-text-secondary, #374151); }
+/* Named by core/frame.js, which sets the animation inline. */
+@keyframes vz-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+/* The frame's footer sits under the caption: a count and the status line,
+   each there only while it has words (core/frame.js): nothing filtered, no
+   line and no gap. A second click on the selected mark also clears. */
+.vz-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vz-foot > .vz-count:empty,
+.vz-foot > .vz-status:empty { display: none; }
+.vz-foot > .vz-status {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+.vz-foot .vz-status-note { margin-left: 0; }
+/* The resting line coming back after a receipt. Without this it snaps into the
+   slot the receipt just dissolved out of, which moves the cut one step later
+   and does not remove it. */
+.vz-status-returning { animation: vz-status-in 320ms ease-out both; }
+@keyframes vz-status-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.vz-status-note {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-warning-text, #b45309);
+  font-style: italic;
+  margin-left: 12px;
+}
+.vz-slider {
+  width: 100%;
+  accent-color: var(--blockr-color-primary, #2563eb);
+  cursor: pointer;
+}
+.vz-slider-value {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-600, #4b5563);
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ===== Header =====
+   Titles, tools (the download), gear and settings tray, placed by state.
+   Closed: one row, title and subtitle on the left, download and gear on the
+   right. Open: the gear alone on top, the tray under it (blockr.ui draws its
+   beak 8px in from the right end, under the gear), then the titles and the
+   download. The table block uses the same classes and rules. */
+.vz-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "titles tools gear";
+  column-gap: 6px;
+  /* Top-aligned, so a sentence that wraps grows downward and the icons stay
+     at the top right. */
+  align-items: start;
+}
+.vz-head > .vz-head__titles {
+  grid-area: titles;
+  min-width: 0;
+}
+.vz-head > .vz-head__tools {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vz-head > .vz-head__tools:empty { display: none; }
+.vz-head > .blockr-gear-btn { grid-area: gear; }
+.vz-head > .blockr-settings { grid-area: tray; }
+.vz-head.vz-head--open { grid-template-areas: ". . gear" "tray tray tray" "titles tools tools"; }
+.vz-head.vz-head--open > .vz-head__tools { justify-self: end; }
+.vz-head.vz-head--open > .blockr-settings { margin: 8px 0 10px; }
+.vz-frame > .vz-head > .vz-head__titles { padding: 2px 8px 0 2px; }
+
+/* ===== Busy cue (core/busy.js) =====
+   An output being recomputed keeps its old picture, dimmed, and the line under
+   its sentence counts the wait. The class lands 300 ms after R's
+   "blockr-busy" and leaves once the new picture is drawn. The sentence keeps
+   full contrast: it names what is being computed. */
+.vz-busy-line {
+  height: 0;
+  overflow: hidden;
+  padding: 0 2px;
+  line-height: 18px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+  transition: height 0.15s ease;
+}
+/* The line opens rather than appears, so the output slides down under it. */
+.vz-busy .vz-busy-line { height: 24px; }
+/* On the elements themselves, so the output fades back in as well as out. */
+.vz-chart-grid,
+.vz-chart-legend,
+[data-dt-elem-id] .blockr-table-wrapper { transition: opacity 0.15s ease; }
+.vz-busy .vz-chart-grid,
+.vz-busy .vz-chart-legend,
+.vz-busy .blockr-table-wrapper { opacity: 0.45; }
+
+/* ===== Empty state ===== */
+.vz-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 24px;
+}
+.vz-empty-text {
+  font-size: 13px;
+  color: var(--blockr-color-text-muted, #9ca3af);
+  text-align: center;
+}

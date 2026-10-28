@@ -46,7 +46,7 @@ test('the band sits below the plot by default and above it with legend = "top"',
   const above = draw({ chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' });
   const top = band(above);
   assert.strictEqual(top.nextElementSibling, above.block.chartGrid);
-  assert.ok(top.classList.contains('dd-legend-band--top'));
+  assert.ok(top.classList.contains('vz-chart-legend--top'));
   // The title band is the header's, which comes before.
   assert.ok(top.compareDocumentPosition(above.block.chartGrid) & 4);
   assert.ok(above.block.frame.el.firstElementChild.contains(above.block.frame.titleEl));
@@ -59,7 +59,7 @@ test('the band moves back below when the setting returns to bottom', () => {
   assert.strictEqual(band(r).nextElementSibling, r.block.chartGrid);
   h.sendInternal(r.env, r.id, { columns: F.columns, data: F.data, settings: { ...config, legend: 'bottom' } });
   assert.strictEqual(band(r).previousElementSibling, r.block.chartGrid);
-  assert.ok(!band(r).classList.contains('dd-legend-band--top'));
+  assert.ok(!band(r).classList.contains('vz-chart-legend--top'));
   r.env.close();
 });
 
@@ -72,10 +72,10 @@ test('legend = "none" draws no band', () => {
 test('the title shows for a labelled colour column only', () => {
   // ARM has a label in the fixture, AESEV has none.
   const labelled = draw({ chart_type: 'bar', ...AE, color: 'ARM' });
-  assert.strictEqual(band(labelled).querySelector('.dd-legend-title').textContent, 'Planned Arm');
+  assert.strictEqual(band(labelled).querySelector('.vz-chart-legend-title').textContent, 'Planned Arm');
   labelled.env.close();
   const plainCol = draw({ chart_type: 'bar', ...AE, color: 'AESEV' });
-  assert.strictEqual(band(plainCol).querySelector('.dd-legend-title'), null);
+  assert.strictEqual(band(plainCol).querySelector('.vz-chart-legend-title'), null);
   plainCol.env.close();
 });
 
@@ -83,25 +83,25 @@ test('the swatch follows the mark', () => {
   const swatchOf = (config) => {
     const r = draw(config);
     const el = band(r);
-    const cls = el.querySelector('.dd-legend-swatch').className;
+    const cls = el.querySelector('.vz-chart-legend-swatch').className;
     r.env.close();
-    return cls.replace('dd-legend-swatch', '').trim();
+    return cls.replace('vz-chart-legend-swatch', '').trim();
   };
-  assert.strictEqual(swatchOf({ chart_type: 'bar', ...AE, color: 'AESEV' }), 'dd-legend-swatch--square');
-  assert.strictEqual(swatchOf({ chart_type: 'line', ...LAB, color: 'SEX' }), 'dd-legend-swatch--line');
-  assert.strictEqual(swatchOf({ chart_type: 'area', ...LAB, color: 'SEX' }), 'dd-legend-swatch--square');
-  assert.strictEqual(swatchOf({ chart_type: 'scatter', ...LAB, color: 'ARM' }), 'dd-legend-swatch--dot');
+  assert.strictEqual(swatchOf({ chart_type: 'bar', ...AE, color: 'AESEV' }), 'vz-chart-legend-swatch--square');
+  assert.strictEqual(swatchOf({ chart_type: 'line', ...LAB, color: 'SEX' }), 'vz-chart-legend-swatch--line');
+  assert.strictEqual(swatchOf({ chart_type: 'area', ...LAB, color: 'SEX' }), 'vz-chart-legend-swatch--square');
+  assert.strictEqual(swatchOf({ chart_type: 'scatter', ...LAB, color: 'ARM' }), 'vz-chart-legend-swatch--dot');
   assert.strictEqual(swatchOf({ chart_type: 'pointrange', group: 'AVISIT', color: 'ARM', value: 'AVAL' }),
-                     'dd-legend-swatch--dot');
+                     'vz-chart-legend-swatch--dot');
   assert.strictEqual(swatchOf({ chart_type: 'band', ...LAB, color: 'ARM', band_series: F.band_series.color,
-                                whiskers: 'p10_p90' }), 'dd-legend-swatch--line');
+                                whiskers: 'p10_p90' }), 'vz-chart-legend-swatch--line');
   assert.strictEqual(swatchOf({ chart_type: 'boxplot', group: 'AVISIT', color: 'ARM', value: 'AVAL' }),
-                     'dd-legend-swatch--square');
+                     'vz-chart-legend-swatch--square');
 });
 
 test('a chip still filters its level, and a second click sends again', () => {
   const r = draw({ chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' });
-  const chip = band(r).querySelector('.dd-legend-chip');
+  const chip = band(r).querySelector('.vz-chart-legend-chip');
   const sent = () => r.env.win.__inputs.filter((i) => /_select:/.test(i.name)).length;
   const before = sent();
   chip.click();

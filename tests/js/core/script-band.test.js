@@ -39,12 +39,12 @@ test('the band is hidden until a script declares a value or fails', () => {
 test('one row per declared value, the declaration that failed named', () => {
   const t = band();
   t.b.update(SCRIPT);
-  const rows = t.host.querySelectorAll('.dd-band-row');
+  const rows = t.host.querySelectorAll('.vz-script-band-row');
   assert.equal(rows.length, 2);
   assert.equal(rows[0].getAttribute('data-role'), 'n');
   assert.equal(rows[0].querySelector('.blockr-label').textContent, 'N');
   assert.equal(rows[0].querySelector('input').value, '5');
-  assert.ok(rows[1].classList.contains('dd-script-input-error'));
+  assert.ok(rows[1].classList.contains('vz-script-input-error'));
   assert.match(rows[1].textContent, /not a plain value/);
 });
 
@@ -60,7 +60,7 @@ test('an edit writes script_values by the variable name, keeping the others', ()
 test('a failed script says so; the same script again draws nothing new', () => {
   const t = band();
   t.b.update({ inputs: [], error: 'object x not found' });
-  assert.equal(t.host.querySelector('.dd-script-failed').textContent,
+  assert.equal(t.host.querySelector('.vz-script-failed').textContent,
                'Script failed: object x not found');
   const first = t.host.firstChild;
   t.b.update({ inputs: [], error: 'object x not found' });

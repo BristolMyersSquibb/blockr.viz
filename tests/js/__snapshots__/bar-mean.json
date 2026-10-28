@@ -161,11 +161,11 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Week 12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean of Analysis Value</span><span class=\"dd-tt-value\">35.45 (n=12)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean of Analysis Value</span><span class=\"dd-tt-value\">33.98 (n=12)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean of Analysis Value</span><span class=\"dd-tt-value\">30.61 (n=12)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean of Analysis Value</span><span class=\"dd-tt-value\">28.64 (n=12)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Baseline</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Mean of Analysis Value</span><span class=\"dd-tt-value\">26.87 (n=12)</span></div>"
+       "<div class=\"vz-tt-head\"><span>Week 12</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean of Analysis Value</span><span class=\"vz-tt-value\">35.45 (n=12)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 8</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean of Analysis Value</span><span class=\"vz-tt-value\">33.98 (n=12)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 4</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean of Analysis Value</span><span class=\"vz-tt-value\">30.61 (n=12)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 2</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean of Analysis Value</span><span class=\"vz-tt-value\">28.64 (n=12)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Baseline</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean of Analysis Value</span><span class=\"vz-tt-value\">26.87 (n=12)</span></div>"
       ]
      }
     },

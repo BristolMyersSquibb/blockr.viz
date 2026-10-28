@@ -22,7 +22,7 @@
   const C = V.gear.controls;
 
   /**
-   * How wide a row is in the section's grid (chart.css): tiles, editors,
+   * How wide a row is in the section's grid (gear.css): tiles, editors,
    * templates and multi-line text take the whole width; a control with a
    * second one beside it (drill, highlight) two cells; a checkbox sits on
    * the controls' line.
@@ -30,12 +30,12 @@
    */
   const rowClass = (ctx, boxed) => {
     const control = ctx.arg.gear ? ctx.arg.gear.control : '';
-    if (control === 'tiles' || control === 'custom' || control === 'template') return ' dd-role-tiles';
-    if (control === 'code' || control === 'script') return ' dd-script-row';
+    if (control === 'tiles' || control === 'custom' || control === 'template') return ' vz-row--wide';
+    if (control === 'code' || control === 'script') return ' vz-row--code';
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
-      return ' dd-role-paired';
+      return ' vz-row--paired';
     }
-    return boxed ? ' dd-form-row--check' : '';
+    return boxed ? ' vz-row--check' : '';
   };
 
   /** A local edit not yet echoed by R: its value, the value R had, and how
@@ -194,11 +194,11 @@
       const boxed = g.control === 'toggle' ||
         (g.control === 'segmented' && ctx.arg.type.name === 'bool');
       const row = document.createElement('div');
-      row.className = 'dd-form-row' + rowClass(ctx, boxed);
+      row.className = 'vz-row' + rowClass(ctx, boxed);
       row.setAttribute('data-role', ctx.key);
       if (!boxed && ctx.label !== section) {
         const head = document.createElement('div');
-        head.className = 'dd-row-head';
+        head.className = 'vz-row-head';
         const lbl = document.createElement('span');
         lbl.className = 'blockr-label';
         lbl.textContent = ctx.label + (ctx.required ? ' *' : '');
@@ -206,7 +206,7 @@
         row.appendChild(head);
       }
       const controls = document.createElement('div');
-      controls.className = 'dd-row-controls';
+      controls.className = 'vz-row-controls';
       row.appendChild(controls);
       body.appendChild(row);
       C.build(controls, ctx);
@@ -217,7 +217,7 @@
      * @param {VizScope} scope */
     _addMenu(body, keys, values, scope) {
       const row = document.createElement('div');
-      row.className = 'dd-form-row dd-add-wrap dd-add-mapping';
+      row.className = 'vz-row vz-add vz-add-mapping';
       body.appendChild(row);
       const add = (/** @type {string} */ key) => {
         if (!key) return;
@@ -326,7 +326,7 @@
     btn.className = 'blockr-gear-btn';
     btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
     const band = document.createElement('div');
-    band.className = 'blockr-settings blockr-settings--beak dd-popover';
+    band.className = 'blockr-settings blockr-settings--beak vz-tray';
     head.append(btn, band);
     const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
     const set = (/** @type {boolean} */ on) => tray.set(on);

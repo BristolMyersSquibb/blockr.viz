@@ -238,11 +238,11 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Baseline</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">12</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">9.7</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">32.88</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">73.32</span></div>",
-       "<div class=\"dd-tt-head\"><span>Week 12</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of CHG</span><span class=\"dd-tt-value\">83.93</span></div>"
+       "<div class=\"vz-tt-head\"><span>Baseline</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of CHG</span><span class=\"vz-tt-value\">12</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 2</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of CHG</span><span class=\"vz-tt-value\">9.7</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 4</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of CHG</span><span class=\"vz-tt-value\">32.88</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 8</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of CHG</span><span class=\"vz-tt-value\">73.32</span></div>",
+       "<div class=\"vz-tt-head\"><span>Week 12</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of CHG</span><span class=\"vz-tt-value\">83.93</span></div>"
       ]
      }
     },

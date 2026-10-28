@@ -37,7 +37,7 @@ probe <- js("
       // show:true == a legend is painted INTO the canvas. Must never happen.
       if (lg && lg.show === true) nativeShown.push(lg.data ? lg.data.length : 0);
     }
-    const bands = Array.from(document.querySelectorAll('.dd-legend-band'));
+    const bands = Array.from(document.querySelectorAll('.vz-chart-legend'));
     const visible = bands.filter(e => e.offsetParent !== null);
     return {
       panels: panels.length,
@@ -45,8 +45,8 @@ probe <- js("
       bandsInDom: bands.length,
       bandsVisible: visible.length,
       bandChips: visible.map(e => ({
-        title: (e.querySelector('.dd-legend-title') || {}).textContent || null,
-        chips: Array.from(e.querySelectorAll('.dd-legend-chip')).map(
+        title: (e.querySelector('.vz-chart-legend-title') || {}).textContent || null,
+        chips: Array.from(e.querySelectorAll('.vz-chart-legend-chip')).map(
           c => c.textContent.trim())
       }))
     };
@@ -61,13 +61,13 @@ p <- jsonlite::fromJSON(probe, simplifyVector = FALSE)
 # the band; with facets it must hit all panels, not just one).
 toggle <- js("
   JSON.stringify((function () {
-    const band = Array.from(document.querySelectorAll('.dd-legend-band'))
+    const band = Array.from(document.querySelectorAll('.vz-chart-legend'))
       .filter(e => e.offsetParent !== null).pop();
     if (!band) return {err: 'no band'};
-    const chip = band.querySelector('.dd-legend-chip');
+    const chip = band.querySelector('.vz-chart-legend-chip');
     if (!chip) return {err: 'no chip'};
     const name = chip.textContent.trim();
-    const card = band.closest('.dd-chart-card') || band.parentElement;
+    const card = band.closest('.vz-chart-panel-card') || band.parentElement;
     const panels = Array.from(card.querySelectorAll('[_echarts_instance_]'));
     const sel = () => panels.map(d => {
       const o = echarts.getInstanceByDom(d).getOption();
@@ -77,7 +77,7 @@ toggle <- js("
     const before = sel();
     chip.click();
     return {name: name, panels: panels.length, before: before,
-            after: sel(), dimmed: chip.classList.contains('dd-legend-chip-off')};
+            after: sel(), dimmed: chip.classList.contains('vz-chart-legend-chip-off')};
   })())
 ")
 cat("toggle:", toggle, "\n")
@@ -91,12 +91,12 @@ if (p$nativeLegendsShown > 0)
   errs <- c(errs, sprintf("%d panel(s) still draw a NATIVE legend",
                           p$nativeLegendsShown))
 if (p$bandsVisible == 0)
-  errs <- c(errs, "no visible .dd-legend-band")
+  errs <- c(errs, "no visible .vz-chart-legend")
 if (!is.null(tg$err)) {
   errs <- c(errs, paste("toggle probe:", tg$err))
 } else {
   if (!isTRUE(tg$dimmed))
-    errs <- c(errs, "clicked chip did not get .dd-legend-chip-off")
+    errs <- c(errs, "clicked chip did not get .vz-chart-legend-chip-off")
   off <- vapply(tg$after, function(x) identical(x, FALSE), logical(1))
   if (!all(off))
     errs <- c(errs, sprintf("chip '%s' unselected in only %d/%d panels",

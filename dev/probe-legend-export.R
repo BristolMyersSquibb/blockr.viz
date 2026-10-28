@@ -38,7 +38,7 @@ cat("console errors after boot:", boot_errs, "\n")
 
 # Trigger the export on the FIRST chart (single panel -> the newly-exercised path).
 js("(function () {
-  const btn = document.querySelector('.dd-chart-dl');
+  const btn = document.querySelector('.vz-chart-panel-dl');
   if (!btn) return 'no button';
   btn.click();
   return 'clicked';
