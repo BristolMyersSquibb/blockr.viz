@@ -36,15 +36,24 @@
       ka.every((k) => sameValues((a || {})[k], (b || {})[k]));
   }
 
+  /** Whether every value of `a` is among `b`'s. */
+  const within = (/** @type {(string | null)[] | undefined} */ a,
+                  /** @type {(string | null)[] | undefined} */ b) => {
+    if (!a || !b || !a.length) return false;
+    const has = new Set(b.map((v) => (v == null ? null : String(v))));
+    return a.every((v) => has.has(v == null ? null : String(v)));
+  };
+
   /**
    * Whether `keys` lies inside `claim`: every column of the claim is in the
-   * keys with the same values. A spanner's claim covers its leaves.
+   * keys, its values among theirs. A spanner's claim covers its leaves; a
+   * colour split's segment (one level) covers its column (every level).
    * @param {TableClaim} claim
    * @param {TableClaim | null | undefined} keys
    */
   function covers(claim, keys) {
     const k = Object.keys(claim);
-    return !!keys && k.length > 0 && k.every((c) => sameValues(claim[c], keys[c]));
+    return !!keys && k.length > 0 && k.every((c) => within(claim[c], keys[c]));
   }
 
   /** @param {TableSelection | null} a @param {TableSelection | null} b */

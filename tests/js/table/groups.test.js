@@ -242,6 +242,9 @@ test('a click on a colour split\'s segment claims that level only', () => {
   m.cols[2].keys = { SEX: ['F', 'M'] };
   const t = mount(payload({ data: m, config: G }));
   t.click(t.cell(1, 2).querySelectorAll('.vz-table-groups-fill')[1]);
+  // The claimed cell is marked: its row lit, its column lit.
+  assert.ok(t.cell(1, 2).classList.contains('vz-table-col-active'));
+  assert.ok(t.$$('tbody tr')[1].classList.contains('vz-table-row-active'));
   t.click(t.cell(0, 2));
   assert.deepEqual(t.selects(), [
     { type: 'categorical', filters: { ARM: ['Low'] }, columns: { SEX: ['M'] } },

@@ -2,10 +2,10 @@
    table-structured.css. Keyed headers and section values carry `vz-table-keyed`, set where
    the markup is written. */
 
-/* A layout switch swaps what the body holds. Chrome's scroll anchoring would
-   then move a scrolled panel to keep some node in place; view.js keeps the
-   panel's scroll instead. */
-.vz-table > .vz-body { overflow-anchor: none; }
+/* A layout switch swaps what the body holds and what the gear tray offers.
+   Chrome's scroll anchoring would then move a scrolled panel to keep some
+   node in place; view.js keeps the panel's scroll instead. */
+.vz-table { overflow-anchor: none; }
 
 /* The view sizes its header by its own width, so a narrow block reflows
    whatever panel or card it sits in. */
