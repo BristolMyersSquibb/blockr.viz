@@ -774,8 +774,10 @@ new_table_block <- function(layout = "records",
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  core <- c("block_name", "block_metadata", "ctor", "ctor_pkg")
-  args <- legacy_ctor_args("table", c(given, dots[setdiff(names(dots), core)]))
+  # Old argument names; any other name is a block attribute (block_name,
+  # blockr.dock's `visible`) that blockr.core keeps.
+  old <- intersect(names(dots), legacy_arg_names("table"))
+  args <- legacy_ctor_args("table", c(given, dots[old]))
   values <- table_normalize(viz_check(spec, args))
   # blockr.core reads the starting state from this frame, by argument name.
   list2env(values, environment())
@@ -792,9 +794,9 @@ new_table_block <- function(layout = "records",
     class = "table_block",
     ...
   )
-  # blockr.core keeps other `...` as attributes, and would save old names
-  # back into every board.
-  for (nm in setdiff(names(dots), core)) attr(res, nm) <- NULL
+  # blockr.core keeps `...` as attributes, and would save old names back into
+  # every board.
+  for (nm in old) attr(res, nm) <- NULL
   res
 }
 

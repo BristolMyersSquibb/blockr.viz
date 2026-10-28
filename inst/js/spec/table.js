@@ -1207,7 +1207,8 @@
       "gear": {
         "group": "Variables",
         "control": "columns",
-        "label": "Statistics"
+        "label": "Statistics",
+        "labels": ["N", "n (%)", "Mean", "SD", "Mean (SD)", "Median", "Median (Q1, Q3)", "Q1, Q3", "Min, Max"]
       },
       "slot": false,
       "ctrl": true

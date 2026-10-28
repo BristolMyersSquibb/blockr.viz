@@ -207,6 +207,10 @@ record_rw_got <- function(rec) {
 # The old names a constructor warning lists, in sorted order: the rewrite
 # lists them in call order (behaviour-changes.md).
 record_rw_warnings <- function(w) {
+  # The old-name warning says "an earlier blockr.viz" (behaviour-changes.md
+  # row 26).
+  w <- sub("from blockr.viz < 0.3.0.", "from an earlier blockr.viz.", w,
+           fixed = TRUE)
   vapply(w, function(x) {
     m <- regmatches(x, regexpr("(`[^`]+`(, )?)+(?= (is|are) from)", x,
                                perl = TRUE))
