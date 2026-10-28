@@ -56,7 +56,7 @@
   /** @type {any} */ let measureCtx = null;
 
   const Mixins = /** @type {any} */ (function Mixins() {});
-  Object.assign(Mixins.prototype, NS.chrome, NS.interact, NS.exporter);
+  Object.assign(Mixins.prototype, NS.chrome, NS.scriptBand, NS.interact, NS.exporter);
 
   class ChartView extends Mixins {
     /** @param {HTMLElement & Record<string, any>} el @param {VizScope} scope */
@@ -139,6 +139,7 @@
       if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
+      this._updateScriptBand(d.script);
       this.drawn = false;
       this._render();
       this._updateDownloads(d.downloads);
