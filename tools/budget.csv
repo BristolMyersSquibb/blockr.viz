@@ -103,7 +103,6 @@ R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400
 R: legacy,R/summarize-block.R,400
 JS: core,inst/js/core/*.js,1300
-JS: core,inst/js/busy-cue.js,1300
 JS: core,inst/js/drilldown-theme-register.js,1300
 JS: gear,inst/js/core/gear/**.js,1300
 JS: chart,inst/js/chart/**.js,7700

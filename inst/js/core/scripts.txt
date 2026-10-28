@@ -3,6 +3,7 @@
 namespace.js
 util.js
 scope.js
+busy.js
 binding.js
 download.js
 capture.js
