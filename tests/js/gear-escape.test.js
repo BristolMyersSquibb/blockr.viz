@@ -90,7 +90,7 @@ test('Escape closes the table gear tray', async () => {
  * the draft and leaves the tray open; with the `@` menu open, the first
  * Escape closes the menu and the second reverts. Nothing is sent. */
 test('Escape in a title field reverts it and keeps the tray open', async () => {
-  const c = D.open({ type: 'bar', y: 'AETERM', orientation: 'horizontal', title: 'Adverse events' });
+  const c = D.open({ type: 'bar', category: 'AETERM', orientation: 'horizontal', title: 'Adverse events' });
   try {
     const win = c.env.win;
     const { band, button } = c.block.frame.tray;
