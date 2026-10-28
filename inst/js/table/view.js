@@ -67,6 +67,8 @@
       if (this.viewScope) this.viewScope.dispose();
       this.view = null;
       this.layout = layout;
+      // On the frame, for browser tests and stylesheets.
+      this.frame.el.setAttribute('data-layout', layout);
       this.frame.empty(null);
       const Layout = T.layouts[layout];
       if (!Layout) return;
