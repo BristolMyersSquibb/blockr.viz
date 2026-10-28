@@ -1,9 +1,11 @@
 #' A one-slot cache keyed by identical()
 #'
 #' A dock panel visit hands the chart server an equal frame, which invalidates
-#' every reactive that reads it. The costly ones (column metadata, the band
-#' and smoother fits) keep their last answer and return it while their inputs
-#' are identical().
+#' every reactive that reads it. The costly ones (serializing the rows, the
+#' column metadata, the band and smoother fits, the scale resolution) keep their
+#' last answer and return it while their inputs are identical(). On the same
+#' object that is a pointer comparison; on an equal copy it walks the values,
+#' which is still much cheaper than the work it saves.
 #'
 #' @return A function `(key, compute)` that returns the last value when `key`
 #'   is identical to the last key, and otherwise calls `compute()` and keeps

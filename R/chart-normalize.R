@@ -1,6 +1,8 @@
 # The chart's rules between arguments, applied after every change from any
-# source (constructor, gear, external control, restored board). Per-argument
-# checks are the spec's (viz_check()); these read two arguments.
+# source (constructor, gear, external control, restored board). One pure
+# function of the state, the state before the change and the data's column
+# kinds (viz_column_kinds()). Per-argument checks are the spec's (viz_check());
+# these are only the rules that read two arguments.
 
 # The aggregated types that cannot lie either way.
 NORM_CHART_FIXED <- c("waterfall", "pie", "treemap")
@@ -9,7 +11,8 @@ NORM_CHART_FIXED <- c("waterfall", "pie", "treemap")
 # `prev` (the state before the change, NULL for a new block) and `kinds` (the
 # data's column kinds, NULL without data).
 # - `orientation` is kept only where the inference from `x`, `y`, `func` and
-#   the kinds would read the chart the other way; without kinds it stays.
+#   the kinds would read the chart the other way (see
+#   dev/chart-cran-requirements.md); without kinds it stays.
 # - Waterfall, pie and treemap have no `orientation`. A horizontal bar
 #   switched to one of them keeps its category: `x` and `y` swap unless the
 #   change set them.
@@ -49,8 +52,10 @@ chart_orientation <- function(state, kinds) {
 # vertical, the category moves to x, unless the same change set x or y.
 chart_keep_category <- function(state, prev, kinds) {
   if (is.null(prev) || !(prev[["type"]] %||% "bar") %in% CHART_ORIENTED_TYPES ||
-        changed(state, prev, "x") || changed(state, prev, "y") ||
-        !identical(chart_lies(prev, kinds), "horizontal")) {
+        changed(state, prev, "x") || changed(state, prev, "y")) {
+    return(state)
+  }
+  if (!identical(chart_lies(prev, kinds), "horizontal")) {
     return(state)
   }
   state[c("x", "y")] <- list(prev[["y"]], prev[["x"]])
@@ -63,12 +68,12 @@ chart_lies <- function(state, kinds) {
 }
 
 # Which way an oriented chart lies when `orientation` is not given
-# (dev/chart-cran-requirements.md). The column `func` aggregates is the value
-# axis.
+# (dev/chart-cran-requirements.md). The column `func` aggregates sits on the
+# value axis, the one it groups by on the category axis.
 # - One of x and y set: with a row count on a bar it is the category,
 #   otherwise the value.
 # - Both set: a numeric x beside a non-numeric y is horizontal; any other
-#   pair is vertical, as in ggplot2.
+#   pair, or one whose kinds are unknown, is vertical, as in ggplot2.
 # - Neither set: vertical.
 chart_infer_lie <- function(state, kinds) {
   type <- state[["type"]] %||% "bar"

@@ -14,6 +14,7 @@
 #'   argument allows `NULL`.
 #' @noRd
 viz_check_value <- function(arg, x, name) {
+  # An empty list from JSON means unset, except where an empty list is a value.
   if (is.list(x) && !length(x) &&
         !arg$type$name %in% c("map", "records", "records_by", "named")) {
     x <- NULL
@@ -34,6 +35,15 @@ viz_check_value <- function(arg, x, name) {
   tryCatch(
     check(x, arg),
     viz_value_error = function(e) spec_fail(name, conditionMessage(e))
+  )
+}
+
+# Check `x` and return it in a one-element list, or NULL when it fails. For
+# callers that reject a bad value and carry on.
+try_check_value <- function(arg, x, name) {
+  tryCatch(
+    list(viz_check_value(arg, x, name)),
+    viz_arg_error = function(e) NULL
   )
 }
 
@@ -60,13 +70,26 @@ json_atomic <- function(x) {
   if (!is.list(x)) {
     return(x)
   }
-  ok <- vapply(x, function(e) is.null(e) || (is.atomic(e) && length(e) == 1L),
-               logical(1L))
-  if (!all(ok)) {
+  if (!all(vapply(x, is_scalar_or_null, logical(1L)))) {
     value_fail("must be a vector of single values")
   }
   x[vapply(x, is.null, logical(1L))] <- list(NA)
   unlist(x, use.names = FALSE)
+}
+
+is_scalar_or_null <- function(x) {
+  is.null(x) || (is.atomic(x) && length(x) == 1L)
+}
+
+# The list-valued types give NULL for an empty value unless `null = FALSE`.
+empty_or_null <- function(x, arg) {
+  if (!length(x) && !isFALSE(arg$null)) NULL else x
+}
+
+# `x` named by `nms` when any name is not empty.
+with_labels <- function(x, nms) {
+  if (!is.null(nms) && any(nzchar(nms))) names(x) <- nms
+  x
 }
 
 one_string <- function(x) {
@@ -106,6 +129,10 @@ one_of <- function(x, values) {
   x
 }
 
+check_string <- function(x, arg) one_string(x)
+
+check_enum <- function(x, arg) one_of(one_string(x), arg$values)
+
 check_column <- function(x, arg) {
   x <- one_string(x)
   if (!nzchar(x)) {
@@ -117,8 +144,7 @@ check_column <- function(x, arg) {
 
 check_columns <- function(x, arg) {
   x <- some_strings(x)
-  x <- x[nzchar(x)]
-  if (!length(x) && !isFALSE(arg$null)) NULL else x
+  empty_or_null(x[nzchar(x)], arg)
 }
 
 check_enums <- function(x, arg) {
@@ -126,7 +152,7 @@ check_enums <- function(x, arg) {
   for (v in x) {
     one_of(v, arg$values)
   }
-  if (!length(x) && !isFALSE(arg$null)) NULL else x
+  empty_or_null(x, arg)
 }
 
 check_number <- function(x, arg) {
@@ -191,9 +217,7 @@ check_numbers <- function(x, arg) {
   if (!is.numeric(x) || !all(is.finite(x))) {
     value_fail("must be finite numbers, not ", value_text(x))
   }
-  x <- as.numeric(x)
-  if (!is.null(nms) && any(nzchar(nms))) names(x) <- nms
-  if (!length(x) && !isFALSE(arg$null)) NULL else x
+  empty_or_null(with_labels(as.numeric(x), nms), arg)
 }
 
 # Values of a column: numbers when every value is a number, else text, dates
@@ -209,8 +233,7 @@ check_values <- function(x, arg) {
     value_fail("must be numbers or strings without NA, not ", value_text(x))
   }
   out <- if (is.numeric(x)) as.numeric(x) else as.character(x)
-  if (!is.null(nms) && any(nzchar(nms))) names(out) <- nms
-  if (!length(out) && !isFALSE(arg$null)) NULL else out
+  empty_or_null(with_labels(out, nms), arg)
 }
 
 check_format <- function(x, arg) {
@@ -241,34 +264,36 @@ check_fields <- function(x, fields) {
   if (length(extra)) {
     value_fail("has no field `", extra[[1L]], "`")
   }
+  check_entries(x, names(fields), function(f) fields[[f]], "has field ")
+}
+
+# Each entry of `x` named in `nms`, checked as the argument `arg_of(name)`.
+# A failure names the entry: "has field `a` ...".
+check_entries <- function(x, nms, arg_of, what) {
   out <- list()
-  for (f in names(fields)) {
+  for (nm in nms) {
     v <- tryCatch(
-      viz_check_value(fields[[f]], x[[f]], f),
-      viz_arg_error = function(e) value_fail("has field ", inner_message(e))
+      viz_check_value(arg_of(nm), x[[nm]], nm),
+      viz_arg_error = function(e) value_fail(what, inner_message(e))
     )
-    out[f] <- list(v)
+    out[nm] <- list(v)
   }
   out
 }
 
+# The message of a nested argument error, without its closing period.
+inner_message <- function(e) sub("\\.$", "", conditionMessage(e))
+
 check_records <- function(x, arg) {
-  if (!is.list(x) || (!is.null(names(x)) && length(x))) {
-    value_fail("must be a list of records")
-  }
-  out <- lapply(x, check_record, arg = arg)
-  if (!length(out) && !isFALSE(arg$null)) NULL else out
+  check_record_list(x, arg, function(r) check_record(r, arg))
 }
 
 # Records whose fields depend on their `key` field: each is checked against
 # the variant its key names, with the key kept as its first field.
 check_records_by <- function(x, arg) {
-  if (!is.list(x) || (!is.null(names(x)) && length(x))) {
-    value_fail("must be a list of records")
-  }
   key <- arg$type$key
   variants <- arg$type$variants
-  out <- lapply(x, function(r) {
+  check_record_list(x, arg, function(r) {
     k <- if (is.list(r)) json_atomic(r[[key]])
     if (!is.character(k) || length(k) != 1L || !k %in% names(variants)) {
       value_fail("needs `", key, "` in each record, one of ",
@@ -279,11 +304,14 @@ check_records_by <- function(x, arg) {
                          fields[setdiff(names(fields), key)])
     c(stats::setNames(list(k), key), rest)
   })
-  if (!length(out) && !isFALSE(arg$null)) NULL else out
 }
 
-# The message of a nested argument error, without its closing period.
-inner_message <- function(e) sub("\\.$", "", conditionMessage(e))
+check_record_list <- function(x, arg, check_one) {
+  if (!is.list(x) || (!is.null(names(x)) && length(x))) {
+    value_fail("must be a list of records")
+  }
+  empty_or_null(lapply(x, check_one), arg)
+}
 
 # A list keyed by free names, each value checked against the value type.
 check_named <- function(x, arg) {
@@ -297,15 +325,8 @@ check_named <- function(x, arg) {
   if (!is.null(max) && length(x) > max) {
     value_fail("takes at most ", max, " entries, not ", length(x))
   }
-  out <- list()
-  for (nm in nms) {
-    v <- tryCatch(
-      viz_check_value(arg$type$value, x[[nm]], nm),
-      viz_arg_error = function(e) value_fail("has entry ", inner_message(e))
-    )
-    out[nm] <- list(v)
-  }
-  if (!length(out) && !isFALSE(arg$null)) NULL else out
+  out <- check_entries(x, nms, function(nm) arg$type$value, "has entry ")
+  empty_or_null(out, arg)
 }
 
 check_map <- function(x, arg) {
@@ -323,9 +344,8 @@ check_map <- function(x, arg) {
 # lists keep their names and are read the same way inside.
 map_canon <- function(x) {
   if (is.list(x)) {
-    if (is.null(names(x)) && length(x) && all(vapply(x, function(e) {
-      is.null(e) || (is.atomic(e) && length(e) == 1L)
-    }, logical(1L)))) {
+    if (is.null(names(x)) && length(x) &&
+          all(vapply(x, is_scalar_or_null, logical(1L)))) {
       return(map_canon(json_atomic(x)))
     }
     return(lapply(x, map_canon))
@@ -343,15 +363,15 @@ map_canon <- function(x) {
 SPEC_CHECKERS <- list(
   column = check_column,
   columns = check_columns,
-  enum = function(x, arg) one_of(one_string(x), arg$values),
+  enum = check_enum,
   enums = check_enums,
-  string = function(x, arg) one_string(x),
-  template = function(x, arg) one_string(x),
+  string = check_string,
+  template = check_string,
   number = check_number,
   integer = check_integer,
   bool = check_bool,
   numbers = check_numbers,
-  strings = function(x, arg) check_columns(x, arg),
+  strings = check_columns,
   values = check_values,
   format = check_format,
   record = check_record,
@@ -408,10 +428,7 @@ viz_heal <- function(spec, payload, what = paste("a", spec$block)) {
   out <- list()
   for (nm in names(spec$args)) {
     arg <- spec$args[[nm]]
-    v <- tryCatch(
-      list(viz_check_value(arg, payload[[nm]], nm)),
-      viz_arg_error = function(e) NULL
-    )
+    v <- try_check_value(arg, payload[[nm]], nm)
     if (is.null(v)) {
       healed <- c(healed, nm)
       v <- list(viz_check_value(arg, spec_default(arg), nm))
@@ -425,14 +442,12 @@ viz_heal <- function(spec, payload, what = paste("a", spec$block)) {
 }
 
 heal_text <- function(what, healed, dropped) {
+  quoted <- function(x) paste0("`", x, "`", collapse = ", ")
   paste0(
     "Restoring ", what, ": ",
     paste(c(
-      if (length(healed)) paste0("reset ", paste0("`", healed, "`",
-                                                  collapse = ", "),
-                                 " to the default"),
-      if (length(dropped)) paste0("dropped ", paste0("`", dropped, "`",
-                                                     collapse = ", "))
+      if (length(healed)) paste0("reset ", quoted(healed), " to the default"),
+      if (length(dropped)) paste0("dropped ", quoted(dropped))
     ), collapse = "; "),
     "."
   )

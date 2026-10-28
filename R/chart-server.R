@@ -1,8 +1,9 @@
 # The chart block's server, on the kit (viz_block_server()). The kit holds the
-# state, one reactiveVal per spec argument, and takes the gear's settings,
-# clicks and pictures into it. The chart adds the data it draws and the filter
-# it emits (here), the payload and the exhibit (chart-view.R), and the claims
-# a drill target receives.
+# state, one reactiveVal per spec argument under the public names, and the
+# observers that take the gear's settings, clicks and pictures into it. The
+# chart adds reactives that read the state: the data it draws and the filter it
+# emits (here), the payload and the exhibit for the downloads (chart-view.R),
+# and the claims a drill target receives.
 
 chart_server <- function(id, data, init) {
   viz_block_server(
@@ -208,8 +209,9 @@ chart_filter_parts <- function(v, src, members) {
        cols = c(list(c(sel$x, if (!is.null(sel$y_range)) sel$y)), cols))
 }
 
-# What a drill target receives: with a target set, the click (the kit's
-# `claim`); without, the held selection.
+# What a drill target receives: the click's conditions. With a target set a
+# click is an event (the kit's `claim`); without, the held selection is the
+# claim. The kit sends them.
 chart_claims <- function(kit, src) {
   shiny::reactive({
     d <- tryCatch(src$prepared(), error = function(e) NULL)

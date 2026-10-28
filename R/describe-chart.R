@@ -1,7 +1,14 @@
-# What the assistant is told about a chart block. The block's expr is only the
-# click/brush filter, so its result is the upstream frame and carries no trace
-# of the chart: this method is the model's only account of what the user is
-# looking at. It reports what is set, in chart vocabulary.
+# What the assistant is told about a chart block.
+#
+# A chart block's expr is only the click/brush filter, so its result is the
+# upstream data frame and carries no trace of the chart: the mappings, the
+# chart type and the drill filter are block arguments the browser consumes.
+# `get_block_result` therefore cannot rescue a wrong description here the way it
+# can for a data block. This method is the model's only account of what the
+# user is looking at.
+#
+# The default method's `str()` of the constructor's 50-odd arguments is mostly
+# NULL defaults, so this reports what is set, in chart vocabulary.
 
 # Column-valued arguments, in the order a reader wants them.
 chart_mapping_args <- function() {
@@ -16,7 +23,7 @@ chart_ctor_defaults <- function() {
 }
 
 # Scalars inline, vectors capped: a categorical filter can hold hundreds of
-# levels.
+# levels and the whole description is capped downstream anyway.
 fmt_chart_val <- function(x, max_n = 6L) {
   if (is.null(x) || (is.character(x) && length(x) == 1L && !nzchar(x))) {
     return(NULL)
@@ -85,6 +92,11 @@ describe_block.chart_block <- function(x, board, id, ..., state = NULL) {
     chart_filter_lines(state),
     chart_chrome_lines(state),
     chart_other_lines(state, defaults),
+    # The commonest cause of an empty chart is a mapped column the data no
+    # longer has (renamed or dropped upstream). The renderer reports it inside
+    # the canvas, where the assistant cannot see it, and this method has the
+    # block arguments but not the data: so name the columns and say where to
+    # check.
     if (length(maps)) {
       paste(
         "If the chart looks empty, check these mapped columns against the",
@@ -97,9 +109,12 @@ describe_block.chart_block <- function(x, board, id, ..., state = NULL) {
   )
 }
 
-# The default method's account of which arguments the model may write. A chart
-# makes nearly all of its 50-odd arguments controllable; the typed tool
-# carries the list.
+# The default method's line on which arguments the model may write; without it
+# the model does not know which of them it is allowed to change. A chart
+# declares nearly every one of its 50-odd arguments controllable, so spelling
+# them out would cost more of the prompt cap than the rest of the description
+# together and tell the model nothing it cannot get from the typed tool, which
+# carries the full schema.
 chart_ctrl_line <- function(x) {
   ctrl <- blockr.core::external_ctrl_vars(x)
   if (length(ctrl) > 12L) {
@@ -137,8 +152,10 @@ chart_type_line <- function(state, defaults) {
   )
 }
 
-# Only the types that aggregate have a `func` worth reporting: elsewhere it
-# sits at its default and means nothing.
+# Only the types that aggregate in the browser have a `func` worth reporting.
+# Elsewhere (scatter, line, gantt, and the distribution marks, which summarize
+# the raw values without a `func`) it sits at its default and means nothing, so
+# reporting "count of row counts" on a scatter is worse than silence.
 chart_value_line <- function(state, defaults) {
   typ <- coal_chr(state$type, defaults$type)
   func <- state$func
@@ -164,10 +181,12 @@ chart_value_line <- function(state, defaults) {
   sprintf("Aggregation: %s of %s by %s", func, roles$value, group)
 }
 
-# The click or brush the user made, which silently narrows everything
-# downstream.
+# The one piece of state that is neither creation-time config nor visible in
+# the block's own arguments to a reader: a click or brush the user made, which
+# silently narrows everything downstream.
 chart_filter_lines <- function(state) {
   sel <- state$selection
+  # The click filter keeps its columns apart: "AETERM = Rash; AESEV = MILD".
   set <- list(
     filters = fmt_chart_filters(chart_filters_state(sel$filters)),
     range = fmt_chart_val(sel$range),
@@ -194,6 +213,8 @@ chart_chrome_lines <- function(state) {
 
 # Everything else that was moved off its default, named but not explained.
 chart_other_lines <- function(state, defaults) {
+  # `selection` is runtime interaction state, not creation-time config; it has
+  # its own lines above.
   known <- c(chart_mapping_args(), "selection", "title", "subtitle", "caption",
              "type", "orientation", "position", "func")
   rest <- setdiff(intersect(names(state), names(defaults)), known)
