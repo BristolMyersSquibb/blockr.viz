@@ -227,7 +227,8 @@ input.vz-table-search:focus {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
-  padding: 3px 18px 3px calc(24px + var(--blockr-card-inset, 0px));
+  /* --vz-indent: the row's indent steps (table/html.js indentSteps()). */
+  padding: 3px 18px 3px calc(24px + var(--vz-indent, 0) * 16px + var(--blockr-card-inset, 0px));
   line-height: 20px;
   font-size: var(--blockr-font-size-base, 0.875rem);
   font-weight: var(--blockr-font-weight-normal, 400);

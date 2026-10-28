@@ -64,7 +64,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "shadow"
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -166,12 +166,14 @@
           2,
           2,
           0
-         ]
+         ],
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
+         "disabled": true,
+         "scale": false
         },
         "label": {
          "show": true,
@@ -184,7 +186,8 @@
         },
         "labelLayout": {
          "hideOverlap": true
-        }
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -242,43 +245,57 @@
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.5,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.666667,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.5,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.833333,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.166667,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -302,7 +319,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "shadow"
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -404,12 +421,14 @@
           2,
           2,
           0
-         ]
+         ],
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
+         "disabled": true,
+         "scale": false
         },
         "label": {
          "show": true,
@@ -422,7 +441,8 @@
         },
         "labelLayout": {
          "hideOverlap": true
-        }
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -480,43 +500,57 @@
          {
           "value": 0.666667,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.666667,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.833333,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.5,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 0.333333,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

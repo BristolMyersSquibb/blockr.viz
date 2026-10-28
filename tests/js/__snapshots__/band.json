@@ -274,7 +274,8 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "__bandItem": [
          0,
@@ -291,14 +292,20 @@
          "x": 0,
          "y": 1
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "__bandItem": [
          0,
@@ -315,7 +322,12 @@
          "x": 0,
          "y": 1
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -375,15 +387,19 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "lineStyle": {
          "color": "#ffffff",
-         "width": 3.4
+         "width": 3.4,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -447,11 +463,14 @@
         },
         "lineStyle": {
          "color": "#0072B2",
-         "width": 2.2
+         "width": 2.2,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

@@ -185,7 +185,8 @@
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -229,7 +230,8 @@
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -283,7 +285,8 @@
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -327,7 +330,8 @@
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        }
@@ -364,43 +368,57 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -410,13 +428,17 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -428,13 +450,17 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -446,19 +472,25 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -468,19 +500,25 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -492,13 +530,17 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -510,7 +552,9 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -522,7 +566,9 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -538,7 +584,9 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -550,37 +598,49 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

@@ -138,11 +138,12 @@
       if (id) V.util.select(id, /** @type {Record<string, unknown> | null} */ (sel));
     }
 
-    /** The footer's words for the selection, in column labels; null for none. */
+    /** The footer's words for the selection, in column labels; null for none:
+     * the line shows only while something is selected. */
     words() {
       const c = this.current;
       const v = this.view;
-      if (!c) return this.brushDrawn ? 'Brush filter active' : null;
+      if (!c) return null;
       const m = v._memo.model;
       return 'Filtered: ' + (c.type === 'range'
         ? NS.keys.describeRange(c, v.columns, m && m.x ? m.x.type : undefined)

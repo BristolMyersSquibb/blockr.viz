@@ -82,15 +82,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "line",
-        "label": {
-         "show": false
-        },
-        "lineStyle": {
-         "color": "#6b7280",
-         "width": 1,
-         "type": "solid"
-        }
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -239,11 +231,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -286,11 +281,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -333,11 +331,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -380,11 +381,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -427,11 +431,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -474,11 +481,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -521,11 +531,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -568,11 +581,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -615,11 +631,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -662,11 +681,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -709,11 +731,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -756,11 +781,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -795,63 +823,94 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
         "name": "",
         "data": [],
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
         "name": "High Dose",
         "data": [],
         "itemStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
         "name": "Low Dose",
         "data": [],
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
         "name": "Placebo",
         "data": [],
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__scrim__",
@@ -863,7 +922,12 @@
         "legendHoverLink": false,
         "z": 8,
         "animation": false,
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__focus__",
@@ -874,7 +938,12 @@
         "showSymbol": false,
         "legendHoverLink": false,
         "z": 9,
-        "animation": false
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__focus_dots__",
@@ -884,7 +953,12 @@
         "silent": true,
         "legendHoverLink": false,
         "z": 10,
-        "animation": false
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

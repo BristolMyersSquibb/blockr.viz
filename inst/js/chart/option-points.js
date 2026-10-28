@@ -146,7 +146,9 @@
       smoothMonotone: smoothOn ? 'x' : undefined,
       // Clicks and hover on the line itself, not only on its symbols.
       triggerLineEvent: isLine ? true : undefined,
-      symbol: isLine && crowd ? 'none' : 'circle',
+      // A line without dots has no symbol at all: ECharts would show one at
+      // the hovered x.
+      symbol: isLine && (crowd || !dots) ? 'none' : 'circle',
       symbolSize: isLine ? lineMarkerPx : BASE_SCATTER_SIZE * dm,
       showSymbol: isLine ? dots : undefined,
       itemStyle: isLine
@@ -362,12 +364,12 @@
       ? endLabelPad(panel.series.filter((/** @type {any} */ s) => !(m.hl && s.muted))
         .map((/** @type {any} */ s) => s.level))
       : 0;
-    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.25 * lm, labelPad };
+    return { series, stepMode, smoothOn, markerPx: lineMarkerPx, focusW: 2.5 * lm, labelPad };
   };
 
-  /** The hover overlay, on every line chart (empty until a line is hovered) so the series keep one
-   * shape: a veil on its own hidden 0..1 axes, then the hovered line and its dots. `state.veil` is
-   * the fill, set on promotion. @param {{ veil?: string }} state */
+  /** The hover overlay of a crowd of lines (empty until a line is hovered): a veil on its own
+   * hidden 0..1 axes, then the hovered line and its dots. `state.veil` is the fill, set on
+   * promotion. @param {{ veil?: string }} state */
   const lineOverlay = (state) => [{
     id: '__scrim__', type: 'custom', xAxisIndex: 1, yAxisIndex: 1, data: [],
     silent: true, legendHoverLink: false, z: 8, animation: false,
@@ -401,8 +403,8 @@
   };
 
   /**
-   * The line chart's tooltip on a hairline crosshair: each line's value at x,
-   * highest first, capped. A crowd shows only the line nearest the cursor
+   * The line chart's tooltip at the cursor's x, on an invisible pointer:
+   * each line's value at x, highest first, capped. A crowd shows only the line nearest the cursor
    * (`hover.si`).
    * @param {any} m @param {any} look @param {{ si: number | null }} hover
    */
@@ -412,8 +414,7 @@
     const vf = NS.valueFormat(look.cfg);
     return {
       trigger: 'axis',
-      axisPointer: { type: 'line', label: { show: false },
-                     lineStyle: { color: look.ink.muted, width: 1, type: 'solid' } },
+      axisPointer: { type: 'none' },
       confine: true,
       formatter: (/** @type {any} */ ps) => {
         if (!Array.isArray(ps)) ps = [ps];

@@ -41,7 +41,7 @@
 
     // A range selection only exists on the individual family.
     patch: (c) => NS.option.aggregatedPatch(c.m, c.panel, c.cfg, c.current,
-                                            c.range ? null : c.lit, c.dimmed)
+                                            c.range ? null : c.lit, c.dimmed, c.ink)
   };
 
   NS.families = Object.assign(NS.families || {}, { aggregated });

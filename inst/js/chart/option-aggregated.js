@@ -19,8 +19,6 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const { withItemStyle } = option.barMarkParts;
 
-  // The opacity of a mark a filter does not light.
-  const DIM = 0.15;
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
 
@@ -82,7 +80,7 @@
       if (r.labelNote) labelNote = r.labelNote;
       const panelH = r.panelH != null ? r.panelH : DEFAULT_PANEL_H;
       return {
-        option: NS.cardTooltip(NS.applyDrillEmphasis(r.option, look.cfg), look.ink),
+        option: NS.cardTooltip(NS.quietHover(r.option, look.cfg), look.ink),
         // 64 only catches a degenerate option; a one-row panel is 104.
         height: Math.max(64, Math.round(panelH)) + 'px',
         panelH,
@@ -118,16 +116,18 @@
   const QUIET_TYPES = ['line', 'scatter', 'custom'];
 
   /**
-   * The highlight patch for one panel: every datum's opacity from whether
-   * its mark is lit (`lit` null: no filter). Built off the current option so
-   * what each datum carries (corner, colour, raw value, label) rides along.
+   * The highlight patch for one panel: every datum outlined or faded by
+   * whether its mark is lit (`lit` null: no filter; NS.selStyle()). Built off
+   * the current option so what each datum carries (corner, colour, raw
+   * value, label) rides along.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {any} current chart.getOption()
    * @param {((keys: Record<string, any>) => boolean) | null} lit
    * @param {boolean} wasDimmed the panel's quiet series carry dimming from before
+   * @param {Ink} [ink]
    * @returns {{ series: any[], dimmed: boolean }}
    */
-  const aggregatedPatch = (m, panel, cfg, current, lit, wasDimmed) => {
+  const aggregatedPatch = (m, panel, cfg, current, lit, wasDimmed, ink = NS.INK_DEFAULT) => {
     const SEP = NS.model.BOX_CAT_SEP;
     const fv = panel.facet;
     // getOption() hands axes back as arrays; the first is the category axis.
@@ -145,15 +145,18 @@
     };
     const barSplit = m.type === 'bar' && !m.cumulative && m.colors.length > 0;
     const anyFilter = !!lit;
+    /** @param {boolean} lit1 @param {any} s */
+    const look = (lit1, s) => NS.selStyle(lit1, anyFilter, ink, s.itemStyle);
 
     const series = (current.series || []).map((/** @type {any} */ s) => {
       // A name written on the marks is no mark of the data.
       if (typeof s.id === 'string' &&
           (s.id.indexOf('__legend_') === 0 || s.id === '__label__')) return {};
+      // The waterfall's invisible base: an outline would show it.
+      if (s.silent && s.type === 'bar') return {};
       if (s.type === 'pie' || s.type === 'treemap') {
-        const dim = s.type === 'pie' ? 0.2 : 0.3;
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d
-          : withItemStyle(d, { opacity: on(d.name, null) ? 1 : dim })) };
+          : withItemStyle(d, look(on(d.name, null), s))) };
       }
       // A box series is custom, one datum per category (option-distribution.js).
       if (typeof s.id === 'string' && s.id.indexOf('__box_') === 0) {
@@ -161,7 +164,7 @@
         return { data: (s.data || []).map((/** @type {any} */ v, /** @type {number} */ i) => {
           if (!v || typeof v !== 'object') return v;
           const [g, lv] = slotMark(cats[i]);
-          return withItemStyle(v, { opacity: on(g, lv) ? 1 : DIM });
+          return withItemStyle(v, look(on(g, lv), s));
         }) };
       }
       if (QUIET_TYPES.includes(s.type)) {
@@ -178,7 +181,7 @@
             cat = cats[idx];
           }
           const [g, lv] = slotMark(cat);
-          return withItemStyle(d, { opacity: on(g, lv) ? 1 : DIM });
+          return withItemStyle(d, look(on(g, lv), s));
         }) };
       }
       if (cats.length === 0) return {};
@@ -190,7 +193,7 @@
           ...(isObj && v.raw != null ? { raw: v.raw } : {}),
           ...(isObj && v.label ? { label: v.label } : {}),
           itemStyle: { ...(isObj ? v.itemStyle : undefined),
-                       opacity: on(String(cats[i] ?? ''), lv) ? 1 : DIM }
+                       ...look(on(String(cats[i] ?? ''), lv), s) }
         };
       }) };
     });

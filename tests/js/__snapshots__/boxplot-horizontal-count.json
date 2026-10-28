@@ -225,8 +225,14 @@
         },
         "renderItem": "[fn]",
         "itemStyle": {
-         "color": "#0072B2"
-        }
+         "color": "#0072B2",
+         "cursor": "pointer"
+        },
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -269,7 +275,9 @@
           "n": 9,
           "name": "Rash",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -284,7 +292,9 @@
           "n": 10,
           "name": "Upper respiratory tract infection",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -299,7 +309,9 @@
           "n": 9,
           "name": "Fatigue",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -313,7 +325,9 @@
           ],
           "n": 0,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -328,7 +342,9 @@
           "n": 8,
           "name": "Nausea",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -343,7 +359,9 @@
           "n": 10,
           "name": "Headache",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -358,7 +376,9 @@
           "n": 8,
           "name": "Dizziness",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

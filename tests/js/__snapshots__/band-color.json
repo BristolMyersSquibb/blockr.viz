@@ -528,7 +528,8 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "__bandItem": [
          0,
@@ -540,7 +541,12 @@
          "x": 0,
          "y": 1
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -601,15 +607,19 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "lineStyle": {
          "color": "#ffffff",
-         "width": 3.4
+         "width": 3.4,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -674,11 +684,14 @@
         },
         "lineStyle": {
          "color": "#E69F00",
-         "width": 2.2
+         "width": 2.2,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
@@ -686,7 +699,8 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "__bandItem": [
          0,
@@ -698,7 +712,12 @@
          "x": 0,
          "y": 1
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -759,15 +778,19 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "lineStyle": {
          "color": "#ffffff",
-         "width": 3.4
+         "width": 3.4,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -832,11 +855,14 @@
         },
         "lineStyle": {
          "color": "#009E73",
-         "width": 2.2
+         "width": 2.2,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
@@ -844,7 +870,8 @@
         "legendHoverLink": false,
         "silent": true,
         "itemStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "__bandItem": [
          0,
@@ -856,7 +883,12 @@
          "x": 0,
          "y": 1
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -917,15 +949,19 @@
         "silent": true,
         "legendHoverLink": false,
         "itemStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "lineStyle": {
          "color": "#ffffff",
-         "width": 3.4
+         "width": 3.4,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -990,11 +1026,14 @@
         },
         "lineStyle": {
          "color": "#CC79A7",
-         "width": 2.2
+         "width": 2.2,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

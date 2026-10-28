@@ -634,8 +634,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -1049,9 +1051,15 @@
          "color": "#0072B2",
          "width": 2,
          "type": "solid",
-         "opacity": 0.9
+         "opacity": 0.9,
+         "cursor": "pointer"
         },
-        "z": 2
+        "z": 2,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

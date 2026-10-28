@@ -154,5 +154,5 @@ test('a drill selection dims each part of a split level by its own points', () =
   for (const [s, p] of marks) assert.strictEqual(p.data.length, s.data.length);
   // CH is in Europe: its highlighted points dim.
   const ch = marks.filter(([s]) => !s.blockrMuted).map(([, p]) => p.data[0].itemStyle.opacity);
-  assert.deepStrictEqual(plain(ch), [0.15, 0.15]);
+  assert.deepStrictEqual(plain(ch), [0.25, 0.25]);
 });

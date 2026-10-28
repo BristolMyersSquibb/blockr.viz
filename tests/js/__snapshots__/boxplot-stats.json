@@ -218,7 +218,8 @@
         },
         "renderItem": "[fn]",
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "markLine": {
          "silent": true,
@@ -245,7 +246,12 @@
            }
           }
          ]
-        }
+        },
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -277,7 +283,9 @@
           "n": 12,
           "name": "Baseline",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -292,7 +300,9 @@
           "n": 10,
           "name": "Week 2",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -307,7 +317,9 @@
           "n": 12,
           "name": "Week 4",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -322,7 +334,9 @@
           "n": 12,
           "name": "Week 8",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -337,7 +351,9 @@
           "n": 11,
           "name": "Week 12",
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

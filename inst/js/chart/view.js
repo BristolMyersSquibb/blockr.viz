@@ -171,7 +171,7 @@
         const drawn = this._memo.option && this._memo.option.panels[i];
         const patch = panel
           ? fam.patch({ m, panel, cfg: this.settings, derived: this.derived, current,
-                        drawn: drawn && drawn.option,
+                        drawn: drawn && drawn.option, ink: this._ink,
                         lit, filters, range, dimmed: !!slot.dimmed })
           : { series: current.series.map(() => ({})), dimmed: false };
         slot.dimmed = patch.dimmed;

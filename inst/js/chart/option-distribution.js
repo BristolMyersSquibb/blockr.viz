@@ -95,7 +95,8 @@
     const a = horizontal ? 0 : 1; // the value axis coordinate
     const line = (/** @type {number[]} */ p, /** @type {number[]} */ q, /** @type {string} */ stroke,
                   /** @type {number} */ lineWidth) =>
-      ({ type: 'line', shape: { x1: p[0], y1: p[1], x2: q[0], y2: q[1] }, style: { stroke, lineWidth, opacity } });
+      ({ type: 'line', shape: { x1: p[0], y1: p[1], x2: q[0], y2: q[1] }, style: { stroke, lineWidth, opacity },
+         emphasisDisabled: true });
     const across = (/** @type {number[]} */ p) => horizontal
       ? [[p[0], p[1] - half], [p[0], p[1] + half]] : [[p[0] - half, p[1]], [p[0] + half, p[1]]];
     const lo = Math.min(bLo[a], bHi[a]), len = Math.abs(bHi[a] - bLo[a]);
@@ -103,12 +104,17 @@
       ? { x: lo, y: mid[1] - half, width: len, height: 2 * half }
       : { x: mid[0] - half, y: lo, width: 2 * half, height: len };
     const [m0, m1] = across(mid);
+    // emphasisDisabled: ECharts lightens a hovered custom shape otherwise.
     return {
       type: 'group',
+      emphasisDisabled: true,
       children: [
         line(wLo, bLo, clr, 1.5),
         line(bHi, wHi, clr, 1.5),
-        { type: 'rect', shape: { ...body, r: 1.5 }, style: { fill: clr, opacity } },
+        // A selected box is outlined (NS.selStyle(): its border, as stroke).
+        { type: 'rect', shape: { ...body, r: 1.5 }, emphasisDisabled: true,
+          style: { fill: clr, opacity,
+                   ...(st && st.lineWidth > 0 ? { stroke: st.stroke, lineWidth: st.lineWidth } : {}) } },
         line(m0, m1, cut, 1.5)
       ]
     };

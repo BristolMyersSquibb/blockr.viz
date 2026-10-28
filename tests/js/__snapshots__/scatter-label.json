@@ -232,8 +232,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -307,8 +309,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -402,8 +406,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -497,8 +503,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__label__",
@@ -799,7 +807,8 @@
          "show": false
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "label": {
          "show": true,
@@ -811,7 +820,8 @@
          "textBorderWidth": 3,
          "distance": 6
         },
-        "labelLayout": "[fn]"
+        "labelLayout": "[fn]",
+        "cursor": "pointer"
        }
       ]
      },

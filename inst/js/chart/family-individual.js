@@ -129,7 +129,8 @@
     return [255, 255, 255];
   };
 
-  /** Fill the overlay with the hovered line, a little wider, and the veil fading the rest.
+  /** Fill the overlay with the hovered line, a little wider, a dot at each of its points
+   * (where the measurements are; as 0.2 drew them), and the veil fading the rest.
    * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {number} si */
   const promoteFocus = (view, slot, chart, si) => {
     const f = slot.focus;
@@ -152,7 +153,8 @@
         showSymbol: false, lineStyle: { color: clr, width: f.focusW, opacity: 1 },
         areaStyle: null
       }, {
-        id: '__focus_dots__', data: []
+        id: '__focus_dots__', data: s.data, symbol: 'circle', symbolSize: 8,
+        itemStyle: { color: clr, opacity: 0.8, borderColor: 'rgb(' + bg.join(',') + ')', borderWidth: 2 }
       }]
     });
   };
@@ -167,7 +169,9 @@
     });
   };
 
-  /** Hover: show the nearest band level's ribbon, promote the nearest line.
+  /** Hover: show the nearest band level's ribbon; in a crowd of lines (one per
+   * series), promote the nearest line over a veil, so a subject can be
+   * followed. Every other chart's hover is the tooltip alone (quietHover()).
    * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {any} zr */
   const hoverEvents = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
@@ -179,6 +183,7 @@
         }
       }
       if (!slot.focus) return;
+      // The nearest line is what the tooltip names and a click takes.
       const si = nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
       if (si === slot.focusSi) return;
       slot.hover.si = si;
@@ -337,7 +342,8 @@
     patch(c) {
       const drawn = c.drawn && c.drawn.series && c.drawn.series.length === c.current.series.length
         ? c.drawn.series : c.current.series;
-      return NS.option.individualPatch(c.m, c.panel, drawn, c.lit, c.dimmed, c.filters, c.range);
+      return NS.option.individualPatch(c.m, c.panel, drawn, c.lit, c.dimmed, c.filters, c.range,
+                                       c.ink);
     },
 
     // The slot takes the panel's hover state and pickers; the hover does not

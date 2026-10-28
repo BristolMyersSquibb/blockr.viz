@@ -789,10 +789,15 @@
 
 /* Hierarchy, drawn as the records and variables layouts draw their section
    headings (table-structured.css). Every label starts on one 24px edge, the
-   12px chevron and 9px gap hanging to the left of it (margin-left: -21px).
+   12px chevron and 9px gap hanging to the left of it (margin-left: -21px). A
+   child starts on its parent's label edge; a deeper parent is one 21px step
+   in (--vz-indent, table/html.js indentSteps()), so its chevron sits where
+   its parent's label starts.
    A heading has 11px above it and 3px below; the last row of a group has
    7px below it. */
-.vz-table-groups-table[data-summarize-nested='1'] td.vz-table-groups-label-col,
+.vz-table-groups-table[data-summarize-nested='1'] td.vz-table-groups-label-col {
+  padding-left: calc(24px + var(--vz-indent, 0) * 21px);
+}
 .vz-table-groups-table[data-summarize-nested='1'] th.vz-table-stub-header{
   padding-left: 24px;
 }

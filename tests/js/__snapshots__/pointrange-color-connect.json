@@ -191,17 +191,21 @@
         "showSymbol": false,
         "lineStyle": {
          "color": "#0072B2",
-         "width": 1.4
+         "width": 1.4,
+         "cursor": "pointer"
         },
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "tooltip": {
          "show": false
-        }
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
@@ -243,7 +247,12 @@
           2
          ]
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -315,8 +324,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -349,17 +360,21 @@
         "showSymbol": false,
         "lineStyle": {
          "color": "#E69F00",
-         "width": 1.4
+         "width": 1.4,
+         "cursor": "pointer"
         },
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "tooltip": {
          "show": false
-        }
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
@@ -401,7 +416,12 @@
           2
          ]
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -473,8 +493,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -507,17 +529,21 @@
         "showSymbol": false,
         "lineStyle": {
          "color": "#009E73",
-         "width": 1.4
+         "width": 1.4,
+         "cursor": "pointer"
         },
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "tooltip": {
          "show": false
-        }
+        },
+        "cursor": "pointer"
        },
        {
         "type": "custom",
@@ -559,7 +585,12 @@
           2
          ]
         },
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -631,8 +662,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

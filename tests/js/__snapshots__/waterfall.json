@@ -56,7 +56,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "shadow"
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -146,10 +146,12 @@
         "barWidth": "60%",
         "itemStyle": {
          "color": "transparent",
-         "borderColor": "transparent"
+         "borderColor": "transparent",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "silent": true,
         "tooltip": {
@@ -161,7 +163,8 @@
          -2.3,
          30.58,
          103.9
-        ]
+        ],
+        "cursor": "pointer"
        },
        {
         "name": "delta",
@@ -169,7 +172,8 @@
         "stack": "waterfall",
         "barWidth": "60%",
         "emphasis": {
-         "focus": "self"
+         "disabled": true,
+         "scale": false
         },
         "data": [
          {
@@ -232,7 +236,8 @@
            ]
           }
          }
-        ]
+        ],
+        "cursor": "pointer"
        }
       ]
      },
@@ -251,40 +256,7 @@
      "notMerge": false,
      "option": {
       "series": [
-       {
-        "data": [
-         {
-          "value": -12,
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {
-          "value": -12,
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {
-          "value": -2.3,
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {
-          "value": 30.58,
-          "itemStyle": {
-           "opacity": 1
-          }
-         },
-         {
-          "value": 103.9,
-          "itemStyle": {
-           "opacity": 1
-          }
-         }
-        ]
-       },
+       {},
        {
         "data": [
          {
@@ -297,7 +269,9 @@
             2,
             2
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -310,7 +284,9 @@
             2,
             2
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -323,7 +299,9 @@
             2,
             2
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -336,7 +314,9 @@
             2,
             2
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -349,7 +329,9 @@
             2,
             2
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

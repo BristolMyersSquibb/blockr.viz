@@ -132,11 +132,10 @@
          "formatter": "{b}"
         },
         "emphasis": {
-         "itemStyle": {
-          "shadowBlur": 10,
-          "shadowColor": "rgba(0,0,0,0.2)"
-         }
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -162,7 +161,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#0072B2",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          },
          {
@@ -171,7 +172,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#E69F00",
-           "opacity": 0.2
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -180,7 +183,9 @@
           "n": 8,
           "itemStyle": {
            "color": "#009E73",
-           "opacity": 0.2
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -189,7 +194,9 @@
           "n": 2,
           "itemStyle": {
            "color": "#CC79A7",
-           "opacity": 0.2
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -267,11 +274,10 @@
          "formatter": "{b}"
         },
         "emphasis": {
-         "itemStyle": {
-          "shadowBlur": 10,
-          "shadowColor": "rgba(0,0,0,0.2)"
-         }
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -296,7 +302,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#0072B2",
-           "opacity": 0.2
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -305,7 +313,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#E69F00",
-           "opacity": 0.2
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -314,7 +324,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#009E73",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          }
         ]

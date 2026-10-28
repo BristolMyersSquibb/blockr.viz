@@ -57,15 +57,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "line",
-        "label": {
-         "show": false
-        },
-        "lineStyle": {
-         "color": "#6b7280",
-         "width": 1,
-         "type": "solid"
-        }
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -226,11 +218,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -273,11 +268,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -320,11 +318,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -367,11 +368,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -414,11 +418,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -461,11 +468,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -508,11 +518,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -555,11 +568,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -602,11 +618,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -649,11 +668,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -696,11 +718,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -743,11 +768,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -782,11 +810,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__scrim__",
@@ -798,7 +829,12 @@
         "legendHoverLink": false,
         "z": 8,
         "animation": false,
-        "renderItem": "[fn]"
+        "renderItem": "[fn]",
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__focus__",
@@ -809,7 +845,12 @@
         "showSymbol": false,
         "legendHoverLink": false,
         "z": 9,
-        "animation": false
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__focus_dots__",
@@ -819,7 +860,12 @@
         "silent": true,
         "legendHoverLink": false,
         "z": 10,
-        "animation": false
+        "animation": false,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

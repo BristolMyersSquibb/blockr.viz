@@ -852,8 +852,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -927,8 +929,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -1342,9 +1346,15 @@
          "color": "#E69F00",
          "width": 2,
          "type": "solid",
-         "opacity": 0.9
+         "opacity": 0.9,
+         "cursor": "pointer"
         },
-        "z": 2
+        "z": 2,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -1438,8 +1448,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -1853,9 +1865,15 @@
          "color": "#009E73",
          "width": 2,
          "type": "solid",
-         "opacity": 0.9
+         "opacity": 0.9,
+         "cursor": "pointer"
         },
-        "z": 2
+        "z": 2,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -1949,8 +1967,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -2364,9 +2384,15 @@
          "color": "#CC79A7",
          "width": 2,
          "type": "solid",
-         "opacity": 0.9
+         "opacity": 0.9,
+         "cursor": "pointer"
         },
-        "z": 2
+        "z": 2,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
