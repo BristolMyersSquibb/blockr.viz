@@ -56,7 +56,7 @@ setup_drilldown_theme_sync <- function(session = NULL) {
 #' @param ... Forwarded to [blockr.core::new_board_option()].
 #'
 #' @return A `board_option` object.
-#' @examplesIf interactive()
+#' @examples
 #' new_drilldown_theme_option()
 #' @export
 new_drilldown_theme_option <- function(value = "default",

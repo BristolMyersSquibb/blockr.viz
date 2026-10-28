@@ -22,10 +22,7 @@ viz_read_set <- function(spec, x) {
   values <- list()
   rejected <- setdiff(names(x$values), names(spec$args))
   for (nm in intersect(names(x$values), names(spec$args))) {
-    v <- tryCatch(
-      list(viz_check_value(spec$args[[nm]], x$values[[nm]], nm)),
-      viz_arg_error = function(e) NULL
-    )
+    v <- try_check_value(spec$args[[nm]], x$values[[nm]], nm)
     if (is.null(v)) {
       rejected <- c(rejected, nm)
     } else {
@@ -72,7 +69,7 @@ viz_read_selection <- function(x) {
 
 read_categorical <- function(s) {
   filters <- read_filters(s$filters)
-  columns <- if (is.null(s$columns)) list() else read_filters(s$columns)
+  columns <- read_filters(s$columns, optional = TRUE)
   if (is.null(filters) || is.null(columns) ||
         (!length(filters) && !length(columns))) {
     return(NULL)
@@ -88,7 +85,7 @@ read_range <- function(s) {
   if (has_y && (!is_name(s$y) || !is_pair(s$y_range))) {
     return(NULL)
   }
-  filters <- if (is.null(s$filters)) list() else read_filters(s$filters)
+  filters <- read_filters(s$filters, optional = TRUE)
   if (is.null(filters)) {
     return(NULL)
   }
@@ -99,8 +96,11 @@ read_range <- function(s) {
 }
 
 # `{col: [value or null]}` as a named list of character vectors, NULL as NA;
-# NULL when the shape is wrong.
-read_filters <- function(f) {
+# NULL when the shape is wrong. A missing `f` is an empty list when optional.
+read_filters <- function(f, optional = FALSE) {
+  if (optional && is.null(f)) {
+    return(list())
+  }
   if (!is.list(f) || (length(f) && (is.null(names(f)) ||
                                       any(!nzchar(names(f)))))) {
     return(NULL)
@@ -158,26 +158,19 @@ is_size <- function(x) {
 #' @param specs A list of `viz_spec`.
 #' @noRd
 viz_input_handlers <- function(specs) {
-  for (spec in specs) {
-    local({
-      s <- spec
-      shiny::registerInputHandler(
-        paste0("blockr.viz.", s$block),
-        function(x, session, name) viz_read_set(s, x),
-        force = TRUE
-      )
-    })
+  register <- function(type, read) {
+    shiny::registerInputHandler(
+      paste0("blockr.viz.", type),
+      function(x, session, name) read(x),
+      force = TRUE
+    )
   }
-  shiny::registerInputHandler(
-    "blockr.viz.selection",
-    function(x, session, name) viz_read_selection(x),
-    force = TRUE
-  )
-  shiny::registerInputHandler(
-    "blockr.viz.capture",
-    function(x, session, name) viz_read_capture(x),
-    force = TRUE
-  )
+  # lapply gives each handler its own `spec`; a for loop would share one.
+  lapply(specs, function(spec) {
+    register(spec$block, function(x) viz_read_set(spec, x))
+  })
+  register("selection", viz_read_selection)
+  register("capture", viz_read_capture)
   invisible(NULL)
 }
 
@@ -209,8 +202,8 @@ viz_gate_set <- function(msg, revs, locked = viz_locked(),
   values[setdiff(names(values), revs$stale(names(values), msg$rev))]
 }
 
-# Whether the board is locked. Until a block server can ask blockr.core for
-# its board's lock (blockr.core#416), the option decides.
+# Whether the board is locked. The option decides until a block server can
+# ask blockr.core for its board's lock.
 viz_locked <- function() {
   isTRUE(blockr.core::blockr_option("locked", FALSE))
 }

@@ -1,5 +1,6 @@
 # The chart spec's Marks group: smoother, line and point style, the
-# distribution statistics, the band and the histogram bins.
+# distribution statistics, the band and the histogram bins. Split out of
+# spec-chart.R for length; chart_spec() assembles it.
 
 chart_spec_marks <- function() {
   list(
@@ -14,7 +15,8 @@ chart_spec_marks <- function() {
 
     connect = chart_arg(
       type = "enum", default = "straight",
-      values = c("straight", "monotone", "step_start", "step_middle", "step_end"),
+      values = c("straight", "monotone", "step_start", "step_middle",
+                 "step_end"),
       applies = c("line", "area"),
       gear = gear("Marks", "select", "Line",
                   labels = c("Straight", "Monotone", "Step at start",
@@ -45,8 +47,8 @@ chart_spec_marks <- function() {
       gear = gear("Marks", "select", "Inner range", labels = SPEC_STAT_LABELS),
       example = "mean_se",
       describe = paste(
-        "Statistic of a boxplot's body, a pointrange's interval or a band's inner",
-        "range."
+        "Statistic of a boxplot's body, a pointrange's interval or a band's",
+        "inner range."
       )
     ),
 
@@ -70,7 +72,8 @@ chart_spec_marks <- function() {
     ),
 
     connect_centers = chart_arg(
-      type = "bool", default = FALSE, applies = "pointrange",
+      type = "bool", default = FALSE,
+      applies = "pointrange",
       gear = gear("Marks", "segmented", "Centers",
                   labels = c("Connect centers", "Off")),
       example = TRUE,
@@ -84,8 +87,9 @@ chart_spec_marks <- function() {
                   labels = c("Adaptive (by subjects)", "Fixed (x units)")),
       example = "adaptive",
       describe = paste(
-        "\"adaptive\" grows the window at each point until it holds `band_size`",
-        "individuals; \"fixed\" uses `band_size` as a half-width in x units."
+        "\"adaptive\" grows the window at each point until it holds",
+        "`band_size` individuals; \"fixed\" uses `band_size` as a half-width",
+        "in x units."
       )
     ),
 
@@ -98,7 +102,8 @@ chart_spec_marks <- function() {
     ),
 
     band_min_n = chart_arg(
-      type = "integer", default = 12L, bounds = bounds(1), applies = "band",
+      type = "integer", default = 12L, bounds = bounds(1),
+      applies = "band",
       gear = gear("Marks", "text", "Cut below n"),
       example = 12L,
       describe = "Points with fewer individuals than this are not drawn."

@@ -1,4 +1,7 @@
-/* ctrl_receipt(): the status card a sender block returns, a receipt for what it last pushed. */
+/* ctrl_receipt(): the status card a sender block returns as its output.
+   It reads as a receipt for what this block last pushed over the control
+   channel: past tense, never a claim about the target's current state (the
+   sender has no back-edge to the target). */
 .ctrl-receipt {
   display: flex;
   flex-direction: column;
@@ -10,6 +13,7 @@
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   color: var(--blockr-color-text-primary, #111827);
 }
+/* Nothing sent yet: no tint, no emphasis. An empty state, not a status. */
 .ctrl-receipt--idle {
   background: var(--blockr-color-bg-subtle, #f9fafb);
   color: var(--blockr-color-text-muted, #6b7280);
@@ -23,7 +27,13 @@
   color: var(--blockr-color-text-muted, #6b7280);
 }
 .ctrl-receipt-target { color: var(--blockr-color-primary, #2563eb); }
-.ctrl-receipt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Chips mirror .blockr-pill (blockr.dplyr), so a sent condition and the pill
+   it lands on in the target filter read as the same object. */
+.ctrl-receipt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .ctrl-receipt-chip {
   display: inline-flex;
   align-items: center;

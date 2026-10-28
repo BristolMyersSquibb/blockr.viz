@@ -96,7 +96,7 @@ new_viz_revs <- function(values = list()) {
 viz_empty_ok <- function(spec) {
   ok <- vapply(spec$args, function(a) {
     d <- a$default
-    !isFALSE(a$null) || is.null(d) || !length(d) ||
+    !isFALSE(a$null) || !length(d) ||
       (is.character(d) && length(d) == 1L && !nzchar(d))
   }, logical(1L))
   names(spec$args)[ok]

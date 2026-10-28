@@ -21,7 +21,9 @@ chart_js_dep <- memoise0(function() {
   )
 })
 
-# chart.css, shared with the table block, versioned by its contents.
+# chart.css, shared by the chart block and the table block (which reuses the
+# chart's gear and popover styling). One definition serves both pages, and the
+# version comes from the file's contents.
 chart_css_dep <- memoise0(function() {
   htmltools::tagList(
     tooltip_card_dep(),

@@ -1,0 +1,128 @@
+---
+title: "The table block"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The table block}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+`new_table_block()` shows the data it receives as an interactive table and
+passes the data on, filtered by the reader's last click if `drill` is set.
+`layout` decides what a row is; `look` how it is drawn.
+
+```{r}
+library(blockr.core)
+library(blockr.viz)
+
+serve(new_table_block(), data = list(data = iris))
+```
+
+## Records
+
+The default layout shows the input's rows, with search and sort.
+
+```{r}
+new_table_block(rowname = "name", columns = c("mpg", "hp", "wt"))
+
+# rows under one collapsible header per cylinder count
+new_table_block(by = "cyl", columns = c("mpg", "hp"))
+```
+
+`shadings` colors cells: `"diverging"` centers on zero, `"sequential"`
+ramps two colors, `"bar"` draws a data bar.
+
+```{r}
+new_table_block(shadings = list(
+  list(mode = "bar", columns = c("mpg", "hp")),
+  list(mode = "diverging", columns = "change", domain = c(-1, 1))
+))
+```
+
+A finished table from R code, such as a structured or annotated data frame
+(`as_annotated_df()`), is drawn as it comes.
+
+## Groups
+
+One row per level of `by`, one column per entry of `summaries`. Each entry
+is a list with a `type` and that type's keys:
+
+| type | a column of |
+|---|---|
+| `"simple"` | a count or statistic, as a number, bar, dot or tile |
+| `"dist"` | a box, point range or text of a column's spread |
+| `"field"` | the distinct values of a column |
+| `"sparkline"` | a small line of a column over `x` |
+| `"spans"` | intervals from `x` to `xend` on a time line |
+| `"pair"` | two points per row, from `x` to `xend` |
+| `"expr"` | an R expression evaluated per row group |
+| `"custom"` | a function of the row group's rows |
+
+```{r}
+new_table_block(
+  layout = "groups", by = "Species",
+  summaries = list(
+    list(type = "simple", func = "count"),
+    list(type = "simple", func = "mean", col = "Sepal.Length",
+         show = "number"),
+    list(type = "dist", col = "Petal.Length", summary = "median_q1_q3",
+         show = "box"),
+    list(type = "expr", name = "Widest", expr = "max(Sepal.Width)")
+  ),
+  sort_by = "value", top_n = 10
+)
+```
+
+`percent_of` sets the base of a count's percentage, `missing` keeps or drops
+rows whose group is missing, and `top_n` folds the rows past the cut into
+one "Other" row. `?new_table_block` lists every key of every type.
+
+## Variables
+
+A Table 1: one row per statistic or level of each variable, one column per
+level of `by`.
+
+```{r}
+new_table_block(
+  layout = "variables", by = "TRT01A",
+  stats = c("n", "mean_sd", "median_q1_q3"),
+  total = TRUE, id = "USUBJID"
+)
+```
+
+## Looks
+
+`look = "compact"` rotates the column titles and draws `tile` summaries as a
+heatmap; `look = "cards"` draws one card per summary.
+
+```{r}
+new_table_block(
+  layout = "groups", look = "cards",
+  summaries = list(
+    list(type = "simple", name = "Rows", func = "count"),
+    list(type = "simple", func = "mean", col = "mpg")
+  )
+)
+```
+
+## Clicks
+
+With `drill`, a click on a row filters the block's output. In records it
+names the column to filter on, or `"auto"`; in groups and variables
+`"auto"` filters on the clicked row's groups.
+
+```{r}
+new_table_block(layout = "groups", by = "region",
+                summaries = list(list(type = "simple", func = "count")),
+                drill = "auto")
+```
+
+## Downloads
+
+With `download = TRUE` (the default) the block offers Excel (the values,
+with their number format), a web page and PowerPoint, and an image where the
+table draws marks.

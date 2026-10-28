@@ -28,12 +28,11 @@ registry_example_value <- function(type, x) {
   if (is.null(x)) {
     return(x)
   }
-  arrays <- c("columns", "enums", "strings", "numbers", "values")
   switch(
     type$name,
     record = registry_example_record(type, x),
     records = lapply(x, function(r) registry_example_record(type, r)),
-    if (type$name %in% arrays) as.list(x) else x
+    if (type$name %in% VIZ_ARRAY_TYPES) as.list(x) else x
   )
 }
 
@@ -91,8 +90,7 @@ viz_slot_values <- function(spec, values) {
       next
     }
     v <- values[[nm]]
-    if (length(v) > 1L || spec$args[[nm]]$type$name %in%
-          c("columns", "enums", "strings", "numbers", "values")) {
+    if (length(v) > 1L || spec$args[[nm]]$type$name %in% VIZ_ARRAY_TYPES) {
       v <- slot_list_text(v)
     }
     out[nm] <- list(v)

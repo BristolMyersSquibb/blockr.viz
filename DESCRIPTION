@@ -19,7 +19,8 @@ Description: Two blocks for 'blockr' boards. The chart block draws bar,
     each variable, as a table, a compact matrix or cards. A click on either
     filters the blocks downstream. Both download as 'Excel', a web page, an
     image or 'PowerPoint'.
-URL: https://github.com/BristolMyersSquibb/blockr.viz
+URL: https://bristolmyerssquibb.github.io/blockr.viz/,
+    https://github.com/BristolMyersSquibb/blockr.viz
 BugReports: https://github.com/BristolMyersSquibb/blockr.viz/issues
 License: GPL (>= 3)
 Depends:
