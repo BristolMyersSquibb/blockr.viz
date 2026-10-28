@@ -51,6 +51,9 @@ reference:
       - pptx_add_exhibit
       - report_call
       - exhibit-options
+  - title: A table in another block
+    contents:
+      - interactive_table
   - title: Sending a click to another block
     contents:
       - ctrl_send

@@ -110,6 +110,16 @@ NULL
 #' ctrl_auto_target(session = shiny::MockShinySession$new())
 NULL
 
+#' @name interactive_table
+#' @rdname interactive_table
+#' @examples
+#' interactive_table(head(mtcars))
+#'
+#' # An annotated table whose rows send a click as input$tbl_select
+#' interactive_table(summary_table(iris, vars = "Species"), drill = TRUE,
+#'                   elem_id = "tbl")
+NULL
+
 # Exported for other blockr packages, not for users: no example needed.
 
 #' @name dt_download_control
