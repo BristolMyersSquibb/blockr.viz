@@ -12,7 +12,8 @@
  *   box        whiskers, box and median
  *   pointrange a range and its centre, with an outer fence
  *   pair       a dumbbell: band, reference, link, from and to
- *   interval   swimlane segments on a time axis
+ *   interval   swimlane segments on a time axis, with ticks, a line,
+ *              point events and an open end
  *   sparkline  a line, its band and reference, the last point
  *   tile       a painted square with the value in it
  *
@@ -176,7 +177,42 @@
         col(c.fills[Number(g[2]) - 1]) + '"' + (g.length > 3 ? ' data-l="' + esc(g[3]) + '"' : '') +
         ' data-tip="' + esc(at(c.tips[i], j)) + '"></i>';
     });
+    // Overlays, under the pointer only where they carry a tooltip: ticks
+    // across the segments, the line through them, the open end, the events.
+    ((c.ticks && c.ticks[i]) || []).forEach((x) => {
+      s += '<i class="vz-table-lane-tk" style="left:' + n(x) + '%"></i>';
+    });
+    ((c.band && c.band[i]) || []).forEach((b) => {
+      s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
+    });
+    const op = c.openAt ? c.openAt[i] : null;
+    if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
+    ((c.events && c.events[i]) || []).forEach((e, j) => {
+      s += '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%"' +
+        ' data-tip="' + esc(c.eventTips ? at(c.eventTips[i], j) : '') + '">' + shape(Number(e[1])) + '</svg>';
+    });
     return s + '</div>';
+  }
+
+  /**
+   * An event shape, centred on 0 in a 14-unit box, over a 2px ring in the
+   * surface colour: 1 filled triangle, 2 open triangle, 3 cross, 4 square.
+   * The static painter (R/paint-marks.R, paint_shape) draws the same four.
+   * @param {number} k
+   */
+  function shape(k) {
+    const tri = 'M0,-5L5,4L-5,4Z';
+    const x = 'M-4,-4L4,4M4,-4L-4,4';
+    const sq = 'M-4,-4H4V4H-4Z';
+    const two = (/** @type {string} */ d, /** @type {string} */ cls) =>
+      '<path class="vz-ev-ring' + (cls === 'vz-ev-line' ? ' is-line' : '') + '" d="' + d +
+      '"></path><path class="' + cls + '" d="' + d + '"></path>';
+    switch (k) {
+      case 2: return two(tri, 'vz-ev-open');
+      case 3: return two(x, 'vz-ev-line');
+      case 4: return two(sq, 'vz-ev-fill');
+      default: return two(tri, 'vz-ev-fill');
+    }
   }
 
   /** SVG points: numbers, commas and spaces only. */
@@ -328,5 +364,5 @@
       '</div>';
   }
 
-  V.table.marks = { glyph, cell, axis };
+  V.table.marks = { glyph, cell, axis, shape };
 })();

@@ -196,8 +196,8 @@
    */
   function laneText(lane, t, x) {
     if (lane.classList.contains('vz-table-groups-ivcell')) {
-      const seg = t.closest('.vz-table-lane-seg');
-      if (seg) return { text: seg.getAttribute('data-tip') || '', color: /** @type {HTMLElement} */ (seg).style.background };
+      const seg = t.closest('.vz-table-lane-seg, .vz-table-lane-ev');
+      if (seg) return { text: seg.getAttribute('data-tip') || '', color: /** @type {HTMLElement} */ (seg).style.background || undefined };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;

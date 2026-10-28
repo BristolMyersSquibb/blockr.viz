@@ -469,6 +469,78 @@
   min-width: 2px;
   border-radius: var(--blockr-mark-radius, 2px);
 }
+/* Swimlane overlays. Ticks are surface-coloured cuts across the segments
+   (assessment visits), so they vanish where there is no segment. The line is
+   dark and thin through the middle (duration of response). The arrow says the
+   lane is still open at its last segment's end. Events sit on top, each shape
+   over a 2px surface ring so it reads on any fill; they may lie past the last
+   segment. Ticks, line and arrow let the pointer through to the segment. */
+.vz-table-groups-ivcell .vz-table-lane-tk {
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-dor {
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--blockr-color-text-default, #111827);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-open {
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-left: 1px;
+  border-left: 7px solid var(--blockr-color-text-default, #111827);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-ev {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.vz-ev-ring {
+  fill: var(--blockr-color-bg-surface, #ffffff);
+  stroke: var(--blockr-color-bg-surface, #ffffff);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.vz-ev-ring.is-line {
+  stroke-width: 6.2px;
+  fill: none;
+}
+.vz-ev-fill {
+  fill: var(--blockr-color-text-default, #111827);
+}
+.vz-ev-open {
+  fill: var(--blockr-color-bg-surface, #ffffff);
+  stroke: var(--blockr-color-text-default, #111827);
+  stroke-width: 1.6px;
+  stroke-linejoin: round;
+}
+.vz-ev-line {
+  fill: none;
+  stroke: var(--blockr-color-text-default, #111827);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+}
+.vz-table-groups-legend-shape {
+  width: 12px;
+  height: 12px;
+  overflow: visible;
+}
+.vz-table-groups-legend-shape .vz-ev-ring { display: none; }
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
    the spans, not more height. */

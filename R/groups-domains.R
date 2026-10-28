@@ -216,6 +216,16 @@ groups_dom_interval <- function(plan, idx, rows) {
     for (ss in rows[[plan[[i]]$segs]]) {
       for (sg in ss) ext <- c(ext, sg$s, sg$e)
     }
+    # Ticks, the line and events widen the axis too: a death after the last
+    # segment still lands inside the cell.
+    ovl <- plan[[i]]$ovl
+    if (!is.null(ovl)) {
+      for (o in rows[[ovl]]) {
+        ext <- c(ext, o$tk,
+                 unlist(lapply(o$bd, function(b) c(b$s, b$e))),
+                 unlist(lapply(o$ev, function(e) e$x)))
+      }
+    }
   }
   ext <- ext[is.finite(ext)]
   is_date <- any(vapply(plan[idx], function(p) {
