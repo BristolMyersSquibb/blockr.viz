@@ -1,33 +1,23 @@
 # The chart's rules between arguments, applied after every change from any
-# source: the constructor, the gear, external control, a restored board.
-# One pure function of the state, the state before the change and the
-# data's column kinds (viz_column_kinds()). Per-argument checks are the
-# spec's (viz_check()); these are only the rules that read two arguments.
+# source (constructor, gear, external control, restored board). Per-argument
+# checks are the spec's (viz_check()); these read two arguments.
 
-# Types that can lie either way, and the aggregated types that cannot.
-NORM_CHART_ORIENTED <- c("bar", "boxplot", "pointrange")
+# The aggregated types that cannot lie either way.
 NORM_CHART_FIXED <- c("waterfall", "pie", "treemap")
 
-#' Apply the chart's cross-argument rules
-#'
-#' - `orientation` is kept only where the inference from `x`, `y`, `func` and
-#'   the column kinds would read the chart the other way (see
-#'   dev/chart-cran-requirements.md); without kinds it is left as it is.
-#' - Types that cannot lie either way have no `orientation`. A horizontal
-#'   bar switched to waterfall, pie or treemap keeps its category: `x` and
-#'   `y` swap unless the change set them.
-#' - A histogram counts rows per bin of `x`: it has no `y`, no orientation
-#'   and no sort.
-#' - `ymin` and `ymax` are pairs: an unmatched end is dropped.
-#' - The selection goes when a mapping or the drill changes, and is never
-#'   held with a drill target.
-#' - `unit`, `drill_target` and `drill_table` are trimmed.
-#'
-#' @param state The chart's state: a named list under the spec's names.
-#' @param prev The state before the change, or `NULL` (a new block).
-#' @param kinds The data's column kinds, or `NULL` without data.
-#' @return The state after the rules.
-#' @noRd
+# Apply the rules to `state` (a named list under the spec's names), given
+# `prev` (the state before the change, NULL for a new block) and `kinds` (the
+# data's column kinds, NULL without data).
+# - `orientation` is kept only where the inference from `x`, `y`, `func` and
+#   the kinds would read the chart the other way; without kinds it stays.
+# - Waterfall, pie and treemap have no `orientation`. A horizontal bar
+#   switched to one of them keeps its category: `x` and `y` swap unless the
+#   change set them.
+# - A histogram has no `y`, orientation or sort.
+# - `ymin` and `ymax` are pairs: an unmatched end is dropped.
+# - The selection goes when a mapping or the drill changes, and is never held
+#   with a drill target.
+# - `unit`, `drill_target` and `drill_table` are trimmed.
 chart_normalize <- function(state, prev = NULL, kinds = NULL) {
   state <- trim_settings(state, c("unit", "drill_target", "drill_table"))
   type <- state[["type"]] %||% "bar"
@@ -36,7 +26,7 @@ chart_normalize <- function(state, prev = NULL, kinds = NULL) {
   } else if (type %in% NORM_CHART_FIXED) {
     state <- chart_keep_category(state, prev, kinds)
     state["orientation"] <- list(NULL)
-  } else if (type %in% NORM_CHART_ORIENTED) {
+  } else if (type %in% CHART_ORIENTED_TYPES) {
     state["orientation"] <- list(chart_orientation(state, kinds))
   }
   state <- chart_pair_intervals(state)
@@ -58,11 +48,9 @@ chart_orientation <- function(state, kinds) {
 # A horizontal bar has its category on y. Switched to a type that is always
 # vertical, the category moves to x, unless the same change set x or y.
 chart_keep_category <- function(state, prev, kinds) {
-  if (is.null(prev) || !(prev[["type"]] %||% "bar") %in% NORM_CHART_ORIENTED ||
-        changed(state, prev, "x") || changed(state, prev, "y")) {
-    return(state)
-  }
-  if (!identical(chart_lies(prev, kinds), "horizontal")) {
+  if (is.null(prev) || !(prev[["type"]] %||% "bar") %in% CHART_ORIENTED_TYPES ||
+        changed(state, prev, "x") || changed(state, prev, "y") ||
+        !identical(chart_lies(prev, kinds), "horizontal")) {
     return(state)
   }
   state[c("x", "y")] <- list(prev[["y"]], prev[["x"]])
@@ -75,12 +63,12 @@ chart_lies <- function(state, kinds) {
 }
 
 # Which way an oriented chart lies when `orientation` is not given
-# (dev/chart-cran-requirements.md). The column `func` aggregates sits on the
-# value axis, the one it groups by on the category axis.
+# (dev/chart-cran-requirements.md). The column `func` aggregates is the value
+# axis.
 # - One of x and y set: with a row count on a bar it is the category,
 #   otherwise the value.
 # - Both set: a numeric x beside a non-numeric y is horizontal; any other
-#   pair, or one whose kinds are unknown, is vertical, as in ggplot2.
+#   pair is vertical, as in ggplot2.
 # - Neither set: vertical.
 chart_infer_lie <- function(state, kinds) {
   type <- state[["type"]] %||% "bar"
@@ -102,10 +90,10 @@ chart_infer_lie <- function(state, kinds) {
 chart_pair_intervals <- function(state) {
   lo <- state[["ymin"]]
   hi <- state[["ymax"]]
-  n <- min(length(lo), length(hi))
   if (length(lo) == length(hi)) {
     return(state)
   }
+  n <- min(length(lo), length(hi))
   state[c("ymin", "ymax")] <- list(
     if (n) lo[seq_len(n)], if (n) hi[seq_len(n)]
   )

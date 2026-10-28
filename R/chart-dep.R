@@ -1,9 +1,5 @@
-#' HTML dependencies for the chart block
-#'
-#' The design system's tokens and shared controls (blockr.ui), the ECharts
-#' themes, the busy cue, the JS core and the specs (viz_core_dep()), then
-#' the chart scripts listed in `inst/js/chart/scripts.txt`.
-#' @noRd
+# The chart block's dependencies: blockr.ui's controls, the ECharts themes,
+# the JS core and specs, then the scripts in `inst/js/chart/scripts.txt`.
 drilldown_chart_dep <- memoise0(function() {
   htmltools::tagList(
     blockr.ui::controls_dep(),
@@ -25,12 +21,8 @@ chart_js_dep <- memoise0(function() {
   )
 })
 
-# chart.css, shared by the chart block and the table block (which reuses the
-# chart's gear/popover styling). ONE definition so the cache-busting suffix
-# cannot drift between the two: htmltools dedupes same-name dependencies by
-# highest version, so a table-only page with a stale copy of this dep would
-# serve chart.css under an old version string and hit the browser cache.
-# Suffix bumped when inst/css/chart.css changes.
+# chart.css, shared with the table block. The suffix is the cache buster:
+# bump it when inst/css/chart.css changes.
 chart_css_dep <- memoise0(function() {
   htmltools::tagList(
     tooltip_card_dep(),
@@ -46,10 +38,10 @@ chart_css_dep <- memoise0(function() {
 #' HTML dependency for the data tooltip card
 #'
 #' The stylesheet behind every blockr.viz data tooltip: a headline with a
-#' colour swatch, then rows with the name muted on the left and the value on
-#' the right (`dd-tt-head`, `dd-tt-sw`, `dd-tt-row`, `dd-tt-label`,
-#' `dd-tt-value`, `dd-tt-meta`, `dd-tt-sep`). Another package's tooltips
-#' attach it and use the same classes, so every hover card looks the same.
+#' colour swatch, then rows with the name on the left and the value on the
+#' right (`dd-tt-head`, `dd-tt-sw`, `dd-tt-row`, `dd-tt-label`,
+#' `dd-tt-value`, `dd-tt-meta`, `dd-tt-sep`). Another package's tooltips can
+#' attach it and use the same classes.
 #'
 #' @return An [htmltools::htmlDependency()].
 #' @export
@@ -62,15 +54,12 @@ tooltip_card_dep <- memoise0(function() {
   )
 })
 
-# Bundled echarts theme files (dark, vintage, westeros, ...) live inside the
-# echarts4r package. The block calls `echarts.init(el, name)` directly, so
-# each theme's JS must be loaded in the page for the name to resolve.
+# The echarts themes bundled in echarts4r, loaded so that
+# `echarts.init(el, name)` resolves the name.
 drilldown_echarts_themes_dep <- memoise0(function() {
   theme_dir <- system.file(
     "htmlwidgets/lib/echarts-6.0.0/themes", package = "echarts4r"
   )
-  if (!nzchar(theme_dir)) return(NULL)
-
   scripts <- c(
     "dark.js", "vintage.js", "westeros.js", "essos.js", "wonderland.js",
     "walden.js", "chalk.js", "infographic.js", "macarons.js", "roma.js",
