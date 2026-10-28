@@ -170,8 +170,10 @@ test_that("a selection is held, or sent as an event in transient mode", {
     session$setInputs(chart_select = sel)
     expect_null(st$selection())
     expect_identical(session$returned$claim()$nonce, 1)
+    # A clear is an event too: the chart releases what it sent.
     session$setInputs(chart_select = list(selection = NULL, nonce = 3L))
-    expect_identical(session$returned$claim()$nonce, 1)
+    expect_identical(session$returned$claim()$nonce, 3L)
+    expect_null(session$returned$claim()$selection)
   })
 })
 

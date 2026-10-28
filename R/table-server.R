@@ -122,7 +122,8 @@ table_claims <- function(kit, part) {
   shiny::reactive({
     if (kit$transient()) {
       c1 <- kit$claim()
-      if (is.null(c1)) {
+      # A table sends no clear with a drill target; one would hold.
+      if (is.null(c1) || is.null(c1$selection)) {
         return(NULL)
       }
       return(part()$claims(c1$selection))
