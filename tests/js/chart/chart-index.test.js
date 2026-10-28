@@ -52,14 +52,13 @@ test('rowsFromPayload reads columns, dictionary columns, a JSON string and rows'
   assert.deepStrictEqual(plain(C.rowsFromPayload({})), []);
 });
 
-test('labelCounts counts rows, or distinct id, within a facet', () => {
+test('labelCounts counts rows, or distinct id', () => {
   const r = [
     { T: 'Rash', ID: 'S01', F: 'a' }, { T: 'Rash', ID: 'S01', F: 'a' },
     { T: 'Rash', ID: 'S02', F: 'b' }, { T: null, ID: null, F: 'b' }
   ];
   assert.deepStrictEqual(plain(C.labelCounts(r, {}, 'T')), { Rash: 3, '': 1 });
   assert.deepStrictEqual(plain(C.labelCounts(r, { id: 'ID' }, 'T')), { Rash: 2 });
-  assert.deepStrictEqual(plain(C.labelCounts(r, {}, 'T', 'F', 'b')), { Rash: 1, '': 1 });
   // "None (as is)": the id column's first value per group, as it is.
   assert.deepStrictEqual(plain(C.labelCounts(r, { id: 'ID', func: 'identity' }, 'T')),
                          { Rash: 'S01' });

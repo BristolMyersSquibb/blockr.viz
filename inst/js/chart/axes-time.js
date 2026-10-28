@@ -10,11 +10,8 @@
   const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
-  /**
-   * A date in ms: a number as is, an ISO date as UTC midnight, an R date-time
-   * string ("2020-03-01 12:30:00") as that wall-clock time in UTC.
-   * @param {any} v @returns {number}
-   */
+  /** A date in ms: a number as is, an ISO date as UTC midnight, an R date-time string ("2020-03-01
+   * 12:30:00") as that wall-clock time in UTC. @param {any} v @returns {number} */
   const timeValue = (v) => {
     if (v == null || v === '') return NaN;
     if (typeof v === 'number') return v;
@@ -24,11 +21,9 @@
     return Date.parse(/[zZ]|[+-]\d{2}:?\d{2}$/.test(t) ? t : t + 'Z');
   };
 
-  /**
-   * The period a time column is sampled at, from the median gap between its
-   * distinct values: 'year', 'quarter', 'month', 'day' or 'time'.
-   * @param {any[]} rows @param {string} col @returns {string}
-   */
+  /** The period a time column is sampled at, from the median gap between its distinct values:
+   * 'year', 'quarter', 'month', 'day' or 'time'. @param {any[]} rows @param {string} col
+   * @returns {string} */
   const timePeriod = (rows, col) => {
     const seen = new Set();
     for (const r of rows || []) {
@@ -74,11 +69,8 @@
     return NS.ddNum(Number(v));
   };
 
-  /**
-   * The span between two x values: days on a time axis, units on a value
-   * axis, nothing on a category axis.
-   * @param {any} a @param {any} b @param {string} xAxisType
-   */
+  /** The span between two x values: days on a time axis, units on a value axis, nothing on a
+   * category axis. @param {any} a @param {any} b @param {string} xAxisType */
   const durationStr = (a, b, xAxisType) => {
     if (xAxisType === 'category') return '';
     const s = Number(a), e = Number(b);

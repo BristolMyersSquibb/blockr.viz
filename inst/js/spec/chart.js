@@ -35,6 +35,22 @@
       "slot": true,
       "ctrl": true
     },
+    "xend": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["gantt"]
+      },
+      "gear": {
+        "group": "Mapping",
+        "control": "column",
+        "label": "X end"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "y": {
       "type": {
         "name": "column"
@@ -115,22 +131,6 @@
       "slot": true,
       "ctrl": true
     },
-    "xend": {
-      "type": {
-        "name": "column"
-      },
-      "nullable": true,
-      "applies": {
-        "only": ["gantt"]
-      },
-      "gear": {
-        "group": "Mapping",
-        "control": "column",
-        "label": "X end"
-      },
-      "slot": true,
-      "ctrl": true
-    },
     "label": {
       "type": {
         "name": "column"
@@ -179,7 +179,8 @@
         "group": "Look",
         "control": "segmented",
         "label": "Stacking",
-        "labels": ["Stacked", "Side by side", "100%"]
+        "labels": ["Stacked", "Side by side", "100%"],
+        "when": "color"
       },
       "slot": true,
       "ctrl": true
@@ -407,7 +408,7 @@
       },
       "nullable": true,
       "applies": {
-        "only": ["bar", "waterfall", "pie", "treemap", "boxplot", "pointrange", "scatter", "line", "area", "histogram"]
+        "only": ["bar", "waterfall", "boxplot", "pointrange", "scatter", "line", "area", "histogram"]
       },
       "gear": {
         "group": "Reference lines",

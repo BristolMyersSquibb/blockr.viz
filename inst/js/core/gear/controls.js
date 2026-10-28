@@ -340,7 +340,7 @@
     const inp = /** @type {HTMLInputElement} */ (document.createElement(
       opts.multiline ? 'textarea' : 'input'));
     if (!opts.multiline) inp.type = opts.type || 'text';
-    inp.className = 'blockr-input dd-text';
+    inp.className = 'blockr-text-input dd-text' + (opts.multiline ? ' dd-script-editor' : '');
     const before = ctx.arg.type.name === 'template' ? String(ctx.value ?? '')
       : toText(ctx.arg, ctx.value);
     inp.value = before;
@@ -485,9 +485,26 @@
     inp.step = ctx.arg.type.name === 'integer' ? '1' : 'any';
   }
 
+  /** The prepare script sits behind a checkbox until there is one;
+   * unticking it drops the script.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function scriptCtl(el, ctx) {
+    const box = document.createElement('div');
+    box.className = 'dd-script-wrap';
+    const show = (/** @type {boolean} */ on) => { box.style.display = on ? '' : 'none'; };
+    show(isSet(ctx.value));
+    checkbox(el, 'Use a prepare script', isSet(ctx.value), (on) => {
+      show(on);
+      if (!on && isSet(ctx.value)) ctx.set(null);
+    }, { ...ctx, key: ctx.key + '_on' });
+    el.appendChild(box);
+    field(box, ctx, { multiline: true });
+  }
+
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */
   function textCtl(el, ctx) {
-    field(el, ctx, { multiline: MULTILINE.includes(ctx.key) });
+    if (ctx.key === 'script') scriptCtl(el, ctx);
+    else field(el, ctx, { multiline: MULTILINE.includes(ctx.key) });
   }
 
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */

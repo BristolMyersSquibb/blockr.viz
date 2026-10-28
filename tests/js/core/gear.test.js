@@ -12,6 +12,7 @@ const setup = (config, opts) => {
 };
 const sel = (el, key) => row(el, key).querySelector('select');
 const inp = (el, key) => row(el, key).querySelector('input, textarea');
+const byKey = (el, key) => el.querySelector(`[data-gear-input="${key}"]`);
 const picked = (s) => Array.from(s.options).filter((o) => o.selected);
 /** Out of the window's realm, for deepEqual. */
 const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -259,7 +260,25 @@ test('text: a string commits on blur, Escape restores, empty is ""', () => {
   assert.equal(j.value, 'CHF');
   type(t.win, inp(t.el, 'unit'), '  ');
   assert.deepEqual(lastSet(t).values, { unit: '' });
-  assert.equal(inp(t.el, 'script').tagName, 'TEXTAREA');
+  assert.equal(byKey(t.el, 'script').tagName, 'TEXTAREA');
+});
+
+test('text fields take blockr.ui text input class', () => {
+  const t = setup({ type: 'bar', x: 'ARM' });
+  assert.ok(inp(t.el, 'unit').classList.contains('blockr-text-input'));
+});
+
+test('the prepare script sits behind a checkbox; unticking drops the script', () => {
+  const t = setup({ type: 'bar', x: 'ARM', script: null });
+  const box = byKey(t.el, 'script_on');
+  assert.equal(box.checked, false);
+  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, 'none');
+  box.click();
+  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, '');
+  const u = setup({ type: 'bar', x: 'ARM', script: 'data <- data' });
+  assert.equal(byKey(u.el, 'script_on').checked, true);
+  byKey(u.el, 'script_on').click();
+  assert.deepEqual(lastSet(u).values, { script: null });
 });
 
 test('slider: sends a number on change', () => {
