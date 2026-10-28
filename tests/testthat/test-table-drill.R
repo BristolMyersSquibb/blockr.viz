@@ -112,7 +112,7 @@ drill_paths <- list(
   # A header claims its group; a row its group and its value in the drill
   # column (drill = "SEX").
   list(view = "nest", a = "Low dose", b = "S-033",
-       cell = ".blockr-section-value", cell_b = NULL,
+       cell = ".vz-table-section-value", cell_b = NULL,
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
        foot_b = "ARM = Low dose, SEX = M",
@@ -134,7 +134,7 @@ drill_paths <- list(
        want_b = adae[adae$AEDECOD == "Headache" & adae$ARM == "Low dose", ],
        foot_b = "AESOC = Nervous system, AEDECOD = Headache, ARM = Low dose"),
   list(view = "col", a = "Low dose", b = "Low dose",
-       cell_b = '.blockr-summarize-fill[data-seg="2"]',
+       cell_b = '.vz-table-groups-fill[data-seg="2"]',
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
        foot_b = "ARM = Low dose, SEX = M"),
@@ -170,7 +170,7 @@ for (p in drill_paths) local({
     out <- paste0(id, "_out")
     none <- p$none %||% adsl
     drill_view(app, id, out)
-    if (!is.null(p$expand)) drill_click(app, id, p$expand, ".blockr-indent-btn")
+    if (!is.null(p$expand)) drill_click(app, id, p$expand, ".vz-table-indent-btn")
 
     expect_true(same_rows(drill_result(app, out), none), label = "no click")
 

@@ -72,15 +72,15 @@ skip_if_no_app <- function() {
 # `@key@`; js_get(), js_run() and js_wait() fill them in.
 SEL <- c(
   # table frame and records
-  frame = ".vz-table", clickable = "dt-clickable", row = "tr.blockr-data-row",
-  stub = ".blockr-stub", cell = "td.blockr-data", hidden = ".blockr-hidden-search",
-  search = "input.blockr-search", count = ".vz-count",
-  active = ".dt-row-active", row_active = "tr.dt-row-active",
+  frame = ".vz-table", clickable = "vz-table-clickable", row = "tr.vz-table-row",
+  stub = ".vz-table-stub", cell = "td.vz-table-data", hidden = ".blockr-hidden-search",
+  search = "input.vz-table-search", count = ".vz-count",
+  active = ".vz-table-row-active", row_active = "tr.vz-table-row-active",
   # status footer (table and chart)
   status = ".dd-status-text", clear = ".dd-status-clear", cap = ".dd-status-cap",
   # cards
-  card_row = ".tc-row", card = ".tc", card_label = ".tc-rowlab",
-  card_glyph = ".tc-glyph", card_box = ".blockr-summarize-boxcell",
+  card_row = ".vz-table-card-row", card = ".vz-table-card", card_label = ".vz-table-card-rowlab",
+  card_glyph = ".vz-table-card-glyph", card_box = ".vz-table-groups-boxcell",
   # chart
   chart = ".dd-chart",
   # gear
@@ -437,7 +437,7 @@ test_that("drill: clearing the selection restores all rows", {
 test_that("settings: setting drill updates the table markup", {
   skip_if_no_app()
 
-  # A table whose rows filter on a click carries .dt-clickable.
+  # A table whose rows filter on a click carries .vz-table-clickable.
   clickable <- function(id = "bars") {
     isTRUE(js_get(sprintf(
       "document.querySelector('%s @frame@').classList.contains('@clickable@')",
