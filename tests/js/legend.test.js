@@ -313,3 +313,92 @@ test('marks on a pie need no band: the slices name themselves', () => {
   assert.strictEqual(band(r), null);
   r.env.close();
 });
+
+// -- past 15 levels: no legend, the tooltip names the level --------------------
+
+// The fixture with a patient id per row: 60 colour levels.
+const PATIENTS = { ...F.data, USUBJID: F.data.USUBJID.map((_, i) => 'P' + String(i + 1).padStart(2, '0')) };
+const drawPatients = (config) =>
+  h.drawInternal({ ...BASE, ...config }, PATIENTS, F.columns, { keepOpen: true });
+const strip = (html) => String(html).replace(/<[^>]*>/g, ' ');
+// The live option of the first panel, functions and all.
+const liveOption = (r) => r.block.charts[0].getOption();
+const tipOf = (opt) => [].concat(opt.tooltip)[0].formatter;
+
+test('legendFits stops at 15 levels', () => {
+  const NS = loadPure();
+  assert.strictEqual(NS.legendFits(15), true);
+  assert.strictEqual(NS.legendFits(16), false);
+});
+
+test('a bar coloured by patient draws, with no band; the tooltip names the patient', () => {
+  for (const legend of ['bottom', 'top', 'marks']) {
+    const r = drawPatients({ chart_type: 'bar', ...AE, color: 'USUBJID', orientation: 'vertical', legend });
+    try {
+      assert.strictEqual(r.dom.empty.length, 0);
+      assert.strictEqual(band(r), null);
+      assert.deepStrictEqual(markNames(lastOption(r)), []);
+      const opt = liveOption(r);
+      const s = opt.series.find((x) => x.type === 'bar' && x.data.some((d) => d != null &&
+        (typeof d === 'object' ? d.value : d) != null));
+      const i = s.data.findIndex((d) => d != null && (typeof d === 'object' ? d.value : d) != null);
+      const tip = strip(tipOf(opt)({ dataIndex: i, seriesName: s.name, name: 'x' }));
+      assert.ok(tip.includes(s.name), tip);
+    } finally { r.env.close(); }
+  }
+});
+
+test('a line coloured by patient has no band and no end names; the tooltip names the patient', () => {
+  const r = drawPatients({ chart_type: 'line', ...LAB, color: 'USUBJID', legend: 'marks' });
+  try {
+    assert.strictEqual(band(r), null);
+    const opt = liveOption(r);
+    assert.ok(!opt.series.some((s) => s.endLabel && s.endLabel.show));
+    const s = opt.series.find((x) => x.type === 'line' && /^P\d\d$/.test(x.name));
+    const tip = strip(tipOf(opt)([{ seriesType: 'line', seriesName: s.name, seriesIndex: 0,
+                                               value: s.data[0], color: '#000' }]));
+    assert.ok(tip.includes(s.name), tip);
+  } finally { r.env.close(); }
+});
+
+test('a scatter coloured by patient writes no names on the marks and keeps no band', () => {
+  const r = drawPatients({ chart_type: 'scatter', ...LAB, color: 'USUBJID', legend: 'marks' });
+  try {
+    assert.strictEqual(band(r), null);
+    assert.deepStrictEqual(markNames(lastOption(r)), []);
+  } finally { r.env.close(); }
+});
+
+test('with a series apart from the colour, the point tooltip names the patient', () => {
+  const r = drawPatients({ chart_type: 'scatter', ...LAB, series: 'ARM', color: 'USUBJID' });
+  try {
+    assert.strictEqual(band(r), null);
+    const opt = liveOption(r);
+    const s = opt.series.find((x) => x.type === 'scatter' && x.data.length && !x.silent);
+    const pt = s.data[0];
+    const value = Array.isArray(pt) ? pt : pt.value;
+    const tip = strip(tipOf(opt)({ seriesName: s.name, value, color: '#000' }));
+    assert.match(tip, /P\d\d/);
+  } finally { r.env.close(); }
+  // Below the cap the legend says the colour, and the tooltip adds no row for it.
+  const few = draw({ chart_type: 'scatter', ...LAB, series: 'USUBJID', color: 'ARM' });
+  try {
+    assert.ok(band(few));
+  } finally { few.env.close(); }
+});
+
+test('a gantt coloured by patient has no band; the tooltip names the patient', () => {
+  const r = drawPatients({ chart_type: 'gantt', x: 'ASTDY', y: 'AETERM', xend: 'AENDY', color: 'USUBJID' });
+  try {
+    assert.strictEqual(r.dom.empty.length, 0);
+    assert.strictEqual(band(r), null);
+    const opt = liveOption(r);
+    const s = opt.series.find((x) => x.data && x.data.length);
+    const d = s.data[0];
+    const value = Array.isArray(d) ? d : d.value;
+    const fmt = (s.tooltip && s.tooltip.formatter) || tipOf(opt);
+    const tip = strip(fmt({ value, seriesName: s.name }));
+    assert.ok(tip.includes(String(value[4])), tip);
+    assert.match(String(value[4]), /^P\d\d$/);
+  } finally { r.env.close(); }
+});

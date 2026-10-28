@@ -16,6 +16,12 @@
 
   // Past this many levels the names on the marks of a line crowd each other.
   const MARKS_MAX_LEVELS = 8;
+  // Past this many levels a legend cannot be read: no band, no names on the
+  // marks. The tooltip names the level instead.
+  const LEGEND_MAX = 15;
+
+  /** Can a legend of n levels be read? @param {number} n */
+  const legendFits = (n) => n <= LEGEND_MAX;
 
   /**
    * How the names go on the marks of this chart, or null where they have no
@@ -31,7 +37,7 @@
   const marksKind = (m, cfg) => {
     if (m.family === 'individual') {
       // Chips that are not the series have no mark to sit on.
-      if (!m.legend || m.byColor) return null;
+      if (!m.legend || m.byColor || !legendFits(m.legend.items.length)) return null;
       if (m.type === 'scatter') {
         return (m.x.type === 'category' || m.y.type === 'category') ? null : 'centroid';
       }
@@ -44,12 +50,12 @@
     if (m.family === 'aggregated') {
       if (m.type === 'pie' || m.type === 'treemap') return 'slices';
       if (m.type === 'bar' && !m.histogram && !m.cumulative && m.colors.length &&
-          cfg.position !== 'dodge') {
+          legendFits(m.colors.length) && cfg.position !== 'dodge') {
         const vertical = cfg.orientation === 'vertical';
         // A level the named bar lacks would have no name: the legend stays.
         return stackCovers(m, vertical) ? (vertical ? 'stack' : 'stack-h') : null;
       }
-      if (m.type === 'pointrange' && m.split) return 'centroid';
+      if (m.type === 'pointrange' && m.split && legendFits(m.levels.length)) return 'centroid';
     }
     return null;
   };
@@ -126,13 +132,13 @@
     }
 
     /**
-     * Draw the chips, or hide the band with no spec.
+     * Draw the chips, or hide the band with no spec or more chips than can be read.
      * @param {{ col: string, items: Array<{ name: string, color: string }> } | null} spec
      * @param {{ position: 'top' | 'bottom', swatch: string }} [plan]
      */
     update(spec, plan) {
       const el = this.el;
-      if (!spec || !spec.items.length || !plan) {
+      if (!spec || !spec.items.length || !legendFits(spec.items.length) || !plan) {
         el.hidden = true;
         el.textContent = '';
         this.col = null;
@@ -198,5 +204,5 @@
     }
   }
 
-  Object.assign(NS, { legendPlan, cloudCentre, nameMark, Legend });
+  Object.assign(NS, { legendPlan, legendFits, cloudCentre, nameMark, Legend });
 })();

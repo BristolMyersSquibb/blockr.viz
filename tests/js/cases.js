@@ -94,7 +94,7 @@ const aggregated = [
   c('bar-palette-overflow', { type: 'bar', category: 'AVISIT', value: null, orientation: 'horizontal',
       func: 'count', color: 'USUBJID', drill: 'auto' }, { derived: { palette: ['#111111',
       '#222222', '#333333'] } }),
-  c('bar-too-many-colors', { type: 'bar', category: 'AETERM', value: null, orientation: 'horizontal',
+  c('bar-many-colors', { type: 'bar', category: 'AETERM', value: null, orientation: 'horizontal',
       func: 'count', color: 'ADY', drill: 'auto' }),
   c('bar-missing-column', { type: 'bar', category: 'NOPE', value: null, orientation: 'horizontal',
       func: 'count' }),

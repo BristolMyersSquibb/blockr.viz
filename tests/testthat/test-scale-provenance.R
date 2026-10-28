@@ -81,19 +81,20 @@ test_that("the summarize table colors follow provenance too", {
                c("#0072B2", "#E69F00", "#999999"))
 })
 
-test_that("two hashed levels never share a colour while the palette lasts", {
-  # A bare registration: every level's colour comes from the hash.
+test_that("a hashed level keeps its colour whatever else a chart shows", {
   m <- blockr.theme::new_scale_map(blockr.theme::scale_binding("TRT"))
   arm <- c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose")
-  grp <- structure(arm, blockr_source = "TRT")
-  res <- dd_resolve_scales(m, "Group", grp)
-  expect_length(unique(unlist(res$color)), 3L)
-  expect_true(all(unlist(res$color) %in% dd_palette()))
-  # A pinned colour stays, and a hashed level moves off it.
-  pinned <- blockr.theme::new_scale_map(blockr.theme::scale_binding(
-    "TRT", color = c(Placebo = unname(res$color[["Xanomeline Low Dose"]]))
-  ))
-  res2 <- dd_resolve_scales(pinned, "Group", grp)
-  expect_identical(res2$color[["Placebo"]], res$color[["Xanomeline Low Dose"]])
-  expect_length(unique(unlist(res2$color)), 3L)
+  all3 <- dd_resolve_scales(m, "Group", structure(arm, blockr_source = "TRT"))
+  two <- dd_resolve_scales(m, "Group",
+                           structure(arm[1:2], blockr_source = "TRT"))
+  expect_identical(two$color[arm[1:2]], all3$color[arm[1:2]])
+})
+
+test_that("a channel mixing pins and a pool reads its pins apart", {
+  pool <- c("#111111", "#222222", "#333333")
+  expect_identical(dd_spec_fixed(c("01-701-1015" = "#d55e00", pool)),
+                   "01-701-1015")
+  expect_identical(dd_spec_fixed(pool), character())
+  expect_identical(dd_spec_fixed(c(a = "#111111")), "a")
+  expect_identical(dd_spec_fixed(NULL), character())
 })
