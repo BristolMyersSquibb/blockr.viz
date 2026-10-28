@@ -31,12 +31,23 @@
     return shown === total ? total + noun : shown + ' of ' + total + noun;
   }
 
+  /**
+   * A structured table: R built it from an annotated frame (a Table 1, the
+   * rows nested under `by`, a finished input), so it has sections, nested
+   * rows or row claims. It takes the Table-1 typography and counts no rows.
+   * @param {TableModel} m
+   */
+  const isStructured = (m) => !!(m.sections && m.sections.length) ||
+    !!(m.rows && (m.rows.keys || m.rows.indent));
+
   class Records {
     /**
      * @param {TableFrame} frame
      * @param {VizScope} scope
+     * @param {TableLayoutOpts} [opts] `still`: a picture or a page without
+     *   Shiny, every row drawn and no tools.
      */
-    constructor(frame, scope) {
+    constructor(frame, scope, opts = {}) {
       this.frame = frame;
       this.scope = scope;
       this.grid = new T.Grid(frame.box, scope);
@@ -53,8 +64,7 @@
       /** The last claim sent to a drill target. */
       this.sent = /** @type {TableSelection | null} */ (null);
       this.drawnWith = '';
-      /** A picture or a page without Shiny: every row drawn, no tools. */
-      this.still = false;
+      this.still = !!opts.still;
       /** @type {Record<string, string>} */
       this.labels = {};
       this.drill = T.drill.wire(this.grid, frame, scope, {
@@ -125,7 +135,7 @@
         f.receipt(null, null);
         return;
       }
-      f.structured(!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys));
+      f.structured(isStructured(m));
       f.el.classList.toggle('dt-clickable', T.drill.clickable(m));
       this.draw(m, cfg);
     }
@@ -168,8 +178,7 @@
      * @param {{ shown: number, total: number }} c
      */
     countLine(m, c) {
-      const structured = !!(m.sections && m.sections.length) || !!(m.rows && m.rows.indent);
-      return structured ? '' : countText(c.shown, c.total);
+      return isStructured(m) ? '' : countText(c.shown, c.total);
     }
 
     /**
@@ -255,8 +264,7 @@
     /** @returns {TableInfo} */
     info() {
       const m = this.model;
-      const structured = !!m && (!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys) ||
-                                 !!(m.rows && m.rows.indent));
+      const structured = !!m && isStructured(m);
       const by = this.config().by;
       return { structured, finished: structured && !(Array.isArray(by) && by.length),
                numbers: !m || m.cols.some((c) => !!c.num) };

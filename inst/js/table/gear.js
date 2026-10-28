@@ -12,7 +12,6 @@
  * - the editors of keys the engine has no control for (`custom`): the
  *   shading rules here, a layout's own in its file (`Blockr.viz.table.editors`).
  *
- * Without the engine the view has no gear.
  */
 (function () {
   'use strict';
@@ -169,7 +168,7 @@
    * The shading rules: one row per rule, and a button that adds one. Every
    * key of a rule goes back as it came, `domain` included.
    * @param {HTMLElement} el
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    */
   function shadings(el, ctx) {
     const rules = /** @type {Record<string, unknown>[]} */ (
@@ -199,13 +198,12 @@
    * @returns {TableGearHandle | null}
    */
   function mount(frame, scope, info) {
-    const G = /** @type {any} */ (V).gear;
-    if (!G || typeof G.mount !== 'function') return null;
+    const G = V.gear;
     const t = G.tray(frame.head, scope, 'Table settings');
     /** What R resolved with the last payload: the drill targets. */
     /** @type {TableDerived} */
     let derived = {};
-    /** @type {TableGearHost} */
+    /** @type {VizGearHost} */
     const host = {
       // The blocks a click can be sent to, as the chart offers them.
       choices: (key) => key === 'drill_target'

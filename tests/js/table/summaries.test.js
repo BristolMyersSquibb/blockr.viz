@@ -10,7 +10,8 @@ const COLS = [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'SEX', cl
 function editor(summaries) {
   const built = [];
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { controls: { build: (el, ctx) => built.push(ctx) } };
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+                            controls: { ...win.Blockr.viz.gear.controls, build: (el, ctx) => built.push(ctx) } };
   } });
   const sets = [];
   const el = env.win.document.createElement('div');

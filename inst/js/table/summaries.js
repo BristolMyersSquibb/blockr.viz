@@ -81,8 +81,7 @@
    * @param {Entry} s
    */
   function headText(b, s) {
-    const icons = /** @type {any} */ (V).gear && /** @type {any} */ (V).gear.icons;
-    const icon = icons && icons[ICON[/** @type {'simple'} */ (s.type)]];
+    const icon = V.gear.icons[ICON[/** @type {'simple'} */ (s.type)]];
     b.textContent = '';
     const part = (/** @type {string} */ cls, /** @type {string} */ text) => {
       const x = b.appendChild(document.createElement('span'));
@@ -116,11 +115,11 @@
    * @param {HTMLElement} body
    * @param {Entry} s
    * @param {Record<string, any>} variant
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    * @param {(next: Entry) => void} put
    */
   function fields(body, s, variant, ctx, put) {
-    const C = /** @type {any} */ (V).gear.controls;
+    const C = V.gear.controls;
     const keys = Object.keys(variant).filter((f) => variant[f].gear && shows(s, f));
     for (const f of keys.filter((x) => x !== 'name').concat(keys.includes('name') ? ['name'] : [])) {
       const arg = variant[f];
@@ -148,7 +147,7 @@
    * @param {Entry[]} list
    * @param {number} k
    * @param {Record<string, any>} variants
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    * @param {Set<number>} open
    */
   function entry(list, k, variants, ctx, open) {
@@ -198,12 +197,12 @@
   /**
    * The Columns row.
    * @param {HTMLElement} el
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    */
   function editor(el, ctx) {
     const spec = /** @type {any} */ (V.spec.table);
     const variants = spec && spec.summaries && spec.summaries.type.variants;
-    if (!variants || !(/** @type {any} */ (V).gear && /** @type {any} */ (V).gear.controls)) return;
+    if (!variants) return;
     const list = /** @type {Entry[]} */ (Array.isArray(ctx.values.summaries) ? ctx.values.summaries : []);
     const box = /** @type {Element} */ (el.closest('.blockr-settings') || el);
     let open = opened.get(box);

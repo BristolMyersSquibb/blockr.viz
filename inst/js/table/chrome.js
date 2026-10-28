@@ -10,9 +10,9 @@
  * download. The header lays out like the chart's (chart.css `.vz-head`); in
  * a narrow block the tools take their own row (table-view.css).
  *
- * Titles, the download menu and the gear come from shared core scripts
- * when they are loaded (`Blockr.viz.titles`, `.download`, `.gear`); until
- * then the frame writes plain titles and leaves the other two out.
+ * Titles carry the title slots (core/titles.js) when the view has a gear,
+ * plain text when it has none (a printed page). The download menu is
+ * core/download.js's.
  */
 (function () {
   'use strict';
@@ -72,7 +72,7 @@
       this.clearBtn.setAttribute('data-blockr-tooltip', 'Clear filter');
       /** @type {(() => void) | null} */
       this._onClear = null;
-      /** @type {TableSlots | null} */
+      /** @type {VizSlots | null} */
       this.slots = null;
       scope.on(this.clearBtn, 'click', () => { if (this._onClear) this._onClear(); });
       /** @type {Array<(q: string) => void>} */
@@ -101,9 +101,9 @@
      */
     titles(t) {
       const x = t || {};
-      /** @param {TableTitleBand | string | null | undefined} b */
+      /** @param {VizTitleBand | string | null | undefined} b */
       const band = (b) => (typeof b === 'string' ? { text: b } : b || null);
-      const text = (/** @type {TableTitleBand | null} */ b) => (b && b.text) || '';
+      const text = (/** @type {VizTitleBand | null} */ b) => (b && b.text) || '';
       const [title, sub, cap] = [band(x.title), band(x.subtitle), band(x.caption)];
       if (this.slots) {
         this.slots.paint(this.titleEl, title);
@@ -134,10 +134,8 @@
         this._search.forEach((f) => f(''));
       }
       this.downloadSlot.hidden = !o.download;
-      if (typeof V.downloads === 'function') {
-        V.downloads(this.downloadSlot, /** @type {VizDownload[]} */ (o.download ? o.downloads : null),
-                    this.scope, o.onOpen ? { onOpen: o.onOpen } : {});
-      }
+      V.downloads(this.downloadSlot, /** @type {VizDownload[]} */ (o.download ? o.downloads : null),
+                  this.scope, o.onOpen ? { onOpen: o.onOpen } : {});
     }
 
     /**

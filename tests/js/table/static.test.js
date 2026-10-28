@@ -70,13 +70,21 @@ test('renderStatic again redraws through the same view and keeps the search', ()
   const el = env.win.document.body.appendChild(env.win.document.createElement('div'));
   el.id = 'it';
   const T = env.V.table;
-  T.renderStatic(el, payload({ data: flatModel(5) }), { gear: false });
+  const first = payload({ data: flatModel(5) });
+  T.renderStatic(el, first, { gear: false });
   const input = el.querySelector('input');
   input.value = 'S2';
-  T.renderStatic(el, payload({ data: null, dataRev: 0, config: { selection: null } }));
+  T.renderStatic(el, payload({ data: null, dataRev: first.data_rev,
+                               derived: { titles: { title: 'Kept rows' } } }));
   assert.equal(el.querySelectorAll('.vz-head').length, 1);
   assert.equal(el.querySelector('input'), input);
   assert.equal(input.value, 'S2');
+  assert.match(el.textContent, /Kept rows/);
+  assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 5);
+  // Rows of another revision are not held: nothing is drawn from them.
+  T.renderStatic(el, payload({ data: null, dataRev: first.data_rev + 99,
+                               derived: { titles: { title: 'Other rows' } } }));
+  assert.doesNotMatch(el.textContent, /Other rows/);
 });
 
 test('a click on a static table goes out as <id>_select', () => {

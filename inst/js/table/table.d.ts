@@ -2,9 +2,10 @@
  * Types for the table block's scripts (inst/js/table/). Dev tooling only:
  * read by tsconfig.core.json, never served to the browser.
  *
- * `derived.table` is what R computes for the browser (R/table-model.R); the
- * shapes here are the contract between the two. Everything is
- * column-oriented: a vector per column, one entry per row.
+ * The table R computes for the browser travels as `payload.data`
+ * (TableModel, built in R/table-records.R, R/table-groups-view.R and
+ * R/table-structured.R); the shapes here are the contract between the two.
+ * Everything is column-oriented: a vector per column, one entry per row.
  */
 
 /** Column name to values; `null` is a missing value. The shape of
@@ -187,7 +188,7 @@ interface TableCards {
   fold?: string | null;
 }
 
-/** A table to draw: `derived.table`. */
+/** A table to draw: `payload.data`. */
 interface TableModel {
   n: number;
   /** Index of the stub (row names) column, or null. */
@@ -208,14 +209,6 @@ interface TableModel {
   note?: string | null;
 }
 
-/** A title line as R resolves it (viz_titles()): its text, and the words
- *  that name an argument, which the title slots make clickable. */
-interface TableTitleBand {
-  text?: string;
-  parts?: { text: string; arg?: string; by?: string }[];
-  offers?: string[];
-}
-
 interface TableLegend {
   groups: { title: string; items: { color: string; label: string }[] }[];
 }
@@ -223,8 +216,8 @@ interface TableLegend {
 /** The table block's `derived`, as R builds it. The table itself is
  *  `payload.data`. */
 interface TableDerived {
-  titles?: { title?: TableTitleBand | string | null; subtitle?: TableTitleBand | string | null;
-             caption?: TableTitleBand | string | null; [k: string]: unknown } | null;
+  titles?: { title?: VizTitleBand | string | null; subtitle?: VizTitleBand | string | null;
+             caption?: VizTitleBand | string | null; [k: string]: unknown } | null;
   /** Say this instead of drawing a table. */
   empty?: { kind: string; message: string } | null;
   /** The drill receipt line, "Filtered: Arm = Placebo". */
@@ -314,7 +307,6 @@ interface TableGrid {
   headAt(el: Element | null): { th: Element; h: TableHeadCell } | null;
 }
 
-/** One table layout's view, drawn into the block's frame. */
 /** How a TableView is built outside the block's binding (static.js). */
 interface TableViewOpts {
   /** false: no gear and no title slots. */
@@ -323,6 +315,7 @@ interface TableViewOpts {
   still?: boolean;
 }
 
+/** One table layout's view, drawn into the block's frame. */
 interface TableLayoutView {
   render(payload: VizPayload): void;
   dispose(): void;
@@ -340,21 +333,6 @@ interface TableInfo {
   numbers: boolean;
 }
 
-/** The hooks of the core gear engine the table uses (gear-api.md). */
-interface TableGearHost {
-  visible?(key: string, values: Record<string, unknown>): boolean;
-  choices?(key: string, values: Record<string, unknown>): VizChoice[] | null;
-  label?(key: string, values: Record<string, unknown>): string | null | undefined;
-  custom?(key: string, el: HTMLElement, ctx: TableGearCtx): void;
-}
-
-interface TableGearCtx {
-  values: Record<string, unknown>;
-  columns: VizPayload['columns'];
-  scope: VizScope;
-  set(value: unknown): void;
-}
-
 /** The mounted gear: the engine, and a way to open its tray. */
 interface TableGearHandle {
   engine: VizGear;
@@ -363,12 +341,12 @@ interface TableGearHandle {
 }
 
 /** The title slots (core/titles.js): words of a title that open controls. */
-interface TableSlots {
-  paint(el: HTMLElement, band: TableTitleBand | null | undefined): void;
-  dispose(): void;
+/** How a layout draws: `still` is a picture or a page without Shiny. */
+interface TableLayoutOpts {
+  still?: boolean;
 }
 
-type TableLayoutClass = new (frame: TableFrame, scope: VizScope) => TableLayoutView;
+type TableLayoutClass = new (frame: TableFrame, scope: VizScope, opts?: TableLayoutOpts) => TableLayoutView;
 
 /** The block's frame: header, scroll box, footer (chrome.js). */
 interface TableFrame {
@@ -382,7 +360,7 @@ interface TableFrame {
   readonly foot: HTMLElement;
   readonly searchInput: HTMLInputElement;
   /** Set once the title slots are loaded; titles paint through them. */
-  slots: TableSlots | null;
+  slots: VizSlots | null;
   query(): string;
   onSearch(fn: (q: string) => void): void;
   titles(t: TableDerived['titles']): void;
@@ -434,7 +412,7 @@ interface VizTableNamespace {
   View: VizViewClass;
   /** Gear editors for keys the engine draws no control for, by
    *  "<layout>.<key>" or "<key>". */
-  editors: Record<string, (el: HTMLElement, ctx: TableGearCtx) => void>;
+  editors: Record<string, (el: HTMLElement, ctx: VizCustomCtx) => void>;
   variables: {
     varOf(s: Record<string, unknown>): string | null;
     withVars(summaries: Record<string, unknown>[], vars: string[],
@@ -447,7 +425,7 @@ interface VizTableNamespace {
   /** Draw a payload on an element without the output binding, or redraw it. */
   renderStatic(el: HTMLElement, payload: VizPayload, opts?: TableViewOpts): void;
   /** The records layout; groups extends it. */
-  Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
+  Records: new (frame: TableFrame, scope: VizScope, opts?: TableLayoutOpts) => TableLayoutView;
   html: {
     th(model: TableModel, r: number, c: number,
        f: { sortable: boolean; foldAll: boolean; axis?: (c: TableCol) => string }): string;
@@ -489,7 +467,7 @@ interface VizTableNamespace {
   gear: {
     mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
-    shadings(el: HTMLElement, ctx: TableGearCtx): void;
+    shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };
   /** blockr.ui's controls for the table's own gear rows, with native
    *  fallbacks (gear.js). */

@@ -36,9 +36,10 @@
     /**
      * @param {TableFrame} frame
      * @param {VizScope} scope
+     * @param {TableLayoutOpts} [opts]
      */
-    constructor(frame, scope) {
-      super(frame, scope);
+    constructor(frame, scope, opts = {}) {
+      super(frame, scope, opts);
       frame.el.classList.add('blockr-summarize-container');
       scope.own({ dispose: () => frame.el.classList.remove('blockr-summarize-container') });
       this.legend = scope.node(document.createElement('div'));
@@ -199,8 +200,7 @@
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
       frame.el.classList.add('blockr-summarize-capture');
-      const view = new Groups(frame, scope);
-      view.still = true;
+      const view = new Groups(frame, scope, { still: true });
       view.render(payload);
       return settled(scope)
         .then(() => snap.toCanvas(frame.el, { scale: ratio || pictureRatio(payload), dpr: 1,

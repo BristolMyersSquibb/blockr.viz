@@ -7,7 +7,8 @@
  *
  * - `renderStatic(el, payload, opts)` draws `payload` on `el`; again on the
  *   same element, it re-renders through the same view, so search, sort,
- *   folds and scroll stay, and `data: null` keeps the rows it has. `opts.gear === false`: no gear, plain titles.
+ *   folds and scroll stay, and `data: null` keeps the rows of the same
+ *   `data_rev`. `opts.gear === false`: no gear, plain titles.
  *   `opts.still`: every row and no tools, as for a printed page.
  * - Every such element is drawn on DOM ready and when one is added later
  *   (renderUI). No gear unless `data-viz-gear="on"`;
@@ -26,7 +27,8 @@
   const SEL = '.blockr-viz-static[data-viz-view="table"]';
 
   const page = new V.Scope();
-  /** @type {WeakMap<Element, { view: InstanceType<VizViewClass>, scope: VizScope, data?: unknown }>} */
+  /** @type {WeakMap<Element, { view: InstanceType<VizViewClass>, scope: VizScope,
+   *   rows?: { rev: number, data: unknown } }>} */
   const mounts = new WeakMap();
 
   /**
@@ -45,9 +47,15 @@
       mounts.set(el, m);
       scope.own({ dispose: () => mounts.delete(el) });
     }
-    // No rows means the rows drawn last, as in the block.
-    if (payload.data == null && m.data != null) payload = Object.assign({}, payload, { data: m.data });
-    else m.data = payload.data;
+    // No rows: the rows of the same data revision, as the binding keeps
+    // them; a payload whose rows the element does not hold draws nothing.
+    if (payload.data != null) {
+      m.rows = { rev: payload.data_rev, data: payload.data };
+    } else if (m.rows && m.rows.rev === payload.data_rev) {
+      payload = Object.assign({}, payload, { data: m.rows.data });
+    } else {
+      return;
+    }
     m.view.render(payload);
   }
 

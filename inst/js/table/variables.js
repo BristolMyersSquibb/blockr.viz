@@ -44,11 +44,10 @@
   /**
    * The gear's Variables row: a column picker over the entries.
    * @param {HTMLElement} el
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    */
   function picker(el, ctx) {
-    const C = /** @type {any} */ (V).gear && /** @type {any} */ (V).gear.controls;
-    if (!C) return;
+    const C = V.gear.controls;
     const summaries = /** @type {Record<string, unknown>[]} */ (
       Array.isArray(ctx.values.summaries) ? ctx.values.summaries : []);
     const vars = summaries.map(varOf).filter((v) => v != null);
