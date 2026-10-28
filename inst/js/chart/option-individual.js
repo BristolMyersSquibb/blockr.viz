@@ -37,21 +37,8 @@
   const hiddenToolbox = (feature) =>
     ({ show: true, itemSize: 0, itemGap: 0, right: -40, top: -40, feature });
   const BRUSH_TOOLS = ['rect', 'lineX', 'clear'];
-  const brushToolbox = () => hiddenToolbox({ brush: { type: BRUSH_TOOLS } });
-  // Drag-to-zoom on the data x axis only, not the veil's hidden one.
-  const zoomToolbox = () => hiddenToolbox({
-    dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' }
-  });
 
   const { identityDomain, pos, logDomains, clampBand } = parts.log;
-
-  /** The settings with the band's series clamped above a log axis's floor.
-   * @param {Record<string, any>} cfg @param {number} floor */
-  const clampedBand = (cfg, floor) => {
-    const band = cfg.derived.band || {};
-    return { ...cfg, derived: { ...cfg.derived,
-                                band: { ...band, series: clampBand(band.series, floor) } } };
-  };
 
   /** What every part of a panel's option reads: config, colours, the panel's
    * log domains (null on a linear axis) and the measured x labels.
@@ -61,11 +48,10 @@
     const lx = (look.logDom && look.logDom.x) || null;
     const ly = (look.logDom && look.logDom.y) || null;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
-    const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
     const xCats = m.x.cats;
     // Measured before the height: turned labels grow the canvas.
     const xlab = xCats ? NS.axes.xAxisLabels(xCats, width - X_INSET, true, look.measure, ink) : null;
-    return { m, look, width, cfg, ink, theme, lx, ly, title, ax, lm: cfg.line_width, xCats, xlab,
+    return { m, look, width, cfg, ink, theme, lx, ly, title, lm: cfg.line_width, xCats, xlab,
              isLine: m.isLine, isBand: m.isBand, isTime: m.x.type === 'time' };
   };
 
@@ -74,7 +60,10 @@
   const panelSeries = (k, panel) => {
     const { m, look, cfg, lx, ly, width } = k;
     if (k.isBand) {
-      const b = parts.band(m, panel, ly ? { ...look, cfg: clampedBand(cfg, ly.min) } : look);
+      // On a log axis the band's series are clamped above the axis's floor.
+      const band = cfg.derived.band || {};
+      const b = parts.band(m, panel, ly ? { ...look, cfg: { ...cfg, derived: { ...cfg.derived,
+        band: { ...band, series: clampBand(band.series, ly.min) } } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
                band: b.band, pts: null, labelPad: b.labelPad };
     }
@@ -138,63 +127,36 @@
     return { refData, idDom, idLog };
   };
 
-  /**
-   * With a series column apart from the colour, the chips are colour values
-   * no series is named after: an empty series per chip for the legend to bind.
-   * @param {any} k @param {any[]} series
-   */
-  const addChipSeries = (k, series) => {
-    const { m, isLine } = k;
-    if (!(m.byColor && m.legend)) return;
-    for (const it of m.legend.items) {
-      series.push({
-        type: isLine ? 'line' : 'scatter', name: it.name, data: [],
-        itemStyle: { color: it.color }, lineStyle: { color: it.color },
-        showSymbol: false, silent: true
-      });
-    }
-  };
-
   /** @param {any} k @param {any} ext @param {any} idDom @param {any} idLog */
   const panelAxes = (k, ext, idDom, idLog) => {
-    const { m, cfg, ink, ax, lx, ly, xCats, xlab, isLine, isTime } = k;
+    const { m, cfg, ink, lx, ly, xCats, xlab, isLine, isTime } = k;
     // A line chart reads values off the y grid and dates off the crosshair,
     // so it has no x grid and no y axis line.
-    const grid = { lineStyle: { color: ax.splitLineColor, type: 'solid', width: 1 } };
+    const grid = { lineStyle: { color: ink.border, type: 'solid', width: 1 } };
+    const xTitle = NS.axisName(k.title(m.x.col), m.x.col, cfg, { unit: false });
     /** @type {any} */
     const xAxis = {
-      type: m.x.type,
-      name: NS.axisName(k.title(m.x.col), m.x.col, cfg, { unit: false }),
-      nameLocation: 'middle',
-      nameGap: xlab && xlab.bottom ? xlab.bottom + 16 : 28,
-      nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
+      ...NS.axes.valueAxis(ink, m.x.type, xTitle, xlab && xlab.bottom ? xlab.bottom + 16 : 28),
       axisLabel: xlab ? xlab.axisLabel : {
-        color: ax.labelColor, fontSize: ax.fontSize, hideOverlap: true,
+        color: ink.muted, fontSize: ink.fontSize, hideOverlap: true,
         // A date axis labels years, then months, then days as it zooms in.
         ...(isTime ? { formatter: { year: '{yyyy}', month: '{MMM}', day: '{d} {MMM}',
                                     hour: '{HH}:{mm}', minute: '{HH}:{mm}' } } : {})
       },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: ink.strong } },
       splitLine: isLine ? { show: false } : grid,
       scale: true
     };
     if (xCats) xAxis.data = xCats;
     if (idDom && m.x.type === 'value') { xAxis.min = idDom[0]; xAxis.max = idDom[1]; }
     if (lx) NS.axes.logAxis(xAxis, idLog || lx);
-    const yFormat = m.y.type === 'value' && NS.valueFormat(cfg, { unit: false });
     /** @type {any} */
     const yAxis = {
-      type: m.y.type,
-      name: NS.axisName(k.title(m.y.col), m.y.col, cfg),
-      nameLocation: 'middle',
-      nameGap: 46,
+      ...NS.axes.valueAxis(ink, m.y.type, NS.axisName(k.title(m.y.col), m.y.col, cfg), 46,
+                           { format: m.y.type === 'value' && NS.valueFormat(cfg, { unit: false }) }),
       nameRotate: 90,
-      nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
-                   ...(yFormat ? { formatter: yFormat } : {}) },
       axisTick: { show: false },
-      axisLine: isLine ? { show: false } : { lineStyle: { color: ink.strong } },
+      ...(isLine ? { axisLine: { show: false } } : {}),
       splitLine: grid,
       scale: true
     };
@@ -233,7 +195,17 @@
         data: refData
       };
     }
-    addChipSeries(k, series);
+    // With a series column apart from the colour, the chips are colour values
+    // no series is named after: an empty series per chip for the legend to bind.
+    if (m.byColor && m.legend) {
+      for (const it of m.legend.items) {
+        series.push({
+          type: isLine ? 'line' : 'scatter', name: it.name, data: [],
+          itemStyle: { color: it.color }, lineStyle: { color: it.color },
+          showSymbol: false, silent: true
+        });
+      }
+    }
 
     const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
 
@@ -267,7 +239,10 @@
               bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
       yAxis: isLine ? [yAxis, scrimAxis] : yAxis,
-      toolbox: brushable ? brushToolbox() : (isLine ? zoomToolbox() : undefined),
+      toolbox: brushable ? hiddenToolbox({ brush: { type: BRUSH_TOOLS } })
+        // Drag-to-zoom on the data x axis only, not the veil's hidden one.
+        : (isLine ? hiddenToolbox({
+          dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' } }) : undefined),
       brush: brushable ? {
         toolbox: BRUSH_TOOLS, xAxisIndex: 0, yAxisIndex: 0,
         brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)',
@@ -344,9 +319,8 @@
     for (const s of panel.series) {
       byPart.set(keyOf(s.level) + (s.muted ? MUTED : ''), s);
       const k = keyOf(s.level);
-      const all = byLevel.get(k);
-      if (all) byLevel.set(k, { rows: all.rows.concat(s.rows), pts: all.pts.concat(s.pts) });
-      else byLevel.set(k, { rows: s.rows, pts: s.pts });
+      const all = byLevel.get(k) || { rows: [], pts: [] };
+      byLevel.set(k, { rows: all.rows.concat(s.rows), pts: all.pts.concat(s.pts) });
     }
     const keyCols = new Set(m.splitCol ? [m.splitCol] : []);
     if (m.facet) keyCols.add(m.facet);
@@ -392,14 +366,11 @@
         return { data: ms.pts, itemStyle: { opacity: onLevel(s.name) ? 1 : DIM } };
       }
       const on = onLevel(s.name);
-      if (isMark(s) && s.type === 'line') {
-        const base = m.isBand ? 1 : m.lineOpacity;
-        return { lineStyle: { opacity: on ? base : base * DIM },
-                 itemStyle: { opacity: on ? 1 : DIM } };
-      }
       if (s.type === 'line') {
-        const base = m.isBand ? 1 : 0.9;
-        return { lineStyle: { opacity: on ? base : base * DIM } };
+        const mark = isMark(s);
+        const base = m.isBand ? 1 : (mark ? m.lineOpacity : 0.9);
+        return { lineStyle: { opacity: on ? base : base * DIM },
+                 ...(mark ? { itemStyle: { opacity: on ? 1 : DIM } } : {}) };
       }
       return { itemStyle: { opacity: on ? 1 : DIM } };
     });
