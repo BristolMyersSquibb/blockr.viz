@@ -381,12 +381,14 @@ SPEC_CHECKERS <- list(
   map = check_map
 )
 
-# blockr.core's own block arguments a constructor passes on through `...`
-# (blockr.core::new_block()). Any other name in `...` is an old argument
-# name, or an error from viz_check(). A restore sets the saved names a
-# constructor does not take (blockr.dock's `visible`) as attributes after
-# building the block (legacy_build()).
-VIZ_CORE_BLOCK_ARGS <- c("block_name", "block_metadata", "ctor", "ctor_pkg")
+# Block arguments a constructor passes on through `...` to
+# blockr.core::new_block(): core's own, and blockr.dock's `visible` (which
+# panes a block shows), which boards set in code. Any other name in `...` is
+# an old argument name, or an error from viz_check(). A restore also keeps
+# other saved names a constructor does not take, as attributes
+# (legacy_build()).
+VIZ_CORE_BLOCK_ARGS <- c("block_name", "block_metadata", "ctor", "ctor_pkg",
+                         "visible")
 
 #' Check a constructor call against the spec
 #'

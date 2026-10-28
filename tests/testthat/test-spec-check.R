@@ -240,3 +240,11 @@ test_that("named lists are keyed by free names", {
   back <- viz_read_set(s, list(rev = 0, values = w))
   expect_identical(back$values$highlight, list(country = "CH"))
 })
+
+test_that("blockr.dock's visible is accepted in code, a misspelling is not", {
+  b <- new_table_block(visible = "inputs")
+  expect_identical(attr(b, "visible"), "inputs")
+  expect_error(new_table_block(colour = "x"))
+  expect_identical(attr(new_chart_block(visible = "outputs"), "visible"),
+                   "outputs")
+})
