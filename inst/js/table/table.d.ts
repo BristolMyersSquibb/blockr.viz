@@ -309,6 +309,14 @@ interface TableGrid {
 }
 
 /** One table layout's view, drawn into the block's frame. */
+/** How a TableView is built outside the block's binding (static.js). */
+interface TableViewOpts {
+  /** false: no gear and no title slots. */
+  gear?: boolean;
+  /** Every row drawn and no tools, as for a printed page. */
+  still?: boolean;
+}
+
 interface TableLayoutView {
   render(payload: VizPayload): void;
   dispose(): void;
@@ -427,6 +435,8 @@ interface VizTableNamespace {
   picture(payload: VizPayload, width: number, ratio?: number): Promise<VizPicture>;
   /** Draw the tables R wrote into a page without Shiny (static.js). */
   mount(node?: ParentNode): void;
+  /** Draw a payload on an element without the output binding, or redraw it. */
+  renderStatic(el: HTMLElement, payload: VizPayload, opts?: TableViewOpts): void;
   /** The records layout; groups extends it. */
   Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
   html: {
