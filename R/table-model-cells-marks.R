@@ -1,10 +1,5 @@
-# Table model: cells of the swimlane (interval) and sparkline columns. Both
-# are positioned along an x domain, so they share the x label formatter.
-
 # Swimlane segments: [left, width, fill-index] triples per row, plus a
-# pre-escaped tooltip per segment. The domain is the observed x/xend
-# range (per entry on the summaries path, prep-level otherwise),
-# not zero-based.
+# pre-escaped tooltip per segment. The domain is the observed x/xend range.
 cells_interval <- function(ctx, p) {
   prep <- ctx$prep
   segs <- ctx$rows[[p$segs %||% ".segs"]]
@@ -23,14 +18,13 @@ cells_interval <- function(ctx, p) {
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
 }
 
-# An x value as the card prints it: a date for a date domain, the lane
-# number format otherwise.
+# An x value as the card prints it: a date for a date domain.
 cells_fmt_x <- function(v, dd) {
   if (dd) format(as.Date(v, origin = "1970-01-01")) else lane_fmt(v)
 }
 
-# Segment tuples [left, width, fill-index (, escaped label)]: the
-# optional 4th slot keys the same-event hover highlight (data-l).
+# Segment tuples [left, width, fill-index (, escaped label)]; the optional 4th
+# slot keys the same-event hover highlight (data-l).
 cells_interval_segs <- function(segs, bb) {
   lapply(segs, function(ss) {
     lapply(ss, function(sg) {
@@ -40,8 +34,7 @@ cells_interval_segs <- function(segs, bb) {
   })
 }
 
-# Tooltip: the event label headlines (chart-gantt parity), then the
-# colour level, the span, and any extra field pairs.
+# Tooltip: event label, colour level, span, then extra field pairs.
 cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
   lapply(segs, function(ss) {
     vapply(ss, function(sg) {
@@ -61,11 +54,8 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
   })
 }
 
-# One inline SVG per cell, geometry PRE-PRINTED as point strings so the
-# emitters paste rather than format floats. viewBox 0 0 100 36 (taller
-# than the 12px lanes: amplitude is the point), a token 1 unit of
-# vertical padding -- the trajectory uses the full row; y grows
-# downward.
+# One inline SVG per cell, geometry pre-printed as point strings. viewBox
+# 0 0 100 36 with 1 unit of vertical padding; y grows downward.
 CELLS_SPARK_H <- 36
 CELLS_SPARK_PAD <- 1
 
@@ -77,12 +67,11 @@ cells_sparkline <- function(ctx, p) {
   pts <- rows[[p$pts %||% ".pts"]]
   dd <- isTRUE(p$dom_date %||% prep$dom_date)
   per <- lapply(pts, function(p1) cells_spark_row(p1, xd, yd, dd))
-  # The computed reference (p$ref, from the series row's `ref` option):
-  # ONE center line and optional dispersion band per COLUMN, printed
-  # here as scalar coordinates so every cell draws the same reference.
+  # The computed reference (p$ref): one center line and optional band per
+  # column, as scalar coordinates.
   ref <- cells_spark_ref(p$ref, yd)
-  # The sparkline column always sorts (and labels) by the LAST value;
-  # with a companion rank bar, `.v` carries that bar's aggregate instead.
+  # Sorts and labels by the last value; with a companion rank bar, `.v` carries
+  # that bar's aggregate.
   last_y <- rows[[p$key %||% ".last"]] %||% rows$.last %||% rows$.v
   lab <- if (ctx$vals_on && isTRUE(p$show_val)) {
     disp <- summarize_val_str(last_y, summarize_val_digits(

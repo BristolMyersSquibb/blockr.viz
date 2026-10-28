@@ -407,3 +407,16 @@ test('x_lines on a category x: on the category it names', () => {
   assert.deepStrictEqual(plain(opt.series[0].markLine.data.map((d) => [d.xAxis, d.label.formatter])),
                          [['W2', 'Dose']]);
 });
+
+test('connect: straight, monotone and the three steps reach the line series', () => {
+  const want = { straight: [undefined, undefined], monotone: [undefined, true],
+                 step_start: ['start', undefined], step_middle: ['middle', undefined],
+                 step_end: ['end', undefined] };
+  for (const [connect, [step, smooth]] of Object.entries(want)) {
+    const { opt } = build({ type: 'line', series: 'ID', connect });
+    assert.strictEqual(opt.series[0].step, step, connect + ' step');
+    assert.strictEqual(Boolean(opt.series[0].smooth), Boolean(smooth), connect + ' smooth');
+  }
+  // A scatter draws no line, whatever connect says.
+  assert.strictEqual(build({ connect: 'step_start' }).opt.series[0].step, undefined);
+});

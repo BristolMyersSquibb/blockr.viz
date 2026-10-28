@@ -76,6 +76,14 @@ test_that("old interval, band, script and filter fields are translated", {
   expect_equal(st$selection$filters, list(ARM = "A"))
 })
 
+test_that("an old id survives beside identity_line", {
+  st <- chart_state(suppressWarnings(new_chart_block(
+    chart_type = "scatter", x = "est", y = "term", band_id = "USUBJID",
+    identity_line = TRUE
+  )))
+  expect_equal(st$id, "USUBJID")
+})
+
 test_that("a cumulative bar is a waterfall, a radar a bar", {
   st <- chart_state(suppressWarnings(new_chart_block(
     chart_type = "bar", group = "step", value = "v", func = "sum",

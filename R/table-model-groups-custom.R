@@ -1,25 +1,13 @@
-# Table model, groups layout: custom summaries ---------------------------------
-#
-# A custom row is a function of the rows, grouped by table row, that returns
-# a small data frame. Its columns name what they are: `value`; `from`, `to`;
-# `lo`, `q1`, `mid`, `q3`, `hi`; `text`. One more column, if there is one, is
-# the split: the frame has a row per level of it, and each level draws its own
-# mark (the colour split of the preset rows). The block runs the function once
-# per level of `by` and per facet level, with `d` grouped by that level's
-# columns. A function that keeps the grouping (dplyr verbs, `.add = TRUE`)
-# computes every table row of the level in one call, and a nested table needs
-# nothing more from it: a worst-grade count is right for the SOC and for its
-# terms alike, because each level reduces its own rows.
-#
-# The function is read once over the whole data to learn its shape, and the
-# row then stands in as the preset row that draws that shape (a sum bar, a
-# pair, a distribution, an expr cell). Plan, sort, domains and every renderer
-# are the presets'; only the fill differs (lane_custom_fill()).
+# Custom summaries: a function of `d` (rows grouped by table row) returning a
+# data frame with columns named `value`, `from`/`to`, `lo`/`q1`/`mid`/`q3`/`hi`
+# or `text`. One other column is the split, a row per level. It runs once per
+# level of `by` and facet level and must keep the grouping. Its shape picks the
+# preset row that draws it; only the fill differs (lane_custom_fill()).
 
 LANE_CUSTOM_ROLES <- c("value", "from", "to", "lo", "q1", "mid", "q3", "hi",
                        "text")
 
-# What each mark reads. The first mark whose columns are all present is the
+# What each mark reads; the first mark whose columns are all present is the
 # default.
 LANE_CUSTOM_NEEDS <- list(
   dumbbell = c("from", "to"),
@@ -30,8 +18,7 @@ LANE_CUSTOM_NEEDS <- list(
   text = "text"
 )
 
-#' Parse a custom row's code into a function of one argument. Takes a
-#' function (`\(d) d |> ...`) or a bare body that uses `d`.
+#' Parse custom code (a function or a bare body using `d`) into a function.
 #' @noRd
 lane_custom_fn <- function(code) {
   exprs <- tryCatch(rlang::parse_exprs(paste(code, collapse = "\n")),
@@ -44,7 +31,6 @@ lane_custom_fn <- function(code) {
   body <- if (length(exprs) == 1L) exprs[[1L]] else as.call(c(quote(`{`), exprs))
   f <- tryCatch(eval(body, env), error = function(e) NULL)
   if (is.function(f)) return(f)
-  # A bare body: `d` is the rows, grouped by table row.
   fun <- function(d) NULL
   formals(fun) <- alist(d = )
   body(fun) <- body
@@ -58,7 +44,6 @@ lane_custom_run <- function(fn, d) {
   r <- tryCatch(fn(d), error = function(e) e)
   if (inherits(r, "error")) return(r)
   if (is.atomic(r) && !is.null(names(r)) && length(r)) {
-    # A named vector reads as one row.
     r <- as.data.frame(as.list(r), check.names = FALSE)
   }
   if (!is.data.frame(r)) {
@@ -67,8 +52,8 @@ lane_custom_run <- function(fn, d) {
   as.data.frame(r, check.names = FALSE)
 }
 
-#' Learn a custom row's shape and rewrite it as the preset row that draws it.
-#' Returns `list(s =)` or `list(err =)`.
+#' Learn a custom row's shape and rewrite it as its preset row.
+#' @return `list(s =)` or `list(err =)`.
 #' @noRd
 lane_custom_setup <- function(s, data) {
   who <- paste0("Summary \"", s$name, "\": ")
@@ -86,8 +71,8 @@ lane_custom_setup <- function(s, data) {
   mark <- sh$mark
   lv <- NULL
   if (!is.null(split)) {
-    # Levels from the full data where the split is a data column, so a
-    # level's colour does not depend on which cells happen to return it.
+    # Levels from the full data when the split is a data column, so colours
+    # do not depend on which cells return it.
     lv <- summarize_color_levels(if (split %in% names(data)) data[[split]] else
                               probe[[split]])
     if (length(lv) > LANE_MAX_LEVELS) {
@@ -98,9 +83,8 @@ lane_custom_setup <- function(s, data) {
     }
   }
   keep <- s[intersect(names(s), c("name", "facet", "scope", "fn"))]
-  # `denom`: a column whose distinct values in the cell's slice are the N. A
-  # count then reads as the presets' counts do: "54 (18%)", N in the header,
-  # a bar as long as its share. The value stays the function's.
+  # `denom`: a column whose distinct values in the slice are the N, so a count
+  # reads "54 (18%)".
   denom <- summarize_chr1(s$denom)
   if (!is.null(denom) && !denom %in% names(data)) {
     return(list(err = paste0(who, "the percent column \"", denom,
@@ -117,8 +101,8 @@ lane_custom_setup <- function(s, data) {
   list(s = s2)
 }
 
-# The split column and the mark of a custom row, from the columns its
-# function returns. Returns `list(split, mark)` or `list(err =)`.
+# Split column and mark from the function's columns: `list(split, mark)` or
+# `list(err =)`.
 lane_custom_shape <- function(s, cols, who) {
   split <- setdiff(cols, LANE_CUSTOM_ROLES)
   if (length(split) > 1L) {
@@ -150,7 +134,6 @@ lane_custom_shape <- function(s, cols, who) {
   list(split = split, mark = mark)
 }
 
-# The preset row that draws a custom row's mark.
 lane_custom_preset <- function(mark, cols, denom) {
   count <- if (is.null(denom)) list(func = "sum") else
     list(func = "count_distinct", col = denom)
@@ -172,11 +155,9 @@ lane_custom_preset <- function(mark, cols, denom) {
   )
 }
 
-#' The function's frames for every cell of `slice`, keyed by `tkeys`. One
-#' call per level: `d` arrives grouped by `tkeys`, and the function keeps that
-#' grouping, so its result carries the key columns that place each value.
-#' A failure is a `lane_custom_error`, which lane_prepare_summaries() turns
-#' into the table's error message.
+#' The function's frames for every cell of `slice`, keyed by `tkeys`. `d`
+#' arrives grouped by `tkeys`. A failure is a `lane_custom_error`, turned into
+#' the table's error message by lane_prepare_summaries().
 #' @noRd
 lane_custom_cells <- function(slice, tkeys, s) {
   fail <- function(...) {
@@ -197,8 +178,7 @@ lane_custom_cells <- function(slice, tkeys, s) {
   r
 }
 
-#' Fill a custom row's columns: the same `<sid>_*` columns the preset it
-#' stands in for would write, so the plan reads them unchanged.
+#' Fill a custom row's columns: the `<sid>_*` columns its preset would write.
 #' @noRd
 lane_custom_fill <- function(target, tkeys, slice, s, sid) {
   # The user's function sees the input's columns, not the row tag.
@@ -227,7 +207,6 @@ lane_sum_na <- function(x) {
   if (all(is.na(x))) NA_real_ else sum(x, na.rm = TRUE)
 }
 
-# One statistic of a custom column per target row.
 lane_custom_per <- function(target, rows, col, f, tkeys) {
   if (!nrow(rows) || is.null(rows[[col]])) return(rep(NA_real_, nrow(target)))
   g <- dplyr::group_by(rows, dplyr::across(dplyr::all_of(tkeys)))
@@ -238,7 +217,6 @@ lane_custom_per <- function(target, rows, col, f, tkeys) {
   summarize_match_col(target, a, tkeys, ".v")
 }
 
-# The function's frame rows of the j-th split level.
 lane_custom_level_rows <- function(cells, cu, j) {
   if (!nrow(cells)) return(cells)
   cells[as.character(cells[[cu$split]]) == cu$levels[[j]], , drop = FALSE]
@@ -273,7 +251,6 @@ lane_cfill_text <- function(target, tkeys, cells, sid) {
   target
 }
 
-# The ends of one dumbbell under `prefix`.
 lane_cfill_ends <- function(target, rows, prefix, tkeys) {
   n <- nrow(target)
   target[[paste0(prefix, "_from")]] <- lane_custom_per(target, rows, "from",
@@ -287,8 +264,7 @@ lane_cfill_ends <- function(target, rows, prefix, tkeys) {
 }
 
 lane_cfill_dumbbell <- function(target, tkeys, cells, cu, sid, split_on) {
-  # The pooled pair (the sort key, and the value label where a row draws
-  # one level) is the mean of the cell's rows.
+  # The pooled pair (sort key, value label) is the mean of the cell's rows.
   target <- lane_cfill_ends(target, cells, sid, tkeys)
   target[[paste0(sid, "_f")]] <- rep(NA_integer_, nrow(target))
   if (split_on) {
@@ -300,7 +276,6 @@ lane_cfill_dumbbell <- function(target, tkeys, cells, cu, sid, split_on) {
   target
 }
 
-# The statistics of one box or point range under `prefix`.
 lane_cfill_put <- function(target, rows, prefix, tkeys) {
   stats <- c(bc = "mid", bl = "q1", bh = "q3", wl = "lo", wh = "hi")
   for (k in names(stats)) {
@@ -322,13 +297,13 @@ lane_cfill_dist <- function(target, tkeys, cells, cu, sid, split_on) {
   target
 }
 
-#' Words for a custom row's plan entry: the preset's describe the preset's
-#' statistics ("Median", "Q1-Q3"), which a custom function did not compute.
+#' Words for a custom row's plan entry; the preset's name statistics the
+#' function did not compute.
 #' @noRd
 lane_custom_plan <- function(entry, s, cp) {
   cu <- s$.custom
   # A count keeps the preset's second header line (its N); the other marks'
-  # preset lines name statistics the function did not compute.
+  # would name statistics the function did not compute.
   if (!cu$mark %in% c("bar", "number")) {
     entry[names(entry) == "sub_label"] <- NULL
     entry$sub_label <- if (!is.null(cp$level)) {

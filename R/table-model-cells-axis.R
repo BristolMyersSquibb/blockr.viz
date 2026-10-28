@@ -1,12 +1,5 @@
-# Table model: axis domain, ticks and value-label helpers of the cell model.
-# Pure compute: the domain a column is drawn against, nice tick values (numbers
-# and calendar dates), the decimals and strings of value labels, and the ink
-# for a number printed on a fill. summarize-paint.R and table-cards.R read
-# these too, so the axis and the cells share one domain.
-
-#' The domain a column's marks are drawn against, as the AXIS has to print it:
-#' the same numbers `summarize_cells()` scales the geometry with, never
-#' re-derived from the data. `NULL` for a column with no scale.
+#' The domain a column's marks are drawn against, as the axis prints it: the
+#' numbers `summarize_cells()` scales with. `NULL` for a column with no scale.
 #' @noRd
 summarize_axis_domain <- function(p, prep = NULL) {
   ok <- function(a, b) {
@@ -18,24 +11,20 @@ summarize_axis_domain <- function(p, prep = NULL) {
     return(list(d0 = p$dmin, d1 = p$dmax))
   }
   if (kind %in% c("bar", "barsplit")) {
-    # Length from a zero baseline: the width IS value / column max, so the
-    # domain starts at zero whatever the data's minimum is. A 100% split
-    # normalises every row, which makes the domain the percentage itself.
+    # Zero baseline: width is value / column max. A 100% split's domain is
+    # the percentage itself.
     d1 <- if (identical(p$mode, "percent")) 100 else p$dmax %||% prep$bar_max
     if (!ok(0, d1)) return(NULL)
     list(d0 = 0, d1 = d1,
-         # A faceted percentage bar (`denom`) and the 100% split are read as
-         # percentages; a count column is read in its own unit.
+         # Faceted percentage bars (`denom`) and 100% splits read as percentages.
          pct = identical(p$mode, "percent") || !is.null(p$denom))
   } else if (identical(kind, "bardiv")) {
-    # Zero-centred: the cell spans -max .. +max around the middle, which is
-    # where the comparator sits.
+    # Zero-centred: -max .. +max around the comparator.
     mx <- p$dmax %||% prep$bar_max
     if (!ok(0, mx)) return(NULL)
     list(d0 = -mx, d1 = mx)
   } else if (kind %in% c("interval", "sparkline")) {
-    # The x domain, shared by the column: a swimlane's spans and a
-    # sparkline's trajectory are both positioned along it.
+    # The x domain shared by the column.
     d <- p$dom %||% prep$dom
     if (length(d) < 2L || !ok(d[[1L]], d[[2L]])) return(NULL)
     list(d0 = d[[1L]], d1 = d[[2L]],
@@ -45,11 +34,8 @@ summarize_axis_domain <- function(p, prep = NULL) {
   }
 }
 
-#' Nice tick values across a domain: the 1 / 2 / 2.5 / 5 / 10 ladder, picking
-#' the step CLOSEST to an even split rather than the first one at least as
-#' big (which drops to half the ticks whenever the domain sits just above a
-#' rung). Ticks outside the padded domain are cut, never clamped onto the
-#' edge, so every printed number is where it says it is.
+#' Nice tick values: the 1 / 2 / 2.5 / 5 / 10 ladder, taking the step closest
+#' to an even split. Ticks outside the domain are cut, not clamped.
 #' @noRd
 summarize_axis_ticks <- function(d0, d1, k = 4L) {
   raw <- (d1 - d0) / max(1L, k - 1L)
@@ -61,12 +47,9 @@ summarize_axis_ticks <- function(d0, d1, k = 4L) {
   t[t >= d0 & t <= d1]
 }
 
-#' How many decimals a column's value labels print: one finer than its axis
-#' ticks, so ticks every 10 read "17.7" and ticks every 0.5 read "2.25".
-#' Whole numbers (counts) stay whole. `NA` when the column has no axis to
-#' read the step off: those labels keep lane_fmt()'s significant digits.
-#' `x` is every value the column prints, all colour levels together, so one
-#' column prints one precision.
+#' Decimals for a column's value labels: one finer than its axis ticks. Whole
+#' numbers stay whole. `NA` without an axis (labels keep lane_fmt()). `x` is
+#' every value the column prints, all colour levels, so it has one precision.
 #' @noRd
 summarize_val_digits <- function(x, d0 = NULL, d1 = NULL) {
   x <- x[is.finite(x)]
@@ -114,10 +97,8 @@ summarize_ink <- function(fills) {
   }, character(1L), USE.NAMES = FALSE)
 }
 
-# The calendar ladder: step, its length in days (for picking) and the format a
-# tick at that step is printed in. A date axis is only honest on calendar
-# boundaries -- "every 30 days" drifts through the months -- so the step is a
-# real unit and seq() walks it.
+# The calendar ladder: step, length in days and tick format. Steps are real
+# calendar units because "every 30 days" drifts through the months.
 SUMMARIZE_DATE_STEPS <- list(
   list(by = "1 day", days = 1, fmt = "%d %b", unit = "day"),
   list(by = "2 days", days = 2, fmt = "%d %b", unit = "day"),
@@ -132,9 +113,8 @@ SUMMARIZE_DATE_STEPS <- list(
   list(by = "10 years", days = 3652.5, fmt = "%Y", unit = "year")
 )
 
-#' Nice tick DATES across a day-numbered domain (a swimlane or a sparkline
-#' over a Date column): the calendar ladder above, three ticks rather than
-#' four because a date label is three times the width of a number.
+#' Nice tick dates across a day-numbered domain: three ticks, since a date
+#' label is about three times as wide as a number.
 #' @noRd
 summarize_axis_date_ticks <- function(d0, d1, k = 3L) {
   raw <- (d1 - d0) / max(1L, k - 1L)
@@ -151,14 +131,12 @@ summarize_axis_date_ticks <- function(d0, d1, k = 3L) {
 }
 
 #' The first tick: the earliest boundary of the step's unit at or after the
-#' domain start, so the labels land on month firsts and January 1sts rather
-#' than on whatever day the data happens to open.
+#' domain start (month firsts, January 1sts).
 #' @noRd
 summarize_axis_date_start <- function(d, st) {
   if (identical(st$unit, "day")) return(d)
   if (identical(st$unit, "week")) {
-    # Monday: the week boundary the ISO calendar (and every study calendar
-    # built on it) uses.
+    # Monday, the ISO week boundary.
     return(d + (8L - as.integer(format(d, "%u"))) %% 7L)
   }
   yr <- as.integer(format(d, "%Y"))

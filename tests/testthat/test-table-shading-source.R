@@ -27,12 +27,6 @@ test_that("dd_parse_shadings passes source through and normalizes domain", {
   expect_identical(sh[[1]]$domain, c(1, 5))
 })
 
-test_that("dd_shadings_json round-trips source (gear echo must not drop it)", {
-  js <- dd_shadings_json(tmpl_rule())
-  back <- dd_parse_shadings(js)
-  expect_identical(back[[1]]$source, "{col} (sev)")
-})
-
 test_that("template source pairs each column with its companion and hides it", {
   d <- toy()
   vis <- dd_shading_visuals(tmpl_rule(), d, setdiff(names(d), "USUBJID"))

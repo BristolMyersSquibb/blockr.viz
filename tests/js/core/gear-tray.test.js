@@ -109,3 +109,23 @@ test('50 cycles with blockr.ui leave nothing behind', noUi, async () => {
   await tick(env.win, 10);
   assert.deepEqual(baseline(env), before);
 });
+
+test('Escape closes the gear tray of a chart or table view, and focus goes to the gear', noUi, () => {
+  const env = loadGear({ ui: true });
+  // happy-dom's animations reject on cancel; the tray opens without one.
+  env.win.HTMLElement.prototype.animate = undefined;
+  const head = env.doc.body.appendChild(env.doc.createElement('div'));
+  const scope = new env.V.Scope();
+  const t = env.V.gear.tray(head, scope, 'Table settings');
+  const esc = (el) => el.dispatchEvent(new env.win.KeyboardEvent('keydown',
+    { key: 'Escape', bubbles: true, cancelable: true }));
+  for (const where of [t.band, t.button]) {
+    t.button.click();
+    assert.equal(t.isOpen(), true, 'the gear opens the tray');
+    assert.ok(head.classList.contains('vz-head--open') || t.button.getAttribute('aria-expanded') === 'true');
+    esc(where);
+    assert.equal(t.isOpen(), false, 'Escape closes it');
+    assert.equal(env.doc.activeElement, t.button);
+  }
+  scope.dispose();
+});

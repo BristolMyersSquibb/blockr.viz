@@ -140,3 +140,27 @@ test_that("the gear's picker offers auto first, labelled with what it found", {
     NULL
   )
 })
+
+test_that("the table's payload lists the board's filter blocks to send to", {
+  blk <- new_table_block()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      fake_targets(session, list(
+        drill_filter_block = c(`Patient Drill` = "pt_drill"),
+        value_filter_block = c(`Patient Drill` = "pt_drill",
+                               Cohort = "cohort_filter")
+      ))
+      session$flushReact()
+      expr <- session$makeScope("expr")
+      p <- expr$output$table
+      expect_identical(
+        p$derived$ctrl_choices,
+        list(list(value = "auto", label = "Automatic (Patient Drill)"),
+             list(value = "pt_drill", label = "Patient Drill"),
+             list(value = "cohort_filter", label = "Cohort"))
+      )
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(mtcars)))
+  )
+})

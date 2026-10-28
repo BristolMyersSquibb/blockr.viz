@@ -255,16 +255,7 @@ table_legacy_args <- function(args, from = NULL) {
   drop(out, old)
 }
 
-#' Legacy deserialization for the table block
-#'
-#' Restores boards saved before the table block's rewrite, whose state
-#' carries the old argument names (`cell_color`, `value`, `group`, the
-#' `filter_*` fields, ...). The payload is translated by
-#' `table_legacy_args()`, the same table the constructor uses for old names
-#' in code. Current payloads (they carry `layout`) pass straight through.
-#'
-#' @param x,data,... Passed through from [blockr.core::blockr_deser()].
-#' @keywords internal
+#' @rdname blockr_deser.chart_block
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
@@ -276,16 +267,7 @@ blockr_deser.table_block <- function(x, data, ...) {
   )
 }
 
-#' Legacy deserialization for the summarize table block
-#'
-#' A board saved with a summarize table restores as a table block in the
-#' groups layout. Its class changes (`summarize_table_block` becomes
-#' `table_block`), which blockr.core accepts since it checks only that the
-#' result is a block (BristolMyersSquibb/blockr.core#379). The board saves
-#' as a table block from then on.
-#'
-#' @inheritParams blockr_deser.table_block
-#' @keywords internal
+#' @rdname blockr_deser.chart_block
 #' @export
 blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
