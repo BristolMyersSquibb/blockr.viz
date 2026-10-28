@@ -200,43 +200,6 @@ test('D5: point ranges dim too, and stay untouched while nothing is filtered', (
   assert.deepStrictEqual(patch(cfg, null).series, [{}, {}]);
 });
 
-test('the option reads only the config fields the model and the option list', () => {
-  const configs = [
-    {}, { color: 'SEV', position: 'fill', value_labels: true, facet: 'ARM' },
-    { color: 'SEV', position: 'dodge', ...VERTICAL, y_lines: [{ value: 2, label: null }] },
-    { x: 'ID', func: 'pct_distinct', percent_of: ['color'], color: 'SEV' },
-    { type: 'waterfall', x: 'T', y: 'V', orientation: null, func: 'sum',
-      waterfall_totals: [{ value: 'Fever', label: null }], value_labels: true, show_n: 'axis' },
-    { type: 'pie', x: 'T', y: null, orientation: null },
-    { type: 'treemap', x: 'T', y: null, orientation: null },
-    { type: 'boxplot', x: 'T', y: 'V', orientation: 'vertical', color: 'SEV',
-      box_points: 'outliers', show_n: 'axis', id: 'ID' },
-    { type: 'pointrange', y: 'T', x: 'V', connect_centers: true, orientation: 'horizontal',
-      summary: 'mean_sd' },
-    { drill: '', derived: { palette: ['#000000'] } }
-  ];
-  const allowed = new Set([...C.model.aggregated.FIELDS, ...C.option.aggregated.FIELDS]);
-  for (const cfg of configs) {
-    const c = settings(cfg);
-    const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-    const read = new Set();
-    // A read of `derived.palette` is the field "derived.palette".
-    const nested = (name, target) => new Proxy(target, { get(t, k) {
-      if (typeof k === 'string') read.add(name + '.' + k);
-      return t[k];
-    } });
-    const spy = new Proxy(c, { get(t, k) {
-      if (k === 'derived') return nested('derived', t.derived);
-      read.add(k);
-      return t[k];
-    } });
-    C.option.aggregated(m, { cfg: spy, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                             measure, widths: [600, 600] });
-    const extra = [...read].filter((k) => typeof k === 'string' && !allowed.has(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});
-
 // -- format / unit (format.js) -------------------------------------------------
 
 test('format and unit: compact ticks, the unit in the title, values with it', () => {

@@ -17,12 +17,6 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['type', 'drill', 'point_size', 'line_width', 'connect', 'smoother',
-    'derived.smoother', 'ymin', 'ymax', 'x_lines', 'y_lines', 'identity_line', 'derived.band',
-    'box_points', 'linetype', 'x_ranges', 'legend', 'label', 'format', 'unit', 'position',
-    'derived.titles', 'y_transform', 'x_transform', 'facet_scales'];
-
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
   // The grid's left and right margins, which the x labels do not get.
@@ -276,7 +270,6 @@
       labelNote: [m.capMessage, logNote].filter(Boolean).join(' ') || null
     };
   };
-  individual.FIELDS = OPTION_FIELDS;
 
   /** The legend band's chips. @param {any} m */
   const individualLegend = (m) => (m.legend && m.legend.items.length ? m.legend : null);

@@ -19,11 +19,6 @@
   const NS = V.chart;
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'category', 'color', 'facet', 'measure', 'func', 'missing',
-    'percent_of', 'sort_by', 'sort_dir', 'facet_scales', 'derived.scales', 'show_n',
-    'id', 'tooltip', 'summary', 'whiskers', 'box_points', 'label', 'highlight'];
-
   // A colour-split distribution slot is `group + SEP + level`: ECharts
   // dedupes a category axis by value, so the bare group would collapse the
   // boxes of one group into one slot.
@@ -391,7 +386,6 @@
       out.hlColors = lit;
     }
   };
-  aggregated.FIELDS = MODEL_FIELDS;
 
   /**
    * The aggregate cell of (group, colour) in a panel: the first, or

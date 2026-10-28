@@ -23,11 +23,6 @@
   const NS = V.chart;
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'x', 'y', 'color', 'facet', 'series', 'tooltip',
-    'derived.scales', 'derived.palette', 'show_n', 'id', 'func', 'highlight',
-    'y_transform', 'x_transform'];
-
   // Line charts: past TRAJ_FULL_MAX series the lines thin and lose their
   // markers, past TRAJ_REDUCED_MAX they thin further, past the cap the rest
   // are not drawn (the footer says so).
@@ -205,7 +200,6 @@
     highlightSeries(out, rows, ix, cfg);
     return out;
   };
-  individual.FIELDS = MODEL_FIELDS;
 
   /** The highlight on a scatter or line. A line is highlighted when one of its rows holds a
    * highlighted value, a point by its own row. What is not highlighted is `muted` (drawn grey by

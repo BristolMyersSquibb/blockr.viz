@@ -24,16 +24,6 @@
   /** @type {VizEmpty} */
   const NO_VALUE = { kind: 'empty', message: 'Pick a numeric Value to plot its distribution' };
 
-  /** A memo key of the config fields; `derived.x` is R's derived x.
-   * @param {Record<string, any>} cfg @param {string[]} fields */
-  const pick = (cfg, fields) => {
-    /** @type {Record<string, any>} */ const out = {};
-    for (const f of fields) {
-      out[f] = f.startsWith('derived.') ? cfg.derived[f.slice(8)] : cfg[f];
-    }
-    return JSON.stringify(out);
-  };
-
   /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
   class ChartView {
@@ -62,8 +52,11 @@
       this._blank = false;
       /** @type {string | null} */ this.theme = null;
       /** @type {Ink} */ this._ink = NS.INK_DEFAULT;
-      /** @type {{ modelKey: string | null, model: any, optionKey: string | null, option: any }} */
-      this._memo = { modelKey: null, model: null, optionKey: null, option: null };
+      /** The family's model and option, memoised on the config fields each
+       * read (memo.js); `model` and `option` are the current ones.
+       * @type {{ models: any, options: any, modelGen: number, model: any, option: any }} */
+      this._memo = { models: new NS.ReadMemo(), options: new NS.ReadMemo(), modelGen: 0,
+                     model: null, option: null };
       /** @type {(() => void) | null} */ this._settle = null;
       this.selection = new NS.Selection(this);
       this.frame = new V.Frame(el, scope, { cls: 'vz-chart' });
@@ -258,33 +251,31 @@
       this.drawn = true;
     }
 
-    /** @param {ChartFamily} fam */
+    /** The family's model of the rows, recomputed when the rows, the
+     * columns or a config field it read changed. @param {ChartFamily} fam */
     _model(fam) {
-      const key = this._rowsGen + '\u0000' + this._columnsKey + '\u0000' +
-        pick(this.config, fam.model.FIELDS);
-      if (this._memo.modelKey !== key) {
-        this._memo.model = fam.model({ rows: this.data, ix: this._ix,
-                                        columns: this.columns, cfg: this.config });
-        this._memo.modelKey = key;
-        this._memo.optionKey = null;
+      const memo = this._memo;
+      const extra = fam.name + '\u0000' + this._rowsGen + '\u0000' + this._columnsKey;
+      if (memo.models.update(this.config, extra, (/** @type {Record<string, any>} */ cfg) =>
+        fam.model({ rows: this.data, ix: this._ix, columns: this.columns, cfg }))) {
+        memo.modelGen++;
       }
-      return this._memo.model;
+      return (memo.model = memo.models.value);
     }
 
-    /** @param {ChartFamily} fam @param {any} m @param {number[] | null} widths */
+    /** The family's option for the model, recomputed with a new model, ink,
+     * theme or panel widths, or when a config field it read changed.
+     * @param {ChartFamily} fam @param {any} m @param {number[] | null} widths */
     _option(fam, m, widths) {
+      const memo = this._memo;
       const ink = this._ink;
-      const key = this._memo.modelKey + '\u0000' + pick(this.config, fam.option.FIELDS) +
-        '\u0000' + JSON.stringify(ink) + '\u0000' + (this.theme || '') +
-        '\u0000' + (widths ? widths.join(',') : '');
-      if (this._memo.optionKey !== key) {
-        this._memo.option = fam.option(m, {
-          cfg: this.config, columns: this.columns, ink, theme: this.theme,
-          measure: this._measure(ink), widths: widths || []
-        });
-        this._memo.optionKey = key;
-      }
-      return this._memo.option;
+      const extra = fam.name + '\u0000' + memo.modelGen + '\u0000' + JSON.stringify(ink) +
+        '\u0000' + (this.theme || '') + '\u0000' + (widths ? widths.join(',') : '');
+      memo.options.update(this.config, extra, (/** @type {Record<string, any>} */ cfg) => fam.option(m, {
+        cfg, columns: this.columns, ink, theme: this.theme,
+        measure: this._measure(ink), widths: widths || []
+      }));
+      return (memo.option = memo.options.value);
     }
 
     // Text width in a CSS font, on a shared canvas.

@@ -249,25 +249,6 @@ test('a click sends the keys, a missing one as null; a drill column its values',
   assert.strictEqual(send({ drill: '' }, { T: 'Rash' }), null);
 });
 
-test('the model reads only the config fields it lists', () => {
-  const configs = [
-    {}, { color: 'SEV', facet: 'ARM', show_n: 'both', id: 'ID', tooltip: ['ID'] },
-    { type: 'waterfall', y: 'V', func: 'sum' }, { type: 'pie', facet: 'ARM' },
-    { type: 'boxplot', y: 'V', color: 'SEV', box_points: 'outliers' },
-    { type: 'pointrange', y: 'V', summary: 'mean_sd', facet: 'ARM' },
-    { sort_by: 'D' }, { sort_by: 'data' }, { func: 'pct_distinct', y: 'ID', percent_of: 'color' }
-  ];
-  for (const cfg of configs) {
-    const read = new Set();
-    const spy = new Proxy(settingsOf(cfg), { get(t, k) { read.add(k); return t[k]; } });
-    C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    // A listed path such as 'derived.scales' covers the read of its root.
-    const listed = (k) => C.model.aggregated.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
-    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});
-
 test('summarizeStat: mean_2sd is two sd around the mean, p5_p95 the 5th to 95th percentile', () => {
   const s = C.model.summarizeStat([2, 4], 'mean_2sd');
   assert.strictEqual(s.center, 3);

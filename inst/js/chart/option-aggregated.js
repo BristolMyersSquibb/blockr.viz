@@ -15,13 +15,6 @@
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
   const { withItemStyle } = parts;
 
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['type', 'position', 'orientation', 'value_labels', 'y_lines',
-    'percent_of', 'waterfall_totals', 'connect_centers', 'drill', 'derived.palette',
-    'derived.scales', 'measure', 'func', 'show_n', 'summary', 'whiskers', 'box_points',
-    'category', 'color', 'facet', 'format', 'unit', 'derived.titles', 'legend', 'x_lines',
-    'x_ranges'];
-
   // The opacity of a mark a filter does not light.
   const DIM = 0.15;
   // The canvas of a builder that sizes nothing itself.
@@ -95,7 +88,6 @@
     });
     return { panels, labelNote };
   };
-  aggregated.FIELDS = OPTION_FIELDS;
 
   /**
    * The legend chips: a distribution's split levels, else a bar's colour

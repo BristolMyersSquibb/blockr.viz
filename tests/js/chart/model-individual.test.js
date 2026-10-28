@@ -249,19 +249,3 @@ test('interpYAtX: between points, null outside; a category x by its position', (
   assert.strictEqual(C.model.interpYAtX([['Base', 2], ['W2', 4]], 0.5, order), 3);
 });
 
-test('the model reads only the config fields it lists', () => {
-  const configs = [
-    [{}], [{ color: 'ARM', facet: 'SEX', show_n: 'both', id: 'ID', tooltip: ['ID'] }],
-    [{ type: 'line', series: 'ID', color: 'ARM' }, { scales: { var: 'ARM', color: {} } }],
-    [{ type: 'band', color: 'ARM' }, { palette: ['#000000'] }], [{ x: 'VIS', type: 'line' }]
-  ];
-  for (const [cfg, derived] of configs) {
-    const read = new Set();
-    const spy = new Proxy(settingsOf(cfg, derived), { get(t, k) { read.add(k); return t[k]; } });
-    C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    // A listed path such as 'derived.scales' covers the read of its root.
-    const listed = (k) => C.model.individual.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
-    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});

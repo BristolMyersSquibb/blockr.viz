@@ -22,11 +22,6 @@
   const NS = V.chart;
   const model = /** @type {any} */ (NS.model);
 
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
-    'series', 'label', 'tooltip', 'drill', 'derived.scales', 'show_n', 'id', 'func',
-    'facet_scales'];
-
   /**
    * @typedef {{ facet: string, label: string | null, lanes: string[],
    *             laneCounts: Map<string, any> | null, marks: any[][],
@@ -141,7 +136,6 @@
     }
     return out;
   };
-  timeline.FIELDS = MODEL_FIELDS;
 
   /** The keys of a timeline mark: its lane, and the facet in a facet panel. The colour is no key.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark

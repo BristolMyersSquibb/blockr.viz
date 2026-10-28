@@ -232,7 +232,7 @@ interface ChartPatchInput {
 
 /**
  * A chart family as the view uses it (family-*.js): its model and option
- * (each with the `FIELDS` its memo keys on), the legend band's chips, the
+ * (memoised on the config fields each reads, memo.js), the legend band's chips, the
  * handlers of a new ECharts instance, and the highlight patch. `widths`:
  * the option reads each panel's width. `alwaysHighlight`: every draw ends
  * with a highlight patch; the others patch only while a selection dims.
@@ -241,9 +241,8 @@ interface ChartPatchInput {
  */
 interface ChartFamily {
   name: 'aggregated' | 'timeline' | 'individual';
-  model: ((input: { rows: any[]; ix: any; columns: VizColumn[]; cfg: Record<string, any> }) => any)
-    & { FIELDS: string[] };
-  option: ((m: any, look: Record<string, any>) => any) & { FIELDS: string[] };
+  model(input: { rows: any[]; ix: any; columns: VizColumn[]; cfg: Record<string, any> }): any;
+  option(m: any, look: Record<string, any>): any;
   legend(m: any, cfg: Record<string, any>): { col: string; items: Array<{ name: string; color: string }> } | null;
   widths: boolean;
   alwaysHighlight: boolean;
@@ -292,7 +291,7 @@ interface ChartView extends VizView {
   columns: VizColumn[];
   data: any[];
   _ix: any;
-  _memo: { modelKey: string | null; model: any; optionKey: string | null; option: any };
+  _memo: { models: any; options: any; modelGen: number; model: any; option: any };
   _slots: ChartSlot[];
   charts: any[];
   theme: string | null;

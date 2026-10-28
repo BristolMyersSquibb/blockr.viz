@@ -11,9 +11,6 @@
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
 
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['label', 'drill', 'derived.palette', 'derived.scales'];
-
   // Lane height and the room around the plot, in CSS px.
   const LANE_PX = 28;
   const PANEL_EXTRA_PX = 80;
@@ -176,7 +173,6 @@
       timelinePanel(k, panel, renderItem, formatter, xAxis));
     return { panels };
   };
-  timeline.FIELDS = OPTION_FIELDS;
 
   /**
    * The legend chips: the colour levels in the option's colours.

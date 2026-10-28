@@ -266,32 +266,6 @@ test('D5: a band level dims with its halo and ribbon', () => {
                          [1, 1, 1, 0.15, 0.15]);
 });
 
-test('the option reads only the config fields it and the model list', () => {
-  const configs = [
-    [{}],
-    [{ color: 'ARM', facet: 'SEX', ymin: ['LO'], ymax: ['HI'], x_lines: [{ value: 1, label: null }],
-       y_lines: [{ value: 2, label: null }] }],
-    [{ type: 'line', series: 'ID', connect: 'straight', line_width: 2 }],
-    [{ type: 'line', x: 'VIS', color: 'ARM', point_size: 2 }],
-    [{ smoother: 'lm', identity_line: true, drill: null }, { smoother: {} }],
-    [{ type: 'band', color: 'ARM', box_points: 'outliers' },
-     { band: { series: BAND, refs: { hi: { col: 'HI', value: 7 } } } }]
-  ];
-  const allowed = new Set([...C.model.individual.FIELDS, ...C.option.individual.FIELDS]);
-  for (const [cfg, derived] of configs) {
-    const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
-    const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-    const read = new Set();
-    // `derived` is read through too: a field is listed as `derived.<key>`.
-    const dspy = new Proxy(c.derived, { get(t, k) { read.add('derived.' + String(k)); return t[k]; } });
-    const spy = new Proxy(c, { get(t, k) { if (k !== 'derived') read.add(k); return k === 'derived' ? dspy : t[k]; } });
-    C.option.individual(m, { cfg: spy, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                             measure, widths: [600, 600, 600] });
-    const extra = [...read].filter((k) => typeof k === 'string' && !allowed.has(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});
-
 test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the month', () => {
   const columns = [{ name: 'MONTH', class: 'date' }, num('VAL'), cat('G')];
   const rows = ['2020-01-01', '2020-02-01', '2020-03-01'].flatMap((d, i) =>
