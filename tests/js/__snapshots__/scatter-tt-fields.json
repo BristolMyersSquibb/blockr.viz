@@ -246,8 +246,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -351,8 +353,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -486,8 +490,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -621,8 +627,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

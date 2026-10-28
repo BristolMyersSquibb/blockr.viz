@@ -256,6 +256,8 @@ interface ChartPatchInput {
   filters: ChartSelectionFilters | null;
   range: ChartRangeSelection | null;
   dimmed: boolean;
+  /** The view's ink: a selected mark's outline is its text colour. */
+  ink: Ink;
 }
 
 /**

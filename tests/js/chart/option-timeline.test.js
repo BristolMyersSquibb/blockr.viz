@@ -108,7 +108,7 @@ test('a categorical x names its categories in the tooltip', () => {
 
 test('drill off: no emphasis and no hand cursor; a theme drops the transparent background', () => {
   const { opt } = build({ drill: '' });
-  assert.deepStrictEqual(plain(opt.series[0].emphasis), { disabled: true });
+  assert.deepStrictEqual(plain(opt.series[0].emphasis), { disabled: true, scale: false });
   assert.strictEqual(opt.series[0].cursor, 'default');
   assert.strictEqual(build({}, { theme: 'dark' }).opt.backgroundColor, undefined);
 });
@@ -132,17 +132,17 @@ const barOpacity = (p) => p.series.map((s) => s.data.map((d) => [d.value[3], d.i
 
 test('D5: a lane filter dims the other lanes; the colour is not a key', () => {
   const p = timelinePatch({ color: 'SEV' }, { T: ['Rash'] });
-  assert.deepStrictEqual(barOpacity(p), [[['Rash', 1]], [['Nausea', 0.15], ['Rash', 1]]]);
+  assert.deepStrictEqual(barOpacity(p), [[['Rash', 1]], [['Nausea', 0.25], ['Rash', 1]]]);
   assert.strictEqual(p.dimmed, true);
   // A filter naming the colour too is a filter on a column the mark does
   // not carry: the event's own row decides.
   assert.deepStrictEqual(barOpacity(timelinePatch({ color: 'SEV' }, { T: ['Rash'], SEV: ['MILD'] })),
-                         [[['Rash', 1]], [['Nausea', 0.15], ['Rash', 0.15]]]);
+                         [[['Rash', 1]], [['Nausea', 0.25], ['Rash', 0.25]]]);
 });
 
 test('D5: a filter on another column lights the events holding it', () => {
   assert.deepStrictEqual(barOpacity(timelinePatch({ drill: 'ID' }, { ID: ['S02'] })),
-                         [[['Rash', 0.15], ['Nausea', 1], ['Rash', 1]]]);
+                         [[['Rash', 0.25], ['Nausea', 1], ['Rash', 1]]]);
 });
 
 test('D5: no filter is an empty patch, unless bars were dimmed before', () => {

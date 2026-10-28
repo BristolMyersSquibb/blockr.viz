@@ -149,14 +149,14 @@
         "itemStyle": {
          "borderColor": "#ffffff",
          "borderWidth": 2,
-         "gapWidth": 2
+         "gapWidth": 2,
+         "cursor": "pointer"
         },
         "emphasis": {
-         "itemStyle": {
-          "shadowBlur": 10,
-          "shadowColor": "rgba(0,0,0,0.15)"
-         }
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -193,7 +193,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#0072B2",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -202,7 +204,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#E69F00",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -211,7 +215,9 @@
           "n": 9,
           "itemStyle": {
            "color": "#009E73",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -220,7 +226,9 @@
           "n": 9,
           "itemStyle": {
            "color": "#CC79A7",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -229,7 +237,9 @@
           "n": 10,
           "itemStyle": {
            "color": "#56B4E9",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -238,7 +248,9 @@
           "n": 9,
           "itemStyle": {
            "color": "#D55E00",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          },
          {
@@ -247,7 +259,9 @@
           "n": 3,
           "itemStyle": {
            "color": "#9AA0A6",
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#ffffff",
+           "borderWidth": 2
           }
          }
         ]

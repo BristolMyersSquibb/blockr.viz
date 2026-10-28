@@ -15,8 +15,6 @@
   const LANE_PX = 28;
   const PANEL_EXTRA_PX = 80;
   const PANEL_MIN_PX = 200;
-  // The opacity of a bar a filter does not light.
-  const DIM = 0.15;
 
   /** Which marks each series of a panel draws, as mark positions in series order: one series per
    * colour level (marks of no level are not drawn), else one series of every mark. The option and
@@ -148,7 +146,7 @@
     };
     const height = Math.max(PANEL_MIN_PX,
       Math.min(NS.PANEL_H_CAP, panel.lanes.length * LANE_PX) + PANEL_EXTRA_PX) + 'px';
-    return { option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink), height };
+    return { option: NS.cardTooltip(NS.quietHover(opt, cfg), ink), height };
   };
 
   /** @param {any} m the timeline model @param {ChartLook} look
@@ -182,22 +180,22 @@
   };
 
   /**
-   * The highlight patch for one panel: every bar's opacity from whether its
+   * The highlight patch for one panel: every bar outlined or faded by whether its
    * mark (lane and facet) is lit. Without a filter, and nothing dimmed from
    * before, the patch is empty.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {((keys: Record<string, any>, rows: () => any[]) => boolean) | null} lit
-   * @param {boolean} wasDimmed
+   * @param {boolean} wasDimmed @param {Ink} [ink]
    * @returns {{ series: any[], dimmed: boolean }}
    */
-  const timelinePatch = (m, panel, cfg, lit, wasDimmed) => {
+  const timelinePatch = (m, panel, cfg, lit, wasDimmed, ink = NS.INK_DEFAULT) => {
     const layout = seriesMarks(m, panel);
     if (!lit && !wasDimmed) return { series: layout.map(() => ({})), dimmed: false };
     const series = layout.map((idx) => ({
       data: idx.map((i) => {
         const t = panel.marks[i];
         const on = !lit || lit(NS.model.timelineKeys(cfg, panel.facet, t), () => [panel.rows[i]]);
-        return { value: t, itemStyle: { opacity: on ? 1 : DIM } };
+        return { value: t, itemStyle: NS.selStyle(on, !!lit, ink) };
       })
     }));
     return { series, dimmed: !!lit };

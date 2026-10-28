@@ -188,13 +188,16 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "bar",
@@ -230,13 +233,16 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "bar",
@@ -282,13 +288,16 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "bar",
@@ -324,13 +333,16 @@
         ],
         "stack": "stack",
         "itemStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "barWidth": "60%",
         "barMaxWidth": 48,
         "emphasis": {
-         "focus": "self"
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },
@@ -365,43 +377,57 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -411,13 +437,17 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          },
          {
@@ -429,13 +459,17 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -447,19 +481,25 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": 1,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -469,19 +509,25 @@
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -493,13 +539,17 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -511,7 +561,9 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -523,7 +575,9 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]
@@ -539,7 +593,9 @@
             2,
             0
            ],
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
@@ -551,37 +607,49 @@
             2,
             0
            ],
-           "opacity": 1
+           "opacity": 1,
+           "borderColor": "#111827",
+           "borderWidth": 1.5
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          },
          {
           "value": null,
           "itemStyle": {
-           "opacity": 0.15
+           "opacity": 0.25,
+           "borderColor": "transparent",
+           "borderWidth": 0
           }
          }
         ]

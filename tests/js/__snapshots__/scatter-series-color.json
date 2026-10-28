@@ -189,8 +189,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -224,8 +226,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -259,8 +263,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -294,8 +300,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -329,8 +337,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -364,8 +374,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -399,8 +411,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -434,8 +448,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -469,8 +485,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -504,8 +522,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -539,8 +559,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -574,8 +596,10 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
@@ -601,60 +625,90 @@
          "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
         "name": "",
         "data": [],
         "itemStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#0072B2"
+         "color": "#0072B2",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
         "name": "High Dose",
         "data": [],
         "itemStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#CC79A7"
+         "color": "#CC79A7",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
         "name": "Low Dose",
         "data": [],
         "itemStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#009E73"
+         "color": "#009E73",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "scatter",
         "name": "Placebo",
         "data": [],
         "itemStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "lineStyle": {
-         "color": "#E69F00"
+         "color": "#E69F00",
+         "cursor": "pointer"
         },
         "showSymbol": false,
-        "silent": true
+        "silent": true,
+        "emphasis": {
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        }
       ]
      },

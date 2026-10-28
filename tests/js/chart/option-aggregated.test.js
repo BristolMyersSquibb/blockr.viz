@@ -175,29 +175,29 @@ const opacities = (p) => p.series.map((s) => s.data.map((d) => d.itemStyle.opaci
 
 test('D5: a segment filter lights that segment, a group filter the whole bar', () => {
   assert.deepStrictEqual(opacities(patch({ color: 'SEV' }, { T: ['Rash'], SEV: ['MILD'] })),
-                         [[1, 0.15, 0.15], [0.15, 0.15, 0.15]]);
+                         [[1, 0.25, 0.25], [0.25, 0.25, 0.25]]);
   // Fever has no SEVERE cell; its empty slot is lit with the group.
   assert.deepStrictEqual(opacities(patch({ color: 'SEV' }, { T: ['Rash', 'Fever'] })),
-                         [[1, 0.15, 1], [1, 0.15, 1]]);
+                         [[1, 0.25, 1], [1, 0.25, 1]]);
   // No filter: every mark at full strength.
   assert.deepStrictEqual(opacities(patch({ color: 'SEV' }, null)), [[1, 1, 1], [1, 1, 1]]);
 });
 
 test('D5: a filter on a column the chart does not draw lights the marks holding it', () => {
-  assert.deepStrictEqual(opacities(patch({}, { ID: ['S03'] })), [[1, 0.15, 1]]);
+  assert.deepStrictEqual(opacities(patch({}, { ID: ['S03'] })), [[1, 0.25, 1]]);
 });
 
 test('D5: a facet key lights its own panel only', () => {
   const f = { T: ['Rash'], ARM: ['B'] };
-  assert.deepStrictEqual(opacities(patch({ facet: 'ARM' }, f, 0)), [[0.15, 0.15, 0.15]]);
-  assert.deepStrictEqual(opacities(patch({ facet: 'ARM' }, f, 1)), [[1, 0.15, 0.15]]);
+  assert.deepStrictEqual(opacities(patch({ facet: 'ARM' }, f, 0)), [[0.25, 0.25, 0.25]]);
+  assert.deepStrictEqual(opacities(patch({ facet: 'ARM' }, f, 1)), [[1, 0.25, 0.25]]);
 });
 
 test('D5: point ranges dim too, and stay untouched while nothing is filtered', () => {
   const cfg = { type: 'pointrange', category: 'T', value: 'V', orientation: 'horizontal', sort_by: 'data', sort_dir: 'asc' };
   const p = patch(cfg, { T: ['Nausea'] });
   assert.deepStrictEqual(p.series.map((s) => s.data.map((d) => d.itemStyle.opacity)),
-                         [[0.15, 1, 0.15], [0.15, 1, 0.15]]);
+                         [[0.25, 1, 0.25], [0.25, 1, 0.25]]);
   assert.strictEqual(p.dimmed, true);
   assert.deepStrictEqual(patch(cfg, null).series, [{}, {}]);
 });

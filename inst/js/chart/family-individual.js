@@ -82,7 +82,6 @@
     const f = slot.focus;
     if (!f) return null;
     let cd;
-    // The data axes by index: the veil's axes share the grid.
     try { cd = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [px, py]); } catch (e) { return null; }
     if (!cd || cd[0] == null || cd[1] == null) return null;
     const cx = +cd[0], cy = +cd[1];
@@ -93,8 +92,7 @@
     let bestSi = null, bestY = null, bestX = null, bestDy = Infinity;
     for (let i = 0; i < series.length; i++) {
       const s = series[i];
-      if (!s || s.id === '__focus__' || s.type !== 'line' ||
-          !Array.isArray(s.data) || !s.data.length) continue;
+      if (!s || s.type !== 'line' || !Array.isArray(s.data) || !s.data.length) continue;
       const yv = NS.model.interpYAtX(s.data, cx, xOrder);
       if (yv == null) continue;
       const dy = Math.abs(yt(yv) - yt(cy));
@@ -109,65 +107,7 @@
     return bestSi;
   };
 
-  /** RGB of the surface a slot is painted on: the theme's background, else the first
-   * opaque ancestor's, else white. @param {ChartView} view @param {ChartSlot} slot
-   * @returns {number[]} */
-  const plotSurface = (view, slot) => {
-    // A fully transparent colour does not count as a surface.
-    /** @param {string} s */
-    const rgbOf = (s) => (/^rgba\(.*,\s*0(\.0*)?\)$/.test(s) ? null : NS.rgbOf(s));
-    if (view.theme && slot.chart) {
-      const opt = slot.chart.getOption();
-      const got = rgbOf(String(opt && opt.backgroundColor || ''));
-      if (got) return got;
-    }
-    for (let el = /** @type {HTMLElement | null} */ (slot.chartDiv); el && el.nodeType === 1;
-         el = el.parentElement) {
-      const got = rgbOf(getComputedStyle(el).backgroundColor);
-      if (got) return got;
-    }
-    return [255, 255, 255];
-  };
-
-  /** Fill the overlay with the hovered line, a little wider, and the veil fading the rest.
-   * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {number} si */
-  const promoteFocus = (view, slot, chart, si) => {
-    const f = slot.focus;
-    if (!f) return;
-    const s = f.series[si];
-    if (!s || s.id === '__focus__' || s.type !== 'line' ||
-        !Array.isArray(s.data) || !s.data.length) return;
-    slot.focusSi = si;
-    const clr = (s.itemStyle && s.itemStyle.color) || null;
-    // Read now, so a light/dark switch after the draw is followed.
-    const bg = plotSurface(view, slot);
-    f.veil = 'rgba(' + bg.join(',') + ',0.6)';
-    chart.setOption({
-      series: [{
-        // One constant datum: renderItem draws the veil from the grid.
-        id: '__scrim__', data: [[0.5, 0.5]]
-      }, {
-        id: '__focus__', data: s.data, step: f.stepMode || undefined,
-        smooth: f.smoothOn, smoothMonotone: f.smoothOn ? 'x' : undefined,
-        showSymbol: false, lineStyle: { color: clr, width: f.focusW, opacity: 1 },
-        areaStyle: null
-      }, {
-        id: '__focus_dots__', data: []
-      }]
-    });
-  };
-
-  /** Empty the overlay. @param {ChartSlot} slot @param {any} chart */
-  const demoteFocus = (slot, chart) => {
-    if (!slot.focus || slot.focusSi == null) return;
-    slot.focusSi = null;
-    chart.setOption({
-      series: [{ id: '__scrim__', data: [] },
-               { id: '__focus__', data: [] }, { id: '__focus_dots__', data: [] }]
-    });
-  };
-
-  /** Hover: show the nearest band level's ribbon, promote the nearest line.
+  /** Hover: show the nearest band level's ribbon; note the nearest line.
    * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {any} zr */
   const hoverEvents = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
@@ -179,11 +119,11 @@
         }
       }
       if (!slot.focus) return;
+      // The nearest line is what the tooltip names and a click takes; hover
+      // draws nothing.
       const si = nearestLineSeries(slot, chart, e.offsetX, e.offsetY);
-      if (si === slot.focusSi) return;
       slot.hover.si = si;
-      if (si == null) demoteFocus(slot, chart);
-      else promoteFocus(view, slot, chart, si);
+      slot.focusSi = si;
     });
     zr.on('globalout', () => {
       if (view.settings.type === 'band' && slot.band && slot.bandFocus != null) {
@@ -192,7 +132,7 @@
       }
       if (!slot.focus) return;
       slot.hover.si = null;
-      demoteFocus(slot, chart);
+      slot.focusSi = null;
     });
   };
 
@@ -337,7 +277,8 @@
     patch(c) {
       const drawn = c.drawn && c.drawn.series && c.drawn.series.length === c.current.series.length
         ? c.drawn.series : c.current.series;
-      return NS.option.individualPatch(c.m, c.panel, drawn, c.lit, c.dimmed, c.filters, c.range);
+      return NS.option.individualPatch(c.m, c.panel, drawn, c.lit, c.dimmed, c.filters, c.range,
+                                       c.ink);
     },
 
     // The slot takes the panel's hover state and pickers; the hover does not
@@ -348,7 +289,6 @@
       slot.focusSi = null;
       slot.focus = po.focus;
       slot.band = po.band;
-      if (po.focus) po.focus.veil = undefined;
     },
 
     actions: (slot, po) => !!(po.brushable || slot.brushable || po.zoomable || slot.zoomArmed),

@@ -267,8 +267,10 @@
       const note = split && !showPercent && !additive ? V.tooltip.note(esc(aggLabel)) : '';
       return V.tooltip.head(esc(head)) + note + rows + total + extraRows(head);
     };
+    // An unsplit bar answers anywhere over its category; the pointer stays
+    // invisible, as hover marks nothing.
     return split ? { trigger: 'item', confine: true, formatter }
-      : { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true, formatter };
+      : { trigger: 'axis', axisPointer: { type: 'none' }, confine: true, formatter };
   };
 
   /** A plain, stacked, grouped or percent bar. @param {any} m @param {any} panel @param {any} look
@@ -413,7 +415,7 @@
       option: {
         ...P.base,
         tooltip: {
-          trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
+          trigger: 'axis', axisPointer: { type: 'none' }, confine: true,
           // Only the visible delta; the base is how the bar floats.
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');

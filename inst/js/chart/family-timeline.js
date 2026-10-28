@@ -28,7 +28,8 @@
       });
     },
 
-    patch: (c) => NS.option.timelinePatch(c.m, c.panel, c.cfg, c.range ? null : c.lit, c.dimmed)
+    patch: (c) => NS.option.timelinePatch(c.m, c.panel, c.cfg, c.range ? null : c.lit, c.dimmed,
+                                          c.ink)
   };
 
   NS.families = Object.assign(NS.families || {}, { timeline });

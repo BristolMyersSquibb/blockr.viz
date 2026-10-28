@@ -230,7 +230,8 @@
          "cursor": "default"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -306,7 +307,8 @@
          "cursor": "default"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -402,7 +404,8 @@
          "cursor": "default"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        },
@@ -498,7 +501,8 @@
          "cursor": "default"
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "cursor": "default"
        }

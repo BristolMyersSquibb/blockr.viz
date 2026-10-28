@@ -20,8 +20,6 @@
   const PANEL_H = 400;
   // The grid's left and right margins, which the x labels do not get.
   const X_INSET = 71;
-  // The opacity of a mark a filter does not light, as a share of its own.
-  const DIM = 0.15;
 
   // ECharts builds the brush and zoom drag controllers only for a rendered
   // toolbox, so one is rendered with no size, outside the canvas.
@@ -57,12 +55,12 @@
       const b = option.bandParts.band(m, panel, ly ? { ...look, derived: { ...look.derived,
         band: { ...band, series: clampBand(band.series, ly.min) } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
-               band: b.band, pts: null, labelPad: b.labelPad };
+               band: b.band, labelPad: b.labelPad };
     }
     const pts = option.pointParts.points(m, panel, (lx || ly)
       ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
       width > X_INSET ? width - X_INSET : 0);
-    return { series: pts.series, mlTarget: 0, bandMany: false, band: null, pts,
+    return { series: pts.series, mlTarget: 0, bandMany: false, band: null,
              labelPad: pts.labelPad };
   };
 
@@ -160,8 +158,7 @@
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }
     if (ly) NS.axes.logAxis(yAxis, idLog || ly);
-    const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
-    return { xAxis, yAxis, scrimAxis };
+    return { xAxis, yAxis };
   };
 
   /** One panel's option and the state its slot gets. @param {any} m @param {any} panel
@@ -169,7 +166,7 @@
   const panelOption = (m, panel, look, width) => {
     const k = panelContext(m, look, width);
     const { cfg, ink, theme, ly, isLine, isBand, isTime, xlab, xCats } = k;
-    const { series, mlTarget, bandMany, band, pts, labelPad } = panelSeries(k, panel);
+    const { series, mlTarget, bandMany, band, labelPad } = panelSeries(k, panel);
 
     // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
@@ -197,22 +194,18 @@
       }
     }
 
-    const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
+    const { xAxis, yAxis } = panelAxes(k, ext, idDom, idLog);
 
     // A line, a band and a scatter with series are clicked, not brushed (a
     // brush would race the click on a point).
     const brushable = m.x.type !== 'category' && !isLine && !isBand && !m.seriesCol;
     const hover = { si: null };
-    /** @type {{ veil?: string }} */
-    const scrimState = {};
-    if (isLine) for (const s of option.pointParts.lineOverlay(scrimState)) series.push(s);
-    // The line picker's registry, only for a crowd of lines. A few lines are
-    // read off the crosshair's tooltip instead.
-    const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
-      series, stepMode: pts.stepMode || null, smoothOn: pts.smoothOn,
-      xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW,
-      yLog: !!ly
-    }) : null;
+    // The line picker's registry, only for a crowd of lines: the line nearest
+    // the cursor is what the tooltip names and a click takes. A few lines are
+    // read off the tooltip at the cursor's x instead.
+    const focus = (isLine && m.crowd) ? {
+      series, xAxisType: m.x.type, xOrder: m.x.order, yLog: !!ly
+    } : null;
 
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
@@ -227,10 +220,10 @@
       legend: { show: false },
       grid: { left: 66, right: 5 + labelPad, top: 30,
               bottom: 52 + (xlab ? xlab.bottom : 0) },
-      xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
-      yAxis: isLine ? [yAxis, scrimAxis] : yAxis,
+      xAxis,
+      yAxis,
       toolbox: brushable ? hiddenToolbox({ brush: { type: BRUSH_TOOLS } })
-        // Drag-to-zoom on the data x axis only, not the veil's hidden one.
+        // Drag-to-zoom on x only.
         : (isLine ? hiddenToolbox({
           dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' } }) : undefined),
       brush: brushable ? {
@@ -243,7 +236,7 @@
     };
     const panelH = PANEL_H + (xlab ? xlab.bottom : 0);
     return {
-      option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink),
+      option: NS.cardTooltip(NS.quietHover(opt, cfg), ink),
       height: panelH + 'px',
       panelH,
       xFit: xlab ? { labels: xCats, inset: X_INSET, decimate: true, nameGap: true,
@@ -282,16 +275,19 @@
    * the filter; on a filter of a column a scatter series does not carry, each
    * point by its own row. A range filter lights the scatter points inside it,
    * and the lines and band levels with a point inside it; its facet key, in
-   * `filters`, lights the panel. Overlays follow their series. Without a
-   * filter, and nothing dimmed from before, the patch is empty.
+   * `filters`, lights the panel. Overlays follow their series. A lit point
+   * is outlined and a lit line drawn a pixel wider; the rest fade
+   * (NS.selStyle()). Without a filter, and nothing dimmed from before, the
+   * patch is empty.
    * @param {any} m @param {any} panel @param {any[]} drawn the panel option's series
    * @param {((keys: Record<string, any>, rows: any) => boolean) | null} lit
    * @param {boolean} wasDimmed
    * @param {Record<string, any[]> | null} filters
    * @param {{ x_range: any[], y_range: any[] | null } | null} [range]
+   * @param {Ink} [ink]
    * @returns {{ series: any[], dimmed: boolean }}
    */
-  const individualPatch = (m, panel, drawn, lit, wasDimmed, filters, range) => {
+  const individualPatch = (m, panel, drawn, lit, wasDimmed, filters, range, ink = NS.INK_DEFAULT) => {
     if (!lit && !range && !wasDimmed) return { series: drawn.map(() => ({})), dimmed: false };
     const inRange = range ? (/** @type {any[]} */ p) => NS.keys.pointInRange(p, range) : null;
     const NONE = '\u0000';
@@ -333,8 +329,12 @@
       }
       return /** @type {boolean} */ (levelLit.get(k));
     };
+    const filtered = !!lit || !!inRange;
+    const DIM = NS.SEL_DIM;
     const series = drawn.map((/** @type {any} */ s) => {
       if (!s || s.id != null) return {};
+      /** @param {boolean} on */
+      const look = (on) => NS.selStyle(on, filtered, ink, s.itemStyle);
       if (s.silent && s.type !== 'custom' && Array.isArray(s.data) && !s.data.length) return {};
       const ms = byPart.get(keyOf(s.name) + (s.blockrMuted ? MUTED : ''));
       if (isMark(s) && s.type === 'scatter' && ms) {
@@ -345,24 +345,26 @@
             const on = keyOn && (!byRow || NS.keys.rowMatches(ms.rows[j], filters)) &&
               (!inRange || inRange(p));
             if (on) any = true;
-            return { value: p, itemStyle: { opacity: on ? 1 : DIM } };
+            return { value: p, itemStyle: look(on) };
           });
           // Both parts of a highlighted level answer for it.
           levelLit.set(keyOf(s.name), any || levelLit.get(keyOf(s.name)) === true);
           return { data, itemStyle: { opacity: 1 } };
         }
-        return { data: ms.pts, itemStyle: { opacity: onLevel(s.name) ? 1 : DIM } };
+        return { data: ms.pts, itemStyle: look(onLevel(s.name)) };
       }
       const on = onLevel(s.name);
       if (s.type === 'line') {
         const mark = isMark(s);
         const base = m.isBand ? 1 : (mark ? m.lineOpacity : 0.9);
-        return { lineStyle: { opacity: on ? base : base * DIM },
+        const w = s.lineStyle && s.lineStyle.width;
+        return { lineStyle: { opacity: on ? base : base * DIM,
+                              ...(mark && w ? { width: filtered && on ? w + 1 : w } : {}) },
                  ...(mark ? { itemStyle: { opacity: on ? 1 : DIM } } : {}) };
       }
-      return { itemStyle: { opacity: on ? 1 : DIM } };
+      return { itemStyle: look(on) };
     });
-    return { series, dimmed: !!lit || !!inRange };
+    return { series, dimmed: filtered };
   };
 
   Object.assign(option, { individual, individualLegend, individualPatch });

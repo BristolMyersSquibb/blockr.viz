@@ -51,18 +51,17 @@ test('a scatter with series is clicked, not brushed', () => {
   assert.strictEqual(opt.toolbox, undefined);
 });
 
-test('a line: the zoom toolbox, the veil\'s axes, the hover overlay, a picker for a crowd', () => {
+test('a line: the zoom toolbox, no hover overlay, an invisible pointer, a picker for a crowd', () => {
   const { po, opt } = build({ type: 'line', series: 'ID', connect: 'step_end' });
-  assert.deepStrictEqual(types(opt), [['line', 'S01'], ['line', 'S02'], ['custom', null],
-                                      ['line', '__focus__'], ['scatter', '__focus_dots__']]);
+  // Hover draws nothing: no veil, no promoted line, no crosshair.
+  assert.deepStrictEqual(types(opt), [['line', 'S01'], ['line', 'S02']]);
   assert.strictEqual(opt.series[0].step, 'end');
   assert.strictEqual(opt.series[0].smooth, undefined);
-  assert.strictEqual(opt.xAxis.length, 2);
-  assert.strictEqual(opt.xAxis[1].show, false);
+  assert.ok(!Array.isArray(opt.xAxis), 'one x axis');
+  assert.strictEqual(opt.tooltip.axisPointer.type, 'none');
   assert.ok(opt.toolbox.feature.dataZoom);
   assert.strictEqual(po.zoomable, true);
   assert.strictEqual(po.focus.series, opt.series);
-  assert.strictEqual(po.focus.stepMode, 'end');
   // One line: nothing to pick out.
   assert.strictEqual(build({ type: 'line' }).po.focus, null);
 });
@@ -88,7 +87,7 @@ test('the line tooltip follows the hovered line, and says nothing away from ever
   assert.doesNotMatch(html, /S01/);
 });
 
-test('a colour-split line card lists every level at the crosshair, highest first', () => {
+test('a colour-split line card lists every level at the cursor\'s x, highest first', () => {
   const { po, opt } = build({ type: 'line', color: 'ARM' });
   const ps = [{ seriesType: 'line', seriesIndex: 0, seriesName: 'A', value: [1, 3], color: '#111111' },
               { seriesType: 'line', seriesIndex: 1, seriesName: 'B', value: [1, 7], color: '#222222' }];
@@ -98,7 +97,8 @@ test('a colour-split line card lists every level at the crosshair, highest first
   const html = opt.tooltip.formatter(ps);
   assert.match(html, /B<\/span>.*A<\/span>/);
   assert.doesNotMatch(html, /is-hit|is-dim|Arm B/);
-  assert.strictEqual(opt.tooltip.axisPointer.lineStyle.type, 'solid');
+  // No crosshair: the pointer is invisible.
+  assert.strictEqual(opt.tooltip.axisPointer.type, 'none');
 });
 
 test('a crowd of lines (one per series) names only the line under the cursor', () => {
@@ -142,7 +142,7 @@ test('the identity line: one rounded domain on both axes, on the markLine', () =
   const d = opt.series[0].markLine.data;
   assert.deepStrictEqual(plain(d[d.length - 1].map((e) => e.coord)), [[0, 0], [16, 16]]);
   // Not on a line chart.
-  assert.strictEqual(build({ type: 'line', identity_line: true }).opt.xAxis[0].min, undefined);
+  assert.strictEqual(build({ type: 'line', identity_line: true }).opt.xAxis.min, undefined);
 });
 
 test('a shift plot faceted by a column the data lacks keeps its fits and identity line', () => {
@@ -165,12 +165,12 @@ test('helper lines on x and y share the markLine of the first series', () => {
 
 test('categorical x: the labels fit the panel width; turned labels grow the canvas', () => {
   const wide = build({ type: 'line', x: 'VIS', series: 'ID' });
-  assert.deepStrictEqual(plain(wide.opt.xAxis[0].data), ['Base', 'W2']);
+  assert.deepStrictEqual(plain(wide.opt.xAxis.data), ['Base', 'W2']);
   assert.strictEqual(wide.po.xFit.inset, 71);
   assert.strictEqual(wide.po.height, '400px');
   const narrow = build({ type: 'line', x: 'VIS', series: 'ID' }, { widths: [100] });
   assert.ok(narrow.po.panelH > 400);
-  assert.strictEqual(narrow.opt.xAxis[0].axisLabel.rotate, 90);
+  assert.strictEqual(narrow.opt.xAxis.axisLabel.rotate, 90);
 });
 
 const BAND = {
@@ -246,35 +246,37 @@ const patch = (cfg, filters, wasDimmed = false, derived = {}) => {
 
 test('D5: no filter is an empty patch, unless something was dimmed', () => {
   assert.deepStrictEqual(patch({ type: 'line', series: 'ID' }, null),
-                         { series: [{}, {}, {}, {}, {}], dimmed: false });
+                         { series: [{}, {}], dimmed: false });
   const undo = patch({ type: 'line', series: 'ID' }, null, true);
-  assert.deepStrictEqual(undo.series[0], { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 } });
-  assert.deepStrictEqual(undo.series.slice(2), [{}, {}, {}]);
+  assert.deepStrictEqual(undo.series[0], { lineStyle: { opacity: 1, width: 1.4 }, itemStyle: { opacity: 1 } });
 });
 
-test('D5: a filter on the series dims the other lines', () => {
+test('D5: a filter on the series fades the other lines and widens its own', () => {
   const p = patch({ type: 'line', series: 'ID' }, { ID: ['S02'] });
   assert.deepStrictEqual(p.series.slice(0, 2), [
-    { lineStyle: { opacity: 0.15 }, itemStyle: { opacity: 0.15 } },
-    { lineStyle: { opacity: 1 }, itemStyle: { opacity: 1 } }]);
+    { lineStyle: { opacity: 0.25, width: 1.4 }, itemStyle: { opacity: 0.25 } },
+    { lineStyle: { opacity: 1, width: 2.4 }, itemStyle: { opacity: 1 } }]);
   assert.strictEqual(p.dimmed, true);
 });
 
 test('D5: a filter on a column the points do not carry lights each point by its row', () => {
   const p = patch({ color: 'ARM' }, { ID: ['S02'] });
-  assert.deepStrictEqual(p.series[1], { data: [{ value: [1, 3], itemStyle: { opacity: 0.15 } },
-                                               { value: [14, 5], itemStyle: { opacity: 0.15 } }],
+  const faded = { opacity: 0.25, borderColor: 'transparent', borderWidth: 0 };
+  assert.deepStrictEqual(p.series[1], { data: [{ value: [1, 3], itemStyle: faded },
+                                               { value: [14, 5], itemStyle: faded }],
                                         itemStyle: { opacity: 1 } });
-  assert.deepStrictEqual(p.series[0].data[0].itemStyle, { opacity: 1 });
+  // A selected point is outlined in the text ink.
+  assert.deepStrictEqual(p.series[0].data[0].itemStyle,
+                         { opacity: 1, borderColor: C.INK_DEFAULT.text, borderWidth: 1.5 });
   // A filter on the colour lights whole series, the points plain again.
   const q = patch({ color: 'ARM' }, { ARM: ['A'] });
-  assert.deepStrictEqual(q.series[1], { data: [[1, 3], [14, 5]], itemStyle: { opacity: 0.15 } });
+  assert.deepStrictEqual(q.series[1], { data: [[1, 3], [14, 5]], itemStyle: faded });
 });
 
 test('D5: a band level dims with its halo and ribbon', () => {
   const p = patch({ type: 'band', color: 'ARM' }, { ARM: ['A'] }, false, { band: { series: BAND } });
   assert.deepStrictEqual(p.series.map((s) => (s.lineStyle || s.itemStyle).opacity),
-                         [1, 1, 1, 0.15, 0.15]);
+                         [1, 1, 1, 0.25, 0.25]);
 });
 
 test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the month', () => {
@@ -290,7 +292,7 @@ test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the mon
                                      measure, widths: [600] });
   const opt = o.panels[0].option;
   assert.strictEqual(opt.useUTC, true);
-  assert.strictEqual(opt.xAxis[0].type, 'time');
+  assert.strictEqual(opt.xAxis.type, 'time');
   assert.deepStrictEqual(plain(opt.series[0].data[0]), [Date.UTC(2020, 0, 1), 0]);
   // Three points on a 600 px card are far apart: dots.
   assert.strictEqual(opt.series[0].showSymbol, true);
@@ -365,7 +367,7 @@ test('an area fills and stacks a colour split, from zero, without dots', () => {
   const areas = opt.series.filter((s) => s.areaStyle);
   assert.strictEqual(areas.length, 2);
   assert.ok(areas.every((s) => s.stack === 'area' && s.showSymbol === false));
-  assert.strictEqual(typeof opt.yAxis[0].min, 'function');
+  assert.strictEqual(typeof opt.yAxis.min, 'function');
   const dodge = build({ type: 'area', color: 'ARM', position: 'dodge' }).opt;
   assert.ok(dodge.series.filter((s) => s.areaStyle).every((s) => !s.stack));
 });

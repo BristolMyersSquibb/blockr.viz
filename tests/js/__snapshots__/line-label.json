@@ -58,15 +58,7 @@
       "tooltip": {
        "trigger": "axis",
        "axisPointer": {
-        "type": "line",
-        "label": {
-         "show": false
-        },
-        "lineStyle": {
-         "color": "#6b7280",
-         "width": 1,
-         "type": "solid"
-        }
+        "type": "none"
        },
        "confine": true,
        "formatter": "[fn]",
@@ -93,84 +85,62 @@
        "top": 30,
        "bottom": 52
       },
-      "xAxis": [
-       {
-        "type": "value",
-        "name": "Analysis Relative Day",
-        "nameLocation": "middle",
-        "nameGap": 28,
-        "nameTextStyle": {
-         "color": "#6b7280",
-         "fontSize": 12
-        },
-        "axisLabel": {
-         "color": "#6b7280",
-         "fontSize": 12,
-         "hideOverlap": true
-        },
-        "axisLine": {
-         "lineStyle": {
-          "color": "#d1d5db"
-         }
-        },
-        "axisTick": {
-         "show": false
-        },
-        "splitLine": {
-         "show": false
-        },
-        "scale": true
+      "xAxis": {
+       "type": "value",
+       "name": "Analysis Relative Day",
+       "nameLocation": "middle",
+       "nameGap": 28,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 12
        },
-       {
-        "type": "value",
-        "min": 0,
-        "max": 1,
-        "show": false,
-        "axisPointer": {
-         "show": false
-        }
-       }
-      ],
-      "yAxis": [
-       {
-        "type": "value",
-        "name": "Analysis Value",
-        "nameLocation": "middle",
-        "nameGap": 46,
-        "nameTextStyle": {
-         "color": "#6b7280",
-         "fontSize": 12
-        },
-        "axisLabel": {
-         "color": "#6b7280",
-         "fontSize": 12
-        },
-        "axisLine": {
-         "show": false
-        },
-        "nameRotate": 90,
-        "axisTick": {
-         "show": false
-        },
-        "splitLine": {
-         "lineStyle": {
-          "color": "#e5e7eb",
-          "type": "solid",
-          "width": 1
-         }
-        },
-        "scale": true
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 12,
+        "hideOverlap": true
        },
-       {
-        "type": "value",
-        "min": 0,
-        "max": 1,
-        "show": false,
-        "axisPointer": {
-         "show": false
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
         }
-       }
-      ],
+       },
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "show": false
+       },
+       "scale": true
+      },
+      "yAxis": {
+       "type": "value",
+       "name": "Analysis Value",
+       "nameLocation": "middle",
+       "nameGap": 46,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 12
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 12
+       },
+       "axisLine": {
+        "show": false
+       },
+       "nameRotate": 90,
+       "axisTick": {
+        "show": false
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "solid",
+         "width": 1
+        }
+       },
+       "scale": true
+      },
       "toolbox": {
        "show": true,
        "itemSize": 0,
@@ -215,11 +185,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -262,11 +235,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -309,11 +285,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -356,11 +335,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -403,11 +385,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -450,11 +435,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -497,11 +485,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -544,11 +535,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -591,11 +585,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -638,11 +635,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -685,11 +685,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -732,11 +735,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "type": "line",
@@ -771,11 +777,14 @@
          "width": 1.4,
          "opacity": 1,
          "cap": "round",
-         "join": "round"
+         "join": "round",
+         "cursor": "pointer"
         },
         "emphasis": {
-         "disabled": true
-        }
+         "disabled": true,
+         "scale": false
+        },
+        "cursor": "pointer"
        },
        {
         "id": "__label__",
@@ -1076,7 +1085,8 @@
          "show": false
         },
         "emphasis": {
-         "disabled": true
+         "disabled": true,
+         "scale": false
         },
         "label": {
          "show": true,
@@ -1088,40 +1098,8 @@
          "textBorderWidth": 3,
          "distance": 6.5
         },
-        "labelLayout": "[fn]"
-       },
-       {
-        "id": "__scrim__",
-        "type": "custom",
-        "xAxisIndex": 1,
-        "yAxisIndex": 1,
-        "data": [],
-        "silent": true,
-        "legendHoverLink": false,
-        "z": 8,
-        "animation": false,
-        "renderItem": "[fn]"
-       },
-       {
-        "id": "__focus__",
-        "name": "__focus__",
-        "type": "line",
-        "data": [],
-        "silent": true,
-        "showSymbol": false,
-        "legendHoverLink": false,
-        "z": 9,
-        "animation": false
-       },
-       {
-        "id": "__focus_dots__",
-        "name": "__focus_dots__",
-        "type": "scatter",
-        "data": [],
-        "silent": true,
-        "legendHoverLink": false,
-        "z": 10,
-        "animation": false
+        "labelLayout": "[fn]",
+        "cursor": "pointer"
        }
       ]
      },
