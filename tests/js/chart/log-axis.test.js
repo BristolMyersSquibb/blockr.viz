@@ -23,9 +23,9 @@ const ROWS = [
 const BASE = { type: 'scatter', x: 'GDP', y: 'LIFE' };
 
 const build = (cfg, rows = ROWS, derived = {}) => {
-  const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.individual(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+  const c = C.model.settings({ ...BASE, ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.individual(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600, 600] });
   return { m, o, opt: o.panels[0].option };
 };

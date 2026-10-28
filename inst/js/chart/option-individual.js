@@ -15,13 +15,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.indParts = option.indParts || {});
-
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['type', 'drill', 'point_size', 'line_width', 'connect', 'smoother',
-    'derived.smoother', 'ymin', 'ymax', 'x_lines', 'y_lines', 'identity_line', 'derived.band',
-    'box_points', 'linetype', 'x_ranges', 'legend', 'label', 'format', 'unit', 'position',
-    'derived.titles', 'y_transform', 'x_transform', 'facet_scales'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -37,7 +30,7 @@
     ({ show: true, itemSize: 0, itemGap: 0, right: -40, top: -40, feature });
   const BRUSH_TOOLS = ['rect', 'lineX', 'clear'];
 
-  const { identityDomain, pos, logDomains, clampBand } = parts.log;
+  const { identityDomain, pos, logDomains, clampBand } = option.domainParts;
 
   /** What every part of a panel's option reads: config, colours, the panel's
    * log domains (null on a linear axis) and the measured x labels.
@@ -57,16 +50,16 @@
   /** The panel's series from the band or the points part, with what the option
    * needs beside them. @param {any} k @param {any} panel */
   const panelSeries = (k, panel) => {
-    const { m, look, cfg, lx, ly, width } = k;
+    const { m, look, lx, ly, width } = k;
     if (k.isBand) {
       // On a log axis the band's series are clamped above the axis's floor.
-      const band = cfg.derived.band || {};
-      const b = parts.band(m, panel, ly ? { ...look, cfg: { ...cfg, derived: { ...cfg.derived,
-        band: { ...band, series: clampBand(band.series, ly.min) } } } } : look);
+      const band = look.derived.band || {};
+      const b = option.bandParts.band(m, panel, ly ? { ...look, derived: { ...look.derived,
+        band: { ...band, series: clampBand(band.series, ly.min) } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
                band: b.band, pts: null, labelPad: b.labelPad };
     }
-    const pts = parts.points(m, panel, (lx || ly)
+    const pts = option.pointParts.points(m, panel, (lx || ly)
       ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
       width > X_INSET ? width - X_INSET : 0);
     return { series: pts.series, mlTarget: 0, bandMany: false, band: null, pts,
@@ -102,7 +95,7 @@
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
-    if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
+    if (isBand) for (const r of option.bandParts.bandRefLines(cfg, look.derived, ext, ink, look.columns)) refData.push(r);
     // y = x is a diagonal only when both axes use the same scale.
     const identityOn = cfg.identity_line === true && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
@@ -132,7 +125,7 @@
     // A line chart reads values off the y grid and dates off the crosshair,
     // so it has no x grid and no y axis line.
     const grid = { lineStyle: { color: ink.border, type: 'solid', width: 1 } };
-    const xTitle = NS.axisName(k.title(m.x.col), m.x.col, cfg, { unit: false });
+    const xTitle = NS.axisName(k.title(m.x.col), m.x.col, cfg, k.look.derived, { unit: false });
     /** @type {any} */
     const xAxis = {
       ...NS.axes.valueAxis(ink, m.x.type, xTitle, xlab && xlab.bottom ? xlab.bottom + 16 : 28),
@@ -151,7 +144,7 @@
     if (lx) NS.axes.logAxis(xAxis, idLog || lx);
     /** @type {any} */
     const yAxis = {
-      ...NS.axes.valueAxis(ink, m.y.type, NS.axisName(k.title(m.y.col), m.y.col, cfg), 46,
+      ...NS.axes.valueAxis(ink, m.y.type, NS.axisName(k.title(m.y.col), m.y.col, cfg, k.look.derived), 46,
                            { format: m.y.type === 'value' && NS.valueFormat(cfg, { unit: false }) }),
       nameRotate: 90,
       axisTick: { show: false },
@@ -180,7 +173,7 @@
 
     // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
-      ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
+      ? (ly ? { lo: ly.min, hi: ly.max } : option.bandParts.bandExtent(cfg, look.derived, panel, bandMany)) : null;
 
     // One markLine per series is all ECharts allows, so they share one.
     const { refData, idDom, idLog } = panelRefData(k, ext, series);
@@ -212,7 +205,7 @@
     const hover = { si: null };
     /** @type {{ veil?: string }} */
     const scrimState = {};
-    if (isLine) for (const s of parts.lineOverlay(scrimState)) series.push(s);
+    if (isLine) for (const s of option.pointParts.lineOverlay(scrimState)) series.push(s);
     // The line picker's registry, only for a crowd of lines. A few lines are
     // read off the crosshair's tooltip instead.
     const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
@@ -229,7 +222,7 @@
       // Only the first draw animates: a merge-patch morphs lines while the
       // dots jump to the new layout.
       animationDurationUpdate: 0,
-      tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
+      tooltip: isLine ? option.pointParts.lineTooltip(m, look, hover) : option.pointParts.pointTooltip(m, look),
       // Hidden: its selection model is what the chips toggle.
       legend: { show: false },
       grid: { left: 66, right: 5 + labelPad, top: 30,
@@ -261,11 +254,10 @@
 
   /**
    * @param {any} m the individual model
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme: any,
-   *           measure: (s: string) => number, widths?: number[] }} look
+   * @param {ChartLook} look
    */
   const individual = (m, look) => {
-    const logs = (m.logX || m.logY) ? logDomains(m, look.cfg) : null;
+    const logs = (m.logX || m.logY) ? logDomains(m, look.cfg, look.derived) : null;
     const dropped = (m.logDropped || 0) + (logs ? logs.dropped : 0);
     const logNote = dropped
       ? `Log scale: ${dropped} value${dropped === 1 ? '' : 's'} at or below zero not shown.` : null;
@@ -276,7 +268,6 @@
       labelNote: [m.capMessage, logNote].filter(Boolean).join(' ') || null
     };
   };
-  individual.FIELDS = OPTION_FIELDS;
 
   /** The legend band's chips. @param {any} m */
   const individualLegend = (m) => (m.legend && m.legend.items.length ? m.legend : null);

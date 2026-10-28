@@ -57,16 +57,16 @@
   const paletteAt = (pal, i) => (i < pal.length ? pal[i] : PALETTE_OVERFLOW);
 
   /** The series pool: the board theme's categorical role, else the built-in.
-   *  @param {Record<string, any>} cfg @returns {string[]} */
-  const paletteOf = (cfg) => {
-    const p = cfg.derived.palette;
+   *  @param {ChartDerived} derived @returns {string[]} */
+  const paletteOf = (derived) => {
+    const p = derived.palette;
     return (Array.isArray(p) && p.length) ? p : BLOCKR_PALETTE;
   };
 
   /** The board scale for `varName`, or null when it targets another column.
-   *  @param {Record<string, any>} cfg @param {any} varName */
-  const scaleFor = (cfg, varName) => {
-    const sc = cfg.derived.scales;
+   *  @param {ChartDerived} derived @param {any} varName */
+  const scaleFor = (derived, varName) => {
+    const sc = derived.scales;
     return (sc && varName && sc.var === varName) ? sc : null;
   };
 

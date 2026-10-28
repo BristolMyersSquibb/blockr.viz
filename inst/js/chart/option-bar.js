@@ -10,10 +10,9 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
   const { barRadius, barValueLabels, barMarkLabels, stackNames, boldNames, endFormat,
-          WATERFALL_COLORS, withItemStyle, fitXLabels } = parts;
-  const { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET } = parts.BAR;
+          WATERFALL_COLORS, withItemStyle, fitXLabels } = option.barMarkParts;
+  const { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET } = option.barMarkParts.BAR;
 
   /** What every part of a bar's option reads: groups, colour levels, layout and colours.
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW */
@@ -21,7 +20,7 @@
     const { cfg, ink } = look;
     const groups = panel.groups;
     const colors = m.colors;
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(look.derived);
     const isGrouped = cfg.position === 'dodge';
     const isPercent = cfg.position === 'fill';
     const vertical = cfg.orientation === 'vertical';
@@ -155,7 +154,7 @@
       { facet: cfg.facet, category: cfg.category, color: cfg.color })[cfg.percent_of];
     const name = showPercent ? '% of group total'
       : (pctFunc ? '% of ' + (ofCol ? P.title(ofCol) : 'total')
-        : NS.axisName(P.valueTitle, cfg.measure, cfg));
+        : NS.axisName(P.valueTitle, cfg.measure, cfg, k.look.derived));
     const format = asFraction ? (/** @type {number} */ v) => Math.round(v * 100) + '%'
       : NS.valueFormat(cfg, { unit: false });
     return {
@@ -276,7 +275,7 @@
    * @param {number} plotW */
   const bar = (m, panel, look, plotW) => {
     const k = barContext(m, panel, look, plotW);
-    const P = parts.common(look);
+    const P = option.aggregatedCommon(look);
     const { groups, colors, vertical } = k;
     const series = barSeries(k);
     const cat = barCategoryAxis(k);
@@ -377,7 +376,7 @@
    */
   const waterfall = (m, panel, look, plotW) => {
     const { cfg, ink, measure } = look;
-    const P = parts.common(look);
+    const P = option.aggregatedCommon(look);
     const labelsOn = cfg.value_labels === true;
     const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const { base, delta, lo, hi } = waterfallSteps(m, panel, cfg, labelsOn, wvf);
@@ -386,7 +385,7 @@
     const { xlab, xFit } = fitXLabels(catLabels, plotW, look, catFmt);
     const catAxis = { ...NS.axes.categoryAxis(panel.groups, ink, { xlab, display: catFmt }),
                       splitLine: { show: false } };
-    const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg), 45, {
+    const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg, look.derived), 45, {
       format: wvf && NS.valueFormat(cfg, { unit: false }), grid: 'dashed' });
     const label = { show: false, distance: 4, color: ink.muted, fontSize: ink.fontSize,
                     fontFamily: ink.face };
@@ -432,5 +431,5 @@
     };
   };
 
-  Object.assign(parts, { bar, waterfall });
+  option.barParts = { bar, waterfall };
 })();

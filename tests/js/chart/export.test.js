@@ -220,7 +220,7 @@ const captureMsg = (env, config, extra = {}) => env.win.JSON.parse(JSON.stringif
 const replies = (c) => c.inputs().filter((x) => x.name === 'blockr_viz_capture_result');
 const hosts = (c) => c.doc.querySelectorAll('.blockr-capture-host').length;
 
-test('capture: a picture after the drawing settles, one reply, the host removed', async () => {
+test('capture: a picture once the panels finished rendering, one reply, the host removed', async () => {
   const { c } = prepare(BAR, { width: 800 });
   const init = c.env.fake.api.init;
   c.env.win.echarts.init = (...a) => {
@@ -230,10 +230,10 @@ test('capture: a picture after the drawing settles, one reply, the host removed'
   };
   c.env.handlers['blockr-viz:capture'](captureMsg(c.env, BAR));
   assert.strictEqual(hosts(c), 1);
-  await c.clock.advanceAsync(1399);
-  assert.strictEqual(replies(c).length, 0, 'not before the animation settles');
-  await c.clock.advanceAsync(1);
+  assert.strictEqual(replies(c).length, 0, 'not before the panels finished rendering');
+  await c.clock.advanceAsync(20);
   assert.strictEqual(replies(c).length, 1);
+  assert.strictEqual(c.env.fake.instances.at(-1).getOption().animation, false, 'drawn still');
   assert.strictEqual(replies(c)[0].value.req, 'tok-1');
   assert.match(replies(c)[0].value.png, /^data:image\/png;base64,COMPOSED-/);
   assert.strictEqual(hosts(c), 0);

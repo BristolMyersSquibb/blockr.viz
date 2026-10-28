@@ -2,6 +2,7 @@
 # the generated spec. Read by the chart's html dependency and by the node
 # test harness (tests/js/harness.js).
 common.js
+memo.js
 chart-types.js
 colors.js
 drill.js

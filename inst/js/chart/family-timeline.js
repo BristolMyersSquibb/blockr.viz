@@ -21,9 +21,9 @@
 
     attach(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
-        if (NS.drillState(view.config) === 'off') return;
+        if (NS.drillState(view.settings) === 'off') return;
         if (params.componentType !== 'series' || !params.value) return;
-        const filters = NS.model.timelineClick(view.config, slot.facetVal, params.value);
+        const filters = NS.model.timelineClick(view.settings, slot.facetVal, params.value);
         if (filters) view.selection.click(slot, params, filters);
       });
     },

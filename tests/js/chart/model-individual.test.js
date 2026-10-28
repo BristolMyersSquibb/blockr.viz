@@ -24,10 +24,10 @@ const ROWS = [
 const BASE = { type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
 
 // `derived` is R's derived object: the colour scales, the palette.
-const settingsOf = (cfg, derived = {}) => C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
+const settingsOf = (cfg) => C.model.settings({ ...BASE, ...cfg }, COLUMNS);
 
 const model = (cfg, rows = ROWS, derived = {}) => C.model.individual({ rows, ix: new C.RowIndex(),
-  columns: COLUMNS, cfg: settingsOf(cfg, derived) });
+  columns: COLUMNS, cfg: settingsOf(cfg), derived });
 
 test('an unsplit scatter: one series of the rows with an x and a y', () => {
   const m = model({});
@@ -191,8 +191,8 @@ test('the keys of a line or band level: its level and the facet', () => {
 test('a brush: the points\' x and y; with a drill column their rows, each (x, y) once', () => {
   const rows = [{ X: 1, Y: 5, ID: 'a' }, { X: 1, Y: 5, ID: 'b' }, { X: 2, Y: 6, ID: 'c' }];
   const cols = [num('X'), num('Y'), cat('ID')];
-  const cfg = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', drill: 'ID' }, {}, cols);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg });
+  const cfg = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', drill: 'ID' }, cols);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg, derived: {} });
   const series = [{ data: m.panels[0].series[0].pts }];
   const sel = (idx) => idx.map((dataIndex) => ({ seriesIndex: 0, dataIndex }));
   const r = C.model.individualBrush(m, cfg, m.panels[0], series, sel([0, 1, 2, 9999, -1]));
@@ -249,19 +249,3 @@ test('interpYAtX: between points, null outside; a category x by its position', (
   assert.strictEqual(C.model.interpYAtX([['Base', 2], ['W2', 4]], 0.5, order), 3);
 });
 
-test('the model reads only the config fields it lists', () => {
-  const configs = [
-    [{}], [{ color: 'ARM', facet: 'SEX', show_n: 'both', id: 'ID', tooltip: ['ID'] }],
-    [{ type: 'line', series: 'ID', color: 'ARM' }, { scales: { var: 'ARM', color: {} } }],
-    [{ type: 'band', color: 'ARM' }, { palette: ['#000000'] }], [{ x: 'VIS', type: 'line' }]
-  ];
-  for (const [cfg, derived] of configs) {
-    const read = new Set();
-    const spy = new Proxy(settingsOf(cfg, derived), { get(t, k) { read.add(k); return t[k]; } });
-    C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    // A listed path such as 'derived.scales' covers the read of its root.
-    const listed = (k) => C.model.individual.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
-    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});

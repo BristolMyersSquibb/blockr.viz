@@ -53,7 +53,7 @@ table_spec_data <- function() {
     summaries = table_arg(
       type = type_records_by("type", table_summary_specs()), default = list(),
       applies = c("groups", "variables"),
-      gear = gear("Columns", "none", "Columns"),
+      gear = gear("Columns", "custom", "Columns"),
       slot = FALSE,
       example = list(
         list(type = "simple", name = "Subjects", func = "count_distinct",
@@ -120,7 +120,7 @@ table_spec_color <- function() {
     shadings = table_arg(
       type = type_records(spec = table_shading_spec()), default = list(),
       applies = "records",
-      gear = gear("Color", "none", "Shade cells"),
+      gear = gear("Color", "custom", "Shade cells"),
       slot = FALSE,
       example = list(list(mode = "diverging", columns = character())),
       describe = paste(

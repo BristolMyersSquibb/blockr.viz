@@ -164,7 +164,9 @@ type_fields <- function(fields, spec) {
 #'
 #' @param group The tray section ("Mapping", "Look", ...).
 #' @param control The row's control: column, columns, values, select, tiles,
-#'   segmented, toggle, number, text, template, slider or none.
+#'   segmented, toggle, number, text, code (text over several lines), script
+#'   (the prepare script, behind a checkbox), template, slider, or custom (the
+#'   view draws the row itself).
 #' @param label The row's label.
 #' @param labels Option labels: for an enum, in the order of its `values`;
 #'   for a bool, the labels of `TRUE` and `FALSE`.

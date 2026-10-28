@@ -211,6 +211,35 @@ interface Ink {
   face: string;
 }
 
+/** An aggregated chart's axes (model-common.js axes()): the category column,
+ * the column it aggregates (".count" for a row count), and which of x and y
+ * holds each. */
+interface ChartAxes {
+  category: string | null;
+  measure: string;
+  cat_key: 'x' | 'y';
+  val_key: 'x' | 'y' | null;
+}
+
+/** What the models and options read (model-common.js settings()): the
+ * payload's config with the spec's defaults, the chart's own defaults, and
+ * an aggregated chart's axes. R's `derived` travels beside it. */
+type ChartSettings = ChartConfig & Partial<ChartAxes> & Record<string, any>;
+
+/** What an option builder draws with beside the model (view.js _option()):
+ * the settings and R's derived, the columns, the ink and theme, a text
+ * measure in the axis font, and each panel's width. */
+interface ChartLook {
+  cfg: ChartSettings;
+  derived: ChartDerived;
+  columns: VizColumn[];
+  ink: Ink;
+  theme: string | null;
+  measure: (s: string) => number;
+  widths?: number[];
+  [extra: string]: unknown;
+}
+
 /** A light test of a mark under the selection: its keys, and its rows when
  * the caller has them. */
 type ChartLit = (keys: Record<string, unknown>, rows?: unknown[]) => boolean;
@@ -219,7 +248,8 @@ type ChartLit = (keys: Record<string, unknown>, rows?: unknown[]) => boolean;
 interface ChartPatchInput {
   m: any;
   panel: any;
-  cfg: Record<string, any>;
+  cfg: ChartSettings;
+  derived: ChartDerived;
   /** The option ECharts holds now. */
   current: any;
   /** The option this view drew for the panel, if any. */
@@ -232,7 +262,7 @@ interface ChartPatchInput {
 
 /**
  * A chart family as the view uses it (family-*.js): its model and option
- * (each with the `FIELDS` its memo keys on), the legend band's chips, the
+ * (memoised on the config fields each reads, memo.js), the legend band's chips, the
  * handlers of a new ECharts instance, and the highlight patch. `widths`:
  * the option reads each panel's width. `alwaysHighlight`: every draw ends
  * with a highlight patch; the others patch only while a selection dims.
@@ -241,10 +271,9 @@ interface ChartPatchInput {
  */
 interface ChartFamily {
   name: 'aggregated' | 'timeline' | 'individual';
-  model: ((input: { rows: any[]; ix: any; columns: VizColumn[]; cfg: Record<string, any> }) => any)
-    & { FIELDS: string[] };
-  option: ((m: any, look: Record<string, any>) => any) & { FIELDS: string[] };
-  legend(m: any, cfg: Record<string, any>): { col: string; items: Array<{ name: string; color: string }> } | null;
+  model(input: { rows: any[]; ix: any; columns: VizColumn[]; cfg: ChartSettings; derived: ChartDerived }): any;
+  option(m: any, look: ChartLook): any;
+  legend(m: any, cfg: ChartSettings, derived: ChartDerived): { col: string; items: Array<{ name: string; color: string }> } | null;
   widths: boolean;
   alwaysHighlight: boolean;
   attach(view: ChartView, slot: ChartSlot): void;
@@ -287,12 +316,12 @@ interface ChartView extends VizView {
   readonly selection: ChartSelectionState;
   readonly legend: { el: HTMLElement; mark(sel: ChartSelection | null): void };
   readonly chartGrid: HTMLElement;
-  config: Record<string, any>;
+  settings: ChartSettings;
   derived: ChartDerived;
   columns: VizColumn[];
   data: any[];
   _ix: any;
-  _memo: { modelKey: string | null; model: any; optionKey: string | null; option: any };
+  _memo: { models: any; options: any; modelGen: number; model: any; option: any };
   _slots: ChartSlot[];
   charts: any[];
   theme: string | null;
@@ -304,7 +333,7 @@ interface ChartView extends VizView {
   _measureFont(font: string): (s: string) => number;
 }
 
-type ChartViewClass = new (el: HTMLElement, scope: VizScope) => ChartView;
+type ChartViewClass = new (el: HTMLElement, scope: VizScope, opts?: { still?: boolean }) => ChartView;
 
 /** The view's selection (selection.js). */
 interface ChartSelectionState {

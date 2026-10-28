@@ -221,20 +221,20 @@
   // (`blockr-viz:capture`: the payload plus `req`, `width`, `height`); a
   // fresh view draws it in a host core/capture.js parks off screen.
 
-  // ECharts animates in for about a second after a draw; an earlier read
-  // captures a blank first frame.
-  const CAPTURE_SETTLE_MS = 1400;
+  // The capture view draws still, so a panel is complete when ECharts says
+  // it finished rendering. A panel that never says so (a host the browser
+  // does not lay out) is taken after this long.
+  const FINISH_MS = 3000;
   let captureSeq = 0;
 
-  /** Wait until a panel has a height, then let the animation settle; an
-   * empty state ends the wait at once.
-   * @param {ChartView} view @param {VizScope} scope @param {() => void} then @param {number} left */
-  const whenDrawn = (view, scope, then, left) => {
-    const charted = view._slots.filter((s) => s.chart);
-    if (view.drawn && !charted.length) { then(); return; }
-    const ready = charted.some((s) => s.chartDiv.clientHeight > 40);
-    if (ready || left <= 0) scope.timeout(then, CAPTURE_SETTLE_MS);
-    else scope.timeout(() => whenDrawn(view, scope, then, left - 1), 100);
+  /** Resolves when every panel has finished rendering; at once for an empty
+   * state. @param {ChartView} view @param {VizScope} scope @returns {Promise<void>} */
+  const whenDrawn = (view, scope) => {
+    const charts = view._slots.filter((s) => s.chart).map((s) => s.chart);
+    /** @param {any} chart @returns {Promise<void>} */
+    const finished = (chart) => new Promise((resolve) => chart.on('finished', () => resolve()));
+    const late = new Promise((resolve) => scope.timeout(() => resolve(undefined), FINISH_MS));
+    return Promise.race([Promise.all(charts.map(finished)), late]).then(() => {});
   };
 
   /** @param {ChartViewClass} View @param {ChartCaptureMessage} msg @returns {Promise<VizPicture>} */
@@ -246,15 +246,11 @@
         const el = host.appendChild(document.createElement('div'));
         el.id = 'blockr-capture-chart-' + (++captureSeq);
         el.style.cssText = 'width:' + msg.width + 'px;height:' + msg.height + 'px;';
-        const view = scope.own(new View(el, scope));
+        const view = scope.own(new View(el, scope, { still: true }));
         view.render(msg);
-        whenDrawn(view, scope, () => {
-          try {
-            picture(view, { pixelRatio: msg.ratio }).then(resolve, reject);
-          } catch (e) {
-            reject(e);
-          }
-        }, 50);
+        whenDrawn(view, scope)
+          .then(() => picture(view, { pixelRatio: msg.ratio }))
+          .then(resolve, reject);
       })
     });
     return p.finally(() => scope.dispose());

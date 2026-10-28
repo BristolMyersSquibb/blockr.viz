@@ -70,7 +70,7 @@ viz_shared_args <- function() {
 
     script = viz_arg(
       type = "string", default = NULL, null = "no script",
-      gear = gear("Prepare script", "text", "Prepare script"),
+      gear = gear("Prepare script", "script", "Prepare script"),
       slot = FALSE, ai = FALSE,
       describe = paste(
         "Experimental. R code run on the input before the block sees it. Its",

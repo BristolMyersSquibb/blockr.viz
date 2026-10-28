@@ -171,7 +171,7 @@
    * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {any} zr */
   const hoverEvents = (view, slot, chart, zr) => {
     zr.on('mousemove', (/** @type {any} */ e) => {
-      if (view.config.type === 'band' && slot.band) {
+      if (view.settings.type === 'band' && slot.band) {
         const lvl = nearestBandLevel(slot, chart, e.offsetX, e.offsetY);
         if (lvl !== slot.bandFocus) {
           slot.bandFocus = lvl;
@@ -186,7 +186,7 @@
       else promoteFocus(view, slot, chart, si);
     });
     zr.on('globalout', () => {
-      if (view.config.type === 'band' && slot.band && slot.bandFocus != null) {
+      if (view.settings.type === 'band' && slot.band && slot.bandFocus != null) {
         slot.bandFocus = null;
         applyBandFocus(slot, chart);
       }
@@ -202,7 +202,7 @@
   const zoomEvents = (view, slot, chart, zr) => {
     // A double-click resets the zoom and cancels the line click it queued.
     zr.on('dblclick', () => {
-      if (!NS.isLineType(view.config.type)) return;
+      if (!NS.isLineType(view.settings.type)) return;
       if (slot.lineClick) {
         slot.lineClick();
         slot.lineClick = null;
@@ -229,7 +229,7 @@
     const m = view._memo.model;
     if (!m || m.family !== 'individual') return;
     const panel = NS.model.panelOf(m, slot.facetVal);
-    const sel = NS.model.individualClick(m, view.config, panel, params, focusName);
+    const sel = NS.model.individualClick(m, view.settings, panel, params, focusName);
     if (!sel) return;
     if (sel.type === 'categorical') view.selection.click(slot, params, sel.filters);
     else view.selection.latch(sel, false);
@@ -238,9 +238,9 @@
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
   const clickEvents = (view, slot, chart) => {
     chart.on('click', (/** @type {any} */ params) => {
-      if (NS.drillState(view.config) === 'off') return;
+      if (NS.drillState(view.settings) === 'off') return;
       if (params.componentType !== 'series') return;
-      const isLine = NS.isLineType(view.config.type);
+      const isLine = NS.isLineType(view.settings.type);
       const sel = view.selection;
       // A click in brush mode also fires a brush clear: ignore it for a moment.
       sel.suppressBrushClear = true;
@@ -271,15 +271,15 @@
     }
     const panel = NS.model.panelOf(m, slot.facetVal);
     const opt = slot.chart.getOption();
-    const caught = NS.model.individualBrush(m, view.config, panel, (opt && opt.series) || [], selected);
-    const sel = NS.model.brushSelection(m, view.config, panel, caught);
+    const caught = NS.model.individualBrush(m, view.settings, panel, (opt && opt.series) || [], selected);
+    const sel = NS.model.brushSelection(m, view.settings, panel, caught);
     if (sel) view.selection.latch(sel, true);
   };
 
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
   const brushEvents = (view, slot, chart) => {
     chart.on('brushSelected', (/** @type {any} */ params) => {
-      if (NS.drillState(view.config) === 'off') return;
+      if (NS.drillState(view.settings) === 'off') return;
       const batch = params.batch && params.batch[0];
       if (!batch) return;
       const selected = (batch.selected || []).flatMap((/** @type {any} */ s) =>

@@ -384,7 +384,16 @@ function fakeEcharts(mode) {
       getHeight: () => dom.clientHeight,
       resize(o) { if (mode === 'full') log.push({ op: 'resize', opts: normalize(o) }); },
       dispatchAction(a) { if (mode === 'full') log.push({ op: 'dispatchAction', action: normalize(a) }); },
-      on(evt, query, fn) { handlers.push({ evt, fn: typeof query === 'function' ? query : fn }); },
+      on(evt, query, fn) {
+        handlers.push({ evt, fn: typeof query === 'function' ? query : fn });
+        // ECharts says 'finished' a frame after it renders; here, a frame
+        // after someone listens for it.
+        if (evt === 'finished') {
+          dom.ownerDocument.defaultView.setTimeout(() => {
+            if (!disposed) inst.trigger('finished');
+          }, 16);
+        }
+      },
       off(evt) { for (let i = handlers.length - 1; i >= 0; i--) if (handlers[i].evt === evt) handlers.splice(i, 1); },
       trigger(evt, params) { for (const h of handlers) if (h.evt === evt) h.fn(params); },
       getZr: () => ({

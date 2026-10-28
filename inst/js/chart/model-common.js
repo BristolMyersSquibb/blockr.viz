@@ -83,19 +83,18 @@
   };
 
   /** The settings the model and option builders read: each spec argument, its default where the
-   * config leaves it out, R's `derived`, and an aggregated chart's axes (axes()).
-   * @param {Record<string, any>} config @param {Record<string, any>} [derived]
-   * @param {VizColumn[]} [columns] @returns {Record<string, any>} */
-  const settings = (config, derived, columns = []) => {
+   * payload's config leaves it out, and an aggregated chart's axes (axes()). R's `derived` goes
+   * beside them.
+   * @param {Record<string, any>} config @param {VizColumn[]} [columns] @returns {ChartSettings} */
+  const settings = (config, columns = []) => {
     const spec = /** @type {VizSpec} */ (V.spec.chart || {});
     /** @type {Record<string, any>} */
     const cfg = {};
     for (const k of Object.keys(spec)) cfg[k] = spec[k].default ?? null;
     for (const [k, v] of Object.entries(config || {})) if (v != null) cfg[k] = v;
-    cfg.derived = derived || {};
     if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg, columns));
     defaults(cfg, columns);
-    return cfg;
+    return /** @type {ChartSettings} */ (cfg);
   };
 
   /** The gear's label of a spec argument. @param {string} key */
@@ -113,10 +112,10 @@
   /**
    * The empty state a config draws instead of a chart, or null when it can
    * draw.
-   * @param {any[]} rows @param {VizColumn[]} columns @param {Record<string, any>} cfg
-   * @returns {VizEmpty | null}
+   * @param {any[]} rows @param {VizColumn[]} columns @param {ChartSettings} cfg
+   * @param {ChartDerived} derived @returns {VizEmpty | null}
    */
-  const gate = (rows, columns, cfg) => {
+  const gate = (rows, columns, cfg, derived) => {
     const fam = NS.familyOf(cfg.type);
     // The settings a family cannot draw without, as [setting, spec key].
     /** @type {[string, string][]} */
@@ -152,13 +151,14 @@
     if (rows.length === 0) return emptyState('No data to chart');
 
     // A band whose series R could not compute says why.
-    const band = cfg.derived.band;
+    const band = derived.band;
     if (cfg.type === 'band' && band && !band.series && band.note) {
       return emptyState(String(band.note));
     }
 
-    if (cfg.color) {
-      const nColors = new Set(rows.map((r) => r[cfg.color])).size;
+    const color = cfg.color;
+    if (color) {
+      const nColors = new Set(rows.map((r) => r[color])).size;
       if (nColors > MAX_COLOR_LEVELS) {
         const hint = fam === 'aggregated'
           ? `Pick a column with ≤${MAX_COLOR_LEVELS} categories.`

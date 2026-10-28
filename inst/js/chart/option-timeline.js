@@ -11,21 +11,12 @@
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
 
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['label', 'drill', 'derived.palette', 'derived.scales'];
-
   // Lane height and the room around the plot, in CSS px.
   const LANE_PX = 28;
   const PANEL_EXTRA_PX = 80;
   const PANEL_MIN_PX = 200;
   // The opacity of a bar a filter does not light.
   const DIM = 0.15;
-
-  /**
-   * @typedef {{ cfg: Record<string, any>, columns: VizColumn[],
-   *             ink: typeof NS.INK_DEFAULT, theme: any,
-   *             measure: (s: string) => number }} Look
-   */
 
   /** Which marks each series of a panel draws, as mark positions in series order: one series per
    * colour level (marks of no level are not drawn), else one series of every mark. The option and
@@ -42,12 +33,12 @@
     return m.color.levels.map((/** @type {any} */ lvl) => buckets.get(lvl) || []);
   };
 
-  /** What every part of the timeline option reads. @param {any} m @param {Look} look */
+  /** What every part of the timeline option reads. @param {any} m @param {ChartLook} look */
   const timelineContext = (m, look) => {
     const { cfg, columns, ink, theme } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const { type: xAxisType, cats: xCats, col: x } = m.x;
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(look.derived);
     const colorLevels = m.color ? m.color.levels : [];
     const showLegend = colorLevels.length > 0;
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
@@ -160,7 +151,7 @@
     return { option: NS.cardTooltip(NS.applyDrillEmphasis(opt, cfg), ink), height };
   };
 
-  /** @param {any} m the timeline model @param {Look} look
+  /** @param {any} m the timeline model @param {ChartLook} look
    * @returns {{ panels: Array<{ option: any, height: string }> }} */
   const timeline = (m, look) => {
     const k = timelineContext(m, look);
@@ -176,16 +167,15 @@
       timelinePanel(k, panel, renderItem, formatter, xAxis));
     return { panels };
   };
-  timeline.FIELDS = OPTION_FIELDS;
 
   /**
    * The legend chips: the colour levels in the option's colours.
-   * @param {any} m @param {Record<string, any>} cfg
+   * @param {any} m @param {ChartSettings} cfg @param {ChartDerived} derived
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
-  const timelineLegend = (m, cfg) => {
+  const timelineLegend = (m, cfg, derived) => {
     if (!m.color) return null;
-    const colors = NS.levelColors(m.color.levels, m.color.scale, NS.paletteOf(cfg));
+    const colors = NS.levelColors(m.color.levels, m.color.scale, NS.paletteOf(derived));
     return { col: m.color.col,
              items: m.color.levels.map((/** @type {any} */ lvl, /** @type {number} */ i) =>
                ({ name: String(lvl), color: colors[i] })) };

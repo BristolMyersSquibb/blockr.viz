@@ -8,6 +8,8 @@ const assert = require('node:assert');
 const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
+// R's derived: none in these tests.
+const derived = {};
 const MUTED = C.mutedMark(C.INK_DEFAULT);
 const [BLUE, ORANGE] = C.BLOCKR_PALETTE;
 
@@ -27,7 +29,7 @@ const ROWS = [
   { country: 'BR', region: 'Americas', period: '5y', x: 4.0, y: 3.0 }
 ];
 
-const look = (c) => ({ cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure,
+const look = (c) => ({ cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure,
                        widths: [600, 600] });
 
 // `highlight` is a column and some of its values: H('country', 'CH').
@@ -36,16 +38,15 @@ const H = (col, ...values) => ({ [col]: values.map((value) => ({ value, label: n
 const bar = (cfg) => {
   const c = C.model.settings({ type: 'bar', y: 'country', x: 'x', orientation: 'horizontal',
                                func: 'sum', drill: 'auto', sort_by: 'alpha', sort_dir: 'asc',
-                               ...cfg }, {}, COLUMNS);
-  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+                               ...cfg }, COLUMNS);
+  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const o = C.option.aggregated(m, look(c));
   return { m, c, opt: o.panels[0].option };
 };
 
 const points = (cfg) => {
-  const c = C.model.settings({ type: 'scatter', x: 'x', y: 'y', drill: 'auto', ...cfg },
-                             {}, COLUMNS);
-  const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+  const c = C.model.settings({ type: 'scatter', x: 'x', y: 'y', drill: 'auto', ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const o = C.option.individual(m, look(c));
   return { m, c, opt: o.panels[0].option };
 };
@@ -54,7 +55,7 @@ const colourOf = (d, s) => (d && typeof d === 'object' && d.itemStyle && d.itemS
   s.itemStyle.color;
 
 test('highlightOf reads the column and its values, on the types that draw it', () => {
-  const of = (type, highlight) => C.highlightOf(C.model.settings({ type, highlight }, {}, COLUMNS));
+  const of = (type, highlight) => C.highlightOf(C.model.settings({ type, highlight }, COLUMNS));
   assert.deepStrictEqual(plain(of('bar', H('country', 'CH'))), { country: ['CH'] });
   assert.deepStrictEqual(plain(of('line', H('country', 'CH'))), { country: ['CH'] });
   assert.strictEqual(of('bar', H('country')), null);
@@ -94,7 +95,7 @@ test('a colour split: the palette and the legend cover the highlighted levels', 
   // Asia is the only highlighted level, so it takes the palette's first colour.
   assert.strictEqual(asia.itemStyle.color, BLUE);
   assert.strictEqual(europe.itemStyle.color, MUTED);
-  assert.deepStrictEqual(plain(C.option.aggregatedLegend(m, c).items), [{ name: 'Asia', color: BLUE }]);
+  assert.deepStrictEqual(plain(C.option.aggregatedLegend(m, c, derived).items), [{ name: 'Asia', color: BLUE }]);
 });
 
 test('without a highlight nothing changes', () => {

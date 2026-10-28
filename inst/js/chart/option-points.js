@@ -11,7 +11,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   // A crowd of lines (one per entity) stays thin so it reads as a texture.
   const BASE_LINE_WIDTH = 2;
@@ -116,8 +115,8 @@
       surface: ink.surface,
       smoothOn: isLine && cfg.connect === 'monotone',
       smoother: cfg.smoother,
-      smootherSeries: cfg.derived.smoother,
-      pairs: parts.log.intervalPairs(cfg),
+      smootherSeries: look.derived.smoother,
+      pairs: option.domainParts.intervalPairs(cfg),
       // A colour split stacks its areas, unless the layout says side by side.
       stackArea: isArea && m.splitCol && cfg.position !== 'dodge',
       ltCol: isLine && cfg.linetype ? cfg.linetype : null,
@@ -206,7 +205,7 @@
         lo: s.rows.map((/** @type {any} */ r) => loEnd(r[loCol])),
         hi: s.rows.map((/** @type {any} */ r) => hiEnd(r[hiCol]))
       };
-      const rib = parts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY);
+      const rib = option.bandParts.ribbon(s.level, b, 'lo', 'hi', clr, BAND_OPACITY);
       if (rib) { rib.z = 1; out.push(rib); }
     }
     return out;
@@ -261,7 +260,7 @@
               hiEnd(r[hiCol]) != null && (floorX == null || Number(r[m.x.col]) > 0))
             .map((/** @type {any} */ r) => [encodeX(r[m.x.col]), loEnd(r[loCol]), Number(r[hiCol])]);
           if (errPts.length) {
-            series.push(option.aggParts.whiskerSeries(s.level || 'errbar', errPts, clrOf(s), false));
+            series.push(option.distributionParts.whiskerSeries(s.level || 'errbar', errPts, clrOf(s), false));
           }
         }
       }
@@ -478,5 +477,5 @@
     };
   };
 
-  Object.assign(parts, { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip, endLabelOf, endLabelPad });
+  option.pointParts = { points, labelSpacer, lineOverlay, lineTooltip, pointTooltip, endLabelOf, endLabelPad };
 })();

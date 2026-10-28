@@ -10,7 +10,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   // Waterfall sign colours: semantic, so they override the palette.
   const WATERFALL_COLORS = { increase: '#009E73', decrease: '#dc2626', total: '#bbbbbb' };
@@ -338,9 +337,9 @@
     };
   };
 
-  Object.assign(parts, {
+  option.barMarkParts = {
     barRadius, barValueLabels, barMarkLabels, stackNames, boldNames, endFormat, WATERFALL_COLORS,
     asDatum, withItemStyle, labelStyle, fitXLabels,
     BAR: { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET }
-  });
+  };
 })();

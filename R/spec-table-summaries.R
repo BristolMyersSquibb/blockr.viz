@@ -256,7 +256,7 @@ table_summary_specs <- function() {
       facet = summary_facet_arg(),
       expr = viz_arg(
         type = "string", required = TRUE,
-        gear = gear("Columns", "text", "Expression"),
+        gear = gear("Columns", "code", "Expression"),
         describe = paste(
           "R expression evaluated in dplyr::summarise() per row group. A",
           "numeric result is a number cell, anything else text."
@@ -279,7 +279,7 @@ table_summary_specs <- function() {
       ),
       fn = viz_arg(
         type = "string", required = TRUE,
-        gear = gear("Columns", "text", "Summary of d"),
+        gear = gear("Columns", "code", "Summary of d"),
         describe = paste(
           "A function of `d`, the rows grouped by table row. Returns a data",
           "frame or named vector with columns among value, from, to, lo, q1,",

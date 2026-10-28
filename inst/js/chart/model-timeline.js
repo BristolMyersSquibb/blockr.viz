@@ -22,11 +22,6 @@
   const NS = V.chart;
   const model = /** @type {any} */ (NS.model);
 
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
-    'series', 'label', 'tooltip', 'drill', 'derived.scales', 'show_n', 'id', 'func',
-    'facet_scales'];
-
   /**
    * @typedef {{ facet: string, label: string | null, lanes: string[],
    *             laneCounts: Map<string, any> | null, marks: any[][],
@@ -39,10 +34,12 @@
    *             ttFields: string[], panels: TimelinePanel[] }} TimelineModel
    */
 
-  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {TimelineModel} */
-  const timeline = ({ rows, ix, columns, cfg }) => {
-    const { x, xend, y, color, facet, sort_by, series, label } = cfg;
+  const timeline = ({ rows, ix, columns, cfg, derived }) => {
+    const { xend, color, facet, sort_by, series, label } = cfg;
+    // gate() let only a chart with x and y through.
+    const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const ttFields = model.tooltipFields(cfg);
     // The drill column's value rides on every mark.
     const drill = NS.drillColumn(cfg);
@@ -67,7 +64,7 @@
     out.nFacets = facets.length;
     out.single = facets.length === 1;
 
-    const colorScale = NS.scaleFor(cfg, color);
+    const colorScale = NS.scaleFor(derived, color);
     if (color) {
       const levels = NS.axes.orderLevels(ix.levels(rows, color, 'nz'), colorScale, columns, color);
       if (levels.length) out.color = { col: color, levels, scale: colorScale };
@@ -124,9 +121,9 @@
         if (lane === undefined) continue;
         const s = xCoord(r[x]);
         const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
-        marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, r[color] ?? '',
+        marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, (color != null ? r[color] ?? '' : ''),
                     (label != null ? (r[label] ?? '') : ''),
-                    r[series] ?? '',
+                    (series != null ? r[series] ?? '' : ''),
                     (drill != null ? (r[drill] ?? '') : ''),
                     ttFields.length ? ttFields.map((/** @type {string} */ c) => r[c] ?? '') : 0]);
         markRows.push(r);
@@ -141,7 +138,6 @@
     }
     return out;
   };
-  timeline.FIELDS = MODEL_FIELDS;
 
   /** The keys of a timeline mark: its lane, and the facet in a facet panel. The colour is no key.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
