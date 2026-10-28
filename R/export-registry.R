@@ -1,8 +1,6 @@
-# The download formats, registered by whoever can write them.
-#
-# A block's download menu lists every registered format that can write the
-# block's exhibit and whose packages are installed. Other packages register
-# their own formats in .onLoad.
+# The download formats, registered by whoever can write them. A block's
+# download menu lists every registered format that can write the block's
+# exhibit and whose packages are installed.
 
 viz_exporter_env <- new.env(parent = emptyenv())
 
@@ -123,4 +121,25 @@ viz_register_exporters <- function() {
                         order = 40)
   register_pptx_exporter()
   invisible(NULL)
+}
+
+#' Say a download failure out loud: show it on screen at click time and keep
+#' the error propagating. Shiny otherwise answers with an HTML error page that
+#' the browser saves as "<session>-<block>-dl_pptx.htm".
+#' @noRd
+dl_guard <- function(what, expr) {
+  withCallingHandlers(
+    expr,
+    error = function(e) {
+      msg <- conditionMessage(e)
+      try(
+        shiny::showNotification(
+          paste0("The ", what, " download failed: ", msg),
+          type = "error", duration = NULL
+        ),
+        silent = TRUE
+      )
+      message("[blockr.viz] ", what, " download failed: ", msg)
+    }
+  )
 }

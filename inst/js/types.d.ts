@@ -1,6 +1,6 @@
 /**
  * Ambient types for the scripts in inst/js/ outside the rewritten core,
- * chart and table (busy-cue.js, drilldown-theme-register.js), which
+ * chart and table (drilldown-theme-register.js), which
  * tsconfig.json checks. The rewritten JS has its own types (core/core.d.ts,
  * table/table.d.ts) under tsconfig.core.json. Dev tooling only: never
  * referenced by an htmlDependency, never run in the browser.

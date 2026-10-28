@@ -2,7 +2,7 @@
 # (blockr.ai's config_effect()).
 
 effect <- function(block, args, data = mtcars) {
-  register_drilldown_ai_effect()
+  register_assistant_effect()
   blockr.ai::config_effect(block, args, data)
 }
 

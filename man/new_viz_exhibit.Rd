@@ -32,14 +32,14 @@ or \code{NULL}.}
 
 \item{meta}{A named list: \code{dataset} (the first part of the file name),
 \code{digits} (the number format the screen rounds to), \code{collapsible} and
-\code{sortable} (for the web page), \code{source} (the frame the download
-footer's provenance is read from, when \code{data} was built for the export).}
+\code{sortable} (for the web page), \code{source} (the frame the download footer's
+provenance is read from, when \code{data} was built for the export).}
 }
 \value{
 A \code{viz_exhibit}.
 }
 \description{
-What a block's downloads write: its rows, and when the browser drew the
+What a block's downloads write: its rows and, when the browser drew the
 block, the picture.
 }
 \examples{

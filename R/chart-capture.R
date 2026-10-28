@@ -94,29 +94,6 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
   )
 }
 
-# PNG bytes as a data URI. base64_enc() wraps at 80 columns and a data URI
-# with newlines does not load, so the newlines are removed.
-#' @noRd
-png_data_uri <- function(png) {
-  paste0("data:image/png;base64,",
-         gsub("\n", "", jsonlite::base64_enc(png), fixed = TRUE))
-}
-
-# How much a capture is scaled to fit a box in inches, keeping its aspect.
-# The browser composes it at canvas_capture_ratio() device pixels per CSS
-# pixel, at least 2, so it may grow to twice its on-screen size and stay
-# sharp; no further.
-#' @noRd
-capture_fit <- function(x, max_width = NULL, max_height = NULL) {
-  fit <- min(
-    if (is.null(max_width)) Inf else max_width / x$width,
-    if (is.null(max_height)) Inf else max_height / x$height,
-    2
-  )
-  if (is.finite(fit)) fit else 1
-}
-
-
 # -- The capture service, R side ---------------------------------------------
 #
 # For blockr.outline decks; the block's downloads do not use it. A deck asks

@@ -1,6 +1,6 @@
 # The Image download.
 
-# The browser's picture, else the render object's own painted image.
+# The browser's picture, else the render object's painted image.
 export_png <- function(x, file) {
   p <- exhibit_picture(x)
   if (!is.null(p)) {

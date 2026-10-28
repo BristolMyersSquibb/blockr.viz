@@ -1,12 +1,12 @@
 #' Options That Tune an Exported Table
 #'
 #' Everything the table exporters read from `options()`. An app sets them once
-#' at startup; none is required. The values below are the defaults. Where a
-#' board option exists for the same thing it wins.
+#' at startup; none is required. The values below are the defaults. A board
+#' option for the same thing wins.
 #'
 #' @section Fitting a table to a slide:
 #' The exporter shrinks a table before it breaks it, and carries it downward
-#' before it deals its columns sideways. These say how far each goes.
+#' before it deals its columns sideways.
 #'
 #' \describe{
 #'   \item{`blockr.viz.ft_min_font_size` (11)}{How small the type may go
@@ -17,17 +17,15 @@
 #'   \item{`blockr.viz.ft_font_size` (13)}{The size a table starts at, before
 #'     any shrinking.}
 #'   \item{`blockr.viz.ft_footer_gap` (0.05)}{Inches left above whatever the
-#'     layout puts at the foot of the slide -- footer, date, slide number.
-#'     `0` lets a page run right up to it. A stated row height is a floor and
-#'     PowerPoint grows a row that needs another line, so measurement errors
-#'     land at the bottom of a page.}
+#'     layout puts at the foot of the slide (footer, date, slide number).
+#'     `0` lets a page run right up to it.}
 #'   \item{`blockr.viz.ft_header_break_tol` (0, off)}{Set to a fraction (say
 #'     0.6) to deal the columns over two sets of slides when a header word is
-#'     cut past that much of itself. Off by default: the columns come apart
-#'     only when a data cell no longer fits its own longest word.}
+#'     cut past that much of itself. Off, the columns come apart only when a
+#'     data cell no longer fits its own longest word.}
 #'   \item{`blockr.viz.ft_fit_width` (unset)}{Total table width in inches. A
 #'     deck sets it from the reference template; unset means natural widths,
-#'     which is right for html and pdf.}
+#'     which suits html and pdf.}
 #' }
 #'
 #' @section How the width is shared out:
@@ -36,8 +34,8 @@
 #'     while the data columns are still short of their full headers. Raise it
 #'     to keep long row labels on one line, lower it to feed the columns.}
 #'   \item{`blockr.viz.ft_width_slack` (1.04)}{Margin for the measuring font
-#'     differing from the rendering font. Raise it if a real deck wraps where
-#'     the export predicted it would not.}
+#'     differing from the rendering font. Raise it if a deck wraps where the
+#'     export predicted it would not.}
 #'   \item{`blockr.viz.ft_col_widths` ("measured")}{`"even"` is the
 #'     positional rule: the stub takes a fixed width, the data columns share
 #'     what is left equally, whatever their text needs.}
@@ -63,10 +61,10 @@
 #' }
 #'
 #' @section Not options:
-#' Two layout knobs are function arguments:
 #' `static_table(cell_padding = )` (`NULL`, the flextable default of 5pt,
-#' tightened to 2 automatically when a table cannot fit any other way) and
-#' the stub's own minimum width, a 1.2in constant inside the width allocator.
+#' tightened to 2 when a table cannot fit any other way) is a function
+#' argument. The stub's minimum width is a 1.2in constant in the width
+#' allocator.
 #'
 #' @name exhibit-options
 #' @seealso [static_table()], [write_exhibit_pptx()],

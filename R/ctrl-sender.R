@@ -8,6 +8,10 @@
 # senders also live outside this package (blockr.sandbox's composer table).
 # They need the same send guard, which stops a send -> board update ->
 # re-evaluation -> send loop.
+#
+# Kept for compatibility, at the end of this file: dd_ctrl_claims(),
+# dd_ctrl_sender(), dd_ctrl_subject() and dd_col_claims(), the names
+# blockr.viz 0.3.0 exported.
 
 # Has the user drilled yet? A latch: TRUE until the drill selection first
 # differs from the constructor's, FALSE afterwards. A live comparison would
@@ -186,8 +190,9 @@ ctrl_choices_list <- function(choices) {
   ))
 }
 
-# Old names of the exported plumbing, for blockr.sandbox's composer table
-# until it calls the new ones.
+# Names blockr.viz 0.3.0 exported, kept for compatibility: blockr.sandbox's
+# composer table and other callers still use them. New code calls the names
+# without `dd_`.
 #' @rdname ctrl_claims
 #' @export
 dd_ctrl_claims <- function(...) ctrl_claims(...)
@@ -199,3 +204,26 @@ dd_ctrl_sender <- function(...) ctrl_sender(...)
 #' @rdname ctrl_subject
 #' @export
 dd_ctrl_subject <- function(...) ctrl_subject(...)
+
+#' The column half of a structured click, as claims
+#'
+#' The browser sends a header click's source column and values
+#' (`TRT01P = "Placebo"`), so this reshapes them into conditions; a pooled
+#' column sends its members. Exported in 0.3.0 and kept for compatibility.
+#'
+#' @param col_keys A list of `list(column=, values=)`, as the click sent it.
+#' @param table Name of the table the claim applies to, `""` for none.
+#' @return A list of filter conditions, `list()` when there is no column half.
+#' @keywords internal
+#' @export
+dd_col_claims <- function(col_keys, table = "") {
+  out <- lapply(col_keys, function(k) {
+    nme <- as.character(k[["column"]] %||% "")[1L]
+    vals <- as.character(unlist(k[["values"]], use.names = FALSE))
+    if (is.na(nme) || !nzchar(nme) || !length(vals)) {
+      return(NULL)
+    }
+    claim_cond(nme, vals, table)
+  })
+  Filter(Negate(is.null), out)
+}

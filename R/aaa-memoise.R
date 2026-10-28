@@ -1,12 +1,12 @@
-# aaa- so it collates first: the *_dep() builders call memoise0() when the
-# package loads.
+# aaa- prefix so it collates first: the *_dep() builders call memoise0() at
+# package-load time, so it must already be defined.
 
-#' Run a nullary builder once per process and keep its result
-#'
-#' For the htmlDependency builders, which would otherwise read the package
-#' version and files from disk on every render. A dependency is an immutable
-#' list, so one copy serves every session. `exists()` rather than
-#' `is.null()`, so a builder that returns NULL is not run again.
+# Runs a nullary builder at most once per process and caches the result in a
+# private environment. `exists()` rather than `is.null()` caches a `NULL`
+# result too. Used for the htmlDependency builders: they take no
+# data-dependent arguments, return the same immutable object for the life of
+# the process, and would otherwise repeat their disk I/O on every render. One
+# copy is shared across Shiny sessions.
 #' @noRd
 memoise0 <- function(build) {
   force(build)

@@ -208,4 +208,12 @@ interface VizNamespace {
                   draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
                   timeout?: number }): Promise<VizPicture>;
   captureReply(req: string, p: Promise<VizPicture>): Promise<void>;
+  /** The busy cue (core/busy.js), also at `Blockr.busy`. */
+  busy: VizBusy;
+}
+
+interface VizBusy {
+  start(id: string, label?: string): void;
+  stop(id: string): void;
+  watch(id: string, label: string): void;
 }

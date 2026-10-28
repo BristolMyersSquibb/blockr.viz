@@ -26,15 +26,13 @@ text, the spreadsheet keeps the full value under a rounding number
 format. Read at click time, so a stale snapshot is never written.}
 
 \item{enabled}{A function of no arguments returning \code{TRUE} when downloads
-are on. \code{NULL} (the default) means always on, which is the answer for a
-caller with no gear to switch them off in.}
+are on. \code{NULL} (the default) means always on.}
 
 \item{slot_id}{Output id for the control itself.}
 
 \item{filename}{Word the file is named by when the exhibit has no title.
 The full name is the dataset in the data's \code{blockr_provenance} attribute
-when it has one,
-the title or this word, and the time:
+when it has one, the title or this word, and the time:
 \verb{AQ-001_Ozone_by_month_2026-10-02_1432.xlsx}. An exhibit whose \code{data}
 is a frame built for the export, without the input's attributes, returns
 the dataset name as \code{dataset}.}
@@ -43,26 +41,17 @@ the dataset name as \code{dataset}.}
 the browser drew it (a \code{chart_capture}, see R/chart-capture.R), or
 \code{NULL} while there is none. When given, the menu gains an Image entry,
 and the web page and the deck carry the picture instead of a re-typeset
-table. The heatmap passes one: it is a graphic table, exported like the
-chart and the summarize table. The spreadsheet always gets values.}
+table. The spreadsheet always gets values.}
 }
 \value{
 A \code{\link[shiny:uiOutput]{shiny::uiOutput()}} to place on the toolbar.
 }
 \description{
-Registers the download handlers for every format this machine can write and
-returns the slot to drop on the table's toolbar. Each
-format writes the SAME frame the table shows, through that format's own
-writer: \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for the spreadsheet,
-\code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
-for a deck. That last pair is the exhibit machinery blockr.outline's report
-and deck exports use, so a table downloaded here and the same table in a
-deck are one artifact.
-}
-\details{
-Registration is guarded per session and slot, because a caller may run on
-every re-render: \code{block_result_output()} does, once per evaluation of its
-block, and re-registering a handler each time would leak one output per
-render.
+Registers a download handler for each format this machine can write and
+returns the slot to drop on the table's toolbar. Each format writes the
+table through the package's own exporters (\code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}},
+\code{\link[=write_exhibit_html]{write_exhibit_html()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}), the same artifact a deck
+or report export gets. Registration is guarded per session and slot, so a
+caller may run on every re-render.
 }
 \keyword{internal}

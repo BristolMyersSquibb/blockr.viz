@@ -4,7 +4,7 @@
 #' definition in its `blockr_groups` attribute:
 #' `list(groups = <named list: group name -> raw members>, overlap = <lgl>)`.
 #' The data keeps one row per subject; this function makes the copies a
-#' consumer that splits by the column needs, at the last moment.
+#' consumer that splits by the column needs.
 #'
 #' * No `blockr_groups` attribute: `data` is returned unchanged.
 #' * Partition (`overlap = FALSE`): the column already holds group names. Rows
@@ -12,17 +12,15 @@
 #'   and the column becomes a factor in group order.
 #' * Overlap (`overlap = TRUE`): the column holds the raw level. Each group
 #'   gets one copy of its member rows with the column set to the group name,
-#'   the copies are stacked in group order, and the column becomes a factor in
-#'   group order. A subject in two groups appears twice.
+#'   stacked in group order, and the column becomes a factor in group order. A
+#'   subject in two groups appears twice.
 #'
 #' The result keeps every data-frame attribute and every attribute of the
-#' other columns. The group column keeps its `blockr_source` and `label`, and
-#' its `blockr_groups` becomes the identity partition, so a second call changes
-#' nothing. The applied definition is kept in `blockr_groups_expanded`, so
-#' drill claims and colours can map a group back to its members.
-#'
-#' Use it only in code that splits by the column. Anything that counts across
-#' groups (a total, an overall N) must read the unexpanded data.
+#' other columns. The group column's `blockr_groups` becomes the identity
+#' partition, so a second call changes nothing, and the applied definition is
+#' kept in `blockr_groups_expanded` so a group maps back to its members. Use it
+#' only in code that splits by the column. Anything that counts across groups
+#' (a total, an overall N) must read the unexpanded data.
 #'
 #' @param data A data frame or tibble.
 #' @param col Name of the group column.
@@ -71,8 +69,7 @@ expand_groups <- function(data, col = "Group") {
     lab <- raw[rows]
   }
 
-  # dplyr_row_slice() keeps column and data-frame attributes, which base `[`
-  # drops, and resets row names.
+  # Unlike base `[`, dplyr_row_slice() keeps column and data-frame attributes.
   out <- dplyr::dplyr_row_slice(data, rows)
 
   keep <- attributes(x)
@@ -87,7 +84,6 @@ expand_groups <- function(data, col = "Group") {
     groups = stats::setNames(as.list(nms), nms),
     overlap = FALSE
   )
-  # The applied definition, for mapping a group name back to raw members.
   if (is.null(attr(new, "blockr_groups_expanded", exact = TRUE))) {
     attr(new, "blockr_groups_expanded") <- def
   }
@@ -105,8 +101,8 @@ expand_groups <- function(data, col = "Group") {
   out
 }
 
-# The column's group definition, validated, or NULL. A definition is a list
-# with a named, non-empty `groups` list and a logical `overlap`.
+# The column's group definition, validated, or NULL: a named, non-empty
+# `groups` list and a logical `overlap`.
 group_def <- function(x) {
   def <- attr(x, "blockr_groups", exact = TRUE)
   if (!is.list(def) || !is.list(def$groups) || !length(def$groups)) {
@@ -133,8 +129,7 @@ group_def_origin <- function(x) {
 }
 
 # Would expand_groups() change anything? Not for a column without a
-# definition, nor for one already expanded (an identity partition stored as a
-# factor in group order with no missing values).
+# definition, nor for one already expanded.
 group_expand_needed <- function(x) {
   def <- group_def(x)
   if (is.null(def)) {
@@ -160,7 +155,7 @@ has_group_def <- function(x) {
 # The values a column holds for the given group names. `origin = FALSE`: the
 # column as it is now (an unexpanded overlap column holds raw members, an
 # expanded or partition column holds names). `origin = TRUE`: the column as
-# the data upstream holds it. Values that are not group names pass through.
+# the data upstream holds it. Other values pass through.
 group_column_values <- function(x, vals, origin = FALSE) {
   vals <- as.character(unlist(vals))
   def <- if (isTRUE(origin)) group_def_origin(x) else group_def(x)
@@ -185,8 +180,6 @@ group_column_values <- function(x, vals, origin = FALSE) {
 }
 
 # Expand `data` by every column in `cols` that carries a group definition.
-# `cols` are the columns a chart splits by; a column bound to no such role is
-# never expanded.
 expand_role_groups <- function(data, cols) {
   if (!is.data.frame(data)) {
     return(data)
@@ -203,9 +196,8 @@ expand_role_groups <- function(data, cols) {
 
 # Pools that borrow a member's colour: group name -> the raw level whose
 # colour it takes. A group that is a raw level under its own name keeps its
-# colour. The member used is the first one not shown as a group of its own
-# (All Xanomeline = Low + High next to High takes Low's colour), else the
-# first member.
+# colour. The member used is the first one not shown as a group of its own,
+# else the first member.
 group_pool_colour_levels <- function(x) {
   def <- group_def_origin(x)
   if (is.null(def)) {
@@ -234,14 +226,14 @@ chart_split_roles <- function(group = NULL, color = NULL, facet = NULL,
 
 # The members a block's own click filter should match, for a click on a group
 # of an overlap definition. The input holds raw levels there, so the emitted
-# expression has to be `Group %in% c(<members>)`, not `Group == "<group>"`.
+# expression has to be `Group %in% c(<members>)`.
 #
 # `r_filters` gives the click filter, a named list column -> values (NA for a
 # missing value, which no group holds). Returns a function `(filters)` giving
 # a named list column -> members for the columns that need translating, or
-# NULL when none does. A reactiveVal that only moves when the answer does
-# backs it. The answer is keyed by the filter it was computed for, so it
-# holds while the input is unavailable and never applies to another filter.
+# NULL when none does. The answer is keyed by the filter it was computed for,
+# so it holds while the input is unavailable and never applies to another
+# filter.
 dd_group_filters_members <- function(r_filters, r_data,
                                      r_active = function() TRUE) {
   rv <- shiny::reactiveVal(NULL)

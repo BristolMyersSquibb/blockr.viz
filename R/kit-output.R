@@ -133,7 +133,35 @@ viz_rows <- function() {
   }
 }
 
-# The busy cue's two messages (inst/js/busy-cue.js, loaded with the JS core).
+#' A one-slot cache keyed by identical()
+#'
+#' A dock panel visit hands the chart server an equal frame, which invalidates
+#' every reactive that reads it. The costly ones (serializing the rows, the
+#' column metadata, the band and smoother fits, the scale resolution) keep their
+#' last answer and return it while their inputs are identical(). On the same
+#' object that is a pointer comparison; on an equal copy it walks the values,
+#' which is still much cheaper than the work it saves.
+#'
+#' @return A function `(key, compute)` that returns the last value when `key`
+#'   is identical to the last key, and otherwise calls `compute()` and keeps
+#'   its result. A `compute()` that errors leaves the cache as it was.
+#' @noRd
+last_value_cache <- function() {
+  env <- new.env(parent = emptyenv())
+  env$full <- FALSE
+  function(key, compute) {
+    if (env$full && identical(key, env$key)) {
+      return(env$value)
+    }
+    value <- compute()
+    env$key <- key
+    env$value <- value
+    env$full <- TRUE
+    value
+  }
+}
+
+# The busy cue's two messages (inst/js/core/busy.js).
 # `id` is the element the cue dims, the view's element. Blocks outside this
 # package that render through viz send the same two messages.
 

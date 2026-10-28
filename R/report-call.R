@@ -4,11 +4,10 @@
 #' report or deck). Returns a call over `var`, the variable the generated
 #' script binds the block's result to, such as
 #' `blockr.viz::static_table(tbl1)`, or `NULL` when the bare result prints
-#' as is. Consumers deparse the call into the document, so it is
-#' self-qualified and holds only literal values.
-#'
-#' The chart block has no method: a document carries the picture the browser
-#' captured (see [chart_capture_ids()]).
+#' as is. The call is self-qualified and holds only literal values, since
+#' consumers deparse it into the document. The chart block has no method: a
+#' document carries the picture the browser captured (see
+#' [chart_capture_ids()]).
 #'
 #' @param x A block object.
 #' @param var The variable name (string) holding the block's result in the
@@ -24,17 +23,11 @@ report_call <- function(x, var, ...) {
 
 #' @rdname report_call
 #' @export
-report_call.default <- function(x, var, ...) {
-  NULL
-}
+report_call.default <- function(x, var, ...) NULL
 
 # Whether `v` equals `default`, ignoring the int / dbl and scalar drift of a
 # round-trip through state.
 identical_default <- function(v, default) {
-  if (is.null(default)) {
-    return(FALSE)
-  }
-
-  length(v) == 1L && length(default) == 1L &&
+  !is.null(default) && length(v) == 1L && length(default) == 1L &&
     !is.na(v) && identical(as.character(v), as.character(default))
 }

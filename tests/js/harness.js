@@ -41,8 +41,7 @@ const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
 const CORE_FILES = fs.readFileSync(path.join(JS_DIR, 'core', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((f) => 'core/' + f);
-// busy-cue.js is blockr.viz's busy cue until the core has one.
-const SHARED_FILES = ['busy-cue.js', ...CORE_FILES, 'spec/chart.js'];
+const SHARED_FILES = [...CORE_FILES, 'spec/chart.js'];
 
 /** The chart scripts in load order, as the html dependency lists them. */
 const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')

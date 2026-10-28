@@ -4,6 +4,7 @@ namespace.js
 util.js
 tooltip.js
 scope.js
+busy.js
 binding.js
 download.js
 capture.js

@@ -23,13 +23,9 @@ size an exported table shrinks to before it is split over several slides.
 \details{
 The paginator shrinks a table to this size on both axes before it carries
 rows onto another slide or deals columns over several. Set it to the base
-size (13pt) to forbid shrinking, or down to 8pt for a deck that must not
-split its tables. When even the smallest allowed size does not fit, the
-table is split and the download says so.
-
-One value serves every route out of the app: the deck built by
-blockr.outline's slide builder and the PowerPoint download on a table,
-summarize table or chart block.
+size (13pt) to forbid shrinking. When even the smallest allowed size does
+not fit, the table is split and the download says so. One value serves the
+decks built by blockr.outline and the PowerPoint download of every block.
 }
 \examples{
 new_exhibit_font_option()

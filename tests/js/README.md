@@ -1,8 +1,8 @@
 # JavaScript tests for the chart block
 
 The chart scripts in `inst/js/chart/` run in node with happy-dom, loaded
-the way the page loads them: blockr.ui's controls, `busy-cue.js`,
-`drilldown-theme-register.js`, the JS core, then the chart scripts in the order
+the way the page loads them: blockr.ui's controls,
+`drilldown-theme-register.js`, the JS core (with the busy cue, `core/busy.js`), then the chart scripts in the order
 `scripts.txt` lists them. A chart is
 created by the input binding's `initialize` and drawn by the `drilldown-data`
 message handler. echarts is a fake that records what the chart asks of it

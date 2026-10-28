@@ -2,33 +2,26 @@
 #'
 #' Renders an [annotated data frame][as_annotated_df()] as a styled
 #' [flextable][flextable::flextable()], the static table output for report and
-#' deck rendering (quarto pptx, docx). flextable emits real OpenXML tables in
-#' PowerPoint and Word output.
+#' deck rendering (quarto pptx, docx).
 #'
 #' Structure comes from the annotated-df contract (shared with the table view
 #' and [write_annotated_xlsx()]): `.label` is the row stub, `.group<k>_level`
 #' runs and `.variable_label` blocks become bold section-header rows merged
 #' across the table width, `.indent` / `.strong` / `.emph` style rows,
 #' `Top||Leaf` column names become a merged spanner header row, and
-#' `attr(col, "label")` carries the leaf header text (`"\n"` renders as a line
-#' break). The identity columns (`.variable*`, raw `.group<k>` pairs) are
-#' ignored here.
+#' `attr(col, "label")` carries the leaf header text (`"\n"` is a line
+#' break). The other identity columns are ignored here.
 #'
-#' Columns can carry emphasis, the column analogue of the row `.strong` /
-#' `.emph` flags: `attr(col, "strong")` / `attr(col, "emph")`. When any column
-#' is flagged, the header band follows an emphasis ramp (normal light gray,
-#' `emph` dark gray and italic, `strong` an accent) and `header_bg` is
-#' ignored.
-#'
-#' The look is a dense bordered grid, first column left-aligned and wide, data
-#' columns right-aligned, optional colored header bands and manual column
-#' widths, since PowerPoint never autofits.
+#' Columns can carry emphasis, the column analogue of the row flags:
+#' `attr(col, "strong")` / `attr(col, "emph")`. When any column is flagged,
+#' the header band follows an emphasis ramp (normal light gray, `emph` dark
+#' gray and italic, `strong` an accent) and `header_bg` is ignored.
 #'
 #' @param data A data frame (or an object with an [as_annotated_df()]
 #'   method, e.g. a composer table, coerced on entry).
 #' @param title,subtitle,caption Table title / subtitle (header lines) and
-#'   caption (footer line). `NULL` (default) auto-fills from the annotated
-#'   df's `label` / `subtitle` / `caption` attributes; `""` suppresses.
+#'   caption (footer line). `NULL` (default) fills from the annotated df's
+#'   `label` / `subtitle` / `caption` attributes; `""` suppresses.
 #' @param na_rep Character. Text for missing (`NA`) cells. Defaults to an em
 #'   dash.
 #' @param font,font_size,font_color Base typography, applied to all parts.
@@ -36,38 +29,29 @@
 #'   `getOption("blockr.viz.ft_font_size")`, 13 unset. `font` defaults from
 #'   `getOption("blockr.viz.ft_font")`, which a theme sets
 #'   (`exhibits = list(ft_font = ...)`) and which the pptx export sets from the
-#'   reference deck's font scheme. Unset, the blockr default applies.
+#'   reference deck's font scheme.
 #' @param indent_width Points of left padding per `.indent` level (section
 #'   headers indent at their nesting depth with the same step).
 #' @param first_col_width,other_cols_width Column widths in inches, used
 #'   unless `fit_width` or `auto_width` is set. Defaults fit the 13.33in
-#'   widescreen template; pass smaller values for the 10in quarto default.
+#'   widescreen template.
 #' @param fit_width Optional total table width in inches (usually the slide's
-#'   usable content width). When set, the columns are distributed to fill it
-#'   exactly (`col_widths` says how). Defaults from
+#'   usable content width). The columns are distributed to fill it exactly
+#'   (`col_widths` says how). Defaults from
 #'   `getOption("blockr.viz.ft_fit_width")`, which the pptx / docx render sets
 #'   from the reference template. Unset for html / pdf.
 #' @param col_widths How `fit_width` is split, `"measured"` (default) or
-#'   `"even"`. Measured asks every column what its own text needs at the
-#'   current font. When the slide can hold them all, the data columns get
-#'   enough that no cell wraps and no header breaks inside a word, and the
-#'   rest goes to the row stub. While the data columns are still short of
-#'   their full headers the stub takes at most
-#'   `getOption("blockr.viz.ft_stub_share")` (0.3) of the width and wraps.
-#'
-#'   When the slide cannot hold them all, the stub and the data columns are
-#'   filled to a common level, from the width each cannot go below (its
-#'   longest word) toward its whole text. A column of counts reaches its full
-#'   width almost at once, and a column of several short words gives room back
-#'   and wraps.
-#'
-#'   Even gives the stub `first_col_width` capped at half the slide and splits
-#'   the remainder equally over the data columns. Defaults from
-#'   `getOption("blockr.viz.ft_col_widths")`.
-#'
-#'   A numeric vector of widths (one per column, stub first) is used as given.
-#'   [write_exhibit_pptx()] uses this to give every page of a split table the
-#'   widths measured on the whole of it.
+#'   `"even"`. Measured gives every column what its own text needs at the
+#'   current font: no cell wraps and no header breaks inside a word when the
+#'   slide can hold them, and the rest goes to the row stub (at most
+#'   `getOption("blockr.viz.ft_stub_share")`, 0.3, of the width while the
+#'   data columns are short of their full headers). When the slide cannot hold
+#'   them all, the columns are filled to a common level, from their longest
+#'   word toward their whole text. Even gives the stub `first_col_width`
+#'   capped at half the slide and splits the remainder equally. A numeric
+#'   vector of widths (one per column, stub first) is used as given;
+#'   [write_exhibit_pptx()] uses it to give every page of a split table the
+#'   same widths. Defaults from `getOption("blockr.viz.ft_col_widths")`.
 #' @param cell_padding Points of left and right padding per cell, or `NULL`
 #'   (default) for the flextable default of 5. Set automatically to a tighter
 #'   value when a table cannot fit any other way.
@@ -86,8 +70,7 @@
 #'     \item The two mix: `c(.stub = "#EEE", Placebo = "grey", "#33D6F1")`.
 #'   }
 #'   Defaults from `getOption("blockr.viz.ft_header_bg")`; unset (or `NULL` /
-#'   `"none"`) leaves the header unfilled. blockr.viz ships no palette of its
-#'   own.
+#'   `"none"`) leaves the header unfilled.
 #' @param pptx_left,pptx_top Slide placement in inches, stashed as attributes
 #'   on the result for the officer-based pptx pipeline. Inert under the quarto
 #'   render.
@@ -119,68 +102,146 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     stop("static_table() needs the 'flextable' package.", call. = FALSE)
   }
 
-  # Table-producing objects are coerced to a data frame, and long-form
-  # summary_table internals are spread to the wide display grid.
-  data <- as_annotated_df(data)
-  data <- fmt_to_wide(data)
+  data <- fmt_to_wide(as_annotated_df(data))
+  s <- st_structure(
+    data,
+    title = title %||% attr(data, "label"),
+    subtitle = subtitle %||% attr(data, "subtitle"),
+    caption = caption %||% attr(data, "caption"),
+    na_rep = na_rep, continued = continued
+  )
+  ft <- st_flextable(s, font, font_size, font_color, header_bg, indent_width)
 
-  # NULL fills from the display attributes, "" suppresses.
-  if (is.null(title))    title    <- attr(data, "label")
-  if (is.null(subtitle)) subtitle <- attr(data, "subtitle")
-  if (is.null(caption))  caption  <- attr(data, "caption")
+  widths <- NULL
+  if (isTRUE(auto_width)) {
+    ft <- flextable::autofit(ft)
+  } else {
+    measure_args <- c(s$measure, list(font = font, font_size = font_size,
+                                      total = fit_width))
+    fitted <- st_fit_widths(measure_args, length(s$data_cols), col_widths,
+                            fit_width, cell_padding, first_col_width,
+                            other_cols_width, indent_width)
+    widths <- fitted$widths
+    cell_padding <- fitted$cell_padding
+    ft <- st_set_widths(ft, widths, cell_padding, length(s$data_cols))
+  }
 
-  # Row-side structure: grouping-value axes and variable blocks.
+  # The source frame, so pptx_add_exhibit() can rebuild the table in pages,
+  # and the input row of each rendered body row (`NA` for section headers).
+  row_map <- rep(NA_integer_, nrow(s$body))
+  row_map[s$sec$data_pos] <- seq_len(nrow(s$df))
+  attr(ft, "pptx_left") <- pptx_left
+  attr(ft, "pptx_top") <- pptx_top
+  attr(ft, "exhibit_data") <- data
+  attr(ft, "row_map") <- row_map
+  # `cell = TRUE` means the columns are narrower than their contents, which
+  # row splitting cannot fix. The pptx writer steps the font down instead.
+  attr(ft, "width_squeeze") <- c(
+    header = isTRUE(attr(widths, "header_squeeze")),
+    cell = isTRUE(attr(widths, "cell_squeeze"))
+  )
+  # The share of the longest header word the tightest column keeps.
+  attr(ft, "word_fit") <- attr(widths, "word_fit") %||% 1
+  # What the width pass decided, so pages of one table share the layout.
+  attr(ft, "layout_plan") <- list(col_widths = as.numeric(widths),
+                                  cell_padding = cell_padding)
+  attr(ft, "leaf_row") <- s$leaf_i
+  ft
+}
+
+# The table's parsed structure: the display frame `df` and its stub and data
+# columns, row flags, spanner (`top`) and `leaf` labels, section rows, the body
+# grid, the stub header, the header line texts, the header row indexes and the
+# arguments of ft_measured_widths() that depend only on the data.
+st_structure <- function(data, title, subtitle, caption, na_rep, continued) {
   view <- annotated_structure_view(data)
   df <- view$data
-  section_cols <- view$section_cols
-  n_row <- nrow(df)
-
   stub_col <- if (".label" %in% names(df)) ".label" else names(df)[1]
   # Dot-prefixed columns are structure, never data cells.
   data_cols <- setdiff(names(df), stub_col)
   data_cols <- data_cols[!startsWith(data_cols, ".")]
-  n_data <- length(data_cols)
-  n_col <- n_data + 1L
+  labels <- st_column_labels(df, data_cols)
+  indent <- st_dot_values(df, ".indent", as.integer, 0L)
+  has_spanner <- any(nzchar(labels$top))
+  sec <- st_section_rows(df, view$section_cols, continued)
+  body <- st_body_grid(df, stub_col, data_cols, sec, na_rep)
+  stub_hdr <- stub_header_rows(df[[stub_col]], 1L + has_spanner)
+  n_line_rows <- st_has(title) + st_has(subtitle)
+  list(
+    df = df, stub_col = stub_col, data_cols = data_cols,
+    top = labels$top, leaf = labels$leaf,
+    indent = indent,
+    bold_row = st_dot_values(df, ".strong", as.logical, FALSE),
+    emph_row = st_dot_values(df, ".emph", as.logical, FALSE),
+    sec = sec, body = body, stub_hdr = stub_hdr,
+    title = title, subtitle = subtitle, caption = caption,
+    spanner_i = if (has_spanner) n_line_rows + 1L else integer(0),
+    leaf_i = n_line_rows + has_spanner + 1L,
+    measure = list(
+      stub = body[sec$data_pos, 1L],
+      stub_indent = indent,
+      stub_label = stub_hdr$label,
+      cells = body[sec$data_pos, -1L, drop = FALSE],
+      leaf = labels$leaf, top = labels$top,
+      banner = c(if (st_has(title)) title, if (st_has(subtitle)) subtitle)
+    )
+  )
+}
 
-  indent <- if (".indent" %in% names(df)) {
-    iv <- suppressWarnings(as.integer(df[[".indent"]]))
-    iv[is.na(iv)] <- 0L
-    iv
-  } else {
-    rep(0L, n_row)
-  }
-  bold_row <- if (".strong" %in% names(df)) {
-    bv <- suppressWarnings(as.logical(df[[".strong"]]))
-    !is.na(bv) & bv
-  } else {
-    rep(FALSE, n_row)
-  }
-  emph_row <- if (".emph" %in% names(df)) {
-    ev <- suppressWarnings(as.logical(df[[".emph"]]))
-    !is.na(ev) & ev
-  } else {
-    rep(FALSE, n_row)
-  }
+# The styled flextable, before widths.
+st_flextable <- function(s, font, font_size, font_color, header_bg,
+                         indent_width) {
+  ft <- flextable::flextable(as.data.frame(s$body, check.names = FALSE,
+                                           stringsAsFactors = FALSE))
+  ft <- st_add_header(ft, s)
+  ft <- st_theme(ft, font, font_size, font_color)
+  ft <- st_align_data(ft, length(s$data_cols), s$spanner_i, s$leaf_i)
+  ft <- st_style_header(ft, s, header_bg)
+  ft <- st_style_lines(ft, s$title, s$subtitle, s$caption, font_size)
+  st_style_body(ft, s, indent_width)
+}
 
-  # Two-level spanners: data-column names split on "||". The leaf header text
-  # comes from attr(col, "label").
-  parts <- strsplit(data_cols, "||", fixed = TRUE)
-  top <- vapply(parts, function(p) if (length(p) > 1L) p[[1L]] else "",
-                character(1))
-  leaf <- vapply(data_cols, function(cn) {
-    lbl <- attr(df[[cn]], "label")
-    if (is.null(lbl) || !nzchar(lbl)) {
-      utils::tail(strsplit(cn, "||", fixed = TRUE)[[1L]], 1L)
-    } else {
-      lbl
-    }
-  }, character(1))
-  has_spanner <- any(nzchar(top))
+# TRUE for a non-empty text line.
+st_has <- function(x) !is.null(x) && nzchar(x)
 
-  # ---- interleave section-header rows -----------------------------------
-  # One bold merged row per section restart, where the table view puts its
-  # section rows: for each data row, the outermost changed level and every
-  # level below it emit a header.
+# A dot-prefixed structure column converted by `convert`, NA and absent as `na`.
+st_dot_values <- function(df, col, convert, na) {
+  if (!col %in% names(df)) {
+    return(rep(na, nrow(df)))
+  }
+  v <- suppressWarnings(convert(df[[col]]))
+  v[is.na(v)] <- na
+  v
+}
+
+# The part of each `Top||Leaf` column name before the bars, else "".
+st_spanner_top <- function(cols) {
+  vapply(strsplit(cols, "||", fixed = TRUE),
+         function(p) if (length(p) > 1L) p[[1L]] else "", character(1))
+}
+
+# Spanner and leaf header text (`attr(col, "label")`, else the part after the
+# bars) per column.
+st_column_labels <- function(df, data_cols) {
+  list(
+    top = st_spanner_top(data_cols),
+    leaf = vapply(data_cols, function(cn) {
+      lbl <- attr(df[[cn]], "label")
+      if (is.null(lbl) || !nzchar(lbl)) {
+        utils::tail(strsplit(cn, "||", fixed = TRUE)[[1L]], 1L)
+      } else {
+        lbl
+      }
+    }, character(1))
+  )
+}
+
+# Where the section-header rows go, as the table view draws them: each data
+# row whose outermost section level changed emits a header for that level and
+# every level below it. Returns the output row of each data row (`data_pos`)
+# and the position, text and level of each header (`pos`, `txt`, `lvl`).
+st_section_rows <- function(df, section_cols, continued = FALSE) {
+  n_row <- nrow(df)
   k <- length(section_cols)
   diff_from <- rep(NA_integer_, n_row)
   path_mat <- matrix(character(), nrow = n_row, ncol = 0L)
@@ -198,11 +259,10 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     }
   }
 
-  n_hdr_before <- ifelse(is.na(diff_from), 0L, k - diff_from + 1L)
-  data_pos <- seq_len(n_row) + cumsum(n_hdr_before)
-  hdr_pos <- integer(0)
-  hdr_txt <- character(0)
-  hdr_lvl <- integer(0)
+  n_before <- ifelse(is.na(diff_from), 0L, k - diff_from + 1L)
+  data_pos <- seq_len(n_row) + cumsum(n_before)
+  out <- list(data_pos = data_pos, pos = integer(0), txt = character(0),
+              lvl = integer(0))
   for (L in seq_len(k)) {
     at <- which(!is.na(diff_from) & diff_from <= L)
     if (!length(at)) next
@@ -213,70 +273,64 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
       txt <- paste0(lbl, ": ", txt)
     }
     # A page that opens inside a section says so.
-    if (isTRUE(continued) && length(at) && at[[1L]] == 1L) {
+    if (isTRUE(continued) && at[[1L]] == 1L) {
       txt[[1L]] <- paste0(txt[[1L]], " (continued)")
     }
-    hdr_pos <- c(hdr_pos, data_pos[at] - (k - L + 1L))
-    hdr_txt <- c(hdr_txt, txt)
-    hdr_lvl <- c(hdr_lvl, rep(L, length(at)))
+    out$pos <- c(out$pos, data_pos[at] - (k - L + 1L))
+    out$txt <- c(out$txt, txt)
+    out$lvl <- c(out$lvl, rep(L, length(at)))
   }
+  out
+}
 
-  # Body grid, all character. NA becomes `na_rep` in data rows.
-  total_out <- n_row + length(hdr_pos)
-  body <- matrix("", nrow = total_out, ncol = n_col,
+# The body grid, all character. NA becomes `na_rep` in data rows.
+st_body_grid <- function(df, stub_col, data_cols, sec, na_rep) {
+  body <- matrix("", nrow = nrow(df) + length(sec$pos),
+                 ncol = length(data_cols) + 1L,
                  dimnames = list(NULL, c(stub_col, data_cols)))
-  body[data_pos, 1L] <- as.character(df[[stub_col]])
-  for (j in seq_len(n_data)) {
+  body[sec$data_pos, 1L] <- as.character(df[[stub_col]])
+  for (j in seq_along(data_cols)) {
     v <- as.character(df[[data_cols[j]]])
     v[is.na(v)] <- na_rep %||% ""
-    body[data_pos, j + 1L] <- v
+    body[sec$data_pos, j + 1L] <- v
   }
-  if (length(hdr_pos)) body[hdr_pos, 1L] <- hdr_txt
-  body_df <- as.data.frame(body, check.names = FALSE,
-                           stringsAsFactors = FALSE)
+  if (length(sec$pos)) body[sec$pos, 1L] <- sec$txt
+  body
+}
 
-  ft <- flextable::flextable(body_df)
-
-  # ---- header rows ------------------------------------------------------
-  # Bottom-up: leaf labels, the merged spanner row, then subtitle and title
-  # lines (add_header_lines prepends, so the subtitle goes first). The stub
-  # header comes from the stub column's `label` attribute, else blank.
-  stub_hdr <- stub_header_rows(df[[stub_col]], 1L + has_spanner)
-  stub_label <- utils::tail(stub_hdr$label, 1L)
+# Header rows, bottom-up: leaf labels, the merged spanner row, then the
+# subtitle and title lines (add_header_lines prepends), then the footnote.
+st_add_header <- function(ft, s) {
   # Passed through `values` so a column named `x` is not matched to a formal
   # of set_header_labels().
   ft <- flextable::set_header_labels(
     ft,
-    values = stats::setNames(as.list(c(stub_label, leaf)),
-                             c(stub_col, data_cols))
+    values = stats::setNames(
+      as.list(c(utils::tail(s$stub_hdr$label, 1L), s$leaf)),
+      c(s$stub_col, s$data_cols)
+    )
   )
-  if (has_spanner) {
-    runs <- rle(top)
+  if (length(s$spanner_i)) {
+    runs <- rle(s$top)
     ft <- flextable::add_header_row(
       ft,
-      values = c(stub_hdr$label[[1L]], runs$values),
+      values = c(s$stub_hdr$label[[1L]], runs$values),
       colwidths = c(1L, runs$lengths),
       top = TRUE
     )
   }
-  has_subtitle <- !is.null(subtitle) && nzchar(subtitle)
-  has_title <- !is.null(title) && nzchar(title)
-  if (has_subtitle) ft <- flextable::add_header_lines(ft, subtitle, top = TRUE)
-  if (has_title) ft <- flextable::add_header_lines(ft, title, top = TRUE)
-  title_i <- if (has_title) 1L else integer(0)
-  subtitle_i <- if (has_subtitle) as.integer(has_title) + 1L else integer(0)
-  n_line_rows <- has_title + has_subtitle
-  spanner_i <- if (has_spanner) n_line_rows + 1L else integer(0)
-  leaf_i <- n_line_rows + has_spanner + 1L
-
-  if (!is.null(caption) && nzchar(caption)) {
-    ft <- flextable::add_footer_lines(ft, caption)
+  if (st_has(s$subtitle)) {
+    ft <- flextable::add_header_lines(ft, s$subtitle, top = TRUE)
   }
+  if (st_has(s$title)) ft <- flextable::add_header_lines(ft, s$title, top = TRUE)
+  if (st_has(s$caption)) ft <- flextable::add_footer_lines(ft, s$caption)
+  ft
+}
 
-  # ---- theme ------------------------------------------------------------
+st_theme <- function(ft, font, font_size, font_color) {
   inner <- flextable::fp_border_default(color = "gray", width = 0.5)
   outer <- flextable::fp_border_default(color = "black", width = 1)
-  ft <- ft |>
+  ft |>
     flextable::font(fontname = font, part = "all") |>
     flextable::fontsize(size = font_size, part = "all") |>
     flextable::color(color = font_color, part = "all") |>
@@ -287,38 +341,50 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
     flextable::padding(padding.top = 0, padding.bottom = 0, part = "all") |>
     flextable::valign(valign = "center", part = "all") |>
     flextable::align(align = "left", j = 1L, part = "all")
-  # Numbers are right-aligned, with the leaf header over them. Spanners are
-  # centred.
-  if (n_data > 0L) {
-    data_j <- 1L + seq_len(n_data)
-    ft <- ft |>
-      flextable::align(align = "right", j = data_j, part = "body") |>
-      flextable::align(align = "right", i = leaf_i, j = data_j,
-                       part = "header")
-    if (has_spanner) {
-      ft <- flextable::align(ft, align = "center", i = spanner_i, j = data_j,
-                             part = "header")
-    }
-  }
+}
 
-  # Header styling: leaf and spanner rows bold, with colored bands per column
-  # group from `header_bg` (see resolve_header_bands). Per-column emphasis
-  # (`attr(df[[col]], "strong")` / `"emph"`) replaces the bands with the
-  # emphasis ramp, and emph columns render italic.
-  col_strong <- vapply(
-    data_cols, function(cn) isTRUE(as.logical(attr(df[[cn]], "strong"))),
-    logical(1L)
-  )
-  col_emph <- vapply(
-    data_cols, function(cn) isTRUE(as.logical(attr(df[[cn]], "emph"))),
-    logical(1L)
-  )
+# Numbers are right-aligned, with the leaf header over them.
+st_align_data <- function(ft, n_data, spanner_i, leaf_i) {
+  if (n_data == 0L) {
+    return(ft)
+  }
+  data_j <- 1L + seq_len(n_data)
+  ft <- ft |>
+    flextable::align(align = "right", j = data_j, part = "body") |>
+    flextable::align(align = "right", i = leaf_i, j = data_j, part = "header")
+  if (length(spanner_i)) {
+    ft <- flextable::align(ft, align = "center", i = spanner_i, j = data_j,
+                           part = "header")
+  }
+  ft
+}
+
+# Background and text color on header cells.
+st_fill <- function(ft, bg, text, i, j) {
+  ft |>
+    flextable::bg(bg = bg, i = i, j = j, part = "header") |>
+    flextable::color(color = text, i = i, j = j, part = "header")
+}
+
+# Leaf and spanner rows bold, with a colored band per column group from
+# `header_bg` (see resolve_header_bands). Per-column emphasis replaces the
+# bands with the emphasis ramp, and emph columns render italic.
+st_style_header <- function(ft, s, header_bg) {
+  df <- s$df
+  data_cols <- s$data_cols
+  stub_hdr <- s$stub_hdr
+  hdr_rows <- c(s$spanner_i, s$leaf_i)
+  col_flag <- function(key) {
+    vapply(data_cols, function(cn) isTRUE(as.logical(attr(df[[cn]], key))),
+           logical(1L))
+  }
+  col_strong <- col_flag("strong")
+  col_emph <- col_flag("emph")
   emphasis_mode <- any(col_strong | col_emph)
 
-  hdr_rows <- c(spanner_i, leaf_i)
   ft <- flextable::bold(ft, i = hdr_rows, part = "header")
   # A producer that sets `label_bold` decides for the stub cells itself.
-  if (!is.null(attr(df[[stub_col]], "label_bold", exact = TRUE)) &&
+  if (!is.null(attr(df[[s$stub_col]], "label_bold", exact = TRUE)) &&
         any(!stub_hdr$bold)) {
     ft <- flextable::bold(ft, i = hdr_rows[!stub_hdr$bold], j = 1L,
                           bold = FALSE, part = "header")
@@ -327,91 +393,81 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   band <- if (emphasis_mode) {
     ft_emphasis_bands(col_strong, col_emph)
   } else {
-    resolve_header_bands(header_bg, top, data_cols)
+    resolve_header_bands(header_bg, s$top, data_cols)
   }
   if (!is.null(band)) {
-    # Bands span both the spanner and leaf rows. A column whose group has no
-    # color (NA) is left unfilled.
-    for (j in seq_len(n_data)) {
+    # Bands span the spanner and leaf rows. A column whose group has no color
+    # (NA) is left unfilled.
+    for (j in seq_along(data_cols)) {
       if (is.na(band$bg[j])) next
-      ft <- ft |>
-        flextable::bg(bg = band$bg[j], i = hdr_rows, j = j + 1L,
-                      part = "header") |>
-        flextable::color(color = band$text[j], i = hdr_rows, j = j + 1L,
-                         part = "header")
+      ft <- st_fill(ft, band$bg[j], band$text[j], hdr_rows, j + 1L)
     }
-    # Stub header: colored by the emphasis ramp or a ".stub" entry.
     if (!is.na(band$stub_bg)) {
-      ft <- ft |>
-        flextable::bg(bg = band$stub_bg, i = hdr_rows, j = 1L,
-                      part = "header") |>
-        flextable::color(color = band$stub_text, i = hdr_rows, j = 1L,
-                         part = "header")
+      ft <- st_fill(ft, band$stub_bg, band$stub_text, hdr_rows, 1L)
     }
   }
-  if (emphasis_mode) {
-    for (j in which(col_emph)) {
-      ft <- flextable::italic(ft, i = hdr_rows, j = j + 1L, part = "header")
-    }
+  for (j in which(col_emph)) {
+    ft <- flextable::italic(ft, i = hdr_rows, j = j + 1L, part = "header")
   }
+  ft
+}
 
-  # Title / subtitle lines are already merged across the width.
-  if (has_title) {
+# Title and subtitle lines (already merged across the width) and the footnote.
+st_style_lines <- function(ft, title, subtitle, caption, font_size) {
+  if (st_has(title)) {
     ft <- ft |>
-      flextable::bold(i = title_i, part = "header") |>
-      flextable::fontsize(size = font_size + 2, i = title_i,
-                          part = "header") |>
-      flextable::align(align = "center", i = title_i, part = "header")
+      flextable::bold(i = 1L, part = "header") |>
+      flextable::fontsize(size = font_size + 2, i = 1L, part = "header") |>
+      flextable::align(align = "center", i = 1L, part = "header")
   }
-  if (has_subtitle) {
+  if (st_has(subtitle)) {
+    i <- as.integer(st_has(title)) + 1L
     ft <- ft |>
-      flextable::italic(i = subtitle_i, part = "header") |>
-      flextable::align(align = "center", i = subtitle_i, part = "header")
+      flextable::italic(i = i, part = "header") |>
+      flextable::align(align = "center", i = i, part = "header")
   }
-  if (!is.null(caption) && nzchar(caption)) {
+  if (st_has(caption)) {
     ft <- ft |>
       flextable::italic(i = 1L, part = "footer") |>
       flextable::fontsize(size = max(font_size - 4, 8), i = 1L,
                           part = "footer") |>
       flextable::align(align = "left", i = 1L, part = "footer")
   }
+  ft
+}
 
-  # ---- body row styling -------------------------------------------------
-  # Section headers: bold, merged across the width, indented one step per
-  # nesting level above 1. Data rows: .indent padding on the stub and
-  # .strong / .emph across the row.
-  if (length(hdr_pos)) {
-    for (r in seq_along(hdr_pos)) {
-      ft <- flextable::merge_h_range(ft, i = hdr_pos[r], j1 = 1L, j2 = n_col)
+# Section headers: bold, merged across the width, indented one step per
+# nesting level above 1. Data rows: `.indent` padding on the stub, `.strong` /
+# `.emph` across the row, and per-cell paint (`.bg:<col>` / `.fg:<col>`, see
+# annotation_cell_paint()).
+st_style_body <- function(ft, s, indent_width) {
+  sec <- s$sec
+  data_pos <- sec$data_pos
+  data_cols <- s$data_cols
+  indent <- s$indent
+  if (length(sec$pos)) {
+    for (r in seq_along(sec$pos)) {
+      ft <- flextable::merge_h_range(ft, i = sec$pos[r], j1 = 1L,
+                                     j2 = length(data_cols) + 1L)
     }
-    ft <- flextable::bold(ft, i = hdr_pos, part = "body")
-    deep <- hdr_lvl > 1L
-    if (any(deep)) {
-      for (lvl in unique(hdr_lvl[deep])) {
-        ft <- flextable::padding(
-          ft,
-          i = hdr_pos[hdr_lvl == lvl], j = 1L,
-          padding.left = (lvl - 1L) * indent_width
-        )
-      }
+    ft <- flextable::bold(ft, i = sec$pos, part = "body")
+    for (lvl in unique(sec$lvl[sec$lvl > 1L])) {
+      ft <- flextable::padding(ft, i = sec$pos[sec$lvl == lvl], j = 1L,
+                               padding.left = (lvl - 1L) * indent_width)
     }
   }
   for (lvl in sort(unique(indent[indent > 0L]))) {
-    ft <- flextable::padding(
-      ft,
-      i = data_pos[indent == lvl], j = 1L,
-      padding.left = lvl * indent_width
-    )
+    ft <- flextable::padding(ft, i = data_pos[indent == lvl], j = 1L,
+                             padding.left = lvl * indent_width)
   }
-  if (any(bold_row)) {
-    ft <- flextable::bold(ft, i = data_pos[bold_row], part = "body")
+  if (any(s$bold_row)) {
+    ft <- flextable::bold(ft, i = data_pos[s$bold_row], part = "body")
   }
-  if (any(emph_row)) {
-    ft <- flextable::italic(ft, i = data_pos[emph_row], part = "body")
+  if (any(s$emph_row)) {
+    ft <- flextable::italic(ft, i = data_pos[s$emph_row], part = "body")
   }
-  # Per-cell paint (`.bg:<col>` / `.fg:<col>`, see annotation_cell_paint()).
-  for (j in seq_len(n_data)) {
-    paint <- annotation_cell_paint(df, data_cols[j])
+  for (j in seq_along(data_cols)) {
+    paint <- annotation_cell_paint(s$df, data_cols[j])
     if (is.null(paint)) next
     for (hex in unique(stats::na.omit(paint$bg))) {
       ft <- flextable::bg(ft, i = data_pos[which(paint$bg == hex)],
@@ -422,91 +478,57 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
                              j = j + 1L, color = hex, part = "body")
     }
   }
+  ft
+}
 
-  # ---- widths -----------------------------------------------------------
-  # "measured" asks each column what its text needs (see
-  # ft_measured_widths()). "even" gives the stub `first_col_width` and splits
-  # the rest. Without `fit_width` the raw first/other widths apply and may
-  # exceed the slide.
+# Cell padding and widths. The stub's left padding carries the row indents, so
+# only its right edge changes.
+st_set_widths <- function(ft, widths, cell_padding, n_data) {
+  if (!is.null(cell_padding) && n_data > 0L) {
+    ft <- ft |>
+      flextable::padding(j = 1L + seq_len(n_data),
+                         padding.left = cell_padding,
+                         padding.right = cell_padding, part = "all") |>
+      flextable::padding(j = 1L, padding.right = cell_padding, part = "all")
+  }
+  for (j in seq_along(widths)) {
+    ft <- flextable::width(ft, j = j, width = widths[[j]])
+  }
+  ft
+}
+
+# Column widths in inches, and the cell padding they were measured with.
+# "measured" asks each column what its text needs (see ft_measured_widths(),
+# whose arguments are `measure_args`). "even" gives the stub `first_col_width`
+# and splits the rest. Without `fit_width` the raw first / other widths apply
+# and may exceed the slide.
+st_fit_widths <- function(measure_args, n_data, col_widths, fit_width,
+                          cell_padding, first_col_width, other_cols_width,
+                          indent_width) {
+  measure_args$stub_indent <- measure_args$stub_indent * indent_width
   widths <- NULL
-  if (isTRUE(auto_width)) {
-    ft <- flextable::autofit(ft)
-  } else {
-    if (is.numeric(col_widths) && length(col_widths) == n_col) {
-      # Widths handed in by the pptx writer, the same on every page.
-      widths <- col_widths
-    } else if (!is.null(fit_width) && n_data > 0L &&
-          identical(col_widths, "measured")) {
-
-      measure <- function(pad) {
-        ft_measured_widths(
-          stub = body[data_pos, 1L],
-          stub_indent = indent * indent_width,
-          stub_label = stub_hdr$label,
-          cells = body[data_pos, -1L, drop = FALSE],
-          leaf = leaf, top = top,
-          font = font, font_size = font_size, total = fit_width,
-          banner = c(if (has_title) title, if (has_subtitle) subtitle),
-          pad = pad
-        )
-      }
-
-      pad <- ft_pad_width(cell_padding)
-      widths <- measure(pad)
-
-      # Padding is given back only when the data cells no longer fit. A header
-      # that merely wraps keeps the spacing.
-      if (isTRUE(attr(widths, "cell_squeeze")) && is.null(cell_padding)) {
-        cell_padding <- TIGHT_PAD
-        pad <- ft_pad_width(cell_padding)
-        widths <- measure(pad)
-      }
+  if (is.numeric(col_widths) && length(col_widths) == n_data + 1L) {
+    # Widths handed in by the pptx writer, the same on every page.
+    widths <- col_widths
+  } else if (!is.null(fit_width) && n_data > 0L &&
+               identical(col_widths, "measured")) {
+    measure <- function(pad) {
+      do.call(ft_measured_widths, c(measure_args, list(pad = pad)))
     }
-    if (is.null(widths)) {
-      if (!is.null(fit_width) && n_data > 0L) {
-        first_col_width <- min(first_col_width, fit_width * 0.5)
-        other_cols_width <- (fit_width - first_col_width) / n_data
-      }
-      widths <- c(first_col_width, rep(other_cols_width, n_data))
-    }
-    if (!is.null(cell_padding) && n_data > 0L) {
-      # The stub's left padding carries the row indents, so only its right
-      # edge changes.
-      ft <- ft |>
-        flextable::padding(j = 1L + seq_len(n_data),
-                           padding.left = cell_padding,
-                           padding.right = cell_padding, part = "all") |>
-        flextable::padding(j = 1L, padding.right = cell_padding, part = "all")
-    }
-    for (j in seq_along(widths)) {
-      ft <- flextable::width(ft, j = j, width = widths[[j]])
+    widths <- measure(ft_pad_width(cell_padding))
+    # Padding is given back only when the data cells no longer fit. A header
+    # that merely wraps keeps the spacing.
+    if (isTRUE(attr(widths, "cell_squeeze")) && is.null(cell_padding)) {
+      cell_padding <- TIGHT_PAD
+      widths <- measure(ft_pad_width(cell_padding))
     }
   }
-
-  attr(ft, "pptx_left") <- pptx_left
-  attr(ft, "pptx_top") <- pptx_top
-  # The source frame, so pptx_add_exhibit() can rebuild the table in pages.
-  attr(ft, "exhibit_data") <- data
-  # The input row of each rendered body row, `NA` for synthesized section
-  # headers.
-  row_map <- rep(NA_integer_, total_out)
-  row_map[data_pos] <- seq_len(n_row)
-  attr(ft, "row_map") <- row_map
-  # `cell = TRUE` means the columns are narrower than their contents, which
-  # row splitting cannot fix. The pptx writer steps the font down instead.
-  attr(ft, "width_squeeze") <- c(
-    header = isTRUE(attr(widths, "header_squeeze")),
-    cell = isTRUE(attr(widths, "cell_squeeze"))
-  )
-  # The share of the longest header word the tightest column keeps (1 when
-  # nothing breaks).
-  attr(ft, "word_fit") <- attr(widths, "word_fit") %||% 1
-  # What the width pass decided, so pages of one table share the layout.
-  attr(ft, "layout_plan") <- list(
-    col_widths = as.numeric(widths),
-    cell_padding = cell_padding
-  )
-  # The header row that carries the leaf labels.
-  attr(ft, "leaf_row") <- leaf_i
-  ft
+  if (is.null(widths)) {
+    if (!is.null(fit_width) && n_data > 0L) {
+      first_col_width <- min(first_col_width, fit_width * 0.5)
+      other_cols_width <- (fit_width - first_col_width) / n_data
+    }
+    widths <- c(first_col_width, rep(other_cols_width, n_data))
+  }
+  list(widths = widths, cell_padding = cell_padding)
 }

@@ -131,7 +131,7 @@ test_that("the report call counts the board's subjects for the Big N", {
 test_that("the row slicer keeps per-row and per-column fields apart", {
   ex <- demo_exhibit()
   m <- ex$cells
-  cut <- rp_slice(m, c(1L, 3L))
+  cut <- paint_slice(m, c(1L, 3L))
 
   expect_identical(cut$n, 2L)
   expect_identical(cut$label, m$label[c(1L, 3L)])
@@ -155,7 +155,7 @@ test_that("the pager terminates, covers every row and never orphans a group", {
   )
 
   for (per in c(1L, 2L, 3L, 4L, 5L, 7L, 20L)) {
-    pages <- rp_page_rows(m, per)
+    pages <- paint_page_rows(m, per)
     rows <- as.integer(unlist(pages))
 
     # every row placed
@@ -240,9 +240,9 @@ test_that("a slide row grows to hold every colour level and its number", {
   prep <- groups_prepare(d, by = "TERM", summaries = sm)
   on <- groups_cells(prep)
   off <- groups_cells(prep, cfg = list(value_labels = FALSE))
-  lay <- rp_layout(on, prep, 9)
-  h_on <- rp_heights(on, prep, lay, 9)
-  h_off <- rp_heights(off, prep, rp_layout(off, prep, 9), 9)
+  lay <- paint_layout(on, prep, 9)
+  h_on <- paint_heights(on, prep, lay, 9)
+  h_off <- paint_heights(off, prep, paint_layout(off, prep, 9), 9)
   # Three levels per row: the row grows to hold the full lanes, and a
   # little more again for their numbers.
   expect_true(all(h_off$rows > h_off$row_h))
