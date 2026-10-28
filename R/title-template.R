@@ -1,19 +1,16 @@
 # Dynamic block titles ------------------------------------------------------
 #
-# The chart (and table) blocks take free-text `title` / `subtitle` / `caption`
-# state. The text may reference the CURRENT data through a small, closed set
-# of `{...}` tokens, resolved server-side on every render -- so a title stays
-# correct as upstream blocks (value filter, picker) reshape the data:
+# The chart and table blocks take free-text `title` / `subtitle` / `caption`
+# state. The text may reference the current data through a closed set of
+# `{...}` tokens, resolved on every render, so a title follows upstream blocks
+# (value filter, picker) as they reshape the data:
 #
 #   {col}             the distinct values of column `col`, collapsed with
 #                     ", " (factor columns in level order, others in order of
-#                     appearance). An upstream value filter on ARM makes
-#                     `{ARM}` read "Placebo" -- no channel needed, the
-#                     selection is already visible in the data.
+#                     appearance). After an upstream value filter on ARM,
+#                     `{ARM}` reads "Placebo".
 #   {label(col)}      the column's variable label attribute (falls back to
-#                     the column name). The picker block stamps the picked
-#                     measure's label onto its `into` column, so
-#                     `{label(value)}` follows the pick.
+#                     the column name).
 #   {n}               the number of rows.
 #   {n_distinct(col)} the number of distinct values of `col`.
 #   {highlight}       the values a chart highlights ("Switzerland and
@@ -21,106 +18,86 @@
 #                     frame's `blockr_highlight` attribute, which the chart
 #                     block sets; elsewhere it is a column name like any other.
 #   {filters}         the filter trail: what the filters upstream of this
-#                     block actually applied, in the order they applied it
-#                     ("SEX = F; TRTEMFL"). Written onto the data by the
-#                     filter blocks themselves -- see
-#                     `blockr.dm::filter_trail()` -- so it reports the filters
-#                     on THIS block's path and no others. A block fed from a
-#                     branch the global filter does not reach says so by
-#                     leaving it out.
+#                     block applied, in order ("SEX = F; TRTEMFL"). The filter
+#                     blocks write it onto the data (see
+#                     `blockr.dm::filter_trail()`). It is "" when nothing is
+#                     filtered, and a caption that resolves to "" hides its
+#                     band.
 #
-#                     Resolves to "" when nothing is filtered, and a caption
-#                     that resolves to "" hides its band. So `{filters}` on
-#                     its own disappears on an unfiltered board, whereas
-#                     "Filtered: {filters}" leaves the label behind.
-#
-# Tokens are data lookups, never code: nothing is evaluated (the same
-# decision as dropping glue from the ggplot exprs). A token naming a column
-# the data does not carry resolves to "" instead of erroring -- the
-# tt_fields policy: display text must not take the block down when an
-# upstream edit drops a column.
+# Tokens are data lookups and nothing is evaluated. A token naming a column
+# the data does not carry resolves to "" instead of erroring, so an upstream
+# edit that drops a column does not take the block down.
 
 title_column_label <- function(data, col) {
   if (!is.data.frame(data) || !col %in% names(data)) {
     return("")
   }
 
+  has_text <- function(x) {
+    is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
+  }
+
   direct <- attr(data[[col]], "label", exact = TRUE)
   source <- attr(data[[col]], "blockr_source", exact = TRUE)
 
   source_label <- NULL
-  if (is.character(source) && length(source) == 1L &&
-      !is.na(source) && nzchar(source)) {
-    if (source %in% names(data)) {
-      source_label <- attr(data[[source]], "label", exact = TRUE)
+  if (has_text(source)) {
+    source_label <- if (source %in% names(data)) {
+      attr(data[[source]], "label", exact = TRUE)
     }
-    if (!(is.character(source_label) && length(source_label) == 1L &&
-          !is.na(source_label) && nzchar(source_label))) {
+    if (!has_text(source_label)) {
       source_label <- source
     }
   }
 
-  if (is.character(direct) && length(direct) == 1L &&
-      !is.na(direct) && nzchar(direct) && !identical(direct, col)) {
+  if (has_text(direct) && !identical(direct, col)) {
     return(direct)
   }
   if (!is.null(source_label)) {
     return(source_label)
   }
-  if (is.character(direct) && length(direct) == 1L &&
-      !is.na(direct) && nzchar(direct)) {
+  if (has_text(direct)) {
     return(direct)
   }
   col
 }
 
 # How many distinct values a `{col}` token spells out before eliding with
-# ", ...". Guards against `{USUBJID}` turning the title into a subject list.
+# "...". Keeps `{USUBJID}` from turning the title into a subject list.
 TITLE_MAX_VALUES <- 8L
 
-# Two more forms, for the sentence a block writes about itself (see
-# blockr.docs design-system/pinned-controls.md):
+# Block state forms, for the sentence a block writes about itself:
 #
 #   {@arg}            the current value of the block argument `arg`, printed
-#                     literally. `{@color}` reads "TRT" -- NOT the values in
-#                     column TRT, which is what the bare `{TRT}` token does.
-#                     A word printed from an `@` token is a SLOT: on the face
-#                     it is clickable and opens that argument's own control.
+#                     literally. `{@color}` reads "TRT", not the values in
+#                     column TRT. On the face the word is a slot: clicking it
+#                     opens that argument's control.
 #   {label(@arg)}     the variable label of the column the argument names,
-#                     falling back to the column name. Still a slot for `arg`:
-#                     the reading is derived, the editor is unchanged.
-#   {n_distinct(@arg)} how many distinct values that column has. NOT a slot --
-#                     a count is not something a reader can set.
+#                     falling back to the column name. Also a slot for `arg`.
+#   {n_distinct(@arg)} how many distinct values that column has. Not a slot.
 #   {@arg in a, b}    a slot whose menu offers only `a` and `b` (plus the
 #                     current pick). Works inside `label()` too:
-#                     `{label(@value in AVAL, CHG, PCHG)}`. Optional; without
-#                     a list the menu offers what the gear does.
+#                     `{label(@value in AVAL, CHG, PCHG)}`.
 #
-#   [ ... ]           a segment that leaves with its token. Any token inside
-#                     resolving to "" drops the whole segment, so
-#                     "[, faceted by {@facet}]" says nothing at all when facet
-#                     is unset, rather than "faceted by (none)". The engine
-#                     already had half of this rule: a caption resolving to ""
-#                     hides its band.
+#   [ ... ]           a segment that leaves with its token. If any token inside
+#                     resolves to "", the whole segment drops, so
+#                     "[, faceted by {@facet}]" says nothing when facet is
+#                     unset.
 #
-# One walk serves both renderers. `title_template_parts()` returns the pieces
-# and `resolve_title_template()` pastes them, so an export and the block can
-# never disagree about what the sentence says.
+# `title_template_parts()` returns the pieces and `resolve_title_template()`
+# pastes them, so an export and the block face say the same sentence.
 
-# `\n` written in a template is a line break. Every surface a template is
-# typed on is one line -- the gear's text field, a composer script's `#|`
-# declaration -- so the two characters are the only way to say "break here",
-# and they are the same two an R string takes for it in a block ctor. The
-# bands render them (`white-space: pre-line`), which is why the rule is the
-# same for the title, the subtitle and the caption.
+# `\n` written in a template is a line break. Templates are typed on one-line
+# surfaces (the gear's text field, a composer `#|` declaration), so the two
+# characters are the way to say "break here". The bands render them with
+# `white-space: pre-line`.
 tt_line_breaks <- function(template) {
   if (is.na(template)) return(template)
   gsub("\\n", "\n", template, fixed = TRUE)
 }
 
-# Split a template into segments. Each is `list(text=, optional=)`; an
-# unmatched "[" is literal text, because a template is display copy and must
-# not error.
+# Split a template into segments, each `list(text=, optional=)`. An unmatched
+# "[" is literal text.
 split_template_segments <- function(template) {
   out <- list()
   buf <- ""
@@ -150,7 +127,7 @@ split_template_segments <- function(template) {
 
 # The pieces of one segment: plain text, and one piece per {token}. `arg` is
 # set on the pieces a reader can click; `empty` marks a token that resolved to
-# nothing, which is what makes an optional segment disappear.
+# nothing, which drops an optional segment.
 resolve_template_chunk <- function(text, data, args) {
   starts <- gregexpr("\\{[^{}]+\\}", text)[[1L]]
   if (identical(starts[[1L]], -1L)) {
@@ -184,10 +161,8 @@ title_template_parts <- function(template, data, args = list()) {
   template <- tt_line_breaks(as.character(template)[[1L]])
   if (!length(template) || is.na(template) || !nzchar(template)) return(list())
   out <- list()
-  # Arguments whose clause dropped. They are the ones a reader cannot reach:
-  # the word that would open them left with the segment, so the face offers
-  # them at the end of the sentence instead. Without this, promoting `facet`
-  # on a chart that has no facet yet promotes nothing.
+  # Arguments whose clause dropped. The word that would open them left with
+  # the segment, so the face offers them at the end of the sentence.
   offers <- character()
   for (seg in split_template_segments(template)) {
     parts <- resolve_template_chunk(seg$text, data, args)
@@ -203,8 +178,7 @@ title_template_parts <- function(template, data, args = list()) {
     }
     out <- c(out, parts)
   }
-  # Adjacent plain pieces merge, so the face renders one text node per run
-  # instead of one per template fragment.
+  # Adjacent plain pieces merge into one text node.
   merged <- list()
   for (p in out) {
     last <- if (length(merged)) merged[[length(merged)]] else NULL
@@ -214,7 +188,7 @@ title_template_parts <- function(template, data, args = list()) {
       merged <- c(merged, list(p))
     }
   }
-  # An argument named twice, once in a clause that stayed, is not on offer.
+  # An argument also named in a clause that stayed is not on offer.
   kept <- vapply(
     merged, function(p) if (is.null(p$arg)) NA_character_ else p$arg,
     character(1L)
@@ -227,51 +201,44 @@ title_template_parts <- function(template, data, args = list()) {
 resolve_title_template <- function(template, data, args = list()) {
   template <- tt_line_breaks(as.character(template)[[1L]])
   if (!nzchar(template)) return(template)
-  # Nothing to resolve, and no data needed to say so.
   if (!grepl("[{[]", template)) return(template)
-  # Without a frame the data tokens resolve to "" rather than erroring, which
-  # is the tt_fields policy: display text must not take the block down.
+  # Without a frame the data tokens resolve to "".
   if (!is.data.frame(data)) data <- data.frame()
   parts <- title_template_parts(template, data, args)
   paste0(vapply(parts, function(p) p$text, character(1L)), collapse = "")
 }
 
 # Returns `list(text=, arg=)`: the resolved string, and the argument whose
-# control the word opens when it is one.
+# control the word opens when it is one. `by` ("name" or "label") says which
+# half of the option the sentence printed, so the menu can lead with the same.
 resolve_title_token <- function(token, data, args = list()) {
   plain <- function(x) list(text = x, arg = NULL)
 
-  # `@arg` forms first: they read block state, not the data, and a bare
-  # `{@color}` must print the argument's VALUE rather than the values in the
-  # column it names.
+  # `@arg` forms read block state, not the data, so a bare `{@color}` prints
+  # the argument's value rather than the values in the column it names.
   m <- regmatches(token, regexec("^@\\s*([^()@]+?)\\s*$", token))[[1L]]
   if (length(m) == 2L) {
     nm <- slot_arg_name(m[[2L]])
     return(list(text = arg_token_value(nm, args), arg = nm, by = "name"))
   }
   m <- regmatches(
-    token, regexec("^([A-Za-z_.][A-Za-z0-9_.]*)\\(\\s*@\\s*([^()@]+?)\\s*\\)$", token)
+    token,
+    regexec("^([A-Za-z_.][A-Za-z0-9_.]*)\\(\\s*@\\s*([^()@]+?)\\s*\\)$", token)
   )[[1L]]
   if (length(m) == 3L) {
-    m[[3L]] <- slot_arg_name(m[[3L]])
-    col <- arg_token_value(m[[3L]], args)
-    if (!nzchar(col)) {
-      # Empty, but still this argument's slot. Dropping the `arg` here would
-      # lose the offer as well as the word: a clause written
-      # `[, split by {label(@facet)}]` would vanish with nothing left to
-      # switch faceting on with. A count is the exception, as below.
-      if (identical(m[[2L]], "n_distinct")) return(plain(""))
-      return(list(text = "", arg = m[[3L]],
-                  by = if (identical(m[[2L]], "label")) "label" else "name"))
+    fn <- m[[2L]]
+    nm <- slot_arg_name(m[[3L]])
+    col <- arg_token_value(nm, args)
+    text <- if (nzchar(col)) {
+      resolve_title_token(paste0(fn, "(", col, ")"), data, args)$text
+    } else {
+      ""
     }
-    inner <- resolve_title_token(paste0(m[[2L]], "(", col, ")"), data, args)
-    # A count is not a value a reader can set, so it is text, not a slot.
-    if (identical(m[[2L]], "n_distinct")) return(plain(inner$text))
-    # `by` travels so the menu can lead with the same half of the option the
-    # sentence printed: click "Actual Treatment" and a list whose rows read
-    # "TRTA / Actual Treatment" bolds a string that is nowhere on screen.
-    return(list(text = inner$text, arg = m[[3L]],
-                by = if (identical(m[[2L]], "label")) "label" else "name"))
+    # A count is text, not a value a reader can set. An empty slot keeps its
+    # `arg`, so a dropped clause can still offer the argument.
+    if (identical(fn, "n_distinct")) return(plain(text))
+    return(list(text = text, arg = nm,
+                by = if (identical(fn, "label")) "label" else "name"))
   }
 
   if (identical(token, "n")) return(plain(format(nrow(data), big.mark = "")))
@@ -280,35 +247,22 @@ resolve_title_token <- function(token, data, args = list()) {
   if (identical(token, "highlight") && !is.null(hl)) return(plain(hl))
 
   if (identical(token, "filters")) {
-    # Read straight off the frame rather than threaded in: every caller hands
-    # the resolver the block's own input, and the one place that subsets
-    # columns first (the chart block's `plain_data()`) carries the attribute
-    # across deliberately. Names are the producing block ids, used for
-    # deduplication upstream; a reader wants the clauses.
+    # Names are the producing block ids; a reader wants the clauses.
     trail <- attr(data, "blockr_filters", exact = TRUE)
     trail <- trail[!is.na(trail) & nzchar(trail)]
     if (!length(trail)) return(plain(""))
     return(plain(paste(unname(trail), collapse = "; ")))
   }
 
-  fn_arg <- function(fn) {
-    m <- regmatches(
-      token,
-      regexec(paste0("^", fn, "\\(\\s*([^()]+?)\\s*\\)$"), token)
-    )[[1L]]
-    if (length(m) == 2L) m[[2L]] else NULL
-  }
-
-  col <- fn_arg("label")
-  if (!is.null(col)) {
-    if (!col %in% names(data)) return(plain(""))
-    return(plain(title_column_label(data, col)))
-  }
-
-  col <- fn_arg("n_distinct")
-  if (!is.null(col)) {
-    if (!col %in% names(data)) return(plain(""))
-    v <- data[[col]]
+  m <- regmatches(
+    token, regexec("^(label|n_distinct)\\(\\s*([^()]+?)\\s*\\)$", token)
+  )[[1L]]
+  if (length(m) == 3L) {
+    if (!m[[3L]] %in% names(data)) return(plain(""))
+    if (identical(m[[2L]], "label")) {
+      return(plain(title_column_label(data, m[[3L]])))
+    }
+    v <- data[[m[[3L]]]]
     return(plain(format(length(unique(v[!is.na(v)])), big.mark = "")))
   }
 
@@ -322,16 +276,14 @@ resolve_title_token <- function(token, data, args = list()) {
   }
   if (!length(vals)) return(plain(""))
   if (length(vals) > TITLE_MAX_VALUES) {
-    # Horizontal ellipsis, \u-escaped rather than literal: R sources must
-    # stay ASCII (R CMD check "non-ASCII characters" warning).
+    # \u-escaped: R sources must stay ASCII.
     vals <- c(vals[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
   plain(paste(vals, collapse = ", "))
 }
 
 # A slot may name its choices: `{@func in mean, median}`,
-# `{label(@value in AVAL, CHG, PCHG)}`. The list only narrows what the word's
-# menu offers; everything else about the token reads the bare name.
+# `{label(@value in AVAL, CHG, PCHG)}`. The list only narrows the word's menu.
 SLOT_CHOICES_RE <- "^([^[:space:]]+)[[:space:]]+in[[:space:]]+(.*)$"
 
 slot_arg_name <- function(x) {
@@ -341,8 +293,7 @@ slot_arg_name <- function(x) {
 }
 
 # Every `{... @arg in a, b ...}` list in the given templates, as a named list
-# of character vectors keyed by argument. Read off the text alone, so the
-# chart can ship the listed columns before any data is resolved. An argument
+# of character vectors keyed by argument, read off the text alone. An argument
 # listed twice gets the union, in the order written.
 template_slot_choices <- function(templates) {
   out <- list()
@@ -374,47 +325,46 @@ arg_token_value <- function(name, args) {
   v
 }
 
-# The three-tier title contract shared by the viz blocks (the table block's
-# `color` split, applied to text): NULL = auto (use `auto`, normally the
-# data frame's label attribute -- the gt block's existing fallback), "" =
-# explicitly none (a label-carrying input whose title the user turned off),
-# anything else = a template resolved against the data. Returns NULL when
-# there is nothing to show, so JS falsy checks hide the band.
+# The auto tier of a title: a label written upstream, shown verbatim and never
+# treated as a template. NULL when empty.
+auto_title <- function(auto) {
+  auto <- if (is.character(auto) && length(auto)) auto[[1L]]
+  if (!is.null(auto) && nzchar(auto)) auto
+}
+
+# The three-tier title contract shared by the viz blocks: NULL = auto (use
+# `auto`, normally the data frame's label attribute), "" = explicitly none,
+# anything else = a template resolved against the data. Returns NULL when there
+# is nothing to show, so JS falsy checks hide the band.
 resolve_block_title <- function(x, data, auto = NULL, args = list()) {
   if (is.null(x)) {
-    # The auto tier is a label written upstream, not user text: shown
-    # verbatim, never treated as a template.
-    auto <- if (is.character(auto) && length(auto)) auto[[1L]] else NULL
-    if (!is.null(auto) && nzchar(auto)) return(auto) else return(NULL)
+    return(auto_title(auto))
   }
   x <- as.character(x)[[1L]]
   if (is.na(x) || !nzchar(trimws(x))) return(NULL)
   resolve_title_template(x, data, args)
 }
 
-# The same three tiers, as pieces. The face renders these; every other
-# renderer takes the string from `resolve_block_title()`. NULL when there is
-# nothing to show, and a single plain piece for the auto tier, which is a
-# label written upstream rather than a template.
+# The same three tiers, as pieces for the face; every other renderer takes the
+# string from `resolve_block_title()`. NULL when there is nothing to show, and
+# one plain piece for the auto tier.
 block_title_parts <- function(x, data, auto = NULL, args = list()) {
   if (is.null(x)) {
-    auto <- if (is.character(auto) && length(auto)) auto[[1L]] else NULL
-    if (is.null(auto) || !nzchar(auto)) return(NULL)
-    return(list(list(text = auto)))
+    auto <- auto_title(auto)
+    return(if (!is.null(auto)) list(list(text = auto)))
   }
   x <- as.character(x)[[1L]]
   if (is.na(x) || !nzchar(trimws(x))) return(NULL)
   parts <- title_template_parts(x, data, args)
   offers <- attr(parts, "offers", exact = TRUE)
   if (!length(parts)) {
-    # Every clause dropped: there is no sentence, and the offers are all
-    # there is to show.
+    # Every clause dropped: only the offers are left to show.
     if (!length(offers)) return(NULL)
     out <- list()
     attr(out, "offers") <- offers
     return(out)
   }
-  # `empty` is a parser flag; the client only needs the word and its argument.
+  # `empty` is a parser flag; the client needs the word and its argument.
   out <- lapply(parts, function(p) {
     if (is.null(p$arg)) {
       list(text = p$text)
@@ -426,14 +376,11 @@ block_title_parts <- function(x, data, auto = NULL, args = list()) {
   out
 }
 
-# The table-level display attributes used for the auto tiers: `label` (the
-# title -- the established display-name attribute), `subtitle` and `caption`.
-# Producers stamp them on the annotated df (e.g. the composer methods recover
-# them from the gt heading / source notes). Read from the block's RAW input:
-# as_plain_df() subsets columns, and base subsetting drops data-frame-level
-# attributes, so they must be captured before that coercion. Non-data-frame
-# inputs (composer tables) are coerced once through the annotated-df generic,
-# which is where their attributes live.
+# The table-level attributes behind the auto tiers: `label` (the title),
+# `subtitle` and `caption`. Producers stamp them on the annotated df. Read
+# them from the block's raw input, before as_plain_df(), whose column subsetting
+# drops data-frame attributes. Non-data-frame inputs are coerced through
+# as_annotated_df().
 input_display_attrs <- function(d) {
   if (!is.data.frame(d)) {
     d <- tryCatch(as_annotated_df(d), error = function(e) NULL)
