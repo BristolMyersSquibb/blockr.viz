@@ -436,3 +436,17 @@ test('bar_width: narrow, medium and wide set the table width; fit leaves it', ()
     assert.equal(t.$('table').getAttribute('data-summarize-width'), w === 'fit' ? null : w, w);
   }
 });
+
+test("the picture takes R's pixel ratio, else 2", async () => {
+  const scales = [];
+  const env = loadTable({ before: (win) => {
+    win.snapdom = { toCanvas: (el, o) => {
+      scales.push(o.scale);
+      return Promise.resolve({ toDataURL: () => 'data:image/png;base64,AAA' });
+    } };
+  } });
+  await env.V.table.picture(payload({ data: groups(), config: G, derived: { capture_ratio: 3 } }), 500);
+  await env.V.table.picture(payload({ data: groups(), config: G }), 500);
+  await env.V.table.picture(payload({ data: groups(), config: G, derived: { capture_ratio: 3 } }), 500, 1);
+  assert.deepEqual(scales, [3, 2, 1]);
+});

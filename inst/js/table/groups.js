@@ -17,8 +17,6 @@
   const T = V.table;
   const esc = V.util.esc;
 
-  /** The picture's pixel ratio unless R says otherwise. */
-  const RATIO = 2;
 
   /**
    * The legend: one titled group per colour column.
@@ -175,6 +173,14 @@
   }
 
   /**
+   * The picture's pixel ratio: R's (`derived.capture_ratio`, the board's
+   * option), 2 on a payload without one.
+   * @param {VizPayload} p
+   */
+  const pictureRatio = (p) =>
+    Number(/** @type {TableDerived} */ (p.derived || {}).capture_ratio) || 2;
+
+  /**
    * A picture of a groups table drawn off screen from `payload`: every row,
    * the titles, legend and caption, no tools. For the Image and PowerPoint
    * downloads, at the width the export asks for.
@@ -197,7 +203,8 @@
       view.still = true;
       view.render(payload);
       return settled(scope)
-        .then(() => snap.toCanvas(frame.el, { scale: ratio || RATIO, dpr: 1, embedFonts: true,
+        .then(() => snap.toCanvas(frame.el, { scale: ratio || pictureRatio(payload), dpr: 1,
+                                              embedFonts: true,
                                               backgroundColor: '#ffffff' }))
         .then((/** @type {HTMLCanvasElement} */ canvas) => ({
           png: canvas.toDataURL('image/png'),
