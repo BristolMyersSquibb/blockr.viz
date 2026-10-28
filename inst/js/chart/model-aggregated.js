@@ -206,11 +206,13 @@
    * The category slots of a distribution panel and what each one draws: one
    * per group, or per (group, level) when colour splits the marks. An empty
    * (group, level) slot is dropped unless a fixed facet grid needs every
-   * slot in every panel.
+   * slot in every panel. One panel is no grid: a facet column the data does
+   * not hold (a board's "Subgroup" before a subgroup is picked) puts every
+   * row in one panel, and that panel keeps no empty slot.
    * @param {{ rows: any[], ix: any, cfg: Record<string, any>, groups: string[],
-   *           levels: string[], facet: string }} p
+   *           levels: string[], facet: string, panels: number }} p
    */
-  const distributionSlots = ({ rows, ix, cfg, groups, levels, facet }) => {
+  const distributionSlots = ({ rows, ix, cfg, groups, levels, facet, panels }) => {
     const groupBy = cfg.category, colorCol = cfg.color, facetCol = cfg.facet, value = cfg.measure;
     const isBox = cfg.type === 'boxplot';
     const bodyStat = cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se');
@@ -219,7 +221,7 @@
     const facetRows = (facetCol && facet !== '__all__')
       ? ix.get(rows, facetCol, 'nz', String(facet)) : rows;
     const split = levels.length > 0;
-    const keepEmpty = !!facetCol && NS.facetScales(cfg) !== 'free';
+    const keepEmpty = !!facetCol && panels > 1 && NS.facetScales(cfg) !== 'free';
     const outliersOn = isBox && cfg.box_points === 'outliers';
     const idCol = cfg.id;
 
@@ -347,7 +349,8 @@
         groups, cells, axisCounts,
         ttRep: ttRep ? (ttRep.get(restrict ? String(fv) : '__all__') || {}) : null,
         slots: (distribution && !out.noValue)
-          ? distributionSlots({ rows, ix, cfg, groups, levels: out.levels, facet: fv }) : null
+          ? distributionSlots({ rows, ix, cfg, groups, levels: out.levels, facet: fv,
+                                panels: facets.length }) : null
       });
     }
     highlightMarks(out, rows, ix, cfg);
