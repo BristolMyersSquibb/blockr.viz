@@ -11,8 +11,7 @@ seq_rule <- function() drilldown_table_color(type = "sequential")
 # The background / text colours the screen styles a column with, NA where the
 # cell is unpainted -- read off the same cell model the browser renders.
 screen_paint <- function(data, label_col, shadings, col) {
-  b <- dt_flat_build(data, label_col, NULL, dd_parse_shadings(shadings),
-                     toggles = list())
+  b <- dt_flat_build(data, label_col, NULL, dd_parse_shadings(shadings))
   cc <- b$cells[[match(col, vapply(b$cells, `[[`, "", "name"))]]
   list(bg = unname(cc$bg %||% rep(NA_character_, b$n)),
        fg = unname(cc$fg %||% rep(NA_character_, b$n)))
@@ -166,7 +165,7 @@ test_that("exports format numbers like the screen (#37)", {
   expect_identical(out$n, "12")
   expect_identical(attr(out$times_more, "label"), "Times more")
   # the screen's own formatter, cell for cell
-  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = 2L)
+  b <- dt_flat_build(d, "term", NULL, digits = 2L)
   expect_identical(b$cells[[1]]$disp, "3.81")
   expect_identical(b$cells[[2]]$disp, "2.70")
 
@@ -306,7 +305,7 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   d <- data.frame(term = c("a", "b"), share = c(0.25, 0.5),
                   amount = c(1500, 2.5e6))
   # Cells.
-  b <- dt_flat_build(d, "term", NULL, toggles = list(), digits = "percent")
+  b <- dt_flat_build(d, "term", NULL, digits = "percent")
   expect_identical(b$cells[[1]]$disp, c("25%", "50%"))
   st <- viz_check(viz_block_spec("table"),
                   list(layout = "records", rowname = "term",

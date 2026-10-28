@@ -1,4 +1,7 @@
-/* The cards look of the table block (R/table-cards.R, js/table/cards.js). */
+/* The cards look of the table block (R/table-cards.R, js/table/cards.js).
+   The glyphs inside a card are the summarize table's own markup and keep
+   its stylesheet; this file lays out the cards around them. The grid's
+   data-tc-mode is set by table/cards.js from the host's width. */
 
 .blockr-cards-host {
   padding: 2px 0 4px;
