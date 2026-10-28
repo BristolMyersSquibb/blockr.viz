@@ -37,6 +37,8 @@ LEGACY_NAMES <- legacy_table(list(
 
   # chart -------------------------------------------------------------------
   legacy_row("chart", "chart_type", "type"),
+  legacy_row("chart", "expose", NA,
+             rule = "read and dropped; warns to name the setting in `subtitle`"),
   legacy_row("chart", "baseline", "type", c(cumulative = "waterfall"),
              rule = "only on a bar; \"zero\" is dropped"),
   legacy_row("chart", "type", "type", c(radar = "bar"),

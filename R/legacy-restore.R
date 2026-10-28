@@ -29,6 +29,13 @@ legacy_ctor_args <- function(block, args) {
 
 # `named` is the state after the renames and translators, `out` the result.
 legacy_translate <- function(block, x, version) {
+  # `expose` drew an always-visible band of controls; the subtitle's {@arg}
+  # words are the controls now. Warned on its own, in code and on restore.
+  if (identical(block, "chart") && "expose" %in% names(x)) {
+    warning("new_chart_block(): `expose` is retired. Name the setting in ",
+            "`subtitle` instead, e.g. \"[, coloured by {label(@color)}]\".",
+            call. = FALSE)
+  }
   named <- legacy_named(block, as.list(x))
   if (identical(block, "table")) named <- legacy_table_selection(named)
   out <- legacy_values(block, legacy_map_values(block, named), version)
@@ -50,7 +57,8 @@ legacy_warn <- function(block, args, named, out) {
       !identical(nm, "script")
   }, names(out)))
   labels <- "direct_labels" %in% old
-  old <- setdiff(old, "direct_labels")
+  # legacy_translate() warns about `expose` itself.
+  old <- setdiff(old, c("direct_labels", "expose"))
   old <- if (length(old)) paste0("`", old, "`") else character()
   kinds <- c(summaries = "summary", shadings = "shading")
   for (nf in names(kinds)) {

@@ -67,11 +67,12 @@ new_chart_block <- function(
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  # Old argument names; any other name is a block attribute (block_name,
-  # blockr.dock's `visible`) that blockr.core keeps.
-  old <- intersect(names(dots), legacy_arg_names("chart"))
+  # blockr.core's block arguments pass through; any other name is an old
+  # argument name, or unknown, which viz_check() refuses.
+  old <- setdiff(names(dots), VIZ_CORE_BLOCK_ARGS)
   args <- legacy_ctor_args("chart", c(given, dots[old]))
   values <- viz_check(spec, args)
+  # In code a mismatched pair is a mistake (chart-normalize.R's header).
   if (length(values$ymin) != length(values$ymax)) {
     stop("`ymin` and `ymax` must name the same number of columns.",
          call. = FALSE)
