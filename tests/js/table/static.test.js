@@ -50,6 +50,8 @@ test('a table added later is drawn once; a printed one draws past the window', a
   await tick(env.win, 2);
   env.V.table.mount();
   assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 600);
+  // A printed table has no search to count rows against.
+  assert.equal(el.querySelector('.dt-row-count').textContent, '');
   assert.equal(el.querySelectorAll('.blockr-gear-btn').length, 0);
 });
 
