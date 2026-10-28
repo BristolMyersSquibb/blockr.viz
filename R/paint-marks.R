@@ -9,9 +9,9 @@
 
 # --- constants -----------------------------------------------------------
 # Colour tokens resolved to literals, from the table view's CSS.
-PAINT_FILL  <- "#2a78d6"                      # --blockr-summarize-fill
+PAINT_FILL  <- "#2a78d6"                      # --vz-table-groups-fill
 PAINT_TRACK <- "#dad9d5"                      # mix(#eeeeea 80%, #898781)
-PAINT_TICK  <- "#c3c2b7"                      # --blockr-summarize-tick
+PAINT_TICK  <- "#c3c2b7"                      # --vz-table-groups-tick
 PAINT_RULE  <- "#e1e0d9"                      # --blockr-color-border, hairlines
 PAINT_TEXT  <- "#1c1b18"
 PAINT_MUTED <- "#6f6d66"
@@ -204,7 +204,7 @@ paint_bardiv <- function(c, i, x, w, ytop, gl) {
 }
 
 # Two whisker segments (never through the body), caps, a translucent IQR body
-# and a solid median tick. CSS: .blockr-summarize-boxcell.
+# and a solid median tick. CSS: .vz-table-groups-boxcell.
 paint_box <- function(c, i, x, w, ytop, gl, fill = PAINT_FILL) {
   if (is.na(c$bc[[i]])) return(list())
   h <- gl$lane

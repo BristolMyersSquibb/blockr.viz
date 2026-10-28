@@ -1,35 +1,35 @@
 /* The cards look of the table block (R/table-cards.R, js/table/cards.js).
    The glyphs inside a card are the summarize table's own markup and keep
    its stylesheet; this file lays out the cards around them. The grid's
-   data-tc-mode is set by table/cards.js from the host's width. */
+   data-cards-mode is set by table/cards.js from the host's width. */
 
-.blockr-cards-host {
+.vz-table-cards {
   padding: 2px 0 4px;
   font-variant-numeric: tabular-nums;
 }
 /* The records table's rows run to the panel edge and inset their cells;
    the cards take the same inset. */
-.drilldown-table-container .blockr-cards-host {
+.vz-table .vz-table-cards {
   padding-left: var(--blockr-card-inset, 0px);
   padding-right: var(--blockr-card-inset, 0px);
 }
 
-.tc-grid { display: grid; gap: 8px; align-items: stretch; }
-.tc-grid .tc-row { display: contents; }
+.vz-table-card-grid { display: grid; gap: 8px; align-items: stretch; }
+.vz-table-card-grid .vz-table-card-row { display: contents; }
 
 /* wide: a row head column, one column per card */
-.tc-grid.is-multi[data-tc-mode="wide"] {
-  grid-template-columns: minmax(72px, max-content) repeat(var(--tc-k), minmax(0, 1fr));
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] {
+  grid-template-columns: minmax(72px, max-content) repeat(var(--vz-table-card-k), minmax(0, 1fr));
 }
-.tc-grid.is-multi[data-tc-mode="wide"] .tc-lab,
-.tc-grid.is-multi[data-tc-mode="wide"] .tc-word { display: none; }
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] .vz-table-card-lab,
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] .vz-table-card-word { display: none; }
 /* one row: the cards wrap */
-.tc-grid:not(.is-multi) {
+.vz-table-card-grid:not(.is-multi) {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
-.tc-colhead {
+.vz-table-card-colhead {
   font-size: 11.5px;
   line-height: 1.35;
   color: var(--blockr-color-text-muted, #6b7280);
@@ -37,7 +37,7 @@
   align-self: end;
   min-width: 0;
 }
-.tc-colhead b {
+.vz-table-card-colhead b {
   display: block;
   color: var(--blockr-color-text-default, #374151);
   font-size: 12px;
@@ -46,9 +46,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tc-colhead .tc-legend { margin-top: 3px; }
+.vz-table-card-colhead .vz-table-card-legend { margin-top: 3px; }
 
-.tc-rowhead {
+.vz-table-card-rowhead {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -58,24 +58,24 @@
   border-radius: 8px;
   min-width: 0;
 }
-.tc-rowhead .tc-rowlab {
+.vz-table-card-rowhead .vz-table-card-rowlab {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tc-strip {
+.vz-table-card-strip {
   flex: none;
   width: 4px;
   align-self: stretch;
   margin: 8px 0;
   border-radius: 2px;
 }
-.tc-row.is-child .tc-rowhead { padding-left: 22px; font-weight: 500; }
-.tc-row.is-parent .blockr-indent-btn { margin-left: 0; margin-right: 0; }
-.tc-row.is-parent.collapsed .blockr-chev { transform: rotate(-90deg); }
+.vz-table-card-row.is-child .vz-table-card-rowhead { padding-left: 22px; font-weight: 500; }
+.vz-table-card-row.is-parent .vz-table-indent-btn { margin-left: 0; margin-right: 0; }
+.vz-table-card-row.is-parent.collapsed .vz-table-chev { transform: rotate(-90deg); }
 
 /* the card */
-.tc {
+.vz-table-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -84,14 +84,14 @@
   border-radius: 8px;
   background: var(--blockr-color-bg-surface, #ffffff);
 }
-.tc-lab {
+.vz-table-card-lab {
   font-size: 12px;
   color: var(--blockr-color-text-muted, #4b5563);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tc-val {
+.vz-table-card-val {
   font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
@@ -101,14 +101,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tc.is-text .tc-val {
+.vz-table-card.is-text .vz-table-card-val {
   font-size: 15px;
   font-weight: 500;
   line-height: 1.35;
   white-space: normal;
 }
-.tc-na { color: var(--blockr-color-text-muted, #9ca3af); font-weight: 400; }
-.tc-sub {
+.vz-table-card-na { color: var(--blockr-color-text-muted, #9ca3af); font-weight: 400; }
+.vz-table-card-sub {
   font-size: 11.5px;
   color: var(--blockr-color-text-muted, #6b7280);
   min-height: 17px;
@@ -116,13 +116,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tc-glyph {
+.vz-table-card-glyph {
   margin-top: auto;
   padding-top: 8px;
   min-width: 0;
 }
-.tc-glyph .blockr-summarize-spcell { height: 30px; }
-.tc-legend {
+.vz-table-card-glyph .vz-table-groups-spcell { height: 30px; }
+.vz-table-card-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 10px;
@@ -130,7 +130,7 @@
   color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 6px;
 }
-.tc-legend i {
+.vz-table-card-legend i {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -138,7 +138,7 @@
   margin-right: 4px;
   vertical-align: -0.5px;
 }
-.tc-fold, .tc-empty {
+.vz-table-card-fold, .vz-table-card-empty {
   margin-top: 8px;
   font-size: 12px;
   font-style: italic;
@@ -146,17 +146,17 @@
 }
 
 /* medium: each row its own line, the row head above its cards */
-.tc-grid[data-tc-mode="medium"] { display: flex; flex-direction: column; gap: 12px; }
-.tc-grid[data-tc-mode="medium"] .tc-corner,
-.tc-grid[data-tc-mode="medium"] .tc-colhead { display: none; }
-.tc-grid[data-tc-mode="medium"] .tc-row {
+.vz-table-card-grid[data-cards-mode="medium"] { display: flex; flex-direction: column; gap: 12px; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-corner,
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-colhead { display: none; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px;
 }
-.tc-grid[data-tc-mode="medium"] .tc-rowhead { grid-column: 1 / -1; padding: 2px; }
-.tc-grid[data-tc-mode="medium"] .tc-strip,
-.tc-grid[data-tc-mode="narrow"] .tc-strip {
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-rowhead { grid-column: 1 / -1; padding: 2px; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-strip,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-strip {
   width: 16px;
   height: 4px;
   align-self: center;
@@ -164,50 +164,50 @@
 }
 
 /* narrow: one card per line, the glyph to the right of the number */
-.tc-grid[data-tc-mode="narrow"] { display: flex; flex-direction: column; gap: 8px; }
-.tc-grid[data-tc-mode="narrow"] .tc-corner,
-.tc-grid[data-tc-mode="narrow"] .tc-colhead,
-.tc-grid[data-tc-mode="narrow"] .tc-legend { display: none; }
-.tc-grid.is-multi[data-tc-mode="narrow"] .tc-row {
+.vz-table-card-grid[data-cards-mode="narrow"] { display: flex; flex-direction: column; gap: 8px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-corner,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-colhead,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-legend { display: none; }
+.vz-table-card-grid.is-multi[data-cards-mode="narrow"] .vz-table-card-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.tc-grid.is-multi[data-tc-mode="narrow"] .tc-row + .tc-row { margin-top: 6px; }
-.tc-grid[data-tc-mode="narrow"] .tc-rowhead { padding: 2px; }
-.tc-grid[data-tc-mode="narrow"] .tc {
+.vz-table-card-grid.is-multi[data-cards-mode="narrow"] .vz-table-card-row + .vz-table-card-row { margin-top: 6px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-rowhead { padding: 2px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 118px;
   column-gap: 10px;
   align-items: center;
   padding: 8px 10px;
 }
-.tc-grid[data-tc-mode="narrow"] .tc > * { grid-column: 1; }
-.tc-grid[data-tc-mode="narrow"] .tc-glyph {
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card > * { grid-column: 1; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-glyph {
   grid-column: 2;
   grid-row: 1 / span 3;
   margin: 0;
   padding: 0;
 }
-.tc-grid[data-tc-mode="narrow"] .tc-val { font-size: 20px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-val { font-size: 20px; }
 
-.dt-clickable .tc-row:not(.dt-row-nodrill) > .tc,
-.dt-clickable .tc-row:not(.dt-row-nodrill) > .tc-rowhead { cursor: pointer; }
-.dt-clickable .tc-row:not(.dt-row-nodrill):hover > .tc {
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill) > .vz-table-card,
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill) > .vz-table-card-rowhead { cursor: pointer; }
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill):hover > .vz-table-card {
   border-color: var(--blockr-color-border-strong, #d1d5db);
 }
-.tc-row.dt-row-active > .tc {
+.vz-table-card-row.vz-table-row-active > .vz-table-card {
   outline: 2px solid var(--blockr-color-border-accent, #1d4ed8);
   outline-offset: -1px;
 }
-.tc-row.dt-row-active > .tc-rowhead {
+.vz-table-card-row.vz-table-row-active > .vz-table-card-rowhead {
   background: var(--blockr-color-bg-accent-subtle, #eff6ff);
   color: var(--blockr-color-text-accent, #1d4ed8);
 }
-.tc-row.dt-flash-row > .tc {
-  animation: tc-flash 1200ms ease-out both;
+.vz-table-card-row.vz-table-flash-row > .vz-table-card {
+  animation: vz-table-card-flash 1200ms ease-out both;
 }
-@keyframes tc-flash {
+@keyframes vz-table-card-flash {
   from { box-shadow: 0 0 0 2px var(--blockr-color-border-accent, #1d4ed8); }
   to { box-shadow: 0 0 0 2px transparent; }
 }

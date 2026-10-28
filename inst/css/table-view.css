@@ -1,5 +1,5 @@
 /* The table block's view (inst/js/table/): what its frame and markup add to
-   table-structured.css. Keyed headers and section values carry `dt-keyed`, set where
+   table-structured.css. Keyed headers and section values carry `vz-table-keyed`, set where
    the markup is written. */
 
 /* A layout switch swaps what the body holds. Chrome's scroll anchoring would
@@ -17,12 +17,12 @@
 }
 
 /* What a click claims reads as clickable. */
-.vz-table.dt-clickable .blockr-table thead th.dt-keyed,
-.vz-table.dt-clickable .blockr-table tbody tr.blockr-section-header.dt-keyed .blockr-section-value,
-.vz-table.dt-clickable .tc-row {
+.vz-table.vz-table-clickable .blockr-table thead th.vz-table-keyed,
+.vz-table.vz-table-clickable .blockr-table tbody tr.vz-table-section-header.vz-table-keyed .vz-table-section-value,
+.vz-table.vz-table-clickable .vz-table-card-row {
   cursor: pointer;
 }
-.vz-table.dt-clickable .tc-row.dt-row-nodrill {
+.vz-table.vz-table-clickable .vz-table-card-row.vz-table-row-nodrill {
   cursor: default;
 }
 
@@ -60,14 +60,14 @@
   .vz-table > .vz-head > .vz-head__tools {
     justify-self: stretch;
   }
-  .vz-table > .vz-head > .vz-head__tools > .blockr-search {
+  .vz-table > .vz-head > .vz-head__tools > .vz-table-search {
     flex: 1 1 auto;
     min-width: 0;
   }
 }
 
 /* The shading rules in the gear: a mode, the columns it paints, remove. */
-.vz-shadings { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.vz-shade-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.vz-shade-mode { min-width: 160px; }
-.vz-shade-cols { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.vz-table-shadings { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.vz-table-shade-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.vz-table-shade-mode { min-width: 160px; }
+.vz-table-shade-cols { display: flex; flex-wrap: wrap; gap: 4px 12px; }

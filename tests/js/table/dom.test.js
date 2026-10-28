@@ -12,9 +12,9 @@ function mount(p, env = loadTable()) {
   const $$ = (sel) => Array.from(el.querySelectorAll(sel));
   const click = (node, init = {}) => node.dispatchEvent(
     new env.win.MouseEvent('click', Object.assign({ bubbles: true }, init)));
-  const stubs = () => $$('tbody tr.blockr-data-row').map((r) => r.children[0].textContent);
+  const stubs = () => $$('tbody tr.vz-table-row').map((r) => r.children[0].textContent);
   const search = async (q) => {
-    const inp = $('input.blockr-search');
+    const inp = $('input.vz-table-search');
     inp.value = q;
     inp.dispatchEvent(new env.win.Event('input', { bubbles: true }));
     await tick(env.win, 200);
@@ -28,7 +28,7 @@ test('a flat table draws its header, rows and row count', () => {
                    ['USUBJID', 'Arm', 'Age']);
   assert.equal(t.$('thead th[data-col-index="2"] .blockr-col-label').textContent, 'years');
   assert.deepEqual(t.stubs(), ['S1', 'S2', 'S3', 'S4', 'S5']);
-  assert.ok(t.$('thead th[data-col-index="2"]').classList.contains('dt-col-num'));
+  assert.ok(t.$('thead th[data-col-index="2"]').classList.contains('vz-table-col-num'));
   assert.equal(t.$('.vz-count').textContent, '5 rows');
 });
 
@@ -36,10 +36,10 @@ test('missing values draw a dash, and text is escaped', () => {
   const m = flatModel(3, { na: true });
   m.cols[0].disp[0] = '<b>x</b>';
   const t = mount(payload({ data: m }));
-  const first = t.$('tbody tr.blockr-data-row');
+  const first = t.$('tbody tr.vz-table-row');
   assert.equal(first.children[0].innerHTML, '&lt;b&gt;x&lt;/b&gt;');
-  const second = t.$$('tbody tr.blockr-data-row')[1];
-  assert.ok(second.children[1].classList.contains('blockr-dash'));
+  const second = t.$$('tbody tr.vz-table-row')[1];
+  assert.ok(second.children[1].classList.contains('vz-table-dash'));
 });
 
 test('cell fills, ink and data bars become styles', () => {
@@ -49,7 +49,7 @@ test('cell fills, ink and data bars become styles', () => {
   m.cols[2].bar = [null, 0.5];
   m.cols[2].bar_fill = '#00f';
   const t = mount(payload({ data: m }));
-  const [a, b] = t.$$('tbody tr.blockr-data-row').map((r) => r.children[2].getAttribute('style'));
+  const [a, b] = t.$$('tbody tr.vz-table-row').map((r) => r.children[2].getAttribute('style'));
   assert.match(a, /background:#ff0000;color:#ffffff/);
   assert.match(b, /linear-gradient\(90deg,#00f 0 50%,transparent 50%\)/);
 });
@@ -57,7 +57,7 @@ test('cell fills, ink and data bars become styles', () => {
 test('a header click sorts up, down, then back to the data order', () => {
   const t = mount(payload({ data: flatModel(5) }));
   const th = () => t.$('th[data-col-index="2"]');
-  const ages = () => t.$$('tbody tr.blockr-data-row').map((r) => Number(r.children[2].textContent));
+  const ages = () => t.$$('tbody tr.vz-table-row').map((r) => Number(r.children[2].textContent));
   const data = ages();
   t.click(th());
   assert.deepEqual(ages(), data.slice().sort((x, y) => x - y));
@@ -74,7 +74,7 @@ test('Enter on a header sorts; text sorts by locale', () => {
   const t = mount(payload({ data: flatModel(4) }));
   const th = t.$('th[data-col-index="1"]');
   th.dispatchEvent(new t.win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  assert.deepEqual(t.$$('tbody tr.blockr-data-row').map((r) => r.children[1].textContent),
+  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.children[1].textContent),
                    ['High', 'Low', 'Placebo', 'Placebo']);
 });
 
@@ -91,9 +91,9 @@ test('search narrows the rows and the count, and says when nothing matches', asy
   assert.deepEqual(t.stubs(), ['S1', 'S4']);
   assert.equal(t.$('.vz-count').textContent, '2 of 6 rows');
   await t.search('nothing');
-  assert.equal(t.$('.blockr-search-empty').textContent, 'No matching rows');
+  assert.equal(t.$('.vz-table-search-empty').textContent, 'No matching rows');
   await t.search('');
-  assert.equal(t.$('.blockr-search-empty'), null);
+  assert.equal(t.$('.vz-table-search-empty'), null);
   assert.equal(t.$('.vz-count').textContent, '6 rows');
 });
 
@@ -102,16 +102,16 @@ test('turning search off hides the box and drops the query', async () => {
   const t = mount(payload({ data: flatModel(6), dataRev: 1 }), env);
   await t.search('placebo');
   t.b.renderValue(t.el, payload({ config: { search: false }, dataRev: 1 }));
-  assert.ok(t.$('input.blockr-search').hidden);
+  assert.ok(t.$('input.vz-table-search').hidden);
   assert.equal(t.stubs().length, 6);
 });
 
 test('a long table draws only a window of rows and follows the scroll', async () => {
   const t = mount(payload({ data: flatModel(2000) }));
   const box = t.$('.blockr-table-wrapper');
-  const drawn = () => t.$$('tbody tr.blockr-data-row');
+  const drawn = () => t.$$('tbody tr.vz-table-row');
   assert.ok(drawn().length < 200, 'windowed: ' + drawn().length);
-  assert.equal(t.$$('tbody tr.dt-vspacer').length, 1);
+  assert.equal(t.$$('tbody tr.vz-table-vspacer').length, 1);
   assert.equal(t.$('.vz-count').textContent, '2000 rows');
   Object.defineProperty(box, 'clientHeight', { value: 600, configurable: true });
   box.scrollTop = 30 * 1000;
@@ -119,45 +119,45 @@ test('a long table draws only a window of rows and follows the scroll', async ()
   await tick(t.win, 40);
   const first = Number(drawn()[0].getAttribute('data-i'));
   assert.ok(first > 900 && first < 1000, 'window starts at ' + first);
-  assert.equal(t.$$('tbody tr.dt-vspacer').length, 2);
+  assert.equal(t.$$('tbody tr.vz-table-vspacer').length, 2);
 });
 
 test('sorting a long table sorts all of it, not the window', () => {
   const t = mount(payload({ data: flatModel(1000) }));
   t.click(t.$('th[data-col-index="2"]'));
   t.click(t.$('th[data-col-index="2"]'));
-  assert.equal(t.$('tbody tr.blockr-data-row').children[2].textContent, '69');
+  assert.equal(t.$('tbody tr.vz-table-row').children[2].textContent, '69');
 });
 
 test('sections head their rows; a click on the header folds it', () => {
   const t = mount(payload({ data: table1() }));
-  const heads = () => t.$$('tr.blockr-section-header').map((r) => r.textContent);
+  const heads = () => t.$$('tr.vz-table-section-header').map((r) => r.textContent);
   assert.deepEqual(heads(), ['Sex', 'Age', 'Age group']);
   assert.equal(t.$('.vz-count').textContent, '');
-  assert.ok(t.$('.vz-table').classList.contains('drilldown-table-structured'));
-  t.click(t.$('tr.blockr-section-header .blockr-chev'));
+  assert.ok(t.$('.vz-table').classList.contains('vz-table-structured'));
+  t.click(t.$('tr.vz-table-section-header .vz-table-chev'));
   assert.deepEqual(t.stubs(), ['Mean (SD)', '<65', '>=65']);
-  assert.ok(t.$('tr.blockr-section-header').classList.contains('collapsed'));
-  t.click(t.$('tr.blockr-section-header .blockr-section-value'));
+  assert.ok(t.$('tr.vz-table-section-header').classList.contains('collapsed'));
+  t.click(t.$('tr.vz-table-section-header .vz-table-section-value'));
   assert.equal(t.stubs().length, 5);
 });
 
 test('alt-click and the corner button fold every section', () => {
   const t = mount(payload({ data: table1() }));
-  t.click(t.$('tr.blockr-section-header'), { altKey: true });
+  t.click(t.$('tr.vz-table-section-header'), { altKey: true });
   assert.equal(t.stubs().length, 0);
-  assert.equal(t.$('.dt-foldall').getAttribute('aria-label'), 'Expand all groups');
-  t.click(t.$('.dt-foldall'));
+  assert.equal(t.$('.vz-table-foldall').getAttribute('aria-label'), 'Expand all groups');
+  t.click(t.$('.vz-table-foldall'));
   assert.equal(t.stubs().length, 5);
-  t.click(t.$('.dt-foldall'));
+  t.click(t.$('.vz-table-foldall'));
   assert.equal(t.stubs().length, 0);
 });
 
 test('without collapsible the sections are plain labels', () => {
   const t = mount(payload({ data: table1(), config: { collapsible: false } }));
-  assert.equal(t.$('.blockr-section-btn-static') != null, true);
-  assert.equal(t.$('.dt-foldall'), null);
-  t.click(t.$('tr.blockr-section-header .blockr-chev'));
+  assert.equal(t.$('.vz-table-section-btn-static') != null, true);
+  assert.equal(t.$('.vz-table-foldall'), null);
+  t.click(t.$('tr.vz-table-section-header .vz-table-chev'));
   assert.equal(t.stubs().length, 5);
 });
 
@@ -174,14 +174,14 @@ test('spanners span their leaves, and the stub header spans the header rows', ()
   assert.equal(top[0].getAttribute('rowspan'), '2');
   assert.equal(top[1].getAttribute('colspan'), '2');
   assert.ok(top[1].classList.contains('group'));
-  assert.equal(t.$$('thead tr')[1].children[0].querySelector('.arm__n').textContent, 'N = 22');
+  assert.equal(t.$$('thead tr')[1].children[0].querySelector('.vz-table-arm-n').textContent, 'N = 22');
 });
 
 test('nested sections: both levels, search keeps the headers of what matches', async () => {
   const t = mount(payload({ data: nested() }));
-  const heads = () => t.$$('tr.blockr-section-header').map((r) => r.querySelector('.blockr-section-value').textContent);
+  const heads = () => t.$$('tr.vz-table-section-header').map((r) => r.querySelector('.vz-table-section-value').textContent);
   assert.deepEqual(heads(), ['Placebo', 'F', 'M', 'Active', 'F']);
-  assert.equal(t.$('tr.blockr-section-header .blockr-section-label').textContent, 'Arm: ');
+  assert.equal(t.$('tr.vz-table-section-header .vz-table-section-label').textContent, 'Arm: ');
   await t.search('d');
   assert.deepEqual(heads(), ['Active', 'F']);
   assert.deepEqual(t.stubs(), ['d']);
@@ -191,15 +191,15 @@ test('sorting keeps rows inside their sections', () => {
   const t = mount(payload({ data: nested() }));
   t.click(t.$('th[data-col-index="1"]'));
   t.click(t.$('th[data-col-index="1"]'));
-  const order = t.$$('tbody tr').map((r) => r.classList.contains('blockr-section-header')
-    ? '#' + r.querySelector('.blockr-section-value').textContent : r.children[0].textContent);
+  const order = t.$$('tbody tr').map((r) => r.classList.contains('vz-table-section-header')
+    ? '#' + r.querySelector('.vz-table-section-value').textContent : r.children[0].textContent);
   assert.deepEqual(order, ['#Placebo', '#F', 'b', 'a', '#M', 'c', '#Active', '#F', 'd']);
 });
 
 test('a folded outer section hides its inner headers', () => {
   const t = mount(payload({ data: nested() }));
-  t.click(t.$('tr.blockr-section-header[data-level="1"] .blockr-chev'));
-  const heads = t.$$('tr.blockr-section-header').map((r) => r.querySelector('.blockr-section-value').textContent);
+  t.click(t.$('tr.vz-table-section-header[data-level="1"] .vz-table-chev'));
+  const heads = t.$$('tr.vz-table-section-header').map((r) => r.querySelector('.vz-table-section-value').textContent);
   assert.deepEqual(heads, ['Placebo', 'Active', 'F']);
 });
 
@@ -212,12 +212,12 @@ test('an indented row folds the rows under it', () => {
     rows: { indent: [0, 1, 1, 0], strong: [true, false, false, true] }
   };
   const t = mount(payload({ data: m }));
-  const parent = t.$('tr.blockr-indent-toggle');
-  assert.ok(parent.classList.contains('blockr-bold'));
+  const parent = t.$('tr.vz-table-indent-toggle');
+  assert.ok(parent.classList.contains('vz-table-bold'));
   assert.match(t.$$('tbody tr')[1].children[0].getAttribute('style'), /padding-left:calc\(40px/);
-  t.click(parent.querySelector('.blockr-indent-btn'));
+  t.click(parent.querySelector('.vz-table-indent-btn'));
   assert.deepEqual(t.stubs(), ['Cardiac', 'Skin']);
-  t.click(t.$('tr.blockr-indent-toggle .blockr-indent-btn'));
+  t.click(t.$('tr.vz-table-indent-toggle .vz-table-indent-btn'));
   assert.equal(t.stubs().length, 4);
 });
 
@@ -225,7 +225,7 @@ test('a bold stub header keeps its class; leaves without sorting are not sortabl
   const m = table1();
   m.head[0][0].bold = true;
   const t = mount(payload({ data: m, config: { sortable: false } }));
-  assert.ok(t.$('th.blockr-stub-header').classList.contains('blockr-stub-header-bold'));
+  assert.ok(t.$('th.vz-table-stub-header').classList.contains('vz-table-stub-header-bold'));
   assert.equal(t.$$('th.blockr-sortable').length, 0);
 });
 

@@ -97,7 +97,7 @@ test_that("write_exhibit_html() keeps the section structure it was given", {
   write_exhibit_html(df, f)
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
 
-  expect_match(html, "blockr-section-header", fixed = TRUE)
+  expect_match(html, "vz-table-section-header", fixed = TRUE)
   expect_match(html, "Screening", fixed = TRUE)
   expect_match(html, "Treatment", fixed = TRUE)
 })

@@ -1,15 +1,15 @@
 /* The structured table (sections, spanners, stub indent, fold chevrons),
-   scoped to `.drilldown-table-structured`, which the view sets on a table
+   scoped to `.vz-table-structured`, which the view sets on a table
    with sections or keyed rows. */
-.drilldown-table-structured {
+.vz-table-structured {
   background: var(--blockr-color-bg-surface, #ffffff);
   font-size: var(--blockr-font-size-base, 0.875rem);
   color: var(--blockr-color-text-default, #111827);
 }
-.drilldown-table-structured .blockr-table-wrapper {
+.vz-table-structured .blockr-table-wrapper {
   max-height: none;
 }
-input.blockr-search {
+input.vz-table-search {
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
@@ -27,8 +27,8 @@ input.blockr-search {
   width: 180px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-input.blockr-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
-input.blockr-search:focus {
+input.vz-table-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
+input.vz-table-search:focus {
   outline: none;
   border-color: var(--blockr-color-border-accent, #2563eb);
   box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
@@ -41,7 +41,7 @@ input.blockr-search:focus {
    The border is transparent and still wins the collapsed-border conflict
    against the row's own rule (cell beats row at equal width), which is what
    keeps the shared sheet's full-width header line off. */
-.drilldown-table-structured .blockr-table thead th {
+.vz-table-structured .blockr-table thead th {
   vertical-align: bottom;
   white-space: normal;
   word-break: normal;
@@ -53,7 +53,7 @@ input.blockr-search:focus {
   padding: 7px 12px;
   border-bottom: 1px solid transparent;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header {
+.vz-table-structured .blockr-table thead th.vz-table-col-header {
   text-align: right;
 }
 /* One unbroken rule under the whole header, in the grey of the card's rule
@@ -61,11 +61,11 @@ input.blockr-search:focus {
    cells that span down to it (the row-label title, a column without a
    spanner). A spanner's tile sits above it. Drawn on the cells rather than
    as a border, which would not travel with the sticky header. */
-.drilldown-table-structured .blockr-table thead th {
+.vz-table-structured .blockr-table thead th {
   background-image: none;
 }
-.drilldown-table-structured .blockr-table thead tr:last-child > th,
-.drilldown-table-structured .blockr-table thead th[rowspan] {
+.vz-table-structured .blockr-table thead tr:last-child > th,
+.vz-table-structured .blockr-table thead th[rowspan] {
   background-image: linear-gradient(var(--blockr-color-border-default, #e5e7eb), var(--blockr-color-border-default, #e5e7eb));
   background-repeat: no-repeat;
   background-size: 100% 1px;
@@ -73,8 +73,8 @@ input.blockr-search:focus {
 }
 /* In a block card the table runs to the card edges: the last column pads its text back in by the card's inset,
    as the row labels do on the left. */
-.drilldown-table-structured .blockr-table thead th.blockr-col-header:last-child,
-.drilldown-table-structured .blockr-table tbody td.blockr-data:last-child {
+.vz-table-structured .blockr-table thead th.vz-table-col-header:last-child,
+.vz-table-structured .blockr-table tbody td.vz-table-data:last-child {
   padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
 /* A group header sits ABOVE the columns it names, so it cannot read smaller
@@ -85,7 +85,7 @@ input.blockr-search:focus {
    makes one grey band with words in it. The inset gutters cut that band into
    tiles; the wash is translucent so a drill-active column still shows through.
    The last spanner keeps its gutter clear of the card's inset too. */
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group {
   text-align: center;
   font-size: 13.5px;
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -96,20 +96,20 @@ input.blockr-search:focus {
     inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
     inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group:last-child {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group:last-child {
   box-shadow:
     inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
     inset calc(-5px - var(--blockr-card-inset, 0px)) 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
 /* A spanner's Big N sub-line follows its own row's centring, not the
    flush-right the leaf headers use to sit over their numbers. */
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group .dt-th-subrow {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group .vz-table-th-subrow {
   justify-content: center;
 }
 /* The claimed-column paint has to be restated for a group cell, because the
    tile above sets both of the properties it uses. The gutters stay so the
    tile keeps its shape. */
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group.dt-col-active {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.vz-table-col-active {
   background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   color: var(--blockr-color-text-accent, #2563eb);
   box-shadow:
@@ -119,33 +119,33 @@ input.blockr-search:focus {
 /* A group below the top row is already inside a tile, so it drops its own and
    reads like a leaf: a tile in a tile is only more grey. Over a single column
    it sits flush right, above the number, like the leaf under it. */
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group.group-inner {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner {
   background: none;
   border-radius: 0;
   box-shadow: none;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group.group-inner[colspan="1"] {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner[colspan="1"] {
   text-align: right;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group.group-inner[colspan="1"] .dt-th-subrow {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner[colspan="1"] .vz-table-th-subrow {
   justify-content: flex-end;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.group.group-inner.dt-col-active {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner.vz-table-col-active {
   background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   box-shadow: none;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.leaf {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.leaf {
   font-size: 13.5px;
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-default, #111827);
   letter-spacing: -0.01em;
 }
-.drilldown-table-structured .blockr-table thead th .arm__name {
+.vz-table-structured .blockr-table thead th .vz-table-arm-name {
   display: block;
 }
 /* The Big N: bold like the arm name above it, but smaller and in the muted
    ink, so it reads as the name's footnote. */
-.drilldown-table-structured .blockr-table thead th .arm__n {
+.vz-table-structured .blockr-table thead th .vz-table-arm-n {
   display: block;
   font-size: 12px;
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -153,14 +153,14 @@ input.blockr-search:focus {
   letter-spacing: 0.01em;
   margin-top: 0;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.leaf strong {
+.vz-table-structured .blockr-table thead th.vz-table-col-header.leaf strong {
   font-weight: var(--blockr-font-weight-semibold, 600);
   font-size: 13.5px;
 }
 /* The first-column title is the producer's text (attr(.label, "label")), in
    the body's size and ink, padded in by the card's inset like the row
    labels under it. */
-.drilldown-table-structured .blockr-table thead th.blockr-stub-header {
+.vz-table-structured .blockr-table thead th.vz-table-stub-header {
   text-align: left;
   padding-left: calc(12px + var(--blockr-card-inset, 0px));
   font-size: 13px;
@@ -169,22 +169,22 @@ input.blockr-search:focus {
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-default, #111827);
 }
-.drilldown-table-structured .blockr-table thead th.blockr-stub-header.blockr-stub-header-bold {
+.vz-table-structured .blockr-table thead th.vz-table-stub-header.vz-table-stub-header-bold {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
 /* Fold all (table/html.js adds it when the table folds and has groups): the
    chevron hangs to the left, so the title starts on the rows' 24px text edge
    (3px padding + 12px chevron + 9px gap), as the group headings do. Only
    the chevron is the button; without a title it carries "All". */
-.drilldown-table-structured thead th.blockr-stub-header.dt-has-foldall {
+.vz-table-structured thead th.vz-table-stub-header.vz-table-has-foldall {
   padding-left: calc(3px + var(--blockr-card-inset, 0px));
 }
-.drilldown-table-structured .dt-foldall-wrap {
+.vz-table-structured .vz-table-foldall-wrap {
   display: flex;
   align-items: flex-start;
   gap: 9px;
 }
-.drilldown-table-structured .dt-foldall {
+.vz-table-structured .vz-table-foldall {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -200,14 +200,14 @@ input.blockr-search:focus {
   cursor: pointer;
   flex: none;
 }
-.drilldown-table-structured .dt-foldall:hover,
-.drilldown-table-structured .dt-foldall:hover .blockr-chev {
+.vz-table-structured .vz-table-foldall:hover,
+.vz-table-structured .vz-table-foldall:hover .vz-table-chev {
   color: var(--blockr-color-text-default, #111827);
 }
-.drilldown-table-structured .dt-foldall[aria-expanded="false"] .blockr-chev {
+.vz-table-structured .vz-table-foldall[aria-expanded="false"] .vz-table-chev {
   transform: rotate(-90deg);
 }
-.drilldown-table-structured .dt-foldall:focus-visible {
+.vz-table-structured .vz-table-foldall:focus-visible {
   outline: var(--blockr-focus-outline, 2px solid #2563eb);
   outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: 2px;
@@ -220,7 +220,7 @@ input.blockr-search:focus {
    makes the indentation visible. 3px above and below the 20px line is a
    26px row, as in the preview. A groups table keeps its row labels on one
    line (table-groups.css). */
-.drilldown-table-structured .blockr-table:not(.blockr-summarize-table) tbody td.blockr-stub {
+.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody td.vz-table-stub {
   text-align: left;
   vertical-align: top;
   white-space: normal;
@@ -236,7 +236,7 @@ input.blockr-search:focus {
 /* Value cells - right-aligned, tabular figures, top-aligned to match the
    wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
    comes from the data via `.bold` rows, not a blanket medium weight. */
-.drilldown-table-structured .blockr-table tbody td.blockr-data {
+.vz-table-structured .blockr-table tbody td.vz-table-data {
   text-align: right;
   vertical-align: top;
   white-space: nowrap;
@@ -252,85 +252,85 @@ input.blockr-search:focus {
   font-feature-settings: 'tnum' 1;
 }
 /* Em-dash for missing values reads as 'no data', not as a real figure. */
-.drilldown-table-structured .blockr-table tbody td.blockr-data.blockr-dash {
+.vz-table-structured .blockr-table tbody td.vz-table-data.vz-table-dash {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 /* No rules in the body. 26px rows: 3px above and below a 20px line, set
    here rather than inherited, so the height does not depend on the base
    sheet's line height. Groups are set apart by space (the group's last row
    and the next heading's top padding). */
-.drilldown-table-structured .blockr-table tbody tr {
+.vz-table-structured .blockr-table tbody tr {
   border-bottom: 0;
 }
-.drilldown-table-structured .blockr-table tbody tr.blockr-group-last td {
+.vz-table-structured .blockr-table tbody tr.vz-table-group-last td {
   border-bottom: 0;
   padding-bottom: 7px;
 }
-.drilldown-table-structured .blockr-table tbody tr.blockr-bold td {
+.vz-table-structured .blockr-table tbody tr.vz-table-bold td {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
-.drilldown-table-structured .blockr-table tbody tr.blockr-italic td {
+.vz-table-structured .blockr-table tbody tr.vz-table-italic td {
   font-style: italic;
 }
 /* Hover. A table nothing can be clicked in keeps a plain row wash. A table
-   whose rows drill (`.dt-clickable`) shows what a click would claim instead:
-   table/drill.js sets dt-hot-row / dt-hot-col / dt-hot-cell from the click
+   whose rows drill (`.vz-table-clickable`) shows what a click would claim instead:
+   table/drill.js sets vz-table-hot-row / vz-table-hot-col / vz-table-hot-cell from the click
    model, so the plain :hover wash is off there. The shared sheet's
    own hover sits on the <tr>; it goes, or it would show under both. */
-.drilldown-table-structured .blockr-table tbody tr:hover {
+.vz-table-structured .blockr-table tbody tr:hover {
   background-color: transparent;
 }
-.drilldown-table-structured .blockr-table thead th.blockr-sortable:hover {
+.vz-table-structured .blockr-table thead th.blockr-sortable:hover {
   background-color: var(--blockr-color-bg-surface, #ffffff);
 }
-.drilldown-table-structured:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover > td {
+.vz-table-structured:not(.vz-table-clickable) .blockr-table tbody tr.vz-table-row:hover > td {
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
-.drilldown-table-structured .blockr-table tbody tr.dt-hot-row > td,
-.drilldown-table-structured .blockr-table tbody td.dt-hot-col,
-.drilldown-table-structured .blockr-table thead th.dt-hot-col {
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row > td,
+.vz-table-structured .blockr-table tbody td.vz-table-hot-col,
+.vz-table-structured .blockr-table thead th.vz-table-hot-col {
   background-color: var(--blockr-color-bg-hover, #f3f4f6);
 }
-.drilldown-table-structured .blockr-table tbody tr.dt-hot-row.dt-hot-soft > td,
-.drilldown-table-structured .blockr-table tbody td.dt-hot-col.dt-hot-soft {
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row.vz-table-hot-soft > td,
+.vz-table-structured .blockr-table tbody td.vz-table-hot-col.vz-table-hot-soft {
   background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, transparent);
 }
 /* The sticky header stays opaque, or the rows scroll through it. */
-.drilldown-table-structured .blockr-table thead th.dt-hot-col.dt-hot-soft {
+.vz-table-structured .blockr-table thead th.vz-table-hot-col.vz-table-hot-soft {
   background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, var(--blockr-color-bg-surface, #ffffff));
 }
-.drilldown-table-structured .blockr-table tbody tr.dt-hot-row > td.dt-hot-cell {
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row > td.vz-table-hot-cell {
   background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 9%, transparent);
 }
 /* Drill state: the claimed row and column take the selected tint and the
    accent ink, with no bars; the cell where the two cross is one step stronger
    and bold. After the hover rules, so a claim shows through the hover. */
-.drilldown-table-structured .blockr-table tbody tr.dt-row-active > td,
-.drilldown-table-structured .blockr-table tbody td.dt-col-active,
-.drilldown-table-structured .blockr-table thead th.blockr-col-header.dt-col-active {
+.vz-table-structured .blockr-table tbody tr.vz-table-row-active > td,
+.vz-table-structured .blockr-table tbody td.vz-table-col-active,
+.vz-table-structured .blockr-table thead th.vz-table-col-header.vz-table-col-active {
   background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   color: var(--blockr-color-text-accent, #2563eb);
   box-shadow: none;
 }
-.drilldown-table-structured .blockr-table thead th.dt-col-active .arm__n {
+.vz-table-structured .blockr-table thead th.vz-table-col-active .vz-table-arm-n {
   color: var(--blockr-color-text-accent, #2563eb);
 }
-.drilldown-table-structured .blockr-table tbody tr.dt-row-active > td.dt-col-active {
+.vz-table-structured .blockr-table tbody tr.vz-table-row-active > td.vz-table-col-active {
   background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
 /* Group header row + full-width clickable button. The td carries no
    padding (so the bigger hit target reaches the row edges); the button
    carries it. */
-.drilldown-table-structured .blockr-table tbody tr.blockr-section-header {
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header {
   cursor: pointer;
 }
-.drilldown-table-structured .blockr-table tbody tr.blockr-section-header td.blockr-section-cell {
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header td.vz-table-section-cell {
   padding: 0 0 0 var(--blockr-card-inset, 0px);
   text-align: left;
   border-top: none;
 }
-.drilldown-table-structured .blockr-section-btn {
+.vz-table-structured .vz-table-section-btn {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -344,57 +344,57 @@ input.blockr-search:focus {
   padding: 11px 12px 3px;
 }
 /* The first heading sits right under the column header. */
-.drilldown-table-structured .blockr-table tbody tr.blockr-section-header:first-child .blockr-section-btn {
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header:first-child .vz-table-section-btn {
   padding-top: 10px;
 }
 /* Collapsing disabled: the section label is a static span, not a control. */
-.drilldown-table-structured .blockr-section-btn-static { cursor: default; }
+.vz-table-structured .vz-table-section-btn-static { cursor: default; }
 /* Section headers (html_is_nest()): each heading's name starts where its
    rows start (24px, one 16px step per level), the 12px chevron and 9px gap
    hanging to the left of it. */
-.drilldown-table-structured .blockr-section-cell.blockr-section-nest .blockr-section-btn {
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest .vz-table-section-btn {
   padding-left: 3px;
 }
-.drilldown-table-structured .blockr-section-cell.blockr-section-nest.level-2 .blockr-section-btn {
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-2 .vz-table-section-btn {
   padding-left: 19px;
 }
-.drilldown-table-structured .blockr-section-cell.blockr-section-nest.level-3 .blockr-section-btn {
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-3 .vz-table-section-btn {
   padding-left: 35px;
 }
-.drilldown-table-structured .blockr-section-cell.blockr-section-nest.level-4 .blockr-section-btn {
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-4 .vz-table-section-btn {
   padding-left: 51px;
 }
-.drilldown-table-structured .blockr-section-value {
+.vz-table-structured .vz-table-section-value {
   font-weight: var(--blockr-font-weight-semibold, 600);
   letter-spacing: -0.005em;
   font-size: 14px;
 }
-.drilldown-table-structured .blockr-section-cell.level-3 .blockr-section-value,
-.drilldown-table-structured .blockr-section-cell.level-4 .blockr-section-value {
+.vz-table-structured .vz-table-section-cell.level-3 .vz-table-section-value,
+.vz-table-structured .vz-table-section-cell.level-4 .vz-table-section-value {
   font-size: 13px;
 }
 /* The design system's chevron: 12px, a 1.4px stroke at any size, muted,
    darker on hover of its heading. Down while open, right when folded (the
    ROW carries `collapsed`). The svg keeps its 24-unit path; the stroke is
-   pinned by the `.blockr-html-table-container .blockr-chev path` rule at the
+   pinned by the `.vz-table .vz-table-chev path` rule at the
    end of this sheet. */
-.drilldown-table-structured .blockr-chev {
+.vz-table-structured .vz-table-chev {
   width: 12px;
   height: 12px;
   flex: none;
   color: var(--blockr-color-text-muted, #6b7280);
   transition: transform var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
 }
-.drilldown-table-structured .blockr-section-btn:hover .blockr-chev {
+.vz-table-structured .vz-table-section-btn:hover .vz-table-chev {
   color: var(--blockr-color-text-default, #111827);
 }
-.drilldown-table-structured tr.blockr-section-header.collapsed .blockr-chev {
+.vz-table-structured tr.vz-table-section-header.collapsed .vz-table-chev {
   transform: rotate(-90deg);
 }/* Indent-derived collapse: a chevron button sits before the label of any row
    that heads a deeper-indented group. Reuses the section chevron, rotating when
    the row is collapsed. The button is a bare affordance so clicking the label /
    cells still drills. */
-.drilldown-table-structured .blockr-indent-btn {
+.vz-table-structured .vz-table-indent-btn {
   border: 0;
   background: transparent;
   padding: 0;
@@ -405,16 +405,16 @@ input.blockr-search:focus {
   vertical-align: baseline;
   margin-left: -17px;
 }
-.drilldown-table-structured .blockr-indent-btn:hover .blockr-chev {
+.vz-table-structured .vz-table-indent-btn:hover .vz-table-chev {
   color: var(--blockr-color-text-default, #111827);
 }
-.drilldown-table-structured tr.blockr-indent-toggle.collapsed .blockr-chev {
+.vz-table-structured tr.vz-table-indent-toggle.collapsed .vz-table-chev {
   transform: rotate(-90deg);
 }
-.drilldown-table-structured .blockr-table tbody tr:last-child td {
+.vz-table-structured .blockr-table tbody tr:last-child td {
   border-bottom-color: transparent;
 }
-.drilldown-table-structured .blockr-section-label {
+.vz-table-structured .vz-table-section-label {
   color: var(--blockr-color-text-muted, #6b7280);
   font-weight: var(--blockr-font-weight-normal, 400);
   margin-right: 4px;
@@ -423,16 +423,16 @@ input.blockr-search:focus {
    scrolls; a soft shadow fades in once the scroll container is scrolled
    (the JS toggles `.scrolled` on .blockr-table-wrapper). background-color,
    not the shorthand, so a leaf keeps its column rule. */
-.drilldown-table-structured .blockr-table thead th {
+.vz-table-structured .blockr-table thead th {
   position: sticky;
   top: 0;
   z-index: 3;
   background-color: var(--blockr-color-bg-surface, #ffffff);
 }
-.drilldown-table-structured .blockr-table-wrapper.scrolled thead th {
+.vz-table-structured .blockr-table-wrapper.scrolled thead th {
   box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
 }
-.blockr-html-table-container .blockr-chev path {
+.vz-table .vz-table-chev path {
   vector-effect: non-scaling-stroke;
   stroke-width: 1.4px;
 }

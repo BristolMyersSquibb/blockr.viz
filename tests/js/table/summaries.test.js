@@ -31,18 +31,18 @@ test('one entry per summary: its name, what it computes, a chevron', () => {
   const e = editor([{ type: 'simple', func: 'mean', col: 'AGE' }, { type: 'dist', col: 'AGE', name: 'Age' },
                     { type: 'simple', color: 'SEX', facet: 'ARM' }]);
   const text = (cls) => Array.from(e.el.querySelectorAll(cls)).map((x) => x.textContent);
-  assert.deepEqual(text('.lane-sum-name'), ['Summary', 'Age', 'Summary']);
-  assert.deepEqual(text('.lane-sum-desc'), ['mean of AGE', 'distribution of AGE',
+  assert.deepEqual(text('.vz-table-sum-name'), ['Summary', 'Age', 'Summary']);
+  assert.deepEqual(text('.vz-table-sum-desc'), ['mean of AGE', 'distribution of AGE',
                                             'count of rows, split by SEX, by ARM']);
-  assert.equal(e.el.querySelectorAll('.lane-sum-chev').length, 3);
+  assert.equal(e.el.querySelectorAll('.vz-table-sum-chev').length, 3);
   assert.equal(e.built.length > 0, true);
-  assert.ok(Array.from(e.el.querySelectorAll('.lane-sum-body')).every((b) => b.hidden));
+  assert.ok(Array.from(e.el.querySelectorAll('.vz-table-sum-body')).every((b) => b.hidden));
 });
 
 test('a lone column starts open; the words for other types', () => {
   const e = editor([{ type: 'field', col: 'SEX' }]);
-  assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
-  assert.equal(e.el.querySelectorAll('.lane-sum-up, .lane-sum-down').length, 0);
+  assert.equal(e.el.querySelector('.vz-table-sum-body').hidden, false);
+  assert.equal(e.el.querySelectorAll('.vz-table-sum-up, .vz-table-sum-down').length, 0);
   const d = e.env.V.table.summaries.describe;
   assert.equal(d({ type: 'field', col: 'SEX' }), 'values of SEX');
   assert.equal(d({ type: 'expr', expr: 'n()' }), 'n()');
@@ -69,30 +69,30 @@ test('a field edit sends the whole list with that entry changed', () => {
 test('move, remove, add and fold', () => {
   const list = [{ type: 'simple' }, { type: 'expr', expr: 'n()' }];
   const e = editor(list);
-  e.click(e.el.querySelectorAll('.lane-sum-down')[0]);
-  e.click(e.el.querySelectorAll('.lane-sum-up')[0]);
-  e.click(e.el.querySelectorAll('.lane-sum-rm')[1]);
-  const add = e.el.querySelector('.lane-sum-addcol select');
+  e.click(e.el.querySelectorAll('.vz-table-sum-down')[0]);
+  e.click(e.el.querySelectorAll('.vz-table-sum-up')[0]);
+  e.click(e.el.querySelectorAll('.vz-table-sum-rm')[1]);
+  const add = e.el.querySelector('.vz-table-sum-addcol select');
   // blockr.ui's Select (here the test's stand-in) keys its options by label.
   assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'Summary', 'Distribution']);
   add.value = 'Pair';
   add.dispatchEvent(new e.env.win.Event('change'));
   // The first entry moves only down, the last only up.
-  assert.equal(e.el.querySelectorAll('.lane-sum-up').length, 1);
+  assert.equal(e.el.querySelectorAll('.vz-table-sum-up').length, 1);
   assert.deepEqual(e.sets, [
     [{ type: 'expr', expr: 'n()' }, { type: 'simple' }],
     [{ type: 'expr', expr: 'n()' }, { type: 'simple' }],
     [{ type: 'simple' }],
     [{ type: 'simple' }, { type: 'expr', expr: 'n()' }, { type: 'pair' }]
   ]);
-  const toggle = e.el.querySelector('.lane-sum-toggle');
+  const toggle = e.el.querySelector('.vz-table-sum-toggle');
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   e.click(toggle);
-  assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+  assert.equal(e.el.querySelector('.vz-table-sum-body').hidden, false);
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   e.draw(list);
-  assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
-  assert.equal(e.el.querySelector('.lane-sum-toggle').getAttribute('aria-expanded'), 'true');
+  assert.equal(e.el.querySelector('.vz-table-sum-body').hidden, false);
+  assert.equal(e.el.querySelector('.vz-table-sum-toggle').getAttribute('aria-expanded'), 'true');
 });
 
 test('the Show tiles have a drawing for every value and the editor width', () => {
@@ -102,7 +102,7 @@ test('the Show tiles have a drawing for every value and the editor width', () =>
     assert.match(show.host.icon('show', v), /^<svg/, v);
   }
   assert.equal(show.host.icon('func', 'mean'), '');
-  const row = e.el.querySelector('.lane-sum-field--wide');
+  const row = e.el.querySelector('.vz-table-sum-field--wide');
   assert.ok(row);
   assert.equal(row.querySelector('.blockr-label').textContent, show.label);
 });

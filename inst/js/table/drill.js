@@ -17,8 +17,8 @@
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
 
-  const FLASH = ['dt-flash-row', 'dt-flash-col', 'dt-flash-colhead', 'dt-flash-cross'];
-  const HOT = ['dt-hot-row', 'dt-hot-col', 'dt-hot-cell', 'dt-hot-soft'];
+  const FLASH = ['vz-table-flash-row', 'vz-table-flash-col', 'vz-table-flash-colhead', 'vz-table-flash-cross'];
+  const HOT = ['vz-table-hot-row', 'vz-table-hot-col', 'vz-table-hot-cell', 'vz-table-hot-soft'];
 
   /** @param {(string | null)[] | undefined} a @param {(string | null)[] | undefined} b */
   const sameValues = (a, b) => !!a && !!b && a.length === b.length &&
@@ -140,7 +140,7 @@
       const hit = grid.headAt(th);
       if (hit && covers(claim, hit.h.keys)) out.head.push(th);
     });
-    table.querySelectorAll('tbody tr.blockr-data-row').forEach((tr) => {
+    table.querySelectorAll('tbody tr.vz-table-row').forEach((tr) => {
       idx.forEach((j) => { if (tr.children[j]) out.cells.push(tr.children[j]); });
     });
     return out;
@@ -172,26 +172,26 @@
   function hover(grid, at) {
     const m = /** @type {TableModel} */ (grid.model);
     const hot = (/** @type {Element} */ el, /** @type {string[]} */ cls) => el.classList.add(...cls);
-    if (at.matches('.blockr-section-value')) {
-      const sh = at.closest('tr.blockr-section-header');
-      if (sh && sh.classList.contains('dt-keyed')) hot(sh, ['dt-hot-row']);
+    if (at.matches('.vz-table-section-value')) {
+      const sh = at.closest('tr.vz-table-section-header');
+      if (sh && sh.classList.contains('vz-table-keyed')) hot(sh, ['vz-table-hot-row']);
       return;
     }
     const hit = grid.headAt(at);
     if (hit) {
       const ce = colEls(grid, hit.h.keys);
-      ce.head.concat(ce.cells).forEach((c) => hot(c, ['dt-hot-col']));
+      ce.head.concat(ce.cells).forEach((c) => hot(c, ['vz-table-hot-col']));
       return;
     }
-    const tr = at.closest('tr.blockr-data-row');
-    if (!tr || tr.classList.contains('dt-row-nodrill')) return;
+    const tr = at.closest('tr.vz-table-row');
+    if (!tr || tr.classList.contains('vz-table-row-nodrill')) return;
     const j = /** @type {HTMLTableCellElement} */ (at).cellIndex;
     const keys = j !== m.stub && m.cols[j] ? m.cols[j].keys : null;
-    if (!keys) return hot(tr, ['dt-hot-row']);
+    if (!keys) return hot(tr, ['vz-table-hot-row']);
     const ce = colEls(grid, keys);
-    hot(tr, ['dt-hot-row', 'dt-hot-soft']);
-    ce.head.concat(ce.cells).forEach((c) => { if (c !== at) hot(c, ['dt-hot-col', 'dt-hot-soft']); });
-    hot(at, ['dt-hot-cell']);
+    hot(tr, ['vz-table-hot-row', 'vz-table-hot-soft']);
+    ce.head.concat(ce.cells).forEach((c) => { if (c !== at) hot(c, ['vz-table-hot-col', 'vz-table-hot-soft']); });
+    hot(at, ['vz-table-hot-cell']);
   }
 
   /**
@@ -206,7 +206,7 @@
       .forEach((el) => el.classList.remove(...HOT));
     scope.on(grid.box, 'mouseover', (e) => {
       const t = /** @type {Element | null} */ (e.target);
-      const at = t && t.closest ? (t.closest('.blockr-section-value') || t.closest('td, th')) : null;
+      const at = t && t.closest ? (t.closest('.vz-table-section-value') || t.closest('td, th')) : null;
       if (at === hotAt) return;
       hotAt = at;
       clear();
@@ -230,12 +230,12 @@
     if (hit) {
       return hit.h.keys && !t.closest('.blockr-sort-icon') ? { sel: selection({}, hit.h.keys) } : null;
     }
-    const sec = t.closest('tr.blockr-section-header');
+    const sec = t.closest('tr.vz-table-section-header');
     if (sec) {
       const s = m.sections ? m.sections[Number(sec.getAttribute('data-s'))] : null;
-      return s && s.keys && t.closest('.blockr-section-value') ? { sel: selection(s.keys), tr: sec } : null;
+      return s && s.keys && t.closest('.vz-table-section-value') ? { sel: selection(s.keys), tr: sec } : null;
     }
-    const tr = t.closest('tr.blockr-data-row');
+    const tr = t.closest('tr.vz-table-row');
     const claim = tr ? rowClaim(m, Number(tr.getAttribute('data-i'))) : null;
     if (!tr || !claim) return null;
     const td = /** @type {HTMLTableCellElement | null} */ (t.closest('td'));
@@ -302,8 +302,8 @@
     rowClass(i) {
       const m = this.ctx.model();
       if (!m || !clickable(m)) return '';
-      if (!rowClaim(m, i)) return 'dt-row-nodrill';
-      return this.rows().has(i) ? 'dt-row-active' : '';
+      if (!rowClaim(m, i)) return 'vz-table-row-nodrill';
+      return this.rows().has(i) ? 'vz-table-row-active' : '';
     }
 
     /** @param {number} s */
@@ -312,18 +312,18 @@
       const m = this.grid.model;
       const sec = m && m.sections ? m.sections[s] : null;
       return sel && !this.ctx.transient() && sec && sec.keys && !sel.columns &&
-        equal(sec.keys, sel.filters) ? 'dt-row-active' : '';
+        equal(sec.keys, sel.filters) ? 'vz-table-row-active' : '';
     }
 
     /** Light the claimed columns; runs after every draw. */
     paint() {
       const table = this.grid.table;
       if (!table) return;
-      table.querySelectorAll('.dt-col-active').forEach((el) => el.classList.remove('dt-col-active'));
+      table.querySelectorAll('.vz-table-col-active').forEach((el) => el.classList.remove('vz-table-col-active'));
       const sel = this.ctx.selection();
       if (!sel || this.ctx.transient()) return;
       const e = colEls(this.grid, sel.columns);
-      e.head.concat(e.cells).forEach((el) => el.classList.add('dt-col-active'));
+      e.head.concat(e.cells).forEach((el) => el.classList.add('vz-table-col-active'));
     }
 
     /**
@@ -337,10 +337,10 @@
         V.util.select(this.frame.id, /** @type {any} */ (sel));
         ctx.sent(sel);
         /** @type {Array<{ el: Element, cls: string }>} */
-        const parts = at.tr ? [{ el: at.tr, cls: 'dt-flash-row' }] : [];
+        const parts = at.tr ? [{ el: at.tr, cls: 'vz-table-flash-row' }] : [];
         const e = colEls(this.grid, sel.columns);
-        e.head.forEach((el) => parts.push({ el, cls: 'dt-flash-colhead' }));
-        e.cells.forEach((el) => parts.push({ el, cls: el === at.cell ? 'dt-flash-cross' : 'dt-flash-col' }));
+        e.head.forEach((el) => parts.push({ el, cls: 'vz-table-flash-colhead' }));
+        e.cells.forEach((el) => parts.push({ el, cls: el === at.cell ? 'vz-table-flash-cross' : 'vz-table-flash-col' }));
         flash(this.frame.el, this.scope, parts);
         return;
       }

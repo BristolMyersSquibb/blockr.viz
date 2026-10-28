@@ -77,57 +77,57 @@ function mount(p, env = loadTable()) {
   const $$ = (sel) => Array.from(el.querySelectorAll(sel));
   const click = (node, init = {}) => node.dispatchEvent(
     new env.win.MouseEvent('click', Object.assign({ bubbles: true }, init)));
-  const cell = (r, c) => $$('tbody tr.blockr-data-row')[r].children[c];
+  const cell = (r, c) => $$('tbody tr.vz-table-row')[r].children[c];
   const render = (q) => env.b.renderValue(el, payload(q));
   return Object.assign(env, { el, $, $$, click, cell, render });
 }
 
 test('the groups table carries its classes and settings', () => {
   const t = mount(payload({ data: groups(), config: Object.assign({ bar_width: 'narrow', look: 'compact' }, G) }));
-  assert.ok(t.$('.vz-table').classList.contains('blockr-summarize-container'));
+  assert.ok(t.$('.vz-table').classList.contains('vz-table-groups'));
   const tbl = t.$('table');
-  assert.ok(tbl.classList.contains('blockr-summarize-table'));
+  assert.ok(tbl.classList.contains('vz-table-groups-table'));
   assert.equal(tbl.getAttribute('data-summarize-width'), 'narrow');
   assert.equal(tbl.getAttribute('data-summarize-compact'), '1');
   assert.equal(tbl.getAttribute('data-summarize-nested'), null);
-  assert.ok(t.cell(0, 0).classList.contains('blockr-summarize-label-col'));
+  assert.ok(t.cell(0, 0).classList.contains('vz-table-groups-label-col'));
   assert.equal(t.$('.vz-count').textContent, '2 more in Other');
 });
 
 test('a bar: the track, its fill and the value with its percentage', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const c = t.cell(0, 1);
-  assert.equal(c.className, 'blockr-summarize-bar-col');
-  assert.match(c.querySelector('.blockr-summarize-fill').getAttribute('style'), /width:33%;background:#2563eb/);
-  assert.equal(c.querySelector('.blockr-summarize-barval').textContent, '10 (17%)');
-  assert.equal(c.querySelector('.blockr-summarize-barval').getAttribute('style'), 'width:4ch');
-  assert.equal(t.cell(2, 1).querySelector('.blockr-summarize-fill'), null);
+  assert.equal(c.className, 'vz-table-groups-bar-col');
+  assert.match(c.querySelector('.vz-table-groups-fill').getAttribute('style'), /width:33%;background:#2563eb/);
+  assert.equal(c.querySelector('.vz-table-groups-barval').textContent, '10 (17%)');
+  assert.equal(c.querySelector('.vz-table-groups-barval').getAttribute('style'), 'width:4ch');
+  assert.equal(t.cell(2, 1).querySelector('.vz-table-groups-fill'), null);
 });
 
 test('values off: the marks draw without their numbers', () => {
   const t = mount(payload({ data: groups(), config: Object.assign({ value_labels: false }, G) }));
-  assert.equal(t.$$('.blockr-summarize-barval').length, 0);
+  assert.equal(t.$$('.vz-table-groups-barval').length, 0);
   assert.equal(t.$('table').getAttribute('data-summarize-values'), 'off');
 });
 
 test('a colour split: one segment per level with a value, its label inside', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const segs = t.cell(1, 2).querySelectorAll('.blockr-summarize-fill');
+  const segs = t.cell(1, 2).querySelectorAll('.vz-table-groups-fill');
   assert.equal(segs.length, 2);
   assert.match(segs[0].getAttribute('style'), /width:30%;background:#f00/);
-  assert.equal(segs[1].querySelector('.blockr-summarize-seglab').textContent, '4');
+  assert.equal(segs[1].querySelector('.vz-table-groups-seglab').textContent, '4');
   assert.equal(segs[0].getAttribute('data-summarize-tip'), 'F: 3');
-  assert.equal(t.cell(2, 2).querySelectorAll('.blockr-summarize-fill').length, 1);
+  assert.equal(t.cell(2, 2).querySelectorAll('.vz-table-groups-fill').length, 1);
 });
 
 test('a stacked split keeps its total beside the bar; a grouped one has none', () => {
   const m = groups();
   m.cols[2].mark.valueWidth = 2;
   const t = mount(payload({ data: m, config: G }));
-  assert.equal(t.cell(0, 2).querySelector('.blockr-summarize-barwrap > .blockr-summarize-barval').textContent, '10');
+  assert.equal(t.cell(0, 2).querySelector('.vz-table-groups-barwrap > .vz-table-groups-barval').textContent, '10');
   Object.assign(m.cols[2].mark, { mode: 'grouped', levelValues: [['2', '3', null], ['1', '4', '5']] });
   t.render({ data: m, config: G });
-  assert.equal(t.cell(0, 2).querySelector(':scope > .blockr-summarize-barwrap'), null);
+  assert.equal(t.cell(0, 2).querySelector(':scope > .vz-table-groups-barwrap'), null);
 });
 
 test('a grouped split with labels draws one labelled track per level', () => {
@@ -135,43 +135,43 @@ test('a grouped split with labels draws one labelled track per level', () => {
   Object.assign(m.cols[2].mark, { mode: 'grouped', levelValues: [['2', '3', null], ['1', '4', '5']],
                                   valueWidth: 2 });
   const t = mount(payload({ data: m, config: G }));
-  const lv = t.cell(0, 2).querySelectorAll('.blockr-summarize-lv');
+  const lv = t.cell(0, 2).querySelectorAll('.vz-table-groups-lv');
   assert.equal(lv.length, 2);
-  assert.equal(lv[1].querySelector('.blockr-summarize-barval').textContent, '1');
+  assert.equal(lv[1].querySelector('.vz-table-groups-barval').textContent, '1');
 });
 
 test('a diverging bar: positive and negative, zero empty', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  assert.ok(t.cell(0, 3).querySelector('.blockr-summarize-fill.is-pos'));
-  assert.ok(t.cell(2, 3).querySelector('.blockr-summarize-fill.is-neg'));
-  assert.equal(t.cell(1, 3).querySelector('.blockr-summarize-fill'), null);
+  assert.ok(t.cell(0, 3).querySelector('.vz-table-groups-fill.is-pos'));
+  assert.ok(t.cell(2, 3).querySelector('.vz-table-groups-fill.is-neg'));
+  assert.equal(t.cell(1, 3).querySelector('.vz-table-groups-fill'), null);
 });
 
 test('a box: whiskers, caps, box, median; nothing without a median', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const box = t.cell(0, 4).querySelector('.blockr-summarize-boxcell');
+  const box = t.cell(0, 4).querySelector('.vz-table-groups-boxcell');
   assert.deepEqual(Array.from(box.children).map((i) => i.className),
-                   ['lane-wh', 'lane-wh', 'lane-cap', 'lane-cap', 'lane-box', 'lane-med']);
+                   ['vz-table-lane-wh', 'vz-table-lane-wh', 'vz-table-lane-cap', 'vz-table-lane-cap', 'vz-table-lane-box', 'vz-table-lane-med']);
   assert.equal(box.getAttribute('data-summarize-tip'), 'n = 4');
-  assert.equal(t.cell(1, 4).querySelector('.blockr-summarize-boxcell').children.length, 0);
+  assert.equal(t.cell(1, 4).querySelector('.vz-table-groups-boxcell').children.length, 0);
 });
 
 test('a point range: fence, range and centre', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const pr = t.cell(0, 5).querySelector('.blockr-summarize-prcell');
-  assert.deepEqual(Array.from(pr.children).map((i) => i.className), ['lane-fence', 'lane-rng', 'lane-ctr']);
-  assert.deepEqual(Array.from(t.cell(1, 5).querySelector('.blockr-summarize-prcell').children)
-    .map((i) => i.className), ['lane-rng', 'lane-ctr']);
+  const pr = t.cell(0, 5).querySelector('.vz-table-groups-prcell');
+  assert.deepEqual(Array.from(pr.children).map((i) => i.className), ['vz-table-lane-fence', 'vz-table-lane-rng', 'vz-table-lane-ctr']);
+  assert.deepEqual(Array.from(t.cell(1, 5).querySelector('.vz-table-groups-prcell').children)
+    .map((i) => i.className), ['vz-table-lane-rng', 'vz-table-lane-ctr']);
 });
 
 test('a pair: reference, link, from and an open to; dashed by its level', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const pa = t.cell(1, 6).querySelector('.blockr-summarize-pacell');
+  const pa = t.cell(1, 6).querySelector('.vz-table-groups-pacell');
   assert.ok(pa.classList.contains('is-dash'));
   assert.deepEqual(Array.from(pa.children).map((i) => i.className),
-                   ['lane-ref', 'lane-link', 'lane-from', 'lane-to is-open']);
-  assert.match(t.cell(0, 6).querySelector('.blockr-summarize-pacell').getAttribute('style'),
-               /--blockr-summarize-fill:#0a0/);
+                   ['vz-table-lane-ref', 'vz-table-lane-link', 'vz-table-lane-from', 'vz-table-lane-to is-open']);
+  assert.match(t.cell(0, 6).querySelector('.vz-table-groups-pacell').getAttribute('style'),
+               /--vz-table-groups-fill:#0a0/);
 });
 
 test('a colour split of lanes draws one lane per level that has rows', () => {
@@ -181,53 +181,53 @@ test('a colour split of lanes draws one lane per level that has rows', () => {
   m.cols[5].mark = { kind: 'pointrange', multi: true, levels: ['F', 'M'], fills: ['#f00', '#00f'],
                      lanes: [g([40, null, 30]), g([60, 50, null])], valueWidth: 2 };
   const t = mount(payload({ data: m, config: G }));
-  const lv = t.cell(0, 5).querySelectorAll('.blockr-summarize-lv');
+  const lv = t.cell(0, 5).querySelectorAll('.vz-table-groups-lv');
   assert.equal(lv.length, 2);
   assert.match(lv[1].getAttribute('style'), /#00f/);
-  assert.equal(lv[1].querySelector('.blockr-summarize-barval').textContent, '1');
-  assert.equal(t.cell(1, 5).querySelectorAll('.blockr-summarize-lv').length, 1);
+  assert.equal(lv[1].querySelector('.vz-table-groups-barval').textContent, '1');
+  assert.equal(t.cell(1, 5).querySelectorAll('.vz-table-groups-lv').length, 1);
 });
 
 test('a swimlane: its segments in their level colours, the axis in the foot', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const c = t.cell(0, 7);
-  assert.ok(c.classList.contains('blockr-summarize-wide'));
-  const segs = c.querySelectorAll('.lane-seg');
+  assert.ok(c.classList.contains('vz-table-groups-wide'));
+  const segs = c.querySelectorAll('.vz-table-lane-seg');
   assert.equal(segs.length, 2);
   assert.match(segs[1].getAttribute('style'), /background:#555/);
   assert.equal(segs[0].getAttribute('data-l'), 'Mild');
   assert.equal(segs[0].getAttribute('data-tip'), 'day 1 to 5');
-  assert.equal(t.$('tfoot .blockr-summarize-axis-cell').children.length, 1);
-  assert.equal(t.$$('thead .blockr-summarize-axis').length, 1);
+  assert.equal(t.$('tfoot .vz-table-groups-axis-cell').children.length, 1);
+  assert.equal(t.$$('thead .vz-table-groups-axis').length, 1);
 });
 
 test('a sparkline: band, reference line, line and the last point', () => {
   const t = mount(payload({ data: groups(), config: G }));
   assert.ok(t.cell(0, 8).classList.contains('is-spark'));
-  const sp = t.cell(0, 8).querySelector('.blockr-summarize-spcell');
+  const sp = t.cell(0, 8).querySelector('.vz-table-groups-spcell');
   assert.deepEqual(Array.from(sp.querySelector('svg').children).map((e) => e.tagName.toLowerCase()),
                    ['polygon', 'line', 'polyline']);
-  assert.match(sp.querySelector('.lane-dot').getAttribute('style'), /left:100%;top:55%/);
+  assert.match(sp.querySelector('.vz-table-lane-dot').getAttribute('style'), /left:100%;top:55%/);
   assert.equal(t.cell(1, 8).querySelector('polyline'), null);
 });
 
 test('a tile is painted with its value; numbers and text draw as they are', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const tile = t.cell(2, 9).querySelector('.blockr-summarize-tile');
+  const tile = t.cell(2, 9).querySelector('.vz-table-groups-tile');
   assert.equal(tile.getAttribute('style'), 'background:#c00;color:#fff');
   assert.equal(t.cell(1, 9).innerHTML, '');
-  assert.ok(t.cell(0, 10).classList.contains('blockr-summarize-num'));
+  assert.ok(t.cell(0, 10).classList.contains('vz-table-groups-num'));
   assert.equal(t.cell(1, 11).innerHTML, '&lt;b&gt;x&lt;/b&gt;');
 });
 
 test('the axis strip sits under its header, with the value slot', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const ax = t.$('th[data-col-index="1"] .blockr-summarize-axis');
+  const ax = t.$('th[data-col-index="1"] .vz-table-groups-axis');
   assert.ok(ax.classList.contains('has-val'));
-  assert.deepEqual(Array.from(ax.querySelectorAll('.blockr-summarize-axis-in span')).map((s) => s.className),
+  assert.deepEqual(Array.from(ax.querySelectorAll('.vz-table-groups-axis-in span')).map((s) => s.className),
                    ['is-first', '', 'is-last']);
   t.render({ data: groups(), config: Object.assign({ column_axis: false }, G) });
-  assert.equal(t.$$('.blockr-summarize-axis').length, 0);
+  assert.equal(t.$$('.vz-table-groups-axis').length, 0);
 });
 
 test('a row click claims the group and lights its row; again clears', () => {
@@ -241,7 +241,7 @@ test('a click on a colour split\'s segment claims that level only', () => {
   const m = groups();
   m.cols[2].keys = { SEX: ['F', 'M'] };
   const t = mount(payload({ data: m, config: G }));
-  t.click(t.cell(1, 2).querySelectorAll('.blockr-summarize-fill')[1]);
+  t.click(t.cell(1, 2).querySelectorAll('.vz-table-groups-fill')[1]);
   t.click(t.cell(0, 2));
   assert.deepEqual(t.selects(), [
     { type: 'categorical', filters: { ARM: ['Low'] }, columns: { SEX: ['M'] } },
@@ -252,20 +252,20 @@ test('a click on a colour split\'s segment claims that level only', () => {
 test('without by there is no search or header sorting', () => {
   const m = groups();
   const t = mount(payload({ data: m, config: { layout: 'groups', by: [] } }));
-  assert.ok(t.$('input.blockr-search').hidden);
+  assert.ok(t.$('input.vz-table-search').hidden);
   assert.equal(t.$$('th.blockr-sortable').length, 0);
 });
 
 test('nested groups: parents fold their terms; search keeps the parent', async () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   assert.equal(t.$('table').getAttribute('data-summarize-nested'), '1');
-  const rows = () => t.$$('tbody tr.blockr-data-row');
+  const rows = () => t.$$('tbody tr.vz-table-row');
   assert.deepEqual(rows().map((r) => r.className.split(' ').filter((c) => c.startsWith('is-')).join(' ')),
                    ['is-parent', 'is-child', 'is-child is-group-end', 'is-parent', 'is-child is-group-end']);
-  t.click(rows()[0].querySelector('.blockr-indent-btn'));
+  t.click(rows()[0].querySelector('.vz-table-indent-btn'));
   assert.equal(rows().length, 3);
-  t.click(rows()[0].querySelector('.blockr-indent-btn'));
-  const inp = t.$('input.blockr-search');
+  t.click(rows()[0].querySelector('.vz-table-indent-btn'));
+  const inp = t.$('input.vz-table-search');
   inp.value = 'rash';
   inp.dispatchEvent(new t.win.Event('input'));
   await tick(t.win, 200);
@@ -276,19 +276,19 @@ test('nested groups: parents fold their terms; search keeps the parent', async (
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   t.click(t.$('th[data-col-index="1"]'));
-  assert.deepEqual(t.$$('tbody tr.blockr-data-row').map((r) => r.children[0].textContent),
+  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.children[0].textContent),
                    ['Skin', 'Rash', 'Cardiac', 'Angina', 'Arrhythmia']);
 });
 
 test('the legend: one group per colour column, hidden with cards', () => {
   const legend = { groups: [{ title: 'Sex', items: [{ color: '#f00', label: 'F' }, { color: '#00f', label: 'M' }] }] };
   const t = mount(payload({ data: groups(), config: G, derived: { legend }, dataRev: 9 }));
-  assert.equal(t.$('.blockr-summarize-legend').hidden, false);
-  assert.equal(t.$('.blockr-summarize-legend-title').textContent, 'Sex');
-  assert.equal(t.$$('.blockr-summarize-legend-item').length, 2);
-  assert.ok(t.$('.blockr-summarize-legend').nextElementSibling.classList.contains('blockr-table-wrapper'));
+  assert.equal(t.$('.vz-table-groups-legend').hidden, false);
+  assert.equal(t.$('.vz-table-groups-legend-title').textContent, 'Sex');
+  assert.equal(t.$$('.vz-table-groups-legend-item').length, 2);
+  assert.ok(t.$('.vz-table-groups-legend').nextElementSibling.classList.contains('blockr-table-wrapper'));
   t.render({ dataRev: 9, config: G, derived: {} });
-  assert.ok(t.$('.blockr-summarize-legend').hidden);
+  assert.ok(t.$('.vz-table-groups-legend').hidden);
 });
 
 test('a card draws its column\'s mark without the value', () => {
@@ -296,11 +296,11 @@ test('a card draws its column\'s mark without the value', () => {
   m.cards = { n: 3, multi: true, label: m.cols[0].disp,
               cols: [{ label: 'Rows', main: ['10', '20', '30'], glyph: 1 }] };
   const t = mount(payload({ data: m, config: Object.assign({ look: 'cards' }, G) }));
-  const glyph = t.$('.tc-glyph');
+  const glyph = t.$('.vz-table-card-glyph');
   assert.equal(glyph.getAttribute('data-k'), '1');
-  assert.ok(glyph.querySelector('.blockr-summarize-track'));
-  assert.equal(glyph.querySelector('.blockr-summarize-barval'), null);
-  t.click(t.$$('.tc-row')[2]);
+  assert.ok(glyph.querySelector('.vz-table-groups-track'));
+  assert.equal(glyph.querySelector('.vz-table-groups-barval'), null);
+  t.click(t.$$('.vz-table-card-row')[2]);
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: ['High'] } }]);
 });
 
@@ -308,8 +308,8 @@ test('the picture draws every row off screen without tools, and goes', async () 
   const seen = [];
   const env = loadTable({ before: (win) => {
     win.snapdom = { toCanvas: (el) => {
-      seen.push({ rows: el.querySelectorAll('tbody tr.blockr-data-row').length,
-                  search: el.querySelector('input.blockr-search').hidden,
+      seen.push({ rows: el.querySelectorAll('tbody tr.vz-table-row').length,
+                  search: el.querySelector('input.vz-table-search').hidden,
                   host: !!el.closest('.blockr-capture-host') });
       return Promise.resolve({ toDataURL: () => 'data:image/png;base64,AAA' });
     } };
@@ -355,19 +355,19 @@ test('50 groups mounts and unmounts leave no scope open', async () => {
   for (let k = 0; k < 50; k++) {
     const el = env.add('tbl');
     env.b.renderValue(el, payload({ data: k % 2 ? nested() : groups(), config: G }));
-    el.querySelector('tbody tr.blockr-data-row').dispatchEvent(new env.win.MouseEvent('click', { bubbles: true }));
+    el.querySelector('tbody tr.vz-table-row').dispatchEvent(new env.win.MouseEvent('click', { bubbles: true }));
     el.remove();
     env.trigger(el, 'shiny:unbound');
     await tick(env.win, 5);
   }
   assert.equal(env.V.Scope.open(), open);
-  assert.equal(env.win.document.querySelectorAll('.blockr-summarize-legend').length, 0);
+  assert.equal(env.win.document.querySelectorAll('.vz-table-groups-legend').length, 0);
 });
 
 /** Move the pointer onto `node` and return the card's text and node. */
 function hover(t, node) {
   node.dispatchEvent(new t.win.MouseEvent('mousemove', { bubbles: true, clientX: 10, clientY: 10 }));
-  const tip = t.win.document.querySelector('.blockr-lane-tip');
+  const tip = t.win.document.querySelector('.vz-table-lane-tip');
   return { tip, text: tip.hidden ? '' : tip.textContent, html: tip.innerHTML };
 }
 
@@ -375,7 +375,7 @@ test('hover: a bar names its value under the row and the column context', () => 
   const m = groups();
   m.cols[1].mark.hover = { head: 'Count', meas: 'Rows' };
   const t = mount(payload({ data: m, config: G }));
-  const c = hover(t, t.cell(1, 1).querySelector('.blockr-summarize-fill'));
+  const c = hover(t, t.cell(1, 1).querySelector('.vz-table-groups-fill'));
   assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'Low');
   assert.match(c.text, /Count/);
   assert.match(c.text, /Rows20 \(33%\)/);
@@ -386,7 +386,7 @@ test('hover: a colour split lists each level, the one under the pointer lit', ()
   const m = groups();
   m.cols[2].mark.hover = { cvar: 'Sex', den: 10, meas: 'Rows' };
   const t = mount(payload({ data: m, config: G }));
-  const segs = t.cell(1, 2).querySelectorAll('.blockr-summarize-fill');
+  const segs = t.cell(1, 2).querySelectorAll('.vz-table-groups-fill');
   const c = hover(t, segs[1]);
   const rows = c.tip.querySelectorAll('.dd-tt-row');
   assert.equal(rows[0].textContent, 'Sex F3 (30%)');
@@ -402,19 +402,19 @@ test('hover: a box names its statistics; a pair its clauses', () => {
                                          whiskerLow: [10, null, 5], whiskerHigh: [70, null, 45] },
                                   hover: { words: { center: 'Median', range: 'Q1–Q3', whisk: 'Tukey' } } });
   const t = mount(payload({ data: m, config: G }));
-  const box = hover(t, t.cell(0, 4).querySelector('.lane-box'));
+  const box = hover(t, t.cell(0, 4).querySelector('.vz-table-lane-box'));
   assert.match(box.text, /n4/);
   assert.match(box.text, /Median35/);
   assert.match(box.text, /Box \(Q1–Q3\)30 – 40/);
   assert.match(box.text, /Whiskers \(Tukey\)10 – 70/);
-  assert.equal(hover(t, t.cell(0, 4).querySelector('.blockr-summarize-boxcell')).text, '');
-  const pr = hover(t, t.cell(0, 6).querySelector('.lane-to'));
+  assert.equal(hover(t, t.cell(0, 4).querySelector('.vz-table-groups-boxcell')).text, '');
+  const pr = hover(t, t.cell(0, 6).querySelector('.vz-table-lane-to'));
   assert.match(pr.text, /10 to 60/);
 });
 
 test('hover: a swimlane segment says its text and lights its label everywhere', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const seg = t.cell(0, 7).querySelector('.lane-seg');
+  const seg = t.cell(0, 7).querySelector('.vz-table-lane-seg');
   const c = hover(t, seg);
   assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'day 1 to 5');
   assert.ok(seg.classList.contains('is-same'));
@@ -426,13 +426,13 @@ test('hover: a swimlane segment says its text and lights its label everywhere', 
 
 test('hover: a sparkline names its point; the card goes with the view', () => {
   const t = mount(payload({ data: groups(), config: G }));
-  const c = hover(t, t.cell(0, 8).querySelector('.blockr-summarize-spcell'));
+  const c = hover(t, t.cell(0, 8).querySelector('.vz-table-groups-spcell'));
   assert.equal(c.tip.querySelector('.dd-tt-head').textContent, '1');
   assert.equal(c.tip.querySelector('.dd-tt-row').textContent, '3');
   t.el.remove();
   t.trigger(t.el, 'shiny:unbound');
   return tick(t.win, 5).then(() => {
-    assert.equal(t.win.document.querySelector('.blockr-lane-tip'), null);
+    assert.equal(t.win.document.querySelector('.vz-table-lane-tip'), null);
   });
 });
 
@@ -440,7 +440,7 @@ test('hover: a card glyph gives its column\'s card', () => {
   const m = groups();
   m.cards = { n: 3, multi: true, label: m.cols[0].disp, cols: [{ label: 'Rows', main: ['10', '20', '30'], glyph: 1 }] };
   const t = mount(payload({ data: m, config: Object.assign({ look: 'cards' }, G) }));
-  const c = hover(t, t.$$('.tc-row')[0].querySelector('.blockr-summarize-fill'));
+  const c = hover(t, t.$$('.vz-table-card-row')[0].querySelector('.vz-table-groups-fill'));
   assert.match(c.text, /^Placebo/);
   assert.match(c.text, /10 \(17%\)/);
 });
