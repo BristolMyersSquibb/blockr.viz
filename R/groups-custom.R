@@ -158,21 +158,21 @@ groups_custom_preset <- function(mark, cols, denom) {
 #' (groups_failed_summary()), the only place a failure is detected after
 #' groups_custom_setup().
 #' @noRd
-groups_custom_runs <- function(summaries, ctx) {
+groups_custom_runs <- function(summaries, build) {
   for (i in seq_along(summaries)) {
     s <- summaries[[i]]
     if (is.null(s$.custom)) next
     runs <- list()
-    for (cp in groups_summary_copies(s, i, ctx)) {
+    for (cp in groups_summary_copies(s, i, build)) {
       # The user's function sees the input's columns, not the row tag.
       slice <- cp$slice
       slice[[GROUPS_ROW_ID]] <- NULL
       # A frame, or the failure's message.
       failed <- function(x) if (!is.data.frame(x)) x$err
-      one <- list(leaf = groups_custom_cells(slice, ctx$keys, s))
+      one <- list(leaf = groups_custom_cells(slice, build$keys, s))
       err <- failed(one$leaf)
-      if (!is.null(ctx$parent) && is.null(err)) {
-        one$par <- groups_custom_cells(slice, ctx$parent, s)
+      if (!is.null(build$parent) && is.null(err)) {
+        one$par <- groups_custom_cells(slice, build$parent, s)
         err <- failed(one$par)
       }
       if (!is.null(err)) break

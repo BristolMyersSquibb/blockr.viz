@@ -28,7 +28,9 @@ groups_split_degenerate <- function(plan, idx, rows) {
 }
 
 #' Per-entry domains, computed over the assembled rows and SHARED across a
-#' summary's facet copies (same `sid` stem before the `f<j>` suffix).
+#' summary's facet copies (same `sid` stem before the `f<j>` suffix). Also
+#' settles what the plan left provisional: a bar with a negative value
+#' becomes `bardiv`, a degenerate grouped split `stacked`.
 #' @noRd
 groups_summary_domains <- function(plan, rows) {
   groups <- split(seq_along(plan), vapply(plan, function(p) {

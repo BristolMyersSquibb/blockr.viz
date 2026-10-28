@@ -2,7 +2,7 @@
 #' @return A TableModel list, or `NULL` when `m$cells` is `NULL` (the
 #'   preparation failed).
 #' @noRd
-table_groups_view <- function(m, axis = TRUE) {
+table_groups_to_model <- function(m, axis = TRUE) {
   cells <- m$cells
   if (is.null(cells)) {
     return(NULL)
@@ -23,7 +23,7 @@ table_groups_view <- function(m, axis = TRUE) {
     collapsed = if (nested && !isTRUE(cells$expanded)) TRUE,
     note = cells$fold
   )
-  table_view_arrays(table_groups_compact(out))
+  table_model_arrays(table_groups_compact(out))
 }
 
 # One body column. A plain number is `num` (right-aligned); other kinds sort on

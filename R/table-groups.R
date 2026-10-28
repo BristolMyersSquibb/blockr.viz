@@ -3,9 +3,9 @@
 #' @noRd
 table_groups_part <- function(kit, src) {
   st <- kit$state
-  shown <- shiny::reactive(src$rows())
+  frame <- shiny::reactive(src$rows())
   model <- shiny::reactive({
-    d <- shown()
+    d <- frame()
     shiny::req(is.data.frame(d))
     table_model_groups(src$values(), d, scale_map = src$scale_map(),
                        subject = src$subject())
@@ -13,13 +13,13 @@ table_groups_part <- function(kit, src) {
   # A click on a pooled group of an overlap definition filters on the
   # group's members (dd_group_filters_members()).
   members <- dd_group_filters_members(
-    function() table_selection_groups(st$selection()), shown
+    function() table_selection_groups(st$selection()), frame
   )
   list(
-    shown = shown,
-    view = shiny::reactive(table_groups_payload(
+    frame = frame,
+    drawn = shiny::reactive(table_groups_drawn(
       tryCatch(model(), error = function(e) NULL), src$values(),
-      tryCatch(shown(), error = function(e) NULL), src
+      tryCatch(frame(), error = function(e) NULL), src
     )),
     failed = shiny::reactive(as.list(model()$prep$failed)),
     expr = function(sel) {
@@ -27,7 +27,7 @@ table_groups_part <- function(kit, src) {
       src$prep$wrap_drill(f, members(f))
     },
     claims = function(sel) {
-      d <- tryCatch(shown(), error = function(e) NULL)
+      d <- tryCatch(frame(), error = function(e) NULL)
       ctrl_claims(d, st$drill_table(), table_selection_groups(sel),
                      subject = src$subject())
     },
@@ -36,25 +36,25 @@ table_groups_part <- function(kit, src) {
       if (!is.null(p)) paste0("Filtered: ", p)
     },
     exhibit = function(tt) {
-      table_groups_exhibit(model(), src$values(), shown(), tt, src,
+      table_groups_exhibit(model(), src$values(), frame(), tt, src,
                            kit$capture())
     },
     title_args = function(v) table_groups_title_args(kit$spec, v)
   )
 }
 
-# The view of a prepared groups table: the TableModel (its `note` is the
-# line under the rows), or what to say instead, and the legend.
-table_groups_payload <- function(m, v, d, src) {
+# What the browser draws for a prepared groups table: the TableModel (its
+# `note` is the line under the rows), or what to say instead, and the legend.
+table_groups_drawn <- function(m, v, d, src) {
   if (is.null(m)) {
     return(list(empty = list(kind = "no_data", message = "No data")))
   }
   if (!is.null(m$prep$err)) {
     return(list(empty = list(kind = "message", message = m$prep$err)))
   }
-  model <- table_groups_view(m, axis = isTRUE(v$column_axis))
+  model <- table_groups_to_model(m, axis = isTRUE(v$column_axis))
   if (identical(v$look, "cards")) {
-    model$cards <- cards_payload(table_cards_groups(
+    model$cards <- cards_model(table_cards_groups(
       m$cells, m$prep, data = d, scale_map = src$scale_map()
     ))
   }

@@ -1,5 +1,33 @@
 # The groups table's legend and its stub header.
 
+#' The legend: one group per colour column in use, each titled by its column
+#' since a table can carry more than one colour dimension.
+#' @noRd
+groups_color_groups <- function(summaries, data, drawn, scale_map) {
+  legend_cols <- unique(unlist(lapply(summaries, function(s) {
+    if (groups_color_capable(s)) groups_present(s$color, data)
+  })))
+  color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
+    lv <- groups_color_levels(data[[cc]], drawn)
+    if (length(lv) < 2L) return(NULL)
+    list(column = cc, title = groups_col_name(data, cc), levels = lv,
+         palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
+  }))
+  # A tile painted by a worst level gets its own legend group.
+  for (s in summaries) {
+    if (!identical(s$show, "tile") || is.null(s$.fill)) next
+    lv <- s$.fill_levels
+    if (!length(lv)) next
+    color_groups[[length(color_groups) + 1L]] <- list(
+      column = s$.fill,
+      title = paste("Worst", groups_col_name(data, s$.fill)),
+      levels = lv,
+      palette = groups_tile_colors(scale_map, s$.fill, lv, data[[s$.fill]])
+    )
+  }
+  color_groups
+}
+
 # The legend as data: a list of titled groups, always present for two or more
 # series (colour alone must not carry identity). The table maps colour per
 # column, so it can carry several groups, each titled by its column.
@@ -45,4 +73,3 @@ groups_label_header <- function(prep) {
   if (isTRUE(prep$all)) return("")
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
-

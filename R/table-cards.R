@@ -82,117 +82,15 @@ table_cards_groups <- function(m, prep, data = NULL, scale_map = NULL) {
   )
 }
 
-#' One column of cards from one plan entry.
+#' One column of cards from one plan entry: its numbers (cards_groups_value())
+#' and its head (the domain the marks are drawn against, the legend).
 #' @noRd
 cards_groups_col <- function(p, c, k, rows, prep) {
-  n <- nrow(rows)
   kind <- p$kind %||% "num"
-  get <- function(nm) {
-    if (is.null(nm) || is.na(nm) || is.null(rows[[nm]])) {
-      rep(NA_real_, n)
-    } else {
-      rows[[nm]]
-    }
-  }
   dom <- cells_axis_domain(p, prep)
-  digits <- function(...) {
-    cells_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
-  }
-  sub <- NULL
-  # The statistic the grey line holds ("Q1-Q3", "95% CI"): a card in a
-  # single row prints it, a column of cards names it once in its head.
-  word <- NULL
-  text <- FALSE
-  if (kind %in% c("box", "pointrange") && !is.null(p$cols)) {
-    cn <- p$cols
-    bc <- get(cn["bc"])
-    bl <- get(cn["bl"])
-    bh <- get(cn["bh"])
-    dig <- digits(bc, bl, bh)
-    main <- cards_num(bc, dig)
-    if (!is.na(cn["bl"])) {
-      word <- p$words$range %||% "Range"
-      sub <- ifelse(
-        is.na(bl) | is.na(bh), "",
-        paste0(cards_num(bl, dig), " to ", cards_num(bh, dig))
-      )
-    }
-  } else if (identical(kind, "pair")) {
-    a <- get(p$cols[["a"]])
-    b <- get(p$cols[["b"]])
-    dig <- digits(a, b)
-    main <- cards_num(b, dig)
-    sub <- ifelse(is.na(a), "", paste0("from ", cards_num(a, dig)))
-  } else if (identical(kind, "sparkline")) {
-    last <- get(p$key)
-    pts <- rows[[p$pts %||% ".pts"]]
-    first <- vapply(pts %||% vector("list", n), function(s) {
-      y <- s$y
-      if (length(y)) as.numeric(y[[1L]]) else NA_real_
-    }, numeric(1L))
-    dig <- digits(last, first)
-    main <- cards_num(last, dig)
-    sub <- ifelse(is.na(first), "", paste0("from ", cards_num(first, dig)))
-  } else if (identical(p$dispkey, "dist_text")) {
-    bc <- get(p$key)
-    bl <- get(p$lo)
-    bh <- get(p$hi)
-    dig <- cells_val_digits(c(bc, bl, bh))
-    main <- cards_num(bc, dig)
-    sub <- ifelse(is.na(bl) | is.na(bh), "",
-                  paste0(cards_num(bl, dig), " to ", cards_num(bh, dig)))
-  } else if (isTRUE(p$text) || (!is.null(p$alt_text) && is.null(rows[[p$key]]))) {
-    v <- as.character(rows[[p$key]] %||% rows[[p$alt_text]])
-    v[is.na(v)] <- ""
-    main <- v
-    text <- TRUE
-  } else {
-    v <- get(p$key)
-    main <- if (is.null(prep$format)) {
-      cards_num(v, cells_val_digits(v))
-    } else {
-      out <- rep("", n)
-      ok <- !is.na(v)
-      out[ok] <- sub("^-", "\u2212", dt_format_num(v[ok], prep$format,
-                                                    big.mark = ","))
-      out
-    }
-    # The unit after the number, as on a records card.
-    if (!is.null(prep$unit) && isTRUE(p$unit_ok)) {
-      main <- ifelse(nzchar(main), paste(main, prep$unit), main)
-    }
-    # A count against an N prints its share in the table ("72 (28%)"): the
-    # card keeps it as the grey line.
-    den <- p$val_denom
-    # A single row is all of its N, which says nothing.
-    if (is.numeric(den) && length(den) == 1L && is.finite(den) && den > 0 &&
-          !all(is.na(v) | abs(v - den) < 1e-9)) {
-      sub <- ifelse(is.na(v), "",
-                    paste0(formatC(v / den * 100, format = "f", digits = 0L),
-                           "% of ", cards_num(den, 0L)))
-    }
-  }
-
+  val <- cards_groups_value(p, kind, rows, prep, dom)
   glyph <- kind %in% c("bar", "barsplit", "bardiv", "box", "pointrange",
                        "pair", "sparkline")
-  range <- if (glyph && !is.null(dom) && !isTRUE(dom$date)) {
-    d0 <- dom$d0
-    d1 <- dom$d1
-    unit <- if (isTRUE(dom$pct)) "%" else ""
-    # A count drawn as a share of its N (a faceted count): the card's number
-    # is the count, so the head names the count scale, not the percentage.
-    den <- p$val_denom
-    if (isTRUE(dom$pct) && is.numeric(den) && length(den) == 1L &&
-          is.finite(den) && den > 0 && !identical(p$mode, "percent")) {
-      d0 <- d0 * den / 100
-      d1 <- d1 * den / 100
-      unit <- ""
-    }
-    # The column's domain in two significant digits: the cards have no
-    # axis, so the head says what the marks are drawn against.
-    paste0(groups_fmt(signif(d0, 2L)), unit, " to ",
-           groups_fmt(signif(d1, 2L)), unit)
-  }
   legend <- if (identical(kind, "barsplit")) {
     cards_legend(c$names, c$fills)
   } else if (isTRUE(c$multi)) {
@@ -203,15 +101,132 @@ cards_groups_col <- function(p, c, k, rows, prep) {
 
   list(
     label = label,
-    range = range,
-    word = word,
+    range = if (glyph) cards_groups_range(p, dom),
+    word = val$word,
     legend = legend,
     # Into the payload's `cols` (the stub is 0): the glyph the table draws.
     glyph = if (glyph) k,
-    text = text,
-    main = as.character(main),
-    sub = if (!is.null(sub)) as.character(sub)
+    text = isTRUE(val$text),
+    main = as.character(val$main),
+    sub = if (!is.null(val$sub)) as.character(val$sub)
   )
+}
+
+#' A card column's numbers, per row: `main` (the big number or text), `sub`
+#' (the grey line), `word` (the statistic the grey line holds, "Q1-Q3": a card
+#' in a single row prints it, a column of cards names it once in its head) and
+#' `text` (main is text, not a number).
+#' @noRd
+cards_groups_value <- function(p, kind, rows, prep, dom) {
+  n <- nrow(rows)
+  get <- function(nm) {
+    if (is.null(nm) || is.na(nm) || is.null(rows[[nm]])) {
+      rep(NA_real_, n)
+    } else {
+      rows[[nm]]
+    }
+  }
+  digits <- function(...) {
+    cells_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
+  }
+  if (kind %in% c("box", "pointrange") && !is.null(p$cols)) {
+    cn <- p$cols
+    bc <- get(cn["bc"])
+    bl <- get(cn["bl"])
+    bh <- get(cn["bh"])
+    dig <- digits(bc, bl, bh)
+    has_range <- !is.na(cn["bl"])
+    list(main = cards_num(bc, dig),
+         sub = if (has_range) cards_span(bl, bh, dig),
+         word = if (has_range) p$words$range %||% "Range")
+  } else if (identical(kind, "pair")) {
+    a <- get(p$cols[["a"]])
+    b <- get(p$cols[["b"]])
+    dig <- digits(a, b)
+    list(main = cards_num(b, dig), sub = cards_from(a, dig))
+  } else if (identical(kind, "sparkline")) {
+    last <- get(p$key)
+    pts <- rows[[p$pts %||% ".pts"]]
+    first <- vapply(pts %||% vector("list", n), function(s) {
+      y <- s$y
+      if (length(y)) as.numeric(y[[1L]]) else NA_real_
+    }, numeric(1L))
+    dig <- digits(last, first)
+    list(main = cards_num(last, dig), sub = cards_from(first, dig))
+  } else if (identical(kind, "dist_text")) {
+    bc <- get(p$key)
+    bl <- get(p$lo)
+    bh <- get(p$hi)
+    dig <- cells_val_digits(c(bc, bl, bh))
+    list(main = cards_num(bc, dig), sub = cards_span(bl, bh, dig))
+  } else if (identical(kind, "text") ||
+               (identical(kind, "expr") && is.null(rows[[p$key]]))) {
+    v <- as.character(rows[[p$key]] %||% rows[[p$alt_text]])
+    v[is.na(v)] <- ""
+    list(main = v, text = TRUE)
+  } else {
+    cards_groups_number(p, get(p$key), prep)
+  }
+}
+
+# A plain number: in the table's format, with the unit after it as on a
+# records card. A count against an N keeps its share as the grey line
+# ("72 (28%)" in the table).
+cards_groups_number <- function(p, v, prep) {
+  main <- if (is.null(prep$format)) {
+    cards_num(v, cells_val_digits(v))
+  } else {
+    out <- rep("", length(v))
+    ok <- !is.na(v)
+    out[ok] <- sub("^-", "\u2212", dt_format_num(v[ok], prep$format,
+                                                  big.mark = ","))
+    out
+  }
+  if (!is.null(prep$unit) && isTRUE(p$unit_ok)) {
+    main <- ifelse(nzchar(main), paste(main, prep$unit), main)
+  }
+  den <- p$val_denom
+  # A single row is all of its N, which says nothing.
+  share <- is.numeric(den) && length(den) == 1L && is.finite(den) &&
+    den > 0 && !all(is.na(v) | abs(v - den) < 1e-9)
+  list(main = main, sub = if (share) {
+    ifelse(is.na(v), "",
+           paste0(formatC(v / den * 100, format = "f", digits = 0L),
+                  "% of ", cards_num(den, 0L)))
+  })
+}
+
+# "1.2 to 3.4", empty where either end is missing.
+cards_span <- function(lo, hi, dig) {
+  ifelse(is.na(lo) | is.na(hi), "",
+         paste0(cards_num(lo, dig), " to ", cards_num(hi, dig)))
+}
+
+# "from 1.2", empty where the start is missing.
+cards_from <- function(x, dig) {
+  ifelse(is.na(x), "", paste0("from ", cards_num(x, dig)))
+}
+
+# The column's domain in two significant digits: the cards have no axis, so
+# the head says what the marks are drawn against. A count drawn as a share of
+# its N (a faceted count) names the count scale: the card's number is the
+# count, not the percentage.
+cards_groups_range <- function(p, dom) {
+  if (is.null(dom) || isTRUE(dom$date)) {
+    return(NULL)
+  }
+  d0 <- dom$d0
+  d1 <- dom$d1
+  unit <- if (isTRUE(dom$pct)) "%" else ""
+  den <- p$val_denom
+  if (isTRUE(dom$pct) && is.numeric(den) && length(den) == 1L &&
+        is.finite(den) && den > 0 && !identical(p$mode, "percent")) {
+    d0 <- d0 * den / 100
+    d1 <- d1 * den / 100
+    unit <- ""
+  }
+  paste0(groups_fmt(signif(d0, 2L)), unit, " to ",
+         groups_fmt(signif(d1, 2L)), unit)
 }
 
 #' @noRd
@@ -308,7 +323,7 @@ table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
 
 #' The card model as JSON-ready lists: every per-row vector stays an array.
 #' @noRd
-cards_payload <- function(model) {
+cards_model <- function(model) {
   if (is.null(model)) return(NULL)
   arr <- function(x) I(unname(as.character(x)))
   groups_drop_null(list(

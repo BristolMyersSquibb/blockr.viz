@@ -1,4 +1,4 @@
-# table_records_view() (R/table-records.R) against the first render of the
+# table_records_to_model() (R/table-records.R) against the first render of the
 # table recordings: the browser gets the same text and values the reference
 # sent, and the paint as values instead of CSS.
 
@@ -17,7 +17,7 @@ tr_bar_pct <- function(style) {
          numeric(1L))
 }
 
-test_that("table_records_view() draws what the reference sent", {
+test_that("table_records_to_model() draws what the reference sent", {
   cases <- tm_cases("records")
   n <- 0L
   for (nm in names(cases)) {
@@ -26,7 +26,7 @@ test_that("table_records_view() draws what the reference sent", {
     if (!identical(want$kind, "flat")) next
     m <- table_model_records(cs$state, cs$data,
                              tint = table_model_tint(cs$state, cs$data))
-    v <- table_records_view(m)
+    v <- table_records_to_model(m)
     got <- tm_json(v)
     expect_identical(got$n, want$n, label = nm)
     expect_length(got$cols, length(want$cols))
@@ -60,7 +60,7 @@ test_that("table_records_view() draws what the reference sent", {
 test_that("a records header names each column and its label", {
   d <- data.frame(id = c("a", "b"), v = c(1.5, 2))
   attr(d$v, "label") <- "Value"
-  v <- table_records_view(table_model_records(
+  v <- table_records_to_model(table_model_records(
     list(rowname = "id", format = "number"), d
   ))
   expect_identical(v$stub, 0L)
@@ -75,12 +75,12 @@ test_that("a records header names each column and its label", {
 
 test_that("a one-row table's columns are arrays on the wire", {
   d <- data.frame(id = "a", v = 1.5)
-  v <- table_records_view(table_model_records(list(rowname = "id"), d))
+  v <- table_records_to_model(table_model_records(list(rowname = "id"), d))
   json <- jsonlite::toJSON(v, auto_unbox = TRUE)
   back <- jsonlite::fromJSON(json, simplifyVector = FALSE)
   expect_type(back$cols[[2L]]$disp, "list")
   expect_type(back$widths, "list")
-  s <- table_structured_view(table_nest(
+  s <- table_structured_to_model(table_nest(
     data.frame(g = "x", id = "a", v = 1), "g", "id"
   ))
   back <- jsonlite::fromJSON(jsonlite::toJSON(s, auto_unbox = TRUE),

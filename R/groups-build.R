@@ -33,18 +33,18 @@ groups_split_col <- function(sid, level) paste0(sid, "_S_", level)
 #' @return The state `st`: `summaries`, `leaf`, `par_rows`, `plan` and `primary`
 #'   (the first summary and its column id, whose value is the sort key).
 #' @noRd
-groups_build_columns <- function(summaries, leaf, par_rows, ctx) {
+groups_build_columns <- function(summaries, leaf, par_rows, build) {
   st <- list(summaries = summaries, leaf = leaf, par_rows = par_rows,
              plan = list(), primary = NULL)
   for (i in seq_along(summaries)) {
-    st <- groups_build_summary(st, i, ctx)
+    st <- groups_build_summary(st, i, build)
   }
   st
 }
 
 # Facet copies of one summary: one over all rows, or one per facet level.
-groups_summary_copies <- function(s, i, ctx) {
-  data <- ctx$data
+groups_summary_copies <- function(s, i, build) {
+  data <- build$data
   fl <- s$.flevels
   if (is.null(fl)) {
     return(list(list(suffix = groups_copy_sid(i), slice = data, level = NULL)))
@@ -54,49 +54,51 @@ groups_summary_copies <- function(s, i, ctx) {
     list(suffix = groups_copy_sid(i, j),
          slice = data[as.character(data[[s$.facet]]) == lv, ,
                       drop = FALSE],
-         level = lv, fcol = s$.facet, qualify = ctx$qualify,
-         named = ctx$n_faceted > 1L)
+         level = lv, fcol = s$.facet, qualify = build$qualify,
+         named = build$n_faceted > 1L)
   })
 }
 
 # One summary's copies: fill the frames, add the plan entries.
-groups_build_summary <- function(st, i, ctx) {
+groups_build_summary <- function(st, i, build) {
   s <- st$summaries[[i]]
-  copies <- groups_summary_copies(s, i, ctx)
+  copies <- groups_summary_copies(s, i, build)
   for (cp in copies) {
-    cp <- groups_copy_denom(cp, s, ctx)
-    st$leaf <- groups_fill(st$leaf, ctx$keys, ctx$keys, cp$slice, s,
+    cp <- groups_copy_denom(cp, s, build)
+    st$leaf <- groups_fill(st$leaf, build$keys, build$keys, cp$slice, s,
                            cp$suffix)
     if (!is.null(st$par_rows)) {
-      st$par_rows <- groups_fill(st$par_rows, ctx$parent, ctx$keys, cp$slice,
-                                 s, cp$suffix, parent_row = TRUE)
+      st$par_rows <- groups_fill(st$par_rows, build$parent, build$keys,
+                                 cp$slice, s, cp$suffix, parent_row = TRUE)
     }
     cp <- groups_series_ref(cp, s)
-    entry <- groups_summary_plan(s, cp, ctx$data, ctx$scale_map)
+    entry <- groups_summary_plan(s, cp, build$data, build$scale_map)
     if (!is.null(s$.custom)) entry <- groups_custom_plan(entry, s, cp)
     st$plan <- c(st$plan, list(entry))
   }
-  if (is.null(st$primary)) st$primary <- list(s = s, sid = copies[[1L]]$suffix)
+  if (is.null(st$primary)) {
+    st$primary <- list(s = s, i = i, sid = copies[[1L]]$suffix)
+  }
   st
 }
 
-groups_copy_denom <- function(cp, s, ctx) {
-  data <- ctx$data
+groups_copy_denom <- function(cp, s, build) {
+  data <- build$data
   # A count's N: subjects (count distinct) or rows (count) in the copy's slice,
   # including rows without a group (groups_denom()). On the one row of a
   # table without `by` the count is its own N and would read 100%, so it is
   # skipped; a colour split keeps its shares.
-  same_n <- ctx$all && is.null(s$.color) &&
-    !(ctx$pct_total && !is.null(cp$level))
+  same_n <- build$all && is.null(s$.color) &&
+    !(build$pct_total && !is.null(cp$level))
   if (identical(s$type, "simple") && !same_n &&
         groups_has_pct(chr_state(s$func) %||% "count")) {
-    cp$den <- groups_denom(if (ctx$pct_total) data else cp$slice,
+    cp$den <- groups_denom(if (build$pct_total) data else cp$slice,
                               chr_state(s$func) %||% "count",
                               chr_state(s$col))
   }
   # Every facet copy says its level's N: subjects in the slice, rows when the
   # board declares no subject.
-  if (!is.null(cp$level)) cp$pop <- groups_pop_n(cp$slice, ctx$subject)
+  if (!is.null(cp$level)) cp$pop <- groups_pop_n(cp$slice, build$subject)
   cp
 }
 

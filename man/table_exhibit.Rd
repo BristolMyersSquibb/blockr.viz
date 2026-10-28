@@ -7,31 +7,30 @@
 table_exhibit(
   data,
   rowname = NULL,
-  value = NULL,
-  group = character(),
-  summaries = list(),
+  columns = NULL,
   shadings = list(),
   format = "number",
   unit = NULL,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
-  digits = NULL
+  ...
 )
 }
 \arguments{
 \item{data}{The table block's input: a data frame or an
 \code{\link[=as_annotated_df]{as_annotated_df()}}-coercible table object.}
 
-\item{rowname, value, group, summaries, shadings, format, unit}{As in
-\code{\link[=new_table_block]{new_table_block()}}.}
+\item{rowname, columns, shadings, format, unit}{As in \code{\link[=new_table_block]{new_table_block()}}.}
 
 \item{title, subtitle, caption}{Table text, with the block's three tiers:
 \code{NULL} takes the input's \code{label} / \code{subtitle} / \code{caption} attribute, \code{""}
 shows none, any other string is a title template resolved against
 \code{data}.}
 
-\item{digits}{Old name of \code{format} (a number of decimals).}
+\item{...}{Old argument names, translated with a warning: \code{value} (now
+\code{columns}), \code{digits} (now \code{format}), and \code{group} with \code{summaries}, the
+aggregation the table block no longer does.}
 }
 \value{
 An annotated data frame, with \code{label}, \code{subtitle} and \code{caption}
@@ -40,13 +39,12 @@ attributes carrying the resolved text.
 \description{
 What \code{\link[=new_table_block]{new_table_block()}} puts into a rendered report or deck: the table as
 the block shows it, as an \link[=as_annotated_df]{annotated data frame} for
-\code{\link[=static_exhibit]{static_exhibit()}} to typeset. The rowname comes first, then the value
-columns (or the aggregate, with \code{group} / \code{summaries}); numbers are
-printed in the block's \code{format} exactly like the screen, and \code{unit} heads
-the numeric columns; cells
-shaded by a diverging or sequential rule carry their colours as \verb{.bg:} /
-\verb{.fg:} columns, which \code{\link[=static_table]{static_table()}} and the HTML table paint. Colour
-source columns are left out. In-cell bars are not drawn.
+\code{\link[=static_exhibit]{static_exhibit()}} to typeset. The rowname comes first, then \code{columns};
+numbers are printed in the block's \code{format} exactly like the screen, and
+\code{unit} heads the numeric columns; cells shaded by a diverging or
+sequential rule carry their colours as \verb{.bg:} / \verb{.fg:} columns, which
+\code{\link[=static_table]{static_table()}} and the HTML table paint. Colour source columns are left
+out. In-cell bars are not drawn.
 }
 \details{
 The block's \code{\link[=report_call]{report_call()}} emits

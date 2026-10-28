@@ -1,4 +1,4 @@
-# table_groups_view() (R/table-groups-view.R) against the groups recordings:
+# table_groups_to_model() (R/table-groups-view.R) against the groups recordings:
 # the first render of each, `blockr-viz-summarize-data` with kind "flat". The
 # browser gets the same rows, numbers and text the reference sent as JSON
 # plus HTML, now as a TableModel.
@@ -215,7 +215,7 @@ tg_check <- function(v, want, label, pick = isTRUE(want$pick)) {
   tg_expect_head(v, want, label)
 }
 
-test_that("table_groups_view() draws what the reference sent", {
+test_that("table_groups_to_model() draws what the reference sent", {
   cases <- tm_cases("groups")
   seen <- character()
   for (nm in names(cases)) {
@@ -223,7 +223,7 @@ test_that("table_groups_view() draws what the reference sent", {
     want <- tm_payload(cs$messages, "blockr-viz-summarize-data")
     if (!identical(want$kind, "flat")) next
     m <- table_model_groups(cs$state, cs$data)
-    v <- tm_json(table_groups_view(
+    v <- tm_json(table_groups_to_model(
       m, axis = isTRUE(cs$state$column_axis %||% TRUE)
     ))
     tg_check(v, want, nm)
@@ -245,7 +245,7 @@ tg_state <- function(cs, ...) {
 
 test_that("a one-row table's columns are arrays on the wire", {
   cs <- tm_cases("groups")$grp_no_by
-  v <- table_groups_view(table_model_groups(cs$state, cs$data))
+  v <- table_groups_to_model(table_model_groups(cs$state, cs$data))
   back <- tm_json(v)
   expect_type(back$cols[[1L]]$disp, "list")
   expect_type(back$cols[[2L]]$mark$w, "list")
@@ -254,11 +254,11 @@ test_that("a one-row table's columns are arrays on the wire", {
 
 test_that("a column's axis has no empty fields on the wire", {
   cs <- tm_cases("groups")$grp_all_types
-  v <- tm_json(table_groups_view(table_model_groups(cs$state, cs$data)))
+  v <- tm_json(table_groups_to_model(table_model_groups(cs$state, cs$data)))
   expect_named(v$cols[[2L]]$axis, c("at", "labels"))
   expect_true(v$cols[[11L]]$axis$foot)
 })
 
 test_that("a failed preparation has no view", {
-  expect_null(table_groups_view(list(prep = list(err = "x"), cells = NULL)))
+  expect_null(table_groups_to_model(list(prep = list(err = "x"), cells = NULL)))
 })

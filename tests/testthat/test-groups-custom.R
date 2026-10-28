@@ -79,7 +79,7 @@ test_that("the mark is read off the returned columns, or named", {
                fn = paste("dplyr::summarise(d, lo = min(S), mid = median(S),",
                           "hi = max(S))"),
                show = "pointrange")),
-    c("bar", "num", "num", "pointrange")
+    c("bar", "num", "expr", "pointrange")
   )
 })
 

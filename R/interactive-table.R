@@ -105,7 +105,7 @@ interactive_table_payload <- function(x, drill, drill_target, sortable,
     target <- is.character(drill_target) && length(drill_target) == 1L &&
       nzchar(trimws(drill_target))
     if (length(v$drill) && target) v$drill_target <- drill_target
-    table_frame_view(viz_check(viz_block_spec("table"), v), d,
+    table_frame_drawn(viz_check(viz_block_spec("table"), v), d,
                      list(scale_map = function() NULL), "records")
   }
   list(

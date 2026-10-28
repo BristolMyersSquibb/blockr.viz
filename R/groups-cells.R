@@ -106,7 +106,8 @@ cells_drop_labels <- function(c) {
   c
 }
 
-# One plan entry to its column. The first matching branch wins.
+# One plan entry to its column, by the entry's kind. The text kinds (`num`,
+# `text`, `dist_text`, `expr`) all become a `num` cell column.
 cells_column <- function(ctx, p) {
   # Per-entry scale, falling back to the prep-level one.
   b <- cells_bounds(p$dmin %||% ctx$mn, p$dmax %||% ctx$mx)
@@ -126,11 +127,11 @@ cells_column <- function(ctx, p) {
     cells_interval(ctx, p)
   } else if (identical(p$kind, "sparkline")) {
     cells_sparkline(ctx, p)
-  } else if (isTRUE(p$raw) && isTRUE(p$text)) {
+  } else if (identical(p$kind, "text")) {
     cells_text_raw(ctx, p)
-  } else if (identical(p$dispkey, "dist_text")) {
+  } else if (identical(p$kind, "dist_text")) {
     cells_dist_text(ctx, p)
-  } else if (!is.null(p$alt_text) && is.null(ctx$rows[[p$key]])) {
+  } else if (identical(p$kind, "expr") && is.null(ctx$rows[[p$key]])) {
     cells_alt_text(ctx, p)
   } else {
     cells_num(ctx, p)
@@ -253,10 +254,13 @@ cells_fold_text <- function(prep) {
   )
 }
 
+# Plan kinds drawn as a number or text cell, without a mark.
+GROUPS_TEXT_KINDS <- c("num", "text", "dist_text", "expr")
+
 #' The hover card's column description. NULL where the cell prints everything.
 #' @noRd
 cells_tip_meta <- function(p) {
-  if (identical(p$kind, "num")) return(NULL)
+  if (p$kind %in% GROUPS_TEXT_KINDS) return(NULL)
   den <- p$val_denom
   out <- list(
     head = chr_state(p$label),

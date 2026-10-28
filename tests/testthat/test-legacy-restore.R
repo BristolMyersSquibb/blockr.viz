@@ -255,7 +255,7 @@ test_that("a restored heatmap draws one row per subject", {
   st <- table_normalize(viz_check(viz_block_spec("table"), st))
   m <- table_model_groups(st, ae)
   expect_null(m$prep$err)
-  v <- table_groups_view(m)
+  v <- table_groups_to_model(m)
   expect_identical(as.character(v$cols[[1L]]$disp),
                    c("A", "1", "2", "B", "3"))
 })

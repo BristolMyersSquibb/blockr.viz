@@ -313,7 +313,7 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   st <- viz_check(viz_block_spec("table"),
                   list(layout = "records", rowname = "term",
                        format = "compact", unit = "CHF"))
-  v <- table_records_view(table_model_records(st, d))
+  v <- table_records_to_model(table_model_records(st, d))
   expect_identical(as.character(v$cols[[3]]$disp), c("1.5K", "2.5M"))
   expect_identical(v$head[[1]][[3]]$sub, "amount (CHF)")
   # Cards: the unit after the number, not in the label.

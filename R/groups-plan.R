@@ -1,5 +1,9 @@
 # One plan entry per summary column: the mark it draws, its stat columns,
-# colour split, facet and labels, read by the cell model.
+# colour split, facet and labels, read by the cell model. An entry's `kind`
+# and a split bar's `mode` are provisional: the plan is built before any value
+# exists, and groups_summary_domains() settles both over the assembled rows
+# (a bar with a negative value is `bardiv`, a grouped split whose rows each
+# hold one level is stacked).
 
 #' Colour dimension of a distribution column: per-level stat columns, levels
 #' and colours (`groups_level_colors`). `list()` when there is no colour.
@@ -57,8 +61,8 @@ groups_plan_entry <- function(base, ...) {
   base
 }
 
-groups_plan_base <- function(s, cp, sid, label, sub, den) {
-  base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
+groups_plan_base <- function(s, cp, sid, label, sub_label, den) {
+  base <- list(label = label, sub_label = sub_label, sid = sid, stype = s$type,
                flevel = cp$level, fcol = cp$fcol, sname = s$name,
                meas = s$name,
                # a zero count is an empty column (groups_drop_empty_facets)
@@ -85,31 +89,28 @@ groups_plan_base <- function(s, cp, sid, label, sub, den) {
 #' @noRd
 groups_summary_plan <- function(s, cp, data, scale_map = NULL) {
   sid <- cp$suffix
-  sub <- groups_plan_sub(s, cp)
+  sub_label <- groups_plan_sub(s, cp)
   den <- groups_plan_den(cp)
-  base <- groups_plan_base(s, cp, sid, groups_plan_label(s, cp), sub, den)
+  base <- groups_plan_base(s, cp, sid, groups_plan_label(s, cp), sub_label, den)
   if (identical(s$type, "simple")) {
     groups_plan_simple(s, sid, base, den, data, scale_map)
   } else if (identical(s$type, "dist")) {
     groups_plan_dist(s, sid, base, data, scale_map)
   } else if (!is.null(s$.failed)) {
     groups_plan_entry(base, list(
-      kind = "num", key = groups_col(sid, "t"), raw = TRUE, text = TRUE,
-      failed = s$.failed
+      kind = "text", key = groups_col(sid, "t"), failed = s$.failed
     ))
   } else if (identical(s$type, "field")) {
-    groups_plan_entry(base, list(
-      kind = "num", key = groups_col(sid, "t"), raw = TRUE, text = TRUE
-    ))
+    groups_plan_entry(base, list(kind = "text", key = groups_col(sid, "t")))
   } else if (identical(s$type, "expr")) {
-    # Numeric vs text is decided by the eval; the plan names the numeric
-    # key and groups_cells falls back to the text column when it is absent.
+    # Numeric vs text is decided by the eval: `key` is the number, `alt_text`
+    # the text column the cell model reads when there is no number.
     groups_plan_entry(base, list(
-      kind = "num", key = groups_col(sid, "v"),
+      kind = "expr", key = groups_col(sid, "v"),
       alt_text = groups_col(sid, "t")
     ))
   } else if (identical(s$type, "pair")) {
-    groups_plan_pair(s, sid, base, sub, data, scale_map)
+    groups_plan_pair(s, sid, base, sub_label, data, scale_map)
   } else if (identical(s$type, "sparkline")) {
     groups_plan_entry(base, list(
       kind = "sparkline", key = groups_col(sid, "last"),
@@ -201,7 +202,7 @@ groups_plan_tile <- function(s, sid, base, data, scale_map) {
 groups_plan_dist <- function(s, sid, base, data, scale_map) {
   if (identical(s$show, "text")) {
     return(groups_plan_entry(base, list(
-      kind = "num", key = groups_col(sid, "bc"), dispkey = "dist_text",
+      kind = "dist_text", key = groups_col(sid, "bc"),
       lo = groups_col(sid, "bl"), hi = groups_col(sid, "bh")
     )))
   }
@@ -243,17 +244,17 @@ groups_pair_cols <- function(prefix) {
     lo = groups_col(prefix, "lo"), hi = groups_col(prefix, "hi"))
 }
 
-groups_plan_pair <- function(s, sid, base, sub, data, scale_map) {
+groups_plan_pair <- function(s, sid, base, sub_label, data, scale_map) {
   lv <- s$.levels
   dlv <- s$.dlevels
   words <- c(
     trimws(paste(GROUPS_PAIR_WORDS[[s$x_func]],
-                 groups_col_name(data, s$x), "◇")),
+                 groups_col_name(data, s$x), "\u25c7")),
     trimws(paste(GROUPS_PAIR_WORDS[[s$xend_func]],
-                 groups_col_name(data, s$xend), "●"))
+                 groups_col_name(data, s$xend), "\u25cf"))
   )
   dashed <- if (length(dlv) > 1L) {
-    paste0(" · dashed: ", groups_col_name(data, s$linetype), " ≠ ",
+    paste0(" \u00b7 dashed: ", groups_col_name(data, s$linetype), " \u2260 ",
            dlv[[1L]])
   } else {
     ""
@@ -262,7 +263,8 @@ groups_plan_pair <- function(s, sid, base, sub, data, scale_map) {
     base,
     list(
       kind = "pair", key = groups_col(sid, "to"),
-      sub_label = sub %||% paste0(words[[1L]], " → ", words[[2L]], dashed),
+      sub_label = sub_label %||%
+        paste0(words[[1L]], " \u2192 ", words[[2L]], dashed),
       cols = groups_pair_cols(sid), ncol = groups_col(sid, "n"),
       fidx = groups_col(sid, "f"), didx = groups_col(sid, "d"),
       ref = s$x_lines, levels = lv,
@@ -376,32 +378,4 @@ groups_facet_spans <- function(lead, groups, facet_levels, data, shared_facet,
            ))
     })
   )
-}
-
-#' The legend: one group per colour column in use, each titled by its column
-#' since a table can carry more than one colour dimension.
-#' @noRd
-groups_color_groups <- function(summaries, data, drawn, scale_map) {
-  legend_cols <- unique(unlist(lapply(summaries, function(s) {
-    if (groups_color_capable(s)) groups_present(s$color, data)
-  })))
-  color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
-    lv <- groups_color_levels(data[[cc]], drawn)
-    if (length(lv) < 2L) return(NULL)
-    list(column = cc, title = groups_col_name(data, cc), levels = lv,
-         palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
-  }))
-  # A tile painted by a worst level gets its own legend group.
-  for (s in summaries) {
-    if (!identical(s$show, "tile") || is.null(s$.fill)) next
-    lv <- s$.fill_levels
-    if (!length(lv)) next
-    color_groups[[length(color_groups) + 1L]] <- list(
-      column = s$.fill,
-      title = paste("Worst", groups_col_name(data, s$.fill)),
-      levels = lv,
-      palette = groups_tile_colors(scale_map, s$.fill, lv, data[[s$.fill]])
-    )
-  }
-  color_groups
 }

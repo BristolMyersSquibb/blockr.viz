@@ -12,7 +12,7 @@
 #' @noRd
 table_variables_part <- function(kit, src) {
   st <- kit$state
-  shown <- shiny::reactive({
+  frame <- shiny::reactive({
     d <- src$rows()
     if (!is.data.frame(d)) {
       return(d)
@@ -30,7 +30,7 @@ table_variables_part <- function(kit, src) {
     built[[2L]] <- quote(.(data))
     dd_splice_slot(ex, built)
   }
-  table_frame_part(kit, src, shown, layout = "variables", filter = built_from)
+  table_frame_part(kit, src, frame, layout = "variables", filter = built_from)
 }
 
 # A numeric variable is a `dist` summary, a categorical one a count bar split

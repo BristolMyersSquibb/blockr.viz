@@ -60,7 +60,8 @@ table_static_groups <- function(x) {
   if (!is.null(cells)) cells$expanded <- TRUE
   axis <- !isFALSE(args$axis)
   list(
-    model = table_groups_view(list(prep = x$prep, cells = cells), axis = axis),
+    model = table_groups_to_model(list(prep = x$prep, cells = cells),
+                                  axis = axis),
     config = list(
       layout = "groups", look = "table",
       by = I(as.character(unlist(args$by))),
