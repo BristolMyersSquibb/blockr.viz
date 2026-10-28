@@ -1,7 +1,9 @@
 # The header rows of the structured table (R/table-structured.R): the
 # spanners as TableHeadCell lists.
 
-# Header rows, top to bottom.
+# Header rows, top to bottom. Column names split on `||` into paths; a cell
+# spans the neighbouring columns that share its path up to its row, and a
+# leaf reaches down to the last row.
 table_structured_head <- function(data, data_cols, stub_col, col_keys = NULL) {
   parts <- strsplit(data_cols, "||", fixed = TRUE)
   depths <- lengths(parts)
@@ -75,7 +77,8 @@ table_structured_head_row <- function(L, ctx) {
 }
 
 # One cell: a leaf when every column it covers ends at this row, a spanner
-# otherwise.
+# otherwise. A leaf reaches down to the last row and names the body column
+# under it; a spanner claims its own path.
 table_structured_head_cell <- function(L, i, span, prefix, ctx) {
   leaf <- all(ctx$depths[i:(i + span - 1L)] == L)
   name <- ctx$data_cols[i]
@@ -102,7 +105,9 @@ table_structured_head_cell <- function(L, i, span, prefix, ctx) {
 }
 
 # A header label as `text` and `sub`: the name lines, and the Big N ("N = 86")
-# that every producer puts last.
+# that every producer puts last. A label that carries HTML ("<strong>Placebo
+# </strong><br>N = 86") is read as the text it shows. No usable label falls
+# back to the name the column path spells.
 table_structured_label <- function(label, fallback) {
   if (!is.character(label) || length(label) != 1L || is.na(label) ||
         !nzchar(label)) {
