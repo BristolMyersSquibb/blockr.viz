@@ -17,44 +17,24 @@
   /** @param {unknown} v */
   const set = (v) => v != null && v !== '' && !(Array.isArray(v) && !v.length);
 
-  /**
-   * Which way an oriented chart lies when `orientation` is not given, the
-   * twin of R's chart_infer_lie(): a row count's single column is the
-   * category, any other single column the value; a numeric x beside a
-   * non-numeric y is horizontal; otherwise, and with neither set, vertical.
-   * @param {Record<string, any>} c @param {VizColumn[]} columns
-   * @returns {'horizontal' | 'vertical'}
-   */
-  const inferLie = (c, columns) => {
-    const type = c.type || 'bar';
-    const hasX = set(c.x), hasY = set(c.y);
-    const count = type === 'bar' && (c.func || 'count') === 'count';
-    if (hasX !== hasY) return hasX === count ? 'vertical' : 'horizontal';
-    if (!hasX) return 'vertical';
-    const numeric = (/** @type {string} */ n) => {
-      const m = columns.find((col) => col.name === n);
-      return m ? V.util.isNumeric(m) : null;
-    };
-    return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
-  };
+  /** The way a bar (horizontal), boxplot or point range (vertical) lies when `orientation` is
+   * not given. @param {string} type @returns {'horizontal' | 'vertical'} */
+  const defaultLie = (type) => (type === 'bar' ? 'horizontal' : 'vertical');
 
   /** An aggregated chart's axes: the category column, the column it aggregates (`measure`, ".count"
-   * for a row count), the statistic, the way it lies, and which of x and y holds each.
-   * @param {Record<string, any>} c @param {VizColumn[]} columns */
-  const axes = (c, columns) => {
+   * for a row count), the statistic and the way it lies. `orientation` maps nothing: the category
+   * is `category` either way. A histogram's category is the bin column R adds beside x.
+   * @param {Record<string, any>} c */
+  const axes = (c) => {
     if (c.type === 'histogram') {
       return { category: set(c.x) ? c.x + '_bin' : null, measure: '.count', func: 'count',
-               orientation: 'vertical', cat_key: 'x', val_key: null };
+               orientation: 'vertical' };
     }
     const fixed = FIXED.includes(c.type);
-    const lie = fixed ? 'vertical' : (c.orientation || inferLie(c, columns));
-    const onY = lie === 'horizontal';
     const func = NS.DISTRIBUTION_TYPES.includes(c.type) ? 'mean' : (c.func || 'count');
-    const count = func === 'count';
-    return { category: (onY ? c.y : c.x) || null,
-             measure: count ? '.count' : ((onY ? c.x : c.y) || ''), func,
-             orientation: fixed ? null : lie, cat_key: onY ? 'y' : 'x',
-             val_key: count ? null : (onY ? 'x' : 'y') };
+    return { category: set(c.category) ? c.category : null,
+             measure: func === 'count' ? '.count' : (set(c.value) ? c.value : ''), func,
+             orientation: fixed ? null : (c.orientation || defaultLie(c.type)) };
   };
 
   /** The defaults that depend on the chart: the statistics of a box and a point range, and the
@@ -98,7 +78,7 @@
     for (const k of ['color', 'facet', 'series']) {
       if (cfg[k] && columns.length && !columns.some((c) => c.name === cfg[k])) cfg[k] = null;
     }
-    if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg, columns));
+    if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg));
     defaults(cfg, columns);
     return /** @type {ChartSettings} */ (cfg);
   };
@@ -126,7 +106,7 @@
     // The settings a family cannot draw without, as [setting, spec key].
     /** @type {[string, string][]} */
     const required = cfg.type === 'histogram' ? [['x', 'x']]
-      : fam === 'aggregated' ? [['category', cfg.cat_key || 'x']]
+      : fam === 'aggregated' ? [['category', 'category']]
       : [['x', 'x'], ['y', 'y']];
     const unset = required.filter(([k]) => !NS.hasVal(cfg[k]));
     if (unset.length) {
@@ -137,8 +117,8 @@
     // A histogram's category is the bin column R adds beside x.
     const req = cfg.type === 'histogram' ? [[specLabel('x'), cfg.x]]
       : fam === 'aggregated'
-        ? [[specLabel(cfg.cat_key || 'x'), cfg.category],
-           [specLabel(cfg.val_key || 'y'), cfg.measure !== '.count' ? cfg.measure : null]]
+        ? [[specLabel('category'), cfg.category],
+           [specLabel('value'), cfg.measure !== '.count' ? cfg.measure : null]]
         : [['X', cfg.x], ['Y', cfg.y]];
     const avail = columns.map((c) => c.name);
     const missing = req
@@ -193,6 +173,6 @@
   const tooltipFields = (cfg, drop = []) => [].concat(cfg.tooltip || []).map(String)
     .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
 
-  Object.assign(model, { settings, inferLie, FIXED, defaults, gate, emptyState, facetLabels,
+  Object.assign(model, { settings, defaultLie, FIXED, defaults, gate, emptyState, facetLabels,
                          tooltipFields });
 })();

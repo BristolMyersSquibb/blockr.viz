@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "boxplot",
-  "x": "AVISIT",
-  "y": "AVAL",
+  "category": "AVISIT",
+  "value": "AVAL",
   "orientation": "vertical",
   "color": "ARM",
   "facet": "SEX",
@@ -231,7 +231,6 @@
       ],
       "yAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 45,
@@ -253,7 +252,8 @@
          "color": "#e5e7eb",
          "type": "dashed"
         }
-       }
+       },
+       "scale": true
       },
       "series": [
        {
@@ -1584,7 +1584,6 @@
       ],
       "yAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 45,
@@ -1606,7 +1605,8 @@
          "color": "#e5e7eb",
          "type": "dashed"
         }
-       }
+       },
+       "scale": true
       },
       "series": [
        {

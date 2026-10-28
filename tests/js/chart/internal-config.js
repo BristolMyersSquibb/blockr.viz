@@ -22,7 +22,8 @@ function toPayload(o) {
     const value = o.value === '.count' || !set(o.value) ? null : o.value;
     const func = DIST.includes(type) ? null : (o.func || 'count');
     const val = func === 'count' ? null : value;
-    if (lie === 'horizontal') { c.y = o.group || null; c.x = val; } else { c.x = o.group || null; c.y = val; }
+    c.category = o.group || null;
+    c.value = val;
     if (!fixed) c.orientation = lie;
     if (func) c.func = func;
   } else {
@@ -43,7 +44,7 @@ function toPayload(o) {
   if (o.pct_of) c.percent_of = o.pct_of === 'group' ? 'category' : o.pct_of;
   if (o.count_on) c.show_n = o.count_on === 'off' ? 'none' : o.count_on;
   if (set(o.count_col) || set(o.band_id)) c.id = o.count_col || o.band_id;
-  if (set(o.value_lines)) c.y_lines = labelled(o.value_lines, o.value_line_names);
+  if (set(o.value_lines)) c.value_lines = labelled(o.value_lines, o.value_line_names);
   if (set(o.x_lines)) c.x_lines = labelled(o.x_lines, o.x_line_names);
   if (set(o.lo)) c.ymin = [].concat(o.lo);
   if (set(o.hi)) c.ymax = [].concat(o.hi);

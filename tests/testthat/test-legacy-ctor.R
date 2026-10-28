@@ -30,7 +30,7 @@ test_that("an old value under a current name is translated and named", {
 
 test_that("current names pass silently, bad values are left for the spec", {
   expect_silent(out <- legacy_ctor_args("chart", list(
-    type = "bar", x = "cat", facet_cols = "junk", script = c("a <- 1", "data")
+    type = "bar", category = "cat", facet_cols = "junk", script = c("a <- 1", "data")
   )))
   expect_identical(out$facet_cols, "junk")
   expect_identical(out$script, "a <- 1\ndata")
@@ -101,7 +101,7 @@ test_that("the empty-able and the controllable arguments come from the spec", {
 
 test_that("a chart keeps block attributes it does not own through a restore", {
   # A saved board carries blockr.dock's `visible`; in code it is an error.
-  blk <- new_chart_block(type = "bar", x = "a")
+  blk <- new_chart_block(type = "bar", category = "a")
   attr(blk, "visible") <- "outputs"
   expect_silent(out <- blockr.core::blockr_deser(blockr.core::blockr_ser(blk)))
   expect_identical(attr(out, "visible"), "outputs")
@@ -110,7 +110,7 @@ test_that("a chart keeps block attributes it does not own through a restore", {
   expect_warning(
     out <- blockr.core::blockr_deser(
       structure(list(), class = "chart_block"),
-      list(payload = list(type = "bar", x = "a", smooth = TRUE,
+      list(payload = list(type = "bar", category = "a", smooth = TRUE,
                           visible = "outputs"),
            constructor = list(version = "0.2.9"))
     ),

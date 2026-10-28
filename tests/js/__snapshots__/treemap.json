@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "treemap",
-  "x": "AETERM",
-  "y": "AVAL",
+  "category": "AETERM",
+  "value": "AVAL",
   "func": "sum",
   "drill": "auto"
  },

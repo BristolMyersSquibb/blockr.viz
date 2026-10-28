@@ -17,7 +17,7 @@ chart_server <- function(id, data, init) {
         expr = chart_expr(data, kit$state, src),
         exhibit = chart_exhibit(kit, src, view),
         normalize = function(v) {
-          chart_normalize(v, viz_values(kit$state), shiny::isolate(src$kinds()))
+          chart_normalize(v, viz_values(kit$state))
         },
         claims = chart_claims(kit, src),
         script = src$prep
@@ -27,9 +27,8 @@ chart_server <- function(id, data, init) {
 }
 
 # The data the chart draws: the input, coerced; the prepare script and its
-# output (`prep`, viz_script_sources()); the column kinds the cross-argument
-# rules read; and the frame expanded by group definitions, with a
-# histogram's bin column.
+# output (`prep`, viz_script_sources()); and the frame expanded by group
+# definitions, with a histogram's bin column.
 chart_sources <- function(data, state) {
   src <- list()
   src$input <- shiny::reactive({
@@ -53,14 +52,6 @@ chart_sources <- function(data, state) {
     out
   })
   src$prep <- viz_script_sources(src$raw, state)
-  # Kept while the data is gone (a hidden panel makes data() throw), so an
-  # inferred orientation does not flip on a view switch.
-  last_kinds <- new.env(parent = emptyenv())
-  src$kinds <- shiny::reactive({
-    d <- tryCatch(src$prep$prepared(), error = function(e) NULL)
-    if (is.data.frame(d) && ncol(d)) last_kinds$v <- viz_column_kinds(d)
-    last_kinds$v
-  })
   src$hist <- shiny::reactive(
     chart_hist(viz_values(state),
                tryCatch(src$prep$prepared(), error = function(e) NULL))
@@ -68,33 +59,25 @@ chart_sources <- function(data, state) {
   src$plain <- shiny::reactive({
     v <- viz_values(state)
     d <- expand_role_groups(src$prep$prepared(),
-                            chart_split_cols(v, src$kinds()))
+                            chart_split_cols(v))
     chart_hist_data(d, chart_hist(v, d))
   })
   src
 }
 
-# The category column of an aggregated chart: x, or y when it lies
-# horizontally. NULL on the other types.
-chart_category <- function(v, kinds) {
-  type <- v$type %||% "bar"
-  if (!type %in% CHART_AGGREGATED_TYPES) {
-    return(NULL)
-  }
-  if (type %in% NORM_CHART_FIXED) {
-    return(v$x)
-  }
-  if (identical(chart_lies(v, kinds), "horizontal")) v$y else v$x
+# The category column of an aggregated chart. NULL on the other types.
+chart_category <- function(v) {
+  if ((v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) v$category
 }
 
 # The columns whose group definition splits the rows: the category and the
 # splitting roles; x and y themselves on a chart that draws rows.
-chart_split_cols <- function(v, kinds) {
+chart_split_cols <- function(v) {
   if (identical(v$type, "histogram")) {
     return(chart_split_roles(color = v$color, facet = v$facet,
                              series = v$series, x = v$x))
   }
-  cat <- chart_category(v, kinds)
+  cat <- chart_category(v)
   if (!is.null(cat) || (v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
     return(chart_split_roles(group = cat, color = v$color, facet = v$facet,
                              series = v$series))

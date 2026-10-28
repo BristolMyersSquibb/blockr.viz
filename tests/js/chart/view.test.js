@@ -8,7 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const D = require('./drive');
 
-const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
+const BAR = { type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto' };
 const rows = (b) => Array.from(b.frame.tray.band.querySelectorAll('.vz-row[data-role]'),
                                (r) => r.getAttribute('data-role'));
 const row = (b, key) => b.frame.tray.band.querySelector('.vz-row[data-role="' + key + '"]');
@@ -20,11 +20,12 @@ test('the gear shows the rows the spec offers for the chart type', () => {
     assert.ok(bar.includes(k), k);
   }
   for (const k of ['smoother', 'connect', 'bins', 'percent_of']) assert.ok(!bar.includes(k), k);
-  assert.strictEqual(row(c.block, 'y').querySelector('.blockr-label').textContent, 'Y *');
+  assert.strictEqual(row(c.block, 'category').querySelector('.blockr-label').textContent, 'Category *');
+  assert.strictEqual(row(c.block, 'value'), null, 'a count reads no value');
   c.send({ ...BAR, type: 'scatter', x: 'ADY', y: 'AVAL' });
   const sc = rows(c.block);
   assert.ok(sc.includes('smoother') && !sc.includes('func'));
-  c.send({ ...BAR, func: 'pct_distinct', x: 'USUBJID' });
+  c.send({ ...BAR, func: 'pct_distinct', value: 'USUBJID' });
   assert.ok(rows(c.block).includes('percent_of'), 'a share asks what it is a share of');
   c.close();
 });
@@ -95,11 +96,11 @@ test('downloads: the formats R offers, while download is on', () => {
 test('an empty state offers no Image: there is no picture to take', () => {
   const downloads = [{ id: 'blk-dl_xlsx', ext: 'xlsx', label: 'Excel' },
                      { id: 'blk-dl_png', ext: 'png', label: 'Image' }];
-  const c = D.open({ ...BAR, y: null, download: true }, { derived: { downloads } });
+  const c = D.open({ ...BAR, category: null, download: true }, { derived: { downloads } });
   assert.match(c.block.chartGrid.textContent, /^Pick/);
   assert.ok(c.block.frame.downloadSlot.querySelector('#blk-dl_xlsx'));
   assert.strictEqual(c.block.frame.downloadSlot.querySelector('#blk-dl_png'), null);
-  c.send({ ...c.config, y: 'AETERM' }, { derived: { downloads } });
+  c.send({ ...c.config, category: 'AETERM' }, { derived: { downloads } });
   assert.ok(c.block.frame.downloadSlot.querySelector('#blk-dl_png'), 'drawn again: Image is back');
   c.close();
 });
@@ -217,9 +218,11 @@ test('every chart type: the gear rows are the spec rows that apply to it', () =>
   const spec = c.env.win.Blockr.viz.spec.chart;
   // Rows the chart's hooks hold back: a share's base, the drill target.
   const held = ['percent_of', 'drill_target', 'drill_table'];
-  const set = ['x', 'y', 'color', 'facet', 'drill'];
+  const set = ['category', 'value', 'x', 'y', 'color', 'facet', 'drill'];
   for (const type of spec.type.values) {
-    c.send({ ...BAR, type, x: 'ADY', y: 'AVAL', color: 'ARM', facet: 'SEX' });
+    // A mean, so an aggregated chart's value row shows (a count hides it).
+    c.send({ ...BAR, type, category: 'AETERM', value: 'AVAL', func: 'mean', x: 'ADY', y: 'AVAL',
+             color: 'ARM', facet: 'SEX' });
     const want = Object.keys(spec).filter((k) => {
       const a = spec[k];
       if (!a.gear || a.gear.control === 'none' || held.includes(k)) return false;
@@ -240,18 +243,18 @@ test('the spec hides what does nothing: stacking without a colour, value lines o
   assert.ok(!rows(c.block).includes('position'), 'no colour: nothing to stack');
   c.send({ ...BAR, color: 'AESEV' });
   assert.ok(rows(c.block).includes('position'));
-  assert.ok(rows(c.block).includes('y_lines'));
+  assert.ok(rows(c.block).includes('value_lines'));
   for (const type of ['pie', 'treemap']) {
-    c.send({ type, x: 'AETERM' });
-    assert.ok(!rows(c.block).includes('y_lines'), type);
+    c.send({ type, category: 'AETERM' });
+    assert.ok(!rows(c.block).includes('value_lines'), type);
   }
   c.close();
 });
 
-test('with neither x nor y, a bar stands vertical and asks for X', () => {
-  const c = D.open({ type: 'bar', x: null, y: null });
-  assert.match(c.block.chartGrid.textContent, /^Pick X to plot/);
-  assert.strictEqual(c.block.settings.orientation, 'vertical');
+test('with no category, a bar lies horizontal and asks for one', () => {
+  const c = D.open({ type: 'bar', category: null, value: null });
+  assert.match(c.block.chartGrid.textContent, /^Pick Category to plot/);
+  assert.strictEqual(c.block.settings.orientation, 'horizontal');
   c.close();
 });
 

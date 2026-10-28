@@ -346,7 +346,7 @@
     }
   });
 
-  /** `y_lines` on the value axis: a markLine on the first series, and axis bounds that take in the
+  /** `value_lines` on the value axis: a markLine on the first series, and axis bounds that take in the
    * lines and the data. Mutates `series[0]` and `valAxis`. @param {any[]} series
    * @param {any} valAxis @param {boolean} onX @param {boolean} fraction the axis runs 0..1 while
    * the reader types percent @param {any} lines `[{value, label}]`

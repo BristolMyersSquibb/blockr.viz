@@ -8,7 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const D = require('./drive');
 
-const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
+const BAR = { type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto' };
 const SCRIPT = {
   inputs: [
     { name: 'top_n', key: 'sv_top_n', label: 'Top n', kind: 'number', min: 1, max: 50 },

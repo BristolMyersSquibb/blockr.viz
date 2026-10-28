@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const D = require('./chart/drive');
 
 const cls = (el) => el.className.split(/\s+/)[0];
-const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal' };
+const BAR = { type: 'bar', category: 'AETERM', orientation: 'horizontal' };
 const TITLES = { titles: { title: { text: 'A title' }, subtitle: { text: 'A subtitle' } } };
 const tick = () => new Promise((r) => setImmediate(r));
 

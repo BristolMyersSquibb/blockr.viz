@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "pointrange",
-  "y": "AVISIT",
-  "x": "AVAL",
+  "category": "AVISIT",
+  "value": "AVAL",
   "orientation": "horizontal",
   "color": "ARM",
   "drill": "auto"
@@ -107,7 +107,6 @@
       },
       "xAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 30,
@@ -123,7 +122,8 @@
         "lineStyle": {
          "color": "#d1d5db"
         }
-       }
+       },
+       "scale": true
       },
       "yAxis": {
        "type": "category",

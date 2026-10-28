@@ -3,10 +3,12 @@
 /** The chart block's settings, as viz_wire() sends them. */
 interface ChartConfig {
   type: 'bar' | 'histogram' | 'waterfall' | 'pie' | 'treemap' | 'boxplot' | 'pointrange' | 'scatter' | 'line' | 'area' | 'band' | 'gantt';
+  category: string | null;
+  value: string | null;
+  func: 'count' | 'count_distinct' | 'pct_distinct' | 'mean' | 'median' | 'sum' | 'min' | 'max' | 'identity';
   x: string | null;
   xend: string | null;
   y: string | null;
-  func: 'count' | 'count_distinct' | 'pct_distinct' | 'mean' | 'median' | 'sum' | 'min' | 'max' | 'identity';
   color: string | null;
   facet: string | null;
   series: string | null;
@@ -25,7 +27,7 @@ interface ChartConfig {
   line_width: number;
   point_size: number;
   connect: 'straight' | 'monotone' | 'step_start' | 'step_middle' | 'step_end';
-  y_lines: { value: number; label: string | null }[] | null;
+  value_lines: { value: number; label: string | null }[] | null;
   x_lines: { value: number | string; label: string | null }[] | null;
   ymin: string[] | null;
   ymax: string[] | null;

@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "x": "AETERM",
-  "y": null,
+  "category": "AETERM",
+  "value": null,
   "orientation": "vertical",
   "func": "count",
   "drill": "auto"

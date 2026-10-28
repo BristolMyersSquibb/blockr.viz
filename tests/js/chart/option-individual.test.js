@@ -158,7 +158,7 @@ test('a shift plot faceted by a column the data lacks keeps its fits and identit
 
 test('helper lines on x and y share the markLine of the first series', () => {
   const { opt } = build({ x_lines: [{ value: 5, label: null }],
-                       y_lines: [{ value: 4, label: null }, { value: 8, label: null }] });
+                       value_lines: [{ value: 4, label: null }, { value: 8, label: null }] });
   const d = plain(opt.series[0].markLine.data);
   assert.deepStrictEqual(d.map((e) => e.xAxis ?? e.yAxis), [5, 4, 8]);
 });

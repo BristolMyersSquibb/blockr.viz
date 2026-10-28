@@ -127,29 +127,29 @@ record_scenarios <- function() {
 
   list(
     # --- one per type -----------------------------------------------------
-    bar_count = list(args = list(type = "bar", y = "cat")),
+    bar_count = list(args = list(type = "bar", category = "cat")),
     bar_mean_dodge = list(args = list(
-      type = "bar", x = "cat", y = "num", func = "mean", color = "grp",
-      position = "dodge", value_labels = TRUE, format = "1", unit = "kg",
+      type = "bar", category = "cat", value = "num", func = "mean",
+      orientation = "vertical", color = "grp", position = "dodge", value_labels = TRUE, format = "1", unit = "kg",
       legend = "none", sort_by = "value", sort_dir = "asc"
     )),
     bar_fill_facet = list(args = list(
-      type = "bar", x = "cat", y = "num", func = "sum", color = "grp",
-      position = "fill", facet = "fac", facet_cols = 2,
+      type = "bar", category = "cat", value = "num", func = "sum",
+      orientation = "vertical", color = "grp", position = "fill", facet = "fac", facet_cols = 2,
       facet_scales = "free", show_n = "both", id = "id",
       percent_of = "color"
     )),
     bar_missing_drop = list(args = list(
-      type = "bar", y = "cat_na", missing = "drop", format = "compact",
+      type = "bar", category = "cat_na", missing = "drop", format = "compact",
       y_transform = "log10", tooltip = "grp", drill = "cat_na"
     )),
     bar_distinct = list(args = list(
-      type = "bar", x = "cat", y = "id", func = "count_distinct",
+      type = "bar", category = "cat", value = "id", func = "count_distinct",
       orientation = "vertical", label = "grp"
     )),
     bar_pct_distinct = list(args = list(
-      type = "bar", x = "cat", y = "id", func = "pct_distinct",
-      color = "grp", percent_of = "total"
+      type = "bar", category = "cat", value = "id", func = "pct_distinct",
+      orientation = "vertical", color = "grp", percent_of = "total"
     )),
     histogram = list(
       args = list(type = "histogram", x = "num", bins = 4, drill = "auto"),
@@ -160,25 +160,25 @@ record_scenarios <- function() {
       )
     ),
     waterfall = list(args = list(
-      type = "waterfall", x = "cat", y = "num", func = "sum",
+      type = "waterfall", category = "cat", value = "num", func = "sum",
       waterfall_totals = "d"
     )),
-    pie = list(args = list(type = "pie", x = "cat", y = "num",
+    pie = list(args = list(type = "pie", category = "cat", value = "num",
                            func = "sum", legend = "marks")),
-    treemap = list(args = list(type = "treemap", x = "cat", y = "num",
-                               func = "sum")),
+    treemap = list(args = list(type = "treemap", category = "cat",
+                               value = "num", func = "sum")),
     boxplot = list(args = list(
-      type = "boxplot", x = "cat", y = "num", summary = "mean_sd",
+      type = "boxplot", category = "cat", value = "num", summary = "mean_sd",
       whiskers = "min_max", box_points = "outliers", color = "grp"
     )),
     pointrange = list(args = list(
-      type = "pointrange", x = "fac", y = "num", summary = "mean_se",
+      type = "pointrange", category = "fac", value = "num", summary = "mean_se",
       connect_centers = TRUE
     )),
     scatter_full = list(args = list(
       type = "scatter", x = "num", y = "num2", color = "grp",
       smoother = "lm", identity_line = TRUE,
-      y_lines = c(Target = 4, 6), x_lines = c(Listed = 5),
+      value_lines = c(Target = 4, 6), x_lines = c(Listed = 5),
       x_ranges = list(Early = c(1, 3)), highlight = list(grp = "g1"),
       label = "id", tooltip = c("id", "day"), x_transform = "log10",
       point_size = 2, legend = "top", facet = "fac", facet_scales = "free_y"
@@ -211,18 +211,19 @@ record_scenarios <- function() {
     # --- text -------------------------------------------------------------
     titles_template = list(
       args = list(
-        type = "bar", x = "cat", y = "num", func = "mean", color = "grp",
+        type = "bar", category = "cat", value = "num", func = "mean",
+        orientation = "vertical", color = "grp",
         title = "{n} rows of {label(cat)}",
-        subtitle = "{@func in mean, median} of {label(@y)}[, by {@color}]",
+        subtitle = "{@func in mean, median} of {label(@value)}[, by {@color}]",
         caption = ""
       ),
       data = "df_titled",
       steps = list(set(title = "", caption = "{n_distinct(id)} ids"))
     ),
-    titles_auto = list(args = list(type = "bar", y = "cat"),
+    titles_auto = list(args = list(type = "bar", category = "cat"),
                        data = "df_titled"),
     titles_offer = list(args = list(
-      type = "bar", y = "cat",
+      type = "bar", category = "cat",
       subtitle = "Counts[, coloured by {@color}][, in {@facet_cols} columns]"
     )),
     titles_highlight = list(args = list(
@@ -232,7 +233,7 @@ record_scenarios <- function() {
 
     # --- clicks -----------------------------------------------------------
     drill_categorical = list(
-      args = list(type = "bar", y = "cat", drill = "cat"),
+      args = list(type = "bar", category = "cat", drill = "cat"),
       steps = list(
         click(cat = "b"),
         click(cat = c("a", "c")),
@@ -261,11 +262,11 @@ record_scenarios <- function() {
       steps = list(brush("day", as.Date(c("2024-01-05", "2024-01-10"))))
     ),
     drill_restore = list(args = list(
-      type = "bar", y = "cat", drill = "cat",
+      type = "bar", category = "cat", drill = "cat",
       selection = list(type = "categorical", filters = list(cat = "a"))
     )),
     drill_transient = list(
-      args = list(type = "bar", y = "cat", drill = "cat",
+      args = list(type = "bar", category = "cat", drill = "cat",
                   drill_target = "vf1", drill_table = "adsl"),
       steps = list(
         click(cat = "b"),
@@ -277,15 +278,16 @@ record_scenarios <- function() {
 
     # --- settings ---------------------------------------------------------
     set_roles = list(
-      args = list(type = "bar", y = "cat"),
+      args = list(type = "bar", category = "cat"),
       steps = list(
-        set(type = "bar", x = "num", y = "cat", func = "mean",
+        set(type = "bar", category = "cat", value = "num", func = "mean",
             orientation = "horizontal"),
-        set(type = "waterfall", x = "cat", y = "num", func = "sum"),
+        set(type = "waterfall", category = "cat", value = "num",
+            func = "sum"),
         set(type = "scatter", x = "num", y = "num2"),
         set(type = "histogram", x = "num", sort_by = "alpha",
             sort_dir = "desc"),
-        set(type = "boxplot", x = "fac", y = "num")
+        set(type = "boxplot", category = "fac", value = "num")
       )
     ),
     set_aesthetics = list(
@@ -302,9 +304,9 @@ record_scenarios <- function() {
             smoother = "lm", connect_centers = TRUE),
         set(value_labels = FALSE, identity_line = FALSE,
             connect = "monotone", connect_centers = FALSE),
-        set(y_lines = c(Target = 4, 6), x_lines = c(2, Cut = 7),
+        set(value_lines = c(Target = 4, 6), x_lines = c(2, Cut = 7),
             x_ranges = list(Early = c(1, 3))),
-        set(y_lines = NULL, x_lines = NULL, x_ranges = NULL),
+        set(value_lines = NULL, x_lines = NULL, x_ranges = NULL),
         set(highlight = list(grp = "g2")),
         set(highlight = NULL),
         set(line_width = 1.5, point_size = 3),
@@ -345,8 +347,9 @@ record_scenarios <- function() {
       )
     ),
     heal_missing_column = list(
-      args = list(type = "bar", x = "cat", color = "grp", facet = "fac",
-                  series = "id", linetype = "grp"),
+      args = list(type = "bar", category = "cat", orientation = "vertical",
+                  color = "grp", facet = "fac", series = "id",
+                  linetype = "grp"),
       steps = list(
         data_step("df_no_grp"),
         set(color = NULL, linetype = NULL),
@@ -355,7 +358,7 @@ record_scenarios <- function() {
       )
     ),
     data_changes = list(
-      args = list(type = "bar", y = "cat"),
+      args = list(type = "bar", category = "cat"),
       steps = list(
         set(sort_dir = "asc"),
         data_step("df_changed"),
@@ -365,7 +368,8 @@ record_scenarios <- function() {
     ),
     script = list(
       args = list(
-        type = "bar", x = "cat", y = "num2", func = "sum",
+        type = "bar", category = "cat", value = "num2", func = "sum",
+        orientation = "vertical",
         script = c("k <- 2", "transform(data, num2 = num * k)"),
         script_values = list(k = 3)
       ),
@@ -377,13 +381,14 @@ record_scenarios <- function() {
     ),
     script_drill = list(
       args = list(
-        type = "bar", x = "kind", drill = "kind",
+        type = "bar", category = "kind", orientation = "vertical",
+        drill = "kind",
         script = "transform(data, kind = ifelse(num > 5, 'big', 'small'))"
       ),
       steps = list(click(kind = "big"), click(kind = "big", grp = "g1"))
     ),
     input_tbl = list(
-      args = list(type = "bar", y = "cat", drill = "cat",
+      args = list(type = "bar", category = "cat", drill = "cat",
                   caption = "{filters}"),
       data = "tbl",
       steps = list(click(cat = "a"))
@@ -391,8 +396,9 @@ record_scenarios <- function() {
 
     # --- downloads --------------------------------------------------------
     download_bar = list(
-      args = list(type = "bar", x = "cat", y = "num", func = "mean",
-                  color = "grp", title = "Means"),
+      args = list(type = "bar", category = "cat", value = "num",
+                  func = "mean", orientation = "vertical", color = "grp",
+                  title = "Means"),
       steps = list(download("dl_xlsx"))
     ),
     download_scatter = list(
@@ -400,7 +406,7 @@ record_scenarios <- function() {
       steps = list(download("dl_xlsx"), set(download = FALSE))
     ),
     download_capture = list(
-      args = list(type = "bar", y = "cat"),
+      args = list(type = "bar", category = "cat"),
       steps = list(
         download("dl_png"),
         capture(),
@@ -414,7 +420,7 @@ record_scenarios <- function() {
     # Saved-board shapes. The reference healed them in the constructor; the
     # rewrite heals them on restore (`restore = TRUE`).
     ctor_normalize = list(restore = TRUE, args = list(
-      type = list("bar"), x = list(), y = "cat", color = list(),
+      type = list("bar"), category = "cat", value = list(), color = list(),
       identity_line = "on", value_labels = "off", box_points = "all",
       facet_cols = "junk", bins = "0", format = 2, unit = NA,
       percent_of = c("facet", "color"), tooltip = list("id", "grp"),
@@ -435,7 +441,7 @@ record_scenarios <- function() {
     # says. Replayed only against a target that speaks these messages.
     wire_click_forms = list(
       wire = TRUE,
-      args = list(type = "bar", y = "cat", drill = "cat"),
+      args = list(type = "bar", category = "cat", drill = "cat"),
       steps = list(
         wire(drilldown_block_action = list(
           action = "filter", filter_type = "categorical", column = "cat",
@@ -469,7 +475,7 @@ record_scenarios <- function() {
     ),
     wire_transport = list(
       wire = TRUE,
-      args = list(type = "bar", y = "cat"),
+      args = list(type = "bar", category = "cat"),
       steps = list(
         gear(sort_dir = "asc"),
         wire(drilldown_block_need = 1),
@@ -494,7 +500,7 @@ record_ctor_cases <- function() {
     bad_connect = list(connect = "curvy"),
     bad_missing = list(missing = "keep"),
     expose = list(expose = "color"),
-    legacy_value = list(type = "bar", y = "cat", value = TRUE),
+    legacy_value = list(type = "bar", category = "cat", metric = TRUE),
     full = list(type = "scatter", x = "num", y = "num2", caption = "C")
   )
 }
@@ -553,6 +559,7 @@ record_run <- function(sc, target = record_target()) {
   ))
   src <- new.env(parent = emptyenv())
   src$d <- record_data(sc$data %||% "df")
+  if (is.function(target$begin)) target$begin(sc)
   tick <- shiny::reactiveVal(0L)
   dat <- shiny::reactive({
     tick()

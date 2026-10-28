@@ -211,14 +211,12 @@ interface Ink {
   face: string;
 }
 
-/** An aggregated chart's axes (model-common.js axes()): the category column,
- * the column it aggregates (".count" for a row count), and which of x and y
- * holds each. */
+/** An aggregated chart's axes (model-common.js axes()): the category column
+ * (a histogram's bin column) and the column it aggregates (".count" for a row
+ * count). */
 interface ChartAxes {
   category: string | null;
   measure: string;
-  cat_key: 'x' | 'y';
-  val_key: 'x' | 'y' | null;
 }
 
 /** What the models and options read (model-common.js settings()): the

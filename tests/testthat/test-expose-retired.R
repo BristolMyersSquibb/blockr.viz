@@ -7,7 +7,7 @@ test_that("a board saved with `expose` still restores, minus the band", {
   expect_warning(
     blk <- blockr.core::blockr_deser(
       structure(list(), class = "chart_block"),
-      list(payload = list(type = "bar", y = "Species", func = "count",
+      list(payload = list(type = "bar", category = "Species", func = "count",
                           expose = c("color", "facet")),
            constructor = list(version = "0.2.9"))
     ),
@@ -19,7 +19,7 @@ test_that("a board saved with `expose` still restores, minus the band", {
 
 test_that("`expose` in code warns and is ignored (behaviour-changes.md 11)", {
   expect_warning(
-    blk <- new_chart_block(type = "bar", x = "a", expose = "color"),
+    blk <- new_chart_block(type = "bar", category = "a", expose = "color"),
     "`expose` is retired. Name the setting in `subtitle` instead"
   )
   expect_null(attr(blk, "expose"))

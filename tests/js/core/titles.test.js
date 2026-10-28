@@ -19,7 +19,7 @@ const TITLES = {
 const setup = (opts = {}) => {
   const env = loadGear(opts);
   const m = mountGear(env);
-  m.gear.update(payload({ type: 'bar', x: 'ARM', func: 'count', title: 'Count of {@x}',
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count', title: 'Count of {@x}',
                           value_labels: false }, { derived: { titles: TITLES } }));
   return Object.assign(env, m);
 };

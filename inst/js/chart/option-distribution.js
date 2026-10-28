@@ -266,7 +266,7 @@
     const { xlab, gut } = cat;
     const bottomBase = 46 + (xlab ? xlab.bottom : 0);
     const { valAxis, catAxes } = distAxes(k, cat);
-    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.y_lines, ink);
+    NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.value_lines, ink);
     return {
       xFit: cat.xFit,
       // Horizontal: one 28 px row per drawn slot, capped.

@@ -41,7 +41,7 @@ legacy_translate <- function(block, x, version) {
   out <- legacy_values(block, legacy_map_values(block, named), version)
   out <- legacy_entries(block, out)
   for (k in intersect(c("title", "subtitle", "caption"), names(out))) {
-    out[k] <- list(legacy_template(block, out[[k]], out))
+    out[k] <- list(legacy_template(block, out[[k]]))
   }
   list(named = named, out = legacy_drop(block, out))
 }
@@ -93,7 +93,7 @@ legacy_old_names <- function(block) {
 legacy_named <- function(block, x) {
   switch(
     block,
-    # The chart's roles read the renamed `type`, `func` and `orientation`.
+    # The chart's roles read the renamed `type`.
     chart = legacy_chart_selection(legacy_chart_roles(
       legacy_rename("chart", x),
       old = any(names(x) %in% legacy_old_names("chart"))
@@ -224,10 +224,9 @@ legacy_drop <- function(block, x) {
   x[setdiff(names(x), dropped)]
 }
 
-# Old slot name = new one. The chart's `group` and `value` follow the
-# orientation. The table's `value`, `func`, `color`, `facet` and `fill`
-# stay: they name the first summary's keys.
-legacy_slot_names <- function(block, state) {
+# Old slot name = new one. The table's `value`, `func`, `color`, `facet` and
+# `fill` stay: they name the first summary's keys.
+legacy_slot_names <- function(block) {
   if (identical(block, "table")) {
     # `parent` stays: the summarize table's outer column is the groups
     # layout's `parent` word (groups_title_roles()), the outer `by`.
@@ -235,21 +234,17 @@ legacy_slot_names <- function(block, state) {
              pct_of = "percent_of", axis = "column_axis"))
   }
   rows <- legacy_rows("chart")
-  out <- stats::setNames(rows$new, rows$old)
-  horizontal <- legacy_chart_horizontal(state)
-  c(out[!names(out) %in% c("group", "value", "metric")],
-    group = if (horizontal) "y" else "x",
-    value = if (horizontal) "x" else "y")
+  stats::setNames(rows$new, rows$old)
 }
 
 # `{@old}`, `{label(@old)}` and `{@old in a, b}` under the new names and
 # values.
-legacy_template <- function(block, tpl, state) {
+legacy_template <- function(block, tpl) {
   if (!is.character(tpl) || length(tpl) != 1L || is.na(tpl) ||
         !grepl("@", tpl, fixed = TRUE)) {
     return(tpl)
   }
-  tpl <- legacy_slots(tpl, legacy_slot_names(block, state))
+  tpl <- legacy_slots(tpl, legacy_slot_names(block))
   rows <- legacy_rows(block, renamed = FALSE)
   rows <- rows[lengths(rows$values) > 0L & rows$kind == "rename", ]
   for (i in seq_len(nrow(rows))) {

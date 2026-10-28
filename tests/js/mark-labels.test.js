@@ -22,13 +22,10 @@ const ROWS = [
 ];
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
-// A bar lies horizontal: its category G is y, its measure V is x. The other
-// types take G as x and V as y.
+// The category is G and the measure V; a bar lies horizontal.
 const agg = (cfg) => {
-  const bar = cfg.type === 'bar';
   const c = C.model.settings({ drill: 'auto', func: 'sum', sort_by: 'alpha', sort_dir: 'asc',
-                               label: 'L', ...(bar ? { y: 'G', x: 'V', orientation: 'horizontal' }
-                                                    : { x: 'G', y: 'V' }), ...cfg }, COLUMNS);
+                               label: 'L', category: 'G', value: 'V', ...cfg }, COLUMNS);
   const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const o = C.option.aggregated(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });

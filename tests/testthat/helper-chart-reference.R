@@ -6,6 +6,7 @@
 # The names of the recordings are those of api-proposal.md. One entry per
 # renamed argument (`old`) or renamed value (`values`, new = old).
 record_renames <- list(
+  value_lines = list(old = "y_lines"),
   percent_of = list(old = "pct_of"),
   ref_min = list(old = "ref_lo"),
   ref_max = list(old = "ref_hi"),
@@ -52,14 +53,97 @@ record_to_new <- function(x) {
   x
 }
 
+# The roles. The public names map an aggregated chart's `category` and
+# `value`, with `orientation` saying only which way it lies. The reference
+# maps every type to the screen axes `x` and `y` and keeps an `orientation`
+# only where its inference from the column types would read the chart the
+# other way. Types that are not aggregated keep `x` and `y` in both.
+RECORD_AGG <- c("bar", "waterfall", "pie", "treemap", "boxplot", "pointrange")
+RECORD_ORIENTED <- c("bar", "boxplot", "pointrange")
+
+record_lie_default <- function(type) {
+  if (identical(type, "bar")) "horizontal" else "vertical"
+}
+
+record_chr <- function(v) {
+  v <- as.character(unlist(v))
+  if (length(v)) v[[1L]]
+}
+
+# Constructor arguments to the reference's: the category and value on the
+# axes the orientation (or the type's own way) gives, the orientation stated.
+record_roles_old <- function(args) {
+  type <- record_chr(args$type) %||% "bar"
+  if (!type %in% RECORD_AGG || !any(c("category", "value") %in% names(args))) {
+    return(args)
+  }
+  cat <- args[["category"]]
+  val <- args[["value"]]
+  args[c("category", "value")] <- NULL
+  lie <- if (type %in% RECORD_ORIENTED) {
+    record_chr(args$orientation) %||% record_lie_default(type)
+  } else {
+    "vertical"
+  }
+  if (identical(lie, "horizontal")) {
+    args["y"] <- list(cat)
+    args["x"] <- list(val)
+  } else {
+    args["x"] <- list(cat)
+    args["y"] <- list(val)
+  }
+  if (type %in% RECORD_ORIENTED) args$orientation <- lie
+  args
+}
+
+# A reference state in the public names. The rewrite keeps the roles of the
+# other family in its state, unused, so `mem` carries the last category and
+# value into a scatter, and the last x and y into a bar. A list without a
+# `type` (the constructor's argument names) passes as it is.
+record_roles_new <- function(st, mem) {
+  if (!"type" %in% names(st) || !is.character(st$type)) {
+    return(st)
+  }
+  type <- st$type
+  if (type %in% RECORD_AGG) {
+    lie <- chart_roles_internal(type, st$x, st$y, st$func, st$orientation,
+                                mem$is_num)$orientation
+    horizontal <- identical(lie, "horizontal")
+    mem$category <- if (horizontal) st$y else st$x
+    mem$value <- if (horizontal) st$x else st$y
+    mem$orientation <- if (type %in% RECORD_ORIENTED &&
+                             !identical(lie, record_lie_default(type))) lie
+    st["x"] <- list(mem$x)
+    st["y"] <- list(mem$y)
+  } else {
+    mem$x <- st$x
+    mem$y <- st$y
+  }
+  st["category"] <- list(mem$category)
+  st["value"] <- list(mem$value)
+  st["orientation"] <- list(if (!identical(type, "histogram")) mem$orientation)
+  st
+}
+
 record_target <- function() {
+  # What the translation of the roles remembers within one scenario.
+  mem <- new.env(parent = emptyenv())
+  mem$is_num <- function(col) NA
   list(
     name = "reference",
-    ctor = function(args, sc = NULL) {
-      eval(as.call(c(list(quote(new_chart_block)), record_to_old(args))))
+    begin = function(sc) {
+      d <- record_data(sc$data %||% "df")
+      if (!is.data.frame(d)) d <- d$df
+      mem$is_num <- function(col) {
+        if (!length(col) || !col %in% names(d)) NA else is.numeric(d[[col]])
+      }
     },
-    state = record_to_new,
-    inputs = record_ref_inputs,
+    ctor = function(args, sc = NULL) {
+      eval(as.call(c(list(quote(new_chart_block)),
+                     record_roles_old(record_to_old(args)))))
+    },
+    state = function(x) record_roles_new(record_to_new(x), mem),
+    inputs = function(step, cx) record_ref_inputs(step, cx, mem),
     payload = function(msgs, expr, cx) record_ref_payload(msgs),
     capture = function(x) list(drilldown_block_capture = x),
     wire = TRUE
@@ -68,10 +152,10 @@ record_target <- function() {
 
 # A step to the browser inputs that carry it, as list(name = value). `cx`
 # holds the current public state, the current data and a click counter.
-record_ref_inputs <- function(step, cx) {
+record_ref_inputs <- function(step, cx, mem) {
   act <- function(msg) list(drilldown_block_action = msg)
   switch(step$kind,
-    set = record_ref_set(step$args, cx),
+    set = record_ref_set(step$args, cx, mem),
     click = act(c(list(action = "filter", filter_type = "categorical",
                        filters = record_ref_filters(step$args)),
                   list(nonce = cx$nonce))),
@@ -113,7 +197,7 @@ record_ref_filters <- function(f) {
 
 # Settings to the gear's config message (and set_mults for the two sizes),
 # in the browser's names and shapes.
-record_ref_set <- function(a, cx) {
+record_ref_set <- function(a, cx, mem) {
   a <- record_to_old(a)
   msg <- list(action = "config")
   put <- function(key, v) {
@@ -127,14 +211,25 @@ record_ref_set <- function(a, cx) {
     nm <- names(v) %||% rep("", length(v))
     paste(ifelse(nzchar(nm), paste0(nm, ": ", v), v), collapse = "; ")
   }
-  roles <- c("type", "x", "y", "func", "orientation")
+  roles <- c("type", "category", "value", "x", "y", "func", "orientation")
   if (any(roles %in% names(a))) {
     cur <- cx$state
-    for (nm in roles) if (nm %in% names(a)) cur[nm] <- list(a[[nm]])
-    d <- cx$data
+    pick <- function(nm, now) if (nm %in% names(a)) a[[nm]] else now
+    cur$type <- pick("type", cur$type)
+    cur$func <- pick("func", cur$func)
+    if (cur$type %in% RECORD_AGG) {
+      ref <- record_roles_old(list(
+        type = cur$type, category = pick("category", mem$category),
+        value = pick("value", mem$value),
+        orientation = pick("orientation", mem$orientation)
+      ))
+      cur[c("x", "y", "orientation")] <- list(ref$x, ref$y, ref$orientation)
+    } else {
+      cur$x <- pick("x", cur$x)
+      cur$y <- pick("y", cur$y)
+    }
     r <- chart_roles_internal(cur$type, cur$x, cur$y, cur$func,
-                              cur$orientation,
-                              if (is.data.frame(d)) viz_column_kinds(d))
+                              cur$orientation, mem$is_num)
     msg <- put("chart_type", cur$type)
     msg <- put("func", cur$func)
     msg <- put("group", col(r$group))

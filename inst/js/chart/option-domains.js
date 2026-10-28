@@ -108,7 +108,7 @@
     };
     let dropped = 0;
     if (m.logY) {
-      dropped += NS.labelled(cfg.y_lines).filter((/** @type {{ value: any }} */ x) => !pos(x.value)).length;
+      dropped += NS.labelled(cfg.value_lines).filter((/** @type {{ value: any }} */ x) => !pos(x.value)).length;
       if (m.isBand && cfg.box_points === 'outliers') {
         for (const p of m.panels) dropped += bandValues(derived, p, ['out_y']).filter((v) => !pos(v)).length;
       }

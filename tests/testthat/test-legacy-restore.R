@@ -21,9 +21,10 @@ test_that("a chart saved before 0.3.0 restores under the new names", {
   expect_identical(st$missing, "drop")
   expect_identical(st$drill_target, "f1")
   expect_identical(st$script_values, list(k = 1))
-  # An unset orientation drew a bar horizontally: the group is on y.
-  expect_identical(st$y, "class")
-  expect_identical(st$x, "hwy")
+  # The group is the category; an unset orientation still means horizontal.
+  expect_identical(st$category, "class")
+  expect_identical(st$value, "hwy")
+  expect_null(st$orientation)
 })
 
 test_that("a chart saved by the reference restores under the new names", {
@@ -57,9 +58,9 @@ test_that("title templates come out with the new slot names", {
     caption = "{@value_lines} and {@pct_of} [{@y_scale in linear, log}]"
   ))
   expect_identical(st$subtitle,
-                   "{@type}: {label(@y)} by {@position in stack, dodge}")
+                   "{@type}: {label(@category)} by {@position in stack, dodge}")
   expect_identical(st$caption,
-                   "{@y_lines} and {@percent_of} [{@y_transform in identity, log10}]")
+                   "{@value_lines} and {@percent_of} [{@y_transform in identity, log10}]")
   tb <- legacy_restore("table", list(
     layout = "groups", title = "{@group} within {@parent}, {@id_var}"
   ))

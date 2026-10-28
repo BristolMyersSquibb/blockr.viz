@@ -15,12 +15,14 @@ LEGACY_CHART_RETIRED <- c(
   "series_by", "x_end_col", "lo_col", "hi_col"
 )
 
-# Returns the arguments under their current names. An aggregated chart saved
-# before 0.3.0 often had no `orientation` (the browser drew a bar horizontal,
-# a boxplot vertical); the result states it where a distinct count would read
-# it the other way.
+# Returns the arguments under their current names. `group`, `value` and
+# `orientation` saved before 0.3.0 mean what `category`, `value` and
+# `orientation` mean now; only the row-count marker `value = ".count"` goes.
 # `old`: the arguments carried an old chart name (before the renames).
 legacy_chart_roles <- function(args, old) {
+  if (identical(chr_state(args[["value"]]), ".count")) {
+    args["value"] <- list(NULL)
+  }
   if (!old) {
     return(args)
   }
@@ -29,14 +31,6 @@ legacy_chart_roles <- function(args, old) {
     args[[nm]] <<- NULL
     v
   }
-  # The current name wins when both are given.
-  move <- function(old, new, f = identity) {
-    if (old %in% names(args)) {
-      v <- take(old)
-      if (is.null(args[[new]])) args[new] <<- list(f(v))
-    }
-  }
-  move("metric", "value")
   # `direct_labels = TRUE` (0.3.0 before `legend`): the names on the marks.
   if ("direct_labels" %in% names(args)) {
     v <- take("direct_labels")
@@ -57,39 +51,9 @@ legacy_chart_roles <- function(args, old) {
   }
   args$type <- type
 
-  # Roles.
-  group <- take("group")
-  value <- take("value")
-  if (type %in% CHART_AGGREGATED_TYPES) {
-    func <- args[["func"]] %||% "count"
-    value <- chr_state(value)
-    if (identical(value, ".count")) value <- NULL
-    group <- chr_state(group)
-    orient <- chr_state(args[["orientation"]])
-    if (type %in% CHART_ORIENTED_TYPES) {
-      orient <- orient %||%
-        (if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal")
-      if (identical(orient, "horizontal")) {
-        args$x <- value
-        args$y <- group
-      } else {
-        args$x <- group
-        args$y <- value
-      }
-      inferred <- chart_infer_lie(
-        list(type = type, x = args[["x"]], y = args[["y"]], func = func), NULL
-      )
-      # A distinct count reads a character column: without data the inference
-      # cannot tell which side is the category, so keep the orientation the
-      # board was drawn with.
-      keep <- !identical(inferred, orient) ||
-        func %in% c("count_distinct", "pct_distinct")
-      args["orientation"] <- list(if (keep) orient else NULL)
-    } else {
-      args$x <- group
-      args$y <- value
-      args["orientation"] <- list(NULL)
-    }
+  # Roles, saved as a list or a vector.
+  for (nm in c("category", "value")) {
+    if (nm %in% names(args)) args[nm] <- list(chr_state(args[[nm]]))
   }
 
   # One id column.
@@ -143,14 +107,4 @@ legacy_chart_selection <- function(args) {
     list(type = "categorical", filters = s$filters, columns = list())
   })
   args
-}
-
-# Whether an aggregated chart lies horizontally (without data).
-legacy_chart_horizontal <- function(state) {
-  type <- state[["type"]] %||% "bar"
-  if (!type %in% c("bar", "boxplot", "pointrange")) {
-    return(FALSE)
-  }
-  orient <- state[["orientation"]] %||% chart_infer_lie(state, NULL)
-  identical(orient, "horizontal")
 }

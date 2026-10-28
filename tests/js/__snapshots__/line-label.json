@@ -108,13 +108,13 @@
          "fontSize": 12,
          "hideOverlap": true
         },
-        "axisTick": {
-         "show": false
-        },
         "axisLine": {
          "lineStyle": {
           "color": "#d1d5db"
          }
+        },
+        "axisTick": {
+         "show": false
         },
         "splitLine": {
          "show": false
@@ -137,7 +137,6 @@
         "name": "Analysis Value",
         "nameLocation": "middle",
         "nameGap": 46,
-        "nameRotate": 90,
         "nameTextStyle": {
          "color": "#6b7280",
          "fontSize": 12
@@ -146,10 +145,11 @@
          "color": "#6b7280",
          "fontSize": 12
         },
-        "axisTick": {
+        "axisLine": {
          "show": false
         },
-        "axisLine": {
+        "nameRotate": 90,
+        "axisTick": {
          "show": false
         },
         "splitLine": {
@@ -1080,13 +1080,13 @@
         },
         "label": {
          "show": true,
-         "position": "top",
-         "distance": 6.5,
          "formatter": "[fn]",
+         "position": "top",
          "color": "#374151",
          "fontSize": 12,
          "textBorderColor": "#ffffff",
-         "textBorderWidth": 3
+         "textBorderWidth": 3,
+         "distance": 6.5
         },
         "labelLayout": "[fn]"
        },

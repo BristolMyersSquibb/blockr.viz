@@ -19,10 +19,10 @@ const ROWS = [
   { T: 'Fever', ID: 'S03', ARM: 'A', SEV: 'MILD', V: 3 }
 ];
 // A horizontal bar of row counts per term. A case that draws something else
-// states its own x, y and orientation. `derived` is R's derived object.
-const BASE = { type: 'bar', y: 'T', orientation: 'horizontal', drill: 'auto',
+// states its own category, value and orientation. `derived` is R's derived object.
+const BASE = { type: 'bar', category: 'T', orientation: 'horizontal', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
-const VERTICAL = { orientation: 'vertical', x: 'T', y: null };
+const VERTICAL = { orientation: 'vertical' };
 
 /** The settings of `cfg` and R's derived, which `cfg` may carry. */
 const settings = (cfg, columns = COLUMNS) => {
@@ -94,14 +94,14 @@ test('value labels: a stack labelled once with its total, headroom on the axis',
 });
 
 test('value lines: a markLine on the first series and an axis widened past the line', () => {
-  const { opt } = build({ y_lines: [{ value: 10, label: null }] });
+  const { opt } = build({ value_lines: [{ value: 10, label: null }] });
   assert.strictEqual(opt.series[0].markLine.data[0].xAxis, 10);
   assert.strictEqual(typeof opt.xAxis.max, 'function');
   assert.strictEqual(opt.xAxis.max({ min: 0, max: 3 }), 12);
 });
 
 test('waterfall: a floating delta per step, totals restate the running sum', () => {
-  const { opt } = build({ type: 'waterfall', x: 'T', y: 'V', orientation: null, func: 'sum',
+  const { opt } = build({ type: 'waterfall', category: 'T', value: 'V', orientation: null, func: 'sum',
                           sort_by: 'data', waterfall_totals: [{ value: 'Fever', label: null }] });
   assert.deepStrictEqual(plain(opt.xAxis.data), ['Rash', 'Nausea', 'Fever']);
   assert.deepStrictEqual(values(opt.series[0]), [0, 9, 0]);
@@ -112,18 +112,18 @@ test('waterfall: a floating delta per step, totals restate the running sum', () 
 });
 
 test('pie and treemap: a slice per group with a value, the board scale colours it', () => {
-  const pie = build({ type: 'pie', x: 'T', y: null, orientation: null,
+  const pie = build({ type: 'pie', category: 'T', value: null, orientation: null,
                       derived: { scales: { var: 'T', color: { Rash: '#123456' } } } }).opt;
   assert.deepStrictEqual(plain(pie.series[0].data.map((d) => [d.name, d.value, d.itemStyle.color])),
                          [['Rash', 3, '#123456'], ['Nausea', 1, '#E69F00'], ['Fever', 1, '#009E73']]);
-  const tm = build({ type: 'treemap', x: 'T', y: 'V', orientation: null, func: 'sum' }).opt;
+  const tm = build({ type: 'treemap', category: 'T', value: 'V', orientation: null, func: 'sum' }).opt;
   // Nausea sums to -2 and drops out.
   assert.deepStrictEqual(plain(tm.series[0].data.map((d) => d.name)), ['Rash', 'Fever']);
 });
 
 test('boxplot: five numbers per slot, a NaN box for an empty one, outliers beside', () => {
   const rows = [1, 2, 3, 4, 100].map((V) => ({ T: 'a', V })).concat([{ T: 'b', V: null }]);
-  const { opt } = build({ type: 'boxplot', x: 'T', y: 'V', orientation: 'vertical', sort_by: 'data',
+  const { opt } = build({ type: 'boxplot', category: 'T', value: 'V', orientation: 'vertical', sort_by: 'data',
                           sort_dir: 'asc', box_points: 'outliers' }, {}, rows);
   assert.deepStrictEqual(plain(opt.xAxis.data), ['a', 'b']);
   assert.deepStrictEqual(plain(opt.series[0].data[0]), { value: [1, 2, 3, 4, 7], n: 5 });
@@ -134,7 +134,7 @@ test('boxplot: five numbers per slot, a NaN box for an empty one, outliers besid
 });
 
 test('point range: an interval under a centre dot, the slot as the dot name', () => {
-  const { opt } = build({ type: 'pointrange', y: 'T', x: 'V', color: 'SEV',
+  const { opt } = build({ type: 'pointrange', category: 'T', value: 'V', color: 'SEV',
                           sort_by: 'data', sort_dir: 'asc', orientation: 'horizontal' });
   assert.deepStrictEqual(plain(opt.series.map((s) => [s.type, s.name])),
                          [['custom', 'MILD'], ['scatter', 'MILD'], ['custom', 'SEVERE'],
@@ -144,7 +144,7 @@ test('point range: an interval under a centre dot, the slot as the dot name', ()
 });
 
 test('a distribution without a numeric value draws nothing in its panel', () => {
-  const { o } = build({ type: 'boxplot', x: 'T', y: null, orientation: 'vertical' });
+  const { o } = build({ type: 'boxplot', category: 'T', value: null, orientation: 'vertical' });
   assert.strictEqual(o.panels[0].option, null);
   assert.strictEqual(o.panels[0].height, '350px');
 });
@@ -156,8 +156,8 @@ test('legend chips: colour levels; none for pie, treemap and waterfall', () => {
   };
   assert.deepStrictEqual(legend({ color: 'SEV' }), { col: 'SEV', items: [
     { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#E69F00' }] });
-  assert.strictEqual(legend({ type: 'pie', x: 'T', y: null, orientation: null, color: 'SEV' }), null);
-  assert.strictEqual(legend({ type: 'waterfall', x: 'T', y: null, orientation: null, color: 'SEV' }), null);
+  assert.strictEqual(legend({ type: 'pie', category: 'T', value: null, orientation: null, color: 'SEV' }), null);
+  assert.strictEqual(legend({ type: 'waterfall', category: 'T', value: null, orientation: null, color: 'SEV' }), null);
   assert.strictEqual(legend({}), null);
 });
 
@@ -193,7 +193,7 @@ test('D5: a facet key lights its own panel only', () => {
 });
 
 test('D5: point ranges dim too, and stay untouched while nothing is filtered', () => {
-  const cfg = { type: 'pointrange', y: 'T', x: 'V', sort_by: 'data', sort_dir: 'asc' };
+  const cfg = { type: 'pointrange', category: 'T', value: 'V', orientation: 'horizontal', sort_by: 'data', sort_dir: 'asc' };
   const p = patch(cfg, { T: ['Nausea'] });
   assert.deepStrictEqual(p.series.map((s) => s.data.map((d) => d.itemStyle.opacity)),
                          [[0.15, 1, 0.15], [0.15, 1, 0.15]]);
@@ -211,7 +211,7 @@ test('format and unit: compact ticks, the unit in the title, values with it', ()
   assert.strictEqual(C.valueFormat({ format: 'number' }), null);
   assert.strictEqual(C.valueFormat({ unit: 'CHF' }, { unit: false }), null);
 
-  const { opt } = build({ x: 'V', func: 'sum', format: 'compact', unit: 'CHF' });
+  const { opt } = build({ value: 'V', func: 'sum', format: 'compact', unit: 'CHF' });
   // A column without a label: the axis is named by the unit alone.
   assert.strictEqual(opt.xAxis.name, 'CHF');
   assert.strictEqual(opt.xAxis.axisLabel.formatter(2500), '2.5K');
@@ -227,8 +227,8 @@ test('the axis name: label and unit, the unit alone, none when the title says it
 });
 
 test('value labels print each value on its own; a line at 0 has no label', () => {
-  const { opt } = build({ x: 'V', func: 'sum', value_labels: true,
-                         y_lines: [{ value: 0, label: null }, { value: 2, label: null }] });
+  const { opt } = build({ value: 'V', func: 'sum', value_labels: true,
+                         value_lines: [{ value: 0, label: null }, { value: 2, label: null }] });
   const lbl = opt.series[0].label.formatter;
   assert.strictEqual(lbl({ value: 1.5 }), '1.5');
   assert.strictEqual(lbl({ value: 2.14 }), '2.14');
@@ -244,8 +244,7 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
     .map((d, i) => ({ WEEK: d, V: i + 1 }));
   const run = (cfg) => {
     const { orientation, ...rest } = cfg;
-    const axes = orientation === 'vertical' ? { x: 'WEEK', y: 'V' } : { y: 'WEEK', x: 'V' };
-    const { c, derived } = settings({ ...axes, orientation, func: 'sum', sort_by: 'data', ...rest },
+    const { c, derived } = settings({ category: 'WEEK', value: 'V', orientation, func: 'sum', sort_by: 'data', ...rest },
                                     columns);
     const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns, cfg: c, derived });
     return C.option.aggregated(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
@@ -255,7 +254,7 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
     x_lines: [{ value: '2026-10-21', label: 'Listed' }, { value: '2026-10-12', label: null },
               { value: '2027-01-01', label: null }],
     x_ranges: { Promo: [{ value: '2026-09-01', label: null }, { value: '2026-10-14', label: null }] },
-    y_lines: [{ value: 2, label: null }]
+    value_lines: [{ value: 2, label: null }]
   };
   const v = run({ ...cfg, orientation: 'vertical' });
   // The value line stays; a date inside a week marks that week's bar; past

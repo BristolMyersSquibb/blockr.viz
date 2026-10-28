@@ -180,13 +180,12 @@ const ROWS = [
   { T: 'b', SEV: 'LOW', V: 3 }, { T: 'b', SEV: 'HIGH', V: 1 },
   { T: 'c', SEV: 'LOW', V: 5 }
 ];
-// A bar lies horizontal unless it says otherwise: its category T is y and
-// its measure V is x. Vertical, and a boxplot, put T on x and V on y.
+// The category is T and the measure V; a bar lies horizontal unless it says
+// otherwise, a boxplot vertical.
 const settingsOf = (cfg) => {
-  const vertical = cfg.orientation === 'vertical' || cfg.type === 'boxplot';
   return C.model.settings({
     type: 'bar', func: 'sum', color: 'SEV', sort_by: 'alpha', sort_dir: 'asc', drill: 'auto',
-    ...(vertical ? { x: 'T', y: 'V' } : { y: 'T', x: 'V', orientation: 'horizontal' }), ...cfg
+    category: 'T', value: 'V', ...cfg
   }, COLUMNS);
 };
 const build = (cfg) => {
@@ -226,7 +225,7 @@ test('marks on a stack spread the names of thin segments a line apart', () => {
   const add = (t, sev, n) => { for (let i = 0; i < n; i++) rows.push({ T: t, SEV: sev, V: 1, ID: t + sev + i, ARM: 'A' }); };
   add('a', 'HIGH', 40); add('a', 'LOW', 40); add('a', 'MID', 1);
   add('b', 'HIGH', 1); add('b', 'LOW', 1); add('b', 'MID', 1);
-  const c = C.model.settings({ type: 'bar', x: 'T', func: 'count', color: 'SEV', sort_by: 'alpha',
+  const c = C.model.settings({ type: 'bar', category: 'T', func: 'count', color: 'SEV', sort_by: 'alpha',
                                sort_dir: 'asc', orientation: 'vertical', legend: 'marks',
                                drill: 'auto' }, COLUMNS);
   const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });

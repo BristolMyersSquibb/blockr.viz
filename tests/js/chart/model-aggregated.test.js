@@ -23,7 +23,7 @@ const ROWS = [
 ];
 
 // A vertical bar of row counts per T: the category is x, the measure y.
-const BASE = { type: 'bar', x: 'T', orientation: 'vertical', func: 'count', drill: 'auto',
+const BASE = { type: 'bar', category: 'T', orientation: 'vertical', func: 'count', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
 
 const settingsOf = (cfg, columns = COLUMNS) => C.model.settings({ ...BASE, ...cfg }, columns);
@@ -56,7 +56,7 @@ test('group order: value, alpha, factor levels, data, a column', () => {
   assert.deepStrictEqual(groupsOf(build({ sort_by: 'alpha', sort_dir: 'asc' })),
                          [['', 'Fever', 'Nausea', 'Rash']]);
   // Factor levels win over the alphabet, and unused levels drop out.
-  assert.deepStrictEqual(groupsOf(build({ x: 'SEX', sort_by: 'alpha', sort_dir: 'asc' })),
+  assert.deepStrictEqual(groupsOf(build({ category: 'SEX', sort_by: 'alpha', sort_dir: 'asc' })),
                          [['M', 'F']]);
   assert.deepStrictEqual(groupsOf(build({ sort_by: 'data', sort_dir: 'asc' })),
                          [['Rash', 'Nausea', '', 'Fever']]);
@@ -76,11 +76,11 @@ test('data order: a date or a number in its own order, whatever the row order', 
     { day: '2025-03-01', dose: 20, V: 1 }, { day: '2025-01-01', dose: 5, V: 9 },
     { day: null, dose: 10, V: 2 }, { day: '2025-02-01', dose: null, V: 4 }
   ];
-  const sorted = (cfg) => groupsOf(build({ y: 'V', func: 'sum', sort_by: 'data',
+  const sorted = (cfg) => groupsOf(build({ value: 'V', func: 'sum', sort_by: 'data',
                                            sort_dir: 'asc', ...cfg }, rows, cols));
-  assert.deepStrictEqual(sorted({ x: 'day' }), [['2025-01-01', '2025-02-01', '2025-03-01', '']]);
-  assert.deepStrictEqual(sorted({ x: 'dose' }), [['5', '10', '20', '']]);
-  assert.deepStrictEqual(sorted({ x: 'dose', sort_dir: 'desc' }), [['', '20', '10', '5']]);
+  assert.deepStrictEqual(sorted({ category: 'day' }), [['2025-01-01', '2025-02-01', '2025-03-01', '']]);
+  assert.deepStrictEqual(sorted({ category: 'dose' }), [['5', '10', '20', '']]);
+  assert.deepStrictEqual(sorted({ category: 'dose', sort_dir: 'desc' }), [['', '20', '10', '5']]);
 });
 
 test('the default sort follows the category column', () => {
@@ -109,7 +109,7 @@ test('colour levels follow the scale order, then factor levels, then the alphabe
   const scaled = build({ color: 'SEV' }, ROWS, COLUMNS,
                        { scales: { var: 'SEV', order: ['SEVERE', 'MILD'] } });
   assert.deepStrictEqual(plain(scaled.colors), ['SEVERE', 'MILD', '']);
-  assert.deepStrictEqual(plain(build({ x: 'T', color: 'SEX' }).colors), ['M', 'F']);
+  assert.deepStrictEqual(plain(build({ category: 'T', color: 'SEX' }).colors), ['M', 'F']);
 });
 
 test('facets: fixed scales share one group order, free scales keep their own', () => {
@@ -164,7 +164,7 @@ test('B8: the 10th-90th percentile draws that range around the median, not Q1-Q3
 test('B10: a distribution panel finds its rows by the shared key, a missing facet too', () => {
   const rows = [{ G: 'a', F: null, V: 1 }, { G: 'a', F: null, V: 3 }, { G: 'a', F: 'p', V: 10 }];
   const cols = [cat('G'), cat('F'), num('V')];
-  const m = build({ type: 'boxplot', x: 'G', facet: 'F', y: 'V',
+  const m = build({ type: 'boxplot', category: 'G', facet: 'F', value: 'V',
                     sort_by: 'data', sort_dir: 'asc' }, rows, cols);
   assert.deepStrictEqual(plain(m.panels.map((p) => [p.facet, p.slots[0].n, p.slots[0].body.center])),
                          [['', 2, 2], ['p', 1, 10]]);
@@ -174,7 +174,7 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
   const rows = [1, 2, 3, 4, 100].map((V) => ({ G: 'a', V, C: 'x' }))
     .concat([{ G: 'b', V: null, C: 'y' }, { G: 'b', V: 5, C: 'y' }]);
   const cols = [cat('G'), num('V'), cat('C')];
-  const cfg = { type: 'boxplot', x: 'G', y: 'V',
+  const cfg = { type: 'boxplot', category: 'G', value: 'V',
                 sort_by: 'data', sort_dir: 'asc', box_points: 'outliers' };
   const m = build(cfg, rows, cols);
   const s = m.panels[0].slots;
@@ -189,7 +189,7 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
                          [['a', 'x'], ['b', 'y']]);
   assert.strictEqual(split.panels[0].slots[0].cat, 'a\u0000x');
   // No numeric value: nothing to summarise.
-  const none = build({ type: 'boxplot', x: 'G', y: null }, rows, cols);
+  const none = build({ type: 'boxplot', category: 'G', value: null }, rows, cols);
   assert.strictEqual(none.noValue, true);
   assert.strictEqual(none.panels[0].slots, null);
 });
@@ -198,7 +198,7 @@ test('a box plot faceted by a column the data lacks has no empty slots', () => {
   // A board adds its Subgroup column only once a subgroup is picked.
   const rows = [{ G: 'a', C: 'x', V: 1 }, { G: 'a', C: 'y', V: 2 }, { G: 'b', C: 'x', V: 3 }];
   const cols = [cat('G'), cat('C'), num('V')];
-  const m = build({ type: 'boxplot', x: 'G', color: 'C', facet: 'Subgroup', y: 'V',
+  const m = build({ type: 'boxplot', category: 'G', color: 'C', facet: 'Subgroup', value: 'V',
                     sort_by: 'data', sort_dir: 'asc' }, rows, cols);
   assert.strictEqual(m.facet, null);
   assert.strictEqual(m.panels.length, 1);
@@ -208,7 +208,7 @@ test('a box plot faceted by a column the data lacks has no empty slots', () => {
 test('a fixed facet grid keeps every distribution slot in every panel', () => {
   const rows = [{ G: 'a', C: 'x', F: 'p', V: 1 }, { G: 'b', C: 'y', F: 'q', V: 2 }];
   const cols = [cat('G'), cat('C'), cat('F'), num('V')];
-  const cfg = { type: 'pointrange', x: 'G', color: 'C', facet: 'F', y: 'V',
+  const cfg = { type: 'pointrange', category: 'G', color: 'C', facet: 'F', value: 'V',
                 sort_by: 'data', sort_dir: 'asc' };
   const slots = (m) => plain(m.panels.map((p) => p.slots.map((s) => [s.cat, s.n])));
   assert.deepStrictEqual(slots(build(cfg, rows, cols)), [
@@ -229,8 +229,8 @@ test('the mark a click lands on: a bar segment, a split box', () => {
   const wf = build({ type: 'waterfall' });
   assert.deepStrictEqual(at(wf, { type: 'waterfall' }, { name: 'Rash', seriesName: 'delta' }),
                          { group: 'Rash', level: null });
-  const box = build({ type: 'boxplot', y: 'V', color: 'SEV' });
-  assert.deepStrictEqual(at(box, { type: 'boxplot', y: 'V', color: 'SEV' }, { name: 'Rash\u0000MILD' }),
+  const box = build({ type: 'boxplot', category: 'V', orientation: 'horizontal', color: 'SEV' });
+  assert.deepStrictEqual(at(box, { type: 'boxplot', category: 'V', orientation: 'horizontal', color: 'SEV' }, { name: 'Rash\u0000MILD' }),
                          { group: 'Rash', level: 'MILD' });
 });
 

@@ -14,12 +14,12 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "bar",
-  "y": "AETERM",
-  "x": null,
+  "category": "AETERM",
+  "value": null,
   "orientation": "horizontal",
   "func": "count",
   "drill": "auto",
-  "y_lines": [
+  "value_lines": [
    {
     "value": 5,
     "label": null

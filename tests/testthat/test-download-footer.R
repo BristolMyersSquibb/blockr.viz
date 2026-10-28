@@ -154,7 +154,7 @@ test_that("the chart block's footer reads the chart's input, not its numbers", {
   d <- data.frame(term = c("A", "B", "B"), n = 1:3)
   attr(d, "blockr_provenance") <- list(dataset = "AQ-001")
   attr(d, "blockr_filters") <- c(sex = "Sex = F")
-  blk <- new_chart_block(type = "bar", x = "term", download = TRUE)
+  blk <- new_chart_block(type = "bar", category = "term", download = TRUE)
 
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

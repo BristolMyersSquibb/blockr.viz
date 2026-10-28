@@ -14,8 +14,8 @@
   "facet_scales": "fixed",
   "download": false,
   "type": "boxplot",
-  "y": "AETERM",
-  "x": "AVAL",
+  "category": "AETERM",
+  "value": "AVAL",
   "orientation": "horizontal",
   "drill": "auto",
   "id": "USUBJID"
@@ -80,7 +80,6 @@
       },
       "xAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 30,
@@ -96,7 +95,8 @@
         "lineStyle": {
          "color": "#d1d5db"
         }
-       }
+       },
+       "scale": true
       },
       "yAxis": {
        "type": "category",

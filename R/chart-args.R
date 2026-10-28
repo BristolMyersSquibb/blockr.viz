@@ -1,50 +1,19 @@
-# Public arguments of new_chart_block() and the chart's internal names.
+# The chart's argument helpers: which types map which roles, the text of
+# a highlight and the selection.
 #
-# The constructor, the saved state and the `{@arg}` slots speak the public
-# names. The server and inst/js/chart/ keep the names from before 0.3.0:
-# `chart_type`, `group`/`value`/`orientation`, `bar_mode`, `tt_fields`,
-# `value_lines`, `lo`/`hi`, `band_id`, `count_col`, `count_on`, `na_group`,
-# `ctrl_target`/`ctrl_table`, `values` and the four `filter_*` fields. This
-# file is the only place the two meet.
-#
-# Roles are the one translation that is not a rename. Publicly `x` and `y` are
-# the screen axes for every type, as in ggplot2: a horizontal bar is
-# `y = "category", x = "amount"`. Internally an aggregated chart has a
-# category column (`group`), an aggregated column (`value`) and an
-# `orientation`.
+# An aggregated chart maps a `category` and a `value`; `orientation` only
+# says which way the marks lie. `x` and `y` are the screen axes of the types
+# that draw rows (scatter, line, area, band), the histogram and the gantt.
 
-# Types whose category and value columns are drawn on screen axes, and which
-# can lie either way. Waterfall is vertical only, pie and treemap have no axes:
-# for those `x` is the category and `y` the value.
+# Types that can lie either way, and the way they lie when `orientation` is
+# NULL. Waterfall is vertical only; pie and treemap have no axes.
 CHART_ORIENTED_TYPES <- c("bar", "boxplot", "pointrange")
 CHART_AGGREGATED_TYPES <- c("bar", "waterfall", "pie", "treemap",
                             "boxplot", "pointrange")
 CHART_DISTRIBUTION_TYPES <- c("boxplot", "pointrange")
 
-# Public roles -> the internal ones the server and the browser read.
-# `kinds` (viz_column_kinds()) is NULL when the data is not there.
-chart_roles_internal <- function(type, x, y, func, orientation, kinds = NULL) {
-  if (identical(type, "histogram")) {
-    return(list(group = chart_bin_col(x), value = ".count", x = x, y = NULL,
-                orientation = "vertical"))
-  }
-  if (!type %in% CHART_AGGREGATED_TYPES) {
-    return(list(group = NULL, value = ".count", x = x, y = y,
-                orientation = orientation))
-  }
-  orient <- if (type %in% CHART_ORIENTED_TYPES) {
-    orientation %||%
-      chart_infer_lie(list(type = type, x = x, y = y, func = func), kinds)
-  }
-  horizontal <- identical(orient, "horizontal")
-  group <- if (horizontal) y else x
-  value <- if (horizontal) x else y
-  if (identical(func %||% "count", "count") &&
-        !type %in% CHART_DISTRIBUTION_TYPES) {
-    value <- ".count"
-  }
-  list(group = group, value = value, x = NULL, y = NULL,
-       orientation = orient)
+chart_default_orientation <- function(type) {
+  if (identical(type, "bar")) "horizontal" else "vertical"
 }
 
 # How a title's `{highlight}` prints the values of a `highlight` (one column

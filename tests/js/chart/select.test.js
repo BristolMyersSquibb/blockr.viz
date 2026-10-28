@@ -7,7 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const D = require('./drive');
 
-const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
+const BAR = { type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto' };
 const cat = (filters) => ({ type: 'categorical', filters });
 const run = (config, steps, opts) => {
   const c = D.open(config, opts);
@@ -94,7 +94,7 @@ test('a legend chip selects its level', () => {
 });
 
 test('a pie slice and a gantt lane select their level', () => {
-  assert.deepStrictEqual(run({ type: 'pie', x: 'AESEV', drill: 'auto' }, (c) => c.click(0, 0, 0)).sent,
+  assert.deepStrictEqual(run({ type: 'pie', category: 'AESEV', drill: 'auto' }, (c) => c.click(0, 0, 0)).sent,
                          [cat({ AESEV: ['SEVERE'] })]);
   const g = { type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM', drill: 'auto' };
   assert.deepStrictEqual(run(g, (c) => c.click(0, 0, 0)).sent, [cat({ AETERM: ['Rash'] })]);
@@ -158,7 +158,7 @@ test('a drill column lights every bar holding a selected row, not only the click
   const data = { T: ['Rash', 'Fever', 'Rash', 'Cough'], ID: ['a', 'a', 'b', 'c'] };
   const columns = [{ name: 'T', class: 'string', n_unique: 3, label: '' },
                    { name: 'ID', class: 'string', n_unique: 3, label: '' }];
-  const c = D.open({ type: 'bar', y: 'T', orientation: 'horizontal', drill: 'ID' },
+  const c = D.open({ type: 'bar', category: 'T', orientation: 'horizontal', drill: 'ID' },
                    { data, columns });
   c.clickWhere(0, D.at('Fever'));
   assert.deepStrictEqual(D.plain(c.selections()[0].filters), { ID: ['a'] });

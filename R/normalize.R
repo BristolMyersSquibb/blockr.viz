@@ -1,35 +1,5 @@
-# What the cross-argument rules (chart_normalize(), table_normalize()) know
-# about the data: one kind per column. The rules are pure functions of a
-# block's state, the state before the change, and these kinds.
-
-# The kind of each column of a data frame: a named character vector of
-# "numeric", "date", "factor", "logical" or "character"; NULL without data.
-viz_column_kinds <- function(data) {
-  if (!is.data.frame(data)) {
-    return(NULL)
-  }
-  vapply(data, function(v) {
-    if (inherits(v, c("Date", "POSIXt"))) {
-      "date"
-    } else if (is.factor(v)) {
-      "factor"
-    } else if (is.logical(v)) {
-      "logical"
-    } else if (is.numeric(v)) {
-      "numeric"
-    } else {
-      "character"
-    }
-  }, character(1L))
-}
-
-# TRUE, FALSE, or NA when the column or the data is not known.
-kind_is_numeric <- function(kinds, col) {
-  if (is.null(kinds) || !length(col) || !col[[1L]] %in% names(kinds)) {
-    return(NA)
-  }
-  identical(unname(kinds[[col[[1L]]]]), "numeric")
-}
+# Helpers of the cross-argument rules (chart_normalize(), table_normalize()),
+# pure functions of a block's state and the state before the change.
 
 # Whether `name` differs between two states. Without a previous state
 # nothing counts as changed.

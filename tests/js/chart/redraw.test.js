@@ -34,7 +34,7 @@ test('a brush filter and a drill receipt survive a new payload', () => {
   assert.strictEqual(c.footer(), before);
   c.close();
 
-  const t = D.open({ type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto',
+  const t = D.open({ type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto',
                      drill_target: 'auto' });
   t.clickWhere(0, D.at('Nausea'));
   t.advance(1000);

@@ -33,25 +33,26 @@ chart_spec_mapping <- function() {
       )
     ),
 
-    x = chart_arg(
+    category = chart_arg(
       type = "column", null = "unset",
-      gear = gear("Mapping", "column", "X"),
-      example = "Sepal.Length",
+      applies = SPEC_CHART_AGGREGATED,
+      gear = gear("Mapping", "column", "Category"),
+      example = "Species",
       describe = paste(
-        "Column on the horizontal axis. For an aggregated type one of x and y",
-        "is the category and the other the column `func` aggregates. Gantt:",
-        "the interval start. Histogram: the column that is binned."
+        "Column whose values become the bars, slices, tiles, boxes or",
+        "points: one mark per value. The same whichever way a bar lies."
       )
     ),
 
-    y = chart_arg(
+    value = chart_arg(
       type = "column", null = "unset",
-      applies = except("histogram"),
-      gear = gear("Mapping", "column", "Y"),
-      example = "Sepal.Width",
+      applies = SPEC_CHART_AGGREGATED,
+      gear = gear("Mapping", "column", "Value"),
+      example = "Sepal.Length",
       describe = paste(
-        "Column on the vertical axis. With `func = \"count\"` set only the",
-        "category column. Gantt: the lane. Pie and treemap: the value."
+        "Column `func` aggregates per category; unused by",
+        "`func = \"count\"`. Boxplot and pointrange: the column whose",
+        "spread each box or point range shows."
       )
     ),
 
@@ -65,10 +66,29 @@ chart_spec_mapping <- function() {
                              "Median", "Sum", "Min", "Max", "None (as is)")),
       example = "count",
       describe = paste(
-        "Aggregation of the value column per category. \"identity\" draws",
+        "Aggregation of `value` per category. \"identity\" draws",
         "the value as is; \"pct_distinct\" is the share of the panel's",
         "distinct values (see `percent_of`)."
       )
+    ),
+
+    x = chart_arg(
+      type = "column", null = "unset",
+      applies = c(SPEC_CHART_INDIVIDUAL, "histogram", "gantt"),
+      gear = gear("Mapping", "column", "X"),
+      example = "Sepal.Length",
+      describe = paste(
+        "Column on the horizontal axis of a scatter, line, area or band.",
+        "Histogram: the column that is binned. Gantt: the interval start."
+      )
+    ),
+
+    y = chart_arg(
+      type = "column", null = "unset",
+      applies = c(SPEC_CHART_INDIVIDUAL, "gantt"),
+      gear = gear("Mapping", "column", "Y"),
+      example = "Sepal.Width",
+      describe = "Column on the vertical axis. Gantt: the lane."
     ),
 
     color = chart_arg(
@@ -168,13 +188,13 @@ chart_spec_look <- function() {
   list(
     orientation = chart_arg(
       type = "enum", values = c("horizontal", "vertical"),
-      null = "inferred",
+      null = "horizontal for bar, vertical for boxplot and pointrange",
       applies = c("bar", "boxplot", "pointrange"),
       gear = gear("Look", "segmented", "Orientation",
                   labels = c("Horizontal", "Vertical")),
       describe = paste(
-        "Which way a bar, boxplot or pointrange lies. Leave NULL: it is",
-        "inferred. Needed only when both columns are non-numeric."
+        "Which way a bar, boxplot or pointrange lies. It changes no mapping:",
+        "`category` stays the category either way."
       )
     ),
 
@@ -233,7 +253,7 @@ chart_spec_look <- function() {
     ),
 
     waterfall_totals = chart_arg(
-      type = type_values(of = "x"), null = "no totals",
+      type = type_values(of = "category"), null = "no totals",
       applies = "waterfall",
       gear = gear("Look", "values", "Totals"),
       slot = FALSE,
@@ -324,14 +344,15 @@ chart_spec_numbers <- function() {
 
 chart_spec_lines <- function() {
   list(
-    y_lines = chart_arg(
+    value_lines = chart_arg(
       type = "numbers", null = "no lines",
       applies = c("bar", "waterfall", "boxplot", "pointrange", "scatter", "line",
                   "area", "histogram"),
       gear = gear("Reference lines", "text", "Horizontal", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across the value axis. Names are",
-        "labels. Text form: \"Target: 4; 6\"."
+        "Positions of dashed guide lines across the value axis: `value`'s",
+        "axis, y on a scatter, line, area or histogram. Names are labels.",
+        "Text form: \"Target: 4; 6\"."
       )
     ),
 
@@ -340,8 +361,8 @@ chart_spec_lines <- function() {
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Reference lines", "text", "Vertical", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across x: numbers, dates or",
-        "category values. Names are labels."
+        "Positions of dashed guide lines across x, or across a bar's",
+        "category axis: numbers, dates or category values. Names are labels."
       )
     ),
 
@@ -419,10 +440,11 @@ chart_spec_interact <- function() {
 chart_spec <- function() {
   shared <- viz_shared_args()
   order <- c(
-    "type", "x", "xend", "y", "func", "color", "facet", "series", "label",
+    "type", "category", "value", "func", "x", "xend", "y", "color", "facet",
+    "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
     "format", "unit", "y_transform", "x_transform", "tooltip", "drill",
-    "line_width", "point_size", "connect", "y_lines", "x_lines", "ymin",
+    "line_width", "point_size", "connect", "value_lines", "x_lines", "ymin",
     "ymax", "linetype", "x_ranges", "legend", "highlight", "smoother",
     "identity_line", "box_points", "summary", "whiskers", "connect_centers",
     "band_window", "band_size", "band_min_n", "id", "ref_min", "ref_max",

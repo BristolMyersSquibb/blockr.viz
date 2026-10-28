@@ -44,7 +44,7 @@ const onGear = (band, gear) => gear;
 const inBand = (band) => band;
 
 test('Escape closes the chart gear tray', async () => {
-  const c = D.open({ type: 'bar', y: 'AETERM', orientation: 'horizontal' });
+  const c = D.open({ type: 'bar', category: 'AETERM', orientation: 'horizontal' });
   try {
     check(c.env.win, c.block.frame.tray.band, c.block.frame.tray.button, onGear);
     check(c.env.win, c.block.frame.tray.band, c.block.frame.tray.button, inBand);
