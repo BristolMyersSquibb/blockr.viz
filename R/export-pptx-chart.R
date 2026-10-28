@@ -1,13 +1,8 @@
-# A ggplot as an exhibit -----------------------------------------------------
-#
-# The exhibit writers (write_exhibit_html(), write_exhibit_pptx(),
-# write_exhibit_png()) take any ggplot a block hands them: the patient
-# profile's static plots, say, or a ggplot block's result. A plot goes into
-# HTML as an image and onto a slide as a vector drawing, sized from the
-# `pptx_width` / `pptx_height` it carries, or the deck default.
+# A ggplot as an exhibit. HTML gets an image, a slide gets a vector drawing
+# sized from the plot's `pptx_width` / `pptx_height` attributes.
 
-# The box a plot is drawn into: the size it carries as attributes, or the
-# deck default.
+# The box a plot is drawn into, in inches: its size attributes or 8 x 4.5.
+# `max_width` scales it down, keeping the aspect.
 #' @noRd
 gg_exhibit_size <- function(p, max_width = NULL) {
 
@@ -26,8 +21,7 @@ gg_exhibit_size <- function(p, max_width = NULL) {
   list(width = w, height = h)
 }
 
-# A plot's own title, whatever ggplot2 version wrote it. Used to tell a
-# duplicate slide title from a different one; NULL when the plot has none.
+# The plot's own title, or NULL when it has none.
 #' @noRd
 gg_title <- function(p) {
   lab <- tryCatch(p$labels$title, error = function(e) NULL)
@@ -54,9 +48,7 @@ html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
                             max_height = NULL,
                             default_expanded = NULL, ...) {
 
-  # A chart in an HTML document is an image of the rendered plot, at the size
-  # the plot says it wants -- the same thing blockr.outline's deck puts on an
-  # HTML slide. Inlined as a data URI, so the page carries it.
+  # The plot is inlined as a PNG data URI.
   size <- gg_exhibit_size(x, max_width = 8)
 
   f <- tempfile(fileext = ".png")
@@ -77,8 +69,7 @@ html_exhibit.gg <- function(x, title = NULL, subtitle = NULL, caption = NULL,
 pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
                                 caption = NULL, template = NULL, layout = NULL,
                                 master = NULL, top = NULL,
-                                # Accepted and ignored: the table paginator's
-                                # knobs. A plot is one slide by definition.
+                                # Accepted and ignored: a plot is one slide.
                                 max_rows = NULL, max_cols = NULL,
                                 min_font_size = NULL, ...) {
 
@@ -86,19 +77,14 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
   }
 
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
+  setup <- pptx_slide_setup(doc, layout, master)
+  layout <- setup$layout
+  master <- setup$master
+  slide_w <- setup$width
+  slide_h <- setup$height
 
-  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
-  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
+  slide_title <- pptx_has_title(title) &&
+    pptx_layout_has_title(doc, layout, master)
 
   top <- top %||% max(
     attr(x, "pptx_top") %||% 1.1,
@@ -109,23 +95,15 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
     }
   )
 
-  # The slide's title placeholder and the plot's own title band can print the
-  # same line twice, one above the other, in two sizes -- and the band costs
-  # the picture the height it takes. Where they SAY THE SAME THING the
-  # placeholder wins: it inherits the deck's styling and an editor can retype
-  # it. Where they differ they both stay, because then they are two facts: a
-  # deck titles its slides with the BLOCK NAME ("3. Chart"), and dropping the
-  # chart's own title there would throw away the informative one.
-  #
-  # The subtitle is never touched: a placeholder holds one line, and the
-  # subtitle belongs next to the marks.
+  # When the slide title and the plot's own title are the same line, the
+  # placeholder keeps it and the plot drops its copy. Different titles both
+  # stay. The subtitle is never touched.
   if (slide_title && identical(trimws(title), trimws(gg_title(x) %||% "")) &&
         requireNamespace("ggplot2", quietly = TRUE)) {
     stripped <- tryCatch(x + ggplot2::labs(title = NULL),
                          error = function(e) NULL)
     if (!is.null(stripped)) {
-      # `+` returns a bare ggplot: the size attributes on the original do not
-      # survive it, and they are the placement.
+      # `+` drops the size attributes, so they are copied back.
       attributes(stripped) <- utils::modifyList(
         attributes(stripped),
         attributes(x)[setdiff(names(attributes(x)), names(attributes(stripped)))]
@@ -136,20 +114,9 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
 
   size <- gg_exhibit_size(x)
 
-  # FILL the box that is left, keeping the aspect the chart asked for.
-  #
-  # `pptx_width` / `pptx_height` are the size the chart wants to be READ at,
-  # not the size of the slide it lands on. Placing a plot at that size and stopping left an 8in
-  # figure floating in the middle of a 12.5in slide with a hand's width of
-  # margin on each side -- the deck looked unfinished, and the axis labels
-  # were smaller than they needed to be for no reason.
-  #
-  # So the plot scales UP as well as down, until the first edge of the
-  # content box is reached. Officer re-renders the ggplot at the placed size
-  # rather than blowing up pixels, so this is a bigger drawing, not a coarser
-  # one -- type stays at its point size, which is why the relative weight of
-  # the labels drops as the panel grows. `blockr.viz.gg_slide_fill` caps it
-  # for a deck that wants the older, smaller figure back.
+  # The plot scales up or down to fill the box below `top`, keeping its
+  # aspect. officer re-renders it at the placed size, so type stays at its
+  # point size. `blockr.viz.gg_slide_fill` multiplies the fitted size.
   fill <- getOption("blockr.viz.gg_slide_fill", 1)
   if (!is.numeric(fill) || length(fill) != 1L || !is.finite(fill) ||
         fill <= 0) {
@@ -164,10 +131,7 @@ pptx_add_exhibit.gg <- function(doc, x, title = NULL, subtitle = NULL,
   doc <- officer::add_slide(doc, layout = layout, master = master)
 
   if (slide_title) {
-    doc <- tryCatch(
-      officer::ph_with(doc, title,
-                       location = officer::ph_location_type(type = "title")),
-      error = function(e) doc)
+    doc <- pptx_set_title(doc, title)
   }
 
   officer::ph_with(
@@ -190,49 +154,14 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
     stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
   }
 
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
+  setup <- pptx_slide_setup(doc, layout, master)
+  layout <- setup$layout
+  master <- setup$master
+  slide_w <- setup$width
+  slide_h <- setup$height
 
-  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
-  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  can_title <- pptx_layout_has_title(doc, layout, master)
-
-  # A picture cut into pages (`x$pages`, new_chart_capture()) goes out
-  # one page per slide, every page at the same scale so the rows line up
-  # when the reader flips. Page 1 opens with the picture's own title band;
-  # the later ones say whose continuation they are in the slide title.
-  pages <- x$pages
-  if (length(pages) > 1L) {
-    n <- length(pages)
-    label <- if (has_title) title else x$title %||% ""
-    titles <- c(if (has_title) title else "",
-                trimws(paste0(label, " (", seq_len(n)[-1L], " of ", n, ")")))
-    tops <- vapply(titles, function(t) {
-      if (nzchar(t) && can_title) {
-        top %||% pptx_title_bottom(doc, layout, master, template %||% "",
-                                   t) %||% 1.1
-      } else {
-        top %||% 1.1
-      }
-    }, numeric(1))
-    fit <- min(mapply(function(p, t) {
-      min((slide_w - 0.8) / p$width, (slide_h - t - 0.4) / p$height, 2)
-    }, pages, tops))
-    for (k in seq_len(n)) {
-      doc <- pptx_capture_slide(doc, pages[[k]], fit, titles[[k]], tops[[k]],
-                                can_title, layout, master, slide_w)
-    }
-    return(doc)
-  }
-
-  slide_title <- has_title && can_title
+  slide_title <- pptx_has_title(title) &&
+    pptx_layout_has_title(doc, layout, master)
 
   top <- top %||% if (slide_title) {
     pptx_title_bottom(doc, layout, master, template %||% "", title) %||% 1.1
@@ -240,32 +169,16 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
     1.1
   }
 
-  # Fit the box, keeping the captured aspect -- the same rule the ggplot
-  # exhibit follows, except that a bitmap scales rather than re-renders. The
-  # composer draws at pixelRatio 2, so growing to twice the captured size
-  # spends the pixels that are already there and stops at screen density;
-  # past that it would be blowing them up.
+  # Fit the box, keeping the captured aspect. The capture was drawn at pixel
+  # ratio 2, so it may grow to twice its size and no further.
   fit <- min((slide_w - 0.8) / x$width, (slide_h - top - 0.4) / x$height, 2)
-
-  pptx_capture_slide(doc, x, fit, if (slide_title) title else "", top,
-                     can_title, layout, master, slide_w)
-}
-
-# One slide: the title when there is one and the layout has a place for it,
-# the picture at `fit`, centred.
-#' @noRd
-pptx_capture_slide <- function(doc, x, fit, title, top, can_title, layout,
-                               master, slide_w) {
   w <- x$width * fit
   h <- x$height * fit
 
   doc <- officer::add_slide(doc, layout = layout, master = master)
 
-  if (nzchar(title) && can_title) {
-    doc <- tryCatch(
-      officer::ph_with(doc, title,
-                       location = officer::ph_location_type(type = "title")),
-      error = function(e) doc)
+  if (slide_title) {
+    doc <- pptx_set_title(doc, title)
   }
 
   officer::ph_with(

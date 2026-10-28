@@ -11,15 +11,15 @@ new_drilldown_theme_option(value = "default", category = "Chart options", ...)
 
 \item{category}{Settings sidebar category.}
 
-\item{...}{Forwarded to \code{\link[blockr.core:new_board_options]{blockr.core::new_board_option()}}.}
+\item{...}{Forwarded to \code{\link[blockr.core:new_board_option]{blockr.core::new_board_option()}}.}
 }
 \value{
 A \code{board_option} object.
 }
 \description{
 Board option that adds an "ECharts Theme" selector to the board sidebar.
-Matches \code{blockr.echarts::new_echart_theme_option()} so boards can mix the
-two mechanisms without collision.
+It matches \code{blockr.echarts::new_echart_theme_option()}, so boards can use
+both.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

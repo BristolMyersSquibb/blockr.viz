@@ -41,7 +41,7 @@ test_that("selections have one shape", {
     '{"selection": {"type": "categorical",
       "filters": {"AESEV": ["MILD", null]}}, "nonce": 3}'
   ))
-  expect_identical(sel$nonce, 3L)
+  expect_identical(sel$nonce, 3)
   expect_identical(sel$selection$filters, list(AESEV = c("MILD", NA)))
   expect_identical(sel$selection$columns, list())
 
@@ -61,7 +61,12 @@ test_that("selections have one shape", {
 
   clear <- viz_read_selection(json('{"selection": null, "nonce": 6}'))
   expect_null(clear$selection)
-  expect_identical(clear$nonce, 6L)
+  expect_identical(clear$nonce, 6)
+  # The table's receipt clear sends Date.now().
+  expect_silent(late <- viz_read_selection(
+    json('{"selection": null, "nonce": 1793173863956}')
+  ))
+  expect_identical(late$nonce, 1793173863956)
 })
 
 test_that("a malformed selection reads as NULL", {

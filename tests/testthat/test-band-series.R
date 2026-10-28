@@ -53,15 +53,8 @@ test_that("summarize_stat degrades on thin and empty input", {
                summarize_stat(1:10, "median_q1_q3"))
 })
 
-test_that("summarize_stat covers the chart's SUMMARY_STATS with no drift", {
-  js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
-  expect_true(file.exists(js))
-  src <- paste(readLines(js, warn = FALSE), collapse = "\n")
-  block <- sub("^[\\s\\S]*?const SUMMARY_STATS = \\[", "", src, perl = TRUE)
-  block <- sub("\\][\\s\\S]*", "", block, perl = TRUE)
-  m <- gregexpr("value:\\s*['\"]([^'\"]+)['\"]", block, perl = TRUE)
-  js_stats <- sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1",
-                  regmatches(block, m)[[1]], perl = TRUE)
+test_that("summarize_stat covers the chart's summary statistics", {
+  js_stats <- viz_block_spec("chart")$args$summary$values
 
   expect_true("p10_p90" %in% js_stats)
   # Every statistic the browser offers must be one R can compute, or a band

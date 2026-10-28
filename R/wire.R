@@ -108,6 +108,26 @@ wire_record <- function(type, x) {
 #'   string.
 #' @noRd
 viz_wire_df <- function(df) {
+  w <- wire_df_parts(df, warn = TRUE)
+  list(columns = w$meta,
+       data = jsonlite::toJSON(w$cols, na = "null", null = "null",
+                               digits = NA))
+}
+
+#' The column meta of a frame, without its rows
+#'
+#' What viz_wire_df() gives as `columns`, for a view that sends its own
+#' rows (the table sends its model) but whose gear picks columns of the
+#' input.
+#' @param df A data frame, or `NULL`.
+#' @return A list of column meta; `NULL` for no frame.
+#' @noRd
+viz_wire_columns <- function(df) {
+  if (!is.data.frame(df)) return(NULL)
+  wire_df_parts(df, warn = FALSE)$meta
+}
+
+wire_df_parts <- function(df, warn) {
   cols <- list()
   meta <- list()
   skipped <- character()
@@ -125,12 +145,11 @@ viz_wire_df <- function(df) {
       w$meta
     )
   }
-  if (length(skipped)) {
+  if (warn && length(skipped)) {
     warning("Left out of the chart data, their class cannot be drawn: ",
             paste0("`", skipped, "`", collapse = ", "), ".", call. = FALSE)
   }
-  list(columns = meta,
-       data = jsonlite::toJSON(cols, na = "null", null = "null", digits = NA))
+  list(cols = cols, meta = meta)
 }
 
 # One column as wire values, its class and its meta; NULL when it cannot

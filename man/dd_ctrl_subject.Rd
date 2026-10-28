@@ -14,12 +14,9 @@ The column name, or \code{NULL} when the board declares no subjects.
 }
 \description{
 The column a drill claims when the board says what a subject is: the
-\code{subject} field of the "study_roles" board option (blockr.pharma's Study
-settings), \code{USUBJID} when the option is there and the field is empty.
-Read by option id, so this package does not depend on blockr.pharma.
-}
-\details{
-A board without the option has no subjects (an airquality board, a
-finance board), and its senders claim columns as they always did.
+\code{subject} field of the "study_roles" board option, or \code{USUBJID} when the
+option exists and the field is empty. Read by option id, so this package
+does not depend on blockr.pharma. A board without the option has no
+subjects and its senders claim columns.
 }
 \keyword{internal}

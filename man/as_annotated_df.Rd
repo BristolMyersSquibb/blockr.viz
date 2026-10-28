@@ -21,41 +21,28 @@ as_annotated_df(x, ...)
 An annotated data frame.
 }
 \description{
-The blockr \strong{annotated data frame} is a plain data frame whose reserved
-\code{.}-columns describe a display table's structure and identity: \code{.label}
-(row stub), the ARD-named identity pairs \verb{.group<k>} / \verb{.group<k>_level}
-(row-grouping variable name / value) and \code{.variable} / \code{.variable_level}
-(leaf source variable / value; \code{NA} level marks a stat row), their
-optional \verb{_label} display companions, \code{.indent} (extra display depth,
-fallback dialect), \code{.strong} / \code{.emph} (emphasis); two-level column
-spanners are encoded in the column name as \code{Top||Leaf}, and the column /
-table labels carry the headers / title. Three optional table-level
-attributes carry display text: \code{label} (the title -- the established R
-display-name attribute), \code{subtitle} and \code{caption}. Producers stamp them
-(the composer methods recover them from the gt heading and source notes)
-and the table / chart blocks use them as the auto tier of their
-\code{title} / \code{subtitle} / \code{caption} state -- shown until the user overrides
-or suppresses each per block, and carried into the Excel export. Section
-headers are synthesized by the renderer from grouping-value runs -- they
-are never rows of the frame.
-It is what the blockr.viz table renderer (\code{\link[=new_table_block]{new_table_block()}} /
-\code{html_table()}) consumes and what \code{\link[=summary_table]{summary_table()}} produces. The full
-contract lives in the blockr.design spec
-(\code{open/annotated-data-frame/format.md}).
+An annotated data frame is a plain data frame whose reserved \code{.}-columns
+describe a display table's structure and identity: \code{.label} (row stub), the
+ARD-named identity pairs \verb{.group<k>} / \verb{.group<k>_level} (row-grouping
+variable name / value) and \code{.variable} / \code{.variable_level} (leaf source
+variable / value; an \code{NA} level marks a stat row), their optional \verb{_label}
+display companions, \code{.indent} (extra display depth) and \code{.strong} / \code{.emph}
+(emphasis). Two-level column spanners are encoded in the column name as
+\code{Top||Leaf}. The table-level attributes \code{label} (the title), \code{subtitle} and
+\code{caption} carry display text; the table and chart blocks use them as the
+auto tier of their \code{title} / \code{subtitle} / \code{caption} state and the Excel
+export carries them. Section headers are synthesized by the renderer from
+grouping-value runs and are never rows of the frame.
 }
 \details{
-\code{as_annotated_df()} is the broom-style hub: it coerces a table-producing
-object (composer, gtsummary, gt, rtables, ...) into that data frame. Producer
-packages register one S3 method each -- e.g. blockr.sandbox provides the
-composer methods (\code{as_annotated_df.composed_table} / \code{.gt_tbl}). The generic
-lives here, with the renderer that defines the convention; the methods live
-with their producers (composer is an internal package, so its method stays in
-blockr.sandbox).
+It is the format \code{\link[=new_table_block]{new_table_block()}} consumes and \code{\link[=summary_table]{summary_table()}}
+produces. The full contract lives in the blockr.design spec
+(\code{open/annotated-data-frame/format.md}).
 
-Consumers call the generic unconditionally: a data frame passes through
-untouched (it is already the target format), so coercion is idempotent and
-explicit \code{as_annotated_df()} steps upstream of a coercing consumer (such as
-\code{\link[=new_table_block]{new_table_block()}}) are harmless.
+\code{as_annotated_df()} coerces a table-producing object (composer, gtsummary,
+gt, rtables, ...) into that data frame. Producer packages register one S3
+method each, e.g. blockr.sandbox provides the composer methods. A data frame
+passes through untouched, so coercion is idempotent.
 }
 \seealso{
 \code{\link[=new_table_block]{new_table_block()}}, \code{\link[=summary_table]{summary_table()}}

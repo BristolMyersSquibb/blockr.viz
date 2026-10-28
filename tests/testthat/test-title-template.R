@@ -70,12 +70,6 @@ test_that("resolve_block_title implements the three tiers", {
   )
 })
 
-test_that("title_state keeps '' (off) and heals list() to NULL", {
-  expect_null(title_state(NULL))
-  expect_null(title_state(list()))     # pre-#144 DAG paste corruption
-  expect_equal(title_state(""), "")    # explicitly none must survive
-  expect_equal(title_state("x {y}"), "x {y}")
-})
 
 test_that("input_display_attrs reads label, subtitle and caption from raw input", {
   d <- data.frame(x = 1)

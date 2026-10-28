@@ -17,11 +17,9 @@ A data frame without the reserved annotation columns.
 \description{
 \code{\link[=as_annotated_df]{as_annotated_df()}} followed by dropping the reserved \code{.}-annotation
 columns (\code{.label}, \code{.indent}, \code{.strong}, \code{.emph}, \code{.fmt}, \code{.digits},
-\verb{.variable*}, \verb{.group<k>*}). This is what the chart / tile blocks consume when a
-table-producing object (a composer table, a gtsummary table, ...) is
-connected: a chart of a structured display table charts its \strong{data
-columns}; the row-structure rendering belongs to the table renderers.
-Other dot-prefixed columns are not reserved and pass through.
+\verb{.variable*}, \verb{.group<k>*}). The chart and tile blocks use it, so a chart of
+a structured display table charts its data columns. Other dot-prefixed
+columns pass through.
 }
 \seealso{
 \code{\link[=as_annotated_df]{as_annotated_df()}}, \code{\link[=new_chart_block]{new_chart_block()}}, \code{\link[=new_table_block]{new_table_block()}}

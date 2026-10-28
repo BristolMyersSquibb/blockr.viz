@@ -16,41 +16,35 @@ dd_ctrl_sender(
 \item{r_target}{Reactive returning the target block id (\code{""} for none).}
 
 \item{r_claims}{Reactive returning the claim list (\code{NULL} = hold, see
-\code{\link[=dd_ctrl_claims]{dd_ctrl_claims()}}).
-\code{r_nonce} is what makes a re-click of the SAME mark send again. A sender in
-transient-drill mode does not latch the selection, so clicking one mark
-twice produces the identical claim, and the skip below would swallow the
-second click. The nonce is a click counter minted in the browser: it changes
-on a real click and NOT on a board re-evaluation, which is exactly the
-distinction the skip has to make.}
+\code{\link[=dd_ctrl_claims]{dd_ctrl_claims()}}).}
 
 \item{r_pristine}{Optional latch from \code{dd_ctrl_pristine()}; a sender with no
-restorable drill state (one whose selection lives only in the session) may
-omit it.}
+restorable drill state may omit it.}
 
 \item{session}{Shiny session.}
 
-\item{r_nonce}{Optional reactive returning the click counter behind the
-current claim; part of the send-once key, never part of the payload.}
+\item{r_nonce}{Optional reactive returning a click counter minted in the
+browser. It is part of the send-once key and never part of the payload.
+It lets a re-click of the same mark in transient-drill mode send again,
+since the claim is identical, while a board re-evaluation, which does not
+change the counter, does not.}
 }
 \value{
 The observer, invisibly.
 }
 \description{
-The one observer shared by the three drill senders: a claim sends, no
-claim clears -- and \code{\link[=ctrl_clear]{ctrl_clear()}} only acts when this block still owns
-the target's last claim, so an un-drill never clobbers a sibling sender's
-cohort. Re-aiming (or un-setting) the target releases the OLD target's
-claim the same ownership-scoped way, so a filter is never left stuck on a
-sender that no longer points at it.
+The observer shared by the three drill senders: a claim sends, no claim
+clears. \code{\link[=ctrl_clear]{ctrl_clear()}} only acts when this block still owns the target's
+last claim, so an un-drill never clobbers a sibling sender's cohort.
+Re-aiming or un-setting the target releases the old target's claim the same
+way.
 }
 \details{
-\code{r_pristine} suppresses the startup push. A board restores the sender's drill
-AND the target's filter from the same saved board, so re-sending a restored
-claim tells the target what it already knows -- at the price of a board update,
-which re-evaluates every block on the board. On a pipeline that takes seconds
-that is a wholly redundant reload on every open. While pristine we record the
-claim as sent without sending it, so the first real drill still diffs against
-it correctly.
+A send is a board update, which re-evaluates every block, including this
+one, and \code{r_claims} invalidates on that re-evaluation. The observer
+therefore sends only a payload that differs from the last one. \code{r_pristine}
+suppresses the push of a restored claim: the target comes back from the
+same saved board already holding it. The claim is recorded as sent, so the
+first real drill diffs against it.
 }
 \keyword{internal}

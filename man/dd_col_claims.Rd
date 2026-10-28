@@ -15,11 +15,8 @@ dd_col_claims(col_keys, table = "")
 A list of filter conditions, \code{list()} when there is no column half.
 }
 \description{
-The row half of a drill has to be resolved against the display frame (its
-filter columns are the dotted identity ones, which mean nothing
-downstream). The column half does not: the browser sends the source column
-and its value straight off the header (\code{TRT01P = "Placebo"}), so this is a
-reshape, not a lookup. A pooled column ("All Active") sends its members,
-which is what \code{mode = "multi"} already takes.
+The browser sends the source column and its value straight off the column
+header (\code{TRT01P = "Placebo"}), so this reshapes the click into conditions.
+A pooled column ("All Active") sends its members.
 }
 \keyword{internal}
