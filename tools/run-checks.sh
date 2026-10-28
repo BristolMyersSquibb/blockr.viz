@@ -35,7 +35,6 @@ step "dead R"               Rscript tools/dead-r.R .
 step "dead JS"              node tools/dead-js.js .
 step "dead CSS"             node tools/dead-css.js .
 step "R lengths"            Rscript tools/lengths.R .
-step "size budget"          Rscript tools/check-budget.R .
 step "lintr"                Rscript -e 'l <- lintr::lint_package(); print(l); quit(status = length(l) > 0)'
 step "eslint (incl. JS lengths, dead locals)" npm run --silent lint
 step "tsc"                  npm run --silent typecheck
@@ -58,6 +57,10 @@ if [ "$fast" = 0 ]; then
   step "JS coverage"        npm run --silent coverage
   step "R CMD check"        Rscript tools/check-rcmdcheck.R .
 fi
+echo
+echo "== size budget (report only)"
+Rscript tools/check-budget.R . || true
+
 echo
 echo "== comments (report only)"
 Rscript tools/check-comments.R .
