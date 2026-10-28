@@ -183,9 +183,13 @@ paint_legend <- function(prep, y, hh, gl) {
       at <- at + paint_w(grp$title, fs * 0.8, gl$family) + px * 6
     }
     for (it in grp$items) {
-      g <- c(g, list(paint_sq(at, gl$H - ly, sw, it$color, c("left", "centre")),
-                     paint_txt(gl, it$label, at + sw + px * 3, ly,
-                            size = fs * 0.8)))
+      key <- if (!is.null(it$shape)) {
+        paint_shape(it$shape, at + sw / 2, gl$H - ly, px * 0.9)
+      } else {
+        paint_sq(at, gl$H - ly, sw, it$color, c("left", "centre"))
+      }
+      g <- c(g, list(key, paint_txt(gl, it$label, at + sw + px * 3, ly,
+                                    size = fs * 0.8)))
       at <- at + sw + px * 3 + paint_w(it$label, fs * 0.8, gl$family) + px * 10
     }
     at <- at + px * 8

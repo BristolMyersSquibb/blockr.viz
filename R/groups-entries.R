@@ -172,8 +172,16 @@ groups_norm_dist <- function(s, show_given) {
 groups_norm_spans <- function(s) {
   s$tooltip <- as.character(s$tooltip %||% character())
   s$parent <- if (is.null(s$parent)) TRUE else isTRUE(s$parent)
+  for (nm in GROUPS_SPANS_OVERLAYS) s[[nm]] <- chr_state(s[[nm]])
   s
 }
+
+# The swimlane's optional overlays: ticks, the line (band_x / band_xend),
+# point events (event_x / event_shape) and the open end. Each reads only the
+# rows where its own columns are set, so they share one long frame with the
+# segment rows.
+GROUPS_SPANS_OVERLAYS <- c("ticks", "band_x", "band_xend", "event_x",
+                           "event_shape", "open")
 
 # The pair row: two summaries of one group drawn as a segment, a hollow
 # diamond at `x` and a dot at `xend`, each read by its function (`x_func`,

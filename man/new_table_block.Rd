@@ -225,6 +225,12 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{tooltip}: Extra columns in the tooltip. Default \code{NULL}: no extra columns.
 \item \code{size}: Segment thickness. One of \code{"md"}, \code{"lg"}. Default: \code{"md"}.
 \item \code{color}: Color split, at most 15 levels. Default \code{NULL}: no color split.
+\item \code{ticks}: Positions drawn as thin ticks across the lane (visits). Read from the rows where it is set, so tick rows can sit in the same frame. Default \code{NULL}: no ticks.
+\item \code{band_x}: Start of a dark line through the middle of the lane (a phase such as a trial period). Both or neither. Default \code{NULL}: no band.
+\item \code{band_xend}: End of the line. Default \code{NULL}: no band.
+\item \code{event_x}: Positions of point events, which may lie past the last segment (a churn date after the contract ended). Default \code{NULL}: no events.
+\item \code{event_shape}: Event kind. Its levels take, in order, a filled triangle, an open triangle, a cross and a square; further levels repeat them. Names the event in the tooltip and the legend. Default \code{NULL}: one shape.
+\item \code{open}: Logical. TRUE on any of a row's records draws an arrowhead at the end of its last segment (still ongoing). Default \code{NULL}: no arrow.
 }
 
 \strong{\code{type = "pair"}}

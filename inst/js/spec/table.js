@@ -527,6 +527,85 @@
               },
               "slot": false,
               "ctrl": true
+            },
+            "ticks": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Ticks at"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "band_x": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Line from"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "band_xend": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Line to"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "event_x": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Events at"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "event_shape": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Event shape",
+                "when": "event_x"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "open": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Open end"
+              },
+              "slot": false,
+              "ctrl": true
             }
           },
           "pair": {

@@ -11,11 +11,53 @@ cells_interval <- function(ctx, p) {
   cvar <- chr_state(p$cvar)
   out_segs <- cells_interval_segs(segs, bb)
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
-  list(kind = "interval", segs = out_segs, tips = out_tips,
+  out <- list(kind = "interval", segs = out_segs, tips = out_tips,
        fills = as.character(p$fills %||% prep$fills),
        d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
        dd = dd, lg = identical(p$size, "lg"),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
+  if (!is.null(p$ovl)) {
+    out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb, p, dd))
+  }
+  out
+}
+
+# The overlays in lane percent, only the parts the row asked for: `tk` tick
+# positions, `bd` line pieces [left, width], `ev` events [x, shape] with
+# their tooltip in `et`, and `op` the open end's position (NA: closed).
+cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
+  has <- function(nm) any(vapply(ovl, function(o) !is.null(o[[nm]]), NA))
+  out <- list()
+  if (has("tk")) {
+    out$tk <- lapply(ovl, function(o) bb$pos(as.numeric(o$tk)))
+  }
+  if (has("bd")) {
+    out$bd <- lapply(ovl, function(o) {
+      lapply(o$bd, function(b) {
+        list(bb$pos(b$s)[[1L]], bb$span(b$s, b$e)[[1L]])
+      })
+    })
+  }
+  if (has("ev")) {
+    ename <- p$ename %||% "x"
+    out$ev <- lapply(ovl, function(o) {
+      lapply(o$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
+    })
+    out$et <- lapply(ovl, function(o) {
+      vapply(o$ev, function(e) {
+        paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
+               cells_fmt_x(e$x, dd))
+      }, character(1L))
+    })
+  }
+  if (has("op")) {
+    out$op <- vapply(seq_along(ovl), function(i) {
+      ss <- segs[[i]]
+      if (!isTRUE(ovl[[i]]$op) || !length(ss)) return(NA_real_)
+      bb$pos(max(vapply(ss, function(sg) sg$e, numeric(1L))))[[1L]]
+    }, numeric(1L))
+  }
+  out
 }
 
 # An x value as the card prints it: a date for a date domain.
