@@ -13,7 +13,7 @@ for (nm in names(record_scenarios())) {
     test_that(paste("chart recording:", nm), {
       path <- file.path(record_dir(), paste0(nm, ".rds"))
       skip_if_not(file.exists(path), "no recording")
-      skip_if(isTRUE(sc$wire), "the reference's browser messages")
+      skip_if(isTRUE(sc$wire), "the reference's own wire messages, not replayed")
       if (nm %in% names(record_rw_open)) {
         skip(paste("open behaviour change,", record_rw_open[[nm]]))
       }
