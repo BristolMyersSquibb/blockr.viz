@@ -557,8 +557,15 @@ tg_rw_compare <- function(got, want) {
 # the value it had the step before, while the reference shows the healed
 # default. `titles`: the bands the rewrite resolves at `step`. `state`: the
 # value an argument has instead. `skip`: parts left uncompared from `from`
-# on.
+# on. `empty`: steps where the rewrite draws no rows (the reference drew the
+# input), so the view has no row count or labels.
 tg_rw_known <- list(
+  var_none = list(why = "Per variable without variables asks for them",
+                  empty = 1L),
+  var_widget = list(why = "Per variable without variables asks for them",
+                    empty = 1L),
+  layout_switch_seed = list(why = "Per variable without variables asks for them",
+                            empty = 4L),
   rec_gear = list(why = "row 14", hold = list(
     list(arg = "format", from = 10L), list(arg = "look", from = 19L)
   )),
@@ -618,6 +625,7 @@ tg_rw_apply_known <- function(want, got, nm, sc) {
     }
   }
   if (!is.null(k$titles)) steps[[k$titles$step]]$browser$titles <- k$titles$value
+  for (i in k$empty) steps[[i]]$browser[c("n", "labels")] <- NULL
   for (nm2 in names(k$state)) {
     v <- k$state[[nm2]](sc)
     for (i in seq_along(steps)) steps[[i]]$state[nm2] <- list(v)

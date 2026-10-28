@@ -210,6 +210,8 @@ interface VizUi {
     { el: HTMLElement; set(v: string): void; get(): string };
   checkbox(label: string, checked: boolean, onChange: (on: boolean) => void):
     { el: HTMLElement; input: HTMLInputElement; set(v: boolean): void; get(): boolean };
+  /** blockr.ui's amber cue on an empty required field. */
+  setRequiredEmpty?(el: Element, empty: boolean): void;
   layer?(el: Element | Element[], opts?: { from?: Element; inPage?: boolean;
          escape?: (e: KeyboardEvent) => void; outside?: (e: PointerEvent) => void }):
     { remove(): void };

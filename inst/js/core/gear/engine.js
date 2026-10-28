@@ -210,6 +210,12 @@
       row.appendChild(controls);
       body.appendChild(row);
       C.build(controls, ctx);
+      // An empty required pick takes blockr.ui's amber cue. A custom editor
+      // knows what empty means for its value and sets the cue itself.
+      const ui = /** @type {VizUi} */ (root.Blockr);
+      if (ctx.required && g.control !== 'custom' && ui.setRequiredEmpty) {
+        ui.setRequiredEmpty(row, !C.isSet(ctx.value));
+      }
     }
 
     /** The optional mappings not shown, as a menu that adds a row.

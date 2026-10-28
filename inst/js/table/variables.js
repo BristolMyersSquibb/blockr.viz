@@ -63,6 +63,9 @@
       set: (/** @type {unknown} */ v) => ctx.set(withVars(summaries, /** @type {string[]} */ (v || []),
                                                          ctx.columns))
     });
+    // The layout needs a variable; a row count names none.
+    const ui = /** @type {VizUi} */ (root.Blockr);
+    if (ui.setRequiredEmpty) ui.setRequiredEmpty(el, !vars.length);
   }
 
   class Variables extends /** @type {any} */ (T.Records) {

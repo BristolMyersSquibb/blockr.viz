@@ -74,6 +74,17 @@ test('column: (none) unless required, a missing column kept, labels muted', () =
   assert.ok(!xs.some((x) => x.startsWith('AVAL')));
 });
 
+test('an empty required row is amber until it is picked', () => {
+  const amber = (t, key) => row(t.el, key).classList.contains('blockr-field--required-empty');
+  const host = { required: (k) => k === 'x' || k === 'y' };
+  const t = setup({ type: 'bar', x: 'ARM' }, { host });
+  assert.equal(amber(t, 'x'), false);
+  assert.equal(amber(t, 'y'), true);
+  assert.equal(amber(t, 'func'), false, 'a row that is not required never is');
+  t.gear.update(payload({ type: 'bar', x: 'ARM', y: 'AVAL' }));
+  assert.equal(amber(t, 'y'), false);
+});
+
 test('column on a columns argument sends an array', () => {
   const t = setup({ type: 'line', x: 'ADT', y: 'AVAL' });
   choose(t.win, sel(t.el, 'ymin'), 'LO');

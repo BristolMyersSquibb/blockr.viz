@@ -61,6 +61,16 @@ test('the gear\'s Variables row picks among the columns not in by', () => {
   assert.deepEqual(rowCtx.columns.map((c) => c.name), ['AGE', 'SEX']);
   rowCtx.set(['AGE', 'SEX']);
   assert.deepEqual(JSON.parse(JSON.stringify(sets)), [[{ type: 'dist', col: 'AGE' }, { type: 'simple', color: 'SEX' }]]);
+  // The layout needs a variable: required, and amber while a row count is all.
+  assert.equal(host.required('summaries', { layout: 'variables' }), true);
+  assert.equal(host.required('summaries', { layout: 'groups' }), false);
+  const amber = (e) => e.classList.contains('blockr-field--required-empty');
+  assert.equal(amber(el), false);
+  const none = env.win.document.createElement('div');
+  host.custom('summaries', none, { values: { layout: 'variables', by: [],
+                                             summaries: [{ type: 'simple', func: 'count', name: 'Count' }] },
+                                   columns: COLS, scope: new env.V.Scope(), set: () => {} });
+  assert.equal(amber(none), true);
   const shade = env.win.document.createElement('div');
   host.custom('shadings', shade, { values: { layout: 'records', shadings: [] }, columns: COLS,
                                    scope: new env.V.Scope(), set: () => {} });
