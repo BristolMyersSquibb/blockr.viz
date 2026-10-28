@@ -11,7 +11,6 @@ NULL, invisibly.
 }
 \description{
 Registers the colorblind-friendly "blockr" echarts theme. Called from
-\code{.onLoad()} so any drill-down chart that renders after package load can
-reference it by name.
+\code{.onLoad()}.
 }
 \keyword{internal}

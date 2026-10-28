@@ -244,12 +244,3 @@ spec_default <- function(arg) {
   d <- arg$default
   if (inherits(d, "viz_opt")) getOption(d$name, d$fallback) else d
 }
-
-# Whether an argument means something for a type or layout.
-spec_applies <- function(arg, type) {
-  a <- arg$applies
-  if (is.null(a)) {
-    return(TRUE)
-  }
-  if (inherits(a, "viz_except")) !type %in% a else type %in% a
-}

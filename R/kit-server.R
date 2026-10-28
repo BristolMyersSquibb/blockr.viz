@@ -1,20 +1,19 @@
 # The server side every block shares: the observers that take the browser's
 # inputs into the block's state.
 #
-# The rule for all of them: an observer that receives input only checks it
-# and writes state. Parsing or evaluating the prepare script, running the
-# prepare step and any other side effect happen in reactives that read the
-# state. On a frozen block blockr.core reverts writes to external_ctrl
-# fields with a priority = Inf observer, which runs after the input observer
-# returns; code evaluated inside the input observer would already have run.
+# An observer that receives input only checks it and writes state. Parsing or
+# evaluating the prepare script, running the prepare step and any other side
+# effect happen in reactives that read the state. On a frozen block
+# blockr.core reverts writes to external_ctrl fields with a priority = Inf
+# observer, which runs after the input observer returns, so a side effect
+# inside the input observer would already have run.
 
 #' Track changes to a block's state that do not come from its gear
 #'
 #' An observer, run ahead of the block's other observers, that bumps the
 #' revision for every value that differs from the last known one. The gear's
-#' own writes are known already (viz_apply()), so only changes from
-#' elsewhere count: the assistant, a ctrl_send, core's revert of a frozen
-#' block.
+#' own writes are known already (viz_apply()), so only other changes count:
+#' the assistant, a ctrl_send, core's revert of a frozen block.
 #'
 #' @param state The block's state from viz_state().
 #' @param revs Its counter from new_viz_revs().
@@ -29,9 +28,9 @@ viz_rev_tracker <- function(state, revs) {
 
 #' Take the gear's settings into the state
 #'
-#' Reads `<id>_set` (already checked by its input handler, see
-#' kit-input.R), passes it through the lock, script and stale-message gates,
-#' runs the block's `normalize()` over the result and writes what changed.
+#' Reads `<id>_set` (checked by its input handler, see kit-input.R), passes it
+#' through the lock, script and stale-message gates, runs the block's
+#' `normalize()` over the result and writes what changed.
 #'
 #' @param input The block's Shiny input.
 #' @param id The view's element id, without the `_set` suffix.
@@ -51,8 +50,7 @@ viz_settings_observer <- function(input, id, spec, state, revs,
     if (!length(values)) {
       return()
     }
-    # Each setting replaces its value whole: modifyList() would merge a list
-    # value into the old one.
+    # Each setting replaces its value whole; modifyList() would merge lists.
     merged <- viz_values(state)
     for (nm in names(values)) merged[nm] <- list(values[[nm]])
     viz_apply(state, normalize(merged), revs)
@@ -60,8 +58,8 @@ viz_settings_observer <- function(input, id, spec, state, revs,
   invisible(obs)
 }
 
-# A message key the spec does not know or a value it refuses means the JS
-# and the spec disagree. Logged once per block and key, not per message.
+# A message key the spec does not know, or a value it refuses, means the JS
+# and the spec disagree. Warns once per block and key.
 viz_log_rejected <- function(rejected, block) {
   for (key in rejected) {
     rlang::warn(
@@ -119,9 +117,8 @@ viz_capture_observer <- function(input, id, capture) {
 
 #' The server every block view runs
 #'
-#' The skeleton of a block on the kit (design.md section 7). It holds the
-#' block's state, one reactiveVal per spec argument, and wires what every
-#' block has:
+#' The skeleton of a block on the kit. It holds the block's state, one
+#' reactiveVal per spec argument, and wires what every block has:
 #'
 #' - the revision tracker;
 #' - the settings observer, which runs the block's `normalize()` over every
@@ -151,8 +148,7 @@ viz_capture_observer <- function(input, id, capture) {
 #' - `cond`: a reactiveValues of the block's own conditions (`error`,
 #'   `warning`, `message`), which blockr.core shows with the block; optional.
 #'
-#' Anything else, a capture service say, `setup()` wires itself with what
-#' `kit` holds.
+#' `setup()` wires anything else itself, with what `kit` holds.
 #'
 #' @param id The block's module id.
 #' @param spec The block's `viz_spec`.
@@ -193,8 +189,8 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
   list(
     input = input, output = output, session = session, spec = spec,
     state = state, revs = revs, el = session$ns(view), data = data,
-    # With a drill target set a click is an event: kept here, not in the
-    # selection. A block without the argument holds every click.
+    # With a drill target set a click is an event, kept here instead of in
+    # the selection. A block without the argument holds every click.
     claim = shiny::reactiveVal(NULL),
     transient = function() {
       !is.null(state$drill_target) && nzchar(state$drill_target() %||% "")
@@ -223,10 +219,9 @@ viz_with_downloads <- function(kit, parts, view) {
   }
 }
 
-# A drill target receives the claims over the control channel. With a
-# target set each click is sent once, by its nonce; without one the held
-# selection is the claim, and nothing goes out while it is the one the block
-# was built with.
+# Sends the claims to a drill target over the control channel. With a target
+# set each click is sent once, by its nonce. Without one the held selection is
+# the claim, and nothing goes out while it is the one the block was built with.
 viz_drill_sender <- function(kit, claims, sel0) {
   latch <- dd_ctrl_pristine(function() kit$state$selection(), sel0)
   dd_ctrl_sender(

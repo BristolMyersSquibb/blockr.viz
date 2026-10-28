@@ -1,55 +1,30 @@
-# PowerPoint and Word tables: measuring text and fitting column widths
-# for static_table() (R/export-pptx-table.R).
+# Measuring text and fitting column widths for static_table()
+# (R/export-pptx-table.R).
 
-# Left plus right cell padding as a width in inches. `NULL` means the
-# flextable default, which is what static_table() leaves in place.
+# Left plus right cell padding in inches. `NULL` means the flextable default.
 ft_pad_width <- function(cell_padding) {
   if (is.null(cell_padding)) ft_side_padding() / 72 else 2 * cell_padding / 72
 }
 
-# Cell padding, in points, for a table that cannot fit any other way. Two
-# points instead of the flextable default of five: on a 36-column table the
-# default spends 5in of a 12.5in slide on padding alone, which is the
-# difference between a legible table and stacked characters.
+# Cell padding in points for a table that cannot fit any other way. The
+# flextable default is 5.
 TIGHT_PAD <- 2
 
 # ---- measured column widths ------------------------------------------------
-# Give every column the width its own text needs, in this priority: a data
-# cell never wraps, a header never breaks inside a word, the headers unwrap
-# toward their full text, and only then does the stub grow past its share.
-# The stub is the only column whose content is prose, so it is the one that
-# survives wrapping; a count like "143 (41.2%)" broken over two lines costs a
-# readable row and doubles its height.
+# Gives every column the width its own text needs, in this priority: a data
+# cell never wraps, a header never breaks inside a word, headers unwrap toward
+# their full text, and only then does the stub grow past `stub_share` of
+# `total`. The stub is the only column with prose in it, so it is the one that
+# wraps. Text is measured with systemfonts at the table's font and size;
+# `blockr.viz.ft_width_slack` covers the error when the font is not installed.
 #
-# The stub does not hold its whole label on one line while the data columns
-# are pinched: `stub_share` caps what it claims until everything else is
-# served, and it takes the leftovers afterwards. A long system organ class
-# reading over two lines costs a row; the same label spread over five inches
-# is what pushes a table onto a second set of slides.
-#
-# Everything is measured through systemfonts at the table's own font and size,
-# which is the same engine flextable itself measures with. When the deck's
-# typeface is not installed on the machine doing the export (a house template
-# naming Trebuchet MS on a Linux server, say) systemfonts substitutes and the
-# numbers are approximate, which is what `blockr.viz.ft_width_slack` covers.
-#
-# Returns widths in inches summing to `total`, or NULL when the table cannot
-# be measured -- the caller then falls back to the positional split, so a
-# missing measurement never fails an export.
-#
-# Three attributes come back with them, all saying how close the slide came to
-# being too narrow and what would help:
-#   `header_squeeze` -- the headers will break inside a word. Nothing here can
-#     fix that; fewer columns or a smaller font can.
-#   `cell_squeeze`   -- the DATA cells no longer fit. Below that the columns
-#     are narrower than a character and PowerPoint stacks them one per line,
-#     which is the 36-column grade table. Only less padding or a smaller font
-#     helps, because a digit and its padding is all that is left.
-#   `word_fit`       -- how much of the longest header word the narrowest
-#     column can hold, as a fraction. 1 is a header that never breaks, 0.5 a
-#     word taking two lines, 0.1 the stacked-letters case. It is the difference
-#     between a header squeeze worth living with and one that is not, and the
-#     pptx writer reads it to decide whether to deal the columns over slides.
+# Returns widths in inches summing to `total`, or NULL when the table cannot be
+# measured (the caller then falls back to the positional split). Attributes:
+#   `header_squeeze` -- the headers break inside a word.
+#   `cell_squeeze`   -- the data cells no longer fit, so PowerPoint would stack
+#     their characters. Only less padding or a smaller font helps.
+#   `word_fit`       -- the fraction of the longest header word the narrowest
+#     column holds: 1 never breaks, 0.5 takes two lines.
 ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
                                font, font_size, total, banner = character(),
                                pad = ft_side_padding() / 72,
@@ -72,40 +47,28 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
 
   out <- tryCatch(
     {
-      # The stub asks for its longest label at its own indent depth. Section
-      # header rows are merged across the table, so they are not in `stub`
-      # and never widen the column.
+      # Section header rows are merged across the table, so they are not in
+      # `stub` and never widen the column.
       stub_cells <- ft_text_widths(stub, font, font_size) + stub_indent / 72
-      # ... but never so narrow that a single word has to break, and never
-      # hairline thin because the table happens to have no rows yet.
+      # The stub never gets so narrow that a word breaks.
       stub_floor <- max(
         min(stub_min, total / 3),
         ft_word_width(c(stub, stub_label), font, font_size) + pad
       )
       stub_nat <- max(c(stub_cells, 0)) + pad
       stub_want <- max(stub_nat, stub_floor)
-      # What the stub keeps when the table has to be squeezed: its floor, or
-      # its own width when that is smaller. A stub of short codes must not
-      # hold half an inch back from columns that are being cut off.
+      # What the stub keeps when the table is squeezed: its floor, or its own
+      # width when that is smaller.
       stub_keep <- min(stub_nat, stub_floor)
 
-      # A data column asks for two widths. `want` is the one it must have:
-      # its widest cell, and its header's longest word, so the numbers never
-      # wrap and the header never breaks mid-word. `lux` is the one it would
-      # like: the whole header on as few lines as it was written with. A
-      # header may wrap between words when the slide is tight; it should not
-      # have to when the slide has room to spare.
+      # A data column asks for three widths. `want`: its widest cell and its
+      # header's longest word. `lux`: also the whole header on its written
+      # lines. `bare`: the least it can take, its longest word.
       cell_w <- vapply(
         seq_len(n_data),
         function(j) max(c(ft_text_widths(cells[, j], font, font_size), 0)),
         numeric(1L)
       ) + pad
-      # And the width below which it cannot go: its longest word. A count is
-      # very nearly one word, so a column of counts asks for the whole cell
-      # either way; a cell of several short words can give most of its width
-      # back and read as two lines. That is what lets a table whose cells are
-      # more text than number share the shortfall, instead of spending the
-      # slide on cells that would wrap perfectly well.
       cell_word <- vapply(
         seq_len(n_data),
         function(j) ft_word_width(cells[, j], font, font_size),
@@ -115,8 +78,7 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
                           font = font, size = font_size) + pad
       head_full <- ft_text_widths(leaf, font, font_size) + pad
 
-      # A spanner sits over its whole group, so its demand is shared out: it
-      # only widens columns when the group is narrower than the spanner.
+      # A spanner's demand is shared across its group.
       span_word <- rep(0, n_data)
       span_full <- rep(0, n_data)
       if (any(nzchar(top))) {
@@ -137,16 +99,12 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       need <- cell_w * slack
       want <- pmax(need, head_word, span_word)
       lux <- pmax(want, head_full, span_full)
-      # Nothing may break inside a word, in a cell or in a header. Everything
-      # above that is negotiable.
+      # Nothing may break inside a word, in a cell or in a header.
       bare <- pmax(cell_word, head_word, span_word)
 
-      # Columns that carry the same statistic get the same width, whatever
-      # their own arm happens to need: "n (%)" under Placebo and under a
-      # 200-subject arm are read across, and a table whose arms are visibly
-      # different widths reads as a mistake. Leaf labels name the statistic;
-      # when they are all distinct they ARE the groups (one column per arm),
-      # so the whole data side is one class.
+      # Columns with the same leaf label (the same statistic under different
+      # arms) get the same width. With all-distinct labels the whole data side
+      # is one class.
       role <- if (anyDuplicated(leaf)) leaf else rep("", n_data)
       need <- ft_group_max(need, role)
       want <- ft_group_max(want, role)
@@ -154,71 +112,46 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
       bare <- ft_group_max(bare, role)
 
       if (sum(want) + stub_floor > total) {
-        # Nothing fits at its full width, so everything gives a little rather
-        # than one column being crushed. The stub takes part in the fill
-        # instead of being handed the remainder; pinned at its floor, it would
-        # wrap to three lines while columns of medium-long text kept every
-        # character on one line.
-        #
-        # Each column is filled from what it cannot go below (its longest
-        # word) toward what it would like (its whole text), all to a common
-        # level. A column of counts reaches its full width almost at once
-        # because a count is one word; a column of prose keeps taking room as
-        # long as there is any, and wraps when there is not. Which is the
-        # right answer either way round: with a system organ class in the stub
-        # and counts beside it, the counts are served and the stub wraps.
+        # Nothing fits at full width. Every column, the stub included, is
+        # filled from its longest word toward its whole text to a common
+        # level: counts (one word) reach full width at once, prose wraps.
         squeeze[["header"]] <- TRUE
         w <- ft_water_fill(c(stub_want, want), total, c(stub_floor, bare))
         stub_w <- w[[1L]]
         data_w <- w[-1L]
-        # A cell narrower than its own longest word is the defect worth
-        # reporting: below that a number is broken mid-token and, further
-        # down, PowerPoint stacks the characters one per line. A cell that
-        # merely wraps between words is not, and neither is a HEADER whose
-        # longest word breaks -- that is what `word_fit` is for, and calling
-        # it a cell squeeze is what sent seven-column tables sideways.
+        # Only a cell narrower than its longest word counts as a cell
+        # squeeze. A header breaking is reported through `word_fit`.
         squeeze[["cell"]] <- any(data_w < cell_word - 1e-9)
       } else {
-        # Whether this table is close enough to the slide to fill it, decided
-        # on the widths it needs rather than the ones it ends up with.
+        # Whether the table needs enough of the slide to fill it.
         fills <- stub_want + sum(want) >= 0.7 * total
 
         # What the stub claims before the data columns have had their turn.
-        # Past this it is spending slide on a label that wraps perfectly well,
-        # and the columns that pay for it are the ones a reader compares.
         stub_cap <- max(stub_floor, stub_share * total)
         stub_w <- min(stub_want, stub_cap, total - sum(want))
         data_w <- want
         room <- total - stub_w - sum(data_w)
 
-        # First call on the room: unwrap the headers, in proportion to how
-        # far each is from its own text, so no column takes the whole surplus.
+        # First, unwrap the headers in proportion to how far each is from its
+        # full text.
         short <- pmax(lux - data_w, 0)
         if (room > 0 && sum(short) > 0) {
           data_w <- data_w + short * min(1, room / sum(short))
           room <- total - stub_w - sum(data_w)
         }
 
-        # Second call: the stub back up to its own text, now that nothing else
-        # is waiting for the room. A four-column table on a wide slide still
-        # ends with its label on one line; a twelve-column one does not.
+        # Second, the stub up toward its own text.
         if (room > 0 && stub_w < stub_want) {
           stub_w <- stub_w + min(room, stub_want - stub_w)
           room <- total - stub_w - sum(data_w)
         }
 
         if (fills) {
-          # What is left over is spread evenly. The stub is already at its
-          # natural width and more of it would only reopen the gap this
-          # replaces.
+          # Spread what is left evenly over the data columns.
           if (room > 0) data_w <- data_w + room / n_data
         } else {
-          # A small table on a wide slide. Stretching four columns across
-          # thirteen inches to honour `fit_width` gives cavernous cells with
-          # a number lost in the middle of each; the table keeps its natural
-          # size and the pptx writer centres it instead. It does grow far
-          # enough to hold its own title line, which is merged across the
-          # width and would otherwise wrap over a narrow table.
+          # A small table keeps its natural size (the pptx writer centres
+          # it). It grows only enough to hold its title line on one line.
           banner_w <- max(c(
             ft_text_widths(banner, font, font_size + 2) + pad, 0
           ))
@@ -229,10 +162,7 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
         }
       }
 
-      # How much of its longest word the tightest header keeps. A word that
-      # loses a syllable to the next line is a blemish; one holding two
-      # characters of six is the stacked-letters failure, and only the reader
-      # of this number can tell them apart.
+      # How much of its longest word the tightest header keeps.
       word_need <- pmax(head_word, span_word)
       if (any(word_need > 0)) {
         word_fit <- min(1, min(data_w[word_need > 0] / word_need[word_need > 0]))
@@ -255,18 +185,10 @@ ft_measured_widths <- function(stub, stub_indent, stub_label, cells, leaf, top,
 }
 
 # ---- estimated rendered heights --------------------------------------------
-# How tall each row of a part will come out, in inches, once PowerPoint has
-# wrapped the text into the column widths the table carries. flextable states
-# a row height, but PowerPoint treats it as a minimum and grows the row to fit
-# its content, so the stated height is a floor and not an answer.
-#
-# Needed to cut a long table into slides: the page break has to be decided
-# before the slide exists, and a wrapped stub label costs a line that a row
-# count knows nothing about.
-#
-# Measured, not exact. The wrap is greedy on whitespace (which is what a
-# renderer does) but the font may not be the one PowerPoint will use, and
-# borders add a fraction of a point per row.
+# How tall each row of a part will come out, in inches, once the text is
+# wrapped into the table's column widths. The stated row height is a floor,
+# since PowerPoint grows a row to fit its content. The estimate wraps greedily
+# on whitespace and is not exact when the font is not installed.
 ft_part_heights <- function(ft, part = "body") {
 
   p <- ft[[part]]
@@ -294,8 +216,8 @@ ft_part_heights <- function(ft, part = "body") {
   for (j in seq_len(n_col)) {
     txt <- ft_cell_text(p, j)
     span <- spans[, j]
-    # A merged cell is measured across the columns it covers, and the cells
-    # it swallowed are not measured at all.
+    # A merged cell is measured across the columns it covers; the cells it
+    # covers are skipped.
     avail <- vapply(seq_len(n_row), function(i) {
       if (span[[i]] < 1) return(NA_real_)
       sum(w[j:min(n_col, j + span[[i]] - 1L)]) -
@@ -312,7 +234,6 @@ ft_part_heights <- function(ft, part = "body") {
     }
   }
 
-  # The stated row height is a floor, not a cap.
   stated <- p$rowheights
   if (is.numeric(stated) && length(stated) == n_row) {
     out <- pmax(out, stated)
@@ -321,13 +242,9 @@ ft_part_heights <- function(ft, part = "body") {
   out
 }
 
-# The text one column of a flextable part actually PRINTS, row by row.
-#
-# Not `part$dataset`, which for a header still holds the column keys the table
-# was built from ("Placebo (N=143)||n (%)"), never the labels
-# set_header_labels() put there. Measuring those would size the header band
-# against strings no reader ever sees. The rendered runs live in the chunk
-# structure; the dataset is the fallback for a flextable that has none.
+# The text one column of a flextable part prints, row by row. Read from the
+# chunk structure, because `part$dataset` holds the column keys and not the
+# header labels. The dataset is the fallback when there are no chunks.
 ft_cell_text <- function(p, j) {
 
   n_row <- nrow(p$dataset)
@@ -351,8 +268,7 @@ ft_cell_text <- function(p, j) {
 }
 
 # Lines a string takes at a given width, wrapping greedily on whitespace and
-# breaking hard at "\n". A word wider than the column still gets its own line
-# rather than being counted twice.
+# breaking hard at "\n". A word wider than the column gets its own line.
 ft_line_count <- function(x, width, font, size, bold = FALSE) {
 
   x <- as.character(x)
@@ -381,8 +297,7 @@ ft_line_count <- function(x, width, font, size, bold = FALSE) {
       next
     }
     ww <- wid(words)
-    # Measured rather than assumed: a space is not the same width in every
-    # face, and at eight columns the error adds up.
+    # The width of a space differs between faces.
     space <- max(0, wid("x x") - wid("xx"))
     n <- 1L
     cur <- ww[[1L]]
@@ -406,9 +321,8 @@ ft_group_max <- function(x, by) {
 }
 
 # Shrink the widest columns first (max-min fair), never below `mins`, and
-# rescale to the budget. When even the minimums do not fit -- forty columns on
-# a widescreen slide -- the result is proportional to what each column needed,
-# which is the best a fixed width can do.
+# rescale to `budget`. When even the minimums do not fit, the result is
+# proportional to what each column needs.
 ft_water_fill <- function(want, budget, mins) {
   cap <- function(x) sum(pmax(mins, pmin(want, x)))
   lo <- 0
@@ -421,10 +335,8 @@ ft_water_fill <- function(want, budget, mins) {
   w * budget / sum(w)
 }
 
-# Width in inches of each string's longest line. A cell's own "\n" is a hard
-# break (the Big-N convention), so a two-line header asks only for its wider
-# line. Bold throughout: the emphasis rows are the widest ones, and a table
-# sized for regular weight wraps as soon as a row is bolded.
+# Width in inches of each string's longest line ("\n" is a hard break). Bold,
+# because emphasis rows are the widest and must not wrap.
 ft_text_widths <- function(x, font, size) {
 
   x <- as.character(x)
@@ -445,8 +357,7 @@ ft_text_widths <- function(x, font, size) {
   w
 }
 
-# Width of the widest single word: the point below which a cell stops wrapping
-# and starts breaking words.
+# Width in inches of the widest single word.
 ft_word_width <- function(x, font, size) {
 
   words <- unlist(strsplit(as.character(x), "[[:space:]]+"))
@@ -460,9 +371,7 @@ ft_word_width <- function(x, font, size) {
                                 weight = "bold", res = 72)) / 72
 }
 
-# Left plus right cell padding in points. static_table() sets the vertical
-# padding and leaves these at the flextable defaults, so this is what a cell
-# spends before its first character.
+# Left plus right cell padding in points: the flextable default.
 ft_side_padding <- function() {
   d <- flextable::get_flextable_defaults()
   sum(vapply(c("padding.left", "padding.right"),
@@ -470,9 +379,8 @@ ft_side_padding <- function() {
              numeric(1L)))
 }
 
-# Readable text color for a fill, by luminance (Rec. 601). Any hex or R
-# color name; NA in -> NA out (no fill, no text override). blockr.viz carries
-# no house palette, so this is the only color knowledge here.
+# Readable text color for a fill, by luminance (Rec. 601). Takes hex or R color
+# names; NA gives NA (no override).
 ft_contrast_text <- function(bg) {
   vapply(bg, function(col) {
     if (is.na(col)) return(NA_character_)
@@ -484,19 +392,14 @@ ft_contrast_text <- function(bg) {
   }, character(1L), USE.NAMES = FALSE)
 }
 
-# The emphasis ramp for column .strong / .emph: normal / emph / strong ->
-# light gray / dark gray / accent. Generic UI values (not a house palette),
-# overridable via option -- the same guarded-fallback shape the chart uses
-# for its palette (blockr.theme has no R-side token API, so these are local
-# defaults; the accent doubles as the chart's first series color feel).
+# The emphasis ramp for column .strong / .emph: normal, emph and strong map to
+# light gray, dark gray and an accent. Override with
+# `blockr.viz.ft_emphasis_colors`.
 FT_EMPHASIS_DEFAULT <- c(normal = "#EEEEEE", emph = "#9AA3B0",
                          strong = "#2563EB")
 
-# A theme's `bands` role, read as the emphasis triple. Themes state bands the
-# way header fills want them (a `.stub` light grey then a cycle pool), which is
-# the same vocabulary: the stub is the `normal` band and the first pool entry
-# is the accent. Returns NULL unless the theme supplies both, so a partial
-# answer falls through to FT_EMPHASIS_DEFAULT rather than half-applying.
+# A theme's `bands` role as the emphasis triple: the `.stub` band is `normal`
+# and the first pool entry is the accent. NULL unless the theme supplies both.
 ft_emphasis_from_theme <- function() {
   bands <- viz_palette("bands")
   if (is.null(bands)) {
@@ -513,9 +416,7 @@ ft_emphasis_from_theme <- function() {
     strong = pool[[1L]])
 }
 
-# Per-column bg / text for emphasis mode. strong -> accent, emph -> dark gray,
-# normal -> light gray; the stub takes the normal (light) band so the header
-# reads as one strip. Contrast text by luminance.
+# Per-column bg / text for emphasis mode. The stub takes the normal band.
 ft_emphasis_bands <- function(col_strong, col_emph) {
   cols <- getOption("blockr.viz.ft_emphasis_colors", NULL) %||%
     ft_emphasis_from_theme() %||% FT_EMPHASIS_DEFAULT
@@ -529,20 +430,15 @@ ft_emphasis_bands <- function(col_strong, col_emph) {
   )
 }
 
-# Resolve `header_bg` to per-data-column fills, keyed on the column-group
-# structure the annotated df carries. `header_bg` is a color vector:
-#   * NAMED entries PIN a group: the name is a by-level value (the spanner
-#     top for nested `by`, else the data-column name); ".stub" pins the row-
-#     stub header. So `c(Placebo = "grey", "Drug" = "#33D6F1")` colours those
-#     arms explicitly (placebo grey, treatment blue) whatever their position.
-#   * UNNAMED entries are the cycle pool for the remaining, unpinned groups
-#     (in order of first appearance) -- `c("#A59F9F", "#33D6F1")` bands them.
-#   * The two mix: `c(.stub = "#EEE", Placebo = "grey", "#33D6F1", "#FDA97C")`.
-# Colors are hex or R color names -- NO palette-name lookup, so no house
-# style lives in blockr.viz; the app supplies the actual values (typically via
-# getOption("blockr.viz.ft_header_bg")). `NULL` / `FALSE` / `"none"` -> no
-# fill. Returns per-column bg/text (length = n data cols; NA = unfilled) plus
-# stub_bg/stub_text, or NULL when there is nothing to fill.
+# Resolve `header_bg` to per-data-column fills, keyed on the column groups the
+# annotated df carries. `header_bg` is a color vector (hex or R names):
+#   * Named entries pin a group: the name is the spanner top for nested `by`,
+#     else the data-column name. ".stub" pins the row-stub header.
+#   * Unnamed entries are the cycle pool for the unpinned groups, in order of
+#     first appearance.
+#   * The two mix: `c(.stub = "#EEE", Placebo = "grey", "#33D6F1")`.
+# `NULL`, `FALSE` and `"none"` mean no fill. Returns per-column bg / text (NA =
+# unfilled) plus stub_bg / stub_text, or NULL when there is nothing to fill.
 resolve_header_bands <- function(header_bg, top, data_cols) {
   n <- length(data_cols)
   if (n == 0L) return(NULL)
@@ -552,14 +448,13 @@ resolve_header_bands <- function(header_bg, top, data_cols) {
   }
 
   nm <- names(header_bg)
-  header_bg <- as.character(header_bg)   # (drops names -- captured above)
+  header_bg <- as.character(header_bg)
   if (is.null(nm)) nm <- rep("", length(header_bg))
   pins <- header_bg[nzchar(nm)]
   names(pins) <- nm[nzchar(nm)]
   pool <- header_bg[!nzchar(nm)]
 
-  # Group key per data column: the spanner top when nested, else the column
-  # name itself. Unpinned groups draw from the cycle pool in appearance order.
+  # Group key per data column: the spanner top, else the column name.
   keys <- ifelse(nzchar(top), top, data_cols)
   groups <- unique(keys)
   gcol <- stats::setNames(rep(NA_character_, length(groups)), groups)

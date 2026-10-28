@@ -1,33 +1,22 @@
 # ---------------------------------------------------------------------------
 # Copied from blockr.extra (R/code-block-inputs.R).
 #
-# The chart block's `script` argument reuses the code block's declaration
+# The chart block's `script` argument uses the code block's declaration
 # convention: a top-level assignment whose right-hand side is a plain value is
-# a control, everything else is code. This is a COPY, not a shared dependency,
-# on purpose -- see the note in R/prepare-expr.R.
-#
-# The editor half did NOT come along: cb_input_ui(), cb_params_ui(),
-# cb_editor_marks(), cb_mark_title(), cb_syntactic_marks(), cb_kind_syntactic()
-# and CB_GLYPHS paint a CodeMirror gutter and render Shiny controls. The chart
-# block has neither: its script sits in a plain textarea in the gear, and its
-# controls are drawn by the band's own JS renderer.
+# a control, everything else is code. The copy has the parsing half only. The
+# chart's script sits in a plain textarea in the gear, and the band's own JS
+# renderer draws the controls.
 # ---------------------------------------------------------------------------
 
 #' The inputs layer of the chart block's prepare script
 #'
-#' The code block's script is ordinary R. A top-level assignment whose
-#' right-hand side is a *plain value* ([CB_VALUE_CALLS]) becomes a control on
-#' the card; every other statement is code. A name starting with a dot is
-#' never a control, which is how a line that happens to look like a
-#' declaration says it is scaffolding.
+#' The script is ordinary R. A top-level assignment whose right-hand side is a
+#' *plain value* ([CB_VALUE_CALLS]) becomes a control on the card; every other
+#' statement is code. A name starting with a dot is never a control.
 #'
-#' Both are decidable by reading the line, without evaluating anything and
-#' without regard to where in the script it sits. There is deliberately no
-#' fenced region, no marker comment and no header: an input is a *kind of
-#' line*, not a *place in the script*, so nothing has to be delimited and
-#' nothing can be mis-delimited. The editor paints the lines that became
-#' controls (see `blockr-code-inputs` in `srcjs/code-block/index.js`), which is
-#' what tells the user which lines are special.
+#' Both are decided by reading the line, without evaluating anything and
+#' wherever it sits in the script. There is no fenced region or marker
+#' comment.
 #'
 #' @name chart-prepare-parse
 #' @keywords internal
@@ -35,10 +24,8 @@ NULL
 
 #' Calls whose result counts as a plain value
 #'
-#' Kept short on purpose. Every addition widens what silently becomes a control,
-#' so this is a deliberate list rather than a heuristic. `factor()` is the
-#' important one: its levels are the choice list, which is how a select is
-#' expressed without any blockr vocabulary.
+#' Every addition widens what silently becomes a control, so the list is short.
+#' The levels of `factor()` are the choice list of a select.
 #'
 #' @keywords internal
 CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
@@ -53,7 +40,7 @@ CB_ANN_CALLS <- c("number", "text", "select", "flag", "date", "input")
 
 #' Is this statement an assignment to a bare name?
 #'
-#' The shape a declaration has to have, whether or not it turns out to be one.
+#' The shape a declaration has, whether or not it is one.
 #'
 #' @param e A top-level expression from [parse()].
 #' @noRd
@@ -70,10 +57,8 @@ cb_is_assign_stmt <- function(e) {
 
 #' Is this a name the block keeps to itself?
 #'
-#' The escape hatch, and it is the one R already has: a leading dot means
-#' internal. `ls()` hides those names, so does a file manager, and so does
-#' this. It is how a line that would otherwise be read as a knob says it is
-#' scaffolding for the knobs around it.
+#' A leading dot means internal, as in `ls()`. It marks a line that would
+#' otherwise be read as a control as scaffolding for the controls around it.
 #'
 #' @param name A variable name.
 #' @noRd
@@ -87,26 +72,19 @@ cb_is_private_name <- function(name) {
 #' @return `TRUE` for `name <- <plain value>`, the name not starting with a dot.
 #' @noRd
 cb_is_input_stmt <- function(e) {
-  if (!cb_is_assign_stmt(e)) {
-    return(FALSE)
-  }
-  if (cb_is_private_name(as.character(e[[2L]]))) {
-    return(FALSE)
-  }
-  cb_is_value_rhs(e[[3L]])
+  cb_is_assign_stmt(e) && !cb_is_private_name(as.character(e[[2L]])) &&
+    cb_is_value_rhs(e[[3L]])
 }
 
 #' Is this right-hand side a plain value?
 #'
-#' Purely syntactic. Errs toward "not a control": `6L * 2` is arithmetic, not a
-#' literal, so it stays code. Being conservative here means a line never becomes
-#' a widget by surprise; the reverse mistake only costs an explicit edit.
+#' Purely syntactic, and conservative: `6L * 2` is arithmetic, so it stays
+#' code. A line never becomes a widget by surprise.
 #'
 #' @param rhs The right-hand side expression.
 #' @noRd
 cb_is_value_rhs <- function(rhs) {
-  # A bare literal: 6, "total", TRUE, 2.5. Length-1 only; a longer atomic
-  # constant cannot appear in source without a call to `c()`.
+  # A bare literal: 6, "total", TRUE, 2.5.
   if (is.atomic(rhs) && length(rhs) == 1L) {
     return(TRUE)
   }
@@ -146,13 +124,14 @@ cb_parse <- function(text) {
   if (is.null(text) || !nzchar(trimws(text))) {
     return(list(ok = TRUE, error = NULL, stmts = list(), lines = character()))
   }
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   exprs <- tryCatch(
     parse(text = text, keep.source = TRUE),
     error = function(e) e
   )
   if (inherits(exprs, "error")) {
     return(list(ok = FALSE, error = conditionMessage(exprs), stmts = list(),
-                lines = strsplit(text, "\n", fixed = TRUE)[[1L]]))
+                lines = lines))
   }
 
   refs <- utils::getSrcref(exprs)
@@ -168,16 +147,14 @@ cb_parse <- function(text) {
     )
   })
 
-  list(ok = TRUE, error = NULL, stmts = stmts,
-       lines = strsplit(text, "\n", fixed = TRUE)[[1L]])
+  list(ok = TRUE, error = NULL, stmts = stmts, lines = lines)
 }
 
 #' Read the `#|` annotation off a source line
 #'
-#' The annotation is the slip road, not the main road: the widget kind already
-#' follows from the value, so this only carries what a value cannot say (a
-#' numeric range, a nicer label, a placeholder). Accepts both
-#' `#| number(min = 1, max = 50)` and the bare `#| min = 1, max = 50`.
+#' The widget kind follows from the value, so the annotation only carries what
+#' a value cannot say (a numeric range, a label, a placeholder). Both
+#' `#| number(min = 1, max = 50)` and the bare `#| min = 1, max = 50` work.
 #'
 #' @param line_text One line of source.
 #' @return A named list of evaluated annotation arguments (possibly empty).
@@ -219,18 +196,13 @@ cb_annotation <- function(line_text) {
 
 #' Derive the widget from a declaration's value
 #'
-#' The three facts a control needs — kind, choice pool, single or multiple —
-#' all come from the *declaration*, never from the live value. A multi-select
-#' whose user narrows it to one pick must stay a multi-select, so `multiple` is
-#' fixed by the script.
+#' Kind, choice pool and single or multiple come from the declaration, never
+#' from the live value, so a multi-select narrowed to one pick stays a
+#' multi-select.
 #'
 #' Exactly one pick declares a single select; anything else declares a
-#' multi-select. **Zero is deliberately on the multi side**, so a script can
-#' offer a set of choices with nothing chosen yet
-#' (`factor(character(0), levels = lv)`). Reading it as a single select instead
-#' would leave no way to write "pick any number of these, starting from none" —
-#' the declaration's length is the only signal available, and a one-element
-#' default is not always wanted.
+#' multi-select. Zero counts as multi, so a script can offer choices with
+#' nothing chosen yet (`factor(character(0), levels = lv)`).
 #'
 #' @param v The evaluated right-hand side.
 #' @return A list with `kind`, and for selects `choices` and `multiple`; `NULL`
@@ -253,8 +225,7 @@ cb_widget_for <- function(v) {
   if (is.character(v) && length(v) == 1L) {
     return(list(kind = "text"))
   }
-  # A bare vector is the value, so the pool is exactly that vector. Honest, if
-  # not very useful — widen it with a factor.
+  # A bare vector is its own pool.
   if ((is.character(v) || is.numeric(v)) && length(v) > 1L) {
     return(list(kind = "select", choices = as.character(v), multiple = TRUE))
   }
@@ -263,17 +234,13 @@ cb_widget_for <- function(v) {
 
 #' Build the input specs for a script
 #'
-#' Declarations are evaluated in the block's own evaluation environment (so a
-#' declaration can reach exactly what the body can reach, no more). Preceding
-#' non-input assignments are bound lazily, so a helper line like
-#' `lv <- unique(data$site)` is available to a later `factor(x, lv)` without the
-#' pipeline above it ever being run.
+#' Declarations are evaluated in the block's evaluation environment, so they
+#' reach what the body reaches. Preceding non-input assignments are bound
+#' lazily, so a helper line like `lv <- unique(data$site)` is available to a
+#' later `factor(x, lv)` without running the pipeline.
 #'
-#' A statement that is not an assignment cannot be bound lazily, so the ones
-#' *above the last declaration* are simply run: a preamble that works the
-#' grouping column out with an `if` has to have happened before the
-#' declarations under it are evaluated. Nothing below the last declaration is
-#' touched, which is where the pipeline lives.
+#' A statement above the last declaration that is not an assignment cannot be
+#' bound lazily and is run. Nothing below the last declaration is run.
 #'
 #' @param parsed The result of [cb_parse()].
 #' @param data The upstream data frame (may be `NULL` before it arrives).
@@ -287,33 +254,32 @@ cb_specs <- function(parsed, data = NULL) {
   env <- blockr.core::eval_env(list(data = data))
   is_input <- vapply(parsed$stmts, `[[`, logical(1L), "input")
   last_decl <- if (any(is_input)) max(which(is_input)) else 0L
-  # A declaration the script uses as scaffolding is not a knob: it is bound
-  # like any other helper line and no control is offered. See cb_demoted().
+  # A declaration the script uses as scaffolding is bound like a helper line
+  # and offers no control (see cb_demoted()).
   demoted <- cb_demoted(parsed)
   specs <- list()
 
   for (i in seq_along(parsed$stmts)) {
     st <- parsed$stmts[[i]]
     if (!st$input || demoted[[i]]) {
-      # Bind other assignments lazily: only forced if a later declaration
-      # actually reads them.
+      # Bound lazily: forced only if a later declaration reads it.
       if (cb_is_assign_stmt(st$expr)) {
         cb_delay(env, as.character(st$expr[[2L]]), st$expr[[3L]])
       } else if (i < last_decl) {
-        # Not an assignment, so there is nothing to defer. A declaration below
-        # it may depend on what it does, and it fails on its own account when
-        # the block runs, so a failure here is not reported twice.
+        # A failure here is not reported: a declaration below that depends on
+        # it fails on its own account when the block runs.
         try(eval(st$expr, env), silent = TRUE)
       }
       next
     }
 
+    fail <- function(msg) {
+      list(name = st$name, line = st$line, kind = NA_character_, error = msg)
+    }
+
     value <- tryCatch(eval(st$expr[[3L]], env), error = function(e) e)
     if (inherits(value, "error")) {
-      specs[[length(specs) + 1L]] <- list(
-        name = st$name, line = st$line, kind = NA_character_,
-        error = conditionMessage(value)
-      )
+      specs[[length(specs) + 1L]] <- fail(conditionMessage(value))
       next
     }
     # Make it visible to later declarations too.
@@ -321,20 +287,16 @@ cb_specs <- function(parsed, data = NULL) {
 
     w <- cb_widget_for(value)
     if (!is.null(w) && identical(w$kind, "select") && !length(w$choices)) {
-      # An empty factor is almost always a mistyped column name; an empty
-      # dropdown would hide that.
-      specs[[length(specs) + 1L]] <- list(
-        name = st$name, line = st$line, kind = NA_character_,
-        error = "no choices - is the column name right?"
+      # An empty factor is usually a mistyped column name.
+      specs[[length(specs) + 1L]] <- fail(
+        "no choices - is the column name right?"
       )
       next
     }
     if (is.null(w)) {
-      specs[[length(specs) + 1L]] <- list(
-        name = st$name, line = st$line, kind = NA_character_,
-        error = paste0("no control for a value of class ",
-                       paste(class(value), collapse = "/"))
-      )
+      specs[[length(specs) + 1L]] <- fail(paste0(
+        "no control for a value of class ", paste(class(value), collapse = "/")
+      ))
       next
     }
 
@@ -363,10 +325,10 @@ cb_specs <- function(parsed, data = NULL) {
 
 #' Bind a name to an expression that is only evaluated if something reads it
 #'
-#' A declaration may legitimately depend on a helper line above it
-#' (`lv <- unique(data$site)` feeding `factor("Basel", lv)`), but the statements
-#' in between must not run just to build that scope — one of them is usually the
-#' block's whole pipeline. An active binding evaluates on first read and caches.
+#' A declaration may depend on a helper line above it (`lv <- unique(data$site)`
+#' feeding `factor("Basel", lv)`), but the statements in between, usually the
+#' block's pipeline, must not run to build that scope. An active binding
+#' evaluates on first read and caches.
 #'
 #' @noRd
 cb_delay <- function(env, name, expr) {
@@ -374,15 +336,13 @@ cb_delay <- function(env, name, expr) {
   force(env)
   cached <- NULL
   forced <- FALSE
-  # A later statement may re-assign a name an earlier declaration already
-  # bound; script order wins, and `makeActiveBinding()` refuses to shadow a
-  # regular binding. (`exists()` would force an active binding, so check the
-  # names directly.)
+  # A later statement may re-assign a name already bound; script order wins,
+  # and `makeActiveBinding()` refuses to shadow a regular binding. The names
+  # are checked directly because `exists()` would force an active binding.
   #
-  # `x <- f(x)` is ordinary R and reads the OLD `x`, so the old binding is
-  # carried into a child environment the new one evaluates in. Without that,
-  # the binding reads itself and the declaration below it dies with "infinite
-  # recursion" instead of seeing the narrowed value.
+  # `x <- f(x)` reads the old `x`, so the old binding is carried into a child
+  # environment that the new one evaluates in. Otherwise the binding reads
+  # itself and fails with "infinite recursion".
   where <- env
   if (name %in% ls(env, all.names = TRUE)) {
     where <- new.env(parent = env)
@@ -393,10 +353,8 @@ cb_delay <- function(env, name, expr) {
     }
     rm(list = name, envir = env)
   }
-  # The binding has to accept a write too: assigning over an active binding
-  # CALLS it with the new value, so a nullary function dies with "unused
-  # argument" the moment a later declaration of the same name is evaluated
-  # into this environment.
+  # The binding accepts a write too, because assigning over an active binding
+  # calls it with the new value.
   makeActiveBinding(
     name,
     function(v) {
@@ -417,9 +375,9 @@ cb_delay <- function(env, name, expr) {
 
 #' Coerce a value coming back from a widget to the declared type
 #'
-#' Shiny inputs arrive as strings from selects and as lists from JS arrays; the
-#' declaration already knows the type, so it drives the coercion. Numeric `NA`
-#' notably ships as the *string* `"NA"`.
+#' Shiny inputs arrive as strings from selects and as lists from JS arrays, so
+#' the declared type drives the coercion. Numeric `NA` ships as the string
+#' `"NA"`.
 #'
 #' @param value The raw input value.
 #' @param spec The spec record it belongs to.

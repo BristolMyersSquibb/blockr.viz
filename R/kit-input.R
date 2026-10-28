@@ -56,7 +56,8 @@ viz_read_selection <- function(x) {
     return(NULL)
   }
   s <- x$selection
-  nonce <- as.integer(x$nonce)
+  # A double: the browser may send Date.now(), past the integer range.
+  nonce <- as.numeric(x$nonce)
   if (is.null(s)) {
     return(list(selection = NULL, nonce = nonce))
   }
