@@ -3,8 +3,9 @@
  *
  * The files run unmodified, in the order the page loads them: blockr.ui's
  * controls (controls_dep()), the core (inst/js/core/scripts.txt), the
- * generated chart spec, then the chart scripts in inst/js/chart/, in the
- * order scripts.txt lists them. A chart is built by the shared output
+ * generated chart and table specs, the table scripts (the chart's data view
+ * draws with them), then the chart scripts in inst/js/chart/, in the order
+ * scripts.txt lists them. A chart is built by the shared output
  * binding on its element's first payload, exactly as Shiny hands R's
  * viz_payload() to `renderValue`.
  *
@@ -41,14 +42,20 @@ const UI_FILES = ['blockr-ui.js', 'blockr-select.js', 'blockr-input.js'];
 const CORE_FILES = fs.readFileSync(path.join(JS_DIR, 'core', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((f) => 'core/' + f);
-const SHARED_FILES = [...CORE_FILES, 'spec/chart.js'];
+const SHARED_FILES = [...CORE_FILES, 'spec/chart.js', 'spec/table.js'];
 
 /** The chart scripts in load order, as the html dependency lists them. */
 const CHART_FILES = fs.readFileSync(path.join(JS_DIR, 'chart', 'scripts.txt'), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((f) => 'chart/' + f);
 
-const VIZ_FILES = [...SHARED_FILES, ...CHART_FILES];
+/** The table scripts, which draw the chart's data view. Loaded before the
+ * chart's, so the chart's output binding is the one the harness holds. */
+const TABLE_FILES = fs.readFileSync(path.join(JS_DIR, 'table', 'scripts.txt'), 'utf8')
+  .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  .map((f) => 'table/' + f);
+
+const VIZ_FILES = [...SHARED_FILES, ...TABLE_FILES, ...CHART_FILES];
 
 let uiDir = process.env.BLOCKR_UI_JS;
 const UI_DIR = () => uiDir || (uiDir = require('node:child_process').execFileSync(

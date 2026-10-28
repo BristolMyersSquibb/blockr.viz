@@ -118,8 +118,10 @@ chart_titles <- function(spec, v, d, auto, specs) {
 # What the downloads write (export-registry.R): the numbers the chart shows,
 # one row per mark for the aggregated types and the rows for the rest; the
 # browser's picture, when it has sent one; the resolved text. Read when a
-# format is clicked.
-chart_exhibit <- function(kit, src, view) {
+# format is clicked. With a data view (chart-data-view.R) and a chart that
+# has a Summary, `meta$data_view` holds its two frames, which the Excel
+# download writes as two sheets.
+chart_exhibit <- function(kit, src, view, dv = NULL) {
   function() {
     v <- viz_values(kit$state)
     data <- chart_xlsx_frame(
@@ -127,6 +129,7 @@ chart_exhibit <- function(kit, src, view) {
       color = v$color, facet = v$facet, func = v$func,
       value = chart_value_col(v), na_group = v$missing
     )
+    summ <- if (!is.null(dv)) dv$summary()
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
     # The footer's {dataset} and {filters} are the input's: the numbers the
@@ -137,7 +140,10 @@ chart_exhibit <- function(kit, src, view) {
       title = text(ti$title), subtitle = text(ti$subtitle),
       caption = text(ti$caption), kind = "chart",
       meta = list(dataset = if (is.data.frame(input)) dl_dataset(input),
-                  source = input)
+                  source = input,
+                  data_view = if (is.data.frame(summ)) {
+                    list(summary = summ, rows = dv$rows())
+                  })
     )
   }
 }

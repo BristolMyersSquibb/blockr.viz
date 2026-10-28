@@ -12,7 +12,7 @@
  * Built by the shared output binding (core/binding.js) with a Scope that
  * owns everything set up outside the element. The view owns its parts: the
  * core frame (header, titles, gear, downloads, footer), the script band,
- * the legend band and the selection.
+ * the legend band, the data table (core/data-view.js) and the selection.
  */
 (function () {
   'use strict';
@@ -71,6 +71,9 @@
       this.band = V.scriptBand(body, scope, this.gear);
       this.chartGrid = mk('div', 'vz-chart-grid', body);
       this.legend = new NS.Legend(this, body);
+      this.dataView = new V.DataView(this.frame, scope, {
+        onToggle: () => scope.frame(() => this._resizeCharts())
+      });
       this.status();
       // One resize per animation frame.
       /** @type {(() => void) | null} */ let pending = null;
@@ -115,6 +118,7 @@
       this.drawn = false;
       this._render();
       this._downloads();
+      this.dataView.update(d.data_view);
       this.frame.busyDone();
     }
 

@@ -184,3 +184,26 @@
   color: var(--blockr-color-text-muted, #9ca3af);
   text-align: center;
 }
+
+/* The data table under a view (core/data-view.js): hidden until the header's
+   tool opens it. A pressed tool takes the accent tint. The table's own
+   footer is hidden: the view's footer already says what is selected. */
+.vz-data { display: none; }
+.vz-data-open .vz-data {
+  display: block;
+  border-top: 1px solid var(--blockr-color-border-default);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.vz-data-tool[aria-pressed="true"],
+.vz-data-tool[aria-pressed="true"]:hover {
+  color: var(--blockr-color-text-accent-strong);
+  background: var(--blockr-color-bg-accent-subtle);
+  border-color: var(--blockr-color-border-accent-subtle);
+}
+.vz-data__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+.vz-data__meta { font-size: var(--blockr-font-size-xs); color: var(--blockr-color-text-muted); }
+.vz-data__n { margin-left: 5px; opacity: .7; font-variant-numeric: tabular-nums; }
+/* Above table-structured.css's `max-height: none`, which loads later. */
+.vz-data__table .vz-table .blockr-table-wrapper { max-height: 320px; }
+.vz-data__table .vz-foot { display: none; }

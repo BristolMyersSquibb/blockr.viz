@@ -15,4 +15,5 @@ gear/icons.js
 gear/controls.js
 gear/engine.js
 frame.js
+data-view.js
 script-band.js

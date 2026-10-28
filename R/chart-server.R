@@ -3,7 +3,7 @@
 # observers that take the gear's settings, clicks and pictures into it. The
 # chart adds reactives that read the state: the data it draws and the filter it
 # emits (here), the payload and the exhibit for the downloads (chart-view.R),
-# and the claims a drill target receives.
+# the data view (chart-data-view.R), and the claims a drill target receives.
 
 chart_server <- function(id, data, init) {
   viz_block_server(
@@ -12,10 +12,13 @@ chart_server <- function(id, data, init) {
       src <- chart_sources(data, kit$state)
       view <- chart_view(kit, src)
       chart_capture_service(kit$session, kit$el, view$payload)
+      expr <- chart_expr(data, kit$state, src)
+      dv <- chart_data_view(kit, src, expr)
       list(
         payload = view$payload,
-        expr = chart_expr(data, kit$state, src),
-        exhibit = chart_exhibit(kit, src, view),
+        expr = expr,
+        exhibit = chart_exhibit(kit, src, view, dv),
+        data_view = dv$derived,
         normalize = function(v) {
           chart_normalize(v, viz_values(kit$state))
         },

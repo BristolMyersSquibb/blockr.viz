@@ -181,7 +181,7 @@ interface VizNamespace {
   spec: Record<string, unknown>;
   util: {
     esc(x: unknown): string;
-    send(id: string, kind: 'set' | 'select' | 'capture' | 'need', value: unknown,
+    send(id: string, kind: 'set' | 'select' | 'capture' | 'data' | 'need', value: unknown,
          block?: string): boolean;
     select(id: string, selection: Record<string, unknown> | null): boolean;
     isNumeric(c: VizColumn | null | undefined): boolean;
@@ -202,6 +202,7 @@ interface VizNamespace {
     new (host: HTMLElement, scope: VizScope, opts?: { cls?: string }): VizFrame;
     message(parent: HTMLElement, e: VizEmpty | null | undefined): boolean;
   };
+  DataView: { new (frame: VizFrame, scope: VizScope, opts?: { onToggle?: () => void }): VizDataView };
   binding(name: string, view: string, View: VizViewClass,
           opts?: { grace?: number; busy?: string }): boolean;
   downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
@@ -218,4 +219,31 @@ interface VizBusy {
   start(id: string, label?: string): void;
   stop(id: string): void;
   watch(id: string, label: string): void;
+}
+
+/**
+ * A view's data table (core/data-view.js), as R sends it in
+ * `derived.data_view` while the reader has it open (R/chart-data-view.R).
+ */
+interface VizDataViewState {
+  /** The tab R built the table for; "rows" when there is no Summary. */
+  tab: 'summary' | 'rows';
+  /** Rows of Summary, one per mark; null when the view has none. */
+  summary: number | null;
+  /** Rows behind the selection, and the input's rows. */
+  rows: number | null;
+  total: number | null;
+  /** The table view's payload for `tab`. */
+  table: VizPayload | null;
+}
+
+interface VizDataView {
+  readonly on: boolean;
+  readonly tab: 'summary' | 'rows';
+  readonly tool: HTMLButtonElement;
+  readonly panel: HTMLElement;
+  readonly host: HTMLElement;
+  toggle(): void;
+  pick(tab: 'summary' | 'rows'): void;
+  update(dv: VizDataViewState | null | undefined): void;
 }

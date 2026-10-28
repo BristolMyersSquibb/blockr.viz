@@ -87,12 +87,12 @@ update_interactive_table <- function(session, elem_id, x, drill = TRUE,
 }
 
 # The payload of the table view's records layout: the table of `x`, or a
-# line to show instead.
+# line to show instead. `selection` is a claim on a row to light.
 interactive_table_payload <- function(x, drill, drill_target, sortable,
-                                      collapsible, search) {
+                                      collapsible, search, selection = NULL) {
   v <- list(layout = "records", sortable = isTRUE(sortable),
             collapsible = isTRUE(collapsible), search = isTRUE(search),
-            download = FALSE)
+            download = FALSE, selection = selection)
   built <- if (is.null(x)) {
     list(empty = list(kind = "no_data", message = ""))
   } else if (is.character(x) ||

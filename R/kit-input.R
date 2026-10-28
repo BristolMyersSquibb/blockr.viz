@@ -1,8 +1,8 @@
 # What the browser sends a block, read and checked on arrival.
 #
-# Each block view sends three typed inputs: `<id>_set` (the settings that
-# changed), `<id>_select` (a click or brush) and `<id>_capture` (a picture of
-# the view). Shiny calls the handler registered for the input's type before
+# Each block view sends typed inputs: `<id>_set` (the settings that
+# changed), `<id>_select` (a click or brush), `<id>_capture` (a picture of
+# the view) and, with a data view, `<id>_data` (whether its table is open). Shiny calls the handler registered for the input's type before
 # any observer sees the value; a handler returns NULL for anything malformed,
 # which observeEvent() ignores.
 
@@ -150,10 +150,29 @@ is_size <- function(x) {
   is.numeric(x) && length(x) == 1L && is.finite(x) && x > 0
 }
 
+#' Read a data view message: `{on, tab, n}`
+#'
+#' Whether the reader has the view's data table open, on which tab, and the
+#' browser's request count: a new count asks for the table's rows again.
+#' @return `list(on, tab, n)`, `tab` `"summary"` or `"rows"`, or `NULL`
+#'   when malformed.
+#' @noRd
+viz_read_data_view <- function(x) {
+  if (!is.list(x) || !is.logical(x$on) || length(x$on) != 1L ||
+        is.na(x$on)) {
+    return(NULL)
+  }
+  tab <- x$tab
+  ok <- is.character(tab) && length(tab) == 1L &&
+    tab %in% c("summary", "rows")
+  n <- if (is_whole_count(x$n)) as.numeric(x$n) else 0
+  list(on = x$on, tab = if (ok) tab else "summary", n = n)
+}
+
 #' Register the input handlers
 #'
 #' One handler per block spec (`blockr.viz.chart`, `blockr.viz.table`) and
-#' one each for selections and captures. Called from `.onLoad`.
+#' one each for selections, captures and the data view. Called from `.onLoad`.
 #'
 #' @param specs A list of `viz_spec`.
 #' @noRd
@@ -171,6 +190,7 @@ viz_input_handlers <- function(specs) {
   })
   register("selection", viz_read_selection)
   register("capture", viz_read_capture)
+  register("data_view", viz_read_data_view)
   invisible(NULL)
 }
 

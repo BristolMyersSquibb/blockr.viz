@@ -129,6 +129,8 @@ type ChartDerived = {
   /** Device pixels per CSS pixel the picture is composed with, 1 to 6. */
   capture_ratio: number;
   downloads?: VizDownload[];
+  /** The data table under the chart, while the reader has it open. */
+  data_view?: VizDataViewState;
 };
 
 /** What R sends the chart view: the shared payload with the chart's `derived`. */

@@ -22,15 +22,17 @@
   const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ENTITIES[c]);
 
   /** The input handler type R registered for each input (R/kit-input.R). */
-  const TYPES = { select: 'blockr.viz.selection', capture: 'blockr.viz.capture' };
+  const TYPES = { select: 'blockr.viz.selection', capture: 'blockr.viz.capture',
+                  data: 'blockr.viz.data_view' };
 
   /**
-   * Send one of a view's inputs to R: `<id>_set`, `<id>_select` or
-   * `<id>_capture`, typed so R's input handler checks it on arrival, or
+   * Send one of a view's inputs to R: `<id>_set`, `<id>_select`,
+   * `<id>_capture` or `<id>_data` (core/data-view.js), typed so R's input
+   * handler checks it on arrival, or
    * `<id>_need` (the data revision the view holds no rows for). Priority
    * "event", so the same value sent twice arrives twice.
    * @param {string} id The view's element id.
-   * @param {'set' | 'select' | 'capture' | 'need'} kind
+   * @param {'set' | 'select' | 'capture' | 'data' | 'need'} kind
    * @param {unknown} value
    * @param {string} [block] For `set`: the block whose spec reads it.
    * @returns {boolean} Whether Shiny took it.

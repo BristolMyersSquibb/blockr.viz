@@ -6,7 +6,9 @@ drilldown_chart_dep <- memoise0(function() {
     drilldown_echarts_themes_dep(),
     viz_core_dep(),
     chart_js_dep(),
-    chart_css_dep()
+    chart_css_dep(),
+    # The data view under the chart is drawn by the table view.
+    table_view_dep()
   )
 })
 
