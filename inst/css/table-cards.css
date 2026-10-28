@@ -188,9 +188,6 @@
 }
 .tc-grid[data-tc-mode="narrow"] .tc-val { font-size: 20px; }
 
-/* row states: the engines' classes (drill, search, collapse) */
-.tc-grid .tc-row.blockr-summarize-hidden-search,
-.tc-grid .tc-row.blockr-hidden-search { display: none !important; }
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc,
 .dt-clickable .tc-row:not(.dt-row-nodrill) > .tc-rowhead { cursor: pointer; }
 .dt-clickable .tc-row:not(.dt-row-nodrill):hover > .tc {

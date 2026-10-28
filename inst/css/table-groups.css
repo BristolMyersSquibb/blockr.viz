@@ -143,14 +143,6 @@
 
 /* Sorting affordance: none of our own. */
 
-/* The by_level facet layout's spanning header row (one cell per facet level
-   over its summary group) -- centred, with a hairline under the span so the
-   group reads as one unit. */
-.blockr-summarize-table th.blockr-th-group {
-  text-align: center;
-  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
-}
-
 /* Bars: segments TOUCH, and only the VALUE end is rounded. */
 .blockr-summarize-track {
   display: flex;
@@ -296,32 +288,6 @@
   bottom: 0;
   width: 2px;
   background: var(--blockr-summarize-fill);
-}
-/* The dot style: three nested weights over one x. */
-/* 999px, not half the height as a literal. */
-.blockr-summarize-prcell .lane-fence {
-  top: 50%;
-  height: 8px;
-  margin-top: -4px;
-  border-radius: 999px;
-  background: var(--blockr-summarize-fill);
-  opacity: 0.16;
-}
-.blockr-summarize-prcell .lane-rng {
-  top: 50%;
-  height: 4px;
-  margin-top: -2px;
-  border-radius: 999px;
-  background: var(--blockr-summarize-fill);
-}
-.blockr-summarize-prcell .lane-ctr {
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--blockr-summarize-fill);
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
 /* Pair (dumbbell): two values of one group joined by a segment. */
 .blockr-summarize-pacell .lane-band {
@@ -596,8 +562,7 @@
 /* Hierarchy, drawn as the records and variables layouts draw their section
    headings (table-structured.css). */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
-.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
-.blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
+.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header{
   padding-left: 24px;
 }
 .blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-parent > td {
@@ -633,11 +598,6 @@
   text-overflow: clip;
   white-space: normal;
 }
-.blockr-summarize-table tr.blockr-summarize-fold td {
-  font-style: italic;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.blockr-summarize-table tr.blockr-summarize-hidden-search { display: none; }
 
 /* Legend + footer. */
 /* The legend is its own row under the control row (search + gear), so a long
@@ -679,17 +639,6 @@
   border-radius: 2px;
   display: inline-block;
 }
-.blockr-summarize-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0.1rem 0;
-  font-size: 0.75rem;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.blockr-summarize-note { color: var(--blockr-color-text-warning, #b45309); }
 /* The tile: a square mark with its value, painted by the cell's level. An
    empty cell is truly empty. */
 .blockr-summarize-table td.blockr-summarize-tile-col {
