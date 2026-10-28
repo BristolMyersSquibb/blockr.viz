@@ -67,8 +67,8 @@ new_chart_block <- function(
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  # Old argument names; any other name is a block attribute that blockr.core
-  # keeps.
+  # Old argument names; any other name is a block attribute (block_name,
+  # blockr.dock's `visible`) that blockr.core keeps.
   old <- intersect(names(dots), legacy_arg_names("chart"))
   args <- legacy_ctor_args("chart", c(given, dots[old]))
   values <- viz_check(spec, args)
@@ -90,7 +90,8 @@ new_chart_block <- function(
     class = "chart_block",
     ...
   )
-  # blockr.core keeps `...` as attributes and would save the old names back.
+  # blockr.core keeps `...` as attributes and would save the old names back
+  # into every board.
   for (nm in old) attr(res, nm) <- NULL
   res
 }

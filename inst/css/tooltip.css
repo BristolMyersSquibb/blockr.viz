@@ -1,4 +1,9 @@
-/* Data tooltip content (ECharts cards, summarize table, heatmap, blockr.pharma profile); loaded via tooltip_card_dep(). */
+/* The content of every data tooltip: the ECharts cards (chart/common.js
+   tipHead / tipRow), the summarize table's, the heatmap's and blockr.pharma's
+   patient profile. One file so each of them loads the same rules
+   (tooltip_card_dep()). Headline 13px/600, rows 12px with the label muted and
+   the value at 500 in tabular figures, a swatch where a headline or a row
+   stands for one series. */
 .dd-tt-head,
 .dd-tt-row {
   display: flex;
@@ -35,6 +40,8 @@
   margin: 3px 0 2px;
   border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
+/* A card listing every level of a colour split: the level under the pointer
+   stands out, the others step back. */
 .dd-tt-row.is-hit .dd-tt-label,
 .dd-tt-row.is-hit .dd-tt-value {
   color: var(--blockr-color-text-default, #111827);
@@ -43,6 +50,8 @@
 .dd-tt-row.is-dim {
   opacity: 0.55;
 }
+/* Muted text after a value: the date after a study day, the duration after
+   an end. */
 .dd-tt-meta {
   margin-left: 6px;
   font-weight: var(--blockr-font-weight-normal, 400);

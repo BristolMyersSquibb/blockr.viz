@@ -1,6 +1,7 @@
-# The chart block's arguments, grouped as in the gear and assembled in formal
-# order by chart_spec() at the end. viz_arg() is in R/spec.R, the shared
-# entries in R/spec-base.R.
+# The chart block's arguments: one entry per public argument of
+# new_chart_block(), grouped as in the gear and assembled in formal order by
+# chart_spec() at the end. viz_arg() is in R/spec.R, the shared entries in
+# R/spec-base.R, old names in R/legacy.R.
 
 # viz_arg() with `slot = TRUE` as the default: most chart arguments are slots.
 chart_arg <- function(..., slot = TRUE) viz_arg(..., slot = slot)
@@ -22,8 +23,8 @@ chart_spec_mapping <- function() {
       example = "scatter",
       describe = paste(
         "Chart type. Aggregated: bar, waterfall, pie, treemap, boxplot,",
-        "pointrange. One mark per row: scatter, line, area, band. Also histogram",
-        "and gantt (intervals on lanes)."
+        "pointrange. One mark per row: scatter, line, area, band.",
+        "Also histogram and gantt (intervals on lanes)."
       )
     ),
 
@@ -32,14 +33,15 @@ chart_spec_mapping <- function() {
       gear = gear("Mapping", "column", "X"),
       example = "Sepal.Length",
       describe = paste(
-        "Column on the horizontal axis. For an aggregated type one of x and y is",
-        "the category and the other the column `func` aggregates. Gantt: the",
-        "interval start. Histogram: the column that is binned."
+        "Column on the horizontal axis. For an aggregated type one of x and y",
+        "is the category and the other the column `func` aggregates. Gantt:",
+        "the interval start. Histogram: the column that is binned."
       )
     ),
 
     y = chart_arg(
-      type = "column", null = "unset", applies = except("histogram"),
+      type = "column", null = "unset",
+      applies = except("histogram"),
       gear = gear("Mapping", "column", "Y"),
       example = "Sepal.Width",
       describe = paste(
@@ -58,9 +60,9 @@ chart_spec_mapping <- function() {
                              "Median", "Sum", "Min", "Max", "None (as is)")),
       example = "count",
       describe = paste(
-        "Aggregation of the value column per category. \"identity\" draws the",
-        "value as is; \"pct_distinct\" is the share of the panel's distinct values",
-        "(see `percent_of`)."
+        "Aggregation of the value column per category. \"identity\" draws",
+        "the value as is; \"pct_distinct\" is the share of the panel's",
+        "distinct values (see `percent_of`)."
       )
     ),
 
@@ -83,13 +85,14 @@ chart_spec_mapping <- function() {
       applies = c(SPEC_CHART_INDIVIDUAL, "gantt"),
       gear = gear("Add mapping", "column", "Series"),
       describe = paste(
-        "Column whose values split rows into separate series: one line or point",
-        "group per value, the bar label on a gantt."
+        "Column whose values split rows into separate series: one line or",
+        "point group per value, the bar label on a gantt."
       )
     ),
 
     xend = chart_arg(
-      type = "column", null = "dots at x", applies = "gantt",
+      type = "column", null = "dots at x",
+      applies = "gantt",
       gear = gear("Mapping", "column", "X end"),
       describe = "Interval end. A row without an end is drawn as a dot at `x`."
     ),
@@ -99,22 +102,24 @@ chart_spec_mapping <- function() {
       applies = c("bar", "pie", "treemap", "scatter", "line", "area", "gantt"),
       gear = gear("Add mapping", "column", "Label"),
       describe = paste(
-        "Column written on the marks. A bar, slice or tile shows it only when its",
-        "rows agree on one value."
+        "Column written on the marks. A bar, slice or tile shows it only when",
+        "its rows agree on one value."
       )
     ),
 
     linetype = chart_arg(
-      type = "column", null = "all solid", applies = c("line", "area"),
+      type = "column", null = "all solid",
+      applies = c("line", "area"),
       gear = gear("Add mapping", "column", "Dash by"),
       describe = paste(
-        "Column whose values set a line's dash: the first value is solid, the",
-        "others dashed."
+        "Column whose values set a line's dash: the first value is solid,",
+        "the others dashed."
       )
     ),
 
     highlight = chart_arg(
-      type = type_named(type_values(), max = 1L), null = "no highlight",
+      type = type_named(type_values(), max = 1L),
+      null = "no highlight",
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Add mapping", "column", "Highlight"),
       slot = FALSE,
@@ -157,13 +162,14 @@ chart_spec_mapping <- function() {
 chart_spec_look <- function() {
   list(
     orientation = chart_arg(
-      type = "enum", values = c("horizontal", "vertical"), null = "inferred",
+      type = "enum", values = c("horizontal", "vertical"),
+      null = "inferred",
       applies = c("bar", "boxplot", "pointrange"),
       gear = gear("Look", "segmented", "Orientation",
                   labels = c("Horizontal", "Vertical")),
       describe = paste(
-        "Which way a bar, boxplot or pointrange lies. Leave NULL: it is inferred.",
-        "Needed only when both columns are non-numeric."
+        "Which way a bar, boxplot or pointrange lies. Leave NULL: it is",
+        "inferred. Needed only when both columns are non-numeric."
       )
     ),
 
@@ -195,8 +201,8 @@ chart_spec_look <- function() {
       gear = gear("Look", "segmented", "Y scale", labels = c("Linear", "Log")),
       example = "log10",
       describe = paste(
-        "\"log10\" draws a base-10 y axis. Values at or below zero are not drawn;",
-        "a note under the chart counts them."
+        "\"log10\" draws a base-10 y axis. Values at or below zero are not",
+        "drawn; a note under the chart counts them."
       )
     ),
 
@@ -214,15 +220,16 @@ chart_spec_look <- function() {
       gear = gear("Look", "text", "Shaded", parse = "ranges"),
       slot = FALSE,
       describe = paste(
-        "Named stretches of x shaded behind the marks, as `list(Recession =",
-        "c(\"2008-01-01\", \"2009-06-30\"))`. Text form: \"Recession: 2008-01-01",
-        "to 2009-06-30; ...\"."
+        "Named stretches of x shaded behind the marks, as",
+        "`list(Recession = c(\"2008-01-01\", \"2009-06-30\"))`. Text form:",
+        "\"Recession: 2008-01-01 to 2009-06-30; ...\"."
       ),
       example = list(Recession = c("2008-01-01", "2009-06-30"))
     ),
 
     waterfall_totals = chart_arg(
-      type = type_values(of = "x"), null = "no totals", applies = "waterfall",
+      type = type_values(of = "x"), null = "no totals",
+      applies = "waterfall",
       gear = gear("Look", "values", "Totals"),
       slot = FALSE,
       describe = "Steps of a waterfall drawn as totals, from zero."
@@ -239,8 +246,8 @@ chart_spec_sorting <- function() {
       example = "value",
       describe = paste(
         "Category order: \"value\", \"data\", \"alpha\", or a column (its",
-        "per-category minimum). Gantt: \"onset\", \"alpha\" or a column. NULL:",
-        "\"data\" for date, numeric and factor categories, else \"value\"."
+        "per-category minimum). Gantt: \"onset\", \"alpha\" or a column.",
+        "NULL: \"data\" for date, numeric and factor categories, else \"value\"."
       )
     ),
 
@@ -265,8 +272,8 @@ chart_spec_numbers <- function() {
                   labels = c("Show values", "Off")),
       example = TRUE,
       describe = paste(
-        "TRUE writes each bar's value at its end: a stack its total, a filled bar",
-        "each share."
+        "TRUE writes each bar's value at its end: a stack its total, a",
+        "filled bar each share."
       )
     ),
 
@@ -275,13 +282,14 @@ chart_spec_numbers <- function() {
 
     percent_of = chart_arg(
       type = "enum", default = "facet",
-      values = c("facet", "category", "color", "total"), applies = "bar",
+      values = c("facet", "category", "color", "total"),
+      applies = "bar",
       gear = gear("Numbers", "select", "Percent of",
                   labels = c("Facet", "Category", "Color", "Whole chart")),
       example = "facet",
       describe = paste(
-        "The role whose levels a `pct_distinct` denominator is taken within, or",
-        "\"total\" for the whole chart."
+        "The role whose levels a `pct_distinct` denominator is taken",
+        "within, or \"total\" for the whole chart."
       )
     ),
 
@@ -302,8 +310,8 @@ chart_spec_numbers <- function() {
       gear = gear("Counts", "column", "Individual id"),
       example = "customer_id",
       describe = paste(
-        "Column that identifies an individual, counted distinct by the band and by",
-        "`show_n`."
+        "Column that identifies an individual, counted distinct by the band",
+        "and by `show_n`."
       )
     )
   )
@@ -317,8 +325,8 @@ chart_spec_lines <- function() {
                   "area", "histogram"),
       gear = gear("Reference lines", "text", "Horizontal", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across the value axis. Names are labels.",
-        "Text form: \"Target: 4; 6\"."
+        "Positions of dashed guide lines across the value axis. Names are",
+        "labels. Text form: \"Target: 4; 6\"."
       )
     ),
 
@@ -327,13 +335,14 @@ chart_spec_lines <- function() {
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Reference lines", "text", "Vertical", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across x: numbers, dates or category",
-        "values. Names are labels."
+        "Positions of dashed guide lines across x: numbers, dates or",
+        "category values. Names are labels."
       )
     ),
 
     identity_line = chart_arg(
-      type = "bool", default = FALSE, applies = "scatter",
+      type = "bool", default = FALSE,
+      applies = "scatter",
       gear = gear("Reference lines", "segmented", "Identity",
                   labels = c("Identity line (y = x)", "Off")),
       example = FALSE,
@@ -341,16 +350,18 @@ chart_spec_lines <- function() {
     ),
 
     ref_min = chart_arg(
-      type = "column", null = "no lower limit", applies = "band",
+      type = "column", null = "no lower limit",
+      applies = "band",
       gear = gear("Reference lines", "column", "Reference low"),
       describe = paste(
-        "Column holding a lower reference limit per row, drawn as a dashed line at",
-        "its median and labelled with its spread."
+        "Column holding a lower reference limit per row, drawn as a dashed",
+        "line at its median and labelled with its spread."
       )
     ),
 
     ref_max = chart_arg(
-      type = "column", null = "no upper limit", applies = "band",
+      type = "column", null = "no upper limit",
+      applies = "band",
       gear = gear("Reference lines", "column", "Reference high"),
       describe = "Column holding an upper reference limit per row, as `ref_min`."
     )
@@ -367,8 +378,8 @@ chart_spec_facets <- function() {
                   when = "facet"),
       example = "fixed",
       describe = paste(
-        "\"fixed\" shares one scale across panels, \"free\" lets each panel size",
-        "itself, \"free_y\" frees y only (scatter, line and band)."
+        "\"fixed\" shares one scale across panels, \"free\" lets each panel",
+        "size itself, \"free_y\" frees y only (scatter, line and band)."
       )
     ),
 
@@ -384,12 +395,13 @@ chart_spec_facets <- function() {
 chart_spec_interact <- function() {
   list(
     drill = chart_arg(
-      type = "column", also = "auto", null = "a click does nothing",
+      type = "column", also = "auto",
+      null = "a click does nothing",
       gear = gear("Drill-down", "toggle", "Filter on"),
       example = "Species",
       describe = paste(
-        "Column a click filters downstream on, or \"auto\" for the type's natural",
-        "target (the clicked group, bin or lane)."
+        "Column a click filters downstream on, or \"auto\" for the type's",
+        "natural target (the clicked group, bin or lane)."
       )
     ),
 
@@ -397,8 +409,8 @@ chart_spec_interact <- function() {
   )
 }
 
-# The chart spec, in the formal order of new_chart_block(). Called by
-# viz_block_spec("chart").
+# The chart spec, in the formal order of new_chart_block(). `...` comes
+# second, after `type`. Called by viz_block_spec("chart").
 chart_spec <- function() {
   shared <- viz_shared_args()
   order <- c(
