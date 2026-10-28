@@ -23,14 +23,17 @@
 
   /**
    * How wide a row is in the section's grid (gear.css): tiles, editors,
-   * templates and multi-line text take the whole width; a control with a
-   * second one beside it (drill, highlight) two cells; a checkbox sits on
-   * the controls' line.
+   * templates, multi-line text and segments of four or more icons (so their
+   * words have room) take the whole width; a control with a second one
+   * beside it (drill, highlight) two cells; a checkbox sits on the
+   * controls' line.
    * @param {VizRowCtx} ctx @param {boolean} boxed
    */
   const rowClass = (ctx, boxed) => {
-    const control = ctx.arg.gear ? ctx.arg.gear.control : '';
+    const g = ctx.arg.gear;
+    const control = g ? g.control : '';
     if (control === 'tiles' || control === 'custom' || control === 'template') return ' vz-row--wide';
+    if (g && g.icons && (ctx.arg.values || []).length >= 4) return ' vz-row--wide';
     if (control === 'code' || control === 'script') return ' vz-row--code';
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' vz-row--paired';

@@ -252,7 +252,51 @@
     const at = String(choices.findIndex((c) => same(c.value, value)));
     const opts = choices.map((c, i) => ({ value: String(i), label: c.label }));
     const pick = (/** @type {string} */ v) => onPick(choices[Number(v)].value);
-    el.appendChild(ui().segmented(opts, at, pick, { label: ctx.label }).el);
+    const seg = ui().segmented(opts, at, pick, { label: ctx.label }).el;
+    el.appendChild(seg);
+    if (ctx.arg.gear && ctx.arg.gear.icons) withIcons(el, seg, choices, ctx);
+  }
+
+  /** Each segment its icon (icons.js) before its word. Where the words
+   * would not fit the row, they go, and each icon is named by its tooltip.
+   * @param {HTMLElement} el @param {HTMLElement} seg @param {VizChoice[]} choices
+   * @param {VizRowCtx} ctx */
+  function withIcons(el, seg, choices, ctx) {
+    const glyphs = V.gear.glyphs || {};
+    const btns = /** @type {HTMLElement[]} */ (Array.from(seg.children));
+    btns.forEach((b, i) => {
+      const icon = document.createElement('span');
+      icon.className = 'vz-seg-icon';
+      icon.innerHTML = glyphs[ctx.key + ':' + String(choices[i].value)] || '';
+      const word = document.createElement('span');
+      word.className = 'vz-seg-word';
+      word.textContent = choices[i].label;
+      b.textContent = '';
+      b.append(icon, word);
+    });
+    seg.classList.add('vz-seg--icons');
+    const fit = () => {
+      const room = el.getBoundingClientRect().width;
+      if (!room) return;
+      seg.classList.remove('vz-seg--bare');
+      const bare = seg.getBoundingClientRect().width > room + 0.5;
+      seg.classList.toggle('vz-seg--bare', bare);
+      btns.forEach((b, i) => {
+        if (bare) {
+          b.setAttribute('data-blockr-tooltip', choices[i].label);
+          b.setAttribute('aria-label', choices[i].label);
+        } else {
+          b.removeAttribute('data-blockr-tooltip');
+          b.removeAttribute('aria-label');
+        }
+      });
+    };
+    fit();
+    if (typeof root.ResizeObserver === 'function') {
+      const ro = new root.ResizeObserver(fit);
+      ro.observe(el);
+      ctx.scope.own({ dispose: () => ro.disconnect() });
+    }
   }
 
   /** A text field that commits on Enter or when it is left; Escape puts the

@@ -78,7 +78,7 @@ gen_applies <- function(a) {
 gen_gear <- function(g) {
   out <- list(group = g$group, control = g$control, label = g$label,
               labels = if (!is.null(g$labels)) I(g$labels), parse = g$parse,
-              when = g$when)
+              when = g$when, icons = g$icons)
   Filter(Negate(is.null), out)
 }
 

@@ -646,7 +646,7 @@
   justify-content: flex-start; text-align: left; overflow: hidden; white-space: nowrap;
 }
 .vz-table-sum-icon { flex: none; display: inline-flex; color: var(--blockr-color-text-muted, #6b7280); }
-.vz-table-sum-icon svg { width: 20px; height: 14px; }
+.vz-table-sum-icon svg { width: 20px; height: 20px; }
 .vz-table-sum-name { flex: none; font-weight: var(--blockr-font-weight-semibold, 600);
                  color: var(--blockr-color-text-default, #111827); }
 .vz-table-sum-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
@@ -666,6 +666,24 @@
 .vz-table-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
 .vz-table-sum-addcol { align-self: flex-start; min-width: 200px; }
+/* The Add menu (summaries.js, on blockr.ui's menu): a type's drawing in a
+   chip, its name over its line. */
+.blockr-menu.vz-table-sum-menu { max-height: 440px; }
+.vz-table-sum-menu .blockr-menu__icon {
+  width: 32px; height: 32px; box-sizing: border-box; align-items: center;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb); border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
+.vz-table-sum-menu .blockr-menu__icon svg { width: 20px; height: 20px; }
+.vz-table-sum-menu .blockr-menu__item:hover .blockr-menu__icon,
+.vz-table-sum-menu .blockr-menu__item--active .blockr-menu__icon {
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
+}
+.vz-table-sum-menu .blockr-menu__label { display: flex; flex-direction: column; font-weight: 500; line-height: 1.3; }
+.vz-table-sum-about { overflow: hidden; text-overflow: ellipsis; font-size: var(--blockr-font-size-xs, 12px);
+                      font-weight: 400; color: var(--blockr-color-text-muted, #6b7280); }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
    per page, positioned by table/tooltip.js. It follows the pointer, so it is

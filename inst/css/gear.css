@@ -310,6 +310,20 @@
   .blockr-settings .vz-row-controls { flex-wrap: wrap; }
 }
 
+/* ===== Segments with icons (core/gear/icons.js) =====
+   The icon before its word. Where the words would not fit the row
+   (controls.js, withIcons), they go and each icon is named by its tooltip. */
+.vz-seg--icons .blockr-segmented__seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.vz-seg-icon { display: inline-flex; flex: none; }
+.vz-seg-icon svg { display: block; width: 16px; height: 16px; }
+.vz-seg--bare .vz-seg-word { display: none; }
+.vz-seg--bare .blockr-segmented__seg { padding: 0 9px; }
+
 /* ===== Type tiles ===== */
 .vz-tiles {
   display: grid;

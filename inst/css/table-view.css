@@ -69,5 +69,5 @@
 /* The shading rules in the gear: a mode, the columns it paints, remove. */
 .vz-table-shadings { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .vz-table-shade-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.vz-table-shade-mode { min-width: 160px; }
+.vz-table-shade-mode { flex: 1 1 100%; min-width: 0; }
 .vz-table-shade-cols { display: flex; flex-wrap: wrap; gap: 4px 12px; }

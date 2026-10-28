@@ -202,6 +202,81 @@ test('segmented: an enum picks, a bool is a checkbox with its first label', () =
   assert.deepEqual(lastSet(t).values, { value_labels: true });
 });
 
+test('segmented with icons: icon and word; where the words do not fit, icons named by tooltips', () => {
+  const env = loadGear();
+  // Layout: the row 100px wide, the control 300px with its words, 90 without.
+  const P = env.win.HTMLElement.prototype;
+  const rect = P.getBoundingClientRect;
+  let room = 400;
+  P.getBoundingClientRect = function () {
+    const w = this.classList.contains('vz-row-controls') ? room
+      : this.classList.contains('blockr-segmented') ? (this.classList.contains('vz-seg--bare') ? 90 : 300) : 0;
+    return { width: w, height: 0, top: 0, left: 0, right: w, bottom: 0, x: 0, y: 0 };
+  };
+  const observed = [];
+  env.win.ResizeObserver = function (cb) {
+    this.observe = (el) => observed.push({ el, cb, ro: this });
+    this.disconnect = () => { this.gone = true; };
+  };
+  try {
+    const m = mountGear(env);
+    m.gear.update(payload({ type: 'bar', category: 'ARM', color: 'SEX', position: 'stack' }));
+    const seg = row(m.el, 'position').querySelector('.blockr-segmented');
+    assert.ok(seg.classList.contains('vz-seg--icons'));
+    assert.equal(seg.querySelectorAll('.vz-seg-icon svg').length, 3);
+    assert.deepEqual(Array.from(seg.querySelectorAll('.vz-seg-word')).map((w) => w.textContent),
+                     ['Stacked', 'Side by side', '100%']);
+    assert.ok(!seg.classList.contains('vz-seg--bare'));
+    assert.equal(seg.querySelector('button').getAttribute('data-blockr-tooltip'), null);
+    // Four or more icons take the whole row, so their words have room.
+    assert.ok(row(m.el, 'legend').classList.contains('vz-row--wide'));
+    assert.ok(!row(m.el, 'position').classList.contains('vz-row--wide'));
+    const watch = observed.find((o) => o.el.contains(seg));
+    room = 100;
+    watch.cb();
+    assert.ok(seg.classList.contains('vz-seg--bare'));
+    const b = seg.querySelectorAll('button')[1];
+    assert.equal(b.getAttribute('data-blockr-tooltip'), 'Side by side');
+    assert.equal(b.getAttribute('aria-label'), 'Side by side');
+    room = 400;
+    watch.cb();
+    assert.ok(!seg.classList.contains('vz-seg--bare'));
+    assert.equal(b.getAttribute('aria-label'), null);
+    // A segmented control without icons keeps its words only.
+    m.gear.update(payload({ type: 'bar', category: 'ARM', missing: 'level' }));
+    assert.equal(row(m.el, 'missing').querySelector('.vz-seg-icon'), null);
+    m.scope.dispose();
+    assert.ok(watch.ro.gone, 'the observer goes with the gear');
+  } finally {
+    P.getBoundingClientRect = rect;
+  }
+});
+
+test('every option of an icons entry has a drawing, in both blocks and their records', () => {
+  const env = loadGear();
+  const glyphs = env.V.gear.glyphs;
+  let n = 0;
+  const walk = (args) => {
+    for (const [key, arg] of Object.entries(args || {})) {
+      if (arg.gear && arg.gear.icons) {
+        assert.equal(arg.gear.control, 'segmented', key);
+        for (const v of arg.values) {
+          assert.match(glyphs[key + ':' + v] || '', /^<svg class="vz-glyph"/, key + ':' + v);
+          n += 1;
+        }
+      }
+      walk(arg.type.fields);
+      for (const fields of Object.values(arg.type.variants || {})) walk(fields);
+    }
+  };
+  walk(env.V.spec.chart);
+  walk(env.V.spec.table);
+  assert.ok(n >= 40, n + ' options with icons');
+  for (const t of Object.keys(env.V.spec.table.summaries.type.variants)) {
+    assert.match(glyphs['summary:' + t], /viewBox="0 0 24 24"/, t);
+  }
+});
+
 test('toggle: drill switches on with auto and shows the column picker', () => {
   const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', drill: null }, { host: {
     choices: (k) => (k === 'drill' ? [{ value: 'auto', label: 'Auto, the clicked group' }] : null) } });
