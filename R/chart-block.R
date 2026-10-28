@@ -1,5 +1,6 @@
 #' @rdname new_chart_block
 #' @export
+# viz: long the formals mirror the spec, one argument per line
 new_chart_block <- function(
     type = "bar",
     ...,

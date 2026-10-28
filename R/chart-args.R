@@ -61,7 +61,8 @@ chart_infer_orientation <- function(type, x, y, func, is_num) {
     return(if (count) "horizontal" else "vertical")
   }
   if (has_x && has_y) {
-    return(if (isTRUE(is_num(x)) && isFALSE(is_num(y))) "horizontal" else "vertical")
+    horizontal <- isTRUE(is_num(x)) && isFALSE(is_num(y))
+    return(if (horizontal) "horizontal" else "vertical")
   }
   if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal"
 }
@@ -169,10 +170,12 @@ chart_legacy_args <- function(args) {
   for (o in names(renames)) move(o, renames[[o]])
   if ("direct_labels" %in% names(args)) {
     v <- take("direct_labels")
-    if (is.null(args$legend) && isTRUE(bool_state(v))) args$legend <- "marks"
+    if (is.null(args[["legend"]]) && isTRUE(bool_state(v))) {
+      args$legend <- "marks"
+    }
   }
 
-  type <- as.character(unlist(args$type %||% "bar"))[1L]
+  type <- as.character(unlist(args[["type"]] %||% "bar"))[1L]
   baseline <- take("baseline")
   if (identical(type, "bar") && identical(baseline, "cumulative")) {
     type <- "waterfall"
@@ -189,11 +192,11 @@ chart_legacy_args <- function(args) {
   group <- take("group")
   value <- take("value")
   if (type %in% CHART_AGGREGATED_TYPES) {
-    func <- args$func %||% "count"
+    func <- args[["func"]] %||% "count"
     value <- chr_state(value)
     if (identical(value, ".count")) value <- NULL
     group <- chr_state(group)
-    orient <- chr_state(args$orientation)
+    orient <- chr_state(args[["orientation"]])
     if (type %in% CHART_ORIENTED_TYPES) {
       orient <- orient %||%
         (if (type %in% CHART_DISTRIBUTION_TYPES) "vertical" else "horizontal")
@@ -204,8 +207,8 @@ chart_legacy_args <- function(args) {
         args$x <- group
         args$y <- value
       }
-      inferred <- chart_infer_orientation(type, args$x, args$y, func,
-                                          function(col) NA)
+      inferred <- chart_infer_orientation(type, args[["x"]], args[["y"]],
+                                          func, function(col) NA)
       # Without data a distinct count cannot be inferred: keep the saved one.
       keep <- !identical(inferred, orient) ||
         func %in% c("count_distinct", "pct_distinct")
@@ -219,10 +222,12 @@ chart_legacy_args <- function(args) {
 
   band_id <- chr_state(take("band_id"))
   count_col <- chr_state(take("count_col"))
-  if (is.null(args$id)) args["id"] <- list(band_id %||% count_col)
+  if (is.null(args[["id"]])) args["id"] <- list(band_id %||% count_col)
 
-  if (!is.null(args$pct_of)) {
-    args$pct_of <- chart_pct_of_public(as.character(unlist(args$pct_of)))
+  if (!is.null(args[["pct_of"]])) {
+    args$pct_of <- chart_pct_of_public(
+      as.character(unlist(args[["pct_of"]]))
+    )
   }
 
   ft <- take("filter_type")
@@ -231,7 +236,7 @@ chart_legacy_args <- function(args) {
   fp <- take("filter_point")
   fc <- take("filter_column")
   fv <- take("filter_values")
-  if (is.null(args$selection)) {
+  if (is.null(args[["selection"]])) {
     fl <- chart_filters_state(fl) %||% chart_legacy_filters(fc, fv)
     args["selection"] <- list(chart_selection(
       ft, fl, null_state(fr), null_state(fp)
