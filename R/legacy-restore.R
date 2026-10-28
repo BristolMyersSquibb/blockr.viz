@@ -1,11 +1,13 @@
 # LEGACY: this file and R/legacy.R, R/legacy-deser.R go when boards from
 # blockr.viz < 0.3.0.9000 need no longer restore.
 #
-# legacy_restore() maps a saved state (a payload or a call's arguments) to
-# the current names: the old translators (legacy_chart_roles(),
-# legacy_table_args()), the renames and value maps of LEGACY_NAMES, the
-# rules a map cannot say (legacy_values()), summary entries and shading
-# rules, title templates, dropped names, then viz_heal().
+# legacy_translate() maps a saved state or a call's arguments to the current
+# names, in one order: the renames of LEGACY_NAMES and the translators a
+# rename cannot say (legacy_chart_roles(), legacy_table_args()), the old
+# selection shape, the value maps, the rules a map cannot say
+# (legacy_values()), summary entries and shading rules, title templates,
+# dropped names. A restore heals what is left (viz_heal()); the constructor
+# warns about what it translated and leaves bad values to viz_check().
 
 # Boards saved by the rewritten blocks carry at least this version. Before
 # it, the table's `color = NULL` meant "auto".
@@ -15,27 +17,31 @@ VIZ_REWRITE_VERSION <- "0.3.0.9000"
 # of the block's spec.
 legacy_restore <- function(block, state, version = NULL) {
   stopifnot(block %in% c("chart", "table"), is.list(state))
-  state <- legacy_map_values(block, legacy_named(block, as.list(state)))
-  state <- legacy_values(block, state, version)
-  if (identical(block, "table")) state <- legacy_table_selection(state)
-  state <- legacy_entries(block, state)
-  for (k in intersect(c("title", "subtitle", "caption"), names(state))) {
-    state[k] <- list(legacy_template(block, state[[k]], state))
-  }
-  state <- legacy_drop(block, state)
-  viz_heal(viz_block_spec(block), state)
+  viz_heal(viz_block_spec(block), legacy_translate(block, state, version)$out)
 }
 
-# The constructor's hook: old names and values in code are translated with
-# one warning. Values the spec refuses are left to viz_check() (errors).
+# Code speaks the current version: an unset `color` is off, not "auto".
 legacy_ctor_args <- function(block, args) {
-  named <- legacy_named(block, args)
+  tr <- legacy_translate(block, args, VIZ_REWRITE_VERSION)
+  legacy_warn(block, args, tr$named, tr$out)
+  tr$out
+}
+
+# `named` is the state after the renames and translators, `out` the result.
+legacy_translate <- function(block, x, version) {
+  named <- legacy_named(block, as.list(x))
   if (identical(block, "table")) named <- legacy_table_selection(named)
-  out <- legacy_map_values(block, named)
-  if (identical(block, "table")) out <- legacy_table_drill(out)
-  out <- legacy_script(legacy_drop(block, legacy_entries(block, out)))
-  # Old names, and current names given an old value; anything else is left
-  # to viz_check().
+  out <- legacy_values(block, legacy_map_values(block, named), version)
+  out <- legacy_entries(block, out)
+  for (k in intersect(c("title", "subtitle", "caption"), names(out))) {
+    out[k] <- list(legacy_template(block, out[[k]], out))
+  }
+  list(named = named, out = legacy_drop(block, out))
+}
+
+# One warning naming the old names in a call, and the current names given an
+# old value; anything else is left to viz_check().
+legacy_warn <- function(block, args, named, out) {
   current <- names(viz_block_spec(block)$args)
   known <- LEGACY_NAMES$old[LEGACY_NAMES$block == block]
   renamed <- intersect(setdiff(names(args), current), known)
@@ -66,7 +72,7 @@ legacy_ctor_args <- function(block, args) {
     warning("new_", block, "_block(): `direct_labels = TRUE` is now ",
             "`legend = \"marks\"`.", call. = FALSE)
   }
-  out
+  invisible()
 }
 
 # The old names of a block: those LEGACY_NAMES renames or drops.
@@ -140,7 +146,9 @@ legacy_map_values <- function(block, x) {
 # Rules a value map cannot say.
 legacy_values <- function(block, x, version) {
   x <- legacy_script(x)
-  if (identical(block, "chart")) {
+  # What the blocks before the rewrite saved in another form; code speaks the
+  # current version, where such a value is an error.
+  if (identical(block, "chart") && legacy_before_rewrite(version)) {
     if (length(x[["percent_of"]]) > 1L) {
       x$percent_of <- x$percent_of[[1L]]
     }
