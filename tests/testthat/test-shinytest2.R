@@ -1079,3 +1079,32 @@ test_that("a chart whose labels all fit says nothing", {
   chart_settle("chart")
   expect_null(chart_cap_text("chart"))
 })
+
+# A tall chart (320 bars, 4,000 px) must not put its status line below the
+# visible part of its panel: the footer sticks to the bottom of whatever
+# scrolls. A dock panel scrolls; here the block's card is given a panel's
+# height. Without it the line, and a drill's receipt, sat 3,000 px down.
+test_that("a tall chart keeps its status line in view", {
+  skip_if_no_app()
+  chart_settle("chart_many")
+  pos <- js_get(sprintf(
+    "(function(){
+       var v = document.querySelector('%s');
+       var box = v.closest('.card-body');
+       box.style.maxHeight = '600px';
+       box.scrollTop = 0;
+       var f = v.querySelector('.vz-foot').getBoundingClientRect();
+       var b = box.getBoundingClientRect();
+       var c = v.querySelector('@chart@').getBoundingClientRect();
+       var out = {top: f.top - b.top, bottom: b.bottom - f.bottom,
+                  panel: b.height, chart: c.height};
+       box.style.maxHeight = '';
+       return out;
+     })()",
+    view_sel("chart_many", "chart")
+  ))
+  expect_gt(pos$chart, pos$panel)
+  expect_gte(pos$top, 0)
+  expect_gte(pos$bottom, -1)
+  expect_match(chart_cap_text("chart_many"), "Axis labels thinned", fixed = TRUE)
+})

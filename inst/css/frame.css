@@ -77,6 +77,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  /* A tall chart or table (a waterfall of 250 subjects is 4,000 px) would
+     put the count, the status line and a drill's receipt below the visible
+     part of the panel. The footer sticks to the bottom of whatever scrolls
+     while the block is in view. Empty, it has no height. */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--blockr-color-bg-surface, #fff);
 }
 .vz-foot > .vz-count:empty,
 .vz-foot > .vz-status:empty { display: none; }
