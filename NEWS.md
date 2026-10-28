@@ -43,6 +43,28 @@ read.
 * In the groups layout, a custom summary that fails only on the parent rows
   of a nested `by` shows as one failed column with its error; the table
   still draws.
+* Title slots resolve in the records and variables layouts as well:
+  `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
+  there.
+* Unsetting a table's `drill_target` clears the selection at the old target
+  once; it was cleared twice.
+* A board saved with a click on an aggregated old table keeps that click
+  when it restores in the groups layout: the table shows it and the output
+  is filtered. Before, the restored output was unfiltered.
+
+## Removed
+
+* The gt table block (`new_gt_table_block()`, `gt_table()`); gt is no
+  longer suggested.
+* The drilldown chart, waterfall and drilldown table blocks of blockr.viz
+  0.0.x. Their saved boards no longer restore. A waterfall is
+  `new_chart_block(type = "waterfall")`.
+* `new_tile_block()`. A tile is `new_table_block(look = "cards")`. Saved
+  tile boards restore as table blocks in the cards look: a tile with
+  `summaries` in the groups layout, any other in the records layout.
+* `new_summary_table_block()` and `new_summarize_table_block()` are
+  superseded: they translate their arguments and return a table block in
+  the variables and the groups layout.
 
 ## Downloads
 
@@ -77,8 +99,14 @@ goes.
   are `drill_target` and `drill_table`, `values` is `script_values`, and
   the `filter_*` fields are `selection`. `func_toggle` is dropped.
 * Chart values: `type = "radar"` becomes a bar chart, with a warning;
+  `baseline = "cumulative"` on a bar is `type = "waterfall"`; `bar_mode`
+  `"stacked"`, `"grouped"` and `"percent"` are `position` `"stack"`,
+  `"dodge"` and `"fill"`; `pct_of = "group"` is `"category"`; `y_scale`
+  and `x_scale` `"linear"` and `"log"` are `"identity"` and `"log10"`;
   `show_n = "off"` is `"none"`; `connect = "step-start"` and its siblings
-  are `"step_start"`; `"on"` and `"off"` are `TRUE` and `FALSE`.
+  are `"step_start"`, and `connect = "off"` is `"straight"`;
+  `box_points = "all"` is `"none"`; `"on"` and `"off"` are `TRUE` and
+  `FALSE`. Several `percent_of` values keep the first.
 * Table arguments: `value` and `values` are `columns`, `group` is `by`,
   `cell_color` is `shadings`, `row_color` is `color`, `rotate_titles` and
   `compact` are `look`, `digits` is `format`, the three `*_download`
@@ -88,16 +116,23 @@ goes.
   table's `vars`, `add_overall`, `overall_label`, `nest_hierarchies` and
   `id_var` are `summaries`, `total`, `total_label`, `nest` and `id`.
   `max_height`, `indent_details` and `state` are dropped.
+* Table values: `sort_by = "label"` is `"alpha"`, `stats = "compact"` is
+  `"mean_sd"`, and an old aggregation `list(func, cols)` in `summaries`
+  becomes one number column per function and column.
 * Summary keys: `band` is `ymin`, `ref` is `summary` or `x_lines`,
   `ref_lo`, `ref_hi`, `lo` and `hi` are `ref_min` and `ref_max`, `dash` is
-  `linetype`, `from` and `to` are `x` and `xend`, `fields` is `tooltip`,
-  `stat` and `inner` are `summary`, `outer` is `whiskers`, `style` is
-  `show`, `denom` is `id`, `type = "series"` is `"sparkline"`, and
-  `position = "stacked"` is `"stack"`.
-* Shading keys: `cols` is `columns` and `type` is `mode`.
+  `linetype`, `from` and `to` are `x` and `xend`, `from_func` and
+  `to_func` are `x_func` and `xend_func`, `fields` is `tooltip`, `stat`
+  and `inner` are `summary`, `outer` is `whiskers`, `style` is `show`
+  (`"dot"` is `"pointrange"`), `denom` is `id`, `type = "series"` is
+  `"sparkline"`, `ref = "median_iqr"` is `"median_q1_q3"`, and `position`
+  `"stacked"`, `"grouped"` and `"percent"` are `"stack"`, `"dodge"` and
+  `"fill"`. `scope`, `parent` and `facet_order` are dropped.
+* Shading keys: `cols` is `columns` and `type` is `mode`. `palette` and
+  `source` are dropped.
 * Saved boards: chart and table blocks restore under the new names, title
-  templates included (`{@group}` becomes `{@x}` or `{@y}`). Tile and
-  summary table blocks restore as table blocks. gt, summarize,
+  templates included (`{@group}` becomes `{@x}` or `{@y}`). Tile, summary
+  table and summarize table blocks restore as table blocks. gt,
   `drilldown_chart`, `waterfall` and `drilldown_table` blocks no longer
   restore.
 
