@@ -95,7 +95,7 @@ board_min_font_size <- function() {
 #'
 #' @return A `board_option` object.
 #' @seealso [write_exhibit_pptx()], [pptx_add_exhibit()]
-#' @examplesIf interactive()
+#' @examples
 #' new_exhibit_font_option()
 #' @export
 new_exhibit_font_option <- function(value = 11, category = "Table options",

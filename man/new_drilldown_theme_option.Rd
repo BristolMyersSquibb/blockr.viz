@@ -22,7 +22,5 @@ Matches \code{blockr.echarts::new_echart_theme_option()} so boards can mix the
 two mechanisms without collision.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_drilldown_theme_option()
-\dontshow{\}) # examplesIf}
 }

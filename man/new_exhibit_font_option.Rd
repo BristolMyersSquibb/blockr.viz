@@ -42,9 +42,7 @@ summarize table or chart block all read it, so a slide and the block it
 came from stay the same table.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_exhibit_font_option()
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}, \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}}

@@ -251,8 +251,6 @@ as_plain_df <- function(x, ...) {
 #' @return A subset of `source`: the rows the claim selects. When nothing is
 #'   claimed, a zero-row frame or the whole source (`unclaimed`).
 #' @seealso [as_annotated_df()], [new_table_block()] (`drill = "source"`)
-#' @examplesIf interactive()
-#' drill_source(drilled_table)
 #' @export
 drill_source <- function(x, source = NULL, columns = NULL,
                          unclaimed = c("none", "all")) {
