@@ -219,6 +219,9 @@ test_that("LEGACY_NAMES points at names the specs have", {
                                              function(s) names(s$args))))),
     shading = names(table_shading_spec()$args)
   )
+  # The heatmap restores as a table: its names land on the table or on its
+  # tile summary.
+  targets$heatmap <- c(targets$table, targets$summary)
   expect_setequal(unique(LEGACY_NAMES$block), names(targets))
   kept <- LEGACY_NAMES[!is.na(LEGACY_NAMES$new), ]
   for (i in seq_len(nrow(kept))) {

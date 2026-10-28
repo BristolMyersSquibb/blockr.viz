@@ -65,71 +65,39 @@ blockr_deser.summary_table_block <- function(x, data, ...) {
 #' @export
 blockr_deser.tile_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
-  p <- data[["payload"]]
-  # The tile's own arguments; whatever else rides on the payload is a block
-  # attribute (block_name, ...) and passes through.
-  own <- c("value", "group", "by", "name", "summaries", "color", "layout",
-           "overline", "caption", "secondary", "style", "good_when",
-           "format", "unit", "drill", "filter_column", "filter_values",
-           "filter_col", "filter_value", "ctrl_target", "ctrl_table",
-           "measures", "showcase", "state")
-  attrs <- p[setdiff(names(p), own)]
-  value <- chr_vec_state(p[["value"]]) %||% character()
-  group <- chr_vec_state(p[["group"]] %||% p[["by"]]) %||% character()
-  group <- group[nzchar(group)]
-  name <- chr_state(p[["name"]])
-  summaries <- p[["summaries"]]
-  filter_column <- chr_vec_state(p[["filter_column"]] %||% p[["filter_col"]])
-  filter_values <- null_state(p[["filter_values"]] %||% p[["filter_value"]])
-  drill_target <- chr_state(p[["ctrl_target"]]) %||% ""
-  drill_table <- chr_state(p[["ctrl_table"]]) %||% ""
-  label <- chr_state(attrs[["block_name"]]) %||% "a tile"
+  legacy_new_table(legacy_deser("tile_block", data))
+}
 
-  dropped <- function(nm) {
-    set <- vapply(nm, function(k) {
-      v <- p[[k]]
-      !is.null(v) && length(v) && !identical(v, "") &&
-        !identical(v, "plain") && !identical(v, "number") &&
-        !identical(v, "up") && !identical(v, "cards")
-    }, logical(1L))
-    nm[set]
+#' Legacy deserialization for the heatmap block
+#'
+#' The heatmap block of blockr.viz < 0.3.0 is gone: a heatmap is a table
+#' block in the groups layout and the compact look, one tile summary counting
+#' the rows per `col` value and painted by the worst `color`, one row per
+#' `row` value grouped by `group`. A board saved with one restores as that
+#' table, with a warning, and saves as a table block from then on. A heatmap
+#' another package built (blockr.pharma's AE heatmap) restores through that
+#' package's constructor.
+#'
+#' Drop this method when backwards compatibility is no longer needed.
+#'
+#' @inheritParams blockr_deser.tile_block
+#' @keywords internal
+#' @export
+blockr_deser.heatmap_block <- function(x, data, ...) {
+  pkg <- data[["constructor"]][["package"]]
+  if (!is.null(pkg) && !identical(pkg, "blockr.viz")) {
+    return(NextMethod())
   }
+  stopifnot("payload" %in% names(data))
+  legacy_new_table(legacy_deser("heatmap_block", data))
+}
 
-  if (table_is_agg_summaries(summaries)) {
-    args <- list(
-      layout = "groups", by = group, look = "cards",
-      summaries = table_agg_to_summaries(summaries),
-      drill = if (isTRUE(p[["drill"]]) && length(group)) group[[1L]],
-      drill_target = drill_target, drill_table = drill_table,
-      selection = if (length(filter_column) && length(filter_values)) {
-        list(column = filter_column, values = filter_values)
-      }
-    )
-    lost <- dropped(c("format", "unit", "secondary", "caption", "overline"))
-  } else if (is.null(name) && length(value)) {
-    args <- list(layout = "records", look = "cards", columns = value,
-                 rowname = if (length(group)) group[[1L]])
-    lost <- dropped(c("format", "unit", "secondary", "style", "caption",
-                      "overline", "drill"))
-  } else {
-    args <- list(
-      layout = "records", rowname = name %||% (if (length(group)) group[[1L]]),
-      columns = unique(c(group, value, chr_state(p[["secondary"]])))
-    )
-    lost <- c("the long tile frame", dropped(c("format", "unit", "style",
-                                               "caption", "overline",
-                                               "drill")))
-  }
-  if (length(lost)) {
-    warning(
-      "The tile block is gone: ", label, " restores as a table block. ",
-      "Not carried over: ", paste(lost, collapse = ", "), ".",
-      call. = FALSE
-    )
-  }
+# The table block a legacy restore becomes, saved as a table from then on.
+legacy_new_table <- function(res) {
   do.call(
     new_table_block,
-    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
+    c(res$args, res$attrs,
+      list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
   )
 }
 
