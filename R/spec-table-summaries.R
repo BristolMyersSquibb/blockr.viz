@@ -206,8 +206,8 @@ table_summary_specs <- function() {
         type = "column", null = "no band",
         gear = gear("Columns", "column", "Line from"),
         describe = paste(
-          "Start of a dark line through the middle of the lane (a duration",
-          "of response). Both or neither."
+          "Start of a dark line through the middle of the lane (a phase",
+          "such as a trial period). Both or neither."
         )
       ),
       band_xend = viz_arg(
@@ -220,7 +220,7 @@ table_summary_specs <- function() {
         gear = gear("Columns", "column", "Events at"),
         describe = paste(
           "Positions of point events, which may lie past the last segment",
-          "(a death after treatment end)."
+          "(a churn date after the contract ended)."
         )
       ),
       event_shape = viz_arg(

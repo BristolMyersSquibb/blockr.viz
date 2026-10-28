@@ -216,7 +216,7 @@ groups_dom_interval <- function(plan, idx, rows) {
     for (ss in rows[[plan[[i]]$segs]]) {
       for (sg in ss) ext <- c(ext, sg$s, sg$e)
     }
-    # Ticks, the line and events widen the axis too: a death after the last
+    # Ticks, the line and events widen the axis too: an event after the last
     # segment still lands inside the cell.
     ovl <- plan[[i]]$ovl
     if (!is.null(ovl)) {

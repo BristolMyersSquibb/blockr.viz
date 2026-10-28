@@ -470,8 +470,8 @@
   border-radius: var(--blockr-mark-radius, 2px);
 }
 /* Swimlane overlays. Ticks are surface-coloured cuts across the segments
-   (assessment visits), so they vanish where there is no segment. The line is
-   dark and thin through the middle (duration of response). The arrow says the
+   (check-ins, inspections), so they vanish where there is no segment. The line is
+   dark and thin through the middle (a phase within the span). The arrow says the
    lane is still open at its last segment's end. Events sit on top, each shape
    over a 2px surface ring so it reads on any fill; they may lie past the last
    segment. Ticks, line and arrow let the pointer through to the segment. */

@@ -273,7 +273,7 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
     if (length(ss)) ss[[1L]]$s else NA_real_
   }, numeric(1L))
   target[[groups_col(sid, "nseg")]] <- lengths(segs)
-  # The overlays are one row's facts (its visits, its death); a parent row
+  # The overlays are one row's facts (its check-ins, its milestones); a parent row
   # pools its rows' segments but draws none of them.
   if (groups_spans_has_overlay(s)) {
     target[[groups_col(sid, "ovl")]] <- I(if (isTRUE(parent_row)) {
