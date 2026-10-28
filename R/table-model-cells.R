@@ -1,40 +1,16 @@
-# Table model: the cell model of the groups layout --------------------------
-#
-# Pure compute, no markup and no JSON. summarize_cells() turns the prepared
-# table (`prep`) into the cell model both consumers read (the HTML emitter and
-# the JSON payload in summarize-push.R). This file holds the entry point, the
-# scale helpers every column kind shares, the row meta and the hover-card
-# column description. One builder per column kind lives in
-# table-model-cells-columns.R (bar, tile, split, diverging, text, number),
-# table-model-cells-lanes.R (box, point range, pair) and
-# table-model-cells-marks.R (swimlane, sparkline). The axis domain, tick and
-# value-label helpers are in table-model-cells-axis.R.
-
-#' The cell model: everything both consumers need, computed once.
-#'
-#' Per-column entries carry `kind` plus only the vectors that kind uses:
-#'   bar      -> `w` (percent widths, NA = no value = no fill), `v` (sort
-#'               values), `fill`, `sub`, and the in-bar label (`disp`/`pct`/
-#'               `dw`) when the plan asks for one
-#'   barsplit -> `seg` (list of per-series width vectors), `segv`, `fills`,
-#'               `names`, `mode`, plus the in-bar label
-#'   bardiv   -> `w`, `v`, `pos` (polarity), plus the signed in-bar label
-#'   num      -> `disp` (display strings), `v`; `text` marks a left-aligned
-#'               raw field column
-#' Widths are already rounded to the 2dp both consumers print. `dw` is the
-#' label slot's width in ch -- ONE number per column, computed here, so every
-#' row reserves the same slot and the tracks stay aligned.
+#' The cell model both consumers read. A column entry has `kind` plus only
+#' the vectors that kind uses (`w` percent widths with NA = no fill, `v` sort
+#' values, `disp`/`pct`/`dw` for the in-bar label). Widths are rounded to 2dp.
+#' `dw` is the label slot width in ch, one number per column so every row
+#' reserves the same slot.
 #' @noRd
 summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   rows <- prep$rows
   plan <- prep$plan
   n <- nrow(rows)
 
-  # What every column builder reads: the rows, the prep (axis domains, number
-  # format, palette), the prep-level scale and the Values switch.
-  # The table's Values switch (`value_labels`, default on): off drops every
-  # value label beside a mark, whatever the mark. Number and text columns ARE
-  # their values and are not touched.
+  # Shared by every column builder. `vals_on` is the Values switch: off drops
+  # value labels beside marks (number and text columns are untouched).
   ctx <- list(
     rows = rows, n = n, prep = prep, mx = prep$bar_max,
     mn = prep$bar_min %||% 0, vals_on = !isFALSE(cfg$value_labels)
@@ -44,21 +20,14 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   cols <- cells_annotate(cols, plan)
 
   st <- cells_row_state(prep, rows, active)
-  # The one row of a table without `by` has no group to drill on and
-  # nothing to sort against.
+  # A table without `by` has no group to drill on.
   if (isTRUE(prep$all)) drill <- NULL
 
   list(
     n = n,
-    thead = summarize_thead(prep, sortable = !isTRUE(prep$all) &&
-                              isTRUE(cfg$sortable %||% TRUE),
-                            cols = cols, axis = isTRUE(cfg$axis %||% TRUE)),
-    tfoot = summarize_tfoot(prep, cols = cols,
-                            axis = isTRUE(cfg$axis %||% TRUE)),
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
-    # A compact matrix opens its groups, as the heatmap did: the subjects are
-    # what it shows.
+    # A compact matrix opens its groups.
     expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))) ||
       isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
@@ -71,17 +40,14 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     on = st$on,
     on_cell = st$on_cell,
     pick = !is.null(drill),
-    # The columns a row click claims, outer -> inner: a parent row claims the
-    # first, a child row both (R/summarize-drill.R).
+    # Columns a row click claims, outer to inner (R/summarize-drill.R).
     path = c(summarize_chr1(prep$parent), summarize_chr1(prep$group)),
     cols = cols,
-    fold = summarize_fold_text(prep),
-    attrs = summarize_table_attrs(prep, cfg)
+    fold = summarize_fold_text(prep)
   )
 }
 
-# One plan entry -> its column of the cell model. The branch order is the
-# dispatch: the first entry that matches wins.
+# One plan entry to its column. The first matching branch wins.
 cells_column <- function(ctx, p) {
   # Per-entry scale, falling back to the prep-level one.
   b <- cells_bounds(p$dmin %||% ctx$mn, p$dmax %||% ctx$mx)
@@ -112,17 +78,12 @@ cells_column <- function(ctx, p) {
   }
 }
 
-# `v` is the sort key and the data-v attribute, nothing else, so full float
-# precision is pure payload: a faceted percentage like 23.734177215189873
-# costs 18 bytes per cell against 5 for 23.73. Rounded HERE so both consumers
-# print the same string and the drift guard stays green.
+# `v` is the sort key and data-v, rounded to 4dp so both consumers print the
+# same string and the payload stays small.
 cells_sortv <- function(v) if (is.numeric(v)) round(v, 4L) else v
 
-# NA stays NA: a no-value cell (the identity measure's absent facet) draws
-# NO fill at all, where 0 draws the visible zero-width sliver.
-# Parametric over the scale: summaries-path plan entries carry their own
-# domain (mixed marks must not share one), single-mark paths use the
-# prep-level scale.
+# NA stays NA: a no-value cell draws no fill, where 0 draws a zero-width
+# sliver. Summaries-path plan entries carry their own domain.
 cells_pct_w <- function(v, e_mx) {
   w <- if (is.finite(e_mx) && e_mx > 0) {
     pmax(0, pmin(100, abs(v) / e_mx * 100))
@@ -134,12 +95,9 @@ cells_pct_w <- function(v, e_mx) {
   round(w, 2L)
 }
 
-# Position/width on the lane marks' shared domain [bar_min, bar_max]: the
-# bar's pct_w() generalized to a domain that need not start at zero (a
-# box of change-from-baseline values has a negative lo). Positions and
-# widths are BOTH computed from raw values here and shipped rounded, so the
-# two consumers never subtract floats themselves (String(24.13 - 10.5) in
-# JS is not "13.63").
+# Position and width on the lane marks' shared domain, which need not start at
+# zero. Computed from raw values and rounded here so consumers never subtract
+# floats (String(24.13 - 10.5) in JS is not "13.63").
 cells_bounds <- function(e_mn, e_mx) {
   rng <- if (is.finite(e_mx) && is.finite(e_mn) && e_mx > e_mn) {
     e_mx - e_mn
@@ -162,8 +120,8 @@ cells_bounds <- function(e_mn, e_mx) {
   )
 }
 
-# The in-bar value label: the raw measure (never the width percentage),
-# with the counting measures' "(43%)" tail when the plan carries a base.
+# The in-bar value label: the raw measure, with a "(43%)" tail for counting
+# measures that carry a base.
 cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
   prep <- ctx$prep
   if (!ctx$vals_on || !isTRUE(p$show_val)) return(NULL)
@@ -177,8 +135,7 @@ cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
                                } else if (!is.na(dig)) {
                                  function(v) summarize_val_str(v, dig)
                                })
-  # formatC pads "fg" output to a common width; harmless in a collapsing
-  # HTML cell but it would inflate the label slot -- trim before measuring.
+  # formatC pads "fg" output; trim before measuring the label slot.
   parts$disp <- trimws(parts$disp)
   len <- nchar(parts$disp) +
     if (is.null(parts$pct)) 0L else ifelse(nzchar(parts$pct),
@@ -186,12 +143,9 @@ cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
   c(parts, list(dw = max(c(1L, len))))
 }
 
-# What the hover card says about each column, beside the row's numbers:
-# its header and sub-line (the arm and its N, or the summary's name), the
-# measure a bar shows, the colour column a split names its levels by, the
-# percentage base, and the statistic words of a distribution. Then what a
-# click on a cell adds to the row's claim: a facet column its level, a colour
-# split the level of the segment hit (the drill, below).
+# Hover-card column description (header, sub-line, measure, colour column,
+# percentage base, statistic words), plus what a click adds to the row's claim:
+# a facet column its level, a colour split the level of the segment hit.
 cells_annotate <- function(cols, plan) {
   for (i in seq_along(cols)) {
     cols[[i]]$tt <- summarize_tip_meta(plan[[i]])
@@ -208,8 +162,8 @@ cells_annotate <- function(cols, plan) {
   cols
 }
 
-# A stored click is the row's path, plus what a cell added. The row lights
-# from its path; the cell part goes to the client, which marks the cell.
+# A stored click is the row's path plus what a cell added; the cell part goes
+# to the client.
 cells_row_state <- function(prep, rows, active) {
   path <- c(summarize_chr1(prep$parent), summarize_chr1(prep$group))
   filters <- summarize_drill_filters(active$col, active$vals)
@@ -241,8 +195,7 @@ summarize_parent_labels <- function(rows) {
   parent
 }
 
-#' The fold row's text, or NULL when nothing was capped. Never a silent
-#' truncation: `top_n` always says what fell below the cut.
+#' The fold row's text, or NULL when nothing was capped.
 #' @noRd
 summarize_fold_text <- function(prep) {
   if (!isTRUE(prep$folded > 0L)) return(NULL)
@@ -258,8 +211,7 @@ summarize_fold_text <- function(prep) {
   )
 }
 
-#' The hover card's column description (see summarize_cells()). NULL for the
-#' columns whose cell already prints everything (numbers, text).
+#' The hover card's column description. NULL where the cell prints everything.
 #' @noRd
 summarize_tip_meta <- function(p) {
   if (identical(p$kind, "num")) return(NULL)

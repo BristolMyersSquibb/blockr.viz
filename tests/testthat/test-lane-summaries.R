@@ -241,55 +241,41 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   expect_length(summarize_axis_ticks(1, 1), 0L)
   expect_length(summarize_axis_ticks(NA_real_, 1), 0L)
 
-  strip <- function(p, ...) as.character(summarize_axis_strip(p, ...))
-  expect_match(strip(list(kind = "box", dmin = 0, dmax = 100)),
-               "blockr-summarize-axis")
-  # EVERY mark on a scale gets one, each against the domain its own geometry
-  # was computed from: a bar from zero to the column max...
-  expect_match(strip(list(kind = "bar", dmin = 40, dmax = 100)),
-               "left:0%\">0</span>")
-  # ...a 100% split over the percentage itself, with the unit named once...
-  expect_match(strip(list(kind = "barsplit", mode = "percent", dmax = 7)),
-               "100%</span>")
-  # ...and a difference bar zero-centred, the comparator in the middle.
-  expect_match(strip(list(kind = "bardiv", dmax = 10)), "left:50%\">0</span>")
-  # A swimlane / sparkline axis is the x domain, printed as DATES when the x
-  # column is one (the tooltip's rule).
+  ax <- function(p, prep = NULL) table_groups_axis(p, prep)
+  at_label <- function(a, lab) as.numeric(a$at)[match(lab, a$labels)]
+  # Every mark on a scale gets one, each against its own domain: a bar from
+  # zero to the column max...
+  expect_identical(at_label(ax(list(kind = "bar", dmin = 40, dmax = 100)), "0"),
+                   0)
+  # ...a 100% split over the percentage, the unit on the last label...
+  expect_true("100%" %in% ax(list(kind = "barsplit", mode = "percent",
+                                  dmax = 7))$labels)
+  # ...and a difference bar zero-centred.
+  expect_identical(at_label(ax(list(kind = "bardiv", dmax = 10)), "0"), 50)
+  # A swimlane axis prints dates when the x column is one.
   span <- as.numeric(as.Date(c("2023-02-11", "2023-06-02")))
-  expect_match(strip(list(kind = "interval", dom = span, dom_date = TRUE)),
-               "Mar 2023")
-  interval_axis <- strip(list(kind = "interval", dom = c(0, 450)))
-  expect_match(interval_axis, "left:0%\">0</span>", fixed = TRUE)
-  expect_match(interval_axis, "left:11.11%\">50</span>", fixed = TRUE)
-  expect_match(interval_axis, "class=\"is-last\" style=\"left:100%\">450</span>",
-               fixed = TRUE)
-  expect_match(strip(list(kind = "sparkline", dom = c(0, 90))),
-               "blockr-summarize-axis")
-  # No scale, no strip -- and a degenerate domain draws nothing either.
-  expect_null(summarize_axis_strip(list(kind = "num")))
-  expect_null(summarize_axis_strip(list(kind = "box", dmin = 1, dmax = 1)))
-  # The prep-level scale stands in where the plan entry carries none (the
-  # flat ranked-bar path, where one bar_max covers every bar column).
-  expect_match(strip(list(kind = "bar"), NULL, list(bar_max = 100)),
-               "blockr-summarize-axis")
+  expect_true("Mar 2023" %in% ax(list(kind = "interval", dom = span,
+                                      dom_date = TRUE))$labels)
+  iv <- ax(list(kind = "interval", dom = c(0, 450)))
+  expect_identical(at_label(iv, c("0", "50", "450")), c(0, 11.11, 100))
+  expect_false(is.null(ax(list(kind = "sparkline", dom = c(0, 90)))))
+  # No scale, no axis; a degenerate domain neither.
+  expect_null(ax(list(kind = "num")))
+  expect_null(ax(list(kind = "box", dmin = 1, dmax = 1)))
+  # The prep-level scale stands in where the entry carries none.
+  expect_false(is.null(ax(list(kind = "bar"), list(bar_max = 100))))
 })
 
 test_that("large swimlanes repeat the axis below the table", {
   ae <- sum_fixture()
-  large <- summarize_cells(summarize_prepare(
-    ae, by = "USUBJID", summaries = list(
-      list(type = "spans", x = "ASTDY", xend = "AENDY", size = "lg")
-    )
-  ))
-  expect_match(large$tfoot, "<tfoot>", fixed = TRUE)
-  expect_match(large$tfoot, "blockr-summarize-axis", fixed = TRUE)
-
-  medium <- summarize_cells(summarize_prepare(
-    ae, by = "USUBJID", summaries = list(
-      list(type = "spans", x = "ASTDY", xend = "AENDY")
-    )
-  ))
-  expect_identical(medium$tfoot, "")
+  foot <- function(size) {
+    p <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+      c(list(type = "spans", x = "ASTDY", xend = "AENDY"), size)
+    ))
+    isTRUE(table_groups_axis(p$plan[[1L]], p)$foot)
+  }
+  expect_true(foot(list(size = "lg")))
+  expect_false(foot(list()))
 })
 
 test_that("swimlane parent rows can act as section headers", {
@@ -326,9 +312,9 @@ test_that("axis = FALSE drops every strip", {
   ae <- sum_fixture()
   S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
   prep <- lane_prepare_summaries(ae, by = "ARM", summaries = S)
-  expect_match(summarize_cells(prep)$thead, "blockr-summarize-axis")
-  expect_false(grepl("blockr-summarize-axis",
-                     summarize_cells(prep, cfg = list(axis = FALSE))$thead))
+  m <- list(prep = prep, cells = summarize_cells(prep))
+  expect_false(is.null(table_groups_view(m, axis = TRUE)$cols[[2L]]$axis))
+  expect_null(table_groups_view(m, axis = FALSE)$cols[[2L]]$axis)
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {
@@ -989,7 +975,8 @@ test_that("every facet copy carries its level's N, counted in subjects", {
   expect_identical(vapply(pl$facet_spans$groups, function(g) g$pop, 1L),
                    c(2L, 3L))
   expect_null(pl$plan[[2L]]$sub_label)
-  expect_match(summarize_thead(pl), "N = 3</span>", fixed = TRUE)
+  head <- table_groups_head(list(prep = pl), FALSE)
+  expect_true(any(grepl("N = 3", unlist(head), fixed = TRUE)))
 
   # a mean's facet N is subjects too
   pm <- summarize_prepare(d, by = "TERM", subject = "USUBJID", summaries = list(

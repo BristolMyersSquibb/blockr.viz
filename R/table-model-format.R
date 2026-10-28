@@ -1,30 +1,14 @@
-# Number formats in the table model: the table's `format` setting
-# (table_format_state(), dt_format_num()), the unit in the column headers
-# (dt_unit_labels()), and the `.fmt` cell-formatting engine below.
+# Number formats of the table model: the `format` setting, the unit in the
+# column headers, and the `.fmt` cell engine (dev/table-and-chart-architecture.md,
+# "The `.fmt` convention").
 #
-# The `.fmt` cell-formatting engine.
-#
-# Tidy shapers (summary_table/describe, broom, frequencies, ...) emit plain
-# NUMERIC columns plus a hidden per-row `.fmt` template column (a sibling of
-# `.section_*` / `.var` / `.label` / `.indent`). The renderer turns those into
-# display strings by pure interpolation: each `{col}` token in the template is
-# replaced with that row's (rounded) value of `col`.
-#
-#   .fmt = "{n} ({pct}%)"               -> "38 (54%)"
-#   .fmt = "{estimate} ({std.error})"   -> "0.05 (0.01)"
-#   .fmt = "{median} ({q1}, {q3})"      -> "12 (8, 19)"
-#
-# No codebook of named formats, no domain knowledge: the template names the
-# columns and carries the literal punctuation. Rounding stays OUT of the
-# template (a `digits` arg / per-row `.digits` owns it). See
-# dev/table-and-chart-architecture.md ("The `.fmt` convention").
+# `.fmt` engine: a hidden per-row `.fmt` template column such as
+# "{n} ({pct}%)" is interpolated into display strings from the numeric columns
+# of the same row. Rounding stays out of the template (`digits` or a per-row
+# `.digits` column owns it).
 
-#' Format one numeric value for display
-#'
-#' Fixed-decimal display (trailing zeros KEPT -- `65` at 1 dp renders
-#' `65.0`), matching the pharma fixed-precision convention the shapers
-#' produced via `sprintf("%.1f", ...)`. Non-numerics pass through.
-#' @noRd
+# Fixed decimals with trailing zeros kept (65 at 1 dp is "65.0"); non-numerics
+# pass through.
 fmt_num <- function(x, digits) {
   if (is.numeric(x)) {
     formatC(round(x, digits), format = "f", digits = digits, drop0trailing = FALSE)
@@ -33,24 +17,10 @@ fmt_num <- function(x, digits) {
   }
 }
 
-#' Interpolate per-row `.fmt` templates into display cells
-#'
-#' For each row, replaces `{col}` tokens in the `.fmt` template with that row's
-#' value of `col`, rounded to `digits` (or to a per-row `.digits` column when
-#' present). A token MAY carry its own precision as `{col:N}` (e.g.
-#' `"{mean:1} ({sd:2})"`), which overrides both `.digits` and `digits` for that
-#' one token -- needed when a single cell mixes precisions (mean at 1 dp, SD at
-#' 2 dp). Rows whose template is `NA`/`""` yield `NA` (the caller decides the
-#' fallback). Tokens naming a missing column, or rows whose referenced value is
-#' `NA`, render as `na`.
-#'
-#' @param df A data frame carrying a `.fmt` template column + the numeric
-#'   columns it references.
-#' @param fmt_col Name of the template column (default `".fmt"`).
-#' @param digits Default decimal places when no `.digits` column is present.
-#' @param na String used for `NA` cell values.
-#' @return A character vector, one formatted cell per row.
-#' @noRd
+# Interpolates each row's `.fmt` template. `{col}` takes that row's value of
+# `col`, rounded to the row's `.digits` or `digits`; `{col:N}` pins N decimals
+# for that token. An NA or "" template gives NA; a missing column or an NA value
+# renders as `na`.
 fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
   stopifnot(is.data.frame(df))
   if (!fmt_col %in% names(df)) {
@@ -66,13 +36,8 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
   live <- which(!is.na(tmpl) & nzchar(tmpl))
   if (!length(live)) return(out)
   eff_digits <- ifelse(is.na(row_digits[live]), digits, row_digits[live])
-  # Templates are highly repetitive (a handful of distinct values across
-  # thousands of rows), so parse each distinct (template, digits) combo ONCE
-  # and interpolate its rows column-vectorized: split the template into
-  # literal segments around the tokens and paste0() them back with the
-  # formatted value VECTORS (fmt_num is already vectorized). The digits
-  # default takes part in the key because it feeds every token without an
-  # explicit ":N" precision.
+  # Templates repeat heavily: parse each distinct (digits, template) once and
+  # paste the formatted value vectors between the literal segments.
   for (g in split(seq_along(live), paste0(eff_digits, "\r", tmpl[live]))) {
     rows <- live[g]
     t <- tmpl[rows[1L]]
@@ -93,7 +58,6 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
       tok <- toks[j]
       if (is.null(vals[[tok]])) {
         spec <- substring(tok, 2L, nchar(tok) - 1L)
-        # Optional per-token precision: "{col:N}" pins this token's digits.
         tok_digits <- d
         if (grepl(":", spec, fixed = TRUE)) {
           parts <- strsplit(spec, ":", fixed = TRUE)[[1]]
@@ -114,33 +78,17 @@ fmt_cells <- function(df, fmt_col = ".fmt", digits = 2L, na = "NA") {
   out
 }
 
-#' Format a tidy frame's cells, then optionally spread a group dimension to
-#' columns (the "format-then-spread" display assembly).
-#'
-#' Order matters: combine the composite cell **per row** first (n & pct live on
-#' the same row), then a plain spread on the single formatted-string column.
-#' Spreading the raw numeric columns first would force messy column-pairing.
-#'
-#' @param df Tidy frame with a `.fmt` column.
-#' @param group_col Optional column whose levels become the value columns. When
-#'   `NULL`, no spread -- the formatted cell is returned in `.cell` and the
-#'   referenced numeric columns are dropped.
-#' @param id_cols Row-identity columns to keep (default: the dotted columns
-#'   `.section_*`/`.label`/`.indent`/`.strong`/`.emph` present in `df`).
-#' @param digits,na Passed to `fmt_cells()`.
-#' @return A data frame: row-identity columns + either a `.cell` column (no
-#'   spread) or one formatted column per `group_col` level (spread).
-#' @noRd
+# Formats each row's cell first (n and pct share a row), then spreads
+# `group_col` to columns; with `group_col = NULL` it returns `.cell` alone.
+# `id_cols` defaults to the dotted row-identity columns present in `df`.
 fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
                          digits = 2L, na = "NA") {
   stopifnot(is.data.frame(df))
   df[[".cell"]] <- fmt_cells(df, digits = digits, na = na)
   if (is.null(id_cols)) {
-    # The annotated-df v2 identity + display columns. `.variable` takes part
-    # in row identity (two variables routinely share level labels -- "OTHER",
-    # "UNKNOWN", ... -- and without it the pivot merges their rows into
-    # list-cols) and, unlike the retired hidden `.var`, it STAYS in the wide
-    # output: it is the machine name a drill filters on.
+    # `.variable` is part of row identity (variables share level labels such
+    # as "OTHER", which would pivot into list-cols) and stays in the output:
+    # drills filter on it.
     id_cols <- grep(
       paste0("^\\.(label|indent|strong|emph",
              "|group\\d+(_level|_label)?",
@@ -152,12 +100,9 @@ fmt_assemble <- function(df, group_col = NULL, id_cols = NULL,
     keep <- c(id_cols, ".cell")
     return(df[, intersect(keep, names(df)), drop = FALSE])
   }
-  # Plain spread on the single formatted-string column.
   long <- df[, c(id_cols, group_col, ".cell"), drop = FALSE]
-  # pivot_wider() aborts ("spec$.name can't contain the empty string") when a
-  # group level is "" or NA -- which happens on real data (e.g. an untreated /
-  # screen-fail subject with a blank TRT01A arm). Relabel those degenerate
-  # levels so the spread can never throw at render time.
+  # pivot_wider() aborts on a "" or NA group level (a blank arm on real
+  # data); relabel it.
   gv <- as.character(long[[group_col]])
   blank <- is.na(gv) | !nzchar(trimws(gv))
   if (any(blank)) long[[group_col]][blank] <- "(Missing)"
@@ -217,29 +162,25 @@ fmt_to_wide <- function(df) {
     }
   }
 
-  # Display attributes describe the TABLE, not its layout, so they survive the
-  # long -> wide pivot. `input_display_attrs()` reads these as the auto tier
-  # behind the table block's title / subtitle / caption fields, and a producer
-  # that has something to say (e.g. summary_table() naming the one statistic a
-  # compact table shows) would otherwise lose it here.
+  # Display attributes describe the table, not its layout, so they survive the
+  # pivot; input_display_attrs() reads them for the title bands.
   for (a in c("label", "subtitle", "caption")) {
     v <- attr(df, a, exact = TRUE)
     if (!is.null(v)) attr(wide, a) <- v
   }
   wide
 }
-# The table's number format, the chart's set (chart_format_state() on the
-# chart branch): "number" (the default, up to two decimals), "compact" (1.2K,
-# 3.4M, 5.6B), "percent" (a fraction x100 with "%") or a whole number of
-# decimals, as an integer from 0 to 6. A number outside 0 to 6 is clamped
-# (an old `digits = 8` reads as 6); anything else reads as "number".
-# An old `digits = d` ("up to d decimals") as a format: 2, the old default,
-# is "number"; any other number is that many decimals, now printed exactly.
+
+# `digits = d` read as a format: 2 is "number", any other number is that many
+# decimals.
 table_digits_format <- function(digits) {
   f <- table_format_state(digits)
   if (identical(f, 2L)) "number" else f
 }
 
+# The number format, as the chart's: "number" (up to two decimals), "compact",
+# "percent", or 0 to 6 decimals as an integer. A number outside 0 to 6 is
+# clamped; anything else reads as "number".
 table_format_state <- function(format) {
   f <- unlist(format, use.names = FALSE)
   if (!length(f) || is.na(f[[1L]])) return("number")
@@ -252,22 +193,12 @@ table_format_state <- function(format) {
   "number"
 }
 
-#' A numeric cell as the table displays it, in the table's number format
-#' (table_format_state()), the same rules as the chart
-#' (inst/js/chart/format.js):
-#'
-#' - a whole number `d`: exactly `d` decimals (`2`: 4.30), so a column lines
-#'   up;
-#' - "number": up to two decimals, trailing zeros dropped (1.5 next to 2.25);
-#'   a value that would round to 0 keeps two significant digits (0.0034);
-#' - "compact": 1.2K / 3.4M / 5.6B with one decimal, below a thousand as
-#'   "number";
-#' - "percent": a fraction x100 with one decimal and "%".
-#'
-#' The cards, the groups layout's number cells, the downloads and the report
-#' format through here too, so the screen and the file show the same number.
-#' Expects non-NA values.
-#' @noRd
+# A numeric cell in the table's number format (table_format_state()), by the
+# rules of inst/js/chart/format.js: a whole number `d` is exactly d decimals;
+# "number" is up to two decimals, and a value that would round to 0 keeps two
+# significant digits; "compact" is 1.2K / 3.4M / 5.6B; "percent" is a fraction
+# x100 with one decimal. Cards, downloads and the report format through here
+# too. Expects non-NA values.
 dt_format_num <- function(v, format = "number", big.mark = "") {
   v <- as.numeric(v)
   dec <- function(x, d, drop0 = TRUE) {
@@ -298,12 +229,9 @@ dt_format_num <- function(v, format = "number", big.mark = "") {
   out
 }
 
-#' Put the table's `unit` into the headers of its numeric columns, as the
-#' chart puts it into the axis title once: "Revenue (CHF)". The stub and the
-#' dot-prefixed structure columns are left alone. `unit` empty or `NULL`, a
-#' structured frame or anything that is not a data frame comes back
-#' unchanged.
-#' @noRd
+# Appends " (unit)" to the headers of the numeric columns, leaving the stub and
+# dot-prefixed columns alone. Returns `data` unchanged for an empty unit or a
+# structured or non-data-frame input.
 dt_unit_labels <- function(data, unit, stub = NULL) {
   unit <- chr_state(trimws(as.character(unlist(unit))))
   if (is.null(unit) || !is.data.frame(data) || dt_is_structured(data)) {

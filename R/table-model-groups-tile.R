@@ -1,12 +1,5 @@
-# Table model, groups layout: tile column ---------------------------------------
-#
-# The tile is a matrix cell: the value in a square, painted by the worst level
-# of a `fill` column or by the value on a ramp. Levels, colours, the worst
-# level per row and the paint per row.
-
-# Levels of a tile's paint column in their order of severity: a factor keeps
-# its own level order (vocabularies live in the data), numeric grades order
-# numerically, a bare character column falls back to sorted values.
+# Levels of a tile's paint column in order of severity: factor levels, numeric
+# order, else sorted values.
 lane_ord_levels <- function(x) {
   if (is.factor(x)) return(levels(x))
   if (is.numeric(x)) return(as.character(sort(unique(x[is.finite(x)]))))
@@ -14,8 +7,8 @@ lane_ord_levels <- function(x) {
   sort(unique(x[!is.na(x) & nzchar(x)]))
 }
 
-# Colours for a tile's paint levels: the board's scale map when it covers
-# every level, else a light-to-dark ramp in level order (worst darkest).
+# Colours per level: the board's scale map when it covers every level, else a
+# light-to-dark ramp (worst darkest).
 lane_tile_colors <- function(map, col, levels, column = NULL) {
   levels <- as.character(levels)
   if (!length(levels)) return(character())
@@ -35,8 +28,7 @@ lane_tile_ramp <- function(n) {
   grDevices::colorRampPalette(c("#cdd9f7", "#7fa2ee", "#2f5bd3"))(n)
 }
 
-# The worst `fill` level per target row: the largest level index among the
-# slice's rows of that group, NA where the group has none.
+# Worst `fill` level index per target row; NA where the group has no rows.
 lane_tile_worst <- function(target, tkeys, slice, fill, levels) {
   if (!nrow(slice)) return(rep(NA_integer_, nrow(target)))
   idx <- match(as.character(slice[[fill]]), levels)
@@ -52,17 +44,13 @@ lane_tile_worst <- function(target, tkeys, slice, fill, levels) {
   as.integer(out)
 }
 
-# A tile column's paint per row: `bg` / `fg` hex (NA = empty cell) and `has`
-# (the cell shows a value). By the worst `fill` level when the column has
-# one, else by the value on a ramp from zero to the column's maximum. Shared
-# by the screen (summarize_cells()) and the spreadsheet
-# (summarize_export_df()).
+# Tile paint per row: `bg`/`fg` hex (NA = empty cell), `has` (cell shows a
+# value). By the worst `fill` level, else on a ramp from zero to `dmax`.
 lane_tile_paint <- function(p, rows) {
   v <- rows[[p$key]]
   n <- length(v)
   has <- is.finite(v) & !(isTRUE(p$zero_empty) & v %in% 0)
-  # A group row (an arm over its subjects) is a header in a matrix: its
-  # totals would dwarf every cell under it, so it shows no tiles.
+  # Group rows are matrix headers; their totals would dwarf the cells.
   lvl <- rows$.level
   if (!is.null(lvl) && any(lvl > 0L)) has <- has & lvl > 0L
   bg <- rep(NA_character_, n)
@@ -71,7 +59,6 @@ lane_tile_paint <- function(p, rows) {
     fills <- as.character(p$fills)
     ok <- has & !is.na(w)
     bg[ok] <- fills[w[ok]]
-    # A cell with rows but none carrying a level paints at the floor.
     bg[has & is.na(w)] <- fills[[1L]]
   } else {
     mxv <- p$dmax %||% 0
