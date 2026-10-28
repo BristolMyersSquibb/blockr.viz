@@ -34,8 +34,9 @@
       /** @type {VizScope | null} */
       this.viewScope = null;
       this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
-      this.script = this.gear ? V.scriptBand(this.frame.band, scope, this.gear.engine) : null;
-      if (!this.script) this.frame.band.style.display = 'none';
+      // The prepare script's controls, under the header.
+      this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
+      if (this.script) this.frame.box.before(this.script.el);
       if (this.gear) {
         const gear = this.gear;
         this.frame.slots = scope.own(V.titles.slots({ gear: gear.engine, scope, openGear: gear.open }));

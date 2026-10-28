@@ -371,9 +371,9 @@ test('a prepare script draws its controls and its error under the header', () =>
   const t = mount(payload({ data: flatModel(2), derived: { script } }), env);
   const band = t.$('.vz-table > .dd-mapping-band');
   assert.ok(band);
-  assert.equal(band.style.display, '');
+  assert.equal(band.hidden, false);
   assert.equal(band.querySelector('[data-role="n"] .blockr-label').textContent, 'Rows');
   assert.equal(band.querySelector('.dd-script-failed').textContent, 'Script failed: boom');
   t.render({ data: flatModel(2), derived: {} });
-  assert.equal(band.style.display, 'none');
+  assert.equal(band.hidden, true);
 });
