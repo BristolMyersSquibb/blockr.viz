@@ -1,6 +1,5 @@
 #' @rdname new_chart_block
 #' @export
-# viz: long the formals mirror the spec, one argument per line
 new_chart_block <- function(
     type = "bar",
     ...,
@@ -67,8 +66,8 @@ new_chart_block <- function(
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  # Old argument names; any other name is a block attribute (block_name,
-  # blockr.dock's `visible`) that blockr.core keeps.
+  # Old argument names; any other name is a block attribute that blockr.core
+  # keeps.
   old <- intersect(names(dots), legacy_arg_names("chart"))
   args <- legacy_ctor_args("chart", c(given, dots[old]))
   values <- viz_check(spec, args)
@@ -77,7 +76,7 @@ new_chart_block <- function(
          call. = FALSE)
   }
   values <- chart_normalize(values)
-  # blockr.core reads the starting state from this frame, by argument name.
+  # blockr.core reads the starting state from this frame by argument name.
   list2env(values, environment())
 
   res <- blockr.core::new_transform_block(
@@ -90,8 +89,7 @@ new_chart_block <- function(
     class = "chart_block",
     ...
   )
-  # blockr.core keeps `...` as attributes, and would save old names back into
-  # every board.
+  # blockr.core keeps `...` as attributes and would save the old names back.
   for (nm in old) attr(res, nm) <- NULL
   res
 }

@@ -2,16 +2,14 @@
 #
 # A click sends the clicked mark's keys as a named list,
 # `{AETERM: ["Rash"], AESEV: ["MODERATE"]}`; a value may be JSON null, a
-# missing key. The older one-column form is a `column` and its `values`.
-# Both are held as one shape, the block's `filters` state: a named list of
+# missing key. It is held as the block's `filters` state: a named list of
 # character vectors, NA for a missing value, NULL when nothing is filtered.
 # The columns AND together, in the block's own output and in a claim sent to
 # a drill target (dd_ctrl_claims()).
 
-# A filter from the constructor, saved state or a message, as a named list of
-# character vectors (NA = missing), or NULL. A JSON null arrives from Shiny
-# as NULL inside a list or as NA; both become NA. Unnamed or empty columns
-# are dropped.
+# A filter from the constructor, saved state or a message, in that shape, or
+# NULL. A JSON null arrives from Shiny as NULL inside a list or as NA; both
+# become NA. Unnamed columns are dropped.
 chart_filters_state <- function(x) {
   if (!is.list(x) || !length(x) || is.null(names(x))) {
     return(NULL)
@@ -19,15 +17,12 @@ chart_filters_state <- function(x) {
   out <- list()
   for (i in seq_along(x)) {
     col <- names(x)[[i]]
-    if (is.na(col) || !nzchar(col)) {
-      next
-    }
     vals <- chart_filter_values(x[[i]])
-    if (length(vals)) {
+    if (!is.na(col) && nzchar(col) && length(vals)) {
       out[[col]] <- vals
     }
   }
-  if (length(out)) out else NULL
+  if (length(out)) out
 }
 
 chart_filter_values <- function(v) {
@@ -42,9 +37,8 @@ chart_filter_values <- function(v) {
   unique(unname(as.character(v)))
 }
 
-# The older one-column filter_column + filter_values (a board saved before
-# `filters`, or a `column` / `values` message) as a filter. That form has no
-# missing value.
+# The older one-column filter_column + filter_values as a filter. That form
+# has no missing value.
 chart_legacy_filters <- function(column, values) {
   col <- chr_state(column)
   vals <- as.character(unlist(values, use.names = FALSE))
@@ -58,8 +52,8 @@ chart_legacy_filters <- function(column, values) {
 # One condition per filtered column, for dplyr::filter(), which ANDs them.
 # `members` maps a column to the members of the clicked groups of an overlap
 # definition (dd_group_filters_members()). A missing value matches NA and the
-# empty string, as the aggregation folds both; `%in%` rather than `==` so
-# that a date column does not try to read "" as a date.
+# empty string, as the aggregation folds both; `%in%` so that a date column
+# does not try to read "" as a date.
 chart_filter_conds <- function(filters, members = NULL) {
   lapply(names(filters), function(col) {
     vals <- filters[[col]]
@@ -91,11 +85,10 @@ chart_filter_call <- function(conds) {
   )
 }
 
-# A value the browser sent for a column drawn on a time axis: there it is
-# milliseconds since 1970. Against a Date or date-time column it becomes the
-# literal call that reads back as that date (`as.Date("1986-07-01")`), so the
-# filter compares like with like and the shown code reads as a date. Any
-# other value, or column, passes through.
+# A value the browser sent for a column on a time axis is milliseconds since
+# 1970. Against a Date or date-time column it becomes the literal call that
+# reads back as that date (`as.Date("1986-07-01")`). Any other value or
+# column passes through.
 chart_time_literal <- function(v, col) {
   if (!is.numeric(v) || length(v) != 1L || is.na(v)) {
     return(v)
@@ -107,7 +100,7 @@ chart_time_literal <- function(v, col) {
   if (inherits(col, "POSIXt")) {
     tz <- attr(col, "tzone")
     tz <- if (length(tz) && nzchar(tz[[1L]])) tz[[1L]] else "UTC"
-    # The browser placed the column's wall-clock time as if it were UTC.
+    # The browser read the wall-clock time as UTC.
     s <- format(as.POSIXct(v / 1000, origin = "1970-01-01", tz = "UTC"),
                 "%Y-%m-%d %H:%M:%S", tz = "UTC")
     return(bquote(as.POSIXct(.(s), tz = .(tz))))
@@ -127,19 +120,12 @@ chart_range_cond <- function(rng, data = NULL) {
   if (is.data.frame(data) && xc %in% names(data)) {
     xr <- lapply(xr, chart_time_literal, data[[xc]])
   }
+  cond <- bquote(dplyr::between(.data[[.(xc)]], .(xr[[1L]]), .(xr[[2L]])))
   if (!is.null(yr) && !is.null(rng$y_col)) {
-    bquote(
-      dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)) &
-        dplyr::between(.data[[.(yc)]], .(ylo), .(yhi)),
-      list(xc = xc, yc = rng$y_col, xlo = xr[[1L]], xhi = xr[[2L]],
-           ylo = yr[1], yhi = yr[2])
-    )
-  } else {
-    bquote(
-      dplyr::between(.data[[.(xc)]], .(xlo), .(xhi)),
-      list(xc = xc, xlo = xr[[1L]], xhi = xr[[2L]])
-    )
+    cond <- bquote(.(cond) & dplyr::between(.data[[.(rng$y_col)]], .(yr[1]),
+                                            .(yr[2])))
   }
+  cond
 }
 
 # How the assistant reads a filter: "AETERM = Rash; AESEV = (missing)".
