@@ -1,6 +1,5 @@
 /* The table block's view (inst/js/table/): what its frame and markup add to
-   table-structured.css. Keyed headers and section values carry `dt-keyed`, set where
-   the markup is written. */
+   table-structured.css. */
 
 /* The view sizes its header by its own width, so a narrow block reflows
    whatever panel or card it sits in. */
