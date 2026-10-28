@@ -94,7 +94,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
                  alt_text = paste0(sid, "_t")))
   } else if (identical(s$type, "pair")) {
     lane_plan_pair(s, sid, base, sub, data, scale_map)
-  } else if (identical(s$type, "series")) {
+  } else if (identical(s$type, "sparkline")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
                  pts = paste0(sid, "_pts"), x = summarize_chr1(s$x),
                  dom_date = isTRUE(s$.date), ref = cp$ref,
@@ -149,7 +149,7 @@ lane_plan_barsplit <- function(s, sid, base, den, data, scale_map) {
                  if (!additive) {
                    "grouped"
                  } else {
-                   s$.mode %||% "stacked"
+                   LANE_POSITIONS[[s$position %||% "stack"]]
                  }
                }),
                show_val = TRUE,
@@ -178,7 +178,7 @@ lane_plan_tile <- function(s, sid, base, data, scale_map) {
 }
 
 lane_plan_dist <- function(s, sid, base, sub, data, scale_map) {
-  stat <- summarize_chr1(s$stat) %||% "median_q1_q3"
+  stat <- summarize_chr1(s$summary) %||% "median_q1_q3"
   meta <- LANE_STAT_META[[stat]] %||% LANE_STAT_META$median_q1_q3
   if (identical(s$show, "text")) {
     return(c(base, list(kind = "num", key = paste0(sid, "_bc"),
@@ -188,8 +188,8 @@ lane_plan_dist <- function(s, sid, base, sub, data, scale_map) {
   }
   # ONE glyph, two styles. Leaf columns follow the pieces switched on, so an
   # absent range ships no columns.
-  inner <- summarize_chr1(s$inner) %||% "median_q1_q3"
-  outer <- summarize_chr1(s$outer) %||% "none"
+  inner <- summarize_chr1(s$summary) %||% "median_q1_q3"
+  outer <- summarize_chr1(s$whiskers) %||% "none"
   cmeta <- LANE_STAT_META[[lane_dist_centre_stat(s)]] %||%
     LANE_STAT_META$median_q1_q3
   cols <- c(bc = paste0(sid, "_bc"), n = paste0(sid, "_n"))
@@ -225,16 +225,16 @@ lane_plan_pair <- function(s, sid, base, sub, data, scale_map) {
   lv <- s$.levels
   dlv <- s$.dlevels
   words <- c(
-    trimws(paste(LANE_PAIR_WORDS[[s$from_func]],
-                 summarize_col_name(data, s$from), "\u25c7")),
-    trimws(paste(LANE_PAIR_WORDS[[s$to_func]],
-                 summarize_col_name(data, s$to), "\u25cf"))
+    trimws(paste(LANE_PAIR_WORDS[[s$x_func]],
+                 summarize_col_name(data, s$x), "\u25c7")),
+    trimws(paste(LANE_PAIR_WORDS[[s$xend_func]],
+                 summarize_col_name(data, s$xend), "\u25cf"))
   )
   # Set on `base`: c() would append a second `sub_label` that `$` never reads.
   base$sub_label <- sub %||% paste0(
     words[[1L]], " \u2192 ", words[[2L]],
     if (length(dlv) > 1L) {
-      paste0(" \u00b7 dashed: ", summarize_col_name(data, s$dash), " \u2260 ",
+      paste0(" \u00b7 dashed: ", summarize_col_name(data, s$linetype), " \u2260 ",
              dlv[[1L]])
     } else {
       ""
@@ -243,7 +243,7 @@ lane_plan_pair <- function(s, sid, base, sub, data, scale_map) {
   c(base, list(kind = "pair", key = paste0(sid, "_to"),
                cols = lane_pair_cols(sid), ncol = paste0(sid, "_n"),
                fidx = paste0(sid, "_f"), didx = paste0(sid, "_d"),
-               ref = s$ref, levels = lv,
+               ref = s$x_lines, levels = lv,
                words = list(from = words[[1L]], to = words[[2L]]),
                fills = if (!is.null(lv)) {
                  unname(summarize_level_colors(
@@ -273,13 +273,13 @@ lane_plan_spans <- function(s, sid, base, data, scale_map) {
                xend = xend, levels = lv,
                dom = lane_axis_domain_attr(data, c(x, xend)),
                dom_date = isTRUE(s$.date),
-               tfields = intersect(as.character(s$fields %||% character()),
+               tfields = intersect(as.character(s$tooltip %||% character()),
                                    names(data)),
                # Tooltip names for the colour and extra fields: labels, else
                # names.
                cvar = summarize_col_name(data, summarize_chr1(s$color)),
                tlabels = vapply(
-                 intersect(as.character(s$fields %||% character()), names(data)),
+                 intersect(as.character(s$tooltip %||% character()), names(data)),
                  function(f) summarize_col_name(data, f), character(1L),
                  USE.NAMES = FALSE
                ),
@@ -300,12 +300,12 @@ lane_plan_spans <- function(s, sid, base, data, scale_map) {
 #' @noRd
 lane_dist_sub_label <- function(s, meta, wmeta) {
   parts <- c(
-    if (identical(summarize_chr1(s$inner) %||% "none", "none")) {
+    if (identical(summarize_chr1(s$summary) %||% "none", "none")) {
       LANE_STAT_META[[lane_dist_centre_stat(s)]]$center
     } else {
       meta$label
     },
-    if (!identical(summarize_chr1(s$outer) %||% "none", "none")) wmeta$range
+    if (!identical(summarize_chr1(s$whiskers) %||% "none", "none")) wmeta$range
   )
   paste(parts, collapse = " \u00b7 ")
 }
