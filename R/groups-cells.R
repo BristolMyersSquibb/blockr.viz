@@ -30,6 +30,7 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     # A compact matrix opens its groups.
     expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))) ||
       isTRUE(cfg$compact),
+    compact = isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = cells_parent_labels(rows),
     parent_key = as.character(

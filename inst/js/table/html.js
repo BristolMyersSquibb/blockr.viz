@@ -66,6 +66,7 @@
     return '<th class="' + cls.filter(Boolean).join(' ') + '" data-h="' + r + ',' + c + '"' +
       ((h.span || 1) > 1 ? ' colspan="' + h.span + '"' : '') +
       ((h.rows || 1) > 1 ? ' rowspan="' + h.rows + '"' : '') +
+      (h.tip ? ' data-blockr-tooltip="' + esc(h.tip) + '"' : '') +
       (sortable ? ' data-col-index="' + h.col + '" tabindex="0" aria-sort="none"' : '') +
       '>' + inner + '</th>';
   }

@@ -68,10 +68,7 @@ table_groups_head <- function(m, pick) {
       sub = chr_state(p$sub_label), col = i
     ))
   }
-  stub <- table_groups_compact(list(
-    text = groups_label_header(prep), sub = prep$group_label, col = 0L,
-    stub = TRUE
-  ))
+  stub <- table_groups_stub_head(prep, isTRUE(m$cells$compact))
   fs <- prep$facet_spans
   if (is.null(fs)) {
     return(list(c(list(stub), lapply(seq_along(prep$plan), leaf))))
@@ -83,6 +80,23 @@ table_groups_head <- function(m, pick) {
     table_groups_spanners(prep, fs, pick)
   )
   list(row1, lapply(setdiff(seq_along(prep$plan), lead), leaf))
+}
+
+# The stub's header: the `by` names over their labels. A compact matrix shows
+# the row column's label alone, its name as the tooltip: the outer groups are
+# its section rows, and the long label line would set the column's width.
+table_groups_stub_head <- function(prep, compact = FALSE) {
+  if (compact && !isTRUE(prep$all) && !is.null(prep$group)) {
+    label <- prep$row_label %||% prep$group
+    return(table_groups_compact(list(
+      text = label, col = 0L, stub = TRUE,
+      tip = if (!identical(label, prep$group)) prep$group
+    )))
+  }
+  table_groups_compact(list(
+    text = groups_label_header(prep), sub = prep$group_label, col = 0L,
+    stub = TRUE
+  ))
 }
 
 # The facet levels over their columns: level, its N, and the claim a click makes.

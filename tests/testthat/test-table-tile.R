@@ -130,3 +130,22 @@ test_that("the records layout nests by `by` and outputs the input rows", {
     expect_identical(eval(ex, list(data = d)), d[d$species == "a", ])
   })
 })
+
+test_that("a compact matrix's stub header is the row column's label", {
+  d <- tile_fixture()
+  attr(d$ARM, "label") <- "Treatment arm"
+  attr(d$SUBJ, "label") <- "Subject"
+  state <- list(layout = "groups", by = c("ARM", "SUBJ"), look = "compact",
+                summaries = tile_summary(fill = "GRADE"))
+  stub <- function(st) {
+    table_groups_to_model(table_model_groups(st, d))$head[[1L]][[1L]]
+  }
+  h <- stub(state)
+  expect_identical(h$text, "Subject")
+  expect_identical(h$tip, "SUBJ")
+  expect_null(h$sub)
+  # The table look keeps both columns' names over their labels.
+  h <- stub(utils::modifyList(state, list(look = "table")))
+  expect_identical(h$text, "ARM / SUBJ")
+  expect_identical(h$sub, "Treatment arm / Subject")
+})

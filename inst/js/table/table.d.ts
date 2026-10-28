@@ -37,6 +37,8 @@ interface TableHeadCell {
   stub?: boolean;
   /** A stub header the producer set in bold. */
   bold?: boolean;
+  /** The cell's tooltip, e.g. the column name under its label. */
+  tip?: string | null;
 }
 
 /** One body column. */
