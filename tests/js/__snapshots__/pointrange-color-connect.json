@@ -306,9 +306,12 @@
          }
         ],
         "z": 4,
-        "symbolSize": 7,
+        "symbolSize": 9,
         "itemStyle": {
          "color": "#0072B2",
+         "opacity": 1,
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5,
          "cursor": "pointer"
         },
         "emphasis": {
@@ -461,9 +464,12 @@
          }
         ],
         "z": 4,
-        "symbolSize": 7,
+        "symbolSize": 9,
         "itemStyle": {
          "color": "#E69F00",
+         "opacity": 1,
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5,
          "cursor": "pointer"
         },
         "emphasis": {
@@ -616,9 +622,12 @@
          }
         ],
         "z": 4,
-        "symbolSize": 7,
+        "symbolSize": 9,
         "itemStyle": {
          "color": "#009E73",
+         "opacity": 1,
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5,
          "cursor": "pointer"
         },
         "emphasis": {

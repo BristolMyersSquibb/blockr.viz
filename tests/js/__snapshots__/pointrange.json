@@ -232,9 +232,12 @@
          }
         ],
         "z": 4,
-        "symbolSize": 7,
+        "symbolSize": 9,
         "itemStyle": {
          "color": "#0072B2",
+         "opacity": 1,
+         "borderColor": "#ffffff",
+         "borderWidth": 1.5,
          "cursor": "pointer"
         },
         "emphasis": {
