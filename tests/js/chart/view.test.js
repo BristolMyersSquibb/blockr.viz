@@ -110,8 +110,10 @@ test('the theme R names is the ECharts theme; a new one draws new instances', ()
 test('a payload without rows draws from the rows of its data revision', () => {
   const c = D.open(BAR);
   const first = c.block.data;
+  const ix = c.block._ix;
   c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
   assert.strictEqual(c.block.data, first);
+  assert.strictEqual(c.block._ix, ix, 'held rows are not parsed or indexed again');
   assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
   c.send(BAR, { data: null, dataRev: 2 });
   assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),

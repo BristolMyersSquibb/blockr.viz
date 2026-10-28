@@ -49,7 +49,9 @@ interface VizPayload {
 
 /** A block view: built by the shared binding on its element's first value. */
 interface VizView {
-  render(payload: VizPayload): void;
+  /** `rowsChanged`: the rows differ from those of the last value drawn, or
+   * none was drawn; absent, a view takes the rows as new. */
+  render(payload: VizPayload, rowsChanged?: boolean): void;
   dispose(): void;
   /** Shows an error R sent; a silent req() never reaches it. */
   error?(message: string): void;

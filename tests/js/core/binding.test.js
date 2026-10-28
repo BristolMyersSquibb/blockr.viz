@@ -6,10 +6,14 @@ const { loadCore } = require('./load');
 
 const tick = (win, ms) => new Promise((r) => win.setTimeout(r, ms));
 
-// A view that records what it was asked to do.
-const recorder = (log) => class {
+// A view that records what it was asked to do, and in `rows` the
+// rows-changed flag of every render.
+const recorder = (log, rows) => class {
   constructor(el) { this.el = el; log.push(['new', el.id]); }
-  render(p) { log.push(['render', p.data_rev, p.data && p.data.g]); }
+  render(p, rowsChanged) {
+    log.push(['render', p.data_rev, p.data && p.data.g]);
+    rows.push(rowsChanged);
+  }
   error(msg) { log.push(['error', msg]); }
   dispose() { log.push(['dispose', this.el.id]); }
 };
@@ -17,7 +21,8 @@ const recorder = (log) => class {
 const setup = (opts) => {
   const env = loadCore();
   const log = [];
-  env.V.binding('blockr.viz.test', 'test', recorder(log), opts);
+  const rows = [];
+  env.V.binding('blockr.viz.test', 'test', recorder(log, rows), opts);
   const b = env.outputs['blockr.viz.test'];
   const add = (id) => {
     const el = env.win.document.createElement('div');
@@ -27,7 +32,7 @@ const setup = (opts) => {
     env.win.document.body.appendChild(el);
     return el;
   };
-  return Object.assign(env, { log, b, add });
+  return Object.assign(env, { log, rows, b, add });
 };
 
 const payload = (rev, data) => ({ state_rev: 0, data_rev: rev, columns: [],
@@ -66,6 +71,23 @@ test('a value without rows uses the rows held for its revision', () => {
   b.renderValue(el, payload(1, null));
   assert.deepEqual(log.at(-1), ['render', 1, ['x']]);
   assert.equal(sent.length, 0);
+});
+
+test('the view is told when the rows are new to it', async () => {
+  const { b, add, rows, win } = setup();
+  const el = add('a');
+  b.renderValue(el, payload(1, { g: ['x'] }));
+  b.renderValue(el, payload(1, null));
+  b.renderValue(el, payload(1, { g: ['x'] }));
+  b.renderValue(el, payload(2, { g: ['y'] }));
+  win.document.documentElement.setAttribute('data-bs-theme', 'dark');
+  await tick(win, 0);
+  assert.deepEqual(rows, [true, false, false, true, false]);
+  // A new element under the id draws its held rows as new: its view has none.
+  el.remove();
+  const again = add('a');
+  b.renderValue(again, payload(2, null));
+  assert.equal(rows.at(-1), true);
 });
 
 test('rows missing for a revision are asked for once', () => {

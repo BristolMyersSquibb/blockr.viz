@@ -8,6 +8,8 @@
  * What the binding adds to Shiny's:
  * - one view per element, built on the first value, with its own Scope;
  * - a value already drawn (Shiny replays it on every re-bind) is skipped;
+ * - the view is told whether the rows are new to it (`rowsChanged`), so it
+ *   parses and indexes them only then;
  * - rows are kept per id, because R leaves them out of a payload whose data
  *   revision the client holds; a payload without rows the client does not
  *   hold asks R for them once (`<id>_need`);
@@ -53,7 +55,7 @@
     /** @type {VizMount} */
     const m = { el, scope, view: scope.own(new View(el, scope)), last: null,
                 needRev: null, drawn: null };
-    scope.mutate(document.documentElement, () => { if (m.drawn) m.view.render(m.drawn); },
+    scope.mutate(document.documentElement, () => { if (m.drawn) m.view.render(m.drawn, false); },
                  { attributes: true, attributeFilter: ['data-bs-theme'], subtree: true });
     live.set(el.id, m);
     // A re-bind of the same element unbinds it first; only an element that
@@ -111,8 +113,10 @@
       p = Object.assign({}, p, { data: held.data });
     }
     m.needRev = null;
+    // The view parses its rows only when they are new to it.
+    const rowsChanged = !m.drawn || m.drawn.data_rev !== p.data_rev;
     m.drawn = p;
-    m.view.render(p);
+    m.view.render(p, rowsChanged);
   }
 
   /**
