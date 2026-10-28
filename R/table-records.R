@@ -100,9 +100,9 @@ table_frame_part <- function(kit, src, shown, layout, filter = identity) {
                                             layout)),
     expr = function(sel) {
       d <- frame()
-      s <- table_selection_records(sel, structured = table_is_structured(d))
+      s <- table_click(sel, structured = table_is_structured(d))
       ex <- if (identical(layout, "records") && length(st$by())) {
-        table_nest_drill_expr(st$by(), s$group_cols, s$group_vals)
+        table_nest_drill_expr(st$by(), s$filters)
       } else {
         filter(table_records_expr(s, source = table_drill_is_source(
           st$drill(), d
@@ -162,35 +162,28 @@ table_drill_is_source <- function(drill, d) {
 # The claims of a click on a frame: the clicked rows' identity, or the
 # clicked column's values, and the clicked cell's or header's column.
 table_frame_claims <- function(sel, d, table, subject) {
-  s <- table_selection_records(sel, structured = table_is_structured(d))
-  filters <- if (length(s$group_cols)) {
-    stats::setNames(as.list(s$group_vals), s$group_cols)
-  } else if (!is.null(s$column) && length(s$values)) {
-    stats::setNames(list(s$values), s$column)
-  } else {
-    list()
-  }
-  rows <- dd_ctrl_claims(d, table, filters, subject = subject)
+  s <- table_click(sel, structured = table_is_structured(d))
+  rows <- dd_ctrl_claims(d, table, s$filters, subject = subject)
   if (is.null(rows)) {
     return(NULL)
   }
-  c(dd_col_claims(s$col_keys, table), rows)
+  cols <- lapply(names(s$columns), function(cl) {
+    claim_cond(cl, s$columns[[cl]], table)
+  })
+  c(cols, rows)
 }
 
 # The footer's "Filtered: ..." line for the held selection.
 table_frame_receipt <- function(sel, d) {
-  s <- table_selection_records(sel, structured = table_is_structured(d))
-  col_lab <- table_col_keys_label(s$col_keys)
-  if (length(s$group_cols) || length(col_lab)) {
-    lab <- c(table_claim_label(s$group_cols, s$group_vals, table_group_names(d)),
-             col_lab)
-    return(if (length(lab)) paste0("Filtered: ", paste(lab, collapse = ", ")))
+  s <- table_click(sel, structured = table_is_structured(d))
+  f <- s$filters
+  rows <- if (s$structured) {
+    table_claim_label(f, table_group_names(d))
+  } else if (length(f)) {
+    paste0(names(f)[[1L]], " = ", paste(f[[1L]], collapse = ", "))
   }
-  if (!is.null(s$column) && length(s$values)) {
-    return(paste0("Filtered: ", s$column, " = ",
-                  paste(s$values, collapse = ", ")))
-  }
-  NULL
+  lab <- c(rows, table_col_keys_label(s$columns))
+  if (length(lab)) paste0("Filtered: ", paste(lab, collapse = ", "))
 }
 
 # The downloads' exhibit: the frame as shown, with the shaded cells' paint

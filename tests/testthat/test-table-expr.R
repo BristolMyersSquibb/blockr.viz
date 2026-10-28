@@ -3,13 +3,13 @@
 test_that("a flat records click filters its column", {
   sel <- list(type = "categorical", filters = list(cat = "b"))
   expect_identical(
-    table_records_expr(table_selection_records(sel)),
+    table_records_expr(table_click(sel)),
     quote(dplyr::filter(blockr.viz::as_annotated_df(.(data)),
                         .data[["cat"]] == "b"))
   )
   two <- list(type = "categorical", filters = list(cat = c("a", "c")))
   expect_identical(
-    deparse(table_records_expr(table_selection_records(two))),
+    deparse(table_records_expr(table_click(two))),
     deparse(quote(dplyr::filter(blockr.viz::as_annotated_df(.(data)),
                                 .data[["cat"]] %in% c("a", "c"))))
   )
@@ -17,7 +17,7 @@ test_that("a flat records click filters its column", {
 
 test_that("no click keeps every row", {
   expect_identical(
-    table_records_expr(table_selection_records(NULL)),
+    table_records_expr(table_click(NULL)),
     quote(dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE))
   )
 })
@@ -26,7 +26,7 @@ test_that("a structured click ANDs its identity keys", {
   sel <- list(type = "categorical",
               filters = list(.variable = "cat", .variable_level = "a"))
   expect_identical(
-    table_records_expr(table_selection_records(sel, structured = TRUE)),
+    table_records_expr(table_click(sel, structured = TRUE)),
     quote(dplyr::filter(
       blockr.viz::as_annotated_df(.(data)),
       .data[[".variable"]] == "cat" & .data[[".variable_level"]] == "a"
@@ -38,12 +38,12 @@ test_that("the source mode wraps the filter and adds the column's arm", {
   sel <- list(type = "categorical",
               filters = list(.variable = "cat", .variable_level = "b"),
               columns = list(grp = "g2"))
-  ex <- table_records_expr(table_selection_records(sel, structured = TRUE),
+  ex <- table_records_expr(table_click(sel, structured = TRUE),
                            source = TRUE)
   expect_identical(ex[[1L]], quote(dplyr::filter))
   expect_identical(ex[[2L]][[1L]], quote(blockr.viz::drill_source))
   expect_identical(
-    table_records_expr(table_selection_records(NULL), source = TRUE)[[3L]],
+    table_records_expr(table_click(NULL), source = TRUE)[[3L]],
     "all"
   )
 })

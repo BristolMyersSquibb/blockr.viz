@@ -4,45 +4,38 @@
 # The records layout's filter, a bquoted call. It coerces to the annotated data
 # frame first, so a plain frame and a table-producing object give one output
 # contract, and it is self-qualified so the emitted code stands alone.
-# `sel` is the click: `column` and `values` (flat table) or `group_cols` and
-# `group_vals` (structured), plus `col_keys` (the clicked cell's or header's
-# column identity). `source`: whether `drill = "source"` is the source mode.
-table_records_expr <- function(sel, source = FALSE) {
-  gc <- sel$group_cols
-  gv <- sel$group_vals
-  col <- sel$column
-  vals <- sel$values
-  grouped <- length(gc) && length(gc) == length(gv)
-  ex <- table_records_filter(grouped, gc, gv, col, vals)
-  claim_cols <- if (grouped) {
-    as.character(gc)
-  } else if (!is.null(col)) {
-    as.character(col)
-  }
-  ex <- table_records_source(ex, claim_cols, source)
-  ck <- sel$col_keys
+# `click` is table_click()'s; `source`: whether `drill = "source"` is the
+# source mode.
+table_records_expr <- function(click, source = FALSE) {
+  f <- click$filters
+  ex <- table_records_source(table_records_filter(click$structured, f),
+                             names(f), source)
   # The arm of the clicked cell or header, on the source rows.
-  if (length(ck) && isTRUE(source)) ex <- table_col_keys_filter(ex, ck)
+  if (length(click$columns) && isTRUE(source)) {
+    ex <- table_col_keys_filter(ex, click$columns)
+  }
   ex
 }
 
-# The filter itself: AND each clicked key of a grouped or structured table,
-# else the clicked column's values, else every row.
-table_records_filter <- function(grouped, gc, gv, col, vals) {
-  if (grouped) {
+# The filter itself: AND each clicked key of a structured table, else the
+# clicked column's values, else every row.
+table_records_filter <- function(structured, f) {
+  if (isTRUE(structured) && length(f)) {
     # A pure subset of the annotated df: the identity columns already carry
     # the selection.
-    cond <- table_group_filter_call(gc, gv)
+    cond <- table_group_filter_call(names(f), unlist(f))
     return(blockr.core::bbquote(
       dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
       list(cond = cond)
     ))
   }
-  if (is.null(col) || is.null(vals) || length(vals) == 0) {
+  if (!length(f)) {
     return(blockr.core::bbquote(
       dplyr::filter(blockr.viz::as_annotated_df(.(data)), TRUE)
     ))
   }
+  col <- names(f)[[1L]]
+  vals <- f[[1L]]
   if (length(vals) == 1) {
     return(blockr.core::bbquote(
       dplyr::filter(
@@ -79,27 +72,19 @@ table_records_source <- function(ex, claim_cols, source) {
   as.call(call)
 }
 
-# The kit's selection as the records layout's click, as table_records_expr()
-# reads it. The kit holds `filters` (column to values) and `columns` (the
-# clicked cell's or header's column identity). A flat table claims one column;
-# a structured or nested table its rows' identity columns, one value each.
-table_selection_records <- function(sel, structured = FALSE) {
-  f <- if (is.list(sel)) sel$filters
-  out <- list()
-  if (length(f) && isTRUE(structured)) {
-    out$group_cols <- names(f)
-    out$group_vals <- lapply(f, function(v) as.character(v)[[1L]])
-  } else if (length(f)) {
-    out$column <- names(f)[[1L]]
-    out$values <- as.character(f[[1L]])
+# The kit's selection as a click on a frame: `filters` (column to values)
+# and `columns` (the clicked cell's or header's column identity), as
+# character. A structured or nested table claims its rows' identity columns,
+# one value each; a flat table claims one column.
+table_click <- function(sel, structured = FALSE) {
+  chr <- function(x) {
+    x <- lapply(x %||% list(), function(v) as.character(unlist(v)))
+    x[lengths(x) > 0L]
   }
-  ck <- if (is.list(sel)) sel$columns
-  if (length(ck)) {
-    out$col_keys <- unname(Map(function(cl, vl) {
-      list(column = cl, values = as.character(vl))
-    }, names(ck), ck))
-  }
-  out
+  f <- chr(if (is.list(sel)) sel$filters)
+  f <- if (isTRUE(structured)) lapply(f, `[`, 1L) else utils::head(f, 1L)
+  list(filters = f, columns = chr(if (is.list(sel)) sel$columns),
+       structured = isTRUE(structured))
 }
 
 # The kit's selection as the groups layout's filters, column to values, as
