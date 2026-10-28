@@ -54,8 +54,10 @@ ADDED_ARGS <- list(chart = c("category", "value"), table = character())
 REFERENCE_RENAMES <- list(chart = c(y_lines = "value_lines"),
                           table = character())
 
-# Defaults the rewrite changes on purpose (spec-table.md section 1).
-CHANGED_DEFAULTS <- list(chart = character(), table = c("color", "sort_dir"))
+# Defaults the rewrite changes on purpose (spec-table.md section 1; for the
+# chart's `connect`, "monotone" as in production, behaviour-changes.md row
+# 32).
+CHANGED_DEFAULTS <- list(chart = "connect", table = c("color", "sort_dir"))
 
 block_spec <- function(block) viz_block_spec(block)
 

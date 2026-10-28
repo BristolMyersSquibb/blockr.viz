@@ -27,7 +27,7 @@ new_chart_block <- function(
     drill = NULL,
     line_width = 1,
     point_size = 1,
-    connect = "straight",
+    connect = "monotone",
     value_lines = NULL,
     x_lines = NULL,
     ymin = NULL,

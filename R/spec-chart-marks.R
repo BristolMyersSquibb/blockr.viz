@@ -14,7 +14,7 @@ chart_spec_marks <- function() {
     ),
 
     connect = chart_arg(
-      type = "enum", default = "straight",
+      type = "enum", default = "monotone",
       values = c("straight", "monotone", "step_start", "step_middle",
                  "step_end"),
       applies = c("line", "area"),

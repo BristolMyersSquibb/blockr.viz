@@ -423,7 +423,7 @@
       "type": {
         "name": "enum"
       },
-      "default": "straight",
+      "default": "monotone",
       "values": ["straight", "monotone", "step_start", "step_middle", "step_end"],
       "nullable": false,
       "applies": {
