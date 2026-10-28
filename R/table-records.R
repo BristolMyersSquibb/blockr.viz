@@ -174,11 +174,11 @@ table_frame_claims <- function(sel, d, table, subject) {
   } else {
     list()
   }
-  rows <- dd_ctrl_claims(d, table, filters, subject = subject)
+  rows <- ctrl_claims(d, table, filters, subject = subject)
   if (is.null(rows)) {
     return(NULL)
   }
-  c(dd_col_claims(s$col_keys, table), rows)
+  c(col_claims(s$col_keys, table), rows)
 }
 
 # The footer's "Filtered: ..." line for the held selection.

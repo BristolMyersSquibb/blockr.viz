@@ -233,7 +233,7 @@ report_call.table_block <- function(x, var, ...) {
     # The Big N counts the subject column the board's `study_roles` option
     # names, as on screen and in the downloads. Read from the session the
     # document is built in; outside one there is none.
-    subject <- shiny::isolate(dd_ctrl_subject())
+    subject <- shiny::isolate(ctrl_subject())
     if (!is.null(subject)) args$subject <- subject
     return(as.call(c(
       list(call("::", as.name("blockr.viz"),

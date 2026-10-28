@@ -5,7 +5,7 @@
 # missing key. It is held as the block's `filters` state: a named list of
 # character vectors, NA for a missing value, NULL when nothing is filtered.
 # The columns AND together, in the block's own output and in a claim sent to
-# a drill target (dd_ctrl_claims()).
+# a drill target (ctrl_claims()).
 
 # A filter from the constructor, saved state or a message, in that shape, or
 # NULL. A JSON null arrives from Shiny as NULL inside a list or as NA; both

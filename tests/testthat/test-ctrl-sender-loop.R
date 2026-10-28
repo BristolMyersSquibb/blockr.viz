@@ -28,7 +28,7 @@ test_that("an unchanged claim is not re-sent, so the sender cannot loop", {
         })
 
         # not pristine: the user drilled, so this claim is theirs to push
-        dd_ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
+        ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
                        session = session)
       })
     },
@@ -63,9 +63,9 @@ test_that("a restored claim is not pushed at startup", {
                     values = r_values()))
         })
 
-        dd_ctrl_sender(
+        ctrl_sender(
           shiny::reactiveVal("vf"), r_claims,
-          dd_ctrl_pristine(
+          ctrl_pristine(
             function() list(r_column(), r_values()), list(column, values)
           ),
           session = session
@@ -117,9 +117,9 @@ test_that("clearing back to the constructor's drill still notifies the target", 
           list(list(table = "adsl", column = r_column(), values = vals))
         })
 
-        dd_ctrl_sender(
+        ctrl_sender(
           shiny::reactiveVal("vf"), r_claims,
-          dd_ctrl_pristine(
+          ctrl_pristine(
             function() list(r_column(), r_values()), list(column, values)
           ),
           session = session
@@ -157,7 +157,7 @@ test_that("a claim that really changes still sends", {
           list(list(table = "adsl", column = "SEX", values = list(r_vals())))
         })
 
-        dd_ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
+        ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
                        session = session)
 
         session$flushReact()
@@ -206,9 +206,9 @@ test_that("a STRUCTURED (group) drill sends -- the latch must watch ALL drill st
                     values = r_group_vals()))
         })
 
-        dd_ctrl_sender(
+        ctrl_sender(
           shiny::reactiveVal("vf"), r_claims,
-          dd_ctrl_pristine(
+          ctrl_pristine(
             function() {
               list(r_column(), r_values(), r_group_cols(), r_group_vals())
             },
@@ -258,7 +258,7 @@ test_that("a transient re-click of the same mark sends again, a re-eval does not
           list(list(table = "adsl", column = "SEX", values = list("M")))
         })
 
-        dd_ctrl_sender(shiny::reactiveVal("vf"), r_claims,
+        ctrl_sender(shiny::reactiveVal("vf"), r_claims,
                        shiny::reactive(FALSE), session = session,
                        r_nonce = r_nonce)
 

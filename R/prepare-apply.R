@@ -1,9 +1,9 @@
-#' Running the chart block's prepare script
+#' Running a block's prepare script
 #'
-#' Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the block:
-#' run the compiled script on the frame the chart draws, splice it into the
-#' block's expression behind the click filter, and describe its controls to
-#' the browser.
+#' Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the
+#' block's reactives (viz_script_sources(), R/kit-script.R): run the compiled
+#' script on the frame the block draws, splice it into the block's
+#' expression, and describe its controls to the browser.
 #'
 #' @name chart-prepare-apply
 #' @keywords internal
@@ -113,15 +113,19 @@ dd_drill_post <- function(cols, src_cols = NULL) {
 
 #' Splice an expression into every `.(data)` slot of another
 #'
-#' The block's expression is the click filter with the script wrapped around
-#' it, so the drill filter applies to the source rows: a click names a mark by
-#' a column the upstream data has, which the script may not keep. The script's
-#' `.(data)` marker is replaced by the whole filter call, which carries the one
-#' remaining marker. A click on a column the script makes is filtered after
-#' the script (dd_drill_post()).
+#' A block's expression is built from pieces that each read `.(data)`: the
+#' compiled prepare script, the click filter, the code that builds a table.
+#' Nesting one into another replaces the outer piece's marker with the inner
+#' piece, which carries the one remaining marker.
 #'
-#' @param e The outer expression (the compiled script).
-#' @param repl The expression to splice in (the filter call).
+#' The chart puts the click filter inside the script, so it filters the
+#' source rows: a click names a mark by a column the upstream data has,
+#' which the script may not keep. A click on a column the script makes is
+#' filtered after the script (dd_drill_post()). The table puts the script
+#' inside its filter, and the variables layout its build call.
+#'
+#' @param e The outer expression.
+#' @param repl The expression to splice in.
 #' @noRd
 dd_splice_slot <- function(e, repl) {
 

@@ -13,7 +13,7 @@ ae <- data.frame(
 
 test_that("a click claims the subjects in the clicked rows, labelled", {
   flagged <- ae[ae$TRTEMFL, ]
-  out <- dd_ctrl_claims(flagged, "", list(AEBODSYS = "GI"),
+  out <- ctrl_claims(flagged, "", list(AEBODSYS = "GI"),
                         subject = "USUBJID")
   expect_identical(out, list(list(
     name = "USUBJID", mode = "multi", values = c("01", "02"),
@@ -22,11 +22,11 @@ test_that("a click claims the subjects in the clicked rows, labelled", {
 })
 
 test_that("no subject column: the column claim, as before", {
-  out <- dd_ctrl_claims(ae, "", list(AEBODSYS = "GI"))
+  out <- ctrl_claims(ae, "", list(AEBODSYS = "GI"))
   expect_identical(out[[1L]]$name, "AEBODSYS")
 
   # declared, but this frame does not carry it
-  out <- dd_ctrl_claims(ae[, -1L], "", list(AEBODSYS = "GI"),
+  out <- ctrl_claims(ae[, -1L], "", list(AEBODSYS = "GI"),
                         subject = "USUBJID")
   expect_identical(out[[1L]]$name, "AEBODSYS")
 })
@@ -35,16 +35,16 @@ test_that("a structured table resolves through its stamped source_data", {
   ard <- data.frame(.variable = "AEBODSYS", .variable_level = c("GI", "Skin"),
                     n = c(2, 2))
   attr(ard, "source_data") <- ae[ae$TRTEMFL, ]
-  out <- dd_ctrl_claims(ard, "", list(.variable_level = "GI"),
+  out <- ctrl_claims(ard, "", list(.variable_level = "GI"),
                         subject = "USUBJID")
   expect_identical(out[[1L]]$values, c("01", "02"))
   expect_identical(out[[1L]]$label, "AEBODSYS = GI")
 })
 
 test_that("the un-drill and the hold are untouched", {
-  expect_identical(dd_ctrl_claims(ae, "", list(), subject = "USUBJID"),
+  expect_identical(ctrl_claims(ae, "", list(), subject = "USUBJID"),
                    list())
-  expect_null(dd_ctrl_claims(NULL, "", list(AEBODSYS = "GI"),
+  expect_null(ctrl_claims(NULL, "", list(AEBODSYS = "GI"),
                              subject = "USUBJID"))
 })
 
@@ -53,20 +53,20 @@ test_that("the subject column comes from the study_roles board option", {
     function(id) {
       shiny::moduleServer(id, function(input, output, session) {
         # no option: a board without subjects
-        expect_null(dd_ctrl_subject(session))
+        expect_null(ctrl_subject(session))
 
         opt <- shiny::reactiveVal(list(arm = "TRT", subject = ""))
         session$userData$board_options <- list(study_roles = opt)
         # declared nothing: the convention
-        expect_identical(shiny::isolate(dd_ctrl_subject(session)), "USUBJID")
+        expect_identical(shiny::isolate(ctrl_subject(session)), "USUBJID")
 
         opt(list(subject = "SUBJID"))
-        expect_identical(shiny::isolate(dd_ctrl_subject(session)), "SUBJID")
+        expect_identical(shiny::isolate(ctrl_subject(session)), "SUBJID")
       })
     },
     NULL
   )
-  expect_null(dd_ctrl_subject(NULL))
+  expect_null(ctrl_subject(NULL))
 })
 
 test_that("one click sends once, however often its ids are re-read", {
@@ -88,7 +88,7 @@ test_that("one click sends once, however often its ids are re-read", {
           list(list(name = "USUBJID", mode = "multi", values = r_ids()))
         )
 
-        dd_ctrl_sender(shiny::reactiveVal("pt_drill"), r_claims,
+        ctrl_sender(shiny::reactiveVal("pt_drill"), r_claims,
                        shiny::reactive(FALSE), session = session,
                        r_nonce = r_nonce)
 

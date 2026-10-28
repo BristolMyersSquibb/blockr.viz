@@ -175,11 +175,14 @@ test_that("a selection is held, or sent as an event in transient mode", {
   })
 })
 
-test_that("the last capture is kept outside the state", {
+test_that("the last capture is kept outside the state, decoded", {
   shiny::testServer(kit_server, args = list(spec = kit_spec()), {
-    cap <- viz_read_capture(list(png = "data:image/png;base64,AA",
-                                 width = 10, height = 5))
+    cap <- viz_read_capture(list(png = "data:image/png;base64,AAAA",
+                                 width = 96, height = 48))
     session$setInputs(chart_capture = cap)
-    expect_identical(session$returned$capture()$width, 10)
+    pic <- session$returned$capture()
+    expect_s3_class(pic, "chart_capture")
+    expect_identical(pic$png, as.raw(c(0, 0, 0)))
+    expect_identical(c(pic$width, pic$height), c(1, 0.5))
   })
 })

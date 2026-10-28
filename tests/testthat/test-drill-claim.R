@@ -106,7 +106,7 @@ test_that("a drill on a picker copy claims the source column", {
   d$Color <- d$RACE
   attr(d$Color, "blockr_source") <- "RACE"
 
-  claims <- dd_ctrl_claims(d, "adsl", list(Color = "ASIAN"))
+  claims <- ctrl_claims(d, "adsl", list(Color = "ASIAN"))
 
   expect_length(claims, 1L)
   expect_equal(claims[[1L]]$name, "RACE")
@@ -119,7 +119,7 @@ test_that("a copy whose source column was dropped claims under its own name", {
   d <- data.frame(Color = c("ASIAN", "WHITE"), stringsAsFactors = FALSE)
   attr(d$Color, "blockr_source") <- "RACE"
 
-  claims <- dd_ctrl_claims(d, "adsl", list(Color = "ASIAN"))
+  claims <- ctrl_claims(d, "adsl", list(Color = "ASIAN"))
 
   expect_length(claims, 1L)
   expect_equal(claims[[1L]]$name, "Color")

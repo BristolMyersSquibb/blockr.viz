@@ -39,24 +39,24 @@ test_that("annotated_column_keys drops malformed entries, keeps good ones", {
   expect_null(annotated_column_keys(data.frame(a = 1)))
 })
 
-test_that("dd_col_claims reshapes the column half without touching the data", {
+test_that("col_claims reshapes the column half without touching the data", {
   keys <- list(list(column = "ARM", values = "Placebo"),
                list(column = "SEX", values = "F"))
 
   expect_equal(
-    dd_col_claims(keys),
+    col_claims(keys),
     list(list(name = "ARM", mode = "multi", values = "Placebo"),
          list(name = "SEX", mode = "multi", values = "F"))
   )
   # A dm-backed target needs the table named.
-  expect_equal(dd_col_claims(keys[1], "adsl")[[1]]$table, "adsl")
+  expect_equal(col_claims(keys[1], "adsl")[[1]]$table, "adsl")
   # Pools arrive as several values and stay multi.
   expect_equal(
-    dd_col_claims(list(list(column = "ARM", values = c("A", "B"))))[[1]]$values,
+    col_claims(list(list(column = "ARM", values = c("A", "B"))))[[1]]$values,
     c("A", "B")
   )
-  expect_equal(dd_col_claims(NULL), list())
-  expect_equal(dd_col_claims(list(list(column = "", values = "x"))), list())
+  expect_equal(col_claims(NULL), list())
+  expect_equal(col_claims(list(list(column = "", values = "x"))), list())
 })
 
 # --- cannot resolve is not an un-drill --------------------------------------
@@ -69,14 +69,14 @@ test_that("dd_col_claims reshapes the column half without touching the data", {
 
 test_that("no drill selection clears; that is the only thing that clears", {
   d <- data.frame(ARM = c("A", "B"), stringsAsFactors = FALSE)
-  expect_equal(dd_ctrl_claims(d, "", list()), list())
-  expect_equal(dd_ctrl_claims(d, "", NULL), list())
+  expect_equal(ctrl_claims(d, "", list()), list())
+  expect_equal(ctrl_claims(d, "", NULL), list())
 })
 
 test_that("a selection the frame cannot answer holds", {
   d <- data.frame(ARM = c("A", "B"), stringsAsFactors = FALSE)
   # SEX is not in the frame: mid re-evaluation, or a frame that changed shape.
-  expect_null(dd_ctrl_claims(d, "", list(SEX = "F")))
+  expect_null(ctrl_claims(d, "", list(SEX = "F")))
 })
 
 test_that("a selection that resolves to nothing holds", {
@@ -85,23 +85,23 @@ test_that("a selection that resolves to nothing holds", {
   # which is false -- the user drilled, this block just cannot answer.
   d <- data.frame(ARM = c("A", "B"), SEX = c("F", "M"),
                   stringsAsFactors = FALSE)
-  expect_null(dd_ctrl_claims(d, "", list(ARM = "Z")))
+  expect_null(ctrl_claims(d, "", list(ARM = "Z")))
 
   # Structured frame with no identity columns to read.
   s <- data.frame(.group1 = c("x", "x"), .group1_level = c("1", "1"),
                   stringsAsFactors = FALSE)
-  expect_null(dd_ctrl_claims(s, "", list(.group1_level = "1")))
+  expect_null(ctrl_claims(s, "", list(.group1_level = "1")))
 })
 
 test_that("a resolvable selection still claims", {
   d <- data.frame(ARM = c("A", "B"), SEX = c("F", "M"),
                   stringsAsFactors = FALSE)
-  out <- dd_ctrl_claims(d, "", list(ARM = "A"))
+  out <- ctrl_claims(d, "", list(ARM = "A"))
   expect_length(out, 1L)
   expect_equal(out[[1]]$name, "ARM")
   expect_equal(out[[1]]$values, "A")
 })
 
 test_that("no data at all still holds", {
-  expect_null(dd_ctrl_claims(NULL, "", list(ARM = "A")))
+  expect_null(ctrl_claims(NULL, "", list(ARM = "A")))
 })

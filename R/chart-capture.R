@@ -1,11 +1,20 @@
-# The chart as the browser drew it -------------------------------------------
+# A block as the browser drew it ---------------------------------------------
 #
-# A chart's downloads and slides carry the picture the browser drew.
-# `picture()` in chart/export.js composes the whole block on an
-# offscreen canvas (title band, facet panels, facet labels, legend chips,
-# caption) and sends the bitmap up; the png, html and pptx downloads write
-# that. A chart whose panel was never drawn is drawn offscreen by the capture
-# service below.
+# The png, html and pptx downloads and blockr.outline's slides carry the
+# picture the browser drew. Two paths bring it to R:
+#
+# - Downloads: the block's own `<view>_capture` input. When the download menu
+#   opens, the view composes itself (`_downloadImage()` in chart/export.js:
+#   title band, facet panels, facet labels, legend chips, caption; the
+#   groups table's capture() in table/groups.js) and sends the bitmap.
+#   viz_capture_observer() (R/kit-server.R) decodes it with
+#   chart_capture_read() and the exhibit reads it. Chart and table both.
+# - Decks: the capture service at the end of this file. A deck asks for
+#   pictures of charts it does not own, some with closed panels, so the
+#   browser draws them offscreen from the block's payload and answers on one
+#   session-level input. Charts only.
+#
+# Both end in a `chart_capture`, the class every exhibit writer takes.
 
 # Device pixels per CSS pixel the canvas composes with: 2 for the screen, up
 # to 6 for a deck. The layout does not change with it.
@@ -53,6 +62,16 @@ chart_capture_decode <- function(url) {
   if (!length(out)) NULL else out
 }
 
+# The browser's `{png, width, height}` message as a chart_capture, or NULL
+# when it carries no PNG. The one place a capture message is decoded.
+#' @noRd
+chart_capture_read <- function(msg) {
+  if (!is.list(msg)) {
+    return(NULL)
+  }
+  new_chart_capture(chart_capture_decode(msg$png), msg$width, msg$height)
+}
+
 # The bitmap on disk, for the writers that want a file.
 #' @param file Where to write it.
 #' @rdname chart_capture_ids
@@ -86,10 +105,12 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
 
 # -- The capture service, R side ---------------------------------------------
 #
-# A deck asks for pictures of charts it does not own, some with closed panels.
-# A closed panel has no UI in the page, so the block cannot be reached through
-# its module. Each chart block registers a request function in the session
-# while it lives, and the deck calls that.
+# For blockr.outline decks; the block's downloads do not use it. A deck asks
+# for pictures of charts it does not own, some with closed panels. A closed
+# panel has no UI in the page, so the block cannot be reached through its
+# module. Each chart block registers a request function in the session while
+# it lives (chart_capture_service(), R/chart-view.R), and the deck calls
+# that.
 #
 # The picture comes back over the websocket, so an export runs in two steps:
 # `chart_capture_request()` returns a token, the replies land in one
@@ -222,7 +243,7 @@ chart_capture_collect <- function(token,
     stop("the browser could not draw this chart: ", msg$error, call. = FALSE)
   }
 
-  new_chart_capture(chart_capture_decode(msg$png), msg$width, msg$height)
+  chart_capture_read(msg)
 }
 
 # The bitmap as an officer image, in inches, fitted into `max_width` and

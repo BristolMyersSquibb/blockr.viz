@@ -1,6 +1,7 @@
 # The table block's server, on the kit (kit-server.R, kit-output.R). One view,
 # "table": settings arrive as `table_set`, clicks as `table_select`, the
-# browser's picture as `table_capture`; the output `table` carries the payload.
+# browser's picture as `table_capture` (decoded into `kit$capture()`); the
+# output `table` carries the payload.
 # The state is one reactiveVal per spec argument. The layout picks the part
 # (R/table-records.R, R/table-groups.R, R/table-variables.R); only the current
 # layout's part reads the data.
@@ -29,11 +30,6 @@ table_server <- function(id, data, init) {
       )
       part <- function() parts[[kit$state$layout()]]
       titles <- table_titles(kit, src, part)
-      # A picture of the old table must not reach a download.
-      shiny::observeEvent(
-        tryCatch(part()$view()$model, error = function(e) NULL),
-        kit$capture(NULL), ignoreInit = TRUE
-      )
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles),
@@ -44,19 +40,19 @@ table_server <- function(id, data, init) {
                                 function(b) b$text))
         },
         claims = table_claims(kit, part),
-        cond = table_cond(kit, parts)
+        cond = table_cond(kit, parts),
+        script = src$prep
       )
     }
   )
 }
 
-# What every layout reads: the prepared input as a frame, the board's scale
-# map, subject column and drill targets.
+# What every layout reads: the prepare script (`prep`, table_prepare()), the
+# prepared input as a frame, the board's scale map and subject column.
 table_sources <- function(data, state, session) {
-  prep <- table_prepare(data, r_script = state$script,
-                        r_values = state$script_values)
+  prep <- table_prepare(data, state)
   rows <- shiny::reactive({
-    d <- prep$data()
+    d <- prep$prepared()
     if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
   })
   list(
@@ -67,8 +63,7 @@ table_sources <- function(data, state, session) {
       viz_wire_columns(tryCatch(rows(), error = function(e) NULL))
     ),
     scale_map = dd_board_scale_map(),
-    subject = function() dd_ctrl_subject(session),
-    ctrl_choices = dd_ctrl_choices()
+    subject = function() ctrl_subject(session)
   )
 }
 
@@ -98,15 +93,7 @@ table_payload <- function(kit, src, part, titles) {
         empty = built$empty,
         receipt = if (!kit$transient()) part()$receipt(v$selection)
       ),
-      built$derived,
-      list(
-        script = list(inputs = dd_script_roles(src$prep$specs()),
-                      values = dd_script_cfg(src$prep$specs(),
-                                             v$script_values),
-                      error = src$prep$prepared()$error),
-        ctrl_choices = dd_ctrl_choices_list(src$ctrl_choices()),
-        capture_ratio = canvas_capture_ratio()
-      )
+      built$derived
     )
     viz_payload(kit$spec, v, rows(built$model, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
@@ -170,16 +157,6 @@ table_cond <- function(kit, parts) {
     if (!identical(shiny::isolate(cond$error), errs)) cond$error <- errs
   })
   cond
-}
-
-# The browser's last picture of the table, as the exhibit's picture.
-table_picture <- function(cap) {
-  if (is.null(cap)) {
-    return(NULL)
-  }
-  tryCatch(new_chart_capture(chart_capture_decode(cap$png), cap$width,
-                             cap$height),
-           error = function(e) NULL)
 }
 
 # The arguments that are the face's alone: a click, the title bands, the
