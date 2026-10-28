@@ -1,10 +1,15 @@
 # The structured table as the browser draws it: an annotated frame (dotted
-# structure columns, `||` spanner paths, section columns) as the TableModel of
-# inst/js/table/table.d.ts.
+# structure columns, `||` spanner paths, section columns) as the TableModel
+# of inst/js/table/table.d.ts: the browser gets the parts and builds the
+# table.
+#
+#   R/table-structured.R           the model: columns, widths, rows
+#   R/table-structured-head.R      the header rows
+#   R/table-structured-sections.R  the section headers and the drill claims
 
 #' A structured frame as the browser draws it
 #'
-#' Reads the frame the way `dt_table_tag_structured()` does: the `.label`
+#' Reads the frame this way: the `.label`
 #' column is the stub, `.indent` / `.strong` / `.emph` style the rows, the
 #' `.group<k>_level` columns (and the blocks of `.variable_label`) are the
 #' sections, and every other dotted column stays out of the cells.
@@ -67,7 +72,11 @@ table_structured_parts <- function(data) {
   )
 }
 
-# One body column as a TableCol.
+# One body column as a TableCol. A missing value is `null` (the browser
+# draws the dash) unless the cell is painted, where an empty cell is part of
+# the picture. The stub keeps its raw text for the drill; the data columns
+# are right-aligned, so they are all numeric to the browser. `keys` is the
+# column's half of a cell claim.
 table_structured_col <- function(data, name, drill_on, keys = NULL) {
   x <- data[[name]]
   disp <- as.character(x)

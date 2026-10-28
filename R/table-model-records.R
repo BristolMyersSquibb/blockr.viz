@@ -1,6 +1,7 @@
-# The records layout's cell model: what the table shows for each row and column
-# (display strings, paint, raw drill values, the stub with its row tint) and
-# the column widths.
+# The records layout's cell model: what the table shows for each row and
+# column (display strings, paint, raw drill values, the stub with its row
+# tint) and the column widths. table_records_view() turns it into the
+# TableModel.
 
 #' Compute the flat table's cell model: per-column display strings, paint
 #' and drill raw values, and the column widths. Returns `kind = "message"`
@@ -18,7 +19,9 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
                           group_cols = NULL, group = character(),
                           summaries = list(), active = NULL,
                           gear_cols = NULL) {
-  # Pickable columns for the gear (data-dt-cols).
+  # Pickable columns for the gear (data-dt-cols). `data` here is the raw
+  # input except in the block server's aggregated branch, which displays a
+  # projection and passes the raw schema in explicitly.
   if (is.null(gear_cols)) gear_cols <- dt_gear_cols_json(data)
 
   value_cols_raw <- value_cols
@@ -40,7 +43,8 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   # (see dd_shading_visuals): explicit cols claim; empty cols = all numeric
   # minus claimed (override rule, re-resolved per render so it survives
   # upstream schema changes); diverging/sequential pool one domain per rule,
-  # bars normalize per column.
+  # bars normalize per column. Columns a rule reads as its color SOURCE are
+  # paint metadata -- dropped from the display here, painted below.
   shading_vis <- dd_shading_visuals(shadings, data, value_cols)
   value_cols <- setdiff(value_cols, attr(shading_vis, "hidden"))
 
@@ -62,10 +66,14 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   )
 }
 
-# Drill-relevant columns carry each cell's RAW value (rendered as a data-raw
-# attribute, read by the click handlers instead of the displayed text): numeric
-# cells display rounded and NA renders as an em-dash, so a filter built from
-# the display would match zero rows and silently empty downstream.
+# Drill-relevant columns carry each cell's RAW value (rendered as a
+# data-raw attribute, read by the click handlers instead of the displayed
+# text): numeric cells display rounded and NA renders as an em-dash, so a
+# filter built from the display would match zero rows and silently empty
+# downstream. `as.character(raw)` round-trips exactly -- comparing a
+# numeric column to a character value in the filter expr coerces through
+# the same as.character(). NA cells stay NA here -> no data-raw (the click
+# is a no-op; see the nodrill flag in dt_flat_nodrill()).
 dt_flat_raw_cols <- function(drill, group_cols, shown) {
   intersect(unique(c(drill %||% character(), group_cols %||% character())),
             shown)
@@ -137,6 +145,18 @@ dt_flat_paint <- function(sv, data, name, col, keep) {
 }
 
 # The stub column.
+#
+# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) as the
+# row's `tint`, which the view draws as an accent bar on the left of the
+# row. `row_hex` is a per-row vector (the `color` column resolved through
+# the scale map); NA rows get no bar.
+#
+# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) drawn as
+# a subtle accent bar on the left of the row, matching the chart's legend
+# and reading like a selected-row indicator. `row_hex` is a per-row vector
+# (the `color` column resolved through the scale map); NA rows get no bar.
+# Drawn with an inset box-shadow so it adds no width (no layout shift) and
+# is independent of the numeric heatmap above.
 dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   n <- nrow(data)
   has_bar <- !is.null(row_hex) && length(row_hex) == n
@@ -171,8 +191,10 @@ dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, toggles) {
     }, character(1L))
   )
   if (isTRUE(toggles$rotate_titles)) {
-    # Rotated titles (matrix tables): header text no longer drives the column
-    # width -- that is the point of rotating.
+    # Rotated titles (matrix tables): header text no longer drives the
+    # column width -- that is the point of rotating. Value columns size on
+    # their CELL content alone (a count needs ~30px, not the 60px+ the
+    # header estimator floors at), the stub keeps the standard estimate.
     stub_w <- blockr.ui::column_widths_px(
       col_names = label_col,
       col_labels = flat_labels[1L],

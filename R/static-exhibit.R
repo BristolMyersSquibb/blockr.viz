@@ -211,8 +211,8 @@ html_exhibit_expanded <- function(data) {
 }
 
 # Does this display grid render any collapsible row? The structured table's
-# two rules: a non-empty section axis, or a row immediately followed
-# by a more deeply indented one.
+# two rules: a non-empty section axis, or a row immediately followed by a
+# more deeply indented one.
 html_table_collapsible <- function(data, section_cols = character()) {
 
   if (length(section_cols)) {
