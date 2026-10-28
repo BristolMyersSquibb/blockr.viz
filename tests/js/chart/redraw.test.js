@@ -39,12 +39,12 @@ test('a brush filter and a drill receipt survive a new payload', () => {
   t.clickWhere(0, D.at('Nausea'));
   t.advance(1000);
   t.send({ ...t.config, value_labels: true }, { data: null });
-  const rec = t.block.statusEl.querySelector('.dd-status-receipt');
+  const rec = t.block.frame.statusEl.querySelector('.dd-status-receipt');
   assert.ok(rec, 'the receipt is still there');
   assert.match(rec.style.animation, /-?\d+(\.\d+)?ms both$/);
   assert.ok(rec.style.animation.includes(' 400ms both'), 'resumed at its own age: ' + rec.style.animation);
   t.advance(4000);
-  assert.strictEqual(t.block.statusEl.querySelector('.dd-status-receipt'), null);
+  assert.strictEqual(t.block.frame.statusEl.querySelector('.dd-status-receipt'), null);
   t.close();
 });
 
@@ -67,7 +67,7 @@ test('the brush cursor being armed keeps a point click', () => {
   c.advance(200);
   armed(c);
   assert.strictEqual(c.selections().length, 1);
-  assert.strictEqual(c.block._filter.type, 'range');
+  assert.strictEqual(c.block.selection.current.type, 'range');
   c.close();
 });
 
@@ -75,7 +75,7 @@ test('an empty selection still clears a brush; a brush clear clears any filter',
   const c = D.open(SCATTER);
   c.trigger('brushSelected', { batch: [{ selected: [{ seriesIndex: 0, dataIndex: [0, 1] }] }] });
   armed(c);
-  assert.strictEqual(c.block._filter, null);
+  assert.strictEqual(c.block.selection.current, null);
   assert.strictEqual(c.selections().length, 2);
   c.close();
 });

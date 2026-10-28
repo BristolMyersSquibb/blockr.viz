@@ -197,7 +197,7 @@ test('the shading editor round-trips every key of a rule', () => {
   boxes[1].checked = true;
   fire(boxes[1], 'change');
   const mode = el.querySelector('select');
-  mode.value = 'sequential';
+  mode.value = 'Sequential';
   fire(mode, 'change');
   fire(el.querySelector('.vz-shade-add'), 'click');
   fire(el.querySelector('.vz-shade-remove'), 'click');

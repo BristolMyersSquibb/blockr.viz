@@ -1,6 +1,6 @@
 /* The legend setting: where the band sits, its title and swatch, and what
- * "marks" does per chart type (common.js legendPlan, chrome.js
- * _updateLegendBand, the option builders). */
+ * "marks" does per chart type (legend.js: legendPlan and the band, the
+ * option builders). */
 'use strict';
 
 const test = require('node:test');
@@ -29,7 +29,7 @@ const lastOption = (r, slot = 0) => {
     c.option.series && c.option.series.some((s) => s.type));
   return calls[calls.length - 1].option;
 };
-const band = (r) => (r.block.legendEl.style.display === 'none' ? null : r.block.legendEl);
+const band = (r) => (r.block.legend.el.hidden ? null : r.block.legend.el);
 const markNames = (opt) => opt.series.filter((s) => String(s.id || '').startsWith('__legend_'))
   .map((s) => s.label.formatter);
 
@@ -40,7 +40,7 @@ test('the band sits below the plot by default and above it with legend = "top"',
   const el = band(below);
   assert.ok(el);
   assert.strictEqual(el.previousElementSibling, below.block.chartGrid);
-  assert.strictEqual(el.nextElementSibling, below.block.captionEl);
+  assert.strictEqual(el.parentNode.nextElementSibling, below.block.frame.capEl);
   below.env.close();
 
   const above = draw({ chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' });
@@ -49,7 +49,7 @@ test('the band sits below the plot by default and above it with legend = "top"',
   assert.ok(top.classList.contains('dd-legend-band--top'));
   // The title band is the header's, which comes before.
   assert.ok(top.compareDocumentPosition(above.block.chartGrid) & 4);
-  assert.ok(above.block.card.firstElementChild.contains(above.block.titleEl));
+  assert.ok(above.block.frame.el.firstElementChild.contains(above.block.frame.titleEl));
   above.env.close();
 });
 
@@ -171,8 +171,8 @@ test('marks on a scatter write each colour group at its centre of mass', () => {
 // -- marks: bars ---------------------------------------------------------------
 
 const C = loadPure({ roles: true });
-const COLUMNS = [{ name: 'T', type: 'categorical' }, { name: 'SEV', type: 'categorical' },
-                 { name: 'V', type: 'numeric' }];
+const COLUMNS = [{ name: 'T', class: 'string' }, { name: 'SEV', class: 'string' },
+                 { name: 'V', class: 'number' }];
 const ROWS = [
   { T: 'a', SEV: 'LOW', V: 2 }, { T: 'a', SEV: 'HIGH', V: 4 },
   { T: 'b', SEV: 'LOW', V: 3 }, { T: 'b', SEV: 'HIGH', V: 1 },
@@ -278,7 +278,7 @@ test('marks fall back to the band, at the bottom, even when the setting was top'
 // Every term with both grades: the last bar carries each level.
 const CROSS = {
   data: { T: ['a', 'a', 'b', 'b', 'b'], G: ['HIGH', 'LOW', 'HIGH', 'LOW', 'LOW'] },
-  columns: [{ name: 'T', type: 'categorical', n_unique: 2 }, { name: 'G', type: 'categorical', n_unique: 2 }]
+  columns: [{ name: 'T', class: 'string', n_unique: 2 }, { name: 'G', class: 'string', n_unique: 2 }]
 };
 
 test('marks through the view on a stacked bar hide the band', () => {

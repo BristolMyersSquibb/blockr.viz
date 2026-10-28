@@ -1,5 +1,5 @@
-/* The content of every data tooltip: the ECharts cards (chart/common.js
-   tipHead / tipRow), the summarize table's, the heatmap's and blockr.pharma's
+/* The content of every data tooltip: the ECharts cards (core/tooltip.js
+   head / row), the summarize table's, the heatmap's and blockr.pharma's
    patient profile. One file so each of them loads the same rules
    (tooltip_card_dep()). Headline 13px/600, rows 12px with the label muted and
    the value at 500 in tabular figures, a swatch where a headline or a row

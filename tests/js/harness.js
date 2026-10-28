@@ -601,7 +601,7 @@ function message(env, id, { columns, data, config, derived, dataRev, stateRev })
     state_rev: stateRev == null ? ++revSeq : stateRev,
     data_rev: dataRev == null ? 1 : dataRev,
     columns: columns || [], config,
-    derived: Object.assign({ column_meta: columns || [] }, derived || {}),
+    derived: Object.assign({}, derived || {}),
     data: typeof data === 'string' ? null : (data == null ? null : data)
   }));
   if (typeof data === 'string') msg.data = data;
@@ -630,14 +630,14 @@ function timeDraw(env, payload) {
   return ms;
 }
 
-const text = (el) => (el && el.style.display !== 'none' ? el.textContent : null);
+const text = (el) => (el && !el.hidden ? el.textContent : null);
 
 /** What the reader sees outside the canvases. */
 function domSummary(block) {
-  const legend = block.legendEl && block.legendEl.style.display !== 'none'
+  const legend = block.legend && !block.legend.el.hidden
     ? {
-        title: (block.legendEl.querySelector('.dd-legend-title') || {}).textContent || null,
-        chips: Array.from(block.legendEl.querySelectorAll('.dd-legend-chip')).map((c) => ({
+        title: (block.legend.el.querySelector('.dd-legend-title') || {}).textContent || null,
+        chips: Array.from(block.legend.el.querySelectorAll('.dd-legend-chip')).map((c) => ({
           name: c.textContent,
           color: c.querySelector('.dd-legend-swatch').style.background,
           off: c.classList.contains('dd-legend-chip-off')
@@ -647,12 +647,12 @@ function domSummary(block) {
   const empty = Array.from(block.chartGrid.querySelectorAll('.vd-empty-text'))
     .map((e) => e.textContent);
   return {
-    title: text(block.titleEl),
-    subtitle: text(block.subtitleEl),
-    caption: text(block.captionEl),
+    title: text(block.frame.titleEl),
+    subtitle: text(block.frame.subEl),
+    caption: text(block.frame.capEl),
     legend,
     // The footer's words; its clear button is not text.
-    status: block.statusEl ? Array.from(block.statusEl.childNodes)
+    status: block.frame.statusEl ? Array.from(block.frame.statusEl.childNodes)
       .filter((n) => !(n.classList && n.classList.contains('dd-status-clear')))
       .map((n) => n.textContent).join('') : null,
     empty,
@@ -680,7 +680,7 @@ function slotLogs(block) {
  * Draw one chart in a fresh window and return what it did.
  * @param {object} config chart config (build_chart_msg()$config)
  * @param {object|string} data column object (or its JSON string)
- * @param {object[]} columns column metadata (dd_col_meta())
+ * @param {object[]} columns column descriptions (viz_wire_columns())
  * @param {{ width?: number, height?: number, keepOpen?: boolean,
  *           theme?: string, dataRev?: any }} [opts]
  */

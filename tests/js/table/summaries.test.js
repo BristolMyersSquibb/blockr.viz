@@ -72,8 +72,9 @@ test('move, remove, add and fold', () => {
   e.click(e.el.querySelectorAll('.lane-sum-up')[0]);
   e.click(e.el.querySelectorAll('.lane-sum-rm')[1]);
   const add = e.el.querySelector('.lane-sum-addcol select');
-  assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'simple', 'dist']);
-  add.value = 'pair';
+  // blockr.ui's Select (here the test's stand-in) keys its options by label.
+  assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'Summary', 'Distribution']);
+  add.value = 'Pair';
   add.dispatchEvent(new e.env.win.Event('change'));
   // The first entry moves only down, the last only up.
   assert.equal(e.el.querySelectorAll('.lane-sum-up').length, 1);

@@ -10,9 +10,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -106,7 +105,7 @@
     const { cfg, ink } = look;
     const dm = cfg.point_size;
     const lm = cfg.line_width;
-    const series = [];
+    /** @type {any[]} */ const series = [];
     const panelBand = parts.log.bandBucket(cfg, panel);
     if (!panelBand) return { series, band: null, markLineIdx: -1, many: false, labelPad: 0 };
     // `legend: "marks"`: each centre line carries its name at its end.
@@ -179,7 +178,7 @@
       if (cfg.box_points === 'outliers') drawn.push('out_y');
     }
     const vals = parts.log.bandValues(cfg, panel, drawn)
-      .filter((v) => v != null).map(Number).filter(Number.isFinite);
+      .filter((/** @type {any} */ v) => v != null).map(Number).filter(Number.isFinite);
     let lo = NS.minOf(vals), hi = NS.maxOf(vals);
     if (!(Number.isFinite(lo) && Number.isFinite(hi) && hi > lo)) return null;
     const span = hi - lo;
@@ -204,9 +203,9 @@
     const out = [];
     for (const r of refLimits(cfg)) {
       const v = Number(r.value);
-      const base = NS.axes.axisTitle(columns, r.col) + ' ' + NS.ddNum3(v) +
+      const base = NS.axes.axisTitle(columns, r.col) + ' ' + V.util.num3(v) +
         (Number(r.n_distinct) > 1
-          ? ' (' + NS.ddNum3(Number(r.lo)) + '–' + NS.ddNum3(Number(r.hi)) + ')' : '');
+          ? ' (' + V.util.num3(Number(r.lo)) + '–' + V.util.num3(Number(r.hi)) + ')' : '');
       let at = v, off = '';
       if (ext && v > ext.hi) { at = ext.hi; off = ' ↑ off scale'; }
       else if (ext && v < ext.lo) { at = ext.lo; off = ' ↓ off scale'; }

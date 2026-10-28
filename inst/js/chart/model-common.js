@@ -9,10 +9,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
-  const model = NS.model = NS.model || {};
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
+  const model = /** @type {any} */ (NS.model = {});
 
   const FIXED = ['waterfall', 'pie', 'treemap'];
   /** @param {unknown} v */
@@ -34,7 +33,7 @@
     if (!hasX) return 'vertical';
     const numeric = (/** @type {string} */ n) => {
       const m = columns.find((col) => col.name === n);
-      return m ? m.type === 'numeric' : null;
+      return m ? V.util.isNumeric(m) : null;
     };
     return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
   };
@@ -75,8 +74,8 @@
     }
     if (fam === 'individual') return;
     if (!set(cfg.sort_by)) {
-      const meta = /** @type {any} */ (columns.find((c) => c.name === cfg.category));
-      const ordered = !!meta && (meta.type === 'numeric' || !!meta.temporal ||
+      const meta = columns.find((c) => c.name === cfg.category);
+      const ordered = !!meta && (V.util.isNumeric(meta) || V.util.isTemporal(meta) ||
         (Array.isArray(meta.levels) && meta.levels.length > 0));
       cfg.sort_by = ordered ? 'data' : 'value';
     }
@@ -88,7 +87,7 @@
    * @param {Record<string, any>} config @param {Record<string, any>} [derived]
    * @param {VizColumn[]} [columns] @returns {Record<string, any>} */
   const settings = (config, derived, columns = []) => {
-    const spec = (V.spec && V.spec.chart) || {};
+    const spec = /** @type {VizSpec} */ (V.spec.chart || {});
     /** @type {Record<string, any>} */
     const cfg = {};
     for (const k of Object.keys(spec)) cfg[k] = spec[k].default ?? null;
@@ -101,22 +100,21 @@
 
   /** The gear's label of a spec argument. @param {string} key */
   const specLabel = (key) => {
-    const arg = V.spec && V.spec.chart && V.spec.chart[key];
+    const arg = /** @type {VizSpec} */ (V.spec.chart || {})[key];
     return arg && arg.gear ? arg.gear.label : key;
   };
 
   // Above this many colour levels a legend cannot be read.
   const MAX_COLOR_LEVELS = 15;
 
-  /** @param {string} text */
-  const emptyState = (text) =>
-    '<div class="vd-empty-state"><p class="vd-empty-text">' + text + '</p></div>';
+  /** Why there is no chart, in plain text. @param {string} message @returns {VizEmpty} */
+  const emptyState = (message) => ({ kind: 'empty', message });
 
   /**
-   * The empty state a config draws instead of a chart, as HTML, or null when
-   * it can draw.
+   * The empty state a config draws instead of a chart, or null when it can
+   * draw.
    * @param {any[]} rows @param {VizColumn[]} columns @param {Record<string, any>} cfg
-   * @returns {string | null}
+   * @returns {VizEmpty | null}
    */
   const gate = (rows, columns, cfg) => {
     const fam = NS.familyOf(cfg.type);
@@ -156,7 +154,7 @@
     // A band whose series R could not compute says why.
     const band = cfg.derived.band;
     if (cfg.type === 'band' && band && !band.series && band.note) {
-      return emptyState(NS.esc(band.note));
+      return emptyState(String(band.note));
     }
 
     if (cfg.color) {
@@ -164,8 +162,8 @@
       if (nColors > MAX_COLOR_LEVELS) {
         const hint = fam === 'aggregated'
           ? `Pick a column with ≤${MAX_COLOR_LEVELS} categories.`
-          : 'Use <code>series</code> to split into series (e.g. USUBJID); keep ' +
-            '<code>color</code> for low-cardinality grouping (e.g. ARM).';
+          : 'Use ' + specLabel('series') + ' to split into series (e.g. USUBJID); keep ' +
+            specLabel('color') + ' for low-cardinality grouping (e.g. ARM).';
         return emptyState(`Too many color levels (${nColors}). ${hint}`);
       }
     }

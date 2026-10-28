@@ -9,8 +9,8 @@ const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name, extra) => ({ name, type: 'numeric', ...extra });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name, extra) => ({ name, class: 'number', ...extra });
 const COLUMNS = [cat('ID'), cat('ARM', { label: 'Arm' }), cat('SEX'), cat('VIS', { levels: ['Base', 'W2'] }),
                  num('DAY', { label: 'Study Day' }), num('VAL'), num('LO'), num('HI')];
 const ROWS = [
@@ -293,7 +293,7 @@ test('the option reads only the config fields it and the model list', () => {
 });
 
 test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the month', () => {
-  const columns = [{ name: 'MONTH', type: 'categorical', temporal: 'date' }, num('VAL'), cat('G')];
+  const columns = [{ name: 'MONTH', class: 'date' }, num('VAL'), cat('G')];
   const rows = ['2020-01-01', '2020-02-01', '2020-03-01'].flatMap((d, i) =>
     [{ MONTH: d, VAL: i, G: 'a' }, { MONTH: d, VAL: i + 5, G: 'b' }]);
   const c = C.model.settings({ type: 'line', x: 'MONTH', y: 'VAL', color: 'G' }, {}, columns);
@@ -314,7 +314,7 @@ test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the mon
 });
 
 test('a quarterly line over ten years on a 650 px card has no dots', () => {
-  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'D', class: 'date' }, num('VAL')];
   const rows = (n) => Array.from({ length: n }, (_, i) =>
     ({ D: new Date(Date.UTC(2015, 3 * i, 1)).toISOString().slice(0, 10), VAL: i }));
   const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
@@ -331,7 +331,7 @@ test('a quarterly line over ten years on a 650 px card has no dots', () => {
 });
 
 test('a dense line has no dots; a gantt keeps a Date x a category', () => {
-  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'D', class: 'date' }, num('VAL')];
   const rows = Array.from({ length: 200 }, (_, i) =>
     ({ D: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10), VAL: i }));
   const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
@@ -383,7 +383,7 @@ test('an area fills and stacks a colour split, from zero, without dots', () => {
 });
 
 test('x_lines on a Date x: placed as dates, labelled by name or by the date', () => {
-  const columns = [{ name: 'DAY', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'DAY', class: 'date' }, num('VAL')];
   const rows = ['2026-10-14', '2026-10-21', '2026-10-28'].map((d, i) => ({ DAY: d, VAL: i }));
   const c = C.model.settings({
     type: 'line', x: 'DAY', y: 'VAL',

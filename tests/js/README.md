@@ -40,7 +40,7 @@ UPDATE_SNAPSHOTS=1 npm test
 and review the diff of `__snapshots__/` before committing it.
 
 The fixture is built by `fixtures/make-fixtures.R` with the package's own
-payload builders (`dd_col_meta()`, `chart_data_json()`,
+payload builders (`viz_wire_columns()`, `chart_data_json()`,
 `compute_band_series()`, `compute_smoother_series()`). Rebuild it with
 `Rscript tests/js/fixtures/make-fixtures.R` from the package root, then
 update the snapshots.

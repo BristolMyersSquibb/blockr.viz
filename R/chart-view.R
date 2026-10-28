@@ -1,8 +1,9 @@
 # What the chart sends the browser: one payload with the state as the spec
-# writes it (viz_wire()), the rows the current mapping needs, and `derived`:
-# what R computes for the drawing and never takes back. The pieces are cached
-# on exactly their inputs, so a setting that changes only the drawing reuses
-# them.
+# writes it (viz_wire()), the rows the current mapping needs, a description
+# of every column of the input (the gear picks from all of them), and
+# `derived`: what R computes for the drawing and never takes back. The pieces
+# are cached on exactly their inputs, so a setting that changes only the
+# drawing reuses them.
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
@@ -57,7 +58,6 @@ chart_view <- function(kit, src) {
     shiny::req(is.data.frame(d))
     v <- chart_state_values(state)
     viz_payload(spec, v, rows(shipped()), revs, derived = list(
-      column_meta = meta_cache(d, function() dd_col_meta(d)),
       titles = titles(),
       band = band(),
       smoother = smoother(),
@@ -73,7 +73,7 @@ chart_view <- function(kit, src) {
                     values = dd_script_cfg(src$specs(), v$script_values),
                     error = src$run()$error),
       capture_ratio = canvas_capture_ratio()
-    ))
+    ), columns = meta_cache(d, function() viz_wire_columns(d)))
   }
   list(payload = payload, titles = titles)
 }
@@ -148,12 +148,15 @@ chart_exhibit <- function(kit, src, view) {
     )
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
+    # The footer's {dataset} and {filters} are the input's: the numbers the
+    # chart shows carry neither.
+    input <- tryCatch(kit$data(), error = function(e) NULL)
     new_viz_exhibit(
       data, picture = chart_picture(kit$capture()),
       title = text(ti$title), subtitle = text(ti$subtitle),
       caption = text(ti$caption), kind = "chart",
-      meta = list(dataset = tryCatch(dl_dataset(kit$data()),
-                                     error = function(e) NULL))
+      meta = list(dataset = if (is.data.frame(input)) dl_dataset(input),
+                  source = input)
     )
   }
 }

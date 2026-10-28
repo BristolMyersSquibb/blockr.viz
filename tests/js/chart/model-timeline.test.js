@@ -8,8 +8,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure();
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'),
                  num('S'), num('E'), num('D'), cat('V')];
 
@@ -50,7 +50,7 @@ test('one mark per row with an x; a missing end makes a dot', () => {
 
 test('no x or y: an empty state', () => {
   const m = build({ x: '' });
-  assert.match(m.empty, /Select X \(start\) and Y \(term\) columns/);
+  assert.match(m.empty.message, /Select X \(start\) and Y \(term\) columns/);
   assert.strictEqual(m.panels.length, 0);
 });
 

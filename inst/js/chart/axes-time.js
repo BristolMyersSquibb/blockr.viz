@@ -6,9 +6,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
 
   /** A date in ms: a number as is, an ISO date as UTC midnight, an R date-time string ("2020-03-01
    * 12:30:00") as that wall-clock time in UTC. @param {any} v @returns {number} */
@@ -66,7 +65,7 @@
       if (period === 'time') return d.toISOString().slice(0, 16).replace('T', ' ');
       return d.toISOString().slice(0, 10);
     }
-    return NS.ddNum(Number(v));
+    return V.util.num(Number(v));
   };
 
   /** The span between two x values: days on a time axis, units on a value axis, nothing on a

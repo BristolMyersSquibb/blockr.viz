@@ -107,8 +107,8 @@ wire_record <- function(type, x) {
 #'
 #' @param df A data frame.
 #' @return `list(columns, data)`: `columns` a list of column meta (`name`,
-#'   `class`, `label`, `n_unique` and the entries above), `data` a `json`
-#'   string.
+#'   `class`, `label`, `n_unique`, the entries above and `kind` for a column
+#'   mark_column_kinds() marked), `data` a `json` string.
 #' @noRd
 viz_wire_df <- function(df) {
   w <- wire_df_parts(df, warn = TRUE)
@@ -127,13 +127,19 @@ viz_wire_df <- function(df) {
 #' @noRd
 viz_wire_columns <- function(df) {
   if (!is.data.frame(df)) return(NULL)
-  wire_df_parts(df, warn = FALSE)$meta
+  kinds <- column_kinds(df)
+  meta <- lapply(names(df), function(nm) {
+    w <- wire_class(df[[nm]])
+    if (!is.null(w)) wire_column_meta(df[[nm]], nm, w, kinds)
+  })
+  meta[!vapply(meta, is.null, logical(1L))]
 }
 
 wire_df_parts <- function(df, warn) {
   cols <- list()
   meta <- list()
   skipped <- character()
+  kinds <- column_kinds(df)
   for (nm in names(df)) {
     w <- wire_column(df[[nm]])
     if (is.null(w)) {
@@ -141,12 +147,7 @@ wire_df_parts <- function(df, warn) {
       next
     }
     cols[[nm]] <- w$values
-    meta[[length(meta) + 1L]] <- c(
-      list(name = nm, class = w$class,
-           label = attr(df[[nm]], "label", exact = TRUE) %||% "",
-           n_unique = length(unique(df[[nm]]))),
-      w$meta
-    )
+    meta[[length(meta) + 1L]] <- wire_column_meta(df[[nm]], nm, w, kinds)
   }
   if (warn && length(skipped)) {
     warning("Left out of the chart data, their class cannot be drawn: ",
@@ -155,45 +156,80 @@ wire_df_parts <- function(df, warn) {
   list(cols = cols, meta = meta)
 }
 
+# One column's description: its name, wire class, variable label, number
+# of distinct values, the class's meta (factor levels, time zone, unit) and,
+# in a frame that marks kinds, what the column is for. An unmarked column in
+# a marked frame has no `kind`.
+wire_column_meta <- function(x, nm, w, kinds) {
+  c(
+    list(name = nm, class = w$class,
+         label = attr(x, "label", exact = TRUE) %||% "",
+         n_unique = length(unique(x))),
+    w$meta,
+    if (nm %in% names(kinds)) list(kind = unname(kinds[[nm]]))
+  )
+}
+
 # One column as wire values, its class and its meta; NULL when it cannot
 # travel.
 wire_column <- function(x) {
+  w <- wire_class(x)
+  if (is.null(w)) {
+    return(NULL)
+  }
+  c(list(values = wire_values(x, w$class)), w)
+}
+
+# A column's wire class and the meta that goes with it, without its values;
+# NULL when it cannot travel.
+wire_class <- function(x) {
   if (is.factor(x)) {
-    return(list(values = wire_dict(as.character(x), levels(x)),
-                class = "string", meta = list(levels = I(levels(x)))))
+    return(list(class = "string", meta = list(levels = I(levels(x)))))
   }
   if (inherits(x, "Date")) {
-    return(wire_plain(format(x, "%Y-%m-%d"), "date"))
+    return(list(class = "date", meta = list()))
   }
   if (inherits(x, "POSIXct")) {
     tz <- attr(x, "tzone") %||% ""
-    return(wire_plain(as.numeric(x) * 1000, "datetime",
-                      list(tz = if (nzchar(tz[[1L]])) tz[[1L]] else "UTC")))
+    return(list(class = "datetime",
+                meta = list(tz = if (nzchar(tz[[1L]])) tz[[1L]] else "UTC")))
   }
   if (inherits(x, "difftime")) {
-    u <- units(x)
-    return(wire_plain(as.numeric(x, units = u), "duration", list(unit = u)))
+    return(list(class = "duration", meta = list(unit = units(x))))
   }
-  if (inherits(x, "integer64")) {
-    return(wire_plain(wire_int64(x), "number"))
+  if (inherits(x, "integer64") || is.numeric(x)) {
+    return(list(class = "number", meta = list()))
   }
   if (is.character(x)) {
-    return(wire_plain(as.vector(x), "string"))
+    return(list(class = "string", meta = list()))
   }
   if (is.logical(x)) {
-    return(wire_plain(as.vector(x), "bool"))
-  }
-  if (is.numeric(x)) {
-    return(wire_plain(as.vector(x), "number"))
+    return(list(class = "bool", meta = list()))
   }
   NULL
 }
 
-wire_plain <- function(v, class, meta = list()) {
+# A column's values in its wire class: a factor always as codes into its
+# levels, the others as codes only where that is shorter (wire_plain()).
+wire_values <- function(x, class) {
+  if (is.factor(x)) {
+    return(wire_dict(as.character(x), levels(x)))
+  }
+  v <- switch(class,
+    date = format(x, "%Y-%m-%d"),
+    datetime = as.numeric(x) * 1000,
+    duration = as.numeric(x, units = units(x)),
+    number = if (inherits(x, "integer64")) wire_int64(x) else as.vector(x),
+    as.vector(x)
+  )
+  wire_plain(v)
+}
+
+wire_plain <- function(v) {
   if (dict_worth_it(v)) {
     v <- wire_dict(v, sort(unique(v[!is.na(v)])))
   }
-  list(values = v, class = class, meta = meta)
+  v
 }
 
 # Codes into `levels`, 0-based, NA for a missing value.

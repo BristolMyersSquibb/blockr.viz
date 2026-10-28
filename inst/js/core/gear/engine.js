@@ -228,31 +228,11 @@
         this.render();
       };
       const labels = keys.map((k) => this.label(k, values));
-      const Sel = /** @type {VizUi} */ (root.Blockr).Select;
-      if (Sel) {
-        const inst = Sel.single(row, {
-          options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
-          label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
-        });
-        scope.own({ dispose: () => inst.destroy() });
-        return;
-      }
-      const sel = document.createElement('select');
-      sel.className = 'dd-select dd-add-select';
-      sel.setAttribute('aria-label', 'Add a mapping');
-      sel.setAttribute('data-gear-input', '.add');
-      const first = document.createElement('option');
-      first.value = '';
-      first.textContent = '+ Add a mapping';
-      sel.appendChild(first);
-      keys.forEach((key, i) => {
-        const o = document.createElement('option');
-        o.value = key;
-        o.textContent = labels[i];
-        sel.appendChild(o);
+      const inst = /** @type {VizUi} */ (root.Blockr).Select.single(row, {
+        options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
+        label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
       });
-      scope.on(sel, 'change', () => add(sel.value));
-      row.appendChild(sel);
+      scope.own({ dispose: () => inst.destroy() });
     }
 
     /** A field being typed in, so a re-render can put it back. */
@@ -335,11 +315,10 @@
   }
 
   /**
-   * A gear button and its tray, appended to a view's header `head`: blockr.ui's
-   * Blockr.gearTray when the page has it, else the button toggles the tray.
-   * The header gets `vz-head--open` while the tray is open; a tray left open
-   * is closed when `scope` goes, which takes it off blockr.ui's dismiss
-   * stack.
+   * A gear button and its tray, appended to a view's header `head`, opened
+   * and closed by blockr.ui's Blockr.gearTray. The header gets
+   * `vz-head--open` while the tray is open; a tray left open is closed when
+   * `scope` goes, which takes it off blockr.ui's dismiss stack.
    * @param {HTMLElement} head @param {VizScope} scope @param {string} label
    * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
    *             isOpen(): boolean }}
@@ -352,26 +331,13 @@
     const band = document.createElement('div');
     band.className = 'blockr-settings blockr-settings--beak dd-popover';
     head.append(btn, band);
-    const ui = root.Blockr;
-    let open = false;
-    const own = ui.gearTray ? ui.gearTray(band, btn, { label }) : null;
-    const set = (/** @type {boolean} */ on) => {
-      if (own) { own.set(on); return; }
-      open = on;
-      band.classList.toggle('blockr-settings--open', on);
-      btn.classList.toggle('blockr-gear-active', on);
-      btn.setAttribute('aria-expanded', String(on));
-    };
-    if (!own) {
-      btn.setAttribute('aria-label', label);
-      btn.setAttribute('aria-expanded', 'false');
-      scope.on(btn, 'click', () => set(!open));
-    }
+    const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
+    const set = (/** @type {boolean} */ on) => tray.set(on);
     const sync = () => head.classList.toggle('vz-head--open',
                                              btn.getAttribute('aria-expanded') === 'true');
     scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
     scope.own({ dispose: () => set(false) });
-    return { band, button: btn, set, isOpen: () => (own ? own.isOpen() : open) };
+    return { band, button: btn, set, isOpen: () => tray.isOpen() };
   };
 
   /**
