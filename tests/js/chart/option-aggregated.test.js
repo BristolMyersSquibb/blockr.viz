@@ -126,8 +126,9 @@ test('boxplot: five numbers per slot, a NaN box for an empty one, outliers besid
   const { opt } = build({ type: 'boxplot', category: 'T', value: 'V', orientation: 'vertical', sort_by: 'data',
                           sort_dir: 'asc', box_points: 'outliers' }, {}, rows);
   assert.deepStrictEqual(plain(opt.xAxis.data), ['a', 'b']);
-  assert.deepStrictEqual(plain(opt.series[0].data[0]), { value: [1, 2, 3, 4, 7], n: 5 });
-  assert.deepStrictEqual(plain(opt.series[0].data[1].value), [null, null, null, null, null]);
+  assert.strictEqual(opt.series[0].type, 'custom');
+  assert.deepStrictEqual(plain(opt.series[0].data[0]), { value: [0, 1, 2, 3, 4, 7], n: 5, name: 'a' });
+  assert.deepStrictEqual(plain(opt.series[0].data[1].value), [1, null, null, null, null, null]);
   assert.strictEqual(opt.series[0].data[1].n, 0);
   assert.deepStrictEqual(plain(opt.series[1].data), [[0, 100]]);
   assert.strictEqual(opt.yAxis.scale, true);

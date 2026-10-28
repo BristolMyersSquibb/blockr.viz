@@ -203,8 +203,8 @@ paint_bardiv <- function(c, i, x, w, ytop, gl) {
        paint_rect(mid - gl$hair / 2, gl$hair, y, h, PAINT_TICK, gl))
 }
 
-# Two whisker segments (never through the body), caps, a translucent IQR body
-# and a solid median tick. CSS: .vz-table-groups-boxcell.
+# Two whisker segments (never through the body), a solid IQR body and the
+# median cut out of it in white. CSS: .vz-table-groups-boxcell.
 paint_box <- function(c, i, x, w, ytop, gl, fill = PAINT_FILL) {
   if (is.na(c$bc[[i]])) return(list())
   h <- gl$lane
@@ -215,22 +215,15 @@ paint_box <- function(c, i, x, w, ytop, gl, fill = PAINT_FILL) {
     if (is.na(ww)) return(NULL)
     paint_lane_rect(l, ww, x, w, mid - gl$hair / 2, gl$hair, fill, gl)
   }
-  cap <- function(l, ww) {
-    if (is.na(ww)) return(NULL)
-    paint_rect(paint_lane_x(l, x, w) - gl$hair / 2, gl$hair, y + px * 3, h - px * 6,
-            fill, gl)
-  }
   list(
     if (isTRUE(c$bare)) paint_bare(x, w, mid, gl),
     wh(c$wl[[i]], c$w1[[i]]),
     wh(c$b2[[i]], c$w2[[i]]),
-    cap(c$wl[[i]], c$w1[[i]]),
-    cap(c$wh[[i]], c$w2[[i]]),
     if (!is.na(c$bw[[i]])) {
-      paint_lane_rect(c$bl[[i]], c$bw[[i]], x, w, y + px, h - 2 * px,
-                   paint_sub(fill), gl)
+      paint_lane_rect(c$bl[[i]], c$bw[[i]], x, w, y + px, h - 2 * px, fill, gl)
     },
-    paint_rect(paint_lane_x(c$bc[[i]], x, w) - px, px * 2, y, h, fill, gl)
+    paint_rect(paint_lane_x(c$bc[[i]], x, w) - px * 0.75, px * 1.5, y + 2 * px,
+               h - 4 * px, "#ffffff", gl)
   )
 }
 

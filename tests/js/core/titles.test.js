@@ -137,6 +137,17 @@ test('a token nothing answers to is named; an emptied field goes back to auto', 
   assert.deepEqual(lastSet(t).values, { title: null });
 });
 
+test('the line under a field is marked when it would only repeat the field', () => {
+  const t = setup();
+  const same = (key) => row(t.el, key).querySelector('.vz-template-shows')
+    .classList.contains('is-same');
+  assert.equal(same('title'), false, 'a slot: the line says what it prints');
+  assert.equal(same('caption'), false, 'an empty field: the line shows the auto text');
+  t.gear.update(payload({ type: 'bar', x: 'ARM', func: 'count', title: 'Adverse events',
+                          value_labels: false }, { derived: { titles: TITLES } }));
+  assert.equal(same('title'), true, 'plain text: nothing to add');
+});
+
 test('slots: words open their setting; plain words stay text', () => {
   const t = setup();
   const opened = [];

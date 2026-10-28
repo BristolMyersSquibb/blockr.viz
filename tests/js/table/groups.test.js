@@ -147,11 +147,11 @@ test('a diverging bar: positive and negative, zero empty', () => {
   assert.equal(t.cell(1, 3).querySelector('.vz-table-groups-fill'), null);
 });
 
-test('a box: whiskers, caps, box, median; nothing without a median', () => {
+test('a box: whiskers, box, median; nothing without a median', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const box = t.cell(0, 4).querySelector('.vz-table-groups-boxcell');
   assert.deepEqual(Array.from(box.children).map((i) => i.className),
-                   ['vz-table-lane-wh', 'vz-table-lane-wh', 'vz-table-lane-cap', 'vz-table-lane-cap', 'vz-table-lane-box', 'vz-table-lane-med']);
+                   ['vz-table-lane-wh', 'vz-table-lane-wh', 'vz-table-lane-box', 'vz-table-lane-med']);
   assert.equal(box.getAttribute('data-summarize-tip'), 'n = 4');
   assert.equal(t.cell(1, 4).querySelector('.vz-table-groups-boxcell').children.length, 0);
 });

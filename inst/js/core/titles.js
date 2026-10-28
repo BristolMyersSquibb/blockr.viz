@@ -296,6 +296,8 @@
     const body = document.createElement('span');
     body.className = 'vz-template-preview';
     paintPreview(body, band, ctx.labelOf);
+    // Plain text with no slots, clause or break: the line would repeat it.
+    shows.classList.toggle('is-same', before !== '' && !/[{[]|\\n/.test(before));
     const stale = document.createElement('span');
     stale.className = 'vz-template-stale';
     stale.textContent = 'not applied';
@@ -328,13 +330,31 @@
       else menu.refilter();
       sync();
     });
+    const revert = () => { inp.value = before; sync(); inp.blur(); };
     ctx.scope.on(inp, 'keydown', (ev) => {
       const e = /** @type {KeyboardEvent} */ (ev);
       if (menu.keydown(e)) return;
       if (e.key === 'Enter') { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') { inp.value = before; sync(); inp.blur(); }
+      if (e.key === 'Escape') revert();
     });
-    ctx.scope.on(inp, 'blur', () => { menu.close(); if (inp.value !== before) commit(); });
+    // Blockr.layer takes Escape on window, before the field's own keydown,
+    // and gives it to the top layer: the tray, which closes, and the blur
+    // then commits the draft. While it has the focus the field is a layer
+    // of its own, so Escape reverts it. The `@` menu opens above it and
+    // takes the first Escape.
+    /** @type {{ remove(): void } | null} */
+    let layer = null;
+    const unlayer = () => { if (layer) { layer.remove(); layer = null; } };
+    ctx.scope.own({ dispose: unlayer });
+    ctx.scope.on(inp, 'focus', () => {
+      const ly = ui().layer;
+      if (!layer && ly) layer = ly(inp, { escape: () => { layer = null; revert(); } });
+    });
+    ctx.scope.on(inp, 'blur', () => {
+      unlayer();
+      menu.close();
+      if (inp.value !== before) commit();
+    });
     sync();
   }
 

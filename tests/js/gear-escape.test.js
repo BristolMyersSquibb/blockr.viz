@@ -84,3 +84,55 @@ test('Escape closes the table gear tray', async () => {
   win.happyDOM.abort();
   await win.happyDOM.close();
 });
+
+/* Escape in a title field: Blockr.layer takes Escape before the field's own
+ * keydown, so the field is a layer while it has the focus. Escape reverts
+ * the draft and leaves the tray open; with the `@` menu open, the first
+ * Escape closes the menu and the second reverts. Nothing is sent. */
+test('Escape in a title field reverts it and keeps the tray open', async () => {
+  const c = D.open({ type: 'bar', y: 'AETERM', orientation: 'horizontal', title: 'Adverse events' });
+  try {
+    const win = c.env.win;
+    const { band, button } = c.block.frame.tray;
+    click(button);
+    const isOpen = () => band.classList.contains('blockr-settings--open');
+    assert.ok(isOpen());
+    const inp = band.querySelector('input[data-gear-input="title"]');
+    assert.ok(inp, 'the tray has the title field');
+    const type = (text) => {
+      for (const ch of text) {
+        inp.value += ch;
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+        inp.dispatchEvent(new win.InputEvent('input', { data: ch }));
+      }
+    };
+    const layers = win.Blockr.layer.count();
+
+    inp.focus();
+    assert.equal(win.Blockr.layer.count(), layers + 1, 'the focused field is a layer');
+    type(' draft');
+    escape(inp);
+    assert.ok(isOpen(), 'the tray stays open');
+    assert.equal(inp.value, 'Adverse events', 'the draft is reverted');
+    assert.notEqual(win.document.activeElement, inp, 'the field lets go of the focus');
+    assert.equal(win.Blockr.layer.count(), layers, 'the field is no layer once blurred');
+
+    inp.focus();
+    type(' by @');
+    const menu = () => win.document.body.querySelector('.vz-at-menu');
+    assert.ok(menu(), 'the @ menu is open');
+    escape(inp);
+    assert.equal(menu(), null, 'the first Escape closes the menu');
+    assert.ok(isOpen());
+    assert.equal(inp.value, 'Adverse events by @', 'the draft stays');
+    escape(inp);
+    assert.equal(inp.value, 'Adverse events', 'the second reverts it');
+    assert.ok(isOpen(), 'and the tray is still open');
+
+    escape(band);
+    assert.equal(isOpen(), false, 'Escape outside a field still closes the tray');
+    assert.deepEqual(c.sets(), [], 'nothing was sent');
+  } finally {
+    await c.env.close();
+  }
+});

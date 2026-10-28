@@ -126,40 +126,48 @@
       },
       "series": [
        {
-        "type": "boxplot",
+        "type": "custom",
+        "id": "__box_0",
         "data": [
          {
           "value": [
+           0,
            23.24,
            27.37,
            32.11,
            35.11,
            41
           ],
-          "n": 9
+          "n": 9,
+          "name": "Rash"
          },
          {
           "value": [
+           1,
            23.37,
            26.805,
            30.12,
            33.56,
            38.48
           ],
-          "n": 10
+          "n": 10,
+          "name": "Upper respiratory tract infection"
          },
          {
           "value": [
+           2,
            25.24,
            28.48,
            31.11,
            32.37,
            38.205
           ],
-          "n": 9
+          "n": 9,
+          "name": "Fatigue"
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -170,38 +178,54 @@
          },
          {
           "value": [
+           4,
            24.24,
            29.9525,
            32.24,
            34.1375,
            39
           ],
-          "n": 8
+          "n": 8,
+          "name": "Nausea"
          },
          {
           "value": [
+           5,
            21.37,
            26.86,
            31.12,
            34.56,
            39.48
           ],
-          "n": 10
+          "n": 10,
+          "name": "Headache"
          },
          {
           "value": [
+           6,
            22.37,
            26.675,
            30.055,
            33.31,
            37.48
           ],
-          "n": 8
+          "n": 8,
+          "name": "Dizziness"
          }
         ],
+        "encode": {
+         "y": 0,
+         "x": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "itemStyle": {
-         "color": "#0072B222",
-         "borderColor": "#0072B2"
+         "color": "#0072B2"
         }
        }
       ]
@@ -235,6 +259,7 @@
         "data": [
          {
           "value": [
+           0,
            23.24,
            27.37,
            32.11,
@@ -242,12 +267,14 @@
            41
           ],
           "n": 9,
+          "name": "Rash",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           1,
            23.37,
            26.805,
            30.12,
@@ -255,12 +282,14 @@
            38.48
           ],
           "n": 10,
+          "name": "Upper respiratory tract infection",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           2,
            25.24,
            28.48,
            31.11,
@@ -268,12 +297,14 @@
            38.205
           ],
           "n": 9,
+          "name": "Fatigue",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -287,6 +318,7 @@
          },
          {
           "value": [
+           4,
            24.24,
            29.9525,
            32.24,
@@ -294,12 +326,14 @@
            39
           ],
           "n": 8,
+          "name": "Nausea",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           5,
            21.37,
            26.86,
            31.12,
@@ -307,12 +341,14 @@
            39.48
           ],
           "n": 10,
+          "name": "Headache",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           6,
            22.37,
            26.675,
            30.055,
@@ -320,6 +356,7 @@
            37.48
           ],
           "n": 8,
+          "name": "Dizziness",
           "itemStyle": {
            "opacity": 1
           }

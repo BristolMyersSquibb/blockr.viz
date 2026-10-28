@@ -328,8 +328,8 @@
   min-width: 0;
   /* The level's colour arrives as --vz-table-groups-fill on this element. The
      TRANSLUCENT token is derived from the fill, so it has to be re-derived
-     here as well -- otherwise every level's box body keeps the column
-     default and only the whiskers and the median tick take the colour. */
+     here as well -- otherwise a level's translucent marks keep the column
+     default. */
   --vz-table-groups-sub: color-mix(in srgb, var(--vz-table-groups-fill) 45%,
                                transparent);
 }
@@ -345,36 +345,32 @@
   + .vz-table-groups-barval {
   line-height: 12px;
 }
-/* Box: whiskers OUTSIDE the body only (two segments), caps, a translucent
-   body, a solid median tick. */
+/* Box: whiskers OUTSIDE the body only (two segments), a solid body in the
+   fill, and the median cut out of it in the surface colour, as the chart's
+   box (option-distribution.js). */
 .vz-table-groups-boxcell .vz-table-lane-wh {
   top: 50%;
   height: 1px;
   margin-top: -0.5px;
   background: var(--vz-table-groups-fill);
 }
-.vz-table-groups-boxcell .vz-table-lane-cap {
-  top: 3px;
-  bottom: 3px;
-  width: 1px;
-  background: var(--vz-table-groups-fill);
-}
 /* The IQR body is free-standing: neither end sits on an axis and neither abuts
    a sibling, so the cosmetic radius applies to BOTH ends. It is not the pill --
    the box is 10px tall and the radius is 2px, nowhere near the half-height that
-   would make it read as a soft boundary. The fence caps, whiskers and median
-   tick stay square: at 1-2px a radius would turn them into dots. */
+   would make it read as a soft boundary. The whiskers and the median cut stay
+   square: at 1-2px a radius would turn them into dots. */
 .vz-table-groups-boxcell .vz-table-lane-box {
   top: 1px;
   bottom: 1px;
-  background: var(--vz-table-groups-sub);
+  background: var(--vz-table-groups-fill);
   border-radius: var(--blockr-mark-radius, 2px);
 }
 .vz-table-groups-boxcell .vz-table-lane-med {
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--vz-table-groups-fill);
+  top: 2px;
+  bottom: 2px;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--blockr-color-bg-surface, #ffffff);
 }
 /* The dot style: three nested weights over one x. The fence band (outer
    range) recedes to a tint, the inner range is a rounded bar, the centre is a
