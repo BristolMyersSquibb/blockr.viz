@@ -65,22 +65,27 @@ table_groups_join_levels <- function(levels, labs) {
   }, character(1L))
 }
 
-# The mark of a column: summarize_payload_col()'s fields less what the TableCol
-# holds itself (`disp`, `v`, `pct`, tile paint, claims). Text the cell model
-# escaped is plain here; the browser escapes. A number or text has no mark.
+# The mark of a column: the cell model's own fields less what the TableCol
+# holds itself (`disp`, `v`, `pct`, tile paint, claims), per-row vectors as
+# arrays. Flags travel only when true, empty references not at all. Text the
+# cell model escaped is plain here; the browser escapes. A number or text has
+# no mark.
 table_groups_mark <- function(c) {
   if (identical(c$kind, "num")) {
     return(NULL)
   }
-  out <- summarize_payload_col(c)
-  out[c("fkey", "scol", "disp", "v", "pct", "bg", "fg")] <- NULL
-  out$tip <- table_groups_tips(out[["tip"]])
-  if (!is.null(out$lv)) {
-    out$lv <- lapply(out$lv, function(g) {
-      g$tip <- table_groups_tips(g[["tip"]])
-      g
-    })
+  g <- c[setdiff(names(c), c("fkey", "scol", "disp", "v", "pct", "bg", "fg"))]
+  if (!any(c$sub %in% TRUE)) g$sub <- NULL
+  for (k in c("rf", "rc", "rby", "rbh")) {
+    if (length(g[[k]]) && is.na(g[[k]])) g[[k]] <- NULL
   }
+  if (!isTRUE(c$multi)) g$ab <- NULL
+  if (!length(c$tt)) g$tt <- NULL
+  labelled <- !is.null(c$disp) || isTRUE(c$multi) ||
+    (identical(c$kind, "barsplit") && !is.null(c$ldisp))
+  if (!labelled) g$dw <- NULL
+  out <- table_groups_pack(table_groups_fence(g), c$kind, top = TRUE)
+  out$tip <- table_groups_tips(out[["tip"]])
   if (identical(c$kind, "interval")) {
     out$tips <- lapply(out$tips, table_groups_tips)
     out$segs <- lapply(out$segs, lapply, function(sg) {
@@ -91,13 +96,51 @@ table_groups_mark <- function(c) {
   summarize_drop_null(out)
 }
 
+# A point range's fence band only where it has an outer range, per level.
+table_groups_fence <- function(g) {
+  if (!is.null(g$ow) && all(is.na(g$ow))) g[c("ol", "ow")] <- NULL
+  if (!is.null(g$lv)) g$lv <- lapply(g$lv, table_groups_fence)
+  g
+}
+
+# Column-level fields stay scalars (a bar's `fill` is its colour, a pair's is
+# one per row); everything else is per row, an array also at one row.
+TABLE_GROUPS_SCALARS <- c("kind", "mode", "rf", "d0", "d1", "dw", "rc", "rby",
+                          "rbh", "tt")
+TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg")
+
+table_groups_pack <- function(g, kind, top) {
+  out <- list()
+  for (nm in names(g)) {
+    x <- g[[nm]]
+    if (is.null(x) || (nm %in% TABLE_GROUPS_FLAGS && !isTRUE(x))) next
+    out[[nm]] <- if (nm %in% TABLE_GROUPS_FLAGS ||
+                       (top && nm %in% TABLE_GROUPS_SCALARS) ||
+                       (top && nm == "fill" && identical(kind, "bar"))) {
+      x
+    } else if (nm == "segs") {
+      lapply(x, function(ss) if (length(ss)) ss else summarize_arr(list()))
+    } else if (nm == "lv") {
+      lapply(x, function(l) {
+        l <- table_groups_pack(l, kind, top = FALSE)
+        l$tip <- table_groups_tips(l[["tip"]])
+        l
+      })
+    } else if (is.list(x)) {
+      lapply(x, summarize_arr)
+    } else {
+      summarize_arr(x)
+    }
+  }
+  out
+}
+
 table_groups_tips <- function(x) {
   if (!is.null(x)) summarize_arr(table_groups_plain(x))
 }
 
 # The column axis the header draws: tick positions (percent of the cell) and
-# labels, as summarize_axis_strip() prints them, with the "%" already on the
-# last label. `foot` marks a large swimlane, which repeats the axis under the
+# labels, with the "%" already on the last label. `foot` marks a large swimlane, which repeats the axis under the
 # table. `NULL` without a scale or with fewer than two ticks.
 table_groups_axis <- function(p, prep) {
   dom <- summarize_axis_domain(p, prep)
@@ -124,4 +167,17 @@ table_groups_axis <- function(p, prep) {
     at = summarize_arr(pos), labels = summarize_arr(t$labels),
     foot = if (identical(p$kind, "interval") && identical(p$size, "lg")) TRUE
   ))
+}
+
+# A vector as a JSON array, also at length one.
+summarize_arr <- function(x) {
+  I(unname(if (is.factor(x)) as.character(x) else x))
+}
+
+summarize_drop_null <- function(x) {
+  if (!is.list(x)) return(x)
+  x <- x[!vapply(x, is.null, logical(1L))]
+  lapply(x, function(e) {
+    if (is.list(e) && !inherits(e, "AsIs")) summarize_drop_null(e) else e
+  })
 }

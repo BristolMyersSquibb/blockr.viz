@@ -47,7 +47,6 @@ R: records,R/table-css.R,1400
 R: groups,R/table-groups*.R,3600
 R: groups,R/table-model-groups*.R,3600
 R: groups,R/table-model-cells*.R,3600
-R: groups,R/summarize-push.R,3600
 R: groups,R/summarize-table*.R,3600
 R: groups,R/summarize-drill.R,3600
 R: variables,R/table-variables*.R,900
