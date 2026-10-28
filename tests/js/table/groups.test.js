@@ -89,7 +89,7 @@ test('the groups table carries its classes and settings', () => {
   assert.equal(tbl.getAttribute('data-summarize-compact'), '1');
   assert.equal(tbl.getAttribute('data-summarize-nested'), null);
   assert.ok(t.cell(0, 0).classList.contains('blockr-summarize-label-col'));
-  assert.equal(t.$('.dt-row-count').textContent, '2 more in Other');
+  assert.equal(t.$('.vz-count').textContent, '2 more in Other');
 });
 
 test('a bar: the track, its fill and the value with its percentage', () => {
@@ -266,7 +266,7 @@ test('nested groups: parents fold their terms; search keeps the parent', async (
   inp.dispatchEvent(new t.win.Event('input'));
   await tick(t.win, 200);
   assert.deepEqual(rows().map((r) => r.children[0].textContent), ['Skin', 'Rash']);
-  assert.equal(t.$('.dt-row-count').textContent, '');
+  assert.equal(t.$('.vz-count').textContent, '');
 });
 
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
