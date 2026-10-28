@@ -190,29 +190,13 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, subtitle = NULL,
                                            caption = NULL,
                                            max_height = NULL,
                                            default_expanded = NULL, ...) {
-  args <- x$args
-
-  args$title <- if (is.null(title)) x$title else title
-  args$subtitle <- if (is.null(subtitle)) x$subtitle else subtitle
-  args$caption <- if (is.null(caption)) x$caption else caption
-  # The exhibit resolved them, and a caller's text (a caption with the
-  # download footer appended) is final.
-  args$resolve_titles <- FALSE
-  # A printed exhibit is not a scroll box: the page or the slide gives it the
-  # room, so the block's own max_height does not travel with it.
-  args$max_height <- max_height
-  args$search <- FALSE
-  args$elem_id <- NULL
-  # A printed table has nobody to click its chevrons, so a nested one opens
-  # whole. Same call the painted page makes -- it draws every row too, and
-  # the two targets must not disagree about what the table CONTAINS.
-  args$expanded <- TRUE
-  # The look is the block's; this method draws the table look.
-  args$look <- NULL
-  # The table the exhibit already prepared, so the web page carries the
-  # numbers the spreadsheet and the slides carry.
-  args$prep <- x$prep
-  do.call(summarize_table, c(list(x$data), args))
+  # The table view draws it from the cell model the exhibit computed, so the
+  # web page carries the numbers the spreadsheet and the slides carry.
+  g <- table_static_groups(x)
+  g$derived$titles <- table_static_titles(title %||% x$title,
+                                          subtitle %||% x$subtitle,
+                                          caption %||% x$caption)
+  table_static(g$model, g$config, g$derived, max_height = max_height)
 }
 
 #' @export

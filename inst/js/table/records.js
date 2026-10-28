@@ -53,6 +53,8 @@
       /** The last claim sent to a drill target. */
       this.sent = /** @type {TableSelection | null} */ (null);
       this.drawnWith = '';
+      /** A picture or a page without Shiny: every row drawn, no tools. */
+      this.still = false;
       /** @type {Record<string, string>} */
       this.labels = {};
       this.drill = T.drill.wire(this.grid, frame, scope, {
@@ -137,6 +139,7 @@
      * @returns {{ search: boolean, download: boolean, downloads?: unknown, onOpen?: () => void }}
      */
     tools(cfg, has, d) {
+      if (this.still) return { search: false, download: false };
       return { search: has && cfg.search !== false, download: has && cfg.download !== false,
                downloads: d.downloads };
     }
@@ -148,7 +151,8 @@
      * @returns {TableGridFlags}
      */
     flags(cfg, m) {
-      return { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false };
+      return { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false,
+               all: this.still };
     }
 
     /** @returns {TableCardOpts} */

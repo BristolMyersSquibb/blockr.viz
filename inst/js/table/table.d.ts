@@ -425,6 +425,8 @@ interface VizTableNamespace {
   };
   /** A picture of a groups table drawn off screen (groups.js). */
   picture(payload: VizPayload, width: number, ratio?: number): Promise<VizPicture>;
+  /** Draw the tables R wrote into a page without Shiny (static.js). */
+  mount(node?: ParentNode): void;
   /** The records layout; groups extends it. */
   Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
   html: {
