@@ -9,7 +9,7 @@
  *   bar        a track and its fill
  *   barsplit   segments of a colour split, stacked or one track per level
  *   bardiv     a bar either side of zero
- *   box        whiskers, caps, box and median
+ *   box        whiskers, box and median
  *   pointrange a range and its centre, with an outer fence
  *   pair       a dumbbell: band, reference, link, from and to
  *   interval   swimlane segments on a time axis
@@ -106,7 +106,7 @@
     (g.bare ? ' is-bare' : '') + '"' + (has ? tipAttr(at(g.tip, i)) : '') + '>';
 
   /**
-   * Box: whiskers, their caps, the box and the median.
+   * Box: whiskers, the box and the median cut out of it.
    * @param {TableLaneGeom} g
    * @param {number} i
    */
@@ -121,8 +121,6 @@
     if (v('whiskerHighWidth') != null) {
       s += '<i class="vz-table-lane-wh" style="' + span(v('boxRight'), v('whiskerHighWidth')) + '"></i>';
     }
-    if (v('whiskerLowWidth') != null) s += '<i class="vz-table-lane-cap" style="left:' + n(v('whiskerLow')) + '%"></i>';
-    if (v('whiskerHighWidth') != null) s += '<i class="vz-table-lane-cap" style="left:' + n(v('whiskerHigh')) + '%"></i>';
     if (v('boxWidth') != null) s += '<i class="vz-table-lane-box" style="' + span(v('boxLeft'), v('boxWidth')) + '"></i>';
     return s + '<i class="vz-table-lane-med" style="left:' + n(v('median')) + '%"></i></div>';
   }

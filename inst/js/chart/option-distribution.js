@@ -3,8 +3,8 @@
  * Chart block: the boxplot and point range options. The model has already
  * summarised each slot (a group, or group and colour level); this draws a box
  * or a centre dot on an interval per slot. A colour split gives each level
- * its own series, and a split boxplot its own hidden category axis, because
- * ECharts dodges boxplot series that share one axis.
+ * its own series, and a split boxplot its own hidden category axis on which
+ * it draws only its own slots.
  */
 (function () {
   'use strict';
@@ -82,17 +82,58 @@
     .map((/** @type {any} */ s, /** @type {number} */ ci) => ({ s, ci }))
     .filter((/** @type {any} */ e) => e.s.level === lv && e.s.body);
 
-  // ECharts reads datum.value unconditionally: an empty slot is NaNs.
-  const emptyBox = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
+  // One datum per category, so the datum index is the category index. An empty slot is NaNs.
+  const emptyBox = (/** @type {number} */ ci) => ({ value: [ci, NaN, NaN, NaN, NaN, NaN], n: 0 });
 
-  /** One boxplot series per level. @param {any} k */
+  /** The box of one slot: a solid body in the level's colour, the median cut out of it in the
+   * surface colour, whiskers without caps. ECharts' own boxplot draws body outline, whiskers and
+   * median in one colour, so a solid body would hide the median; this draws the parts apart.
+   * The datum is [category, whisker lo, body lo, centre, body hi, whisker hi]. @param {string} clr
+   * @param {string} cut @param {boolean} horizontal */
+  const boxRender = (clr, cut, horizontal) => (/** @type {any} */ params, /** @type {any} */ api) => {
+    const ci = api.value(0);
+    const v = [1, 2, 3, 4, 5].map((i) => api.value(i));
+    if (v.some((x) => !Number.isFinite(x))) return null;
+    const at = (/** @type {number} */ x) => horizontal ? api.coord([x, ci]) : api.coord([ci, x]);
+    const band = horizontal ? api.size([0, 1])[1] : api.size([1, 0])[0];
+    // The bounds of ECharts' boxWidth default, [7, 50].
+    const half = Math.max(7, Math.min(50, band * 0.5)) / 2;
+    const st = api.style ? api.style() : null;
+    const opacity = st && st.opacity != null ? st.opacity : 1;
+    const [wLo, bLo, mid, bHi, wHi] = v.map(at);
+    const a = horizontal ? 0 : 1; // the value axis coordinate
+    const line = (/** @type {number[]} */ p, /** @type {number[]} */ q, /** @type {string} */ stroke,
+                  /** @type {number} */ lineWidth) =>
+      ({ type: 'line', shape: { x1: p[0], y1: p[1], x2: q[0], y2: q[1] }, style: { stroke, lineWidth, opacity } });
+    const across = (/** @type {number[]} */ p) => horizontal
+      ? [[p[0], p[1] - half], [p[0], p[1] + half]] : [[p[0] - half, p[1]], [p[0] + half, p[1]]];
+    const lo = Math.min(bLo[a], bHi[a]), len = Math.abs(bHi[a] - bLo[a]);
+    const body = horizontal
+      ? { x: lo, y: mid[1] - half, width: len, height: 2 * half }
+      : { x: mid[0] - half, y: lo, width: 2 * half, height: len };
+    const [m0, m1] = across(mid);
+    return {
+      type: 'group',
+      children: [
+        line(wLo, bLo, clr, 1.5),
+        line(bHi, wHi, clr, 1.5),
+        { type: 'rect', shape: { ...body, r: 1.5 }, style: { fill: clr, opacity } },
+        line(m0, m1, cut, 1.5)
+      ]
+    };
+  };
+
+  /** One box series per level, a custom series (see boxRender). @param {any} k */
   const distBoxSeries = (k) => k.levelInfo.map((/** @type {any} */ { lv, li, name, hex }) => ({
-    type: 'boxplot', name,
-    data: k.slots.map((/** @type {any} */ s) => (s.level === lv && s.body)
-      ? { value: [s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n }
-      : emptyBox()),
+    type: 'custom', name, id: '__box_' + li,
+    data: k.slots.map((/** @type {any} */ s, /** @type {number} */ ci) => (s.level === lv && s.body)
+      ? { value: [ci, s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n,
+          name: s.cat }
+      : emptyBox(ci)),
+    encode: k.vertical ? { x: 0, y: [1, 2, 3, 4, 5] } : { y: 0, x: [1, 2, 3, 4, 5] },
+    renderItem: boxRender(hex, k.ink.surface, !k.vertical),
     ...(k.split ? (k.vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
-    itemStyle: { color: hex + '22', borderColor: hex }
+    itemStyle: { color: hex }
   }));
 
   /** Per level: a silent interval under a clickable centre dot, and a line through the centres with
@@ -221,7 +262,7 @@
         return lead + V.tooltip.row(esc(bodyMeta.center), V.util.num(d.center)) +
           V.tooltip.row(esc(bodyMeta.range), span(d.lo, d.hi));
       }
-      // ECharts hands a box back as [index, wLo, bLo, center, bHi, wHi].
+      // A box datum is [index, wLo, bLo, center, bHi, wHi].
       const five = d.value.slice(-5);
       return lead + V.tooltip.row(esc(bodyMeta.center), V.util.num(five[2])) +
         V.tooltip.row('Box (' + esc(bodyMeta.range) + ')', V.util.num(five[1]) + ', ' + V.util.num(five[3])) +

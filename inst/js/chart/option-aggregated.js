@@ -155,7 +155,8 @@
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d
           : withItemStyle(d, { opacity: on(d.name, null) ? 1 : dim })) };
       }
-      if (s.type === 'boxplot') {
+      // A box series is custom, one datum per category (option-distribution.js).
+      if (typeof s.id === 'string' && s.id.indexOf('__box_') === 0) {
         if (cats.length === 0) return {};
         return { data: (s.data || []).map((/** @type {any} */ v, /** @type {number} */ i) => {
           if (!v || typeof v !== 'object') return v;
