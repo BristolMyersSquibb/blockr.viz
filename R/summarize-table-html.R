@@ -530,4 +530,3 @@ summarize_bar_width <- function(x) {
   x <- summarize_chr1(x) %||% "fit"
   if (x %in% c("narrow", "medium", "wide", "fit")) x else "fit"
 }
-

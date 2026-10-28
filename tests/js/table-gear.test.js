@@ -11,7 +11,7 @@ const h = require('./harness.js');
 const fixtures = require('./fixtures/table-records.json');
 
 const FILES = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
-  'capture-pages.js', 'busy-cue.js', 'table.js'];
+  'busy-cue.js', 'table.js'];
 
 /** Mount a case's chrome, push its layout and payload `at` (default: the
  *  last one), and open the gear. */

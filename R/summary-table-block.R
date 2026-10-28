@@ -18,4 +18,3 @@ new_summary_table_block <- function(...) {
   args$ctor_pkg <- "blockr.viz"
   do.call(new_table_block, args)
 }
-

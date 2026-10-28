@@ -204,34 +204,6 @@ pptx_add_exhibit.chart_capture <- function(doc, x, title = NULL,
   has_title <- is.character(title) && length(title) == 1L && nzchar(title)
   can_title <- pptx_layout_has_title(doc, layout, master)
 
-  # A picture the browser cut into pages (inst/js/capture-pages.js) goes out
-  # one page per slide, every page at the same scale so the rows line up
-  # when the reader flips. Page 1 opens with the picture's own title band;
-  # the later ones say whose continuation they are in the slide title.
-  pages <- x$pages
-  if (length(pages) > 1L) {
-    n <- length(pages)
-    label <- if (has_title) title else x$title %||% ""
-    titles <- c(if (has_title) title else "",
-                trimws(paste0(label, " (", seq_len(n)[-1L], " of ", n, ")")))
-    tops <- vapply(titles, function(t) {
-      if (nzchar(t) && can_title) {
-        top %||% pptx_title_bottom(doc, layout, master, template %||% "",
-                                   t) %||% 1.1
-      } else {
-        top %||% 1.1
-      }
-    }, numeric(1))
-    fit <- min(mapply(function(p, t) {
-      min((slide_w - 0.8) / p$width, (slide_h - t - 0.4) / p$height, 2)
-    }, pages, tops))
-    for (k in seq_len(n)) {
-      doc <- pptx_capture_slide(doc, pages[[k]], fit, titles[[k]], tops[[k]],
-                                can_title, layout, master, slide_w)
-    }
-    return(doc)
-  }
-
   slide_title <- has_title && can_title
 
   top <- top %||% if (slide_title) {

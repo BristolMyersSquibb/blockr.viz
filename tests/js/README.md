@@ -2,7 +2,7 @@
 
 The chart scripts in `inst/js/chart/` run in node with happy-dom, loaded
 the way the page loads them: blockr.ui's controls, `drilldown-agg.js`,
-`drilldown-config.js`, `capture-pages.js`, `busy-cue.js`,
+`drilldown-config.js`, `busy-cue.js`,
 `drilldown-theme-register.js`, then the chart scripts in the order
 `scripts.txt` lists them. A chart is
 created by the input binding's `initialize` and drawn by the `drilldown-data`

@@ -11,7 +11,7 @@ const D = require('./chart/drive');
 const fixtures = require('./fixtures/summarize-table.json');
 
 const SHARED = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
-  'capture-pages.js', 'busy-cue.js'];
+  'busy-cue.js'];
 
 function mount(html, files) {
   const win = new Window({ url: 'http://localhost/' });
@@ -100,20 +100,6 @@ test('Escape closes the summarize table gear tray and resets its band', async ()
   assert.equal(resets, 2, 'Escape and the gear both reset the band');
   check(win, band, gear, inBand);
   assert.equal(resets, 4);
-  win.happyDOM.abort();
-  await win.happyDOM.close();
-});
-
-test('Escape closes the summary table gear tray', async () => {
-  const win = mount('<div class="summary-table-block-container" id="stb"></div>',
-    ['summary-table-block.js']);
-  const host = win.document.getElementById('stb');
-  win.__binding.initialize(host);
-  const band = host.querySelector('.blockr-settings');
-  const gear = host.querySelector('.blockr-gear-btn');
-  assert.ok(band && gear, 'the summary table has a gear');
-  check(win, band, gear, onGear);
-  check(win, band, gear, inBand);
   win.happyDOM.abort();
   await win.happyDOM.close();
 });

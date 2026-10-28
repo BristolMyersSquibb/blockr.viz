@@ -694,14 +694,16 @@ dd_active_filter_json <- function(active) {
   ck <- dd_col_keys_state(active$ckeys)
   # The column half rides along: table.js marks that column.
   col_filters <- if (length(ck)) {
-    lapply(ck, function(k) list(column = jsonlite::unbox(k$column),
-                                values = k$values))
+    lapply(ck, function(k) {
+      list(column = jsonlite::unbox(k$column), values = k$values)
+    })
   }
   if (length(gcols) && length(gcols) == length(gvals)) {
     return(as.character(jsonlite::toJSON(
       c(list(filters = unname(Map(
-        function(cl, vl) list(column = jsonlite::unbox(cl),
-                              value = jsonlite::unbox(vl)),
+        function(cl, vl) {
+          list(column = jsonlite::unbox(cl), value = jsonlite::unbox(vl))
+        },
         gcols, gvals
       ))), if (length(col_filters)) list(col_filters = col_filters))
     )))
@@ -967,7 +969,7 @@ drilldown_table_dep <- memoise0(function() {
       name = "blockr-viz-table",
       # Suffix bumped when the bundled table JS/CSS changes, to bust the
       # version-pinned asset cache (display-option gear toggles).
-      version = paste0(utils::packageVersion("blockr.viz"), ".44"),
+      version = paste0(utils::packageVersion("blockr.viz"), ".45"),
       src = system.file(package = "blockr.viz"),
       script = "js/table.js",
       stylesheet = "css/table.css"

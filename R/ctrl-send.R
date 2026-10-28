@@ -1237,20 +1237,8 @@ dd_ctrl_auto_choice <- function(session = shiny::getDefaultReactiveDomain()) {
   stats::setNames("auto", paste0("Automatic (", lab, ")"))
 }
 
-#' Candidate targets for the JS gear: `[{value: blockId, label: blockName}]`.
-#' @noRd
-dd_ctrl_choices_json <- function(choices) {
-  if (!length(choices)) {
-    return("[]")
-  }
-  as.character(jsonlite::toJSON(
-    data.frame(value = unname(choices), label = names(choices),
-               stringsAsFactors = FALSE)
-  ))
-}
-
-#' The same, as a plain list for hosts whose config travels as one R list
-#' (the chart's `drilldown-data` message, the tile's config JSON).
+#' Candidate targets for the gear, `[{value: blockId, label: blockName}]`,
+#' as a plain list.
 #' @noRd
 dd_ctrl_choices_list <- function(choices) {
   if (!length(choices)) {

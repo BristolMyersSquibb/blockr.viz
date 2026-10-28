@@ -49,10 +49,9 @@ js_script_list <- function(dir) {
 drilldown_shared_dep <- memoise0(function() {
   htmltools::htmlDependency(
     name = "blockr-viz-drilldown-shared",
-    version = paste0(utils::packageVersion("blockr.viz"), ".31"),
+    version = paste0(utils::packageVersion("blockr.viz"), ".32"),
     src = system.file("js", package = "blockr.viz"),
-    script = c("drilldown-agg.js", "drilldown-config.js", "capture-pages.js",
-               "busy-cue.js")
+    script = c("drilldown-agg.js", "drilldown-config.js", "busy-cue.js")
   )
 })
 

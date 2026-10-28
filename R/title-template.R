@@ -426,15 +426,6 @@ block_title_parts <- function(x, data, auto = NULL, args = list()) {
   out
 }
 
-# A free-text title slot: NULL = auto, "" = explicitly none, else a template.
-# chr_state() cannot be used here -- it drops "", which is a real value for
-# these slots (the same reason the table block's color heals via null_state).
-title_state <- function(x) {
-  x <- null_state(x)
-  if (is.null(x)) return(NULL)
-  as.character(x)[[1L]]
-}
-
 # The table-level display attributes used for the auto tiers: `label` (the
 # title -- the established display-name attribute), `subtitle` and `caption`.
 # Producers stamp them on the annotated df (e.g. the composer methods recover
@@ -456,22 +447,4 @@ input_display_attrs <- function(d) {
     subtitle = one("subtitle"),
     caption  = one("caption")
   )
-}
-
-# Every argument the block's own text speaks for: the words it makes live, and
-# the ones it only offers because their clause dropped. A control elsewhere on
-# the face for one of these would be a second live copy of one setting, which
-# is why the prepare script's strip drops the rows the sentence has taken over.
-sentence_args <- function(...) {
-  parts <- list(...)
-  out <- character()
-  for (p in parts) {
-    if (is.null(p)) next
-    args <- vapply(
-      p, function(x) if (is.null(x$arg)) NA_character_ else x$arg,
-      character(1L)
-    )
-    out <- c(out, args[!is.na(args)], attr(p, "offers", exact = TRUE))
-  }
-  unique(out)
 }

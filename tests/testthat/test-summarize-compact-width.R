@@ -37,18 +37,20 @@ test_that("a compact tile matrix is as wide as its cells, on screen and in the p
   d <- compact_fixture()
   css <- paste(html_table_shared_css_fallback(), summarize_table_css(),
                sep = "\n")
-  container <- function(id) c(
-    paste0("<div class='blockr-summarize-container' ",
-           "data-summarize-elem-id='", id, "'>"),
-    "<div class='dd-table-titles'><div class='dd-table-title'></div>",
-    "<div class='dd-table-subtitle'></div></div>",
-    "<div class='blockr-summarize-legend'></div>",
-    "<div class='blockr-table-wrapper'></div>",
-    "<div class='dd-table-caption'></div>",
-    "<div class='blockr-summarize-footer'>",
-    "<span class='blockr-summarize-note'></span>",
-    "<div class='dd-status-footer'></div></div></div>"
-  )
+  container <- function(id) {
+    c(
+      paste0("<div class='blockr-summarize-container' ",
+             "data-summarize-elem-id='", id, "'>"),
+      "<div class='dd-table-titles'><div class='dd-table-title'></div>",
+      "<div class='dd-table-subtitle'></div></div>",
+      "<div class='blockr-summarize-legend'></div>",
+      "<div class='blockr-table-wrapper'></div>",
+      "<div class='dd-table-caption'></div>",
+      "<div class='blockr-summarize-footer'>",
+      "<span class='blockr-summarize-note'></span>",
+      "<div class='dd-status-footer'></div></div></div>"
+    )
+  }
   page <- tempfile(fileext = ".html")
   writeLines(c(
     "<!doctype html><html><head>",

@@ -15,7 +15,7 @@ const fixtures = require('./fixtures/summarize-table.json');
 // summarize_table_dep(): blockr.ui's controls, the shared engine, table.js, then
 // the block's own script.
 const FILES = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
-  'capture-pages.js', 'busy-cue.js', 'table.js', 'summarize-table.js'];
+  'busy-cue.js', 'table.js', 'summarize-table.js'];
 
 /** Mount a case's chrome, load the scripts, and deliver its first payload
  *  unless `deliver` is false. */

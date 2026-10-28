@@ -6,7 +6,7 @@ const { Window } = require('happy-dom');
 const h = require('./harness.js');
 
 const FILES = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
-  'capture-pages.js', 'busy-cue.js', 'table.js'];
+  'busy-cue.js', 'table.js'];
 
 const ONE_ROW_HEAD = `
           <tr>

@@ -182,17 +182,9 @@ download_footer_stamp <- function(x, data, session) {
     return(x)
   }
 
-  stamp <- function(cap) {
-    out <- png_add_footer(cap$png, txt, css_width = cap$width * 96)
-    cap$png <- out$png
-    cap$height <- cap$height + out$band / 96
-    cap
-  }
-
-  x <- stamp(x)
-  if (length(x$pages)) {
-    x$pages <- lapply(x$pages, stamp)
-  }
+  out <- png_add_footer(x$png, txt, css_width = x$width * 96)
+  x$png <- out$png
+  x$height <- x$height + out$band / 96
   x
 }
 

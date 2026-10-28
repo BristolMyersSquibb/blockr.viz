@@ -78,10 +78,12 @@ table_action <- function(id) sprintf("board-block_%s-expr-records-drilldown_tabl
 chart_action <- function(id) sprintf("board-block_%s-expr-drilldown_block_action", id)
 cards_action <- function(id) sprintf("board-block_%s-expr-groups-summarize_table_block_action", id)
 # The groups engine's container (the cards look draws inside it).
-cards_scope <- function(id) sprintf(
-  ".blockr-summarize-container[data-summarize-elem-id=\"board-block_%s-expr-groups-summarize_table_block\"]",
-  id
-)
+cards_scope <- function(id) {
+  sprintf(
+    ".blockr-summarize-container[data-summarize-elem-id=\"board-block_%s-expr-groups-summarize_table_block\"]",
+    id
+  )
+}
 
 send_table_action <- function(block_id, payload) {
   send_action(table_action(block_id), payload)
