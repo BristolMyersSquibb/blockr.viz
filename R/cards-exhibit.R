@@ -1,14 +1,13 @@
-# The cards look as an EXHIBIT -------------------------------------------------
+# The cards look as an exhibit --------------------------------------------------
 #
-# The downloads of a table block in the cards look draw the cards: the web
-# page with the browser's own renderer (table-cards.js and the summarize
-# table's glyph emitters, inlined by write_exhibit_html()), the slide and the
-# image as a picture painted here. The spreadsheet keeps the table's values;
-# it never sees this object.
+# The web page uses the browser's own renderer (table-cards.js and the
+# summarize table's glyph emitters, inlined by write_exhibit_html()); the
+# slide and the image are pictures painted here. The spreadsheet never sees
+# this object.
 #
 # The painter reuses the summarize painter's glyph functions (rp_bar(),
 # rp_box(), ... in R/summarize-paint.R), which take one cell of the cell
-# model and a box in inches. A card's glyph is that cell in a card-sized box.
+# model and a box in inches.
 
 #' A table in the cards look, as a printable exhibit
 #'
@@ -53,8 +52,7 @@ html_exhibit.cards_exhibit <- function(x, title = NULL, subtitle = NULL,
   caption <- caption %||% x$caption
   data <- list(
     cards = cards_payload(x$model),
-    # The glyphs' geometry: the summarize table's columns, which the
-    # browser's emitters draw from.
+    # The glyphs' geometry, which the browser's emitters draw from.
     cols = if (!is.null(x$cells)) summarize_flat_payload(x$cells)$cols
   )
   json <- as.character(jsonlite::toJSON(summarize_drop_null(data),
@@ -188,20 +186,20 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
   pad <- px * 10
   gap <- px * 8
   multi <- isTRUE(md$multi)
+  any_col <- function(f) any(vapply(md$cols, f, logical(1L)))
   # Glyph band: a sparkline wants height, every other mark a lane.
-  has_sp <- any(vapply(md$cols, function(cl) {
+  has_sp <- any_col(function(cl) {
     !is.null(cl$glyph) && identical(cells$cols[[cl$glyph + 1L]]$kind,
                                      "sparkline")
-  }, logical(1L)))
-  any_glyph <- any(vapply(md$cols, function(cl) !is.null(cl$glyph),
-                          logical(1L)))
-  any_sub <- any(vapply(md$cols, function(cl) !is.null(cl$sub), logical(1L)))
+  })
+  any_glyph <- any_col(function(cl) !is.null(cl$glyph))
+  any_sub <- any_col(function(cl) !is.null(cl$sub))
+  any_legend <- any_col(function(cl) length(cl$legend) > 0)
   lab_h <- if (multi) 0 else fs / 72 * 1.4
   num_h <- fs / 72 * 2.6
   sub_h <- if (any_sub) fs / 72 * 1.3 else 0
   gly_h <- if (!any_glyph) 0 else if (has_sp) px * 34 else px * 20
-  leg_h <- if (!multi && any(vapply(md$cols, function(cl) length(cl$legend) > 0,
-                                    logical(1L)))) fs / 72 * 1.4 else 0
+  leg_h <- if (!multi && any_legend) fs / 72 * 1.4 else 0
   card_h <- 2 * pad + lab_h + num_h + sub_h + gly_h + leg_h
 
   head_w <- if (multi) {
@@ -216,9 +214,7 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
   cw <- (width_in - head_w - gap * (per_line - 1L) -
            (if (multi) gap else 0)) / per_line
 
-  head_leg <- multi && any(vapply(md$cols, function(cl) length(cl$legend) > 0,
-                                   logical(1L)))
-  col_head_h <- if (multi) fs / 72 * (if (head_leg) 4.1 else 2.8) else 0
+  col_head_h <- if (multi) fs / 72 * (if (any_legend) 4.1 else 2.8) else 0
   title_h <- if (summarize_nz(title)) fs / 72 * 2.4 else 0
   subt_h <- if (summarize_nz(subtitle)) fs / 72 * 1.7 else 0
   cap_h <- if (summarize_nz(caption)) fs / 72 * 1.8 else 0
