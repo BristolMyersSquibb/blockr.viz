@@ -564,9 +564,19 @@
 /* The buttons are blockr.ui's (blockr-btn--quiet): here only their size. */
 .lane-sum-ctl { flex: none; min-width: 26px; }
 .lane-sum-ctl.lane-sum-toggle {
-  flex: 1 1 auto; justify-content: flex-start; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis;
+  flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
+  justify-content: flex-start; text-align: left; overflow: hidden; white-space: nowrap;
 }
+.lane-sum-icon { flex: none; display: inline-flex; color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-icon svg { width: 20px; height: 14px; }
+.lane-sum-name { flex: none; font-weight: var(--blockr-font-weight-semibold, 600);
+                 color: var(--blockr-color-text-default, #111827); }
+.lane-sum-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-chev { flex: none; color: var(--blockr-color-text-muted, #6b7280); transition: transform 120ms; }
+.lane-sum-row.is-open .lane-sum-chev { transform: rotate(90deg); }
+.lane-sum-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+.lane-sum-ctl.lane-sum-rm { margin-left: auto; }
 .lane-sum-ctl.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px;

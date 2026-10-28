@@ -471,6 +471,7 @@ interface VizTableNamespace {
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;
     title(s: Record<string, unknown>): string;
+    describe(s: Record<string, unknown>): string;
   };
   tooltip: {
     wire(box: HTMLElement, scope: VizScope, model: () => TableModel | null): void;
