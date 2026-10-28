@@ -199,8 +199,9 @@ test_that("gear option labels match the values they name", {
 })
 
 test_that("the block specs and the nested specs pass viz_spec_check()", {
-  expect_s3_class(viz_block_spec("chart"), "viz_spec")
-  expect_s3_class(viz_block_spec("table"), "viz_spec")
+  for (block in names(VIZ_BLOCK_SPECS)) {
+    expect_s3_class(viz_spec_check(viz_block_spec(block)), "viz_spec")
+  }
   for (spec in c(list(table_shading_spec()), unname(table_summary_specs()))) {
     expect_s3_class(viz_spec_check(spec), "viz_spec")
   }

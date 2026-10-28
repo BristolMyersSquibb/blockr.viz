@@ -1,17 +1,21 @@
 # Checking a spec itself: the rules viz_spec() and viz_arg() do not check
-# while they assemble it. viz_block_spec() runs this once per block.
+# while they assemble it. The specs are package data, so the tests run this
+# on them (test-spec-coverage.R) instead of the package at run time.
 
-#' Check a spec
-#'
-#' Every argument is named once; types, controls and fields are known; enum
-#' values, bounds, `also`, `null` and `required` are where they belong; gear
-#' labels match the values; a slot holds a single value; names that
-#' arguments refer to exist; every literal default and example passes its
-#' own type.
-#'
-#' @param spec A `viz_spec`.
-#' @return `spec`, invisibly. Fails with every problem listed.
-#' @noRd
+# The gear controls an argument can be edited with.
+VIZ_CONTROLS <- c(
+  "column", "columns", "values", "select", "tiles", "segmented", "toggle",
+  "number", "text", "template", "slider", "none"
+)
+
+# Types built with a type_*() function because they have parts.
+VIZ_COMPOUND_TYPES <- c("values", "record", "records", "records_by", "named")
+
+# Every argument is named once; types, controls and fields are known; enum
+# values, bounds, `also`, `null` and `required` are where they belong; gear
+# labels match the values; a slot holds a single value; names that arguments
+# refer to exist; every literal default and example passes its own type.
+# Returns `spec`, invisibly, or fails with every problem listed.
 viz_spec_check <- function(spec) {
   nms <- names(spec$args)
   problems <- character()
@@ -48,7 +52,7 @@ spec_arg_problems <- function(arg, name, all) {
 
 type_problems <- function(type) {
   t <- type$name
-  if (!is.character(t) || length(t) != 1L || !t %in% VIZ_TYPES) {
+  if (!is.character(t) || length(t) != 1L || !t %in% names(SPEC_CHECKERS)) {
     return(paste("has unknown type", deparse(t)))
   }
   if (t %in% VIZ_COMPOUND_TYPES && !inherits(type, "viz_type")) {
