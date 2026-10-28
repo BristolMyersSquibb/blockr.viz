@@ -11,6 +11,7 @@
           "kind": "no_data",
           "message": "No data"
         },
+        "downloads": [],
         "script": {
           "inputs": [],
           "values": [],
@@ -22,8 +23,7 @@
             "label": "Automatic (no filter block found)"
           }
         ],
-        "capture_ratio": 2,
-        "downloads": []
+        "capture_ratio": 2
       },
       "data": {}
     }

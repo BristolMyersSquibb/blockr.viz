@@ -20,9 +20,6 @@
   const FLASH = ['dt-flash-row', 'dt-flash-col', 'dt-flash-colhead', 'dt-flash-cross'];
   const HOT = ['dt-hot-row', 'dt-hot-col', 'dt-hot-cell', 'dt-hot-soft'];
 
-  /** Distinguishes two clicks on the same thing; counts for the page. */
-  let nonce = 0;
-
   /** @param {(string | null)[] | undefined} a @param {(string | null)[] | undefined} b */
   const sameValues = (a, b) => !!a && !!b && a.length === b.length &&
     a.every((v, k) => (v == null ? null : String(v)) === (b[k] == null ? null : String(b[k])));
@@ -337,7 +334,7 @@
     choose(sel, at) {
       const ctx = this.ctx;
       if (ctx.transient()) {
-        V.util.send(this.frame.id, 'select', { selection: sel, nonce: ++nonce });
+        V.util.select(this.frame.id, /** @type {any} */ (sel));
         ctx.sent(sel);
         /** @type {Array<{ el: Element, cls: string }>} */
         const parts = at.tr ? [{ el: at.tr, cls: 'dt-flash-row' }] : [];
@@ -348,7 +345,7 @@
         return;
       }
       const next = same(sel, ctx.selection()) ? null : sel;
-      V.util.send(this.frame.id, 'select', { selection: next, nonce: ++nonce });
+      V.util.select(this.frame.id, /** @type {any} */ (next));
       ctx.select(next);
     }
 

@@ -4,7 +4,93 @@
     {
       "state_rev": 0,
       "data_rev": 1,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"cat","columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -40,18 +126,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -68,7 +142,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -214,7 +300,93 @@
     {
       "state_rev": 0,
       "data_rev": 2,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -250,18 +422,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -278,7 +438,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -424,7 +596,93 @@
     {
       "state_rev": 0,
       "data_rev": 3,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -460,18 +718,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -488,7 +734,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -534,7 +792,93 @@
     {
       "state_rev": 0,
       "data_rev": 4,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"fac","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -570,18 +914,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -598,7 +930,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -647,7 +991,93 @@
     {
       "state_rev": 0,
       "data_rev": 5,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -683,18 +1113,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -711,7 +1129,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -757,7 +1187,93 @@
     {
       "state_rev": 0,
       "data_rev": 6,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"bar","columns":["num"],"domain":null}],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -793,18 +1309,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -821,7 +1325,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -869,7 +1385,93 @@
     {
       "state_rev": 0,
       "data_rev": 7,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -905,18 +1507,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -933,7 +1523,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -981,7 +1583,93 @@
     {
       "state_rev": 0,
       "data_rev": 7,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":"compact","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1017,18 +1705,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1045,13 +1721,111 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 8,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1087,18 +1861,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1115,7 +1877,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -1164,7 +1938,93 @@
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1200,18 +2060,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1228,7 +2076,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -1276,7 +2136,93 @@
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":false,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1312,18 +2258,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1340,13 +2274,111 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1382,18 +2414,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1410,13 +2430,111 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1452,18 +2570,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1480,13 +2586,111 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":false,"sortable":false,"collapsible":false,"download":false,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1522,6 +2726,7 @@
           },
           "choices": []
         },
+        "downloads": [],
         "script": {
           "inputs": [],
           "values": [],
@@ -1533,14 +2738,99 @@
             "label": "Automatic (no filter block found)"
           }
         ],
-        "capture_ratio": 2,
-        "downloads": []
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 9,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1576,18 +2866,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1604,13 +2882,111 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 10,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"compact","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1646,18 +3022,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1674,7 +3038,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -1722,7 +3098,93 @@
     {
       "state_rev": 0,
       "data_rev": 11,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1758,18 +3220,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1791,7 +3241,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -1856,7 +3318,93 @@
     {
       "state_rev": 0,
       "data_rev": 11,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":"id","columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat","search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1892,18 +3440,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -1925,13 +3461,111 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 12,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":null,"columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat","search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -1967,18 +3601,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -2000,7 +3622,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 12,
@@ -2067,7 +3701,93 @@
     {
       "state_rev": 0,
       "data_rev": 12,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":null,"columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"drop","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat","search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -2103,18 +3823,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -2136,14 +3844,112 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     null,
     {
       "state_rev": 0,
       "data_rev": 12,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":null,"columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"drop","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat","search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Rows: {n}","subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -2187,18 +3993,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -2220,13 +4014,111 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 12,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":null,"columns":["num","grp"],"summaries":[],"id":null,"percent_of":"facet","missing":"drop","color":null,"shadings":[{"mode":"sequential","columns":["num"],"domain":null}],"format":3,"unit":"CHF","look":"cards","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":"cat","search":false,"sortable":false,"collapsible":false,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Rows: {n}","subtitle":"","caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -2270,18 +4162,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -2303,7 +4183,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     null

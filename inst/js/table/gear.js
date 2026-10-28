@@ -205,8 +205,6 @@
    * @returns {TableGearHandle | null}
    */
   function mount(frame, scope, info) {
-    const G = V.gear;
-    const t = G.tray(frame.head, scope, 'Table settings');
     /** What R resolved with the last payload: the drill targets. */
     /** @type {TableDerived} */
     let derived = {};
@@ -228,11 +226,9 @@
         if (ed) ed(el, ctx);
       }
     };
-    const engine = scope.own(G.mount(t.band, {
-      block: 'table', id: frame.id, scope, typeKey: 'layout', title: 'Table settings', host
-    }));
+    const engine = frame.mountGear({ block: 'table', typeKey: 'layout', title: 'Table settings', host });
     return {
-      engine, open: () => t.set(true),
+      engine, open: frame.openGear,
       update: (p) => {
         derived = /** @type {TableDerived} */ (p.derived || {});
         engine.update(p);

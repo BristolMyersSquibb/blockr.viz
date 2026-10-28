@@ -29,7 +29,7 @@ test('a flat table draws its header, rows and row count', () => {
   assert.equal(t.$('thead th[data-col-index="2"] .blockr-col-label').textContent, 'years');
   assert.deepEqual(t.stubs(), ['S1', 'S2', 'S3', 'S4', 'S5']);
   assert.ok(t.$('thead th[data-col-index="2"]').classList.contains('dt-col-num'));
-  assert.equal(t.$('.dt-row-count').textContent, '5 rows');
+  assert.equal(t.$('.vz-count').textContent, '5 rows');
 });
 
 test('missing values draw a dash, and text is escaped', () => {
@@ -89,12 +89,12 @@ test('search narrows the rows and the count, and says when nothing matches', asy
   const t = mount(payload({ data: flatModel(6), config: { drill: 'ARM' } }));
   await t.search('placebo');
   assert.deepEqual(t.stubs(), ['S1', 'S4']);
-  assert.equal(t.$('.dt-row-count').textContent, '2 of 6 rows');
+  assert.equal(t.$('.vz-count').textContent, '2 of 6 rows');
   await t.search('nothing');
   assert.equal(t.$('.blockr-search-empty').textContent, 'No matching rows');
   await t.search('');
   assert.equal(t.$('.blockr-search-empty'), null);
-  assert.equal(t.$('.dt-row-count').textContent, '6 rows');
+  assert.equal(t.$('.vz-count').textContent, '6 rows');
 });
 
 test('turning search off hides the box and drops the query', async () => {
@@ -112,7 +112,7 @@ test('a long table draws only a window of rows and follows the scroll', async ()
   const drawn = () => t.$$('tbody tr.blockr-data-row');
   assert.ok(drawn().length < 200, 'windowed: ' + drawn().length);
   assert.equal(t.$$('tbody tr.dt-vspacer').length, 1);
-  assert.equal(t.$('.dt-row-count').textContent, '2000 rows');
+  assert.equal(t.$('.vz-count').textContent, '2000 rows');
   Object.defineProperty(box, 'clientHeight', { value: 600, configurable: true });
   box.scrollTop = 30 * 1000;
   box.dispatchEvent(new t.win.Event('scroll'));
@@ -133,7 +133,7 @@ test('sections head their rows; a click on the header folds it', () => {
   const t = mount(payload({ data: table1() }));
   const heads = () => t.$$('tr.blockr-section-header').map((r) => r.textContent);
   assert.deepEqual(heads(), ['Sex', 'Age', 'Age group']);
-  assert.equal(t.$('.dt-row-count').textContent, '');
+  assert.equal(t.$('.vz-count').textContent, '');
   assert.ok(t.$('.vz-table').classList.contains('drilldown-table-structured'));
   t.click(t.$('tr.blockr-section-header .blockr-chev'));
   assert.deepEqual(t.stubs(), ['Mean (SD)', '<65', '>=65']);

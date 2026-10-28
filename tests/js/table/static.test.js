@@ -23,7 +23,7 @@ const bars = () => ({
   cols: [
     { name: 'ARM', disp: ['Placebo', 'Low', 'High'] },
     { name: 'Rows', disp: ['10', '20', '30'], key: [10, 20, 30],
-      mark: { kind: 'bar', w: [33, 66, 100], fill: '#2563eb', dw: 2 } }
+      mark: { kind: 'bar', width: [33, 66, 100], fill: '#2563eb', valueWidth: 2 } }
   ],
   head: [[{ text: 'Arm', stub: true, col: 0 }, { text: 'Rows', col: 1 }]]
 });
@@ -51,7 +51,7 @@ test('a table added later is drawn once; a printed one draws past the window', a
   env.V.table.mount();
   assert.equal(el.querySelectorAll('tbody tr.blockr-data-row').length, 600);
   // A printed table has no search to count rows against.
-  assert.equal(el.querySelector('.dt-row-count').textContent, '');
+  assert.equal(el.querySelector('.vz-count').textContent, '');
   assert.equal(el.querySelectorAll('.blockr-gear-btn').length, 0);
 });
 

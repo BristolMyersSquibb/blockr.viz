@@ -86,10 +86,13 @@ test('move, remove, add and fold', () => {
     [{ type: 'simple' }, { type: 'expr', expr: 'n()' }, { type: 'pair' }]
   ]);
   const toggle = e.el.querySelector('.lane-sum-toggle');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   e.click(toggle);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   e.draw(list);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+  assert.equal(e.el.querySelector('.lane-sum-toggle').getAttribute('aria-expanded'), 'true');
 });
 
 test('the Show tiles have a drawing for every value and the editor width', () => {

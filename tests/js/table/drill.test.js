@@ -42,7 +42,7 @@ test('a second click on a lit row clears the drill', () => {
   t.click(t.row(3));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'] }), null]);
   assert.deepEqual(t.lit(), []);
-  assert.ok(t.$('.dd-status-footer').hidden);
+  assert.equal(t.$('.dd-status-footer').textContent, '');
 });
 
 test('the clear button on the receipt clears the drill', () => {
@@ -142,6 +142,10 @@ test('a keyed section value claims the section; its chevron still folds', () => 
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'], SEX: ['F'] })]);
   assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
+  // R echoes a click without a column half as `columns: {}`.
+  t.render({ data: nested(), columns: COLUMNS,
+             config: { selection: { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['F'] }, columns: {} } } });
+  assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
   t.click(t.$$('tr.blockr-section-header')[1].querySelector('.blockr-chev'));
   assert.equal(t.selects().length, 1);
   assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('collapsed'));
@@ -168,8 +172,8 @@ test('with a drill target every click is sent and nothing stays lit', () => {
   assert.ok(t.row(0).classList.contains('dt-flash-row'));
   assert.ok(t.row(0).children[1].classList.contains('dt-flash-cross'));
   assert.ok(t.row(1).children[1].classList.contains('dt-flash-col'));
-  assert.match(t.$('.dd-status-text').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
-  assert.ok(t.$('.dd-status-clear').hidden);
+  assert.match(t.$('.dd-status-receipt').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
+  assert.equal(t.$('.dd-status-clear'), null);
   t.row(0).dispatchEvent(new t.win.Event('animationend'));
   assert.equal(t.row(0).classList.contains('dt-flash-row'), false);
 });

@@ -61,12 +61,15 @@
    * @param {Record<string, string>} words
    */
   function dist(kind, g, i, words) {
-    const r = g.r || {};
-    const at = (/** @type {string} */ k) => (r[k] ? r[k][i] : null);
-    let h = g.nn && g.nn[i] != null ? row('n', num(g.nn[i])) : '';
-    h += row(words.center || 'Center', num(at('bc')));
-    if (words.range) h += row(kind === 'box' ? 'Box (' + words.range + ')' : words.range, range(at('bl'), at('bh')));
-    if (words.whisk) h += row(kind === 'box' ? 'Whiskers (' + words.whisk + ')' : words.whisk, range(at('wl'), at('wh')));
+    const r = g.raw || {};
+    const at = (/** @type {keyof TableLaneRaw} */ k) => (r[k] ? /** @type {TableNums} */ (r[k])[i] : null);
+    let h = g.count && g.count[i] != null ? row('n', num(g.count[i])) : '';
+    h += row(words.center || 'Center', num(at('center')));
+    if (words.range) h += row(kind === 'box' ? 'Box (' + words.range + ')' : words.range, range(at('low'), at('high')));
+    if (words.whisk) {
+      h += row(kind === 'box' ? 'Whiskers (' + words.whisk + ')' : words.whisk,
+               range(at('whiskerLow'), at('whiskerHigh')));
+    }
     return h;
   }
 
@@ -82,10 +85,10 @@
   function splitLines(c, m, i, cell, t, tt) {
     const fill = t.closest('.blockr-summarize-fill');
     if (!fill) return '';
-    const drawn = m.names.map((_, j) => j).filter((j) => (m.segv[j][i] || 0) > 0);
+    const drawn = m.names.map((_, j) => j).filter((j) => (m.segValues[j][i] || 0) > 0);
     const hit = hitOf(cell, fill, '.blockr-summarize-fill', drawn);
     const cv = tt.cvar ? tt.cvar + ' ' : '';
-    const lines = drawn.map((j) => row(cv + m.names[j], num(m.segv[j][i]) + share(m.segv[j][i], tt.den),
+    const lines = drawn.map((j) => row(cv + m.names[j], num(m.segValues[j][i]) + share(m.segValues[j][i], tt.den),
                                        m.fills[j], hit == null ? null : j === hit)).join('');
     const total = m.mode !== 'grouped' && c.disp[i]
       ? SEP + row(tt.meas || 'Value', c.disp[i] + (c.pct && c.pct[i] ? ' ' + c.pct[i] : '') +
@@ -103,24 +106,25 @@
    * @param {Record<string, any>} tt
    */
   function multiLines(m, i, cell, mark, tt) {
-    const lv = m.lv || [];
+    const lv = m.lanes || [];
     const drawn = lv.map((_, k) => k).filter((k) => {
       const g = lv[k];
-      return (m.kind === 'box' ? (g.bc || [])[i] : (g.c || [])[i]) != null;
+      return (m.kind === 'box' ? (g.median || [])[i] : (g.center || [])[i]) != null;
     });
     const hit = hitOf(cell, mark.closest('.blockr-summarize-lv'), '.blockr-summarize-lv', drawn);
     const w = tt.words || {};
-    const at = (/** @type {TableLaneGeom} */ g, /** @type {string} */ k) => (g.r && g.r[k] ? g.r[k][i] : null);
+    const at = (/** @type {TableLaneGeom} */ g, /** @type {keyof TableLaneRaw} */ k) =>
+      (g.raw && g.raw[k] ? /** @type {TableNums} */ (g.raw[k])[i] : null);
     const cv = tt.cvar ? tt.cvar + ' ' : '';
-    let h = drawn.map((k) => row(cv + (m.levels || [])[k], num(at(lv[k], 'bc')) +
-      (w.range ? ' (' + range(at(lv[k], 'bl'), at(lv[k], 'bh')) + ')' : ''),
+    let h = drawn.map((k) => row(cv + (m.levels || [])[k], num(at(lv[k], 'center')) +
+      (w.range ? ' (' + range(at(lv[k], 'low'), at(lv[k], 'high')) + ')' : ''),
       (m.fills || [])[k], hit == null ? null : k === hit)).join('');
     if (hit != null) {
       const g = lv[hit];
       const foot = [cv + (m.levels || [])[hit]];
-      if (g.nn && g.nn[i] != null) foot.push('n ' + num(g.nn[i]));
+      if (g.count && g.count[i] != null) foot.push('n ' + num(g.count[i]));
       if (w.whisk) foot.push((m.kind === 'box' ? 'Whiskers (' + w.whisk + ')' : w.whisk) + ' ' +
-                             range(at(g, 'wl'), at(g, 'wh')));
+                             range(at(g, 'whiskerLow'), at(g, 'whiskerHigh')));
       h += SEP + note(foot.join(' · '));
     }
     return h;
@@ -139,12 +143,12 @@
     const clauses = (/** @type {unknown} */ tip, /** @type {number} */ skip) =>
       String(tip || '').split(' · ').slice(skip).filter(Boolean).map(note).join('');
     if (!m.multi) return clauses(m.tip ? m.tip[i] : '', 0);
-    const lv = m.lv || [];
-    const drawn = lv.map((_, k) => k).filter((k) => lv[k].a[i] != null || lv[k].b[i] != null);
+    const lv = m.lanes || [];
+    const drawn = lv.map((_, k) => k).filter((k) => lv[k].from[i] != null || lv[k].to[i] != null);
     const hit = hitOf(cell, mark.closest('.blockr-summarize-lv'), '.blockr-summarize-lv', drawn);
     const w = tt.words || {};
     const cv = tt.cvar ? tt.cvar + ' ' : '';
-    const lines = drawn.map((k) => row(cv + (m.levels || [])[k], lv[k].ab ? lv[k].ab[i] : '',
+    const lines = drawn.map((k) => row(cv + (m.levels || [])[k], lv[k].fromTo ? lv[k].fromTo[i] : '',
                                        (m.fills || [])[k], hit == null ? null : k === hit)).join('');
     const rest = hit == null ? '' : clauses((lv[hit].tip || [])[i], 2);
     return (w.from && w.to ? note(w.from + ' → ' + w.to) : '') + lines + (rest ? SEP + rest : '');
@@ -162,7 +166,7 @@
     const c = model.cols[k];
     const m = c && c.mark;
     if (!m) return '';
-    const tt = /** @type {Record<string, any>} */ (m.tt || {});
+    const tt = /** @type {Record<string, any>} */ (m.hover || {});
     const ctx = [tt.head, tt.sub].filter((x, j, a) => x && a.indexOf(x) === j);
     const label = model.stub != null ? model.cols[model.stub].disp[i] : '';
     const h = head(label) + (ctx.length ? note(ctx.join(' · ')) : '');
@@ -175,7 +179,7 @@
     } else if (m.kind === 'box' || m.kind === 'pointrange') {
       const mark = t.closest('.lane-wh, .lane-cap, .lane-box, .lane-med, .lane-fence, .lane-rng, .lane-ctr');
       body = !mark ? '' : m.multi ? multiLines(m, i, cell, mark, tt)
-        : m.r && m.r.bc && m.r.bc[i] != null ? dist(m.kind, m, i, tt.words || {}) : '';
+        : m.raw && m.raw.center && m.raw.center[i] != null ? dist(m.kind, m, i, tt.words || {}) : '';
     } else if (m.kind === 'pair') {
       const mark = t.closest('.lane-link, .lane-from, .lane-to');
       body = mark ? pairLines(m, i, cell, mark, tt) : '';

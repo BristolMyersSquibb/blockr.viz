@@ -365,43 +365,6 @@ input.blockr-search:focus {
   color: var(--blockr-color-text-muted, #6b7280);
 }
 
-/* ===== Title / caption bands (chart parity) ===== */
-/* Rendered by table/chrome.js from the RESOLVED title text on the
-   payload; the whole band hides while empty so a title-less table is
-   pixel-identical to before. Mirrors chart.css .dd-chart-titles.
-   The separator line lives UNDER the band: it divides the title from the
-   table's column headers (not the control row from the title), so it only
-   exists while a title/subtitle shows. */
-.dd-table-titles {
-  padding: 2px 2px 8px;
-  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  margin-bottom: 6px;
-}
-
-.dd-table-title {
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: 600;
-  color: var(--blockr-color-text-default, #111827);
-  white-space: pre-line;
-}
-
-.dd-table-subtitle {
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-muted, #6b7280);
-  margin-top: 1px;
-  white-space: pre-line;
-}
-
-/* `pre-line`, as on the bands above and on .dd-chart-caption: a newline in
-   the text is a line break, so a caption can carry a second note on its own
-   line. */
-.dd-table-caption {
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-text-muted, #6b7280);
-  padding: 4px 2px 0;
-  white-space: pre-line;
-}
-
 /* ===== Control row (search · download · gear) ===== */
 /* The chrome's toolbar moves INTO the gear row (table/gear.js), so
    search and download sit left of the gear — the chart's cluster — while
@@ -412,14 +375,6 @@ input.blockr-search:focus {
   gap: 6px;
 }
 
-/* Layout E (chart.css .vz-head): the title band sits in the header, on its
-   left, laid out as the chart's. It wraps before the tools, and in the
-   header it has no hairline under it, as the chart's has none. */
-:is(.drilldown-table-container, .blockr-summarize-container) .vz-head > .dd-table-titles {
-  padding: 2px 8px 0 2px;
-  border-bottom: none;
-  margin-bottom: 0;
-}
 :is(.drilldown-table-container, .blockr-summarize-container) .vz-head {
   margin-bottom: 6px;
 }
@@ -444,42 +399,26 @@ input.blockr-search:focus {
 }
 
 /* ===== Footer row: row count + filter status ===== */
-/* One flex row under the table. The count (written by the view) sits left,
-   the server-rendered status line (`.dd-status-footer`: "Filtered: ...", and
-   Reset at its far right) takes the rest. Both halves collapse when empty --
-   a table with no drill and no count is pixel-identical to before, so the
-   footer costs no vertical space it does not use. */
-.dt-table-footer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* The frame's footer (chart.css .vz-foot): the count left, the status line
+   ("Filtered: ...", with its clear button) taking the rest. Both halves
+   collapse when empty. */
+.vz-table > .vz-foot {
   padding: 0 var(--blockr-card-inset, 0px);
 }
 
 /* The status half (there only while a filter is set) takes the rest of the
-   row.
-   Two selectors, one job: shiny-sass.css gives a NON-EMPTY `.shiny-html-output`
-   `display: contents`, which erases the slot's own box and promotes the status
-   line itself to flex item -- so whichever of the two is the item, it grows.
-   (Without this the slot measures 0 wide, space-between has nothing to
-   distribute.) */
-.dt-table-footer .dd-status-footer {
+   row. */
+.vz-table > .vz-foot > .dd-status-footer {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.dt-row-count {
+.vz-table .vz-count {
   padding: 6px 0;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-/* No count (structured table, error/message state, or the static renderer
-   before any row exists): drop the box, padding included. */
-.dt-row-count:empty {
-  display: none;
 }
 
 /* Rotated column titles (matrix display mode, data-dt-rotate-titles="on").
@@ -544,8 +483,8 @@ input.blockr-search:focus {
    scroll area reach the edges; every text keeps its place. Whatever else a
    caller puts in the container stays on the card's inset. Outside a card
    the inset is 0. */
-.drilldown-table-container > .blockr-table-wrapper,
-.drilldown-table-container > .dt-table-footer{
+.drilldown-table-container > .vz-body > .blockr-table-wrapper,
+.drilldown-table-container > .vz-foot {
   margin-left: calc(-1 * var(--blockr-card-inset, 0px));
   margin-right: calc(-1 * var(--blockr-card-inset, 0px));
 }
@@ -562,7 +501,7 @@ input.blockr-search:focus {
   background: #fff;
   padding: 8px 10px;
 }
-.blockr-summarize-capture .dd-table-titles {
+.blockr-summarize-capture .vz-head__titles {
   border-bottom: none;
   margin-bottom: 4px;
 }

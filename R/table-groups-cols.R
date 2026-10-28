@@ -26,8 +26,50 @@ table_groups_mark <- function(c) {
   labelled <- !is.null(c$disp) || isTRUE(c$multi) ||
     (identical(c$kind, "barsplit") && !is.null(c$ldisp))
   if (!labelled) g$dw <- NULL
-  groups_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
-                                        top = TRUE))
+  table_groups_wire(
+    groups_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
+                                       top = TRUE)),
+    c$kind
+  )
+}
+
+# The names the browser reads for the cell model's short keys, by mark kind.
+# The cell model and the PowerPoint painter keep the short ones.
+TABLE_GROUPS_KEYS <- list(
+  all = c(dw = "valueWidth", tt = "hover", nn = "count", lv = "lanes",
+          rf = "reference", ab = "fromTo", r = "raw"),
+  bar = c(w = "width"),
+  bardiv = c(w = "width", pos = "positive"),
+  barsplit = c(seg = "segWidths", segv = "segValues", slab = "segLabels",
+               sink = "segInk", ldisp = "levelValues"),
+  box = c(wl = "whiskerLow", w1 = "whiskerLowWidth", bl = "boxLeft",
+          bw = "boxWidth", bc = "median", b2 = "boxRight",
+          w2 = "whiskerHighWidth", wh = "whiskerHigh"),
+  pointrange = c(c = "center", l = "rangeLeft", rw = "rangeWidth",
+                 ol = "fenceLeft", ow = "fenceWidth"),
+  pair = c(a = "from", b = "to", l = "linkLeft", w = "linkWidth",
+           bl = "bandLeft", bw = "bandWidth"),
+  sparkline = c(pl = "line", bd = "band", dx = "dotX", dy = "dotY",
+                xs = "xValues", ys = "yValues", rc = "refY",
+                rby = "refBandY", rbh = "refBandHeight"),
+  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
+               lg = "large")
+)
+# The raw statistics a hover card prints (`r`).
+TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",
+                      wl = "whiskerLow", wh = "whiskerHigh")
+
+table_groups_wire <- function(g, kind) {
+  rename <- function(nm, map) {
+    hit <- nm %in% names(map)
+    nm[hit] <- map[nm[hit]]
+    nm
+  }
+  if (!is.null(g$r)) names(g$r) <- rename(names(g$r), TABLE_GROUPS_RAW)
+  if (!is.null(g$lv)) g$lv <- lapply(g$lv, table_groups_wire, kind = kind)
+  names(g) <- rename(names(g),
+                     c(TABLE_GROUPS_KEYS$all, TABLE_GROUPS_KEYS[[kind]]))
+  g
 }
 
 # A point range's fence band only where it has an outer range, per level.

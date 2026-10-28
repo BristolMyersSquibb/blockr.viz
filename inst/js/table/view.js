@@ -36,33 +36,30 @@
       this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
       // The prepare script's controls, under the header.
       this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
-      if (this.script) this.frame.box.before(this.script.el);
-      if (this.gear) {
-        const gear = this.gear;
-        this.frame.slots = scope.own(V.titles.slots({ gear: gear.engine, scope, openGear: gear.open }));
-      }
+      if (this.script) this.frame.body.before(this.script.el);
     }
 
     /** @param {VizPayload} p */
     render(p) {
       const layout = String((p.config && p.config.layout) || 'records');
+      // A switch takes the old layout's rows away before the new one draws,
+      // which would pull a scrolled panel up; it keeps its place.
+      const sc = layout !== this.layout ? this.frame.scroller() : null;
+      const top = sc ? sc.scrollTop : 0;
       if (layout !== this.layout) this.switchTo(layout);
       if (this.view) {
         this.view.render(p);
+        if (sc) {
+          sc.scrollTop = top;
+          this.scope.frame(() => { sc.scrollTop = top; });
+        }
       } else {
         this.frame.empty({ kind: 'error', message: 'The ' + layout + ' layout cannot be drawn here.' });
       }
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
       if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
-      this.busyDone();
-    }
-
-    /** End R's busy cue ("drawing") once the table is on screen. */
-    busyDone() {
-      const busy = root.Blockr.busy;
-      if (!busy || !this.el.id) return;
-      this.scope.frame(() => this.scope.frame(() => busy.stop(this.el.id)));
+      this.frame.busyDone();
     }
 
     /** @param {string} layout */
@@ -70,6 +67,7 @@
       if (this.viewScope) this.viewScope.dispose();
       this.view = null;
       this.layout = layout;
+      this.frame.el.setAttribute('data-layout', layout);
       this.frame.empty(null);
       const Layout = T.layouts[layout];
       if (!Layout) return;

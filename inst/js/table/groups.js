@@ -33,30 +33,16 @@
   }
 
   /**
-   * The nearest ancestor that scrolls up and down. One that only scrolls
-   * sideways computes overflow-y to auto as well, so the style alone is not
-   * enough.
-   * @param {Element} el
-   * @returns {Element | null}
-   */
-  function scrollParent(el) {
-    for (let n = el.parentElement; n; n = n.parentElement) {
-      const oy = getComputedStyle(n).overflowY;
-      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n;
-    }
-    return null;
-  }
-
-  /**
    * Keeps the header in view while the panel scrolls: moves it down by as
    * much of the table as has scrolled out of view, and stops at the last row.
-   * @param {HTMLElement} box
+   * @param {TableFrame} frame
    */
-  function followHeader(box) {
+  function followHeader(frame) {
+    const box = frame.box;
     const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
     const table = thead && thead.parentElement;
     if (!thead || !table) return;
-    const sp = scrollParent(box);
+    const sp = frame.scroller();
     const top = sp ? sp.getBoundingClientRect().top : 0;
     // offsetHeight, not a rect: a rect would include the transform set here.
     const max = table.offsetHeight - thead.offsetHeight;
@@ -86,7 +72,7 @@
       T.tooltip.wire(frame.box, scope, () => this.model);
       // One capture listener on the document sees every scroller's scroll:
       // the dock moves a card between containers after it is drawn.
-      const follow = () => followHeader(frame.box);
+      const follow = () => followHeader(frame);
       if (!this.still) {
         scope.on(document, 'scroll', follow, { capture: true, passive: true });
         scope.on(window, 'resize', follow);

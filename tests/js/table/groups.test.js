@@ -17,29 +17,31 @@ function groups() {
     n: 3, stub: 0,
     cols: [
       { name: 'ARM', disp: arms },
-      col('Rows', { kind: 'bar', w: [33, 66, null], fill: '#2563eb', dw: 4 },
+      col('Rows', { kind: 'bar', width: [33, 66, null], fill: '#2563eb', valueWidth: 4 },
           { pct: ['(17%)', '(33%)', '(50%)'], axis: { at: [0, 50, 100], labels: ['0', '15', '30'] } }),
       col('Split', { kind: 'barsplit', mode: 'stacked', names: ['F', 'M'], fills: ['#f00', '#00f'],
-                     seg: [[20, 30, 0], [10, 40, 50]], segv: [[2, 3, 0], [1, 4, 5]],
-                     slab: [['2', '3', null], ['1', '4', '5']], sink: ['#fff', '#fff'] }),
-      col('Diff', { kind: 'bardiv', w: [20, 0, 40], pos: [true, false, false], dw: 3 }),
-      col('Age', { kind: 'box', wl: [10, null, 5], w1: [10, null, 5], bl: [20, null, 15],
-                   bw: [30, null, 20], bc: [35, null, 25], b2: [50, null, 35], w2: [20, null, 10],
-                   wh: [70, null, 45], tip: ['n = 4', null, 'n = 2'] }),
-      col('Weight', { kind: 'pointrange', c: [50, 40, null], l: [30, 20, null],
-                      rw: [40, 40, null], ol: [10, null, null], ow: [80, null, null],
+                     segWidths: [[20, 30, 0], [10, 40, 50]], segValues: [[2, 3, 0], [1, 4, 5]],
+                     segLabels: [['2', '3', null], ['1', '4', '5']], segInk: ['#fff', '#fff'] }),
+      col('Diff', { kind: 'bardiv', width: [20, 0, 40], positive: [true, false, false], valueWidth: 3 }),
+      col('Age', { kind: 'box', whiskerLow: [10, null, 5], whiskerLowWidth: [10, null, 5],
+                   boxLeft: [20, null, 15], boxWidth: [30, null, 20], median: [35, null, 25],
+                   boxRight: [50, null, 35], whiskerHighWidth: [20, null, 10],
+                   whiskerHigh: [70, null, 45], tip: ['n = 4', null, 'n = 2'] }),
+      col('Weight', { kind: 'pointrange', center: [50, 40, null], rangeLeft: [30, 20, null],
+                      rangeWidth: [40, 40, null], fenceLeft: [10, null, null], fenceWidth: [80, null, null],
                       tip: ['mean 50', 'mean 40', null] }),
-      col('Change', { kind: 'pair', a: [10, 20, null], b: [60, 70, null], l: [10, 20, null],
-                      w: [50, 50, null], bl: [null, null, null], bw: [null, null, null],
+      col('Change', { kind: 'pair', from: [10, 20, null], to: [60, 70, null], linkLeft: [10, 20, null],
+                      linkWidth: [50, 50, null], bandLeft: [null, null, null], bandWidth: [null, null, null],
                       fill: ['#0a0', null, null], dash: [false, true, false],
-                      open: [false, true, false], tip: ['10 to 60', '20 to 70', null], rf: 40 }),
+                      open: [false, true, false], tip: ['10 to 60', '20 to 70', null], reference: 40 }),
       col('Course', { kind: 'interval', segs: [[[0, 20, 1, 'Mild'], [30, 10, 2]], [], [[50, 50, 1]]],
                       tips: [['day 1 to 5', 'day 8 to 10'], [], ['day 15 to 30']],
-                      fills: ['#aaa', '#555'], d0: 0, d1: 30, lg: true },
+                      fills: ['#aaa', '#555'], domainStart: 0, domainEnd: 30, large: true },
           { axis: { at: [0, 50, 100], labels: ['1', '15', '30'], foot: true } }),
-      col('Trend', { kind: 'sparkline', pl: ['0,30 50,10 100,20', '', '0,10 100,30'],
-                     bd: ['0,5 100,5 100,25 0,25', null, null], dx: [100, null, 100],
-                     dy: [55, null, 83], xs: ['1,2,3', '', '1,2'], ys: ['3,1,2', '', '1,3'], rc: 18 }),
+      col('Trend', { kind: 'sparkline', line: ['0,30 50,10 100,20', '', '0,10 100,30'],
+                     band: ['0,5 100,5 100,25 0,25', null, null], dotX: [100, null, 100],
+                     dotY: [55, null, 83], xValues: ['1,2,3', '', '1,2'], yValues: ['3,1,2', '', '1,3'],
+                     refY: 18 }),
       col('Grade', { kind: 'tile' }, { bg: ['#fee', null, '#c00'], fg: ['#000', null, '#fff'] }),
       col('Mean', null, { num: true, disp: ['1.5', '2.5', null] }),
       col('Terms', null, { disp: ['Headache', '<b>x</b>', 'Nausea'] })
@@ -59,7 +61,7 @@ function nested() {
     n: 5, stub: 0,
     cols: [{ name: 'AEDECOD', disp: ['Cardiac', 'Angina', 'Arrhythmia', 'Skin', 'Rash'] },
            { name: 'Rows', disp: ['5', '2', '3', '4', '4'], key: [5, 2, 3, 4, 4],
-             mark: { kind: 'bar', w: [100, 40, 60, 80, 80], dw: 2 } }],
+             mark: { kind: 'bar', width: [100, 40, 60, 80, 80], valueWidth: 2 } }],
     head: [[{ text: 'Term', stub: true, col: 0 }, { text: 'Rows', col: 1 }]],
     rows: { indent: [0, 1, 1, 0, 1],
             keys: [k('Cardiac'), k('Cardiac', 'Angina'), k('Cardiac', 'Arrhythmia'), k('Skin'),
@@ -89,7 +91,7 @@ test('the groups table carries its classes and settings', () => {
   assert.equal(tbl.getAttribute('data-summarize-compact'), '1');
   assert.equal(tbl.getAttribute('data-summarize-nested'), null);
   assert.ok(t.cell(0, 0).classList.contains('blockr-summarize-label-col'));
-  assert.equal(t.$('.dt-row-count').textContent, '2 more in Other');
+  assert.equal(t.$('.vz-count').textContent, '2 more in Other');
 });
 
 test('a bar: the track, its fill and the value with its percentage', () => {
@@ -120,17 +122,18 @@ test('a colour split: one segment per level with a value, its label inside', () 
 
 test('a stacked split keeps its total beside the bar; a grouped one has none', () => {
   const m = groups();
-  m.cols[2].mark.dw = 2;
+  m.cols[2].mark.valueWidth = 2;
   const t = mount(payload({ data: m, config: G }));
   assert.equal(t.cell(0, 2).querySelector('.blockr-summarize-barwrap > .blockr-summarize-barval').textContent, '10');
-  Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']] });
+  Object.assign(m.cols[2].mark, { mode: 'grouped', levelValues: [['2', '3', null], ['1', '4', '5']] });
   t.render({ data: m, config: G });
   assert.equal(t.cell(0, 2).querySelector(':scope > .blockr-summarize-barwrap'), null);
 });
 
 test('a grouped split with labels draws one labelled track per level', () => {
   const m = groups();
-  Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']], dw: 2 });
+  Object.assign(m.cols[2].mark, { mode: 'grouped', levelValues: [['2', '3', null], ['1', '4', '5']],
+                                  valueWidth: 2 });
   const t = mount(payload({ data: m, config: G }));
   const lv = t.cell(0, 2).querySelectorAll('.blockr-summarize-lv');
   assert.equal(lv.length, 2);
@@ -173,9 +176,10 @@ test('a pair: reference, link, from and an open to; dashed by its level', () => 
 
 test('a colour split of lanes draws one lane per level that has rows', () => {
   const m = groups();
-  const g = (c) => ({ c, l: [10, 10, 10], rw: [20, 20, 20], tip: ['a', 'b', 'c'], disp: ['1', '2', '3'] });
+  const g = (center) => ({ center, rangeLeft: [10, 10, 10], rangeWidth: [20, 20, 20], tip: ['a', 'b', 'c'],
+                         disp: ['1', '2', '3'] });
   m.cols[5].mark = { kind: 'pointrange', multi: true, levels: ['F', 'M'], fills: ['#f00', '#00f'],
-                     lv: [g([40, null, 30]), g([60, 50, null])], dw: 2 };
+                     lanes: [g([40, null, 30]), g([60, 50, null])], valueWidth: 2 };
   const t = mount(payload({ data: m, config: G }));
   const lv = t.cell(0, 5).querySelectorAll('.blockr-summarize-lv');
   assert.equal(lv.length, 2);
@@ -266,7 +270,7 @@ test('nested groups: parents fold their terms; search keeps the parent', async (
   inp.dispatchEvent(new t.win.Event('input'));
   await tick(t.win, 200);
   assert.deepEqual(rows().map((r) => r.children[0].textContent), ['Skin', 'Rash']);
-  assert.equal(t.$('.dt-row-count').textContent, '');
+  assert.equal(t.$('.vz-count').textContent, '');
 });
 
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
@@ -314,7 +318,7 @@ test('the picture draws every row off screen without tools, and goes', async () 
   m.n = 600;
   m.cols = m.cols.slice(0, 2);
   m.cols[0].disp = Array.from({ length: 600 }, (_, i) => 'g' + i);
-  m.cols[1] = { name: 'Rows', disp: m.cols[0].disp.map(() => '1'), mark: { kind: 'bar', w: m.cols[0].disp.map(() => 50) } };
+  m.cols[1] = { name: 'Rows', disp: m.cols[0].disp.map(() => '1'), mark: { kind: 'bar', width: m.cols[0].disp.map(() => 50) } };
   m.head = [m.head[0].slice(0, 2)];
   delete m.rows;
   const pic = await env.V.table.picture(payload({ data: m, config: G }), 800, 2);
@@ -369,7 +373,7 @@ function hover(t, node) {
 
 test('hover: a bar names its value under the row and the column context', () => {
   const m = groups();
-  m.cols[1].mark.tt = { head: 'Count', meas: 'Rows' };
+  m.cols[1].mark.hover = { head: 'Count', meas: 'Rows' };
   const t = mount(payload({ data: m, config: G }));
   const c = hover(t, t.cell(1, 1).querySelector('.blockr-summarize-fill'));
   assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'Low');
@@ -380,7 +384,7 @@ test('hover: a bar names its value under the row and the column context', () => 
 
 test('hover: a colour split lists each level, the one under the pointer lit', () => {
   const m = groups();
-  m.cols[2].mark.tt = { cvar: 'Sex', den: 10, meas: 'Rows' };
+  m.cols[2].mark.hover = { cvar: 'Sex', den: 10, meas: 'Rows' };
   const t = mount(payload({ data: m, config: G }));
   const segs = t.cell(1, 2).querySelectorAll('.blockr-summarize-fill');
   const c = hover(t, segs[1]);
@@ -393,9 +397,10 @@ test('hover: a colour split lists each level, the one under the pointer lit', ()
 
 test('hover: a box names its statistics; a pair its clauses', () => {
   const m = groups();
-  Object.assign(m.cols[4].mark, { nn: [4, null, 2], r: { bc: [35, null, 25], bl: [30, null, 20], bh: [40, null, 30],
-                                                          wl: [10, null, 5], wh: [70, null, 45] },
-                                  tt: { words: { center: 'Median', range: 'Q1–Q3', whisk: 'Tukey' } } });
+  Object.assign(m.cols[4].mark, { count: [4, null, 2],
+                                  raw: { center: [35, null, 25], low: [30, null, 20], high: [40, null, 30],
+                                         whiskerLow: [10, null, 5], whiskerHigh: [70, null, 45] },
+                                  hover: { words: { center: 'Median', range: 'Q1–Q3', whisk: 'Tukey' } } });
   const t = mount(payload({ data: m, config: G }));
   const box = hover(t, t.cell(0, 4).querySelector('.lane-box'));
   assert.match(box.text, /n4/);

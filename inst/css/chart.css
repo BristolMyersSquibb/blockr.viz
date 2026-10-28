@@ -552,10 +552,10 @@
    line it would sit on the underlined words above it. A subtitle or caption
    carrying offers gets taller lines throughout, which keeps its spacing even
    whether a line holds words, offers or both. */
-:is(.vz-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) { line-height: 2.25; }
+.vz-subtitle:has(.blockr-slot-offer) { line-height: 2.25; }
 /* The caption's text is a pixel smaller, so it needs more line height for the
    same gap. */
-:is(.vz-caption, .dd-table-caption):has(.blockr-slot-offer) { line-height: 2.35; }
+.vz-caption:has(.blockr-slot-offer) { line-height: 2.35; }
 .blockr-slot-offer:hover,
 .blockr-slot-offer:focus-visible {
   border-color: var(--blockr-color-primary, #2563eb);

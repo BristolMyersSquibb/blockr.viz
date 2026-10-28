@@ -11,7 +11,7 @@ drilldown_chart_dep <- memoise0(function() {
 })
 
 chart_js_dep <- memoise0(function() {
-  script <- c("busy-cue.js", "drilldown-theme-register.js",
+  script <- c("drilldown-theme-register.js",
               file.path("chart", js_script_list("chart")))
   htmltools::htmlDependency(
     name = "chart-js",
