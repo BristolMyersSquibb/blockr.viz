@@ -3,7 +3,7 @@
 # One object, rendered by whichever back end the target needs. The block
 # itself cannot be that object: `new_summarize_table_block()` is a transform
 # block whose result is its (filtered) INPUT, and the table exists only as a
-# push to summarize-table.js. A report or a deck evaluating the board would
+# payload to the browser. A report or a deck evaluating the board would
 # print the input frame.
 #
 # So the block states how to rebuild its table (report_call), and the rebuilt
