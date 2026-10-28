@@ -118,6 +118,16 @@ test('a colour split: one segment per level with a value, its label inside', () 
   assert.equal(t.cell(2, 2).querySelectorAll('.blockr-summarize-fill').length, 1);
 });
 
+test('a stacked split keeps its total beside the bar; a grouped one has none', () => {
+  const m = groups();
+  m.cols[2].mark.dw = 2;
+  const t = mount(payload({ data: m, config: G }));
+  assert.equal(t.cell(0, 2).querySelector('.blockr-summarize-barwrap > .blockr-summarize-barval').textContent, '10');
+  Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']] });
+  t.render({ data: m, config: G });
+  assert.equal(t.cell(0, 2).querySelector(':scope > .blockr-summarize-barwrap'), null);
+});
+
 test('a grouped split with labels draws one labelled track per level', () => {
   const m = groups();
   Object.assign(m.cols[2].mark, { mode: 'grouped', ldisp: [['2', '3', null], ['1', '4', '5']], dw: 2 });

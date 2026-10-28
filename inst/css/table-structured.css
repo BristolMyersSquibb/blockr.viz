@@ -198,8 +198,9 @@ input.blockr-search:focus {
   border-radius: 2px;
 }
 /* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned to
-   the top so a wrapped label stays level with its numbers, in the body ink. */
-.drilldown-table-structured .blockr-table tbody td.blockr-stub {
+   the top so a wrapped label stays level with its numbers, in the body ink.
+   A groups table keeps its row labels on one line (table-groups.css). */
+.drilldown-table-structured .blockr-table:not(.blockr-summarize-table) tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
   white-space: normal;

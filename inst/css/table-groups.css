@@ -18,6 +18,25 @@
   --blockr-summarize-lane-max: 320px;
 }
 .blockr-summarize-table { width: 100%; }
+/* A groups table runs its full length and the panel around it scrolls up
+   and down; the box scrolls sideways only. blockr.ui's preview stylesheet
+   makes every .blockr-table-wrapper a 400px scroll box, hence max-height.
+   The header cannot stick to the panel from inside a box that scrolls
+   sideways, so groups.js moves it down instead. Separate borders, because
+   with collapsed ones the table paints the line under the moved header in
+   place, and a strip of rows shows through. */
+.blockr-summarize-container > .blockr-table-wrapper {
+  max-height: none;
+  overflow-y: hidden;
+}
+.blockr-summarize-container .blockr-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.blockr-summarize-container .blockr-table thead {
+  position: relative;
+  z-index: 3;
+}
 /* Column widths ride on the CELLS: the header cells come from the table
    block's (table/html.js), so they carry its classes, not ours. */
 .blockr-summarize-table td.blockr-summarize-bar-col {
