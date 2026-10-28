@@ -73,6 +73,20 @@
       this.downloads(o.download ? o.downloads : null, o.onOpen);
     }
 
+    /**
+     * The nearest ancestor that scrolls up and down: a dock panel, the page.
+     * One that only scrolls sideways computes overflow-y to auto as well, so
+     * the style alone is not enough.
+     * @returns {Element | null}
+     */
+    scroller() {
+      for (let n = this.el.parentElement; n; n = n.parentElement) {
+        const oy = getComputedStyle(n).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+      }
+      return null;
+    }
+
     /** @param {boolean} on A table with sections or keyed rows. */
     structured(on) {
       this.el.classList.toggle('drilldown-table-structured', on);

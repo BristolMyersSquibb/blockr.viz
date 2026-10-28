@@ -39,11 +39,11 @@ tg_unescape <- function(w) {
   w
 }
 
-# The mark has the fields of the recorded column, named as there, less
-# what the TableCol holds.
+# The mark has the fields of the recorded column, less what the TableCol
+# holds, under the names the browser reads (table_groups_wire()).
 tg_expect_mark <- function(mk, w, label) {
   moved <- c("fkey", "scol", "disp", "v", "pct", "bg", "fg")
-  w <- tg_unescape(w[setdiff(names(w), moved)])
+  w <- table_groups_wire(tg_unescape(w[setdiff(names(w), moved)]), w$kind)
   expect_setequal(names(mk), names(w))
   for (f in names(w)) {
     expect_equal(mk[[f]], w[[f]], label = paste(label, f))
@@ -137,7 +137,7 @@ tg_expect_axis <- function(want, col, label) {
   expect_equal(tg_vec(ax$at), want$pos, tolerance = 0.01,
                label = paste(label, "ticks"))
   expect_identical(tg_vec(ax$labels), want$labels, label = paste(label, "labels"))
-  expect_identical(!is.null(col$mark$dw), want$has_val, label = paste(label, "slot"))
+  expect_identical(!is.null(col$mark$valueWidth), want$has_val, label = paste(label, "slot"))
 }
 
 tg_expect_head <- function(v, want, label) {

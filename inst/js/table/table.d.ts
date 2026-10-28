@@ -79,58 +79,75 @@ interface TableAxis {
 type TableNums = (number | null)[];
 type TableTexts = (string | null)[];
 
-/** The marks of the groups layout, as R/table-model-cells*.R computes them.
- *  Positions and widths are percentages of the cell. `dw`: the width of the
- *  value slot beside the mark, in ch. `tt`: what the hover card adds. */
-interface TableMarkBase { dw?: number | null; tt?: unknown }
+/** The marks of the groups layout, as R/groups-cells*.R computes them and
+ *  R/table-groups-cols.R names them. Positions and widths are percentages of
+ *  the cell. `valueWidth`: the width of the value slot beside the mark, in
+ *  ch. `hover`: what the hover card adds. */
+interface TableMarkBase { valueWidth?: number | null; hover?: unknown }
 
 interface TableMarkBar extends TableMarkBase {
-  kind: 'bar'; w: TableNums; sub?: boolean[] | null; fill?: string | null;
+  kind: 'bar'; width: TableNums; sub?: boolean[] | null; fill?: string | null;
 }
 
+/** A colour split: per level, each row's segment width, value, label inside
+ *  the segment and the label's ink; grouped, each level's value text. */
 interface TableMarkSplit extends TableMarkBase {
   kind: 'barsplit'; mode?: string; names: string[]; fills: string[];
-  seg: TableNums[]; segv: TableNums[]; ldisp?: TableTexts[] | null;
-  slab?: TableTexts[] | null; sink?: string[] | null;
+  segWidths: TableNums[]; segValues: TableNums[]; levelValues?: TableTexts[] | null;
+  segLabels?: TableTexts[] | null; segInk?: string[] | null;
 }
 
-interface TableMarkDiv extends TableMarkBase { kind: 'bardiv'; w: TableNums; pos: boolean[] }
+interface TableMarkDiv extends TableMarkBase { kind: 'bardiv'; width: TableNums; positive: boolean[] }
 
-/** A box (wl w1 bl bw bc b2 w2 wh) or a point range (c l rw ol ow). */
+/** The statistics a hover card prints for a box or point range. */
+interface TableLaneRaw {
+  center?: TableNums; low?: TableNums; high?: TableNums;
+  whiskerLow?: TableNums; whiskerHigh?: TableNums;
+}
+
+/** A box or a point range. A box: the low whisker from `whiskerLow`, the box
+ *  from `boxLeft`, the median, the high whisker from `boxRight` to
+ *  `whiskerHigh`. A point range: the fence, the range, the centre. */
 interface TableLaneGeom {
-  wl?: TableNums; w1?: TableNums; bl?: TableNums; bw?: TableNums; bc?: TableNums;
-  b2?: TableNums; w2?: TableNums; wh?: TableNums; c?: TableNums; l?: TableNums;
-  rw?: TableNums; ol?: TableNums; ow?: TableNums; nn?: TableNums;
-  tip?: TableTexts; r?: Record<string, TableNums>; bare?: boolean; disp?: TableTexts;
+  whiskerLow?: TableNums; whiskerLowWidth?: TableNums; boxLeft?: TableNums;
+  boxWidth?: TableNums; median?: TableNums; boxRight?: TableNums;
+  whiskerHighWidth?: TableNums; whiskerHigh?: TableNums;
+  center?: TableNums; rangeLeft?: TableNums; rangeWidth?: TableNums;
+  fenceLeft?: TableNums; fenceWidth?: TableNums; count?: TableNums;
+  tip?: TableTexts; raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
 }
 
 interface TableMarkLane extends TableMarkBase, TableLaneGeom {
   kind: 'box' | 'pointrange'; multi?: boolean; levels?: string[]; fills?: string[];
-  lv?: TableLaneGeom[]; rf?: undefined;
+  lanes?: TableLaneGeom[]; reference?: undefined;
 }
 
-/** A dumbbell: from `a` to `b`, the link `l`/`w`, the band `bl`/`bw`. */
+/** A dumbbell: from `from` to `to`, the link between them, the band behind. */
 interface TablePairGeom {
-  a: TableNums; b: TableNums; l: TableNums; w: TableNums; bl: TableNums; bw: TableNums;
+  from: TableNums; to: TableNums; linkLeft: TableNums; linkWidth: TableNums;
+  bandLeft: TableNums; bandWidth: TableNums;
   fill?: TableTexts; dash?: boolean[]; open?: boolean[]; tip?: TableTexts;
-  disp?: TableTexts; ab?: TableTexts;
+  disp?: TableTexts; fromTo?: TableTexts;
 }
 
 interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
-  kind: 'pair'; rf?: number | null; multi?: boolean; levels?: string[]; fills?: string[];
-  lv?: TablePairGeom[];
+  kind: 'pair'; reference?: number | null; multi?: boolean; levels?: string[]; fills?: string[];
+  lanes?: TablePairGeom[];
 }
 
-/** Swimlane: per row, segments [left, width, level from 1, label?]. */
+/** Swimlane: per row, segments [left, width, level from 1, label?]. `dates`:
+ *  the domain is in days; `large`: the column takes the width it needs. */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
-  d0: number; d1: number; dd?: boolean; lg?: boolean;
+  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
 }
 
+/** Sparkline in a 100 x 36 box: the line's points, the value band, the last
+ *  point, the x and y values for the hover, the reference line and band. */
 interface TableMarkSpark extends TableMarkBase {
-  kind: 'sparkline'; pl: string[]; bd?: TableTexts | null; dx: TableNums; dy: TableNums;
-  xs: string[]; ys: string[]; nn?: TableNums; rc?: number | null; rby?: number | null;
-  rbh?: number | null;
+  kind: 'sparkline'; line: string[]; band?: TableTexts | null; dotX: TableNums; dotY: TableNums;
+  xValues: string[]; yValues: string[]; count?: TableNums; refY?: number | null;
+  refBandY?: number | null; refBandHeight?: number | null;
 }
 
 interface TableMarkTile extends TableMarkBase { kind: 'tile' }
@@ -357,6 +374,7 @@ interface TableFrame extends VizFrame {
   showTools(o: { search: boolean; download: boolean; downloads?: VizDownload[] | null;
                  onOpen?: () => void }): void;
   structured(on: boolean): void;
+  scroller(): Element | null;
 }
 
 interface TableCardOpts {

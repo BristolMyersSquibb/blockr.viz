@@ -113,22 +113,6 @@ chart_titles <- function(spec, v, d, auto, specs) {
   viz_titles(v, d, auto, a)
 }
 
-# The capture service's request function for this chart (R/chart-capture.R):
-# a blockr.outline deck can ask for a picture whether or not the panel was
-# open, and the browser draws it offscreen from this payload. The block's own
-# downloads use the `chart_capture` input instead (viz_capture_observer()).
-chart_capture_service <- function(session, el, payload) {
-  register_chart_capture(el, function(token, width, height) {
-    msg <- tryCatch(shiny::isolate(payload()), error = function(e) NULL)
-    if (is.null(msg)) {
-      stop("chart block '", el, "' has no data to draw yet", call. = FALSE)
-    }
-    session$sendCustomMessage("blockr-viz:capture", c(
-      msg, list(req = token, width = width, height = height)
-    ))
-  })
-}
-
 # What the downloads write (export-registry.R): the numbers the chart shows,
 # one row per mark for the aggregated types and the rows for the rest; the
 # browser's picture, when it has sent one; the resolved text. Read when a

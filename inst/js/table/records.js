@@ -21,7 +21,10 @@
    */
   function asSelection(x) {
     const s = /** @type {any} */ (x);
-    return s && typeof s === 'object' && s.filters && typeof s.filters === 'object' ? s : null;
+    if (!(s && typeof s === 'object' && s.filters && typeof s.filters === 'object')) return null;
+    // R writes a click without a column half as `columns: {}`.
+    const cols = s.columns && typeof s.columns === 'object' && Object.keys(s.columns).length;
+    return cols ? s : { type: s.type, filters: s.filters };
   }
 
   /** @param {number} shown @param {number} total */

@@ -7,6 +7,7 @@
 CB_VALUE_CALLS
 }
 \description{
+Every addition widens what silently becomes a control, so the list is short.
 The levels of \code{factor()} are the choice list of a select.
 }
 \keyword{internal}

@@ -142,6 +142,10 @@ test('a keyed section value claims the section; its chevron still folds', () => 
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'], SEX: ['F'] })]);
   assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
   assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
+  // R echoes a click without a column half as `columns: {}`.
+  t.render({ data: nested(), columns: COLUMNS,
+             config: { selection: { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['F'] }, columns: {} } } });
+  assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('dt-row-active'));
   t.click(t.$$('tr.blockr-section-header')[1].querySelector('.blockr-chev'));
   assert.equal(t.selects().length, 1);
   assert.ok(t.$$('tr.blockr-section-header')[1].classList.contains('collapsed'));
