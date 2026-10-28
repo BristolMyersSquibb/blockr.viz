@@ -242,7 +242,8 @@ groups_prep_norm <- function(summaries, data) {
 groups_missing_columns <- function(summaries, data) {
   for (s in summaries) {
     cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "ymin", "ymax",
-                                            "linetype", "fill"))])
+                                            "linetype", "fill",
+                                            GROUPS_SPANS_OVERLAYS))])
     cols <- as.character(cols)
     if (identical(s$type, "pair")) {
       cols <- c(cols, Filter(is.character, list(s$ref_min, s$ref_max)))
@@ -351,6 +352,19 @@ groups_map_levels <- function(s, data) {
   }
   if (s$type %in% c("sparkline", "spans")) {
     s$.date <- inherits(data[[chr_state(s$x)]], "Date")
+  }
+  # Event shapes by level of the full data, so a facet slice missing a level
+  # keeps every other level's shape. A factor's full level set decides the
+  # shapes, so dropping a level does not move the rest; the legend lists
+  # the levels the event rows carry.
+  if (identical(s$type, "spans") && !is.null(groups_present(s$event_x, data)) &&
+        !is.null(groups_present(s$event_shape, data))) {
+    ex <- groups_as_num(data[[s$event_x]])
+    ok <- if (is.null(ex)) logical(nrow(data)) else is.finite(ex)
+    v <- data[[s$event_shape]]
+    s$.shape_levels <- groups_levels(v)
+    used <- unique(as.character(v[ok]))
+    s$.shape_used <- s$.shape_levels[s$.shape_levels %in% used]
   }
   s
 }
@@ -488,6 +502,9 @@ groups_failed_summary <- function(s, msg) {
 groups_blank_summary <- function(target, s, sid) {
   n <- nrow(target)
   if (identical(s$type, "spans")) {
+    if (groups_spans_has_overlay(s)) {
+      target[[groups_col(sid, "ovl")]] <- I(rep(list(list()), n))
+    }
     target[[groups_col(sid, "segs")]] <- I(rep(list(list()), n))
     target[[groups_col(sid, "start")]] <- rep(NA_real_, n)
     target[[groups_col(sid, "nseg")]] <- rep(0L, n)

@@ -55,7 +55,8 @@ cells_text <- function(c) {
     return(c$disp)
   }
   if (identical(c$kind, "interval")) {
-    return(vapply(c$tips, function(tt) {
+    return(vapply(seq_along(c$tips), function(i) {
+      tt <- c(c$tips[[i]], if (!is.null(c$et)) c$et[[i]])
       paste(unique(as.character(tt)), collapse = " | ")
     }, character(1L)))
   }

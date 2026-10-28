@@ -669,6 +669,136 @@ test_that("spans label/fields enrich tips and key the highlight", {
   expect_false(isTRUE(c2$lg))
 })
 
+# A swimmer frame: segment rows, tick rows, a band row and an event row
+# share one long frame; each overlay reads only its own rows.
+swim_fixture <- function() {
+  na <- NA_real_
+  data.frame(
+    id = c("a", "a", "a", "a", "a", "b", "b", "b"),
+    s = c(0, 40, na, na, na, 0, na, na),
+    e = c(40, 100, na, na, na, 60, na, na),
+    resp = c("SD", "PR", NA, NA, NA, "PD", NA, NA),
+    visit = c(na, na, 40, 80, na, na, 30, na),
+    b0 = c(na, na, na, na, 40, na, na, na),
+    b1 = c(na, na, na, na, 100, na, na, na),
+    ev = c(na, na, na, na, na, na, na, 150),
+    kind = factor(c(NA, NA, NA, NA, NA, NA, NA, "Death"),
+                  levels = c("CR", "PR", "PD", "Death")),
+    ongoing = c(TRUE, NA, NA, NA, NA, FALSE, NA, NA),
+    stringsAsFactors = FALSE
+  )
+}
+
+swim_spans <- function(...) {
+  list(type = "spans", name = "Lane", x = "s", xend = "e", color = "resp",
+       ...)
+}
+
+test_that("spans overlays: ticks, line, events and open end per row", {
+  d <- swim_fixture()
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    ticks = "visit", band_x = "b0", band_xend = "b1", event_x = "ev",
+    event_shape = "kind", open = "ongoing"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  i <- match(c("a", "b"), m$cells$label)
+  # Overlay rows carry no x / xend, so they draw no segment.
+  expect_identical(lengths(c1$segs[i]), c(2L, 1L))
+  # The death at 150 lies past every segment and still widens the axis.
+  expect_gte(c1$d1, 150)
+  pos <- function(v) round((v - c1$d0) / (c1$d1 - c1$d0) * 100, 2L)
+  expect_equal(c1$tk[[i[[1]]]], pos(c(40, 80)))
+  expect_equal(c1$tk[[i[[2]]]], pos(30))
+  expect_length(c1$bd[[i[[1]]]], 1L)
+  expect_equal(c1$bd[[i[[1]]]][[1]][[1]], pos(40))
+  expect_length(c1$bd[[i[[2]]]], 0L)
+  # The event: its position, the square (Death is the 4th factor level), and
+  # a tooltip naming the event and the day.
+  expect_length(c1$ev[[i[[1]]]], 0L)
+  expect_equal(c1$ev[[i[[2]]]][[1]][[1]], pos(150))
+  expect_identical(c1$ev[[i[[2]]]][[1]][[2]], 4L)
+  expect_identical(c1$et[[i[[2]]]], "Death \u00b7 ev: 150")
+  # Open: at the end of a's last segment; b is closed.
+  expect_equal(c1$op[[i[[1]]]], pos(100))
+  expect_true(is.na(c1$op[[i[[2]]]]))
+  # The browser names, also for one row.
+  w <- table_groups_wire(table_groups_pack(c1, "interval", TRUE), "interval")
+  expect_true(all(c("ticks", "band", "events", "eventTips", "openAt") %in%
+                    names(w)))
+})
+
+test_that("spans event shapes: legend lists the drawn levels with shapes", {
+  d <- swim_fixture()
+  d$kind <- factor(as.character(d$kind), levels = c("Death", "PD"))
+  d$ev[[3]] <- 20
+  d$kind[[3]] <- "PD"
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind"
+  )))
+  leg <- groups_legend_spec(m$prep)
+  sh <- Filter(function(g) identical(g$title, "kind"), leg$groups)[[1]]
+  expect_identical(vapply(sh$items, function(x) x$label, ""),
+                   c("Death", "PD"))
+  expect_identical(vapply(sh$items, function(x) x$shape, 1L), c(1L, 2L))
+  # Without a shape column every event is the filled triangle, "Event".
+  c2 <- sum_model(d, by = "id", summaries = list(swim_spans(event_x = "ev")))
+  c2 <- c2$cells$cols[[1]]
+  ev <- unlist(lapply(c2$ev, function(r) vapply(r, function(e) e[[2]], 1L)))
+  expect_true(all(ev == 1L))
+  expect_match(unlist(c2$et)[[1]], "^Event ")
+})
+
+test_that("a parent row pools segments but draws no overlays", {
+  d <- swim_fixture()
+  d$arm <- "A"
+  m <- sum_model(d, by = c("arm", "id"), summaries = list(swim_spans(
+    ticks = "visit", event_x = "ev", open = "ongoing"
+  )))
+  c1 <- m$cells$cols[[1]]
+  p <- which(m$cells$label == "A")
+  expect_gt(length(c1$segs[[p]]), 0L)
+  expect_length(c1$tk[[p]], 0L)
+  expect_length(c1$ev[[p]], 0L)
+  expect_true(is.na(c1$op[[p]]))
+  expect_length(c1$tk[[which(m$cells$label == "a")]], 2L)
+})
+
+test_that("spans without overlays keep the plain payload", {
+  d <- swim_fixture()
+  c1 <- sum_model(d, by = "id", summaries = list(swim_spans()))$cells$cols[[1]]
+  expect_false(any(c("tk", "bd", "ev", "et", "op") %in% names(c1)))
+})
+
+test_that("a spans overlay naming a missing column is an error", {
+  d <- swim_fixture()
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(ticks = "nope")))
+  expect_match(m$prep$err, "column not in data: \"nope\"")
+})
+
+test_that("the static picture paints the overlays", {
+  skip_if_not_installed("systemfonts")
+  d <- swim_fixture()
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    ticks = "visit", band_x = "b0", band_xend = "b1", event_x = "ev",
+    event_shape = "kind", open = "ongoing"
+  )))
+  c1 <- m$cells$cols[[1]]
+  gl <- list(H = 2, W = 4, px = 1 / 96, lane = 12 / 96, hair = 1 / 96,
+             row_h = 0.3, fs = 10, family = "sans")
+  i <- match("b", m$cells$label)
+  g <- paint_interval(c1, i, 0, 3, 0.2, gl)
+  # One segment, one tick, no line, no arrow, one event (a gList).
+  g <- Filter(Negate(is.null), g)
+  expect_length(g, 3L)
+  expect_s3_class(g[[3]], "gList")
+  png <- tempfile(fileext = ".png")
+  on.exit(unlink(png))
+  p <- summarize_paint_grob(m$cells, m$prep, width_in = 6)
+  paint_write_png(p, png, res = 72)
+  expect_true(file.exists(png))
+})
+
 test_that("a series ref computes a pooled line, mean_sd adds the band", {
   ae <- sum_fixture()
   c1 <- sum_model(ae, by = "TERM", summaries = list(

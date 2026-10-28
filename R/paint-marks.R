@@ -288,11 +288,78 @@ paint_pair <- function(c, i, x, w, ytop, gl) {
 # shared x domain; each is at least 2px wide so a one-day event stays visible.
 paint_interval <- function(c, i, x, w, ytop, gl) {
   y <- paint_lane_y(ytop, gl)
-  lapply(c$segs[[i]], function(sg) {
+  px <- gl$px
+  mid <- gl$H - (y + gl$lane / 2)
+  segs <- lapply(c$segs[[i]], function(sg) {
     paint_rect(paint_lane_x(sg[[1L]], x, w),
             max(sg[[2L]] / 100 * w, gl$px * 2), y, gl$lane,
             c$fills[[sg[[3L]]]], gl)
   })
+  # The overlays, as marks.js draws them: surface ticks, the dark line, the
+  # open end's arrow, then the events on top.
+  tk <- lapply(paint_at(c$tk, i), function(v) {
+    paint_rect(paint_lane_x(v, x, w) - px * 0.75, px * 1.5, y, gl$lane,
+               "#ffffff", gl)
+  })
+  bd <- lapply(paint_at(c$bd, i), function(b) {
+    paint_rect(paint_lane_x(b[[1L]], x, w), b[[2L]] / 100 * w,
+               y + gl$lane / 2 - px, px * 2, PAINT_TEXT, gl)
+  })
+  op <- paint_at(c$op, i)
+  op <- if (length(op) && !is.na(op)) {
+    x0 <- paint_lane_x(op, x, w) + px
+    grid::polygonGrob(x = paint_in(x0 + c(0, 7, 0) * px),
+                      y = paint_in(mid + c(5, 0, -5) * px),
+                      gp = grid::gpar(fill = PAINT_TEXT, col = NA))
+  }
+  ev <- lapply(paint_at(c$ev, i), function(e) {
+    paint_shape(e[[2L]], paint_lane_x(e[[1L]], x, w), mid, px)
+  })
+  c(segs, tk, bd, list(op), ev)
+}
+
+# Row `i` of an optional per-row field, NULL when the column has none.
+paint_at <- function(v, i) if (!is.null(v) && length(v) >= i) v[[i]]
+
+# An event shape centred on (x, y), y measured up from the bottom, in CSS px
+# units of `px` inches, over a 2px white ring: 1 filled triangle, 2 open
+# triangle, 3 cross, 4 square. marks.js shape() draws the same.
+paint_shape <- function(k, x, y, px) {
+  lw <- function(n) n * px * 96
+  ring <- function(n = 4) {
+    grid::gpar(fill = "#ffffff", col = "#ffffff", lwd = lw(n),
+               linejoin = "round", lineend = "round")
+  }
+  tri <- function(gp) {
+    grid::polygonGrob(x = paint_in(x + c(0, 5, -5) * px),
+                      y = paint_in(y + c(5, -4, -4) * px), gp = gp)
+  }
+  switch(as.character(k),
+    "2" = grid::gList(
+      tri(ring()),
+      tri(grid::gpar(fill = "#ffffff", col = PAINT_TEXT, lwd = lw(1.6),
+                     linejoin = "round"))
+    ),
+    "3" = {
+      cross <- function(gp) {
+        grid::segmentsGrob(paint_in(x + c(-4, 4) * px),
+                           paint_in(y + c(4, 4) * px),
+                           paint_in(x + c(4, -4) * px),
+                           paint_in(y + c(-4, -4) * px), gp = gp)
+      }
+      grid::gList(cross(ring(6.2)),
+                  cross(grid::gpar(col = PAINT_TEXT, lwd = lw(2.2),
+                                   lineend = "round")))
+    },
+    "4" = {
+      sq <- function(gp) {
+        grid::rectGrob(paint_in(x), paint_in(y), paint_in(8 * px),
+                       paint_in(8 * px), gp = gp)
+      }
+      grid::gList(sq(ring()), sq(grid::gpar(fill = PAINT_TEXT, col = NA)))
+    },
+    grid::gList(tri(ring()), tri(grid::gpar(fill = PAINT_TEXT, col = NA)))
+  )
 }
 
 # Parse a pre-printed SVG point string ("x,y x,y ...", viewBox 0 0 100 36,

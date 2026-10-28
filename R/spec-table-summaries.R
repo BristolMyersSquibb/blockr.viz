@@ -193,7 +193,53 @@ table_summary_specs <- function() {
                     labels = c("Regular", "Wide")),
         describe = "Segment thickness."
       ),
-      color = summary_color_arg()
+      color = summary_color_arg(),
+      ticks = viz_arg(
+        type = "column", null = "no ticks",
+        gear = gear("Columns", "column", "Ticks at"),
+        describe = paste(
+          "Positions drawn as thin ticks across the lane (visits). Read from",
+          "the rows where it is set, so tick rows can sit in the same frame."
+        )
+      ),
+      band_x = viz_arg(
+        type = "column", null = "no band",
+        gear = gear("Columns", "column", "Line from"),
+        describe = paste(
+          "Start of a dark line through the middle of the lane (a phase",
+          "such as a trial period). Both or neither."
+        )
+      ),
+      band_xend = viz_arg(
+        type = "column", null = "no band",
+        gear = gear("Columns", "column", "Line to"),
+        describe = "End of the line."
+      ),
+      event_x = viz_arg(
+        type = "column", null = "no events",
+        gear = gear("Columns", "column", "Events at"),
+        describe = paste(
+          "Positions of point events, which may lie past the last segment",
+          "(a churn date after the contract ended)."
+        )
+      ),
+      event_shape = viz_arg(
+        type = "column", null = "one shape",
+        gear = gear("Columns", "column", "Event shape", when = "event_x"),
+        describe = paste(
+          "Event kind. Its levels take, in order, a filled triangle, an open",
+          "triangle, a cross and a square; further levels repeat them. Names",
+          "the event in the tooltip and the legend."
+        )
+      ),
+      open = viz_arg(
+        type = "column", null = "no arrow",
+        gear = gear("Columns", "column", "Open end"),
+        describe = paste(
+          "Logical. TRUE on any of a row's records draws an arrowhead at the",
+          "end of its last segment (still ongoing)."
+        )
+      )
     ),
 
     pair = viz_spec(

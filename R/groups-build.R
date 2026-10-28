@@ -139,7 +139,7 @@ groups_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) 
     expr = groups_fill_expr(target, tkeys, slice, s, sid),
     sparkline = groups_fill_series(target, tkeys, slice, s, sid),
     pair = groups_pair_fill(target, tkeys, keys, slice, s, sid),
-    spans = groups_fill_spans(target, tkeys, slice, s, sid),
+    spans = groups_fill_spans(target, tkeys, slice, s, sid, parent_row),
     target
   )
 }
@@ -265,14 +265,86 @@ groups_fill_series <- function(target, tkeys, slice, s, sid) {
   target
 }
 
-groups_fill_spans <- function(target, tkeys, slice, s, sid) {
+groups_fill_spans <- function(target, tkeys, slice, s, sid,
+                              parent_row = FALSE) {
   segs <- groups_spans_split(slice, target, tkeys, s)
   target[[groups_col(sid, "segs")]] <- I(segs)
   target[[groups_col(sid, "start")]] <- vapply(segs, function(ss) {
     if (length(ss)) ss[[1L]]$s else NA_real_
   }, numeric(1L))
   target[[groups_col(sid, "nseg")]] <- lengths(segs)
+  # The overlays are one row's facts (its check-ins, its milestones); a parent row
+  # pools its rows' segments but draws none of them.
+  if (groups_spans_has_overlay(s)) {
+    target[[groups_col(sid, "ovl")]] <- I(if (isTRUE(parent_row)) {
+      rep(list(list()), nrow(target))
+    } else {
+      groups_spans_overlays(slice, target, tkeys, s)
+    })
+  }
   target
+}
+
+#' Does a spans row draw any overlay?
+#' @noRd
+groups_spans_has_overlay <- function(s) {
+  any(vapply(c("ticks", "band_x", "event_x", "open"), function(nm) {
+    !is.null(chr_state(s[[nm]]))
+  }, logical(1L)))
+}
+
+#' The overlays of a spans row, one list per target row: `tk` tick positions,
+#' `bd` line pieces (`s`, `e`), `ev` events (`x`, shape index `k`, level
+#' `lv`) and `op`, whether the lane ends open. Each reads only the rows where
+#' its own columns are set.
+#' @noRd
+groups_spans_overlays <- function(slice, target, tkeys, s) {
+  col <- function(nm) {
+    v <- chr_state(s[[nm]])
+    if (!is.null(v) && v %in% names(slice)) v
+  }
+  num <- function(nm) {
+    v <- col(nm)
+    if (is.null(v)) NULL else groups_as_num(slice[[v]])
+  }
+  tk <- num("ticks")
+  b0 <- num("band_x")
+  b1 <- num("band_xend")
+  ex <- num("event_x")
+  shp <- col("event_shape")
+  opc <- col("open")
+  op <- if (!is.null(opc)) as.logical(slice[[opc]])
+  lv <- s$.shape_levels
+  sk <- groups_key_string(slice, tkeys)
+  tkk <- groups_key_string(target, tkeys)
+  lapply(tkk, function(k) {
+    rows <- which(sk == k)
+    out <- list()
+    if (!is.null(tk)) {
+      v <- tk[rows]
+      out$tk <- sort(unique(v[is.finite(v)]))
+    }
+    if (!is.null(b0) && !is.null(b1)) {
+      r <- rows[is.finite(b0[rows]) & is.finite(b1[rows])]
+      r <- r[order(b0[r])]
+      out$bd <- lapply(r, function(j) {
+        list(s = b0[[j]], e = max(b0[[j]], b1[[j]]))
+      })
+    }
+    if (!is.null(ex)) {
+      r <- rows[is.finite(ex[rows])]
+      r <- r[order(ex[r])]
+      out$ev <- lapply(r, function(j) {
+        l <- if (!is.null(shp)) as.character(slice[[shp]][[j]])
+        kk <- if (!is.null(l) && !is.na(l) && length(lv)) match(l, lv) else NA
+        list(x = ex[[j]],
+             k = if (is.na(kk)) 1L else (kk - 1L) %% 4L + 1L,
+             lv = if (!is.null(l) && !is.na(l)) l)
+      })
+    }
+    if (!is.null(op)) out$op <- isTRUE(any(op[rows], na.rm = TRUE))
+    out
+  })
 }
 
 #' @noRd

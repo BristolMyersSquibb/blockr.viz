@@ -305,6 +305,9 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
                      character(1L), USE.NAMES = FALSE),
     section = identical(s$parent, FALSE),
     size = chr_state(s$size) %||% "md",
+    ovl = if (groups_spans_has_overlay(s)) groups_col(sid, "ovl"),
+    shapes = s$.shape_levels,
+    ename = if (!is.null(s$event_x)) groups_col_name(data, s$event_x),
     fills = if (!is.null(lv)) {
       unname(groups_level_colors(scale_map, color, lv, data[[color]])[lv])
     } else {

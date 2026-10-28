@@ -13,6 +13,19 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
     list(column = cc, title = groups_col_name(data, cc), levels = lv,
          palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
+  # A swimlane's event shapes: one group per shape column, drawn in ink.
+  for (s in summaries) {
+    lv <- s$.shape_used
+    if (!identical(s$type, "spans") || !length(lv)) next
+    if (s$event_shape %in% vapply(color_groups, function(g) {
+      g$column
+    }, "")) next
+    color_groups[[length(color_groups) + 1L]] <- list(
+      column = s$event_shape, title = groups_col_name(data, s$event_shape),
+      levels = lv,
+      shapes = (match(lv, s$.shape_levels) - 1L) %% 4L + 1L
+    )
+  }
   # A tile painted by a worst level gets its own legend group.
   for (s in summaries) {
     if (!identical(s$show, "tile") || is.null(s$.fill)) next
@@ -55,7 +68,8 @@ groups_legend_spec <- function(prep) {
         l <- as.character(g$levels[[i]])
         list(
           label = if (nzchar(trimws(l))) l else "(Missing)",
-          color = if (i <= length(pal)) unname(pal[[i]])
+          color = if (i <= length(pal)) unname(pal[[i]]),
+          shape = if (!is.null(g$shapes)) g$shapes[[i]]
         )
       })
     )

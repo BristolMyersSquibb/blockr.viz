@@ -53,7 +53,8 @@ TABLE_GROUPS_KEYS <- list(
                 xs = "xValues", ys = "yValues", rc = "refY",
                 rby = "refBandY", rbh = "refBandHeight"),
   interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
-               lg = "large")
+               lg = "large", tk = "ticks", bd = "band", ev = "events",
+               et = "eventTips", op = "openAt")
 )
 # The raw statistics a hover card prints (`r`).
 TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",
@@ -94,7 +95,7 @@ table_groups_pack <- function(g, kind, top) {
                        (top && nm %in% TABLE_GROUPS_SCALARS) ||
                        (top && nm == "fill" && identical(kind, "bar"))) {
       x
-    } else if (nm == "segs") {
+    } else if (nm %in% c("segs", "bd", "ev")) {
       lapply(x, function(ss) if (length(ss)) ss else groups_arr(list()))
     } else if (nm == "lv") {
       lapply(x, table_groups_pack, kind = kind, top = FALSE)

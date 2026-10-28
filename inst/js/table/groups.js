@@ -28,8 +28,10 @@
     el.hidden = !groups.length;
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
-      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item"><i style="background:' +
-        esc(it.color) + '"></i>' + esc(it.label) + '</span>').join('') + '</span>').join('');
+      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.shape != null
+        ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
+        : '<i style="background:' + esc(it.color) + '"></i>') +
+        esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
   /**

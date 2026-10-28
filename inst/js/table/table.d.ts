@@ -138,10 +138,15 @@ interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
 }
 
 /** Swimlane: per row, segments [left, width, level from 1, label?]. `dates`:
- *  the domain is in days; `large`: the column takes the width it needs. */
+ *  the domain is in days; `large`: the column takes the width it needs.
+ *  Overlays, each only when the row asks for it: `ticks` positions, `band`
+ *  line pieces [left, width], `events` [x, shape 1-4] with `eventTips`, and
+ *  `openAt` where an open lane's arrow sits (null: closed). */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
   domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
+  ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
+  openAt?: TableNums;
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last
@@ -229,7 +234,7 @@ interface TableModel {
 }
 
 interface TableLegend {
-  groups: { title: string; items: { color: string; label: string }[] }[];
+  groups: { title: string; items: { color?: string; label: string; shape?: number }[] }[];
 }
 
 /** The table block's `derived`, as R builds it. The table itself is
@@ -476,6 +481,7 @@ interface VizTableNamespace {
     glyph(c: TableMark | null | undefined, i: number, labels: boolean): string;
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
+    shape(k: number): string;
   };
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;
