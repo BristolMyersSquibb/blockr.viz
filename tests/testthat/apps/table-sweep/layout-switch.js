@@ -8,7 +8,8 @@
 // A read is {shown, gears, open, selected, table1, badge}: the layout on
 // screen, the number of visible gear buttons and open gear trays in the
 // block, the chosen layout tile in the open tray (null without
-// one), and whether that tray holds the Table 1 settings and the input badge.
+// one), and whether that tray holds the Table 1 settings (the Variables
+// section) and the input badge.
 // A pick adds {gaps, blanks, samples}: from the click until the block has
 // settled, sampled every 8 ms, how often the block showed no open tray, and
 // how often it showed no table; and `scrollLost`, whether a scrolled panel
@@ -31,23 +32,17 @@
 
   const root = (id) => document.querySelector(
     ['.card', '.blockr-block-card'].map((c) => c + '[id$="-block_handle-' + id + '"]').join(", "));
-  const wrap = (r, w) => r && r.querySelector('[id$="-' + w + '_wrap"]');
-  const shownOn = (e) => !!e && getComputedStyle(e).display !== "none";
-
-  // The variables layout shows the records wrap too (the records engine
-  // draws it), so the variables wrap decides first.
+  // The table view writes the layout it draws on its frame (data-layout).
   function shown(id) {
     const r = root(id);
-    if (shownOn(wrap(r, "groups"))) return "groups";
-    if (shownOn(wrap(r, "variables"))) return "variables";
-    if (shownOn(wrap(r, "records"))) return "records";
-    return null;
+    const f = r && [...r.querySelectorAll(".vz-table[data-layout]")].find(vis);
+    return f ? f.getAttribute("data-layout") : null;
   }
 
   const gears = (r) => [...r.querySelectorAll(".blockr-gear-btn")].filter(vis);
   const tables = (r) => [...r.querySelectorAll("table")].filter(vis);
   const trays = (r) => [...r.querySelectorAll(".blockr-settings--open")].filter(vis);
-  const segs = (tray) => [...tray.querySelectorAll(".vz-section--layout [role=radio]")]
+  const segs = (tray) => [...tray.querySelectorAll("[data-role=layout] [role=radio]")]
     .filter((s) => LAYOUTS.includes(val(s)));
 
   function read(id) {
@@ -57,7 +52,7 @@
     if (t.length === 1) {
       const on = segs(t[0]).filter((s) => s.getAttribute("aria-checked") === "true");
       selected = on.length === 1 ? val(on[0]) : on.map(val).join("+") || null;
-      table1 = !!t[0].querySelector(".stb-in-gear .stb-grid, .stb-in-gear > *");
+      table1 = !!t[0].querySelector('.vz-section[data-section="Variables"]');
       badge = !!t[0].querySelector(".dd-input-badge");
     }
     return { shown: shown(id), gears: gears(r).length, open: t.length, selected, table1, badge };

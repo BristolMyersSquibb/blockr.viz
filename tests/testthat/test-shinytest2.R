@@ -4,10 +4,10 @@
 # client-side JS contract end-to-end:
 #
 #   * the table search box (DOM row hiding),
-#   * click-to-filter drill: the `<elem>_action` message the table JS emits ->
-#     reactive state -> the block re-filters its own output (the data that
-#     flows downstream), read back via the board's exported `result`,
-#   * a gear-popover `config` message re-rendering the table,
+#   * click-to-filter drill: the `<view>_select` message a view sends on a
+#     click -> reactive state -> the block re-filters its own output (the data
+#     that flows downstream), read back via the board's exported `result`,
+#   * a `<view>_set` settings message re-rendering the view,
 #   * the cell-visual data-bar markup.
 #
 # Server/reactive logic is covered without a browser by test-table-block-*.R;
@@ -46,6 +46,14 @@ if (run_browser) {
     }
   )
   if (!is.null(app)) {
+    # A background tab gets no animation frames, and the views draw on one: a
+    # remote Chrome (blockr.dev/scripts/use-remote-chrome.R) opens the app
+    # behind its first tab.
+    try({
+      cdp <- app$get_chromote_session()
+      cdp$Page$bringToFront()
+      cdp$Emulation$setFocusEmulationEnabled(enabled = TRUE)
+    }, silent = TRUE)
     app$wait_for_idle()
     withr::defer(app$stop(), testthat::teardown_env())
   }
@@ -59,34 +67,78 @@ skip_if_no_app <- function() {
 # Helpers
 # ---------------------------------------------------------------------------
 
-# Emit the `<elem>_action` message a block's JS sends on a drill/gear edit.
-# Each renderer builds a root element with id `ns("<root>")` and its JS listens
-# on `<that id>_action`; on a board the id resolves deterministically. We send
-# that message directly — the same contract the row/bar/card-click and gear
-# popover JS use. (The chart's *real canvas click* is driven separately by
-# echarts_canvas_click(), which exercises the chart's click handler too.)
-send_action <- function(input_id, payload) {
-  json <- jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null")
-  app$run_js(sprintf(
-    "Shiny.setInputValue('%s', %s, {priority: 'event'});", input_id, json
+# The class names the views (and blockr.ui's gear tray) write, in one place:
+# a rename edits this list only. The JS snippets below name them as
+# `@key@`; js_get(), js_run() and js_wait() fill them in.
+SEL <- c(
+  # table frame and records
+  frame = ".vz-table", clickable = "vz-table-clickable", row = "tr.vz-table-row",
+  stub = ".vz-table-stub", cell = "td.vz-table-data", hidden = ".blockr-hidden-search",
+  search = "input.vz-table-search", count = ".vz-count",
+  active = ".vz-table-row-active", row_active = "tr.vz-table-row-active",
+  # status footer (table and chart)
+  status = ".vz-status-text", clear = ".vz-status-clear", cap = ".vz-status-note",
+  # cards
+  card_row = ".vz-table-card-row", card = ".vz-table-card", card_label = ".vz-table-card-rowlab",
+  card_glyph = ".vz-table-card-glyph", card_box = ".vz-table-groups-boxcell",
+  # chart
+  chart = ".vz-chart-panel",
+  # gear
+  gear = ".blockr-gear-btn", tray = ".blockr-settings",
+  tray_open = ".blockr-settings.blockr-settings--open",
+  tray_group = ".blockr-tray-nav__group", checkbox = ".blockr-checkbox",
+  section = ".vz-section", section_title = ".vz-section-title",
+  tile = ".vz-tile", tile_on = ".vz-tile--on"
+)
+
+sel_fill <- function(js) {
+  for (k in names(SEL)) js <- gsub(paste0("@", k, "@"), SEL[[k]], js, fixed = TRUE)
+  stopifnot(!grepl("@[a-z_]+@", js))
+  js
+}
+js_get <- function(js) app$get_js(sel_fill(js))
+js_run <- function(js) app$run_js(sel_fill(js))
+js_wait <- function(js, ...) app$wait_for_js(sel_fill(js), ...)
+
+# A block's view: its output element id and a selector for it. The table
+# block draws into `<ns>-expr-table`, the chart block into `<ns>-expr-chart`.
+view_id <- function(id, kind = "table") {
+  sprintf("board-block_%s-expr-%s", id, kind)
+}
+view_sel <- function(id, kind = "table") paste0("#", view_id(id, kind))
+
+# Send a view message the way the views do (Blockr.viz.util.send(), the same
+# typed inputs a click or a gear edit sends), then settle.
+#
+# send_select(): a click or brush, `<view>_select`. `selection` is the
+# message's selection, or NULL to clear.
+send_select <- function(id, selection, kind = "table") {
+  json <- if (is.null(selection)) "null" else
+    jsonlite::toJSON(selection, auto_unbox = TRUE, null = "null")
+  js_run(sprintf(
+    "Blockr.viz.util.send('%s', 'select', {selection: %s, nonce: Date.now()});",
+    view_id(id, kind), json
   ))
   app$wait_for_idle()
 }
 
-# Per-renderer action input ids (root element + "_action").
-table_action <- function(id) sprintf("board-block_%s-expr-records-drilldown_table_block_action", id)
-chart_action <- function(id) sprintf("board-block_%s-expr-drilldown_block_action", id)
-cards_action <- function(id) sprintf("board-block_%s-expr-groups-summarize_table_block_action", id)
-# The groups engine's container (the cards look draws inside it).
-cards_scope <- function(id) {
-  sprintf(
-    ".blockr-summarize-container[data-summarize-elem-id=\"board-block_%s-expr-groups-summarize_table_block\"]",
-    id
-  )
+# A categorical selection: rows whose `col` is one of `values`.
+categorical <- function(col, values) {
+  list(type = "categorical", filters = stats::setNames(list(as.list(values)), col))
 }
 
-send_table_action <- function(block_id, payload) {
-  send_action(table_action(block_id), payload)
+# send_set(): a settings change, `<view>_set`, at the view's current state
+# revision (the server ignores a value older than its own).
+send_set <- function(id, values, kind = "table") {
+  json <- jsonlite::toJSON(values, auto_unbox = TRUE, null = "null")
+  js_run(sprintf(
+    "(function(){var id = '%s', p = Shiny.shinyapp.$values[id];
+       Blockr.viz.util.send(id, 'set', {rev: p.state_rev, values: %s}, '%s');})();",
+    view_id(id, kind), json, kind
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+  app$wait_for_idle()
 }
 
 # Fire a GENUINE click on an ECharts chart at a data point's pixel, driving the
@@ -104,11 +156,11 @@ send_table_action <- function(block_id, payload) {
 # Scroll a chart block into view, wait for its canvas, and settle past the
 # chart's deferred resize(); returns the chart-container selector.
 chart_settle <- function(block_id) {
-  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
-  app$run_js(sprintf(
+  sel <- view_sel(block_id, "chart")
+  js_run(sprintf(
     "document.querySelector('%s').scrollIntoView({block: 'center'});", sel
   ))
-  app$wait_for_js(sprintf("!!document.querySelector('%s canvas')", sel),
+  js_wait(sprintf("!!document.querySelector('%s canvas')", sel),
                   timeout = 15000)
   app$wait_for_idle()
   Sys.sleep(0.8) # past the chart's deferred resize()
@@ -127,35 +179,34 @@ cdp_click <- function(x, y) {
   app$wait_for_idle()
 }
 
-# --- Gear settings band (drilldown-config.js) ------------------------------
-# The gear opens an in-flow .blockr-settings band inside the block (design-
-# system pilot; no more <body>-portaled popover). The OPEN one carries the
-# --open modifier. These helpers scope to that open band.
-POPOVER_OPEN_JS <- "document.querySelector('.blockr-settings.blockr-settings--open')"
+# --- Gear settings band (core/gear) ----------------------------------------
+# The gear opens an in-flow .blockr-settings band inside the block. The OPEN
+# one carries the --open modifier. These helpers scope to that open band.
+POPOVER_OPEN_JS <- "document.querySelector('@tray_open@')"
 
 gear_open <- function(block_id) {
-  app$run_js(sprintf(
-    "document.querySelector('#board-block_%s-expr-drilldown_block .blockr-gear-btn').click();",
-    block_id
+  js_run(sprintf(
+    "document.querySelector('%s @gear@').click();",
+    view_sel(block_id, "chart")
   ))
   app$wait_for_idle()
   Sys.sleep(0.3)
 }
 
 popover_is_open <- function() {
-  isTRUE(app$get_js(sprintf("!!(%s)", POPOVER_OPEN_JS)))
+  isTRUE(js_get(sprintf("!!(%s)", POPOVER_OPEN_JS)))
 }
 
 popover_active_type <- function() {
-  app$get_js(sprintf(
-    "(function(){var p=%s; if(!p) return null; var a=p.querySelector('.dd-type-btn.dd-type-active, .dd-type-tile.dd-type-active'); return a?a.textContent:null;})()",
+  js_get(sprintf(
+    "(function(){var p=%s; if(!p) return null; var a=p.querySelector('[data-role=type] @tile_on@'); return a?a.dataset.value:null;})()",
     POPOVER_OPEN_JS
   ))
 }
 
 popover_click_type <- function(type) {
-  app$run_js(sprintf(
-    "(function(){var p=%s; Array.from(p.querySelectorAll('.dd-type-btn, .dd-type-tile')).filter(function(b){return b.textContent==='%s';})[0].click();})()",
+  js_run(sprintf(
+    "(function(){var p=%s; p.querySelector('[data-role=type] @tile@[data-value=\"%s\"]').click();})()",
     POPOVER_OPEN_JS, type
   ))
   app$wait_for_idle()
@@ -168,9 +219,9 @@ popover_click_type <- function(type) {
 echarts_canvas_click <- function(block_id, at) {
   sel <- chart_settle(block_id)
   cat_or_val <- if (is.character(at[[2]])) sprintf("'%s'", at[[2]]) else at[[2]]
-  pt <- jsonlite::fromJSON(app$get_js(sprintf(
+  pt <- jsonlite::fromJSON(js_get(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s @chart@');
        var inst = window.echarts.getInstanceByDom(div);
        var px   = inst.convertToPixel({gridIndex: 0}, [%s, %s]);
        var r    = div.getBoundingClientRect();
@@ -186,9 +237,9 @@ echarts_canvas_click <- function(block_id, at) {
 # (ECharts: cx + cos(mid)*rMid, cy + sin(mid)*rMid).
 echarts_pie_click <- function(block_id, slice_name) {
   sel <- chart_settle(block_id)
-  pt <- jsonlite::fromJSON(app$get_js(sprintf(
+  pt <- jsonlite::fromJSON(js_get(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s @chart@');
        var inst = window.echarts.getInstanceByDom(div);
        var dt   = inst.getModel().getSeriesByIndex(0).getData();
        var idx = -1; for (var k = 0; k < dt.count(); k++) if (dt.getName(k) === '%s') idx = k;
@@ -208,9 +259,9 @@ echarts_pie_click <- function(block_id, slice_name) {
 # the chart's range filter.
 echarts_brush <- function(block_id, xrange, yrange) {
   sel <- chart_settle(block_id)
-  app$run_js(sprintf(
+  js_run(sprintf(
     "(function(){
-       var div  = document.querySelector('%s .vz-chart-grid').querySelector('div');
+       var div  = document.querySelector('%s @chart@');
        var inst = window.echarts.getInstanceByDom(div);
        inst.dispatchAction({type: 'brush', areas: [{
          brushType: 'rect', xAxisIndex: 0, yAxisIndex: 0,
@@ -224,10 +275,30 @@ echarts_brush <- function(block_id, xrange, yrange) {
   app$wait_for_idle()
 }
 
-# CSS-escaped id selector for a block's rendered table chrome (search box +
-# <table> live inside it). The id has no CSS-special chars beyond hyphens.
-dt_result <- function(block_id) {
-  sprintf("#board-block_%s-expr-records-dt_result", block_id)
+# Selector for a table block's view (search box + <table> live inside it).
+dt_result <- function(block_id) view_sel(block_id, "table")
+
+# Cards: click the first card of the row labelled `label`; the rows marked
+# selected.
+card_click <- function(block_id, label) {
+  js_run(sprintf(
+    "Array.from(document.querySelectorAll('%s @card_row@'))
+       .filter(function(r){var l = r.querySelector('@card_label@');
+         return l && l.textContent.trim() === '%s';})[0]
+       .querySelector('@card@').click();",
+    dt_result(block_id), label
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.4)
+  app$wait_for_idle()
+}
+
+card_active <- function(block_id) {
+  unlist(js_get(sprintf(
+    "Array.from(document.querySelectorAll('%s @card_row@@active@'))
+       .map(function(r){return r.querySelector('@card_label@').textContent.trim();})",
+    dt_result(block_id)
+  )))
 }
 
 # A block's exported result data frame (the data it passes downstream).
@@ -247,9 +318,9 @@ test_that("table search box filters rows in the browser (JS)", {
   # non-matching rows from the DOM (model search), while the DOM path
   # (structured / static tables) class-hides them.
   count_visible <- function() {
-    app$get_js(sprintf(
+    js_get(sprintf(
       "document.querySelectorAll(
-         '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length",
+         '%s tbody @row@:not(@hidden@)').length",
       scope
     ))
   }
@@ -258,29 +329,29 @@ test_that("table search box filters rows in the browser (JS)", {
   expect_equal(count_visible(), 6)
 
   # Type a query matching exactly one region -> only that row stays visible.
-  app$run_js(sprintf(
-    "var i = document.querySelector('%s input.blockr-search');
+  js_run(sprintf(
+    "var i = document.querySelector('%s @search@');
      i.value = 'East';
      i.dispatchEvent(new Event('input', {bubbles: true}));",
     scope
   ))
-  app$wait_for_js(sprintf(
+  js_wait(sprintf(
     "document.querySelectorAll(
-       '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length === 1",
+       '%s tbody @row@:not(@hidden@)').length === 1",
     scope
   ), timeout = 5000)
   expect_equal(count_visible(), 1)
 
   # Clearing the box restores every row.
-  app$run_js(sprintf(
-    "var i = document.querySelector('%s input.blockr-search');
+  js_run(sprintf(
+    "var i = document.querySelector('%s @search@');
      i.value = '';
      i.dispatchEvent(new Event('input', {bubbles: true}));",
     scope
   ))
-  app$wait_for_js(sprintf(
+  js_wait(sprintf(
     "document.querySelectorAll(
-       '%s tbody tr.blockr-data-row:not(.blockr-hidden-search)').length === 6",
+       '%s tbody @row@:not(@hidden@)').length === 6",
     scope
   ), timeout = 5000)
   expect_equal(count_visible(), 6)
@@ -291,8 +362,8 @@ test_that("the footer counts the rows, and re-counts under a search", {
 
   scope <- dt_result("table")
   count_text <- function() {
-    app$get_js(sprintf(
-      "(function(){var e=document.querySelector('%s .dt-row-count');
+    js_get(sprintf(
+      "(function(){var e=document.querySelector('%s @count@');
          return e ? e.textContent : null;})()", scope
     ))
   }
@@ -301,97 +372,88 @@ test_that("the footer counts the rows, and re-counts under a search", {
 
   # A search narrows the count without touching the data: the browser owns
   # the query, so the footer has to say how much of the table is on screen.
-  app$run_js(sprintf(
-    "var i = document.querySelector('%s input.blockr-search');
+  js_run(sprintf(
+    "var i = document.querySelector('%s @search@');
      i.value = 'East';
      i.dispatchEvent(new Event('input', {bubbles: true}));",
     scope
   ))
-  app$wait_for_js(sprintf(
-    "document.querySelector('%s .dt-row-count').textContent === '1 of 6 rows'",
+  js_wait(sprintf(
+    "document.querySelector('%s @count@').textContent === '1 of 6 rows'",
     scope
   ), timeout = 5000)
   expect_equal(count_text(), "1 of 6 rows")
 
-  app$run_js(sprintf(
-    "var i = document.querySelector('%s input.blockr-search');
+  js_run(sprintf(
+    "var i = document.querySelector('%s @search@');
      i.value = '';
      i.dispatchEvent(new Event('input', {bubbles: true}));",
     scope
   ))
-  app$wait_for_js(sprintf(
-    "document.querySelector('%s .dt-row-count').textContent === '6 rows'",
+  js_wait(sprintf(
+    "document.querySelector('%s @count@').textContent === '6 rows'",
     scope
   ), timeout = 5000)
   expect_equal(count_text(), "6 rows")
 })
 
 # ===========================================================================
-# CLICK-TO-FILTER DRILL (action message -> re-filter -> downstream data)
+# CLICK-TO-FILTER DRILL (select message -> re-filter -> downstream data)
 # ===========================================================================
 
-test_that("drill: a single-value filter action filters the block's output", {
+test_that("drill: a single-value selection filters the block's output", {
   skip_if_no_app()
 
-  send_table_action("table", list(
-    action = "filter", column = "region", values = list("North")
-  ))
+  send_select("table", categorical("region", "North"))
 
   res <- get_block_result("table")
   expect_equal(nrow(res), 2L)
   expect_true(all(res$region == "North"))
 })
 
-test_that("drill: a multi-value filter action uses %in% and keeps all matches", {
+test_that("drill: a multi-value selection uses %in% and keeps all matches", {
   skip_if_no_app()
 
-  send_table_action("table", list(
-    action = "filter", column = "region", values = list("North", "South")
-  ))
+  send_select("table", categorical("region", c("North", "South")))
 
   res <- get_block_result("table")
   expect_equal(nrow(res), 4L)
   expect_setequal(unique(res$region), c("North", "South"))
 })
 
-test_that("drill: clearing the filter (empty values) restores all rows", {
+test_that("drill: clearing the selection restores all rows", {
   skip_if_no_app()
 
-  send_table_action("table", list(
-    action = "filter", column = "region", values = list()
-  ))
+  send_select("table", NULL)
 
   res <- get_block_result("table")
   expect_equal(nrow(res), 6L)
 })
 
 # ===========================================================================
-# GEAR-POPOVER CONFIG (config message -> state -> re-render)
+# SETTINGS (set message -> state -> re-render)
 # ===========================================================================
 
-test_that("config: setting drill via a config action updates the table markup", {
+test_that("settings: setting drill updates the table markup", {
   skip_if_no_app()
 
-  onclick_col <- function() {
-    app$get_js(sprintf(
-      "document.querySelector('%s table').getAttribute('data-dt-onclick-col')",
-      dt_result("bars")
-    ))
+  # A table whose rows filter on a click carries .vz-table-clickable.
+  clickable <- function(id = "bars") {
+    isTRUE(js_get(sprintf(
+      "document.querySelector('%s @frame@').classList.contains('@clickable@')",
+      dt_result(id)
+    )))
   }
 
-  # `bars` starts with no drill -> no onclick column on the <table>.
-  expect_null(onclick_col())
+  # `bars` starts with no drill.
+  expect_false(clickable())
 
-  send_table_action("bars", list(
-    action = "config", param = "drill", value = "region"
-  ))
-  expect_equal(onclick_col(), "region")
+  send_set("bars", list(drill = "region"))
+  expect_true(clickable())
 
-  # "(none)" clears it back off.
-  send_table_action("bars", list(
-    action = "config", param = "drill", value = "(none)"
-  ))
-  expect_null(onclick_col())
+  # An empty drill turns it back off.
+  send_set("bars", list(drill = NULL))
+  expect_false(clickable())
 })
 
 # ===========================================================================
@@ -404,7 +466,7 @@ test_that("cell visuals: numeric cells render data-bar gradients", {
   scope <- dt_result("bars")
 
   # Every numeric cell in `bars` carries a left-anchored linear-gradient.
-  n_bars <- app$get_js(sprintf(
+  n_bars <- js_get(sprintf(
     "document.querySelectorAll(
        '%s table tbody td[style*=\"linear-gradient\"]').length",
     scope
@@ -412,7 +474,7 @@ test_that("cell visuals: numeric cells render data-bar gradients", {
   expect_gt(n_bars, 0)
 
   # The largest revenue (North = 100, the column max) fills to 100%.
-  has_full_bar <- app$get_js(sprintf(
+  has_full_bar <- js_get(sprintf(
     "Array.from(document.querySelectorAll(
        '%s table tbody td[style*=\"linear-gradient\"]'))
        .some(function(td){ return td.getAttribute('style').indexOf('100%%') > -1; })",
@@ -428,14 +490,14 @@ test_that("cell visuals: diverging heatmap paints solid cell backgrounds", {
 
   # Diverging mode paints each numeric cell a solid hex background (no
   # gradient) plus a contrasting text color.
-  n_bg <- app$get_js(sprintf(
+  n_bg <- js_get(sprintf(
     "document.querySelectorAll('%s table tbody td[style*=\"background:#\"]').length",
     scope
   ))
   expect_gt(n_bg, 0)
 
   # These are solid fills, not the data-bar gradient.
-  n_grad <- app$get_js(sprintf(
+  n_grad <- js_get(sprintf(
     "document.querySelectorAll('%s table tbody td[style*=\"linear-gradient\"]').length",
     scope
   ))
@@ -443,26 +505,20 @@ test_that("cell visuals: diverging heatmap paints solid cell backgrounds", {
 })
 
 # ===========================================================================
-# CHART: click-to-filter action (message contract, not the canvas hit-test)
+# CHART: click-to-filter selection (message contract, not the canvas hit-test)
 # ===========================================================================
 
-test_that("chart: a filter action filters the chart block's output", {
+test_that("chart: a selection filters the chart block's output", {
   skip_if_no_app()
 
-  send_action(chart_action("chart"), list(
-    action = "filter", filter_type = "categorical",
-    column = "region", values = list("North")
-  ))
+  send_select("chart", categorical("region", "North"), "chart")
 
   res <- get_block_result("chart")
   expect_true(all(res$region == "North"))
   expect_lt(nrow(res), 6L)
 
   # Clear it again.
-  send_action(chart_action("chart"), list(
-    action = "filter", filter_type = "categorical",
-    column = "region", values = list()
-  ))
+  send_select("chart", NULL, "chart")
   expect_equal(nrow(get_block_result("chart")), 6L)
 })
 
@@ -470,10 +526,7 @@ test_that("chart: a real ECharts canvas click drills the bar (no Playwright)", {
   skip_if_no_app()
 
   # Reset any prior filter so the baseline is the full frame.
-  send_action(chart_action("chart"), list(
-    action = "filter", filter_type = "categorical",
-    column = "region", values = list()
-  ))
+  send_select("chart", NULL, "chart")
   expect_equal(nrow(get_block_result("chart")), 6L)
 
   # Click the middle of the "North" bar (sum revenue 150; value 75 is mid-bar).
@@ -519,15 +572,15 @@ test_that("chart: a rectangular brush filters to the selected x/y range", {
 })
 
 # ===========================================================================
-# GEAR POPOVER ENGINE (drilldown-config.js) — real DOM, not the action input
+# GEAR (core/gear): the real DOM, not the set message
 # ===========================================================================
 
 test_that("gear popover: a chart-type switch keeps it open and the block live", {
   skip_if_no_app()
 
-  cfg <- "#board-block_chart_cfg-expr-drilldown_block"
-  app$run_js(sprintf("document.querySelector('%s').scrollIntoView({block:'center'});", cfg))
-  app$wait_for_js(sprintf("!!document.querySelector('%s canvas')", cfg), timeout = 15000)
+  cfg <- view_sel("chart_cfg", "chart")
+  js_run(sprintf("document.querySelector('%s').scrollIntoView({block:'center'});", cfg))
+  js_wait(sprintf("!!document.querySelector('%s canvas')", cfg), timeout = 15000)
   app$wait_for_idle()
 
   gear_open("chart_cfg")
@@ -540,13 +593,10 @@ test_that("gear popover: a chart-type switch keeps it open and the block live", 
   popover_click_type("pie")
   expect_true(popover_is_open())
   expect_equal(popover_active_type(), "pie")
-  expect_true(app$get_js(sprintf("!!document.querySelector('%s canvas')", cfg)))
+  expect_true(js_get(sprintf("!!document.querySelector('%s canvas')", cfg)))
 
   # Not wedged: a drill still flows through to the (re-filtered) output.
-  send_action(chart_action("chart_cfg"), list(
-    action = "filter", filter_type = "categorical",
-    column = "region", values = list("South")
-  ))
+  send_select("chart_cfg", categorical("region", "South"), "chart")
   res <- get_block_result("chart_cfg")
   expect_setequal(unique(res$region), "South")
   expect_equal(nrow(res), 2L)
@@ -556,18 +606,16 @@ test_that("gear popover: a chart-type switch keeps it open and the block live", 
 # CARDS: the table block's cards look
 # ===========================================================================
 
-test_that("cards: a filter action filters the block's output", {
+test_that("cards: a selection filters the block's output", {
   skip_if_no_app()
 
-  send_action(cards_action("cards"), list(
-    action = "filter", column = list("region"), values = list("South")
-  ))
+  send_select("cards", categorical("region", "South"))
 
   res <- get_block_result("cards")
   expect_true(all(res$region == "South"))
   expect_equal(nrow(res), 2L)
 
-  send_action(cards_action("cards"), list(action = "clear_filter"))
+  send_select("cards", NULL)
   expect_equal(nrow(get_block_result("cards")), 6L)
 })
 
@@ -583,13 +631,13 @@ test_that("summary_table gear: toggling 'overall' adds a Total column to the out
 
   # The block has one gear, the table's. Open it and tick "Overall column":
   # this drives the gear's checkbox -> state -> R -> output.
-  gears <- "Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] .blockr-gear-btn')).filter(function(x){return x.offsetParent;})"
-  expect_equal(app$get_js(paste0(gears, ".length")), 1L)
-  app$run_js(paste0("(function(){var g=", gears, "[0]; g.scrollIntoView({block:'center'}); g.click();})()"))
+  gears <- "Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] @gear@')).filter(function(x){return x.offsetParent;})"
+  expect_equal(js_get(paste0(gears, ".length")), 1L)
+  js_run(paste0("(function(){var g=", gears, "[0]; g.scrollIntoView({block:'center'}); g.click();})()"))
   app$wait_for_idle()
   Sys.sleep(0.3)
-  app$run_js(
-    "(function(){var b=Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] .blockr-checkbox')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()"
+  js_run(
+    "(function(){var b=Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] @checkbox@')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()"
   )
   app$wait_for_idle()
   Sys.sleep(0.5)
@@ -603,21 +651,18 @@ test_that("summary_table gear: toggling 'overall' adds a Total column to the out
 test_that("cards: one card per summary, and a click on a row drills", {
   skip_if_no_app()
 
-  scope <- cards_scope("cards")
-  app$wait_for_js(sprintf(
-    "document.querySelectorAll('%s .tc-row').length === 4", scope
+  scope <- dt_result("cards")
+  js_wait(sprintf(
+    "document.querySelectorAll('%s @card_row@').length === 4", scope
   ), timeout = 10000)
   # Two summaries, four regions: eight cards, each with its glyph.
-  expect_equal(app$get_js(sprintf(
-    "document.querySelectorAll('%s .tc').length", scope)), 8)
-  expect_equal(app$get_js(sprintf(
-    "document.querySelectorAll('%s .tc-glyph .blockr-summarize-boxcell').length",
+  expect_equal(js_get(sprintf(
+    "document.querySelectorAll('%s @card@').length", scope)), 8)
+  expect_equal(js_get(sprintf(
+    "document.querySelectorAll('%s @card_glyph@ @card_box@').length",
     scope)), 4)
 
-  app$run_js(sprintf(
-    "document.querySelector('%s .tc-row[data-summarize-label=\"South\"] .tc').click();",
-    scope
-  ))
+  card_click("cards", "South")
   app$wait_for_idle()
   Sys.sleep(0.4)
   app$wait_for_idle()
@@ -649,28 +694,71 @@ test_that("summary_table: produces the wide annotated summary frame", {
 # click-to-toggle, Reset, raw-value fidelity, gear uncheck, ctor restore.
 # ===========================================================================
 
-# Click the first row of `block_id`'s table whose drill cell carries the
-# given data-raw value (a REAL DOM click through table.js's tbody handler).
-dt_click_raw <- function(block_id, raw) {
-  app$run_js(sprintf(
-    "document.querySelector('%s tbody td[data-raw=\"%s\"]')
-       .closest('tr').click();",
-    dt_result(block_id), raw
+# Click the row of `block_id`'s table whose row name is `label` (a REAL DOM
+# click through the records view's row handler). The view keeps each cell's
+# value in its model, so the click filters on the raw value, not the text.
+dt_click_row <- function(block_id, label) {
+  js_run(sprintf(
+    "Array.from(document.querySelectorAll('%s tbody @row@'))
+       .filter(function(tr){var s = tr.querySelector('@stub@');
+         return s && s.textContent.trim() === '%s';})[0].click();",
+    dt_result(block_id), label
   ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+  app$wait_for_idle()
+}
+
+# The text of a cell: row `label`, column `col` (1 = the first after the stub).
+dt_cell_text <- function(block_id, label, col) {
+  js_get(sprintf(
+    "(function(){var tr = Array.from(document.querySelectorAll('%s tbody @row@'))
+       .filter(function(tr){var s = tr.querySelector('@stub@');
+         return s && s.textContent.trim() === '%s';})[0];
+       return tr ? tr.querySelectorAll('@cell@')[%d].textContent.trim() : null;})()",
+    dt_result(block_id), label, col - 1L
+  ))
+}
+
+# Open a block's gear on its Interaction group and untick the Drill-down
+# section's "Filter on".
+gear_drill_off <- function(block_id, kind = "table") {
+  sel <- view_sel(block_id, kind)
+  js_run(sprintf(
+    "document.querySelector('%s @gear@').click();", sel
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+  js_run(sprintf(
+    "(function(){var p = document.querySelector('%s @tray@');
+       Array.from(p.querySelectorAll('@tray_group@'))
+         .filter(function(g){return /Interaction/.test(g.textContent);})[0].click();
+     })()", sel
+  ))
+  Sys.sleep(0.3)
+  js_run(sprintf(
+    "(function(){var s = Array.from(document.querySelectorAll('%s @section@'))
+       .filter(function(x){var t = x.querySelector('@section_title@');
+         return t && /Drill-down/.test(t.textContent);})[0];
+     s.querySelector('input[type=checkbox]').click();})()",
+    sel
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.5)
   app$wait_for_idle()
 }
 
 dt_status_text <- function(block_id) {
-  app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .vz-status-text');
-       return s ? s.textContent : null;})()",
+  js_get(sprintf(
+    "(function(){var s=document.querySelector('%s @status@');
+       return s && s.textContent.trim() ? s.textContent : null;})()",
     dt_result(block_id)
   ))
 }
 
 dt_active_rows <- function(block_id) {
-  app$get_js(sprintf(
-    "document.querySelectorAll('%s tbody tr.dt-row-active').length",
+  js_get(sprintf(
+    "document.querySelectorAll('%s tbody @row_active@').length",
     dt_result(block_id)
   ))
 }
@@ -682,7 +770,7 @@ test_that("table drill: a real row click filters; re-click clears (toggle)", {
   expect_equal(nrow(get_block_result("table")), 6L)
   expect_null(dt_status_text("table"))
 
-  dt_click_raw("table", "West")
+  dt_click_row("table", "West")
   res <- get_block_result("table")
   expect_equal(nrow(res), 1L)
   expect_equal(res$region, "West")
@@ -693,23 +781,32 @@ test_that("table drill: a real row click filters; re-click clears (toggle)", {
 
   # Re-click the (now active) row -> filter and highlight clear; the
   # downstream block recovers the full frame.
-  dt_click_raw("table", "West")
+  dt_click_row("table", "West")
   expect_equal(nrow(get_block_result("table")), 6L)
   expect_equal(dt_active_rows("table"), 0)
   expect_null(dt_status_text("table"))
   expect_equal(nrow(get_block_result("table_ds")), 6L)
 })
 
-test_that("table drill: the status line has no Reset, a re-click clears", {
+test_that("table drill: the status line's clear and a re-click both clear", {
   skip_if_no_app()
 
-  dt_click_raw("table", "North")
+  dt_click_row("table", "North")
   expect_equal(nrow(get_block_result("table")), 2L)
   expect_equal(dt_status_text("table"), "Filtered: region = North")
-  expect_false(app$get_js(sprintf(
-    "!!document.querySelector('%s .dd-status-reset')", dt_result("table")
-  )))
-  dt_click_raw("table", "North")
+  # The footer's clear button ends the filter.
+  js_run(sprintf(
+    "document.querySelector('%s @clear@').click();", dt_result("table")
+  ))
+  app$wait_for_idle()
+  Sys.sleep(0.3)
+  app$wait_for_idle()
+  expect_equal(nrow(get_block_result("table")), 6L)
+  expect_null(dt_status_text("table"))
+  # So does a second click on the selected row.
+  dt_click_row("table", "North")
+  expect_equal(nrow(get_block_result("table")), 2L)
+  dt_click_row("table", "North")
   expect_equal(nrow(get_block_result("table")), 6L)
   expect_equal(dt_active_rows("table"), 0)
   expect_null(dt_status_text("table"))
@@ -718,15 +815,10 @@ test_that("table drill: the status line has no Reset, a re-click clears", {
 test_that("table drill: a rounded numeric cell filters on its RAW value", {
   skip_if_no_app()
 
-  # The cell displays the rounded value but carries the raw one.
-  cell <- app$get_js(sprintf(
-    "(function(){var td=document.querySelector('%s tbody td[data-raw=\"0.123456\"]');
-       return td ? td.textContent.trim() : null;})()",
-    dt_result("table_num")
-  ))
-  expect_equal(cell, "0.12")
+  # The cell displays the rounded value; the view's model keeps the raw one.
+  expect_equal(dt_cell_text("table_num", "North", 1L), "0.12")
 
-  dt_click_raw("table_num", "0.123456")
+  dt_click_row("table_num", "North")
   res <- get_block_result("table_num")
   expect_equal(nrow(res), 1L)
   expect_equal(res$ratio, 0.123456)
@@ -737,30 +829,16 @@ test_that("table drill: unchecking the gear's Drill-down clears the filter", {
   skip_if_no_app()
 
   scope <- dt_result("table")
-  dt_click_raw("table", "East")
+  dt_click_row("table", "East")
   expect_equal(nrow(get_block_result("table")), 1L)
 
-  # Open the gear and uncheck the switch inside the Drill-down section (open,
-  # since drill is on).
-  app$run_js(sprintf(
-    "document.querySelector('%s .blockr-gear-btn').click();", scope
-  ))
-  app$wait_for_idle()
-  app$run_js(sprintf(
-    "(function(){var s=Array.from(document.querySelectorAll('%s .vz-section'))
-       .filter(function(x){var t=x.querySelector('.vz-section-title');
-         return t && /Drill-down/.test(t.textContent);})[0];
-     s.querySelector('.vz-section-enable input[type=checkbox]').click();})()",
-    scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.5)
-  app$wait_for_idle()
+  # Untick the gear's Drill-down "Filter on".
+  gear_drill_off("table")
 
-  # Downstream recovers AND the drill config is off (clicks now inert).
+  # Downstream recovers AND the drill is off (clicks now inert).
   expect_equal(nrow(get_block_result("table")), 6L)
-  expect_null(app$get_js(sprintf(
-    "document.querySelector('%s table').getAttribute('data-dt-onclick-col')",
+  expect_false(js_get(sprintf(
+    "document.querySelector('%s @frame@').classList.contains('@clickable@')",
     scope
   )))
   expect_equal(dt_active_rows("table"), 0)
@@ -769,27 +847,18 @@ test_that("table drill: unchecking the gear's Drill-down clears the filter", {
 test_that("cards drill: re-clicking the active row clears (toggle)", {
   skip_if_no_app()
 
-  scope <- cards_scope("cards")
+  scope <- dt_result("cards")
   # The earlier cards test left it drilled to South.
   expect_equal(nrow(get_block_result("cards")), 2L)
-  app$wait_for_js(sprintf(
-    "!!document.querySelector('%s .tc-row.is-on[data-summarize-label=\"South\"]')",
-    scope
-  ), timeout = 5000)
+  expect_equal(card_active("cards"), "South")
 
-  app$run_js(sprintf(
-    "document.querySelector('%s .tc-row.is-on .tc').click();", scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.4)
-  app$wait_for_idle()
+  card_click("cards", "South")
 
   expect_equal(nrow(get_block_result("cards")), 6L)
-  expect_equal(app$get_js(sprintf(
-    "document.querySelectorAll('%s .tc-row.is-on').length", scope)), 0)
-  expect_null(app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .vz-status-text');
-       return s ? s.textContent : null;})()", scope)))
+  expect_length(card_active("cards"), 0L)
+  expect_null(js_get(sprintf(
+    "(function(){var s=document.querySelector('%s @status@');
+       return s && s.textContent.trim() ? s.textContent : null;})()", scope)))
 })
 
 test_that("restore: a table with ctor filter state comes up filtered + marked", {
@@ -801,8 +870,8 @@ test_that("restore: a table with ctor filter state comes up filtered + marked", 
   expect_true(all(res$region == "North"))
 
   scope <- dt_result("table_restored")
-  app$wait_for_js(sprintf(
-    "document.querySelectorAll('%s tbody tr.dt-row-active').length > 0", scope
+  js_wait(sprintf(
+    "document.querySelectorAll('%s tbody @row_active@').length > 0", scope
   ), timeout = 5000)
   expect_equal(dt_active_rows("table_restored"), 2)
   expect_equal(dt_status_text("table_restored"), "Filtered: region = North")
@@ -815,27 +884,19 @@ test_that("restore: cards with a saved selection mark the row + footer", {
   expect_equal(nrow(res), 2L)
   expect_true(all(res$region == "South"))
 
-  scope <- cards_scope("cards_restored")
-  app$wait_for_js(sprintf(
-    "!!document.querySelector('%s .tc-row.is-on[data-summarize-label=\"South\"]')",
-    scope
+  scope <- dt_result("cards_restored")
+  js_wait(sprintf(
+    "!!document.querySelector('%s @card_row@@active@')", scope
   ), timeout = 5000)
-  expect_equal(app$get_js(sprintf(
-    "document.querySelector('%s .vz-status-text').textContent", scope)),
+  expect_equal(card_active("cards_restored"), "South")
+  expect_equal(js_get(sprintf(
+    "document.querySelector('%s @status@').textContent", scope)),
     "Filtered: region = South")
 
-  # No Reset: a click on the selected card clears the restored selection.
-  expect_false(app$get_js(sprintf(
-    "!!document.querySelector('%s .dd-status-reset')", scope)))
-  app$run_js(sprintf(
-    "document.querySelector('%s .tc-row.is-on .tc').click();", scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.4)
-  app$wait_for_idle()
+  # A click on the selected card clears the restored selection.
+  card_click("cards_restored", "South")
   expect_equal(nrow(get_block_result("cards_restored")), 6L)
-  expect_equal(app$get_js(sprintf(
-    "document.querySelectorAll('%s .tc-row.is-on').length", scope)), 0)
+  expect_length(card_active("cards_restored"), 0L)
 })
 
 test_that("restore: a chart with ctor filter state labels its footer", {
@@ -848,49 +909,28 @@ test_that("restore: a chart with ctor filter state labels its footer", {
   # The config payload now carries filter_column/filter_values, so the JS
   # restore branch re-selects the mark and the footer names the filter.
   chart_settle("chart_restored")
-  txt <- app$get_js(
-    "document.querySelector(
-       '#board-block_chart_restored-expr-drilldown_block .vz-status-text'
-     ).textContent"
-  )
+  txt <- js_get(sprintf(
+    "document.querySelector('%s @status@').textContent",
+    view_sel("chart_restored", "chart")
+  ))
   expect_equal(txt, "Filtered: region = North")
 })
 
 test_that("cards drill: unchecking the gear's Drill-down clears the filter", {
   skip_if_no_app()
 
-  scope <- cards_scope("cards")
-  app$run_js(sprintf(
-    "document.querySelector('%s .tc-row[data-summarize-label=\"East\"] .tc').click();",
-    scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.4)
-  app$wait_for_idle()
+  scope <- dt_result("cards")
+  card_click("cards", "East")
   expect_equal(nrow(get_block_result("cards")), 1L)
 
-  # Open the gear and uncheck the switch in the Drill-down section: the
-  # drill config and the active filter both clear, so downstream recovers.
-  app$run_js(sprintf(
-    "document.querySelector('%s .blockr-gear-btn').click();", scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.3)
-  app$run_js(sprintf(
-    "(function(){var s=Array.from(document.querySelectorAll('%s .vz-section'))
-       .filter(function(x){var t=x.querySelector('.vz-section-title');
-         return t && /Drill-down/.test(t.textContent);})[0];
-     s.querySelector('.vz-section-enable input[type=checkbox]').click();})()",
-    scope
-  ))
-  app$wait_for_idle()
-  Sys.sleep(0.5)
-  app$wait_for_idle()
+  # Untick the gear's Drill-down "Filter on": the drill and the active
+  # filter both clear, so downstream recovers.
+  gear_drill_off("cards")
 
   expect_equal(nrow(get_block_result("cards")), 6L)
-  # Drill is off: the container no longer carries a drill column.
-  expect_null(app$get_js(sprintf(
-    "document.querySelector('%s').getAttribute('data-summarize-drill')",
+  # Drill is off: the rows no longer take a click.
+  expect_false(js_get(sprintf(
+    "document.querySelector('%s @frame@').classList.contains('@clickable@')",
     scope
   )))
 })
@@ -904,9 +944,9 @@ test_that("cards drill: unchecking the gear's Drill-down clears the filter", {
 # reader actually sees rather than what the option said before layout. A
 # horizontal bar (the default) puts the value on x and the categories on y.
 facet_axes <- function(block_id) {
-  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
-  jsonlite::fromJSON(app$get_js(sprintf(
-    "JSON.stringify(Array.from(document.querySelectorAll('%s .vz-chart-panel'))
+  sel <- view_sel(block_id, "chart")
+  jsonlite::fromJSON(js_get(sprintf(
+    "JSON.stringify(Array.from(document.querySelectorAll('%s @chart@'))
        .map(function(d) {
          var c = echarts.getInstanceByDom(d);
          var m = c.getModel();
@@ -938,11 +978,7 @@ test_that("facet panels share one value domain and one category set", {
 test_that("facet_scales = free hands every panel back its own axis", {
   skip_if_no_app()
 
-  send_action(chart_action("chart_facet"), list(
-    action = "config", chart_type = "bar", group = "product",
-    value = "revenue", func = "sum", facet = "region",
-    facet_scales = "free"
-  ))
+  send_set("chart_facet", list(facet_scales = "free"), "chart")
   chart_settle("chart_facet")
 
   panels <- facet_axes("chart_facet")
@@ -953,11 +989,7 @@ test_that("facet_scales = free hands every panel back its own axis", {
   expect_gt(length(unique(vapply(panels, function(p) p$cats, numeric(1)))), 1L)
 
   # Back to fixed: the harmonised domain returns (no one-way state).
-  send_action(chart_action("chart_facet"), list(
-    action = "config", chart_type = "bar", group = "product",
-    value = "revenue", func = "sum", facet = "region",
-    facet_scales = "fixed"
-  ))
+  send_set("chart_facet", list(facet_scales = "fixed"), "chart")
   chart_settle("chart_facet")
   expect_length(
     unique(lapply(facet_axes("chart_facet"), function(p) unlist(p$value))), 1L
@@ -973,10 +1005,10 @@ test_that("facet_scales = free hands every panel back its own axis", {
 # asserted is the geometry: every drawn box is centred on its tick.
 
 box_geometry <- function(block_id) {
-  sel <- sprintf("#board-block_%s-expr-drilldown_block", block_id)
-  jsonlite::fromJSON(app$get_js(sprintf(
+  sel <- view_sel(block_id, "chart")
+  jsonlite::fromJSON(js_get(sprintf(
     "JSON.stringify((function() {
-       var c = echarts.getInstanceByDom(document.querySelector('%s .vz-chart-panel'));
+       var c = echarts.getInstanceByDom(document.querySelector('%s @chart@'));
        var m = c.getModel();
        var out = { series: 0, x_axes: 0, shown_x_axes: 0, offsets: [] };
        m.eachComponent('xAxis', function(a) {
@@ -1026,10 +1058,10 @@ test_that("a colour-split boxplot centres every box on its own slot", {
 # So what is asserted here is the message.
 
 chart_cap_text <- function(block_id) {
-  app$get_js(sprintf(
-    "(function(){var s=document.querySelector('%s .vz-status-note');
+  js_get(sprintf(
+    "(function(){var s=document.querySelector('%s @cap@');
        return s ? s.textContent : null;})()",
-    sprintf("#board-block_%s-expr-drilldown_block", block_id)
+    view_sel(block_id, "chart")
   ))
 }
 

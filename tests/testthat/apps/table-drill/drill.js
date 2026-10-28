@@ -42,13 +42,13 @@
 
   // What a click can land on: a records row or card, a groups row or card.
   const ROW_SEL = [
-    "tr[data-i]", ".tc-row[data-i]", "tr.blockr-data-row",
-    ".blockr-summarize-row", "tr.blockr-section-header",
+    "tr[data-i]", ".vz-table-card-row[data-i]", "tr.vz-table-row",
+    ".vz-table-groups-row", "tr.vz-table-section-header",
   ].join(",");
   // Card rows are `display: contents`: visible through their children.
   const shown = (x) => vis(x) || [...x.children].some(vis);
   const rows = (r) => [...r.querySelectorAll(ROW_SEL)].filter(shown);
-  const LABEL_SEL = ".tc-rowlab, .blockr-summarize-label, th, td";
+  const LABEL_SEL = ".vz-table-card-rowlab, .vz-table-groups-label, th, td";
   const lab = (x) => x.getAttribute("data-summarize-label") ||
     txt(x.querySelector(LABEL_SEL) || x);
 
@@ -67,8 +67,8 @@
     const row = findRow(id, label);
     if (!row) return null;
     if (cell == null) {
-      for (const sel of [".tc", ".blockr-summarize-label", ".blockr-section-value",
-                         "th", "td.blockr-stub", "td"]) {
+      for (const sel of [".vz-table-card", ".vz-table-groups-label", ".vz-table-section-value",
+                         "th", "td.vz-table-stub", "td"]) {
         const el = row.querySelector(sel);
         if (el && vis(el)) return el;
       }
@@ -87,7 +87,7 @@
     return { x: b.left + Math.min(b.width / 2, 40), y: b.top + b.height / 2 };
   }
 
-  const ACTIVE_SEL = ".dt-row-active, .is-on, .dt-col-active";
+  const ACTIVE_SEL = ".vz-table-row-active, .is-on, .vz-table-col-active";
   function state(id) {
     const r = root(id);
     if (!r) return { found: false };
@@ -101,8 +101,8 @@
       footer: foot.map(txt),
       rows: rows(r).length,
       // A marked cell: a groups cell claim, a Table 1 column.
-      cells: r.querySelectorAll("td.is-on-cell, td.dt-col-active").length,
-      count: txt(r.querySelector(".dt-row-count"))
+      cells: r.querySelectorAll("td.vz-table-col-active").length,
+      count: txt(r.querySelector(".vz-count"))
     };
   }
 

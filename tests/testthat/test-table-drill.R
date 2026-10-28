@@ -97,21 +97,26 @@ adae <- drill_adae
 na_sex <- is.na(adsl$SEX)
 
 # One drill path: the view, the block, what is clicked first (`a`) and next
-# (`b`), the rows each claims, and the footer each shows. `cell` / `cell_b`
+# (`b`), the rows each claims, and the footer each shows. `lit_a` / `lit_b`
+# are the rows lit after each click when that is more than the clicked one:
+# a records click lights every row the filter keeps. `cell` / `cell_b`
 # say where in the row to click (a td index or a selector; NULL the label).
 # A click on a cell claims its row and its column. `expand` opens a
 # collapsed parent row first. `none` is the listing with no click.
 drill_paths <- list(
   list(view = "rec", a = "S-003", b = "S-001",
        want_a = adsl[adsl$SEX %in% "M", ], foot_a = "SEX = M",
-       want_b = adsl[adsl$SEX %in% "F", ], foot_b = "SEX = F"),
+       lit_a = adsl$USUBJID[adsl$SEX %in% "M"],
+       want_b = adsl[adsl$SEX %in% "F", ], foot_b = "SEX = F",
+       lit_b = adsl$USUBJID[adsl$SEX %in% "F"]),
   # A header claims its group; a row its group and its value in the drill
   # column (drill = "SEX").
   list(view = "nest", a = "Low dose", b = "S-033",
-       cell = ".blockr-section-value", cell_b = NULL,
+       cell = ".vz-table-section-value", cell_b = NULL,
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
-       foot_b = "ARM = Low dose, SEX = M"),
+       foot_b = "ARM = Low dose, SEX = M",
+       lit_b = adsl$USUBJID[adsl$ARM == "Low dose" & adsl$SEX %in% "M"]),
   list(view = "rcards", a = "Low dose", b = "High dose",
        none = drill_arm_frame,
        want_a = drill_arm_frame[2, ], foot_a = "Arm = Low dose",
@@ -129,7 +134,7 @@ drill_paths <- list(
        want_b = adae[adae$AEDECOD == "Headache" & adae$ARM == "Low dose", ],
        foot_b = "AESOC = Nervous system, AEDECOD = Headache, ARM = Low dose"),
   list(view = "col", a = "Low dose", b = "Low dose",
-       cell_b = '.blockr-summarize-fill[data-seg="2"]',
+       cell_b = '.vz-table-groups-fill[data-seg="2"]',
        want_a = adsl[adsl$ARM == "Low dose", ], foot_a = "ARM = Low dose",
        want_b = adsl[adsl$ARM == "Low dose" & adsl$SEX %in% "M", ],
        foot_b = "ARM = Low dose, SEX = M"),
@@ -165,13 +170,13 @@ for (p in drill_paths) local({
     out <- paste0(id, "_out")
     none <- p$none %||% adsl
     drill_view(app, id, out)
-    if (!is.null(p$expand)) drill_click(app, id, p$expand, ".blockr-indent-btn")
+    if (!is.null(p$expand)) drill_click(app, id, p$expand, ".vz-table-indent-btn")
 
     expect_true(same_rows(drill_result(app, out), none), label = "no click")
 
     drill_click(app, id, p$a, p[["cell"]])
     s <- drill_state(app, id)
-    expect_identical(s$active, p$a)
+    expect_setequal(s$active, p$lit_a %||% p$a)
     expect_identical(s$footer, paste("Filtered:", p$foot_a))
     expect_true(same_rows(drill_result(app, out), p$want_a),
                 label = paste("listing after a click on", p$a))
@@ -189,7 +194,7 @@ for (p in drill_paths) local({
     drill_click(app, id, p$a, p[["cell"]])
     drill_click(app, id, p$b, cell_b)
     s <- drill_state(app, id)
-    expect_identical(s$active, p$b)
+    expect_setequal(s$active, p$lit_b %||% p$b)
     expect_identical(s$footer, paste("Filtered:", p$foot_b))
     expect_true(same_rows(drill_result(app, out), p$want_b),
                 label = paste("listing after a click on", p$b))

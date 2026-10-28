@@ -83,7 +83,7 @@
   // What the block shows below its title and gear: the table or cards, the
   // legend, the cell paint. A pick in the sentence must change this, not
   // only the sentence.
-  const BODY_SKIP = ".dd-table-titles, .blockr-gear-btn, .blockr-settings, .blockr-select-menu-host";
+  const BODY_SKIP = ".vz-head__titles, .blockr-gear-btn, .blockr-settings, .blockr-select-menu-host";
   const bodySig = (root) => {
     let out = "";
     const walk = (n) => {
