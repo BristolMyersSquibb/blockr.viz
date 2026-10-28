@@ -121,20 +121,30 @@ viz_selection_observer <- function(input, id, state, revs, transient,
 #' holds a `chart_capture` or NULL for every block's exhibit.
 #'
 #' This is the picture the downloads write. The browser sends it when the
-#' download menu opens. blockr.outline decks use the capture service
-#' instead (R/chart-capture.R).
+#' download menu opens, and a click on a format waits until it has sent it.
+#' The download request can still come before the observer runs, which is
+#' at the next flush, so the handler calls `sync()` first: it takes a
+#' picture the input holds and `capture` does not yet. blockr.outline decks
+#' use the capture service instead (R/chart-capture.R).
 #'
 #' @param input The block's Shiny input.
 #' @param id The view's element id.
 #' @param capture A reactiveVal.
-#' @return The observer, invisibly.
+#' @return `sync()`, a function of no arguments.
 #' @noRd
 viz_capture_observer <- function(input, id, capture) {
   name <- paste0(id, "_capture")
-  obs <- shiny::observeEvent(input[[name]], {
-    capture(chart_capture_read(input[[name]]))
-  })
-  invisible(obs)
+  last <- new.env(parent = emptyenv())
+  take <- function(raw) {
+    last$raw <- raw
+    capture(chart_capture_read(raw))
+  }
+  shiny::observeEvent(input[[name]], take(input[[name]]))
+  function() {
+    raw <- shiny::isolate(input[[name]])
+    if (!is.null(raw) && !identical(raw, last$raw)) take(raw)
+    invisible(NULL)
+  }
 }
 
 #' The server every block view runs
@@ -195,7 +205,7 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
                           script = parts$script)
     viz_selection_observer(input, view, kit$state, kit$revs, kit$transient,
                            kit$claim)
-    viz_capture_observer(input, view, kit$capture)
+    kit$capture_sync <- viz_capture_observer(input, view, kit$capture)
     viz_payload_output(output, input, view,
                        viz_with_shared(kit, parts, view),
                        session = session, el = kit$el)
@@ -242,7 +252,7 @@ viz_with_shared <- function(kit, parts, view) {
       function() isTRUE(kit$state$download())
     }
     viz_downloads(parts$exhibit, enabled = enabled, session = kit$session,
-                  filename = view)
+                  filename = view, before = kit$capture_sync)
   }
   choices <- ctrl_choices(kit$session)
   drawn <- new.env(parent = emptyenv())

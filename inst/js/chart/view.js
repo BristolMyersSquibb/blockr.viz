@@ -127,13 +127,13 @@
       this.frame.busyDone();
     }
 
-    // The formats R offers. Opening the control sends the picture to R; an
-    // empty state has none, so Image is left out.
+    // The formats R offers. Opening the control sends the picture to R (a
+    // click on a format waits for it); an empty state has none, so Image is
+    // left out.
     _downloads() {
       const offer = (this.derived.downloads || []).filter((f) => !(this._blank && f.ext === 'png'));
-      this.frame.downloads(this.config.download !== false ? offer : [], () => {
-        NS.picture(this).then((/** @type {VizPicture} */ pic) => V.util.send(this.el.id, 'capture', pic), () => {});
-      });
+      this.frame.downloads(this.config.download !== false ? offer : [], () =>
+        NS.picture(this).then((/** @type {VizPicture} */ pic) => V.util.send(this.el.id, 'capture', pic)));
     }
 
     /** The footer: what the selection holds, with its clear button. */
