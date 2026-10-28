@@ -109,7 +109,7 @@ test('the cards follow the width of their host', () => {
     // happy-dom lays nothing out: report a width and call back at once.
     win.ResizeObserver = class {
       constructor(fn) { this.fn = fn; }
-      observe(el) { this.fn([{ target: el }]); }
+      observe(el) { this.fn([{ target: el, contentRect: { width: 0, height: 0 } }]); }
       disconnect() {}
     };
   } });
@@ -379,13 +379,8 @@ test('a prepare script draws its controls and its error under the header', () =>
   assert.equal(band.hidden, true);
 });
 
-test('a layout pick keeps the panel scroll the reader had at the click', () => {
-  let host;
-  const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
-      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
-  } });
-  // The dock panel the block scrolls in.
+/** A table in a dock panel that scrolls; `scroll(px)` moves it as a reader does. */
+function inPanel(env) {
   const sc = env.win.document.createElement('div');
   sc.style.overflowY = 'auto';
   Object.defineProperty(sc, 'scrollHeight', { value: 2000 });
@@ -394,18 +389,58 @@ test('a layout pick keeps the panel scroll the reader had at the click', () => {
   env.win.document.body.appendChild(sc);
   const t = mount(null, env);
   sc.appendChild(t.el);
+  const scroll = (px) => {
+    sc.scrollTop = px;
+    sc.dispatchEvent(new env.win.Event('scroll'));
+  };
+  return Object.assign(t, { sc, scroll });
+}
+
+test('a layout pick keeps the panel scroll the reader had at the click', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  const t = inPanel(env);
   t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
-  sc.scrollTop = 200;
+  t.scroll(200);
   const frame = t.$('.vz-table');
+  // As the frame's ResizeObserver reports it.
+  t.el._viz.view.frame.height = 400;
   host.onChange({ layout: 'records' }, {});
-  assert.notEqual(frame.style.minHeight, '');
+  assert.equal(frame.style.minHeight, '400px');
   // A shorter tray would pull the panel up before R answers.
-  sc.scrollTop = 95;
+  t.scroll(95);
   // A payload that is not the pick changes nothing.
   t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
   assert.notEqual(frame.style.minHeight, '');
   t.render({ data: flatModel(3), config: { layout: 'records' } });
   assert.equal(t.$('.vz-table').getAttribute('data-layout'), 'records');
-  assert.equal(sc.scrollTop, 200);
+  assert.equal(t.sc.scrollTop, 200);
   assert.equal(frame.style.minHeight, '');
+});
+
+test('a layout switch keeps the scroll without reading styles off the page', () => {
+  const t = inPanel(loadTable());
+  t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
+  t.scroll(200);
+  // Reading a style or a size would restyle the old layout's rows first.
+  let reads = 0;
+  const gcs = t.win.getComputedStyle;
+  t.win.getComputedStyle = (...a) => { reads++; return gcs.apply(t.win, a); };
+  t.render({ data: flatModel(3), config: { layout: 'records' } });
+  t.win.getComputedStyle = gcs;
+  assert.equal(reads, 0);
+  assert.equal(t.sc.scrollTop, 200);
+});
+
+test('a layout switch lets go of the old layout: one search handler', () => {
+  const t = mount(payload({ data: flatModel(3) }));
+  const frame = t.el._viz.view.frame;
+  for (let i = 0; i < 4; i++) {
+    t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
+    t.render({ data: flatModel(3), config: { layout: 'records' } });
+  }
+  assert.equal(frame._search.length, 1);
 });

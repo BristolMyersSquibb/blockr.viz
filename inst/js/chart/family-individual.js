@@ -218,7 +218,8 @@
         : { start: p.start, end: p.end, startValue: p.startValue, endValue: p.endValue };
       slot.resetBtn.hidden = !slot.zoom;
     });
-    view.scope.on(slot.resetBtn, 'click', () => {
+    // The slot's scope goes with this chart; the next chart registers again.
+    /** @type {VizScope} */ (slot.scope).on(slot.resetBtn, 'click', () => {
       if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
     });
   };

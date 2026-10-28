@@ -52,16 +52,17 @@
       const layout = String((p.config && p.config.layout) || 'records');
       // A switch takes the old layout's rows away before the new one draws,
       // which would pull a scrolled panel up; it keeps its place, the place
-      // at the click when the gear picked the layout.
+      // at the click when the gear picked the layout. The place comes from
+      // the panel's scroll events: reading it here would restyle every row
+      // of the old layout first.
       const switching = layout !== this.layout;
-      const held = switching ? this.held : null;
-      const sc = held ? held.sc : switching ? this.frame.scroller() : null;
-      const top = held ? held.top : sc ? sc.scrollTop : 0;
+      const at = switching ? this.held || this.frame.scrollPlace() : null;
       if (switching) this.switchTo(layout);
       if (this.view) {
         this.view.render(p);
         if (this.held && (switching || layout === this.held.to)) this.unhold();
-        if (sc) {
+        if (at) {
+          const { sc, top } = at;
           sc.scrollTop = top;
           this.scope.frame(() => { sc.scrollTop = top; });
         }
@@ -86,10 +87,10 @@
         h.release();
         h.to = to;
       } else {
-        const sc = this.frame.scroller();
-        if (!sc) return;
-        this.frame.el.style.minHeight = this.frame.el.offsetHeight + 'px';
-        this.held = { sc, top: sc.scrollTop, to, release: () => {} };
+        const at = this.frame.scrollPlace();
+        if (!at) return;
+        if (this.frame.height > 0) this.frame.el.style.minHeight = this.frame.height + 'px';
+        this.held = { sc: at.sc, top: at.top, to, release: () => {} };
       }
       // R may refuse the pick; the frame lets go after a while.
       /** @type {NonNullable<TableView['held']>} */ (this.held).release =

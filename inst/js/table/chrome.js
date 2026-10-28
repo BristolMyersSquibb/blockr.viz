@@ -44,6 +44,21 @@
       this._search = [];
       const run = scope.debounce(() => this._search.forEach((f) => f(this.query())), SEARCH_MS);
       scope.on(this.searchInput, 'input', run);
+      // Where the panel around the frame was scrolled to, and the frame's
+      // height, as the browser reports them: a layout switch reads neither
+      // off the page, which would restyle the old layout's rows.
+      /** @type {{ sc: Element, top: number } | null} */
+      this._scrolled = null;
+      scope.on(document, 'scroll', (e) => {
+        const t = e.target === document ? document.scrollingElement : /** @type {Element} */ (e.target);
+        if (t && t !== this.box && t.contains(this.el)) this._scrolled = { sc: t, top: t.scrollTop };
+      }, { capture: true, passive: true });
+      this.height = 0;
+      scope.resize(this.el, (entries) => {
+        const r = entries[entries.length - 1];
+        const b = r.borderBoxSize && r.borderBoxSize[0];
+        this.height = b ? b.blockSize : r.contentRect.height;
+      });
       this.showTools({ search: false, download: false });
     }
 
@@ -52,9 +67,17 @@
       return this.searchInput.hidden ? '' : this.searchInput.value.trim().toLowerCase();
     }
 
-    /** @param {(q: string) => void} fn Called after a pause in typing. */
+    /**
+     * @param {(q: string) => void} fn Called after a pause in typing.
+     * @returns {() => void} Stops calling it; a layout's scope owns it, so a
+     *   layout switch lets go of the old view.
+     */
     onSearch(fn) {
       this._search.push(fn);
+      return () => {
+        const k = this._search.indexOf(fn);
+        if (k >= 0) this._search.splice(k, 1);
+      };
     }
 
     /**
@@ -71,6 +94,16 @@
         this._search.forEach((f) => f(''));
       }
       this.downloads(o.download ? o.downloads : null, o.onOpen);
+    }
+
+    /**
+     * The panel's scroll as its last scroll event left it, while the frame
+     * is still in that panel; null when it has not scrolled.
+     * @returns {{ sc: Element, top: number } | null}
+     */
+    scrollPlace() {
+      const s = this._scrolled;
+      return s && s.sc.isConnected && s.sc.contains(this.el) ? s : null;
     }
 
     /**
