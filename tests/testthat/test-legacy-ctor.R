@@ -129,3 +129,8 @@ test_that("the table's pct_of reads as percent_of, in code and in a saved board"
   expect_identical(st$percent_of, "total")
   expect_false("pct_of" %in% names(st))
 })
+
+test_that("the old summary table constructor is the variables layout", {
+  b <- new_summary_table_block(by = "ARM")
+  expect_identical(blockr.core::blockr_ser(b)$payload$layout, "variables")
+})

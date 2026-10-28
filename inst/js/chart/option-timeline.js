@@ -7,9 +7,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
 
   // Config fields the option reads beside the model's.
@@ -65,7 +64,7 @@
       const end = api.coord([api.value(1), api.value(2)]);
       const h = api.size([0, 1])[1] * 0.6;
       const barW = Math.max(end[0] - start[0], 4);
-      const rect = echarts.graphic.clipRectByRect(
+      const rect = root.echarts.graphic.clipRectByRect(
         { x: start[0], y: start[1] - h / 2, width: barW, height: h },
         { x: params.coordSys.x, y: params.coordSys.y,
           width: params.coordSys.width, height: params.coordSys.height }

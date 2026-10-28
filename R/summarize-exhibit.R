@@ -1,20 +1,31 @@
 # The summarize table as an exhibit -------------------------------------------
 #
-# The table block's result is its input; the table exists only as a payload to
-# the browser. static_summarize_table() rebuilds it as an exhibit that carries
-# its source, and each target renders from that: html_exhibit() gives the HTML
-# table, pptx_add_exhibit() painted pages, print() the picture.
+# The block is a transform block whose result is its input; the table exists
+# only as a payload to the browser. So the block states how to rebuild its
+# table (report_call), and the rebuilt table carries what every target needs:
+#
+#   static_summarize_table(data, ...)   -> summarize_exhibit
+#     html_exhibit()      -> the HTML table, marks and all
+#     pptx_add_exhibit()  -> painted pages, one slide each
+#     print()             -> the picture, for an interactive session
+#
+# As with static_table(), an exhibit carries its source and each target
+# renders from that.
 
 #' A Summarize Table as a Printable Exhibit
 #'
 #' The groups layout of the table block (`new_table_block(layout = "groups")`)
 #' rebuilt outside Shiny, as an object a report, a deck or a download can
-#' render. The block's own result is only its input data.
+#' render. The block's own result is only its input data; this puts the table
+#' itself into a document.
 #'
-#' [html_exhibit()] gives the HTML table the app draws, and
-#' [pptx_add_exhibit()] paints it onto as many slides as it needs. On a slide
-#' the exhibit is a picture, because a PowerPoint table cell cannot hold a
-#' distribution glyph; the text is not selectable there. A plain display table
+#' [html_exhibit()] gives the same HTML table the app draws, and
+#' [pptx_add_exhibit()] paints it and places it on as many slides as it needs.
+#' Both read one cell model, computed here.
+#'
+#' On a slide the exhibit is a picture, because PowerPoint's table cells hold
+#' text runs only and a distribution glyph cannot live in one. The text is
+#' therefore not selectable or editable on those slides. A plain display table
 #' keeps [static_table()].
 #'
 #' @param data A data frame (or [as_annotated_df()]-coercible object), the
@@ -38,62 +49,68 @@
 #' ex
 #' @export
 static_summarize_table <- function(data, ...) {
-  args <- summarize_legacy_args(list(...))
-  targs <- args$.title_args %||% summarize_title_args(args)
-  args$.title_args <- NULL
-
-  prep <- do.call(groups_prepare,
-                  c(list(data),
-                    args[names(args) %in% names(formals(groups_prepare))]))
-  cells <- groups_cells(
-    prep,
-    cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
-               value_labels = args$value_labels %||% TRUE,
-               bar_width = args$bar_width)
-  )
-  text <- function(role, attr = role) {
-    resolve_block_title(args[[role]], data, auto = groups_attr(data, attr),
+  args <- list(...)
+  extra <- args[intersect(names(args), c(".title_args", "scale_map", "subject"))]
+  state <- groups_exhibit_state(args[setdiff(names(args), names(extra))])
+  m <- table_model_groups(state, data, scale_map = extra$scale_map,
+                          subject = extra$subject)
+  targs <- extra$.title_args %||%
+    table_groups_title_args(viz_block_spec("table"), state)
+  title <- function(nm, auto) {
+    resolve_block_title(state[[nm]], data, auto = groups_attr(data, auto),
                         args = targs)
   }
+  groups_exhibit(m, data, state, title("title", "label"),
+                 title("subtitle", "subtitle"), title("caption", "caption"),
+                 scale_map = extra$scale_map)
+}
 
+# The arguments of a static groups table as the block's state: old names
+# translated, every unset argument at the spec's default.
+groups_exhibit_state <- function(args) {
+  args <- legacy_table_args(args, from = "summarize")
+  args$layout <- "groups"
+  table_normalize(viz_check(viz_block_spec("table"),
+                            legacy_ctor_args("table", args)))
+}
+
+# The exhibit of a computed groups model (table_model_groups()): what every
+# download target renders, the screen's numbers and marks.
+groups_exhibit <- function(m, data, state, title = NULL, subtitle = NULL,
+                           caption = NULL, scale_map = NULL) {
   structure(
     list(
-      data = data, args = args, prep = prep, cells = cells,
-      # The cards look's text (R/table-cards.R).
-      cards = if (identical(args$look, "cards") && is.null(prep$err)) {
-        table_cards_groups(cells, prep, data = data,
-                           scale_map = args$scale_map)
+      data = data, args = state, prep = m$prep, cells = m$cells,
+      # The cards look's text (R/table-cards.R); the spreadsheet ignores it.
+      cards = if (identical(state$look, "cards") && is.null(m$prep$err)) {
+        table_cards_groups(m$cells, m$prep, data = data, scale_map = scale_map)
       },
-      title = text("title", "label"), subtitle = text("subtitle"),
-      caption = text("caption")
+      title = title, subtitle = subtitle, caption = caption
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
   )
 }
 
-# The settings a title, subtitle or caption can name as `{@arg}` or
-# `{label(@arg)}`. `by` is the innermost grouping column and an outer one is
-# the parent; the first summary stands in for the ranked bar's block settings.
-#' @noRd
-summarize_title_args <- function(args) {
-  by <- as.character(unlist(args$by %||% character()))
-  s1 <- if (length(args$summaries) && is.list(args$summaries[[1L]])) {
-    args$summaries[[1L]]
+# The settings a groups title can name beyond the spec's slots: the first
+# summary's roles, for the single ranked bar's sentences. `by` is the
+# innermost grouping column (each row); an outer one is the parent. Unset
+# roles go, so a prepare script's value of the same name can stand in.
+groups_title_roles <- function(v) {
+  by <- as.character(unlist(v$by %||% character()))
+  s1 <- if (length(v$summaries) && is.list(v$summaries[[1L]])) {
+    v$summaries[[1L]]
   } else {
     list()
   }
   out <- list(
     by = if (length(by)) by[[length(by)]],
-    group = if (length(by)) by[[1L]],
+    group = if (length(by) == 2L) by[[1L]] else if (length(by)) by[[1L]],
     parent = if (length(by) == 2L) by[[1L]],
     value = chr_state(s1[["col"]]),
     func = chr_state(s1[["func"]]),
-    id_var = args$id_var,
     color = chr_state(s1[["color"]]),
     facet = chr_state(s1[["facet"]]),
-    fill = chr_state(s1[["fill"]]),
-    sort_by = args$sort_by, top_n = args$top_n,
-    drill = args$drill
+    fill = chr_state(s1[["fill"]])
   )
   out[!vapply(out, is.null, logical(1L))]
 }
@@ -110,7 +127,7 @@ format.summarize_exhibit <- function(x, ...) {
 
 #' @export
 print.summarize_exhibit <- function(x, ...) {
-  # The picture needs an open device; otherwise print the summary line.
+  # The picture needs an open device; otherwise print the one-line summary.
   ok <- summarize_paint_ready() &&
     !identical(grDevices::dev.cur()[[1L]], 1L)
   if (ok) {
@@ -138,6 +155,8 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, subtitle = NULL,
                                            caption = NULL,
                                            max_height = NULL,
                                            default_expanded = NULL, ...) {
+  # The table view draws it from the cell model the exhibit computed, so the
+  # web page carries the numbers the spreadsheet and the slides carry.
   g <- table_static_groups(x)
   g$derived$titles <- table_static_titles(title %||% x$title,
                                           subtitle %||% x$subtitle,
@@ -159,38 +178,55 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
-  pptx_paint_require()
-  s <- pptx_slide_context(doc, title, layout, master)
-  # The picture starts below the title's rendered text.
+
+  if (!requireNamespace("officer", quietly = TRUE)) {
+    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
+  }
+  summarize_paint_require()
+
+  layouts <- officer::layout_summary(doc)
+  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
+    "Title and Content"
+  } else {
+    layouts$layout[[1L]]
+  }
+  master <- master %||% layouts$master[match(layout, layouts$layout)]
+
+  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
+  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
+
+  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
+  slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
+
+  # The picture starts below the title's rendered text; the rest of the slide,
+  # down to the top of the layout's footer, is the row budget.
   top <- top %||% max(
     1.1,
-    if (s$slide_title) {
-      pptx_title_bottom(doc, s$layout, s$master, template %||% "",
+    if (slide_title) {
+      pptx_title_bottom(doc, layout, master, template %||% "",
                         pptx_page_title(title, c(99L, 99L))) %||% 0
     } else {
       0
     }
   )
+  width <- pptx_content_width(template) %||% (slide_w - 0.8)
+  budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
+
   common <- list(
     x$cells, x$prep,
-    width_in = pptx_content_width(template) %||% (s$width - 0.8),
-    max_height = pptx_body_bottom(doc, s$layout, s$master, s$height) - top,
-    title = if (s$slide_title) "" else (title %||% x$title),
+    width_in = width, max_height = budget,
+    title = if (slide_title) "" else (title %||% x$title),
     subtitle = subtitle %||% x$subtitle,
     caption = caption %||% x$caption
   )
-  pages <- summarize_pptx_pages(common, x$cells$n, title %||% x$title,
-                                font_size, exhibit_min_font_size(min_font_size))
-  pptx_add_pictures(doc, pages, s, top, title, res)
-}
 
-# The pages of a painted table. One slide at a smaller size beats two at the
-# full size, down to `min_font_size`; nothing is painted until the size is set.
-#' @noRd
-summarize_pptx_pages <- function(common, n, title, font_size, min_font_size) {
+  # One slide at a smaller size beats two at the full size, down to
+  # `min_font_size`. Nothing is painted until the size is settled.
+  min_font_size <- exhibit_min_font_size(min_font_size)
   fits_one <- function(fs) {
-    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= n
+    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
   }
+
   if (!fits_one(font_size) && min_font_size < font_size) {
     for (s in seq(font_size - 1, min_font_size)) {
       if (fits_one(s)) {
@@ -199,7 +235,9 @@ summarize_pptx_pages <- function(common, n, title, font_size, min_font_size) {
       }
     }
   }
+
   pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
+
   if (length(pages) > 1L) {
     # Search below the floor only to tell the reader the size that would fit.
     fit <- NULL
@@ -210,21 +248,30 @@ summarize_pptx_pages <- function(common, n, title, font_size, min_font_size) {
         break
       }
     }
-    exhibit_split_note(title, pages = length(pages), size = font_size,
-                       floor = min_font_size, fit_size = fit)
+    exhibit_split_note(title %||% x$title, pages = length(pages),
+                       size = font_size, floor = min_font_size,
+                       fit_size = fit)
   }
-  pages
-}
 
-# The single ranked bar's arguments as the column list they map to
-# (table_legacy_args()); `id_var` is passed through for the title text.
-#' @noRd
-summarize_legacy_args <- function(args) {
-  ranked <- c("group", "value", "func", "parent", "color", "bar_mode",
-              "facet", "cols", "fields")
-  set <- !vapply(args, is.null, logical(1L))
-  if (!any(names(args)[set] %in% ranked)) return(args[!names(args) %in% ranked])
-  out <- table_legacy_args(args, from = "summarize")
-  out$id_var <- out[["id"]] %||% args[["id_var"]]
-  out[setdiff(names(out), c("id", "layout", "selection"))]
+  for (k in seq_along(pages)) {
+    p <- pages[[k]]
+    f <- tempfile(fileext = ".png")
+    paint_write_png(p, f, res = res)
+    doc <- officer::add_slide(doc, layout = layout, master = master)
+    if (slide_title) {
+      doc <- tryCatch(
+        officer::ph_with(
+          doc, pptx_page_title(title, c(k, length(pages))),
+          location = officer::ph_location_type(type = "title")),
+        error = function(e) doc)
+    }
+    # Never scaled: the type was sized for this box.
+    doc <- officer::ph_with(
+      doc, officer::external_img(f, width = p$width, height = p$height),
+      location = officer::ph_location(
+        left = (slide_w - p$width) / 2, top = top,
+        width = p$width, height = p$height))
+  }
+
+  doc
 }

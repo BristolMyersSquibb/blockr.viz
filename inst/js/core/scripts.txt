@@ -2,6 +2,7 @@
 # tests/js/core/load.js.
 namespace.js
 util.js
+tooltip.js
 scope.js
 busy.js
 binding.js
@@ -12,3 +13,5 @@ gear/sections.js
 gear/tiles.js
 gear/controls.js
 gear/engine.js
+frame.js
+script-band.js

@@ -22,11 +22,8 @@
 # `list(page = page(path), block = <the table model the block drew>)`.
 tg_rw_run <- function(sc, page = NULL) {
   table_golden_register_tbl()
-  # The reference took the prepare script and its values from the gear; the
-  # kit does so only where a deployment allows it.
   withr::local_options(utils::modifyList(
-    list(blockr.viz.default_caption = NULL, useFancyQuotes = FALSE,
-         blockr.viz.browser_script = TRUE),
+    list(blockr.viz.default_caption = NULL, useFancyQuotes = FALSE),
     sc$options %||% list()
   ))
   src <- new.env(parent = emptyenv())
@@ -62,7 +59,14 @@ tg_rw_run <- function(sc, page = NULL) {
         dl <- NULL
         if (!is.null(s$input)) {
           vals <- tg_rw_inputs(s, session, expr, cx)
-          if (length(vals)) suppressWarnings(do.call(expr$setInputs, vals))
+          # The reference took the prepare script from the gear; the kit does
+          # so only where a deployment allows it. The script's controls'
+          # values need no option, so a step that turns a knob runs without.
+          sets_script <- is.list(s$value) && identical(s$value$param, "script")
+          withr::with_options(list(blockr.viz.browser_script = sets_script), {
+            if (length(vals)) suppressWarnings(do.call(expr$setInputs, vals))
+            session$flushReact()
+          })
         } else if (!is.null(s$data)) {
           src$d <- table_golden_data(s$data)
           tick(i)

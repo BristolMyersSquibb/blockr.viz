@@ -9,8 +9,8 @@ const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name) => ({ name, type: 'categorical' });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name) => ({ name, class: 'string' });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('CTRY'), cat('REG'), num('YEAR'), num('GDP'), num('LIFE'), num('LO'), num('HI')];
 const ROWS = [
   { CTRY: 'CH', REG: 'EU', YEAR: 2000, GDP: 60000, LIFE: 80, LO: 50000, HI: 70000 },

@@ -2,18 +2,20 @@
  "columns": [
   {
    "name": "USUBJID",
-   "type": "categorical",
+   "class": "string",
+   "label": "",
    "n_unique": 13
   },
   {
    "name": "ARM",
-   "type": "categorical",
-   "n_unique": 4,
-   "label": "Planned Arm"
+   "class": "string",
+   "label": "Planned Arm",
+   "n_unique": 4
   },
   {
    "name": "SEX",
-   "type": "categorical",
+   "class": "string",
+   "label": "",
    "n_unique": 2,
    "levels": [
     "M",
@@ -23,65 +25,74 @@
   },
   {
    "name": "AVISIT",
-   "type": "categorical",
+   "class": "string",
+   "label": "",
    "n_unique": 5
   },
   {
    "name": "AVISITN",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 5
   },
   {
    "name": "ADY",
-   "type": "numeric",
-   "n_unique": 20,
-   "label": "Analysis Relative Day"
+   "class": "number",
+   "label": "Analysis Relative Day",
+   "n_unique": 20
   },
   {
    "name": "AVAL",
-   "type": "numeric",
-   "n_unique": 58,
-   "label": "Analysis Value"
+   "class": "number",
+   "label": "Analysis Value",
+   "n_unique": 58
   },
   {
    "name": "AETERM",
-   "type": "categorical",
-   "n_unique": 7,
-   "label": "Reported Term"
+   "class": "string",
+   "label": "Reported Term",
+   "n_unique": 7
   },
   {
    "name": "AESEV",
-   "type": "categorical",
+   "class": "string",
+   "label": "",
    "n_unique": 4
   },
   {
    "name": "ASTDY",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 40
   },
   {
    "name": "AENDY",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 42
   },
   {
    "name": "ANRHI",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 3
   },
   {
    "name": "CHG",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 16
   },
   {
    "name": "LO",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 58
   },
   {
    "name": "HI",
-   "type": "numeric",
+   "class": "number",
+   "label": "",
    "n_unique": 58
   }
  ],

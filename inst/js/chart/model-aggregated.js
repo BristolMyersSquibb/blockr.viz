@@ -15,9 +15,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const model = /** @type {any} */ (NS.model = NS.model || {});
 
   // Config fields the model reads; a change to any other field reuses it.
@@ -108,17 +107,17 @@
       const bins = Array.isArray(edges) && edges.length ? edges.map(String) : levels;
       if (bins) return bins;
     }
-    const levelAt = new Map((levels || []).map((l, i) => [l, i]));
+    const levelAt = new Map((levels || []).map((/** @type {string} */ l, /** @type {number} */ i) => [l, i]));
 
     const dataOrder = () => {
       const present = new Set(groups);
       if (levels) {
-        return levels.filter((l) => present.has(l)).concat(groups.filter((g) => !levelAt.has(g)));
+        return levels.filter((/** @type {string} */ l) => present.has(l)).concat(groups.filter((g) => !levelAt.has(g)));
       }
       // A date or a number orders by itself, a missing value last. Dates
       // travel as ISO strings, which sort as text.
-      if (meta && (meta.temporal || meta.type === 'numeric')) {
-        const num = !meta.temporal;
+      if (V.util.isTemporal(meta) || V.util.isNumeric(meta)) {
+        const num = !V.util.isTemporal(meta);
         const key = (/** @type {string} */ g) => (num ? Number(g) : g);
         const missing = (/** @type {string} */ g) => g === '' || (num && isNaN(Number(g)));
         const known = groups.filter((g) => !missing(g));
@@ -273,7 +272,7 @@
    * @typedef {{ facet: string, label: string | null, groups: string[], cells: any[],
    *             axisCounts: Map<string, any> | null, ttRep: Record<string, any[]> | null,
    *             slots: any[] | null }} AggregatedPanel
-   * @typedef {{ family: 'aggregated', empty: string | null, type: string,
+   * @typedef {{ family: 'aggregated', empty: VizEmpty | null, type: string,
    *             cumulative: boolean, colors: string[], colorScale: any,
    *             levels: string[], split: boolean, distribution: boolean,
    *             noValue: boolean, ttFields: string[],

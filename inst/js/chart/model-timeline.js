@@ -18,10 +18,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
-  const model = NS.model = NS.model || {};
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
+  const model = /** @type {any} */ (NS.model);
 
   // Config fields the model reads; a change to any other field reuses it.
   const MODEL_FIELDS = ['type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
@@ -32,7 +31,7 @@
    * @typedef {{ facet: string, label: string | null, lanes: string[],
    *             laneCounts: Map<string, any> | null, marks: any[][],
    *             rows: any[] }} TimelinePanel
-   * @typedef {{ family: 'timeline', empty: string | null,
+   * @typedef {{ family: 'timeline', empty: VizEmpty | null,
    *             x: { col: string, type: string, cats: string[] | null },
    *             y: { col: string }, xend: string | null, series: string | null,
    *             label: string | null, color: { col: string, levels: any[], scale: any } | null,
@@ -129,7 +128,7 @@
                     (label != null ? (r[label] ?? '') : ''),
                     r[series] ?? '',
                     (drill != null ? (r[drill] ?? '') : ''),
-                    ttFields.length ? ttFields.map((c) => r[c] ?? '') : 0]);
+                    ttFields.length ? ttFields.map((/** @type {string} */ c) => r[c] ?? '') : 0]);
         markRows.push(r);
       }
       out.panels.push({

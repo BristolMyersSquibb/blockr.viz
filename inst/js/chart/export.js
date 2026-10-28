@@ -1,16 +1,22 @@
 // @ts-check
 /**
- * Chart block: the chart as one picture. _downloadImage() composes the
- * titles, every panel at its place in the grid, the legend band and the
- * caption on one canvas. The capture service draws a chart R asks for in a
- * hidden host and answers with that picture.
+ * Chart block: the chart as one picture. picture() composes the titles,
+ * every panel at its place in the grid, the legend band and the caption on
+ * one canvas. The view sends it to R when the reader opens the download
+ * control; the capture service draws a chart R asks for in a hidden host
+ * and answers with it.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
+
+  /** The bands' plain text. @param {VizTitles | null | undefined} titles
+   * @returns {Record<string, string>} */
+  const titleText = (titles) => Object.fromEntries(['title', 'subtitle', 'caption']
+    .map((k) => [k, String((titles && /** @type {any} */ (titles)[k] &&
+                            /** @type {any} */ (titles)[k].text) || '')]));
 
   /** A function that breaks a text block into lines at the picture width:
    * newlines first, then word wrap.
@@ -40,8 +46,10 @@
 
   /** Everything the picture is laid out from: the wrapped title and caption
    * blocks, the band heights, the legend's place, the canvas size, the background.
-   * @param {any} view @param {DOMRect} gridR @param {number} pr */
+   * @param {ChartView} view @param {DOMRect} gridR @param {number} pr */
   const exportContext = (view, gridR, pr) => {
+    const frame = view.frame;
+    const text = titleText(view.derived.titles);
     const pad = 12;
     // Text styles come from the live bands, so the picture follows the theme.
     /** @param {Element} el @param {string} fb */
@@ -57,24 +65,24 @@
     const wrapLines = lineWrapper(W, pad, (font) => view._measureFont(font));
     /** @param {string} key @param {Element} el @param {string} font @param {string} color */
     const block = (key, el, font, color) => {
-      if (!view._titleText[key]) return null;
-      const b = { text: view._titleText[key], font: fontOf(el, font), color: colorOf(el, color) };
+      if (!text[key]) return null;
+      const b = { text: text[key], font: fontOf(el, font), color: colorOf(el, color) };
       return { ...b, ...wrapLines(b) };
     };
-    const top = /** @type {any[]} */ ([block('title', view.titleEl, '600 15px', '#1f2937'),
-                                       block('subtitle', view.subtitleEl, '13px', '#6b7280')])
+    const top = /** @type {any[]} */ ([block('title', frame.titleEl, '600 15px', '#1f2937'),
+                                       block('subtitle', frame.subEl, '13px', '#6b7280')])
       .filter(Boolean);
-    const cap = block('caption', view.captionEl, 'italic 11px', '#6b7280');
+    const cap = block('caption', frame.capEl, 'italic 11px', '#6b7280');
     const topH = top.length
       ? pad + top.reduce((a, b) => a + b.lines.length * b.lineH, 0) + 6 : pad / 2;
     const capH = cap ? 6 + cap.lines.length * cap.lineH + pad : pad;
-    const legendEl = view.legendEl;
+    const legendEl = view.legend.el;
     const legR = legendEl.offsetParent !== null ? legendEl.getBoundingClientRect() : null;
     const legH = legR ? legR.height : 0;
     const legTop = !!legR && legendEl.classList.contains('dd-legend-band--top');
     const H = Math.round(topH + gridR.height + legH + capH);
 
-    let bg = getComputedStyle(view.card).backgroundColor;
+    let bg = getComputedStyle(frame.el).backgroundColor;
     if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') bg = '#ffffff';
     return { pad, W, H, pr, gridR, fontOf, colorOf, top, cap, topH, legendEl, legR, legH, legTop, bg };
   };
@@ -189,41 +197,24 @@
     return canvas;
   };
 
-  const exporter = {
-    // `send` posts the picture to R as <id>_capture; `opts.done` takes it
-    // instead; neither saves chart.png in the browser.
-    /** @this {any}
-     *  @param {boolean} [send]
-     *  @param {{pixelRatio?: number,
-     *           done?: (url: string, w: number, h: number) => void,
-     *           fail?: (e: Error) => void}} [opts] */
-    _downloadImage(send, opts) {
-      const none = (/** @type {string} */ why) => { if (opts && opts.fail) opts.fail(new Error(why)); };
-      const slots = this._slots.filter((/** @type {any} */ s) => s.chart);
-      if (!slots.length) { none('the chart has nothing drawn'); return; }
-      const gridR = this.chartGrid.getBoundingClientRect();
-      if (!gridR.width || !gridR.height) { none('the chart has no size'); return; }
-      const pr = (opts && opts.pixelRatio) || this.derived.capture_ratio || 2;
-      const k = exportContext(this, gridR, pr);
-
-      panelBitmaps(slots, pr).then((panels) => {
-        const canvas = composeCanvas(k, panels);
-        if (!canvas) return;
-        const url = canvas.toDataURL('image/png');
-        if (opts && opts.done) {
-          opts.done(url, k.W, k.H);
-          return;
-        }
-        if (send) {
-          V.util.send(this.el.id, 'capture', { png: url, width: k.W, height: k.H });
-          return;
-        }
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'chart.png';
-        a.click();
-      });
-    }
+  /**
+   * The chart as one picture, at `pixelRatio` (else R's capture_ratio).
+   * Rejects when nothing is drawn or the grid has no size.
+   * @param {ChartView} view @param {{ pixelRatio?: number }} [opts]
+   * @returns {Promise<VizPicture>}
+   */
+  const picture = (view, opts = {}) => {
+    const slots = view._slots.filter((s) => s.chart);
+    if (!slots.length) return Promise.reject(new Error('the chart has nothing drawn'));
+    const gridR = view.chartGrid.getBoundingClientRect();
+    if (!gridR.width || !gridR.height) return Promise.reject(new Error('the chart has no size'));
+    const pr = opts.pixelRatio || view.derived.capture_ratio || 2;
+    const k = exportContext(view, gridR, pr);
+    return panelBitmaps(slots, pr).then((panels) => {
+      const canvas = composeCanvas(k, panels);
+      if (!canvas) throw new Error('the browser cannot draw the picture');
+      return { png: canvas.toDataURL('image/png'), width: k.W, height: k.H };
+    });
   };
 
   // Capture service: R asks for a picture of a block at a given box
@@ -237,16 +228,16 @@
 
   /** Wait until a panel has a height, then let the animation settle; an
    * empty state ends the wait at once.
-   * @param {any} view @param {VizScope} scope @param {() => void} then @param {number} left */
+   * @param {ChartView} view @param {VizScope} scope @param {() => void} then @param {number} left */
   const whenDrawn = (view, scope, then, left) => {
-    const charted = view._slots.filter((/** @type {any} */ s) => s.chart);
+    const charted = view._slots.filter((s) => s.chart);
     if (view.drawn && !charted.length) { then(); return; }
-    const ready = charted.some((/** @type {any} */ s) => s.chartDiv.clientHeight > 40);
+    const ready = charted.some((s) => s.chartDiv.clientHeight > 40);
     if (ready || left <= 0) scope.timeout(then, CAPTURE_SETTLE_MS);
     else scope.timeout(() => whenDrawn(view, scope, then, left - 1), 100);
   };
 
-  /** @param {VizViewClass} View @param {any} msg @returns {Promise<VizPicture>} */
+  /** @param {ChartViewClass} View @param {ChartCaptureMessage} msg @returns {Promise<VizPicture>} */
   const capturePicture = (View, msg) => {
     const scope = new V.Scope();
     const p = V.capture({
@@ -259,12 +250,7 @@
         view.render(msg);
         whenDrawn(view, scope, () => {
           try {
-            // The density comes from the payload's derived.capture_ratio.
-            /** @type {any} */ (view)._downloadImage(false, {
-              fail: reject,
-              done: (/** @type {string} */ png, /** @type {number} */ width,
-                     /** @type {number} */ height) => resolve({ png, width, height })
-            });
+            picture(view, { pixelRatio: msg.ratio }).then(resolve, reject);
           } catch (e) {
             reject(e);
           }
@@ -275,14 +261,13 @@
   };
 
   /** Register the capture service's message for the chart's views.
-   * @param {VizViewClass} View */
+   * @param {ChartViewClass} View */
   const registerCapture = (View) => {
     const shiny = root.Shiny;
     if (!shiny || typeof shiny.addCustomMessageHandler !== 'function') return;
-    shiny.addCustomMessageHandler('blockr-viz:capture', (/** @type {any} */ msg) =>
+    shiny.addCustomMessageHandler('blockr-viz:capture', (/** @type {ChartCaptureMessage} */ msg) =>
       V.captureReply(msg.req, capturePicture(View, msg)));
   };
 
-  NS.exporter = exporter;
-  NS.registerCapture = registerCapture;
+  Object.assign(NS, { picture, titleText, registerCapture });
 })();

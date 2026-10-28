@@ -109,7 +109,7 @@ function open(config, opts = {}) {
         .map((x) => x.value.values);
     },
     footer() {
-      const t = m.block.statusEl.querySelector('.dd-status-text');
+      const t = m.block.frame.statusEl.querySelector('.dd-status-text');
       return t ? t.textContent : null;
     },
     trigger(evt, params, i = 0) { ctx.chart(i).trigger(evt, params); },

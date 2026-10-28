@@ -8,7 +8,7 @@ draws. The JS side is `inst/js/table/` (its view reads the TableModel of
 
 ```
 new_table_block(...)                     R/table-block.R
-  legacy_ctor_args()  old names          R/legacy-restore.R, R/legacy.R
+  legacy_ctor_args()  old names          R/legacy-restore.R (legacy_translate())
   viz_check()         the spec           R/spec-table.R, R/spec-table-summaries.R
   table_normalize()   cross-argument     R/table-normalize.R
         |
@@ -23,7 +23,8 @@ table_server()                           R/table-server.R
 part$view()  ->  table_payload()  ->  viz_payload()  (R/kit-output.R)
   payload.data     the TableModel (only sent again when it changes)
   payload.columns  the input's columns, for the gear's pickers
-  payload.derived  titles, empty state, receipt, downloads, script values
+    payload.derived  titles (viz_titles(), R/kit-titles.R, the chart's rule
+                   too), empty state, receipt, downloads, script values
 ```
 
 The state holds the spec's argument names (`layout`, `by`, `summaries`,
@@ -34,7 +35,10 @@ The state holds the spec's argument names (`layout`, `by`, `summaries`,
 A part also gives `expr(sel)` (the emitted filter, R/table-expr.R),
 `claims(sel)` and `receipt(sel)` (what a click claims and how it reads,
 R/table-drill.R) and `exhibit(tt)` (what the downloads write,
-R/table-exhibit.R and R/table-download.R).
+R/table-exhibit.R and R/table-download.R). The groups exhibit is built from
+the model the screen draws (`groups_exhibit()`, R/summarize-exhibit.R);
+`static_summarize_table()`, which a report call emits, builds the same model
+from `new_table_block()`'s arguments with the spec's defaults.
 
 ## The groups layout
 
@@ -90,6 +94,17 @@ structured frame (R/table-variables.R).
 | R/table-model-format.R, R/table-model-shading.R | number formats, shading |
 | R/table-dep.R | the view's scripts and stylesheets |
 | R/legacy*.R | boards and code from earlier blockr.viz (delete with them) |
+
+## Legacy
+
+Everything about earlier versions is in R/legacy*.R: the rename and value
+table `LEGACY_NAMES` (R/legacy.R), the translators a rename cannot say
+(R/legacy-chart.R, R/legacy-table.R, which also restores the tile and
+heatmap blocks), the restore methods (R/legacy-deser.R), and one pipeline
+both entry points run (`legacy_translate()`, R/legacy-restore.R): a restore
+heals what is left, the constructor warns and leaves bad values to the
+spec. Rules for forms the blocks before the rewrite saved apply to those
+boards only.
 
 ## Tests
 

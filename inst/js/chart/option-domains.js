@@ -7,9 +7,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -44,8 +43,8 @@
 
   /** The interval column pairs, lo and hi. @param {Record<string, any>} cfg */
   const intervalPairs = (cfg) => {
-    const lo = [].concat(cfg.ymin || []).filter(Boolean);
-    const hi = [].concat(cfg.ymax || []).filter(Boolean);
+    const lo = /** @type {any[]} */ ([]).concat(cfg.ymin || []).filter(Boolean);
+    const hi = /** @type {any[]} */ ([]).concat(cfg.ymax || []).filter(Boolean);
     return lo.map((l, i) => [l, hi[i]]).filter((p) => p[1]);
   };
 
@@ -100,20 +99,20 @@
       if (shared) {
         const all = exts.filter(Boolean);
         const dom = all.length
-          ? NS.axes.logTicks(Math.min(...all.map((e) => e[0])), Math.max(...all.map((e) => e[1])))
+          ? NS.axes.logTicks(Math.min(...all.map((/** @type {number[]} */ e) => e[0])), Math.max(...all.map((/** @type {number[]} */ e) => e[1])))
           : null;
         return new Array(n).fill(dom);
       }
-      return exts.map((e) => (e ? NS.axes.logTicks(e[0], e[1]) : null));
+      return exts.map((/** @type {number[] | null} */ e) => (e ? NS.axes.logTicks(e[0], e[1]) : null));
     };
     let dropped = 0;
     if (m.logY) {
-      dropped += NS.labelled(cfg.y_lines).filter((x) => !pos(x.value)).length;
+      dropped += NS.labelled(cfg.y_lines).filter((/** @type {{ value: any }} */ x) => !pos(x.value)).length;
       if (m.isBand && cfg.box_points === 'outliers') {
         for (const p of m.panels) dropped += bandValues(cfg, p, ['out_y']).filter((v) => !pos(v)).length;
       }
     }
-    if (m.logX) dropped += NS.labelled(cfg.x_lines).filter((x) => !pos(x.value)).length;
+    if (m.logX) dropped += NS.labelled(cfg.x_lines).filter((/** @type {{ value: any }} */ x) => !pos(x.value)).length;
     return {
       x: per('x', m.logX, mode !== 'free'),
       y: per('y', m.logY, mode === 'fixed'),

@@ -1,7 +1,6 @@
-/* Export and capture: what _downloadImage composes (title band, panels,
- * legend band, caption) and where the picture goes (the done callback, the
- * `<id>_capture` input, a browser download, a failure), and the capture
- * service's request and reply.
+/* Export and capture: what picture() composes (title band, panels, legend
+ * band, caption) and where the picture goes (its promise, the `<id>_capture`
+ * input, a failure), and the capture service's request and reply.
  *
  * happy-dom has no layout and no pixels. This file gives the window a small
  * layout of its own (getBoundingClientRect / offsetParent) and a canvas
@@ -26,7 +25,7 @@ const hiddenUp = (el) => {
   return false;
 };
 
-/** A layout for the chart card, enough for _downloadImage to measure. */
+/** A layout for the chart card, enough for picture() to measure. */
 function stubLayout(env) {
   const win = env.win;
   const proto = win.HTMLElement.prototype;
@@ -80,7 +79,7 @@ function stubLayout(env) {
     }
     const band = this.closest('.dd-legend-band');
     if (band) {
-      const card = band.closest('.dd-card');
+      const card = band.closest('.vz-frame');
       const gr = card.querySelector('.dd-chart-grid').getBoundingClientRect();
       const top = gr.top + gr.height;
       if (this === band) return rect(0, top, gr.width, LEGEND_H);
@@ -161,7 +160,8 @@ test('compose: titles, one panel, caption, at the ratio asked for', async () => 
     title: { text: 'Adverse events' }, subtitle: { text: 'Count of rows by Reported Term' },
     caption: { text: 'Safety population\nN = 60 records' } } } });
   let done = null;
-  c.block._downloadImage(false, { pixelRatio: 3, done: (url, w, h) => { done = { url, w, h }; } });
+  const pic = (view, opts) => c.env.win.Blockr.viz.chart.picture(view, opts);
+  pic(c.block, { pixelRatio: 3 }).then((p) => { done = { url: p.png, w: p.width, h: p.height }; });
   await c.clock.advanceAsync(0);
   const cv = composed(canvases);
   assert.ok(done && /^data:image\/png;base64,COMPOSED-/.test(done.url));
@@ -178,7 +178,7 @@ test('compose: every facet panel and the legend chips', async () => {
   const { c, canvases } = prepare({ ...BAR, color: 'AESEV', facet: 'ARM', facet_cols: 2 },
                                   { width: 800 });
   let done = false;
-  c.block._downloadImage(false, { done: () => { done = true; } });
+  c.env.win.Blockr.viz.chart.picture(c.block).then(() => { done = true; });
   await c.clock.advanceAsync(0);
   const cv = composed(canvases);
   assert.ok(done);
@@ -192,7 +192,7 @@ test('compose: reaching for the download sends the picture as <id>_capture', asy
   const downloads = [{ id: 'blk-dl_png', ext: 'png', label: 'Image' }];
   const { c } = prepare({ ...BAR, download: true }, { width: 300, derived: { downloads,
                                                                              capture_ratio: 4 } });
-  const tool = c.block.downloadEl.querySelector('.blockr-tool, .blockr-action-menu__trigger');
+  const tool = c.block.frame.downloadSlot.querySelector('.blockr-tool, .blockr-action-menu__trigger');
   tool.dispatchEvent(new c.env.win.Event('click'));
   await c.clock.advanceAsync(0);
   const sent = c.inputs().filter((x) => x.name === D.ID + '_capture:blockr.viz.capture');
@@ -202,27 +202,18 @@ test('compose: reaching for the download sends the picture as <id>_capture', asy
   c.close();
 });
 
-test('compose: no callback and no send saves chart.png in the browser', async () => {
-  const { c } = prepare(BAR, { width: 300 });
-  const clicks = [];
-  c.env.win.HTMLAnchorElement.prototype.click = function () { clicks.push(this.download); };
-  c.block._downloadImage();
-  await c.clock.advanceAsync(0);
-  assert.deepStrictEqual(clicks, ['chart.png']);
-  c.close();
-});
-
 test('compose: a chart with nothing drawn says so', async () => {
   const { c } = prepare({ ...BAR, y: 'NOPE' }, { width: 300 });
   let err = null;
-  c.block._downloadImage(false, { done: () => { err = 'drawn'; }, fail: (e) => { err = e.message; } });
+  c.env.win.Blockr.viz.chart.picture(c.block).then(() => { err = 'drawn'; }, (e) => { err = e.message; });
+  await c.clock.advanceAsync(0);
   assert.strictEqual(err, 'the chart has nothing drawn');
   c.close();
 });
 
 /** A capture request for `config`, as R's chart_capture_service() sends it. */
 const captureMsg = (env, config, extra = {}) => env.win.JSON.parse(JSON.stringify({
-  state_rev: 1, data_rev: 9, columns: F.columns, derived: { column_meta: F.columns },
+  state_rev: 1, data_rev: 9, columns: F.columns, derived: {},
   config: { ...require('../cases').BASE, ...config }, data: F.data,
   req: 'tok-1', width: 640, height: 360, ratio: 2.5, ...extra
 }));

@@ -1,4 +1,4 @@
-/* The prepare script's band (chart/script-band.js, features 96 to 98): a
+/* The prepare script's band (core/script-band.js, features 96 to 98): a
  * control per declared value, written to `script_values` by name, and the
  * script's error said above the chart. Also the histogram's bins from R's
  * edges (derived.hist). */
@@ -20,11 +20,11 @@ const SCRIPT = {
   values: { sv_top_n: 10, sv_serious: 'off', sv_arm: 'A' },
   error: null
 };
-const input = (c, key) => c.block.bandEl.querySelector(`[data-gear-input="${key}"]`);
+const input = (c, key) => c.block.band.el.querySelector(`[data-gear-input="${key}"]`);
 
 test('the script band draws a control per declared value, and names one it could not make', () => {
   const c = D.open(BAR, { derived: { script: SCRIPT } });
-  const band = c.block.bandEl;
+  const band = c.block.band.el;
   assert.strictEqual(band.style.display, '');
   assert.deepStrictEqual([...band.querySelectorAll('[data-role]')].map((r) => r.dataset.role),
                          ['sv_top_n', 'sv_serious', 'sv_arm']);
@@ -50,19 +50,19 @@ test('a script control writes script_values by name, a flag as true or false', (
 
 test('a failing script is said above the chart; no script, no band', () => {
   const c = D.open(BAR, { derived: { script: { inputs: [], values: {}, error: 'object x not found' } } });
-  assert.strictEqual(c.block.bandEl.querySelector('.dd-script-failed').textContent,
+  assert.strictEqual(c.block.band.el.querySelector('.dd-script-failed').textContent,
                      'Script failed: object x not found');
-  assert.strictEqual(c.block.bandEl.style.display, '');
+  assert.strictEqual(c.block.band.el.hidden, false);
   c.send(BAR, { derived: { script: { inputs: [], values: {}, error: null } } });
-  assert.strictEqual(c.block.bandEl.style.display, 'none');
-  assert.strictEqual(c.block.bandEl.children.length, 0);
+  assert.strictEqual(c.block.band.el.hidden, true);
+  assert.strictEqual(c.block.band.el.children.length, 0);
   c.close();
 });
 
 test("a histogram draws every bin R's edges list, the empty ones too", () => {
   const data = { AVAL: [1, 2, 9], AVAL_bin: ['0–5', '0–5', '5–10'] };
-  const columns = [{ name: 'AVAL', type: 'numeric', n_unique: 3, label: '' },
-                   { name: 'AVAL_bin', type: 'categorical', n_unique: 2, label: '' }];
+  const columns = [{ name: 'AVAL', class: 'number', n_unique: 3, label: '' },
+                   { name: 'AVAL_bin', class: 'string', n_unique: 2, label: '' }];
   const edges = { label: ['0–5', '5–10', '10–15'], lo: [0, 5, 10], hi: [5, 10, 15] };
   const c = D.open({ type: 'histogram', x: 'AVAL' }, { data, columns, derived: { hist: edges } });
   assert.deepStrictEqual(D.plain(c.chart().getOption().xAxis[0].data), ['0–5', '5–10', '10–15']);

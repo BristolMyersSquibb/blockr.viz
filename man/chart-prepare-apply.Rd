@@ -2,10 +2,11 @@
 % Please edit documentation in R/prepare-apply.R
 \name{chart-prepare-apply}
 \alias{chart-prepare-apply}
-\title{Running the chart block's prepare script}
+\title{Running a block's prepare script}
 \description{
-Runs the compiled script (R/prepare-parse.R, R/prepare-expr.R) on the frame
-the chart draws, splices it into the block's expression behind the click
-filter, and describes its controls to the browser.
+Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the
+block's reactives (viz_script_sources(), R/kit-script.R): run the compiled
+script on the frame the block draws, splice it into the block's
+expression, and describe its controls to the browser.
 }
 \keyword{internal}

@@ -381,3 +381,21 @@ test_that("format and unit reach the groups layout's number cells and labels", {
   p0 <- groups_prepare(d, by = "g", summaries = S)
   expect_null(p0$format)
 })
+
+test_that("a groups block's report call carries its settings by spec name", {
+  b <- new_table_block(layout = "groups", by = "Species",
+                       column_axis = FALSE, percent_of = "total")
+  cl <- as.list(report_call(b, "d"))
+  expect_identical(cl$by, "Species")
+  expect_false(cl$column_axis)
+  expect_identical(cl$percent_of, "total")
+  # At the spec's default, a setting is left out; set otherwise, it is kept.
+  expect_null(cl$missing)
+  cl <- as.list(report_call(new_table_block(layout = "groups", by = "Species",
+                                            missing = "drop"), "d"))
+  expect_identical(cl$missing, "drop")
+  # The rebuilt table is the block's: missing groups shown, as on screen.
+  d <- data.frame(Species = c("a", NA, "b"))
+  ex <- static_summarize_table(d, by = "Species")
+  expect_true("(Missing)" %in% ex$prep$rows$.label)
+})

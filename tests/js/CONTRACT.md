@@ -140,7 +140,7 @@ instances first). [life-bind-empty, life-remount, life-initialize-twice]
 
 `{ png, width, height }`: a PNG data URL and the composed size in CSS px.
 Sent when `config.capture_export` is true and the hoisted download control
-(`.blockr-action-menu__trigger` or `.dd-chart-dl .blockr-tool` in the gear
+(`.blockr-action-menu__trigger` or `.vz-download .blockr-tool` in the gear
 header) is clicked. Scale is `config.capture_ratio`, else 2.
 [export-capture-input]
 

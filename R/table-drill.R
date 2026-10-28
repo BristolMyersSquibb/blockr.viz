@@ -36,42 +36,6 @@ table_drill_phrase <- function(filters) {
   )
 }
 
-#' Rows lit by the stored click: those whose own path ends on the last filtered
-#' column and holds every filtered value.
-#' @noRd
-table_drill_on <- function(rows, group, parent, filters) {
-  n <- nrow(rows)
-  if (!length(filters) || is.null(group)) {
-    return(rep(FALSE, n))
-  }
-  label <- as.character(rows$.label)
-  is_par <- if (is.null(rows$.is_parent)) rep(FALSE, n) else rows$.is_parent
-  par_val <- if (is.null(rows$.parent)) {
-    rep(NA_character_, n)
-  } else {
-    as.character(rows$.parent)
-  }
-  own_col <- if (is.null(parent)) {
-    rep(group, n)
-  } else {
-    ifelse(is_par, parent, group)
-  }
-  last <- names(filters)[[length(filters)]]
-  on <- own_col == last
-  for (nm in names(filters)) {
-    vals <- filters[[nm]]
-    hit <- if (!is.null(parent) && identical(nm, parent)) {
-      ifelse(is_par, label, par_val) %in% vals
-    } else if (identical(nm, group)) {
-      !is_par & label %in% vals
-    } else {
-      rep(FALSE, n)
-    }
-    on <- on & hit
-  }
-  on
-}
-
 #' The click as a `dplyr::filter()` call on `data`. `members` maps a grouped
 #' column to the raw values its clicked group pools. A click on "(Missing)"
 #' claims missing values.
@@ -118,11 +82,12 @@ table_group_filter_call <- function(cols, vals) {
 }
 
 # A nested records claim as a filter on the input: `.group<k>_level` stands
-# for the k-th `by` column; a real column (the drill column) is kept.
-table_nest_drill_expr <- function(by, gc, gv) {
+# for the k-th `by` column; a real column (the drill column) is kept. `f` is
+# the click's filters, one value per column.
+table_nest_drill_expr <- function(by, f) {
+  gc <- as.character(names(f))
+  gv <- as.character(unlist(f))
   by <- as.character(unlist(by))
-  gc <- as.character(unlist(gc))
-  gv <- as.character(unlist(gv))
   if (!length(gc) || length(gc) != length(gv)) {
     return(table_drill_expr(list()))
   }
@@ -139,10 +104,11 @@ table_nest_drill_expr <- function(by, gc, gv) {
 
 # A claim in the data's words, outermost first: `.variable` /
 # `.variable_level` read "AEDECOD = ABDOMINAL PAIN", `.group<k>_level` reads
-# "ARM = Placebo" given `group_names` (table_group_names()).
-table_claim_label <- function(gc, gv, group_names = character()) {
-  gc <- as.character(unlist(gc))
-  gv <- as.character(unlist(gv))
+# "ARM = Placebo" given `group_names` (table_group_names()). `f` is the
+# click's filters, one value per column.
+table_claim_label <- function(f, group_names = character()) {
+  gc <- as.character(names(f))
+  gv <- as.character(unlist(f))
   if (!length(gc) || length(gc) != length(gv)) {
     return(character())
   }
@@ -176,35 +142,17 @@ table_group_names <- function(data) {
   out
 }
 
-# A column claim as `list(list(column, values))`, or NULL.
-table_col_keys_state <- function(x) {
-  if (!is.list(x) || !length(x)) return(NULL)
-  out <- lapply(x, function(k) {
-    if (!is.list(k)) return(NULL)
-    cl <- as.character(unlist(k[["column"]]))
-    vl <- as.character(unlist(k[["values"]]))
-    if (length(cl) != 1L || !nzchar(cl) || !length(vl)) return(NULL)
-    list(column = cl, values = vl)
-  })
-  out <- Filter(Negate(is.null), out)
-  if (length(out)) out
-}
-
-# "ARM = Low dose" for each column claim.
-table_col_keys_label <- function(ck) {
-  ck <- table_col_keys_state(ck)
-  vapply(ck %||% list(), function(k) {
-    paste0(k$column, " = ", paste(k$values, collapse = ", "))
-  }, character(1L))
+# "ARM = Low dose" for each column claim (column to values).
+table_col_keys_label <- function(columns) {
+  vapply(names(columns), function(cl) {
+    paste0(cl, " = ", paste(columns[[cl]], collapse = ", "))
+  }, character(1L), USE.NAMES = FALSE)
 }
 
 # `dplyr::filter(<ex>, ARM %in% "Low dose")` for a column claim.
-table_col_keys_filter <- function(ex, ck) {
-  ck <- table_col_keys_state(ck)
-  if (!length(ck)) return(ex)
-  f <- stats::setNames(lapply(ck, `[[`, "values"),
-                       vapply(ck, `[[`, "", "column"))
-  out <- table_drill_expr(f)
+table_col_keys_filter <- function(ex, columns) {
+  if (!length(columns)) return(ex)
+  out <- table_drill_expr(columns)
   out[[2L]] <- ex
   out
 }

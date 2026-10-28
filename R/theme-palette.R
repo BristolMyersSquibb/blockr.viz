@@ -4,7 +4,7 @@
 # old to have theme_palette(), or no theme applied, every call returns the
 # hard-coded fallback.
 
-# Fallback series colours, mirroring BLOCKR_PALETTE in inst/js/chart/common.js.
+# Fallback series colours, mirroring BLOCKR_PALETTE in inst/js/chart/colors.js.
 # An applied theme's `categorical` role wins, and the resolved vector is sent
 # to JS with the chart config. The six colours are blockr.theme's "Blockr"
 # palette (Okabe-Ito without black and yellow, since yellow is 1.3:1 on
@@ -13,7 +13,7 @@ DD_PALETTE_FALLBACK <- c(
   "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"
 )
 
-# Mirrors PALETTE_OVERFLOW and paletteAt() in inst/js/chart/common.js, so
+# Mirrors PALETTE_OVERFLOW and paletteAt() in inst/js/chart/colors.js, so
 # static exports (PPTX, report code) agree with the screen.
 DD_PALETTE_OVERFLOW <- "#9AA0A6"
 

@@ -7,9 +7,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
   const { barRadius, barValueLabels, barMarkLabels, stackNames, boldNames, endFormat,
@@ -152,7 +151,8 @@
   const barValueAxis = (k, P) => {
     const { cfg, asFraction, showPercent, pctFunc, vertical, ink } = k;
     // "% of panel" names the column its denominator is taken over.
-    const ofCol = { facet: cfg.facet, category: cfg.category, color: cfg.color }[cfg.percent_of];
+    const ofCol = /** @type {Record<string, any>} */ (
+      { facet: cfg.facet, category: cfg.category, color: cfg.color })[cfg.percent_of];
     const name = showPercent ? '% of group total'
       : (pctFunc ? '% of ' + (ofCol ? P.title(ofCol) : 'total')
         : NS.axisName(P.valueTitle, cfg.measure, cfg));
@@ -212,7 +212,7 @@
   const barTooltip = (k, P, series) => {
     const { m, panel, cfg, colors, showPercent, pctFunc } = k;
     const { title, aggLabel } = P;
-    const esc = NS.esc;
+    const esc = V.util.esc;
     const split = colors.length > 0;
     const vf = k.asFraction ? null : NS.valueFormat(cfg);
     const fmtRaw = vf || ((/** @type {number} */ n) =>
@@ -240,7 +240,7 @@
       const extra = panel.ttRep ? panel.ttRep[head] : null;
       if (!extra) return '';
       return m.ttFields.map((/** @type {string} */ c, /** @type {number} */ i) =>
-        (extra[i] != null && extra[i] !== '') ? NS.tipRow(esc(title(c) || c), esc(extra[i])) : ''
+        (extra[i] != null && extra[i] !== '') ? V.tooltip.row(esc(title(c) || c), esc(extra[i])) : ''
       ).join('');
     };
     /** @param {any} p @param {string} head */
@@ -256,17 +256,17 @@
     const formatter = (/** @type {any} */ arg) => {
       const { ps, hit } = levelsAt(arg);
       if (!ps.length) return '';
-      const head = ps[0].axisValueLabel || ps[0].name || '';
+      const head = /** @type {any} */ (ps[0]).axisValueLabel || ps[0].name || '';
       const vals = ps.filter((/** @type {any} */ p) => p && p.value != null);
-      const rows = vals.map((/** @type {any} */ p) => NS.tipRow(
+      const rows = vals.map((/** @type {any} */ p) => V.tooltip.row(
         split ? colorName + esc(p.seriesName) : esc(aggLabel), valueText(p, head),
         split ? p.color : null, hit == null ? null : p.seriesName === hit)).join('');
       const total = split && !showPercent && additive && vals.length > 1
-        ? NS.TIP_SEP + NS.tipRow(esc(aggLabel), fmtRaw(vals.reduce(
+        ? V.tooltip.SEP + V.tooltip.row(esc(aggLabel), fmtRaw(vals.reduce(
           (/** @type {number} */ a, /** @type {any} */ p) => a + Number(p.value || 0), 0)))
         : '';
-      const note = split && !showPercent && !additive ? NS.tipNote(esc(aggLabel)) : '';
-      return NS.tipHead(esc(head)) + note + rows + total + extraRows(head);
+      const note = split && !showPercent && !additive ? V.tooltip.note(esc(aggLabel)) : '';
+      return V.tooltip.head(esc(head)) + note + rows + total + extraRows(head);
     };
     return split ? { trigger: 'item', confine: true, formatter }
       : { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true, formatter };
@@ -333,7 +333,7 @@
       return vals.length ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
         : null;
     };
-    const totals = new Set(NS.labelled(cfg.waterfall_totals).map((x) => String(x.value)));
+    const totals = new Set(NS.labelled(cfg.waterfall_totals).map((/** @type {{ value: any }} */ x) => String(x.value)));
     /** @type {any[]} */
     const base = [];
     /** @type {any[]} */
@@ -419,8 +419,8 @@
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
-            return NS.tipHead(NS.esc(p.name)) + NS.tipRow(NS.esc(P.aggLabel),
-              p.value == null ? '–' : (wvf ? wvf(p.value) : NS.ddNum(p.value)));
+            return V.tooltip.head(V.util.esc(p.name)) + V.tooltip.row(V.util.esc(P.aggLabel),
+              p.value == null ? '–' : (wvf ? wvf(p.value) : V.util.num(p.value)));
           }
         },
         legend: { show: false },

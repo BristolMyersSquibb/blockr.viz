@@ -8,9 +8,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
@@ -233,7 +232,7 @@
   const panelSeries = (k) => {
     const { panel, isLine, pairs, ltCol, clrOf, smoother, m, hiEnd, loEnd, floorX, encodeX } = k;
     const ltLevels = lineTypeLevels(k);
-    const series = [];
+    /** @type {any[]} */ const series = [];
     panel.series.forEach((/** @type {any} */ s, /** @type {number} */ si) => {
       if (isLine && pairs.length && s.rows.length) series.push(...lineBands(k, s));
       if (ltCol && ltLevels.length > 1) {
@@ -311,7 +310,7 @@
         }
       }
     }
-    const data = [];
+    /** @type {any[]} */ const data = [];
     for (const s of panel.series) {
       if (hlCol && s.muted) continue;
       s.rows.forEach((/** @type {any} */ r, /** @type {number} */ i) => {
@@ -391,15 +390,15 @@
   const ttPairs = (m, look, val) => (Array.isArray(val) ? m.ttFields : [])
     .map((/** @type {string} */ c, /** @type {number} */ i) => /** @type {[string, any]} */ ([
       NS.axes.axisTitle(look.columns, c) || c,
-      typeof val[2 + i] === 'number' ? NS.ddNum3(val[2 + i]) : val[2 + i]
-    ])).filter(([, v]) => v != null && v !== '');
+      typeof val[2 + i] === 'number' ? V.util.num3(val[2 + i]) : val[2 + i]
+    ])).filter((/** @type {[string, any]} */ [, v]) => v != null && v !== '');
 
   /** The tooltip fields as a "  (col: v, col2: v2)" suffix on a line's row.
    * @param {any} m @param {any} look */
   const ttSuffixOf = (m, look) => (/** @type {any} */ val) => {
     const pairs = ttPairs(m, look, val);
     return pairs.length
-      ? '  (' + pairs.map(([t, v]) => NS.esc(t) + ': ' + NS.esc(v)).join(', ') + ')' : '';
+      ? '  (' + pairs.map(([t, v]) => V.util.esc(t) + ': ' + V.util.esc(v)).join(', ') + ')' : '';
   };
 
   /**
@@ -441,17 +440,17 @@
           ? (rows[0].axisValueLabel ?? String(rows[0].value[0]))
           : (m.x.type === 'time'
             ? NS.axes.fmtXVal(rows[0].value[0], 'time', null, m.x.period)
-            : title(m.x.col) + ': ' + NS.ddNum3(rows[0].value[0]));
+            : title(m.x.col) + ': ' + V.util.num3(rows[0].value[0]));
         // Highest first, the order the lines stack in at the crosshair.
         rows.sort((/** @type {any} */ a, /** @type {any} */ b) =>
           (Number(b.value[1]) || 0) - (Number(a.value[1]) || 0));
         const lines = rows.slice(0, TT_ROW_CAP).map((/** @type {any} */ p) => {
-          const nm = m.splitCol ? NS.esc(p.seriesName) : NS.esc(title(m.y.col));
-          return NS.tipRow(nm, (vf ? vf(p.value[1]) : NS.ddNum3(p.value[1])) + ttSuffix(p.value),
+          const nm = m.splitCol ? V.util.esc(p.seriesName) : V.util.esc(title(m.y.col));
+          return V.tooltip.row(nm, (vf ? vf(p.value[1]) : V.util.num3(p.value[1])) + ttSuffix(p.value),
                            m.splitCol ? p.color : null, null);
         });
-        if (rows.length > TT_ROW_CAP) lines.push(NS.tipNote('+' + (rows.length - TT_ROW_CAP) + ' more'));
-        return NS.tipHead(NS.esc(head)) + lines.join('');
+        if (rows.length > TT_ROW_CAP) lines.push(V.tooltip.note('+' + (rows.length - TT_ROW_CAP) + ' more'));
+        return V.tooltip.head(V.util.esc(head)) + lines.join('');
       }
     };
   };
@@ -470,7 +469,7 @@
         /** @type {Array<[string, any]>} */
         const pairs = [
           [title(m.x.col) || 'X', NS.axes.fmtXVal(p.value[0], m.x.type, null, m.x.period)],
-          [title(m.y.col) || 'Y', vf ? vf(p.value[1]) : NS.ddNum3(p.value[1])]
+          [title(m.y.col) || 'Y', vf ? vf(p.value[1]) : V.util.num3(p.value[1])]
         ];
         if (lvl) pairs.push([title(m.splitCol) || 'Series', lvl]);
         pairs.push(...ttPairs(m, look, p.value));

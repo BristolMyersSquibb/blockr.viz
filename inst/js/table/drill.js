@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * The drill on a Grid: a click on a row, a cell, a keyed header or a keyed
- * section value sends a selection (design.md section 2) to R as
+ * section value sends a selection (`TableSelection`, table.d.ts) to R as
  * `<id>_select`, and the rows, sections and columns the current selection
  * claims are lit.
  *

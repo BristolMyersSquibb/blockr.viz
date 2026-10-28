@@ -115,8 +115,10 @@ test_that("old names never come back on a re-save", {
     chart_type = "bar", group = "ARM", bar_mode = "percent", metric = ".count"
   ))
   payload <- blockr.core::blockr_ser(blk)[["payload"]]
-  expect_length(intersect(names(payload), CHART_LEGACY_ARGS), 0L)
-  expect_false(any(CHART_LEGACY_ARGS %in% names(attributes(blk))))
+  old <- LEGACY_NAMES$old[LEGACY_NAMES$block == "chart" &
+                             LEGACY_NAMES$old != LEGACY_NAMES$new]
+  expect_length(intersect(names(payload), old), 0L)
+  expect_false(any(old %in% names(attributes(blk))))
   expect_equal(payload$position, "fill")
 })
 
@@ -150,9 +152,10 @@ test_that("a board saved with direct_labels restores as legend = marks", {
 })
 
 test_that("the orientation is inferred from x and y", {
-  num <- function(col) col %in% c("sales", "AVAL")
+  kinds <- c(sales = "numeric", AVAL = "numeric", class = "character",
+             region = "character", ARM = "character")
   inf <- function(type, x, y, func = "count") {
-    chart_infer_orientation(type, x, y, func, num)
+    chart_infer_lie(list(type = type, x = x, y = y, func = func), kinds)
   }
   # one column: the category for a count, the value otherwise
   expect_equal(inf("bar", "class", NULL), "vertical")
@@ -163,8 +166,8 @@ test_that("the orientation is inferred from x and y", {
   expect_equal(inf("bar", "sales", "region", "sum"), "horizontal")
   expect_equal(inf("bar", "region", "sales", "sum"), "vertical")
   expect_equal(inf("boxplot", "AVAL", "ARM"), "horizontal")
-  # none: the type's default
-  expect_equal(inf("bar", NULL, NULL), "horizontal")
+  # none: vertical, for every type
+  expect_equal(inf("bar", NULL, NULL), "vertical")
   expect_equal(inf("pointrange", NULL, NULL), "vertical")
 })
 

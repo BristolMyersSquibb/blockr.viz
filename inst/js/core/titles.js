@@ -4,10 +4,10 @@
  * `@` menu, and the sentence on the block's face, whose words open their
  * setting's control.
  *
- * Both read `derived.titles` from the payload (gear-api.md): per band the
- * parts R resolved (`{text, arg?, by?}`) and the settings it would name if
- * they were set (`offers`); `args`, what each `{@name}` prints now; and
- * `choices`, the values a sentence lists for a word. The JS never resolves
+ * Both read `derived.titles` from the payload (VizTitles in gear.d.ts):
+ * per band the parts R resolved (`{text, arg?, by?}`) and the settings it
+ * would name if they were set (`offers`); `args`, what each `{@name}`
+ * prints now; and `choices`, the values a sentence lists for a word. The JS never resolves
  * a template, so the face, the preview and the exports say the same.
  */
 (function () {
