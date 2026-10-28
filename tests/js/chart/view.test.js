@@ -190,6 +190,9 @@ test('every chart type: the gear rows are the spec rows that apply to it', () =>
     const want = Object.keys(spec).filter((k) => {
       const a = spec[k];
       if (!a.gear || a.gear.control === 'none' || held.includes(k)) return false;
+      // Rows the hooks hide in this state (no counts shown; no value axis).
+      if (k === 'id' && type !== 'band') return false;
+      if (k === 'y_lines' && (type === 'pie' || type === 'treemap')) return false;
       if (a.gear.group === 'Add mapping' && !set.includes(k)) return false;
       const ap = a.applies;
       if (ap && ap.only && !ap.only.includes(type)) return false;
@@ -199,6 +202,16 @@ test('every chart type: the gear rows are the spec rows that apply to it', () =>
     const got = rows(c.block).filter((k) => !held.includes(k));
     assert.deepStrictEqual(got.slice().sort(), want.sort(), type);
   }
+  c.close();
+});
+
+test('stacking shows with a colour, the id with counts shown', () => {
+  const c = D.open(BAR);
+  assert.ok(!rows(c.block).includes('position'), 'no colour: nothing to stack');
+  assert.ok(!rows(c.block).includes('id'), 'no counts: the id counts nothing');
+  c.send({ ...BAR, color: 'AESEV', show_n: 'axis' });
+  assert.ok(rows(c.block).includes('position'));
+  assert.ok(rows(c.block).includes('id'));
   c.close();
 });
 
