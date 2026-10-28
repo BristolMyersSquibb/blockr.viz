@@ -51,8 +51,7 @@ A \code{\link[shiny:uiOutput]{shiny::uiOutput()}} to place on the toolbar.
 }
 \description{
 Registers the download handlers for every format this machine can write and
-returns the slot to drop on the table's toolbar (\code{dt_chrome()}'s
-\code{download_slot}, which \code{\link[=interactive_table]{interactive_table()}} takes as \code{download}). Each
+returns the slot to drop on the table's toolbar. Each
 format writes the SAME frame the table shows, through that format's own
 writer: \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} for the spreadsheet,
 \code{\link[=write_exhibit_html]{write_exhibit_html()}} for a self-contained page, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}

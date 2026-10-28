@@ -1,9 +1,8 @@
 # JavaScript tests for the chart block
 
 The chart scripts in `inst/js/chart/` run in node with happy-dom, loaded
-the way the page loads them: blockr.ui's controls, `drilldown-agg.js`,
-`drilldown-config.js`, `busy-cue.js`,
-`drilldown-theme-register.js`, then the chart scripts in the order
+the way the page loads them: blockr.ui's controls, `busy-cue.js`,
+`drilldown-theme-register.js`, the JS core, then the chart scripts in the order
 `scripts.txt` lists them. A chart is
 created by the input binding's `initialize` and drawn by the `drilldown-data`
 message handler. echarts is a fake that records what the chart asks of it
@@ -80,16 +79,10 @@ keys, models and options, loaded into a vm context without a DOM), the
 binding's message handling and a few behaviours too narrow for a scenario.
 `npm test` runs them.
 
-## Summarize table
+## Table
 
-`summarize-table.test.js` drives the summarize table block's script
-(`inst/js/summarize-table.js`) the way the page does: the chrome the block's UI
-renders once, then the payloads its server pushes. Both come from the block's
-R code, recorded by `fixtures/make-summarize-fixtures.R` under
-`shiny::testServer()`, so a class, attribute or message name that R writes and
-the script does not read fails here. Rebuild the fixture after changing the
-block's server, payload or chrome:
-
-```sh
-Rscript tests/js/fixtures/make-summarize-fixtures.R
-```
+`table/*.test.js` load the JS core, the table spec and the scripts
+`inst/js/table/scripts.txt` lists (`table/load.js`), and drive the table
+view through the shared output binding with payloads as R sends them.
+`table/fixtures.test.js` replays the payloads R recorded per scenario
+(`fixtures/table/`, written by `fixtures/table/make-fixtures.R`).

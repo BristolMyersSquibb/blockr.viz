@@ -581,9 +581,8 @@ test_that("summary_table gear: toggling 'overall' adds a Total column to the out
   before <- get_block_result("summary")
   expect_false("Total" %in% names(before))
 
-  # The block has one gear, the table's; the summary table widget's settings
-  # are its "Table 1" section. Open it and tick "Overall column": this drives
-  # summary-table-block.js's checkbox -> state -> R -> output.
+  # The block has one gear, the table's. Open it and tick "Overall column":
+  # this drives the gear's checkbox -> state -> R -> output.
   gears <- "Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] .blockr-gear-btn')).filter(function(x){return x.offsetParent;})"
   expect_equal(app$get_js(paste0(gears, ".length")), 1L)
   app$run_js(paste0("(function(){var g=", gears, "[0]; g.scrollIntoView({block:'center'}); g.click();})()"))

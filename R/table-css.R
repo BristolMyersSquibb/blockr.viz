@@ -1,8 +1,7 @@
-# The stylesheets of the pages R writes itself: the web page download, the
-# groups and cards exhibits, interactive_table() and the old table chrome
-# (inst/css/exhibit-table-*.css, the text the R strings had). The table view
-# has its own (table_view_dep(), R/table-dep.R); the exporters switch to
-# those once their markup carries the classes the view's rules read.
+# The stylesheets of the tables R writes as HTML itself (html_table(), the
+# records Web page): inst/css/exhibit-table-*.css, the text the R strings
+# had. The groups and cards pages are drawn by the table view, with its own
+# stylesheets (table_view_dep(), R/table-dep.R).
 
 # A stylesheet of inst/css as one string, read once per session.
 viz_css_file <- local({
@@ -17,12 +16,6 @@ viz_css_file <- local({
     cache[[name]]
   }
 })
-
-#' The base table rules (inst/css/exhibit-table-base.css)
-#' @noRd
-html_table_shared_css_fallback <- function() {
-  viz_css_file("exhibit-table-base.css")
-}
 
 #' The table body and header cell rules (inst/css/exhibit-table-delta.css)
 #'
@@ -42,10 +35,4 @@ html_table_delta_css <- function(scope = ".blockr-html-table-container") {
 #' @noRd
 html_table_chev_css <- function() {
   viz_css_file("exhibit-table-chev.css")
-}
-
-#' The groups layout's rules (inst/css/exhibit-table-groups.css)
-#' @noRd
-summarize_table_css <- function() {
-  viz_css_file("exhibit-table-groups.css")
 }

@@ -1,27 +1,15 @@
-/* Escape closes the gear tray of the chart, table and summarize table,
- * as it does the heatmap's (Blockr.gearTray): pressed in the band or on the
- * gear, it closes the band and focuses the gear. */
+/* Escape closes the gear tray of the chart and the table (Blockr.gearTray):
+ * pressed in the band or on the gear, it closes the band and focuses the
+ * gear. */
 'use strict';
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Window } = require('happy-dom');
 const h = require('./harness.js');
 const D = require('./chart/drive');
-const fixtures = require('./fixtures/summarize-table.json');
-
-const SHARED = [...h.UI_FILES, 'drilldown-agg.js', 'drilldown-config.js',
-  'busy-cue.js'];
-
-function mount(html, files) {
-  const win = new Window({ url: 'http://localhost/' });
-  win.eval(h.PRELUDE);
-  win.document.body.innerHTML = html;
-  win.eval(h.iconsScript());
-  for (const f of [...SHARED, ...files]) h.run(win, f);
-  win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
-  return win;
-}
 
 const click = (el) => el.dispatchEvent(new el.ownerDocument.defaultView.MouseEvent(
   'click', { bubbles: true, cancelable: true }));
@@ -66,40 +54,33 @@ test('Escape closes the chart gear tray', async () => {
   }
 });
 
-const TABLE = `
-  <div class="drilldown-table-container" data-dt-elem-id="tbl">
-    <table class="blockr-table">
-      <thead><tr><th class="blockr-col-header leaf" data-col-index="0">n</th></tr></thead>
-      <tbody><tr class="blockr-data-row"><td class="blockr-data">1</td></tr></tbody>
-    </table>
-  </div>`;
+const listed = (dir) => fs.readFileSync(path.join(h.JS_DIR, dir, 'scripts.txt'), 'utf8')
+  .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  .map((f) => dir + '/' + f);
 
 test('Escape closes the table gear tray', async () => {
-  const win = mount(TABLE, ['table.js']);
-  const band = win.document.querySelector('.blockr-settings.dd-popover');
-  const gear = win.document.querySelector('.blockr-gear-btn');
+  const win = new Window({ url: 'http://localhost/' });
+  win.eval(h.PRELUDE);
+  // Reduced motion: the tray opens and closes without its animation.
+  win.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} });
+  win.eval(h.iconsScript());
+  for (const f of [...h.UI_FILES, ...listed('core'), 'spec/table.js', ...listed('table')]) {
+    h.run(win, f);
+  }
+  win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
+  const el = win.document.body.appendChild(win.document.createElement('div'));
+  el.id = 'tbl';
+  const V = win.Blockr.viz;
+  const view = new V.table.View(el, new V.Scope());
+  view.render({ state_rev: 1, data_rev: 1, columns: [], derived: {},
+                config: { layout: 'records', search: true, download: false },
+                data: { n: 1, stub: 0, cols: [{ name: 'n', disp: ['1'] }],
+                        head: [[{ text: 'n', stub: true, col: 0 }]] } });
+  const band = el.querySelector('.blockr-settings.dd-popover');
+  const gear = el.querySelector('.blockr-gear-btn');
   assert.ok(band && gear, 'the table has a gear');
   check(win, band, gear, onGear);
   check(win, band, gear, inBand);
-  win.happyDOM.abort();
-  await win.happyDOM.close();
-});
-
-test('Escape closes the summarize table gear tray and resets its band', async () => {
-  const c = fixtures.flat;
-  const win = mount(c.chrome, ['table.js', 'summarize-table.js']);
-  const p = c.payloads[0];
-  win.__handlers['blockr-viz-summarize-data']({ id: c.id, rev: p.rev, payload: p.payload });
-  const root = win.document.querySelector('[data-summarize-elem-id]');
-  const band = win.document.querySelector('.blockr-settings.dd-popover');
-  const gear = win.document.querySelector('.blockr-gear-btn');
-  let resets = 0;
-  const reset = root._summarizeBand;
-  root._summarizeBand = function () { resets++; return reset.apply(this, arguments); };
-  check(win, band, gear, onGear);
-  assert.equal(resets, 2, 'Escape and the gear both reset the band');
-  check(win, band, gear, inBand);
-  assert.equal(resets, 4);
   win.happyDOM.abort();
   await win.happyDOM.close();
 });

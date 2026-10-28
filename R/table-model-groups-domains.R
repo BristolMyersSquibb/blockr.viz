@@ -159,8 +159,8 @@ lane_dom_value <- function(plan, idx, rows, kind) {
   # signed measure (mean/median of a change column, a waterfall's extreme
   # per subject) is the zero-centred DIVERGING bar instead -- same column,
   # same numbers, and every consumer downstream already switches on `kind`
-  # (summarize_axis_domain(), summarize_cells(), summarize_cells_html(), the
-  # JSON packer and its summarize-table.js twin). Decided here because this
+  # (summarize_axis_domain(), summarize_cells(), the table view's marks).
+  # Decided here because this
   # is the first point that has seen the assembled values. `barsplit` is
   # deliberately excluded: stacked segments that go negative are a different
   # problem, and it has no diverging form.

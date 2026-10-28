@@ -24,6 +24,7 @@ option-domains.js
 option-individual.js
 gear.js
 chrome.js
+script-band.js
 interact.js
 interact-individual.js
 export.js

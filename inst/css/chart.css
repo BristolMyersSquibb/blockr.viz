@@ -16,17 +16,6 @@
   gap: 0 14px;
 }
 
-/* Title and the chart-type selector always own a full row. */
-.dd-popover > .dd-popover-title,
-.dd-popover > .dd-popover-types {
-  flex: 1 1 100%;
-}
-
-.dd-popover-title {
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  margin-bottom: 10px;
-}
-
 .dd-form-row {
   flex: 1 1 190px;
   min-width: 0;
@@ -47,38 +36,6 @@
   line-height: 1.3;
 }
 
-/* Picker wrap — layout-only hook for the canonical select. The visual chrome
-   (bordered control, focus ring) is blockr.ui's .blockr-select--bordered;
-   here we only own width so the select fills its form row. Text inputs
-   sit in a .dd-text-wrap next to their commit chip (see drilldown-config.js). */
-.dd-picker-wrap {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Text input + "Enter ↵" commit chip (design-system §5.5 confirm cycle).
-   The chip overlays inside the field's right edge, matching the chips in
-   blockr.dplyr's rows and blockr.io's path input. */
-.dd-text-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.dd-text-wrap .blockr-text-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-right: 40px;
-}
-
-.dd-text-wrap .blockr-expr-confirm {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
 /* ===== Titles: writing the block's sentence =====
    The one section in the gear that is typed rather than picked, so it is the
    one section that needs the whole popover: a template
@@ -92,87 +49,6 @@
   grid-column: 1 / -1;
 }
 
-/* A collapsible section header (Titles, Drill-down, Prepare script). Not the
-   checkbox one above it: that owns a capability and unchecking clears it,
-   while folding only hides rows. Closed, it prints the section's state after
-   the title (.dd-fold-sum). */
-.dd-section-title--fold {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  cursor: pointer;
-  user-select: none;
-}
-.dd-section-title--fold:hover,
-.dd-section-title--fold:hover .dd-fold-chev {
-  color: var(--blockr-color-text-default, #111827);
-}
-/* The shared chevron. A fold points right when closed and down when open,
-   rotating -90deg (design system, "Chevrons"). */
-.dd-fold-chev {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  color: var(--blockr-color-text-muted, #6b7280);
-  transform: rotate(-90deg);
-  transition: transform var(--blockr-transition, 150ms ease);
-  pointer-events: none;
-}
-.dd-fold-chev svg {
-  width: 12px;
-  height: 12px;
-}
-.dd-section-title--fold[aria-expanded="true"] .dd-fold-chev {
-  transform: none;
-}
-/* The closed section's state: "Off", "None", the title, "4 lines". Body
-   text in the muted colour, so it reads as a value and not as part of the
-   section's name. */
-.dd-fold-sum {
-  min-width: 0;
-  margin-left: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  font-weight: var(--blockr-font-weight-normal, 400);
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-
-/* The field: full width, monospace (a template is code-shaped), and NO room
-   reserved for the commit chip -- that moves to the foot line below, so the
-   input, its preview and the selects in the sections above all end at the
-   same x. */
-.dd-title-row .dd-text-wrap {
-  display: block;
-}
-.dd-title-row .blockr-text-input {
-  display: block;
-  width: 100%;
-  padding-right: 12px;
-  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-.dd-title-foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 26px;
-  margin-top: 6px;
-}
-.dd-title-foot .dd-form-help {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.dd-title-foot .blockr-expr-confirm {
-  position: static;
-  transform: none;
-  margin-left: auto;
-  flex: 0 0 auto;
-}
 .dd-at-key {
   font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
   background: var(--blockr-grey-100, #f3f4f6);
@@ -342,26 +218,6 @@
   background: var(--blockr-grey-100, #f3f4f6);
 }
 
-/* Fallback native select (only when Blockr.Select is unavailable) — mirror the
-   canonical popover input look. */
-.dd-cfg-select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 8px;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  color: var(--blockr-color-text-primary, #374151);
-  background: var(--blockr-color-bg-input, #f9fafb);
-  cursor: pointer;
-  min-height: 38px;
-}
-.dd-cfg-select:focus {
-  border-color: var(--blockr-color-primary, #2563eb);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
 /* ===== Sections (Mapping / Encoding / Presentation) =====
    Each section owns a full popover row and holds its own wrapping grid of
    form rows. Rows are generated per active role (no display:none family
@@ -391,55 +247,7 @@
   border-top: 1px solid var(--blockr-color-border, #e5e7eb);
   padding-top: 10px;
 }
-/* Variant A: a capability section whose header carries a checkbox. Off = just
-   this header line; on = the section body renders below. */
-.dd-section-title--toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-.dd-section-checkbox {
-  width: 15px;
-  height: 15px;
-  border-radius: 4px;
-  border: 1.5px solid var(--blockr-grey-300, #cfd4da);
-  background: #fff;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-.dd-section-checkbox.dd-on {
-  background: var(--blockr-color-primary, #2563eb);
-  border-color: var(--blockr-color-primary, #2563eb);
-}
-.dd-section-checkbox.dd-on::after {
-  content: "";
-  width: 4px;
-  height: 8px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  margin-top: -2px;
-}
 
-/* ===== The gear tray (design system: "The gear tray", "Layout") =====
-   Scoped to the in-flow tray (.blockr-settings) that every host of this
-   engine opens; the rules above stay the fallback for anything else.
-
-   - No heading, no rules: a section is its title and 24px of space.
-   - One field grid: about 130px columns, their number stepping on the
-     tray's width (2 from 290px, 4 from 560, 6 from 840, 8 from 1110). A
-     select, text field or segmented control takes two columns, a field with
-     a pair of controls four, anything list- or code-shaped the whole row.
-     12px between columns, 16px between rows, 10px under a section title.
-   The tray is the container (blockr-settings-band.css sets container-type).
-   Selectors carry .dd-popover to stay ahead of blockr.ui's narrow-band
-   rules, whichever file loads last. */
-.blockr-settings.dd-popover > .dd-popover-types {
-  margin-bottom: 0;
-}
 .blockr-settings.dd-popover > * + .dd-section {
   margin-top: 24px;
 }
@@ -470,15 +278,11 @@
   grid-column: span var(--dd-s4);
 }
 .blockr-settings.dd-popover .dd-section > .dd-section-title,
-.blockr-settings.dd-popover .dd-section > .dd-summaries,
 .blockr-settings.dd-popover .dd-section > .dd-add-wrap,
 .blockr-settings.dd-popover .dd-section > .dd-script-row,
-.blockr-settings.dd-popover .dd-section > .dd-drill-hint,
 .blockr-settings.dd-popover .dd-section > .dd-layout-tiles,
-.blockr-settings.dd-popover .dd-section > .dd-layout-hint,
 .blockr-settings.dd-popover .dd-section > .dd-form-row.dd-role-tiles,
-.blockr-settings.dd-popover .dd-section--titles > .dd-form-row,
-.blockr-settings.dd-popover .dd-section--custom > * {
+.blockr-settings.dd-popover .dd-section--titles > .dd-form-row {
   grid-column: 1 / -1;
 }
 .blockr-settings.dd-popover .dd-section-title {
@@ -505,20 +309,6 @@
 .blockr-settings.dd-popover .dd-form-row--check > .dd-form-help {
   margin-top: -4px;
 }
-/* A segmented control fills its two columns, and its segments share the
-   width, so "100%" fits beside "Stacked" and "Grouped". */
-.blockr-settings.dd-popover .dd-pill-wrap > .blockr-segmented {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-}
-.blockr-settings.dd-popover .dd-pill-wrap > .blockr-segmented > .blockr-segmented__seg {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 /* An option that exists but does not apply here (the table's Cards look in
    the variables layout): drawn, greyed, inert. */
 .blockr-settings.dd-popover .blockr-segmented__seg.is-disabled {
@@ -533,20 +323,6 @@
   justify-content: space-between;
   gap: 6px;
 }
-.dd-role-remove {
-  border: none;
-  background: none;
-  color: var(--blockr-grey-400, #9ca3af);
-  cursor: pointer;
-  font-size: 0.75rem;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-.dd-role-remove:hover {
-  color: var(--blockr-color-danger, #dc3545);
-  background: var(--blockr-grey-50, #f9fafb);
-}
 
 /* Control area — holds one picker, or a paired primary+secondary
    (metric+agg, sort+dir) side by side. */
@@ -555,209 +331,22 @@
   gap: 8px;
   align-items: stretch;
 }
-.dd-row-controls > .dd-picker-wrap,
-.dd-row-controls > .dd-pill-wrap,
-.dd-row-controls > .dd-slider-wrap,
 .dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
 /* Tiles in groups (the chart type): each group its heading over its tiles,
    the groups side by side while they fit. */
 .dd-row-controls:has(> .dd-tile-group) { flex-wrap: wrap; gap: 16px; }
 .dd-row-controls > .dd-tile-group { flex: 1 1 240px; min-width: 0; }
-/* "of" connector in a verb-object aggregation row: "[agg] of [column]". */
-.dd-pair-connector {
-  align-self: center;
-  flex: 0 0 auto;
-  color: var(--blockr-color-text-muted, #6b7280);
-  font-size: 12px;
-  white-space: nowrap;
-}
-/* Repeatable rule lists (Aggregate summaries, Shade cells). The wrapper spans
-   the full popover width — breaking out of the section's narrow grid cells —
-   which also leaves the Group / Color-by picker alone on its own row. Each
-   rule then reads as ONE row: "[fn] of [columns] ✕" / "[mode] on [columns] ✕".
-   The fn/mode picker keeps a compact share; the columns picker gets the rest. */
-.dd-section > .dd-summaries { grid-column: 1 / -1; }
-.dd-summaries > .blockr-label { display: block; }
-.dd-value-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.dd-value-row > .dd-picker-wrap { flex: 1 1 0; min-width: 0; }
-.dd-value-row > .dd-value-agg { flex: 0 1 35%; }
-/* Badge above Mapping: the input is a finished table, so there is no
-   grouping or summary to set (table.js). The fuller explanation is the hover
-   tooltip. A neutral badge, blockr.ui's design system (Labels and status). */
-.dd-input-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  margin: 2px 0 8px;
-  padding: 0 7px;
-  border: 1px solid var(--blockr-color-border-default);
-  border-radius: var(--blockr-radius-pill);
-  background: var(--blockr-color-bg-subtle);
-  color: var(--blockr-color-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium);
-  cursor: default;
-}
-/* Repeatable metrics list (table/tile aggregation). Breaks out of the section's
-   narrow grid cells to the full popover width so each "[agg] of [columns]" row
-   has room; the column picker grows, the function select stays compact. */
-.dd-metrics {
-  grid-column: span 2;   /* like the chart's paired metric+agg row */
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  min-width: 0;
-}
-.dd-metric-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.dd-metric-row > .dd-metric-agg { flex: 0 0 132px; }
-.dd-metric-row > .dd-metric-cols { flex: 1 1 0; min-width: 0; }
-.dd-metric-remove { flex: 0 0 auto; }
-/* "Add aggregation" trigger under the list (subtle link, chrome reset via
-   .dd-add-trigger). */
-.dd-add-metric { align-self: flex-start; margin-top: 2px; }
-
-/* Required mapping with no value: soft attention, not a hard error. The border
-   now lives on the select control, so tint it there. */
-.dd-role-required-empty .dd-picker-wrap .blockr-select__control {
-  border-color: var(--blockr-color-warning, #f59e0b);
-  background: var(--blockr-color-warning-bg, #fffbeb);
-}
 
 /* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link
    (subtle grey text link + plus icon, blue on hover) from the shared
    blockr-blocks.css; .dd-add-trigger just resets the <button> chrome. */
 .dd-add-wrap { grid-column: 1 / -1; position: relative; margin-bottom: 12px; }
-.dd-add-trigger {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-}
-/* The add menu is a real dropdown anchored under the trigger (design
-   feedback on the chip strip: choose-and-done; the engine closes it on
-   outside click). */
-.dd-add-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  min-width: 160px;
-  margin-top: 4px;
-  padding: 4px;
-  background: #fff;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 8px;
-  box-shadow: var(--blockr-shadow-dropdown, 0 4px 12px rgba(0, 0, 0, 0.08));
-}
-.dd-add-item {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  text-align: left;
-  padding: 6px 10px;
-  border-radius: 4px;
-}
-.dd-add-item:hover {
-  background: var(--blockr-grey-50, #f9fafb);
-}
-
-/* Click-through toggle (Good when, Layout, Orientation, drill on/off). Renders
-   a single self-labeling .blockr-pill (blockr.dplyr blockr-blocks.css); this
-   wrapper just left-aligns it under the label so it keeps its natural width
-   instead of stretching to the form-row's full width. */
-.dd-pill-wrap {
-  display: flex;
-  align-items: center;
-}
 
 /* ===== Card wrapper (for popover positioning) ===== */
 .dd-card {
   position: relative;
 }
 
-/* Popover type rows */
-.dd-popover-types {
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* ===== Chart type selector (two groups) ===== */
-.dd-type-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dd-type-group-label {
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-400, #9ca3af);
-  font-weight: var(--blockr-font-weight-medium, 500);
-  white-space: nowrap;
-}
-
-.dd-cfg-types {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.dd-type-btn {
-  background: #fff;
-  border: none;
-  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
-  padding: 4px 10px;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-500, #6b7280);
-  cursor: pointer;
-  text-transform: capitalize;
-}
-.dd-type-btn:last-child { border-right: none; }
-.dd-type-btn:hover { background: var(--blockr-grey-50, #f9fafb); }
-.dd-type-btn.dd-type-active {
-  background: #eff6ff;
-  color: var(--blockr-color-primary, #2563eb);
-  font-weight: var(--blockr-font-weight-medium, 500);
-}
-
-/* ===== Picker tiles =====
-   One tile for every picker that shows drawings: the chart type (.dd-type-tile,
-   with per-family micro-headings) and the table block's layout and look
-   (.dd-layout-tile, drilldown-config.js _buildTiles). Edge to edge: the
-   drawing (Blockr.TILE_ICONS, a 48 x 32 viewBox) is the tile's face and
-   fills it at 3:2; the name sits under the face, outside it. The button has
-   no frame of its own. The drawing is currentColor and keeps its 1.5px and
-   1px lines at any width (non-scaling-stroke). States sit on the face and
-   the name: muted at rest, default on hover, the accent when chosen, the
-   disabled ink when not available. */
-.dd-popover-types-tiles {
-  display: block;
-}
-.dd-type-grid-label {
-  margin-bottom: 5px;
-}
-.dd-type-grid,
 .dd-layout-tiles {
   display: grid;
   /* Five a row in a 560px gear, three in a 360px panel. */
@@ -776,7 +365,6 @@
 .dd-type-group-head:first-child {
   margin-top: 0;
 }
-.dd-type-tile,
 .dd-layout-tile {
   display: flex;
   flex-direction: column;
@@ -791,8 +379,6 @@
   color: var(--blockr-color-text-muted, #6b7280);
   cursor: pointer;
 }
-.dd-type-tile { text-transform: capitalize; }
-.dd-type-tile-icon,
 .dd-layout-tile-face {
   display: block;
   width: 100%;
@@ -802,17 +388,14 @@
   overflow: hidden;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.dd-type-tile-icon svg,
 .dd-layout-tile-face svg {
   display: block;
   width: 100%;
   height: auto;
 }
-.dd-type-tile-icon svg *,
 .dd-layout-tile-face svg * {
   vector-effect: non-scaling-stroke;
 }
-.dd-type-tile-label,
 .dd-layout-tile-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -820,23 +403,18 @@
   max-width: 100%;
   text-align: center;
 }
-.dd-type-tile:hover,
 .dd-layout-tile:hover {
   color: var(--blockr-color-text-default, #111827);
 }
-.dd-type-tile:hover .dd-type-tile-icon,
 .dd-layout-tile:hover .dd-layout-tile-face {
   background: var(--blockr-color-bg-hover, #f3f4f6);
   border-color: var(--blockr-color-border-strong, #d1d5db);
 }
-.dd-type-tile.dd-type-active,
 .dd-layout-tile--on,
-.dd-type-tile.dd-type-active:hover,
 .dd-layout-tile--on:hover {
   color: var(--blockr-color-text-accent-strong, #1d4ed8);
   font-weight: var(--blockr-font-weight-medium, 500);
 }
-.dd-type-tile.dd-type-active .dd-type-tile-icon,
 .dd-layout-tile--on .dd-layout-tile-face {
   background: var(--blockr-color-bg-accent-subtle, #eff6ff);
   border-color: var(--blockr-color-border-accent, #2563eb);
@@ -852,20 +430,11 @@
   background: var(--blockr-color-bg-surface, #fff);
   border-color: var(--blockr-color-border-default, #e5e7eb);
 }
-.dd-popover .dd-type-tile:focus-visible,
 .dd-layout-tile:focus-visible {
   outline: var(--blockr-focus-outline, 2px solid #2563eb);
   outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: var(--blockr-radius-md, 6px);
 }
-
-/* A shading rule: its mode as tiles, then the columns it shades. */
-.dd-shading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dd-shading + .dd-shading { margin-top: 12px; }
 
 /* ===== Chart grid (faceting) ===== */
 .dd-chart-grid {
@@ -953,7 +522,7 @@
 
    Same clock as the table's flash (400ms hold, 1400ms linear): the two surfaces
    are one gesture and should not decay at different rates. Opacity, because it
-   is what actually interpolates -- see the note in table.css. */
+   is what actually interpolates. */
 .dd-drill-flash {
   position: absolute;
   pointer-events: none;
@@ -1190,12 +759,6 @@
   color: var(--blockr-color-text-default, #111827);
 }
 
-/* Toggled-off level: dimmed chip (ECharts greys inactive entries the same
-   way); the dim rides computed opacity so the PNG export inherits it. */
-.dd-legend-chip-off {
-  opacity: 0.35;
-}
-
 /* ===== Status footer ===== */
 .dd-status-footer {
   display: flex;
@@ -1250,11 +813,6 @@
   margin-left: 0;
 }
 
-@keyframes dd-receipt-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 /* The resting line coming back after a receipt. Without this it snaps into the
    slot the receipt just dissolved out of, which is the cut moved one step
    later rather than removed. */
@@ -1274,31 +832,6 @@
   margin-left: 12px;
 }
 
-.dd-status-reset {
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-grey-400, #9ca3af);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  text-underline-offset: 2px;
-  padding: 0;
-  transition: color 0.15s, text-decoration-color 0.15s;
-}
-.dd-status-reset:hover {
-  color: var(--blockr-color-primary, #2563eb);
-  text-decoration-color: currentColor;
-}
-
-/* ===== Multiplier sliders (individual-family popover row) ===== */
-.dd-slider-wrap {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  column-gap: 10px;
-  align-items: center;
-}
-
 .dd-slider {
   width: 100%;
   accent-color: var(--blockr-color-primary, #2563eb);
@@ -1315,13 +848,8 @@
 
 /* ===== Keyboard accessibility: visible focus on every gear control =====
    The design system's focus outline, on :focus-visible only. Shared by the
-   chart and table gears (both render via DrilldownConfig). */
-.dd-popover .dd-type-btn:focus-visible,
-.dd-popover .blockr-pill:focus-visible,
-.dd-popover .dd-add-trigger:focus-visible,
-.dd-popover .dd-add-item:focus-visible,
-.dd-popover .dd-role-remove:focus-visible,
-.dd-popover .dd-cfg-select:focus-visible {
+   chart and table gears (both drawn by the core gear engine). */
+.dd-popover .blockr-pill:focus-visible {
   outline: var(--blockr-focus-outline, 2px solid #2563eb);
   outline-offset: var(--blockr-focus-offset, 2px);
 }
@@ -1331,7 +859,7 @@
    Closed: one row, title and subtitle on the left, download and gear on the
    right. Open: the gear alone on top, the tray under it (blockr.ui draws its
    beak 8px in from the right end, under the gear), then the titles and the
-   download. The table block uses the same classes and rules (table.css). */
+   download. The table block uses the same classes and rules. */
 .vz-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -1396,104 +924,9 @@
   .dd-mapping-band { grid-template-columns: 1fr; }
 }
 
-/* The popover rows are laid out for a narrow column; on the face they sit in
-   the grid, so they drop the popover's own spacing and take the 42px shell. */
-.dd-mapping-band .dd-band-row {
-  display: block;
-  margin: 0;
-  padding: 0;
-}
-.dd-mapping-band .dd-band-row .dd-row-head {
-  margin-bottom: 5px;
-}
-.dd-mapping-band .dd-band-row .blockr-label {
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  font-weight: 500;
-  color: var(--blockr-color-text-secondary, #6b7280);
-  text-transform: none;
-  letter-spacing: normal;
-}
-.dd-mapping-band .dd-band-row .dd-row-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dd-mapping-band .dd-band-row .dd-row-controls > * {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-/* The verb-object pair ("[max] of [AVAL]") keeps the aggregation narrow: it
-   is one word, and giving it half the cell steals the width from the column
-   name, which is the part that is actually read. Only when it IS a control --
-   as a fixed word it sizes itself (.dd-pair-fixed). */
-/* ONLY on a row that is actually a pair. A distribution mark (boxplot,
-   pointrange) has no aggregation, so its value row holds the column select
-   alone -- and without the .dd-role-paired guard that select IS the first
-   child, took the 34%, and rendered as "A..." in a 70px box. */
-.dd-mapping-band .dd-band-row.dd-role-value.dd-role-paired .dd-row-controls > .dd-picker-wrap:first-child {
-  flex: 0 0 34%;
-}
-.dd-mapping-band .dd-band-row .dd-pair-connector {
-  flex: 0 0 auto;
-  color: var(--blockr-grey-400, #9ca3af);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-}
-/* The help line under a picker is gear voice (it explains a choice while you
-   are configuring). On the face it would double the band's height on every
-   block, so it is dropped -- the label and the value carry the reading. */
-.dd-mapping-band .dd-band-row .dd-form-help {
-  display: none;
-}
-
-/* The aggregation beside a value in the strip: a word, not a control. `func`
-   is an analysis decision authored per exhibit (a waterfall's "max" IS
-   worst-value-per-patient), so the strip states it and the gear is where it
-   changes. */
-.dd-mapping-band .dd-band-row .dd-pair-fixed {
-  flex: 0 0 auto;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  font-weight: 500;
-  color: var(--blockr-color-text-primary, #111827);
-  white-space: nowrap;
-}
-
-/* Parity with the code / function block's params grid, measured rather than
-   guessed: the label is already the same 13px / 500 / secondary, but the
-   engine's select is the popover's 38px one and its row head carries the
-   popover's spacing. Lift both to the standalone control geometry -- the same
-   override settings-band.css makes for the in-flow gear band. */
-.dd-mapping-band .dd-picker-wrap .blockr-select__control {
-  min-height: 42px;
-}
 .dd-mapping-band .blockr-text-input {
   padding: 10px 14px;
   min-height: 42px;
-}
-/* 5px under the label, exactly as .fb-field-label sets. The head is a flex
-   box whose own height can exceed the label's line box, so it is zeroed and
-   the gap put on the head itself. */
-.dd-mapping-band .dd-band-row .dd-row-head {
-  margin: 0 0 5px;
-  padding: 0;
-  min-height: 0;
-  line-height: inherit;
-}
-/* The popover label carries its own 4px bottom margin, which stacks with the
-   head's 5px and made the gap 9px against the code block's 5px. */
-.dd-mapping-band .dd-band-row .blockr-label {
-  line-height: 19.5px;
-  margin-bottom: 0;
-}
-
-/* A column role with no mapping shows the "(none)" option, which is a real
-   value in the list and so renders like any other. It is the absence of a
-   mapping, though, so it reads muted -- the same weight an unset field has
-   anywhere else. Applies in the gear and on the face: it is one control. */
-.dd-role-unset .blockr-select__value {
-  color: var(--blockr-grey-400, #9ca3af);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1512,49 +945,9 @@
   grid-column: 1 / -1;
   width: 100%;
 }
-.dd-script-wrap {
-  display: block;
-  width: 100%;
-}
-.dd-script-editor {
-  width: 100%;
-  box-sizing: border-box;
-  /* Monospace, because it is code. `font:` shorthand is deliberately NOT used
-     here -- it resets font-family to the shorthand's own value and drops the
-     inherited stack (reference_css_font_shorthand_inherit_drops). */
-  font-family: var(--blockr-font-mono, ui-monospace, SFMono-Regular, Menlo,
-    Consolas, monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 96px;
-  white-space: pre;
-  overflow-wrap: normal;
-  overflow-x: auto;
-}
-/* The ⌘↵ chip sits under the box rather than inside it: a textarea's
-   bottom-right corner already belongs to the resize handle. */
-.dd-script-wrap .dd-text-commit {
-  margin-top: 6px;
-}
 .dd-script-row .dd-form-help {
   display: block;
   margin-top: 6px;
-}
-/* A script that threw, and a declaration that could not become a control.
-   Both read as errors rather than as help text, because both mean a knob the
-   user expected is not there. */
-.dd-script-failed {
-  color: var(--blockr-color-danger, #b91c1c);
-}
-.dd-mapping-band .dd-script-input-error .dd-form-help {
-  display: block;
-  margin-top: 5px;
-  color: var(--blockr-color-danger, #b91c1c);
-}
-.dd-mapping-band .dd-script-failed {
-  grid-column: 1 / -1;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
 /* The data tooltip's content (.dd-tt-*) is in tooltip.css (tooltip_card_dep()). */
@@ -1634,16 +1027,6 @@
 .blockr-busy .blockr-table-wrapper {
   opacity: 0.45;
 }
-
-/* The table block's layout switch: the picker tiles above, and a line under
-   them that says what the chosen layout gives. */
-.dd-layout-hint {
-  grid-column: 1 / -1;
-  margin: -8px 0 0;          /* 16px row gap - 8 = 8px under the tiles */
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.dd-layout-hint strong { color: var(--blockr-color-text-default, #111827); font-weight: var(--blockr-font-weight-medium, 500); }
 
 /* Empty state */
 .vd-empty-state {

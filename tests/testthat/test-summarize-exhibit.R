@@ -35,23 +35,27 @@ test_that("static_summarize_table() carries the cell model", {
   expect_identical(ex$title, "T")
 })
 
-test_that("the HTML renderer draws the same marks the app does", {
+test_that("the HTML renderer hands the table view the app's marks", {
   ex <- demo_exhibit()
-  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+  html <- htmltools::renderTags(html_exhibit(ex))$html
+  p <- static_payloads(html)
+  expect_length(p, 1L)
+  p <- p[[1L]]
 
-  expect_true(grepl("blockr-summarize-table", html, fixed = TRUE))
-  expect_true(grepl("lane-box", html, fixed = TRUE))
-  expect_true(grepl("blockr-summarize-fill", html, fixed = TRUE))
-  # An exhibit is printed, not searched. (The class name still appears in the
-  # inlined CSS, so the test asks for the INPUT.)
-  expect_false(grepl("<input type=\"search\"", html, fixed = TRUE))
+  expect_identical(p$config$layout, "groups")
+  kinds <- vapply(p$data$cols[-1L], function(c) c$mark$kind, character(1L))
+  expect_identical(kinds, c("bar", "bar", "box"))
+  # The view's scripts come with it; nothing asks for Shiny.
+  deps <- htmltools::renderTags(html_exhibit(ex))$dependencies
+  expect_true("blockr-viz-table" %in% vapply(deps, `[[`, "", "name"))
 })
 
 test_that("the HTML renderer accepts subject denominators", {
   ex <- demo_exhibit(subject = "id")
-  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+  p <- static_payloads(htmltools::renderTags(html_exhibit(ex))$html)[[1L]]
 
-  expect_true(grepl("blockr-summarize-table", html, fixed = TRUE))
+  expect_identical(p$config$layout, "groups")
+  expect_identical(p$data$n, ex$cells$n)
 })
 
 test_that("the HTML renderer uses resolved exhibit titles", {
@@ -59,10 +63,9 @@ test_that("the HTML renderer uses resolved exhibit titles", {
     subtitle = "By: {@rows}[ Display AEs with at least {@min_share} patients]",
     .title_args = list(rows = "SOC and PT", min_share = "1")
   )
-  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+  p <- static_payloads(htmltools::renderTags(html_exhibit(ex))$html)[[1L]]
 
-  expect_true(grepl("By: SOC and PT", html, fixed = TRUE))
-  expect_false(grepl(">By:<", html, fixed = TRUE))
+  expect_match(p$derived$titles$subtitle, "By: SOC and PT", fixed = TRUE)
 })
 
 test_that("a nested export opens every row", {
@@ -72,14 +75,11 @@ test_that("a nested export opens every row", {
     summaries = list(list(type = "simple", func = "count", show = "number",
                           name = "n"))
   )
-  html <- as.character(htmltools::renderTags(html_exhibit(ex))$html)
+  p <- static_payloads(htmltools::renderTags(html_exhibit(ex))$html)[[1L]]
 
   # The dashboard hides child rows behind a chevron; a printed table cannot.
-  # Both class names appear in the inlined CSS, so the test reads the ROWS.
-  rows <- regmatches(html, gregexpr("<tr class=\"[^\"]*\"", html))[[1L]]
-  expect_true(any(grepl("is-child", rows, fixed = TRUE)))
-  expect_false(any(grepl("collapsed-hidden", rows, fixed = TRUE)))
-  expect_false(any(grepl(" collapsed\"", rows, fixed = TRUE)))
+  expect_true(any(unlist(p$data$rows$indent) > 0))
+  expect_null(p$data$collapsed)
 })
 
 test_that("the block's report call rebuilds its own table", {

@@ -78,7 +78,7 @@ summarize_agg_expr <- function(func, value, id_var) {
 # lengths are already computed upstream (one row per group -- e.g. one value
 # per subject). Duplicate rows collapse to the first non-missing value and an
 # all-missing group stays NA, matching the chart engine's identity branch
-# (drilldown-agg.js aggregate()).
+# (inst/js/chart/agg.js aggregate()).
 #' @noRd
 summarize_agg_first <- function(x) {
   x <- x[!is.na(x)]

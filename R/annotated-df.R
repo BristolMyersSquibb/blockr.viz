@@ -395,38 +395,6 @@ annotated_spanner_labels <- function(data) {
   if (!length(lbl)) NULL else lbl
 }
 
-# One column's keys as plain lists ready for JSON.
-col_key_entries <- function(entry) {
-  lapply(entry, function(p) {
-    list(column = as.character(p[["column"]]),
-         values = I(as.character(p[["values"]])))
-  })
-}
-
-# One column's keys as the JSON the markup carries.
-#' @noRd
-dd_col_keys_json <- function(entry) {
-  as.character(jsonlite::toJSON(col_key_entries(entry), auto_unbox = TRUE))
-}
-
-# The rendered-column-index -> keys map table.js reads off the `<table>`,
-# indexed by `cell.cellIndex`. The stub (when there is one) occupies slot 0.
-# Columns with no identity are null and add nothing to the claim.
-#' @noRd
-dd_col_keys_map_json <- function(data_cols, col_keys, stub_offset = 0L) {
-
-  slots <- vector("list", length(data_cols) + stub_offset)
-
-  for (i in seq_along(data_cols)) {
-    entry <- col_keys[[data_cols[[i]]]]
-    if (!is.null(entry)) {
-      slots[[i + stub_offset]] <- col_key_entries(entry)
-    }
-  }
-
-  as.character(jsonlite::toJSON(slots, auto_unbox = TRUE, null = "null"))
-}
-
 #' @noRd
 dd_is_string <- function(x) {
   is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)

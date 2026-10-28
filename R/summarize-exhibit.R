@@ -1,7 +1,7 @@
 # The summarize table as an exhibit -------------------------------------------
 #
 # The block is a transform block whose result is its input; the table exists
-# only as a push to summarize-table.js. So the block states how to rebuild its
+# only as a payload to the browser. So the block states how to rebuild its
 # table (report_call), and the rebuilt table carries what every target needs:
 #
 #   static_summarize_table(data, ...)   -> summarize_exhibit
@@ -165,25 +165,13 @@ html_exhibit.summarize_exhibit <- function(x, title = NULL, subtitle = NULL,
                                            caption = NULL,
                                            max_height = NULL,
                                            default_expanded = NULL, ...) {
-  args <- x$args
-
-  args$title <- if (is.null(title)) x$title else title
-  args$subtitle <- if (is.null(subtitle)) x$subtitle else subtitle
-  args$caption <- if (is.null(caption)) x$caption else caption
-  # The exhibit resolved the titles; a caller's text is final.
-  args$resolve_titles <- FALSE
-  # A printed exhibit is not a scroll box.
-  args$max_height <- max_height
-  args$search <- FALSE
-  args$elem_id <- NULL
-  # Nobody can click the chevrons of a printed table, so a nested one opens
-  # whole, as the painted page does.
-  args$expanded <- TRUE
-  # This method draws the table look.
-  args$look <- NULL
-  # The prepared table, so every target carries the same numbers.
-  args$prep <- x$prep
-  do.call(summarize_table, c(list(x$data), args))
+  # The table view draws it from the cell model the exhibit computed, so the
+  # web page carries the numbers the spreadsheet and the slides carry.
+  g <- table_static_groups(x)
+  g$derived$titles <- table_static_titles(title %||% x$title,
+                                          subtitle %||% x$subtitle,
+                                          caption %||% x$caption)
+  table_static(g$model, g$config, g$derived, max_height = max_height)
 }
 
 #' @export

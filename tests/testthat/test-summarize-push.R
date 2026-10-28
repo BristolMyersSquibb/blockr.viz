@@ -76,18 +76,6 @@ test_that("a flat table has a row per group and a bar with its own label", {
   expect_length(v$rows$keys, 4L)
 })
 
-test_that("labels stay plain in the model and are escaped by each consumer", {
-  ae <- push_fixture()
-  S <- list(push_bar())
-  m <- sum_model(ae, by = "TERM", summaries = S)
-  expect_true("T <1> & co" %in% m$cells$label)
-  expect_true("T <1> & co" %in% table_groups_view(m)$cols[[1]]$disp)
-  html <- as.character(htmltools::renderTags(
-    summarize_table(ae, by = "TERM", summaries = S)
-  )$html)
-  expect_match(html, "T &lt;1&gt; &amp; co", fixed = TRUE)
-})
-
 test_that("a nested table has levels, parent rows and parent labels", {
   ae <- push_fixture()
   m <- sum_model(ae, by = c("SOC", "TERM"), summaries = list(push_bar()))
@@ -100,32 +88,6 @@ test_that("a nested table has levels, parent rows and parent labels", {
   rows <- table_groups_view(m)$rows
   expect_identical(as.integer(rows$indent), as.integer(cells$level))
   expect_identical(as.logical(rows$strong), as.logical(cells$parent_row))
-})
-
-test_that("section headers keep a raw key when their label carries N", {
-  ae <- data.frame(
-    ARM = c("A", "A", "B"),
-    USUBJID = c("S1", "S2", "S3"),
-    SDY = c(1, 2, 3),
-    EDY = c(5, 6, 7),
-    stringsAsFactors = FALSE
-  )
-  prep <- summarize_prepare(
-    ae, by = c("ARM", "USUBJID"),
-    summaries = list(list(type = "spans", x = "SDY", xend = "EDY",
-                          parent = FALSE))
-  )
-  m <- summarize_cells(prep)
-
-  expect_true("A (N = 2)" %in% as.character(m$label))
-  expect_true("A (N = 2)" %in% as.character(m$parent))
-  expect_true("A" %in% as.character(m$parent_key))
-
-  html <- summarize_cells_html(m)
-  expect_match(html, 'data-summarize-label="A \\(N = 2\\)"')
-  expect_match(html, 'data-summarize-key="A"')
-  expect_match(html, 'data-summarize-parent="A \\(N = 2\\)"')
-  expect_match(html, 'data-summarize-parent-key="A"')
 })
 
 test_that("a split column has one width vector per series", {
@@ -142,41 +104,6 @@ test_that("a split column has one width vector per series", {
   expect_true(all(abs(sums - 100) < 0.02))
 })
 
-test_that("a grouped split with one level per row is stacked instead", {
-  ae <- push_fixture()
-  # COHORT is constant within USUBJID, and `max` is non-additive, so the plan
-  # asks for side-by-side lanes -- with nothing to put beside anything. Every
-  # row would draw one bar and one EMPTY lane, at twice the height.
-  c1 <- sum_model(ae, by = "USUBJID", summaries = list(
-    list(type = "simple", func = "max", col = "AVAL", show = "bar",
-         color = "COHORT")
-  ))$cells$cols[[1]]
-  expect_identical(c1$kind, "barsplit")
-  expect_identical(c1$mode, "stacked")
-  # Stacked omits an empty segment, so the cell is one bar in the row's own
-  # colour -- and the colours are still the level colours, not a flat fill.
-  html <- summarize_cells_html(summarize_cells(summarize_prepare(
-    ae, by = "USUBJID", summaries = list(
-      list(type = "simple", func = "max", col = "AVAL", show = "bar",
-           color = "COHORT")
-    )
-  )))
-  row1 <- regmatches(html,
-                     regexpr("<tr class=\"blockr-summarize-row.*?</tr>", html))
-  expect_length(gregexpr("blockr-summarize-fill", row1)[[1]], 1L)
-  expect_identical(gregexpr("width:0%", row1)[[1]][[1]], -1L)
-  expect_identical(gregexpr("is-tall", row1)[[1]][[1]], -1L)
-
-  # A REAL split is untouched: SEV varies within a term, so the lanes carry
-  # a comparison and grouped stays grouped.
-  keep <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "simple", func = "max", col = "AVAL", show = "bar",
-         color = "SEV")
-  ))
-  expect_identical(keep$cells$cols[[1]]$mode, "grouped")
-  expect_identical(table_groups_view(keep)$cols[[2]]$mark$mode, "grouped")
-})
-
 test_that("the degenerate collapse leaves widths and the domain alone", {
   ae <- push_fixture()
   cfg <- list(type = "simple", func = "max", col = "AVAL", show = "bar")
@@ -189,35 +116,6 @@ test_that("the degenerate collapse leaves widths and the domain alone", {
   expect_equal(as.numeric(split$cols[[1]]$v), as.numeric(plain$cols[[1]]$v))
   seg_w <- Reduce(`+`, lapply(split$cols[[1]]$seg, as.numeric))
   expect_equal(seg_w, as.numeric(plain$cols[[1]]$w), tolerance = 1e-8)
-})
-
-test_that("a state that cannot be drawn says why and has no cells", {
-  ae <- push_fixture()
-  m <- sum_model(ae, by = "GONE")
-  expect_match(m$prep$err, "Mapped column not in data")
-  expect_null(m$cells)
-  expect_null(table_groups_view(m))
-  # The legend and the footer slots clear.
-  expect_null(summarize_legend_spec(m$prep))
-  expect_null(summarize_foot_spec(m$prep)$note)
-})
-
-test_that("the legend maps the colour levels and a plain facet has none", {
-  ae <- push_fixture()
-  prep <- sum_model(ae, by = "TERM", summaries = list(
-    push_bar("count_distinct", "USUBJID", facet = "ARM", color = "SEV")
-  ))$prep
-  # The legend maps the COLOUR levels; a plain facet carries none (its
-  # column headers already name the levels).
-  leg <- summarize_legend_spec(prep)
-  expect_identical(leg$groups[[1L]]$title, "SEV")
-  expect_length(leg$groups[[1L]]$items, 2L)
-  # No row count in the footer: the fold row speaks for a Top N cut.
-  expect_null(summarize_foot_spec(prep)$count)
-  plain <- sum_model(ae, by = "TERM", summaries = list(
-    push_bar("count_distinct", "USUBJID", facet = "ARM")
-  ))$prep
-  expect_null(summarize_legend_spec(plain))
 })
 
 # --- the lane marks ----------------------------------------------------------
@@ -246,29 +144,6 @@ test_that("a box column has pre-rounded positions AND widths", {
                         as.numeric(c1$bl)) <= 0.02))
   # The tooltip carries the statistic's own words.
   expect_match(c1$tip[[1]], "Median .* Q1–Q3 .* 1\\.5×IQR")
-})
-
-test_that("a pointrange with n = 1 has NA bounds and a center-only cell", {
-  ae <- push_fixture()
-  one <- ae[!duplicated(ae$TERM), , drop = FALSE]   # one row per term
-  c1 <- sum_model(one, by = "TERM", summaries = list(
-    list(type = "dist", col = "DUR", stat = "mean_ci95",
-         show = "pointrange")
-  ))$cells$cols[[1]]
-  expect_identical(c1$kind, "pointrange")
-  expect_true(all(is.na(as.numeric(c1$rw))))
-  expect_false(anyNA(as.numeric(c1$c)))
-  # Tips are pre-escaped (both consumers paste them into an attribute).
-  expect_match(c1$tip[[1]], "undefined (n &lt; 2)", fixed = TRUE)
-  # And the emitter draws the dot alone.
-  html <- summarize_cells_html(summarize_cells(summarize_prepare(
-    one, by = "TERM", summaries = list(
-      list(type = "dist", col = "DUR", stat = "mean_ci95",
-           show = "pointrange")
-    )
-  )))
-  expect_match(html, "lane-ctr")
-  expect_false(grepl("lane-rng", html))
 })
 
 test_that("an interval column has per-row segments on the observed domain", {
@@ -434,67 +309,6 @@ test_that("a pair column with a negative change signs every label", {
   expect_true(all(grepl("^[+-]", d)))
 })
 
-test_that("a coloured pair column draws one dumbbell per level", {
-  ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "mean", color = "SEV")
-  ))
-  expect_null(prep$err)
-  p <- prep$plan[[1]]
-  expect_length(p$lcols, 2L)
-  rows <- prep$rows
-  # Each level's ends come from that level's rows only.
-  for (j in 1:2) {
-    lv <- c("MILD", "MODERATE")[[j]]
-    want <- vapply(rows$TERM, function(t) {
-      mean(ae$SDY[ae$TERM == t & ae$SEV == lv])
-    }, numeric(1))
-    expect_equal(rows[[p$lcols[[j]][["a"]]]], unname(want), info = lv)
-  }
-  # The pooled pair stays the sort value; the column domain takes in
-  # every level's ends.
-  ends <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
-    unlist(rows[cn[c("a", "b")]])
-  }))
-  expect_true(p$dmin <= min(ends) && p$dmax >= max(ends))
-  c1 <- summarize_cells(prep)$cols[[1]]
-  expect_true(isTRUE(c1$multi))
-  expect_identical(c1$levels, c("MILD", "MODERATE"))
-  expect_length(c1$lv, 2L)
-  expect_true(all(c1$lv[[1]]$fill == c1$fills[[1]]))
-  expect_match(c1$lv[[2]]$tip[[1]], "^MODERATE \u00b7 ")
-  # No single number for the cell: each level prints its own change beside
-  # its dumbbell, in the column's one slot width.
-  expect_null(c1$disp)
-  expect_true(c1$dw >= 1L)
-  for (j in 1:2) {
-    g <- c1$lv[[j]]
-    drawn <- !is.na(g$a) & !is.na(g$b)
-    expect_true(all(nzchar(g$disp[drawn])), info = j)
-  }
-  html <- summarize_cells_html(summarize_cells(prep))
-  expect_match(html, "blockr-summarize-multi", fixed = TRUE)
-  expect_match(html, "blockr-summarize-pacell", fixed = TRUE)
-  expect_match(html, paste0("blockr-summarize-lv blockr-summarize-barwrap",
-                            "[^>]*>.*?blockr-summarize-barval"))
-})
-
-test_that("a pair's tip is text and is escaped once, in the cell", {
-  ae <- push_fixture()
-  # TERM's first level is "T <1> & co".
-  prep <- summarize_prepare(ae, by = "SOC", summaries = list(
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "mean", color = "TERM")
-  ))
-  m <- summarize_cells(prep)
-  c1 <- m$cols[[1]]
-  expect_match(c1$lv[[1]]$tip[[1]], "^T <1> & co \u00b7 ")
-  html <- summarize_cells_html(m)
-  expect_match(html, "data-summarize-tip=\"T &lt;1&gt; &amp; co", fixed = TRUE)
-  expect_no_match(html, "&amp;amp;", fixed = TRUE)
-})
-
 test_that("a coloured pair of one level per row labels that level", {
   ae <- push_fixture()
   ae <- ae[!duplicated(ae$USUBJID), ]
@@ -506,81 +320,6 @@ test_that("a coloured pair of one level per row labels that level", {
   labs <- Reduce(function(x, g) ifelse(nzchar(g$disp), g$disp, x),
                  c1$lv, rep("", length(c1$v)))
   expect_true(all(nzchar(labs)))
-})
-
-test_that("value_labels = FALSE drops every value label", {
-  ae <- push_fixture()
-  S <- list(
-    list(type = "simple", func = "count", show = "bar"),
-    list(type = "dist", col = "DUR", show = "box"),
-    list(type = "pair", from = "SDY", from_func = "mean", to = "EDY",
-         to_func = "mean", color = "SEV")
-  )
-  prep <- summarize_prepare(ae, by = "TERM", summaries = S)
-  on <- summarize_cells(prep)
-  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))
-  expect_false(is.null(on$cols[[1]]$disp))
-  for (c in off$cols) {
-    expect_null(c$disp)
-    expect_null(c$dw)
-    for (g in c$lv) expect_null(g$disp)
-  }
-  html <- summarize_cells_html(off)
-  expect_false(grepl("blockr-summarize-barval", html, fixed = TRUE))
-  # The view gives the browser no label slot to draw either, though every
-  # column keeps its plain text for the search.
-  v <- table_groups_view(sum_model(ae, by = "TERM", summaries = S,
-                                   value_labels = FALSE))
-  for (cc in v$cols[-1L]) {
-    expect_null(cc$mark$dw)
-    expect_false(is.null(cc$disp))
-  }
-  von <- table_groups_view(sum_model(ae, by = "TERM", summaries = S))
-  expect_false(is.null(von$cols[[2]]$mark$dw))
-})
-
-test_that("a grouped split bar prints one value per level", {
-  ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "simple", func = "mean", col = "DUR", show = "bar",
-         color = "SEV")
-  ))
-  c1 <- summarize_cells(prep)$cols[[1]]
-  expect_identical(c1$mode, "grouped")
-  expect_null(c1$disp)
-  expect_length(c1$ldisp, 2L)
-  for (j in 1:2) {
-    has <- c1$segv[[j]] > 0
-    expect_true(all(nzchar(c1$ldisp[[j]][has])), info = j)
-  }
-  html <- summarize_cells_html(summarize_cells(prep))
-  expect_match(html, "blockr-summarize-track is-lv", fixed = TRUE)
-  # Off: back to the stacked rows with no number.
-  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))$cols[[1]]
-  expect_null(off$ldisp)
-  expect_null(off$disp)
-})
-
-test_that("a stacked split bar prints each segment's value inside it", {
-  ae <- push_fixture()
-  prep <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "simple", func = "count", show = "bar", color = "SEV")
-  ))
-  c1 <- summarize_cells(prep)$cols[[1]]
-  expect_identical(c1$mode, "stacked")
-  # The total stays at the end; each segment carries its own count.
-  expect_false(is.null(c1$disp))
-  expect_length(c1$slab, 2L)
-  expect_identical(c1$slab[[1]], ifelse(c1$segv[[1]] > 0,
-                                        as.character(c1$segv[[1]]), ""))
-  expect_length(c1$sink, 2L)
-  html <- summarize_cells_html(summarize_cells(prep))
-  expect_match(html, "blockr-summarize-seglab w", fixed = TRUE)
-  off <- summarize_cells(prep, cfg = list(value_labels = FALSE))$cols[[1]]
-  expect_null(off$slab)
-  # Dark ink on a light fill, white on a dark one.
-  expect_identical(summarize_ink(c("#f0e442", "#0072b2")),
-                   c("#1f2937", "#ffffff"))
 })
 
 test_that("value labels print one decimal finer than the column axis", {
@@ -692,27 +431,4 @@ test_that("a colour-split nested pair averages each level's rows", {
   c1 <- summarize_cells(prep)$cols[[1]]
   expect_true(isTRUE(c1$multi))
   expect_match(c1$lv[[1]]$tip[rows$.is_parent], "mean of [0-9]+ rows$")
-})
-
-test_that("a zero draws an empty track, a small value still shows", {
-  # The fill's 2px floor is for small values; on a zero it read as a little.
-  t <- summarize_track_html(c(0, 0.4, NA))
-  expect_false(grepl("blockr-summarize-fill", t[[1]]))
-  expect_match(t[[2]], "blockr-summarize-fill")
-  expect_false(grepl("blockr-summarize-fill", t[[3]]))
-
-  grouped <- summarize_split_html(list(
-    v = c(3, 2), names = c("MILD", "SEVERE"), mode = "grouped",
-    seg = list(c(60, 40), c(0, 10)), segv = list(c(3, 2), c(0, 1)),
-    fills = c("#111111", "#222222")
-  ))
-  # Row 1: MILD drawn, SEVERE has no value there and gets no track.
-  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-row3",
-                                                        grouped))), c(1L, 2L))
-  expect_identical(lengths(regmatches(grouped, gregexpr("blockr-summarize-fill",
-                                                        grouped))), c(1L, 2L))
-
-  dv <- summarize_dv_html(c(0, 30), c(TRUE, FALSE))
-  expect_false(grepl("blockr-summarize-fill", dv[[1]]))
-  expect_match(dv[[2]], "is-neg")
 })
