@@ -1,22 +1,17 @@
 # Paint a summarize table as ONE grid picture ---------------------------------
 #
 # A third consumer of summarize_cells(), beside the HTML markup and the JSON
-# payload: the same cell model drawn with grid, for formats that cannot hold
-# the HTML table. A PowerPoint table cell holds text runs only, so a glyph
-# cannot live in one. On a slide the exhibit is therefore one picture (header,
-# numbers and marks together), and its text is not selectable.
-#
+# payload. A PowerPoint table cell holds text runs only and cannot hold a
+# glyph, so on a slide the exhibit is one picture (text not selectable).
 # Export-only: nothing on the block's render path calls it.
 #
 # Everything is computed in inches from the top-left. The vertical constants
 # are the CSS ones (12px lane, 1px whisker, 3px cap inset, 2px median, 8px
-# fence / dot) scaled by one `px` factor, so the glyphs keep the on-screen
-# proportions at any size. Needs grid and systemfonts (Suggests; callers check)
-# and ragg to rasterise.
+# fence / dot) scaled by one `px` factor. Needs grid and systemfonts
+# (Suggests; callers check) and ragg to rasterise.
 
 # --- constants -----------------------------------------------------------
-# Colour tokens resolved to literals (the CSS cascade does not exist in an
-# export). Values from R/summarize-table-css.R.
+# Colour tokens resolved to literals. Values from R/summarize-table-css.R.
 RP_FILL  <- "#2a78d6"                      # --blockr-summarize-fill
 RP_TRACK <- "#dad9d5"                      # mix(#eeeeea 80%, #898781)
 RP_TICK  <- "#c3c2b7"                      # --blockr-summarize-tick
@@ -30,18 +25,20 @@ RP_VAL_SIZE <- 0.85
 RP_SEG_SIZE <- 0.77
 # Indent of a child row, in inches.
 RP_INDENT <- 0.28
+# freetype refuses macOS's Helvetica.ttc below 8pt, so a width wanted below
+# RP_W_FLOOR is measured at RP_W_REF and scaled (reads a few percent wide).
+RP_W_FLOOR <- 8
+RP_W_REF <- 12
 
 rp_sub <- function(col) grDevices::adjustcolor(col, alpha.f = 0.45)
 rp_faint <- function(col) grDevices::adjustcolor(col, alpha.f = 0.16)
 
 # --- measuring -----------------------------------------------------------
-# freetype refuses macOS's Helvetica.ttc below 8pt, so a width wanted below
-# RP_W_FLOOR is measured at RP_W_REF and scaled. Per-size rounding makes that
-# read a few percent wide, which is the safe side.
-RP_W_FLOOR <- 8
-RP_W_REF <- 12
-
-rp_string_width <- function(txt, fs, family, bold) {
+# The widest of `txt` in inches (0 for none). Falls back to half an em per
+# character when nothing can be measured.
+rp_w <- function(txt, fs, family = "sans", bold = FALSE) {
+  txt <- as.character(txt[!is.na(txt)])
+  if (!length(txt)) return(0)
   measure <- function(size) {
     tryCatch(
       systemfonts::string_width(txt, family = family, size = size,
@@ -52,19 +49,8 @@ rp_string_width <- function(txt, fs, family, bold) {
   w <- if (fs >= RP_W_FLOOR) measure(fs)
   if (is.null(w)) {
     ref <- measure(RP_W_REF)
-    w <- if (is.null(ref)) NULL else ref * (fs / RP_W_REF)
+    w <- if (!is.null(ref)) ref * (fs / RP_W_REF)
   }
-  w
-}
-
-# The widest of `txt` in inches (0 for none). Falls back to half an em per
-# character when nothing can be measured.
-rp_w <- function(txt, fs, family = "sans", bold = FALSE) {
-  if (!length(txt)) return(0)
-  txt <- txt[!is.na(txt)]
-  if (!length(txt)) return(0)
-  txt <- as.character(txt)
-  w <- rp_string_width(txt, fs, family, bold)
   w <- w[is.finite(w)]
   if (!length(w)) return(max(nchar(txt)) * fs * 0.5 / 72)
   max(w) / 72
@@ -74,9 +60,9 @@ rp_ch <- function(fs, family = "sans") rp_w("0", fs, family)
 
 # --- layout --------------------------------------------------------------
 # The stub and the number columns shrink to fit; the glyph columns share the
-# slack (the `width:1%` idiom of summarize-table-css.R). Each glyph column
-# keeps a label slot of `dw` characters so its lanes start and end at the same
-# x on every row.
+# slack (the `width:1%` idiom of summarize-table-css.R). A glyph column keeps
+# a label slot of `dw` characters so its lanes start and end at the same x on
+# every row.
 rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
                       pad = 0.06, lane_min = 0.9) {
 
@@ -99,7 +85,6 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   fixed <- vapply(seq_along(m$cols), function(i) {
     if (is_glyph[i]) return(NA_real_)
     c <- m$cols[[i]]
-    # A tile column is as wide as its square.
     if (identical(kind[i], "tile")) {
       return(max(rp_w(c$disp, fs, family), fs / 72 * 2.2) + 2 * pad)
     }
@@ -107,8 +92,7 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
     max(rp_w(txt, fs, family), rp_w(c(hdr[i], sub[i]), fs, family)) + 2 * pad
   }, numeric(1L))
 
-  # The value slot a glyph column reserves right of its lane (`dw` is set
-  # when the column prints labels).
+  # The value slot a glyph column reserves right of its lane.
   slot <- vapply(seq_along(m$cols), function(i) {
     c <- m$cols[[i]]
     if (!is_glyph[i] || is.null(c$dw)) return(0)
@@ -136,28 +120,49 @@ rp_layout <- function(m, prep, width_in, fs = 9, family = "sans",
 # --- primitives ----------------------------------------------------------
 # `gl` is the geometry list: H (picture height), W (width), px (one CSS px in
 # inches), lane, hair, row_h, fs, family. `y` arguments count down from the
-# top, `x` from the left, both in inches.
+# top, `x` from the left, both in inches. The bare grob helpers (rp_ln,
+# rp_circle, rp_seg, rp_sq) take a y already measured up from the bottom.
+
+rp_in <- function(v) grid::unit(v, "in")
 
 rp_txt <- function(gl, s, x, y, just = "left", size = gl$fs, col = RP_TEXT,
                    bold = FALSE, vjust = "centre", rot = 0) {
-  grid::textGrob(s, x = grid::unit(x, "in"), y = grid::unit(gl$H - y, "in"),
+  grid::textGrob(s, x = rp_in(x), y = rp_in(gl$H - y),
                  just = c(just, vjust), rot = rot,
                  gp = grid::gpar(fontsize = size, col = col,
                                  fontfamily = gl$family,
                                  fontface = if (bold) "bold" else "plain"))
 }
 
+rp_ln <- function(x, y, col, lwd, ...) {
+  grid::linesGrob(x = rp_in(x), y = rp_in(y),
+                  gp = grid::gpar(col = col, lwd = lwd, ...))
+}
+
 rp_rule <- function(gl, y, col = RP_RULE, lwd = 0.6) {
-  grid::linesGrob(x = grid::unit(c(0, gl$W), "in"),
-                  y = grid::unit(c(gl$H - y, gl$H - y), "in"),
-                  gp = grid::gpar(col = col, lwd = lwd))
+  rp_ln(c(0, gl$W), rep(gl$H - y, 2L), col, lwd)
+}
+
+rp_seg <- function(x1, y1, x2, y2, col, lwd, lty) {
+  grid::segmentsGrob(rp_in(x1), rp_in(y1), rp_in(x2), rp_in(y2),
+                     gp = grid::gpar(col = col, lwd = lwd, lty = lty))
+}
+
+rp_circle <- function(x, y, r, fill, col, lwd) {
+  grid::circleGrob(x = rp_in(x), y = rp_in(y), r = rp_in(r),
+                   gp = grid::gpar(fill = fill, col = col, lwd = lwd))
+}
+
+rp_sq <- function(x, y, side, fill, just = "centre") {
+  grid::rectGrob(x = rp_in(x), y = rp_in(y), width = rp_in(side),
+                 height = rp_in(side), just = just,
+                 gp = grid::gpar(fill = fill, col = NA))
 }
 
 rp_rect <- function(x0, w, ytop, h, fill, gl) {
   if (is.na(x0) || is.na(w)) return(NULL)
-  grid::rectGrob(x = grid::unit(x0, "in"), y = grid::unit(gl$H - ytop, "in"),
-                 width = grid::unit(max(w, gl$hair), "in"),
-                 height = grid::unit(h, "in"),
+  grid::rectGrob(x = rp_in(x0), y = rp_in(gl$H - ytop),
+                 width = rp_in(max(w, gl$hair)), height = rp_in(h),
                  just = c("left", "top"),
                  gp = grid::gpar(fill = fill, col = NA))
 }
@@ -167,9 +172,18 @@ rp_lane_x <- function(pct, x, w) x + pct / 100 * w
 # Top of a lane of height `h` centred in the row.
 rp_lane_y <- function(ytop, gl, h = gl$lane) ytop + (gl$row_h - h) / 2
 
+# A mark with a positive size (a zero draws no fill: rp_rect()'s hairline floor
+# would read as a little).
+rp_pos <- function(v) !is.na(v) && v > 0
+
+# A rect from `l`% over `wd`% of the lane at x / w.
+rp_lane_rect <- function(l, wd, x, w, y, h, fill, gl) {
+  rp_rect(rp_lane_x(l, x, w), wd / 100 * w, y, h, fill, gl)
+}
+
 # The hairline behind a bare box or point range.
 rp_bare <- function(x, w, mid, gl) {
-  list(rp_rect(x, w, mid - gl$hair / 2, gl$hair, RP_RULE, gl))
+  rp_rect(x, w, mid - gl$hair / 2, gl$hair, RP_RULE, gl)
 }
 
 # --- the marks -----------------------------------------------------------
@@ -179,53 +193,49 @@ rp_bare <- function(x, w, mid, gl) {
 rp_bar <- function(c, i, x, w, ytop, gl) {
   h <- gl$lane
   y <- rp_lane_y(ytop, gl)
-  fill <- c$fill[[min(i, length(c$fill))]] %||% RP_FILL
-  if (!length(c$fill)) fill <- RP_FILL
+  fill <- (if (length(c$fill)) c$fill[[min(i, length(c$fill))]]) %||% RP_FILL
   if (isTRUE(c$sub[[min(i, length(c$sub))]])) fill <- rp_sub(fill)
+  list(rp_rect(x, w, y, h, RP_TRACK, gl),
+       if (rp_pos(c$w[[i]])) rp_rect(x, c$w[[i]] / 100 * w, y, h, fill, gl))
+}
+
+rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
+  if (identical(c$mode, "grouped")) {
+    return(rp_barsplit_grouped(c, i, x, w, ytop, gl, xr))
+  }
+  h <- gl$lane
+  y <- rp_lane_y(ytop, gl)
+  size <- gl$fs * RP_SEG_SIZE
   out <- list(rp_rect(x, w, y, h, RP_TRACK, gl))
-  # A zero draws no fill: rp_rect()'s hairline floor would read as a little.
-  if (!is.na(c$w[[i]]) && c$w[[i]] > 0) {
-    out <- c(out, list(rp_rect(x, c$w[[i]] / 100 * w, y, h, fill, gl)))
+  at <- x
+  for (j in seq_along(c$names)) {
+    seg <- c$seg[[j]][[i]]
+    if (!rp_pos(seg)) next
+    sw <- seg / 100 * w
+    # The segment's own number, inside it where it fits.
+    lb <- if (!is.null(c$slab)) c$slab[[j]][[i]] else ""
+    fits <- nzchar(lb) &&
+      rp_w(lb, size, gl$family, bold = TRUE) + gl$px * 4 <= sw
+    out <- c(out, list(
+      rp_rect(at, sw, y, h, c$fills[[j]], gl),
+      if (fits) {
+        rp_txt(gl, lb, at + sw / 2, y + h / 2, just = "centre", size = size,
+               col = c$sink[[j]], bold = TRUE)
+      }
+    ))
+    at <- at + sw
   }
   out
 }
 
-rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
-  k <- length(c$names)
-  if (!identical(c$mode, "grouped")) {
-    h <- gl$lane
-    y <- rp_lane_y(ytop, gl)
-    out <- list(rp_rect(x, w, y, h, RP_TRACK, gl))
-    at <- x
-    for (j in seq_len(k)) {
-      seg <- c$seg[[j]][[i]]
-      if (is.na(seg) || seg <= 0) next
-      sw <- seg / 100 * w
-      out <- c(out, list(rp_rect(at, sw, y, h, c$fills[[j]], gl)))
-      # The segment's own number, inside it where it fits.
-      lb <- if (!is.null(c$slab)) c$slab[[j]][[i]] else ""
-      if (nzchar(lb) &&
-            rp_w(lb, gl$fs * RP_SEG_SIZE, gl$family, bold = TRUE) +
-              gl$px * 4 <= sw) {
-        out <- c(out, list(rp_txt(gl, lb, at + sw / 2, y + h / 2,
-                                  just = "centre",
-                                  size = gl$fs * RP_SEG_SIZE,
-                                  col = c$sink[[j]], bold = TRUE)))
-      }
-      at <- at + sw
-    }
-    return(out)
-  }
-  # Grouped: one 10px row per level with a value in this row, stacked in the
-  # cell. With value labels each level also owns a text line beside its row.
-  has <- vapply(seq_len(k), function(j) {
-    v <- c$segv[[j]][[i]]
-    !is.na(v) && v > 0
-  }, logical(1L))
-  lv <- which(has)
+# One 10px row per level with a value in this row, stacked in the cell. With
+# value labels each level also owns a text line beside its row.
+rp_barsplit_grouped <- function(c, i, x, w, ytop, gl, xr) {
+  lv <- which(vapply(seq_along(c$names), function(j) rp_pos(c$segv[[j]][[i]]),
+                     logical(1L)))
   h <- gl$px * 10
   lab <- !is.null(c$ldisp) && !is.null(xr)
-  pitch <- rp_split_pitch(gl$px, gl$fs, lab)
+  pitch <- rp_pitch(gl$px, gl$fs, lab, gl$px * 14)
   tot <- max(length(lv) - 1L, 0L) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_along(lv), function(r) {
@@ -233,9 +243,7 @@ rp_barsplit <- function(c, i, x, w, ytop, gl, xr = NULL) {
     y <- y0 + (r - 1) * pitch
     seg <- c$seg[[j]][[i]]
     list(rp_rect(x, w, y, h, RP_TRACK, gl),
-         if (!is.na(seg) && seg > 0) {
-           rp_rect(x, seg / 100 * w, y, h, c$fills[[j]], gl)
-         },
+         if (rp_pos(seg)) rp_rect(x, seg / 100 * w, y, h, c$fills[[j]], gl),
          if (lab && nzchar(c$ldisp[[j]][[i]])) {
            rp_txt(gl, c$ldisp[[j]][[i]], xr, y + h / 2, just = "right",
                   size = gl$fs * RP_VAL_SIZE, col = RP_MUTED)
@@ -247,15 +255,13 @@ rp_bardiv <- function(c, i, x, w, ytop, gl) {
   h <- gl$lane
   y <- rp_lane_y(ytop, gl)
   mid <- x + w / 2
-  out <- list(rp_rect(x, w, y, h, RP_TRACK, gl))
-  if (!is.na(c$w[[i]]) && c$w[[i]] > 0) {
-    ww <- c$w[[i]] / 100 * w / 2
-    out <- c(out, list(
-      if (isTRUE(c$pos[[i]])) rp_rect(mid, ww, y, h, RP_FILL, gl)
-      else rp_rect(mid - ww, ww, y, h, RP_FILL, gl)
-    ))
-  }
-  c(out, list(rp_rect(mid - gl$hair / 2, gl$hair, y, h, RP_TICK, gl)))
+  ww <- c$w[[i]] / 100 * w / 2
+  list(rp_rect(x, w, y, h, RP_TRACK, gl),
+       if (rp_pos(c$w[[i]])) {
+         rp_rect(if (isTRUE(c$pos[[i]])) mid else mid - ww, ww, y, h, RP_FILL,
+                 gl)
+       },
+       rp_rect(mid - gl$hair / 2, gl$hair, y, h, RP_TICK, gl))
 }
 
 # Two whisker segments (never through the body), caps, a translucent IQR body
@@ -263,55 +269,50 @@ rp_bardiv <- function(c, i, x, w, ytop, gl) {
 rp_box <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   if (is.na(c$bc[[i]])) return(list())
   h <- gl$lane
+  px <- gl$px
   y <- rp_lane_y(ytop, gl)
   mid <- y + h / 2
-  out <- if (isTRUE(c$bare)) rp_bare(x, w, mid, gl) else list()
   wh <- function(l, ww) {
     if (is.na(ww)) return(NULL)
-    rp_rect(rp_lane_x(l, x, w), ww / 100 * w, mid - gl$hair / 2, gl$hair,
+    rp_lane_rect(l, ww, x, w, mid - gl$hair / 2, gl$hair, fill, gl)
+  }
+  cap <- function(l, ww) {
+    if (is.na(ww)) return(NULL)
+    rp_rect(rp_lane_x(l, x, w) - gl$hair / 2, gl$hair, y + px * 3, h - px * 6,
             fill, gl)
   }
-  cap <- function(l) {
-    if (is.na(l)) return(NULL)
-    rp_rect(rp_lane_x(l, x, w) - gl$hair / 2, gl$hair, y + gl$px * 3,
-            h - gl$px * 6, fill, gl)
-  }
-  c(out, list(
+  list(
+    if (isTRUE(c$bare)) rp_bare(x, w, mid, gl),
     wh(c$wl[[i]], c$w1[[i]]),
     wh(c$b2[[i]], c$w2[[i]]),
-    if (!is.na(c$w1[[i]])) cap(c$wl[[i]]),
-    if (!is.na(c$w2[[i]])) cap(c$wh[[i]]),
+    cap(c$wl[[i]], c$w1[[i]]),
+    cap(c$wh[[i]], c$w2[[i]]),
     if (!is.na(c$bw[[i]])) {
-      rp_rect(rp_lane_x(c$bl[[i]], x, w), c$bw[[i]] / 100 * w,
-              y + gl$px, h - 2 * gl$px, rp_sub(fill), gl)
+      rp_lane_rect(c$bl[[i]], c$bw[[i]], x, w, y + px, h - 2 * px,
+                   rp_sub(fill), gl)
     },
-    rp_rect(rp_lane_x(c$bc[[i]], x, w) - gl$px, gl$px * 2, y, h, fill, gl)
-  ))
+    rp_rect(rp_lane_x(c$bc[[i]], x, w) - px, px * 2, y, h, fill, gl)
+  )
 }
 
 # Fence band (a tint), inner range, ringed centre dot. The dot is a circle
 # sized off the row height, never off the lane width.
 rp_pr <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   if (is.na(c$c[[i]])) return(list())
+  px <- gl$px
   mid <- rp_lane_y(ytop, gl) + gl$lane / 2
-  out <- if (isTRUE(c$bare)) rp_bare(x, w, mid, gl) else list()
-  if (!is.null(c$ow) && !is.na(c$ow[[i]])) {
-    out <- c(out, list(rp_rect(
-      rp_lane_x(c$ol[[i]], x, w), c$ow[[i]] / 100 * w,
-      mid - gl$px * 4, gl$px * 8, rp_faint(fill), gl)))
-  }
-  if (!is.na(c$rw[[i]])) {
-    out <- c(out, list(rp_rect(
-      rp_lane_x(c$l[[i]], x, w), c$rw[[i]] / 100 * w,
-      mid - gl$px * 2, gl$px * 4, fill, gl)))
-  }
-  cx <- rp_lane_x(c$c[[i]], x, w)
-  c(out, list(
-    grid::circleGrob(x = grid::unit(cx, "in"),
-                     y = grid::unit(gl$H - mid, "in"),
-                     r = grid::unit(gl$px * 4, "in"),
-                     gp = grid::gpar(fill = fill, col = "#ffffff", lwd = 1.2))
-  ))
+  list(
+    if (isTRUE(c$bare)) rp_bare(x, w, mid, gl),
+    if (!is.null(c$ow) && !is.na(c$ow[[i]])) {
+      rp_lane_rect(c$ol[[i]], c$ow[[i]], x, w, mid - px * 4, px * 8,
+                   rp_faint(fill), gl)
+    },
+    if (!is.na(c$rw[[i]])) {
+      rp_lane_rect(c$l[[i]], c$rw[[i]], x, w, mid - px * 2, px * 4, fill, gl)
+    },
+    rp_circle(rp_lane_x(c$c[[i]], x, w), gl$H - mid, px * 4, fill, "#ffffff",
+              1.2)
+  )
 }
 
 # The dumbbell: band, reference line, link, a hollow diamond at `from` and a
@@ -322,54 +323,40 @@ rp_pair <- function(c, i, x, w, ytop, gl) {
   mid <- y + h / 2
   fill <- c$fill[[i]]
   if (is.na(fill)) fill <- RP_FILL
-  out <- list()
-  if (!is.na(c$bw[[i]])) {
-    out <- c(out, list(rp_rect(rp_lane_x(c$bl[[i]], x, w), c$bw[[i]] / 100 * w,
-                               y, h, "#eeede8", gl)))
-  }
-  if (!is.na(c$rf)) {
-    rx <- rp_lane_x(c$rf, x, w)
-    out <- c(out, list(grid::segmentsGrob(
-      grid::unit(rx, "in"), grid::unit(gl$H - ytop, "in"),
-      grid::unit(rx, "in"), grid::unit(gl$H - ytop - gl$row_h, "in"),
-      gp = grid::gpar(col = "#8d8b84", lwd = 0.8, lty = "dashed"))))
-  }
-  if (!is.na(c$w[[i]])) {
-    x1 <- rp_lane_x(c$l[[i]], x, w)
-    x2 <- x1 + c$w[[i]] / 100 * w
-    out <- c(out, list(grid::segmentsGrob(
-      grid::unit(x1, "in"), grid::unit(gl$H - mid, "in"),
-      grid::unit(x2, "in"), grid::unit(gl$H - mid, "in"),
-      gp = grid::gpar(col = fill, lwd = 1.6,
-                      lty = if (isTRUE(c$dash[[i]])) "dashed" else "solid"))))
-  }
+  lx <- function(p) rp_lane_x(p, x, w)
   # A thinned split lane (three or more levels) takes smaller marks.
   r <- min(gl$px * 4, h * 0.45)
-  if (!is.na(c$a[[i]])) {
-    ax <- rp_lane_x(c$a[[i]], x, w)
-    out <- c(out, list(grid::polygonGrob(
-      x = grid::unit(ax + c(0, r, 0, -r), "in"),
-      y = grid::unit(gl$H - mid + c(r, 0, -r, 0), "in"),
-      gp = grid::gpar(fill = "#ffffff", col = fill, lwd = 1.2))))
-  }
-  if (!is.na(c$b[[i]])) {
-    bx <- rp_lane_x(c$b[[i]], x, w)
-    out <- c(out, list(grid::circleGrob(
-      x = grid::unit(bx, "in"), y = grid::unit(gl$H - mid, "in"),
-      r = grid::unit(r, "in"),
-      gp = grid::gpar(fill = if (isTRUE(c$open[[i]])) "#ffffff" else fill,
-                      col = fill, lwd = 1.2))))
-  }
-  out
+  list(
+    if (!is.na(c$bw[[i]])) {
+      rp_lane_rect(c$bl[[i]], c$bw[[i]], x, w, y, h, "#eeede8", gl)
+    },
+    if (!is.na(c$rf)) {
+      rp_seg(lx(c$rf), gl$H - ytop, lx(c$rf), gl$H - ytop - gl$row_h,
+             "#8d8b84", 0.8, "dashed")
+    },
+    if (!is.na(c$w[[i]])) {
+      x1 <- lx(c$l[[i]])
+      rp_seg(x1, gl$H - mid, x1 + c$w[[i]] / 100 * w, gl$H - mid, fill, 1.6,
+             if (isTRUE(c$dash[[i]])) "dashed" else "solid")
+    },
+    if (!is.na(c$a[[i]])) {
+      grid::polygonGrob(
+        x = rp_in(lx(c$a[[i]]) + c(0, r, 0, -r)),
+        y = rp_in(gl$H - mid + c(r, 0, -r, 0)),
+        gp = grid::gpar(fill = "#ffffff", col = fill, lwd = 1.2))
+    },
+    if (!is.na(c$b[[i]])) {
+      rp_circle(lx(c$b[[i]]), gl$H - mid, r,
+                if (isTRUE(c$open[[i]])) "#ffffff" else fill, fill, 1.2)
+    }
+  )
 }
 
 # The swimlane. Segments are [left%, width%, fill index] on the column's
 # shared x domain; each is at least 2px wide so a one-day event stays visible.
 rp_interval <- function(c, i, x, w, ytop, gl) {
-  segs <- c$segs[[i]]
-  if (!length(segs)) return(list())
   y <- rp_lane_y(ytop, gl)
-  lapply(segs, function(sg) {
+  lapply(c$segs[[i]], function(sg) {
     rp_rect(rp_lane_x(sg[[1L]], x, w),
             max(sg[[2L]] / 100 * w, gl$px * 2), y, gl$lane,
             c$fills[[sg[[3L]]]], gl)
@@ -391,37 +378,28 @@ rp_sparkline <- function(c, i, x, w, ytop, gl, fill = RP_FILL) {
   y <- rp_lane_y(ytop, gl)
   X <- function(v) x + v / 100 * w
   Y <- function(v) gl$H - (y + v / 36 * h)
-  out <- list()
-  if (!is.na(c$rby)) {
-    out <- c(out, list(rp_rect(x, w, y + c$rby / 36 * h, c$rbh / 36 * h,
-                               rp_faint(fill), gl)))
-  }
   bd <- rp_sp_pts(c$bd[[i]])
-  if (!is.null(bd)) {
-    out <- c(out, list(grid::polygonGrob(
-      x = grid::unit(X(bd[, 1L]), "in"), y = grid::unit(Y(bd[, 2L]), "in"),
-      gp = grid::gpar(fill = RP_TRACK, col = NA))))
-  }
-  if (!is.na(c$rc)) {
-    out <- c(out, list(grid::linesGrob(
-      x = grid::unit(c(x, x + w), "in"), y = grid::unit(rep(Y(c$rc), 2L), "in"),
-      gp = grid::gpar(col = RP_TICK, lwd = 0.8, lty = "22"))))
-  }
   pl <- rp_sp_pts(c$pl[[i]])
-  if (!is.null(pl) && nrow(pl) > 1L) {
-    out <- c(out, list(grid::linesGrob(
-      x = grid::unit(X(pl[, 1L]), "in"), y = grid::unit(Y(pl[, 2L]), "in"),
-      gp = grid::gpar(col = fill, lwd = 1.3, lineend = "round",
-                      linejoin = "round"))))
-  }
-  if (!is.na(c$dx[[i]])) {
-    out <- c(out, list(grid::circleGrob(
-      x = grid::unit(X(c$dx[[i]]), "in"),
-      y = grid::unit(gl$H - (y + c$dy[[i]] / 100 * h), "in"),
-      r = grid::unit(gl$px * 3, "in"),
-      gp = grid::gpar(fill = fill, col = "#ffffff", lwd = 1))))
-  }
-  out
+  list(
+    if (!is.na(c$rby)) {
+      rp_rect(x, w, y + c$rby / 36 * h, c$rbh / 36 * h, rp_faint(fill), gl)
+    },
+    if (!is.null(bd)) {
+      grid::polygonGrob(x = rp_in(X(bd[, 1L])), y = rp_in(Y(bd[, 2L])),
+                        gp = grid::gpar(fill = RP_TRACK, col = NA))
+    },
+    if (!is.na(c$rc)) {
+      rp_ln(c(x, x + w), rep(Y(c$rc), 2L), RP_TICK, 0.8, lty = "22")
+    },
+    if (!is.null(pl) && nrow(pl) > 1L) {
+      rp_ln(X(pl[, 1L]), Y(pl[, 2L]), fill, 1.3, lineend = "round",
+            linejoin = "round")
+    },
+    if (!is.na(c$dx[[i]])) {
+      rp_circle(X(c$dx[[i]]), gl$H - (y + c$dy[[i]] / 100 * h), gl$px * 3,
+                fill, "#ffffff", 1)
+    }
+  )
 }
 
 # A colour-split cell stacks only the levels the row has, so a row of one
@@ -432,7 +410,7 @@ rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
   if (!k) return(list())
   lab <- !is.null(c$dw) && !is.null(xr)
   h <- gl$lane
-  pitch <- rp_multi_pitch(gl$px, gl$fs, lab)
+  pitch <- rp_pitch(gl$px, gl$fs, lab, gl$px * 12 + gl$px * 2)
   tot <- (k - 1) * pitch + h
   y0 <- ytop + (gl$row_h - tot) / 2
   unlist(lapply(seq_len(k), function(jj) {
@@ -446,13 +424,10 @@ rp_multi <- function(c, i, x, w, ytop, gl, xr = NULL) {
     } else {
       rp_pr(lv, i, x, w, yy, gl, lv$fill %||% RP_FILL)
     }
-    if (lab && !is.null(lv$disp) && nzchar(lv$disp[[i]])) {
-      marks <- c(marks, list(rp_txt(gl, lv$disp[[i]], xr, yy + gl$row_h / 2,
-                                    just = "right",
-                                    size = gl$fs * RP_VAL_SIZE,
-                                    col = RP_MUTED)))
-    }
-    marks
+    c(marks, if (lab && !is.null(lv$disp) && nzchar(lv$disp[[i]])) {
+      list(rp_txt(gl, lv$disp[[i]], xr, yy + gl$row_h / 2, just = "right",
+                  size = gl$fs * RP_VAL_SIZE, col = RP_MUTED))
+    })
   }), recursive = FALSE)
 }
 
@@ -468,16 +443,9 @@ rp_multi_drawn <- function(c, i) {
   }, seq_along(c$lv))
 }
 
-# Distance between two levels' lanes: the lane plus its gap, or a line of the
-# label type when each carries a number and that is larger.
-rp_multi_pitch <- function(px, fs, lab = TRUE) {
-  h <- px * 12 + px * 2
-  if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
-}
-
-# The same for a grouped split bar: the 10px row plus 4px.
-rp_split_pitch <- function(px, fs, lab = TRUE) {
-  h <- px * 14
+# Distance between two levels' lanes: the lane `h` plus its gap, or a line of
+# the label type when each carries a number and that is larger.
+rp_pitch <- function(px, fs, lab, h) {
   if (lab) max(h, fs * RP_VAL_SIZE / 72 * 1.25) else h
 }
 
@@ -485,27 +453,22 @@ rp_split_pitch <- function(px, fs, lab = TRUE) {
 # column has more levels than that holds.
 rp_row_heights <- function(m, row_h, px, fs) {
   out <- rep(row_h, m$n)
+  rows <- seq_len(m$n)
   for (c in m$cols) {
     if (identical(c$kind, "barsplit") && identical(c$mode, "grouped")) {
-      for (r in seq_len(m$n)) {
-        k <- sum(vapply(c$segv, function(x) {
-          !is.na(x[[r]]) && x[[r]] > 0
-        }, logical(1L)))
-        if (k < 2L) next
-        need <- (k - 1) * rp_split_pitch(px, fs, !is.null(c$ldisp)) +
-          px * 10 + px * 8
-        if (need > out[[r]]) out[[r]] <- need
-      }
+      k <- vapply(rows, function(r) {
+        sum(vapply(c$segv, function(x) rp_pos(x[[r]]), logical(1L)))
+      }, numeric(1L))
+      need <- (k - 1) * rp_pitch(px, fs, !is.null(c$ldisp), px * 14) +
+        px * 10 + px * 8
+    } else if (isTRUE(c$multi)) {
+      k <- vapply(rows, function(r) length(rp_multi_drawn(c, r)), numeric(1L))
+      need <- (k - 1) *
+        rp_pitch(px, fs, !is.null(c$dw), px * 12 + px * 2) + px * 12 + px * 8
+    } else {
       next
     }
-    if (!isTRUE(c$multi)) next
-    for (r in seq_len(m$n)) {
-      k <- length(rp_multi_drawn(c, r))
-      if (k < 2L) next
-      need <- (k - 1) * rp_multi_pitch(px, fs, !is.null(c$dw)) +
-        px * 12 + px * 8
-      if (need > out[[r]]) out[[r]] <- need
-    }
+    out <- ifelse(k >= 2L, pmax(out, need), out)
   }
   out
 }
@@ -542,13 +505,14 @@ rp_legend_spec <- function(prep) {
   tryCatch(summarize_legend_spec(prep), error = function(e) NULL)
 }
 
+rp_has <- function(s) !is.null(s) && nzchar(s)
+
 rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
                        subtitle = NULL, caption = NULL) {
 
   # One CSS px in inches, tied to the type size (13px type on a 12px lane).
   px <- (fs / 72) / 13
-  # A sparkline column claims 40px against 12 for the other marks, so the row
-  # grows when one is present.
+  # A sparkline column claims 40px against 12 for the other marks.
   has_sp <- any(vapply(m$cols, function(c) identical(c$kind, "sparkline"),
                        logical(1L)))
   row_h <- row_h %||% max(fs / 72 * 1.9, px * 22, if (has_sp) px * 44 else 0)
@@ -562,7 +526,6 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
   }
   span_off <- if (is.null(prep$facet_spans)) 0 else line_h
   axis_h <- fs / 72 * 1.1
-  has_leg <- length(rp_legend_spec(prep)$groups) > 0L
 
   # Tile titles stand on their side: the band grows by the longest one.
   tile <- lay$kind == "tile"
@@ -577,10 +540,10 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
     line_h = line_h, sub_line = sub_line,
     span_off = span_off, axis_h = axis_h, rot_h = rot_h,
     head_h = span_off + line_h + sub_line + axis_h + 0.06 + rot_h,
-    title_h = if (is.null(title) || !nzchar(title)) 0 else fs / 72 * 2.4,
-    sub_h = if (is.null(subtitle) || !nzchar(subtitle)) 0 else fs / 72 * 1.7,
-    cap_h = if (is.null(caption) || !nzchar(caption)) 0 else fs / 72 * 1.8,
-    leg_h = if (has_leg) fs / 72 * 1.9 else 0,
+    title_h = if (rp_has(title)) fs / 72 * 2.4 else 0,
+    sub_h = if (rp_has(subtitle)) fs / 72 * 1.7 else 0,
+    cap_h = if (rp_has(caption)) fs / 72 * 1.8 else 0,
+    leg_h = if (length(rp_legend_spec(prep)$groups) > 0L) fs / 72 * 1.9 else 0,
     fold_h = if (is.null(m$fold)) 0 else row_h
   )
   # Everything that is not rows: what a page spends before its first row.
@@ -592,7 +555,6 @@ rp_heights <- function(m, prep, lay, fs, row_h = NULL, title = NULL,
 # The colour legend, under the subtitle (on screen it lives in the toolbar).
 rp_legend <- function(prep, y, hh, gl) {
   leg <- rp_legend_spec(prep)
-  if (is.null(leg) || !length(leg$groups)) return(list())
   fs <- gl$fs
   px <- gl$px
   sw <- px * 9
@@ -606,11 +568,9 @@ rp_legend <- function(prep, y, hh, gl) {
       at <- at + rp_w(grp$title, fs * 0.8, gl$family) + px * 6
     }
     for (it in grp$items) {
-      g <- c(g, list(grid::rectGrob(
-        x = grid::unit(at, "in"), y = grid::unit(gl$H - ly, "in"),
-        width = grid::unit(sw, "in"), height = grid::unit(sw, "in"),
-        just = c("left", "centre"), gp = grid::gpar(fill = it$color, col = NA))),
-        list(rp_txt(gl, it$label, at + sw + px * 3, ly, size = fs * 0.8)))
+      g <- c(g, list(rp_sq(at, gl$H - ly, sw, it$color, c("left", "centre")),
+                     rp_txt(gl, it$label, at + sw + px * 3, ly,
+                            size = fs * 0.8)))
       at <- at + sw + px * 3 + rp_w(it$label, fs * 0.8, gl$family) + px * 10
     }
     at <- at + px * 8
@@ -618,26 +578,59 @@ rp_legend <- function(prep, y, hh, gl) {
   g
 }
 
+# Facet spanners: one label over its columns, with a rule.
+rp_spans <- function(spans, lay, hh, hy, gl) {
+  fs <- gl$fs
+  at <- spans$lead
+  g <- list()
+  for (grp in spans$groups) {
+    x0 <- lay$x[at + 2]
+    x1 <- lay$x[at + 1 + grp$n + 1]
+    # The level's N sits beside the level, muted; the pair is centred.
+    ny <- hy + hh$line_h * 0.5
+    nlab <- if (!is.null(grp$pop)) paste0("N = ", grp$pop)
+    lw <- rp_w(grp$label, fs * 0.95, gl$family, bold = TRUE)
+    gap <- if (is.null(nlab)) 0 else rp_ch(fs * 0.8, gl$family)
+    nw <- if (is.null(nlab)) 0 else rp_w(nlab, fs * 0.8, gl$family)
+    lx <- (x0 + x1) / 2 - (lw + gap + nw) / 2
+    ry <- gl$H - hy - hh$line_h * 0.92
+    g <- c(g, list(
+      rp_txt(gl, grp$label, lx, ny, bold = TRUE, size = fs * 0.95),
+      if (!is.null(nlab)) {
+        rp_txt(gl, nlab, lx + lw + gap, ny, size = fs * 0.8, col = RP_MUTED)
+      },
+      rp_ln(c(x0 + lay$pad, x1 - lay$pad), c(ry, ry), RP_TICK, 0.6)
+    ))
+    at <- at + grp$n
+  }
+  g
+}
+
 # The header band from `hy`: [spanner] / leaf label / second tier / axis strip.
 rp_header <- function(m, prep, lay, hh, hy, gl) {
   fs <- gl$fs
-  spans <- prep$facet_spans
   lab_y <- hy + hh$span_off
   sub_y <- lab_y + hh$line_h
   axis_y <- sub_y + hh$sub_line + 0.02
-  g <- list(rp_txt(gl, lay$stub_lab, lay$pad, lab_y, bold = TRUE,
-                   size = fs * 0.95, vjust = "top"))
-  if (hh$sub_line && nzchar(prep$group_label %||% "")) {
-    g <- c(g, list(rp_txt(gl, prep$group_label, lay$pad, sub_y, size = fs * 0.8,
-                          col = RP_MUTED, vjust = "top")))
+  lab <- function(s, x, just = "left") {
+    rp_txt(gl, s, x, lab_y, just = just, bold = TRUE, size = fs * 0.95,
+           vjust = "top")
   }
+  sub <- function(s, x, just = "left") {
+    rp_txt(gl, s, x, sub_y, just = just, size = fs * 0.8, col = RP_MUTED,
+           vjust = "top")
+  }
+  g <- list(lab(lay$stub_lab, lay$pad),
+            if (hh$sub_line && nzchar(prep$group_label %||% "")) {
+              sub(prep$group_label, lay$pad)
+            })
 
   for (i in seq_along(m$cols)) {
     x0 <- lay$x[i + 1]
     w <- lay$widths[i]
-    lane_w <- w - lay$slot[i] - 2 * lay$pad
-    just <- if (lay$is_glyph[i]) "left" else "right"
-    xx <- if (lay$is_glyph[i]) x0 + lay$pad else x0 + w - lay$pad
+    glyph <- lay$is_glyph[i]
+    just <- if (glyph) "left" else "right"
+    xx <- if (glyph) x0 + lay$pad else x0 + w - lay$pad
     if (identical(lay$kind[i], "tile")) {
       # On its side, reading bottom-up, its foot on the header rule.
       g <- c(g, list(rp_txt(gl, rp_tile_title(lay$hdr[i]), x0 + w / 2,
@@ -645,44 +638,16 @@ rp_header <- function(m, prep, lay, hh, hy, gl) {
                             rot = 90)))
       next
     }
-    g <- c(g, list(rp_txt(gl, lay$hdr[i], xx, lab_y, just = just, bold = TRUE,
-                          size = fs * 0.95, vjust = "top")))
-    if (hh$sub_line && nzchar(lay$sub[i])) {
-      g <- c(g, list(rp_txt(gl, lay$sub[i], xx, sub_y, just = just,
-                            size = fs * 0.8, col = RP_MUTED, vjust = "top")))
-    }
-    if (lay$is_glyph[i]) {
-      g <- c(g, rp_axis(prep$plan[[i]], prep, x0 + lay$pad, lane_w, axis_y, gl))
-    }
+    g <- c(g, list(
+      lab(lay$hdr[i], xx, just),
+      if (hh$sub_line && nzchar(lay$sub[i])) sub(lay$sub[i], xx, just)
+    ), if (glyph) {
+      rp_axis(prep$plan[[i]], prep, x0 + lay$pad,
+              w - lay$slot[i] - 2 * lay$pad, axis_y, gl)
+    })
   }
-
-  # Facet spanners: one label over its columns, with a rule.
-  if (!is.null(spans)) {
-    at <- spans$lead
-    for (grp in spans$groups) {
-      x0 <- lay$x[at + 2]
-      x1 <- lay$x[at + 1 + grp$n + 1]
-      # The level's N sits beside the level, muted; the pair is centred.
-      ny <- hy + hh$line_h * 0.5
-      nlab <- if (!is.null(grp$pop)) paste0("N = ", grp$pop)
-      lw <- rp_w(grp$label, fs * 0.95, gl$family, bold = TRUE)
-      gap <- if (is.null(nlab)) 0 else rp_ch(fs * 0.8, gl$family)
-      nw <- if (is.null(nlab)) 0 else rp_w(nlab, fs * 0.8, gl$family)
-      lx <- (x0 + x1) / 2 - (lw + gap + nw) / 2
-      ry <- gl$H - hy - hh$line_h * 0.92
-      g <- c(g, list(
-        rp_txt(gl, grp$label, lx, ny, bold = TRUE, size = fs * 0.95),
-        if (!is.null(nlab)) {
-          rp_txt(gl, nlab, lx + lw + gap, ny, size = fs * 0.8, col = RP_MUTED)
-        },
-        grid::linesGrob(x = grid::unit(c(x0 + lay$pad, x1 - lay$pad), "in"),
-                        y = grid::unit(c(ry, ry), "in"),
-                        gp = grid::gpar(col = RP_TICK, lwd = 0.6))
-      ))
-      at <- at + grp$n
-    }
-  }
-  g
+  if (is.null(prep$facet_spans)) return(g)
+  c(g, rp_spans(prep$facet_spans, lay, hh, hy, gl))
 }
 
 # The marks of one cell; `k` is the column kind.
@@ -721,16 +686,11 @@ rp_body_row <- function(m, lay, r, ytop, rh, gl) {
     g <- c(g, rp_cell_marks(c, k, r, lay$x[i + 1] + lay$pad,
                             w - lay$slot[i] - 2 * lay$pad, xr, ytop, gl))
     if (identical(k, "tile")) {
-      bg <- c$bg[[r]]
-      if (!is.na(bg)) {
-        side <- min(rh * 0.82, w - 2 * lay$pad)
+      if (!is.na(c$bg[[r]])) {
         cx <- lay$x[i + 1] + w / 2
         g <- c(g, list(
-          grid::rectGrob(x = grid::unit(cx, "in"),
-                         y = grid::unit(gl$H - ytop - rh / 2, "in"),
-                         width = grid::unit(side, "in"),
-                         height = grid::unit(side, "in"),
-                         gp = grid::gpar(fill = bg, col = NA)),
+          rp_sq(cx, gl$H - ytop - rh / 2, min(rh * 0.82, w - 2 * lay$pad),
+                c$bg[[r]]),
           rp_txt(gl, c$disp[[r]], cx, ytop + rh / 2, just = "centre",
                  size = fs * 0.85, col = c$fg[[r]])
         ))
@@ -762,42 +722,39 @@ summarize_paint_grob <- function(m, prep, width_in = 12.5, fs = 9,
   gl <- list(H = H, W = width_in, px = hh$px, lane = hh$px * 12, hair = hh$px,
              row_h = hh$row_h, fs = fs, family = family)
 
-  g <- list()
-  y <- 0
-  if (hh$title_h) {
-    g <- c(g, list(rp_txt(gl, title, 0, y + hh$title_h * 0.55, size = fs * 1.25,
-                          bold = TRUE)))
-    y <- y + hh$title_h
-  }
-  if (hh$sub_h) {
-    g <- c(g, list(rp_txt(gl, subtitle, 0, y + hh$sub_h * 0.45,
-                          size = fs * 0.95, col = RP_MUTED)))
-    y <- y + hh$sub_h
-  }
-  g <- c(g, rp_legend(prep, y, hh, gl))
-  y <- y + hh$leg_h
+  # Tops of the title, subtitle, legend, header and body bands.
+  ys <- cumsum(c(0, hh$title_h, hh$sub_h, hh$leg_h, hh$head_h))
+  ytops <- ys[[5]] + cumsum(c(0, hh$rows))[seq_len(m$n)]
+  y_end <- ys[[5]] + sum(hh$rows)
 
-  g <- c(g, rp_header(m, prep, lay, hh, y, gl))
-  y <- y + hh$head_h
-  g <- c(g, list(rp_rule(gl, y, col = "#8d8b84", lwd = 0.9)))
-
-  ytops <- y + cumsum(c(0, hh$rows))[seq_len(m$n)]
-  for (r in seq_len(m$n)) {
-    g <- c(g, rp_body_row(m, lay, r, ytops[[r]], hh$rows[[r]], gl))
-  }
-  y <- y + sum(hh$rows)
-
-  # `top_n` never truncates silently: the fold row says what fell below it.
-  if (!is.null(m$fold)) {
-    g <- c(g, list(rp_txt(gl, m$fold, lay$pad, y + hh$row_h / 2,
-                          size = fs * 0.9, col = RP_MUTED)),
-           list(rp_rule(gl, y + hh$row_h)))
-    y <- y + hh$row_h
-  }
-  if (hh$cap_h) {
-    g <- c(g, list(rp_txt(gl, caption, 0, y + hh$cap_h * 0.55,
-                          size = fs * 0.85, col = RP_MUTED)))
-  }
+  g <- c(
+    list(
+      if (hh$title_h) {
+        rp_txt(gl, title, 0, ys[[1]] + hh$title_h * 0.55, size = fs * 1.25,
+               bold = TRUE)
+      },
+      if (hh$sub_h) {
+        rp_txt(gl, subtitle, 0, ys[[2]] + hh$sub_h * 0.45, size = fs * 0.95,
+               col = RP_MUTED)
+      }
+    ),
+    rp_legend(prep, ys[[3]], hh, gl),
+    rp_header(m, prep, lay, hh, ys[[4]], gl),
+    list(rp_rule(gl, ys[[5]], col = "#8d8b84", lwd = 0.9)),
+    unlist(lapply(seq_len(m$n), function(r) {
+      rp_body_row(m, lay, r, ytops[[r]], hh$rows[[r]], gl)
+    }), recursive = FALSE),
+    # `top_n` never truncates silently: the fold row says what fell below it.
+    if (!is.null(m$fold)) {
+      list(rp_txt(gl, m$fold, lay$pad, y_end + hh$row_h / 2, size = fs * 0.9,
+                  col = RP_MUTED),
+           rp_rule(gl, y_end + hh$row_h))
+    },
+    if (hh$cap_h) {
+      list(rp_txt(gl, caption, 0, y_end + hh$fold_h + hh$cap_h * 0.55,
+                  size = fs * 0.85, col = RP_MUTED))
+    }
+  )
 
   list(
     grob = grid::gTree(
@@ -819,10 +776,9 @@ rp_slice_col <- function(c, idx, n) {
   out <- c
   for (k in seq_along(c)) {
     v <- c[[k]]
-    key <- nm[[k]]
-    if (key %in% c("seg", "segv", "ldisp", "slab")) {
+    if (nm[[k]] %in% c("seg", "segv", "ldisp", "slab")) {
       out[[k]] <- lapply(v, function(s) if (length(s) == n) s[idx] else s)
-    } else if (identical(key, "lv")) {
+    } else if (identical(nm[[k]], "lv")) {
       out[[k]] <- lapply(v, rp_slice_col, idx = idx, n = n)
     } else if (length(v) == n && (is.atomic(v) || is.list(v))) {
       out[[k]] <- v[idx]
@@ -842,11 +798,9 @@ rp_slice <- function(m, idx) {
 }
 
 # Where to cut. With uniform rows the count follows from `per_page`; with
-# `heights` a page takes rows while they fit `budget`. Two rules keep a group
-# together:
-#  * a page never ends on a parent row, and
-#  * a page that opens mid-group repeats the parent row, marked as carried
-#    over (`attr(, "carried")`).
+# `heights` a page takes rows while they fit `budget`. A page never ends on a
+# parent row, and a page that opens mid-group repeats the parent row, marked
+# as carried over (`attr(, "carried")`).
 rp_page_rows <- function(m, per_page, heights = NULL, budget = NULL) {
   n <- m$n
   if (per_page >= n) return(list(seq_len(n)))
@@ -911,18 +865,15 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
                                   title = NULL, subtitle = NULL,
                                   caption = NULL) {
 
+  paint <- function(mk, ttl, sub, cap) {
+    summarize_paint_grob(mk, prep, width_in, fs, family, row_h, ttl, sub, cap)
+  }
   per_page <- summarize_paint_per_page(m, prep, width_in, max_height, fs,
                                        family, row_h, title, subtitle, caption)
+  if (per_page >= m$n) return(list(paint(m, title, subtitle, caption)))
+
   lay <- rp_layout(m, prep, width_in, fs = fs, family = family)
   hh <- rp_heights(m, prep, lay, fs, row_h, title, subtitle, caption)
-
-  if (per_page >= m$n) {
-    p <- summarize_paint_grob(m, prep, width_in = width_in, fs = fs,
-                              family = family, row_h = row_h, title = title,
-                              subtitle = subtitle, caption = caption)
-    return(list(p))
-  }
-
   pages <- rp_page_rows(
     m, per_page,
     heights = if (all(hh$rows == hh$row_h)) NULL else hh$rows,
@@ -933,20 +884,13 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
     idx <- pages[[k]]
     mk <- rp_slice(m, as.integer(idx))
     if (k < n_pg) mk$fold <- NULL
-    ttl <- if (is.null(title) || !nzchar(title)) {
-      title
-    } else {
-      paste0(title, "  (", k, " of ", n_pg, ")")
-    }
+    ttl <- if (rp_has(title)) paste0(title, "  (", k, " of ", n_pg, ")") else title
     sub <- if (isTRUE(attr(idx, "carried")) && !is.null(subtitle)) {
       paste0(subtitle, " · continued")
     } else {
       subtitle
     }
-    summarize_paint_grob(mk, prep, width_in = width_in, fs = fs,
-                         family = family, row_h = row_h, title = ttl,
-                         subtitle = sub,
-                         caption = if (k == n_pg) caption else NULL)
+    paint(mk, ttl, sub, if (k == n_pg) caption)
   })
 }
 
