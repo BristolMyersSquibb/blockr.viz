@@ -32,11 +32,6 @@ summarize_legend_spec <- function(prep) {
   }))
 }
 
-#' @noRd
-summarize_nz <- function(x) {
-  !is.null(x) && length(x) == 1L && !is.na(x) && nzchar(x)
-}
-
 # A data-frame-level display attribute, or NULL when absent / not a string.
 #' @noRd
 summarize_attr <- function(data, nm) {

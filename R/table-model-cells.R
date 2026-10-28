@@ -41,7 +41,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     on_cell = st$on_cell,
     pick = !is.null(drill),
     # Columns a row click claims, outer to inner (R/summarize-drill.R).
-    path = c(summarize_chr1(prep$parent), summarize_chr1(prep$group)),
+    path = c(chr_state(prep$parent), chr_state(prep$group)),
     cols = cols,
     fold = summarize_fold_text(prep)
   )
@@ -165,11 +165,11 @@ cells_annotate <- function(cols, plan) {
 # A stored click is the row's path plus what a cell added; the cell part goes
 # to the client.
 cells_row_state <- function(prep, rows, active) {
-  path <- c(summarize_chr1(prep$parent), summarize_chr1(prep$group))
+  path <- c(chr_state(prep$parent), chr_state(prep$group))
   filters <- summarize_drill_filters(active$col, active$vals)
   on_path <- names(filters) %in% path
   on <- summarize_drill_on(
-    rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
+    rows, chr_state(prep$group), chr_state(prep$parent),
     filters[on_path]
   )
   on_cell <- if (any(on) && any(!on_path)) {
@@ -217,10 +217,10 @@ summarize_tip_meta <- function(p) {
   if (identical(p$kind, "num")) return(NULL)
   den <- p$val_denom
   out <- list(
-    head = summarize_chr1(p$label),
-    sub = summarize_chr1(p$sub_label),
-    meas = summarize_chr1(p$meas),
-    cvar = summarize_chr1(p$cvar),
+    head = chr_state(p$label),
+    sub = chr_state(p$sub_label),
+    meas = chr_state(p$meas),
+    cvar = chr_state(p$cvar),
     den = if (is.numeric(den) && length(den) == 1L && is.finite(den) &&
                 den > 0) den,
     words = p$words

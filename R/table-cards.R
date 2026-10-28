@@ -228,8 +228,8 @@ cards_row_hex <- function(rows, prep, data, scale_map) {
     tryCatch(dd_resolve_scales(scale_map, col, data[[col]])$color,
              error = function(e) NULL)
   }
-  inner <- pal_for(summarize_chr1(prep$group))
-  outer <- pal_for(summarize_chr1(prep$parent))
+  inner <- pal_for(chr_state(prep$group))
+  outer <- pal_for(chr_state(prep$parent))
   if (is.null(inner) && is.null(outer)) return(NULL)
   lab <- as.character(rows$.label)
   par <- if (is.null(rows$.is_parent)) {

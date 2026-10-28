@@ -8,7 +8,7 @@ cells_interval <- function(ctx, p) {
   bb <- cells_bounds(dom[[1L]], dom[[2L]])
   lv <- p$levels %||% prep$series
   tf <- as.character(p$tlabels %||% p$tfields %||% character())
-  cvar <- summarize_chr1(p$cvar)
+  cvar <- chr_state(p$cvar)
   out_segs <- cells_interval_segs(segs, bb)
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
   list(kind = "interval", segs = out_segs, tips = out_tips,

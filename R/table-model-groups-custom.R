@@ -85,7 +85,7 @@ lane_custom_setup <- function(s, data) {
   keep <- s[intersect(names(s), c("name", "facet", "scope", "fn"))]
   # `denom`: a column whose distinct values in the slice are the N, so a count
   # reads "54 (18%)".
-  denom <- summarize_chr1(s$id)
+  denom <- chr_state(s$id)
   if (!is.null(denom) && !denom %in% names(data)) {
     return(list(err = paste0(who, "the percent column \"", denom,
                              "\" is not in the data.")))
@@ -122,7 +122,7 @@ lane_custom_shape <- function(s, cols, who) {
       "; no mark reads that. Return value, from and to, mid, or text."
     )))
   }
-  mark <- summarize_chr1(s$show)
+  mark <- chr_state(s$show)
   if (is.null(mark)) mark <- fits[[1L]]
   if (!mark %in% fits) {
     return(list(err = paste0(

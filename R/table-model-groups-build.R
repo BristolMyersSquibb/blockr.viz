@@ -70,10 +70,10 @@ lane_copy_denom <- function(cp, s, ctx) {
   same_n <- ctx$all && is.null(s$.color) &&
     !(ctx$pct_total && !is.null(cp$level))
   if (identical(s$type, "simple") && !same_n &&
-        summarize_has_pct(summarize_chr1(s$func) %||% "count")) {
+        summarize_has_pct(chr_state(s$func) %||% "count")) {
     cp$den <- summarize_denom(if (ctx$pct_total) data else cp$slice,
-                              summarize_chr1(s$func) %||% "count",
-                              summarize_chr1(s$col))
+                              chr_state(s$func) %||% "count",
+                              chr_state(s$col))
   }
   # Every facet copy says its level's N: subjects in the slice, rows when the
   # board declares no subject.
@@ -127,7 +127,7 @@ lane_replace_failed <- function(st, s, sid1, n0, ctx) {
 lane_series_ref <- function(cp, s) {
   if (identical(s$type, "sparkline") &&
         !identical(s$summary %||% "none", "none")) {
-    ys <- as.numeric(cp$slice[[summarize_chr1(s$col)]])
+    ys <- as.numeric(cp$slice[[chr_state(s$col)]])
     ys <- ys[is.finite(ys)]
     cp$ref <- switch(s$summary,
       mean = list(center = mean(ys)),
@@ -166,14 +166,14 @@ lane_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) {
 
 # One aggregated value of `slice` per target row, into column `out`.
 lane_put_value <- function(target, slice, out, tkeys, s, f) {
-  agg <- summarize_aggregate(slice, tkeys, f, summarize_chr1(s$col),
-                             summarize_chr1(s$col))
+  agg <- summarize_aggregate(slice, tkeys, f, chr_state(s$col),
+                             chr_state(s$col))
   target[[out]] <- summarize_match_col(target, agg, tkeys, ".v")
   target
 }
 
 lane_fill_simple <- function(target, tkeys, slice, s, sid) {
-  f <- summarize_chr1(s$func) %||% "count"
+  f <- chr_state(s$func) %||% "count"
   target <- lane_put_value(target, slice, paste0(sid, "_v"), tkeys, s, f)
   # A tile's paint: index of the worst `fill` level among the group's rows.
   if (!is.null(s$.fill)) {
@@ -202,7 +202,7 @@ lane_fill_simple <- function(target, tkeys, slice, s, sid) {
 }
 
 lane_put_stats <- function(target, slice, prefix, tkeys, s, stats) {
-  agg <- lane_stat_agg(slice, tkeys, summarize_chr1(s$col), stats)
+  agg <- lane_stat_agg(slice, tkeys, chr_state(s$col), stats)
   for (nm in setdiff(names(agg), tkeys)) {
     target[[paste0(prefix, "_", sub("^\\.", "", nm))]] <-
       summarize_match_col(target, agg, tkeys, nm)
@@ -237,7 +237,7 @@ lane_fill_dist <- function(target, tkeys, slice, s, sid) {
 lane_fill_field <- function(target, tkeys, slice, s, sid) {
   g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
   agg <- as.data.frame(dplyr::summarise(
-    g, .t = lane_field_join(.data[[summarize_chr1(s$col)]]),
+    g, .t = lane_field_join(.data[[chr_state(s$col)]]),
     .groups = "drop"
   ))
   m <- summarize_match_field(target, agg, tkeys, ".t")
@@ -247,7 +247,7 @@ lane_fill_field <- function(target, tkeys, slice, s, sid) {
 }
 
 lane_fill_expr <- function(target, tkeys, slice, s, sid) {
-  ex <- tryCatch(rlang::parse_expr(summarize_chr1(s$expr)),
+  ex <- tryCatch(rlang::parse_expr(chr_state(s$expr)),
                  error = function(e) NULL)
   if (is.null(ex)) {
     target[[paste0(sid, "_t")]] <- rep("(parse error)", nrow(target))
@@ -310,8 +310,8 @@ lane_as_num <- function(v) {
 
 #' @noRd
 lane_series_split <- function(slice, target, tkeys, s) {
-  xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
-  ys <- as.numeric(slice[[summarize_chr1(s$col)]])
+  xs <- lane_as_num(slice[[chr_state(s$x)]])
+  ys <- as.numeric(slice[[chr_state(s$col)]])
   band <- as.character(c(s$ymin, s$ymax))
   band <- band[nzchar(band)]
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
@@ -332,16 +332,16 @@ lane_series_split <- function(slice, target, tkeys, s) {
 
 #' @noRd
 lane_spans_split <- function(slice, target, tkeys, s) {
-  xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
-  xe <- lane_as_num(slice[[summarize_chr1(s$xend)]])
-  color <- summarize_chr1(s$color)
+  xs <- lane_as_num(slice[[chr_state(s$x)]])
+  xe <- lane_as_num(slice[[chr_state(s$xend)]])
+  color <- chr_state(s$color)
   color <- if (!is.null(color) && color %in% names(slice)) color
   # Full-data level order (s$.levels), so a facet slice missing a level cannot
   # renumber the fills.
   lv <- s$.levels
   # The label column headlines the segment tooltip and keys the same-event
   # hover highlight; fields add columns.
-  lbcol <- summarize_chr1(s$label)
+  lbcol <- chr_state(s$label)
   lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
   fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
   ok <- if (is.null(xs) || is.null(xe)) {

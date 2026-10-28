@@ -71,22 +71,22 @@ lane_norm_row <- function(s, i, data = NULL) {
   s <- s[!vapply(s, function(v) {
     is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v))
   }, logical(1L))]
-  type <- summarize_chr1(s$type) %||% "simple"
+  type <- chr_state(s$type) %||% "simple"
   if (!type %in% names(LANE_ROW_TYPES)) {
     return(list(err = paste0("Summary ", i, ": unknown type \"", type,
                              "\"")))
   }
   shows <- LANE_ROW_TYPES[[type]]
-  show_given <- summarize_chr1(s$show)
+  show_given <- chr_state(s$show)
   show <- show_given %||% shows[[1L]]
   if (!show %in% shows) show <- shows[[1L]]
-  scope <- summarize_chr1(s$scope) %||% "cell"
+  scope <- chr_state(s$scope) %||% "cell"
   if (!scope %in% c("cell", "pooled")) scope <- "cell"
   # Fields are group facts: always pooled (they stand outside faceting).
   if (identical(type, "field")) scope <- "pooled"
 
   for (nm in lane_required_fields(type, s)) {
-    if (is.null(summarize_chr1(s[[nm]]))) {
+    if (is.null(chr_state(s[[nm]]))) {
       return(list(err = paste0("Summary ", i, " (", type, "): `", nm,
                                "` is required")))
     }
@@ -94,13 +94,13 @@ lane_norm_row <- function(s, i, data = NULL) {
 
   s$type <- type
   s$show <- show
-  pos <- summarize_chr1(s[["position"]])
+  pos <- chr_state(s[["position"]])
   s$position <- if (!is.null(pos) && pos %in% names(LANE_POSITIONS)) pos
   # The tile: a square cell painted by the worst level of `fill`, else by the
   # value. Facet levels order by row count by default (commonest terms first).
   if (identical(type, "simple") && identical(show, "tile")) {
-    s$fill <- summarize_chr1(s[["fill"]])
-    fo <- summarize_chr1(s[["facet_order"]]) %||% "count"
+    s$fill <- chr_state(s[["fill"]])
+    fo <- chr_state(s[["facet_order"]]) %||% "count"
     s$facet_order <- if (fo %in% c("count", "level")) fo else "count"
   }
   # A custom row's mark is read off its function unless one is named.
@@ -109,23 +109,23 @@ lane_norm_row <- function(s, i, data = NULL) {
   # Colour and facet are the summary's OWN optional mappings. `scope` survives
   # only to seed `facet` for boards saved under the table-level pair
   # (lane_migrate_globals()).
-  s$color <- summarize_chr1(s$color)
+  s$color <- chr_state(s$color)
   # Fields are group facts: outside faceting.
-  s$facet <- if (identical(type, "field")) NULL else summarize_chr1(s$facet)
+  s$facet <- if (identical(type, "field")) NULL else chr_state(s$facet)
   if (identical(type, "dist") && !identical(show, "text")) {
     s <- lane_norm_dist(s, show_given)
   }
   if (identical(type, "sparkline")) s <- lane_norm_sparkline(s)
   if (identical(type, "spans")) s <- lane_norm_spans(s)
   if (identical(type, "pair")) s <- lane_norm_pair(s)
-  s$name <- summarize_chr1(s$name) %||% lane_summary_auto_name(s, data)
+  s$name <- chr_state(s$name) %||% lane_summary_auto_name(s, data)
   list(s = s)
 }
 
 # The fields a row of this type cannot do without.
 lane_required_fields <- function(type, s) {
   switch(type,
-    simple = if (!identical(summarize_chr1(s$func) %||% "count", "count")) {
+    simple = if (!identical(chr_state(s$func) %||% "count", "count")) {
       "col"
     },
     dist = "col",
@@ -142,12 +142,12 @@ lane_required_fields <- function(type, s) {
 # for "pointrange", the absent outer range. An explicit `style` / `inner` /
 # `outer` wins.
 lane_norm_dist <- function(s, show_given) {
-  style <- summarize_chr1(s$style) %||%
+  style <- chr_state(s$style) %||%
     if (identical(show_given, "box")) "box" else "dot"
   if (!style %in% LANE_DIST_STYLES) style <- "dot"
-  inner <- summarize_chr1(s$summary) %||% "median_q1_q3"
+  inner <- chr_state(s$summary) %||% "median_q1_q3"
   if (!inner %in% c("none", LANE_STATS)) inner <- "median_q1_q3"
-  outer <- summarize_chr1(s$whiskers) %||%
+  outer <- chr_state(s$whiskers) %||%
     if (identical(show_given, "pointrange")) "none" else "tukey"
   if (!outer %in% c("none", LANE_WHISKERS)) outer <- "tukey"
   s$style <- style
@@ -159,7 +159,7 @@ lane_norm_dist <- function(s, show_given) {
 
 # The sparkline's reference `summary` (pooled lines or bands); "none" = off.
 lane_norm_sparkline <- function(s) {
-  ref <- summarize_chr1(s$summary) %||% "none"
+  ref <- chr_state(s$summary) %||% "none"
   if (!ref %in% c("none", "mean", "mean_sd", "median_q1_q3")) ref <- "none"
   s$summary <- ref
   s
@@ -169,7 +169,7 @@ lane_norm_sparkline <- function(s) {
 # `tooltip` adds columns, `size` opts into the tall exhibit form.
 lane_norm_spans <- function(s) {
   s$tooltip <- as.character(s$tooltip %||% character())
-  size <- summarize_chr1(s$size) %||% "md"
+  size <- chr_state(s$size) %||% "md"
   if (!size %in% c("md", "lg")) size <- "md"
   s$size <- size
   s$parent <- if (is.null(s$parent)) TRUE else isTRUE(s$parent)
@@ -180,9 +180,9 @@ lane_norm_spans <- function(s) {
 # number or column), one reference line (`x_lines`, a number) and a
 # `linetype` column whose non-first levels draw dashed.
 lane_norm_pair <- function(s) {
-  ff <- summarize_chr1(s$x_func) %||% "identity"
+  ff <- chr_state(s$x_func) %||% "identity"
   if (!ff %in% LANE_PAIR_FUNCS) ff <- "identity"
-  tf <- summarize_chr1(s$xend_func) %||% "max"
+  tf <- chr_state(s$xend_func) %||% "max"
   if (!tf %in% LANE_PAIR_FUNCS) tf <- "max"
   s$x_func <- ff
   s$xend_func <- tf
@@ -190,7 +190,7 @@ lane_norm_pair <- function(s) {
   s$ref_max <- lane_pair_bound(s$ref_max)
   ref <- suppressWarnings(as.numeric(unlist(s$x_lines) %||% NA_real_))[1L]
   s$x_lines <- if (is.finite(ref)) ref
-  s$linetype <- summarize_chr1(s$linetype)
+  s$linetype <- chr_state(s$linetype)
   s
 }
 
@@ -252,9 +252,9 @@ lane_migrate_globals <- function(summaries, color = NULL, facet = NULL) {
 #' the median. A centre is never absent.
 #' @noRd
 lane_dist_centre_stat <- function(s) {
-  inner <- summarize_chr1(s$summary)
+  inner <- chr_state(s$summary)
   if (!is.null(inner) && !identical(inner, "none")) return(inner)
-  outer <- summarize_chr1(s$whiskers)
+  outer <- chr_state(s$whiskers)
   if (!is.null(outer) && !identical(outer, "none") &&
         outer %in% LANE_STATS) {
     return(outer)
@@ -267,7 +267,7 @@ lane_dist_centre_stat <- function(s) {
 #' @noRd
 lane_summary_auto_name <- function(s, data = NULL) {
   nm <- function(col) {
-    col <- summarize_chr1(col)
+    col <- chr_state(col)
     if (is.null(col) || !is.data.frame(data) || !col %in% names(data)) {
       return(col)
     }
@@ -275,7 +275,7 @@ lane_summary_auto_name <- function(s, data = NULL) {
   }
   switch(s$type,
     simple = {
-      f <- summarize_chr1(s$func) %||% "count"
+      f <- chr_state(s$func) %||% "count"
       if (identical(f, "count")) {
         "Rows"
       } else if (identical(f, "identity")) {

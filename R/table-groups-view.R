@@ -71,7 +71,7 @@ table_groups_head <- function(m, pick) {
     p <- prep$plan[[i]]
     table_groups_compact(list(
       text = as.character(p$label %||% "")[[1L]],
-      sub = summarize_chr1(p$sub_label), col = i
+      sub = chr_state(p$sub_label), col = i
     ))
   }
   stub <- table_groups_compact(list(

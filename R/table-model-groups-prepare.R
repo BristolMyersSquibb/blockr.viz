@@ -28,7 +28,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   ctx <- list(
     data = data, keys = keys, parent = g$parent, all = g$all,
     # A count's percentage base: a facet copy's own rows, or the whole table.
-    pct_total = identical(summarize_chr1(pct_of), "total"),
+    pct_total = identical(chr_state(pct_of), "total"),
     qualify = fi$qualify, n_faceted = fi$n_faceted, scale_map = scale_map,
     subject = subject
   )
@@ -128,7 +128,7 @@ lane_prep_groups <- function(data, by) {
 
 # A mapped column name, or NULL when it is unset or not in the data.
 lane_present <- function(col, data) {
-  col <- summarize_chr1(col)
+  col <- chr_state(col)
   if (is.null(col) || !col %in% names(data)) NULL else col
 }
 
@@ -259,7 +259,7 @@ lane_map_levels <- function(s, data) {
     s$.dlevels <- summarize_levels(data[[s$linetype]])
   }
   if (s$type %in% c("sparkline", "spans")) {
-    s$.date <- inherits(data[[summarize_chr1(s$x)]], "Date")
+    s$.date <- inherits(data[[chr_state(s$x)]], "Date")
   }
   s
 }
@@ -500,9 +500,5 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
 #' (an absent facet cell draws nothing).
 #' @noRd
 summarize_match_col <- function(target, src, keys, col) {
-  tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),
-                         list(sep = "\r")))
-  sk <- do.call(paste, c(lapply(keys, function(k) as.character(src[[k]])),
-                         list(sep = "\r")))
-  as.numeric(src[[col]][match(tk, sk)])
+  as.numeric(summarize_match_field(target, src, keys, col))
 }

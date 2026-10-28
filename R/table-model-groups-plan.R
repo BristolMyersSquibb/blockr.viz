@@ -51,10 +51,10 @@ lane_plan_base <- function(s, cp, sid, label, sub, den) {
                meas = s$name,
                # a zero count is an empty column (summarize_drop_empty_facets)
                zero_empty = identical(s$type, "simple") &&
-                 summarize_has_pct(summarize_chr1(s$func) %||% "count"),
+                 summarize_has_pct(chr_state(s$func) %||% "count"),
                # Values in the data's unit, not a count: `unit` heads it.
                unit_ok = identical(s$type, "simple") &&
-                 !summarize_has_pct(summarize_chr1(s$func) %||% "count"))
+                 !summarize_has_pct(chr_state(s$func) %||% "count"))
   # A count with an N: the header's second line says N and a bar's length is
   # the percentage, so arms of different size share a scale.
   if (!is.null(den)) {
@@ -96,7 +96,7 @@ lane_summary_plan <- function(s, cp, data, scale_map = NULL) {
     lane_plan_pair(s, sid, base, sub, data, scale_map)
   } else if (identical(s$type, "sparkline")) {
     c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
-                 pts = paste0(sid, "_pts"), x = summarize_chr1(s$x),
+                 pts = paste0(sid, "_pts"), x = chr_state(s$x),
                  dom_date = isTRUE(s$.date), ref = cp$ref,
                  show_val = TRUE))
   } else {
@@ -143,7 +143,7 @@ lane_plan_barsplit <- function(s, sid, base, den, data, scale_map) {
                ccol = s$.color,
                mode = local({
                  additive <- is.null(s$.custom) && summarize_additive(
-                   summarize_chr1(s$func) %||% "count"
+                   chr_state(s$func) %||% "count"
                  )
                  # Parts of a mean do not add up: side by side.
                  if (!additive) {
@@ -178,7 +178,7 @@ lane_plan_tile <- function(s, sid, base, data, scale_map) {
 }
 
 lane_plan_dist <- function(s, sid, base, sub, data, scale_map) {
-  stat <- summarize_chr1(s$summary) %||% "median_q1_q3"
+  stat <- chr_state(s$summary) %||% "median_q1_q3"
   meta <- LANE_STAT_META[[stat]] %||% LANE_STAT_META$median_q1_q3
   if (identical(s$show, "text")) {
     return(c(base, list(kind = "num", key = paste0(sid, "_bc"),
@@ -188,8 +188,8 @@ lane_plan_dist <- function(s, sid, base, sub, data, scale_map) {
   }
   # ONE glyph, two styles. Leaf columns follow the pieces switched on, so an
   # absent range ships no columns.
-  inner <- summarize_chr1(s$summary) %||% "median_q1_q3"
-  outer <- summarize_chr1(s$whiskers) %||% "none"
+  inner <- chr_state(s$summary) %||% "median_q1_q3"
+  outer <- chr_state(s$whiskers) %||% "none"
   cmeta <- LANE_STAT_META[[lane_dist_centre_stat(s)]] %||%
     LANE_STAT_META$median_q1_q3
   cols <- c(bc = paste0(sid, "_bc"), n = paste0(sid, "_n"))
@@ -247,8 +247,8 @@ lane_plan_pair <- function(s, sid, base, sub, data, scale_map) {
                words = list(from = words[[1L]], to = words[[2L]]),
                fills = if (!is.null(lv)) {
                  unname(summarize_level_colors(
-                   scale_map, summarize_chr1(s$color), lv,
-                   data[[summarize_chr1(s$color)]]
+                   scale_map, chr_state(s$color), lv,
+                   data[[chr_state(s$color)]]
                  )[lv])
                },
                show_val = TRUE),
@@ -266,8 +266,8 @@ lane_plan_pair <- function(s, sid, base, sub, data, scale_map) {
 
 lane_plan_spans <- function(s, sid, base, data, scale_map) {
   lv <- s$.levels
-  x <- summarize_chr1(s$x)
-  xend <- summarize_chr1(s$xend)
+  x <- chr_state(s$x)
+  xend <- chr_state(s$xend)
   c(base, list(kind = "interval", key = paste0(sid, "_start"),
                segs = paste0(sid, "_segs"), x = x,
                xend = xend, levels = lv,
@@ -277,18 +277,18 @@ lane_plan_spans <- function(s, sid, base, data, scale_map) {
                                    names(data)),
                # Tooltip names for the colour and extra fields: labels, else
                # names.
-               cvar = summarize_col_name(data, summarize_chr1(s$color)),
+               cvar = summarize_col_name(data, chr_state(s$color)),
                tlabels = vapply(
                  intersect(as.character(s$tooltip %||% character()), names(data)),
                  function(f) summarize_col_name(data, f), character(1L),
                  USE.NAMES = FALSE
                ),
                section = identical(s$parent, FALSE),
-               size = summarize_chr1(s$size) %||% "md",
+               size = chr_state(s$size) %||% "md",
                fills = if (!is.null(lv)) {
                  unname(summarize_level_colors(
-                   scale_map, summarize_chr1(s$color), lv,
-                   data[[summarize_chr1(s$color)]]
+                   scale_map, chr_state(s$color), lv,
+                   data[[chr_state(s$color)]]
                  )[lv])
                } else {
                  dd_palette(1L)
@@ -300,12 +300,12 @@ lane_plan_spans <- function(s, sid, base, data, scale_map) {
 #' @noRd
 lane_dist_sub_label <- function(s, meta, wmeta) {
   parts <- c(
-    if (identical(summarize_chr1(s$summary) %||% "none", "none")) {
+    if (identical(chr_state(s$summary) %||% "none", "none")) {
       LANE_STAT_META[[lane_dist_centre_stat(s)]]$center
     } else {
       meta$label
     },
-    if (!identical(summarize_chr1(s$whiskers) %||% "none", "none")) wmeta$range
+    if (!identical(chr_state(s$whiskers) %||% "none", "none")) wmeta$range
   )
   paste(parts, collapse = " \u00b7 ")
 }
@@ -335,7 +335,7 @@ lane_facet_layout <- function(plan, facet_levels, facet_layout, data,
                               shared_facet, subject) {
   facet_spans <- NULL
   has_cell <- any(vapply(plan, function(p) !is.null(p$flevel), logical(1L)))
-  if (identical(summarize_chr1(facet_layout), "by_level") &&
+  if (identical(chr_state(facet_layout), "by_level") &&
         length(facet_levels) && has_cell) {
     lead <- Filter(function(p) is.null(p$flevel), plan)
     groups <- lapply(facet_levels, function(lv) {

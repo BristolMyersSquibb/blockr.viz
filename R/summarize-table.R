@@ -134,7 +134,7 @@ summarize_n_rows <- function(data) {
 # the level, including the population join's rows without a group.
 #' @noRd
 summarize_pop_n <- function(data, subject = NULL) {
-  subject <- summarize_chr1(subject)
+  subject <- chr_state(subject)
   if (!is.null(subject) && subject %in% names(data)) {
     return(dplyr::n_distinct(data[[subject]]))
   }
@@ -227,12 +227,12 @@ summarize_prepare <- function(data, summaries = list(), by = NULL,
     summaries <- table_groups_seed()
   }
   split_cols <- unlist(lapply(summaries, function(s) {
-    if (is.list(s)) c(summarize_chr1(s[["color"]]), summarize_chr1(s[["facet"]]))
+    if (is.list(s)) c(chr_state(s[["color"]]), chr_state(s[["facet"]]))
   }))
 
   # Missing values of a grouping, colour or facet column: no group of their
   # own ("drop"; counted in N, not drawn) or a "(Missing)" level ("level").
-  if (identical(summarize_chr1(missing), "level")) {
+  if (identical(chr_state(missing), "level")) {
     data <- table_missing_levels(data, c(by, split_cols))
   }
 
@@ -248,7 +248,7 @@ summarize_prepare <- function(data, summaries = list(), by = NULL,
 
   prep <- lane_prepare_summaries(
     data, by, summaries,
-    facet_layout = summarize_chr1(facet_layout) %||% "by_summary",
+    facet_layout = chr_state(facet_layout) %||% "by_summary",
     sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
     scale_map = scale_map, subject = subject, pct_of = pct_of
   )
@@ -302,7 +302,7 @@ summarize_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
 # "label" is an alias of "alpha".
 #' @noRd
 summarize_sort_by <- function(sort_by) {
-  sb <- summarize_chr1(sort_by) %||% "value"
+  sb <- chr_state(sort_by) %||% "value"
   if (identical(sb, "label")) "alpha" else sb
 }
 
@@ -388,14 +388,6 @@ summarize_match_field <- function(target, src, keys, col) {
 summarize_col_name <- function(data, col) {
   if (is.null(col)) return(NULL)
   dt_col_label(data[[col]], col) %||% col
-}
-
-#' @noRd
-summarize_chr1 <- function(x) {
-  if (is.null(x)) return(NULL)
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
-  if (!length(x)) NULL else x[[1L]]
 }
 
 # The label column's sub-line: the group column's variable label, or the pair

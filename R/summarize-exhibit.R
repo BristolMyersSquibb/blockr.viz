@@ -105,12 +105,12 @@ summarize_title_args <- function(args) {
     by = if (length(by)) by[[length(by)]],
     group = if (length(by) == 2L) by[[1L]] else if (length(by)) by[[1L]],
     parent = if (length(by) == 2L) by[[1L]],
-    value = summarize_chr1(s1[["col"]]),
-    func = summarize_chr1(s1[["func"]]),
+    value = chr_state(s1[["col"]]),
+    func = chr_state(s1[["func"]]),
     id_var = args$id_var,
-    color = summarize_chr1(s1[["color"]]),
-    facet = summarize_chr1(s1[["facet"]]),
-    fill = summarize_chr1(s1[["fill"]]),
+    color = chr_state(s1[["color"]]),
+    facet = chr_state(s1[["facet"]]),
+    fill = chr_state(s1[["fill"]]),
     sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
   )
