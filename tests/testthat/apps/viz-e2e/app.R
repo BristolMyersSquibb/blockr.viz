@@ -120,6 +120,14 @@ serve(
         value       = "count",
         func        = "sum"
       ),
+      # A prepare script with one control: its band sits on the face.
+      chart_script = new_chart_block(
+        type     = "bar",
+        category = "region",
+        value    = "revenue",
+        func     = "sum",
+        script   = "n <- 4 #| number(min = 1, max = 6, label = 'Rows')\ndata[seq_len(n), ]"
+      ),
       # The table block's cards look: one row of cards per region, a click
       # on a row of cards drills on it.
       cards = new_table_block(
@@ -185,6 +193,7 @@ serve(
       new_link("data", "chart_facet", "data"),
       new_link("data", "chart_box_split", "data"),
       new_link("many", "chart_many", "data"),
+      new_link("data", "chart_script", "data"),
       new_link("data", "cards", "data"),
       new_link("data", "table_num", "data"),
       new_link("data", "table_restored", "data"),

@@ -1108,3 +1108,42 @@ test_that("a tall chart keeps its status line in view", {
   expect_gte(pos$bottom, -1)
   expect_match(chart_cap_text("chart_many"), "Axis labels thinned", fixed = TRUE)
 })
+
+# Dark mode: the prepare script's band and the notch over the open gear take
+# the theme's colours. The injected rule is the older beak rule blockr.stats
+# and blockr.io still ship (white), which loads after blockr.ui's on a board
+# that has those blocks.
+test_that("dark mode: the script band and the gear's notch follow the theme", {
+  skip_if_no_app()
+  sel <- chart_settle("chart_script")
+  js_run(
+    "document.documentElement.setAttribute('data-bs-theme', 'dark');
+     var s = document.createElement('style'); s.id = 'old-beak';
+     s.textContent = '.blockr-settings--beak.blockr-settings--open::before' +
+       '{background:#fff;border-left:1px solid #e5e7eb}';
+     document.head.appendChild(s);"
+  )
+  withr::defer(js_run(
+    "document.documentElement.setAttribute('data-bs-theme', 'light');
+     document.getElementById('old-beak').remove();"
+  ))
+  gear_open("chart_script")
+  col <- js_get(sprintf(
+    "(function(){
+       var probe = document.createElement('div');
+       probe.style.background = 'var(--blockr-color-bg-surface)';
+       document.body.appendChild(probe);
+       var surface = getComputedStyle(probe).backgroundColor; probe.remove();
+       var band = document.querySelector('%s .vz-script-band');
+       var tray = document.querySelector('%s @tray_open@');
+       return {surface: surface,
+               band: band ? getComputedStyle(band).backgroundColor : null,
+               tray: getComputedStyle(tray).backgroundColor,
+               beak: getComputedStyle(tray, '::before').backgroundColor};
+     })()", sel, sel
+  ))
+  expect_false(identical(col$surface, "rgb(255, 255, 255)"))
+  expect_identical(col$band, col$surface)
+  expect_identical(col$beak, col$tray)
+  gear_open("chart_script")
+})
