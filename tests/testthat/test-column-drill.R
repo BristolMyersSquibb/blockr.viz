@@ -39,20 +39,6 @@ test_that("annotated_column_keys drops malformed entries, keeps good ones", {
   expect_null(annotated_column_keys(data.frame(a = 1)))
 })
 
-test_that("values stay a JSON array, single or pooled", {
-  one <- jsonlite::fromJSON(
-    dd_col_keys_json(list(list(column = "ARM", values = "Placebo"))),
-    simplifyVector = FALSE
-  )
-  expect_equal(one[[1]]$values, list("Placebo"))
-
-  pooled <- jsonlite::fromJSON(
-    dd_col_keys_json(list(list(column = "ARM", values = c("A", "B")))),
-    simplifyVector = FALSE
-  )
-  expect_equal(pooled[[1]]$values, list("A", "B"))
-})
-
 test_that("dd_col_claims reshapes the column half without touching the data", {
   keys <- list(list(column = "ARM", values = "Placebo"),
                list(column = "SEX", values = "F"))

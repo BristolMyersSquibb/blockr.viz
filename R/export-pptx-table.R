@@ -5,7 +5,7 @@
 #' deck rendering (quarto pptx, docx). flextable emits real OpenXML tables in
 #' PowerPoint and Word output.
 #'
-#' Structure comes from the annotated-df contract (shared with `html_table()`
+#' Structure comes from the annotated-df contract (shared with the table view
 #' and [write_annotated_xlsx()]): `.label` is the row stub, `.group<k>_level`
 #' runs and `.variable_label` blocks become bold section-header rows merged
 #' across the table width, `.indent` / `.strong` / `.emph` style rows,
@@ -178,8 +178,8 @@ static_table <- function(data, title = NULL, subtitle = NULL, caption = NULL,
   has_spanner <- any(nzchar(top))
 
   # ---- interleave section-header rows -----------------------------------
-  # One bold merged row per section restart, where build_html_tbody() puts its
-  # colspan rows: for each data row, the outermost changed level and every
+  # One bold merged row per section restart, where the table view puts its
+  # section rows: for each data row, the outermost changed level and every
   # level below it emit a header.
   k <- length(section_cols)
   diff_from <- rep(NA_integer_, n_row)

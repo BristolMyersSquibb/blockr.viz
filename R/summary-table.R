@@ -1,114 +1,23 @@
-#' Summary Table -- Tidy, Long-Format Multi-Variable Summary
+#' Summary table in its internal long form
 #'
-#' Aggregate a flat data.frame into a **tidy, long** summary frame: raw
-#' numeric statistic columns plus a hidden per-row `.fmt` template that
-#' names how to combine them into a display cell. Structure and identity are
-#' encoded via well-known dotted columns (the `.group<k>` / `.group<k>_level`
-#' pairs, `.variable` / `.variable_level` / `.variable_label`, `.label`,
-#' `.indent`), and the by-group dimension lives in a single `.group` column.
-#' This long form is **internal**: `fmt_to_wide()` spreads it into the wide
-#' annotated df, the only public shape. Designed for the "list of variables
-#' by Y" pattern; the complementary "one measurement across two dimensions"
-#' pivot is produced upstream by composing `summarize` with
-#' `tidyr::pivot_wider`.
+#' One row per statistic or level and by-group: raw numeric columns (`n`,
+#' `pct`, `mean`, `sd`, `median`, `q1`, `q3`, `min`, `max`, `NA` where they do
+#' not apply) and a per-row `.fmt` template naming how to print them.
+#' `fmt_to_wide()` spreads it into the wide annotated df, the only public
+#' shape. Numeric variables give one row per selected stat (one un-indented
+#' row for a single stat), categoricals one row per level, logicals one row
+#' for the TRUE count.
 #'
-#' The output stays `dplyr`-able (every number is a plain numeric column)
-#' and re-renderable: a renderer turns it into the familiar wide display
-#' grid by formatting each row's `.fmt` template, then spreading `.group`
-#' to columns (see `fmt_assemble()`). The shaper emits numbers and templates
-#' and leaves formatting to the renderer.
+#' Dotted columns carry the structure: `.group<k>` / `.group<k>_level` (the
+#' `sections`), `.variable` / `.variable_level` (the source of a row; `NA`
+#' level on stat rows), `.variable_label` (one per block when there are
+#' several variables), `.label`, `.indent`, and `.group`, the by-group key
+#' (`"outer|inner"` for two `by` columns, `"Overall"` without `by`).
+#' `attr(out, "group_n")` holds the denominator per group key.
 #'
-#' Each `vars` entry contributes rows shaped by the variable's type and
-#' the chosen `stats` selection:
-#'
-#' - **numeric** -> one row per selected stat key (see `stats`). A single
-#'   key emits one un-indented row per variable (e.g. `"mean_sd"` ->
-#'   `.fmt = "{mean:1} ({sd:1})"`); several keys emit one indented row
-#'   each, in catalog order.
-#' - **categorical** -> one row per level, `.fmt = "{n:0} ({pct:1}%)"`.
-#' - **logical** -> one row per variable, `.fmt = "{n:0} ({pct:1}%)"` for
-#'   the TRUE count. The FALSE row is suppressed -- this matches pharma
-#'   flag-variable conventions (TEAE, SAE, etc.).
-#'
-#' Output columns:
-#'
-#' - `.group1/.group1_level, ..., .group<k>/.group<k>_level` -- row-grouping
-#'   pairs from user-provided `sections`: the source variable NAME (constant)
-#'   and its character-coerced value per row. Present iff
-#'   `length(sections) > 0`. The `_level` column carries a `label` attribute
-#'   pulled from the original column for renderer display.
-#' - `.variable` / `.variable_level` -- leaf source identity per row: the
-#'   summarised variable's name and, for level rows (categorical levels,
-#'   logical TRUE counts, hierarchy values), its character-coerced value.
-#'   Stat rows (numeric "Mean (SD)", ...) carry `NA` -- they make no
-#'   source-value claim. Also the pivot row identity: equal level labels
-#'   from different variables ("OTHER", "UNKNOWN", ...) stay apart.
-#' - `.variable_label` -- constant display label per variable block when
-#'   `length(vars) > 1` (the renderer synthesizes one collapsible header per
-#'   label run); absent for single-variable and all-logical (flag list)
-#'   tables, which render flat.
-#' - `.label` -- innermost row label. Stat name for numeric vars
-#'   ("N", "Mean", "SD", ...), level name for categoricals, variable
-#'   name for logicals.
-#' - `.indent` -- detail-row indentation level (see `indent_details`).
-#' - `.group` -- by-group value (one row per var/level x group).
-#'   Pipe-delimited (`"outer|inner"`) for length-2 `by`; the constant
-#'   `"Overall"` when `by` is empty; the `overall_label` value for the
-#'   appended overall column when `add_overall = TRUE`. Internal: consumed
-#'   by the `fmt_to_wide()` spread, never part of the wide output.
-#' - `.fmt` -- per-row display template (the `.fmt` convention). Internal,
-#'   like `.group`.
-#' - Raw numeric stat columns: `n, pct` (categorical/logical, and
-#'   numeric where `pct` is the share of non-missing rows), `mean,
-#'   sd, median, q1, q3, min, max` (numeric). `NA` where not applicable.
-#'
-#' The per-group denominators (for `"<group>\\nN = <n>"` column headers)
-#' ride along as a **named numeric vector** in `attr(out, "group_n")`
-#' (group key -> N). A renderer assembling the wide display reattaches
-#' these as column labels.
-#'
-#' @param data A flat data.frame.
-#' @param vars Character vector of variables to summarise. Each
-#'   becomes a section in the output.
-#' @param sections Optional character vector of outer section
-#'   columns from `data`. Used for nested row-side hierarchy (e.g.
-#'   `sections = "AESOC", vars = "AEDECOD"`).
-#' @param by Character vector of length 0-2. Values become the `.group`
-#'   dimension. Length-2 produces pipe-delimited nested group keys
-#'   consumable by `gt::tab_spanner_delim("|")` after the renderer
-#'   spreads `.group` to columns.
-#' @param stats Character vector of stat keys controlling which rows /
-#'   templates are emitted for **numeric** variables (the underlying
-#'   numbers are always all computed). Any combination of `"n"`,
-#'   `"n_pct"` (non-missing n and % of group rows), `"mean"`, `"sd"`,
-#'   `"mean_sd"`, `"median"`, `"median_q1_q3"`, `"q1_q3"`, `"min_max"`;
-#'   rows follow the order given. A single
-#'   key gives one row per variable, several give one row per stat. The
-#'   legacy presets `"compact"` (= `"mean_sd"`) and `"expanded"`
-#'   (= `c("n", "mean", "sd", "median", "q1_q3", "min_max")`) are still
-#'   accepted. Default `"mean_sd"`.
-#' @param add_overall Logical. If TRUE, append an extra `.group` whose
-#'   rows are computed on the unsplit data (ignoring `by`). Matches
-#'   `gtsummary::add_overall()`.
-#' @param overall_label Character. `.group` value for the overall rows
-#'   when `add_overall = TRUE`. Default `"Total"`.
-#' @param subject_var Optional subject-identifier column for
-#'   distinct-subject counts (for categorical `n_pct`). If NULL,
-#'   rows are counted instead.
-#' @param indent_details Logical, default `TRUE`. When `TRUE`, detail
-#'   rows (stat rows for expanded numerics, category-level rows for
-#'   categoricals) are tagged with `.indent = 1`. When `FALSE`, no
-#'   `.indent` column is emitted.
-#' @param nest_hierarchies Logical, default `FALSE`. Advanced option.
-#'   When `TRUE`, adjacent categorical entries in `vars` that form a
-#'   functional dependency in `data` are rendered as a row-side
-#'   drill-down. v1 supports 2-level hierarchies only.
-#'
-#' @return A tidy, long-format tibble: raw numeric statistic columns plus
-#'   dotted structure / identity columns (`.group<k>` / `.group<k>_level`,
-#'   `.variable` / `.variable_level` / `.variable_label`, `.label`,
-#'   `.indent`), a `.group` dimension column, and a per-row `.fmt`
-#'   template column that a renderer interpolates into display cells.
+#' Arguments as in [summary_table()]; `indent_details = FALSE` emits no
+#' `.indent`, `nest_hierarchies = TRUE` nests two adjacent categoricals that
+#' form a functional dependency.
 #' @noRd
 summary_table_long <- function(data,
                           vars = character(),
@@ -176,11 +85,7 @@ summary_table_long <- function(data,
     lapply(vars, function(v) v)
   }
 
-  # Compute per-run long frames. Each row carries its source identity as the
-  # `.variable` / `.variable_level` pair (the annotated-df v2 contract):
-  # distinct variables routinely share level labels ("OTHER", "UNKNOWN",
-  # "MISSING"), and `.variable` keeps their rows apart in the display pivot
-  # while also naming the column a drill filters on.
+  # Compute per-run long frames.
   per_run <- lapply(runs, function(run) {
     if (length(run) == 2L) {
       compute_hierarchy_run(
@@ -217,31 +122,18 @@ summary_table_long <- function(data,
   # When multiple independent variable blocks are present, tag every row of a
   # run with a constant `.variable_label` -- the renderer synthesizes one
   # collapsible header per label run (headers are rendering, never data rows;
-  # annotated-df v2). Detail rows keep their absolute indents.
-  # Hierarchy runs (length(run)==2) count as one block: their rows share the
-  # outer variable's label even though `.variable` alternates outer/inner.
-  # Flag lists (all-logical vars) render flat -- no `.variable_label`.
+  # annotated-df v2).
   all_logical <- all(vapply(vars, function(v) is.logical(data[[v]]),
                             logical(1)))
 
   # Compact shape: every variable resolves to exactly ONE row, which is what
   # compute_one_var() already aims at for a single statistic ("the old compact
-  # shape", indent 0). Heading each of those single rows with its own variable
-  # name doubles the table's height to say nothing -- with twenty variables it
-  # is forty rows carrying twenty numbers -- so keep the variable in the row's
-  # own stub and let the statistic be named once, in the subtitle.
-  #
-  # Restricted to numeric variables on purpose: a categorical that happens to
-  # have one level also yields one row, but there the label IS the level, and
-  # replacing it with the variable name would lose which level was counted.
+  # shape", indent 0).
   all_numeric <- all(vapply(vars, function(v) is.numeric(data[[v]]),
                             logical(1)))
   # Count DISPLAY rows per variable, and count them WITHIN a section: a frame
   # still holds one long row per by-group (the group dimension only becomes
-  # columns in the wide pivot further down) and one per section value. Neither
-  # multiplies the rows a variable contributes to its own block -- with
-  # sections = "species" each species still shows one row per variable, which
-  # is exactly the shape worth collapsing.
+  # columns in the wide pivot further down) and one per section value.
   display_rows <- function(df) {
     id <- intersect(c(".variable", ".variable_level", ".label"), names(df))
     nrow(unique(df[, id, drop = FALSE]))
@@ -262,9 +154,7 @@ summary_table_long <- function(data,
 
       df <- per_var[[i]]
       # Hierarchy frames (parent at 0, child at 1) need a full +1 so the
-      # nesting is preserved under the header.  Non-hierarchy frames
-      # (categorical at 1, compact numeric at 0) just need every row at
-      # indent >= 1 (one level below the header).
+      # nesting is preserved under the header.
       has_inner_nesting <- any(df$.indent == 0L) && any(df$.indent > 0L)
       if (has_inner_nesting) {
         df$.indent <- df$.indent + 1L
@@ -287,8 +177,7 @@ summary_table_long <- function(data,
 
   # Encode user `sections` columns as ARD-named pairs: `.group<i>` holds the
   # source variable NAME (constant), `.group<i>_level` its value on the row
-  # (character-coerced per the contract). The section display label rides as
-  # a `label` attribute on the `_level` column (chrome, renderer prefix).
+  # (character-coerced per the contract).
   if (length(sections) > 0L) {
     for (i in seq_along(sections)) {
       src <- sections[i]
@@ -335,10 +224,7 @@ summary_table_long <- function(data,
   attr(out, "group_n") <- group_n
 
   # The statistic is constant down a compact table, so it is named once here
-  # rather than repeated in every stub. This is the auto tier the table block
-  # already reads (`input_display_attrs()`): a subtitle the user types wins,
-  # and being an attribute on the frame it follows the table into gt, the
-  # Excel export and a report exhibit.
+  # rather than repeated in every stub.
   if (compact && length(stats) == 1L) {
     stat_label <- SUMMARY_STATS_CATALOG[[stats[[1L]]]]$label
     if (is.character(stat_label) && nzchar(stat_label)) {
@@ -413,7 +299,7 @@ summary_table_long <- function(data,
 #' @return A wide annotated data frame: dotted identity / structure columns
 #'   plus one formatted character column per by-group level, each carrying a
 #'   `label` attribute holding its `"<group>\nN = <n>"` header. Consumed by
-#'   [new_table_block()] / `html_table()` and any renderer that understands the
+#'   [new_table_block()], [html_exhibit()] and any renderer that understands the
 #'   annotated-data-frame convention.
 #' @seealso [as_annotated_df()]
 #' @examples
@@ -468,25 +354,13 @@ summary_table <- function(data,
   )
 
   # The frame the table was computed from, so a click on a display row can be
-  # resolved back to the RECORDS behind it: `new_table_block(drill =
-  # "source")` hands the clicked row to [drill_source()], which reads the
-  # row's `.variable` / `.variable_level` claim ("SEX == F") and applies it
-  # here. Without this attribute that drill errors at eval time, which is how
-  # the contract is written: a producer either stamps the frame or the click
-  # is not resolvable, never a silent fallback to display rows.
-  #
-  # Stamping the INPUT is correct for this producer and would not be for
-  # every one. A composer table applies a population filter and restricts to
-  # denominator members before summarising, so its input over-selects and it
-  # must stamp what it actually summarised. `summary_table()` summarises
-  # `data` as given, so the two frames are the same frame. With `missing =
-  # "level"` the stamped frame keeps its missing values, and drill_source()
-  # reads a "(Missing)" claim as those.
+  # resolved back to the RECORDS behind it: `new_table_block(drill = "source")`
+  # hands the clicked row to [drill_source()], which reads the row's
+  # `.variable` / `.variable_level` claim ("SEX == F") and applies it here.
   attr(out, "source_data") <- data
 
-  # Which arm each column is, so a click on a cell claims its row and its
-  # arm (annotated_column_keys()). The overall column is every row and
-  # claims nothing.
+  # Which arm each column is, so a click on a cell claims its row and its arm
+  # (annotated_column_keys()).
   by1 <- as.character(unlist(by))
   if (length(by1) == 1L && by1 %in% names(input)) {
     lv <- intersect(names(out), unique(as.character(input[[by1]])))
@@ -582,21 +456,8 @@ add_group_col <- function(stats_df, by) {
 # Internal: numeric stat catalog (`stats` vocabulary)
 # =============================================================================
 
-# Each entry maps a stat key to the row label and `.fmt` template it emits
-# for numeric variables. Catalog order is the order of the gear's option list;
-# the rows follow the order the stats are given in.
-#
-# **`composer` is the standard for clinical table numbers, and this catalog does
-# not exceed it.** composer is BMS's own CSR-output package and computes through
-# `cards`/`cardx`; its stat registry (`composer/R/stat-registry.R`) and row
-# labels are the vocabulary. So: `Q1`/`Q3` rather than tern's
-# "25% and 75%-ile", R's default `quantile()` type rather than tern's type 2,
-# `SD` at one decimal to match composer's `{mean:xx.x} ({sd:xx.x})`, and **no
-# confidence intervals** -- composer has none, and a statistic the standard does
-# not carry is one we do not offer. If in doubt, check composer.
-#
-# Rationale and the full convention:
-# `blockr.sandbox/dev/summary-statistics-conventions.md`.
+# Each entry maps a stat key to the row label and `.fmt` template it emits for
+# numeric variables.
 SUMMARY_STATS_CATALOG <- list(
   n            = list(label = "N",               fmt = "{n:0}"),
   n_pct        = list(label = "n (%)",           fmt = "{n:0} ({pct:1}%)"),
@@ -718,9 +579,8 @@ compute_categorical_var <- function(data, var, sections, by,
     return(out)
   }
 
-  # Count per level in one grouped operation (not one dplyr pipeline per
-  # level, which is O(levels) and dominates on high-cardinality vars).
-  # Exclude NA subjects to match n_distinct(na.rm = TRUE) semantics.
+  # Count per level in one grouped operation (not one dplyr pipeline per level,
+  # which is O(levels) and dominates on high-cardinality vars).
   data_nona <- data[!is.na(data[[var]]), , drop = FALSE]
   if (!is.null(subject_var)) {
     data_nona <- data_nona[!is.na(data_nona[[subject_var]]), , drop = FALSE]
@@ -952,15 +812,7 @@ bind_per_var_frames <- function(per_var, sections) {
 
   bound <- do.call(rbind, per_var)
 
-  # Section-major order. The frames arrive one per VARIABLE, each carrying
-  # every section value, so a plain rbind interleaves them: with sections =
-  # "species" and three variables the outer level reads Adelie, Chinstrap,
-  # Gentoo, Adelie, ... and the renderer -- which synthesizes headers from
-  # runs of equal values -- emits the same section header three times.
-  # `sections` is documented as the OUTER row hierarchy above the summarized
-  # variables, so it has to be the outermost sort key; the row index breaks
-  # ties, which keeps variable order within a section and parent/child order
-  # within a variable.
+  # Section-major order.
   if (length(sections) > 0L && nrow(bound) > 0L) {
     keys <- lapply(sections, function(s) {
       v <- as.character(bound[[s]])

@@ -7,7 +7,7 @@
 #' True when it has any row-side grouping / identity column (the ARD-named
 #' `.group<k>*` / `.variable*` pairs) OR a `.label` stub OR an `.indent` /
 #' `.strong` column (the positional fallback dialect) -- the signals
-#' [summary_table()] and coercing producers emit and `html_table()` renders.
+#' [summary_table()] and coercing producers emit and the table view draws.
 #' @noRd
 dt_is_structured <- function(data) {
   any(grepl("^\\.(group\\d+(_level|_label)?|variable(_level|_label)?|label|indent|strong)$",

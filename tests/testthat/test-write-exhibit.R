@@ -121,16 +121,14 @@ test_that("write_exhibit_html() opens every section, however tall the table", {
   # The auto rule this replaces would collapse this table.
   expect_false(html_exhibit_expanded(tall_df()))
 
-  write_exhibit_html(tall_df(), f)
-  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-
-  expect_match(html, "data-initial-expanded=\"1\"", fixed = TRUE)
+  page <- function(...) {
+    write_exhibit_html(tall_df(), f, ...)
+    static_payloads(readLines(f, warn = FALSE))[[1L]]
+  }
+  expect_null(page()$data$collapsed)
 
   # ... and the caller can still ask for the collapsed opening.
-  write_exhibit_html(tall_df(), f, default_expanded = FALSE)
-  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-
-  expect_match(html, "data-initial-expanded=\"0\"", fixed = TRUE)
+  expect_true(page(default_expanded = FALSE)$data$collapsed)
 })
 
 test_that("write_exhibit_html() honours collapsible = FALSE", {
@@ -144,36 +142,24 @@ test_that("write_exhibit_html() honours collapsible = FALSE", {
     check.names = FALSE
   )
 
-  write_exhibit_html(df, f, collapsible = FALSE)
-  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  write_exhibit_html(df, f, collapsible = FALSE, default_expanded = FALSE)
+  p <- static_payloads(readLines(f, warn = FALSE))[[1L]]
 
-  # Static section labels: no toggle button, no chevron, and the script is
-  # told to leave the rows alone.
-  expect_match(html, "blockr-section-btn-static", fixed = TRUE)
-  expect_false(grepl("<button class=\"blockr-section-btn\"", html, fixed = TRUE))
-  expect_match(html, "data-dt-collapsible=\"0\"", fixed = TRUE)
+  expect_false(p$config$collapsible)
   # Nothing can unfold a table with no chevrons, so it cannot start folded.
-  expect_match(html, "data-initial-expanded=\"1\"", fixed = TRUE)
+  expect_null(p$data$collapsed)
+  expect_true(length(p$data$sections) > 0L)
 })
 
 test_that("write_exhibit_html() honours sortable = FALSE", {
   f <- tempfile(fileext = ".html")
   on.exit(unlink(f), add = TRUE)
 
-  # The class name is in the inlined stylesheet either way; what must go is
-  # the header that carries it (the hook the inline script binds to) and its
-  # sort arrow.
   write_exhibit_html(demo_df(), f)
-  expect_match(paste(readLines(f, warn = FALSE), collapse = "\n"),
-               "<th class=\"blockr-col-header leaf blockr-sortable\"",
-               fixed = TRUE)
+  expect_true(static_payloads(readLines(f, warn = FALSE))[[1L]]$config$sortable)
 
   write_exhibit_html(demo_df(), f, sortable = FALSE)
-  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-
-  expect_false(grepl("<th class=\"blockr-col-header leaf blockr-sortable\"",
-                     html, fixed = TRUE))
-  expect_false(grepl("blockr-sort-icon\"", html, fixed = TRUE))
+  expect_false(static_payloads(readLines(f, warn = FALSE))[[1L]]$config$sortable)
 })
 
 # ---- pptx -----------------------------------------------------------------
