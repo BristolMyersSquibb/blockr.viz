@@ -343,3 +343,33 @@ test('table.css rotates the titles the compact look marks', () => {
   const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
   assert.match(dep, /"table\.css"/);
 });
+
+test('the gear offers the blocks a drill can be sent to', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  const targets = [{ value: 'b2', label: 'Listing' }, { value: 'b3', label: 'Chart' }];
+  mount(payload({ data: flatModel(2), derived: { ctrl_choices: targets } }), env);
+  assert.deepEqual(JSON.parse(JSON.stringify(host.choices('drill_target', {}))),
+                   [{ value: '', label: 'None' }].concat(targets));
+  assert.equal(host.choices('format', {}), null);
+});
+
+test('a prepare script draws its controls and its error under the header', () => {
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: () => ({ update() {}, dispose() {}, values: () => ({}), set() {} }) };
+  } });
+  const script = { inputs: [{ key: 'n', name: 'n', label: 'Rows', kind: 'number' }],
+                   values: { n: 10 }, error: 'boom' };
+  const t = mount(payload({ data: flatModel(2), derived: { script } }), env);
+  const band = t.$('.vz-table > .dd-mapping-band');
+  assert.ok(band);
+  assert.equal(band.style.display, '');
+  assert.equal(band.querySelector('[data-role="n"] .blockr-label').textContent, 'Rows');
+  assert.equal(band.querySelector('.dd-script-failed').textContent, 'Script failed: boom');
+  t.render({ data: flatModel(2), derived: {} });
+  assert.equal(band.style.display, 'none');
+});

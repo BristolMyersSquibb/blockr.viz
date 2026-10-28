@@ -11,3 +11,4 @@ gear/sections.js
 gear/tiles.js
 gear/controls.js
 gear/engine.js
+script-band.js

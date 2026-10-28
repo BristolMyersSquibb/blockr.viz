@@ -231,7 +231,13 @@ interface TableDerived {
   receipt?: string | null;
   /** Groups: one titled group of colours per colour column. */
   legend?: TableLegend | null;
-  downloads?: unknown;
+  downloads?: VizDownload[] | null;
+  /** The blocks a drill can be sent to, for the gear's Target filter. */
+  ctrl_choices?: VizChoice[] | null;
+  /** The prepare script's inputs, values and error (core/script-band.js). */
+  script?: VizScriptState | null;
+  /** The pixel ratio of the Image and PowerPoint picture. */
+  capture_ratio?: number | null;
 }
 
 /** What the Grid works out once per model (dom.js `structure()`). */
@@ -337,6 +343,7 @@ interface TableInfo {
 /** The hooks of the core gear engine the table uses (gear-api.md). */
 interface TableGearHost {
   visible?(key: string, values: Record<string, unknown>): boolean;
+  choices?(key: string, values: Record<string, unknown>): VizChoice[] | null;
   label?(key: string, values: Record<string, unknown>): string | null | undefined;
   custom?(key: string, el: HTMLElement, ctx: TableGearCtx): void;
 }
@@ -350,7 +357,7 @@ interface TableGearCtx {
 
 /** The mounted gear: the engine, and a way to open its tray. */
 interface TableGearHandle {
-  engine: { update(p: VizPayload): void; dispose(): void };
+  engine: VizGear;
   open(): void;
   update(p: VizPayload): void;
 }
@@ -368,6 +375,8 @@ interface TableFrame {
   readonly id: string;
   readonly el: HTMLElement;
   readonly head: HTMLElement;
+  /** The prepare script's band, under the header. */
+  readonly band: HTMLElement;
   readonly tools: HTMLElement;
   readonly box: HTMLElement;
   readonly foot: HTMLElement;

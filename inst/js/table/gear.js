@@ -202,8 +202,15 @@
     const G = /** @type {any} */ (V).gear;
     if (!G || typeof G.mount !== 'function') return null;
     const t = G.tray(frame.head, scope, 'Table settings');
+    /** What R resolved with the last payload: the drill targets. */
+    /** @type {TableDerived} */
+    let derived = {};
     /** @type {TableGearHost} */
     const host = {
+      // The blocks a click can be sent to, as the chart offers them.
+      choices: (key) => key === 'drill_target'
+        ? (/** @type {VizChoice[]} */ ([{ value: '', label: 'None' }])).concat(derived.ctrl_choices || [])
+        : null,
       visible: (key, v) => visible(key, v, info()),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
       // A layout's own editor for a key ("variables.summaries"), else the
@@ -216,7 +223,13 @@
     const engine = scope.own(G.mount(t.band, {
       block: 'table', id: frame.id, scope, typeKey: 'layout', title: 'Table settings', host
     }));
-    return { engine, open: () => t.set(true), update: (p) => engine.update(p) };
+    return {
+      engine, open: () => t.set(true),
+      update: (p) => {
+        derived = /** @type {TableDerived} */ (p.derived || {});
+        engine.update(p);
+      }
+    };
   }
 
   V.table.gear = { mount, visible, shadings };

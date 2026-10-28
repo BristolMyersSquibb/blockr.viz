@@ -34,6 +34,8 @@
       /** @type {VizScope | null} */
       this.viewScope = null;
       this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
+      this.script = this.gear ? V.scriptBand(this.frame.band, scope, this.gear.engine) : null;
+      if (!this.script) this.frame.band.style.display = 'none';
       const S = /** @type {any} */ (V).titles;
       if (this.gear && S && typeof S.slots === 'function') {
         const gear = this.gear;
@@ -52,6 +54,7 @@
       }
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
+      if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
       this.busyDone();
     }
 
