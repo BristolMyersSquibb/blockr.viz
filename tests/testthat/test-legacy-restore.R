@@ -385,9 +385,9 @@ test_that("an unknown name is an error in code, on both blocks (row 28)", {
                fixed = TRUE)
   expect_error(new_chart_block(colour = "a"), "unknown argument `colour`",
                fixed = TRUE)
-  expect_error(new_table_block(visible = list("table")),
-               "unknown argument `visible`", fixed = TRUE)
-  # blockr.core's own block arguments pass.
+  expect_error(new_table_block(visibl = list("table")),
+               "unknown argument `visibl`", fixed = TRUE)
+  # blockr.core's own block arguments and blockr.dock's `visible` pass.
   expect_identical(attr(new_table_block(block_name = "T"), "block_name"),
                    "T")
 })
