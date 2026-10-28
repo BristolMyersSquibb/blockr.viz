@@ -6,10 +6,16 @@
 // engine's.
 //
 // The file attaches to `window` (browser convention); alias it to globalThis
-// so it loads untouched outside a browser.
+// so it loads untouched outside a browser. The core namespace and the
+// chart's (common.js) load first, as on the page.
 'use strict';
 
+const path = require('node:path');
+
 globalThis.window = globalThis;
+const js = path.join(path.dirname(process.argv[2]), '..');
+require(path.join(js, 'core', 'namespace.js'));
+require(path.join(js, 'chart', 'common.js'));
 require(process.argv[2]);
 
 const chunks = [];
