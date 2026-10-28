@@ -21,17 +21,13 @@ An object of class \code{summarize_exhibit}.
 \description{
 The groups layout of the table block (\code{new_table_block(layout = "groups")})
 rebuilt outside Shiny, as an object a report, a deck or a download can
-render. The block's own result is only its input data; this puts the table
-itself into a document.
+render. The block's own result is only its input data.
 }
 \details{
-\code{\link[=html_exhibit]{html_exhibit()}} gives the same HTML table the app draws, and
-\code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} paints it and places it on as many slides as it needs.
-Both read one cell model, computed here.
-
-On a slide the exhibit is a picture, because PowerPoint's table cells hold
-text runs only and a distribution glyph cannot live in one. The text is
-therefore not selectable or editable on those slides. A plain display table
+\code{\link[=html_exhibit]{html_exhibit()}} gives the HTML table the app draws, and
+\code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} paints it onto as many slides as it needs. On a slide
+the exhibit is a picture, because a PowerPoint table cell cannot hold a
+distribution glyph; the text is not selectable there. A plain display table
 keeps \code{\link[=static_table]{static_table()}}.
 }
 \examples{

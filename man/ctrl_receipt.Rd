@@ -25,15 +25,11 @@ Builds the status card a sender block returns as its output, so a function
 block driving another block via \code{\link[=ctrl_send]{ctrl_send()}} shows a readable summary.
 Return it as the last expression of the \code{fn}.
 }
-\section{It never reads the target}{
-
-\code{ctrl_receipt()} is a pure function of its arguments. It reads neither the
-target block's state nor any reactive. A reactive read of the target would
-re-trigger the \code{\link[=ctrl_send]{ctrl_send()}} in the same function body and loop. The card
-says "Sent to Cohort" in the past tense because it reports what this block
-pushed, which stays true if another sender later replaces the claim.
+\details{
+\code{ctrl_receipt()} is a pure function of its arguments. It reads no reactive,
+since a read of the target would re-trigger the \code{\link[=ctrl_send]{ctrl_send()}} in the same
+function body and loop.
 }
-
 \examples{
 # Inside a sender function block's fn (always qualify: fns are deparsed):
 # function(data) {

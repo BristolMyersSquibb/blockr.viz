@@ -26,10 +26,9 @@ table_exhibit(
 \item{rowname, value, group, summaries, shadings, format, unit}{As in
 \code{\link[=new_table_block]{new_table_block()}}.}
 
-\item{title, subtitle, caption}{Table text, with the block's three tiers:
-\code{NULL} takes the input's \code{label} / \code{subtitle} / \code{caption} attribute, \code{""}
-shows none, any other string is a title template resolved against
-\code{data}.}
+\item{title, subtitle, caption}{Table text: \code{NULL} takes the input's
+\code{label} / \code{subtitle} / \code{caption} attribute, \code{""} shows none, any other
+string is a title template resolved against \code{data}.}
 
 \item{digits}{Old name of \code{format} (a number of decimals).}
 }
@@ -41,17 +40,16 @@ attributes carrying the resolved text.
 What \code{\link[=new_table_block]{new_table_block()}} puts into a rendered report or deck: the table as
 the block shows it, as an \link[=as_annotated_df]{annotated data frame} for
 \code{\link[=static_exhibit]{static_exhibit()}} to typeset. The rowname comes first, then the value
-columns (or the aggregate, with \code{group} / \code{summaries}); numbers are
-printed in the block's \code{format} exactly like the screen, and \code{unit} heads
-the numeric columns; cells
-shaded by a diverging or sequential rule carry their colours as \verb{.bg:} /
-\verb{.fg:} columns, which \code{\link[=static_table]{static_table()}} and the HTML table paint. Colour
-source columns are left out. In-cell bars are not drawn.
+columns (or the aggregate, with \code{group} / \code{summaries}). Numbers are printed
+in the block's \code{format} like the screen, and \code{unit} heads the numeric
+columns. Cells shaded by a diverging or sequential rule carry their colours
+as \verb{.bg:} / \verb{.fg:} columns, which \code{\link[=static_table]{static_table()}} and the HTML table
+paint. Colour source columns are left out and in-cell bars are not drawn.
 }
 \details{
 The block's \code{\link[=report_call]{report_call()}} emits
 \verb{blockr.viz::static_exhibit(blockr.viz::table_exhibit(<var>, ...))} with
-its own settings, so blockr.outline needs nothing table-specific.
+its own settings.
 }
 \examples{
 table_exhibit(

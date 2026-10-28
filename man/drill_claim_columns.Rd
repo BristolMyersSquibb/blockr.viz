@@ -25,33 +25,22 @@ claimed dimension. Empty when nothing is claimed.
 }
 \description{
 Turns the drilled subset of an annotated (ARD-shaped) data frame into the
-\code{columns} payload a value filter takes, ready for \code{\link[=ctrl_send]{ctrl_send()}}. This is the
-claim logic behind the drill senders.
+\code{columns} payload a value filter takes, ready for \code{\link[=ctrl_send]{ctrl_send()}}.
 }
-\section{Two claim modes}{
-
-\strong{Annotated (\code{columns = NULL}).} The data frame is read on its ARD identity
-columns: \code{.variable} is the source column name, \code{.variable_level} the source
-value on that row, and each \verb{.group<k>} / \verb{.group<k>_level} pair is an
-enclosing grouping dimension. Dimensions come back outermost first, with the
-\code{.variable} leaf last. A \code{.filter} column (a row defined by a predicate, see
-\code{\link[=drill_source]{drill_source()}}) counts as a leaf for the purpose of reading its enclosing
-groups.
-
-\strong{Source columns (\code{columns} given).} Chart and tile drills carry no ARD
-identity, so the caller names the candidate columns, e.g. \code{columns = "SEX"},
-and each is claimed from the subset.
-}
-
-\section{What counts as a claim}{
+\details{
+With \code{columns = NULL} the data frame is read on its ARD identity columns:
+\code{.variable} is the source column name, \code{.variable_level} the source value on
+that row, and each \verb{.group<k>} / \verb{.group<k>_level} pair is an enclosing
+grouping dimension. Dimensions come back outermost first, with the
+\code{.variable} leaf last. A \code{.filter} column (see \code{\link[=drill_source]{drill_source()}}) counts as a
+leaf for reading its enclosing groups. Chart and tile drills carry no ARD
+identity, so the caller names the candidate \code{columns} and each is claimed
+from the subset.
 
 A dimension becomes a filter condition only when the subset resolves it to
-exactly one value. Clicking one bar leaves \code{SEX} single-valued, which is a
-claim. An undrilled chart passes all its rows through, \code{SEX} holds both \code{F}
-and \code{M}, and nothing is claimed: the caller's cue to \code{\link[=ctrl_clear]{ctrl_clear()}}. A brush
-across several bars is not a claim either.
+exactly one value. An undrilled chart passes all its rows through and
+nothing is claimed, which is the caller's cue to \code{\link[=ctrl_clear]{ctrl_clear()}}.
 }
-
 \examples{
 # Annotated mode: a drilled summary table.
 drilled <- data.frame(

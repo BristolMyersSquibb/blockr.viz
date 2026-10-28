@@ -13,7 +13,7 @@ chart_view <- function(kit, src) {
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
-  board_theme <- setup_drilldown_theme_sync(session)
+  board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
   ctrl_choices <- dd_ctrl_choices()
 
@@ -62,7 +62,7 @@ chart_view <- function(kit, src) {
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
-      scales = chart_config_json(dd_scales_config(
+      scales = shiny_json(dd_scales_config(
         scale_map(), v$type, color = v$color,
         group = chart_category(v, src$kinds()), data = d
       )),

@@ -2,8 +2,8 @@
 #
 # The web page is the table view (table_static(), inlined by
 # write_exhibit_html()); the slide and the image are pictures painted here
-# with the summarize painter's glyph functions (rp_bar(), rp_box(), ... in
-# R/summarize-paint.R). The spreadsheet never sees this object.
+# with the summarize painter's glyph functions (paint_bar(), paint_box(), ... in
+# R/paint-table.R). The spreadsheet never sees this object.
 
 #' A table in the cards look, as a printable exhibit
 #'
@@ -82,7 +82,7 @@ write_exhibit_png.cards_exhibit <- function(x, file, width_in = NULL,
   summarize_paint_require()
   p <- cards_paint_grob(x, width_in = width_in %||% 10, title = x$title,
                         subtitle = x$subtitle, caption = x$caption)
-  rp_write_png(p, file, res = res)
+  paint_write_png(p, file, res = res)
   invisible(file)
 }
 
@@ -115,7 +115,7 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
   acc <- new.env()
   acc$g <- list()
   d$add <- function(...) acc$g <- c(acc$g, list(...))
-  d$txt <- function(s, x, y, just = "left", size = fs, col = RP_TEXT,
+  d$txt <- function(s, x, y, just = "left", size = fs, col = PAINT_TEXT,
                     bold = FALSE, vjust = "top") {
     d$add(grid::textGrob(
       s, x = grid::unit(x, "in"), y = grid::unit(d$H - y, "in"),
@@ -133,7 +133,7 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
     y <- y + d$title_h
   }
   if (d$subt_h) {
-    d$txt(subtitle, 0, y, size = fs * 0.95, col = RP_MUTED)
+    d$txt(subtitle, 0, y, size = fs * 0.95, col = PAINT_MUTED)
     y <- y + d$subt_h
   }
   if (d$multi) {
@@ -143,11 +143,11 @@ cards_paint_grob <- function(x, width_in = 10, fs = 10, family = "sans",
   cards_paint_rows(d, y)
   y <- y + d$lines * d$row_h
   if (d$fold_h) {
-    d$txt(md$fold, 0, y, size = fs * 0.85, col = RP_MUTED)
+    d$txt(md$fold, 0, y, size = fs * 0.85, col = PAINT_MUTED)
     y <- y + d$fold_h
   }
   if (d$cap_h) {
-    d$txt(caption, 0, y, size = fs * 0.85, col = RP_MUTED)
+    d$txt(caption, 0, y, size = fs * 0.85, col = PAINT_MUTED)
   }
   list(
     grob = grid::gTree(children = do.call(grid::gList, acc$g)),
@@ -185,7 +185,7 @@ cards_dims <- function(md, cells, width_in, fs, family, rows, title, subtitle,
   card_h <- 2 * pad + lab_h + num_h + sub_h + gly_h + leg_h
   head_w <- if (multi) {
     min(width_in * 0.25,
-        max(rp_w(md$label[rows], fs, family, bold = TRUE)) + px * 20)
+        max(paint_w(md$label[rows], fs, family, bold = TRUE)) + px * 20)
   } else {
     0
   }
@@ -210,7 +210,7 @@ cards_dims <- function(md, cells, width_in, fs, family, rows, title, subtitle,
 #' @noRd
 cards_fit <- function(s, w, size, family, bold = FALSE) {
   s <- as.character(s)
-  while (nchar(s) > 1L && rp_w(s, size, family, bold) > w) {
+  while (nchar(s) > 1L && paint_w(s, size, family, bold) > w) {
     s <- paste0(substr(s, 1L, nchar(s) - 2L), "\u2026")
   }
   s
@@ -225,7 +225,7 @@ cards_paint_heads <- function(d, y) {
     put(cl$label, cw, x0, y, fs * 0.9, bold = TRUE)
     head2 <- paste(c(cl$word, cl$range), collapse = " \u00b7 ")
     if (nzchar(head2)) {
-      put(head2, cw, x0, y + fs / 72 * 1.35, fs * 0.8, col = RP_MUTED)
+      put(head2, cw, x0, y + fs / 72 * 1.35, fs * 0.8, col = PAINT_MUTED)
     }
     if (length(cl$legend)) {
       cards_paint_legend(cl$legend, x0, y + fs / 72 * 3.2, d)
@@ -274,12 +274,12 @@ cards_paint_card <- function(d, i, k, x0, y0) {
       x = grid::unit(x0, "in"), y = grid::unit(H - y0, "in"),
       width = grid::unit(cw, "in"), height = grid::unit(card_h, "in"),
       just = c("left", "top"), r = grid::unit(px * 8, "in"),
-      gp = grid::gpar(fill = "#ffffff", col = RP_RULE, lwd = 0.8)))
+      gp = grid::gpar(fill = "#ffffff", col = PAINT_RULE, lwd = 0.8)))
     cx <- x0 + pad
     inner <- cw - 2 * pad
     cy <- y0 + pad
     if (lab_h) {
-      put(cl$label, inner, cx, cy, fs * 0.85, col = RP_MUTED)
+      put(cl$label, inner, cx, cy, fs * 0.85, col = PAINT_MUTED)
       cy <- cy + lab_h
     }
     plain <- isTRUE(cl$text)
@@ -289,7 +289,7 @@ cards_paint_card <- function(d, i, k, x0, y0) {
     if (sub_h) {
       s <- if (!is.null(cl$sub)) cl$sub[[i]] else ""
       if (!multi && nzchar(s) && !is.null(cl$word)) s <- paste0(cl$word, ": ", s)
-      if (nzchar(s)) put(s, inner, cx, cy, fs * 0.8, col = RP_MUTED)
+      if (nzchar(s)) put(s, inner, cx, cy, fs * 0.8, col = PAINT_MUTED)
       cy <- cy + sub_h
     }
     if (gly_h && !is.null(cl$glyph)) {
@@ -317,16 +317,16 @@ cards_paint_glyph <- function(c, i, x, w, ytop, gl) {
       g$disp <- NULL
       g
     })
-    return(rp_multi(c, i, x, w, ytop, gl, xr = x + w))
+    return(paint_multi(c, i, x, w, ytop, gl, xr = x + w))
   }
   switch(k,
-    bar = rp_bar(c, i, x, w, ytop, gl),
-    barsplit = rp_barsplit(c, i, x, w, ytop, gl, xr = x + w),
-    bardiv = rp_bardiv(c, i, x, w, ytop, gl),
-    box = rp_box(c, i, x, w, ytop, gl),
-    pointrange = rp_pr(c, i, x, w, ytop, gl),
-    pair = rp_pair(c, i, x, w, ytop, gl),
-    sparkline = rp_sparkline(c, i, x, w, ytop, gl),
+    bar = paint_bar(c, i, x, w, ytop, gl),
+    barsplit = paint_barsplit(c, i, x, w, ytop, gl, xr = x + w),
+    bardiv = paint_bardiv(c, i, x, w, ytop, gl),
+    box = paint_box(c, i, x, w, ytop, gl),
+    pointrange = paint_pr(c, i, x, w, ytop, gl),
+    pair = paint_pair(c, i, x, w, ytop, gl),
+    sparkline = paint_sparkline(c, i, x, w, ytop, gl),
     list()
   )
 }
@@ -342,8 +342,8 @@ cards_paint_legend <- function(items, x, ymid, d) {
       width = grid::unit(sw, "in"), height = grid::unit(sw, "in"),
       just = c("left", "centre"), gp = grid::gpar(fill = it$color, col = NA)))
     d$txt(it$label, at + sw + d$px * 3, ymid, size = d$fs * 0.75,
-          col = RP_MUTED, vjust = "centre")
-    at <- at + sw + d$px * 3 + rp_w(it$label, d$fs * 0.75, d$family) +
+          col = PAINT_MUTED, vjust = "centre")
+    at <- at + sw + d$px * 3 + paint_w(it$label, d$fs * 0.75, d$family) +
       d$px * 10
   }
 }

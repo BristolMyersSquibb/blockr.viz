@@ -1,42 +1,9 @@
-# Vendored from blockr.echarts/R/echart-theme.R so the chart block does not
-# depend on blockr.echarts. With both loaded the theme name is the same and
-# registration is idempotent.
+# The board's ECharts theme: the option, and the reactive the chart reads.
+# The JS registers the "blockr" theme itself
+# (inst/js/drilldown-theme-register.js).
 
-.drilldown_theme_env <- new.env(parent = emptyenv())
-
-#' Register the drill-down echarts theme
-#'
-#' Registers the colorblind-friendly "blockr" echarts theme. Called from
-#' `.onLoad()`.
-#'
-#' @return NULL, invisibly.
-#' @keywords internal
-echart_theme_blockr_viz <- function() {
-  if (isTRUE(.drilldown_theme_env$registered)) {
-    return(invisible(NULL))
-  }
-  .drilldown_theme_env$registered <- TRUE
-
-  echarts4r::e_theme_register(
-    name = "blockr",
-    theme = '{
-      "color": ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"],
-      "backgroundColor": "#ffffff",
-      "textStyle": {"color": "#333333", "fontFamily": "Open Sans"}
-    }'
-  )
-  invisible(NULL)
-}
-
-#' Reactive for the board-level echarts theme
-#'
-#' Returns a reactive that tracks the board's `echart_theme` option.
-#'
-#' @param session Ignored. The board options come from
-#'   `blockr.core::get_session()`.
-#' @return A reactive resolving to a theme name (e.g. `"default"`, `"blockr"`).
-#' @keywords internal
-setup_drilldown_theme_sync <- function(session = NULL) {
+# The board's theme option as a reactive theme name ("default", "blockr", ...).
+board_echart_theme <- function() {
   shiny::reactive({
     sess <- blockr.core::get_session()
     blockr.core::get_board_option_or_null("echart_theme", sess) %||% "default"

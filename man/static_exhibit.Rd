@@ -18,16 +18,12 @@ A flextable, or \code{x} unchanged.
 \description{
 The print routine a rendered report or deck applies to a block's result.
 Objects that already print as themselves (a flextable, a gt table, a
-ggplot, an htmlwidget, ready-made HTML) come back untouched; a data frame
+ggplot, an htmlwidget, ready-made HTML) come back untouched. A data frame
 or any object with an \code{\link[=as_annotated_df]{as_annotated_df()}} method (a composer table, a
 gtsummary table, ...) is rendered through \code{\link[=static_table]{static_table()}}. Anything else
-comes back untouched too.
+comes back untouched.
 }
 \details{
-The table structure lives in the annotated data frame, so a function block
-that emits a composer table prints in a report as it would with a table
-block in front of it.
-
 Data frames above \code{getOption("blockr.viz.static_exhibit_max_rows")} (2000)
 rows fall back to the bare print.
 }

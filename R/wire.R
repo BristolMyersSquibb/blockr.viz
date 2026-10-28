@@ -224,3 +224,19 @@ wire_int64 <- function(x) {
   warning("Integers above 2^53 are sent as text.", call. = FALSE)
   as.character(x)
 }
+
+# A value serialized the way Shiny would, as a `json` string that is spliced
+# into the websocket message verbatim, so a large entry is not serialized
+# again on every push. Unlike wire_json() it writes Shiny's 16 significant
+# digits. NULL stays NULL.
+shiny_json <- function(x) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  jsonlite::toJSON(
+    x, dataframe = "columns", null = "null", na = "null", auto_unbox = TRUE,
+    digits = getOption("shiny.json.digits", I(16)), use_signif = TRUE,
+    force = TRUE, POSIXt = "ISO8601", UTC = TRUE, rownames = FALSE,
+    keep_vec_names = TRUE, json_verbatim = TRUE
+  )
+}

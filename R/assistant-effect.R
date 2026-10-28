@@ -104,7 +104,7 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
 }
 
 # Registers the methods on blockr.ai's generic.
-register_drilldown_ai_effect <- function() {
+register_assistant_effect <- function() {
   if (!requireNamespace("blockr.ai", quietly = TRUE)) {
     return(invisible(FALSE))
   }

@@ -19,7 +19,7 @@ The board-wide \code{Group} column (stamped by blockr.pharma) can carry a group
 definition in its \code{blockr_groups} attribute:
 \verb{list(groups = <named list: group name -> raw members>, overlap = <lgl>)}.
 The data keeps one row per subject; this function makes the copies a
-consumer that splits by the column needs, at the last moment.
+consumer that splits by the column needs.
 }
 \details{
 \itemize{
@@ -29,18 +29,16 @@ whose value is not a group name (\code{NA} for a dropped level) are removed,
 and the column becomes a factor in group order.
 \item Overlap (\code{overlap = TRUE}): the column holds the raw level. Each group
 gets one copy of its member rows with the column set to the group name,
-the copies are stacked in group order, and the column becomes a factor in
-group order. A subject in two groups appears twice.
+stacked in group order, and the column becomes a factor in group order. A
+subject in two groups appears twice.
 }
 
 The result keeps every data-frame attribute and every attribute of the
-other columns. The group column keeps its \code{blockr_source} and \code{label}, and
-its \code{blockr_groups} becomes the identity partition, so a second call changes
-nothing. The applied definition is kept in \code{blockr_groups_expanded}, so
-drill claims and colours can map a group back to its members.
-
-Use it only in code that splits by the column. Anything that counts across
-groups (a total, an overall N) must read the unexpanded data.
+other columns. The group column's \code{blockr_groups} becomes the identity
+partition, so a second call changes nothing, and the applied definition is
+kept in \code{blockr_groups_expanded} so a group maps back to its members. Use it
+only in code that splits by the column. Anything that counts across groups
+(a total, an overall N) must read the unexpanded data.
 }
 \examples{
 d <- data.frame(id = 1:4, arm = c("Pbo", "Low", "High", "High"))

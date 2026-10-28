@@ -91,4 +91,3 @@ summarize_label_header <- function(prep) {
   if (isTRUE(prep$all)) return("")
   if (is.null(prep$parent)) prep$group else paste0(prep$parent, " / ", prep$group)
 }
-

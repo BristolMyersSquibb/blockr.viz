@@ -1,4 +1,7 @@
-# The table download control: the download glyph and menu, and the handlers.
+# dt_download_control(): a download menu for blocks outside this package.
+# The chart and table blocks do not use it (their menu is the kit's,
+# viz_downloads()); blockr.sandbox's composer block does. It writes through
+# the same exporters (R/export-registry.R).
 
 #' The download glyph. Inline SVG, so the control carries no dependency and
 #' inherits `currentColor` from the tool.
@@ -141,25 +144,4 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
         silent = TRUE)
   }
   slot
-}
-
-#' Say a download failure out loud: show it on screen at click time and keep
-#' the error propagating. Shiny otherwise answers with an HTML error page that
-#' the browser saves as "<session>-<block>-dl_pptx.htm".
-#' @noRd
-dl_guard <- function(what, expr) {
-  withCallingHandlers(
-    expr,
-    error = function(e) {
-      msg <- conditionMessage(e)
-      try(
-        shiny::showNotification(
-          paste0("The ", what, " download failed: ", msg),
-          type = "error", duration = NULL
-        ),
-        silent = TRUE
-      )
-      message("[blockr.viz] ", what, " download failed: ", msg)
-    }
-  )
 }

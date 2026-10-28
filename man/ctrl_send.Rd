@@ -42,37 +42,23 @@ closure, invisibly.
 \description{
 Helpers that let one block set the externally controllable arguments (see
 the \code{external_ctrl} argument to \code{\link[blockr.core:new_block]{blockr.core::new_block()}}) of another block
-on the same board, through the board's regular update channel. A drill-down
-chart can feed a function block whose function calls \code{ctrl_send()} to push
-the clicked patient into a patient-profile block. Sender and target share
-no data link.
+on the same board, through the board's regular update channel. Sender and
+target share no data link.
 }
 \details{
 \code{install_ctrl_send()} wires the channel up. Call it once per session from
-any board component that holds the board's \code{update} reactive: a board
-callback, a plugin or a dock extension server. It stores a send closure in
-\code{session$userData}, where \code{ctrl_send()} finds it.
-
-Updates go through the board's full validation. Arguments that are not
-externally controllable on the target are rejected with a notification (see
-\code{blockr.core:::validate_board_update}).
+any board component that holds the board's \code{update} reactive. It stores a
+send closure in \code{session$userData}, where \code{ctrl_send()} finds it. Updates go
+through the board's full validation. \code{ctrl_send()} writes state and never
+reads another block's result. Repeated sends of an unchanged value are
+no-ops.
 }
-\section{Semantics under lazy evaluation}{
-
-\code{ctrl_send()} writes state and never reads another block's result, so it
-adds nothing to any evaluation closure. A function block calling it sends
-only while it is on screen. Repeated sends of an unchanged value are no-ops
-(\code{apply_block_mod_delta()} compares with \code{identical()}).
-}
-
 \section{Clearing (\code{ctrl_clear()})}{
 
 The undo side of \code{ctrl_send()}. It resets the target's controllable
 arguments only if the last \code{ctrl_send()} to that target came from the same
-block. A sender that re-evaluates without a drill (at startup, on a board
-restore, or while a different sender's claim is active on the target) owns
-nothing and does nothing. The values passed via \code{...} define "cleared" for
-the target, e.g. \code{state = list(columns = list())} empties a value filter.
+block. The values passed via \code{...} define "cleared" for the target, e.g.
+\code{state = list(columns = list())} empties a value filter.
 }
 
 \examples{

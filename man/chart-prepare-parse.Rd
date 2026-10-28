@@ -6,11 +6,7 @@
 \description{
 The script is ordinary R. A top-level assignment whose right-hand side is a
 \emph{plain value} (\link{CB_VALUE_CALLS}) becomes a control on the card; every other
-statement is code. A name starting with a dot is never a control.
-}
-\details{
-Both are decided by reading the line, without evaluating anything and
-wherever it sits in the script. There is no fenced region or marker
-comment.
+statement is code. A name starting with a dot is never a control. Both are
+decided by reading the line, without evaluating anything.
 }
 \keyword{internal}

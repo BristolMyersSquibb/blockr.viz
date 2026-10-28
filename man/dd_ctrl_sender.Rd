@@ -24,10 +24,8 @@ restorable drill state may omit it.}
 \item{session}{Shiny session.}
 
 \item{r_nonce}{Optional reactive returning a click counter minted in the
-browser. It is part of the send-once key and never part of the payload.
-It lets a re-click of the same mark in transient-drill mode send again,
-since the claim is identical, while a board re-evaluation, which does not
-change the counter, does not.}
+browser. It is part of the send-once key, not of the payload. A re-click
+of the same mark sends again, a board re-evaluation does not.}
 }
 \value{
 The observer, invisibly.
@@ -35,16 +33,13 @@ The observer, invisibly.
 \description{
 The observer shared by the three drill senders: a claim sends, no claim
 clears. \code{\link[=ctrl_clear]{ctrl_clear()}} only acts when this block still owns the target's
-last claim, so an un-drill never clobbers a sibling sender's cohort.
-Re-aiming or un-setting the target releases the old target's claim the same
-way.
+last claim. Re-aiming or un-setting the target releases the old target's
+claim the same way.
 }
 \details{
-A send is a board update, which re-evaluates every block, including this
-one, and \code{r_claims} invalidates on that re-evaluation. The observer
-therefore sends only a payload that differs from the last one. \code{r_pristine}
-suppresses the push of a restored claim: the target comes back from the
-same saved board already holding it. The claim is recorded as sent, so the
-first real drill diffs against it.
+A send is a board update, which re-evaluates this block, so the observer
+sends only a payload that differs from the last one. \code{r_pristine}
+suppresses the push of a restored claim, since the target comes back from
+the same saved board already holding it.
 }
 \keyword{internal}

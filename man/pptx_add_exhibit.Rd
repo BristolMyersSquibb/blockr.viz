@@ -51,43 +51,29 @@ a wrapped title cannot land on the table.}
 \item{max_rows}{How a table too tall for its slide is handled. \code{"auto"}
 (default) carries it onto further slides, cutting where the measured
 height of the rendered rows runs out of slide. A number cuts every
-\code{max_rows} input rows instead. \code{NULL} never splits.
-
-Every page repeats the title, the column header band and the footnote.
-The title is marked \verb{(2 of 3)} and a section carried across a break
-repeats its heading marked \code{(continued)}. Column widths are measured once
-on the whole table, so the columns line up across slides. A break never
-leaves one or two rows of a section at the top of a slide: the whole
-section moves over.}
+\code{max_rows} input rows instead. \code{NULL} never splits. Every page repeats
+the title (marked \verb{(2 of 3)}), the header band and the footnote, and a
+section carried across a break repeats its heading marked \code{(continued)}.
+Column widths are measured once on the whole table. A break never leaves
+one or two rows of a section at the top of a slide.}
 
 \item{max_cols}{How a table too wide for its slide is handled, once the
-font has stepped down as far as \code{min_font_size} allows and the columns
-still do not fit. \code{"auto"} (default) deals them over several sets of
-slides, each repeating the row stub. A set is a whole number of spanner
-groups. A number puts at most that many data columns on a slide. \code{NULL}
-never splits and squeezes the columns as far as they go.
+font has stepped down to \code{min_font_size} and the data cells still do not
+fit their own longest word. \code{"auto"} (default) deals the columns over
+several sets of slides, each repeating the row stub; a set is a whole
+number of spanner groups. A number puts at most that many data columns
+on a slide. \code{NULL} never splits and squeezes the columns as far as they
+go. Set \code{getOption("blockr.viz.ft_header_break_tol")} (default 0, off)
+to also deal the columns when a header word keeps less than that share
+of itself.}
 
-This is the last resort. The columns come apart only when the data cells
-no longer fit their own longest word. Everything short of that is
-absorbed: the font steps down to \code{min_font_size}, the stub wraps
-(\code{getOption("blockr.viz.ft_stub_share")} is the share of the width it
-claims while the data columns are short), cells wrap between words and
-headers break inside words. Set \code{getOption("blockr.viz.ft_header_break_tol")}
-(default 0, off) to also deal the columns when a header word is cut past
-that share of itself.}
-
-\item{min_font_size}{Points. The floor for the two shrink passes. \code{NULL}
+\item{min_font_size}{Points. The floor for the font step-down. \code{NULL}
 (default) resolves it, first hit wins, from the board's
 \code{exhibit_min_font_size} option (\code{\link[=new_exhibit_font_option]{new_exhibit_font_option()}}), then
-\code{getOption("blockr.viz.ft_min_font_size")}, then 11pt. The font steps
-down first until cells fit and headers stop breaking inside words, and
-\code{max_cols} takes over from there. A shrink that does not clear the wrap
-is undone unless it keeps the columns on one slide. It then steps down
-again if that avoids a row split.
-
-A table that does not fit at the floor is split rather than shrunk past
-it, and signals a \code{blockr_exhibit_split} message naming the size that
-would have kept it whole.}
+\code{getOption("blockr.viz.ft_min_font_size")}, then 11pt. A table that does
+not fit at the floor is split rather than shrunk past it, and signals a
+\code{blockr_exhibit_split} message naming the size that would have kept it
+whole.}
 }
 \value{
 The document, with the exhibit's slides appended.
@@ -97,8 +83,8 @@ The paginating half of \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}, 
 an \code{\link[officer:read_pptx]{officer::read_pptx()}} document, appends one slide per page of the
 table, and returns the document. Column widths, font step-down, row and
 column splits, repeated header bands and \verb{(2 of 8)} page titles all happen
-here, so a caller assembling its own deck (blockr.outline's slide builder)
-gets the same slides as a single-table download.
+here, so a caller assembling its own deck gets the same slides as a
+single-table download.
 }
 \section{What the caller owns}{
 

@@ -29,12 +29,10 @@ How a block's result is printed in a rendered document (a blockr.outline
 report or deck). Returns a call over \code{var}, the variable the generated
 script binds the block's result to, such as
 \code{blockr.viz::static_table(tbl1)}, or \code{NULL} when the bare result prints
-as is. Consumers deparse the call into the document, so it is
-self-qualified and holds only literal values.
-}
-\details{
-The chart block has no method: a document carries the picture the browser
-captured (see \code{\link[=chart_capture_ids]{chart_capture_ids()}}).
+as is. The call is self-qualified and holds only literal values, since
+consumers deparse it into the document. The chart block has no method: a
+document carries the picture the browser captured (see
+\code{\link[=chart_capture_ids]{chart_capture_ids()}}).
 }
 \examples{
 report_call(new_table_block(), "tbl1")

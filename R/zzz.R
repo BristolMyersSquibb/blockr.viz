@@ -12,8 +12,7 @@
 
   viz_input_handlers(lapply(names(VIZ_BLOCK_SPECS), viz_block_spec))
   register_viz_blocks()
-  echart_theme_blockr_viz()
-  register_drilldown_ai_effect()
+  register_assistant_effect()
   viz_register_exporters()
 
   invisible(NULL)

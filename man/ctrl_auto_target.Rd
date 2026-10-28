@@ -15,12 +15,7 @@ The block id, \code{""} when the board offers no single candidate.
 \description{
 What \code{ctrl_target = "auto"} resolves to: the one
 \code{blockr.dm::new_drill_filter_block()} on the board or, on a board without
-one, the one value filter block.
-}
-\details{
-Two or more candidates resolve to nothing, so the sender stays quiet until
-the gear's target picker names one. A board that carries any drill filter
-ignores value filters, even when its drill filters are ambiguous.
+one, the one value filter block. Two or more candidates resolve to nothing.
 }
 \examples{
 ctrl_auto_target(session = shiny::MockShinySession$new())

@@ -1,7 +1,7 @@
 # Taking a summarize table away ------------------------------------------------
 #
 # xlsx gets the numbers behind the marks, one column per statistic; html the
-# table itself; pptx painted pages (R/summarize-paint.R); png one picture,
+# table itself; pptx painted pages (R/paint-table.R); png one picture,
 # however tall it needs to be. The spreadsheet is no picture: someone who opens
 # it came to pivot.
 
@@ -144,7 +144,7 @@ write_exhibit_png.summarize_exhibit <- function(x, file, width_in = NULL,
   p <- summarize_paint_grob(x$cells, x$prep, width_in = width_in %||% 12.5,
                             title = x$title, subtitle = x$subtitle,
                             caption = x$caption, ...)
-  rp_write_png(p, file, res = res)
+  paint_write_png(p, file, res = res)
   invisible(file)
 }
 

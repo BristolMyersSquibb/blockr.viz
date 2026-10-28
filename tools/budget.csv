@@ -10,9 +10,8 @@ R: specs,R/spec-table*.R,1200
 R: specs,R/spec-base.R,1200
 R: specs,R/chart-args.R,1200
 R: specs,R/chart-arguments.R,1200
-R: specs,R/block-arguments.R,1200
+R: specs,R/agg-words.R,1200
 R: specs,R/table-args.R,1200
-R: specs,R/state-normalize.R,1200
 R: chart,R/chart-block.R,1800
 R: chart,R/chart-roles.R,1800
 R: chart,R/chart-derived.R,1800
@@ -20,7 +19,6 @@ R: chart,R/chart-server.R,1800
 R: chart,R/chart-view.R,1800
 R: chart,R/chart-normalize.R,1800
 R: chart,R/chart-filters.R,1800
-R: chart,R/chart-payload.R,1800
 R: chart,R/chart-dep.R,1800
 R: chart,R/band-series.R,1800
 R: chart,R/describe-chart.R,1800
@@ -72,12 +70,12 @@ R: shared plumbing,R/ctrl-send.R,3000
 R: shared plumbing,R/busy-cue.R,3000
 R: shared plumbing,R/chart-capture.R,3000
 R: shared plumbing,R/theme-palette.R,3000
-R: shared plumbing,R/drilldown-theme.R,3000
+R: shared plumbing,R/echart-theme.R,3000
 R: shared plumbing,R/prepare-*.R,3000
 R: shared plumbing,R/aaa-memoise.R,3000
 R: shared plumbing,R/expand-groups.R,3000
 R: shared plumbing,R/report-call.R,3000
-R: shared plumbing,R/drilldown-ai-effect.R,3000
+R: shared plumbing,R/assistant-effect.R,3000
 R: shared plumbing,R/blockr.viz-package.R,3000
 R: table shell and shared model,R/table-dep.R,1200
 R: shared plumbing,R/kit-titles.R,3000
@@ -90,6 +88,7 @@ R: exports,R/static-exhibit.R,1500
 R: exports,R/table-exhibit.R,1500
 R: exports,R/cards-exhibit.R,1500
 R: exports,R/download-footer.R,1500
+R: exports,R/board-option.R,1500
 R: exports,R/download-filename.R,1500
 R: exports,R/exhibit-font.R,1500
 R: exports,R/exhibit-options.R,1500
@@ -97,7 +96,9 @@ R: exports,R/table-download.R,1500
 R: exports,R/summarize-download.R,1500
 R: exports,R/summarize-exhibit.R,1500
 R: PowerPoint and the table painter,R/export-pptx-*.R,1800
-R: PowerPoint and the table painter,R/summarize-paint.R,1800
+R: PowerPoint and the table painter,R/paint-marks.R,1800
+R: PowerPoint and the table painter,R/paint-table.R,1800
+R: PowerPoint and the table painter,R/paint-slides.R,1800
 R: legacy,R/legacy.R,400
 R: legacy,R/legacy-restore.R,400
 R: legacy,R/legacy-deser.R,400

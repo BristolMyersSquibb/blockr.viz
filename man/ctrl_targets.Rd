@@ -11,8 +11,7 @@ ctrl_targets(
 }
 \arguments{
 \item{class}{Character(1). Block class to look for. The default is the value
-filter block, the target shape the senders in this package push (a
-\code{state} of filter conditions).}
+filter block.}
 
 \item{session}{Shiny session (defaults to the current reactive domain).}
 }
@@ -22,11 +21,7 @@ back to the id). Empty when there is no channel or no candidate.
 }
 \description{
 The block ids a sender may point at: every block on the board of the given
-class. It populates the target picker of the drill senders and is available
-to a hand-rolled sender that wants one too.
-}
-\details{
-Returns \code{character()} when no channel is installed, or when
+class. Returns \code{character()} when no channel is installed, or when
 \code{\link[=install_ctrl_send]{install_ctrl_send()}} was called without \code{board}.
 }
 \examples{

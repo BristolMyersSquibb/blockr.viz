@@ -12,48 +12,36 @@ dd_ctrl_claims(data, table, filters, subject = NULL)
 \item{table}{Name of the table the claim applies to, \code{""} when the target
 filters a plain data frame (or when the target resolves the table itself).}
 
-\item{filters}{Named list, column -> drilled value(s); the columns AND
-together. An \code{NA} value (or a table's "(Missing)" level) is a missing
-one: it takes the rows where the column is missing or empty, and the
-claim names them with the value filter's tokens \code{"<NA>"} / \code{"<empty>"}.
-A value on a column carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}})
-is a group name. It is matched against the group's members, and the claim
-is the set of source values the group holds (\code{mode = "multi"}).}
+\item{filters}{Named list, column -> drilled value(s) from the block's
+filter reactives; the columns AND together. An \code{NA} value (or a table's
+"(Missing)" level) takes the rows where the column is missing or empty,
+and the claim names them with the tokens \code{"<NA>"} / \code{"<empty>"}. A value
+on a column carrying a group definition (see \code{\link[=expand_groups]{expand_groups()}}) is a group
+name, matched against the group's members, and the claim is the set of
+source values the group holds.}
 
 \item{subject}{The board's subject column (\code{\link[=dd_ctrl_subject]{dd_ctrl_subject()}}), or \code{NULL}.
 When given, the claim becomes the subjects behind the click, with the
-column clause kept as its \code{label}. A target re-applies a column claim to
-its own data, which may differ from the data this block counted (a flag
-filter or a worst-grade reduction in between), whereas subject ids
-resolved here are exact. A structured table resolves them through its
-stamped \code{source_data} (\code{\link[=drill_source]{drill_source()}}). A frame that carries the
-subject column neither way keeps the column claim.}
+column clause kept as its \code{label}. A structured table resolves them
+through its stamped \code{source_data} (\code{\link[=drill_source]{drill_source()}}). A frame that carries
+the subject column neither way keeps the column claim.}
 }
 \value{
 A list of filter conditions, \code{list()} when the user has no drill,
 \code{NULL} when the claim cannot be resolved right now (hold).
 }
 \description{
-\code{filters} is a named list, column -> drilled value(s), from the block's
-filter reactives. The input is subset on those pairs and the claim is read
-off the subset, so the one-value-per-dimension rule of
-\code{\link[=drill_claim_columns]{drill_claim_columns()}} and its un-drill propagation apply.
+The input is subset on the \code{filters} pairs and the claim is read off the
+subset, so the one-value-per-dimension rule of \code{\link[=drill_claim_columns]{drill_claim_columns()}}
+applies. All-dot filter columns (a structured table's \code{.variable},
+\verb{.group<k>}, ...) read the ARD identity off the subset. Any other column is
+a real source column and is the claim column.
 }
 \details{
-All-dot filter columns (a structured table's \code{.variable}, \verb{.group<k>}, ...)
-read the ARD identity off the subset. Any other column is a real source
-column and is the claim column.
-}
-\section{Hold versus clear}{
-
 The sender reads \code{list()} as "clear the target" and \code{NULL} as "keep what the
 target has". \code{list()} is returned only when the user has no drill. \code{NULL} is
 returned when the block cannot resolve its selection right now: there is no
-data frame (under lazy evaluation the input is gated to \code{NULL} while the
-block is off screen), the frame lacks a filtered column (it is being rebuilt
-during a board update), or nothing in the subset resolves to a claim.
-Clearing in those cases would widen the target to everything and re-narrow
-it a moment later.
+data frame (the block is off screen), the frame lacks a filtered column (it
+is being rebuilt), or nothing in the subset resolves to a claim.
 }
-
 \keyword{internal}

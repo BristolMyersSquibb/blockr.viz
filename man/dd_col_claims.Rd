@@ -15,8 +15,7 @@ dd_col_claims(col_keys, table = "")
 A list of filter conditions, \code{list()} when there is no column half.
 }
 \description{
-The browser sends the source column and its value straight off the column
-header (\code{TRT01P = "Placebo"}), so this reshapes the click into conditions.
-A pooled column ("All Active") sends its members.
+The browser sends the source column and its value off the column header
+(\code{TRT01P = "Placebo"}). A pooled column ("All Active") sends its members.
 }
 \keyword{internal}
