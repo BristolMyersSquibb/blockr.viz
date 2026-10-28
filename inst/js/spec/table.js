@@ -110,9 +110,10 @@
               "nullable": false,
               "gear": {
                 "group": "Columns",
-                "control": "tiles",
+                "control": "segmented",
                 "label": "Show",
-                "labels": ["Bar", "Number", "Dot", "Tile"]
+                "labels": ["Bar", "Number", "Dot", "Tile"],
+                "icons": true
               },
               "slot": false,
               "ctrl": true
@@ -157,7 +158,8 @@
                 "control": "segmented",
                 "label": "Stacking",
                 "labels": ["Stacked", "Side by side", "100%"],
-                "when": "color"
+                "when": "color",
+                "icons": true
               },
               "slot": false,
               "ctrl": true
@@ -225,9 +227,10 @@
               "nullable": false,
               "gear": {
                 "group": "Columns",
-                "control": "tiles",
+                "control": "segmented",
                 "label": "Show",
-                "labels": ["Dot range", "Box", "Text"]
+                "labels": ["Dot range", "Box", "Text"],
+                "icons": true
               },
               "slot": false,
               "ctrl": true
@@ -839,9 +842,10 @@
               "nullable": true,
               "gear": {
                 "group": "Columns",
-                "control": "tiles",
+                "control": "segmented",
                 "label": "Show",
-                "labels": ["Bar", "Number", "Dumbbell", "Box", "Dot range", "Text"]
+                "labels": ["Bar", "Number", "Dumbbell", "Box", "Dot range", "Text"],
+                "icons": true
               },
               "slot": false,
               "ctrl": true
@@ -971,9 +975,10 @@
             "nullable": false,
             "gear": {
               "group": "Color",
-              "control": "tiles",
+              "control": "segmented",
               "label": "Mode",
-              "labels": ["Diverging", "Sequential", "Data bar"]
+              "labels": ["Diverging", "Sequential", "Data bar"],
+              "icons": true
             },
             "slot": false,
             "ctrl": true
@@ -1078,7 +1083,8 @@
         "group": "Look",
         "control": "segmented",
         "label": "Facet layout",
-        "labels": ["By summary", "By level"]
+        "labels": ["By summary", "By level"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -1113,7 +1119,8 @@
         "group": "Order",
         "control": "segmented",
         "label": "Order",
-        "labels": ["Ascending", "Descending"]
+        "labels": ["Ascending", "Descending"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true

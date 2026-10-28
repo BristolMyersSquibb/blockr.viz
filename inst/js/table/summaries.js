@@ -9,6 +9,9 @@
  * Rules the spec's notes give and its fields cannot: an aggregate's column
  * only when it aggregates one, the stacking only for a bar split by
  * colour, the paint only for a tile, the outer range only for a mark.
+ *
+ * Each type has its drawing (core/gear/icons.js, `summary:<type>`): it
+ * heads the entry and its row in the Add menu, under the type's one line.
  */
 (function () {
   'use strict';
@@ -17,6 +20,13 @@
 
   const TYPES = { simple: 'Summary', dist: 'Distribution', field: 'Values', sparkline: 'Sparkline',
                   spans: 'Spans', pair: 'Pair', expr: 'Expression', custom: 'Custom' };
+  /** A type's line in the Add menu. */
+  const ABOUT = { simple: 'Count, sum or mean: bar, number, dot', dist: 'Spread of a number: box or dot range',
+                  field: 'The distinct values, as words', sparkline: 'A small line along an ordered column',
+                  spans: 'Intervals in time, such as periods', pair: 'Two values joined, from and to',
+                  expr: 'An R expression per row group', custom: 'A function of the rows, any mark' };
+  /** The Add menu's groups: numbers and words; lines, intervals and pairs; code. */
+  const BREAKS = ['sparkline', 'expr'];
 
   /** @typedef {Record<string, unknown>} Entry */
 
@@ -35,33 +45,10 @@
     return true;
   }
 
-  /** The gear's drawing for each type (core/gear/tiles.js). */
-  const ICON = { simple: 'type:bar', dist: 'type:boxplot', sparkline: 'type:line',
-                 spans: 'type:gantt', pair: 'type:pointrange' };
   const FUNC = { count_distinct: 'distinct count', mean: 'mean', median: 'median', sum: 'sum',
                  min: 'min', max: 'max', sd: 'sd' };
-
-  /** @param {string} body The drawing inside the gear tiles' 48 x 32 box. */
-  const svg = (body) => '<svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true">' +
-    body + '</svg>';
-  /** The Show tiles' drawings: the gear's chart drawings where one fits. */
-  const SHOW = {
-    bar: 'type:bar', box: 'type:boxplot', pointrange: 'type:pointrange', dot: 'type:scatter',
-    number: svg('<text x="24" y="22" text-anchor="middle" font-size="15" font-weight="600" ' +
-                'fill="currentColor">12</text>'),
-    text: svg('<text x="24" y="22" text-anchor="middle" font-size="15" fill="currentColor">Aa</text>'),
-    tile: svg([[8, 6, 1], [20, 6, 0.5], [32, 6, 0.2], [8, 17, 0.35], [20, 17, 0.8], [32, 17, 0.5]]
-      .map(([x, y, o]) => '<rect x="' + x + '" y="' + y + '" width="9" height="9" rx="1" ' +
-                          'fill="currentColor" fill-opacity="' + o + '"/>').join('')),
-    dumbbell: svg('<path d="M12 16H36" stroke="currentColor" stroke-opacity=".5" stroke-width="1.5"/>' +
-                  '<circle cx="12" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
-                  '<circle cx="36" cy="16" r="4" fill="currentColor"/>')
-  };
-  /** @param {string} key @param {unknown} value */
-  const showIcon = (key, value) => {
-    const d = key === 'show' ? SHOW[/** @type {'bar'} */ (String(value))] : null;
-    return !d ? '' : d.startsWith('<') ? d : V.gear.icons[d] || '';
-  };
+  /** @param {unknown} type */
+  const glyph = (type) => (V.gear.glyphs || {})['summary:' + String(type)] || '';
 
   /**
    * An entry's title: its name, else its type.
@@ -103,7 +90,6 @@
    * @param {Entry} s
    */
   function headText(b, s) {
-    const icon = V.gear.icons[ICON[/** @type {'simple'} */ (s.type)]];
     b.textContent = '';
     const part = (/** @type {string} */ cls, /** @type {string} */ text) => {
       const x = b.appendChild(document.createElement('span'));
@@ -111,7 +97,7 @@
       x.textContent = text;
       return x;
     };
-    part('vz-table-sum-icon', '').innerHTML = icon || '';
+    part('vz-table-sum-icon', '').innerHTML = glyph(s.type);
     part('vz-table-sum-name', title(s));
     part('vz-table-sum-desc', describe(s));
     part('vz-table-sum-chev', '›');
@@ -143,12 +129,14 @@
   function fields(body, s, variant, ctx, put) {
     const C = V.gear.controls;
     const keys = Object.keys(variant).filter((f) => variant[f].gear && shows(s, f));
-    for (const f of keys.filter((x) => x !== 'name').concat(keys.includes('name') ? ['name'] : [])) {
+    // The mark first, over the editor's width: it decides the fields that
+    // follow. The name last.
+    const order = [...keys.filter((x) => x === 'show'), ...keys.filter((x) => x !== 'show' && x !== 'name'),
+                   ...keys.filter((x) => x === 'name')];
+    for (const f of order) {
       const arg = variant[f];
       const el = document.createElement('div');
-      // Tiles take the editor's width, as in the gear's own sections.
-      el.className = 'vz-row vz-table-sum-field' +
-        (arg.gear.control === 'tiles' ? ' vz-table-sum-field--wide' : '');
+      el.className = 'vz-row vz-table-sum-field' + (f === 'show' ? ' vz-table-sum-field--wide' : '');
       const lab = document.createElement('label');
       lab.className = 'blockr-label';
       lab.textContent = arg.gear.label;
@@ -159,7 +147,7 @@
       C.build(control, {
         key: f, arg, label: arg.gear.label, value: s[f] === undefined ? arg.default : s[f],
         values: Object.assign({}, ctx.values, s), columns: ctx.columns, required: false,
-        scope: ctx.scope, host: { icon: showIcon }, titles: {},
+        scope: ctx.scope, host: {}, titles: {},
         labelOf: (/** @type {string} */ x) => x,
         set: (/** @type {unknown} */ v) => put(Object.assign({}, s, { [f]: v }))
       });
@@ -243,12 +231,57 @@
     list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
     const add = el.appendChild(document.createElement('div'));
     add.className = 'vz-table-sum-addcol';
-    V.table.ui.pick(add, Object.keys(variants).map((t) => ({
-      value: t, label: TYPES[/** @type {'simple'} */ (t)] || t
-    })), '', { label: 'Add a column', placeholder: '+ Add a column' }, (t) => {
+    addMenu(add, Object.keys(variants), (t) => {
       open.add(list.length);
       ctx.set(list.concat([{ type: t }]));
     }, ctx.scope);
+  }
+
+  /**
+   * "+ Add a column": a button that opens blockr.ui's menu, a row per type
+   * with its drawing, its name and its line. Without Blockr.menu, a pick of
+   * the names.
+   * @param {HTMLElement} el
+   * @param {string[]} types
+   * @param {(type: string) => void} onAdd
+   * @param {VizScope} scope
+   */
+  function addMenu(el, types, onAdd, scope) {
+    const ui = /** @type {VizUi} */ (root.Blockr);
+    const name = (/** @type {string} */ t) => TYPES[/** @type {'simple'} */ (t)] || t;
+    if (!ui.menu) {
+      V.table.ui.pick(el, types.map((t) => ({ value: t, label: name(t) })), '',
+                      { label: 'Add a column', placeholder: '+ Add a column' }, onAdd, scope);
+      return;
+    }
+    /** @type {{ close(): void } | null} */
+    let shown = null;
+    const btn = V.table.ui.button('blockr-btn--secondary blockr-btn--s vz-table-sum-add', '+ Add a column',
+                                  'Add a column', () => {
+      if (shown) { shown.close(); return; }
+      /** @type {VizMenuEntry[]} */
+      const items = [];
+      for (const t of types) {
+        if (BREAKS.includes(t) && items.length) items.push({ divider: true });
+        items.push({ label: name(t), icon: glyph(t) || undefined, onSelect: () => onAdd(t) });
+      }
+      const m = /** @type {NonNullable<VizUi['menu']>} */ (ui.menu)
+        .call(ui, btn, { items, onClose: () => { shown = null; } });
+      shown = m;
+      m.el.classList.add('vz-table-sum-menu');
+      // Each row's line under its name.
+      const rows = m.el.querySelectorAll('.blockr-menu__item');
+      types.forEach((t, i) => {
+        const label = rows[i] && rows[i].querySelector('.blockr-menu__label');
+        if (!label || !ABOUT[/** @type {'simple'} */ (t)]) return;
+        const line = document.createElement('span');
+        line.className = 'vz-table-sum-about';
+        line.textContent = ABOUT[/** @type {'simple'} */ (t)];
+        label.appendChild(line);
+      });
+    }, scope);
+    btn.setAttribute('aria-haspopup', 'menu');
+    el.appendChild(btn);
   }
 
   V.table.editors = Object.assign(V.table.editors || {}, { 'groups.summaries': editor });

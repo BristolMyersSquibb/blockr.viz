@@ -196,7 +196,8 @@
         "group": "Look",
         "control": "segmented",
         "label": "Orientation",
-        "labels": ["Horizontal", "Vertical"]
+        "labels": ["Horizontal", "Vertical"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -216,7 +217,8 @@
         "control": "segmented",
         "label": "Stacking",
         "labels": ["Stacked", "Side by side", "100%"],
-        "when": "color"
+        "when": "color",
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -250,7 +252,8 @@
         "group": "Order",
         "control": "segmented",
         "label": "Order",
-        "labels": ["Ascending", "Descending"]
+        "labels": ["Ascending", "Descending"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -321,7 +324,8 @@
         "group": "Look",
         "control": "segmented",
         "label": "Y scale",
-        "labels": ["Linear", "Log"]
+        "labels": ["Linear", "Log"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -340,7 +344,8 @@
         "group": "Look",
         "control": "segmented",
         "label": "X scale",
-        "labels": ["Linear", "Log"]
+        "labels": ["Linear", "Log"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -431,9 +436,10 @@
       },
       "gear": {
         "group": "Marks",
-        "control": "select",
+        "control": "segmented",
         "label": "Line",
-        "labels": ["Straight", "Monotone", "Step at start", "Step at middle", "Step at end"]
+        "labels": ["Straight", "Monotone", "Step at start", "Step at middle", "Step at end"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -559,7 +565,8 @@
         "control": "segmented",
         "label": "Legend",
         "labels": ["Below", "Above", "On the marks", "None"],
-        "when": "color"
+        "when": "color",
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -602,9 +609,10 @@
       },
       "gear": {
         "group": "Marks",
-        "control": "select",
+        "control": "segmented",
         "label": "Smoother",
-        "labels": ["None", "Linear", "Loess"]
+        "labels": ["None", "Linear", "Loess"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true
@@ -641,7 +649,8 @@
         "group": "Marks",
         "control": "segmented",
         "label": "Points",
-        "labels": ["None", "Outliers"]
+        "labels": ["None", "Outliers"],
+        "icons": true
       },
       "slot": true,
       "ctrl": true

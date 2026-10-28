@@ -191,7 +191,7 @@ chart_spec_look <- function() {
       null = "horizontal for bar, vertical for boxplot and pointrange",
       applies = c("bar", "boxplot", "pointrange"),
       gear = gear("Look", "segmented", "Orientation",
-                  labels = c("Horizontal", "Vertical")),
+                  labels = c("Horizontal", "Vertical"), icons = TRUE),
       describe = paste(
         "Which way a bar, boxplot or pointrange lies. It changes no mapping:",
         "`category` stays the category either way."
@@ -202,7 +202,8 @@ chart_spec_look <- function() {
       type = "enum", default = "stack", values = c("stack", "dodge", "fill"),
       applies = c("bar", "area", "histogram"),
       gear = gear("Look", "segmented", "Stacking",
-                  labels = c("Stacked", "Side by side", "100%"), when = "color"),
+                  labels = c("Stacked", "Side by side", "100%"), when = "color",
+                  icons = TRUE),
       example = "stack",
       describe = "Layout of a color split: stacked, side by side, or to 100%."
     ),
@@ -212,7 +213,7 @@ chart_spec_look <- function() {
       values = c("bottom", "top", "marks", "none"),
       gear = gear("Look", "segmented", "Legend",
                   labels = c("Below", "Above", "On the marks", "None"),
-                  when = "color"),
+                  when = "color", icons = TRUE),
       example = "marks",
       describe = paste(
         "Where the color legend goes. \"marks\" writes the names on the marks",
@@ -223,7 +224,8 @@ chart_spec_look <- function() {
     y_transform = chart_arg(
       type = "enum", default = "identity", values = c("identity", "log10"),
       applies = c("scatter", "line", "band"),
-      gear = gear("Look", "segmented", "Y scale", labels = c("Linear", "Log")),
+      gear = gear("Look", "segmented", "Y scale", labels = c("Linear", "Log"),
+                  icons = TRUE),
       example = "log10",
       describe = paste(
         "\"log10\" draws a base-10 y axis. Values at or below zero are not",
@@ -234,7 +236,8 @@ chart_spec_look <- function() {
     x_transform = chart_arg(
       type = "enum", default = "identity", values = c("identity", "log10"),
       applies = "scatter",
-      gear = gear("Look", "segmented", "X scale", labels = c("Linear", "Log")),
+      gear = gear("Look", "segmented", "X scale", labels = c("Linear", "Log"),
+                  icons = TRUE),
       example = "log10",
       describe = "As `y_transform`, for the x axis of a scatter."
     ),
@@ -281,7 +284,7 @@ chart_spec_sorting <- function() {
       null = "desc for sort_by = \"value\", else asc",
       applies = c(SPEC_CHART_AGGREGATED, "gantt"),
       gear = gear("Order", "segmented", "Order",
-                  labels = c("Ascending", "Descending")),
+                  labels = c("Ascending", "Descending"), icons = TRUE),
       example = "desc",
       describe = "Sort direction."
     )

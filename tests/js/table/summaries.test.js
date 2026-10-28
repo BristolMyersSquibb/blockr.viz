@@ -52,11 +52,12 @@ test('a lone column starts open; the words for other types', () => {
 
 test('an entry\'s fields come from its type, with the spec\'s rules', () => {
   const e = editor([{ type: 'simple', func: 'count', show: 'bar' }]);
-  assert.deepEqual(e.built.map((c) => c.key), ['facet', 'show', 'func', 'color', 'name']);
+  // The mark first: it decides the fields that follow. The name last.
+  assert.deepEqual(e.built.map((c) => c.key), ['show', 'facet', 'func', 'color', 'name']);
   e.draw([{ type: 'simple', func: 'mean', show: 'tile', color: 'SEX' }]);
-  assert.deepEqual(e.built.map((c) => c.key), ['facet', 'show', 'func', 'col', 'fill', 'color', 'name']);
+  assert.deepEqual(e.built.map((c) => c.key), ['show', 'facet', 'func', 'col', 'fill', 'color', 'name']);
   e.draw([{ type: 'dist', col: 'AGE', show: 'text' }]);
-  assert.deepEqual(e.built.map((c) => c.key), ['facet', 'show', 'col', 'summary', 'color', 'name']);
+  assert.deepEqual(e.built.map((c) => c.key), ['show', 'facet', 'col', 'summary', 'color', 'name']);
   assert.equal(e.built.find((c) => c.key === 'summary').value, 'median_q1_q3');
 });
 
@@ -95,14 +96,60 @@ test('move, remove, add and fold', () => {
   assert.equal(e.el.querySelector('.vz-table-sum-toggle').getAttribute('aria-expanded'), 'true');
 });
 
-test('the Show tiles have a drawing for every value and the editor width', () => {
-  const e = editor([{ type: 'simple', func: 'count', show: 'bar' }]);
+test('Show takes the editor\'s width; each entry is headed by its type\'s drawing', () => {
+  const e = editor([{ type: 'simple', func: 'count', show: 'bar' }, { type: 'pair', x: 'AGE', xend: 'AGE' }]);
   const show = e.built.find((c) => c.key === 'show');
-  for (const v of ['bar', 'number', 'dot', 'tile', 'box', 'pointrange', 'text', 'dumbbell']) {
-    assert.match(show.host.icon('show', v), /^<svg/, v);
-  }
-  assert.equal(show.host.icon('func', 'mean'), '');
+  assert.equal(show.arg.gear.control, 'segmented');
+  assert.ok(show.arg.gear.icons);
   const row = e.el.querySelector('.vz-table-sum-field--wide');
-  assert.ok(row);
   assert.equal(row.querySelector('.blockr-label').textContent, show.label);
+  const heads = Array.from(e.el.querySelectorAll('.vz-table-sum-icon'));
+  assert.equal(heads.length, 2);
+  // The types' own drawings: three bars for Summary, a line and two diamonds for Pair.
+  assert.equal(heads[0].querySelectorAll('svg[viewBox="0 0 24 24"] rect').length, 3);
+  assert.equal(heads[1].querySelectorAll('svg[viewBox="0 0 24 24"] path[fill="none"]').length, 3);
+});
+
+test('"+ Add a column" opens blockr.ui\'s menu: a row per type, its drawing and its line', () => {
+  const opened = [];
+  const env = loadTable({ before: (win) => {
+    win.Blockr.menu = (anchor, cfg) => {
+      const el = win.document.createElement('div');
+      for (const it of cfg.items) {
+        const row = el.appendChild(win.document.createElement('button'));
+        if (it.divider) { row.className = 'blockr-menu__divider'; continue; }
+        row.className = 'blockr-menu__item';
+        row.innerHTML = '<span class="blockr-menu__icon">' + (it.icon || '') + '</span>' +
+          '<span class="blockr-menu__label">' + it.label + '</span>';
+        row.onclick = it.onSelect;
+      }
+      const m = { el, closed: 0, close: () => { m.closed += 1; cfg.onClose(); } };
+      opened.push(m);
+      return m;
+    };
+  } });
+  const sets = [];
+  const el = env.win.document.createElement('div');
+  env.V.table.editors['groups.summaries'](el, {
+    values: { layout: 'groups', summaries: [{ type: 'simple' }] }, columns: COLS, scope: new env.V.Scope(),
+    set: (v) => sets.push(JSON.parse(JSON.stringify(v)))
+  });
+  assert.equal(el.querySelector('.vz-table-sum-addcol select'), null);
+  const btn = el.querySelector('.vz-table-sum-add');
+  assert.equal(btn.textContent, '+ Add a column');
+  btn.click();
+  const m = opened[0];
+  assert.ok(m.el.classList.contains('vz-table-sum-menu'));
+  const rows = Array.from(m.el.querySelectorAll('.blockr-menu__item'));
+  assert.equal(rows.length, 8);
+  assert.equal(m.el.querySelectorAll('.blockr-menu__divider').length, 2);
+  assert.match(rows[1].querySelector('.blockr-menu__icon').innerHTML, /^<svg/);
+  assert.equal(rows[1].querySelector('.vz-table-sum-about').textContent, 'Spread of a number: box or dot range');
+  // Again: the open menu closes.
+  btn.click();
+  assert.equal(m.closed, 1);
+  assert.equal(opened.length, 1);
+  btn.click();
+  opened[1].el.querySelectorAll('.blockr-menu__item')[5].click();
+  assert.deepEqual(sets, [[{ type: 'simple' }, { type: 'pair' }]]);
 });

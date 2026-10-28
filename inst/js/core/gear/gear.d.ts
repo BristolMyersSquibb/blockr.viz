@@ -11,6 +11,8 @@ interface VizGearField {
   labels?: string[];
   parse?: string;
   when?: string;
+  /** A segmented control draws each option's icon (icons.js) beside its word. */
+  icons?: boolean;
 }
 
 /** One argument of a generated spec (inst/js/spec/*.js). */
@@ -170,6 +172,8 @@ interface VizGearNamespace {
   controls: VizControlKit;
   tiles: VizTileKit;
   icons: Record<string, string>;
+  /** Small icons keyed `<argument>:<value>` (icons.js). */
+  glyphs: Record<string, string>;
 }
 
 interface VizTitlesNamespace {
@@ -192,6 +196,9 @@ interface VizNamespace {
   titles: VizTitlesNamespace;
 }
 
+/** A row of blockr.ui's Blockr.menu, or a rule between groups. */
+type VizMenuEntry = { label: string; icon?: string; onSelect?: () => void } | { divider: true };
+
 /**
  * The part of blockr.ui the gear uses. blockr.ui is in Imports and every
  * block's dependency attaches its controls; `layer` and `Select.menu` are
@@ -205,6 +212,9 @@ interface VizUi {
                      sections: { el: HTMLElement; title: string; titleEl?: HTMLElement | null }[] }[],
            opts?: { current?: string; onPick?: (key: string) => void; label?: string }):
     { el: HTMLElement; show(key: string): void; current(): string };
+  /** A menu under `anchor` (blockr.ui's Blockr.menu); newer, may be missing. */
+  menu?(anchor: HTMLElement, config: { items: VizMenuEntry[]; onClose?: () => void },
+        byKeyboard?: boolean): { el: HTMLElement; close(): void };
   segmented(options: { value: string; label: string }[], selected: string,
              onChange: (v: string) => void, opts?: { label?: string }):
     { el: HTMLElement; set(v: string): void; get(): string };

@@ -25,6 +25,8 @@ const hooks = new Set([
   'find', 'getId', 'getValue', 'setValue', 'subscribe', 'unsubscribe',
   'initialize', 'receiveMessage', 'getState', 'getRatePolicy', 'renderValue',
   'renderError', 'clearError', 'resize',
+  // blockr.ui: a Blockr.menu row's pick
+  'onSelect',
   // the language and the browser
   'constructor', 'toJSON', 'handleEvent', 'onload', 'onerror'
 ]);

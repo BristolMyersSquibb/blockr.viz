@@ -197,9 +197,11 @@ test('the shading editor round-trips every key of a rule', () => {
   const boxes = el.querySelectorAll('.vz-table-shade-cols input');
   boxes[1].checked = true;
   fire(boxes[1], 'change');
-  const mode = el.querySelector('select');
-  mode.value = 'Sequential';
-  fire(mode, 'change');
+  // The mode: the spec's segments, with icons.
+  const segs = el.querySelectorAll('.vz-table-shade-mode button');
+  assert.deepEqual(Array.from(segs).map((b) => b.textContent), ['Diverging', 'Sequential', 'Data bar']);
+  assert.equal(el.querySelectorAll('.vz-table-shade-mode .vz-seg-icon svg').length, 3);
+  segs[1].click();
   fire(el.querySelector('.vz-table-shade-add'), 'click');
   fire(el.querySelector('.vz-table-shade-remove'), 'click');
   assert.ok(el.querySelector('.vz-table-shade-add').classList.contains('blockr-btn'));

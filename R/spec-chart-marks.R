@@ -7,8 +7,8 @@ chart_spec_marks <- function() {
     smoother = chart_arg(
       type = "enum", default = "none", values = c("none", "lm", "loess"),
       applies = "scatter",
-      gear = gear("Marks", "select", "Smoother",
-                  labels = c("None", "Linear", "Loess")),
+      gear = gear("Marks", "segmented", "Smoother",
+                  labels = c("None", "Linear", "Loess"), icons = TRUE),
       example = "none",
       describe = "Trend line, fit per color or series group and per panel."
     ),
@@ -18,9 +18,10 @@ chart_spec_marks <- function() {
       values = c("straight", "monotone", "step_start", "step_middle",
                  "step_end"),
       applies = c("line", "area"),
-      gear = gear("Marks", "select", "Line",
+      gear = gear("Marks", "segmented", "Line",
                   labels = c("Straight", "Monotone", "Step at start",
-                             "Step at middle", "Step at end")),
+                             "Step at middle", "Step at end"),
+                  icons = TRUE),
       describe = "How a line connects its points."
     ),
 
@@ -66,7 +67,7 @@ chart_spec_marks <- function() {
       type = "enum", default = "none", values = c("none", "outliers"),
       applies = c("boxplot", "band"),
       gear = gear("Marks", "segmented", "Points",
-                  labels = c("None", "Outliers")),
+                  labels = c("None", "Outliers"), icons = TRUE),
       example = "none",
       describe = "\"outliers\" draws the points beyond the whiskers."
     ),

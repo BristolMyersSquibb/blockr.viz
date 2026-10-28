@@ -44,8 +44,8 @@ table_summary_specs <- function() {
       facet = summary_facet_arg(),
       show = viz_arg(
         type = "enum", default = "bar", values = c("bar", "number", "dot", "tile"),
-        gear = gear("Columns", "tiles", "Show",
-                    labels = c("Bar", "Number", "Dot", "Tile")),
+        gear = gear("Columns", "segmented", "Show",
+                    labels = c("Bar", "Number", "Dot", "Tile"), icons = TRUE),
         describe = "The mark. \"tile\" is a square cell, offered with look = \"compact\"."
       ),
       func = viz_arg(
@@ -67,7 +67,7 @@ table_summary_specs <- function() {
         null = "by the measure",
         gear = gear("Columns", "segmented", "Stacking",
                     labels = c("Stacked", "Side by side", "100%"),
-                    when = "color"),
+                    when = "color", icons = TRUE),
         describe = "Layout of a color split on a bar."
       ),
       fill = viz_arg(
@@ -88,8 +88,8 @@ table_summary_specs <- function() {
       show = viz_arg(
         type = "enum", default = "pointrange",
         values = c("pointrange", "box", "text"),
-        gear = gear("Columns", "tiles", "Show",
-                    labels = c("Dot range", "Box", "Text")),
+        gear = gear("Columns", "segmented", "Show",
+                    labels = c("Dot range", "Box", "Text"), icons = TRUE),
         describe = "The mark, or the statistic as text."
       ),
       col = viz_arg(
@@ -318,9 +318,9 @@ table_summary_specs <- function() {
         type = "enum",
         values = c("bar", "number", "dumbbell", "box", "pointrange", "text"),
         null = "read off the result",
-        gear = gear("Columns", "tiles", "Show",
+        gear = gear("Columns", "segmented", "Show",
                     labels = c("Bar", "Number", "Dumbbell", "Box", "Dot range",
-                               "Text")),
+                               "Text"), icons = TRUE),
         describe = "The mark; NULL reads it off the result's columns."
       ),
       fn = viz_arg(
@@ -348,8 +348,9 @@ table_shading_spec <- function() {
     mode = viz_arg(
       type = "enum", default = "diverging",
       values = c("diverging", "sequential", "bar"),
-      gear = gear("Color", "tiles", "Mode",
-                  labels = c("Diverging", "Sequential", "Data bar")),
+      gear = gear("Color", "segmented", "Mode",
+                  labels = c("Diverging", "Sequential", "Data bar"),
+                  icons = TRUE),
       describe = paste(
         "\"diverging\" centers on 0, \"sequential\" ramps two colors, \"bar\"",
         "draws a data bar in the cell. An unknown mode is an error."

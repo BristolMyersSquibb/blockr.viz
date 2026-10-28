@@ -19,7 +19,6 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
 
   const BY_LABEL = { records: 'Nest by', groups: 'One row per', variables: 'One column per' };
-  const MODES = [['diverging', 'Diverging'], ['sequential', 'Sequential'], ['bar', 'Bar']];
   /** Records rows a finished input does not offer: it is shown as it came. */
   const PICKS = ['by', 'rowname', 'columns', 'color', 'shadings', 'missing'];
 
@@ -119,8 +118,14 @@
     el.className = 'vz-table-shade-rule';
     const mode = el.appendChild(document.createElement('div'));
     mode.className = 'vz-table-shade-mode';
-    pick(mode, MODES.map(([value, label]) => ({ value, label })), String(rule.mode || ''),
-         { label: 'Mode' }, (v) => put(Object.assign({}, rule, { mode: v })), scope);
+    // The spec's own control: segments with the ramps' icons.
+    const arg = /** @type {any} */ (V.spec.table).shadings.type.fields.mode;
+    V.gear.controls.build(mode, {
+      key: 'mode', arg, label: arg.gear.label, value: rule.mode ?? arg.default, values: rule,
+      columns: [], required: false, scope, host: {}, titles: {},
+      labelOf: (/** @type {string} */ k) => k,
+      set: (/** @type {unknown} */ v) => put(Object.assign({}, rule, { mode: v }))
+    });
     const on = new Set(/** @type {string[]} */ (rule.columns || []));
     const cols = el.appendChild(document.createElement('div'));
     cols.className = 'vz-table-shade-cols';

@@ -150,7 +150,7 @@ table_spec_look <- function() {
       type = "enum", default = "by_summary", values = c("by_summary", "by_level"),
       applies = "groups",
       gear = gear("Look", "segmented", "Facet layout",
-                  labels = c("By summary", "By level")),
+                  labels = c("By summary", "By level"), icons = TRUE),
       example = "by_summary",
       describe = paste(
         "Column order of faceted summaries. \"by_level\" needs exactly one",
@@ -186,7 +186,7 @@ table_spec_sorting <- function() {
       null = "desc for sort_by = \"value\", else asc",
       applies = "groups",
       gear = gear("Order", "segmented", "Order",
-                  labels = c("Ascending", "Descending")),
+                  labels = c("Ascending", "Descending"), icons = TRUE),
       example = "desc",
       describe = "Sort direction."
     ),
