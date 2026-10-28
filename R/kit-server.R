@@ -29,8 +29,9 @@ viz_rev_tracker <- function(state, revs) {
 #' Take the gear's settings into the state
 #'
 #' Reads `<id>_set` (checked by its input handler, see kit-input.R), passes it
-#' through the lock, script and stale-message gates, runs the block's
-#' `normalize()` over the result and writes what changed.
+#' through the lock, script and stale-message gates, checks the script
+#' controls' values against the script, runs the block's `normalize()` over
+#' the result and writes what changed.
 #'
 #' @param input The block's Shiny input.
 #' @param id The view's element id, without the `_set` suffix.
@@ -38,15 +39,28 @@ viz_rev_tracker <- function(state, revs) {
 #' @param state,revs The block's state and revision counter.
 #' @param normalize A pure function of the full value list that returns it
 #'   with the rules between arguments applied (the chart's orientation, ...).
+#' @param script The block's viz_script_sources(), or NULL: then
+#'   `script_values` from the browser is dropped.
 #' @return The observer, invisibly.
 #' @noRd
 viz_settings_observer <- function(input, id, spec, state, revs,
-                                  normalize = identity) {
+                                  normalize = identity, script = NULL) {
   name <- paste0(id, "_set")
   obs <- shiny::observeEvent(input[[name]], {
     msg <- input[[name]]
     viz_log_rejected(msg$rejected, spec$block)
     values <- viz_gate_set(msg, revs)
+    # The specs are the ones the band was drawn from: the payload has
+    # usually computed them already, and they evaluate declarations only.
+    if ("script_values" %in% names(values)) {
+      values$script_values <- if (!is.null(script)) {
+        viz_script_values(
+          values$script_values,
+          tryCatch(script$specs(), error = function(e) list()),
+          state$script_values()
+        )
+      }
+    }
     if (!length(values)) {
       return()
     }
@@ -177,7 +191,8 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
     parts <- setup(kit)
     stopifnot(is.function(parts$payload), shiny::is.reactive(parts$expr))
     viz_settings_observer(input, view, spec, kit$state, kit$revs,
-                          normalize = parts$normalize %||% identity)
+                          normalize = parts$normalize %||% identity,
+                          script = parts$script)
     viz_selection_observer(input, view, kit$state, kit$revs, kit$transient,
                            kit$claim)
     viz_capture_observer(input, view, kit$capture)

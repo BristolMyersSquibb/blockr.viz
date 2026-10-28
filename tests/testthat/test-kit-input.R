@@ -109,14 +109,16 @@ test_that("the gates drop locked, script and stale settings", {
     '{"rev": 0, "values": {"color": "cyl", "script": "system(1)",
       "script_values": {"a": 1}}}'
   ))
+  # The script's controls' values pass; the settings observer checks them.
   expect_identical(viz_gate_set(msg, revs, locked = FALSE,
                                 browser_script = FALSE),
-                   list(color = "cyl"))
+                   list(color = "cyl", script_values = list(a = 1)))
   expect_named(viz_gate_set(msg, revs, locked = FALSE, browser_script = TRUE),
                c("color", "script", "script_values"))
   expect_identical(viz_gate_set(msg, revs, locked = TRUE), list())
 
   # color changed elsewhere after the message's revision 0
+  msg$values$script_values <- NULL
   revs$track(list(color = "gear"))
   expect_length(viz_gate_set(msg, revs, locked = FALSE,
                              browser_script = FALSE), 0L)

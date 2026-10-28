@@ -83,3 +83,74 @@ viz_script_sources <- function(raw, state) {
     }
   )
 }
+
+#' Take the script controls' values from the browser
+#'
+#' `script_values` is a map of plain values, so the gear may set it, but each
+#' value is checked against the controls the script declares now: a name the
+#' script does not declare is dropped, and so is a value its control could
+#' not have sent (a number outside its range, a choice it does not offer).
+#' A dropped value keeps the current one. The script text itself is code and
+#' stays behind the `blockr.viz.browser_script` option (viz_gate_set()).
+#'
+#' @param incoming The message's `script_values`, a named list.
+#' @param specs The script's current controls (cb_specs()).
+#' @param current The block's current `script_values`.
+#' @return The values to set: `current` with the accepted values replaced.
+#' @noRd
+viz_script_values <- function(incoming, specs, current = list()) {
+  out <- as.list(current %||% list())
+  if (!is.list(incoming) || !length(incoming)) {
+    return(out)
+  }
+  for (s in specs) {
+    if (!is.null(s$error) || is.na(s$kind) || !s$name %in% names(incoming)) {
+      next
+    }
+    v <- script_value_read(incoming[[s$name]], s)
+    if (!is.null(v)) out[s$name] <- list(v)
+  }
+  out
+}
+
+# One control's value as the script reads it, or NULL when its control could
+# not have sent it.
+script_value_read <- function(x, s) {
+  if (is.list(x)) x <- unlist(x, use.names = FALSE)
+  switch(
+    s$kind,
+    number = {
+      if (!is.numeric(x) || length(x) != 1L || !is.finite(x)) {
+        return(NULL)
+      }
+      lo <- s$min %||% -Inf
+      hi <- s$max %||% Inf
+      if (x < lo || x > hi) NULL else as.numeric(x)
+    },
+    flag = {
+      if (is.character(x) && length(x) == 1L && x %in% c("on", "off")) {
+        return(identical(x, "on"))
+      }
+      if (is.logical(x) && length(x) == 1L && !is.na(x)) x
+    },
+    select = {
+      if (is.null(x)) x <- character()
+      if (!is.atomic(x) || (!isTRUE(s$multiple) && length(x) != 1L)) {
+        return(NULL)
+      }
+      if (!all(as.character(x) %in% as.character(s$choices))) {
+        return(NULL)
+      }
+      cb_coerce(as.character(x), s) %||% character()
+    },
+    date = {
+      if (!is.character(x) || length(x) != 1L) {
+        return(NULL)
+      }
+      d <- tryCatch(as.Date(x), error = function(e) NA)
+      if (is.na(d)) NULL else d
+    },
+    text = if (is.character(x) && length(x) == 1L) x,
+    NULL
+  )
+}
