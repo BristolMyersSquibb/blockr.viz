@@ -103,11 +103,10 @@ legacy_script <- function(x) {
   x
 }
 
-# Renames without a rule, and the "to logical" ones.
+# The rows a rename and a value map apply (kind "rename" and "logical").
 legacy_rows <- function(block, renamed = TRUE) {
   rows <- LEGACY_NAMES[LEGACY_NAMES$block == block & !is.na(LEGACY_NAMES$new) &
-                         (is.na(LEGACY_NAMES$rule) |
-                            LEGACY_NAMES$rule == "to logical"), ]
+                         LEGACY_NAMES$kind != "code", ]
   if (renamed) rows[rows$old != rows$new, ] else rows
 }
 
@@ -135,7 +134,7 @@ legacy_map_values <- function(block, x) {
     map <- rows$values[[i]]
     hit <- v %in% names(map)
     v[hit] <- unname(map[v[hit]])
-    if (identical(rows$rule[[i]], "to logical")) {
+    if (identical(rows$kind[[i]], "logical")) {
       v <- as.logical(v)
     }
     x[nm] <- list(v)
@@ -242,7 +241,7 @@ legacy_template <- function(block, tpl, state) {
   }
   tpl <- legacy_slots(tpl, legacy_slot_names(block, state))
   rows <- legacy_rows(block, renamed = FALSE)
-  rows <- rows[lengths(rows$values) > 0L & is.na(rows$rule), ]
+  rows <- rows[lengths(rows$values) > 0L & rows$kind == "rename", ]
   for (i in seq_len(nrow(rows))) {
     tpl <- legacy_template_values(tpl, rows$new[[i]], rows$values[[i]])
   }

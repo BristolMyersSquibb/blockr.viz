@@ -431,7 +431,9 @@ legacy_restore_tile <- function(payload, label = "a tile") {
             "block. Not carried over: ", paste(lost, collapse = ", "), ".",
             call. = FALSE)
   }
-  legacy_restore("table", args, version = NULL)  # unset `color` is "auto"
+  # The tile's rows took the board's colours.
+  args$color <- "auto"
+  legacy_restore("table", args, version = VIZ_REWRITE_VERSION)
 }
 
 # new_heatmap_block() (< 0.3.0): groups, compact, one tile count per `col`
@@ -463,7 +465,9 @@ legacy_restore_heatmap <- function(payload, label = "a heatmap") {
     download = isTRUE(unlist(p[["download"]])),
     title = sentence(p[["title"]]), subtitle = sentence(p[["subtitle"]]),
     caption = sentence(p[["caption"]]),
-    script = p[["script"]], script_values = values
+    script = p[["script"]], script_values = values,
+    # The heatmap's `color` is the tile's paint (`fill`); the rows take none.
+    color = NULL
   )
   warning("new_heatmap_block() is gone: ", label, " restores as a table ",
           "block (groups layout, compact look). See ?new_table_block.",
