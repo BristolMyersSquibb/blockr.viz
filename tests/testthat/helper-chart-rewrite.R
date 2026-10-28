@@ -193,6 +193,11 @@ record_rw_expected <- function(rec) {
     s$wire <- NULL
     s$state <- sel(s$state)
     s["download"] <- list(msg(s$download))
+    if (is.data.frame(s$download) &&
+          (rec$initial$type %||% "bar") %in% c(CHART_AGGREGATED_TYPES,
+                                               "histogram")) {
+      s$download <- record_rw_summary_sheet(s$download, record_df())
+    }
     views <- list()
     for (b in lapply(s$browser, record_ref_computed)) {
       core <- b[names(b) != "rows"]
@@ -237,6 +242,45 @@ record_rw_warnings <- function(w) {
     names <- sort(strsplit(m, ", ", fixed = TRUE)[[1L]])
     sub(m, paste(names, collapse = ", "), x, fixed = TRUE)
   }, character(1L), USE.NAMES = FALSE)
+}
+
+# An aggregated chart's Excel download starts with its Summary sheet
+# (behaviour-changes.md, the chart's data view): the outer keys as row
+# groups over the innermost, the columns by name, the statistic as "Mean of
+# <column>". The reference's flat sheet in that layout; `data` holds the
+# labels the reference's header used.
+record_rw_summary_sheet <- function(dl, data) {
+  lab <- vapply(names(data), function(n) attr(data[[n]], "label") %||% n, "")
+  name <- function(x) {
+    hit <- names(lab)[lab == x]
+    if (length(hit)) hit[[1L]] else x
+  }
+  stat <- function(x) {
+    if (grepl("^Count", x)) {
+      return("Count of rows")
+    }
+    m <- regmatches(x, regexec("^(\\w+): (.+)$", x))[[1L]]
+    if (length(m)) paste(m[[2L]], "of", name(m[[3L]])) else x
+  }
+  head_at <- which(!is.na(dl[[2L]]))[[1L]]
+  top <- dl[seq_len(head_at - 1L), , drop = FALSE]
+  body <- dl[-seq_len(head_at), , drop = FALSE]
+  k <- ncol(dl) - 1L
+  keys <- vapply(unlist(dl[head_at, seq_len(k)]), name, "")
+  out <- list(c(keys[[k]], stat(dl[head_at, k + 1L])))
+  outer <- NULL
+  for (i in seq_len(nrow(body))) {
+    o <- if (k > 1L) paste(unlist(body[i, seq_len(k - 1L)]), collapse = " ")
+    if (k > 1L && !identical(o, outer)) {
+      out <- c(out, list(c(o, NA)))
+      outer <- o
+    }
+    out <- c(out, list(c(body[i, k], body[i, k + 1L])))
+  }
+  rows <- do.call(rbind, out)
+  new <- data.frame(X1 = c(top$X1, rows[, 1L]), X2 = c(top$X2, rows[, 2L]))
+  rownames(new) <- NULL
+  new
 }
 
 # Recordings that differ by a user-visible change still open in

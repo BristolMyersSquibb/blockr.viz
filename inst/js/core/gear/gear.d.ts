@@ -216,7 +216,7 @@ interface VizUi {
   menu?(anchor: HTMLElement, config: { items: VizMenuEntry[]; onClose?: () => void },
         byKeyboard?: boolean): { el: HTMLElement; close(): void };
   segmented(options: { value: string; label: string }[], selected: string,
-             onChange: (v: string) => void, opts?: { label?: string }):
+             onChange: (v: string) => void, opts?: { label?: string; size?: 'xs' }):
     { el: HTMLElement; set(v: string): void; get(): string };
   checkbox(label: string, checked: boolean, onChange: (on: boolean) => void):
     { el: HTMLElement; input: HTMLInputElement; set(v: boolean): void; get(): boolean };

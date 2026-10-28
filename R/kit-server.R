@@ -181,7 +181,11 @@ viz_capture_observer <- function(input, id, capture) {
 #' - `cond`: a reactiveValues of the block's own conditions (`error`,
 #'   `warning`, `message`), which blockr.core shows with the block; optional;
 #' - `script`: the block's viz_script_sources(); optional, no `script` entry
-#'   in the payload without it.
+#'   in the payload without it;
+#' - `data_view`: a function of the reader's `<view>_data` message
+#'   (viz_read_data_view()) returning the payload's `derived$data_view`
+#'   (chart_data_view()); optional. The entry goes out only while the
+#'   reader has the view open.
 #'
 #' `setup()` wires anything else itself, with what `kit` holds.
 #'
@@ -224,7 +228,8 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
   viz_rev_tracker(state, revs)
   list(
     input = input, output = output, session = session, spec = spec,
-    state = state, revs = revs, el = session$ns(view), data = data,
+    state = state, revs = revs, view = view, el = session$ns(view),
+    data = data,
     # With a drill target set a click is an event, kept here instead of in
     # the selection. A block without the argument holds every click.
     claim = shiny::reactiveVal(NULL),
@@ -237,9 +242,10 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
 
 # The payload with the entries every block's `derived` carries beside its
 # own: the download menu, when the block gives an exhibit; the prepare
-# script's controls and error, when it gives one; the drill targets the gear
-# offers; the ratio the browser composes a picture at. `derived` stays a
-# named list, an object on the wire.
+# script's controls and error, when it gives one; the data view's table while
+# the reader has it open; the drill targets the gear offers; the ratio the
+# browser composes a picture at. `derived` stays a named list, an object on
+# the wire.
 #
 # A picture of rows the view no longer draws must not reach a download, so
 # the capture is dropped when the payload's data revision moves. The view
@@ -267,6 +273,10 @@ viz_with_shared <- function(kit, parts, view) {
     drawn$rev <- p$data_rev
     if (!is.null(menu)) p$derived$downloads <- menu()
     if (!is.null(parts$script)) p$derived$script <- parts$script$derived()
+    if (is.function(parts$data_view)) {
+      dv <- kit$input[[paste0(view, "_data")]]
+      if (isTRUE(dv$on)) p$derived$data_view <- parts$data_view(dv)
+    }
     p$derived$ctrl_choices <- ctrl_choices_list(choices())
     p$derived$capture_ratio <- canvas_capture_ratio()
     p

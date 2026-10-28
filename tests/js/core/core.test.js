@@ -13,8 +13,8 @@ test('the core defines Blockr.viz and nothing else', () => {
   const added = Object.keys(win).filter((k) => !before.has(k));
   assert.deepEqual(added.sort(), ['Blockr']);
   assert.deepEqual(Object.keys(V).sort(),
-                   ['Frame', 'Scope', 'binding', 'busy', 'capture', 'captureReply', 'downloads', 'gear',
-                    'scriptBand', 'spec', 'titles', 'tooltip', 'util']);
+                   ['DataView', 'Frame', 'Scope', 'binding', 'busy', 'capture', 'captureReply',
+                    'downloads', 'gear', 'scriptBand', 'spec', 'titles', 'tooltip', 'util']);
   // The views and other packages reach the busy cue as Blockr.busy.
   assert.equal(win.Blockr.busy, V.busy);
 });

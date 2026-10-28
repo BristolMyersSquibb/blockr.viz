@@ -49,7 +49,15 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     stop("write_annotated_xlsx() needs the 'openxlsx' package.", call. = FALSE)
   }
   df <- if (is.data.frame(x)) x else as_annotated_df(x)
+  wb <- openxlsx::createWorkbook()
+  xlsx_annotated_sheet(wb, df, sheet, title, subtitle, caption, digits)
+  openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+  invisible(file)
+}
 
+# One sheet of write_annotated_xlsx(), added to `wb`.
+xlsx_annotated_sheet <- function(wb, df, sheet, title, subtitle, caption,
+                                 digits) {
   stub_col <- if (".label" %in% names(df)) ".label" else names(df)[1]
   data_cols <- setdiff(names(df), stub_col)
   data_cols <- data_cols[!startsWith(data_cols, ".")]
@@ -66,7 +74,6 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     bold_row <- !is.na(bv) & bv
   }
 
-  wb <- openxlsx::createWorkbook()
   openxlsx::addWorksheet(wb, sheet)
   r <- xlsx_write_titles(wb, sheet, n_col, title, subtitle)
   header_bottom_row <- xlsx_write_header(wb, sheet, df, stub_col, data_cols, r)
@@ -95,9 +102,7 @@ write_annotated_xlsx <- function(x, file, title = NULL, subtitle = NULL,
     openxlsx::setColWidths(wb, sheet, cols = 2:n_col, widths = 16)
   }
   openxlsx::freezePane(wb, sheet, firstActiveRow = header_bottom_row + 1L)
-
-  openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
-  invisible(file)
+  invisible(wb)
 }
 
 # A merged line across the table's width.
@@ -325,7 +330,27 @@ xlsx_num_format <- function(digits) {
 # The Excel download: the exhibit's values under its titles.
 export_xlsx <- function(x, file) {
   t <- exhibit_titles(x)
+  dv <- exhibit_meta(x)$data_view
+  if (is.data.frame(dv$summary)) {
+    return(export_xlsx_data_view(dv, file, t))
+  }
   write_annotated_xlsx(exhibit_data(x), file, title = t$title,
                        subtitle = t$subtitle, caption = t$caption,
                        digits = exhibit_meta(x)$digits)
+}
+
+# A chart's data view as two sheets (R/chart-data-view.R): "Summary", one row
+# per mark under the titles, and "Rows", the rows behind the selection, with
+# a filter on the header.
+export_xlsx_data_view <- function(dv, file, titles) {
+  wb <- openxlsx::createWorkbook()
+  xlsx_annotated_sheet(wb, dv$summary, "Summary", titles$title,
+                       titles$subtitle, titles$caption, digits = "number")
+  if (is.data.frame(dv$rows)) {
+    openxlsx::addWorksheet(wb, "Rows")
+    openxlsx::writeData(wb, "Rows", dv$rows, withFilter = TRUE)
+    openxlsx::freezePane(wb, "Rows", firstActiveRow = 2L)
+  }
+  openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+  invisible(file)
 }
