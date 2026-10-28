@@ -993,7 +993,7 @@
       "nullable": true,
       "gear": {
         "group": "Prepare script",
-        "control": "text",
+        "control": "script",
         "label": "Prepare script"
       },
       "slot": false,

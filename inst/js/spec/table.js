@@ -718,7 +718,7 @@
               "required": true,
               "gear": {
                 "group": "Columns",
-                "control": "text",
+                "control": "code",
                 "label": "Expression"
               },
               "slot": false,
@@ -775,7 +775,7 @@
               "required": true,
               "gear": {
                 "group": "Columns",
-                "control": "text",
+                "control": "code",
                 "label": "Summary of d"
               },
               "slot": false,
@@ -804,7 +804,7 @@
       },
       "gear": {
         "group": "Columns",
-        "control": "none",
+        "control": "custom",
         "label": "Columns"
       },
       "slot": false,
@@ -929,7 +929,7 @@
       },
       "gear": {
         "group": "Color",
-        "control": "none",
+        "control": "custom",
         "label": "Shade cells"
       },
       "slot": false,
@@ -1357,7 +1357,7 @@
       "nullable": true,
       "gear": {
         "group": "Prepare script",
-        "control": "text",
+        "control": "script",
         "label": "Prepare script"
       },
       "slot": false,

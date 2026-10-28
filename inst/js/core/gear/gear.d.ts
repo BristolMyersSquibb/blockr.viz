@@ -55,7 +55,7 @@ interface VizGearHost {
   tiles?(key: string, values: VizValues): { label?: string; values: unknown[] }[] | null | undefined;
   /** A tile's icon as an SVG string; '' for the engine's own. */
   icon?(key: string, value: unknown): string;
-  /** Draws the row of a key whose spec control is "none": the view's own editor. */
+  /** Draws the row of a key whose spec control is "custom": the view's own editor. */
   custom?(key: string, el: HTMLElement, ctx: VizCustomCtx): void;
   /** The hint in an empty text field. */
   placeholder?(key: string, values: VizValues): string | null | undefined;

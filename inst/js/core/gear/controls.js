@@ -34,9 +34,6 @@
     { value: 'compact', label: '1.2K' }, { value: 'percent', label: '12.3%' }
   ];
 
-  /** Free text that takes more than one line. */
-  const MULTILINE = ['script', 'expr', 'fn'];
-
   /** @type {Record<string, string>} */
   const PLACEHOLDERS = {
     lines: 'e.g. 2 or Target: 4',
@@ -431,8 +428,13 @@
 
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */
   function textCtl(el, ctx) {
-    if (ctx.key === 'script') scriptCtl(el, ctx);
-    else field(el, ctx, { multiline: MULTILINE.includes(ctx.key) });
+    field(el, ctx);
+  }
+
+  /** Text over several lines: an R expression or function.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function code(el, ctx) {
+    field(el, ctx, { multiline: true });
   }
 
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */
@@ -487,8 +489,9 @@
     V.titles.row(el, ctx);
   }
 
-  /** @param {HTMLElement} el @param {VizRowCtx} ctx */
-  function none(el, ctx) {
+  /** The view's own editor for the row (host.custom), or nothing.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function custom(el, ctx) {
     if (!ctx.host.custom) return;
     ctx.host.custom(ctx.key, el, { values: ctx.values, columns: ctx.columns, scope: ctx.scope,
                                    set: ctx.set });
@@ -496,8 +499,8 @@
 
   /** @type {Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>} */
   const BUILD = { column, columns, values: valuesCtl, select, segmented, toggle, number,
-                  text: textCtl, slider,
-                  tiles, template, none };
+                  text: textCtl, code, script: scriptCtl, slider,
+                  tiles, template, custom };
 
   /** Draw a row's controls. A template row draws its own field, preview and
    * help.
