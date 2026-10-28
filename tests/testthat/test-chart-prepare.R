@@ -421,7 +421,7 @@ test_that("annotations bound a control, helpers feed a declaration lazily", {
                list(min = 1, max = 50, label = "Rows"))
   expect_equal(by_name$k[c("min", "max")], list(min = 0, max = 5))
   expect_identical(by_name$sp$default, "setosa")
-  role <- dd_script_roles(ps$specs)[[1L]]
+  role <- script_control_records(ps$specs)[[1L]]
   expect_identical(role$label, "Rows")
 
   # Values arrive from the browser as text and lists, and are read by kind.
