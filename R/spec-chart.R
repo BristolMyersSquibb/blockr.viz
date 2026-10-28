@@ -190,7 +190,7 @@ chart_spec_look <- function() {
       null = FALSE,
       applies = c("bar", "area", "histogram"),
       gear = gear("Look", "segmented", "Stacking",
-                  labels = c("Stacked", "Side by side", "100%")),
+                  labels = c("Stacked", "Side by side", "100%"), when = "color"),
       slot = TRUE, ctrl = TRUE, ai = TRUE,
       example = "stack",
       describe = "Layout of a color split: stacked, side by side, or to 100%."
@@ -349,7 +349,8 @@ chart_spec_lines <- function() {
 
     y_lines = viz_arg(
       type = "numbers", default = NULL, null = "no lines",
-      applies = c(SPEC_CHART_AGGREGATED, "scatter", "line", "area", "histogram"),
+      applies = c("bar", "waterfall", "boxplot", "pointrange", "scatter", "line",
+                  "area", "histogram"),
       gear = gear("Reference lines", "text", "Horizontal", parse = "lines"),
       slot = TRUE, ctrl = TRUE, ai = TRUE,
       describe = paste(
@@ -452,7 +453,7 @@ chart_spec_interact <- function() {
 chart_spec <- function() {
   shared <- viz_shared_args()
   order <- c(
-    "type", "x", "y", "func", "color", "facet", "series", "xend", "label",
+    "type", "x", "xend", "y", "func", "color", "facet", "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
     "format", "unit", "y_transform", "x_transform", "tooltip", "drill",
     "line_width", "point_size", "connect", "y_lines", "x_lines", "ymin",

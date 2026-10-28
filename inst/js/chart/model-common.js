@@ -22,8 +22,7 @@
    * Which way an oriented chart lies when `orientation` is not given, the
    * twin of R's chart_infer_lie(): a row count's single column is the
    * category, any other single column the value; a numeric x beside a
-   * non-numeric y is horizontal; otherwise vertical, and a bar with neither
-   * set horizontal.
+   * non-numeric y is horizontal; otherwise, and with neither set, vertical.
    * @param {Record<string, any>} c @param {VizColumn[]} columns
    * @returns {'horizontal' | 'vertical'}
    */
@@ -32,7 +31,7 @@
     const hasX = set(c.x), hasY = set(c.y);
     const count = type === 'bar' && (c.func || 'count') === 'count';
     if (hasX !== hasY) return hasX === count ? 'vertical' : 'horizontal';
-    if (!hasX) return type === 'bar' ? 'horizontal' : 'vertical';
+    if (!hasX) return 'vertical';
     const numeric = (/** @type {string} */ n) => {
       const m = columns.find((col) => col.name === n);
       return m ? m.type === 'numeric' : null;

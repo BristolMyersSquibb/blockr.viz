@@ -71,14 +71,9 @@
         if (key === 'band_size' && v.band_window === 'fixed') return 'Half-width (x units)';
         return null;
       },
-      // Rows that do nothing in this state: stacking without a colour,
-      // value lines on a pie or treemap, an id with no counts shown.
       visible(key, v) {
         if (key === 'percent_of') return v.func === 'pct_distinct';
         if (key === 'drill_target' || key === 'drill_table') return !!v.drill;
-        if (key === 'position') return !!v.color;
-        if (key === 'y_lines') return !NS.model.FIXED.includes(v.type) || v.type === 'waterfall';
-        if (key === 'id') return v.type === 'band' || (!!v.show_n && v.show_n !== 'none');
         return true;
       },
       tiles: (key) => (key === 'type' ? TILES : null),
