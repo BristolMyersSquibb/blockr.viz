@@ -13,8 +13,8 @@
   const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
 
-  /** The interval of a point range as a custom series: a line from lo to hi with caps. `encode`
-   * maps both ends to the value axis. @param {any} name @param {any[]} pts [slot, lo, hi] each
+  /** The interval of a point range or an error bar as a custom series: a 1.5px line from lo to
+   * hi without caps, as the box's whiskers. `encode` maps both ends to the value axis. @param {any} name @param {any[]} pts [slot, lo, hi] each
    * @param {string} clr @param {boolean} horizontal */
   const whiskerSeries = (name, pts, clr, horizontal) => ({
     type: 'custom',
@@ -28,21 +28,12 @@
       const base = api.value(0), lo = api.value(1), hi = api.value(2);
       const pLo = horizontal ? api.coord([lo, base]) : api.coord([base, lo]);
       const pHi = horizontal ? api.coord([hi, base]) : api.coord([base, hi]);
-      const w = 4;
       const st = api.style ? api.style() : null;
       const opacity = st && st.opacity != null ? st.opacity : 1;
-      const style = { stroke: clr, lineWidth: 1, opacity };
-      // Caps run across the whisker.
-      const cap = (/** @type {number[]} */ p) => horizontal
-        ? { x1: p[0], y1: p[1] - w, x2: p[0], y2: p[1] + w }
-        : { x1: p[0] - w, y1: p[1], x2: p[0] + w, y2: p[1] };
       return {
-        type: 'group',
-        children: [
-          { type: 'line', shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] }, style },
-          { type: 'line', shape: cap(pLo), style },
-          { type: 'line', shape: cap(pHi), style }
-        ]
+        type: 'line',
+        shape: { x1: pLo[0], y1: pLo[1], x2: pHi[0], y2: pHi[1] },
+        style: { stroke: clr, lineWidth: 1.5, opacity }
       };
     }
   });
@@ -160,8 +151,12 @@
                                   hex, !vertical));
       }
       series.push({
-        type: 'scatter', name, data: centers, z: 4, symbolSize: 7,
-        itemStyle: { color: hex, cursor: 'pointer' }, emphasis: { disabled: true }
+        // The dot is ringed in the surface colour, as the box's median is cut out of it, and
+        // opaque (ECharts draws a scatter at 0.8) so it is the box's full colour.
+        type: 'scatter', name, data: centers, z: 4, symbolSize: 9,
+        itemStyle: { color: hex, opacity: 1, borderColor: k.ink.surface, borderWidth: 1.5,
+                     cursor: 'pointer' },
+        emphasis: { disabled: true }
       });
     }
     return series;
