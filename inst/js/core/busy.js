@@ -13,7 +13,7 @@
  *
  * Nothing shows for the first BUSY_AFTER ms: a cue that flashes for a few
  * frames is noise. The class goes on the element with the output's id; the
- * line is its `.blockr-busy-line` descendant, looked up on every tick since a
+ * line is its `.vz-busy-line` descendant, looked up on every tick since a
  * view may rebuild its DOM.
  *
  * Exposed as `Blockr.viz.busy` and, for the views and other packages,
@@ -80,8 +80,8 @@
       if (pending[id] !== p) return;
       const el = root.document.getElementById(id);
       if (!el) return;
-      el.classList.add('blockr-busy');
-      const line = el.querySelector('.blockr-busy-line');
+      el.classList.add('vz-busy');
+      const line = el.querySelector('.vz-busy-line');
       if (line) {
         line.textContent = (label || 'computing') + '… ' +
           ((performance.now() - t0) / 1000).toFixed(1) + ' s';
@@ -99,7 +99,7 @@
     clear(id);
     delete watched[id];
     const el = root.document.getElementById(id);
-    if (el) el.classList.remove('blockr-busy');
+    if (el) el.classList.remove('vz-busy');
   }
 
   /** @param {string} id */

@@ -42,15 +42,15 @@ function stubLayout(env) {
     return env.layout.width;
   };
   const gridOf = (grid) => {
-    const facets = Array.from(grid.querySelectorAll(':scope > .dd-facet'));
+    const facets = Array.from(grid.querySelectorAll(':scope > .vz-chart-facet'));
     const W = widthOf(grid);
     if (!facets.length) {
-      const ch = grid.querySelector(':scope > .dd-chart');
+      const ch = grid.querySelector(':scope > .vz-chart-panel');
       return { W, cols: 1, cellW: W, cellH: ch ? ch.clientHeight : 0, n: 1, facets };
     }
     const m = /repeat\((\d+)/.exec(grid.style.gridTemplateColumns || '');
     const cols = m ? Number(m[1]) : Math.max(1, Math.min(facets.length, Math.floor(W / 300)));
-    const ch = facets[0].querySelector('.dd-chart');
+    const ch = facets[0].querySelector('.vz-chart-panel');
     return { W, cols, cellW: Math.floor(W / cols), cellH: LABEL_H + (ch ? ch.clientHeight : 0),
              n: facets.length, facets };
   };
@@ -60,35 +60,35 @@ function stubLayout(env) {
   });
   proto.getBoundingClientRect = function () {
     if (!this.isConnected || hiddenUp(this)) return rect(0, 0, 0, 0);
-    const grid = this.closest('.dd-chart-grid');
-    if (this.classList.contains('dd-chart-grid')) {
+    const grid = this.closest('.vz-chart-grid');
+    if (this.classList.contains('vz-chart-grid')) {
       const g = gridOf(this);
       return rect(0, 100, g.W, Math.ceil(g.n / g.cols) * g.cellH);
     }
     if (grid) {
       const g = gridOf(grid);
       const gr = grid.getBoundingClientRect();
-      const facet = this.closest('.dd-facet');
+      const facet = this.closest('.vz-chart-facet');
       if (!facet) return rect(gr.left, gr.top, g.W, g.cellH);
       const i = g.facets.indexOf(facet);
       const left = gr.left + (i % g.cols) * g.cellW;
       const top = gr.top + Math.floor(i / g.cols) * g.cellH;
       if (this === facet) return rect(left, top, g.cellW, g.cellH);
-      if (this.classList.contains('dd-facet-label')) return rect(left, top, g.cellW, LABEL_H);
+      if (this.classList.contains('vz-chart-facet-label')) return rect(left, top, g.cellW, LABEL_H);
       return rect(left, top + LABEL_H, g.cellW, g.cellH - LABEL_H);
     }
-    const band = this.closest('.dd-legend-band');
+    const band = this.closest('.vz-chart-legend');
     if (band) {
       const card = band.closest('.vz-frame');
-      const gr = card.querySelector('.dd-chart-grid').getBoundingClientRect();
+      const gr = card.querySelector('.vz-chart-grid').getBoundingClientRect();
       const top = gr.top + gr.height;
       if (this === band) return rect(0, top, gr.width, LEGEND_H);
       const kids = Array.from(band.children);
-      const chip = this.closest('.dd-legend-chip, .dd-legend-title');
+      const chip = this.closest('.vz-chart-legend-chip, .vz-chart-legend-title');
       const i = kids.indexOf(chip);
       const left = 10 + 80 * i;
       if (this === chip) return rect(left, top + 4, 70, 16);
-      if (this.classList.contains('dd-legend-swatch')) return rect(left, top + 7, 10, 10);
+      if (this.classList.contains('vz-chart-legend-swatch')) return rect(left, top + 7, 10, 10);
       return rect(left + 14, top + 4, 56, 16);
     }
     return rect(0, 0, widthOf(this), this.clientHeight);
@@ -218,7 +218,7 @@ const captureMsg = (env, config, extra = {}) => env.win.JSON.parse(JSON.stringif
   req: 'tok-1', width: 640, height: 360, ratio: 2.5, ...extra
 }));
 const replies = (c) => c.inputs().filter((x) => x.name === 'blockr_viz_capture_result');
-const hosts = (c) => c.doc.querySelectorAll('.blockr-capture-host').length;
+const hosts = (c) => c.doc.querySelectorAll('.vz-capture-host').length;
 
 test('capture: a picture once the panels finished rendering, one reply, the host removed', async () => {
   const { c } = prepare(BAR, { width: 800 });

@@ -47,7 +47,7 @@
   const gears = (r) => [...r.querySelectorAll(".blockr-gear-btn")].filter(vis);
   const tables = (r) => [...r.querySelectorAll("table")].filter(vis);
   const trays = (r) => [...r.querySelectorAll(".blockr-settings--open")].filter(vis);
-  const segs = (tray) => [...tray.querySelectorAll(".dd-section--layout [role=radio]")]
+  const segs = (tray) => [...tray.querySelectorAll(".vz-section--layout [role=radio]")]
     .filter((s) => LAYOUTS.includes(val(s)));
 
   function read(id) {

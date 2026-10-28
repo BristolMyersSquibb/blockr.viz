@@ -142,10 +142,10 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
-       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
-       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
-       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>"
+       "<div class=\"vz-tt-head\"><span>MILD</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>",
+       "<div class=\"vz-tt-head\"><span>SEVERE</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>",
+       "<div class=\"vz-tt-head\"><span>MODERATE</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">8</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>",
+       "<div class=\"vz-tt-head\"><span></span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">2</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>"
       ]
      }
     },
@@ -277,9 +277,9 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>MODERATE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
-       "<div class=\"dd-tt-head\"><span>SEVERE</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>",
-       "<div class=\"dd-tt-head\"><span>MILD</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">10</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Share</span><span class=\"dd-tt-value\">25%</span></div>"
+       "<div class=\"vz-tt-head\"><span>MODERATE</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>",
+       "<div class=\"vz-tt-head\"><span>SEVERE</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>",
+       "<div class=\"vz-tt-head\"><span>MILD</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Share</span><span class=\"vz-tt-value\">25%</span></div>"
       ]
      }
     },

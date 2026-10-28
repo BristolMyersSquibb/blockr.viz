@@ -167,7 +167,7 @@
         const r = t.getBoundingRect().clone();
         if (t.transform) r.applyTransform(t.transform);
         if (r.width > 0 && r.height > 0) {
-          const box = NS.mk('span', 'dd-drill-flash');
+          const box = NS.mk('span', 'vz-chart-flash');
           Object.assign(box.style, { left: r.x + 'px', top: r.y + 'px',
                                      width: r.width + 'px', height: r.height + 'px' });
           const rad = t.shape.r;
@@ -181,7 +181,7 @@
       }
       const x = ev.offsetX, y = ev.offsetY;
       if (typeof x !== 'number' || typeof y !== 'number') return;
-      const ring = NS.mk('span', 'dd-drill-pulse');
+      const ring = NS.mk('span', 'vz-chart-pulse');
       Object.assign(ring.style, { left: x + 'px', top: y + 'px' });
       this._light(host, ring, 1200);
     }

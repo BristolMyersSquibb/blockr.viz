@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { loadCore } = require('./load');
 
 const PIC = { png: 'data:image/png;base64,AA', width: 600, height: 400 };
-const hosts = (win) => win.document.querySelectorAll('.blockr-capture-host').length;
+const hosts = (win) => win.document.querySelectorAll('.vz-capture-host').length;
 
 test('a picture is drawn in an off-screen host that then goes', async () => {
   const { V, win } = loadCore();

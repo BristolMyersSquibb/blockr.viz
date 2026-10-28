@@ -8,21 +8,26 @@ test_that("the chart dependency lists the core, then every chart script", {
   core <- deps[[match("blockr-viz-core", names)]]
   chart <- deps[[match("chart-js", names)]]
   expect_lt(match("blockr-viz-core", names), match("chart-js", names))
-  expect_identical(core$script[[1L]], "core/namespace.js")
-  expect_true(all(c("spec/chart.js", "core/gear/engine.js") %in% core$script))
+  expect_identical(core$script[[1L]], "js/core/namespace.js")
+  expect_true(all(c("js/spec/chart.js", "js/core/gear/engine.js") %in%
+                    core$script))
+  # The frame's and the gear's styles come with the core.
+  expect_identical(core$stylesheet, c("css/frame.css", "css/gear.css"))
   expect_identical(chart$script,
                    c("drilldown-theme-register.js",
                      file.path("chart", js_script_list("chart"))))
   # The busy cue loads with the core: every view's output answers it.
-  expect_true("core/busy.js" %in% core$script)
+  expect_true("js/core/busy.js" %in% core$script)
   expect_identical(utils::tail(chart$script, 1), "chart/view.js")
   for (d in list(core, chart)) {
-    expect_true(all(file.exists(file.path(d$src$file, d$script))))
+    files <- file.path(d$src$file, c(d$script, d$stylesheet))
+    expect_true(all(file.exists(files)))
   }
 })
 
-test_that("a table-only page gets the busy cue too", {
+test_that("a table-only page gets the core, not the chart's styles", {
   deps <- htmltools::findDependencies(table_view_dep())
   core <- deps[[match("blockr-viz-core", vapply(deps, `[[`, "", "name"))]]
-  expect_true("core/busy.js" %in% core$script)
+  expect_true("js/core/busy.js" %in% core$script)
+  expect_false("chart-css" %in% vapply(deps, `[[`, "", "name"))
 })

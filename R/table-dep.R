@@ -6,7 +6,7 @@ table_view_dep <- memoise0(function() {
   htmltools::tagList(
     blockr.ui::controls_dep(),
     viz_core_dep(),
-    chart_css_dep(),
+    tooltip_card_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
       version = js_version(script),

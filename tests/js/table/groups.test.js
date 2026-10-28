@@ -313,7 +313,7 @@ test('the picture draws every row off screen without tools, and goes', async () 
     win.snapdom = { toCanvas: (el) => {
       seen.push({ rows: el.querySelectorAll('tbody tr.vz-table-row').length,
                   search: el.querySelector('input.vz-table-search').hidden,
-                  host: !!el.closest('.blockr-capture-host') });
+                  host: !!el.closest('.vz-capture-host') });
       return Promise.resolve({ toDataURL: () => 'data:image/png;base64,AAA' });
     } };
   } });
@@ -327,7 +327,7 @@ test('the picture draws every row off screen without tools, and goes', async () 
   const pic = await env.V.table.picture(payload({ data: m, config: G }), 800, 2);
   assert.deepEqual(seen, [{ rows: 600, search: true, host: true }]);
   assert.equal(pic.png, 'data:image/png;base64,AAA');
-  assert.equal(env.win.document.querySelector('.blockr-capture-host'), null);
+  assert.equal(env.win.document.querySelector('.vz-capture-host'), null);
 });
 
 test('opening the download menu sends R the picture, once per payload', async () => {
@@ -379,7 +379,7 @@ test('hover: a bar names its value under the row and the column context', () => 
   m.cols[1].mark.hover = { head: 'Count', meas: 'Rows' };
   const t = mount(payload({ data: m, config: G }));
   const c = hover(t, t.cell(1, 1).querySelector('.vz-table-groups-fill'));
-  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'Low');
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'Low');
   assert.match(c.text, /Count/);
   assert.match(c.text, /Rows20 \(33%\)/);
   assert.equal(hover(t, t.cell(1, 1)).text, '');
@@ -391,7 +391,7 @@ test('hover: a colour split lists each level, the one under the pointer lit', ()
   const t = mount(payload({ data: m, config: G }));
   const segs = t.cell(1, 2).querySelectorAll('.vz-table-groups-fill');
   const c = hover(t, segs[1]);
-  const rows = c.tip.querySelectorAll('.dd-tt-row');
+  const rows = c.tip.querySelectorAll('.vz-tt-row');
   assert.equal(rows[0].textContent, 'Sex F3 (30%)');
   assert.ok(rows[0].classList.contains('is-dim'));
   assert.ok(rows[1].classList.contains('is-hit'));
@@ -419,7 +419,7 @@ test('hover: a swimlane segment says its text and lights its label everywhere', 
   const t = mount(payload({ data: groups(), config: G }));
   const seg = t.cell(0, 7).querySelector('.vz-table-lane-seg');
   const c = hover(t, seg);
-  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, 'day 1 to 5');
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'day 1 to 5');
   assert.ok(seg.classList.contains('is-same'));
   assert.ok(t.$('.blockr-table-wrapper').classList.contains('seg-hover'));
   t.$('.blockr-table-wrapper').dispatchEvent(new t.win.MouseEvent('mouseleave'));
@@ -430,8 +430,8 @@ test('hover: a swimlane segment says its text and lights its label everywhere', 
 test('hover: a sparkline names its point; the card goes with the view', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const c = hover(t, t.cell(0, 8).querySelector('.vz-table-groups-spcell'));
-  assert.equal(c.tip.querySelector('.dd-tt-head').textContent, '1');
-  assert.equal(c.tip.querySelector('.dd-tt-row').textContent, '3');
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, '1');
+  assert.equal(c.tip.querySelector('.vz-tt-row').textContent, '3');
   t.el.remove();
   t.trigger(t.el, 'shiny:unbound');
   return tick(t.win, 5).then(() => {

@@ -24,14 +24,14 @@ snap <- "
     if (!d) return {err: 'no chart'};
     const c = echarts.getInstanceByDom(d);
     const g = (c.getOption().grid || [])[0] || {};
-    const card = d.closest('.dd-chart-card') || d.parentElement.parentElement;
-    const band = card.querySelector('.dd-legend-band');
+    const card = d.closest('.vz-chart-panel-card') || d.parentElement.parentElement;
+    const band = card.querySelector('.vz-chart-legend');
     const br = band ? band.getBoundingClientRect() : null;
     return {
       width: c.getWidth(), height: c.getHeight(),
       gridBottom: g.bottom,
       bandH: br ? Math.round(br.height) : null,
-      chips: band ? band.querySelectorAll('.dd-legend-chip').length : 0
+      chips: band ? band.querySelectorAll('.vz-chart-legend-chip').length : 0
     };
   })())
 "

@@ -25,26 +25,26 @@
    */
   function build(parent, options, current, onPick, scope) {
     const row = document.createElement('div');
-    row.className = 'dd-layout-tiles';
+    row.className = 'vz-tiles';
     row.setAttribute('role', 'radiogroup');
     /** @type {HTMLButtonElement[]} */
     const btns = [];
     const select = (/** @type {number} */ i) => btns.forEach((b, j) => {
-      b.classList.toggle('dd-layout-tile--on', j === i);
+      b.classList.toggle('vz-tile--on', j === i);
       b.setAttribute('aria-checked', j === i ? 'true' : 'false');
       b.tabIndex = j === i ? 0 : -1;
     });
     options.forEach((o, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'dd-layout-tile';
+      b.className = 'vz-tile';
       b.setAttribute('role', 'radio');
       b.setAttribute('data-value', o.value);
       const face = document.createElement('span');
-      face.className = 'dd-layout-tile-face';
+      face.className = 'vz-tile-face';
       face.innerHTML = o.icon;
       const name = document.createElement('span');
-      name.className = 'dd-layout-tile-name';
+      name.className = 'vz-tile-name';
       name.textContent = o.label;
       b.append(face, name);
       if (o.disabled) {
@@ -53,7 +53,7 @@
         if (o.title) b.setAttribute('data-blockr-tooltip', o.title);
       }
       scope.on(b, 'click', () => {
-        if (o.disabled || b.classList.contains('dd-layout-tile--on')) return;
+        if (o.disabled || b.classList.contains('vz-tile--on')) return;
         select(i);
         onPick(o.value);
       });

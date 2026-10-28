@@ -31,8 +31,8 @@ test('a row click claims the drill value and lights every row with it', () => {
   assert.equal(t.sent[0].name, 'tbl_select:blockr.viz.selection');
   assert.equal(typeof t.sent[0].value.nonce, 'number');
   assert.deepEqual(t.lit(), [0, 3]);
-  assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo');
-  assert.equal(t.$('.dd-status-footer').hidden, false);
+  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Arm = Placebo');
+  assert.equal(t.$('.vz-status').hidden, false);
   assert.ok(t.$('.vz-table').classList.contains('vz-table-clickable'));
 });
 
@@ -42,13 +42,13 @@ test('a second click on a lit row clears the drill', () => {
   t.click(t.row(3));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'] }), null]);
   assert.deepEqual(t.lit(), []);
-  assert.equal(t.$('.dd-status-footer').textContent, '');
+  assert.equal(t.$('.vz-status').textContent, '');
 });
 
 test('the clear button on the receipt clears the drill', () => {
   const t = mount(payload({ data: flatModel(6) }));
   t.click(t.row(1));
-  t.click(t.$('.dd-status-clear'));
+  t.click(t.$('.vz-status-clear'));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Low'] }), null]);
   assert.deepEqual(t.lit(), []);
 });
@@ -72,7 +72,7 @@ test("R's selection lights its rows and writes R's receipt", () => {
   const t = mount(payload({ data: flatModel(6), config: { selection: cat({ ARM: ['Low'] }) },
                             derived: { receipt: 'Filtered: Arm = Low dose' } }));
   assert.deepEqual(t.lit(), [1, 4]);
-  assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Low dose');
+  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Arm = Low dose');
 });
 
 test('a payload with the same rows keeps the sort and shows the new selection', () => {
@@ -96,7 +96,7 @@ test('Table 1: a row claims its level, a cell adds its column', () => {
   assert.deepEqual(t.$$('th.vz-table-col-active').map((e) => e.getAttribute('data-h')), ['1,1']);
   assert.deepEqual(t.$$('td.vz-table-col-active').map((e) => e.textContent),
                    ['11', '9', '72 (9)', '8', '12']);
-  assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Sex = M, Arm = Active');
+  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Sex = M, Arm = Active');
 });
 
 test('Table 1: a stat row is inert', () => {
@@ -141,7 +141,7 @@ test('a keyed section value claims the section; its chevron still folds', () => 
   t.click(sec.querySelector('.vz-table-section-value'));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'], SEX: ['F'] })]);
   assert.ok(t.$$('tr.vz-table-section-header')[1].classList.contains('vz-table-row-active'));
-  assert.equal(t.$('.dd-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
+  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
   // R echoes a click without a column half as `columns: {}`.
   t.render({ data: nested(), columns: COLUMNS,
              config: { selection: { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['F'] }, columns: {} } } });
@@ -172,8 +172,8 @@ test('with a drill target every click is sent and nothing stays lit', () => {
   assert.ok(t.row(0).classList.contains('vz-table-flash-row'));
   assert.ok(t.row(0).children[1].classList.contains('vz-table-flash-cross'));
   assert.ok(t.row(1).children[1].classList.contains('vz-table-flash-col'));
-  assert.match(t.$('.dd-status-receipt').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
-  assert.equal(t.$('.dd-status-clear'), null);
+  assert.match(t.$('.vz-status-receipt').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
+  assert.equal(t.$('.vz-status-clear'), null);
   t.row(0).dispatchEvent(new t.win.Event('animationend'));
   assert.equal(t.row(0).classList.contains('vz-table-flash-row'), false);
 });

@@ -162,10 +162,10 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">307.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">303.4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">10</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">285.92</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">9</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Sum of Analysis Value</span><span class=\"dd-tt-value\">283.29</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">n</span><span class=\"dd-tt-value\">9</span></div>"
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of Analysis Value</span><span class=\"vz-tt-value\">307.4</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">n</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of Analysis Value</span><span class=\"vz-tt-value\">303.4</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">n</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of Analysis Value</span><span class=\"vz-tt-value\">285.92</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">n</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Sum of Analysis Value</span><span class=\"vz-tt-value\">283.29</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">n</span><span class=\"vz-tt-value\">9</span></div>"
       ],
       "seriesLabels": {
        "series0": [

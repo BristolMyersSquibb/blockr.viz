@@ -79,7 +79,7 @@
     const legendEl = view.legend.el;
     const legR = legendEl.offsetParent !== null ? legendEl.getBoundingClientRect() : null;
     const legH = legR ? legR.height : 0;
-    const legTop = !!legR && legendEl.classList.contains('dd-legend-band--top');
+    const legTop = !!legR && legendEl.classList.contains('vz-chart-legend--top');
     const H = Math.round(topH + gridR.height + legH + capH);
 
     let bg = getComputedStyle(frame.el).backgroundColor;
@@ -153,7 +153,7 @@
     for (const child of Array.from(legendEl.children)) {
       const alpha = parseFloat(getComputedStyle(/** @type {Element} */ (child)).opacity || '1');
       ctx.globalAlpha = Number.isFinite(alpha) ? alpha : 1;
-      const sw = /** @type {Element} */ (child).querySelector('.dd-legend-swatch');
+      const sw = /** @type {Element} */ (child).querySelector('.vz-chart-legend-swatch');
       if (sw) {
         const sr = sw.getBoundingClientRect();
         const swCs = getComputedStyle(sw);
@@ -244,7 +244,7 @@
       width: msg.width, height: msg.height,
       draw: (/** @type {HTMLElement} */ host) => new Promise((resolve, reject) => {
         const el = host.appendChild(document.createElement('div'));
-        el.id = 'blockr-capture-chart-' + (++captureSeq);
+        el.id = 'vz-capture-chart-' + (++captureSeq);
         el.style.cssText = 'width:' + msg.width + 'px;height:' + msg.height + 'px;';
         const view = scope.own(new View(el, scope, { still: true }));
         view.render(msg);

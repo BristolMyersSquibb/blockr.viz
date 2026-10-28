@@ -15,7 +15,7 @@ Every edit below is anchored on a **unique code string**, not a line number.
 
 ## Decision
 
-Today the HTML band (`.dd-legend-band`, `_updateLegendBand()`) draws only when
+Today the HTML band (`.vz-chart-legend`, `_updateLegendBand()`) draws only when
 there is more than one facet panel. All three render paths carry the same rule:
 
 ```js
@@ -113,7 +113,7 @@ Set `const sharedLegend = true;` and rewrite the comment to state the standing
 policy: *the legend is always the HTML band; panels keep a hidden legend
 component whose selection model the band drives.*
 
-`singleFacet` stays — it is also used for `dd-chart-grid-single`.
+`singleFacet` stays — it is also used for `vz-chart-grid--single`.
 
 **A2. Derive band items in the single-panel case too.**
 

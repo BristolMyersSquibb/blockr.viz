@@ -39,12 +39,12 @@ test('a brush filter and a drill receipt survive a new payload', () => {
   t.clickWhere(0, D.at('Nausea'));
   t.advance(1000);
   t.send({ ...t.config, value_labels: true }, { data: null });
-  const rec = t.block.frame.statusEl.querySelector('.dd-status-receipt');
+  const rec = t.block.frame.statusEl.querySelector('.vz-status-receipt');
   assert.ok(rec, 'the receipt is still there');
   assert.match(rec.style.animation, /-?\d+(\.\d+)?ms both$/);
   assert.ok(rec.style.animation.includes(' 400ms both'), 'resumed at its own age: ' + rec.style.animation);
   t.advance(4000);
-  assert.strictEqual(t.block.frame.statusEl.querySelector('.dd-status-receipt'), null);
+  assert.strictEqual(t.block.frame.statusEl.querySelector('.vz-status-receipt'), null);
   t.close();
 });
 

@@ -36,8 +36,8 @@ function typeAt(t, inp, text) {
   }
 }
 const key = (t, inp, k) => inp.dispatchEvent(new t.win.KeyboardEvent('keydown', { key: k }));
-const menuEl = (t) => t.doc.body.querySelector('.dd-at-menu');
-const items = (t) => Array.from(menuEl(t).querySelectorAll('.dd-at-tok')).map((e) => e.textContent);
+const menuEl = (t) => t.doc.body.querySelector('.vz-at-menu');
+const items = (t) => Array.from(menuEl(t).querySelectorAll('.vz-at-tok')).map((e) => e.textContent);
 
 test('menuGroups: settings under public names, columns, counts and structure', () => {
   const t = setup();
@@ -58,10 +58,10 @@ test('the template row shows what the card shows, with its slots and offers', ()
   const r = row(t.el, 'title');
   assert.equal(field(t).value, 'Count of {@x}');
   assert.equal(field(t).spellcheck, false);
-  const body = r.querySelector('.dd-title-preview-body');
+  const body = r.querySelector('.vz-template-preview');
   assert.equal(body.querySelector('.blockr-slot--preview').textContent, 'ARM');
-  assert.equal(body.querySelector('.dd-title-offer').textContent, '+ Color');
-  assert.equal(row(t.el, 'caption').querySelector('.dd-title-preview-body').textContent, 'N = 40');
+  assert.equal(body.querySelector('.vz-template-offer').textContent, '+ Color');
+  assert.equal(row(t.el, 'caption').querySelector('.vz-template-preview').textContent, 'N = 40');
 });
 
 test('typing @ opens the menu; a pick writes the public name at the @', () => {
@@ -88,7 +88,7 @@ test('the menu: arrows move, [ ] wraps the caret, Escape and a space close it', 
   inp.value = '';
   inp.setSelectionRange(0, 0);
   typeAt(t, inp, '@');
-  const hl = () => menuEl(t).querySelector('.dd-at-item--hl .dd-at-tok').textContent;
+  const hl = () => menuEl(t).querySelector('.vz-at-item--hl .vz-at-tok').textContent;
   assert.equal(hl(), '{@x}');
   key(t, inp, 'ArrowDown');
   assert.equal(hl(), '{label(@x)}');
@@ -114,8 +114,8 @@ test('a click on an item picks it; leaving the field closes the menu', () => {
   const inp = field(t);
   inp.value = '';
   typeAt(t, inp, '@');
-  const target = Array.from(menuEl(t).querySelectorAll('.dd-at-item'))
-    .find((b) => b.querySelector('.dd-at-tok').textContent === '{n}');
+  const target = Array.from(menuEl(t).querySelectorAll('.vz-at-item'))
+    .find((b) => b.querySelector('.vz-at-tok').textContent === '{n}');
   target.dispatchEvent(new t.win.MouseEvent('mousedown', { bubbles: true, cancelable: true }));
   assert.equal(inp.value, '{n}');
   typeAt(t, inp, '@');
@@ -128,10 +128,10 @@ test('a token nothing answers to is named; an emptied field goes back to auto', 
   const inp = field(t);
   inp.value = 'By {@colr} and {AGE} and {label(@x)}';
   inp.dispatchEvent(new t.win.Event('input'));
-  const warn = row(t.el, 'title').querySelector('.dd-title-warn');
+  const warn = row(t.el, 'title').querySelector('.vz-template-warn');
   assert.equal(warn.hidden, false);
   assert.match(warn.textContent, /Nothing is called \{@colr\}\./);
-  assert.ok(row(t.el, 'title').classList.contains('dd-title-row--dirty'));
+  assert.ok(row(t.el, 'title').classList.contains('vz-row--dirty'));
   inp.value = '   ';
   key(t, inp, 'Enter');
   assert.deepEqual(lastSet(t).values, { title: null });

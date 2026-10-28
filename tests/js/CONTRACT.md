@@ -193,15 +193,15 @@ not bound yet.
 ### `drilldown-capture`
 
 `{ req, width, height, ratio, columns, data, data_rev, config }`. Draws the
-chart in a hidden host (`.blockr-capture-host`, fixed at left -20000px, the
+chart in a hidden host (`.vz-capture-host`, fixed at left -20000px, the
 requested size) and replies on `blockr_viz_capture_result`. The host is
 removed after a picture, an error or the timeout.
 [export-capture-*]
 
 ### `blockr-busy`, `blockr-busy-done` (core/busy.js)
 
-`{ id, label }` adds `blockr-busy` to the element after 300 ms and writes
-`"<label>… <s> s"` into `.blockr-busy-line`; a second start while one is
+`{ id, label }` adds `vz-busy` to the element after 300 ms and writes
+`"<label>… <s> s"` into `.vz-busy-line`; a second start while one is
 pending is ignored. `{ id }` ends it, as does the chart's own draw.
 [msg-busy, msg-busy-without-rows, busy-cue.test.js]
 
@@ -239,6 +239,6 @@ restore-scatter-range-facet]
 ## Legend band
 
 A chip is a filter control, not a visibility toggle: no `legendSelect` /
-`legendUnSelect`, no chip is ever `dd-legend-chip-off`; the chip of the
-level the latched filter selects carries `dd-legend-chip-on`. With drill
+`legendUnSelect`, no chip is ever `vz-chart-legend-chip-off`; the chip of the
+level the latched filter selects carries `vz-chart-legend-chip--on`. With drill
 off a chip does nothing. [click-legend-*]

@@ -70,7 +70,7 @@
                                          title: 'Chart settings', host: NS.gear.host(this) });
       const body = this.frame.body;
       this.band = V.scriptBand(body, scope, this.gear);
-      this.chartGrid = mk('div', 'dd-chart-grid', body);
+      this.chartGrid = mk('div', 'vz-chart-grid', body);
       this.legend = new NS.Legend(this, body);
       this.status();
       // One resize per animation frame.
@@ -196,7 +196,7 @@
       const m = this._model(fam);
       if (m.empty) { this._showEmpty(m.empty); return; }
       const grid = this.chartGrid;
-      grid.classList.toggle('dd-chart-grid-single', m.nFacets <= 1);
+      grid.classList.toggle('vz-chart-grid--single', m.nFacets <= 1);
       // The row width when facet_cols pins it.
       const cols = Math.trunc(Number(this.settings.facet_cols) || 0);
       grid.style.gridTemplateColumns =
@@ -343,14 +343,14 @@
     _ensureSlot(i, facetLabel, singleFacet) {
       let slot = this._slots[i];
       if (!slot) {
-        const container = singleFacet ? this.chartGrid : mk('div', 'dd-facet', this.chartGrid);
-        const labelEl = singleFacet ? null : mk('div', 'dd-facet-label', container);
-        const chartDiv = mk('div', 'dd-chart', container);
-        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button', 'dd-zoom-reset', container));
+        const container = singleFacet ? this.chartGrid : mk('div', 'vz-chart-facet', this.chartGrid);
+        const labelEl = singleFacet ? null : mk('div', 'vz-chart-facet-label', container);
+        const chartDiv = mk('div', 'vz-chart-panel', container);
+        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-zoom-reset', container));
         resetBtn.type = 'button';
         resetBtn.textContent = 'Reset zoom';
         resetBtn.hidden = true;
-        container.classList.add('dd-zoom-host');
+        container.classList.add('vz-chart-zoom-host');
         slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
                  dimmed: false, hover: { si: null }, brushable: false, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };

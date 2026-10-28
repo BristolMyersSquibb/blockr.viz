@@ -177,11 +177,11 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>"
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>"
       ]
      }
     },
@@ -349,12 +349,12 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>"
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">2</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>"
       ]
      }
     },
@@ -528,12 +528,12 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div>"
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">2</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">2</span></div>"
       ]
      }
     },
@@ -709,13 +709,13 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">3</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">2</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Count</span><span class=\"dd-tt-value\">1</span></div>"
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span></span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">3</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">2</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">1</span></div>"
       ]
      }
     },
