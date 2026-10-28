@@ -4,7 +4,93 @@
     {
       "state_rev": 0,
       "data_rev": 1,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"asc","top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -43,18 +129,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -76,7 +150,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 2,
@@ -98,10 +184,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [86.54000000000001, 100],
+              "width": [86.54000000000001, 100],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }
@@ -128,7 +214,93 @@
     {
       "state_rev": 0,
       "data_rev": 1,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"data","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -167,18 +339,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -200,13 +360,111 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       }
     },
     {
       "state_rev": 0,
       "data_rev": 2,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"Total","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -245,18 +503,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -278,7 +524,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 2,
@@ -300,10 +558,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [61.54, 100],
+              "width": [61.54, 100],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }
@@ -330,7 +588,93 @@
     {
       "state_rev": 0,
       "data_rev": 3,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":null,"top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -369,18 +713,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -402,7 +734,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 2,
@@ -424,10 +768,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [86.54000000000001, 100],
+              "width": [86.54000000000001, 100],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }
@@ -454,7 +798,93 @@
     {
       "state_rev": 0,
       "data_rev": 4,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":2,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -493,18 +923,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -526,7 +944,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 2,
@@ -548,10 +978,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [61.54, 100],
+              "width": [61.54, 100],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }
@@ -578,7 +1008,93 @@
     {
       "state_rev": 0,
       "data_rev": 5,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":3,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -617,18 +1133,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -650,7 +1154,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 3,
@@ -672,10 +1188,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [46.15, 75, 100],
+              "width": [46.15, 75, 100],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }
@@ -702,7 +1218,93 @@
     {
       "state_rev": 0,
       "data_rev": 6,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":"Total","facet":null,"show":"bar","func":"sum","col":"num","position":null,"fill":null,"color":null}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"alpha","sort_dir":"desc","top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -741,18 +1343,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -774,7 +1364,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 4,
@@ -796,10 +1398,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [46.15, 75, 100, 86.54000000000001],
+              "width": [46.15, 75, 100, 86.54000000000001],
               "fill": "#0072B2",
-              "dw": 4,
-              "tt": {
+              "valueWidth": 4,
+              "hover": {
                 "head": "Total",
                 "meas": "Total"
               }

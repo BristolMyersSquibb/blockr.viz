@@ -23,7 +23,7 @@ const bars = () => ({
   cols: [
     { name: 'ARM', disp: ['Placebo', 'Low', 'High'] },
     { name: 'Rows', disp: ['10', '20', '30'], key: [10, 20, 30],
-      mark: { kind: 'bar', w: [33, 66, 100], fill: '#2563eb', dw: 2 } }
+      mark: { kind: 'bar', width: [33, 66, 100], fill: '#2563eb', valueWidth: 2 } }
   ],
   head: [[{ text: 'Arm', stub: true, col: 0 }, { text: 'Rows', col: 1 }]]
 });

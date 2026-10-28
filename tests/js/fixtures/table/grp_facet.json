@@ -4,7 +4,93 @@
     {
       "state_rev": 0,
       "data_rev": 1,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"total","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_level","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -43,18 +129,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -76,7 +150,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 4,
@@ -105,10 +191,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 100, null],
+              "width": [100, 100, 100, null],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "Rows",
                 "meas": "Rows",
                 "den": 12
@@ -133,10 +219,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 50, 50],
+              "width": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "Rows",
                 "meas": "Rows",
                 "den": 12
@@ -199,7 +285,93 @@
     {
       "state_rev": 0,
       "data_rev": 2,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_level","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -238,18 +410,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -271,7 +431,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 4,
@@ -300,10 +472,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 100, null],
+              "width": [100, 100, 100, null],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "Rows",
                 "meas": "Rows",
                 "den": 6
@@ -328,10 +500,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 50, 50],
+              "width": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "Rows",
                 "meas": "Rows",
                 "den": 6
@@ -394,7 +566,93 @@
     {
       "state_rev": 0,
       "data_rev": 3,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -433,18 +691,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -466,7 +712,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 4,
@@ -489,10 +747,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 100, null],
+              "width": [100, 100, 100, null],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "g1",
                 "sub": "Rows · N = 6",
                 "meas": "Rows",
@@ -512,10 +770,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, 100, 50, 50],
+              "width": [100, 100, 50, 50],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "g2",
                 "sub": "Rows · N = 6",
                 "meas": "Rows",
@@ -581,7 +839,93 @@
     {
       "state_rev": 0,
       "data_rev": 4,
-      "columns": null,
+      "columns": [
+        {
+          "name": "cat",
+          "class": "string",
+          "label": "Category",
+          "n_unique": 4
+        },
+        {
+          "name": "grp",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": "fac",
+          "class": "string",
+          "label": "",
+          "n_unique": 3,
+          "levels": ["lo", "mid", "hi"]
+        },
+        {
+          "name": "num",
+          "class": "number",
+          "label": "Numeric value",
+          "n_unique": 12
+        },
+        {
+          "name": "num2",
+          "class": "number",
+          "label": "",
+          "n_unique": 8
+        },
+        {
+          "name": "int",
+          "class": "number",
+          "label": "",
+          "n_unique": 12
+        },
+        {
+          "name": "id",
+          "class": "string",
+          "label": "",
+          "n_unique": 6
+        },
+        {
+          "name": "day",
+          "class": "date",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "flag",
+          "class": "bool",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "cat_na",
+          "class": "string",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "grade",
+          "class": "number",
+          "label": "",
+          "n_unique": 3
+        },
+        {
+          "name": "end",
+          "class": "date",
+          "label": "",
+          "n_unique": 9
+        },
+        {
+          "name": "ulim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "llim",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        }
+      ],
       "config": {"layout":"groups","by":["cat"],"rowname":null,"columns":null,"summaries":[{"type":"simple","name":null,"facet":"grp","show":"bar","func":"count","col":null,"position":null,"fill":null,"color":null},{"type":"simple","name":null,"facet":"grp","show":"number","func":"mean","col":"num","position":null,"fill":null,"color":null},{"type":"field","name":null,"col":"fac"}],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"g2","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":null,"subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -620,18 +964,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -653,7 +985,19 @@
             "label": "Image",
             "ext": "png"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 4,
@@ -676,10 +1020,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [100, null, 100, 100],
+              "width": [100, null, 100, 100],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "g1",
                 "sub": "Rows · N = 6",
                 "meas": "Rows",
@@ -699,10 +1043,10 @@
             },
             "mark": {
               "kind": "bar",
-              "w": [50, 50, 100, 100],
+              "width": [50, 50, 100, 100],
               "fill": "#0072B2",
-              "dw": 7,
-              "tt": {
+              "valueWidth": 7,
+              "hover": {
                 "head": "g2",
                 "sub": "Rows · N = 6",
                 "meas": "Rows",
