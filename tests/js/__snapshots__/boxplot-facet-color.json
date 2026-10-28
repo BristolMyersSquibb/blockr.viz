@@ -231,7 +231,6 @@
       ],
       "yAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 45,
@@ -253,25 +252,30 @@
          "color": "#e5e7eb",
          "type": "dashed"
         }
-       }
+       },
+       "scale": true
       },
       "series": [
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "High Dose",
+        "id": "__box_0",
         "data": [
          {
           "value": [
+           0,
            23.37,
            23.37,
            23.37,
            23.37,
            23.37
           ],
-          "n": 1
+          "n": 1,
+          "name": "Baseline\u0000High Dose"
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -282,6 +286,7 @@
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -292,16 +297,19 @@
          },
          {
           "value": [
+           3,
            25.24,
            25.24,
            25.24,
            25.24,
            25.24
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 2\u0000High Dose"
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -312,6 +320,7 @@
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -322,16 +331,19 @@
          },
          {
           "value": [
+           6,
            27.11,
            27.11,
            27.11,
            27.11,
            27.11
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 4\u0000High Dose"
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -342,6 +354,7 @@
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -352,16 +365,19 @@
          },
          {
           "value": [
+           9,
            30.48,
            30.48,
            30.48,
            30.48,
            30.48
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 8\u0000High Dose"
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -372,6 +388,7 @@
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -382,16 +399,19 @@
          },
          {
           "value": [
+           12,
            32,
            32,
            32,
            32,
            32
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 12\u0000High Dose"
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -402,6 +422,7 @@
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -411,18 +432,30 @@
           "n": 0
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 0,
         "itemStyle": {
-         "color": "#0072B222",
-         "borderColor": "#0072B2"
+         "color": "#0072B2"
         }
        },
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "Low Dose",
+        "id": "__box_1",
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -433,16 +466,19 @@
          },
          {
           "value": [
+           1,
            21.37,
            22.12,
            22.87,
            23.62,
            24.37
           ],
-          "n": 2
+          "n": 2,
+          "name": "Baseline\u0000Low Dose"
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -453,6 +489,7 @@
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -463,16 +500,19 @@
          },
          {
           "value": [
+           4,
            23.24,
            23.99,
            24.74,
            25.49,
            26.24
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 2\u0000Low Dose"
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -483,6 +523,7 @@
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -493,16 +534,19 @@
          },
          {
           "value": [
+           7,
            25.11,
            25.86,
            26.61,
            27.36,
            28.11
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 4\u0000Low Dose"
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -513,6 +557,7 @@
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -523,16 +568,19 @@
          },
          {
           "value": [
+           10,
            28.48,
            29.23,
            29.98,
            30.73,
            31.48
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 8\u0000Low Dose"
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -543,6 +591,7 @@
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -553,16 +602,19 @@
          },
          {
           "value": [
+           13,
            30,
            30.75,
            31.5,
            32.25,
            33
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 12\u0000Low Dose"
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -572,18 +624,30 @@
           "n": 0
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 1,
         "itemStyle": {
-         "color": "#E69F0022",
-         "borderColor": "#E69F00"
+         "color": "#E69F00"
         }
        },
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "Placebo",
+        "id": "__box_2",
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -594,6 +658,7 @@
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -604,16 +669,19 @@
          },
          {
           "value": [
+           2,
            22.37,
            23.12,
            23.87,
            24.62,
            25.37
           ],
-          "n": 2
+          "n": 2,
+          "name": "Baseline\u0000Placebo"
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -624,6 +692,7 @@
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -634,16 +703,19 @@
          },
          {
           "value": [
+           5,
            24.24,
            24.24,
            24.24,
            24.24,
            24.24
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 2\u0000Placebo"
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -654,6 +726,7 @@
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -664,16 +737,19 @@
          },
          {
           "value": [
+           8,
            26.11,
            26.86,
            27.61,
            28.36,
            29.11
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 4\u0000Placebo"
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -684,6 +760,7 @@
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -694,16 +771,19 @@
          },
          {
           "value": [
+           11,
            29.48,
            30.23,
            30.98,
            31.73,
            32.48
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 8\u0000Placebo"
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -714,6 +794,7 @@
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -724,19 +805,31 @@
          },
          {
           "value": [
+           14,
            31,
            31.75,
            32.5,
            33.25,
            34
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 12\u0000Placebo"
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 2,
         "itemStyle": {
-         "color": "#009E7322",
-         "borderColor": "#009E73"
+         "color": "#009E73"
         }
        }
       ]
@@ -823,6 +916,7 @@
         "data": [
          {
           "value": [
+           0,
            23.37,
            23.37,
            23.37,
@@ -830,12 +924,14 @@
            23.37
           ],
           "n": 1,
+          "name": "Baseline\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -849,6 +945,7 @@
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -862,6 +959,7 @@
          },
          {
           "value": [
+           3,
            25.24,
            25.24,
            25.24,
@@ -869,12 +967,14 @@
            25.24
           ],
           "n": 1,
+          "name": "Week 2\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -888,6 +988,7 @@
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -901,6 +1002,7 @@
          },
          {
           "value": [
+           6,
            27.11,
            27.11,
            27.11,
@@ -908,12 +1010,14 @@
            27.11
           ],
           "n": 1,
+          "name": "Week 4\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -927,6 +1031,7 @@
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -940,6 +1045,7 @@
          },
          {
           "value": [
+           9,
            30.48,
            30.48,
            30.48,
@@ -947,12 +1053,14 @@
            30.48
           ],
           "n": 1,
+          "name": "Week 8\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -966,6 +1074,7 @@
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -979,6 +1088,7 @@
          },
          {
           "value": [
+           12,
            32,
            32,
            32,
@@ -986,12 +1096,14 @@
            32
           ],
           "n": 1,
+          "name": "Week 12\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -1005,6 +1117,7 @@
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -1022,6 +1135,7 @@
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -1035,6 +1149,7 @@
          },
          {
           "value": [
+           1,
            21.37,
            22.12,
            22.87,
@@ -1042,12 +1157,14 @@
            24.37
           ],
           "n": 2,
+          "name": "Baseline\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -1061,6 +1178,7 @@
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -1074,6 +1192,7 @@
          },
          {
           "value": [
+           4,
            23.24,
            23.99,
            24.74,
@@ -1081,12 +1200,14 @@
            26.24
           ],
           "n": 2,
+          "name": "Week 2\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -1100,6 +1221,7 @@
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -1113,6 +1235,7 @@
          },
          {
           "value": [
+           7,
            25.11,
            25.86,
            26.61,
@@ -1120,12 +1243,14 @@
            28.11
           ],
           "n": 2,
+          "name": "Week 4\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -1139,6 +1264,7 @@
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -1152,6 +1278,7 @@
          },
          {
           "value": [
+           10,
            28.48,
            29.23,
            29.98,
@@ -1159,12 +1286,14 @@
            31.48
           ],
           "n": 2,
+          "name": "Week 8\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -1178,6 +1307,7 @@
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -1191,6 +1321,7 @@
          },
          {
           "value": [
+           13,
            30,
            30.75,
            31.5,
@@ -1198,12 +1329,14 @@
            33
           ],
           "n": 2,
+          "name": "Week 12\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -1221,6 +1354,7 @@
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -1234,6 +1368,7 @@
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -1247,6 +1382,7 @@
          },
          {
           "value": [
+           2,
            22.37,
            23.12,
            23.87,
@@ -1254,12 +1390,14 @@
            25.37
           ],
           "n": 2,
+          "name": "Baseline\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -1273,6 +1411,7 @@
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -1286,6 +1425,7 @@
          },
          {
           "value": [
+           5,
            24.24,
            24.24,
            24.24,
@@ -1293,12 +1433,14 @@
            24.24
           ],
           "n": 1,
+          "name": "Week 2\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -1312,6 +1454,7 @@
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -1325,6 +1468,7 @@
          },
          {
           "value": [
+           8,
            26.11,
            26.86,
            27.61,
@@ -1332,12 +1476,14 @@
            29.11
           ],
           "n": 2,
+          "name": "Week 4\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -1351,6 +1497,7 @@
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -1364,6 +1511,7 @@
          },
          {
           "value": [
+           11,
            29.48,
            30.23,
            30.98,
@@ -1371,12 +1519,14 @@
            32.48
           ],
           "n": 2,
+          "name": "Week 8\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -1390,6 +1540,7 @@
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -1403,6 +1554,7 @@
          },
          {
           "value": [
+           14,
            31,
            31.75,
            32.5,
@@ -1410,6 +1562,7 @@
            34
           ],
           "n": 2,
+          "name": "Week 12\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
@@ -1584,7 +1737,6 @@
       ],
       "yAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 45,
@@ -1606,25 +1758,30 @@
          "color": "#e5e7eb",
          "type": "dashed"
         }
-       }
+       },
+       "scale": true
       },
       "series": [
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "High Dose",
+        "id": "__box_0",
         "data": [
          {
           "value": [
+           0,
            28.37,
            29.12,
            29.87,
            30.62,
            31.37
           ],
-          "n": 2
+          "n": 2,
+          "name": "Baseline\u0000High Dose"
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -1635,6 +1792,7 @@
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -1645,16 +1803,19 @@
          },
          {
           "value": [
+           3,
            30.24,
            30.99,
            31.74,
            32.49,
            33.24
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 2\u0000High Dose"
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -1665,6 +1826,7 @@
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -1675,16 +1837,19 @@
          },
          {
           "value": [
+           6,
            32.11,
            32.86,
            33.61,
            34.36,
            35.11
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 4\u0000High Dose"
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -1695,6 +1860,7 @@
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -1705,16 +1871,19 @@
          },
          {
           "value": [
+           9,
            35.48,
            36.23,
            36.98,
            37.73,
            38.48
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 8\u0000High Dose"
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -1725,6 +1894,7 @@
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -1735,16 +1905,19 @@
          },
          {
           "value": [
+           12,
            37,
            37.75,
            38.5,
            39.25,
            40
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 12\u0000High Dose"
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -1755,6 +1928,7 @@
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -1764,18 +1938,30 @@
           "n": 0
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 0,
         "itemStyle": {
-         "color": "#0072B222",
-         "borderColor": "#0072B2"
+         "color": "#0072B2"
         }
        },
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "Low Dose",
+        "id": "__box_1",
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -1786,16 +1972,19 @@
          },
          {
           "value": [
+           1,
            29.37,
            30.12,
            30.87,
            31.62,
            32.37
           ],
-          "n": 2
+          "n": 2,
+          "name": "Baseline\u0000Low Dose"
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -1806,6 +1995,7 @@
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -1816,16 +2006,19 @@
          },
          {
           "value": [
+           4,
            34.24,
            34.24,
            34.24,
            34.24,
            34.24
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 2\u0000Low Dose"
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -1836,6 +2029,7 @@
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -1846,16 +2040,19 @@
          },
          {
           "value": [
+           7,
            33.11,
            33.86,
            34.61,
            35.36,
            36.11
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 4\u0000Low Dose"
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -1866,6 +2063,7 @@
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -1876,16 +2074,19 @@
          },
          {
           "value": [
+           10,
            36.48,
            37.23,
            37.98,
            38.73,
            39.48
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 8\u0000Low Dose"
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -1896,6 +2097,7 @@
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -1906,16 +2108,19 @@
          },
          {
           "value": [
+           13,
            38,
            38.75,
            39.5,
            40.25,
            41
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 12\u0000Low Dose"
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -1925,18 +2130,30 @@
           "n": 0
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 1,
         "itemStyle": {
-         "color": "#E69F0022",
-         "borderColor": "#E69F00"
+         "color": "#E69F00"
         }
        },
        {
-        "type": "boxplot",
+        "type": "custom",
         "name": "Placebo",
+        "id": "__box_2",
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -1947,6 +2164,7 @@
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -1957,16 +2175,19 @@
          },
          {
           "value": [
+           2,
            27.37,
            28.12,
            28.87,
            29.62,
            30.37
           ],
-          "n": 2
+          "n": 2,
+          "name": "Baseline\u0000Placebo"
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -1977,6 +2198,7 @@
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -1987,16 +2209,19 @@
          },
          {
           "value": [
+           5,
            29.24,
            29.99,
            30.74,
            31.49,
            32.24
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 2\u0000Placebo"
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -2007,6 +2232,7 @@
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -2017,16 +2243,19 @@
          },
          {
           "value": [
+           8,
            31.11,
            31.86,
            32.61,
            33.36,
            34.11
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 4\u0000Placebo"
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -2037,6 +2266,7 @@
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -2047,16 +2277,19 @@
          },
          {
           "value": [
+           11,
            34.48,
            35.23,
            35.98,
            36.73,
            37.48
           ],
-          "n": 2
+          "n": 2,
+          "name": "Week 8\u0000Placebo"
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -2067,6 +2300,7 @@
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -2077,19 +2311,31 @@
          },
          {
           "value": [
+           14,
            39,
            39,
            39,
            39,
            39
           ],
-          "n": 1
+          "n": 1,
+          "name": "Week 12\u0000Placebo"
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "xAxisIndex": 2,
         "itemStyle": {
-         "color": "#009E7322",
-         "borderColor": "#009E73"
+         "color": "#009E73"
         }
        }
       ]
@@ -2176,6 +2422,7 @@
         "data": [
          {
           "value": [
+           0,
            28.37,
            29.12,
            29.87,
@@ -2183,12 +2430,14 @@
            31.37
           ],
           "n": 2,
+          "name": "Baseline\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -2202,6 +2451,7 @@
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -2215,6 +2465,7 @@
          },
          {
           "value": [
+           3,
            30.24,
            30.99,
            31.74,
@@ -2222,12 +2473,14 @@
            33.24
           ],
           "n": 2,
+          "name": "Week 2\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -2241,6 +2494,7 @@
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -2254,6 +2508,7 @@
          },
          {
           "value": [
+           6,
            32.11,
            32.86,
            33.61,
@@ -2261,12 +2516,14 @@
            35.11
           ],
           "n": 2,
+          "name": "Week 4\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -2280,6 +2537,7 @@
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -2293,6 +2551,7 @@
          },
          {
           "value": [
+           9,
            35.48,
            36.23,
            36.98,
@@ -2300,12 +2559,14 @@
            38.48
           ],
           "n": 2,
+          "name": "Week 8\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -2319,6 +2580,7 @@
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -2332,6 +2594,7 @@
          },
          {
           "value": [
+           12,
            37,
            37.75,
            38.5,
@@ -2339,12 +2602,14 @@
            40
           ],
           "n": 2,
+          "name": "Week 12\u0000High Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -2358,6 +2623,7 @@
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -2375,6 +2641,7 @@
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -2388,6 +2655,7 @@
          },
          {
           "value": [
+           1,
            29.37,
            30.12,
            30.87,
@@ -2395,12 +2663,14 @@
            32.37
           ],
           "n": 2,
+          "name": "Baseline\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           2,
            "NaN",
            "NaN",
            "NaN",
@@ -2414,6 +2684,7 @@
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -2427,6 +2698,7 @@
          },
          {
           "value": [
+           4,
            34.24,
            34.24,
            34.24,
@@ -2434,12 +2706,14 @@
            34.24
           ],
           "n": 1,
+          "name": "Week 2\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           5,
            "NaN",
            "NaN",
            "NaN",
@@ -2453,6 +2727,7 @@
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -2466,6 +2741,7 @@
          },
          {
           "value": [
+           7,
            33.11,
            33.86,
            34.61,
@@ -2473,12 +2749,14 @@
            36.11
           ],
           "n": 2,
+          "name": "Week 4\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           8,
            "NaN",
            "NaN",
            "NaN",
@@ -2492,6 +2770,7 @@
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -2505,6 +2784,7 @@
          },
          {
           "value": [
+           10,
            36.48,
            37.23,
            37.98,
@@ -2512,12 +2792,14 @@
            39.48
           ],
           "n": 2,
+          "name": "Week 8\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           11,
            "NaN",
            "NaN",
            "NaN",
@@ -2531,6 +2813,7 @@
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -2544,6 +2827,7 @@
          },
          {
           "value": [
+           13,
            38,
            38.75,
            39.5,
@@ -2551,12 +2835,14 @@
            41
           ],
           "n": 2,
+          "name": "Week 12\u0000Low Dose",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           14,
            "NaN",
            "NaN",
            "NaN",
@@ -2574,6 +2860,7 @@
         "data": [
          {
           "value": [
+           0,
            "NaN",
            "NaN",
            "NaN",
@@ -2587,6 +2874,7 @@
          },
          {
           "value": [
+           1,
            "NaN",
            "NaN",
            "NaN",
@@ -2600,6 +2888,7 @@
          },
          {
           "value": [
+           2,
            27.37,
            28.12,
            28.87,
@@ -2607,12 +2896,14 @@
            30.37
           ],
           "n": 2,
+          "name": "Baseline\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           3,
            "NaN",
            "NaN",
            "NaN",
@@ -2626,6 +2917,7 @@
          },
          {
           "value": [
+           4,
            "NaN",
            "NaN",
            "NaN",
@@ -2639,6 +2931,7 @@
          },
          {
           "value": [
+           5,
            29.24,
            29.99,
            30.74,
@@ -2646,12 +2939,14 @@
            32.24
           ],
           "n": 2,
+          "name": "Week 2\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           6,
            "NaN",
            "NaN",
            "NaN",
@@ -2665,6 +2960,7 @@
          },
          {
           "value": [
+           7,
            "NaN",
            "NaN",
            "NaN",
@@ -2678,6 +2974,7 @@
          },
          {
           "value": [
+           8,
            31.11,
            31.86,
            32.61,
@@ -2685,12 +2982,14 @@
            34.11
           ],
           "n": 2,
+          "name": "Week 4\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           9,
            "NaN",
            "NaN",
            "NaN",
@@ -2704,6 +3003,7 @@
          },
          {
           "value": [
+           10,
            "NaN",
            "NaN",
            "NaN",
@@ -2717,6 +3017,7 @@
          },
          {
           "value": [
+           11,
            34.48,
            35.23,
            35.98,
@@ -2724,12 +3025,14 @@
            37.48
           ],
           "n": 2,
+          "name": "Week 8\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           12,
            "NaN",
            "NaN",
            "NaN",
@@ -2743,6 +3046,7 @@
          },
          {
           "value": [
+           13,
            "NaN",
            "NaN",
            "NaN",
@@ -2756,6 +3060,7 @@
          },
          {
           "value": [
+           14,
            39,
            39,
            39,
@@ -2763,6 +3068,7 @@
            39
           ],
           "n": 1,
+          "name": "Week 12\u0000Placebo",
           "itemStyle": {
            "opacity": 1
           }

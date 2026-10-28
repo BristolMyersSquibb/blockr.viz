@@ -114,7 +114,6 @@
       },
       "yAxis": {
        "type": "value",
-       "scale": true,
        "name": "Analysis Value",
        "nameLocation": "middle",
        "nameGap": 45,
@@ -137,67 +136,89 @@
          "type": "dashed"
         }
        },
+       "scale": true,
        "max": "[fn]",
        "min": "[fn]"
       },
       "series": [
        {
-        "type": "boxplot",
+        "type": "custom",
+        "id": "__box_0",
         "data": [
          {
           "value": [
+           0,
            21.37,
            23.2644,
            26.87,
            30.4756,
            32.37
           ],
-          "n": 12
+          "n": 12,
+          "name": "Baseline"
          },
          {
           "value": [
+           1,
            23.24,
            24.7756,
            28.64,
            32.5044,
            34.24
           ],
-          "n": 10
+          "n": 10,
+          "name": "Week 2"
          },
          {
           "value": [
+           2,
            25.11,
            27.0044,
            30.61,
            34.2156,
            36.11
           ],
-          "n": 12
+          "n": 12,
+          "name": "Week 4"
          },
          {
           "value": [
+           3,
            28.48,
            30.3744,
            33.98,
            37.5856,
            39.48
           ],
-          "n": 12
+          "n": 12,
+          "name": "Week 8"
          },
          {
           "value": [
+           4,
            30,
            31.6766,
            35.4545,
            39.2325,
            41
           ],
-          "n": 11
+          "n": 11,
+          "name": "Week 12"
          }
         ],
+        "encode": {
+         "x": 0,
+         "y": [
+          1,
+          2,
+          3,
+          4,
+          5
+         ]
+        },
+        "renderItem": "[fn]",
         "itemStyle": {
-         "color": "#0072B222",
-         "borderColor": "#0072B2"
+         "color": "#0072B2"
         },
         "markLine": {
          "silent": true,
@@ -246,6 +267,7 @@
         "data": [
          {
           "value": [
+           0,
            21.37,
            23.2644,
            26.87,
@@ -253,12 +275,14 @@
            32.37
           ],
           "n": 12,
+          "name": "Baseline",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           1,
            23.24,
            24.7756,
            28.64,
@@ -266,12 +290,14 @@
            34.24
           ],
           "n": 10,
+          "name": "Week 2",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           2,
            25.11,
            27.0044,
            30.61,
@@ -279,12 +305,14 @@
            36.11
           ],
           "n": 12,
+          "name": "Week 4",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           3,
            28.48,
            30.3744,
            33.98,
@@ -292,12 +320,14 @@
            39.48
           ],
           "n": 12,
+          "name": "Week 8",
           "itemStyle": {
            "opacity": 1
           }
          },
          {
           "value": [
+           4,
            30,
            31.6766,
            35.4545,
@@ -305,6 +335,7 @@
            41
           ],
           "n": 11,
+          "name": "Week 12",
           "itemStyle": {
            "opacity": 1
           }
