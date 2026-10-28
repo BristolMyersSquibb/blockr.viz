@@ -5,25 +5,18 @@
 
 #' Compute the flat table's cell model: per-column display strings, paint
 #' and drill raw values, and the column widths. Returns `kind = "message"`
-#' (with the rendered message-table tag) for the non-renderable states, else
-#' `kind = "flat"`.
+#' for the non-renderable states, else `kind = "flat"`.
 #'
 #' Vectors are FULL-LENGTH aligned to rows: `disp` is NA where the cell is NA,
 #' `raw` is NULL for non-drill columns, `bg` / `fg` / `bar` are NULL for
 #' unshaded columns and NA on unpainted rows. Display strings are plain
 #' (unescaped).
+#' @param rotate Whether the column titles are turned on their side (the
+#'   compact look): the value columns then size on their cells alone.
 #' @noRd
 dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
                           shadings = list(), drill = NULL, digits = "number",
-                          row_hex = NULL, color = NULL, toggles = list(),
-                          group_cols = NULL, group = character(),
-                          summaries = list(), active = NULL,
-                          gear_cols = NULL) {
-  # Pickable columns for the gear (data-dt-cols). `data` here is the raw
-  # input except in the block server's aggregated branch, which displays a
-  # projection and passes the raw schema in explicitly.
-  if (is.null(gear_cols)) gear_cols <- dt_gear_cols_json(data)
-
+                          row_hex = NULL, rotate = FALSE) {
   value_cols_raw <- value_cols
   if (is.null(label_col)) label_col <- names(data)[1L]
   if (is.null(value_cols)) value_cols <- setdiff(names(data), label_col)
@@ -52,32 +45,27 @@ dt_flat_build <- function(data, label_col = NULL, value_cols = NULL,
   # and the body cells (numeric right, text left).
   num_flag <- vapply(data[value_cols], is.numeric, logical(1L))
 
-  raw_cols <- dt_flat_raw_cols(drill, group_cols, c(label_col, value_cols))
+  shown <- c(label_col, value_cols)
+  raw_cols <- intersect(drill %||% character(), shown)
   body <- dt_flat_cells(data, value_cols, num_flag, shading_vis, raw_cols,
                         digits)
-  onclick <- dt_onclick(drill, c(label_col, value_cols))
-  widths <- dt_flat_widths(data, label_col, value_cols, body$disp_by_col,
-                           toggles)
   list(
     kind = "flat", n = nrow(data),
     stub = dt_flat_stub(data, label_col, raw_cols, row_hex),
-    cells = body$cells, nodrill = dt_flat_nodrill(data, raw_cols),
-    widths = widths, drill = drill, onclick_col = onclick$col
+    cells = body$cells,
+    widths = dt_flat_widths(data, label_col, value_cols, body$disp_by_col,
+                            rotate),
+    drill = if (length(drill) == 1L && drill %in% shown) drill
   )
 }
 
-# Drill-relevant columns carry each cell's RAW value (rendered as a
-# data-raw attribute, read by the click handlers instead of the displayed
-# text): numeric cells display rounded and NA renders as an em-dash, so a
-# filter built from the display would match zero rows and silently empty
-# downstream. `as.character(raw)` round-trips exactly -- comparing a
-# numeric column to a character value in the filter expr coerces through
-# the same as.character(). NA cells stay NA here -> no data-raw (the click
-# is a no-op; see the nodrill flag in dt_flat_nodrill()).
-dt_flat_raw_cols <- function(drill, group_cols, shown) {
-  intersect(unique(c(drill %||% character(), group_cols %||% character())),
-            shown)
-}
+# The drill column carries each cell's RAW value, which a click sends instead
+# of the displayed text: numeric cells display rounded and NA displays as an
+# em-dash, so a filter built from the display would match zero rows and
+# silently empty downstream. `as.character(raw)` round-trips exactly --
+# comparing a numeric column to a character value in the filter expr coerces
+# through the same as.character(). NA cells stay NA, and a row with an NA
+# drill value does not click.
 
 # The value columns' cells, and their display strings per column (non-NA
 # only) for the width estimate.
@@ -144,25 +132,16 @@ dt_flat_paint <- function(sv, data, name, col, keep) {
   list(bg = p$bg, fg = p$fg)
 }
 
-# The stub column.
-#
-# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) as the
-# row's `tint`, which the view draws as an accent bar on the left of the
-# row. `row_hex` is a per-row vector (the `color` column resolved through
-# the scale map); NA rows get no bar.
-#
-# Categorical scale-map row color (e.g. SEX: F = teal, M = orange) drawn as
-# a subtle accent bar on the left of the row, matching the chart's legend
-# and reading like a selected-row indicator. `row_hex` is a per-row vector
-# (the `color` column resolved through the scale map); NA rows get no bar.
-# Drawn with an inset box-shadow so it adds no width (no layout shift) and
-# is independent of the numeric heatmap above.
+# The stub column, with the categorical scale-map row colour (e.g. SEX: F =
+# teal, M = orange) as the row's `tint`, which the view draws as an accent
+# bar on the left of the row. `row_hex` is a per-row vector (the `color`
+# column resolved through the scale map); NA rows get no bar.
 dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   n <- nrow(data)
   has_bar <- !is.null(row_hex) && length(row_hex) == n
   stub_disp <- as.character(data[[label_col]])
-  # An NA stub has always rendered as the literal "NA" (the historical
-  # paste0() semantics); make that explicit so both consumers agree.
+  # An NA stub reads "NA": a row label cannot be blank, and the em-dash
+  # stands for a missing number.
   stub_disp[is.na(stub_disp)] <- "NA"
   list(
     disp = stub_disp, name = label_col,
@@ -172,25 +151,15 @@ dt_flat_stub <- function(data, label_col, raw_cols, row_hex) {
   )
 }
 
-# A row whose drill value(s) include an NA cannot emit a filter (no
-# data-raw -> the click is a no-op); mark it so it doesn't LOOK clickable.
-dt_flat_nodrill <- function(data, raw_cols) {
-  if (length(raw_cols)) {
-    Reduce(`|`, lapply(raw_cols, function(cn) is.na(data[[cn]])))
-  } else {
-    rep(FALSE, nrow(data))
-  }
-}
-
 # Column widths in px, stub first, from the header labels and the cells.
-dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, toggles) {
+dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, rotate) {
   flat_labels <- c(
     dt_col_label(data[[label_col]], label_col) %||% "",
     vapply(value_cols, function(vc) {
       dt_col_label(data[[vc]], vc) %||% ""
     }, character(1L))
   )
-  if (isTRUE(toggles$rotate_titles)) {
+  if (isTRUE(rotate)) {
     # Rotated titles (matrix tables): header text no longer drives the
     # column width -- that is the point of rotating. Value columns size on
     # their CELL content alone (a count needs ~30px, not the 60px+ the
@@ -211,7 +180,7 @@ dt_flat_widths <- function(data, label_col, value_cols, disp_by_col, toggles) {
     col_labels = flat_labels,
     formatted = lapply(c(list(as.character(data[[label_col]])), disp_by_col),
                        as.character),
-    wrap_names = isTRUE(toggles$wrap_titles %||% TRUE)
+    wrap_names = TRUE
   )
 }
 
@@ -258,34 +227,4 @@ dt_col_label <- function(x, name) {
   lbl <- trimws(lbl)
   if (!nzchar(lbl) || identical(lbl, name)) return(NULL)
   lbl
-}
-
-#' Column metadata for the gear popover, stamped on the `<table>` as
-#' `data-dt-cols` (JSON `[{name, type}]`; `"[]"` for a structured frame, whose
-#' pre-formatted cells offer nothing to pick). Always the block's raw INPUT
-#' columns -- NOT the displayed projection -- so the gear's column pickers stay
-#' correct while the table shows an aggregated frame, and re-reading the
-#' attribute at popover-open time picks up upstream schema changes
-#' and server-side config edits without a chrome rebuild.
-#' @noRd
-dt_gear_cols_json <- function(data) {
-  data <- tryCatch(fmt_to_wide(data), error = function(e) data)
-  if (!is.data.frame(data) || dt_is_structured(data)) return("[]")
-  cols <- lapply(names(data), function(nm) {
-    list(
-      name = nm,
-      type = if (is.numeric(data[[nm]])) "numeric" else "categorical"
-    )
-  })
-  as.character(jsonlite::toJSON(cols, auto_unbox = TRUE))
-}
-
-#' Drill onclick target for a row click: the column name + its 0-based index in
-#' the rendered column order, or NULLs when `drill` is unset / not a column.
-#' @noRd
-dt_onclick <- function(drill, all_cols) {
-  if (is.null(drill)) return(list(col = NULL, idx = NULL))
-  m <- match(drill, all_cols)
-  if (is.na(m)) return(list(col = NULL, idx = NULL))
-  list(col = drill, idx = m - 1L)
 }
