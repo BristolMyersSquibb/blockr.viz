@@ -178,100 +178,55 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
-
-  if (!requireNamespace("officer", quietly = TRUE)) {
-    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
-  }
-  summarize_paint_require()
-
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
-
-  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
-  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
-
-  # The picture starts below the title's rendered text; the rest of the slide,
-  # down to the top of the layout's footer, is the row budget.
+  pptx_paint_require()
+  s <- pptx_slide_context(doc, title, layout, master)
+  # The picture starts below the title's rendered text; the rest of the
+  # slide, down to the top of the layout's footer, is the row budget.
   top <- top %||% max(
     1.1,
-    if (slide_title) {
-      pptx_title_bottom(doc, layout, master, template %||% "",
+    if (s$slide_title) {
+      pptx_title_bottom(doc, s$layout, s$master, template %||% "",
                         pptx_page_title(title, c(99L, 99L))) %||% 0
     } else {
       0
     }
   )
-  width <- pptx_content_width(template) %||% (slide_w - 0.8)
-  budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
-
   common <- list(
     x$cells, x$prep,
-    width_in = width, max_height = budget,
-    title = if (slide_title) "" else (title %||% x$title),
+    width_in = pptx_content_width(template) %||% (s$width - 0.8),
+    max_height = pptx_body_bottom(doc, s$layout, s$master, s$height) - top,
+    title = if (s$slide_title) "" else (title %||% x$title),
     subtitle = subtitle %||% x$subtitle,
     caption = caption %||% x$caption
   )
+  pages <- summarize_pptx_pages(common, x$cells$n, font_size, min_font_size,
+                                title %||% x$title)
+  pptx_add_pictures(doc, pages, s, top, title, res)
+}
 
-  # One slide at a smaller size beats two at the full size, down to
-  # `min_font_size`. Nothing is painted until the size is settled.
+# The painted pages at the largest size that keeps the table on one slide,
+# stepping down to `min_font_size`; one slide at a smaller size beats two at
+# the full size. Nothing is painted until the size is settled. A table that
+# still splits says so, with the size that would have fit.
+summarize_pptx_pages <- function(common, n, font_size, min_font_size, what) {
   min_font_size <- exhibit_min_font_size(min_font_size)
   fits_one <- function(fs) {
-    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
+    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= n
   }
-
+  first_fit <- function(sizes) {
+    for (fs in sizes) if (fits_one(fs)) return(fs)
+    NULL
+  }
   if (!fits_one(font_size) && min_font_size < font_size) {
-    for (s in seq(font_size - 1, min_font_size)) {
-      if (fits_one(s)) {
-        font_size <- s
-        break
-      }
-    }
+    font_size <- first_fit(seq(font_size - 1, min_font_size)) %||% font_size
   }
-
   pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
-
   if (length(pages) > 1L) {
     # Search below the floor only to tell the reader the size that would fit.
-    fit <- NULL
-    below <- seq_len(max(0, min(font_size, min_font_size) - MIN_FONT_FLOOR))
-    for (s in min(font_size, min_font_size) - below) {
-      if (fits_one(s)) {
-        fit <- s
-        break
-      }
-    }
-    exhibit_split_note(title %||% x$title, pages = length(pages),
-                       size = font_size, floor = min_font_size,
-                       fit_size = fit)
+    low <- min(font_size, min_font_size)
+    below <- seq_len(max(0, low - MIN_FONT_FLOOR))
+    exhibit_split_note(what, pages = length(pages), size = font_size,
+                       floor = min_font_size, fit_size = first_fit(low - below))
   }
-
-  for (k in seq_along(pages)) {
-    p <- pages[[k]]
-    f <- tempfile(fileext = ".png")
-    paint_write_png(p, f, res = res)
-    doc <- officer::add_slide(doc, layout = layout, master = master)
-    if (slide_title) {
-      doc <- tryCatch(
-        officer::ph_with(
-          doc, pptx_page_title(title, c(k, length(pages))),
-          location = officer::ph_location_type(type = "title")),
-        error = function(e) doc)
-    }
-    # Never scaled: the type was sized for this box.
-    doc <- officer::ph_with(
-      doc, officer::external_img(f, width = p$width, height = p$height),
-      location = officer::ph_location(
-        left = (slide_w - p$width) / 2, top = top,
-        width = p$width, height = p$height))
-  }
-
-  doc
+  pages
 }
