@@ -30,8 +30,6 @@
   const TRAJ_REDUCED_MAX = 500;
   const TRAJ_HARD_CAP = 1000;
 
-  // A colour column with more levels than this gets no legend.
-  const LEGEND_MAX = 15;
 
   /**
    * @typedef {{ level: string | undefined, color: string, rows: any[], pts: any[][],
@@ -238,7 +236,7 @@
         const c = cols[i];
         if (c) { colourOf.set(lv, c); items.push({ name: lv, color: c }); }
       });
-      m.legend = items.length && items.length <= LEGEND_MAX ? { col: color, items } : null;
+      m.legend = items.length ? { col: color, items } : null;
     }
     /** @param {IndSeries} s @param {any[]} rs */
     const colourFor = (s, rs) => {
@@ -322,17 +320,21 @@
     return { of, legendColor };
   };
 
-  /** The legend band's chips, when the colour column has a readable number of levels. With a series
-   * column apart from the colour, the chips are the colour's values, sorted; the option adds an
-   * empty series per chip for the legend to bind to. Fills m.legend and m.byColor.
+  /** The legend band's chips (the band hides them past NS.legendFits). With a series column apart
+   * from the colour, the chips are the colour's values, sorted; the option adds an empty series per
+   * chip for the legend to bind to, and past NS.legendFits the tooltip names the colour value.
+   * Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
    * @param {(level: string, index: number) => string} legendColor */
   const legendOf = (rows, ix, m, legendColor) => {
     const { color, seriesCol } = m;
     if (!color) return;
     const colorLevels = ix.levels(rows, color, 'nz');
-    if (!colorLevels.length || colorLevels.length > LEGEND_MAX) return;
+    if (!colorLevels.length) return;
     m.byColor = !!seriesCol && seriesCol !== color;
+    if (m.byColor && !NS.legendFits(colorLevels.length) && !m.ttFields.includes(color)) {
+      m.ttFields.push(color);
+    }
     const items = m.byColor
       ? colorLevels.slice().sort().map((/** @type {string} */ lvl, /** @type {number} */ i) =>
         ({ name: lvl, color: legendColor(lvl, i) }))
