@@ -42,7 +42,7 @@ test('a second click on a lit row clears the drill', () => {
   t.click(t.row(3));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'] }), null]);
   assert.deepEqual(t.lit(), []);
-  assert.ok(t.$('.dd-status-footer').hidden);
+  assert.equal(t.$('.dd-status-footer').textContent, '');
 });
 
 test('the clear button on the receipt clears the drill', () => {
@@ -168,8 +168,8 @@ test('with a drill target every click is sent and nothing stays lit', () => {
   assert.ok(t.row(0).classList.contains('dt-flash-row'));
   assert.ok(t.row(0).children[1].classList.contains('dt-flash-cross'));
   assert.ok(t.row(1).children[1].classList.contains('dt-flash-col'));
-  assert.match(t.$('.dd-status-text').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
-  assert.ok(t.$('.dd-status-clear').hidden);
+  assert.match(t.$('.dd-status-receipt').textContent, /^Drilled down to SEX = F, ARM = Placebo/);
+  assert.equal(t.$('.dd-status-clear'), null);
   t.row(0).dispatchEvent(new t.win.Event('animationend'));
   assert.equal(t.row(0).classList.contains('dt-flash-row'), false);
 });
