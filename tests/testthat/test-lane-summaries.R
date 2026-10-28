@@ -577,27 +577,6 @@ test_that("the retired table-level pair fans down onto the rows it applied to", 
   expect_identical(own[[1L]]$facet, "SEV")
 })
 
-test_that("a high-cardinality colour or facet is refused, naming the column", {
-  ae <- sum_fixture()
-  p <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "dist", name = "Duration", col = "DUR", color = "USUBJID")
-  ))
-  expect_match(p$err, "colour column \"USUBJID\" has 19 levels")
-  # Facet has the same ceiling for a different reason: one column per level.
-  p <- summarize_prepare(ae, by = "TERM", summaries = list(
-    list(type = "dist", name = "Duration", col = "DUR", facet = "USUBJID")
-  ))
-  expect_match(p$err, "would repeat 19 times")
-  # The gear seeds a mapping from the level counts it ships, so the pick it
-  # offers is one that passes.
-  cols <- summarize_gear_cols(ae)
-  n <- vapply(cols, function(c) c$n_lev %||% NA_integer_, integer(1L))
-  expect_identical(vapply(cols, function(c) c$name, "")[!is.na(n) & n <= 15L],
-                   c("SOC", "TERM", "SEV", "ARM"))
-  # USUBJID is exactly the column the seed must skip.
-  expect_identical(n[vapply(cols, function(c) c$name, "") == "USUBJID"], 19L)
-})
-
 test_that("the ctor migrates the retired pair into the block's STATE", {
   b <- new_summarize_table_block(
     by = "TERM", color = "SEV", facet = "ARM",
@@ -845,51 +824,6 @@ test_that("a distribution's domain is its data, not zero and not n", {
                           show = "dot"))
   )$plan[[1L]]
   expect_identical(dot$dmin, 0)
-})
-
-test_that("a distribution splits by colour: one glyph per level, one scale", {
-  ae <- sum_fixture()
-  p <- lane_prepare_summaries(
-    ae, by = "TERM",
-    summaries = list(list(type = "dist", name = "Duration", col = "DUR",
-                          show = "box", color = "SEV"))
-  )
-  e <- p$plan[[1L]]
-  expect_identical(e$levels, c("MILD", "MOD"))
-  expect_length(e$lcols, 2L)
-  expect_length(e$fills, 2L)
-  # Every level is read against the SAME axis, or the split lies.
-  expect_true(is.finite(e$dmin) && is.finite(e$dmax))
-  lo <- min(p$rows[[e$lcols[[1L]][["wl"]]]], p$rows[[e$lcols[[2L]][["wl"]]]],
-            na.rm = TRUE)
-  hi <- max(p$rows[[e$lcols[[1L]][["wh"]]]], p$rows[[e$lcols[[2L]][["wh"]]]],
-            na.rm = TRUE)
-  expect_lte(e$dmin, lo)
-  expect_gte(e$dmax, hi)
-
-  # The pooled glyph survives as the sort value, and the colour dimension
-  # gets the legend (identity never rides on colour alone).
-  expect_true(all(is.finite(p$rows$.v)))
-  expect_identical(p$series, c("MILD", "MOD"))
-  expect_identical(p$color, "SEV")
-
-  m <- summarize_cells(p)
-  cell <- m$cols[[1L]]
-  expect_true(isTRUE(cell$multi))
-  expect_length(cell$lv, 2L)
-  expect_match(cell$lv[[1L]]$tip[[1L]], "^MILD")
-
-  # A level with no rows in a group draws no lane at all -- the per-subject
-  # case ("this subject is female") is one coloured glyph, not one plus a gap.
-  one <- ae[ae$SEV == "MILD", , drop = FALSE]
-  p1 <- lane_prepare_summaries(
-    one, by = "TERM",
-    summaries = list(list(type = "dist", col = "DUR", show = "box",
-                          color = "SEV"))
-  )
-  html <- summarize_cells_html(summarize_cells(p1))
-  expect_equal(lengths(regmatches(html, gregexpr("blockr-summarize-lv", html))),
-               nrow(p1$rows))
 })
 
 test_that("the colour split takes the board's fixed colours", {

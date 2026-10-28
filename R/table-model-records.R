@@ -341,7 +341,7 @@ dt_col_label <- function(x, name) {
 #' pre-formatted cells offer nothing to pick). Always the block's raw INPUT
 #' columns -- NOT the displayed projection -- so the gear's column pickers stay
 #' correct while the table shows an aggregated frame, and re-reading the
-#' attribute at popover-open time (table.js) picks up upstream schema changes
+#' attribute at popover-open time picks up upstream schema changes
 #' and server-side config edits without a chrome rebuild.
 #' @noRd
 dt_gear_cols_json <- function(data) {

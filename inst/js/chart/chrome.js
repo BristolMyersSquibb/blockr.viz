@@ -83,12 +83,15 @@
       this.titleWrap.style.display = shows(t) || shows(s) ? '' : 'none';
     },
 
-    // The formats R offers (core/download.js). Opening the control sends the picture to R.
+    // The formats R offers (core/download.js). Opening the control sends the
+    // picture to R; an empty state has none, so Image is left out.
     /** @this {any} @param {any} list */
     _updateDownloads(list) {
-      const show = this.config.download !== false && Array.isArray(list) && list.length > 0;
+      const offer = (Array.isArray(list) ? list : [])
+        .filter((/** @type {any} */ f) => !(this._blank && f.ext === 'png'));
+      const show = this.config.download !== false && offer.length > 0;
       this.downloadEl.hidden = !show;
-      V.downloads(this.downloadEl, show ? list : [], this.scope,
+      V.downloads(this.downloadEl, show ? offer : [], this.scope,
                   { onOpen: () => this._downloadImage(true) });
     },
 
@@ -107,12 +110,21 @@
         return;
       }
       this._legendCol = spec.col;
-      this._placeLegendBand(plan.position);
+      const top = plan.position === 'top';
+      el.classList.toggle('dd-legend-band--top', top);
+      const inPlace = top ? el.nextElementSibling === this.chartGrid
+        : el.previousElementSibling === this.chartGrid;
+      if (!inPlace) this.card.insertBefore(el, top ? this.chartGrid : this.chartGrid.nextSibling);
       el.innerHTML = '';
       if (this._chipScope) this._chipScope.dispose();
       this._chipScope = this.scope.own(new V.Scope());
-      const title = this._legendTitleName(spec.items, spec.col);
-      if (title) mk('span', 'dd-legend-title', el).textContent = title;
+      // The colour column's label before the chips: only a label that differs from the name,
+      // and not when a level already carries it.
+      const meta = NS.axes.colMeta(this.columns, spec.col);
+      const title = meta && meta.label && meta.label !== meta.name ? meta.label : null;
+      if (title && !spec.items.some((it) => String(it.name) === title)) {
+        mk('span', 'dd-legend-title', el).textContent = title;
+      }
       for (const it of spec.items) {
         const chip = /** @type {HTMLButtonElement} */ (mk('button', 'dd-legend-chip', el));
         chip.type = 'button';
@@ -124,16 +136,6 @@
       }
       el.style.display = '';
       this._markLegendChips();
-    },
-
-    /** @this {any} @param {'top' | 'bottom'} position */
-    _placeLegendBand(position) {
-      const el = this.legendEl;
-      const top = position === 'top';
-      el.classList.toggle('dd-legend-band--top', top);
-      const inPlace = top ? el.nextElementSibling === this.chartGrid
-        : el.previousElementSibling === this.chartGrid;
-      if (!inPlace) this.card.insertBefore(el, top ? this.chartGrid : this.chartGrid.nextSibling);
     },
 
     // A chip click: its level as a filter, or with an explicit drill column
@@ -160,15 +162,6 @@
         const c = /** @type {HTMLElement} */ (chip);
         c.classList.toggle('dd-legend-chip-on', !!on && on.has(c.dataset.level || ''));
       }
-    },
-
-    // The colour column's label before the chips: only a label that differs
-    // from the name, and not when a level already carries it.
-    /** @this {any} @param {any[]} items @param {string} col */
-    _legendTitleName(items, col) {
-      const meta = NS.axes.colMeta(this.columns, col);
-      const title = meta && meta.label && meta.label !== meta.name ? meta.label : null;
-      return title && !items.some((it) => String(it.name) === title) ? title : null;
     },
 
     // The footer names the last filter sent, in column labels (D4). A live

@@ -56,7 +56,7 @@
   /** @type {any} */ let measureCtx = null;
 
   const Mixins = /** @type {any} */ (function Mixins() {});
-  Object.assign(Mixins.prototype, NS.chrome, NS.interact, NS.exporter);
+  Object.assign(Mixins.prototype, NS.chrome, NS.scriptBand, NS.interact, NS.exporter);
 
   class ChartView extends Mixins {
     /** @param {HTMLElement & Record<string, any>} el @param {VizScope} scope */
@@ -72,6 +72,7 @@
       this._rowsGen = 0;
       /** @type {VizColumn[]} */ this.columns = [];
       /** @type {Record<string, any>} */ this.config = {};
+      /** @type {Record<string, any>} */ this.derived = {};
       /** @type {any[]} */ this.charts = [];
       /** @type {any[]} */ this._slots = [];
       /** @type {string | null} */ this._renderShape = null;
@@ -115,11 +116,8 @@
       this.theme = name;
     }
 
-    /**
-     * A payload from R (core/binding.js hands it over with its rows). The
-     * rows are parsed only when their revision changed.
-     * @param {VizPayload} p
-     */
+    /** A payload from R (core/binding.js hands it over with its rows). The rows are parsed only
+     * when their revision changed. @param {VizPayload} p */
     render(p) {
       const d = /** @type {Record<string, any>} */ (p.derived || {});
       this.derived = d;
@@ -138,9 +136,10 @@
       if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
-      this._updateDownloads(d.downloads);
+      this._updateScriptBand(d.script);
       this.drawn = false;
       this._render();
+      this._updateDownloads(d.downloads);
       this._busyDone();
     }
 
@@ -167,6 +166,7 @@
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
       this._showEmpty(NS.model.emptyState(NS.esc(message)));
+      this._updateDownloads(this.derived.downloads);
       this._busyDone();
     }
 
@@ -175,6 +175,7 @@
       const empty = NS.model.gate(this.data, this.columns, this.config);
       if (empty) { this._showEmpty(empty); return; }
       const fam = this._family();
+      this._blank = false;
       this._draw(fam, FAMILIES[fam]);
       // Once more after layout settles.
       if (this._settle) this._settle();
@@ -185,8 +186,19 @@
     _draw(fam, impl) {
       const m = this._model(impl);
       if (m.empty) { this._showEmpty(m.empty); return; }
-      this._applyFacetGrid(m.nFacets);
-      this._syncShape(fam, m.panels.length);
+      const grid = this.chartGrid;
+      grid.classList.toggle('dd-chart-grid-single', m.nFacets <= 1);
+      // The row width when facet_cols pins it.
+      const cols = parseInt(this.config.facet_cols, 10);
+      grid.style.gridTemplateColumns =
+        (cols > 0 && m.nFacets > 1) ? `repeat(${Math.min(cols, m.nFacets)}, minmax(0, 1fr))` : '';
+      // Instances survive a redraw unless the family, panel count or theme changed (an
+      // ECharts theme is fixed at init).
+      const shape = fam + '|' + m.panels.length + '|' + (this.theme || '');
+      if (this._renderShape !== shape) {
+        this._teardownCharts();
+        this._renderShape = shape;
+      }
       // Every panel is laid out before any width is read, so the first panel
       // fits its labels to its own track (B9).
       m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
@@ -199,7 +211,9 @@
         const slot = this._slots[i];
         const po = o.panels[i];
         if (!po.option) {
-          this._dropSlotChart(slot);
+          if (slot.scope) slot.scope.dispose();
+          slot.scope = null;
+          slot.chart = null;
           this._setSlotHeight(slot, po.height);
           slot.chartDiv.innerHTML = NO_VALUE_HTML;
           return;
@@ -263,13 +277,16 @@
       return this._memo.option;
     }
 
-    // Text width in the axis font, on a shared canvas.
-    /** @param {typeof NS.INK_DEFAULT} ink @returns {(s: string) => number} */
-    _measure(ink) {
+    // Text width in a CSS font, on a shared canvas.
+    /** @param {string} font @returns {(s: string) => number} */
+    _measureFont(font) {
       const ctx = measureCtx || (measureCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = `${ink.fontSize}px ${ink.face}`;
+      ctx.font = font;
       return (s) => ctx.measureText(s).width;
     }
+
+    /** The axis font. @param {typeof NS.INK_DEFAULT} ink */
+    _measure(ink) { return this._measureFont(`${ink.fontSize}px ${ink.face}`); }
 
     // One numeric domain across the panels ("fixed"), read back off what each drew.
     _harmoniseAxes() {
@@ -289,15 +306,6 @@
       }
     }
 
-    // The single-panel class, and the row width when facet_cols pins it.
-    /** @param {number} nFacets */
-    _applyFacetGrid(nFacets) {
-      this.chartGrid.classList.toggle('dd-chart-grid-single', nFacets <= 1);
-      const n = parseInt(this.config.facet_cols, 10);
-      this.chartGrid.style.gridTemplateColumns =
-        (n > 0 && nFacets > 1) ? `repeat(${Math.min(n, nFacets)}, minmax(0, 1fr))` : '';
-    }
-
     _teardownCharts() {
       if (this._shapeScope) this._shapeScope.dispose();
       this._shapeScope = null;
@@ -314,17 +322,7 @@
       this.chartGrid.innerHTML = html;
       this._updateStatus();
       this.drawn = true;
-    }
-
-    // Instances survive a redraw unless the family, panel count or theme
-    // changed (an ECharts theme is fixed at init).
-    /** @param {string} family @param {number} count */
-    _syncShape(family, count) {
-      const shape = family + '|' + count + '|' + (this.theme || '');
-      if (this._renderShape !== shape) {
-        this._teardownCharts();
-        this._renderShape = shape;
-      }
+      this._blank = true;
     }
 
     /** @param {number} i @param {string | null} facetLabel @param {boolean} singleFacet */
@@ -361,13 +359,6 @@
         this._attachHandlers(slot, family);
       }
       return slot.chart;
-    }
-
-    /** @param {any} slot */
-    _dropSlotChart(slot) {
-      if (slot.scope) slot.scope.dispose();
-      slot.scope = null;
-      slot.chart = null;
     }
 
     /** @param {any} slot @param {string} h */

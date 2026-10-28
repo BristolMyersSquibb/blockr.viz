@@ -129,22 +129,11 @@ js_enum <- function(path, anchor) {
   sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1", vals, perl = TRUE)
 }
 
-test_that("LANE_STATS is the chart's SUMMARY_STATS, in the same order", {
+test_that("LANE_STATS and the chart's STAT_META follow the spec's stats", {
   js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
   expect_true(file.exists(js))
-  expect_identical(js_enum(js, "const SUMMARY_STATS"), LANE_STATS)
-})
-
-test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {
-  js <- system.file("js", "summarize-table.js", package = "blockr.viz")
-  skip_if(!nzchar(js) || !file.exists(js), "summarize-table.js not found")
-  expect_identical(js_enum(js, "var LANE_STATS"), LANE_STATS)
-  src <- paste(readLines(js, warn = FALSE), collapse = "\n")
-  for (nm in LANE_STATS) {
-    lbl <- LANE_STAT_META[[nm]]$label
-    expect_true(grepl(lbl, src, fixed = TRUE),
-                info = paste0(nm, " label '", lbl, "' missing in JS"))
-  }
+  expect_identical(LANE_STATS, SPEC_STATS)
+  expect_identical(js_enum(js, "const STAT_META"), c("tukey", SPEC_STATS))
 })
 
 test_that("the table's summary and whiskers specs are the chart's enums", {
