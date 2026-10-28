@@ -80,3 +80,20 @@ test_that("the summarize table colors follow provenance too", {
   expect_equal(unname(p$palette[c("F", "M", "U")]),
                c("#0072B2", "#E69F00", "#999999"))
 })
+
+test_that("two hashed levels never share a colour while the palette lasts", {
+  # A bare registration: every level's colour comes from the hash.
+  m <- blockr.theme::new_scale_map(blockr.theme::scale_binding("TRT"))
+  arm <- c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose")
+  grp <- structure(arm, blockr_source = "TRT")
+  res <- dd_resolve_scales(m, "Group", grp)
+  expect_length(unique(unlist(res$color)), 3L)
+  expect_true(all(unlist(res$color) %in% dd_palette()))
+  # A pinned colour stays, and a hashed level moves off it.
+  pinned <- blockr.theme::new_scale_map(blockr.theme::scale_binding(
+    "TRT", color = c(Placebo = unname(res$color[["Xanomeline Low Dose"]]))
+  ))
+  res2 <- dd_resolve_scales(pinned, "Group", grp)
+  expect_identical(res2$color[["Placebo"]], res$color[["Xanomeline Low Dose"]])
+  expect_length(unique(unlist(res2$color)), 3L)
+})

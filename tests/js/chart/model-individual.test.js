@@ -104,6 +104,16 @@ test('facets: sorted levels, a panel each; the missing facet\'s panel is empty',
   assert.strictEqual(m.single, false);
 });
 
+test('a facet, colour or series column the data does not hold is left unset', () => {
+  // A board adds its Subgroup column only once a subgroup is picked.
+  const m = model({ type: 'line', facet: 'Subgroup', color: 'Group', series: 'ID' });
+  assert.strictEqual(m.facet, null);
+  assert.strictEqual(m.color, null);
+  assert.strictEqual(m.panels.length, 1);
+  assert.strictEqual(m.panels[0].series.reduce((n, s) => n + s.pts.length, 0), 5);
+  assert.strictEqual(model({ facet: 'Subgroup' }).panels[0].series[0].pts.length, 5);
+});
+
 test('a line with more than 1000 series draws the first 1000 and says so', () => {
   const rows = [];
   for (let i = 0; i < 1003; i++) rows.push({ ID: 'P' + String(i).padStart(4, '0'), DAY: 1, VAL: i });

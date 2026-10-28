@@ -194,6 +194,17 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
   assert.strictEqual(none.panels[0].slots, null);
 });
 
+test('a box plot faceted by a column the data lacks has no empty slots', () => {
+  // A board adds its Subgroup column only once a subgroup is picked.
+  const rows = [{ G: 'a', C: 'x', V: 1 }, { G: 'a', C: 'y', V: 2 }, { G: 'b', C: 'x', V: 3 }];
+  const cols = [cat('G'), cat('C'), num('V')];
+  const m = build({ type: 'boxplot', x: 'G', color: 'C', facet: 'Subgroup', y: 'V',
+                    sort_by: 'data', sort_dir: 'asc' }, rows, cols);
+  assert.strictEqual(m.facet, null);
+  assert.strictEqual(m.panels.length, 1);
+  assert.deepStrictEqual(plain(m.panels[0].slots.map((x) => x.cat)), ['a\u0000x', 'a\u0000y', 'b\u0000x']);
+});
+
 test('a fixed facet grid keeps every distribution slot in every panel', () => {
   const rows = [{ G: 'a', C: 'x', F: 'p', V: 1 }, { G: 'b', C: 'y', F: 'q', V: 2 }];
   const cols = [cat('G'), cat('C'), cat('F'), num('V')];

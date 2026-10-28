@@ -17,7 +17,8 @@
       "gear": {
         "group": "Chart type",
         "control": "tiles",
-        "label": "Chart type"
+        "label": "Chart type",
+        "labels": ["Bar", "Histogram", "Waterfall", "Pie", "Treemap", "Boxplot", "Pointrange", "Scatter", "Line", "Area", "Band", "Gantt"]
       },
       "slot": true,
       "ctrl": true

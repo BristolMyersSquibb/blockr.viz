@@ -145,6 +145,17 @@ test('the identity line: one rounded domain on both axes, on the markLine', () =
   assert.strictEqual(build({ type: 'line', identity_line: true }).opt.xAxis[0].min, undefined);
 });
 
+test('a shift plot faceted by a column the data lacks keeps its fits and identity line', () => {
+  // R fits per colour level and leaves the missing facet out.
+  const smoother = { A: { x: [0, 10], y: [1, 2] }, B: { x: [0, 10], y: [3, 4] } };
+  const { opt } = build({ color: 'ARM', series: 'ARM', facet: 'Subgroup', smoother: 'lm',
+                          identity_line: true }, {}, { smoother });
+  assert.deepStrictEqual(types(opt), [['scatter', 'A'], ['line', 'A'], ['scatter', 'B'], ['line', 'B']]);
+  assert.strictEqual(opt.series[0].data.length, 2);
+  const d = opt.series[0].markLine.data;
+  assert.deepStrictEqual(plain(d[d.length - 1].map((e) => e.coord)), [[0, 0], [16, 16]]);
+});
+
 test('helper lines on x and y share the markLine of the first series', () => {
   const { opt } = build({ x_lines: [{ value: 5, label: null }],
                        y_lines: [{ value: 4, label: null }, { value: 8, label: null }] });

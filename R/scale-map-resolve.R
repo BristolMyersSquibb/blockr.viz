@@ -64,11 +64,45 @@ dd_resolve_scales <- function(map, var, column) {
   }
   reps <- group_pool_colour_levels(column)
   if (!length(reps)) {
-    return(
-      blockr.theme::resolve_scales_col(map, var, column, palette = dd_palette())
-    )
+    res <- blockr.theme::resolve_scales_col(map, var, column,
+                                            palette = dd_palette())
+    return(dd_dodge_scales(res, map, var, column))
   }
   dd_resolve_group_scales(map, var, column, reps)
+}
+
+# blockr.theme gives a level the map does not pin a colour by a hash of its
+# name, so two levels can draw the same colour (Placebo and Xanomeline High
+# Dose did). Within one view, a hashed level whose colour an earlier level
+# already holds takes the first palette colour no level holds. Pinned colours
+# never move, and with more levels than colours the hash stands. `skip`:
+# levels that take part in neither (a pool, which borrows a member's colour).
+dd_dodge_scales <- function(res, map, var, column, skip = character()) {
+  vals <- res$color
+  if (is.null(vals)) {
+    return(res)
+  }
+  m <- blockr.theme::as_scale_map(map)
+  src <- attr(column, "blockr_source", exact = TRUE)
+  bind <- if (var %in% names(m)) var else src
+  spec <- if (is.character(bind) && length(bind) == 1L) m[[bind]]$color
+  fixed <- names(spec)
+  pool <- if (length(spec) && is.null(fixed)) spec
+  pool <- pool %||% attr(m, "palette", exact = TRUE) %||% dd_palette()
+  if (sum(!names(vals) %in% skip) > length(pool)) {
+    return(res)
+  }
+  used <- unname(vals[names(vals) %in% fixed])
+  for (lv in names(vals)) {
+    if (lv %in% c(fixed, skip)) next
+    if (vals[[lv]] %in% used) {
+      free <- setdiff(pool, used)
+      if (length(free)) vals[[lv]] <- free[[1L]]
+    }
+    used <- c(used, vals[[lv]])
+  }
+  res$color <- vals
+  res
 }
 
 dd_resolve_group_scales <- function(map, var, column, reps) {
@@ -84,6 +118,8 @@ dd_resolve_group_scales <- function(map, var, column, reps) {
   if (is.null(res)) {
     return(NULL)
   }
+  # Dodge among the raw levels; a pool then borrows its member's colour.
+  res <- dd_dodge_scales(res, map, var, ext, skip = names(reps))
 
   # The binding used, to leave a pinned pool name alone.
   m <- blockr.theme::as_scale_map(map)
