@@ -40,6 +40,10 @@
   /** Ids R has spoken about: never watched, since an idle one would tick on. */
   /** @type {Record<string, boolean>} */
   const heard = {};
+  /** Ids whose cue a drawn view has ended. A view built again under such an
+   * id draws Shiny's last value at once; no wait comes, so it is not watched. */
+  /** @type {Record<string, boolean>} */
+  const ended = {};
   /** @type {Record<string, string>} */
   const watched = {};
 
@@ -96,6 +100,7 @@
 
   /** @param {string} id */
   function stop(id) {
+    ended[id] = true;
     clear(id);
     delete watched[id];
     const el = root.document.getElementById(id);
@@ -143,10 +148,12 @@
    * An output R has not spoken about yet starts its clock the moment it
    * comes on screen. A board that builds blocks lazily makes one only when
    * its panel shows, and R's "blockr-busy" follows a second or more later.
+   * An output that has drawn before is not watched: a dock that builds its
+   * panel again sends no new value, so nothing would stop the clock.
    * @param {string} id @param {string} label
    */
   function watch(id, label) {
-    if (heard[id] || pending[id]) return;
+    if (heard[id] || ended[id] || pending[id]) return;
     watched[id] = label;
   }
 

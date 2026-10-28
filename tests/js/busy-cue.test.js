@@ -100,6 +100,33 @@ test('a chart with no picture counts from when its panel shows', () => {
   env.close();
 });
 
+test('a view opened again without new data does not start the clock', () => {
+  const env = h.createEnv();
+  const first = h.mount(env);
+  const id = first.id;
+  hide(first.el);
+  env.binding.find(env.win.document);
+  front(env, first.el);
+  env.flushTimers(1);
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
+  env.flushTimers(500);
+  assert.ok(!busy(first.el), 'the first picture ends the first wait');
+
+  // The dock builds the panel again: a new element under the same id, found
+  // and shown, and no new value from R, since nothing changed.
+  first.el.parentElement.remove();
+  const again = h.mount(env, id);
+  hide(again.el);
+  env.binding.find(env.win.document);
+  front(env, again.el);
+  env.flushTimers(1);
+  env.flushTimers(1);
+  env.flushTimers(1000);
+  assert.ok(!busy(again.el), 'no clock: this output has drawn before');
+  assert.strictEqual(again.el.querySelector('.vz-busy-line').textContent, '');
+  env.close();
+});
+
 test('a chart R has already spoken about is not watched', () => {
   const env = h.createEnv();
   const id = 'block_spoken-drilldown_block';
