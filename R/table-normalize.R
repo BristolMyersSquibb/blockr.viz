@@ -1,26 +1,14 @@
 # The table's rules between arguments, applied after every change from any
-# source. A pure function of the state, the state before the change and the
-# data's column kinds, as chart_normalize().
+# source. Pure, as chart_normalize().
 
-#' Apply the table's cross-argument rules
-#'
-#' - The groups layout always has a column: with no `summaries` it gets one
-#'   count bar, "Count" (as the reference did in the constructor, on a
-#'   switch to groups and when the gear removed the last column).
-#' - In the variables layout a summary whose variable is also a `by` column
-#'   is dropped: it cannot be a row and a column at once.
-#' - Picking `sort_by = "data"` resets `sort_dir`, so data order reads
-#'   ascending (the gear did this).
-#' - The selection goes when the layout, `by` or the drill changes, and is
-#'   never held with a drill target.
-#' - `unit`, `drill_target` and `drill_table` are trimmed.
-#'
-#' @param state The table's state: a named list under the spec's names.
-#' @param prev The state before the change, or `NULL` (a new block).
-#' @param kinds The data's column kinds, or `NULL` without data. No table
-#'   rule reads them yet.
-#' @return The state after the rules.
-#' @noRd
+# Applies the cross-argument rules to `state`; `prev` is the state before the
+# change (NULL for a new block), `kinds` is unused so far.
+# - groups: with no `summaries`, one count bar, "Count".
+# - variables: a summary whose variable is also a `by` column is dropped.
+# - `sort_by = "data"` resets `sort_dir`, so data order reads ascending.
+# - the selection goes when `layout`, `by` or `drill` changes, and is never
+#   held with a drill target.
+# - `unit`, `drill_target` and `drill_table` are trimmed.
 table_normalize <- function(state, prev = NULL, kinds = NULL) {
   state <- trim_settings(state, c("unit", "drill_target", "drill_table"))
   layout <- state[["layout"]] %||% "records"

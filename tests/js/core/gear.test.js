@@ -12,6 +12,7 @@ const setup = (config, opts) => {
 };
 const sel = (el, key) => row(el, key).querySelector('select');
 const inp = (el, key) => row(el, key).querySelector('input, textarea');
+const byKey = (el, key) => el.querySelector(`[data-gear-input="${key}"]`);
 const picked = (s) => Array.from(s.options).filter((o) => o.selected);
 /** Out of the window's realm, for deepEqual. */
 const plain = (x) => JSON.parse(JSON.stringify(x));
@@ -115,7 +116,7 @@ test('enums in a columns control (table stats)', () => {
   const m = mountGear(env, { block: 'table', id: 'tb' });
   m.gear.update(payload({ layout: 'variables', stats: ['mean_sd'] }));
   const s = sel(m.el, 'stats');
-  assert.deepEqual(picked(s).map((o) => o.textContent), ['mean_sd']);
+  assert.deepEqual(picked(s).map((o) => o.textContent), ['Mean (SD)']);
   s.options[0].selected = true;
   s.dispatchEvent(new env.win.Event('change'));
   assert.deepEqual(env.sent[0].value.values, { stats: ['n', 'mean_sd'] });
@@ -259,7 +260,25 @@ test('text: a string commits on blur, Escape restores, empty is ""', () => {
   assert.equal(j.value, 'CHF');
   type(t.win, inp(t.el, 'unit'), '  ');
   assert.deepEqual(lastSet(t).values, { unit: '' });
-  assert.equal(inp(t.el, 'script').tagName, 'TEXTAREA');
+  assert.equal(byKey(t.el, 'script').tagName, 'TEXTAREA');
+});
+
+test('text fields take blockr.ui text input class', () => {
+  const t = setup({ type: 'bar', x: 'ARM' });
+  assert.ok(inp(t.el, 'unit').classList.contains('blockr-text-input'));
+});
+
+test('the prepare script sits behind a checkbox; unticking drops the script', () => {
+  const t = setup({ type: 'bar', x: 'ARM', script: null });
+  const box = byKey(t.el, 'script_on');
+  assert.equal(box.checked, false);
+  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, 'none');
+  box.click();
+  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, '');
+  const u = setup({ type: 'bar', x: 'ARM', script: 'data <- data' });
+  assert.equal(byKey(u.el, 'script_on').checked, true);
+  byKey(u.el, 'script_on').click();
+  assert.deepEqual(lastSet(u).values, { script: null });
 });
 
 test('slider: sends a number on change', () => {
@@ -365,4 +384,32 @@ test('dispose empties the tray and stops sending', () => {
   assert.equal(t.el.childNodes.length, 0);
   t.gear.set({ x: 'SEX' });
   assert.equal(t.sent.length, 0);
+});
+
+test('the variables layout: Group by, Section by, Individual id, Label and Nest send their keys', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'tb' });
+  m.gear.update(payload({ layout: 'variables', by: [], sections: [], id: null,
+                          total: true, total_label: 'Total', nest: false }));
+  for (const k of ['by', 'sections', 'id', 'stats', 'total', 'total_label', 'nest']) {
+    assert.ok(rows(m.el).includes(k), k + ' is a row');
+  }
+  const pick = (key, i) => {
+    const s = sel(m.el, key);
+    s.options[i].selected = true;
+    s.dispatchEvent(new env.win.Event('change'));
+    return env.sent.at(-1).value.values;
+  };
+  assert.deepEqual(pick('by', 1), { by: ['ARM'] });
+  assert.deepEqual(pick('sections', 2), { sections: ['SEX'] });
+  choose(env.win, sel(m.el, 'id'), 'USUBJID (Subject)');
+  assert.deepEqual(env.sent.at(-1).value.values, { id: 'USUBJID' });
+  const label = inp(m.el, 'total_label');
+  label.value = 'All';
+  label.dispatchEvent(new env.win.Event('blur'));
+  assert.deepEqual(env.sent.at(-1).value.values, { total_label: 'All' });
+  const box = row(m.el, 'nest').querySelector('input');
+  box.checked = true;
+  box.dispatchEvent(new env.win.Event('change'));
+  assert.deepEqual(env.sent.at(-1).value.values, { nest: true });
 });

@@ -5,12 +5,12 @@ new_chart_block <- function(
     type = "bar",
     ...,
     x = NULL,
+    xend = NULL,
     y = NULL,
     func = "count",
     color = NULL,
     facet = NULL,
     series = NULL,
-    xend = NULL,
     label = NULL,
     orientation = NULL,
     position = "stack",
@@ -77,7 +77,7 @@ new_chart_block <- function(
          call. = FALSE)
   }
   values <- chart_normalize(values)
-  # blockr.core reads the starting state from this frame, by argument name.
+  # blockr.core reads the starting state from this frame by argument name.
   list2env(values, environment())
 
   res <- blockr.core::new_transform_block(
@@ -90,8 +90,8 @@ new_chart_block <- function(
     class = "chart_block",
     ...
   )
-  # blockr.core keeps `...` as attributes, and would save old names back into
-  # every board.
+  # blockr.core keeps `...` as attributes and would save the old names back
+  # into every board.
   for (nm in old) attr(res, nm) <- NULL
   res
 }

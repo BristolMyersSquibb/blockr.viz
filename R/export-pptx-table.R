@@ -4,7 +4,7 @@
 #' [flextable][flextable::flextable()], the static table output for report and
 #' deck rendering (quarto pptx, docx).
 #'
-#' Structure comes from the annotated-df contract (shared with `html_table()`
+#' Structure comes from the annotated-df contract (shared with the table view
 #' and [write_annotated_xlsx()]): `.label` is the row stub, `.group<k>_level`
 #' runs and `.variable_label` blocks become bold section-header rows merged
 #' across the table width, `.indent` / `.strong` / `.emph` style rows,
@@ -236,8 +236,8 @@ st_column_labels <- function(df, data_cols) {
   )
 }
 
-# Where the section-header rows go. Like build_html_tbody(), each data row
-# whose outermost section level changed emits a header for that level and
+# Where the section-header rows go, as the table view draws them: each data
+# row whose outermost section level changed emits a header for that level and
 # every level below it. Returns the output row of each data row (`data_pos`)
 # and the position, text and level of each header (`pos`, `txt`, `lvl`).
 st_section_rows <- function(df, section_cols, continued = FALSE) {

@@ -198,14 +198,10 @@ test_that("gear option labels match the values they name", {
   }
 })
 
-test_that("every summary type has a spec and an Add column label", {
-  expect_setequal(names(table_summary_specs()), TABLE_SUMMARY_TYPES)
-  expect_setequal(names(TABLE_SUMMARY_TYPE_LABELS), TABLE_SUMMARY_TYPES)
-})
-
 test_that("the block specs and the nested specs pass viz_spec_check()", {
-  expect_s3_class(viz_block_spec("chart"), "viz_spec")
-  expect_s3_class(viz_block_spec("table"), "viz_spec")
+  for (block in names(VIZ_BLOCK_SPECS)) {
+    expect_s3_class(viz_spec_check(viz_block_spec(block)), "viz_spec")
+  }
   for (spec in c(list(table_shading_spec()), unname(table_summary_specs()))) {
     expect_s3_class(viz_spec_check(spec), "viz_spec")
   }
@@ -219,6 +215,9 @@ test_that("LEGACY_NAMES points at names the specs have", {
                                              function(s) names(s$args))))),
     shading = names(table_shading_spec()$args)
   )
+  # The heatmap restores as a table: its names land on the table or on its
+  # tile summary.
+  targets$heatmap <- c(targets$table, targets$summary)
   expect_setequal(unique(LEGACY_NAMES$block), names(targets))
   kept <- LEGACY_NAMES[!is.na(LEGACY_NAMES$new), ]
   for (i in seq_len(nrow(kept))) {

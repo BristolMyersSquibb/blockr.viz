@@ -1,31 +1,8 @@
-# Table model, groups layout: the preparer ---------------------------------------
-#
-# The entry point of the groups table's compute, lane_prepare_summaries(), and
-# the stages it runs: the grouping columns, the normalized summaries and their
-# colour and facet mappings, the leaf and parent skeletons, the sort key, and
-# the shared row assembly (rank order, cap, nest). The columns themselves are
-# built in table-model-groups-build.R and described in
-# table-model-groups-plan.R.
-#
-# The rule for what belongs on this surface: one row is one category, and the
-# mark is a horizontal glyph on a shared linear domain confined to a cell
-# (_blockr.design/open/summarize-table/).
-
 #' The generic preparer: group_by(by) plus the summaries list.
-#'
-#' `by` is outer -> inner; the renderer nests one level, so at most two
-#' columns (the outer becomes the expandable parent).
-#'
-#' Colour and facet are the SUMMARY's mappings, not the table's: a column
-#' carries a colour split, or repeats per level of a facet column, or
-#' neither, and two columns may map different ones. A summary that names a
-#' facet repeats per level (copies adjacent, by_summary layout); one that
-#' does not renders once. Each plan entry carries its own domain, shared
-#' across that summary's facet copies -- mixed marks with different units
-#' must not share a scale.
-#'
-#' `facet` / `color` are the legacy table-level pair: they are fanned down
-#' onto the rows (lane_migrate_globals()) and never read again.
+#' `by` is outer -> inner, at most two columns (the outer is the expandable
+#' parent). Colour and facet are each summary's own mapping; a summary naming a
+#' facet repeats per level, adjacent. `facet` / `color` are the legacy
+#' table-level pair, fanned down onto the rows (lane_migrate_globals()).
 #' @noRd
 lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                    facet_layout = "by_summary",
@@ -50,8 +27,7 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
 
   ctx <- list(
     data = data, keys = keys, parent = g$parent, all = g$all,
-    # A count's percentage base: each facet copy's own rows ("facet", one
-    # level's N) or the whole table ("total").
+    # A count's percentage base: a facet copy's own rows, or the whole table.
     pct_total = identical(summarize_chr1(pct_of), "total"),
     qualify = fi$qualify, n_faceted = fi$n_faceted, scale_map = scale_map,
     subject = subject
@@ -71,17 +47,13 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
                                  sort_dir, top_n)
   rows <- asm$rows
 
-  # --- per-entry domains ------------------------------------------------------
-  # Computed over the ASSEMBLED rows (parents included) and shared across a
-  # summary's facet copies: one scale per summary, never one scale per table.
   plan <- lane_summary_domains(plan, rows)
   fl <- lane_facet_layout(plan, facet_levels, facet_layout, data, fi$shared,
                           subject)
 
   cg <- lane_color_groups(summaries, data, g$drawn, scale_map)
-  # The first group also fills the single-dimension slots the rank path's
-  # emitters fall back on (a plan entry carries its own fills and levels, so
-  # these are a fallback, never the source of truth).
+  # Single-dimension fallback slots; a plan entry carries its own fills and
+  # levels.
   lead_group <- if (length(cg)) cg[[1L]]
   series_lv <- lead_group$levels
   pal <- lead_group$palette %||% character()
@@ -106,9 +78,8 @@ lane_prepare_summaries <- function(data, by, summaries, facet = NULL,
   )
 }
 
-# The synthetic group a groups table without `by` draws from: one row over
-# the whole input. Its row reads "Total", the variables layout's word for the
-# column over all rows (`total_label`).
+# The synthetic group of a groups table without `by`: one "Total" row over the
+# whole input.
 GROUPS_ALL_COL <- ".all"
 GROUPS_ALL_LABEL <- "Total"
 
@@ -119,17 +90,15 @@ groups_all_data <- function(data) {
   data
 }
 
-#' The grouping columns of a groups table: `by` cleaned and checked, the
-#' synthetic one-level group when `by` is empty, the parent / group split and
-#' the rows that draw. Returns `list(err =)` or `list(data, all, group,
-#' parent, keys, drawn)`.
+#' The grouping columns: `by` cleaned and checked, the synthetic group when `by`
+#' is empty, the parent / group split and the rows that draw.
+#' @return `list(err =)` or `list(data, all, group, parent, keys, drawn)`.
 #' @noRd
 lane_prep_groups <- function(data, by) {
   by <- as.character(by %||% character())
   by <- by[nzchar(by)]
-  # Without `by` the table is one row over all input rows: a synthetic
-  # one-level group (GROUPS_ALL_COL) that has no header, no sort and no
-  # drill. `all` on the result tells the renderers.
+  # Without `by`: one row over all input rows, a synthetic group with no
+  # header, sort or drill.
   all <- !length(by)
   if (all) {
     data <- groups_all_data(data)
@@ -146,14 +115,12 @@ lane_prep_groups <- function(data, by) {
   }
   group <- by[[length(by)]]
   parent <- if (length(by) == 2L) by[[1L]]
-  # An outer column with no value in it is a level with nothing to show, so
-  # the table lists the inner column flat. This is how a prepare script turns
-  # the nesting off without touching `by`: it blanks the outer column
-  # (`AEBODSYS = if (soc) AEBODSYS else NA`) behind a flag.
+  # An outer column with no values lists the inner flat. A prepare script turns
+  # nesting off this way, by blanking the outer column behind a flag.
   if (!is.null(parent) && all(is.na(data[[parent]]))) parent <- NULL
   keys <- c(parent, group)
-  # The rows that draw: a missing group draws none (see the skeletons below),
-  # so a colour level only such rows carry gets no slot and no legend key.
+  # A missing group draws no row, so a colour level only such rows carry gets
+  # no slot or legend key.
   drawn <- stats::complete.cases(data[keys])
   list(data = data, all = all, group = group, parent = parent, keys = keys,
        drawn = drawn)
@@ -165,9 +132,9 @@ lane_present <- function(col, data) {
   if (is.null(col) || !col %in% names(data)) NULL else col
 }
 
-#' Normalize the summaries, fan the legacy table-level colour and facet down
-#' onto the rows and check every mapped column exists. Returns the summaries
-#' or `list(err =)`.
+#' Normalize the summaries, fan the legacy colour and facet down onto the rows
+#' and check every mapped column exists.
+#' @return the summaries or `list(err =)`.
 #' @noRd
 lane_prep_norm <- function(summaries, data, color, facet) {
   summaries <- lane_norm_summaries(summaries, data)
@@ -180,15 +147,14 @@ lane_prep_norm <- function(summaries, data, color, facet) {
   summaries
 }
 
-# Every summary's mapped columns must exist -- reported by row name. Returns
-# the message for the first row that maps a missing column, else NULL.
+# The message for the first summary that maps a missing column, else NULL.
 lane_missing_columns <- function(summaries, data) {
   for (s in summaries) {
-    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "band", "from",
-                                            "to", "dash", "fill"))])
+    cols <- unlist(s[intersect(names(s), c("col", "x", "xend", "ymin", "ymax",
+                                            "linetype", "fill"))])
     cols <- as.character(cols)
     if (identical(s$type, "pair")) {
-      cols <- c(cols, Filter(is.character, list(s$lo, s$hi)))
+      cols <- c(cols, Filter(is.character, list(s$ref_min, s$ref_max)))
       cols <- as.character(unlist(cols))
     }
     miss <- setdiff(cols[nzchar(cols)], names(data))
@@ -202,17 +168,15 @@ lane_missing_columns <- function(summaries, data) {
   NULL
 }
 
-#' Per-summary colour and facet. Both optional, both the summary's own.
-#' Levels come from the FULL data, never a facet slice: fills and formats
-#' must agree across a summary's copies and across every row. Returns the
-#' summaries or `list(err =)`.
+#' Per-summary colour and facet, each optional. Levels come from the FULL data,
+#' never a facet slice, so fills and formats agree across copies and rows.
+#' @return the summaries or `list(err =)`.
 #' @noRd
 lane_prep_mappings <- function(summaries, data, drawn) {
   for (i in seq_along(summaries)) {
     s <- summaries[[i]]
-    # A custom row runs its function once over the whole data to learn what
-    # it returns, then stands in as the preset row that draws that shape.
-    # A function that fails here leaves its column empty, the error with it.
+    # A custom row runs its function once over the whole data to learn its
+    # shape. A failing function leaves its column empty, with the error.
     if (identical(s$type, "custom")) {
       cs <- lane_custom_setup(s, data)
       if (!is.null(cs$err)) {
@@ -230,8 +194,8 @@ lane_prep_mappings <- function(summaries, data, drawn) {
   summaries
 }
 
-# The colour mapping of one summary: its levels over the drawn rows. Returns
-# `list(s =)` or `list(err =)`.
+# Colour mapping: levels over the drawn rows. Returns `list(s =)` or
+# `list(err =)`.
 lane_map_color <- function(s, data, drawn) {
   cc <- lane_present(s$color, data)
   if (!is.null(cc) && lane_color_capable(s)) {
@@ -244,21 +208,20 @@ lane_map_color <- function(s, data, drawn) {
       )))
     }
     s$color <- cc
-    # A lane mark splits its cell (one glyph per level); the swimlane
-    # colours its segments instead, and reads `color` in the plan.
+    # A lane mark splits its cell per level; the swimlane colours segments
+    # and reads `color` in the plan.
     s$.color <- if (lane_takes_color(s)) cc
     s$.levels <- lv
   }
   list(s = s)
 }
 
-# The facet mapping of one summary: its levels, capped, in row-count order
-# for a tile. Returns `list(s =)` or `list(err =)`.
+# Facet mapping: levels, capped, in row-count order for a tile. Returns
+# `list(s =)` or `list(err =)`.
 lane_map_facet <- function(s, data, drawn) {
   fc <- lane_present(s$facet, data)
   if (!is.null(fc)) {
-    # One level is a filter narrowing the data (one arm left), not a
-    # mistake: the column draws once, labelled with that level.
+    # One level is a filter (one arm left), not a mistake: draw once, labelled.
     lv <- summarize_levels(data[[fc]])
     tile <- identical(s$show, "tile")
     cap <- if (tile) LANE_MAX_TILE_LEVELS else LANE_MAX_LEVELS
@@ -282,33 +245,29 @@ lane_map_facet <- function(s, data, drawn) {
   list(s = s)
 }
 
-# The levels a summary reads off the full data besides colour and facet: a
-# tile's paint, a pair's dash, a series' or spans' date axis.
+# Levels read off the full data besides colour and facet: tile paint, pair
+# dash, date axis.
 lane_map_levels <- function(s, data) {
-  # A tile's paint levels come from the full data too: the worst level of
-  # one cell is read against the whole column's scale.
+  # One cell's worst level is read against the whole column's scale.
   if (identical(s$show, "tile") && !is.null(lane_present(s$fill, data))) {
     s$.fill <- s$fill
     s$.fill_levels <- lane_ord_levels(data[[s$fill]])
   }
-  # The dash levels come from the full data, like colour: a facet slice
-  # missing a level must not renumber which rows draw dashed.
-  if (identical(s$type, "pair") && !is.null(lane_present(s$dash, data))) {
-    s$.dlevels <- summarize_levels(data[[s$dash]])
+  # Dash levels come from the full data, so a slice missing a level does not
+  # renumber which rows draw dashed.
+  if (identical(s$type, "pair") && !is.null(lane_present(s$linetype, data))) {
+    s$.dlevels <- summarize_levels(data[[s$linetype]])
   }
-  if (s$type %in% c("series", "spans")) {
+  if (s$type %in% c("sparkline", "spans")) {
     s$.date <- inherits(data[[summarize_chr1(s$x)]], "Date")
   }
   s
 }
 
-# One facet column across the table is the ordinary case: the level alone
-# labels a copy, and the by_level layout can span level groups across the
-# summaries. With SEVERAL, adjacent column groups answer different
-# questions, so each copy names its column ("SEX: F") and by_level has no
-# shared groups to span -- the layout stays by_summary. Several faceted
-# columns: each copy's header keeps its summary's name beside its N, or two
-# "Placebo / N = 86" columns could not be told apart.
+# With ONE facet column the level alone labels a copy and by_level can span
+# groups. With SEVERAL, each copy names its column ("SEX: F"), by_level has
+# nothing to span and the layout stays by_summary; the header keeps the summary
+# name beside its N so two "Placebo / N = 86" columns can be told apart.
 lane_facet_info <- function(summaries, data) {
   facet_cols <- unique(unlist(lapply(summaries, function(s) s$.facet)))
   shared_facet <- if (length(facet_cols) == 1L) facet_cols else NULL
@@ -325,19 +284,17 @@ lane_facet_info <- function(summaries, data) {
   )
 }
 
-#' The leaf and parent skeletons: one row per group (and per parent) with its
-#' label, sort order and keys. Returns `list(leaf, par_rows)` or `list(err =)`.
+#' The leaf and parent skeletons: one row per group (and per parent) with label,
+#' sort order and keys.
+#' @return `list(leaf, par_rows)` or `list(err =)`.
 #' @noRd
 lane_prep_skeleton <- function(data, keys, group, parent, summaries) {
-  # A row whose grouping value is missing (NA) is not a group. It is what
-  # blockr.pharma's population join appends for a subject with no record:
-  # it counts toward a column's N (below, over the full slice) and draws no
-  # row. A blank string is a value and keeps its row.
+  # A missing grouping value (a population join appends one for a subject with
+  # no record) is not a group: it counts toward N and draws no row. A blank
+  # string is a value.
   skel <- unique(data[keys])
   skel <- skel[stats::complete.cases(skel), , drop = FALSE]
-  # Nothing left to draw: no rows at all, or every row without a group (a
-  # population join with no events in it, or a prepare script that cleared
-  # every term).
+  # Nothing left to draw: no rows, or every row without a group.
   if (!nrow(skel)) return(list(err = "No rows to display"))
   skel <- skel[do.call(order, unname(as.list(skel))), , drop = FALSE]
   leaf <- data.frame(.label = as.character(skel[[group]]),
@@ -347,9 +304,8 @@ lane_prep_skeleton <- function(data, keys, group, parent, summaries) {
                        as.character(skel[[parent]]),
                      stringsAsFactors = FALSE)
   for (k in keys) leaf[[k]] <- skel[[k]]
-  # The data's own order for the row labels (factor levels, else
-  # first-appearance): `sort_by = "data"` reads it, everything else ignores
-  # it. A visit-keyed table is unreadable alphabetically.
+  # The data's own order (factor levels, else first appearance), read only by
+  # `sort_by = "data"`.
   leaf$.ord <- summarize_data_ord(data[[group]], leaf$.label)
   show_parent_n <- !is.null(parent) && any(vapply(summaries, function(s) {
     identical(s$type, "spans") && identical(s$parent, FALSE)
@@ -361,8 +317,8 @@ lane_prep_skeleton <- function(data, keys, group, parent, summaries) {
   list(leaf = leaf, par_rows = par_rows)
 }
 
-# The parent rows of the skeleton: one per level of the outer column, with
-# its N in the label when a section-style column asks for it.
+# Parent rows: one per level of the outer column, with N in the label when a
+# section-style column asks for it.
 lane_parent_skeleton <- function(data, skel, parent, show_parent_n) {
   pv <- summarize_levels(data[[parent]])
   parent_n <- tabulate(match(as.character(skel[[parent]]), pv),
@@ -376,13 +332,10 @@ lane_parent_skeleton <- function(data, skel, parent, show_parent_n) {
   par_rows
 }
 
-#' `.v` = the FIRST summary's primary value (its sort key): rank order
-#' follows the leading column unless sort_by picks another. A faceted
-#' column ranks by its value over all its levels together, as the single
-#' ranked bar did: by its first level, a row with nothing in that level
-#' would sink however large its other levels are. One more pass of the
-#' builder over all rows gives that value; its columns are dropped again.
-#' @param st The build state of [lane_build_columns()].
+#' `.v`: the FIRST summary's primary value, the sort key. A faceted column ranks
+#' by its value over all its levels together (by its first level, a row empty
+#' there would sink however large its other levels); one more builder pass gives
+#' it and its columns are dropped.
 #' @return `st` with `.v` set on `leaf` and `par_rows`.
 #' @noRd
 lane_primary_values <- function(st, ctx) {
@@ -418,7 +371,6 @@ lane_primary_values <- function(st, ctx) {
   st
 }
 
-# The pooled primary value of a frame: the first summary built over all rows.
 lane_pool_value <- function(t, tkeys, ps0, ctx, parent_row = FALSE) {
   sid0 <- ".sP"
   t0 <- lane_fill(t, tkeys, ctx$keys, ctx$data, ps0, sid0,
@@ -426,17 +378,15 @@ lane_pool_value <- function(t, tkeys, ps0, ctx, parent_row = FALSE) {
   lane_primary_value(t0, ps0, lane_primary_col(ps0, sid0))
 }
 
-# A tile row's total across its facet copies.
 lane_tile_row_total <- function(t, vcols) {
   cc <- intersect(vcols, names(t))
   if (!length(cc)) return(t$.v)
   rowSums(as.matrix(t[cc]), na.rm = TRUE)
 }
 
-#' A custom summary whose function failed: a text column of dashes that
-#' carries the error (`.failed`), which the block reports through blockr's
-#' conditions. Unfaceted and uncoloured, so it is one column whatever the
-#' summary asked for.
+#' A custom summary whose function failed: a text column of dashes carrying the
+#' error (`.failed`), reported through blockr's conditions. One column whatever
+#' the summary asked for.
 #' @noRd
 lane_failed_summary <- function(s, msg) {
   list(type = "field", name = s$name, .failed = msg)
@@ -461,7 +411,7 @@ lane_primary_col <- function(s, sid) {
     dist = paste0(sid, "_bc"),
     field = paste0(sid, "_t"),
     expr = paste0(sid, "_v"),
-    series = paste0(sid, "_last"),
+    sparkline = paste0(sid, "_last"),
     spans = paste0(sid, "_start"),
     pair = paste0(sid, "_to"),
     paste0(sid, "_v")
@@ -478,8 +428,7 @@ lane_primary_value <- function(target, s, col) {
   if (is.null(v)) rep(NA_real_, nrow(target)) else v
 }
 
-#' Shared ordering + fold + row assembly: the tail of summarize_prepare(), split
-#' out so every mark reuses one definition of "rank order, cap, nest".
+#' Shared ordering, fold and row assembly: rank order, cap, nest.
 #' @noRd
 summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
                                     top_n) {
@@ -520,9 +469,8 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     par_rows$.is_parent <- TRUE
     leaf$.level <- 1L
     leaf$.is_parent <- FALSE
-    # Every renderer-internal column is dot-prefixed; the original data
-    # columns (the group / parent keys) are not, and rbind() must not demand
-    # them from both frames.
+    # Renderer-internal columns are dot-prefixed; the key columns are not, and
+    # rbind() must not demand them from both frames.
     keep <- grep("^\\.", names(leaf), value = TRUE)
     pieces <- list()
     for (i in seq_len(nrow(par_rows))) {
@@ -548,9 +496,8 @@ summarize_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
   list(rows = rows, folded = folded, fold_max = fold_max)
 }
 
-#' Match an arbitrary stat column from `src` into `target` by `keys`
-#' (summarize_match generalized beyond `.v`; absent keys stay NA -- an absent
-#' facet cell draws nothing).
+#' Match a stat column from `src` into `target` by `keys`; absent keys stay NA
+#' (an absent facet cell draws nothing).
 #' @noRd
 summarize_match_col <- function(target, src, keys, col) {
   tk <- do.call(paste, c(lapply(keys, function(k) as.character(target[[k]])),

@@ -24,7 +24,7 @@
 #' @param ... Forwarded to [blockr.core::new_board_option()].
 #'
 #' @return A `board_option` object.
-#' @examplesIf interactive()
+#' @examples
 #' new_download_footer_option("Exported by {user} on {time}")
 #' @export
 new_download_footer_option <- function(

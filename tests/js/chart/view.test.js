@@ -155,11 +155,17 @@ test('50 mounts and unmounts leave no listener, timer, scope, node or chart behi
     target.addEventListener = (t, f, o) => { live.add(f); return add(t, f, o); };
     target.removeEventListener = (t, f, o) => { live.delete(f); return rm(t, f, o); };
   }
+  const observers = new Set();
+  const MO = win.MutationObserver;
+  win.MutationObserver = class extends MO {
+    observe(...a) { observers.add(this); return super.observe(...a); }
+    disconnect() { observers.delete(this); return super.disconnect(); }
+  };
   const V = win.Blockr.viz;
   c.el._viz.scope.dispose();
   c.advance(10000);
   const base = { listeners: live.size, timers: c.clock.timers.length, scopes: V.Scope.open(),
-                 nodes: c.doc.body.querySelectorAll('*').length };
+                 nodes: c.doc.body.querySelectorAll('*').length, observers: observers.size };
   const h = require('../harness');
   for (let i = 0; i < 50; i++) {
     const m = h.mount(c.env, 'cycle-' + i);
@@ -174,8 +180,21 @@ test('50 mounts and unmounts leave no listener, timer, scope, node or chart behi
     c.advance(10000);
   }
   assert.deepStrictEqual({ listeners: live.size, timers: c.clock.timers.length,
-                           scopes: V.Scope.open(), nodes: c.doc.body.querySelectorAll('*').length }, base);
+                           scopes: V.Scope.open(), nodes: c.doc.body.querySelectorAll('*').length,
+                           observers: observers.size }, base);
   assert.ok(c.env.fake.instances.every((i) => i.isDisposed()), 'every ECharts instance disposed');
+  c.close();
+});
+
+test('a light/dark switch redraws with the new ink, without a payload', async () => {
+  const c = D.open(BAR);
+  const before = c.chart().log.filter((x) => x.op === 'setOption').length;
+  c.el.style.setProperty('--blockr-color-text-default', '#eeeeee');
+  c.doc.documentElement.setAttribute('data-bs-theme', 'dark');
+  await Promise.resolve();  // the observer reports in a microtask
+  assert.strictEqual(c.block._ink.text, '#eeeeee');
+  assert.ok(c.chart().log.filter((x) => x.op === 'setOption').length > before, 'drawn again');
+  c.doc.documentElement.removeAttribute('data-bs-theme');
   c.close();
 });
 
@@ -202,6 +221,26 @@ test('every chart type: the gear rows are the spec rows that apply to it', () =>
   c.close();
 });
 
+test('the spec hides what does nothing: stacking without a colour, value lines on a pie', () => {
+  const c = D.open(BAR);
+  assert.ok(!rows(c.block).includes('position'), 'no colour: nothing to stack');
+  c.send({ ...BAR, color: 'AESEV' });
+  assert.ok(rows(c.block).includes('position'));
+  assert.ok(rows(c.block).includes('y_lines'));
+  for (const type of ['pie', 'treemap']) {
+    c.send({ type, x: 'AETERM' });
+    assert.ok(!rows(c.block).includes('y_lines'), type);
+  }
+  c.close();
+});
+
+test('with neither x nor y, a bar stands vertical and asks for X', () => {
+  const c = D.open({ type: 'bar', x: null, y: null });
+  assert.match(c.block.chartGrid.textContent, /^Pick X to plot/);
+  assert.strictEqual(c.block.config.orientation, 'vertical');
+  c.close();
+});
+
 test('the gear offers every column of the data, not only the shipped ones', () => {
   const { F } = require('../cases');
   const c = D.open(BAR);
@@ -223,5 +262,18 @@ test('a histogram stands its bins on x', () => {
   const o = c.chart().getOption();
   assert.strictEqual(o.xAxis[0].type, 'category');
   assert.deepStrictEqual(D.plain(o.xAxis[0].data), ['0-30', '30-90']);
+  c.close();
+});
+
+test('facet_cols sets the panels per row; unset, the grid fills by width', () => {
+  const grid = (c) => c.block.chartGrid.style.gridTemplateColumns;
+  const c = D.open({ ...BAR, facet: 'ARM', facet_cols: 2 });
+  assert.match(grid(c), /^repeat\(2, /);
+  c.send({ ...BAR, facet: 'ARM', facet_cols: null });
+  assert.strictEqual(grid(c), '');
+  c.send({ ...BAR, facet: 'ARM', facet_cols: 9 });
+  const panels = c.block._slots.length;
+  assert.ok(panels > 1);
+  assert.match(grid(c), new RegExp('^repeat\\(' + Math.min(9, panels) + ', '));
   c.close();
 });

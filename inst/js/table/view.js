@@ -19,9 +19,13 @@
     /**
      * @param {HTMLElement} el
      * @param {VizScope} scope
+     * @param {TableViewOpts} [opts] `gear: false` mounts no gear and no
+     *   title slots; `still` draws every row with no tools (a printed page).
      */
-    constructor(el, scope) {
+    constructor(el, scope, opts = {}) {
       this.scope = scope;
+      this.el = el;
+      this.still = !!opts.still;
       this.frame = new T.Frame(el, scope);
       /** @type {string | null} */
       this.layout = null;
@@ -29,7 +33,7 @@
       this.view = null;
       /** @type {VizScope | null} */
       this.viewScope = null;
-      this.gear = T.gear.mount(this.frame, scope, () => this.info());
+      this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
       const S = /** @type {any} */ (V).titles;
       if (this.gear && S && typeof S.slots === 'function') {
         const gear = this.gear;
@@ -48,6 +52,14 @@
       }
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
+      this.busyDone();
+    }
+
+    /** End R's busy cue ("drawing") once the table is on screen. */
+    busyDone() {
+      const busy = root.Blockr.busy;
+      if (!busy || !this.el.id) return;
+      this.scope.frame(() => this.scope.frame(() => busy.stop(this.el.id)));
     }
 
     /** @param {string} layout */
@@ -60,6 +72,7 @@
       if (!Layout) return;
       this.viewScope = new V.Scope();
       this.view = this.viewScope.own(new Layout(this.frame, this.viewScope));
+      if (this.still) /** @type {TableLayoutView & { still?: boolean }} */ (this.view).still = true;
     }
 
     /** @returns {TableInfo} */
@@ -81,5 +94,5 @@
   }
 
   T.View = TableView;
-  V.binding('blockr.viz.table', 'table', TableView);
+  V.binding('blockr.viz.table', 'table', TableView, { busy: 'drawing' });
 })();

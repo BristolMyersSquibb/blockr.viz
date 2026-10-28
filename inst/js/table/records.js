@@ -151,8 +151,10 @@
      * @returns {TableGridFlags}
      */
     flags(cfg, m) {
+      // The compact look: value-column titles on their side (table.css).
+      const attrs = cfg.look === 'compact' ? { 'data-dt-rotate-titles': 'on' } : undefined;
       return { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false,
-               all: this.still };
+               all: this.still, attrs };
     }
 
     /** @returns {TableCardOpts} */
@@ -229,7 +231,8 @@
       if (!m) return;
       const c = this.cardsOn() ? { shown: this.cardOrder().length, total: m.n }
         : this.grid.counts();
-      f.count(this.countLine(m, c));
+      // A printed table has no search to count against.
+      f.count(this.still ? '' : this.countLine(m, c));
       if (this.transient()) {
         f.receipt(this.sent ? 'Drilled down to ' + T.drill.label(this.sent, this.labels) : null,
                   null);

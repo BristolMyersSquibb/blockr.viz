@@ -16,7 +16,7 @@ demo_exhibit <- function(data = demo_frame(), ...) {
       list(type = "simple", func = "count_distinct", col = "id",
            show = "bar", facet = "arm", name = "Subjects"),
       list(type = "dist", col = "val", style = "box",
-           inner = "median_q1_q3", outer = "p10_p90", name = "Value")
+           summary = "median_q1_q3", whiskers = "p10_p90", name = "Value")
     ),
     ...
   )
@@ -235,8 +235,8 @@ test_that("a slide row grows to hold every colour level and its number", {
     stringsAsFactors = FALSE
   )
   d$EDY <- d$SDY + as.integer(d$GRADE) * 3L
-  sm <- list(list(type = "pair", from = "SDY", from_func = "mean",
-                  to = "EDY", to_func = "mean", color = "GRADE"))
+  sm <- list(list(type = "pair", x = "SDY", x_func = "mean",
+                  xend = "EDY", xend_func = "mean", color = "GRADE"))
   prep <- summarize_prepare(d, by = "TERM", summaries = sm)
   on <- summarize_cells(prep)
   off <- summarize_cells(prep, cfg = list(value_labels = FALSE))

@@ -1,0 +1,40 @@
+{
+ "object": [
+  "heatmap_block",
+  "transform_block",
+  "block",
+  "vctrs_vctr",
+  "list"
+ ],
+ "payload": {
+  "row": null,
+  "col": null,
+  "color": null,
+  "group": null,
+  "top_n": null,
+  "cell_numbers": true,
+  "drill": null,
+  "download": false,
+  "filter_column": null,
+  "filter_values": null,
+  "max_height": null,
+  "ctrl_target": null,
+  "ctrl_table": null,
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "script": null,
+  "values": [],
+  "locked_roles": {
+   "~t": "character",
+   "~v": []
+  },
+  "block_name": "Old: heatmap"
+ },
+ "constructor": {
+  "object": "blockr_ctor",
+  "constructor": "new_heatmap_block",
+  "package": "blockr.viz",
+  "version": "0.2.223"
+ }
+}

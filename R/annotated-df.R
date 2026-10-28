@@ -111,22 +111,6 @@ annotation_group_level_cols <- function(data) {
   cols[order(as.integer(sub("^\\.group(\\d+)_level$", "\\1", cols)))]
 }
 
-# Reject summary_table()'s internal long form (`.fmt` template plus an
-# unspread `.group` dimension) at the renderer boundary.
-reject_long_form <- function(data) {
-  if (is.data.frame(data) &&
-      all(c(".fmt", ".group") %in% names(data))) {
-    stop(
-      "This looks like summary_table()'s internal long form (it carries ",
-      "`.fmt` and `.group` columns). The annotated-df contract is the wide ",
-      "display grid -- pass the output of summary_table() (or another ",
-      "as_annotated_df() producer) instead.",
-      call. = FALSE
-    )
-  }
-  invisible(data)
-}
-
 #' Coerce a table object into a plain data frame
 #'
 #' [as_annotated_df()] followed by dropping the reserved `.`-annotation
@@ -187,8 +171,6 @@ as_plain_df <- function(x, ...) {
 #' @return A subset of `source`: the rows the claim selects. When nothing is
 #'   claimed, a zero-row frame or the whole source (`unclaimed`).
 #' @seealso [as_annotated_df()], [new_table_block()] (`drill = "source"`)
-#' @examplesIf interactive()
-#' drill_source(drilled_table)
 #' @export
 drill_source <- function(x, source = NULL, columns = NULL,
                          unclaimed = c("none", "all")) {
@@ -351,17 +333,7 @@ annotated_spanner_labels <- function(data) {
   if (!length(lbl)) NULL else lbl
 }
 
-# One column's keys as the JSON the markup carries.
-dd_col_keys_json <- function(entry) {
-  as.character(jsonlite::toJSON(
-    lapply(entry, function(p) {
-      list(column = as.character(p[["column"]]),
-           values = I(as.character(p[["values"]])))
-    }),
-    auto_unbox = TRUE
-  ))
-}
-
+#' @noRd
 dd_is_string <- function(x) {
   is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
 }

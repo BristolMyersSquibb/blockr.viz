@@ -29,7 +29,5 @@ it), added as the last caption line for a table written as a table.
 when the file is downloaded.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 new_download_footer_option("Exported by {user} on {time}")
-\dontshow{\}) # examplesIf}
 }

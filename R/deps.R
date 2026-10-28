@@ -12,10 +12,10 @@ viz_core_dep <- memoise0(function() {
   )
 })
 
-# The package version with a number taken from the scripts' contents, so a
-# browser never serves a changed script from its cache.
-js_version <- function(script) {
-  sums <- tools::md5sum(system.file("js", script, package = "blockr.viz"))
+# The package version with a number taken from the files' contents, so a
+# browser never serves a changed script or stylesheet from its cache.
+js_version <- function(script, dir = "js") {
+  sums <- tools::md5sum(system.file(dir, script, package = "blockr.viz"))
   tmp <- tempfile()
   on.exit(unlink(tmp))
   writeLines(unname(sums), tmp)

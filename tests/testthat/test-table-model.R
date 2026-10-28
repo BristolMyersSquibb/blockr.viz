@@ -77,3 +77,28 @@ test_that("the row tint follows the color setting", {
   expect_identical(col$col, "grp")
   expect_length(col$hex, 2L)
 })
+
+test_that("color = auto tints rows from the board's scale map", {
+  skip_if_not(has_blockr_theme(), "blockr.theme")
+  d <- data.frame(name = c("CR", "PD", "SD"), n = 1:3)
+  map <- list(name = list(color = list(CR = "#006400", PD = "#8b0000")))
+  tint <- table_model_tint(list(color = "auto", rowname = "name"), d,
+                           scale_map = map)
+  expect_identical(tint$col, "name")
+  expect_identical(tint$hex[1:2], c("#006400", "#8b0000"))
+  # Without a binding for the stub column, auto paints nothing.
+  expect_null(table_model_tint(list(color = "auto", rowname = "n"), d,
+                               scale_map = map)$hex)
+})
+
+test_that("the groups sort direction defaults as the chart's: by value down, else up", {
+  expect_identical(table_sort_dir(list()), "desc")
+  expect_identical(table_sort_dir(list(sort_by = "value")), "desc")
+  expect_identical(table_sort_dir(list(sort_by = "alpha")), "asc")
+  expect_identical(table_sort_dir(list(sort_by = "data")), "asc")
+  expect_identical(table_sort_dir(list(sort_by = "alpha", sort_dir = "desc")),
+                   "desc")
+  expect_null(blockr.core:::initial_block_state(
+    new_table_block(layout = "groups")
+  )$sort_dir)
+})

@@ -110,27 +110,6 @@ test_that("a level row in a mixed table ignores the empty predicate", {
   expect_setequal(out$USUBJID, c("S1", "S3"))
 })
 
-test_that("a predicate row is clickable", {
-  # The keys a click emits. Without the predicate half the row carries no
-  # identity, gets no attribute, and table.js renders it non-clickable -- the
-  # count rows of an AE summary simply do not respond.
-  d <- data.frame(
-    .group1 = "TRT01A", .group1_level = "A",
-    .label = c("Any Serious AEs", "Mean (SD)"),
-    .filter = c("TMPFL_SER == 'Y'", NA),
-    stringsAsFactors = FALSE
-  )
-  keys <- dd_row_drill_attrs(d, ".group1_level")$keys
-
-  expect_true(nzchar(keys[[1L]]))
-  cols <- vapply(jsonlite::fromJSON(keys[[1L]], simplifyVector = FALSE),
-                 `[[`, character(1L), "column")
-  expect_equal(cols, c(".group1_level", ".filter"))
-
-  # A row with neither shape still claims nothing, so it still does not click.
-  expect_false(nzchar(keys[[2L]]))
-})
-
 test_that("`.filter` is a reserved annotation column", {
   # Or the predicate renders as a data cell, in every table that carries one.
   expect_true(".filter" %in% annotation_cols_in(data.frame(.filter = "x")))

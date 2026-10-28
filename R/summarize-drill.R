@@ -1,19 +1,11 @@
-# The summarize table's row click.
-#
-# A row stands for its grouping PATH, not for its label alone. On a nested
-# table (`by = c("AEBODSYS", "AEDECOD")`) a parent row is one body system and
-# a child row is one term inside one body system, so the click claims
-# `AEBODSYS = X` for the parent and `AEBODSYS = X, AEDECOD = Y` for the child.
-# One drill column for every row would send a body system name as an AEDECOD
-# value, which matches nothing, and a child label that repeats under several
-# parents (SEX > ARM) would claim it under all of them.
-#
-# The click is stored as `filter_column` (the path's columns) and
-# `filter_values` (one value per column). A board saved with one column and
-# its values means that column, any of those values.
+# Summarize row click. A row claims its grouping path (`AEBODSYS = X,
+# AEDECOD = Y` for a child), since a child label can repeat under several
+# parents. Stored as `filter_column` (path columns) and `filter_values` (one
+# value per column); a saved single column with several values means any of
+# them.
 
-#' The stored click as filters: a named list, column -> value(s), the columns
-#' ANDed. `list()` when there is no click, or the two slots do not pair up.
+#' The stored click as filters: a named list, column -> value(s), ANDed.
+#' `list()` when there is no click or the slots do not pair up.
 #' @noRd
 summarize_drill_filters <- function(col, vals) {
   col <- as.character(unlist(col %||% character()))
@@ -31,8 +23,7 @@ summarize_drill_filters <- function(col, vals) {
   stats::setNames(as.list(vals), col)
 }
 
-#' The footer's words for a click: "AEBODSYS = X, AEDECOD = Y". NULL when
-#' there is none.
+#' The footer's words for a click, "AEBODSYS = X, AEDECOD = Y"; NULL if none.
 #' @noRd
 summarize_drill_phrase <- function(filters) {
   if (!length(filters)) {
@@ -46,10 +37,8 @@ summarize_drill_phrase <- function(filters) {
   )
 }
 
-#' Which rows the stored click lights: those whose own path ends on the last
-#' filtered column and holds every filtered value. A parent click lights the
-#' parent only; a saved single-column click on the inner column lights the
-#' matching child under every parent, as it filtered.
+#' Rows lit by the stored click: those whose own path ends on the last filtered
+#' column and holds every filtered value.
 #' @noRd
 summarize_drill_on <- function(rows, group, parent, filters) {
   n <- nrow(rows)
@@ -84,11 +73,9 @@ summarize_drill_on <- function(rows, group, parent, filters) {
   on
 }
 
-#' The click as a `dplyr::filter()` call on `data`, one condition per column.
-#' `members` maps a column carrying a group definition to the raw values its
-#' clicked group pools (dd_group_filters_members()). A click on the
-#' "(Missing)" row (`missing = "level"`) claims the rows whose value is
-#' missing.
+#' The click as a `dplyr::filter()` call on `data`. `members` maps a grouped
+#' column to the raw values its clicked group pools. A click on "(Missing)"
+#' claims missing values.
 #' @noRd
 summarize_drill_expr <- function(filters, members = NULL) {
   if (!length(filters)) {
@@ -105,12 +92,9 @@ summarize_drill_expr <- function(filters, members = NULL) {
   as.call(c(list(quote(dplyr::filter), quote(data)), conds))
 }
 
-#' The block's expression: the click filter with the prepare script `sx`
-#' around it. A clicked column the upstream data has is filtered before the
-#' script, on the source rows. A column only the script makes (a `by` the
-#' script derives) does not exist there, so it is filtered after the script.
-#' `src_cols` is the upstream's column names; NULL (not seen yet) filters
-#' every column before the script.
+#' The block's expression: the click filter around the prepare script `sx`.
+#' Columns in `src_cols` (upstream names) are filtered before the script, the
+#' rest (made by the script) after it. NULL `src_cols` filters before.
 #' @noRd
 summarize_drill_wrap <- function(sx, filters, members = NULL,
                                  src_cols = NULL) {

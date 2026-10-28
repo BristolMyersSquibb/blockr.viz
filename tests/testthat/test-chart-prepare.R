@@ -140,41 +140,6 @@ test_that("a declaration that cannot become a control says why", {
 })
 
 
-test_that("values coming back from the band are coerced by the declaration", {
-  txt <- script_of(
-    "num <- 10",
-    "flag <- TRUE",
-    # Two picks, so the declaration says multi-select: exactly one pick is how
-    # a script declares a SINGLE select.
-    "many <- factor(c(\"a\", \"b\"), levels = c(\"a\", \"b\", \"c\"))",
-    "data"
-  )
-  ps <- parsed_of(txt)
-
-  # Numbers arrive as strings from the DOM; the declaration knows better.
-  vals <- dd_script_values(list(sv_num = "42"), ps$specs, list())
-  expect_identical(vals$num, 42)
-
-  # The engine speaks on/off for a boolean; the script declared a logical.
-  expect_false(dd_script_values(list(sv_flag = "off"), ps$specs, list())$flag)
-  expect_true(dd_script_values(list(sv_flag = "on"), ps$specs, list())$flag)
-
-  # A JS array arrives as an R list.
-  vals <- dd_script_values(list(sv_many = list("a", "c")), ps$specs, list())
-  expect_identical(vals$many, c("a", "c"))
-
-  # Emptying a multi-select is a REAL value, and an empty JS array arrives here
-  # as NULL -- indistinguishable from an absent key. The band sends "" for it,
-  # exactly as the expose handler does.
-  vals <- dd_script_values(list(sv_many = ""), ps$specs, list(many = c("a")))
-  expect_identical(vals$many, character())
-
-  # A key the message does not carry leaves the current value alone.
-  vals <- dd_script_values(list(sv_num = 1), ps$specs, list(flag = FALSE))
-  expect_false(vals$flag)
-})
-
-
 test_that("a control the user has not touched shows what the script says", {
   ps <- parsed_of(script_of("n <- 7", "flag <- FALSE", "data"))
   cfg <- dd_script_cfg(ps$specs, list())
@@ -417,4 +382,21 @@ test_that("dd_drill_post sends only script-made columns after the script", {
                    c(FALSE, TRUE, TRUE))
   expect_identical(dd_drill_post(cols, NULL), c(FALSE, FALSE, FALSE))
   expect_identical(dd_drill_post(list(), c("SEX")), logical())
+})
+
+test_that("a script's values are title slots, at the script's default until set", {
+  ps <- parsed_of(script_of("n <- 6", "utils::head(data, n)"))
+  roles <- list(by = "Species")
+  args <- script_title_args(roles, ps$specs, list())
+  expect_equal(args$n, 6)
+  expect_identical(args$by, "Species")
+  args <- script_title_args(roles, ps$specs, list(n = 3))
+  expect_equal(args$n, 3)
+  expect_identical(
+    resolve_block_title("Top {@n} by {@by}", datasets::iris, args = args),
+    "Top 3 by Species"
+  )
+  # A value never shadows a block setting of the same name.
+  expect_identical(script_title_args(roles, ps$specs, list(by = "x"))$by,
+                   "Species")
 })

@@ -75,17 +75,6 @@ test('a filter on a column the chart does not draw lights marks holding its rows
   assert.strictEqual(K.markLit({ AETERM: 'Nausea' }, nausea, g), false);
 });
 
-test('a selection seen as one column: column and value(s)', () => {
-  assert.deepStrictEqual(plain(K.selectionView(null)), { column: null, selected: null });
-  assert.deepStrictEqual(plain(K.selectionView({ AETERM: ['Rash'] })),
-                         { column: 'AETERM', selected: 'Rash' });
-  assert.deepStrictEqual(plain(K.selectionView({ AETERM: ['Rash', 'Nausea'] })),
-                         { column: 'AETERM', selected: ['Rash', 'Nausea'] });
-  assert.deepStrictEqual(plain(K.selectionView({ USUBJID: ['S02'], ARM: ['Low Dose'] })), {
-    column: ['USUBJID', 'ARM'], selected: { USUBJID: ['S02'], ARM: ['Low Dose'] }
-  });
-});
-
 test('a missing value is a key too: sent as null, named (missing), matched by null', () => {
   assert.deepStrictEqual(plain(K.fromKeys({ AETERM: 'Rash', AESEV: '' })),
                          { AETERM: ['Rash'], AESEV: [null] });

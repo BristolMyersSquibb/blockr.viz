@@ -28,8 +28,8 @@ test_that("normalization fills defaults and names the broken row", {
   # The house default is the dot style with both ranges on; `show` is the
   # legacy mirror of the style, not the axis itself.
   expect_identical(s[[1L]]$style, "dot")
-  expect_identical(s[[1L]]$inner, "median_q1_q3")
-  expect_identical(s[[1L]]$outer, "tukey")
+  expect_identical(s[[1L]]$summary, "median_q1_q3")
+  expect_identical(s[[1L]]$whiskers, "tukey")
   expect_identical(s[[1L]]$show, "pointrange")
   expect_identical(s[[1L]]$scope, "cell")
   expect_identical(s[[1L]]$name, "DUR")
@@ -57,24 +57,24 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   # same three pieces.
   for (st in LANE_DIST_STYLES) {
     s <- dist(style = st)
-    expect_identical(s$inner, "median_q1_q3")
-    expect_identical(s$outer, "tukey")
+    expect_identical(s$summary, "median_q1_q3")
+    expect_identical(s$whiskers, "tukey")
   }
   # Either range switches off, which is where the degenerate family lives.
-  expect_identical(dist(outer = "none")$outer, "none")
-  expect_identical(dist(inner = "none")$inner, "none")
+  expect_identical(dist(whiskers = "none")$whiskers, "none")
+  expect_identical(dist(summary = "none")$summary, "none")
   # A centre is never absent: with the inner range off, the outer range's
   # centre stands in; with both off, the median.
-  expect_identical(lane_dist_centre_stat(dist(inner = "none",
-                                              outer = "min_max")),
+  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+                                              whiskers = "min_max")),
                    "min_max")
-  expect_identical(lane_dist_centre_stat(dist(inner = "none",
-                                              outer = "none")),
+  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+                                              whiskers = "none")),
                    "median_q1_q3")
   # Unknown values fall back rather than throwing: a bad style is a dot.
   expect_identical(dist(style = "banana")$style, "dot")
-  expect_identical(dist(inner = "banana")$inner, "median_q1_q3")
-  expect_identical(dist(outer = "banana")$outer, "tukey")
+  expect_identical(dist(summary = "banana")$summary, "median_q1_q3")
+  expect_identical(dist(whiskers = "banana")$whiskers, "tukey")
 })
 
 test_that("legacy `show` still restores the mark it always drew", {
@@ -85,14 +85,14 @@ test_that("legacy `show` still restores the mark it always drew", {
   # restores as the dot style with no outer, not as the new default.
   pr <- dist(show = "pointrange")
   expect_identical(pr$style, "dot")
-  expect_identical(pr$outer, "none")
+  expect_identical(pr$whiskers, "none")
   # "box" kept its whiskers, and the legacy stat fields still seed the axes.
-  bx <- dist(show = "box", stat = "mean_sd", whiskers = "min_max")
+  bx <- dist(show = "box", summary = "mean_sd", whiskers = "min_max")
   expect_identical(bx$style, "box")
-  expect_identical(bx$inner, "mean_sd")
-  expect_identical(bx$outer, "min_max")
+  expect_identical(bx$summary, "mean_sd")
+  expect_identical(bx$whiskers, "min_max")
   # An explicit axis wins over the sugar.
-  expect_identical(dist(show = "pointrange", outer = "tukey")$outer, "tukey")
+  expect_identical(dist(show = "pointrange", whiskers = "tukey")$whiskers, "tukey")
   expect_identical(dist(show = "box", style = "dot")$style, "dot")
 })
 
@@ -109,11 +109,11 @@ test_that("the ground follows the mark: only a bare mark keeps a hairline", {
   expect_false(plan1()$bare)
   expect_false(plan1(style = "box")$bare)
   # Nothing spanning the cell: the hairline comes back.
-  expect_true(plan1(outer = "none")$bare)
-  expect_true(plan1(inner = "none", outer = "none")$bare)
+  expect_true(plan1(whiskers = "none")$bare)
+  expect_true(plan1(summary = "none", whiskers = "none")$bare)
   # The leaf columns follow the pieces that are on.
-  expect_false("wl" %in% names(plan1(outer = "none")$cols))
-  expect_false("bl" %in% names(plan1(inner = "none")$cols))
+  expect_false("wl" %in% names(plan1(whiskers = "none")$cols))
+  expect_false("bl" %in% names(plan1(summary = "none")$cols))
   expect_true(all(c("bl", "bh", "wl", "wh") %in% names(plan1()$cols)))
 })
 
@@ -198,9 +198,9 @@ test_that("hover text names columns by their labels", {
   attr(ae$AENDY, "label") <- "End Day"
   S <- list(
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
-         color = "SEV", fields = "ARM"),
-    list(type = "pair", name = "Onset to end", from = "ASTDY",
-         from_func = "mean", to = "AENDY", to_func = "mean")
+         color = "SEV", tooltip = "ARM"),
+    list(type = "pair", name = "Onset to end", x = "ASTDY",
+         x_func = "mean", xend = "AENDY", xend_func = "mean")
   )
   m <- summarize_cells(summarize_prepare(ae, by = "TERM", summaries = S))
   expect_match(m$cols[[1L]]$tips[[1L]][[1L]],
@@ -241,55 +241,41 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   expect_length(summarize_axis_ticks(1, 1), 0L)
   expect_length(summarize_axis_ticks(NA_real_, 1), 0L)
 
-  strip <- function(p, ...) as.character(summarize_axis_strip(p, ...))
-  expect_match(strip(list(kind = "box", dmin = 0, dmax = 100)),
-               "blockr-summarize-axis")
-  # EVERY mark on a scale gets one, each against the domain its own geometry
-  # was computed from: a bar from zero to the column max...
-  expect_match(strip(list(kind = "bar", dmin = 40, dmax = 100)),
-               "left:0%\">0</span>")
-  # ...a 100% split over the percentage itself, with the unit named once...
-  expect_match(strip(list(kind = "barsplit", mode = "percent", dmax = 7)),
-               "100%</span>")
-  # ...and a difference bar zero-centred, the comparator in the middle.
-  expect_match(strip(list(kind = "bardiv", dmax = 10)), "left:50%\">0</span>")
-  # A swimlane / sparkline axis is the x domain, printed as DATES when the x
-  # column is one (the tooltip's rule).
+  ax <- function(p, prep = NULL) table_groups_axis(p, prep)
+  at_label <- function(a, lab) as.numeric(a$at)[match(lab, a$labels)]
+  # Every mark on a scale gets one, each against its own domain: a bar from
+  # zero to the column max...
+  expect_identical(at_label(ax(list(kind = "bar", dmin = 40, dmax = 100)), "0"),
+                   0)
+  # ...a 100% split over the percentage, the unit on the last label...
+  expect_true("100%" %in% ax(list(kind = "barsplit", mode = "percent",
+                                  dmax = 7))$labels)
+  # ...and a difference bar zero-centred.
+  expect_identical(at_label(ax(list(kind = "bardiv", dmax = 10)), "0"), 50)
+  # A swimlane axis prints dates when the x column is one.
   span <- as.numeric(as.Date(c("2023-02-11", "2023-06-02")))
-  expect_match(strip(list(kind = "interval", dom = span, dom_date = TRUE)),
-               "Mar 2023")
-  interval_axis <- strip(list(kind = "interval", dom = c(0, 450)))
-  expect_match(interval_axis, "left:0%\">0</span>", fixed = TRUE)
-  expect_match(interval_axis, "left:11.11%\">50</span>", fixed = TRUE)
-  expect_match(interval_axis, "class=\"is-last\" style=\"left:100%\">450</span>",
-               fixed = TRUE)
-  expect_match(strip(list(kind = "sparkline", dom = c(0, 90))),
-               "blockr-summarize-axis")
-  # No scale, no strip -- and a degenerate domain draws nothing either.
-  expect_null(summarize_axis_strip(list(kind = "num")))
-  expect_null(summarize_axis_strip(list(kind = "box", dmin = 1, dmax = 1)))
-  # The prep-level scale stands in where the plan entry carries none (the
-  # flat ranked-bar path, where one bar_max covers every bar column).
-  expect_match(strip(list(kind = "bar"), NULL, list(bar_max = 100)),
-               "blockr-summarize-axis")
+  expect_true("Mar 2023" %in% ax(list(kind = "interval", dom = span,
+                                      dom_date = TRUE))$labels)
+  iv <- ax(list(kind = "interval", dom = c(0, 450)))
+  expect_identical(at_label(iv, c("0", "50", "450")), c(0, 11.11, 100))
+  expect_false(is.null(ax(list(kind = "sparkline", dom = c(0, 90)))))
+  # No scale, no axis; a degenerate domain neither.
+  expect_null(ax(list(kind = "num")))
+  expect_null(ax(list(kind = "box", dmin = 1, dmax = 1)))
+  # The prep-level scale stands in where the entry carries none.
+  expect_false(is.null(ax(list(kind = "bar"), list(bar_max = 100))))
 })
 
 test_that("large swimlanes repeat the axis below the table", {
   ae <- sum_fixture()
-  large <- summarize_cells(summarize_prepare(
-    ae, by = "USUBJID", summaries = list(
-      list(type = "spans", x = "ASTDY", xend = "AENDY", size = "lg")
-    )
-  ))
-  expect_match(large$tfoot, "<tfoot>", fixed = TRUE)
-  expect_match(large$tfoot, "blockr-summarize-axis", fixed = TRUE)
-
-  medium <- summarize_cells(summarize_prepare(
-    ae, by = "USUBJID", summaries = list(
-      list(type = "spans", x = "ASTDY", xend = "AENDY")
-    )
-  ))
-  expect_identical(medium$tfoot, "")
+  foot <- function(size) {
+    p <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+      c(list(type = "spans", x = "ASTDY", xend = "AENDY"), size)
+    ))
+    isTRUE(table_groups_axis(p$plan[[1L]], p)$foot)
+  }
+  expect_true(foot(list(size = "lg")))
+  expect_false(foot(list()))
 })
 
 test_that("swimlane parent rows can act as section headers", {
@@ -326,9 +312,9 @@ test_that("axis = FALSE drops every strip", {
   ae <- sum_fixture()
   S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
   prep <- lane_prepare_summaries(ae, by = "ARM", summaries = S)
-  expect_match(summarize_cells(prep)$thead, "blockr-summarize-axis")
-  expect_false(grepl("blockr-summarize-axis",
-                     summarize_cells(prep, cfg = list(axis = FALSE))$thead))
+  m <- list(prep = prep, cells = summarize_cells(prep))
+  expect_false(is.null(table_groups_view(m, axis = TRUE)$cols[[2L]]$axis))
+  expect_null(table_groups_view(m, axis = FALSE)$cols[[2L]]$axis)
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {
@@ -345,13 +331,13 @@ test_that("a mixed column list renders every row type through one table", {
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR", show = "box"),
-    list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+    list(type = "dist", name = "Mean", col = "DUR", summary = "mean_ci95",
          show = "text"),
     list(type = "field", name = "Arms", col = "ARM"),
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV"),
-    list(type = "series", name = "Traj", x = "ASTDY", col = "DUR",
-         band = c("LO", "HI")),
+    list(type = "sparkline", name = "Traj", x = "ASTDY", col = "DUR",
+         ymin = "LO", ymax = "HI"),
     list(type = "expr", name = "CV", expr = "round(sd(DUR)/mean(DUR), 2)")
   )
   m <- sum_model(ae, by = "TERM", summaries = S)
@@ -393,7 +379,7 @@ test_that("facet repeats cell rows, pooled rows and fields render once", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Overall", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Overall", col = "DUR", summary = "mean_se",
          show = "text", scope = "pooled"),
     list(type = "field", name = "Arms", col = "ARM")
   )
@@ -413,7 +399,7 @@ test_that("by_level reorders into level groups with a two-row header", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Duration", col = "DUR", summary = "mean_se",
          show = "text", facet = "ARM"),
     list(type = "field", name = "Arms", col = "ARM")
   )
@@ -525,7 +511,7 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
   S <- list(
     list(type = "simple", name = "Subjects", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM"),
-    list(type = "dist", name = "Duration", col = "DUR", stat = "mean_se",
+    list(type = "dist", name = "Duration", col = "DUR", summary = "mean_se",
          show = "text", facet = "SEV")
   )
   p <- summarize_prepare(ae, by = "TERM", summaries = S,
@@ -654,7 +640,7 @@ test_that("spans label/fields enrich tips and key the highlight", {
   ae$SER <- rep(c("Y", "N"), length.out = nrow(ae))
   c1 <- sum_model(ae, by = "USUBJID", summaries = list(
     list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
-         label = "TERM2", fields = "SER", size = "lg")
+         label = "TERM2", tooltip = "SER", size = "lg")
   ))$cells$cols[[1]]
   # The tooltip headlines the event, then level, span, field pairs.
   expect_match(c1$tips[[1]][[1]], "^Term[0-9] · SEV (MILD|MOD) · ")
@@ -674,12 +660,12 @@ test_that("spans label/fields enrich tips and key the highlight", {
 test_that("a series ref computes a pooled line, mean_sd adds the band", {
   ae <- sum_fixture()
   c1 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean")
+    list(type = "sparkline", x = "ASTDY", col = "DUR", summary = "mean")
   ))$cells$cols[[1]]
   expect_false(is.na(c1$rc))
   expect_true(is.na(c1$rby))               # mean = line only
   c2 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR", ref = "mean_sd")
+    list(type = "sparkline", x = "ASTDY", col = "DUR", summary = "mean_sd")
   ))$cells$cols[[1]]
   expect_true(!is.na(c2$rby) && !is.na(c2$rbh) && c2$rbh > 0)
   # The reference rides INSIDE the svg: band can exceed the observed range,
@@ -687,7 +673,7 @@ test_that("a series ref computes a pooled line, mean_sd adds the band", {
   expect_true(c2$rby >= 0)
   # No ref -> no coordinates.
   c3 <- sum_model(ae, by = "TERM", summaries = list(
-    list(type = "series", x = "ASTDY", col = "DUR")
+    list(type = "sparkline", x = "ASTDY", col = "DUR")
   ))$cells$cols[[1]]
   expect_true(is.na(c3$rc))
 })
@@ -843,7 +829,7 @@ test_that("colour is a table-level dimension every glyph column inherits", {
   ae <- sum_fixture()
   S <- list(
     list(type = "dist", name = "Duration", col = "DUR", show = "box"),
-    list(type = "dist", name = "Mean", col = "DUR", stat = "mean_ci95",
+    list(type = "dist", name = "Mean", col = "DUR", summary = "mean_ci95",
          show = "pointrange"),
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV")
@@ -989,7 +975,8 @@ test_that("every facet copy carries its level's N, counted in subjects", {
   expect_identical(vapply(pl$facet_spans$groups, function(g) g$pop, 1L),
                    c(2L, 3L))
   expect_null(pl$plan[[2L]]$sub_label)
-  expect_match(summarize_thead(pl), "N = 3</span>", fixed = TRUE)
+  head <- table_groups_head(list(prep = pl), FALSE)
+  expect_true(any(grepl("N = 3", unlist(head), fixed = TRUE)))
 
   # a mean's facet N is subjects too
   pm <- summarize_prepare(d, by = "TERM", subject = "USUBJID", summaries = list(
@@ -998,4 +985,20 @@ test_that("every facet copy carries its level's N, counted in subjects", {
   ))
   expect_identical(vapply(pm$plan, function(x) x$sub_label, ""),
                    c("Age · N = 2", "Age · N = 3"))
+})
+
+test_that("simple rows take median, min and max of their column", {
+  d <- data.frame(g = c("a", "a", "a", "b", "b"), v = c(1, 2, 9, 4, 6))
+  num <- function(func) {
+    m <- sum_model(d, by = "g", summaries = list(
+      list(type = "simple", name = "V", func = func, col = "v",
+           show = "number")
+    ))
+    x <- stats::setNames(trimws(as.character(m$cells$cols[[1L]]$disp)),
+                         as.character(m$cells$label))
+    x[order(names(x))]
+  }
+  expect_identical(num("median"), c(a = "2", b = "5"))
+  expect_identical(num("min"), c(a = "1", b = "4"))
+  expect_identical(num("max"), c(a = "9", b = "6"))
 })

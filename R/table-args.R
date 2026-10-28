@@ -1,12 +1,10 @@
 # Old argument names of the table, summarize table and summary table blocks,
-# translated to new_table_block()'s. One table serves code that calls the
-# constructor with old names, boards saved before the rewrite
-# (blockr_deser.table_block()) and the old constructors, which now forward
-# (new_summarize_table_block()). See dev/table-block-rewrite.md.
+# translated to new_table_block()'s. Serves code that calls the constructor
+# with old names, saved boards (blockr_deser.table_block()) and the old
+# constructors, which forward (new_summarize_table_block()).
 
-# Old names, by the block they belong to. Names that exist in both the old
-# and the new signature with the same meaning (rowname, shadings, drill,
-# digits, title, ...) are not listed: they need no translation.
+# Old names, by the block they belong to. Names that exist in both signatures
+# with the same meaning (rowname, shadings, drill, title, ...) are not listed.
 table_legacy_names <- function(from = c("table", "summarize", "summary")) {
   switch(
     match.arg(from),
@@ -16,15 +14,14 @@ table_legacy_names <- function(from = c("table", "summarize", "summary")) {
       "filter_type", "filter_column", "filter_values", "filter_range",
       "filter_group_cols", "filter_group_vals", "filter_spread_col",
       "filter_spread_from", "ctrl_target", "ctrl_table",
-      # The matrix flag before `look` (feat/table-rewrite boards).
+      # The matrix flag before `look`.
       "compact"
     ),
     summarize = c(
       "group", "value", "func", "id_var", "parent", "color", "bar_mode",
       "facet", "cols", "fields", "values", "ctrl_target", "ctrl_table",
       "filter_type", "filter_column", "filter_values",
-      # The facet comparison went in August 2026 (87616f6); a board saved
-      # before carries the slot, always empty.
+      # A removed slot, always empty in saved boards.
       "compare"
     ),
     summary = c(
@@ -44,7 +41,7 @@ table_is_agg_summaries <- function(summaries) {
 }
 
 # The old table's aggregation as typed summaries: one number column per
-# function and column, as the old table drew them.
+# function and column.
 table_agg_to_summaries <- function(summaries) {
   out <- list()
   for (s in dd_parse_summaries(summaries)) {
@@ -64,10 +61,9 @@ table_agg_to_summaries <- function(summaries) {
 # The old summarize table's ranked bar (no `summaries`) as typed summaries:
 # the measure as one bar column with its colour split and facet, plus the
 # opt-in count column and the extra fields. A distinct count counted
-# `id_var`, which is the summary's column now. The fields were drawn only
-# beside the as-is measure (one underlying row per group); under any other
-# measure the bar ignored them, so they map to nothing. The opt-in "%"
-# column maps to nothing either: the bar's own label carries the percent.
+# `id_var`, which is the summary's column. The fields were drawn only beside
+# the as-is measure, so under any other measure they map to nothing. The
+# opt-in "%" column maps to nothing: the bar's own label carries the percent.
 table_ranked_to_summaries <- function(value, func, color, facet, cols, fields,
                                       id_var = NULL) {
   func <- func %||% "count"
@@ -118,8 +114,7 @@ table_legacy_args <- function(args, from = NULL) {
   out <- args
 
   if (identical(from, "summary")) {
-    # The summary table (Table 1) block: its variables become summaries,
-    # its column split stays `by`.
+    # Table 1 block: its variables become summaries, its split stays `by`.
     out$layout <- "variables"
     out$summaries <- table_vars_to_summaries(
       list(), chr_vec_state(get("vars")) %||% character()
@@ -134,28 +129,25 @@ table_legacy_args <- function(args, from = NULL) {
   }
 
   if (identical(from, "table")) {
-    # LEGACY colour args: a cell_color spec is one shadings rule, row_color
-    # is the row tint.
+    # A cell_color spec is one shadings rule, row_color the row tint.
     if (!length(out[["shadings"]]) && !is.null(get("cell_color"))) {
       out$shadings <- dd_parse_shadings(get("cell_color"))
     }
     if (is.null(out[["color"]]) && !is.null(get("row_color"))) {
       out$color <- get("row_color")
     }
-    # Downloads were three per-format toggles before they became one. A
-    # board that stored them keeps its choice; one without them takes the
-    # default (on).
+    # Three per-format download toggles become one; a board without them
+    # takes the default (on).
     per_format <- c("excel_download", "html_download", "pptx_download")
     if (any(!vapply(per_format, function(x) is.null(get(x)), logical(1L)))) {
       out$download <- any(vapply(per_format, function(x) isTRUE(get(x)),
                                  logical(1L)))
     }
-    # The matrix look was a flag (`rotate_titles`, then `compact`) before it
-    # became one of the three looks.
+    # The matrix flags (`rotate_titles`, `compact`) are the "compact" look.
     if (isTRUE(get("rotate_titles")) || isTRUE(get("compact"))) {
       out$look <- "compact"
     }
-    # `digits` is the number format now.
+    # `digits` is the number format.
     if (!is.null(get("digits"))) out$format <- table_digits_format(get("digits"))
     if (!is.null(get("value")) && is.null(out[["columns"]])) {
       out$columns <- get("value")
@@ -186,11 +178,11 @@ table_legacy_args <- function(args, from = NULL) {
       group_vals = null_state(get("filter_group_vals"))
     )
   } else {
-    # The summarize table. With summaries, `group` / `parent` are the
-    # grouping of a board saved before `by` existed; the table-level colour
-    # and facet fan down onto the summaries. Without summaries it is the
-    # ranked bar, which is one bar summary now: `parent` the outer `by`,
-    # `func` / `value` / `id_var` the summary's, `bar_mode` its `position`.
+    # The summarize table. With summaries, `group` / `parent` are the grouping
+    # of a board saved before `by` existed, and the table-level colour and
+    # facet fan down onto the summaries. Without summaries it is the ranked
+    # bar, one bar summary: `parent` the outer `by`, `func` / `value` /
+    # `id_var` the summary's, `bar_mode` its `position`.
     summaries <- if (is.list(out[["summaries"]])) out[["summaries"]] else list()
     by <- chr_vec_state(out[["by"]])
     parent <- chr_state(get("parent"))
@@ -200,7 +192,11 @@ table_legacy_args <- function(args, from = NULL) {
     if (!length(by)) by <- unique(c(parent, group))
     if (length(summaries)) {
       if (!is.null(color) || !is.null(facet)) {
-        norm <- lane_norm_summaries(summaries)
+        # Old keys renamed, `scope` kept: a pooled row takes no facet.
+        norm <- lane_norm_summaries(lapply(summaries, function(e) {
+          if (!is.list(e)) return(e)
+          legacy_map_values("summary", legacy_rename("summary", e))
+        }))
         if (is.null(norm$err)) {
           mig <- lane_migrate_globals(norm, color, facet)
           for (i in seq_along(summaries)) {
@@ -210,8 +206,7 @@ table_legacy_args <- function(args, from = NULL) {
         }
       }
     } else {
-      # Without a group the bar drew nothing; its measure now draws one
-      # Total row.
+      # Without a group the old bar drew nothing; the measure is one Total row.
       summaries <- table_ranked_to_summaries(
         chr_state(get("value")), chr_state(get("func")), color, facet,
         chr_vec_state(get("cols")), chr_vec_state(get("fields")),
@@ -219,9 +214,9 @@ table_legacy_args <- function(args, from = NULL) {
       )
     }
     # The block-level split layout is each colour split's `position` now.
-    bm <- chr_state(get("bar_mode"))
-    if (!is.null(bm) && bm %in% LANE_POSITIONS) {
-      pos <- names(LANE_POSITIONS)[match(bm, LANE_POSITIONS)]
+    # The old word ("stacked") is mapped by LEGACY_NAMES.
+    pos <- chr_state(get("bar_mode"))
+    if (!is.null(pos) && pos %in% LANE_POSITIONS) {
       summaries <- lapply(summaries, function(x) {
         if (is.list(x) && identical(x[["type"]], "simple") &&
               !is.null(x[["color"]]) && is.null(x[["position"]])) {
@@ -232,7 +227,7 @@ table_legacy_args <- function(args, from = NULL) {
     }
     out$layout <- "groups"
     out$by <- by
-    out$summaries <- lapply(summaries, lane_public_summary)
+    out$summaries <- summaries
     if (is.null(out[["id"]]) && !is.null(get("id_var"))) out$id <- get("id_var")
     if (!length(out[["script_values"]]) && length(get("values"))) {
       out$script_values <- get("values")
@@ -255,16 +250,7 @@ table_legacy_args <- function(args, from = NULL) {
   drop(out, old)
 }
 
-#' Legacy deserialization for the table block
-#'
-#' Restores boards saved before the table block's rewrite, whose state
-#' carries the old argument names (`cell_color`, `value`, `group`, the
-#' `filter_*` fields, ...). The payload is translated by
-#' `table_legacy_args()`, the same table the constructor uses for old names
-#' in code. Current payloads (they carry `layout`) pass straight through.
-#'
-#' @param x,data,... Passed through from [blockr.core::blockr_deser()].
-#' @keywords internal
+#' @rdname blockr_deser.chart_block
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
@@ -276,24 +262,16 @@ blockr_deser.table_block <- function(x, data, ...) {
   )
 }
 
-#' Legacy deserialization for the summarize table block
-#'
-#' A board saved with a summarize table restores as a table block in the
-#' groups layout. Its class changes (`summarize_table_block` becomes
-#' `table_block`), which blockr.core accepts since it checks only that the
-#' result is a block (BristolMyersSquibb/blockr.core#379). The board saves
-#' as a table block from then on.
-#'
-#' @inheritParams blockr_deser.table_block
-#' @keywords internal
+#' @rdname blockr_deser.chart_block
 #' @export
 blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
-  payload <- table_legacy_args(data[["payload"]], from = "summarize")
+  saved <- data[["payload"]]
+  is_attr <- !names(saved) %in% legacy_arg_names("summarize_table")
+  payload <- table_legacy_args(saved[!is_attr], from = "summarize")
   payload$layout <- "groups"
-  core <- c(names(formals(blockr.core::new_block)), "block_name")
-  attrs <- payload[intersect(names(payload), core)]
-  args <- legacy_restore("table", payload[setdiff(names(payload), core)],
+  attrs <- saved[is_attr]
+  args <- legacy_restore("table", payload,
                          version = data[["constructor"]][["version"]])
   do.call(
     new_table_block,

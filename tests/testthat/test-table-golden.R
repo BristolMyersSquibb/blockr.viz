@@ -46,8 +46,10 @@ test_that("table recording: constructor cases", {
   path <- file.path(table_golden_dir(), "ctor-cases.rds")
   skip_if_not(file.exists(path), "no recording")
   want <- readRDS(path)
+  # An unknown name is a block attribute, as on the chart (blockr.dock's
+  # `visible`; behaviour-changes.md row 28), so `unknown_arg` builds.
   fails_now <- c("bad_layout", "bad_look", "bad_pct_of", "bad_missing",
-                 "bad_format", "format_clamp", "unknown_arg")
+                 "bad_format", "format_clamp")
   for (nm in names(want)) {
     res <- tryCatch(suppressWarnings(table_golden_ctor(
       tg_rw_args(table_golden_ctor_cases()[[nm]])
@@ -83,6 +85,51 @@ test_that("table recording: restored boards", {
     for (part in names(w$steps[[1L]])) {
       expect_identical(g[[part]], w$steps[[1L]][[part]],
                        label = paste("restore", nm, part))
+    }
+  }
+})
+
+# The recordings above skip the Web page download of these scenarios: the
+# reference wrote the table's markup, the rewrite writes the table view's
+# payload. This checks the payload instead: the page draws the table the
+# block draws at the same step (columns, cell text, header, sections), and
+# where the recording pinned the rows (`n`, `labels`), those too.
+test_that("the Web page downloads draw the table the block shows", {
+  page <- function(path) {
+    if (is.character(path) && grepl("[.]html$", path)) {
+      static_payloads(readLines(path, warn = FALSE))[[1L]]
+    }
+  }
+  as_text <- function(m) {
+    chr <- function(x) vapply(x, function(v) if (is.null(v)) NA_character_ else as.character(v), "")
+    list(
+      names = chr(lapply(m$cols, `[[`, "name")),
+      disp = lapply(m$cols, function(cc) chr(cc$disp)),
+      head = lapply(m$head, function(r) chr(lapply(r, `[[`, "text"))),
+      sections = chr(lapply(m$sections, `[[`, "value"))
+    )
+  }
+  for (nm in c("rec_download", "rec_download_by", "rec_download_structured",
+               "var_download")) {
+    got <- tg_rw_run(table_golden_scenarios()[[nm]], page = page)
+    want <- tg_rw_expected(readRDS(file.path(table_golden_dir(),
+                                             paste0(nm, ".rds"))))
+    steps <- which(vapply(got$steps, function(s) !is.null(s$download$page),
+                          logical(1L)))
+    expect_length(steps, 1L)
+    for (i in steps) {
+      m <- got$steps[[i]]$download$page$data
+      block <- jsonlite::fromJSON(
+        as.character(wire_json(got$steps[[i]]$download$block)),
+        simplifyVector = FALSE
+      )
+      expect_identical(as_text(m), as_text(block), label = nm)
+      b <- want$steps[[i]]$browser
+      if (!is.null(b$labels)) {
+        expect_identical(m$n, b$n, label = nm)
+        expect_identical(as_text(m)$disp[[(m$stub %||% 0L) + 1L]], b$labels,
+                         label = nm)
+      }
     }
   }
 })

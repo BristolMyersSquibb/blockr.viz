@@ -1,8 +1,8 @@
 # What the chart sends the browser: one payload with the state as the spec
 # writes it (viz_wire()), the rows the current mapping needs, and `derived`:
-# what R computes for the drawing and never takes back. See design.md
-# section 3. The pieces are cached on exactly their inputs, so a setting that
-# changes only the drawing reuses them.
+# what R computes for the drawing and never takes back. The pieces are cached
+# on exactly their inputs, so a setting that changes only the drawing reuses
+# them.
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
@@ -112,11 +112,11 @@ chart_needed_cols <- function(v, d, kinds) {
 }
 
 # The chart text resolved against the data, in the shape core/titles.js
-# reads: each band its text, its pieces (the words a reader may set) and
-# the settings offered where a clause dropped; NULL with nothing to show.
-# `args` is what each `{@arg}` prints now, `choices` the lists a sentence
-# gives its words. Slots name the spec's arguments, plus the prepare
-# script's declared values.
+# reads: each band its text, its pieces (the words a reader may set) and the
+# settings offered where a clause dropped; NULL with nothing to show. `args` is
+# what each `{@arg}` prints now, `choices` the lists a sentence gives its
+# words. Slots name the spec's arguments, plus the prepare script's declared
+# values.
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
@@ -142,7 +142,7 @@ chart_titles <- function(spec, v, d, auto, specs) {
 }
 
 # An export can ask for a picture of the chart whether or not its panel was
-# ever open: the browser draws it offscreen from this payload.
+# open: the browser draws it offscreen from this payload.
 chart_capture_service <- function(session, el, payload) {
   register_chart_capture(el, function(token, width, height) {
     msg <- tryCatch(shiny::isolate(payload()), error = function(e) NULL)
@@ -198,26 +198,26 @@ chart_picture <- function(cap) {
   new_chart_capture(chart_capture_decode(cap$png), cap$width, cap$height)
 }
 
-# What the Excel download holds: one row per mark for the aggregated types,
-# built by the table block's engine; the rows themselves for the rest.
+# What the Excel download holds: one row per mark for the aggregated types
+# (the table block's engine), the rows themselves for the rest.
 chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
                              facet = NULL, func = "count", value = NULL,
                              na_group = "level") {
   if (!is.data.frame(data)) {
     return(NULL)
   }
-  keys <- intersect(c(facet, group, color), names(data))
   if (!isTRUE(chart_type %in% c("bar", "waterfall", "pie", "treemap")) ||
         !length(intersect(group, names(data)))) {
     return(data)
   }
+  keys <- intersect(c(facet, group, color), names(data))
   func <- func %||% "count"
-  summaries <- if (identical(func, "count") || !length(value) ||
-                     !value %in% names(data)) {
-    list(list(func = "count", cols = character()))
+  summary <- if (identical(func, "count") || !length(value) ||
+                   !value %in% names(data)) {
+    list(func = "count", cols = character())
   } else {
-    list(list(func = func, cols = value))
+    list(func = func, cols = value)
   }
-  dd_table_aggregate(data, unique(keys), summaries,
+  dd_table_aggregate(data, unique(keys), list(summary),
                      na_group = na_group %||% "level")$data
 }

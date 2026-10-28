@@ -18,7 +18,7 @@ test_that("old names in code are translated, with a warning", {
   expect_warning(
     blk <- new_chart_block(chart_type = "bar", group = "ARM",
                            value = ".count", func = "count"),
-    "blockr.viz < 0.3.0"
+    "from an earlier blockr.viz"
   )
   st <- chart_state(blk)
   # A bar saved without an orientation was drawn horizontal.
@@ -74,6 +74,14 @@ test_that("old interval, band, script and filter fields are translated", {
     filter_values = list("A")
   )))
   expect_equal(st$selection$filters, list(ARM = "A"))
+})
+
+test_that("an old id survives beside identity_line", {
+  st <- chart_state(suppressWarnings(new_chart_block(
+    chart_type = "scatter", x = "est", y = "term", band_id = "USUBJID",
+    identity_line = TRUE
+  )))
+  expect_equal(st$id, "USUBJID")
 })
 
 test_that("a cumulative bar is a waterfall, a radar a bar", {

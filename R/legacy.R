@@ -1,29 +1,20 @@
-# LEGACY: delete with this file.
+# LEGACY: argument names and values of blockr.viz < 0.3.0, applied by
+# R/legacy-restore.R. LEGACY_NAMES has one row per old name or old value:
 #
-# Argument names and values of blockr.viz < 0.3.0, applied by
-# R/legacy-restore.R. The specs (R/spec-chart.R, R/spec-table.R) carry only the
-# current names.
-#
-# LEGACY_NAMES has one row per old name or old value:
-#
-#   block   "chart", "table", "summary" (a table summary entry) or "shading"
+#   block   "chart", "table", "summary" (a table summary entry), "shading"
+#           or "heatmap" (the retired heatmap block, restored as a table)
 #   old     the old argument or key name
 #   new     the current name; NA when the old one is read and dropped
 #   values  old value = new value, as a named character vector; empty when
 #           the value is taken as it is
 #   rule    NA for a plain rename, else what the translation does beyond it
-#   since   the version that replaced it
 #
 # A row with the same name in `old` and `new` maps values only.
 
-# LEGACY: delete with this file
-legacy_row <- function(block, old, new, values = character(), rule = NA,
-                       since = "0.3.0") {
-  list(block = block, old = old, new = new, values = values, rule = rule,
-       since = since)
+legacy_row <- function(block, old, new, values = character(), rule = NA) {
+  list(block = block, old = old, new = new, values = values, rule = rule)
 }
 
-# LEGACY: delete with this file
 legacy_table <- function(rows) {
   data.frame(
     block = vapply(rows, `[[`, "", "block"),
@@ -31,12 +22,10 @@ legacy_table <- function(rows) {
     new = vapply(rows, function(r) as.character(r$new), ""),
     values = I(lapply(rows, `[[`, "values")),
     rule = vapply(rows, function(r) as.character(r$rule), ""),
-    since = vapply(rows, `[[`, "", "since"),
     stringsAsFactors = FALSE
   )
 }
 
-# LEGACY: delete with this file
 LEGACY_NAMES <- legacy_table(list(
 
   # chart -------------------------------------------------------------------
@@ -148,16 +137,39 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("table", "summaries", "summaries",
              rule = paste("an old aggregation list(func, cols) becomes one",
                           "number column per function and column")),
-  # the summary table block restores as layout = "variables"
+  # the summary table block, restored as layout = "variables"
   legacy_row("table", "vars", "summaries",
              rule = "one entry per variable; layout = \"variables\""),
   legacy_row("table", "add_overall", "total"),
   legacy_row("table", "overall_label", "total_label"),
   legacy_row("table", "nest_hierarchies", "nest"),
   legacy_row("table", "id_var", "id"),
+  legacy_row("table", "drill", "drill", c(`TRUE` = "auto"),
+             rule = "TRUE is \"auto\", FALSE unsets it (0.3.0)"),
   legacy_row("table", "indent_details", NA, rule = "read and dropped"),
   legacy_row("table", "state", NA,
              rule = "the interim single-list payload; unwrapped"),
+
+  # heatmap: new_heatmap_block() restores as a table (legacy_restore_heatmap())
+  legacy_row("heatmap", "row", "by",
+             rule = "last in `by`; `{@row}` is `{@by}`"),
+  legacy_row("heatmap", "group", "by", rule = "first in `by`"),
+  legacy_row("heatmap", "col", "facet",
+             rule = "the tile summary's `facet`; `{@col}` is `{@facet}`"),
+  legacy_row("heatmap", "color", "fill",
+             rule = "the tile summary's `fill`; `{@color}` is `{@fill}`"),
+  legacy_row("heatmap", "cell_numbers", "value_labels"),
+  legacy_row("heatmap", "values", "script_values"),
+  legacy_row("heatmap", "top_n", "script_values",
+             rule = "the prepare script's `top_n` value"),
+  legacy_row("heatmap", "ctrl_target", "drill_target",
+             rule = "\"auto\" when unset; the drill is always on"),
+  legacy_row("heatmap", "ctrl_table", "drill_table"),
+  legacy_row("heatmap", "drill", NA, rule = "read and dropped"),
+  legacy_row("heatmap", "filter_column", NA, rule = "read and dropped"),
+  legacy_row("heatmap", "filter_values", NA, rule = "read and dropped"),
+  legacy_row("heatmap", "max_height", NA, rule = "read and dropped"),
+  legacy_row("heatmap", "locked_roles", NA, rule = "read and dropped"),
 
   # summary entries -----------------------------------------------------------
   legacy_row("summary", "type", "type", c(series = "sparkline")),

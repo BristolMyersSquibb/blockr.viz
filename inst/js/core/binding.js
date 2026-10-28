@@ -12,6 +12,8 @@
  *   revision the client holds; a payload without rows the client does not
  *   hold asks R for them once (`<id>_need`);
  * - an error without a message (a silent req()) keeps the picture;
+ * - a light/dark switch (data-bs-theme anywhere on the page) renders the
+ *   last value again, so a view reads the new colours;
  * - with a `busy` label, the view is built as soon as Shiny finds the
  *   element, and the busy cue counts the wait for R's first value from
  *   when the element shows;
@@ -50,7 +52,9 @@
     const scope = new V.Scope();
     /** @type {VizMount} */
     const m = { el, scope, view: scope.own(new View(el, scope)), last: null,
-                needRev: null };
+                needRev: null, drawn: null };
+    scope.mutate(document.documentElement, () => { if (m.drawn) m.view.render(m.drawn); },
+                 { attributes: true, attributeFilter: ['data-bs-theme'], subtree: true });
     live.set(el.id, m);
     // A re-bind of the same element unbinds it first; only an element that
     // has left the page loses its view.
@@ -107,6 +111,7 @@
       p = Object.assign({}, p, { data: held.data });
     }
     m.needRev = null;
+    m.drawn = p;
     m.view.render(p);
   }
 

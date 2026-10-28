@@ -1,26 +1,17 @@
 /* The groups layout of the table block (inst/js/table/groups.js, marks.js,
    tooltip.js, summaries.js): marks, column axes, legend, nesting, the
-   compact matrix and the Columns editor, on top of table-structured.css.
-   Written out of R/summarize-table-css.R, which the old summarize table
-   still uses; the last row of a nested group carries `is-group-end` and a
-   sparkline's cell `is-spark`, set where the markup is written. */
+   compact matrix and the Columns editor, on top of table-structured.css. */
 .blockr-summarize-container {
   --blockr-summarize-fill: var(--blockr-color-bg-accent, #2563eb);
   --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
                                     transparent);
-  /* The lane track. The design token alone is so close to the surface
-     that an empty lane reads as nothing at all -- and on a box or a dot
-     range the track IS the axis the glyph is read against, so it has to be
-     visible. Mixed toward the strong border: still recessive, no longer
-     invisible. */
+  /* The lane track. */
   --blockr-summarize-track: color-mix(in srgb,
                                  var(--blockr-color-bg-subtle, #f9fafb) 55%,
                                  var(--blockr-color-border-strong, #d1d5db));
   --blockr-summarize-bar: var(--blockr-color-bg-accent, #2563eb);
   --blockr-summarize-tick: var(--blockr-color-border-default, #e5e7eb);
-  /* The floor under a GLYPH -- see .blockr-summarize-barwrap below. A board
-     that wants shorter marks and less scrolling overrides it on the
-     container. */
+  /* The floor under a GLYPH -- see .blockr-summarize-barwrap below. */
   --blockr-summarize-lane-min: 80px;
   /* The ceiling over it, in the default `bar_width = 'fit'`: past it a wide
      panel's slack stays blank instead of stretching the marks. */
@@ -28,7 +19,7 @@
 }
 .blockr-summarize-table { width: 100%; }
 /* Column widths ride on the CELLS: the header cells come from the table
-   block's dt_th(), so they carry its classes, not ours. */
+   block's (table/html.js), so they carry its classes, not ours. */
 .blockr-summarize-table td.blockr-summarize-bar-col {
   width: 26%;
   min-width: 110px;
@@ -42,12 +33,7 @@
    left-aligned like the label column, never numeric-formatted. */
 .blockr-summarize-table td.blockr-summarize-txt { white-space: nowrap; }
 .blockr-summarize-table td.blockr-summarize-label-col { white-space: nowrap; }
-/* The GLYPH columns own the slack. Auto table layout hands leftover width to
-   the unconstrained cells, which meant a wide panel only stretched the label
-   column while the bars and boxes stayed at their 26%. width:1% is the
-   shrink-to-fit idiom (with nowrap, the cell takes its content width and no
-   more), so widening the block lengthens the visuals instead. Label and text
-   cells still cap out and ellipsis rather than pushing the glyphs off. */
+/* The GLYPH columns own the slack. */
 .blockr-summarize-table th.blockr-stub-header,
 .blockr-summarize-table td.blockr-summarize-label-col,
 .blockr-summarize-table td.blockr-summarize-txt,
@@ -66,14 +52,7 @@
   align-items: center;
   gap: 8px;
 }
-/* The mark has a FLOOR, and it is the mark that carries it, not the cell.
-   A cell minimum (the 110px on .blockr-summarize-bar-col) is spent on the value
-   label first, so a faceted table with a dozen level columns squeezed every
-   lane down to the few pixels the label left over -- glyphs too small to
-   compare, which is the whole point of the column. Putting the minimum on
-   the lane makes the column's minimum label-plus-a-readable-mark instead, and
-   a table that no longer fits scrolls sideways in its wrapper (the cheap
-   direction: rows stay put, and the reader keeps the labels in view). */
+/* The mark has a FLOOR, and it is the mark that carries it, not the cell. */
 .blockr-summarize-barwrap .blockr-summarize-track,
 .blockr-summarize-barwrap .blockr-summarize-dv,
 .blockr-summarize-barwrap .blockr-summarize-lane {
@@ -81,13 +60,7 @@
   min-width: var(--blockr-summarize-lane-min, 80px);
   max-width: var(--blockr-summarize-lane-max, 320px);
 }
-/* Bar width (`bar_width`). Fit, the default, is the rule above: the lanes
-   take the panel's slack, between the floor and the ceiling. A preset fixes
-   the lane instead, and the table drops to its natural width: every cell's
-   width goes back to auto, because one percentage cell (the 1% shrink-to-fit
-   idiom, the 26% glyph column) stretches an auto-width table to the panel
-   again. The slack stays blank on the right; a panel narrower than the table
-   scrolls. Only the labelled marks follow it: a swimlane spans its cell. */
+/* Bar width (`bar_width`). */
 .blockr-summarize-table[data-summarize-width='narrow'] {
   --blockr-summarize-lane-w: 90px;
 }
@@ -126,11 +99,7 @@
 .blockr-summarize-table .blockr-summarize-pct {
   color: var(--blockr-color-text-muted, #6b7280);
 }
-/* The column axis, under the header label. Printing the domain ONCE is what
-   pays for the empty lanes below it: with a scale named at the top of the
-   column, a cell only has to hold its mark. Geometry mirrors
-   .blockr-summarize-barwrap exactly (flexed strip + the same value slot), so a
-   tick and the mark under it are percentages of one box. */
+/* The column axis, under the header label. */
 .blockr-summarize-axis {
   display: flex;
   gap: 8px;
@@ -144,8 +113,7 @@
 }
 /* The small type sits on the ticks, not on the strip: the pad is sized in
    ch, and a ch at 9.5px is two thirds of the cell's, so a strip-wide font
-   size left the ticked span ~20px longer than the lane under it. The pad
-   takes the value labels' size (11px), so it and the slot are one width. */
+   size left the ticked span ~20px longer than the lane under it. */
 .blockr-summarize-axis-in {
   position: relative;
   flex: 1 1 auto;
@@ -173,33 +141,17 @@
   margin-top: 0;
 }
 
-/* Sorting affordance: none of our own. The header cells are dt_th()'s, so the
-   .blockr-sortable cursor and the .blockr-sort-icon arrow come from the shared
-   table CSS and read exactly like a table block's. */
+/* Sorting affordance: none of our own. */
 
-/* The by_level facet layout's spanning header row (one cell per facet
-   level over its summary group) -- centred, with a hairline under the
-   span so the group reads as one unit. */
+/* The by_level facet layout's spanning header row (one cell per facet level
+   over its summary group) -- centred, with a hairline under the span so the
+   group reads as one unit. */
 .blockr-summarize-table th.blockr-th-group {
   text-align: center;
   border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
 }
 
-/* Bars: segments TOUCH, and only the VALUE end is rounded. The end a bar grows
-   to is a measurement and gets the cosmetic --blockr-mark-radius; the end at
-   zero is the axis, shared by every row, and stays square because rounding it
-   lifts the bar off its baseline. In a stack only the outermost segment has a
-   value end, so `:last-child` carries the radius and the inner joins stay
-   square -- which is also why segments still touch with no separating border,
-   matching the chart block's `stack:'stack'` and `barGap: 0`.
-
-   The radius is cosmetic and means NOTHING. It must stay well under half the
-   lane height, where a capsule becomes the SEMANTIC mark for a soft boundary
-   (see .blockr-summarize-prcell below).
-
-   The grey track stays: it is a table-cell affordance (it says what the row's
-   share is against the column max) with no echarts equivalent, and the
-   crossfilter block in blockr.dm draws the same track + fill pair. */
+/* Bars: segments TOUCH, and only the VALUE end is rounded. */
 .blockr-summarize-track {
   display: flex;
   gap: 0;
@@ -218,9 +170,9 @@
   background: none;
   border-radius: 0;
 }
-/* One level of a grouped split, with its value beside it (.is-lv) or
-   without (.row3): 10px, a little under the plain bar's 12px so the levels
-   keep 4px of white between them. A row grows to hold its levels. */
+/* One level of a grouped split, with its value beside it (.is-lv) or without
+   (.row3): 10px, a little under the plain bar's 12px so the levels keep 4px
+   of white between them. */
 .blockr-summarize-track.is-lv { height: 10px; }
 .blockr-summarize-track.is-tall .blockr-summarize-row3 {
   height: 10px;
@@ -233,10 +185,7 @@
   border-radius: 0;
   background: var(--blockr-summarize-fill);
 }
-/* A stacked segment's own number, inside it. The segment is a size
-   container, so a number it is too narrow for is hidden rather than cut:
-   wN is the number's length in characters, about 6px each at 10px type,
-   plus a little air. A longer number than w7 never shows inside. */
+/* A stacked segment's own number, inside it. */
 .blockr-summarize-fill.has-lab {
   container-type: inline-size;
   display: flex;
@@ -264,9 +213,7 @@
 @container (max-width: 41px) { .blockr-summarize-seglab.lw-6 { display: none; } }
 @container (max-width: 47px) { .blockr-summarize-seglab.lw-7 { display: none; } }
 
-/* The value end. In a plain bar the fill is the only child; in a stack it is
-   the outermost segment; in a grouped bar each row3 holds one. Zero-width
-   segments are never emitted, so :last-child is always a segment that shows. */
+/* The value end. */
 .blockr-summarize-track > .blockr-summarize-fill:last-child,
 .blockr-summarize-row3 > .blockr-summarize-fill:last-child {
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
@@ -277,10 +224,7 @@
 
 /* Lane marks (box / point range / interval / sparkline): absolutely
    positioned glyphs inside a track-coloured lane, percentage geometry
-   computed in R. Same fill/track/sub tokens as the bars, so a themed board
-   restyles every mark together. ONE height (matching the bar track) so a
-   bar column, a box column and a swimlane read as one system; only the
-   sparkline is taller (amplitude needs room). */
+   computed in R. */
 .blockr-summarize-lane {
   position: relative;
   height: 12px;
@@ -288,11 +232,7 @@
 /* The ground, decided by the MARK and not by taste: a glyph that draws an
    outer range (a whisker, or the dot style's fence band) already spans the
    cell, so that band IS the rail the row is read against and a track behind
-   it would be a second line saying the same thing. Only a mark with no outer
-   range -- an IQR bar, a plain point range, a bare dot -- has nothing
-   spanning the cell, and those keep a hairline so they do not float as chips.
-   The column axis in the header carries the domain either way
-   (_blockr.design/open/summarize-table/mock-box/, card D00). */
+   it would be a second line saying the same thing. */
 .blockr-summarize-lane.is-bare::before {
   content: '';
   position: absolute;
@@ -305,9 +245,7 @@
 }
 .blockr-summarize-lane i { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
-   column stays one column. Every level keeps the full 12px lane and its
-   marks; a row with more levels grows to hold them. (Thinning the third
-   level on to fit a fixed row drew one row in two dot sizes.) */
+   column stays one column. */
 .blockr-summarize-multi {
   display: flex;
   flex-direction: column;
@@ -316,16 +254,12 @@
 }
 .blockr-summarize-multi .blockr-summarize-lv {
   min-width: 0;
-  /* The level's colour arrives as --blockr-summarize-fill on this element. The
-     TRANSLUCENT token is derived from the fill, so it has to be re-derived
-     here as well -- otherwise every level's box body keeps the column
-     default and only the whiskers and the median tick take the colour. */
+  /* The level's colour arrives as --blockr-summarize-fill on this element. */
   --blockr-summarize-sub: color-mix(in srgb, var(--blockr-summarize-fill) 45%,
                                transparent);
 }
 /* A colour-split cell with value labels: one number per level, beside its
-   lane. A tight line, so a level is barely taller than its lane and a row of
-   five levels grows by what the numbers need. */
+   lane. */
 .blockr-summarize-multi .blockr-summarize-lv.blockr-summarize-barwrap
   .blockr-summarize-barval {
   line-height: 13px;
@@ -349,11 +283,8 @@
   width: 1px;
   background: var(--blockr-summarize-fill);
 }
-/* The IQR body is free-standing: neither end sits on an axis and neither abuts
-   a sibling, so the cosmetic radius applies to BOTH ends. It is not the pill --
-   the box is 10px tall and the radius is 2px, nowhere near the half-height that
-   would make it read as a soft boundary. The fence caps, whiskers and median
-   tick stay square: at 1-2px a radius would turn them into dots. */
+/* The IQR body is free-standing: neither end sits on an axis and neither
+   abuts a sibling, so the cosmetic radius applies to BOTH ends. */
 .blockr-summarize-boxcell .lane-box {
   top: 1px;
   bottom: 1px;
@@ -366,16 +297,8 @@
   width: 2px;
   background: var(--blockr-summarize-fill);
 }
-/* The dot style: three nested weights over one x. The fence band (outer
-   range) recedes to a tint, the inner range is a rounded bar, the centre is a
-   ringed dot -- so the eye reads centre first, spread second, extent third,
-   which is the order the numbers matter in. Both ends rounded because the
-   band is a soft boundary, unlike the box's hard fence caps. */
-/* 999px, not half the height as a literal. These are CAPSULES: the radius is
-   the signal, so it has to stay half the height whatever the height becomes.
-   Written as 4px and 2px it only happened to be a capsule at 8px and 4px, and
-   a later height change would have quietly demoted it to a rounded rectangle,
-   i.e. to the cosmetic --blockr-mark-radius, which means nothing. */
+/* The dot style: three nested weights over one x. */
+/* 999px, not half the height as a literal. */
 .blockr-summarize-prcell .lane-fence {
   top: 50%;
   height: 8px;
@@ -400,11 +323,7 @@
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
-/* Pair (dumbbell): two values of one group joined by a segment. The band is
-   the range the values are read against, at lane height like every other
-   ground; the reference line runs past the lane so rows read as one line. The
-   `from` mark is a hollow diamond, the `to` mark a dot, hollow when it falls
-   outside the band. A dashed link is the row's `dash` level. */
+/* Pair (dumbbell): two values of one group joined by a segment. */
 .blockr-summarize-pacell .lane-band {
   top: 0;
   bottom: 0;
@@ -446,17 +365,7 @@
 .blockr-summarize-pacell .lane-to.is-open {
   background: var(--blockr-color-bg-surface, #ffffff);
 }
-/* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
-   A timeline is not a stack. A stack tiles by construction -- its segments
-   always share edges, they compose one quantity, and a seam between them
-   would read as a gap in that quantity, which is why a stack's inner joins
-   stay square. A swimlane's segments are per-event [left, width] pairs that
-   overlap, leave gaps, or only incidentally touch. When two of them DO touch,
-   the seam is true: it says these are two events and not one long one. So the
-   abutment exception belongs to stacking, not to interval marks.
-
-   Narrow segments need no guard: min-width is 2px and CSS scales border-radius
-   down proportionally when the corners would not fit the box. */
+/* Interval: the swimlane. */
 .blockr-summarize-ivcell .lane-seg {
   top: 0;
   bottom: 0;
@@ -470,29 +379,21 @@
   width: 55%;
   min-width: 320px;
 }
-/* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
-   multiplicatively, so a subject with many overlapping events re-darkens
-   however low the alpha. Instead the non-matches are repainted with ONE
-   flat opaque near-track shade (!important beats the inline fill) --
-   identical opaque rectangles overlap invisibly, so only the matched
-   event carries colour no matter how dense the timeline is. */
+/* Same-event emphasis, from hover (seg-hover + is-same). */
 .blockr-summarize-container.seg-hover .lane-seg:not(.is-same) {
   background: color-mix(in srgb, var(--blockr-summarize-track) 88%,
                         var(--blockr-summarize-tick)) !important;
   transition: background 0.1s ease;
 }
-/* Rows: 26px, a 20px line with 3px above and below, no rules in the body,
-   as the records and variables layouts draw them (html_table_shared_css_fallback()).
-   The 12px lanes sit inside the line, and the gaps between them separate
-   the rows. The sparkline row below keeps its own taller cell. */
+/* Rows: 26px, a 20px line with 3px above and below, no rules in the body, as
+   the records and variables layouts draw them. */
 .blockr-summarize-table tbody td {
   padding-top: 3px;
   padding-bottom: 3px;
   line-height: 20px;
 }
-/* The first column starts on the records layout's text edge (12px); a
-   nested table moves it to the headings' edge below. The header keeps the
-   records layout's space under its titles (7px and a 1px rule there). */
+/* The first column starts on the records layout's text edge (12px); a nested
+   table moves it to the headings' edge below. */
 .blockr-summarize-table tr > :first-child {
   padding-left: 12px;
 }
@@ -503,19 +404,15 @@
   border-bottom: 0;
 }
 
-/* Sparkline: one inline SVG per cell, band under line, last-value dot.
-   Taller than the other lanes -- and the trajectory USES the row: the
-   cell keeps a token 1px of vertical padding (a line rarely touches the
-   extremes), so a sparkline row stays close to a text row's height
-   instead of paying 36px plus full text padding. */
+/* Sparkline: one inline SVG per cell, band under line, last-value dot. */
 .blockr-summarize-table td.is-spark {
   padding-top: 1px;
   padding-bottom: 1px;
 }
 .blockr-summarize-spcell {
-  /* Row height minus the two 1px paddings: the trajectory occupies the
-     WHOLE row (the svg stretches freely; viewBox geometry is
-     percentage-based and the stroke is non-scaling). */
+  /* Row height minus the two 1px paddings: the trajectory occupies the WHOLE
+     row (the svg stretches freely; viewBox geometry is percentage-based and
+     the stroke is non-scaling). */
   height: 40px;
   background: none;
 }
@@ -548,10 +445,8 @@
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
 }
-/* The gear's Columns row (summaries.js): one entry per column of the
-   table, on the design system's rows (1px border, radius 8, 6px apart). An
-   entry is its title with move and remove buttons; open, its fields sit
-   below on a grid of their own. The row spans its section. */
+/* The gear's Columns row (summaries.js): one entry per column of the table,
+   on the design system's rows (1px border, radius 8, 6px apart). */
 .lane-summaries { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .lane-sum-row {
   border: 1px solid var(--blockr-color-border-default, #e5e7eb);
@@ -561,16 +456,22 @@
 .lane-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
 .lane-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
 .lane-sum-head { display: flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 6px; }
-.lane-sum-ctl {
-  flex: none; width: 26px; height: 26px; border: 0; border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent; color: var(--blockr-color-text-muted, #6b7280); cursor: pointer;
-}
-.lane-sum-ctl:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06));
-                      color: var(--blockr-color-text-default, #111827); }
+/* The buttons are blockr.ui's (blockr-btn--quiet): here only their size. */
+.lane-sum-ctl { flex: none; min-width: 26px; }
 .lane-sum-ctl.lane-sum-toggle {
-  flex: 1 1 auto; width: auto; text-align: left; padding: 0 6px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; color: var(--blockr-color-text-default, #111827);
+  flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
+  justify-content: flex-start; text-align: left; overflow: hidden; white-space: nowrap;
 }
+.lane-sum-icon { flex: none; display: inline-flex; color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-icon svg { width: 20px; height: 14px; }
+.lane-sum-name { flex: none; font-weight: var(--blockr-font-weight-semibold, 600);
+                 color: var(--blockr-color-text-default, #111827); }
+.lane-sum-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-chev { flex: none; color: var(--blockr-color-text-muted, #6b7280); transition: transform 120ms; }
+.lane-sum-row.is-open .lane-sum-chev { transform: rotate(90deg); }
+.lane-sum-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+.lane-sum-ctl.lane-sum-rm { margin-left: auto; }
 .lane-sum-ctl.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px;
@@ -580,11 +481,10 @@
 .lane-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .lane-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
-.lane-sum-addcol { align-self: flex-start; }
+.lane-sum-addcol { align-self: flex-start; min-width: 200px; }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
-   per page, positioned by table/tooltip.js. It follows the pointer, so it is
-   not a Blockr.tooltip, but it wears the same light card. */
+   per page, positioned by table/tooltip.js. */
 .blockr-lane-tip {
   position: fixed;
   z-index: 1070;
@@ -606,9 +506,7 @@
   min-width: 160px;
 }
 
-/* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
-   the rail is an axis and both round; the fill rounds on whichever end points
-   away from the zero tick. */
+/* Zero-centred difference bar. */
 .blockr-summarize-dv {
   position: relative;
   height: 12px;
@@ -625,9 +523,7 @@
   background: var(--blockr-summarize-tick);
 }
 .blockr-summarize-dv .blockr-summarize-fill { position: absolute; top: 0; }
-/* One colour both ways. The side of the zero line already says which
-   direction; colouring the two apart would only add an opinion about which
-   one is good, and nothing tells the block that. */
+/* One colour both ways. */
 .blockr-summarize-dv .blockr-summarize-fill.is-pos {
   left: 50%;
   border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
@@ -640,12 +536,7 @@
   background: var(--blockr-summarize-bar);
 }
 
-/* Hierarchy. The chevron itself is the table block's -- same button, same svg
-   (section_chevron_svg()), same rotation contract (the ROW carries `collapsed`).
-   These four rules are the ONLY part of html_table_delta_css() the summarize
-   table needs; the rest of that delta is the structured Table-1 typography,
-   which would restyle every cell, so it is deliberately not injected. Keep in
-   sync with the .blockr-indent-btn / .blockr-chev block in R/html-table.R. */
+/* Hierarchy. */
 .blockr-summarize-container .blockr-indent-btn {
   border: 0;
   background: transparent;
@@ -671,9 +562,9 @@
   transform: rotate(-90deg);
 }
 
-/* Fold all: the table block's corner chevron (table/html.js), hung into
-   the stub header's padding exactly as the parent rows hang theirs, so the
-   title keeps the labels' left edge. */
+/* Fold all: the table block's corner chevron (table/html.js), hung into the
+   stub header's padding exactly as the parent rows hang theirs, so the title
+   keeps the labels' left edge. */
 .blockr-summarize-container .dt-foldall-wrap {
   display: flex;
   align-items: flex-start;
@@ -702,11 +593,8 @@
   border-radius: 2px;
 }
 
-/* Hierarchy, drawn as the records and variables layouts draw their
-   section headings (R/html-table.R). Every label starts on one 24px edge,
-   the 12px chevron and 9px gap hanging to the left of it (margin-left:
-   -21px). A heading has 11px above it and 3px below; the last row of a
-   group has 7px below it. */
+/* Hierarchy, drawn as the records and variables layouts draw their section
+   headings (table-structured.css). */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
 .blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
 .blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
@@ -719,16 +607,13 @@
 .blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 7px;
 }
-/* A compact row is its 24px tile plus 1px above and below; the last row of
-   a group adds the same 4px. Its header and headings stay on one line: the
-   label column is as wide as the subject ids, and a heading row has no
-   tiles to make room for a wrapped name. */
+/* A compact row is its 24px tile plus 1px above and below; the last row of a
+   group adds the same 4px. */
 .blockr-summarize-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 5px;
 }
-/* The header's grouping names read as the records layout's "All" next to
-   the fold-all chevron: small, normal weight, muted (html-table.R
-   .dt-foldall). */
+/* The header's grouping names read as the records layout's "All" next to the
+   fold-all chevron: small, normal weight, muted (.dt-foldall). */
 .blockr-summarize-table[data-summarize-nested='1'] thead th.blockr-stub-header .blockr-col-name {
   font-size: 12px;
   line-height: 20px;
@@ -772,8 +657,7 @@
   color: var(--blockr-color-text-muted, #6b7280);
 }
 /* One group per colour column (a summarize table maps colour per column, so
-   it can carry several). The wider gap BETWEEN groups keeps a title bound to
-   the items it decodes. */
+   it can carry several). */
 .blockr-summarize-legend-group {
   display: inline-flex;
   flex-wrap: wrap;
@@ -857,11 +741,7 @@
 .blockr-summarize-table[data-summarize-compact='1'] thead th.blockr-col-header .blockr-col-label {
   display: none;
 }
-/* A compact matrix is as wide as its cells and starts at the left. The
-   table drops the panel width, and every cell its percentage width (the 1%
-   on the label cells stretches an auto-width table to the panel too), as
-   for a bar_width preset. A tile column is then as wide as its header, and
-   the tile is a square in it. */
+/* A compact matrix is as wide as its cells and starts at the left. */
 .blockr-summarize-table[data-summarize-compact='1'] { width: auto; }
 .blockr-summarize-table[data-summarize-compact='1'] th,
 .blockr-summarize-table[data-summarize-compact='1'] td { width: auto; }

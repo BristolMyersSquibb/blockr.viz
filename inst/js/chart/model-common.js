@@ -22,8 +22,7 @@
    * Which way an oriented chart lies when `orientation` is not given, the
    * twin of R's chart_infer_lie(): a row count's single column is the
    * category, any other single column the value; a numeric x beside a
-   * non-numeric y is horizontal; otherwise vertical, and a bar with neither
-   * set horizontal.
+   * non-numeric y is horizontal; otherwise, and with neither set, vertical.
    * @param {Record<string, any>} c @param {VizColumn[]} columns
    * @returns {'horizontal' | 'vertical'}
    */
@@ -32,7 +31,7 @@
     const hasX = set(c.x), hasY = set(c.y);
     const count = type === 'bar' && (c.func || 'count') === 'count';
     if (hasX !== hasY) return hasX === count ? 'vertical' : 'horizontal';
-    if (!hasX) return type === 'bar' ? 'horizontal' : 'vertical';
+    if (!hasX) return 'vertical';
     const numeric = (/** @type {string} */ n) => {
       const m = columns.find((col) => col.name === n);
       return m ? m.type === 'numeric' : null;
@@ -40,12 +39,9 @@
     return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
   };
 
-  /**
-   * An aggregated chart's axes: the category column, the column it
-   * aggregates (`measure`, ".count" for a row count), the statistic, the
-   * way it lies, and which of x and y holds each.
-   * @param {Record<string, any>} c @param {VizColumn[]} columns
-   */
+  /** An aggregated chart's axes: the category column, the column it aggregates (`measure`, ".count"
+   * for a row count), the statistic, the way it lies, and which of x and y holds each.
+   * @param {Record<string, any>} c @param {VizColumn[]} columns */
   const axes = (c, columns) => {
     if (c.type === 'histogram') {
       return { category: set(c.x) ? c.x + '_bin' : null, measure: '.count', func: 'count',
@@ -62,14 +58,11 @@
              val_key: count ? null : (onY ? 'x' : 'y') };
   };
 
-  /**
-   * The defaults that depend on the chart: the statistics of a box and a
-   * point range, and the sort. A date, number or factor category keeps its
-   * own order, any other sorts by value; an unset direction is descending
-   * by value and ascending otherwise. A mapping is never picked here: an
-   * unset one asks for a pick (gate()). Mutates `cfg`.
-   * @param {Record<string, any>} cfg @param {VizColumn[]} columns
-   */
+  /** The defaults that depend on the chart: the statistics of a box and a point range, and the
+   * sort. A date, number or factor category keeps its own order, any other sorts by value; an unset
+   * direction is descending by value and ascending otherwise. A mapping is never picked here: an
+   * unset one asks for a pick (gate()). Mutates `cfg`. @param {Record<string, any>} cfg
+   * @param {VizColumn[]} columns */
   const defaults = (cfg, columns) => {
     const fam = NS.familyOf(cfg.type);
     if (NS.DISTRIBUTION_TYPES.includes(cfg.type)) {
@@ -90,14 +83,10 @@
     if (!set(cfg.sort_dir)) cfg.sort_dir = cfg.sort_by === 'value' ? 'desc' : 'asc';
   };
 
-  /**
-   * The settings the model and option builders read: each spec argument,
-   * its default where the config leaves it out, R's `derived`, and an
-   * aggregated chart's axes (axes()).
+  /** The settings the model and option builders read: each spec argument, its default where the
+   * config leaves it out, R's `derived`, and an aggregated chart's axes (axes()).
    * @param {Record<string, any>} config @param {Record<string, any>} [derived]
-   * @param {VizColumn[]} [columns]
-   * @returns {Record<string, any>}
-   */
+   * @param {VizColumn[]} [columns] @returns {Record<string, any>} */
   const settings = (config, derived, columns = []) => {
     const spec = (V.spec && V.spec.chart) || {};
     /** @type {Record<string, any>} */
@@ -184,17 +173,22 @@
   };
 
   /**
-   * Facet value -> its strip label, with "(n)" when show_n covers facets.
-   * @param {any[]} rows @param {Record<string, any>} cfg @param {any[]} facets
-   * @returns {Map<string, any>}
+   * A panel's strip label: the facet value, with "(n)" when show_n covers
+   * facets; null for a single panel.
+   * @param {any[]} rows @param {Record<string, any>} cfg @param {number} nFacets
+   * @returns {(facet: string) => string | null}
    */
-  const facetLabels = (rows, cfg, facets) => {
-    /** @type {Map<string, any>} */
-    const m = new Map();
-    const counts = NS.countOn(cfg, 'facet') ? NS.labelCounts(rows, cfg, cfg.facet, null, null) : null;
-    for (const f of facets) m.set(f, counts ? NS.withCount(f, counts) : f);
-    return m;
+  const facetLabels = (rows, cfg, nFacets) => {
+    const counts = NS.countOn(cfg, 'facet') ? NS.labelCounts(rows, cfg, cfg.facet) : null;
+    return (fv) => (nFacets === 1 || fv === '__all__' ? null
+      : (counts ? NS.withCount(fv, counts) : fv));
   };
 
-  Object.assign(model, { settings, inferLie, FIXED, defaults, gate, emptyState, facetLabels });
+  /** The tooltip columns of a config, less `drop` (columns the tooltip shows anyway).
+   * @param {Record<string, any>} cfg @param {string[]} [drop] @returns {string[]} */
+  const tooltipFields = (cfg, drop = []) => [].concat(cfg.tooltip || []).map(String)
+    .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
+
+  Object.assign(model, { settings, inferLie, FIXED, defaults, gate, emptyState, facetLabels,
+                         tooltipFields });
 })();

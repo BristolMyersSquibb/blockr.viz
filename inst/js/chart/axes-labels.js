@@ -17,10 +17,8 @@
   const colMeta = (columns, name) =>
     /** @type {any} */ ((columns || []).find((c) => c.name === name));
 
-  /**
-   * The column's label when it has one, else its name.
-   * @param {VizColumn[]} columns @param {any} col @returns {string}
-   */
+  /** The column's label when it has one, else its name. @param {VizColumn[]} columns
+   * @param {any} col @returns {string} */
   const axisTitle = (columns, col) => {
     if (!col) return '';
     const c = colMeta(columns, col);
@@ -49,21 +47,17 @@
     return 'value';
   };
 
-  /**
-   * The categories of a column: factor levels (others after), else by a
-   * companion number (AVISIT by AVISITN), else in order of appearance.
-   * @param {VizColumn[]} columns @param {any[]} rows @param {string} colName
-   * @returns {string[]}
-   */
+  /** The categories of a column: factor levels (others after), else by a companion number (AVISIT
+   * by AVISITN), else in order of appearance. @param {VizColumn[]} columns @param {any[]} rows
+   * @param {string} colName @returns {string[]} */
   const orderedCategories = (columns, rows, colName) => {
     const src = rows || [];
     const meta = colMeta(columns, colName);
+    const present = new Set(src.map((r) => String(r[colName] ?? '')));
     if (meta && Array.isArray(meta.levels) && meta.levels.length) {
-      const present = new Set(src.map((r) => String(r[colName] ?? '')));
       const out = meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l));
       const inOut = new Set(out);
-      for (const k of present) if (!inOut.has(k)) { inOut.add(k); out.push(k); }
-      return out;
+      return out.concat([...present].filter((k) => !inOut.has(k)));
     }
     /** @type {Record<string, string>} */
     const companions = { AVISIT: 'AVISITN' };
@@ -78,21 +72,12 @@
       }
       return Object.keys(mins).sort((a, b) => mins[a] - mins[b]);
     }
-    const seen = new Set();
-    const out = [];
-    for (const r of src) {
-      const k = String(r[colName] ?? '');
-      if (!seen.has(k)) { seen.add(k); out.push(k); }
-    }
-    return out;
+    return [...present];
   };
 
-  /**
-   * Order levels by the scale's order, else the factor levels, else
-   * alphabetically; unknown levels last.
-   * @param {any[]} levels @param {any} scale @param {VizColumn[]} columns
-   * @param {string} colName @returns {any[]}
-   */
+  /** Order levels by the scale's order, else the factor levels, else alphabetically; unknown levels
+   * last. @param {any[]} levels @param {any} scale @param {VizColumn[]} columns
+   * @param {string} colName @returns {any[]} */
   const orderLevels = (levels, scale, columns, colName) => {
     /** @param {any[]} ref */
     const by = (ref) => {
@@ -107,11 +92,8 @@
     return levels.slice().sort();
   };
 
-  /**
-   * The label gutter of a horizontal category axis, fitted to the widest
-   * label up to a cap.
-   * @param {any[]} labels @param {(s: string) => number} measure
-   */
+  /** The label gutter of a horizontal category axis, fitted to the widest label up to a cap.
+   * @param {any[]} labels @param {(s: string) => number} measure */
   const yGutter = (labels, measure) => {
     const LABEL_CAP = 145;
     // Slack for the fallback font measured before the page font loads.
@@ -197,11 +179,9 @@
   // Always reserved: a turned label grows the panel and can bring one up.
   const SCROLLBAR = 16;
 
-  /**
-   * Greedy wrap on spaces; `hard` says a word had to be broken mid-word.
+  /** Greedy wrap on spaces; `hard` says a word had to be broken mid-word.
    * @param {(s: string) => number} measure @param {any} text @param {number} width
-   * @returns {{ lines: string[], hard: boolean }}
-   */
+   * @returns {{ lines: string[], hard: boolean }} */
   const wrapLabel = (measure, text, width) => {
     const words = String(text ?? '').split(/\s+/).filter(Boolean);
     const lines = [];
@@ -252,14 +232,36 @@
     };
   };
 
-  /**
-   * Category labels for an x axis: flat when they fit their slot, else
-   * wrapped flat, else turned. `bottom` is the extra grid gutter they cost.
-   * @param {any[]} labels @param {number} availW plot width minus the grid's margins
-   * @param {boolean} decimate thin turned labels (ordered axes only)
+  /** A titled axis (the title centred on its edge) with ink labels and line. `grid` ('dashed' or
+   * 'solid') adds split lines. @param {any} ink @param {string} type @param {string} name
+   * @param {number} gap @param {{ format?: any, grid?: string }} [o] */
+  const valueAxis = (ink, type, name, gap, o = {}) => ({
+    type, name, nameLocation: 'middle', nameGap: gap,
+    nameTextStyle: { color: ink.muted, fontSize: ink.fontSize },
+    axisLabel: { color: ink.muted, fontSize: ink.fontSize,
+                 ...(o.format ? { formatter: o.format } : {}) },
+    axisLine: { lineStyle: { color: ink.strong } },
+    ...(o.grid ? { splitLine: { lineStyle: { color: ink.border, type: o.grid } } } : {})
+  });
+
+  /** A category axis. With `xlab` (the fitted x labels) it runs along x, else down the left:
+   * inverse, its labels cut at the gutter `gut`. `display` maps a category to its label; `ticks`
+   * keeps the left axis's ticks. @param {any[]} data @param {any} ink
+   * @param {{ xlab?: any, display?: any, gut?: any, ticks?: boolean }} o */
+  const categoryAxis = (data, ink, o) => o.xlab
+    ? { type: 'category', data, axisLabel: axisLabelWithDisplay(o.xlab.axisLabel, o.display),
+        axisLine: { lineStyle: { color: ink.strong } }, axisTick: { show: false } }
+    : { type: 'category', data, inverse: true,
+        axisLabel: { color: ink.muted, fontSize: ink.fontSize, align: 'left',
+                     margin: o.gut.margin, width: o.gut.width, overflow: 'truncate',
+                     ellipsis: '…', ...(o.display ? { formatter: o.display } : {}) },
+        axisLine: { show: false }, ...(o.ticks ? {} : { axisTick: { show: false } }) };
+
+  /** Category labels for an x axis: flat when they fit their slot, else wrapped flat, else turned.
+   * `bottom` is the extra grid gutter they cost. @param {any[]} labels @param {number} availW plot
+   * width minus the grid's margins @param {boolean} decimate thin turned labels (ordered axes only)
    * @param {(s: string) => number} measure @param {{ muted: string, fontSize: number }} ink
-   * @returns {{ axisLabel: any, bottom: number, key: string }}
-   */
+   * @returns {{ axisLabel: any, bottom: number, key: string }} */
   const xAxisLabels = (labels, availW, decimate, measure, ink) => {
     const m = (/** @type {any} */ s) => measure(String(s ?? ''));
     let widest = 0;
@@ -272,11 +274,10 @@
     // A hidden panel measures 0: assume a typical width.
     const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
     const base = { color: ink.muted, fontSize: ink.fontSize, interval: 0, lineHeight: LABEL_LINE_H };
+    const fitted = (/** @type {any} */ axisLabel, /** @type {number} */ bottom) =>
+      ({ axisLabel, bottom, key: xLabelKey(axisLabel) });
 
-    if (widest + PAD <= slot) {
-      const axisLabel = { ...base, rotate: 0, __wrapAt: 0, __lines: 1 };
-      return { axisLabel, bottom: 0, key: xLabelKey(axisLabel) };
-    }
+    if (widest + PAD <= slot) return fitted({ ...base, rotate: 0, __wrapAt: 0, __lines: 1 }, 0);
 
     // Flat, unless a word had to break or it takes more than three lines.
     const flatW = Math.max(10, slot - PAD);
@@ -287,7 +288,7 @@
         ...base, rotate: 0, __wrapAt: Math.round(flatW), __lines: flatLines,
         formatter: (/** @type {string} */ v) => wrapLabel(m, v, flatW).lines.join('\n')
       };
-      return { axisLabel, bottom: (flatLines - 1) * LABEL_LINE_H, key: xLabelKey(axisLabel) };
+      return fitted(axisLabel, (flatLines - 1) * LABEL_LINE_H);
     }
 
     // Turned: past two lines the rest joins the last one.
@@ -306,7 +307,7 @@
       ...base, rotate: 90, interval, __wrapAt: TURN_CAP, __lines: turnLines,
       formatter: (/** @type {string} */ v) => turnedLines(v).join('\n')
     };
-    return { axisLabel, bottom: len, key: xLabelKey(axisLabel) };
+    return fitted(axisLabel, len);
   };
 
   // Past this height per label ECharts drops labels silently.
@@ -345,15 +346,11 @@
     }
   });
 
-  /**
-   * `y_lines` on the value axis: a markLine on the first series, and axis
-   * bounds that take in the lines and the data. Mutates `series[0]` and
-   * `valAxis`.
-   * @param {any[]} series @param {any} valAxis @param {boolean} onX
-   * @param {boolean} fraction the axis runs 0..1 while the reader types percent
-   * @param {any} lines `[{value, label}]`
-   * @param {{ text: string, muted: string }} ink
-   */
+  /** `y_lines` on the value axis: a markLine on the first series, and axis bounds that take in the
+   * lines and the data. Mutates `series[0]` and `valAxis`. @param {any[]} series
+   * @param {any} valAxis @param {boolean} onX @param {boolean} fraction the axis runs 0..1 while
+   * the reader types percent @param {any} lines `[{value, label}]`
+   * @param {{ text: string, muted: string }} ink */
   const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
     const keep = NS.labelled(lines).filter((x) => Number.isFinite(Number(x.value)));
     const nm = keep.map((x) => x.label);
@@ -387,24 +384,17 @@
     };
     /** @param {number} at @param {number} st */
     const onLine = (at, st) => vals.some((v) => Math.abs(v - at) < st * 1e-6);
-    if (valAxis.max == null) {
-      valAxis.max = (/** @type {any} */ e) => {
-        const st = step(e);
-        if (!st) return undefined;
-        const at = Math.ceil(ext(e).hi / st) * st;
-        return onLine(at, st) ? at + st : at;
-      };
-    }
-    if (valAxis.min == null) {
-      valAxis.min = (/** @type {any} */ e) => {
-        const st = step(e);
-        if (!st) return undefined;
-        const at = Math.floor(ext(e).lo / st) * st;
-        // A line at 0 on a bar axis is the baseline itself.
-        if (zero && at === 0) return undefined;
-        return onLine(at, st) ? at - st : at;
-      };
-    }
+    /** The axis edge on `dir` (1 top, -1 bottom): a rounded step past the lines and data. */
+    const edge = (/** @type {number} */ dir) => (/** @type {any} */ e) => {
+      const st = step(e);
+      if (!st) return undefined;
+      const at = dir > 0 ? Math.ceil(ext(e).hi / st) * st : Math.floor(ext(e).lo / st) * st;
+      // A line at 0 on a bar axis is the baseline itself.
+      if (dir < 0 && zero && at === 0) return undefined;
+      return onLine(at, st) ? at + dir * st : at;
+    };
+    if (valAxis.max == null) valAxis.max = edge(1);
+    if (valAxis.min == null) valAxis.min = edge(-1);
   };
 
   const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
@@ -441,14 +431,11 @@
     return String(cats[i]);
   };
 
-  /**
-   * `x_lines` and `x_ranges` on a bar's category axis: a line through each
-   * marked bar, a shade over the bars a range spans. Mutates `series[0]`,
-   * adding to the markLine the value lines put there.
-   * @param {any[]} series @param {boolean} onX the categories run along x
+  /** `x_lines` and `x_ranges` on a bar's category axis: a line through each marked bar, a shade
+   * over the bars a range spans. Mutates `series[0]`, adding to the markLine the value lines put
+   * there. @param {any[]} series @param {boolean} onX the categories run along x
    * @param {any[]} cats @param {any} lines `x_lines` @param {any} ranges `x_ranges`
-   * @param {{ text: string, muted: string, fontSize?: number }} ink
-   */
+   * @param {{ text: string, muted: string, fontSize?: number }} ink */
   const addCategoryMarks = (series, onX, cats, lines, ranges, ink) => {
     if (!series.length) return;
     const key = onX ? 'xAxis' : 'yAxis';
@@ -489,7 +476,7 @@
 
   Object.assign(NS.axes, {
     colMeta, axisTitle, axisTypeFor, orderedCategories, orderLevels, yGutter,
-    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay,
+    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay, valueAxis, categoryAxis,
     xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
     LABEL_LINE_H
   });

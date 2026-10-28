@@ -1,10 +1,3 @@
-# Table model: cells of the bar, tile, split-bar, diverging-bar, text and
-# number columns. Each cells_<kind>() takes the shared context (see
-# summarize_cells()) and one plan entry and returns that column of the cell
-# model. The lane marks (box, point range, pair) are in
-# table-model-cells-lanes.R, the swimlane and sparkline in
-# table-model-cells-marks.R.
-
 cells_bar <- function(ctx, p) {
   vraw <- ctx$rows[[p$key]]
   lab <- cells_val_parts(ctx, p, vraw)
@@ -30,13 +23,11 @@ cells_tile <- function(ctx, p) {
 }
 
 cells_barsplit <- function(ctx, p) {
-  # Per-entry scale, like the plain bar: on the summaries path every
-  # column owns its domain, and the prep-level bar_max is 0 there.
+  # Per-entry scale, like the plain bar (bar_max is 0 on the summaries path).
   emx <- p$dmax %||% ctx$mx
   mat <- cells_split_matrix(ctx, p)
-  # `segv` (the segment tooltips) stays in the measure's own unit; only
-  # the WIDTHS are scaled -- against the column max, or the facet's own N
-  # when the plan carries a width denominator.
+  # `segv` stays in the measure's own unit; only the widths are scaled, against
+  # the column max or the facet's N (`denom`).
   segv <- lapply(seq_along(p$series), function(j) mat[, j])
   if (!is.null(p$denom) && is.finite(p$denom) && p$denom > 0) {
     mat <- mat / p$denom * 100
@@ -60,9 +51,8 @@ cells_barsplit <- function(ctx, p) {
   inside <- cells_split_inside(ctx, p, seg, segv)
   c(list(kind = "barsplit", mode = p$mode %||% "stacked",
          names = as.character(p$series),
-         # The plan's own colours win: a summaries column resolves them
-         # through the same resolver as every other mark, so a split bar
-         # and a split box agree about which level is which.
+         # The plan's own colours win, so a split bar and a split box agree on
+         # which level is which.
          fills = fills,
          seg = seg, segv = segv,
          slab = inside, sink = if (!is.null(inside)) summarize_ink(fills),
@@ -84,8 +74,7 @@ cells_split_matrix <- function(ctx, p) {
 }
 
 # Segment widths: stacked scales the row total against the column max,
-# percent normalises each row to 100, grouped scales each series
-# independently. Computed here so both consumers print the same numbers.
+# percent normalises each row to 100, grouped scales each series on its own.
 cells_split_seg <- function(p, mat, tot, emx) {
   if (identical(p$mode, "grouped")) {
     lapply(seq_along(p$series), function(j) cells_pct_w(mat[, j], emx))
@@ -102,9 +91,8 @@ cells_split_seg <- function(p, mat, tot, emx) {
   }
 }
 
-# Grouped: the levels sit side by side, each its own bar, so each
-# prints its own value beside it (`ldisp`, one vector per level) in the
-# column's one slot width. Stacked and 100% keep the one total.
+# Grouped: each level prints its own value (`ldisp`) in the column's one slot
+# width. Stacked and 100% keep the one total.
 cells_split_label <- function(ctx, p, segv, vraw) {
   if (identical(p$mode, "grouped") && ctx$vals_on && isTRUE(p$show_val)) {
     dom <- summarize_axis_domain(p, ctx$prep)
@@ -119,10 +107,8 @@ cells_split_label <- function(ctx, p, segv, vraw) {
   }
 }
 
-# Stacked / 100%: each segment carries its own number INSIDE it (the
-# total stays at the end). The stylesheet hides one its segment is too
-# narrow for, the painter measures; the ink is white or dark against
-# the level's fill.
+# Stacked / 100%: each segment carries its number inside it (the total stays
+# at the end). The stylesheet hides it where the segment is too narrow.
 cells_split_inside <- function(ctx, p, seg, segv) {
   if (!identical(p$mode, "grouped") && ctx$vals_on && isTRUE(p$show_val)) {
     if (identical(p$mode, "percent")) {
@@ -142,9 +128,7 @@ cells_split_inside <- function(ctx, p, seg, segv) {
 cells_bardiv <- function(ctx, p) {
   v <- ctx$rows[[p$key]]
   lab <- cells_val_parts(ctx, p, v, signed = TRUE)
-  # Per-entry scale, like the plain bar: on the summaries path every
-  # column owns its domain and the prep-level bar_max is 0 there, so
-  # reading it would zero every width.
+  # Per-entry scale, like the plain bar (bar_max is 0 on the summaries path).
   dmx <- p$dmax %||% ctx$mx
   w <- if (is.finite(dmx) && dmx > 0) pmin(50, abs(v) / dmx * 50) else v * 0
   w[!is.finite(w)] <- 0
@@ -153,17 +137,15 @@ cells_bardiv <- function(ctx, p) {
 }
 
 cells_text_raw <- function(ctx, p) {
-  # A raw text field: the value IS the display (escaped once, here, so
-  # both consumers paste it as-is), and the sort key is the text itself.
+  # The value is the display and the sort key.
   v <- as.character(ctx$rows[[p$key]])
   v[is.na(v)] <- ""
-  c(list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v)),
+  c(list(kind = "num", text = TRUE, v = v, disp = v),
     if (!is.null(p$failed)) list(failed = TRUE))
 }
 
 cells_dist_text <- function(ctx, p) {
-  # A distribution shown as TEXT: "10.4 (7.6–13.2)". Sorts numerically
-  # by the center (a text sort would rank "9" above "10").
+  # A distribution as text: "10.4 (7.6-13.2)". Sorts by the center, numerically.
   cc <- ctx$rows[[p$key]]
   ll <- ctx$rows[[p$lo]]
   hh <- ctx$rows[[p$hi]]
@@ -177,11 +159,10 @@ cells_dist_text <- function(ctx, p) {
 }
 
 cells_alt_text <- function(ctx, p) {
-  # An expr summary that evaluated to text: fall back to the text
-  # column, sorted as text.
+  # An expr summary that evaluated to text: sorted as text.
   v <- as.character(ctx$rows[[p$alt_text]])
   v[is.na(v)] <- ""
-  list(kind = "num", text = TRUE, v = v, disp = summarize_esc(v))
+  list(kind = "num", text = TRUE, v = v, disp = v)
 }
 
 cells_num <- function(ctx, p) {

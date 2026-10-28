@@ -1,21 +1,6 @@
-/* ===== Settings popover form =====
-   All configuration lives in the gear popover. Each field is a vertical
-   unit (label on top, full-width control, muted help below). Fields flow
-   in a responsive wrapping grid: ~3 across on a wide screen, collapsing
-   to 1 on a narrow one. flex-wrap + min(), no media/container queries
-   (see blockr.docs design-system/design-system-prompt.md). Spec:
-   blockr.docs design-system/components/blockr-popover.md. */
-/* Portaled to <body>, so styled by its own class. max-height/top/left
-   are set inline by _positionPopover (viewport-clamped). */
-.blockr-popover.dd-popover {
-  width: min(680px, 92vw);
-  overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0 14px;
-}
-
+/* ===== Gear tray: form rows =====
+   Each field is a vertical unit: the label on top, a full-width control,
+   muted help below. */
 .dd-form-row {
   flex: 1 1 190px;
   min-width: 0;
@@ -25,30 +10,17 @@
   gap: 4px;
   margin-bottom: 12px;
 }
-
-.dd-form-row > .blockr-label {
-  margin-bottom: 0;
-}
-
+.dd-form-row > .blockr-label { margin-bottom: 0; }
 .dd-form-help {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-400, #9ca3af);
   line-height: 1.3;
 }
 
-/* ===== Titles: writing the block's sentence =====
-   The one section in the gear that is typed rather than picked, so it is the
-   one section that needs the whole popover: a template
-   ("{@func} of {label(@value)}[, by {@color}]") is three times the length of
-   a column name, and a form cell is 180px. Folded away by default, because
-   three full-width rows at the bottom of every gear is a lot of gear for
-   something a board author sets once. Spec + the proposals it came from:
-   _scratch/sentence-builder/final.html, rules in blockr.docs
-   design-system/pinned-controls.md. */
-.dd-section--titles > .dd-form-row {
-  grid-column: 1 / -1;
-}
-
+/* ===== Titles section =====
+   The one section in the gear that is typed rather than picked, so it needs
+   the whole popover: a template ("{@func} of {label(@value)}[, by {@color}]")
+   is three times the length of a column name, and a form cell is 180px. */
 .dd-at-key {
   font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
   background: var(--blockr-grey-100, #f3f4f6);
@@ -57,10 +29,9 @@
   padding: 0 4px;
   color: var(--blockr-color-text-secondary, #374151);
 }
-
 /* What the card shows, from the parts R resolved for the card itself. Dimmed
-   while the field is dirty, because the template in the field has not been
-   resolved by anything yet and the editor must not guess. */
+   while the field is dirty: the template in the field has not been resolved
+   by anything yet, and the editor must not guess. */
 .dd-title-shows {
   display: flex;
   align-items: baseline;
@@ -68,9 +39,7 @@
   margin-top: 7px;
   padding-left: 2px;
 }
-.dd-title-row--dirty .dd-title-shows {
-  opacity: 0.45;
-}
+.dd-title-row--dirty .dd-title-shows { opacity: 0.45; }
 /* The only chrome: a turn, saying that the line above becomes this one. */
 .dd-title-turn {
   flex: 0 0 auto;
@@ -86,9 +55,7 @@
   font-style: italic;
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.dd-title-row--dirty .dd-title-stale {
-  display: inline;
-}
+.dd-title-row--dirty .dd-title-stale { display: inline; }
 .dd-title-preview-body {
   flex: 1 1 auto;
   min-width: 0;
@@ -100,14 +67,12 @@
 .dd-title-preview-body--empty::after {
   content: 'nothing';
   font-style: italic;
-  color: var(--blockr-color-text-muted, #6b7280);
 }
 /* The slot is a word here, not a control: the live copy belongs to the reader,
    on the block. Same mark, no pointer. */
-.blockr-slot--preview {
-  cursor: default;
-}
-.dd-title-offer {
+.blockr-slot--preview { cursor: default; }
+.dd-title-offer,
+.blockr-slot-offer {
   display: inline-block;
   margin-left: 7px;
   padding: 0 6px;
@@ -115,11 +80,10 @@
   border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 1.5;
-  color: var(--blockr-color-text-muted, #6b7280);
   white-space: nowrap;
   vertical-align: 1px;
 }
-
+.dd-title-offer { color: var(--blockr-color-text-muted, #6b7280); }
 /* A name the resolver has no answer for. It prints "" on the card and takes
    its bracketed clause with it, which is right there and wrong here. */
 .dd-title-warn {
@@ -135,8 +99,8 @@
 
 /* ===== The `@` menu =====
    Mention-style: typing `@` in a title field opens the list of everything the
-   block can print, at the caret, filtering on what follows. Portalled to
-   <body> like every other dropdown here. */
+   block can print, at the caret, filtering on what follows. Portaled to
+   <body> like every other dropdown. */
 .dd-at-menu {
   position: fixed;
   z-index: 10000;
@@ -156,14 +120,16 @@
   font-weight: var(--blockr-font-weight-semibold, 600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-note {
   padding: 0 9px 6px;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   line-height: 1.4;
-  color: var(--blockr-color-text-muted, #6b7280);
 }
+.dd-at-head,
+.dd-at-note,
+.dd-at-val,
+.dd-at-tok { color: var(--blockr-color-text-muted, #6b7280); }
 .dd-at-item {
   display: flex;
   align-items: baseline;
@@ -178,12 +144,8 @@
   text-align: left;
   cursor: pointer;
 }
-.dd-at-item--sub {
-  padding-left: 22px;
-}
-.dd-at-item--hl {
-  background: var(--blockr-color-bg-hover, #f3f4f6);
-}
+.dd-at-item--sub { padding-left: 22px; }
+.dd-at-item--hl { background: var(--blockr-color-bg-hover, #f3f4f6); }
 .dd-at-item > b {
   flex: 0 0 auto;
   font-weight: var(--blockr-font-weight-medium, 500);
@@ -199,18 +161,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--blockr-color-text-muted, #6b7280);
 }
-/* An unset setting says so: that is how you find out the block HAS a facet. */
-.dd-at-val--unset {
-  font-style: italic;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
+/* An unset setting says so: that is how you find out the block has a facet. */
+.dd-at-val--unset { font-style: italic; }
 .dd-at-tok {
   flex: 0 0 auto;
   font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-text-muted, #6b7280);
 }
 .dd-at-sep {
   height: 1px;
@@ -220,50 +177,44 @@
 
 /* ===== Sections (Mapping / Encoding / Presentation) =====
    Each section owns a full popover row and holds its own wrapping grid of
-   form rows. Rows are generated per active role (no display:none family
-   hack). */
-/* A uniform auto-fill grid (not flex-grow): every cell is the same width and
-   a lone item on the last row stays one cell wide instead of stretching to
-   full width. auto-fill (vs auto-fit) keeps the implicit tracks so the lone
-   item does not expand. Same intrinsic-responsive approach as blockr.ggplot's
-   block grid — no media queries. */
-.dd-section {
-  flex: 1 1 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  align-items: start;
-  gap: 0 14px;
-}
-/* Paired rows (metric+agg, sort+dir) hold two controls, so span two cells. */
-.dd-section > .dd-role-paired { grid-column: span 2; }
+   form rows. Rows are generated per active role. */
 .dd-section-title {
-  grid-column: 1 / -1;
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--blockr-grey-400, #9ca3af);
-  margin: 10px 0 6px;
-  border-top: 1px solid var(--blockr-color-border, #e5e7eb);
-  padding-top: 10px;
 }
-
-.blockr-settings.dd-popover > * + .dd-section {
-  margin-top: 24px;
+/* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link (a
+   subtle grey text link with a plus icon, blue on hover) from the shared
+   blockr-blocks.css; .dd-add-trigger only resets the <button> chrome. */
+.dd-add-wrap {
+  grid-column: 1 / -1;
+  position: relative;
 }
+.blockr-settings.dd-popover > * + .dd-section { margin-top: 24px; }
+/* --dd-cols is the number of tracks, stepped up with the tray's width. A row
+   spans --dd-s2 of them; a paired row (metric+agg, sort+dir, two controls)
+   spans --dd-s4. */
 .blockr-settings.dd-popover .dd-section {
   --dd-cols: 1;
   --dd-s2: 1;
   --dd-s4: 1;
+  display: grid;
   grid-template-columns: repeat(var(--dd-cols), minmax(0, 1fr));
   gap: 16px 12px;
   align-items: start;
 }
 @container (min-width: 290px) {
-  .blockr-settings.dd-popover .dd-section { --dd-cols: 2; --dd-s2: 2; --dd-s4: 2; }
+  .blockr-settings.dd-popover .dd-section {
+    --dd-cols: 2;
+    --dd-s2: 2;
+    --dd-s4: 2;
+  }
 }
 @container (min-width: 560px) {
-  .blockr-settings.dd-popover .dd-section { --dd-cols: 4; --dd-s4: 4; }
+  .blockr-settings.dd-popover .dd-section {
+    --dd-cols: 4;
+    --dd-s4: 4;
+  }
 }
 @container (min-width: 840px) {
   .blockr-settings.dd-popover .dd-section { --dd-cols: 6; }
@@ -271,34 +222,24 @@
 @container (min-width: 1110px) {
   .blockr-settings.dd-popover .dd-section { --dd-cols: 8; }
 }
-.blockr-settings.dd-popover .dd-section > * {
-  grid-column: span var(--dd-s2);
-}
-.blockr-settings.dd-popover .dd-section > .dd-role-paired {
-  grid-column: span var(--dd-s4);
-}
+.blockr-settings.dd-popover .dd-section > * { grid-column: span var(--dd-s2); }
+.blockr-settings.dd-popover .dd-section > .dd-role-paired { grid-column: span var(--dd-s4); }
 .blockr-settings.dd-popover .dd-section > .dd-section-title,
 .blockr-settings.dd-popover .dd-section > .dd-add-wrap,
 .blockr-settings.dd-popover .dd-section > .dd-script-row,
 .blockr-settings.dd-popover .dd-section > .dd-layout-tiles,
 .blockr-settings.dd-popover .dd-section > .dd-form-row.dd-role-tiles,
-.blockr-settings.dd-popover .dd-section--titles > .dd-form-row {
-  grid-column: 1 / -1;
-}
+.blockr-settings.dd-popover .dd-section--titles > .dd-form-row { grid-column: 1 / -1; }
 .blockr-settings.dd-popover .dd-section-title {
-  margin: 0 0 -6px;          /* 16px row gap - 6 = the 10px under a title */
+  margin: 0 0 -6px; /* 16px row gap - 6 = the 10px under a title */
   padding: 0;
   border: 0;
   letter-spacing: 0.05em;
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.blockr-settings.dd-popover .dd-section-title:last-child {
-  margin-bottom: 0;
-}
+.blockr-settings.dd-popover .dd-section-title:last-child { margin-bottom: 0; }
 .blockr-settings.dd-popover .dd-form-row,
-.blockr-settings.dd-popover .dd-add-wrap {
-  margin: 0;
-}
+.blockr-settings.dd-popover .dd-add-wrap { margin: 0; }
 /* A checkbox in the grid: the box and its words, no field shell, on the
    controls' line of its grid row. */
 .blockr-settings.dd-popover .dd-form-row--check {
@@ -306,54 +247,52 @@
   min-height: var(--blockr-control-h, 42px);
   justify-content: center;
 }
-.blockr-settings.dd-popover .dd-form-row--check > .dd-form-help {
-  margin-top: -4px;
-}
+.blockr-settings.dd-popover .dd-form-row--check > .dd-form-help { margin-top: -4px; }
 /* An option that exists but does not apply here (the table's Cards look in
    the variables layout): drawn, greyed, inert. */
 .blockr-settings.dd-popover .blockr-segmented__seg.is-disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-
-/* Row head: label + remove button on one line above the control. */
+/* Row head: label and remove button on one line above the control. */
 .dd-row-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
 }
-
-/* Control area — holds one picker, or a paired primary+secondary
-   (metric+agg, sort+dir) side by side. */
+/* Control area: one picker, or a paired primary and secondary (metric+agg,
+   sort+dir) side by side. */
 .dd-row-controls {
   display: flex;
   gap: 8px;
   align-items: stretch;
 }
-.dd-row-controls > .dd-layout-tiles { flex: 1 1 0; min-width: 0; }
+.dd-row-controls > .dd-layout-tiles {
+  flex: 1 1 0;
+  min-width: 0;
+}
 /* Tiles in groups (the chart type): each group its heading over its tiles,
    the groups side by side while they fit. */
-.dd-row-controls:has(> .dd-tile-group) { flex-wrap: wrap; gap: 16px; }
-.dd-row-controls > .dd-tile-group { flex: 1 1 240px; min-width: 0; }
-
-/* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link
-   (subtle grey text link + plus icon, blue on hover) from the shared
-   blockr-blocks.css; .dd-add-trigger just resets the <button> chrome. */
-.dd-add-wrap { grid-column: 1 / -1; position: relative; margin-bottom: 12px; }
-
-/* ===== Card wrapper (for popover positioning) ===== */
-.dd-card {
-  position: relative;
+.dd-row-controls:has(> .dd-tile-group) {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.dd-row-controls > .dd-tile-group {
+  flex: 1 1 240px;
+  min-width: 0;
 }
 
+/* ===== Type tiles ===== */
+/* Positions the gear popover. */
+.dd-card { position: relative; }
 .dd-layout-tiles {
   display: grid;
   /* Five a row in a 560px gear, three in a 360px panel. */
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-column: 1 / -1;
   gap: 8px;
 }
-.dd-layout-tiles { grid-column: 1 / -1; }
 .dd-type-group-head {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-medium, 500);
@@ -362,9 +301,7 @@
   color: var(--blockr-color-text-muted, #6b7280);
   margin: 8px 0 4px;
 }
-.dd-type-group-head:first-child {
-  margin-top: 0;
-}
+.dd-type-group-head:first-child { margin-top: 0; }
 .dd-layout-tile {
   display: flex;
   flex-direction: column;
@@ -393,9 +330,7 @@
   width: 100%;
   height: auto;
 }
-.dd-layout-tile-face svg * {
-  vector-effect: non-scaling-stroke;
-}
+.dd-layout-tile-face svg * { vector-effect: non-scaling-stroke; }
 .dd-layout-tile-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -403,9 +338,7 @@
   max-width: 100%;
   text-align: center;
 }
-.dd-layout-tile:hover {
-  color: var(--blockr-color-text-default, #111827);
-}
+.dd-layout-tile:hover { color: var(--blockr-color-text-default, #111827); }
 .dd-layout-tile:hover .dd-layout-tile-face {
   background: var(--blockr-color-bg-hover, #f3f4f6);
   border-color: var(--blockr-color-border-strong, #d1d5db);
@@ -436,7 +369,7 @@
   border-radius: var(--blockr-radius-md, 6px);
 }
 
-/* ===== Chart grid (faceting) ===== */
+/* ===== Chart grid (faceting) and zoom ===== */
 .dd-chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -445,16 +378,9 @@
   margin-left: -10px;
   margin-right: -10px;
 }
-
-.dd-chart-grid.dd-chart-grid-single {
-  display: block;
-  padding: 0;
-  margin-left: -10px;
-  margin-right: -10px;
-}
-
-/* A facet strip is a section title centred over its panel (design system,
-   Charts): no card around the panel, no band behind the name. */
+.dd-chart-grid.dd-chart-grid-single { display: block; }
+/* A facet strip is a section title centred over its panel: no card around the
+   panel, no band behind the name. */
 .dd-facet-label {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   font-weight: var(--blockr-font-weight-semibold, 600);
@@ -464,19 +390,14 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
 .dd-chart {
   width: 100%;
   /* Anchors the transient drill pulse, which is positioned at the click. */
   position: relative;
 }
-
 /* The panel's Reset zoom link: the chart draws no toolbox icons, so this is
    the visible way back from a drag-zoom (a double-click is the other). */
-.dd-zoom-host {
-  position: relative;
-}
-
+.dd-zoom-host { position: relative; }
 .dd-zoom-reset {
   position: absolute;
   top: 4px;
@@ -490,39 +411,28 @@
   color: var(--blockr-color-text-accent, #2563eb);
   cursor: pointer;
 }
-
-.dd-zoom-reset:hover {
-  text-decoration: underline;
-}
-
-.dd-zoom-reset[hidden] {
-  display: none;
-}
+.dd-zoom-reset:hover { text-decoration: underline; }
+.dd-zoom-reset[hidden] { display: none; }
 
 /* ===== Transient drill ===== */
 /* What a drill click leaves behind when the chart sends its claim to another
    block (ctrl_target set). The chart holds no selection, so nothing here may
    look latched: the mark is lit, held just long enough to read, and released.
-
-   HOLD is an animation-delay with `both`, so the element shows the first frame
-   for the whole delay and only then starts to leave. The fade runs ease-IN --
-   slow at first, decisive at the end -- because the failure mode of a fade is a
-   long tail that sits there looking like a selection nobody can clear. */
-
+   The hold is an animation-delay with `both`: the element shows its first
+   frame for the whole delay and only then starts to leave. The fade is
+   linear, because a long ease-out tail looks like a selection nobody can
+   clear. */
 /* The clicked mark, deepened. The box comes from the clicked zrender element
-   (getBoundingRect + its transform), so this is the mark's own geometry rather
-   than a guess from the cursor.
-
-   `mix-blend-mode: multiply` darkens whatever is under the box, so the mark goes
-   a deeper version of ITS OWN colour and comes back. Nothing is added on top --
-   no ring, no veil, no geometry -- which means it needs to know nothing about
-   the palette, the theme or the series colour, and the clicked bar never stops
-   matching its own legend swatch. Multiplying against the white plot background
-   is a no-op, so only the mark moves.
-
-   Same clock as the table's flash (400ms hold, 1400ms linear): the two surfaces
-   are one gesture and should not decay at different rates. Opacity, because it
-   is what actually interpolates. */
+   (getBoundingRect and its transform), so it is the mark's own geometry and
+   not a guess from the cursor.
+   `mix-blend-mode: multiply` darkens whatever is under the box, so the mark
+   goes a deeper version of its own colour and comes back. Nothing is added on
+   top, so it needs to know nothing about the palette, the theme or the series
+   colour, and the clicked bar keeps matching its legend swatch. Multiplying
+   against the white plot background changes nothing, so only the mark moves.
+   Same clock as the table's flash (400ms hold, 1400ms linear): the two
+   surfaces are one gesture and should not decay at different rates. Opacity,
+   because it is what interpolates. */
 .dd-drill-flash {
   position: absolute;
   pointer-events: none;
@@ -531,13 +441,11 @@
   mix-blend-mode: multiply;
   animation: dd-drill-flash 1400ms linear 400ms both;
 }
-
 @keyframes dd-drill-flash {
   from { opacity: 0.22; }
   to { opacity: 0; }
 }
-
-/* The fallback, for a mark a box cannot trace: a pie wedge is a sector and a
+/* The fallback for a mark a box cannot trace: a pie wedge is a sector and a
    radar shape a polygon, where a bounding box is the wrong outline. A ring at
    the click point says the same thing without claiming a shape. */
 .dd-drill-pulse {
@@ -554,129 +462,50 @@
   z-index: 5;
   animation: dd-drill-pulse 700ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
 }
-
-/* Full strength while it is still small (that is the frame the eye catches),
-   then out. */
+/* Full strength while it is still small (the frame the eye catches), then
+   out. */
 @keyframes dd-drill-pulse {
-  0% { transform: scale(0.4); opacity: 1; }
-  35% { opacity: 0.9; }
-  100% { transform: scale(3.2); opacity: 0; }
-}
-
-/* Reduced motion still needs the acknowledgement, just not the travel. The
-   flash is already motion-free (it only changes colour), so it stands. */
-@media (prefers-reduced-motion: reduce) {
-  .dd-drill-pulse {
-    animation: dd-drill-fade 700ms linear forwards;
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
   }
+  35% { opacity: 0.9; }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+/* Reduced motion still needs the acknowledgement, just not the travel. The
+   flash only changes colour, so it stands. */
+@media (prefers-reduced-motion: reduce) {
+  .dd-drill-pulse { animation: dd-drill-fade 700ms linear forwards; }
   @keyframes dd-drill-fade {
     from { opacity: 0.9; }
     to { opacity: 0; }
   }
 }
 
-/* ===== Title / caption bands ===== */
-/* Rendered by chart/chrome.js _updateTitles() from the RESOLVED title text; the
-   whole band hides while empty so a title-less chart is pixel-identical to
-   before. Muted-secondary text mirrors ggplot's title/subtitle hierarchy. */
-.dd-chart-titles {
-  padding: 2px 2px 6px;
-}
-/* Empty title AND subtitle: the wrap hides itself (chart/chrome.js), and the row is
-   just the icons again, exactly as before the title moved up. */
-
+/* ===== Title, subtitle, caption =====
+   Rendered by chart/chrome.js _updateTitles() from the resolved title text.
+   The whole band hides while empty, so a chart without titles has no gap. */
+.dd-chart-titles { padding: 2px 2px 6px; }
 .dd-chart-title {
   font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: 600;
   color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
-
 .dd-chart-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
   white-space: pre-line;
 }
-
-/* ===== Title slots ===== */
-/* A word in the block's own sentence that is one of its arguments: clicking
-   it opens that argument's control. The mark is the colour plus a dashed
-   underline, and nothing else -- no padding, no tint -- so a unit can touch
-   the word ("25+ patients") and so a caption reads as a caption. Grey plus an
-   underline reads as emphasis, and nobody clicks an emphasised word; a tinted
-   tag reads as a control but pushes the punctuation after it away.
-   On hover the dash firms up: dashed says you can change this, solid says you
-   are about to.
-   Rules, and the marks it was chosen from: blockr.docs
-   design-system/pinned-controls.md. Moves to blockr.ui with the rest of the
-   shared layer; `blockr-` is the reserved prefix on purpose, because the
-   table and code blocks render the same word. */
-.blockr-slot {
-  color: var(--blockr-color-primary, #2563eb);
-  font-weight: 500;
-  border-bottom: 1px dashed var(--blockr-color-primary, #2563eb);
-  padding-bottom: 1px;
-  cursor: pointer;
-}
-
-.blockr-slot:hover,
-.blockr-slot:focus-visible,
-.blockr-slot--open {
-  color: var(--blockr-blue-700, #1d4ed8);
-  border-bottom: 1px solid var(--blockr-blue-700, #1d4ed8);
-  outline: none;
-}
-
-/* A setting the sentence would name if it were set. The clause left with its
-   value and took the word with it, so the offer stands in for the word: same
-   menu, dashed rather than underlined, because it is an invitation and not a
-   statement about the picture. Muted, and gone the moment the setting is
-   filled. */
-.blockr-slot-offer {
-  display: inline-block;
-  margin-left: 7px;
-  padding: 0 6px;
-  border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
-  border-radius: var(--blockr-radius-sm, 4px);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  line-height: 1.5;
-  color: var(--blockr-color-text-secondary, #6b7280);
-  cursor: pointer;
-  white-space: nowrap;
-  vertical-align: 1px;
-}
-
-/* The dashed box is nearly as tall as a line of the sentence, so on a
-   wrapped line it would sit on the underlined words above it. A subtitle or
-   caption carrying offers gets taller lines throughout (about 8px between an
-   underline and a wrapped offer), which keeps its spacing even whether a line
-   holds words, offers or both. */
-:is(.dd-chart-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) {
-  line-height: 2.25;
-}
-/* The caption's text is a pixel smaller, so it needs a little more line
-   height for the same gap. */
-:is(.dd-chart-caption, .dd-table-caption):has(.blockr-slot-offer) {
-  line-height: 2.35;
-}
-
-.blockr-slot-offer:hover,
-.blockr-slot-offer:focus-visible {
-  border-color: var(--blockr-color-primary, #2563eb);
-  color: var(--blockr-color-primary, #2563eb);
-  outline: none;
-}
-
-/* What the word opens is the list itself: Blockr.Select.menu(), the design
-   system's dropdown hung off the word. Its chrome lives in
-   blockr-select.css, so there is nothing to style here. */
-
-/* `pre-line`, like the title and subtitle bands: a newline in the text is a
-   line break, which is how a caption carries a second note (a pooling rule,
-   a denominator) on its own line. `\n` in the template is that newline
-   (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and
-   the text stays a text node -- bands are data-derived, never HTML. */
+/* `pre-line`, like the title and subtitle: a newline in the text is a line
+   break, which is how a caption carries a second note (a pooling rule, a
+   denominator) on its own line. `\n` in the template is that newline
+   (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and the
+   text stays a text node: bands are data-derived, never HTML. */
 .dd-chart-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
@@ -684,8 +513,83 @@
   white-space: pre-line;
 }
 
-/* ===== Shared legend band ===== */
-/* One legend for the whole chart (chart/chrome.js _updateLegendBand), shown
+/* ===== Title slots =====
+   A word in the block's own sentence that is one of its arguments: clicking it
+   opens that argument's control. The mark is the colour plus a dashed
+   underline and nothing else, with no padding and no tint, so a unit can touch
+   the word ("25+ patients") and a caption reads as a caption. Grey plus an
+   underline reads as emphasis and nobody clicks an emphasised word; a tinted
+   tag reads as a control but pushes the punctuation after it away. On hover
+   the dash firms up: dashed says you can change this, solid says you are about
+   to. `blockr-` is the reserved prefix on purpose: the table and code blocks
+   render the same word. What the word opens is Blockr.Select.menu(), whose
+   chrome lives in blockr-select.css. */
+.blockr-slot {
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: 500;
+  border-bottom: 1px dashed var(--blockr-color-primary, #2563eb);
+  padding-bottom: 1px;
+  cursor: pointer;
+}
+.blockr-slot:hover,
+.blockr-slot:focus-visible,
+.blockr-slot--open {
+  color: var(--blockr-blue-700, #1d4ed8);
+  border-bottom: 1px solid var(--blockr-blue-700, #1d4ed8);
+  outline: none;
+}
+/* A setting the sentence would name if it were set. The clause left with its
+   value and took the word with it, so the offer stands in for the word: same
+   menu, dashed rather than underlined, because it is an invitation and not a
+   statement about the picture. Muted, and gone once the setting is filled. */
+.blockr-slot-offer {
+  color: var(--blockr-color-text-secondary, #6b7280);
+  cursor: pointer;
+}
+/* The dashed box is nearly as tall as a line of the sentence, so on a wrapped
+   line it would sit on the underlined words above it. A subtitle or caption
+   carrying offers gets taller lines throughout, which keeps its spacing even
+   whether a line holds words, offers or both. */
+:is(.dd-chart-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) { line-height: 2.25; }
+/* The caption's text is a pixel smaller, so it needs more line height for the
+   same gap. */
+:is(.dd-chart-caption, .dd-table-caption):has(.blockr-slot-offer) { line-height: 2.35; }
+.blockr-slot-offer:hover,
+.blockr-slot-offer:focus-visible {
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+  outline: none;
+}
+/* A slot being typed over: it sits in the line where the
+   word was, in the word's colour and weight, a box instead of the underline. */
+.blockr-slot-input {
+  font: inherit;
+  font-weight: 500;
+  color: var(--blockr-blue-700, #1d4ed8);
+  padding: 0 4px;
+  margin: 0 1px;
+  border: 1px solid var(--blockr-color-border-accent, #2563eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-bg-surface, #fff);
+  line-height: inherit;
+  outline: none;
+  /* A field being typed in: the accent edge and the focus ring. */
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+  font-variant-numeric: tabular-nums;
+}
+/* A number keeps type=number for the keyboard, without the spinner. */
+.blockr-slot-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.blockr-slot-input[type=number]::-webkit-outer-spin-button,
+.blockr-slot-input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ===== Legend band =====
+   One legend for the whole chart (chart/chrome.js _updateLegendBand), shown
    once under a facet grid, or above it with `legend = "top"`. Left-aligned on
    the title's and the caption's edge, in the chart text's size
    (--blockr-mark-font-size, as the axes and the names on the marks) and the
@@ -701,18 +605,13 @@
   row-gap: 4px;
   padding: 6px 2px 2px;
 }
-
 /* Between the title band and the plot. */
-.dd-legend-band.dd-legend-band--top {
-  padding: 2px 2px 6px;
-}
-
+.dd-legend-band--top { padding: 2px 2px 6px; }
 .dd-legend-title {
   font-size: var(--blockr-mark-font-size, 12px);
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-muted, #6b7280);
 }
-
 .dd-legend-chip {
   display: inline-flex;
   align-items: center;
@@ -726,32 +625,27 @@
   color: var(--blockr-color-text-secondary, #374151);
   cursor: pointer;
 }
-
 .dd-legend-chip:focus-visible {
   outline: var(--blockr-focus-outline, 2px solid #2563eb);
   outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: var(--blockr-radius-sm, 4px);
 }
-
 .dd-legend-swatch {
   width: 10px;
   height: 10px;
   border-radius: 2px;
   flex: none;
 }
-
 .dd-legend-swatch--line {
   width: 16px;
   height: 2px;
   border-radius: 1px;
 }
-
 .dd-legend-swatch--dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
-
 /* The level a chip filter selects: a ring round the chip. */
 .dd-legend-chip-on {
   box-shadow: 0 0 0 1px var(--blockr-color-border-strong, #9ca3af);
@@ -766,92 +660,63 @@
   justify-content: space-between;
   padding: 6px 0;
 }
-
 .dd-status-text {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
   font-variant-numeric: tabular-nums;
 }
-
 /* The receipt for a transient drill: past tense, this block's own act, and it
-   fades. One step darker than the muted status line it replaces, and NOT the
-   primary blue: the blue read as a link, and it outlived the flash by about a
-   second, leaving a coloured sentence with nothing coloured left on screen.
-   The change of words is the signal; the mark carries the colour.
-
-   It LEAVES the way the mark does -- hold, then fade -- rather than being cut.
-   Held longer than the mark (1400ms vs 400ms) because a sentence takes longer
-   to read than a lit bar takes to notice.
-
-   LINEAR, not the mark's ease-in. Grey text is already invisible around opacity
-   0.3, so the only part of the ramp anyone sees is the top two thirds of it.
-   Under ease-in that stretch was compressed into the last ~350ms and the line
-   read as cut, which is exactly what it looked like. A straight ramp spends its
-   time where the eye can follow it.
-
-   The `animation` shorthand is set INLINE by chart/chrome.js, not here: _updateStatus()
-   rebuilds this element on every chart re-render, and a fresh element would
-   restart the animation from the top. The delay is computed from the age of the
-   receipt so a rebuild resumes the fade instead of replaying it. Only the
-   keyframes and the colour belong in CSS. */
-.dd-status-receipt {
-  color: var(--blockr-color-text-secondary, #374151);
-}
-
-/* The chart's line sits under the caption and is there only while a filter
-   or a receipt is (chart/chrome.js _updateStatus): nothing filtered, no line
-   and no gap. No Reset; a second click on the selected mark clears. */
+   fades. One step darker than the muted status line it replaces, and not the
+   primary blue: the blue read as a link and outlived the flash, leaving a
+   coloured sentence with nothing coloured left on screen. The change of words
+   is the signal; the mark carries the colour.
+   It leaves the way the mark does, hold then fade, rather than being cut. It
+   is held longer than the mark (1400ms against 400ms) because a sentence takes
+   longer to read than a lit bar takes to notice.
+   The fade is linear, not the mark's ease-in. Grey text is invisible around
+   opacity 0.3, so only the top two thirds of the ramp are seen; under ease-in
+   that stretch was squeezed into the last ~350ms and the line read as cut.
+   The `animation` shorthand is set inline by chart/chrome.js, not here:
+   _updateStatus() rebuilds this element on every chart re-render, and a fresh
+   element would restart the animation. The delay is computed from the age of
+   the receipt, so a rebuild resumes the fade instead of replaying it. Only
+   the keyframes and the colour belong in CSS. */
+.dd-status-receipt { color: var(--blockr-color-text-secondary, #374151); }
+/* The chart's line sits under the caption and is there only while a filter or
+   a receipt is (chart/chrome.js _updateStatus): nothing filtered, no line and
+   no gap. There is no Reset; a second click on the selected mark clears. */
 .dd-card > .dd-status-footer {
   justify-content: flex-start;
   gap: 12px;
   padding: 4px 2px 0;
 }
-.dd-card > .dd-status-footer:empty {
-  display: none;
-}
-.dd-card > .dd-status-footer .dd-status-cap {
-  margin-left: 0;
-}
-
+.dd-card > .dd-status-footer:empty { display: none; }
+.dd-card > .dd-status-footer .dd-status-cap { margin-left: 0; }
 /* The resting line coming back after a receipt. Without this it snaps into the
-   slot the receipt just dissolved out of, which is the cut moved one step
-   later rather than removed. */
-.dd-status-returning {
-  animation: dd-status-in 320ms ease-out both;
-}
-
+   slot the receipt just dissolved out of, which moves the cut one step later
+   and does not remove it. */
+.dd-status-returning { animation: dd-status-in 320ms ease-out both; }
 @keyframes dd-status-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
 .dd-status-cap {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-warning-text, #b45309);
   font-style: italic;
   margin-left: 12px;
 }
-
 .dd-slider {
   width: 100%;
   accent-color: var(--blockr-color-primary, #2563eb);
   cursor: pointer;
 }
-
 .dd-slider-value {
   font-variant-numeric: tabular-nums;
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   color: var(--blockr-grey-600, #4b5563);
   min-width: 3ch;
   text-align: right;
-}
-
-/* ===== Keyboard accessibility: visible focus on every gear control =====
-   The design system's focus outline, on :focus-visible only. Shared by the
-   chart and table gears (both drawn by the core gear engine). */
-.dd-popover .blockr-pill:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #2563eb);
-  outline-offset: var(--blockr-focus-offset, 2px);
 }
 
 /* ===== Header =====
@@ -869,7 +734,10 @@
      at the top right. */
   align-items: start;
 }
-.vz-head > .vz-head__titles { grid-area: titles; min-width: 0; }
+.vz-head > .vz-head__titles {
+  grid-area: titles;
+  min-width: 0;
+}
 .vz-head > .vz-head__tools {
   grid-area: tools;
   display: flex;
@@ -879,27 +747,21 @@
 .vz-head > .vz-head__tools:empty { display: none; }
 .vz-head > .blockr-gear-btn { grid-area: gear; }
 .vz-head > .blockr-settings { grid-area: tray; }
-.vz-head.vz-head--open {
-  grid-template-areas: ". . gear" "tray tray tray" "titles tools tools";
-}
+.vz-head.vz-head--open { grid-template-areas: ". . gear" "tray tray tray" "titles tools tools"; }
 .vz-head.vz-head--open > .vz-head__tools { justify-self: end; }
 .vz-head.vz-head--open > .blockr-settings { margin: 8px 0 10px; }
+.dd-card .vz-head > .dd-chart-titles { padding: 2px 8px 0 2px; }
 
-.dd-card .vz-head > .dd-chart-titles {
-  padding: 2px 8px 0 2px;
-}
-
-/* -- Exposed mapping band ---------------------------------------------------
+/* ===== Exposed mapping band =====
    Mapping roles promoted out of the gear onto the block's face (the chart
    block's `expose` argument). The rows are the gear's own role rows, rendered
    into this container instead of the popover, so the two surfaces cannot
-   drift apart -- everything below is layout.
-
-   Geometry follows the code / function block's params grid
-   (blockr.extra .fb-params-grid): 13px medium label at 5px, a 42px control
-   shell, a 12px gap, and a column ladder that steps on the PANEL's width, not
-   the viewport's. A band of selects wants a wide track -- four narrow columns
-   of truncated column names say nothing -- so a third and fourth column are
+   drift apart; everything below is layout.
+   Geometry follows the code / function block's params grid (blockr.extra
+   .fb-params-grid): a 13px medium label 5px above a 42px control shell, a
+   12px gap, and a column ladder that steps on the panel's width, not the
+   viewport's. A band of selects wants a wide track, since four narrow columns
+   of truncated column names say nothing, so a third and fourth column are
    added only once every column still clears ~330px. */
 .dd-mapping-band {
   container-type: inline-size;
@@ -907,13 +769,12 @@
   gap: 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   /* No padding on top: the gear header above already carries its own space,
-     and the code block's params sit 6px under the icon row. Measured, not
-     guessed -- 12px here put the first label 18px down. */
+     and the code block's params sit 6px under the icon row. Measured: 12px here
+     put the first label 18px down. */
   padding: 0 12px 12px;
   border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
   background: #fff;
 }
-
 @container (max-width: 1356px) {
   .dd-mapping-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -923,24 +784,72 @@
 @container (max-width: 452px) {
   .dd-mapping-band { grid-template-columns: 1fr; }
 }
-
+/* The popover rows are laid out for a narrow column; on the face they sit in
+   the grid, so they drop the popover's own spacing and take the 42px shell. */
+.dd-mapping-band .dd-band-row {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+/* 5px under the label, as .fb-field-label sets it. The head is a flex box
+   whose own height can exceed the label's line box, so it is zeroed and the
+   gap is put on the head itself. */
+.dd-mapping-band .dd-band-row .dd-row-head {
+  margin: 0 0 5px;
+  padding: 0;
+  min-height: 0;
+  line-height: inherit;
+}
+/* The popover label carries its own 4px bottom margin, which stacks with the
+   head's 5px and made the gap 9px against the code block's 5px. */
+.dd-mapping-band .dd-band-row .blockr-label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: 500;
+  color: var(--blockr-color-text-secondary, #6b7280);
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 19.5px;
+  margin-bottom: 0;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls > * {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* The help line under a picker is gear voice (it explains a choice while you
+   configure). On the face it would double the band's height on every block, so
+   it is dropped: the label and the value carry the reading. */
+.dd-mapping-band .dd-band-row .dd-form-help { display: none; }
+/* A script that threw, and a declaration that could not become a control.
+   Both read as errors rather than as help text, because both mean a knob the
+   user expected is not there. */
+.dd-script-failed { color: var(--blockr-color-danger, #b91c1c); }
+.dd-mapping-band .dd-script-input-error .dd-form-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.dd-mapping-band .dd-script-failed {
+  grid-column: 1 / -1;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
 .dd-mapping-band .blockr-text-input {
   padding: 10px 14px;
   min-height: 42px;
 }
 
-/* ---------------------------------------------------------------------------
-   Prepare script (chart block `script` argument).
-
-   The gear's textarea, and the two failure surfaces. Nothing here styles the
-   script's CONTROLS: those are ordinary band rows drawn by the same renderer
-   a mapping row uses, so they already inherit the shell, the label track and
-   the column ladder above.
-   --------------------------------------------------------------------------- */
-/* A gear section is a four-column grid sized for narrow pickers. A script is
-   the one thing in here that wants the whole width, so this row spans every
-   track. (`flex` does nothing on a grid item, which is why the row measured
-   203.75px until this said `grid-column`.) */
+/* ===== Prepare script (chart block `script` argument) =====
+   The gear's textarea and the two failure surfaces above. Nothing here styles
+   the script's controls: those are ordinary band rows drawn by the renderer a
+   mapping row uses, so they inherit the shell, the label track and the column
+   ladder. */
+/* A gear section is a grid of narrow tracks for pickers. A script wants the
+   whole width, so its row spans every track. (`flex` does nothing on a grid
+   item.) */
 .dd-script-row {
   grid-column: 1 / -1;
   width: 100%;
@@ -949,56 +858,29 @@
   display: block;
   margin-top: 6px;
 }
-
-/* The data tooltip's content (.dd-tt-*) is in tooltip.css (tooltip_card_dep()). */
-
-/* A slot being typed over (SentenceSlots._edit): sits in the line where the
-   word was, the word's colour and weight, a box instead of the underline. */
-.blockr-slot-input {
-  font: inherit;
-  font-weight: 500;
-  color: var(--blockr-blue-700, #1d4ed8);
-  padding: 0 4px;
-  margin: 0 1px;
-  border: 1px solid var(--blockr-color-border-accent, #2563eb);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-color-bg-surface, #fff);
-  line-height: inherit;
-  outline: none;
-  /* A field being typed in: the accent edge and the focus ring (design
-     system, "Focus"). */
-  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
-  font-variant-numeric: tabular-nums;
+.dd-script-row .dd-row-controls { flex-direction: column; }
+.dd-script-wrap {
+  display: block;
+  width: 100%;
 }
-/* A number keeps type=number for the keyboard, without the spinner. */
-.blockr-slot-input[type=number] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-.blockr-slot-input[type=number]::-webkit-outer-spin-button,
-.blockr-slot-input[type=number]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.dd-script-editor {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--blockr-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
 }
 
-/* A number's range, beside the field while it is typed over ("0 to 50").
-   Says which end it will be held at once the typed value leaves it. */
-.blockr-slot-range {
-  margin: 0 4px 0 2px;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: 400;
-  color: var(--blockr-color-text-muted, #6b7280);
-  white-space: nowrap;
-}
-.blockr-slot-range--out {
-  color: var(--blockr-color-text-danger, #b91c1c);
-}
-
-/* ---- Busy cue (inst/js/busy-cue.js). An output being recomputed keeps its
-   old picture, dimmed, and the line under its sentence counts the wait. The
-   class lands 300 ms after R's "blockr-busy" and leaves once the new picture
-   is drawn. The sentence keeps full contrast: it names what is being
-   computed. Copied from the composer block's cue, which this replaces. */
+/* ===== Busy cue (inst/js/busy-cue.js) =====
+   An output being recomputed keeps its old picture, dimmed, and the line under
+   its sentence counts the wait. The class lands 300 ms after R's
+   "blockr-busy" and leaves once the new picture is drawn. The sentence keeps
+   full contrast: it names what is being computed. */
 .blockr-busy-line {
   height: 0;
   overflow: hidden;
@@ -1009,31 +891,26 @@
   font-variant-numeric: tabular-nums;
   transition: height 0.15s ease;
 }
-
 /* The line opens rather than appears, so the output slides down under it. */
-.blockr-busy .blockr-busy-line {
-  height: 24px;
-}
-
+.blockr-busy .blockr-busy-line { height: 24px; }
 /* On the elements themselves, so the output fades back in as well as out. */
 .dd-chart-grid,
 .dd-legend-band,
-[data-dt-elem-id] .blockr-table-wrapper {
-  transition: opacity 0.15s ease;
-}
-
+[data-dt-elem-id] .blockr-table-wrapper { transition: opacity 0.15s ease; }
 .blockr-busy .dd-chart-grid,
 .blockr-busy .dd-legend-band,
-.blockr-busy .blockr-table-wrapper {
-  opacity: 0.45;
-}
+.blockr-busy .blockr-table-wrapper { opacity: 0.45; }
 
-/* Empty state */
+/* ===== Empty state ===== */
 .vd-empty-state {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 120px; padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 24px;
 }
 .vd-empty-text {
-  font-size: 13px; color: var(--blockr-color-text-muted, #9ca3af);
+  font-size: 13px;
+  color: var(--blockr-color-text-muted, #9ca3af);
   text-align: center;
 }

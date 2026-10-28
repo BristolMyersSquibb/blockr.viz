@@ -1,12 +1,9 @@
-# The table block's server, on the kit (kit-server.R, kit-output.R).
-#
-# One view, "table": the gear's settings arrive as `table_set`, clicks as
-# `table_select`, the browser's picture as `table_capture`, and the output
-# `table` carries the payload. The state is one reactiveVal per spec
-# argument. The layout picks the part that builds the table model, the
-# emitted filter, the drill claims and the exhibit (R/table-records.R,
-# R/table-groups.R, R/table-variables.R); only the current layout's part
-# reads the data.
+# The table block's server, on the kit (kit-server.R, kit-output.R). One view,
+# "table": settings arrive as `table_set`, clicks as `table_select`, the
+# browser's picture as `table_capture`; the output `table` carries the payload.
+# The state is one reactiveVal per spec argument. The layout picks the part
+# (R/table-records.R, R/table-groups.R, R/table-variables.R); only the current
+# layout's part reads the data.
 #
 # A part is a list of
 #   shown()        reactive: the frame the table is built from, which the
@@ -38,7 +35,6 @@ table_server <- function(id, data, init) {
         kit$capture(NULL), ignoreInit = TRUE
       )
       list(
-        # The rules between arguments: R/table-normalize.R.
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles),
         expr = table_expr(kit, part),
@@ -54,19 +50,22 @@ table_server <- function(id, data, init) {
   )
 }
 
-# What every layout reads: the prepare script run on the input
-# (R/table-prepare.R), its output coerced to a frame, and the board's
-# scale map, subject column and drill targets.
+# What every layout reads: the prepared input as a frame, the board's scale
+# map, subject column and drill targets.
 table_sources <- function(data, state, session) {
   prep <- table_prepare(data, r_script = state$script,
                         r_values = state$script_values)
+  rows <- shiny::reactive({
+    d <- prep$data()
+    if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
+  })
   list(
     prep = prep,
     values = table_view_values(state),
-    rows = shiny::reactive({
-      d <- prep$data()
-      if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
-    }),
+    rows = rows,
+    columns = shiny::reactive(
+      viz_wire_columns(tryCatch(rows(), error = function(e) NULL))
+    ),
     scale_map = dd_board_scale_map(),
     subject = function() dd_ctrl_subject(session),
     ctrl_choices = dd_ctrl_choices()
@@ -74,8 +73,7 @@ table_sources <- function(data, state, session) {
 }
 
 # The title bands, resolved against the frame the current layout builds its
-# table from. Every layout has them, with the spec's slots and the prepare
-# script's values as `{@arg}`.
+# table from; the spec's slots and the prepare script's values are `{@arg}`.
 table_titles <- function(kit, src, part) {
   shiny::reactive({
     d <- tryCatch(part()$shown(), error = function(e) NULL)
@@ -110,29 +108,25 @@ table_payload <- function(kit, src, part, titles) {
         capture_ratio = canvas_capture_ratio()
       )
     )
-    viz_payload(kit$spec, v, rows(built$model), kit$revs,
+    viz_payload(kit$spec, v, rows(built$model, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }
 }
 
-#' The table model as the payload's rows, written once per content
-#'
-#' The model goes into `payload.data`; its revision goes up only when the
-#' model changes, so a click or a title edit sends the state and the
-#' browser keeps the table it drew, with its sort and folds. No table is
-#' `{}`.
-#' @noRd
+# The table model as the payload's rows. The revision goes up only when the
+# model changes, so a click or a title edit leaves the browser's table, sort
+# and folds alone. No table is `{}`; `columns` are the input's, for the gear.
 table_model_rows <- function() {
   last <- new.env(parent = emptyenv())
   last$rev <- 0L
   last$data <- NULL
-  function(model) {
+  function(model, columns = NULL) {
     data <- model %||% structure(list(), names = character())
     if (!identical(data, last$data)) {
       last$rev <- last$rev + 1L
       last$data <- data
     }
-    list(data = data, rev = last$rev, columns = NULL)
+    list(data = data, rev = last$rev, columns = columns)
   }
 }
 

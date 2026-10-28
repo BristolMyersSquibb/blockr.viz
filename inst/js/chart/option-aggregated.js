@@ -14,6 +14,7 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
+  const { withItemStyle } = parts;
 
   // Config fields the option reads beside the model's.
   const OPTION_FIELDS = ['type', 'position', 'orientation', 'value_labels', 'y_lines',
@@ -22,13 +23,13 @@
     'category', 'color', 'facet', 'format', 'unit', 'derived.titles', 'legend', 'x_lines',
     'x_ranges'];
 
+  // The opacity of a mark a filter does not light.
+  const DIM = 0.15;
   // The canvas of a builder that sizes nothing itself.
   const DEFAULT_PANEL_H = 350;
 
-  /**
-   * What every builder shares: axis ink, the value's title, the
-   * aggregation's name and the tooltip's rows.
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
+  /** What every builder shares: the option's base, the value's title, the aggregation's name and
+   * the tooltip's rows. @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
    */
   parts.common = (look) => {
     const { cfg, columns, ink } = look;
@@ -42,8 +43,6 @@
     return {
       base: { ...(look.theme ? {} : { backgroundColor: 'transparent' }),
               textStyle: { fontFamily: ink.face } },
-      ax: { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border },
-      esc: NS.esc,
       title,
       valueTitle: cfg.measure === '.count' ? 'Count' : col,
       aggLabel,
@@ -106,22 +105,17 @@
    */
   const aggregatedLegend = (m, cfg) => {
     const ct = m.type;
-    const palette = NS.paletteOf(cfg);
-    let levels = [];
-    if (m.distribution) levels = m.levels;
-    else if (ct !== 'pie' && ct !== 'treemap' && !m.cumulative) levels = m.colors;
+    const levels = m.distribution ? m.levels
+      : (ct !== 'pie' && ct !== 'treemap' && !m.cumulative ? m.colors : []);
     if (!levels.length) return null;
+    const palette = NS.paletteOf(cfg);
     // A highlight lists only the levels it lights.
-    if (m.hlColors && !m.distribution) {
-      const lit = NS.litLevelColors(levels, m.hlColors, m.colorScale, palette);
-      const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
-        ({ name, color: lit[i] })).filter((/** @type {any} */ it) => it.color);
-      return items.length ? { col: cfg.color, items } : null;
-    }
-    const colors = NS.levelColors(levels, m.colorScale, palette);
-    return { col: cfg.color,
-             items: levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
-               ({ name, color: colors[i] })) };
+    const colors = (m.hlColors && !m.distribution)
+      ? NS.litLevelColors(levels, m.hlColors, m.colorScale, palette)
+      : NS.levelColors(levels, m.colorScale, palette);
+    const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
+      ({ name, color: colors[i] })).filter((/** @type {any} */ it) => it.color);
+    return items.length ? { col: cfg.color, items } : null;
   };
 
   // Series patched only while a filter dims something (or to undo it).
@@ -163,14 +157,14 @@
       if (s.type === 'pie' || s.type === 'treemap') {
         const dim = s.type === 'pie' ? 0.2 : 0.3;
         return { data: (s.data || []).map((/** @type {any} */ d) => d == null ? d
-          : ({ ...d, itemStyle: { ...d.itemStyle, opacity: on(d.name, null) ? 1 : dim } })) };
+          : withItemStyle(d, { opacity: on(d.name, null) ? 1 : dim })) };
       }
       if (s.type === 'boxplot') {
         if (cats.length === 0) return {};
         return { data: (s.data || []).map((/** @type {any} */ v, /** @type {number} */ i) => {
           if (!v || typeof v !== 'object') return v;
           const [g, lv] = slotMark(cats[i]);
-          return { ...v, itemStyle: { ...v.itemStyle, opacity: on(g, lv) ? 1 : 0.15 } };
+          return withItemStyle(v, { opacity: on(g, lv) ? 1 : DIM });
         }) };
       }
       if (QUIET_TYPES.includes(s.type)) {
@@ -187,9 +181,7 @@
             cat = cats[idx];
           }
           const [g, lv] = slotMark(cat);
-          const op = on(g, lv) ? 1 : 0.15;
-          return isObj ? { ...d, itemStyle: { ...d.itemStyle, opacity: op } }
-            : { value: d, itemStyle: { opacity: op } };
+          return withItemStyle(d, { opacity: on(g, lv) ? 1 : DIM });
         }) };
       }
       if (cats.length === 0) return {};
@@ -201,7 +193,7 @@
           ...(isObj && v.raw != null ? { raw: v.raw } : {}),
           ...(isObj && v.label ? { label: v.label } : {}),
           itemStyle: { ...(isObj ? v.itemStyle : undefined),
-                       opacity: on(String(cats[i] ?? ''), lv) ? 1 : 0.15 }
+                       opacity: on(String(cats[i] ?? ''), lv) ? 1 : DIM }
         };
       }) };
     });

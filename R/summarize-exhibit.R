@@ -31,8 +31,8 @@
 #'   mtcars, by = "cyl",
 #'   summaries = list(
 #'     list(type = "simple", func = "count", show = "bar", name = "Cars"),
-#'     list(type = "dist", col = "mpg", style = "box",
-#'          inner = "median_q1_q3", outer = "p10_p90", name = "MPG")
+#'     list(type = "dist", col = "mpg", show = "box",
+#'          summary = "median_q1_q3", whiskers = "p10_p90", name = "MPG")
 #'   )
 #' )
 #' ex

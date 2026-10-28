@@ -117,7 +117,7 @@ deck rendering (quarto pptx, docx). flextable emits real OpenXML tables in
 PowerPoint and Word output.
 }
 \details{
-Structure comes from the annotated-df contract (shared with \code{html_table()}
+Structure comes from the annotated-df contract (shared with the table view
 and \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}}): \code{.label} is the row stub, \verb{.group<k>_level}
 runs and \code{.variable_label} blocks become bold section-header rows merged
 across the table width, \code{.indent} / \code{.strong} / \code{.emph} style rows,

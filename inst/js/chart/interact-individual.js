@@ -205,7 +205,7 @@
         this._filter = { type: 'categorical', filters: r.filters, brush: true };
         this._hasBrushFilter = true;
         this._refreshSelection();
-        this._sendFilter(r.filters);
+        this._sendSelection({ type: 'categorical', filters: r.filters });
         return;
       }
       this._selectRange(r.range, true, r.filters || null);

@@ -204,48 +204,6 @@ dd_script_key <- function(name) {
 }
 
 
-#' Read the script values back out of a config message
-#'
-#' @param msg The `config` action message.
-#' @param specs Input specs from [cb_specs()].
-#' @param current The current values list.
-#' @return The updated values list.
-#' @noRd
-dd_script_values <- function(msg, specs, current = list()) {
-
-  for (s in specs) {
-
-    if (!is.null(s$error) || is.na(s$kind)) {
-      next
-    }
-
-    key <- dd_script_key(s$name)
-
-    if (is.null(msg[[key]])) {
-      next
-    }
-
-    v <- msg[[key]]
-
-    # The engine sends "on" or "off" for a boolean.
-    if (identical(s$kind, "flag")) {
-      current[[s$name]] <- identical(as.character(v), "on")
-      next
-    }
-
-    # An emptied multi-select is a value, but an empty JS array arrives as
-    # NULL, which reads as an absent key. The band sends "" for it instead.
-    if (isTRUE(s$multiple) && identical(as.character(v), "")) {
-      current[[s$name]] <- character()
-      next
-    }
-
-    current[[s$name]] <- cb_coerce(v, s) %||% character()
-  }
-
-  current
-}
-
 
 #' Current script values, in the engine's vocabulary
 #'

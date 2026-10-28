@@ -47,6 +47,8 @@ interface VizMount {
   view: VizView;
   last: VizPayload | null;
   needRev: number | null;
+  /** The last value drawn, with its rows. */
+  drawn: VizPayload | null;
 }
 
 /** One row of a view's download menu (R/export-registry.R). */

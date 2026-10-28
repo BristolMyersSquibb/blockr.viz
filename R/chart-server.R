@@ -1,10 +1,9 @@
-# The chart block's server, on the kit (viz_block_server(), kit-server.R).
-#
-# The kit holds the state, one reactiveVal per spec argument under the
-# public names, and the observers that take the gear's settings, clicks and
-# pictures into it. The chart adds reactives that read the state: the data
-# it draws and the filter it emits (here), the payload and the exhibit for
-# the downloads (chart-view.R), and the claims a drill target receives.
+# The chart block's server, on the kit (viz_block_server()). The kit holds the
+# state, one reactiveVal per spec argument under the public names, and the
+# observers that take the gear's settings, clicks and pictures into it. The
+# chart adds reactives that read the state: the data it draws and the filter it
+# emits (here), the payload and the exhibit for the downloads (chart-view.R),
+# and the claims a drill target receives.
 
 chart_server <- function(id, data, init) {
   viz_block_server(
@@ -26,9 +25,9 @@ chart_server <- function(id, data, init) {
   )
 }
 
-# The data the chart draws: the input, coerced; the prepare script's
-# output; the column kinds the cross-argument rules read; and the frame
-# expanded by group definitions, with a histogram's bin column.
+# The data the chart draws: the input, coerced; the prepare script's output;
+# the column kinds the cross-argument rules read; and the frame expanded by
+# group definitions, with a histogram's bin column.
 chart_sources <- function(data, state) {
   src <- list()
   src$input <- shiny::reactive({
@@ -52,8 +51,8 @@ chart_sources <- function(data, state) {
     out
   })
   src <- c(src, chart_script_sources(src$raw, state))
-  # Kept while the data is momentarily gone (a hidden panel makes data()
-  # throw), so an inferred orientation does not flip on a view switch.
+  # Kept while the data is gone (a hidden panel makes data() throw), so an
+  # inferred orientation does not flip on a view switch.
   last_kinds <- new.env(parent = emptyenv())
   src$kinds <- shiny::reactive({
     d <- tryCatch(src$prepared(), error = function(e) NULL)
@@ -73,14 +72,13 @@ chart_sources <- function(data, state) {
   src
 }
 
-# The prepare script: parsed, its declarations read against the live data,
-# run. A failed script draws nothing: an empty frame with the input's
-# columns, so the payload still goes out and carries the error.
+# The prepare script: parsed, its declarations read against the data, run. A
+# failed script draws an empty frame with the input's columns, so the payload
+# still goes out and carries the error.
 chart_script_sources <- function(raw, state) {
   out <- list()
   out$parsed <- shiny::reactive(cb_parse(state$script()))
-  # While the data is gone the last good specs are kept; otherwise the
-  # expression flips on every view switch.
+  # Kept while the data is gone, or the expression flips on a view switch.
   last <- new.env(parent = emptyenv())
   last$specs <- list()
   out$specs <- shiny::reactive({
@@ -142,9 +140,9 @@ chart_split_cols <- function(v, kinds) {
 }
 
 # The emitted filter. A click selects source rows; with a prepare script the
-# filter goes inside it, except a condition on a column only the script
-# makes. The same object comes back while the code is unchanged: blockr.core
-# skips a re-evaluation on identity.
+# filter goes inside it, except a condition on a column only the script makes.
+# The same object comes back while the code is unchanged, so blockr.core skips
+# a re-evaluation.
 chart_expr <- function(data, state, src) {
   members <- dd_group_filters_members(
     function() chart_selection_filters(state$selection()), src$raw
@@ -180,8 +178,8 @@ chart_selection_filters <- function(sel) {
   lapply(f, function(v) as.character(unlist(v)))
 }
 
-# The selection's conditions, ANDed, and the columns each reads. A click on
-# a histogram bin is a range on x: the bin column exists only in what the
+# The selection's conditions and the columns each reads. A click on a
+# histogram bin is a range on x, since the bin column exists only in what the
 # chart draws.
 chart_filter_parts <- function(v, src, members) {
   sel <- v$selection
@@ -211,9 +209,9 @@ chart_filter_parts <- function(v, src, members) {
        cols = c(list(c(sel$x, if (!is.null(sel$y_range)) sel$y)), cols))
 }
 
-# What a drill target receives: the click's conditions. With a target set
-# a click is an event (the kit's `claim`); without, the held selection is
-# the claim. The kit sends them.
+# What a drill target receives: the click's conditions. With a target set a
+# click is an event (the kit's `claim`); without, the held selection is the
+# claim. The kit sends them.
 chart_claims <- function(kit, src) {
   shiny::reactive({
     d <- tryCatch(src$prepared(), error = function(e) NULL)

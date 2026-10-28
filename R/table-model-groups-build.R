@@ -1,19 +1,7 @@
-# Table model, groups layout: building the columns ------------------------------
-#
-# The per-summary build of the groups preparer. One builder, applied per
-# target frame (leaf keyed by `keys`, parents keyed by `parent`) and per data
-# slice (pooled = all rows; cell = one slice per facet level). Each
-# application fills `<sid>_*` columns and the plan entry for the column is
-# described by table-model-groups-plan.R. Also the series, spans and pair
-# builders, which are keyed by arbitrary key combos rather than one group
-# column.
-
-#' Build every summary's columns on the leaf and parent frames and collect
-#' the plan entries. The state `st` carries `summaries`, `leaf`, `par_rows`,
-#' `plan` and `primary` (the first summary and its column id, whose value is
-#' the sort key).
-#' @param ctx The preparer's context: `data`, `keys`, `parent`, `all`,
-#'   `pct_total`, `qualify`, `n_faceted`, `scale_map`, `subject`.
+#' Build every summary's columns on the leaf and parent frames and collect the
+#' plan entries.
+#' @return The state `st`: `summaries`, `leaf`, `par_rows`, `plan` and `primary`
+#'   (the first summary and its column id, whose value is the sort key).
 #' @noRd
 lane_build_columns <- function(summaries, leaf, par_rows, ctx) {
   st <- list(summaries = summaries, leaf = leaf, par_rows = par_rows,
@@ -24,8 +12,7 @@ lane_build_columns <- function(summaries, leaf, par_rows, ctx) {
   st
 }
 
-# The facet copies of one summary: one unfaceted copy over all rows, or one
-# per facet level over that level's rows.
+# Facet copies of one summary: one over all rows, or one per facet level.
 lane_summary_copies <- function(s, i, ctx) {
   data <- ctx$data
   fl <- s$.flevels
@@ -42,13 +29,10 @@ lane_summary_copies <- function(s, i, ctx) {
   })
 }
 
-# One summary's copies: fill the frames, add the plan entries. A custom
-# function that fails is the user's code: its column stays empty, with the
-# error beside it, and every other column draws. The copies already built
-# for it go, columns and plan entries, from the leaf and the parent rows
-# alike; the failed column is one copy. (When the function failed only on
-# the parent rows, the leaf kept that copy's columns and the two frames no
-# longer bound into one table.)
+# One summary's copies: fill the frames, add the plan entries. A failing custom
+# function leaves its column empty, with the error beside it; the copies
+# already built are dropped from leaf and parent rows alike, or the two frames
+# would no longer bind into one table.
 lane_build_summary <- function(st, i, ctx) {
   s <- st$summaries[[i]]
   copies <- lane_summary_copies(s, i, ctx)
@@ -77,16 +61,12 @@ lane_build_summary <- function(st, i, ctx) {
   st
 }
 
-# A copy's N: the denominator of a count's percentage and the population of a
-# facet copy.
 lane_copy_denom <- function(cp, s, ctx) {
   data <- ctx$data
-  # A count's N: the subjects (count distinct) or rows (count) in this
-  # copy's slice -- the whole data for an unfaceted column, one level's
-  # rows for a facet copy. Over the full slice, so rows without a group
-  # (the population join's) are in it (summarize_denom()).
-  # On the one row of a table without `by` the count is its own N, so
-  # its share would read 100%; a colour split keeps its shares.
+  # A count's N: subjects (count distinct) or rows (count) in the copy's slice,
+  # including rows without a group (summarize_denom()). On the one row of a
+  # table without `by` the count is its own N and would read 100%, so it is
+  # skipped; a colour split keeps its shares.
   same_n <- ctx$all && is.null(s$.color) &&
     !(ctx$pct_total && !is.null(cp$level))
   if (identical(s$type, "simple") && !same_n &&
@@ -95,15 +75,14 @@ lane_copy_denom <- function(cp, s, ctx) {
                               summarize_chr1(s$func) %||% "count",
                               summarize_chr1(s$col))
   }
-  # Every facet copy says its level's N, whatever the column shows: the
-  # subjects in the slice, rows when the board declares no subject.
+  # Every facet copy says its level's N: subjects in the slice, rows when the
+  # board declares no subject.
   if (!is.null(cp$level)) cp$pop <- summarize_pop_n(cp$slice, ctx$subject)
   cp
 }
 
 # Fill the leaf and parent frames for one copy. Returns `list(st, failed)`;
-# `failed` is the message of a custom function's error, else NULL. On a
-# failure the caller drops what the summary wrote (lane_build_summary()).
+# `failed` is a custom function's error message, else NULL.
 lane_fill_copy <- function(st, cp, s, ctx) {
   r <- lane_try_fill(st$leaf, ctx$keys, ctx$keys, cp$slice, s, cp$suffix)
   if (!inherits(r, "lane_custom_error")) {
@@ -143,18 +122,17 @@ lane_replace_failed <- function(st, s, sid1, n0, ctx) {
   st
 }
 
-# The series reference is computed per COPY over the slice's values:
-# every sparkline in the column is oriented against the same line
-# (per facet level, its own level's line).
+# The sparkline reference is computed per copy over its slice, so every
+# sparkline in the column is oriented against the same line.
 lane_series_ref <- function(cp, s) {
-  if (identical(s$type, "series") &&
-        !identical(s$ref %||% "none", "none")) {
+  if (identical(s$type, "sparkline") &&
+        !identical(s$summary %||% "none", "none")) {
     ys <- as.numeric(cp$slice[[summarize_chr1(s$col)]])
     ys <- ys[is.finite(ys)]
-    cp$ref <- switch(s$ref,
+    cp$ref <- switch(s$summary,
       mean = list(center = mean(ys)),
       mean_sd = lane_summarize(ys, "mean_sd"),
-      median_iqr = lane_summarize(ys, "median_q1_q3")
+      median_q1_q3 = lane_summarize(ys, "median_q1_q3")
     )
   }
   cp
@@ -179,7 +157,7 @@ lane_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) {
     dist = lane_fill_dist(target, tkeys, slice, s, sid),
     field = lane_fill_field(target, tkeys, slice, s, sid),
     expr = lane_fill_expr(target, tkeys, slice, s, sid),
-    series = lane_fill_series(target, tkeys, slice, s, sid),
+    sparkline = lane_fill_series(target, tkeys, slice, s, sid),
     pair = lane_pair_fill(target, tkeys, keys, slice, s, sid),
     spans = lane_fill_spans(target, tkeys, slice, s, sid),
     target
@@ -197,17 +175,14 @@ lane_put_value <- function(target, slice, out, tkeys, s, f) {
 lane_fill_simple <- function(target, tkeys, slice, s, sid) {
   f <- summarize_chr1(s$func) %||% "count"
   target <- lane_put_value(target, slice, paste0(sid, "_v"), tkeys, s, f)
-  # A tile's paint: the worst level of `fill` among the group's rows,
-  # as an index into the column's levels (NA = no row with a level).
+  # A tile's paint: index of the worst `fill` level among the group's rows.
   if (!is.null(s$.fill)) {
     target[[paste0(sid, "_w")]] <- lane_tile_worst(
       target, tkeys, slice, s$.fill, s$.fill_levels
     )
   }
-  # The pooled value above stays the sort key and the label either
-  # way; the per-level values are what the split draws. The dot names
-  # them for lane_color_split()'s geometry keys, the bar for the
-  # barsplit emitter's `prefix + level` lookup.
+  # The pooled value stays the sort key and label; the split draws the
+  # per-level values, named `_L<j>_bc` for the dot and `_S_<level>` for the bar.
   cc <- s$.color
   if (!is.null(cc)) {
     dot <- identical(s$show, "dot")
@@ -226,7 +201,6 @@ lane_fill_simple <- function(target, tkeys, slice, s, sid) {
   target
 }
 
-# The per-group statistics of a distribution column, under `prefix`.
 lane_put_stats <- function(target, slice, prefix, tkeys, s, stats) {
   agg <- lane_stat_agg(slice, tkeys, summarize_chr1(s$col), stats)
   for (nm in setdiff(names(agg), tkeys)) {
@@ -237,19 +211,16 @@ lane_put_stats <- function(target, slice, prefix, tkeys, s, stats) {
 }
 
 lane_fill_dist <- function(target, tkeys, slice, s, sid) {
-  # `.b` carries the centre and (unless inner is off) the inner range;
-  # `.w` the outer range. Both styles compute both -- the style decides
-  # how they are drawn, never which numbers exist.
+  # `.b` is the centre and (unless inner is off) the inner range, `.w` the
+  # outer range. Both styles compute both; the style only decides the drawing.
   stats <- list(.b = lane_dist_centre_stat(s))
-  if (!identical(s$outer %||% "none", "none")) {
-    stats$.w <- s$outer
+  if (!identical(s$whiskers %||% "none", "none")) {
+    stats$.w <- s$whiskers
   }
-  # The pooled glyph is computed either way: it is the column's sort
-  # key and its fallback when no colour splits it.
+  # The pooled glyph is the sort key and the fallback when no colour splits it.
   target <- lane_put_stats(target, slice, sid, tkeys, s, stats)
-  # The colour dimension (chart parity: colour splits a distribution
-  # into one glyph per level). Each level gets its own stat columns;
-  # a level with no rows in this group stays NA and draws no lane.
+  # Colour splits a distribution into one glyph per level, each with its own
+  # stat columns; a level with no rows in the group stays NA and draws no lane.
   cc <- s$.color
   if (!is.null(cc)) {
     for (j in seq_along(s$.levels)) {
@@ -324,12 +295,6 @@ lane_fill_spans <- function(target, tkeys, slice, s, sid) {
   target
 }
 
-# --- series / spans builders --------------------------------------------------
-# Compact re-statements of the single-mark builders in the variables layout,
-# keyed by arbitrary key combos rather than one group column. Each returns
-# a list-column aligned to `target`, plus stashes the raw extents as
-# attributes for the domain pass.
-
 #' @noRd
 lane_key_string <- function(df, keys) {
   do.call(paste, c(lapply(keys, function(k) as.character(df[[k]])),
@@ -347,7 +312,7 @@ lane_as_num <- function(v) {
 lane_series_split <- function(slice, target, tkeys, s) {
   xs <- lane_as_num(slice[[summarize_chr1(s$x)]])
   ys <- as.numeric(slice[[summarize_chr1(s$col)]])
-  band <- as.character(s$band %||% character())
+  band <- as.character(c(s$ymin, s$ymax))
   band <- band[nzchar(band)]
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
     is.numeric(slice[[band[[1L]]]]) && is.numeric(slice[[band[[2L]]]])
@@ -371,14 +336,14 @@ lane_spans_split <- function(slice, target, tkeys, s) {
   xe <- lane_as_num(slice[[summarize_chr1(s$xend)]])
   color <- summarize_chr1(s$color)
   color <- if (!is.null(color) && color %in% names(slice)) color
-  # Full-data level order rides on the summary (s$.levels), so a facet
-  # slice missing a level cannot renumber the fills.
+  # Full-data level order (s$.levels), so a facet slice missing a level cannot
+  # renumber the fills.
   lv <- s$.levels
-  # Event identity: the label column headlines the segment tooltip and
-  # keys the same-event hover highlight; fields append extra columns.
+  # The label column headlines the segment tooltip and keys the same-event
+  # hover highlight; fields add columns.
   lbcol <- summarize_chr1(s$label)
   lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
-  fcols <- intersect(as.character(s$fields %||% character()), names(slice))
+  fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
   ok <- if (is.null(xs) || is.null(xe)) {
     rep(FALSE, nrow(slice))
   } else {
@@ -414,23 +379,17 @@ lane_spans_split <- function(slice, target, tkeys, s) {
   })
 }
 
-# --- pair builder ---------------------------------------------------------------
-
 LANE_PAIR_WORDS <- c(identity = "", mean = "Mean", median = "Median",
                      min = "Min", max = "Max")
 
-#' Fill one pair row's columns on `target`: `_from`, `_to`, the band `_lo` /
-#' `_hi` (NA where there is none), the colour level index `_f` and the dash
-#' level index `_d`. A colour split adds the same set per level under
-#' `_L<j>`, from that level's rows only.
-#'
-#' A leaf row summarises its own rows with the row's functions. A parent row
-#' (the arm above its subjects) is the mean of its leaf rows' values instead:
-#' "baseline to peak per subject" read at the arm is the mean baseline to the
-#' mean peak, where the row's functions over all of the arm's rows would give
-#' the first subject's baseline and the arm's single highest value. The band
-#' and every colour level follow the same rule, and `_n` counts the leaf rows
-#' a parent averages over (NA on leaf rows; per level under `_L<j>_n`).
+#' Fill one pair row's columns: `_from`, `_to`, band `_lo` / `_hi`, colour level
+#' index `_f`, dash level index `_d` and `_n`. A colour split repeats the set
+#' per level under `_L<j>`, from that level's rows.
+#' A leaf row applies the row's functions to its own rows. A parent row is the
+#' mean of its leaf rows' values instead: at the arm, "baseline to peak per
+#' subject" is the mean baseline to the mean peak, where the functions over all
+#' the arm's rows would give the first subject's baseline and the highest peak.
+#' `_n` counts the leaf rows a parent averages over (NA on leaf rows).
 #' @noRd
 lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
   parent_row <- length(tkeys) < length(keys)
@@ -451,8 +410,7 @@ lane_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
   target
 }
 
-# One group's value of a pair end: the row's function over its own rows, or
-# for a parent row the mean of its leaf rows' values.
+# One group's value of a pair end: the row's function over its own rows.
 lane_pair_agg_one <- function(sl, func, col, kk) {
   if (identical(func, "identity")) {
     g <- dplyr::group_by(sl, dplyr::across(dplyr::all_of(kk)))
@@ -466,8 +424,8 @@ lane_pair_agg_one <- function(sl, func, col, kk) {
   }
 }
 
-# The leaf rows' values: one per group of `keys`, without the rows that
-# have no group (they draw no leaf row, so no parent averages over them).
+# Leaf values, one per group of `keys`; rows without a group draw no leaf row,
+# so no parent averages over them.
 lane_pair_leaf_vals <- function(sl, func, col, keys) {
   out <- lane_pair_agg_one(sl, func, col, keys)
   out[stats::complete.cases(out[keys]), , drop = FALSE]
@@ -503,7 +461,7 @@ lane_pair_level_idx <- function(target, sl, col, lv, tkeys) {
   match(summarize_match_field(target, agg, tkeys, ".t"), lv)
 }
 
-# The leaf rows of the slice under each parent row: what its mean is over.
+# Leaf rows under each parent row: what its mean is over.
 lane_pair_n_leaf <- function(target, sl, tkeys, keys, parent_row) {
   if (!parent_row) return(rep(NA_integer_, nrow(target)))
   lk <- unique(sl[keys])
@@ -520,26 +478,25 @@ lane_pair_band <- function(target, sl, b, tkeys, keys, parent_row) {
   lane_pair_per(target, sl, "mean", b, tkeys, keys, parent_row)
 }
 
-# Both ends, the band, the dash index and the leaf count of one slice,
-# under `prefix`: once for the pooled pair, once per colour level for the
-# split.
+# Both ends, band, dash index and leaf count of one slice under `prefix` (the
+# pooled pair, or one colour level).
 lane_pair_ends <- function(target, sl, prefix, s, tkeys, keys, parent_row) {
   target[[paste0(prefix, "_from")]] <- lane_pair_per(
-    target, sl, s$from_func, s$from, tkeys, keys, parent_row
+    target, sl, s$x_func, s$x, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_to")]] <- lane_pair_per(
-    target, sl, s$to_func, s$to, tkeys, keys, parent_row
+    target, sl, s$xend_func, s$xend, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_lo")]] <- lane_pair_band(
-    target, sl, s$lo, tkeys, keys, parent_row
+    target, sl, s$ref_min, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_hi")]] <- lane_pair_band(
-    target, sl, s$hi, tkeys, keys, parent_row
+    target, sl, s$ref_max, tkeys, keys, parent_row
   )
   target[[paste0(prefix, "_n")]] <- lane_pair_n_leaf(
     target, sl, tkeys, keys, parent_row
   )
-  dash <- s$dash
+  dash <- s$linetype
   target[[paste0(prefix, "_d")]] <- if (!is.null(dash) &&
                                           length(s$.dlevels)) {
     lane_pair_level_idx(target, sl, dash, s$.dlevels, tkeys)

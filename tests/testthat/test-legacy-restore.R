@@ -192,7 +192,7 @@ test_that("a grouped tile restores as grouped cards with its drill", {
   expect_identical(r$args$by, "region")
   expect_identical(vapply(r$args$summaries, `[[`, "", "func"),
                    c("sum", "count"))
-  expect_identical(r$args$drill, "auto")
+  expect_identical(r$args$drill, "region")
   expect_identical(r$args$selection$filters, list(region = "North"))
   expect_identical(r$attrs$block_name, "Revenue by region")
 })
@@ -200,6 +200,75 @@ test_that("a grouped tile restores as grouped cards with its drill", {
 test_that("a tile's lost settings are named in one warning", {
   expect_warning(legacy_deser("tile_block", tile_payloads()[["wide"]]),
                  "unit")
+})
+
+# blockr.viz's own heatmap block, saved by 0.2.223 with its defaults
+# (_scratch/viz-cran-review/integration/make-legacy.R, the old-heatmap board).
+heatmap_saved <- function() {
+  blockr.core:::read_json(test_path("fixtures", "heatmap-block-0.2.223.json"))
+}
+
+test_that("a saved heatmap restores as a compact groups table", {
+  expect_warning(r <- legacy_deser("heatmap_block", heatmap_saved()),
+                 "new_heatmap_block\\(\\) is gone: Old: heatmap")
+  expect_identical(r$block, "table")
+  expect_identical(r$attrs$block_name, "Old: heatmap")
+  restored_ok("table", r$args)
+  expect_identical(r$args$layout, "groups")
+  expect_identical(r$args$look, "compact")
+  s <- r$args$summaries[[1L]]
+  expect_identical(s[c("type", "func", "show")],
+                   list(type = "simple", func = "count", show = "tile"))
+  expect_identical(r$args$drill, "auto")
+  expect_identical(r$args$drill_target, "auto")
+})
+
+test_that("a heatmap's settings land on the table and its tile summary", {
+  p <- list(row = "USUBJID", col = "AEDECOD", color = "AETOXGR",
+            group = "TRT01A", top_n = 10, cell_numbers = FALSE,
+            download = TRUE, ctrl_target = "f1", max_height = 400,
+            subtitle = "Top {@top_n} {label(@col)}, by {label(@color)}",
+            script = "top_n <- 25\ndata", values = list())
+  expect_warning(st <- legacy_restore_heatmap(p, "AEs"), "AEs restores")
+  restored_ok("table", st)
+  expect_identical(st$by, c("TRT01A", "USUBJID"))
+  s <- st$summaries[[1L]]
+  expect_identical(s$facet, "AEDECOD")
+  expect_identical(s$fill, "AETOXGR")
+  expect_false(st$value_labels)
+  expect_true(st$download)
+  expect_identical(st$drill_target, "f1")
+  expect_equal(st$script_values, list(top_n = 10))
+  expect_identical(st$subtitle,
+                   "Top {@top_n} {label(@facet)}, by {label(@fill)}")
+  expect_false("max_height" %in% names(st))
+})
+
+test_that("a restored heatmap draws one row per subject", {
+  ae <- data.frame(
+    TRT01A = c("A", "A", "A", "B"), USUBJID = c("1", "1", "2", "3"),
+    AEDECOD = c("x", "y", "x", "x"), AETOXGR = c("1", "3", "2", "1")
+  )
+  st <- suppressWarnings(legacy_restore_heatmap(list(
+    row = "USUBJID", col = "AEDECOD", color = "AETOXGR", group = "TRT01A"
+  )))
+  st <- table_normalize(viz_check(viz_block_spec("table"), st))
+  m <- table_model_groups(st, ae)
+  expect_null(m$prep$err)
+  v <- table_groups_view(m)
+  expect_identical(as.character(v$cols[[1L]]$disp),
+                   c("A", "1", "2", "B", "3"))
+})
+
+test_that("a saved heatmap board entry restores as a table block", {
+  b <- suppressWarnings(blockr.core::blockr_deser(heatmap_saved()))
+  expect_s3_class(b, "table_block")
+})
+
+test_that("another package's heatmap restores through its constructor", {
+  data <- heatmap_saved()
+  data$constructor$package <- "otherpkg"
+  expect_error(blockr.core::blockr_deser(data), "otherpkg")
 })
 
 test_that("a summary table block restores in the variables layout", {
@@ -266,9 +335,42 @@ test_that("a 0.3.0 summary key reads in code as in a saved board", {
       summaries = list(list(type = "dist", col = "AGE", style = "box"))
     )
   }
-  expect_warning(make(), "from blockr.viz < 0.3.0")
+  expect_warning(make(), "`summaries[[1]]$style` (now `show`)", fixed = TRUE)
   b <- suppressWarnings(make())
   s <- blockr.core::blockr_ser(b)$payload$summaries[[1L]]
   expect_null(s$style)
   expect_identical(s$show, "box")
+})
+
+test_that("0.3.0's drill = TRUE turns the drill on, in code and on a board", {
+  expect_warning(
+    b <- new_table_block(layout = "groups", by = "ARM", drill = TRUE),
+    "`drill` is from an earlier blockr.viz", fixed = TRUE
+  )
+  expect_identical(blockr.core::blockr_ser(b)$payload$drill, "auto")
+  st <- legacy_restore("table", list(layout = "groups", by = "ARM",
+                                     drill = "TRUE"), "0.3.0")
+  restored_ok("table", st)
+  expect_identical(st$drill, "auto")
+  st <- legacy_restore("table", list(layout = "groups", drill = FALSE),
+                       "0.3.0")
+  expect_null(st$drill)
+})
+
+test_that("a block attribute such as blockr.dock's `visible` passes through", {
+  vis <- list("table", "gear")
+  r <- expect_silent(legacy_deser("table_block", list(
+    payload = list(layout = "groups", by = "ARM", visible = vis,
+                   block_name = "T"),
+    constructor = list(version = VIZ_REWRITE_VERSION)
+  )))
+  expect_identical(r$attrs$visible, vis)
+  expect_false("visible" %in% names(r$args))
+  r <- suppressWarnings(legacy_deser("heatmap_block", list(
+    payload = c(heatmap_saved()$payload, list(visible = vis)),
+    constructor = list(version = "0.2.223")
+  )))
+  expect_identical(r$attrs$visible, vis)
+  b <- expect_silent(new_table_block(layout = "groups", visible = vis))
+  expect_identical(attr(b, "visible"), vis)
 })

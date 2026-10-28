@@ -35,18 +35,69 @@
     return true;
   }
 
+  /** The gear's drawing for each type (core/gear/tiles.js). */
+  const ICON = { simple: 'type:bar', dist: 'type:boxplot', sparkline: 'type:line',
+                 spans: 'type:gantt', pair: 'type:pointrange' };
+  const FUNC = { count_distinct: 'distinct count', mean: 'mean', median: 'median', sum: 'sum',
+                 min: 'min', max: 'max', sd: 'sd' };
+
   /**
-   * An entry's title: its name, else its type and column.
+   * An entry's title: its name, else its type.
    * @param {Entry} s
    */
   function title(s) {
     if (typeof s.name === 'string' && s.name) return s.name;
-    const what = [s.func, s.col || s.color || s.x].filter((x) => typeof x === 'string' && x);
-    return (TYPES[/** @type {'simple'} */ (s.type)] || String(s.type)) + (what.length ? ': ' + what.join(' ') : '');
+    return TYPES[/** @type {'simple'} */ (s.type)] || String(s.type);
   }
 
   /**
-   * A small button.
+   * What an entry computes, in words: "count of rows, split by SEX".
+   * @param {Entry} s
+   */
+  function describe(s) {
+    const col = typeof s.col === 'string' ? s.col : '';
+    /** @type {string} */
+    let out;
+    if (s.type === 'simple') {
+      const f = String(s.func || 'count');
+      out = f === 'count' ? 'count of rows' : (FUNC[/** @type {'mean'} */ (f)] || f) + ' of ' + col;
+      if (s.color) out += ', split by ' + String(s.color);
+    } else if (s.type === 'dist') {
+      out = 'distribution of ' + col;
+    } else if (s.type === 'field') {
+      out = 'values of ' + col;
+    } else if (s.type === 'expr') {
+      out = String(s.expr || 'an expression');
+    } else {
+      out = (TYPES[/** @type {'simple'} */ (s.type)] || String(s.type)).toLowerCase() +
+        (col ? ' of ' + col : '');
+    }
+    return s.facet ? out + ', by ' + String(s.facet) : out;
+  }
+
+  /**
+   * An entry's head: its drawing, name, what it computes and a chevron.
+   * @param {HTMLButtonElement} b
+   * @param {Entry} s
+   */
+  function headText(b, s) {
+    const icons = /** @type {any} */ (V).gear && /** @type {any} */ (V).gear.icons;
+    const icon = icons && icons[ICON[/** @type {'simple'} */ (s.type)]];
+    b.textContent = '';
+    const part = (/** @type {string} */ cls, /** @type {string} */ text) => {
+      const x = b.appendChild(document.createElement('span'));
+      x.className = cls;
+      x.textContent = text;
+      return x;
+    };
+    part('lane-sum-icon', '').innerHTML = icon || '';
+    part('lane-sum-name', title(s));
+    part('lane-sum-desc', describe(s));
+    part('lane-sum-chev', '›');
+  }
+
+  /**
+   * A small quiet button.
    * @param {string} cls
    * @param {string} text
    * @param {string} label
@@ -54,13 +105,9 @@
    * @param {VizScope} scope
    */
   function button(cls, text, label, fn, scope) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'lane-sum-ctl ' + cls;
-    b.textContent = text;
-    b.setAttribute('aria-label', label);
+    const b = V.table.ui.button('blockr-btn--quiet blockr-btn--xs lane-sum-ctl ' + cls, text, label,
+                                fn, scope);
     b.setAttribute('data-blockr-tooltip', label);
-    scope.on(b, 'click', fn);
     return b;
   }
 
@@ -96,7 +143,8 @@
   }
 
   /**
-   * One entry: its head (fold, title, move, remove) and its fields.
+   * One entry: its head, which opens it, and its fields with move and
+   * remove.
    * @param {Entry[]} list
    * @param {number} k
    * @param {Record<string, any>} variants
@@ -110,21 +158,20 @@
     el.className = 'lane-sum-row' + (open.has(k) ? ' is-open' : '');
     const head = document.createElement('div');
     head.className = 'lane-sum-head';
-    const name = button('lane-sum-toggle', title(s), open.has(k) ? 'Fold' : 'Edit', () => {
+    const name = button('lane-sum-toggle', '', 'Edit ' + title(s), () => {
       if (open.has(k)) open.delete(k);
       else open.add(k);
       el.classList.toggle('is-open');
       body.hidden = !open.has(k);
     }, ctx.scope);
+    name.removeAttribute('data-blockr-tooltip');
+    headText(name, s);
     const move = (/** @type {number} */ d) => {
       const next = list.slice();
       next.splice(k + d, 0, next.splice(k, 1)[0]);
       send(next);
     };
-    head.append(name,
-      button('lane-sum-up', '↑', 'Move up', () => { if (k > 0) move(-1); }, ctx.scope),
-      button('lane-sum-down', '↓', 'Move down', () => { if (k < list.length - 1) move(1); }, ctx.scope),
-      button('lane-sum-rm', '×', 'Remove', () => send(list.filter((_, j) => j !== k)), ctx.scope));
+    head.append(name);
     el.appendChild(head);
     const body = document.createElement('div');
     body.className = 'lane-sum-body';
@@ -133,6 +180,14 @@
     if (variant) {
       fields(body, s, variant, ctx, (next) => send(list.map((x, j) => (j === k ? next : x))));
     }
+    const acts = body.appendChild(document.createElement('div'));
+    acts.className = 'lane-sum-actions';
+    if (k > 0) acts.appendChild(button('lane-sum-up', 'Move up', 'Move up', () => move(-1), ctx.scope));
+    if (k < list.length - 1) {
+      acts.appendChild(button('lane-sum-down', 'Move down', 'Move down', () => move(1), ctx.scope));
+    }
+    acts.appendChild(button('lane-sum-rm', 'Remove', 'Remove this column',
+                            () => send(list.filter((_, j) => j !== k)), ctx.scope));
     el.appendChild(body);
     return el;
   }
@@ -151,25 +206,25 @@
     if (!variants || !(/** @type {any} */ (V).gear && /** @type {any} */ (V).gear.controls)) return;
     const list = /** @type {Entry[]} */ (Array.isArray(ctx.values.summaries) ? ctx.values.summaries : []);
     const box = /** @type {Element} */ (el.closest('.blockr-settings') || el);
-    const open = opened.get(box) || new Set();
-    opened.set(box, open);
+    let open = opened.get(box);
+    if (!open) {
+      // A lone column opens: it is what the reader came to change.
+      open = new Set(list.length === 1 ? [0] : []);
+      opened.set(box, open);
+    }
     el.textContent = '';
     el.classList.add('lane-summaries');
     list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
-    const add = document.createElement('select');
-    add.className = 'dd-select lane-sum-addcol';
-    add.setAttribute('aria-label', 'Add a column');
-    add.innerHTML = '<option value="">+ Add a column</option>' + Object.keys(variants).map((t) =>
-      '<option value="' + V.util.esc(t) + '">' + V.util.esc(TYPES[/** @type {'simple'} */ (t)] || t) +
-      '</option>').join('');
-    ctx.scope.on(add, 'change', () => {
-      if (!add.value) return;
+    const add = el.appendChild(document.createElement('div'));
+    add.className = 'lane-sum-addcol';
+    V.table.ui.pick(add, Object.keys(variants).map((t) => ({
+      value: t, label: TYPES[/** @type {'simple'} */ (t)] || t
+    })), '', { label: 'Add a column', placeholder: '+ Add a column' }, (t) => {
       open.add(list.length);
-      ctx.set(list.concat([{ type: add.value }]));
-    });
-    el.appendChild(add);
+      ctx.set(list.concat([{ type: t }]));
+    }, ctx.scope);
   }
 
   V.table.editors = Object.assign(V.table.editors || {}, { 'groups.summaries': editor });
-  V.table.summaries = { shows, title };
+  V.table.summaries = { shows, title, describe };
 })();

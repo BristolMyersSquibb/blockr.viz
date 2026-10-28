@@ -182,3 +182,13 @@ test_that("a click on one point filters its x and y", {
     expect_true(all(res$day == 3 & res$val == 0.141))
   })
 })
+
+test_that("the facet_cols option sets the panels per row of a new chart", {
+  withr::local_options(blockr.viz.facet_cols = 3L)
+  st <- blockr.core:::initial_block_state(new_chart_block(type = "bar"))
+  expect_identical(st$facet_cols, 3L)
+  st <- blockr.core:::initial_block_state(
+    new_chart_block(type = "bar", facet_cols = 2L)
+  )
+  expect_identical(st$facet_cols, 2L)
+})
