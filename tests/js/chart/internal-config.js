@@ -1,7 +1,7 @@
-/* The model and option builders' settings (their own words: `group`,
- * `value`, `bar_mode`, "on"/"off") as a payload under the spec's names,
- * `{config, derived}`: the inverse of chart/config.js settings(). For tests
- * that state a case in the builders' words and draw it through the view. */
+/* Settings in the chart's former words (`group`, `value`, `bar_mode`,
+ * "on"/"off") as a payload under the spec's names, `{config, derived}`. For
+ * the tests that still state their cases in those words and draw them
+ * through the view (scaling, some legend cases). */
 'use strict';
 
 const BAR_MODE = { stacked: 'stack', grouped: 'dodge', percent: 'fill' };

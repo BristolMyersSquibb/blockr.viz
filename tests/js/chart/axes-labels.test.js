@@ -47,7 +47,7 @@ test('a note when a category axis has fewer pixels than labels', () => {
 test('value lines: a markLine on the first series, the axis widened past it', () => {
   const series = [{}, {}];
   const axis = {};
-  A.addValueLines(series, axis, false, true, [50, 'x'], ink);
+  A.addValueLines(series, axis, false, true, [{ value: 50, label: null }, { value: 'x', label: null }], ink);
   assert.strictEqual(series[0].markLine.data.length, 1);
   assert.strictEqual(series[0].markLine.data[0].yAxis, 0.5);
   assert.strictEqual(series[0].markLine.data[0].label.formatter, '50%');

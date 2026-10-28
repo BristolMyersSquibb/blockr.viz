@@ -22,7 +22,6 @@ option-points.js
 option-band.js
 option-domains.js
 option-individual.js
-config.js
 gear.js
 chrome.js
 interact.js

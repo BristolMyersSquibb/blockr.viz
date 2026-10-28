@@ -1,15 +1,10 @@
 // @ts-check
 /**
- * Chart block: clicks, the selection and what goes to R.
- *
- * A click turns the clicked mark into a filter (the family's model says
- * how, from the mark's keys), latches it or, with a ctrl_target, sends it
- * as an event. The selection is one filter, {type, filters}; the footer and
- * every clear read it. Methods of the chart view, like chrome.js.
- *
- * A latched filter dims the marks it does not light (D5), a range filter
- * the points outside it (D11): the family's option module builds the
- * patch from each mark's keys.
+ * Chart block: clicks, the selection and what goes to R. A click turns the
+ * clicked mark into a filter (the family's model says how), latches it or,
+ * with a drill_target, sends it as an event. A latched filter dims the marks
+ * it does not light (D5), a range filter the points outside it (D11); the
+ * family's option module builds the patch. Methods of the chart view.
  */
 (function () {
   'use strict';
@@ -19,12 +14,10 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   // Event handlers per family, attached once per ECharts instance. They read
-  // the view's live state, never values captured at draw time, because an
-  // instance outlives many draws.
+  // the view's live state, since an instance outlives many draws.
   const handlers = {
-    // A click on a bar segment, slice, tile, box or point range
-    // sends its mark's keys (D2, D3), or the drill column's values in the
-    // rows under it.
+    // A click on a bar segment, slice, tile, box or point range sends its
+    // mark's keys (D2, D3), or the drill column's values in the rows under it.
     /** @param {any} view @param {any} slot */
     aggregated(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
@@ -54,8 +47,8 @@
     }
   };
 
-  // The same columns with the same values, in any order.
-  /** @param {Record<string, any[]>} a @param {Record<string, any[]>} b */
+  /** The same columns with the same values, in any order.
+   * @param {Record<string, any[]>} a @param {Record<string, any[]>} b */
   const sameFilters = (a, b) => {
     const norm = (/** @type {Record<string, any[]>} */ x) => JSON.stringify(
       Object.keys(x || {}).sort().map((k) => [k, (x[k] || []).map(String).sort()]));
@@ -67,9 +60,8 @@
     _attachHandlers(slot, family) {
       const h = /** @type {Record<string, any>} */ (handlers)[family];
       if (h) h(this, slot);
-      // A click on empty plot space clears a latched filter: with no Reset,
-      // this and a second click on the selected mark are the ways back. Not
-      // while a line is under the cursor, which a click on it would pick.
+      // A click on empty plot space clears a latched filter, unless a line
+      // is under the cursor (a click would pick it).
       slot.chart.getZr().on('click', (/** @type {any} */ e) => {
         if (e && e.target) return;
         if (slot.focus && slot.focusSi != null) return;
@@ -79,8 +71,8 @@
     },
 
     // A click always sends (D1): latched, the filter becomes the selection;
-    // with a ctrl_target it is an event and nothing latches. A second click
-    // on the selected mark clears the selection: the chart has no Reset.
+    // with a drill_target it is an event and nothing latches. A second click
+    // on the selected mark clears the selection.
     /** @this {any} @param {any} slot @param {any} params @param {Record<string, any[]>} filters */
     _select(slot, params, filters) {
       if (NS.transientDrill(this.config)) {
@@ -104,10 +96,9 @@
       this._sendSelection({ type: 'categorical', filters });
     },
 
-    // What R gets for a click, a brush or a clear (design.md section 2):
-    // `{selection, nonce}`, `selection` null for a clear. The counter tells
-    // R a second click on the same mark from a board re-evaluation, which
-    // would otherwise look the same.
+    // What R gets for a click, a brush or a clear: `{selection, nonce}`,
+    // `selection` null for a clear. The nonce tells R a second click on the
+    // same mark from a board re-evaluation.
     /** @this {any} @param {Record<string, any> | null} selection */
     _sendSelection(selection) {
       if (!this.el.id) return;
@@ -118,14 +109,9 @@
     _reset() {
       this._filter = null;
       this._hasBrushFilter = false;
-      this._clearBrush();
+      for (const chart of this.charts) chart.dispatchAction({ type: 'brush', areas: [] });
       this._updateHighlight();
       this._sendSelection(null);
-    },
-
-    /** @this {any} */
-    _clearBrush() {
-      for (const chart of this.charts) chart.dispatchAction({ type: 'brush', areas: [] });
     },
 
     /** The footer, the legend chips, then the marks. @this {any} @param {boolean} [lazy] */
@@ -138,9 +124,8 @@
     // The selection as opacities, one patch per panel and nothing redrawn:
     // a mark is lit when its keys match the filter, or, for a filter on a
     // column it does not carry, when one of its rows does (D5). A range
-    // filter dims the points outside it (D11). Every latched filter dims,
-    // a brush's too. `lazy`: part of a draw, so ECharts applies the patch
-    // with the draw's other follow-ups in one update on the next frame.
+    // filter dims the points outside it (D11). `lazy`: part of a draw, so
+    // ECharts applies the patch with the draw's other follow-ups.
     /** @this {any} @param {boolean} [lazy] */
     _applyHighlight(lazy) {
       const fam = this._family();
@@ -152,7 +137,7 @@
         ? (/** @type {Record<string, any>} */ keys, /** @type {any} */ rows) => NS.keys.markLit(keys,
             rows || (() => NS.model.rowsUnder(this.data, this._ix, keys)), f)
         : null;
-      // A range is only ever taken on the individual family.
+      // A range only exists on the individual family.
       const catLit = range ? null : lit;
       this._slots.forEach((/** @type {any} */ slot, /** @type {number} */ i) => {
         if (!slot || !slot.chart) return;
@@ -160,14 +145,12 @@
         const current = chart.getOption();
         if (!current || !current.series) return;
         const panel = m && m.family === fam ? m.panels[i] : null;
-        /** @type {{ series: any[], dimmed: boolean }} */
-        let patch;
+        /** @type {{ series: any[], dimmed: boolean }} */ let patch;
         if (panel && fam === 'aggregated') {
           patch = NS.option.aggregatedPatch(m, panel, this.config, current, catLit, !!slot.dimmed);
         } else if (panel && fam === 'timeline') {
           patch = NS.option.timelinePatch(m, panel, this.config, catLit, !!slot.dimmed);
         } else if (panel && fam === 'individual') {
-          // The series the panel was drawn with, unnamed ones unnamed.
           const o = this._memo.option && this._memo.option.panels[i];
           const drawn = o && o.option && o.option.series && o.option.series.length === current.series.length
             ? o.option.series : current.series;
@@ -179,8 +162,6 @@
         chart.setOption({ series: patch.series }, lazy ? { lazyUpdate: true } : false);
       });
     },
-
-    // -- Transient drill signal --------------------------------------------
 
     // Light the clicked mark briefly: a trace on its box, or a ring at the
     // click where the mark has no box. One signal at a time.
@@ -197,13 +178,9 @@
         const r = t.getBoundingRect().clone();
         if (t.transform) r.applyTransform(t.transform);
         if (r.width > 0 && r.height > 0) {
-          const box = document.createElement('span');
-          box.className = 'dd-drill-flash';
-          box.style.left = r.x + 'px';
-          box.style.top = r.y + 'px';
-          box.style.width = r.width + 'px';
-          box.style.height = r.height + 'px';
-          // The mark's own corners, so the trace sits on it.
+          const box = NS.mk('span', 'dd-drill-flash');
+          Object.assign(box.style, { left: r.x + 'px', top: r.y + 'px',
+                                     width: r.width + 'px', height: r.height + 'px' });
           const rad = t.shape.r;
           if (rad != null) {
             box.style.borderRadius = (Array.isArray(rad) ? rad : [rad])
@@ -215,19 +192,16 @@
       }
       const x = ev.offsetX, y = ev.offsetY;
       if (typeof x !== 'number' || typeof y !== 'number') return;
-      const ring = document.createElement('span');
-      ring.className = 'dd-drill-pulse';
-      ring.style.left = x + 'px';
-      ring.style.top = y + 'px';
+      const ring = NS.mk('span', 'dd-drill-pulse');
+      Object.assign(ring.style, { left: x + 'px', top: y + 'px' });
       this._mount(host, ring, 1200);
     },
 
-    // A self-removing signal; the timeout covers an off-screen block, where
-    // animationend never fires.
+    // A self-removing signal; the timeout covers an off-screen block.
     /** @this {any} @param {HTMLElement} host @param {HTMLElement} el @param {number} ms */
     _mount(host, el, ms) {
       const drop = () => {
-        if (el.parentNode) el.parentNode.removeChild(el);
+        el.remove();
         if (this._signalEl === el) this._signalEl = null;
       };
       this.scope.on(el, 'animationend', drop);
@@ -238,8 +212,7 @@
 
     /** @this {any} */
     _clearSignal() {
-      const el = this._signalEl;
-      if (el && el.parentNode) el.parentNode.removeChild(el);
+      if (this._signalEl) this._signalEl.remove();
       this._signalEl = null;
     }
   };

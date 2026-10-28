@@ -12,6 +12,9 @@
  *   revision the client holds; a payload without rows the client does not
  *   hold asks R for them once (`<id>_need`);
  * - an error without a message (a silent req()) keeps the picture;
+ * - with a `busy` label, the view is built as soon as Shiny finds the
+ *   element, and the busy cue counts the wait for R's first value from
+ *   when the element shows;
  * - when Shiny unbinds an element that has left the page, its view is
  *   disposed, and its rows are dropped after a grace period unless a new
  *   element under the same id mounts first.
@@ -108,12 +111,28 @@
   }
 
   /**
+   * A found element without a view waits for R's first value. A board that
+   * builds blocks lazily binds the element when its panel shows, and R
+   * speaks a second or more later. The view is built now, so its busy line
+   * exists, and busy-cue.js watch() counts the wait.
+   * @param {HTMLElement} el @param {VizViewClass} View @param {number} grace
+   * @param {string} label
+   */
+  function early(el, View, grace, label) {
+    if (!el.id || /** @type {any} */ (el)._viz) return;
+    mount(el, View, grace);
+    const busy = root.Blockr && root.Blockr.busy;
+    if (busy && typeof busy.watch === 'function') busy.watch(el.id, label);
+  }
+
+  /**
    * Register the output binding for one kind of view.
    * @param {string} name The binding's name ("blockr.viz.chart").
    * @param {string} view The elements' `data-viz-view` ("chart").
    * @param {VizViewClass} View Builds the view: `new View(el, scope)`.
-   * @param {{ grace?: number }} [opts] `grace`: how long, in ms, the rows of
-   *   a removed element are kept for a new element under the same id.
+   * @param {{ grace?: number, busy?: string }} [opts] `grace`: how long, in
+   *   ms, the rows of a removed element are kept for a new element under the
+   *   same id. `busy`: the busy cue's word for the first wait ("drawing").
    * @returns {boolean} Whether Shiny took it.
    */
   function binding(name, view, View, opts = {}) {
@@ -123,8 +142,12 @@
     const b = new shiny.OutputBinding();
     Object.assign(b, {
       /** @param {unknown} scope */
-      find: (scope) => root.jQuery(scope)
-        .find('.blockr-viz-output[data-viz-view="' + view + '"]'),
+      find: (scope) => {
+        const els = root.jQuery(scope).find('.blockr-viz-output[data-viz-view="' + view + '"]');
+        const label = opts.busy;
+        if (label) for (const el of Array.from(els)) early(el, View, grace, label);
+        return els;
+      },
       /** @param {HTMLElement} el @param {VizPayload | null} payload */
       renderValue: (el, payload) => render(el, payload, View, grace),
       /** @param {HTMLElement} el @param {{ message?: string }} err */

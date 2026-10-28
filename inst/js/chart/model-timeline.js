@@ -3,26 +3,17 @@
  * Chart block: the timeline (gantt) model.
  *
  * Rows and config in, what to draw out: the panels (one per facet level
- * holding rows), the lanes of each panel in their sort order, the lane and
- * facet counts, the colour levels, and one mark per row with an x.
- *
- * A mark is a tuple, because a swim-lane chart has a mark per event and an
- * object per event costs memory the chart does not need:
+ * holding rows), their lanes in sort order, the lane and facet counts, the
+ * colour levels, and one mark per row with an x. A mark is a tuple, since a
+ * swim-lane chart has a mark per event; ECharts hands it back as
+ * `params.value` on a click:
  *
  *   [start, end, lane, term, colour, label, series, drill, tooltip]
  *
- *   start, end  x coordinates (a category index on a category x); end is
- *               start for an event without an end
- *   lane        the lane's position in the panel
- *   term        the lane value as a string (the y)
- *   colour      the colour column's value, or ''
- *   label       the label column's value, or ''
- *   series      the series column's value, or ''
- *   drill       the drill column's value (what a click filters on), or ''
- *   tooltip     the tooltip fields' values, or 0 without any
- *
- * The option builder hands these to ECharts as they are, so a click gets the
- * tuple back as `params.value`.
+ * start and end are x coordinates (a category index on a category x; end is
+ * start for an event without one), lane is the lane's position in the
+ * panel, term the lane value as a string, colour/label/series/drill the
+ * columns' values or '', tooltip the tooltip fields' values or 0.
  */
 (function () {
   'use strict';
@@ -33,12 +24,12 @@
   const model = NS.model = NS.model || {};
 
   // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['chart_type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
-    'series', 'label', 'tt_fields', 'drill', 'scales', 'count_on', 'count_col', 'func',
+  const MODEL_FIELDS = ['type', 'x', 'xend', 'y', 'color', 'facet', 'sort_by', 'sort_dir',
+    'series', 'label', 'tooltip', 'drill', 'derived.scales', 'show_n', 'id', 'func',
     'facet_scales'];
 
   /** @param {Record<string, any>} cfg @returns {string[]} */
-  const ttFieldsOf = (cfg) => [].concat(cfg.tt_fields || [])
+  const ttFieldsOf = (cfg) => [].concat(cfg.tooltip || [])
     .map(String).filter((c) => c && c !== 'null');
 
   /**
@@ -54,8 +45,8 @@
    */
 
   /**
-   * One mark per row with an x and a known lane, and the source row of each
-   * mark, for a filter on a column the mark does not carry (D5).
+   * One mark per row with an x and a known lane, and the row behind each
+   * mark, for a filter on a column the mark does not carry.
    * @param {any} k @param {any[]} prow @param {Map<string, number>} laneOf
    */
   const panelMarks = (k, prow, laneOf) => {
@@ -87,8 +78,7 @@
   const timeline = ({ rows, ix, columns, cfg }) => {
     const { x, xend, y, color, facet, sort_by, series, label } = cfg;
     const ttFields = ttFieldsOf(cfg);
-    // The drill column's value rides on every mark: the lane under auto,
-    // or the override's column.
+    // The drill column's value rides on every mark.
     const drill = NS.drillColumn(cfg);
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
     /** @type {TimelineModel} */
@@ -117,8 +107,7 @@
       if (levels.length) out.color = { col: color, levels, scale: colorScale };
     }
 
-    // An x value as a coordinate: the category's first position on a
-    // category axis, from a map built once.
+    // An x value as a coordinate: a category's first position, or the number.
     const xPos = xCats ? NS.firstIndex(xCats) : null;
     /** @param {any} v */
     const xCoord = (v) => {
@@ -129,8 +118,8 @@
       return Number(v);
     };
 
-    // Lanes in sort order. By onset or a column: the smallest value per
-    // lane, ascending; lanes without one are left out. A-Z: by name.
+    // Lanes in sort order: by name for 'alpha', else by the smallest value
+    // per lane of x ('onset') or of a column; a lane without one is left out.
     /** @param {any[]} rs @returns {string[]} */
     const sortTerms = (rs) => {
       const sb = sort_by || 'onset';
@@ -158,17 +147,14 @@
     }
 
     const labels = NS.model.facetLabels(rows, cfg, panels.map((p) => p.fv));
-    // Fixed scales give every panel the same lanes in the same order, so a
-    // row of the grid is one term; free scales keep each panel's own.
+    // Fixed scales give every panel the same lanes; free scales keep each its own.
     const sharedTerms = NS.facetScales(cfg) !== 'free' ? sortTerms(rows) : null;
     const countAxis = NS.countOn(cfg, 'axis');
 
     for (const { fv, rows: prow } of panels) {
       const terms = sharedTerms || sortTerms(prow);
-      // Events per lane, or distinct count_col. A lane has no "as is" value,
-      // so the identity aggregation of a bar does not apply here.
-      const laneCounts = countAxis
-        ? NS.labelCounts(prow, { count_col: cfg.count_col }, y) : null;
+      // Events per lane, or distinct ids; a lane has no "as is" value.
+      const laneCounts = countAxis ? NS.labelCounts(prow, { id: cfg.id }, y) : null;
 
       /** @type {Map<string, number>} */
       const laneOf = new Map();
@@ -186,9 +172,8 @@
   timeline.FIELDS = MODEL_FIELDS;
 
   /**
-   * The keys of a timeline mark: its lane, and the facet in a facet panel
-   * (D3). The colour is an attribute of the event, not a key. A missing
-   * lane or facet value is a key too ('').
+   * The keys of a timeline mark: its lane, and the facet in a facet panel.
+   * The colour is no key.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
    * @returns {Record<string, any>}
    */
@@ -200,10 +185,8 @@
   };
 
   /**
-   * The filter a click on a timeline mark sends, or null when it sends
-   * nothing. Auto: the mark's keys, a missing lane or facet sent as null.
-   * An override column: the clicked event's own value of it, nothing when
-   * the event has none.
+   * The filter a click on a timeline mark sends, or null. Auto: the mark's
+   * keys. A drill column: the event's own value of it, none when it has none.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
    * @returns {Record<string, any[]> | null}
    */
@@ -216,5 +199,5 @@
     return { [drill]: [String(dv)] };
   };
 
-  Object.assign(model, { timeline, timelineKeys, timelineClick, ttFieldsOf });
+  Object.assign(model, { timeline, timelineKeys, timelineClick });
 })();

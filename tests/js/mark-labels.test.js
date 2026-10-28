@@ -20,9 +20,13 @@ const ROWS = [
 ];
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
+// A bar lies horizontal: its category G is y, its measure V is x. The other
+// types take G as x and V as y.
 const agg = (cfg) => {
-  const c = { drill: 'auto', group: 'G', value: 'V', func: 'sum', sort_by: 'alpha',
-              sort_dir: 'asc', label: 'L', ...cfg };
+  const bar = cfg.type === 'bar';
+  const c = C.model.settings({ drill: 'auto', func: 'sum', sort_by: 'alpha', sort_dir: 'asc',
+                               label: 'L', ...(bar ? { y: 'G', x: 'V', orientation: 'horizontal' }
+                                                    : { x: 'G', y: 'V' }), ...cfg }, {}, COLUMNS);
   const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
   const o = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
@@ -31,7 +35,7 @@ const agg = (cfg) => {
 const fmt = (s, i, value) => s.label.formatter({ value, dataIndex: i });
 
 test('a bar writes its label at its end, where its rows agree on one', () => {
-  const { opt } = agg({ chart_type: 'bar' });
+  const { opt } = agg({ type: 'bar' });
   const s = opt.series[0];
   assert.strictEqual(s.label.show, true);
   assert.strictEqual(s.label.position, 'outside');
@@ -43,22 +47,22 @@ test('a bar writes its label at its end, where its rows agree on one', () => {
 });
 
 test('with values on, the label comes first', () => {
-  const { opt } = agg({ chart_type: 'bar', value_labels: 'on' });
+  const { opt } = agg({ type: 'bar', value_labels: true });
   const s = opt.series[0];
   assert.strictEqual(fmt(s, 0, 6), 'Alpha · 6');
   assert.strictEqual(fmt(s, 2, 7), '7');
 });
 
 test('a grouped bar labels each bar by its own cell', () => {
-  const { opt } = agg({ chart_type: 'bar', color: 'K', bar_mode: 'grouped' });
+  const { opt } = agg({ type: 'bar', color: 'K', position: 'dodge' });
   const [x, y] = opt.series;
   assert.deepStrictEqual([0, 1, 2].map((i) => fmt(x, i, 1)), ['Alpha', 'Beta', 'C1']);
   assert.deepStrictEqual([0, 1, 2].map((i) => fmt(y, i, 1)), ['Alpha', '', 'C2']);
 });
 
 test('a stack writes the labels inside its segments, and keeps its totals', () => {
-  const { opt } = agg({ chart_type: 'bar', color: 'K', orientation: 'horizontal',
-                        value_labels: 'on' });
+  const { opt } = agg({ type: 'bar', color: 'K', orientation: 'horizontal',
+                        value_labels: true });
   const lab = opt.series.find((s) => s.id === '__label__');
   assert.ok(lab, 'no label series');
   assert.strictEqual(lab.silent, true);
@@ -71,18 +75,17 @@ test('a stack writes the labels inside its segments, and keeps its totals', () =
 });
 
 test('a waterfall and a boxplot draw no label', () => {
-  assert.strictEqual(agg({ chart_type: 'waterfall' }).m.markLabels, null);
-  assert.strictEqual(agg({ chart_type: 'bar', baseline: 'cumulative' }).m.markLabels, null);
-  assert.strictEqual(agg({ chart_type: 'boxplot' }).m.markLabels, null);
+  assert.strictEqual(agg({ type: 'waterfall' }).m.markLabels, null);
+  assert.strictEqual(agg({ type: 'boxplot' }).m.markLabels, null);
 });
 
 test('pie and treemap write the label in place of the slice name', () => {
-  const pie = agg({ chart_type: 'pie' }).opt.series[0];
+  const pie = agg({ type: 'pie' }).opt.series[0];
   const byName = Object.fromEntries(pie.data.map((d) => [d.name, d]));
   assert.strictEqual(pie.label.formatter({ name: 'a', data: byName.a }), 'Alpha');
   // c's rows disagree: its name stays.
   assert.strictEqual(pie.label.formatter({ name: 'c', data: byName.c }), 'c');
-  const tm = agg({ chart_type: 'treemap' }).opt.series[0];
+  const tm = agg({ type: 'treemap' }).opt.series[0];
   const tb = Object.fromEntries(tm.data.map((d) => [d.name, d]));
   assert.strictEqual(tm.label.formatter({ name: 'b', value: 8, data: tb.b }), 'Beta\n8');
 });
@@ -115,7 +118,8 @@ test('scatter cloud names share one spacer', () => {
   }
   const cols = [{ name: 'X', type: 'numeric' }, { name: 'Y', type: 'numeric' },
                 { name: 'K', type: 'categorical' }];
-  const c = { chart_type: 'scatter', x: 'X', y: 'Y', color: 'K', legend: 'marks', drill: 'auto' };
+  const c = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', color: 'K', legend: 'marks',
+                               drill: 'auto' }, {}, cols);
   const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg: c });
   const opt = C.option.individual(m, { cfg: c, columns: cols, ink: C.INK_DEFAULT, theme: null,
                                        measure, widths: [600] }).panels[0].option;

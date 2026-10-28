@@ -1,11 +1,8 @@
 // @ts-check
 /**
- * Chart block: the bar and waterfall options.
- *
- * One panel of the aggregated model in, its ECharts option out, plus what
- * the view needs beside it: the panel height, the x-label fit inputs a
- * resize redoes, and the footer note when a horizontal axis thins its
- * labels. Pure: text is measured with the function the caller passes.
+ * Chart block: the bar and waterfall options. One panel of the aggregated
+ * model in; its ECharts option, panel height, x-label fit inputs and
+ * thinned-label note out.
  */
 (function () {
   'use strict';
@@ -19,10 +16,9 @@
           WATERFALL_COLORS } = parts;
   const { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET } = parts.BAR;
 
-
   /**
-   * What every part of a bar's option reads: the panel's groups and colour
-   * levels, the layout and the colours.
+   * What every part of a bar's option reads: groups, colour levels, layout
+   * and colours.
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
   const barContext = (m, panel, look, plotW) => {
@@ -30,18 +26,15 @@
     const groups = panel.groups;
     const colors = m.colors;
     const palette = NS.paletteOf(cfg);
-    const barMode = cfg.bar_mode || 'stacked';
-    const isGrouped = barMode === 'grouped';
-    const isPercent = barMode === 'percent';
+    const isGrouped = cfg.position === 'dodge';
+    const isPercent = cfg.position === 'fill';
     const vertical = cfg.orientation === 'vertical';
-    // Horizontal: the row band is fixed, so bars are sized off it; past the
-    // panel cap a grouped fan squeezes into its band. Vertical: bands come
-    // from the width, capped so a few categories do not draw slabs.
+    // Horizontal: a fixed row band; past the panel cap a grouped fan
+    // squeezes into its band. Vertical: bands come from the width.
     const rowBand = isGrouped && colors.length > 0 ? colors.length * GROUP_BAR + GROUP_PAD : ROW_BAND;
     const rowsH = groups.length * rowBand;
     const hCapped = !vertical && rowsH > NS.PANEL_H_CAP;
-    // `highlight`: a bar without a highlighted row is grey; the colour
-    // levels that have one take the palette between them.
+    // `highlight`: a bar without a highlighted row is grey.
     const hlLit = m.hlLit;
     const muted = NS.mutedMark(ink);
     const levelColor = m.hlColors
@@ -51,8 +44,7 @@
     const greyed = (v, g, lv) => (v == null || !hlLit || hlLit(panel.facet, g, lv)) ? v
       : (typeof v === 'object' ? { ...v, itemStyle: { ...v.itemStyle, color: muted } }
         : { value: v, itemStyle: { color: muted } });
-    // A share needs a colour split (one series is 100% of itself);
-    // pct_distinct is a share of the panel and needs none.
+    // A share needs a colour split; pct_distinct is a share of the panel.
     const showPercent = isPercent && colors.length > 0;
     const pctFunc = cfg.func === 'pct_distinct';
     const bandPx = vertical ? (plotW ? (plotW - X_INSET) / Math.max(1, groups.length) : 0)
@@ -60,7 +52,7 @@
     return { m, panel, look, cfg, ink, plotW, groups, colors, palette, isGrouped, isPercent,
              vertical, rowsH, hCapped, hlLit, muted, levelColor, greyed, showPercent, pctFunc,
              asFraction: showPercent || pctFunc, bandPx,
-             valueLabelsOn: cfg.value_labels === 'on' || cfg.value_labels === true };
+             valueLabelsOn: cfg.value_labels === true };
   };
 
   /** The bar series: one, or one per colour level. @param {any} k */
@@ -94,8 +86,8 @@
     }
     const series = colors.map((/** @type {string} */ color, /** @type {number} */ ci) => ({
       type: 'bar', name: color,
-      // null for a (group, colour) cell without rows, so a stack skips it.
-      // A percent datum keeps its raw value for the tooltip.
+      // null for a cell without rows, so a stack skips it; a percent datum
+      // keeps its raw value for the tooltip.
       data: groups.map((/** @type {string} */ g) => {
         const d = NS.model.cellOf(m, panel, g, color);
         const raw = d ? d.value : null;
@@ -116,8 +108,8 @@
   };
 
   /**
-   * The value end rounds: every grouped bar, and in a stack the outermost
-   * segment of each group, which varies with missing cells.
+   * Round the value end: every grouped bar, and in a stack the outermost
+   * segment of each group.
    * @param {any[]} series @param {number} nGroups @param {boolean} vertical @param {boolean} grouped
    */
   const roundValueEnds = (series, nGroups, vertical, grouped) => {
@@ -137,20 +129,27 @@
     }
   };
 
+  /** The groups with their "(n)" count, and the formatter that adds it.
+   * @param {any} panel */
+  const countLabels = (panel) => {
+    const counts = panel.axisCounts;
+    return {
+      catLabels: counts ? panel.groups.map((/** @type {string} */ g) => NS.withCount(g, counts))
+        : panel.groups,
+      catFmt: counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null
+    };
+  };
+
   /**
    * The category axis. "(n)" comes from a formatter, so the axis data stays
-   * the bare group the clicks and tooltips key off. A highlighted bar's name
-   * is semibold; a resize that turns the x labels again keeps it
-   * (`decorate`).
+   * the bare group clicks and tooltips key off. A highlighted bar's name is
+   * semibold; `decorate` reapplies that after a resize.
    * @param {any} k @param {any} P
    */
   const barCategoryAxis = (k, P) => {
     const { panel, groups, colors, vertical, hlLit, ink } = k;
     const measure = k.look.measure;
-    const axisCounts = panel.axisCounts;
-    const catLabels = axisCounts
-      ? groups.map((/** @type {string} */ g) => NS.withCount(g, axisCounts)) : groups;
-    const catFmt = axisCounts ? (/** @type {any} */ v) => NS.withCount(v, axisCounts) : null;
+    const { catLabels, catFmt } = countLabels(panel);
     const gut = NS.axes.yGutter(catLabels, measure);
     const xlab = vertical
       ? NS.axes.xAxisLabels(catLabels, (k.plotW || 0) - X_INSET, false, measure, ink) : null;
@@ -177,8 +176,7 @@
   };
 
   /**
-   * The value axis: ticks in `format`, the unit once in the title; a share
-   * keeps its own percent.
+   * The value axis: ticks in `format`, the unit once in the title.
    * @param {any} k @param {any} P
    */
   const barValueAxis = (k, P) => {
@@ -187,7 +185,7 @@
     return {
       type: 'value',
       name: showPercent ? '% of group total'
-        : (pctFunc ? pctName(cfg, P.title) : NS.axisName(P.valueTitle, cfg.value, cfg)),
+        : (pctFunc ? pctName(cfg, P.title) : NS.axisName(P.valueTitle, cfg.measure, cfg)),
       nameLocation: 'middle',
       nameGap: vertical ? 45 : 30,
       nameTextStyle: { color: P.ax.labelColor, fontSize: P.ax.fontSize },
@@ -203,9 +201,8 @@
   };
 
   /**
-   * What a bar draws beside its bars: value labels, text on the marks, the
-   * reference lines and ranges, and the level names on a stack. Returns the
-   * px each needs on the grid's right.
+   * Value labels, mark text, reference lines and ranges and stack level
+   * names. Returns the px each needs on the grid's right.
    * @param {any} k @param {any[]} series @param {any} valAxis @param {any} cat
    */
   const barSides = (k, series, valAxis, cat) => {
@@ -229,15 +226,12 @@
           valueLabels: k.valueLabelsOn, valuePx, bandPx: k.bandPx, ax, face: ink.face, measure
         })
       : 0;
-    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.value_lines, ink,
-      cfg.value_line_names);
-    // A histogram's bins are ranges of a number, not categories to name.
+    NS.axes.addValueLines(series, valAxis, !vertical, k.asFraction, cfg.y_lines, ink);
+    // A histogram's bins are ranges, not categories to name.
     if (!m.histogram) {
-      NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_line_names,
-        cfg.x_ranges, ink);
+      NS.axes.addCategoryMarks(series, vertical, groups, cfg.x_lines, cfg.x_ranges, ink);
     }
-    // `legend: "marks"`: the level names on the stack's segments. After the
-    // series the tooltip and the highlight read (the first `colors.length`).
+    // `legend: "marks"`: after the series the tooltip and highlight read.
     let namesRight = 0;
     const marks = NS.legendPlan(m, cfg).marks;
     if (marks === 'stack' || marks === 'stack-h') {
@@ -251,8 +245,7 @@
 
   /**
    * The tooltip. A split bar's card lists every level of the hovered
-   * category, the segment under the pointer marked: the item trigger says
-   * which segment that is, the axis trigger only knows the category.
+   * category with the hovered segment marked (the item trigger knows which).
    * @param {any} k @param {any} P @param {any[]} series
    */
   const barTooltip = (k, P, series) => {
@@ -278,7 +271,6 @@
       });
       return { ps, hit: p.seriesName };
     };
-    // A split bar's rows name the colour column with the level.
     const colorName = colors.length ? esc(title(cfg.color) || cfg.color) + ' ' : '';
     const extraRows = (/** @type {any} */ head) => {
       const extra = panel.ttRep ? panel.ttRep[head] : null;
@@ -312,8 +304,8 @@
     return NS.tipHead(P.esc(head)) + rows.concat(t.extraRows(head)).join('');
   };
 
-  /** A bar's card: the value named by its aggregation, with n where it says
-   * something; the segments' total only where they add up (a count, a sum).
+  /** A bar's card: the value named by its aggregation, with n; the total
+   * only where segments add up (a count, a sum).
    * @param {any} k @param {any} P @param {any} t */
   const valueTip = (k, P, t) => {
     const { panel, cfg, colors, pctFunc } = k;
@@ -354,12 +346,11 @@
   const bar = (m, panel, look, plotW) => {
     const k = barContext(m, panel, look, plotW);
     const P = parts.common(look);
-    const { ink, groups, colors, vertical } = k;
+    const { groups, colors, vertical } = k;
     const series = barSeries(k);
     const cat = barCategoryAxis(k, P);
     const valAxis = barValueAxis(k, P);
-    // A histogram's bins touch: the gap is the only thing that tells one
-    // bin from the next.
+    // A histogram's bins touch.
     if (m.histogram) {
       for (const s of series) {
         if (s.type !== 'bar') continue;
@@ -376,18 +367,15 @@
     return {
       xFit: xlab ? { labels: cat.catLabels, inset: X_INSET, decimate: false, gutter: xlab.bottom,
                      key: xlab.key, formatter: cat.catFmt, decorate: cat.decorate } : undefined,
-      // Horizontal: one fixed band per row. Vertical: the default canvas plus
-      // the turned-label gutter, so labels lengthen the canvas.
+      // Horizontal: a fixed band per row. Vertical: canvas plus label gutter.
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, k.rowsH) + bottomBase,
       labelNote: k.hCapped
-        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, P.title(k.cfg.group)) : null,
+        ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, P.title(k.cfg.category)) : null,
       option: {
-        ...(look.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: ink.face },
+        ...P.base,
         tooltip,
-        // The HTML band shows the chips; a hidden legend keeps the
-        // selection model the chips toggle.
+        // A hidden legend keeps the selection model the HTML chips toggle.
         legend: colors.length > 0 ? { show: false, data: colors } : undefined,
         grid: vertical
           ? { left: 55, right: 10 + Math.max(side.labelRight, side.markRight, side.namesRight),
@@ -402,10 +390,9 @@
   };
 
   /**
-   * A waterfall's two stacked series: the transparent offset each step
-   * floats on, and the step itself, coloured by sign; a total step restates
-   * the running total from zero. One value per step, summed across a colour
-   * split; a step without a value is a gap. `lo` and `hi` bound the bridge.
+   * A waterfall's offset and step data, coloured by sign; a total step
+   * restates the running total from zero. A step is summed across a colour
+   * split; one without a value is a gap. `lo` and `hi` bound the bridge.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {boolean} labelsOn @param {((v: number) => string) | null} wvf
    */
@@ -417,7 +404,7 @@
       return vals.length ? vals.reduce((/** @type {number} */ s, /** @type {number} */ v) => s + v, 0)
         : null;
     };
-    const totals = new Set((cfg.waterfall_totals || []).map(String));
+    const totals = new Set(NS.labelled(cfg.waterfall_totals).map((x) => String(x.value)));
     /** @type {any[]} */
     const base = [];
     /** @type {any[]} */
@@ -461,10 +448,8 @@
   };
 
   /**
-   * A waterfall: a bar whose steps float from the running total of the
-   * steps before them. A transparent base series carries the offset, a
-   * visible delta series the step, coloured by sign; a "total" step
-   * (waterfall_totals) restates the running total from zero. Vertical only.
+   * A waterfall: a transparent base series carries each step's offset, a
+   * visible delta series the step. Vertical only.
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
   const waterfall = (m, panel, look, plotW) => {
@@ -472,14 +457,11 @@
     const P = parts.common(look);
     const { ax, esc } = P;
     const groups = panel.groups;
-    const labelsOn = cfg.value_labels === 'on' || cfg.value_labels === true;
+    const labelsOn = cfg.value_labels === true;
     const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const { base, delta, lo, hi } = waterfallSteps(m, panel, cfg, labelsOn, wvf);
 
-    const axisCounts = panel.axisCounts;
-    const countFmt = axisCounts ? (/** @type {any} */ v) => NS.withCount(v, axisCounts) : null;
-    const stepLabels = axisCounts
-      ? groups.map((/** @type {string} */ g) => NS.withCount(g, axisCounts)) : groups;
+    const { catLabels: stepLabels, catFmt: countFmt } = countLabels(panel);
     const xlab = NS.axes.xAxisLabels(stepLabels, (plotW || 0) - X_INSET, false, measure, ink);
     const catAxis = {
       type: 'category', data: groups,
@@ -489,7 +471,7 @@
     };
     /** @type {any} */
     const valAxis = {
-      type: 'value', name: NS.axisName(P.valueTitle, cfg.value, cfg), nameLocation: 'middle',
+      type: 'value', name: NS.axisName(P.valueTitle, cfg.measure, cfg), nameLocation: 'middle',
       nameGap: 45,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
@@ -502,8 +484,6 @@
       { name: 'base', type: 'bar', stack: 'waterfall', barWidth: '60%',
         itemStyle: { color: 'transparent', borderColor: 'transparent' },
         emphasis: { disabled: true }, silent: true, tooltip: { show: false }, data: base },
-      // The corners ride on each datum: a total sits on the axis, a step
-      // floats.
       { name: 'delta', type: 'bar', stack: 'waterfall', barWidth: '60%',
         emphasis: { focus: 'self' }, data: delta,
         ...(labelsOn
@@ -519,16 +499,14 @@
       for (const d of delta) if (d && d.label) w = Math.max(w, measure(d.label.formatter));
       labelRight = Math.max(0, Math.ceil(w / 2 - 10));
     }
-    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink,
-      cfg.value_line_names);
+    NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.y_lines, ink);
     return {
       panelH: 350 + xlab.bottom,
       xFit: { labels: stepLabels, inset: X_INSET, decimate: false, gutter: xlab.bottom,
               key: xlab.key, formatter: countFmt },
       labelNote: null,
       option: {
-        ...(look.theme ? {} : { backgroundColor: 'transparent' }),
-        textStyle: { fontFamily: ink.face },
+        ...P.base,
         tooltip: {
           trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true,
           // Only the visible delta; the base is how the bar floats.

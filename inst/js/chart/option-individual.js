@@ -1,19 +1,13 @@
 // @ts-check
 /**
- * Chart block: the individual option (scatter, line, band).
- *
- * The model and how it should look in, one ECharts option per panel out.
- * The series come from option-points.js (scatter, line) or option-band.js;
- * this file adds what every panel shares: helper lines, the identity line
- * and the band's reference limits on one markLine, the empty series the
- * legend binds to, the axes, the tooltip, and the brush or zoom toolbox.
- *
- * A panel result also carries the state the view hands its slot: the
- * hover tracker the line tooltip reads, the line picker's registry
- * (`focus`), the band picker's ribbons (`band`), and whether the panel
- * is brushed or zoomed.
- *
- * Beside it: the legend band's chips and the highlight patch (D5).
+ * Chart block: the individual option (scatter, line, band), one ECharts
+ * option per panel. The series come from option-points.js or option-band.js;
+ * this file adds the helper lines, the identity line and the band's limits
+ * on one markLine, the legend's empty series, the axes, the tooltip and the
+ * brush or zoom toolbox. A panel result also carries the state its slot
+ * gets: the hover tracker, the line picker's registry (`focus`), the band
+ * picker's ribbons (`band`) and whether it is brushed or zoomed. Beside it:
+ * the legend chips and the highlight patch.
  */
 (function () {
   'use strict';
@@ -25,11 +19,10 @@
   const parts = /** @type {any} */ (option.indParts = option.indParts || {});
 
   // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['chart_type', 'drill', 'dot_size_mult', 'line_width_mult', 'connect',
-    'smoother', 'smoother_series', 'lo', 'hi', 'x_lines', 'value_lines', 'identity_line',
-    'band_series', 'band_refs', 'box_points', 'linetype', 'x_ranges', 'legend', 'direct_labels',
-    'value_line_names', 'x_line_names', 'label',
-    'format', 'unit', 'bar_mode', 'title_resolved', 'y_scale', 'x_scale', 'facet_scales'];
+  const OPTION_FIELDS = ['type', 'drill', 'point_size', 'line_width', 'connect', 'smoother',
+    'derived.smoother', 'ymin', 'ymax', 'x_lines', 'y_lines', 'identity_line', 'derived.band',
+    'box_points', 'linetype', 'x_ranges', 'legend', 'label', 'format', 'unit', 'position',
+    'derived.titles', 'y_transform', 'x_transform', 'facet_scales'];
 
   // The canvas height, before turned x labels add their gutter.
   const PANEL_H = 400;
@@ -39,129 +32,91 @@
   const DIM = 0.15;
 
   // ECharts builds the brush and zoom drag controllers only for a rendered
-  // toolbox, so one is rendered, with no size and outside the canvas. The
-  // cursors are armed in _individualAfter; a double-click or the panel's
-  // Reset zoom link undoes a zoom, and a click off the brush clears it.
-  const HIDDEN_TOOLBOX = { show: true, itemSize: 0, itemGap: 0, right: -40, top: -40 };
-
-  // A scatter's brush.
-  const brushToolbox = () => ({
-    ...HIDDEN_TOOLBOX,
-    feature: { brush: { type: ['rect', 'lineX', 'clear'] } }
-  });
-
-  // A line chart's drag-to-zoom on x.
-  const zoomToolbox = () => ({
-    ...HIDDEN_TOOLBOX,
-    feature: {
-      // The data x axis only, not the veil's hidden one.
-      dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' }
-    }
+  // toolbox, so one is rendered with no size, outside the canvas.
+  /** @param {any} feature */
+  const hiddenToolbox = (feature) =>
+    ({ show: true, itemSize: 0, itemGap: 0, right: -40, top: -40, feature });
+  const BRUSH_TOOLS = ['rect', 'lineX', 'clear'];
+  const brushToolbox = () => hiddenToolbox({ brush: { type: BRUSH_TOOLS } });
+  // Drag-to-zoom on the data x axis only, not the veil's hidden one.
+  const zoomToolbox = () => hiddenToolbox({
+    dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' }
   });
 
   const { identityDomain, pos, logDomains, clampBand } = parts.log;
 
-  /**
-   * What every part of a panel's option reads: the config, the colours, the
-   * panel's log domains and the measured x labels.
-   * @param {any} m @param {any} look @param {number} width
-   */
+  /** The settings with the band's series clamped above a log axis's floor.
+   * @param {Record<string, any>} cfg @param {number} floor */
+  const clampedBand = (cfg, floor) => {
+    const band = cfg.derived.band || {};
+    return { ...cfg, derived: { ...cfg.derived,
+                                band: { ...band, series: clampBand(band.series, floor) } } };
+  };
+
+  /** What every part of a panel's option reads: config, colours, the panel's
+   * log domains (null on a linear axis) and the measured x labels.
+   * @param {any} m @param {any} look @param {number} width */
   const panelContext = (m, look, width) => {
     const { cfg, ink, theme } = look;
-    // This panel's log domains, null on a linear axis.
     const lx = (look.logDom && look.logDom.x) || null;
     const ly = (look.logDom && look.logDom.y) || null;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(look.columns, col);
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
-    const lm = cfg.line_width_mult ?? 1.0;
     const xCats = m.x.cats;
-    // Categorical x: every label, flat while it fits its slot, else turned
-    // and thinned (an ordered axis). Measured before the height: turned
-    // labels grow the canvas by their gutter.
+    // Measured before the height: turned labels grow the canvas.
     const xlab = xCats ? NS.axes.xAxisLabels(xCats, width - X_INSET, true, look.measure, ink) : null;
-    return { m, look, width, cfg, ink, theme, lx, ly, title, ax, lm, xCats, xlab,
+    return { m, look, width, cfg, ink, theme, lx, ly, title, ax, lm: cfg.line_width, xCats, xlab,
              isLine: m.isLine, isBand: m.isBand, isTime: m.x.type === 'time' };
   };
 
-  /**
-   * The panel's series from the band or the points part, with what the
-   * option needs beside them.
-   * @param {any} k @param {any} panel
-   */
+  /** The panel's series from the band or the points part, with what the option
+   * needs beside them. @param {any} k @param {any} panel */
   const panelSeries = (k, panel) => {
     const { m, look, cfg, lx, ly, width } = k;
-    let mlTarget = 0;
-    let bandMany = false;
-    /** @type {any} */
-    let band = null;
-    /** @type {any} */
-    let pts = null;
-    // Room on the right for names at the line ends.
-    let labelPad = 0;
-    /** @type {any[]} */
-    let series;
     if (k.isBand) {
-      const b = parts.band(m, panel, ly
-        ? { ...look, cfg: { ...cfg, band_series: clampBand(cfg.band_series, ly.min) } } : look);
-      series = b.series;
-      labelPad = b.labelPad;
-      band = b.band;
-      bandMany = b.many;
-      if (b.markLineIdx >= 0) mlTarget = b.markLineIdx;
-    } else {
-      pts = parts.points(m, panel, (lx || ly)
-        ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
-        width > X_INSET ? width - X_INSET : 0);
-      series = pts.series;
-      labelPad = pts.labelPad || 0;
+      const b = parts.band(m, panel, ly ? { ...look, cfg: clampedBand(cfg, ly.min) } : look);
+      return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
+               band: b.band, pts: null, labelPad: b.labelPad };
     }
-    return { series, mlTarget, bandMany, band, pts, labelPad };
+    const pts = parts.points(m, panel, (lx || ly)
+      ? { ...look, logFloorX: lx ? lx.min : null, logFloorY: ly ? ly.min : null } : look,
+      width > X_INSET ? width - X_INSET : 0);
+    return { series: pts.series, mlTarget: 0, bandMany: false, band: null, pts,
+             labelPad: pts.labelPad };
   };
 
-  /**
-   * The helper lines, the band's limits and the identity line, ready for the
-   * shared markLine, with the domain both axes then share (`idDom`, null when
-   * the identity line is off).
-   * @param {any} k @param {any} ext @param {any[]} series
-   */
+  /** The helper lines, the band's limits and the identity line for the shared
+   * markLine, with the domain both axes then share (`idDom`, null without
+   * the identity line). @param {any} k @param {any} ext @param {any[]} series */
   const panelRefData = (k, ext, series) => {
     const { m, look, cfg, ink, lx, ly, lm, isBand, isLine } = k;
-    /** @type {any[]} */
     const refData = [];
-    const refX = Array.isArray(cfg.x_lines) ? cfg.x_lines : [];
-    const refY = Array.isArray(cfg.value_lines) ? cfg.value_lines : [];
-    // A name in `x_lines` / `y_lines` labels its line.
-    const nmX = Array.isArray(cfg.x_line_names) ? cfg.x_line_names : [];
-    const nmY = Array.isArray(cfg.value_line_names) ? cfg.value_line_names : [];
     // An unnamed line at 0 needs no label: the axis prints its value.
     /** @param {any} v @param {any} nm */
     const refText = (v, nm) => nm || (Number(v) === 0 ? null : undefined);
-    // An x line sits where the axis puts x: a date on a time axis, a
-    // category on a category axis (as `x_ranges` does).
-    refX.forEach((v, i) => {
+    NS.labelled(cfg.x_lines).forEach(({ value: v, label: nm }) => {
       if (lx && !pos(v)) return;
       if (m.x.type === 'category') {
         const c = NS.axes.catOf(v, m.x.cats || []);
         if (c == null) return;
-        const text = nmX[i] || (c === String(v) ? null : String(v));
+        const text = nm || (c === String(v) ? null : String(v));
         refData.push(NS.axes.guideLine(c, true, lm, text, false, ink));
         return;
       }
       const at = m.x.encode ? m.x.encode(v) : Number(v);
       if (!Number.isFinite(at)) return;
       const text = m.x.type === 'time'
-        ? (nmX[i] || NS.axes.fmtXVal(at, 'time', null, m.x.period === 'time' ? 'time' : null))
-        : refText(v, nmX[i]);
+        ? (nm || NS.axes.fmtXVal(at, 'time', null, m.x.period === 'time' ? 'time' : null))
+        : refText(v, nm);
       refData.push(NS.axes.guideLine(at, true, lm, text, false, ink));
     });
-    refY.forEach((v, i) => {
+    NS.labelled(cfg.y_lines).forEach(({ value: v, label: nm }) => {
       if (ly && !pos(v)) return;
-      refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nmY[i]), false, ink));
+      refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
     if (isBand) for (const r of parts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
-    const idRaw = cfg.identity_line;
-    // y = x is a straight diagonal only when both axes use the same scale.
-    const identityOn = (idRaw === 'on' || idRaw === true) && !isLine &&
+    // y = x is a diagonal only when both axes use the same scale.
+    const identityOn = cfg.identity_line === true && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
     /** @type {any} */
     let idDom = null;
@@ -184,9 +139,8 @@
   };
 
   /**
-   * With a series column apart from the colour, the chips are colour
-   * values no series is named after: an empty series per chip gives the
-   * legend something to bind to.
+   * With a series column apart from the colour, the chips are colour values
+   * no series is named after: an empty series per chip for the legend to bind.
    * @param {any} k @param {any[]} series
    */
   const addChipSeries = (k, series) => {
@@ -204,9 +158,8 @@
   /** @param {any} k @param {any} ext @param {any} idDom @param {any} idLog */
   const panelAxes = (k, ext, idDom, idLog) => {
     const { m, cfg, ink, ax, lx, ly, xCats, xlab, isLine, isTime } = k;
-    // Gridlines are solid hairlines. A line chart reads values off the y
-    // grid and dates off the crosshair, so it has no x grid and no y axis
-    // line.
+    // A line chart reads values off the y grid and dates off the crosshair,
+    // so it has no x grid and no y axis line.
     const grid = { lineStyle: { color: ax.splitLineColor, type: 'solid', width: 1 } };
     /** @type {any} */
     const xAxis = {
@@ -217,8 +170,7 @@
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: xlab ? xlab.axisLabel : {
         color: ax.labelColor, fontSize: ax.fontSize, hideOverlap: true,
-        // A date axis labels years, then months, then days as it zooms in;
-        // never turned.
+        // A date axis labels years, then months, then days as it zooms in.
         ...(isTime ? { formatter: { year: '{yyyy}', month: '{MMM}', day: '{d} {MMM}',
                                     hour: '{HH}:{mm}', minute: '{HH}:{mm}' } } : {})
       },
@@ -230,6 +182,7 @@
     if (xCats) xAxis.data = xCats;
     if (idDom && m.x.type === 'value') { xAxis.min = idDom[0]; xAxis.max = idDom[1]; }
     if (lx) NS.axes.logAxis(xAxis, idLog || lx);
+    const yFormat = m.y.type === 'value' && NS.valueFormat(cfg, { unit: false });
     /** @type {any} */
     const yAxis = {
       type: m.y.type,
@@ -239,8 +192,7 @@
       nameRotate: 90,
       nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
       axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
-                   ...(m.y.type === 'value' && NS.valueFormat(cfg, { unit: false })
-                     ? { formatter: NS.valueFormat(cfg, { unit: false }) } : {}) },
+                   ...(yFormat ? { formatter: yFormat } : {}) },
       axisTick: { show: false },
       axisLine: isLine ? { show: false } : { lineStyle: { color: ink.strong } },
       splitLine: grid,
@@ -249,13 +201,11 @@
     if (m.y.cats) yAxis.data = m.y.cats;
     if (idDom && m.y.type === 'value') { yAxis.min = idDom[0]; yAxis.max = idDom[1]; }
     if (ext) { yAxis.min = ext.lo; yAxis.max = ext.hi; }
-    // An area is measured from zero.
-    if (cfg.chart_type === 'area' && m.y.type === 'value' && yAxis.min == null) {
+    if (cfg.type === 'area' && m.y.type === 'value' && yAxis.min == null) {
       yAxis.scale = false;
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
     }
     if (ly) NS.axes.logAxis(yAxis, idLog || ly);
-    // The veil's own 0..1 axes, in the same grid (line charts only).
     const scrimAxis = { type: 'value', min: 0, max: 1, show: false, axisPointer: { show: false } };
     return { xAxis, yAxis, scrimAxis };
   };
@@ -269,13 +219,11 @@
     const { cfg, ink, theme, ly, isLine, isBand, isTime, xlab, xCats } = k;
     const { series, mlTarget, bandMany, band, pts, labelPad } = panelSeries(k, panel);
 
-    // On a log axis the band's frame is the log domain, so a reference
-    // limit at or below zero is pinned to its foot.
+    // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
       ? (ly ? { lo: ly.min, hi: ly.max } : parts.bandExtent(cfg, panel, bandMany)) : null;
 
-    // Helper lines, the band's limits and the identity line share one
-    // markLine (ECharts allows one per series).
+    // One markLine per series is all ECharts allows, so they share one.
     const { refData, idDom, idLog } = panelRefData(k, ext, series);
     if (series.length > 0 && refData.length) {
       series[series[mlTarget] ? mlTarget : 0].markLine = {
@@ -289,19 +237,15 @@
 
     const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
 
-    // The brush needs continuous x; a line and a band are clicked, not
-    // brushed, and so is a scatter with series (a brush would race the
-    // click on a point).
+    // A line, a band and a scatter with series are clicked, not brushed (a
+    // brush would race the click on a point).
     const brushable = m.x.type !== 'category' && !isLine && !isBand && !m.seriesCol;
-    const zoomable = isLine;
-
     const hover = { si: null };
     /** @type {{ veil?: string }} */
     const scrimState = {};
     if (isLine) for (const s of parts.lineOverlay(scrimState)) series.push(s);
-    // The line picker's registry: only for a crowd of lines, one per entity.
-    // A few lines are read off the crosshair's tooltip instead, so nothing
-    // on the plot changes as the cursor moves.
+    // The line picker's registry, only for a crowd of lines. A few lines are
+    // read off the crosshair's tooltip instead.
     const focus = (isLine && m.crowd) ? Object.assign(scrimState, {
       series, stepMode: pts.stepMode || null, smoothOn: pts.smoothOn,
       xAxisType: m.x.type, xOrder: m.x.order, markerPx: pts.markerPx, focusW: pts.focusW,
@@ -313,21 +257,19 @@
       // Dates are placed and labelled in UTC: R writes them without a zone.
       ...(isTime ? { useUTC: true } : {}),
       textStyle: { fontFamily: ink.face },
-      // The first draw animates. Every later change of the same chart (a
-      // resize, the x label re-fit that follows it, a new filter) snaps:
-      // the re-fit patches the option with a merge, and ECharts morphs the
-      // lines on that while the dots on top of them jump to the new layout.
+      // Only the first draw animates: a merge-patch morphs lines while the
+      // dots jump to the new layout.
       animationDurationUpdate: 0,
       tooltip: isLine ? parts.lineTooltip(m, look, hover) : parts.pointTooltip(m, look),
-      // A hidden legend: its selection model is what the chips toggle.
+      // Hidden: its selection model is what the chips toggle.
       legend: { show: false },
       grid: { left: 66, right: 5 + labelPad, top: 30,
               bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: isLine ? [xAxis, scrimAxis] : xAxis,
       yAxis: isLine ? [yAxis, scrimAxis] : yAxis,
-      toolbox: brushable ? brushToolbox() : (zoomable ? zoomToolbox() : undefined),
+      toolbox: brushable ? brushToolbox() : (isLine ? zoomToolbox() : undefined),
       brush: brushable ? {
-        toolbox: ['rect', 'lineX', 'clear'], xAxisIndex: 0, yAxisIndex: 0,
+        toolbox: BRUSH_TOOLS, xAxisIndex: 0, yAxisIndex: 0,
         brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)',
                       borderWidth: 1 },
         throttleDelay: 300
@@ -341,7 +283,7 @@
       panelH,
       xFit: xlab ? { labels: xCats, inset: X_INSET, decimate: true, nameGap: true,
                      gutter: xlab.bottom, key: xlab.key } : null,
-      hover, focus, band, brushable, zoomable
+      hover, focus, band, brushable, zoomable: isLine
     };
   };
 
@@ -359,7 +301,6 @@
       panels: m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) =>
         panelOption(m, panel, logs ? { ...look, logDom: { x: logs.x[i], y: logs.y[i] } } : look,
                     (look.widths || [])[i] || 0)),
-      // The trajectory cap and what a log axis leaves out, in the footer.
       labelNote: [m.capMessage, logNote].filter(Boolean).join(' ') || null
     };
   };
@@ -368,22 +309,18 @@
   /** The legend band's chips. @param {any} m */
   const individualLegend = (m) => (m.legend && m.legend.items.length ? m.legend : null);
 
-  // -- Highlight (D5) ----------------------------------------------------------
-
   /** Is a series one of the panel's marks, not an overlay? @param {any} s */
   const isMark = (s) => s && s.id == null && !s.silent &&
     (s.type === 'scatter' || s.type === 'line');
 
   /**
    * The highlight patch for one panel, from the series the panel was drawn
-   * with (the option's own, so an unnamed series is still unnamed): a line,
-   * a band level or a scatter series is lit when its keys match the
-   * filter; on a filter of a column a scatter series does not carry, each
-   * point by its own row. A range filter (D11) lights the scatter points
-   * inside it, and the lines and band levels with a point inside it; its
-   * facet key, in `filters`, lights the panel. Overlays follow their
-   * series. Without a filter, and nothing dimmed from before, the patch is
-   * empty.
+   * with: a line, a band level or a scatter series is lit when its keys match
+   * the filter; on a filter of a column a scatter series does not carry, each
+   * point by its own row. A range filter lights the scatter points inside it,
+   * and the lines and band levels with a point inside it; its facet key, in
+   * `filters`, lights the panel. Overlays follow their series. Without a
+   * filter, and nothing dimmed from before, the patch is empty.
    * @param {any} m @param {any} panel @param {any[]} drawn the panel option's series
    * @param {((keys: Record<string, any>, rows: any) => boolean) | null} lit
    * @param {boolean} wasDimmed
@@ -396,9 +333,9 @@
     const inRange = range ? (/** @type {any[]} */ p) => NS.keys.pointInRange(p, range) : null;
     const NONE = '\u0000';
     const keyOf = (/** @type {any} */ name) => (name == null ? NONE : String(name));
-    // A highlight splits a scatter level into its muted points and its
-    // highlighted ones (model-individual.js highlightSeries): `byPart` finds
-    // the part a drawn series is, `byLevel` the whole level.
+    // A highlight splits a scatter level into muted and highlighted parts
+    // (model-individual.js): `byPart` finds the part a drawn series is,
+    // `byLevel` the whole level.
     const MUTED = '\u0002';
     /** @type {Map<string, any>} */
     const byPart = new Map();
@@ -436,13 +373,11 @@
     };
     const series = drawn.map((/** @type {any} */ s) => {
       if (!s || s.id != null) return {};
-      // The legend's empty series.
       if (s.silent && s.type !== 'custom' && Array.isArray(s.data) && !s.data.length) return {};
       const ms = byPart.get(keyOf(s.name) + (s.blockrMuted ? MUTED : ''));
       if (isMark(s) && s.type === 'scatter' && ms) {
         if (perPoint) {
           let any = false;
-          // The panel's key decides before the points do.
           const keyOn = byRow || !lit || lit(NS.model.individualKeys(m, panel.facet, s.name), () => ms.rows);
           const data = ms.pts.map((/** @type {any} */ p, /** @type {number} */ j) => {
             const on = keyOn && (!byRow || NS.keys.rowMatches(ms.rows[j], filters)) &&
@@ -454,7 +389,6 @@
           levelLit.set(keyOf(s.name), any || levelLit.get(keyOf(s.name)) === true);
           return { data, itemStyle: { opacity: 1 } };
         }
-        // The plain points again, in case a filter dimmed them one by one.
         return { data: ms.pts, itemStyle: { opacity: onLevel(s.name) ? 1 : DIM } };
       }
       const on = onLevel(s.name);
@@ -464,7 +398,6 @@
                  itemStyle: { opacity: on ? 1 : DIM } };
       }
       if (s.type === 'line') {
-        // A smoother, or a band's halo.
         const base = m.isBand ? 1 : 0.9;
         return { lineStyle: { opacity: on ? base : base * DIM } };
       }

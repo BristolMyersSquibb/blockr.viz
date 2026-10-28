@@ -1,10 +1,7 @@
 // @ts-check
 /**
- * Chart block: the timeline (gantt) option.
- *
- * The model and how it should look in, one ECharts option and one canvas
- * height per panel out. Nothing here touches the DOM or ECharts: the bar
- * renderer runs inside ECharts later, and text is measured with the
+ * Chart block: the timeline (gantt) option, one ECharts option and canvas
+ * height per panel. Nothing here touches the DOM; text is measured with the
  * function the caller passes.
  */
 (function () {
@@ -15,9 +12,8 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
   const option = /** @type {any} */ (NS.option = NS.option || {});
 
-  // Config fields the option reads beside the model's; a change to any
-  // other field reuses the option.
-  const OPTION_FIELDS = ['label', 'drill', 'palette', 'scales'];
+  // Config fields the option reads beside the model's.
+  const OPTION_FIELDS = ['label', 'drill', 'derived.palette', 'derived.scales'];
 
   // Lane height and the room around the plot, in CSS px.
   const LANE_PX = 28;
@@ -35,8 +31,7 @@
   /**
    * Which marks each series of a panel draws, as mark positions in series
    * order: one series per colour level (marks of no level are not drawn),
-   * else one series of every mark. The option and the highlight patch both
-   * lay the series out from this.
+   * else one series of every mark. The option and the patch share it.
    * @param {any} m @param {any} panel @returns {number[][]}
    */
   const seriesMarks = (m, panel) => {
@@ -51,31 +46,22 @@
     return m.color.levels.map((/** @type {any} */ lvl) => buckets.get(lvl) || []);
   };
 
-  /**
-   * What every part of the timeline option reads: the axes, the colours and
-   * the shared styling.
-   * @param {any} m @param {Look} look
-   */
+  /** What every part of the timeline option reads. @param {any} m @param {Look} look */
   const timelineContext = (m, look) => {
     const { cfg, columns, ink, theme } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const { type: xAxisType, cats: xCats, col: x } = m.x;
-    const y = m.y.col;
     const palette = NS.paletteOf(cfg);
     const colorLevels = m.color ? m.color.levels : [];
     const showLegend = colorLevels.length > 0;
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
     const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
-    const onBarLabel = !!cfg.label;
-    return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y, palette, colorLevels,
-             showLegend, colors, ax, onBarLabel };
+    return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y: m.y.col, palette,
+             colorLevels, showLegend, colors, ax, onBarLabel: !!cfg.label };
   };
 
-  /**
-   * A bar from start to end on its lane, at least 4px wide, clipped to the
-   * plot; the label column's value on it when the bar has room.
-   * @param {any} k
-   */
+  /** A bar from start to end on its lane, at least 4px wide, clipped to the plot,
+   * with the label column's value on it when it has room. @param {any} k */
   const timelineRenderItem = (k) => {
     const { ink, onBarLabel } = k;
     return (/** @type {any} */ params, /** @type {any} */ api) => {
@@ -90,8 +76,7 @@
       );
       if (!rect) return;
       const barLabel = onBarLabel ? String(api.value(5) ?? '') : '';
-      // The datum's opacity rides in the style: a filter dims the bars it
-      // does not light (D5).
+      // The datum's opacity rides in the style: a filter dims the bars it does not light.
       const st = api.style();
       /** @type {any[]} */
       const children = [{ type: 'rect', shape: Object.assign({}, rect, { r: 3 }), style: st }];
@@ -110,12 +95,8 @@
     };
   };
 
-  /**
-   * Every dimension mapped to the hovered bar: the most specific name as
-   * the headline (label, else series, else lane), then the lane, the
-   * interval and its length, the colour and the tooltip fields.
-   * @param {any} k
-   */
+  /** The hovered bar: label, else series, else lane as headline, then the lane,
+   * the interval and its length, the colour and the tooltip fields. @param {any} k */
   const timelineTooltip = (k) => {
     const { m, title, xAxisType, xCats, x, y } = k;
     return (/** @type {any} */ p) => {
@@ -164,18 +145,14 @@
     };
   };
 
-  /**
-   * One panel: its custom bar series, lanes axis and canvas height.
-   * @param {any} k @param {any} panel @param {any} renderItem
-   * @param {any} formatter @param {any} xAxis
-   */
+  /** One panel: its bar series, lanes axis and canvas height.
+   * @param {any} k @param {any} panel @param {any} renderItem @param {any} formatter
+   * @param {any} xAxis */
   const timelinePanel = (k, panel, renderItem, formatter, xAxis) => {
     const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors, ax } = k;
     const layout = seriesMarks(m, panel);
     const data = (/** @type {number[]} */ idx) =>
       idx.map((i) => ({ value: panel.marks[i] }));
-    // One named series per colour level, so each legend chip has a series
-    // to toggle.
     const series = showLegend
       ? colorLevels.map((/** @type {any} */ lvl, /** @type {number} */ si) => ({
           type: 'custom', name: lvl, data: data(layout[si]),
@@ -233,7 +210,7 @@
   timeline.FIELDS = OPTION_FIELDS;
 
   /**
-   * The legend band's chips: the colour levels in the option's colours.
+   * The legend chips: the colour levels in the option's colours.
    * @param {any} m @param {Record<string, any>} cfg
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
@@ -246,9 +223,9 @@
   };
 
   /**
-   * The highlight patch for one panel (D5): every bar's opacity from whether
-   * its mark (lane and facet) is lit. Without a filter, and nothing dimmed
-   * from before, the patch is empty.
+   * The highlight patch for one panel: every bar's opacity from whether its
+   * mark (lane and facet) is lit. Without a filter, and nothing dimmed from
+   * before, the patch is empty.
    * @param {any} m @param {any} panel @param {Record<string, any>} cfg
    * @param {((keys: Record<string, any>, rows: () => any[]) => boolean) | null} lit
    * @param {boolean} wasDimmed

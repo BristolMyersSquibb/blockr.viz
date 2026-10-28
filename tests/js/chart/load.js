@@ -2,8 +2,7 @@
  * no Shiny. Returns the namespace they fill (Blockr.viz.chart).
  *
  * The scripts are the ones the page loads, in scripts.txt order, up to the
- * first that needs a browser, plus the generated spec and config.js (the
- * settings from a payload).
+ * first that needs a browser, plus the generated spec.
  */
 'use strict';
 
@@ -16,7 +15,7 @@ const PURE = ['common.js', 'format.js', 'agg.js', 'chart-index.js', 'chart-keys.
               'model-common.js', 'model-timeline.js', 'model-aggregated.js',
               'model-individual.js', 'option-timeline.js', 'option-bar-marks.js', 'option-bar.js', 'option-radial.js',
               'option-distribution.js', 'option-aggregated.js', 'option-points.js',
-              'option-band.js', 'option-domains.js', 'option-individual.js', 'config.js', 'gear.js'];
+              'option-band.js', 'option-domains.js', 'option-individual.js', 'gear.js'];
 
 function loadPure() {
   const ctx = vm.createContext({ console });

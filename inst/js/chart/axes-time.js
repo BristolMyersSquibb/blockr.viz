@@ -1,10 +1,7 @@
 // @ts-check
 /**
- * Chart block: dates on a time axis, as plain functions.
- *
- * A date value in ms, the period a time column is sampled at, an x value
- * or a span as a tooltip prints it. Starts NS.axes; axes-labels.js adds the
- * rest to it.
+ * Chart block: dates on a time axis. A date in ms, the period a column is
+ * sampled at, an x value or span as a tooltip prints it. Starts NS.axes.
  */
 (function () {
   'use strict';
@@ -14,9 +11,8 @@
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
   /**
-   * A date on a time axis in ms: a number as is, an ISO date as UTC
-   * midnight, an R date-time string ("2020-03-01 12:30:00") as that
-   * wall-clock time in UTC, which the axis also formats in UTC.
+   * A date in ms: a number as is, an ISO date as UTC midnight, an R date-time
+   * string ("2020-03-01 12:30:00") as that wall-clock time in UTC.
    * @param {any} v @returns {number}
    */
   const timeValue = (v) => {
@@ -30,8 +26,7 @@
 
   /**
    * The period a time column is sampled at, from the median gap between its
-   * distinct values: 'year', 'quarter', 'month', 'day' or 'time'. It names
-   * the tooltip's date ("Q4 2014", "Dec 1986").
+   * distinct values: 'year', 'quarter', 'month', 'day' or 'time'.
    * @param {any[]} rows @param {string} col @returns {string}
    */
   const timePeriod = (rows, col) => {
@@ -56,8 +51,8 @@
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   /**
-   * An x value for a tooltip: the category on a category axis, a date on a
-   * time axis (named by its period when one is given), else a trimmed number.
+   * An x value for a tooltip: a category, a date named by its period, or a
+   * trimmed number.
    * @param {any} v @param {string} xAxisType @param {any[] | null} xCats
    * @param {string | null} [period]
    */

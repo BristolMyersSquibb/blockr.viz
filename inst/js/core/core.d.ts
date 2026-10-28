@@ -73,7 +73,7 @@ interface VizNamespace {
   };
   Scope: { new (): VizScope; open(): number };
   binding(name: string, view: string, View: VizViewClass,
-          opts?: { grace?: number }): boolean;
+          opts?: { grace?: number; busy?: string }): boolean;
   downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
             scope: VizScope, opts?: { onOpen?: () => void }): void;
   capture(opts: { width: number; height: number;

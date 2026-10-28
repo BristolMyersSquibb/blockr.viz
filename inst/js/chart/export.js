@@ -1,11 +1,9 @@
 // @ts-check
 /**
- * Chart block: the chart as one picture.
- *
- * _downloadImage() composes the title band, every panel at its place in the
- * grid (facet labels redrawn), the legend band and the caption on one
- * canvas, from each panel's own bitmap. The capture service draws a chart R
- * asks for in a hidden host and answers with that picture.
+ * Chart block: the chart as one picture. _downloadImage() composes the
+ * titles, every panel at its place in the grid, the legend band and the
+ * caption on one canvas. The capture service draws a chart R asks for in a
+ * hidden host and answers with that picture.
  */
 (function () {
   'use strict';
@@ -14,30 +12,10 @@
   const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
   const NS = /** @type {any} */ (V.chart = V.chart || {});
 
-  /** @type {any} */
-  let measureCtx = null;
-
-  /** Text styles from the live bands, so the picture follows the theme.
-   * @param {string} face */
-  const textStyles = (face) => {
-    /** @param {Element | undefined} el @param {string} fb */
-    const fontOf = (el, fb) => {
-      const cs = el ? getComputedStyle(el) : null;
-      if (!cs || !cs.fontSize) return fb + ' ' + face;
-      const style = cs.fontStyle === 'italic' ? 'italic ' : '';
-      return style + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
-    };
-    /** @param {Element | undefined} el @param {string} fb */
-    const colorOf = (el, fb) => {
-      const cs = el ? getComputedStyle(el) : null;
-      return (cs && cs.color) || fb;
-    };
-    return { fontOf, colorOf };
-  };
+  /** @type {any} */ let measureCtx = null;
 
   /** A function that breaks a text block into lines at the picture width:
-   * explicit newlines first, then word wrap (the caption is pre-line on
-   * screen).
+   * newlines first, then word wrap.
    * @param {number} W @param {number} pad */
   const lineWrapper = (W, pad) => {
     const meas = measureCtx || (measureCtx = document.createElement('canvas').getContext('2d'));
@@ -46,56 +24,56 @@
       meas.font = b.font;
       const lines = [];
       for (const src of String(b.text).split(/\r?\n/)) {
-        const words = src.split(/\s+/).filter(Boolean);
-        if (!words.length) { lines.push(''); continue; }
         let cur = '';
-        for (const w of words) {
+        for (const w of src.split(/\s+/).filter(Boolean)) {
           const cand = cur ? cur + ' ' + w : w;
-          if (meas.measureText(cand).width > W - 2 * pad && cur) {
-            lines.push(cur); cur = w;
+          if (cur && meas.measureText(cand).width > W - 2 * pad) {
+            lines.push(cur);
+            cur = w;
           } else {
             cur = cand;
           }
         }
-        if (cur) lines.push(cur);
+        lines.push(cur);
       }
       const px = parseFloat((b.font.match(/(\d+(?:\.\d+)?)px/) || ['', '13'])[1]);
       return { lines, lineH: Math.round(px * 1.4) };
     };
   };
 
-  /** Everything the picture is laid out from: the title and caption
-   * blocks wrapped to the grid width, the band heights, the legend's
-   * place, the canvas size and its background.
+  /** Everything the picture is laid out from: the wrapped title and caption
+   * blocks, the band heights, the legend's place, the canvas size, the background.
    * @param {any} view @param {DOMRect} gridR @param {number} pr */
   const exportContext = (view, gridR, pr) => {
     const pad = 12;
-    const face = (view._ink || NS.INK_DEFAULT).face;
-    const { fontOf, colorOf } = textStyles(face);
-    const tx = view._titleText || {};
-    const blocksTop = [
-      { text: tx.title || '', font: fontOf(view.titleEl, '600 15px'),
-        color: colorOf(view.titleEl, '#1f2937') },
-      { text: tx.subtitle || '', font: fontOf(view.subtitleEl, '13px'),
-        color: colorOf(view.subtitleEl, '#6b7280') }
-    ].filter((b) => b.text);
-    const capBlock = (tx.caption || '') && {
-      text: tx.caption, font: fontOf(view.captionEl, 'italic 11px'),
-      color: colorOf(view.captionEl, '#6b7280')
+    // Text styles come from the live bands, so the picture follows the theme.
+    /** @param {Element} el @param {string} fb */
+    const fontOf = (el, fb) => {
+      const cs = getComputedStyle(el);
+      if (!cs.fontSize) return fb + ' ' + view._ink.face;
+      return (cs.fontStyle === 'italic' ? 'italic ' : '') + cs.fontWeight + ' ' + cs.fontSize +
+        ' ' + cs.fontFamily;
     };
-
+    /** @param {Element} el @param {string} fb */
+    const colorOf = (el, fb) => getComputedStyle(el).color || fb;
     const W = Math.round(gridR.width);
     const wrapLines = lineWrapper(W, pad);
-    const top = blocksTop.map((b) => ({ ...b, ...wrapLines(b) }));
-    const cap = capBlock ? { ...capBlock, ...wrapLines(capBlock) } : null;
+    /** @param {string} key @param {Element} el @param {string} font @param {string} color */
+    const block = (key, el, font, color) => {
+      if (!view._titleText[key]) return null;
+      const b = { text: view._titleText[key], font: fontOf(el, font), color: colorOf(el, color) };
+      return { ...b, ...wrapLines(b) };
+    };
+    const top = /** @type {any[]} */ ([block('title', view.titleEl, '600 15px', '#1f2937'),
+                                       block('subtitle', view.subtitleEl, '13px', '#6b7280')])
+      .filter(Boolean);
+    const cap = block('caption', view.captionEl, 'italic 11px', '#6b7280');
     const topH = top.length
       ? pad + top.reduce((a, b) => a + b.lines.length * b.lineH, 0) + 6 : pad / 2;
     const capH = cap ? 6 + cap.lines.length * cap.lineH + pad : pad;
     const legendEl = view.legendEl;
-    const legR = (legendEl && legendEl.offsetParent !== null)
-      ? legendEl.getBoundingClientRect() : null;
+    const legR = legendEl.offsetParent !== null ? legendEl.getBoundingClientRect() : null;
     const legH = legR ? legR.height : 0;
-    // The band sits above the plot with `legend = "top"`, else below it.
     const legTop = !!legR && legendEl.classList.contains('dd-legend-band--top');
     const H = Math.round(topH + gridR.height + legH + capH);
 
@@ -116,17 +94,17 @@
       });
     })));
 
-  /** The title and subtitle lines at the top.
-   * @param {CanvasRenderingContext2D} ctx @param {any} k */
-  const paintTitles = (ctx, k) => {
-    const { pad, top } = k;
-    let y = pad;
-    for (const b of top) {
-      ctx.font = b.font;
-      ctx.fillStyle = b.color;
-      ctx.textBaseline = 'top';
-      for (const ln of b.lines) { ctx.fillText(ln, pad, y); y += b.lineH; }
+  /** A wrapped text block from `y`; returns the y below it.
+   * @param {CanvasRenderingContext2D} ctx @param {any} b @param {number} x @param {number} y */
+  const paintBlock = (ctx, b, x, y) => {
+    ctx.font = b.font;
+    ctx.fillStyle = b.color;
+    ctx.textBaseline = 'top';
+    for (const ln of b.lines) {
+      ctx.fillText(ln, x, y);
+      y += b.lineH;
     }
+    return y;
   };
 
   /** Every panel at its place in the grid, with its facet label.
@@ -153,8 +131,7 @@
     }
   };
 
-  /** Legend chips where they are on screen, above or below the panels;
-   * chips toggled off keep their dimmed opacity.
+  /** Legend chips where they are on screen; a dimmed chip keeps its opacity.
    * @param {CanvasRenderingContext2D} ctx @param {any} k */
   const paintLegend = (ctx, k) => {
     const { gridR, fontOf, colorOf, topH, legendEl, legR, legTop } = k;
@@ -195,17 +172,6 @@
     ctx.textBaseline = 'top';
   };
 
-  /** The caption lines at the bottom.
-   * @param {CanvasRenderingContext2D} ctx @param {any} k */
-  const paintCaption = (ctx, k) => {
-    const { pad, cap, gridR, topH, legH } = k;
-    ctx.font = cap.font;
-    ctx.fillStyle = cap.color;
-    ctx.textBaseline = 'top';
-    let cy = topH + gridR.height + legH + 6;
-    for (const ln of cap.lines) { ctx.fillText(ln, pad, cy); cy += cap.lineH; }
-  };
-
   /** The bands and the panels on one canvas, or null without a 2d context.
    * @param {any} k @param {any[]} panels @returns {HTMLCanvasElement | null} */
   const composeCanvas = (k, panels) => {
@@ -218,40 +184,36 @@
     ctx.scale(pr, pr);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
-    paintTitles(ctx, k);
+    let y = k.pad;
+    for (const b of k.top) y = paintBlock(ctx, b, k.pad, y);
     paintPanels(ctx, k, panels);
     if (legR) paintLegend(ctx, k);
-    if (cap) paintCaption(ctx, k);
+    if (cap) paintBlock(ctx, cap, k.pad, k.topH + k.gridR.height + k.legH + 6);
     return canvas;
   };
 
   const exporter = {
     // `send` posts the picture to R as <id>_capture; `opts.done` takes it
-    // instead; neither saves chart.png in the browser. `pixelRatio` is the
-    // resolution, and the only thing it changes.
+    // instead; neither saves chart.png in the browser.
     /** @this {any}
      *  @param {boolean} [send]
      *  @param {{pixelRatio?: number,
      *           done?: (url: string, w: number, h: number) => void,
      *           fail?: (e: Error) => void}} [opts] */
     _downloadImage(send, opts) {
-      // Nothing drawn, or a grid with no size: there is no picture to take.
       const none = (/** @type {string} */ why) => { if (opts && opts.fail) opts.fail(new Error(why)); };
-      const slots = (this._slots || []).filter((/** @type {any} */ s) => s && s.chart);
-      if (!slots.length || !this.chartGrid) { none('the chart has nothing drawn'); return; }
+      const slots = this._slots.filter((/** @type {any} */ s) => s.chart);
+      if (!slots.length) { none('the chart has nothing drawn'); return; }
       const gridR = this.chartGrid.getBoundingClientRect();
       if (!gridR.width || !gridR.height) { none('the chart has no size'); return; }
-      const pr = (opts && opts.pixelRatio) || (this.config && this.config.capture_ratio) || 2;
+      const pr = (opts && opts.pixelRatio) || this.derived.capture_ratio || 2;
       const k = exportContext(this, gridR, pr);
 
       panelBitmaps(slots, pr).then((panels) => {
         const canvas = composeCanvas(k, panels);
         if (!canvas) return;
         const url = canvas.toDataURL('image/png');
-        // Kept so a driven browser can read back what was composed.
-        this._lastCapture = url;
-
-        if (opts && typeof opts.done === 'function') {
+        if (opts && opts.done) {
           opts.done(url, k.W, k.H);
           return;
         }
@@ -267,26 +229,22 @@
     }
   };
 
-  // -- Capture service --------------------------------------------------------
-  //
-  // R asks for a picture of a block at a given box (`blockr-viz:capture`,
-  // the payload plus `req`, `width`, `height`); a fresh view draws it in a
-  // host core/capture.js parks off screen, and the reply goes out once.
+  // Capture service: R asks for a picture of a block at a given box
+  // (`blockr-viz:capture`: the payload plus `req`, `width`, `height`); a
+  // fresh view draws it in a host core/capture.js parks off screen.
 
-  // ECharts animates in for about a second after a draw; reading the
-  // panels the moment they exist captures a blank first frame.
+  // ECharts animates in for about a second after a draw; an earlier read
+  // captures a blank first frame.
   const CAPTURE_SETTLE_MS = 1400;
   let captureSeq = 0;
 
-  /** Wait until a panel has a height, then let the animation settle.
-   * An empty state ends the wait at once.
+  /** Wait until a panel has a height, then let the animation settle; an
+   * empty state ends the wait at once.
    * @param {any} view @param {VizScope} scope @param {() => void} then @param {number} left */
   const whenDrawn = (view, scope, then, left) => {
-    const slots = view._slots || [];
-    // An empty state is all there is: nothing to wait for.
-    if (view.drawn && !slots.some((/** @type {any} */ s) => s && s.chart)) { then(); return; }
-    const ready = slots.some((/** @type {any} */ s) =>
-      s && s.chart && s.chartDiv && s.chartDiv.clientHeight > 40);
+    const charted = view._slots.filter((/** @type {any} */ s) => s.chart);
+    if (view.drawn && !charted.length) { then(); return; }
+    const ready = charted.some((/** @type {any} */ s) => s.chartDiv.clientHeight > 40);
     if (ready || left <= 0) scope.timeout(then, CAPTURE_SETTLE_MS);
     else scope.timeout(() => whenDrawn(view, scope, then, left - 1), 100);
   };

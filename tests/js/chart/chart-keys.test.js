@@ -28,10 +28,10 @@ test('a filter from rows takes the distinct non-missing values', () => {
 });
 
 test('a restored filter needs a column and values', () => {
-  assert.deepStrictEqual(plain(K.restored({ filter_column: 'AETERM', filter_values: ['Rash'] })),
-                         { AETERM: ['Rash'] });
-  assert.strictEqual(K.restored({ filter_values: ['Rash'] }), null);
-  assert.strictEqual(K.restored({ filter_column: 'AETERM', filter_values: [] }), null);
+  const sel = (filters) => ({ selection: { type: 'categorical', filters } });
+  assert.deepStrictEqual(plain(K.restored(sel({ AETERM: ['Rash'] }))), { AETERM: ['Rash'] });
+  assert.strictEqual(K.restored({ selection: { type: 'categorical' } }), null);
+  assert.strictEqual(K.restored(sel({ AETERM: [] })), null);
   assert.strictEqual(K.restored({}), null);
 });
 
@@ -119,31 +119,31 @@ test('a range in column labels: both ends at one precision, a point with =', () 
                      'ADT 1970-01-01 to 1970-01-02');
 });
 
-test('a restored filter: `filters` first, with missing values; a range is not one', () => {
-  assert.deepStrictEqual(plain(K.restored({ filters: { AETERM: ['Rash'], AESEV: [null] },
-                                            filter_column: 'AETERM', filter_values: ['Rash'] })),
+test('a restored filter: its filters, with missing values; a range is not one', () => {
+  const sel = (filters) => ({ selection: { type: 'categorical', filters } });
+  assert.deepStrictEqual(plain(K.restored(sel({ AETERM: ['Rash'], AESEV: [null] }))),
                          { AETERM: ['Rash'], AESEV: [null] });
   // A scalar from R is one value; an empty column is dropped.
-  assert.deepStrictEqual(plain(K.restored({ filters: { AETERM: 'Rash', ARM: [] } })),
+  assert.deepStrictEqual(plain(K.restored(sel({ AETERM: 'Rash', ARM: [] }))),
                          { AETERM: ['Rash'] });
-  assert.strictEqual(K.restored({ filters: {} }), null);
-  assert.strictEqual(K.restored({ filter_type: 'range', filters: { ARM: ['Placebo'] } }), null);
+  assert.strictEqual(K.restored(sel({})), null);
+  assert.strictEqual(K.restored({ selection: { type: 'range', filters: { ARM: ['Placebo'] } } }), null);
 });
 
 test('a restored range carries the facet key it was taken in (D10, D11)', () => {
-  const cfg = { filter_type: 'range', filters: { ARM: ['Placebo'] },
-                filter_range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: [1, 3] } };
+  const cfg = { selection: { type: 'range', filters: { ARM: ['Placebo'] }, x: 'ADY', y: 'AVAL',
+                              x_range: [2, 9], y_range: [1, 3] } };
   assert.deepStrictEqual(plain(K.restoredRange(cfg)), {
     range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: [1, 3] },
     filters: { ARM: ['Placebo'] }
   });
   // A line's x range: no y.
-  const line = plain(K.restoredRange({ filter_type: 'range', filters: null,
-    filter_range: { x_col: 'ADY', y_col: 'AVAL', x_range: [2, 9], y_range: null } }));
+  const line = plain(K.restoredRange({ selection: { type: 'range', filters: null, x: 'ADY', y: 'AVAL',
+                                        x_range: [2, 9], y_range: null } }));
   assert.deepStrictEqual(line, { range: { x_col: 'ADY', y_col: null, x_range: [2, 9], y_range: null },
                                  filters: null });
-  assert.strictEqual(K.restoredRange({ filter_type: 'categorical', filter_range: cfg.filter_range }), null);
-  assert.strictEqual(K.restoredRange({ filter_type: 'range' }), null);
+  assert.strictEqual(K.restoredRange({ selection: { ...cfg.selection, type: 'categorical' } }), null);
+  assert.strictEqual(K.restoredRange({ selection: { type: 'range' } }), null);
 });
 
 test('a range selection: x and y fields, the facet key in filters only in a panel (D10)', () => {

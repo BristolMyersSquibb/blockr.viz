@@ -449,7 +449,7 @@ const PRELUDE = `
     setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); }
   };
   window.$ = window.jQuery = function (x) {
-    var q = { find: function () { return []; },
+    var q = { find: function (sel) { return x && x.querySelectorAll ? x.querySelectorAll(sel) : []; },
               on: function (t, f) { (x.__jq = x.__jq || {})[t] = f; return q; },
               off: function (t) { if (x.__jq) delete x.__jq[t]; return q; } };
     return q;

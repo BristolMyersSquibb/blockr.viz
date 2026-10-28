@@ -2,24 +2,14 @@
 /**
  * Chart block: a mark's keys and the filters made of them.
  *
- * Every mark carries its keys, the column values that define it
- * ({AETERM: "Rash"}, plus the facet column inside a facet panel). One rule
- * then serves every chart type:
- *
- *   - a click sends the clicked mark's keys as a filter (D2, D3), in the
- *     shape R's dd_ctrl_claims() already takes: {col: [values]};
- *   - the footer names that filter in column labels (D4);
- *   - a restored filter lights the marks that hold filtered rows (D5).
- *
- * A filter here is a plain object {col: [values]}; the values are the
- * strings R compares against. A missing value is a key too: a mark keyed
- * on a missing value ('' or null) sends that column with null, which R
- * matches with is.na() (and the empty string, as the aggregation folds
- * both).
- *
- * A range filter (a point or a brush on numeric axes) is
- * {x_col, y_col, x_range, y_range}. In a facet panel it
- * carries the panel's key in the same `filters` field a click uses (D10).
+ * A mark carries its keys, the column values that define it ({AETERM:
+ * "Rash"}, plus the facet column inside a facet panel). A click sends them
+ * as a filter {col: [values]}, the footer names the filter in column labels,
+ * and a restored filter lights the marks that hold filtered rows. A missing
+ * value ('' or null) is a key too, sent as null, which R matches with
+ * is.na(). A range filter (a point or a brush on numeric axes) is {x_col,
+ * y_col, x_range, y_range}, with the panel's key in `filters` in a facet
+ * panel.
  */
 (function () {
   'use strict';
@@ -30,13 +20,11 @@
 
   /** @typedef {Record<string, any[]>} Filters */
 
-  /** Is a key value missing? The aggregation keys a missing value as ''.
-   *  @param {any} v */
+  /** Is a key value missing? The aggregation keys it as ''. @param {any} v */
   const isMissing = (v) => v == null || v === '';
 
   /**
-   * A filter from a mark's keys: one value per column, null for a missing
-   * value.
+   * A filter from a mark's keys: one value per column, null when missing.
    * @param {Record<string, any>} keys @returns {Filters}
    */
   const fromKeys = (keys) => {
@@ -50,8 +38,7 @@
   };
 
   /**
-   * A filter on `col` with the distinct non-missing values `rows` hold, or
-   * null when they hold none.
+   * A filter on `col` with the distinct non-missing values of `rows`, or null.
    * @param {string} col @param {any[]} rows @returns {Filters | null}
    */
   const fromRows = (col, rows) => {
@@ -62,8 +49,8 @@
   };
 
   /**
-   * A filter as R sends it back: {col: [values]}, a null value for a
-   * missing one. A scalar is one value. Null when no column has a value.
+   * A filter as R sends it back: {col: [values]}; a scalar is one value.
+   * Null when no column has a value.
    * @param {any} obj @returns {Filters | null}
    */
   const clean = (obj) => {
@@ -79,41 +66,35 @@
   };
 
   /**
-   * The categorical filter a saved board restores: `filters`, else the
-   * older one-column filter_column + filter_values. Null for a saved range, and without a
-   * column or values.
+   * The categorical filter a saved selection restores, or null.
    * @param {Record<string, any>} cfg @returns {Filters | null}
    */
   const restored = (cfg) => {
-    if (cfg.filter_type === 'range') return null;
-    const f = clean(cfg.filters);
-    if (f) return f;
-    const col = cfg.filter_column;
-    const vals = cfg.filter_values;
-    if (!col || !Array.isArray(vals) || !vals.length) return null;
-    return { [col]: vals.slice() };
+    const sel = cfg.selection;
+    if (!sel || sel.type === 'range') return null;
+    return clean(sel.filters);
   };
 
   /**
-   * The range filter a saved board restores, with the facet key it was
-   * taken in (D10, D11), or null.
+   * The range filter a saved selection restores, with the facet key it was
+   * taken in, or null.
    * @param {Record<string, any>} cfg
    * @returns {{ range: { x_col: string, y_col: string | null, x_range: any[],
    *                      y_range: any[] | null }, filters: Filters | null } | null}
    */
   const restoredRange = (cfg) => {
-    const r = cfg.filter_range;
-    if (cfg.filter_type !== 'range' || !r || !r.x_col || !Array.isArray(r.x_range)) return null;
+    const r = cfg.selection;
+    if (!r || r.type !== 'range' || !r.x || !Array.isArray(r.x_range)) return null;
     const yr = Array.isArray(r.y_range) && r.y_range.length ? r.y_range : null;
     return {
-      range: { x_col: r.x_col, y_col: yr ? (r.y_col || null) : null, x_range: r.x_range, y_range: yr },
-      filters: clean(cfg.filters)
+      range: { x_col: r.x, y_col: yr ? (r.y || null) : null, x_range: r.x_range, y_range: yr },
+      filters: clean(r.filters)
     };
   };
 
   /**
-   * A range as the selection R reads: its x and y fields, plus the facet key
-   * in `filters` when the range was taken in a facet panel (D10).
+   * A range as the selection R reads, plus the facet key in `filters` when
+   * it was taken in a facet panel.
    * @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range
    * @param {Filters | null} [filters]
    */
@@ -130,20 +111,16 @@
   // Above this many values a column is named with its count, not its values.
   const MAX_LISTED = 3;
 
-  // How the footer names a missing value.
-  const MISSING_WORD = '(missing)';
-
   /**
-   * The words for a filter, in column labels (D4): "Reported Term = Rash",
-   * "Reported Term = Rash, Severity = MODERATE", "Severity = (missing)",
-   * "Patient, 214 values".
+   * The words for a filter, in column labels: "Reported Term = Rash",
+   * "Severity = (missing)", "Patient, 214 values".
    * @param {Filters} filters @param {VizColumn[]} columns @returns {string}
    */
   const describe = (filters, columns) => Object.keys(filters).map((col) => {
     const label = NS.axes.axisTitle(columns, col);
     const vals = filters[col];
     if (vals.length > MAX_LISTED) return label + ', ' + vals.length + ' values';
-    return label + ' = ' + vals.map((v) => (isMissing(v) ? MISSING_WORD : v)).join(', ');
+    return label + ' = ' + vals.map((v) => (isMissing(v) ? '(missing)' : v)).join(', ');
   }).join(', ');
 
   /**
@@ -160,9 +137,8 @@
   };
 
   /**
-   * One end of a range, or both: "2 to 86", "21.4 to 30.0" (both ends at
-   * the same decimals), "= 15" for a single value. Dates on a time axis,
-   * categories as they are.
+   * A range in words: "2 to 86", "21.4 to 30.0" (both ends at the same
+   * decimals), "= 15" for a single value. Dates on a time axis.
    * @param {any[]} r @param {string} [axisType]
    */
   const rangeWords = (r, axisType) => {
@@ -179,9 +155,9 @@
   };
 
   /**
-   * The words for a range filter (D4): "Study Day 2 to 86, Value 21.4 to
-   * 30.0"; a point reads "Study Day = 15, Value = 29.2". The facet key of
-   * a range taken in a panel follows: ", Arm = Placebo" (D10).
+   * The words for a range filter: "Study Day 2 to 86, Value 21.4 to 30.0";
+   * a point reads "Study Day = 15, Value = 29.2". The facet key of a range
+   * taken in a panel follows: ", Arm = Placebo".
    * @param {{ x_col: string, y_col: string | null, x_range: any[],
    *           y_range: any[] | null }} range
    * @param {VizColumn[]} columns @param {string} [xAxisType]
@@ -200,8 +176,7 @@
   /** A value as a filter compares it: missing folds to ''. @param {any} v */
   const keyOf = (v) => (isMissing(v) ? '' : String(v));
 
-  // The values of each filtered column as a set of strings, made once per
-  // filter: a highlight asks for every mark.
+  // Each filtered column's values as a set, made once per filter.
   /** @type {WeakMap<Filters, Record<string, Set<string>>>} */
   const valueSets = new WeakMap();
   /** @param {Filters} filters @returns {Record<string, Set<string>>} */
@@ -229,9 +204,8 @@
   };
 
   /**
-   * Is a value within [lo, hi]? Numbers compare as numbers, with a little
-   * slack for a value that came back from R as text; anything else as
-   * text (ISO dates sort that way).
+   * Is a value within [lo, hi]? Numbers compare as numbers with a little
+   * slack; anything else as text (ISO dates sort that way).
    * @param {any} v @param {any[] | null} r
    */
   const within = (v, r) => {
@@ -247,17 +221,16 @@
   };
 
   /**
-   * Is a drawn point ([x, y, ...]) inside a range filter (D11)?
+   * Is a drawn point ([x, y, ...]) inside a range filter?
    * @param {any[]} p @param {{ x_range: any[], y_range: any[] | null }} range
    */
   const pointInRange = (p, range) =>
     within(p[0], range.x_range) && within(p[1], range.y_range);
 
   /**
-   * Is a mark lit under a filter (D5)? When every filtered column is one of
-   * the mark's keys, the keys decide; otherwise the mark is lit when one of
-   * its rows passes the filter (patient S01 on a chart of terms lights every
-   * term S01 has). `rows` may be a function, called only when needed.
+   * Is a mark lit under a filter? When every filtered column is one of the
+   * mark's keys, the keys decide; otherwise the mark is lit when one of its
+   * rows passes the filter. `rows` may be a function, called only if needed.
    * @param {Record<string, any>} keys @param {any[] | (() => any[])} rows
    * @param {Filters} filters
    */
@@ -273,9 +246,8 @@
   };
 
   /**
-   * A filter seen as one column and its values, for code that reads that:
-   * the column (several: their names) and the value (several: the array; on
-   * several columns: the filter itself).
+   * A filter as one column and its value: the array of values when there are
+   * several; with several columns, their names and the filter itself.
    * @param {Filters | null} filters
    * @returns {{ column: any, selected: any }}
    */
@@ -289,7 +261,7 @@
     return { column: cols, selected: filters };
   };
 
-  NS.keys = { isMissing, fromKeys, fromRows, clean, restored, restoredRange,
-              rangeSelection, describe, describeRange, rangeWords, rowMatches,
-              pointInRange, markLit, selectionView, MAX_LISTED, MISSING_WORD };
+  NS.keys = { isMissing, fromKeys, fromRows, restored, restoredRange, rangeSelection,
+              describe, describeRange, rowMatches, pointInRange, markLit, selectionView,
+              MAX_LISTED };
 })();

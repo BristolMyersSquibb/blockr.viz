@@ -21,10 +21,14 @@ const ROWS = [
   { T: 'Fever', ID: 'S03', ARM: 'A', SEV: 'MILD', S: null, E: 5, D: 4, V: 'Week 2' }
 ];
 
-const BASE = { chart_type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
+const BASE = { type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
 
-const build = (cfg, rows = ROWS, columns = COLUMNS) => C.model.timeline(
-  { rows, ix: new C.RowIndex(), columns, cfg: { ...BASE, ...cfg } });
+// `derived` is R's derived object (the colour scales).
+const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
+  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+
+const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.timeline(
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
 
 test('one mark per row with an x; a missing end makes a dot', () => {
   const m = build({});
@@ -82,8 +86,8 @@ test('colour levels follow the factor levels; the board scale order wins', () =>
   const m = build({ color: 'SEV' }, ROWS, columns);
   // Unknown levels ('', the missing severity) after the known ones.
   assert.deepStrictEqual(plain(m.color.levels), ['SEVERE', 'MILD', '']);
-  const s = build({ color: 'SEV', scales: { var: 'SEV', order: ['MILD', 'SEVERE'] } },
-                  ROWS, columns);
+  const s = build({ color: 'SEV' }, ROWS, columns,
+                  { scales: { var: 'SEV', order: ['MILD', 'SEVERE'] } });
   assert.deepStrictEqual(plain(s.color.levels), ['MILD', 'SEVERE', '']);
   // Without levels: alphabetical.
   assert.deepStrictEqual(plain(build({ color: 'SEV' }).color.levels), ['', 'MILD', 'SEVERE']);
@@ -104,16 +108,16 @@ test('facets: sorted panels, shared lanes when fixed, own lanes when free', () =
 });
 
 test('counts: events or distinct ids per lane, rows per facet', () => {
-  const m = build({ facet: 'ARM', count_on: 'both' });
+  const m = build({ facet: 'ARM', show_n: 'both' });
   assert.deepStrictEqual(plain(m.panels.map((p) => p.label)), ['A (3)', 'B (2)']);
   assert.deepStrictEqual(plain(m.panels[0].laneCounts), { Rash: 1, '': 1, Fever: 1 });
-  const d = build({ count_on: 'axis', count_col: 'ID' });
+  const d = build({ show_n: 'axis', id: 'ID' });
   assert.deepStrictEqual(plain(d.panels[0].laneCounts), { Rash: 2, Nausea: 1, '': 1, Fever: 1 });
   assert.strictEqual(build({}).panels[0].laneCounts, null);
 });
 
 test('label, series, an override drill column and tooltip fields ride on the mark', () => {
-  const m = build({ label: 'SEV', series: 'ID', drill: 'ID', tt_fields: ['ARM', 'D'] });
+  const m = build({ label: 'SEV', series: 'ID', drill: 'ID', tooltip: ['ARM', 'D'] });
   assert.deepStrictEqual(plain(m.panels[0].marks[0]),
                          [4, 9, 1, 'Rash', '', 'MILD', 'S01', 'S01', ['B', 3]]);
   // Drill off: nothing to filter on.
@@ -121,29 +125,29 @@ test('label, series, an override drill column and tooltip fields ride on the mar
 });
 
 test('a click filters the lane; in a facet panel the panel too (D3)', () => {
-  const cfg = { ...BASE, facet: 'ARM' };
+  const cfg = settingsOf({ facet: 'ARM' });
   const mark = [1, 3, 0, 'Rash', '', '', '', 'Rash', 0];
-  assert.deepStrictEqual(plain(C.model.timelineClick({ ...BASE }, '__all__', mark)),
+  assert.deepStrictEqual(plain(C.model.timelineClick(settingsOf({}), '__all__', mark)),
                          { T: ['Rash'] });
   assert.deepStrictEqual(plain(C.model.timelineClick(cfg, 'A', mark)),
                          { T: ['Rash'], ARM: ['A'] });
   // A panel of missing facet values filters the missing facet, as null.
   assert.deepStrictEqual(plain(C.model.timelineClick(cfg, '', mark)), { T: ['Rash'], ARM: [null] });
   // An override column: the clicked event's own value, already in the panel.
-  const byId = { ...cfg, drill: 'ID' };
+  const byId = settingsOf({ facet: 'ARM', drill: 'ID' });
   assert.deepStrictEqual(plain(C.model.timelineClick(byId, 'A', [1, 3, 0, 'Rash', '', '', '', 'S02', 0])),
                          { ID: ['S02'] });
   // A missing lane is a key too.
-  assert.deepStrictEqual(plain(C.model.timelineClick({ ...BASE }, '__all__',
+  assert.deepStrictEqual(plain(C.model.timelineClick(settingsOf({}), '__all__',
     [7, 8, 2, '', '', '', '', '', 0])), { T: [null] });
   // Nothing to send: drill off, or an override column the event has no value of.
-  assert.strictEqual(C.model.timelineClick({ ...BASE, drill: '' }, '__all__', mark), null);
+  assert.strictEqual(C.model.timelineClick(settingsOf({ drill: '' }), '__all__', mark), null);
   assert.strictEqual(C.model.timelineClick(byId, 'A', [7, 8, 2, 'Rash', '', '', '', '', 0]), null);
 });
 
 test('the keys of a mark are its lane and facet, whatever the drill column', () => {
   const mark = [1, 3, 0, 'Rash', 'MILD', '', '', 'S02', 0];
-  assert.deepStrictEqual(plain(C.model.timelineKeys({ ...BASE, drill: 'ID', color: 'SEV',
-                                                      facet: 'ARM' }, 'A', mark)),
+  assert.deepStrictEqual(plain(C.model.timelineKeys(settingsOf({ drill: 'ID', color: 'SEV',
+                                                                    facet: 'ARM' }), 'A', mark)),
                          { T: 'Rash', ARM: 'A' });
 });

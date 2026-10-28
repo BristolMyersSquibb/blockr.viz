@@ -1,10 +1,8 @@
 // @ts-check
 /**
- * Chart block: what a bar carries besides its bar. The sizes every bar
- * shares, the rounded value end, value labels at a bar's end, text on the
- * marks (`label`), the level names on a stack (`legend = "marks"`), and the
- * names of the highlighted bars in semibold. Pure: text is measured with
- * the function the caller passes.
+ * Chart block: what a bar carries besides its bar. The shared sizes, the
+ * rounded value end, value labels, text on the marks (`label`), the level
+ * names on a stack (`legend = "marks"`) and highlighted names in semibold.
  */
 (function () {
   'use strict';
@@ -15,18 +13,58 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
-  // Waterfall sign colours (new_waterfall_block's defaults): semantic, so
-  // they override the palette.
+  // Waterfall sign colours: semantic, so they override the palette.
   const WATERFALL_COLORS = { increase: '#009E73', decrease: '#dc2626', total: '#bbbbbb' };
 
-  // The corner radius of a bar's value end (--blockr-mark-radius). The end
-  // at zero is the axis and stays square; a floating step rounds both ends.
+  // Corner radius of the value end (--blockr-mark-radius). The end at zero
+  // is the axis and stays square; a floating step rounds both ends.
   const MARK_RADIUS = 2;
   /** @param {boolean} vertical @param {boolean} [floating] @returns {number[]} */
   const barRadius = (vertical, floating) => {
     const r = MARK_RADIUS;
     if (floating) return [r, r, r, r];
     return vertical ? [r, r, 0, 0] : [0, r, r, 0];
+  };
+
+  /** @param {any} d */
+  const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
+
+  /**
+   * The tallest positive stack, which ECharts scales the value axis from.
+   * @param {any[]} series @param {number} n groups
+   */
+  const stackTop = (series, n) => {
+    let top = 0;
+    for (let g = 0; g < n; g++) {
+      let sum = 0;
+      for (const s of series) {
+        const v = Number(valOf(s.data[g]));
+        if (Number.isFinite(v) && v > 0) sum += v;
+      }
+      top = Math.max(top, sum);
+    }
+    return top;
+  };
+
+  /**
+   * Headroom for labels past the bars: sets the axis boundary gap and returns
+   * the px a grid needs on its right for the widest end label.
+   * @param {Array<{ v: number, text: string }>} ends @param {any} valAxis
+   * @param {boolean} vertical @param {number} plotPx @param {(s: string) => number} textW
+   */
+  const endRoom = (ends, valAxis, vertical, plotPx, textW) => {
+    const hasPos = ends.some((e) => e.v > 0);
+    const hasNeg = ends.some((e) => e.v < 0);
+    valAxis.boundaryGap = [hasNeg ? '12%' : 0, hasPos ? '12%' : 0];
+    let w = 0;
+    for (const e of ends) if (vertical || e.v > 0) w = Math.max(w, textW(e.text));
+    // A vertical bar's label is centred on it and may overhang by half.
+    if (vertical) return Math.max(0, Math.ceil(w / 2 - 10));
+    if (!hasPos) return 0;
+    // 12% headroom is about 10.7% of the plot past the longest bar; a fraction
+    // axis is pinned at 100% and has none to lend.
+    const room = valAxis.max === 1 ? 0 : 0.107 * plotPx;
+    return Math.max(0, Math.ceil(w + 8 - room));
   };
 
   const BAR_MAX = 48;
@@ -37,12 +75,9 @@
   const X_INSET = 65;
 
   /**
-   * Value labels on a bar (`value_labels`), at the bar's own end. A stack
-   * is labelled once with its total, a grouped bar per bar, a percent bar
-   * per segment inside it where the share fits. Colliding labels hide. The
-   * value axis gets 12% headroom on the sides the bars reach. Returns the
-   * px a grid needs on its right for the widest label. Mutates `series`
-   * and `valAxis`.
+   * `value_labels` at a bar's end: a stack once with its total, a grouped
+   * bar per bar, a percent bar per segment where the share fits. Returns the
+   * px a grid needs on its right. Mutates `series` and `valAxis`.
    * @param {any[]} series @param {any} valAxis
    * @param {{ax: any, vertical: boolean, stacked: boolean, percent: boolean,
    *          fraction: boolean, plotPx: number, bandPx: number,
@@ -52,8 +87,6 @@
    */
   const barValueLabels = (series, valAxis, o) => {
     const textW = o.measure;
-    /** @param {any} d */
-    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
     const vf = NS.valueFormat(o.cfg);
     // `|| 0` folds a negative zero, which would print as "-0".
     const fmt = o.fraction
@@ -80,8 +113,10 @@
       return 0;
     }
 
-    /** @type {number[]} */
+    /** @type {Array<{ v: number, text: string }>} */
     const ends = [];
+    /** @param {number} v */
+    const addEnd = (v) => ends.push({ v, text: fmt(v) });
     for (const s of series) {
       s.label = { show: !o.stacked, position: 'outside', distance: 4, ...style,
         formatter: (/** @type {any} */ p) => p.value == null ? '' : fmt(Number(p.value)) };
@@ -89,7 +124,7 @@
       if (!o.stacked) {
         for (const d of s.data) {
           const v = valOf(d);
-          if (v != null) ends.push(Number(v));
+          if (v != null) addEnd(Number(v));
         }
       }
     }
@@ -102,7 +137,7 @@
           if (v != null) { tot += Number(v); any = true; }
         }
         if (!any) continue;
-        ends.push(tot);
+        addEnd(tot);
         // The label rides the outermost segment of the total's sign.
         for (let si = series.length - 1; si >= 0; si--) {
           const d = series[si].data[gi];
@@ -117,29 +152,14 @@
       }
     }
 
-    const hasPos = ends.some((v) => v > 0);
-    const hasNeg = ends.some((v) => v < 0);
-    valAxis.boundaryGap = [hasNeg ? '12%' : 0, hasPos ? '12%' : 0];
-    let w = 0;
-    for (const v of ends) {
-      if (o.vertical || v > 0) w = Math.max(w, textW(fmt(v)));
-    }
-    // A vertical bar's label is centred on it and may overhang by half.
-    if (o.vertical) return Math.max(0, Math.ceil(w / 2 - 10));
-    if (!hasPos) return 0;
-    // 12% headroom is about 10.7% of the plot past the longest bar; a fraction
-    // axis is pinned at 100% and has none to lend.
-    const room = valAxis.max === 1 ? 0 : 0.107 * o.plotPx;
-    return Math.max(0, Math.ceil(w + 8 - room));
+    return endRoom(ends, valAxis, o.vertical, o.plotPx, textW);
   };
 
   /**
    * `label` on a bar (model labelOf). A plain or grouped bar writes the text
-   * at its end, before its value when values show too. A stack or a 100% bar
-   * writes it inside each segment it fits in, from a label-only series, so
-   * a stack's totals keep their place; with percent values on, the segment's
-   * share follows the text. Mutates `series` and `valAxis`; returns the px a
-   * grid needs on its right.
+   * at its end, before its value. A stack or 100% bar writes it inside each
+   * segment it fits in, from a label-only series. Mutates `series` and
+   * `valAxis`; returns the px a grid needs on its right.
    * @param {any[]} series the bar series, one per colour level (or one)
    * @param {any} valAxis
    * @param {{ textAt: (si: number, gi: number) => string | null, groups: string[],
@@ -149,19 +169,11 @@
    * @returns {number}
    */
   const barMarkLabels = (series, valAxis, o) => {
-    /** @param {any} d */
-    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
     const bars = series.slice(0, o.nBars);
     const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
 
     if (o.stack) {
-      // The value axis's reach, as ECharts scales it from the tallest stack.
-      let top = 0;
-      for (let gi = 0; gi < o.groups.length; gi++) {
-        let sum = 0;
-        for (const s of bars) { const v = Number(valOf(s.data[gi])); if (Number.isFinite(v) && v > 0) sum += v; }
-        top = Math.max(top, sum);
-      }
+      const top = stackTop(bars, o.groups.length);
       const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
       const barW = Math.min(BAR_MAX, 0.6 * (o.bandPx || BAR_MAX / 0.6));
       /** @type {any[]} */
@@ -181,7 +193,6 @@
           const len = perPx ? Math.abs(v) / perPx : Infinity;
           const fits = o.vertical ? len >= o.ax.fontSize + 4 && barW >= w + 4 : len >= w + 6;
           if (!fits) return;
-          // The share now rides with the text.
           if (o.percent && o.valueLabels) {
             s.data[gi] = { ...((typeof d === 'object') ? d : { value: d }), label: { show: false } };
           }
@@ -222,24 +233,15 @@
       });
     });
     if (!ends.length) return 0;
-    const hasPos = ends.some((e) => e.v > 0);
-    const hasNeg = ends.some((e) => e.v < 0);
-    valAxis.boundaryGap = [hasNeg ? '12%' : 0, hasPos ? '12%' : 0];
-    let w = 0;
-    for (const e of ends) if (o.vertical || e.v > 0) w = Math.max(w, o.measure(e.text));
-    if (o.vertical) return Math.max(0, Math.ceil(w / 2 - 10));
-    if (!hasPos) return 0;
-    const room = valAxis.max === 1 ? 0 : 0.107 * o.valuePx;
-    return Math.max(0, Math.ceil(w + 8 - room));
+    return endRoom(ends, valAxis, o.vertical, o.valuePx, o.measure);
   };
 
   /**
-   * `legend: "marks"` on a stacked or 100% bar: each series' name at the middle
-   * of its segment, beside the last bar (vertical) or above the first bar
-   * (horizontal). One label-only series per segment, so a bar's own labels
-   * (values, totals) keep their place. Names of thin segments are spread a
-   * line apart, in segment order. Appends to `series`; returns the px a vertical
-   * grid needs on its right for the longest name.
+   * `legend: "marks"` on a stacked or 100% bar: each series' name at the
+   * middle of its segment, beside the last bar (vertical) or above the first
+   * (horizontal), as label-only series. Names of thin segments are spread a
+   * line apart. Appends to `series`; returns the px a vertical grid needs on
+   * its right for the longest name.
    * @param {any[]} series the bar series, one per level
    * @param {{ vertical: boolean, groups: string[], bandPx: number, barPx: number,
    *           valuePx: number, measure: (s: string) => number, ink: any }} o
@@ -247,22 +249,17 @@
    * @returns {number}
    */
   const stackNames = (series, o) => {
-    /** @param {any} d */
-    const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
     const n = o.groups.length;
     // The bar to name: the last (or first) one with a segment.
     /** @param {number} gi */
-    const filled = (gi) => series.some((s) => { const v = valOf(s.data[gi]); return v != null && Number(v) !== 0; });
+    const filled = (gi) => series.some((s) => {
+      const v = valOf(s.data[gi]);
+      return v != null && Number(v) !== 0;
+    });
     let gi = o.vertical ? n - 1 : 0;
     while (gi >= 0 && gi < n && !filled(gi)) gi += o.vertical ? -1 : 1;
     if (gi < 0 || gi >= n) return 0;
-    // The value axis's reach, as ECharts scales it from the tallest stack.
-    let top = 0;
-    for (let g = 0; g < n; g++) {
-      let s = 0;
-      for (const sr of series) { const v = Number(valOf(sr.data[g])); if (Number.isFinite(v) && v > 0) s += v; }
-      top = Math.max(top, s);
-    }
+    const top = stackTop(series, n);
     const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
     /** @type {Array<{ si: number, name: string, at: number, w: number }>} */
     const items = [];
@@ -277,12 +274,10 @@
       if (!name) return;
       items.push({ si, name, at: mid, w: o.measure(name) });
     });
-    // Thin segments put their names closer than a line: spread them, top
-    // down (or left to right lying down), each at least a line (a name's
-    // width) from the next, and the whole run lifted (or moved left) where it
-    // would leave the axis. The order stays the order of the segments.
+    // Thin segments put names closer than a line: spread them, each at least
+    // a line (a name's width) from the next, and keep the run on the axis.
     if (perPx) {
-      const fs = (o.ink && o.ink.fontSize) || 12;
+      const fs = o.ink.fontSize || 12;
       if (o.vertical) {
         items.sort((x, y) => y.at - x.at);
         const gap = (fs + 3) * perPx;
@@ -300,7 +295,6 @@
       }
     }
     let widest = 0;
-    // Back in series order: one label series per level, as the bars.
     items.sort((x, y) => x.si - y.si);
     for (const it of items) {
       widest = Math.max(widest, it.w);
@@ -316,21 +310,19 @@
   };
 
   /**
-   * The denominator of "% of panel", named by its columns' labels.
+   * The denominator of "% of panel", named by its column's label.
    * @param {Record<string, any>} cfg @param {(col: any) => string} title
    */
   const pctName = (cfg, title) => {
     /** @type {Record<string, any>} */
-    const roleCol = { facet: cfg.facet, group: cfg.group, color: cfg.color };
-    const roles = Array.isArray(cfg.pct_of) ? cfg.pct_of : (cfg.pct_of ? [cfg.pct_of] : ['facet']);
-    const cols = roles.map((/** @type {string} */ r) => roleCol[r]).filter(Boolean);
-    return cols.length ? '% of ' + cols.map(title).join(' x ') : '% of total';
+    const roleCol = { facet: cfg.facet, category: cfg.category, color: cfg.color };
+    const col = roleCol[cfg.percent_of];
+    return col ? '% of ' + title(col) : '% of total';
   };
 
   /**
    * An axis label that sets the names in `lit` in semibold text ink, line by
-   * line (a vertical axis wraps long names). A name holding rich-text syntax
-   * stays as it is.
+   * line. A name holding rich-text syntax stays as it is.
    * @param {any} axisLabel @param {Set<string>} lit @param {any} ink
    */
   const boldNames = (axisLabel, lit, ink) => {

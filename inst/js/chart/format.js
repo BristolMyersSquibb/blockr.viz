@@ -1,13 +1,10 @@
 // @ts-check
 /**
- * Chart block: the number format of a chart's values (`format`, `unit`),
- * the same vocabulary as the tile block. "number" prints separators and
- * up to two decimals (NS.ddNum), "compact" 1.2K / 3.4M / 5.6B, "percent" a
- * fraction x100 with "%", a whole number (0 to 6, or its text) exactly that
- * many decimals. Each prints as on the table block. `unit` is free text printed after the number ("CHF").
- *
- * A chart with format "number" and no unit keeps its own formatting:
- * valueFormat() then returns null and the callers fall back to it.
+ * Chart block: the number format of a chart's values (`format`, `unit`), as
+ * on the tile block. "number" is NS.ddNum, "compact" 1.2K / 3.4M / 5.6B,
+ * "percent" a fraction x100, a whole number 0 to 6 that many decimals.
+ * `unit` is free text printed after the number. Format "number" with no unit
+ * makes valueFormat() return null and callers keep their own formatting.
  */
 (function () {
   'use strict';
@@ -43,8 +40,7 @@
 
   /**
    * The formatter for a chart's values, or null to keep the chart's own.
-   * `unit: false` leaves the unit off (axis ticks: the axis title carries
-   * it once).
+   * `unit: false` leaves the unit off (axis ticks; the title carries it).
    * @param {Record<string, any>} cfg @param {{ unit?: boolean }} [opts]
    * @returns {((v: any) => string) | null}
    */
@@ -75,11 +71,9 @@
   };
 
   /**
-   * An axis name. `title` is the column's label, or its name when it has
-   * none (axes.axisTitle); `col` the column. With a label: the label and
-   * the unit, "Growth (%)". Without: the unit alone when there is one, else
-   * the column name. Empty when the chart's title already carries it
-   * ("Real GDP growth 2026, %" names the "%" axis).
+   * An axis name. `title` is the column's label (or name, axes.axisTitle),
+   * `col` the column. Labelled: label and unit, "Growth (%)". Else the unit
+   * alone, else the column name. Empty when the chart's title carries it.
    * @param {string} title @param {any} col @param {Record<string, any>} cfg
    * @param {{ unit?: boolean }} [opts]
    */
@@ -88,7 +82,8 @@
     const labelled = !!title && title !== col;
     const name = labelled ? unitTitle(title, unit ? cfg : {})
       : (unit || title || '');
-    const head = String(cfg.title_resolved || '').toLowerCase();
+    const t = cfg.derived && cfg.derived.titles && cfg.derived.titles.title;
+    const head = String((t && t.text) || '').toLowerCase();
     if (name && head.includes(name.toLowerCase())) return '';
     return name;
   };
