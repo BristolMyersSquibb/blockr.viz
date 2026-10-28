@@ -46,7 +46,7 @@
   }
 
   /**
-   * A small button.
+   * A small quiet button.
    * @param {string} cls
    * @param {string} text
    * @param {string} label
@@ -54,13 +54,9 @@
    * @param {VizScope} scope
    */
   function button(cls, text, label, fn, scope) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'lane-sum-ctl ' + cls;
-    b.textContent = text;
-    b.setAttribute('aria-label', label);
+    const b = V.table.ui.button('blockr-btn--quiet blockr-btn--xs lane-sum-ctl ' + cls, text, label,
+                                fn, scope);
     b.setAttribute('data-blockr-tooltip', label);
-    scope.on(b, 'click', fn);
     return b;
   }
 
@@ -156,18 +152,14 @@
     el.textContent = '';
     el.classList.add('lane-summaries');
     list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
-    const add = document.createElement('select');
-    add.className = 'dd-select lane-sum-addcol';
-    add.setAttribute('aria-label', 'Add a column');
-    add.innerHTML = '<option value="">+ Add a column</option>' + Object.keys(variants).map((t) =>
-      '<option value="' + V.util.esc(t) + '">' + V.util.esc(TYPES[/** @type {'simple'} */ (t)] || t) +
-      '</option>').join('');
-    ctx.scope.on(add, 'change', () => {
-      if (!add.value) return;
+    const add = el.appendChild(document.createElement('div'));
+    add.className = 'lane-sum-addcol';
+    V.table.ui.pick(add, Object.keys(variants).map((t) => ({
+      value: t, label: TYPES[/** @type {'simple'} */ (t)] || t
+    })), '', { label: 'Add a column', placeholder: '+ Add a column' }, (t) => {
       open.add(list.length);
-      ctx.set(list.concat([{ type: add.value }]));
-    });
-    el.appendChild(add);
+      ctx.set(list.concat([{ type: t }]));
+    }, ctx.scope);
   }
 
   V.table.editors = Object.assign(V.table.editors || {}, { 'groups.summaries': editor });

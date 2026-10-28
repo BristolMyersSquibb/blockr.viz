@@ -561,15 +561,11 @@
 .lane-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
 .lane-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
 .lane-sum-head { display: flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 6px; }
-.lane-sum-ctl {
-  flex: none; width: 26px; height: 26px; border: 0; border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent; color: var(--blockr-color-text-muted, #6b7280); cursor: pointer;
-}
-.lane-sum-ctl:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06));
-                      color: var(--blockr-color-text-default, #111827); }
+/* The buttons are blockr.ui's (blockr-btn--quiet): here only their size. */
+.lane-sum-ctl { flex: none; min-width: 26px; }
 .lane-sum-ctl.lane-sum-toggle {
-  flex: 1 1 auto; width: auto; text-align: left; padding: 0 6px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; color: var(--blockr-color-text-default, #111827);
+  flex: 1 1 auto; justify-content: flex-start; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
 }
 .lane-sum-ctl.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-body {
@@ -580,7 +576,7 @@
 .lane-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .lane-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
-.lane-sum-addcol { align-self: flex-start; }
+.lane-sum-addcol { align-self: flex-start; min-width: 200px; }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
    per page, positioned by table/tooltip.js. It follows the pointer, so it is

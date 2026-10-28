@@ -189,16 +189,19 @@ test('the shading editor round-trips every key of a rule', () => {
               { name: 'ARM', class: 'character', label: 'Arm' }],
     set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
   };
+  ctx.scope = new V.Scope();
   V.table.gear.shadings(el, ctx);
+  const fire = (x, type) => x.dispatchEvent(new win.Event(type, { bubbles: true }));
   assert.equal(el.querySelectorAll('.vz-shade-cols label').length, 2);
   const boxes = el.querySelectorAll('.vz-shade-cols input');
   boxes[1].checked = true;
-  boxes[1].onchange();
+  fire(boxes[1], 'change');
   const mode = el.querySelector('select');
   mode.value = 'sequential';
-  mode.onchange();
-  el.querySelector('.vz-shade-add').onclick();
-  el.querySelector('.vz-shade-remove').onclick();
+  fire(mode, 'change');
+  fire(el.querySelector('.vz-shade-add'), 'click');
+  fire(el.querySelector('.vz-shade-remove'), 'click');
+  assert.ok(el.querySelector('.vz-shade-add').classList.contains('blockr-btn'));
   const dom = [{ value: -1, label: null }, { value: 1, label: null }];
   assert.deepEqual(sets, [
     [{ mode: 'bar', columns: ['AGE', 'WT'], domain: dom }],

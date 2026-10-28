@@ -56,7 +56,7 @@ test('move, remove, add and fold', () => {
   e.click(e.el.querySelectorAll('.lane-sum-down')[0]);
   e.click(e.el.querySelectorAll('.lane-sum-up')[0]);
   e.click(e.el.querySelectorAll('.lane-sum-rm')[1]);
-  const add = e.el.querySelector('.lane-sum-addcol');
+  const add = e.el.querySelector('.lane-sum-addcol select');
   assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'simple', 'dist']);
   add.value = 'pair';
   add.dispatchEvent(new e.env.win.Event('change'));
