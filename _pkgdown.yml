@@ -28,6 +28,7 @@ reference:
       - as_annotated_df
       - as_plain_df
       - summary_table
+      - drill_source
   - title: Downloads
     desc: >
       What a block's downloads write, and how another package adds a
@@ -49,6 +50,7 @@ reference:
       - html_exhibit
       - pptx_add_exhibit
       - report_call
+      - exhibit-options
   - title: Sending a click to another block
     contents:
       - ctrl_send
@@ -59,3 +61,10 @@ reference:
     contents:
       - new_exhibit_font_option
       - new_download_footer_option
+  - title: Superseded
+    desc: >
+      Kept so older code runs.
+    contents:
+      - new_summary_table_block
+      - new_summarize_table_block
+      - drilldown_table_color

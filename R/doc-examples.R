@@ -121,3 +121,45 @@ NULL
 #' @rdname tooltip_card_dep
 #' @keywords internal
 NULL
+
+#' @name mark_column_kinds
+#' @rdname mark_column_kinds
+#' @keywords internal
+NULL
+
+# Used only inside blockr.viz; to be unexported.
+
+#' @name ctrl_receipt
+#' @rdname ctrl_receipt
+#' @keywords internal
+NULL
+
+#' @name drill_claim_columns
+#' @rdname drill_claim_columns
+#' @keywords internal
+NULL
+
+#' @name expand_groups
+#' @rdname expand_groups
+#' @keywords internal
+NULL
+
+#' @name interactive_table
+#' @rdname interactive_table
+#' @keywords internal
+NULL
+
+#' @name new_drilldown_theme_option
+#' @rdname new_drilldown_theme_option
+#' @keywords internal
+NULL
+
+#' @name table_nest
+#' @rdname table_nest
+#' @keywords internal
+NULL
+
+#' @name describe_block.chart_block
+#' @rdname describe_block.chart_block
+#' @keywords internal
+NULL
