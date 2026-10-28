@@ -248,7 +248,7 @@ dt_col_label <- function(x, name) {
 #' @noRd
 dt_gear_cols_json <- function(data) {
   data <- tryCatch(fmt_to_wide(data), error = function(e) data)
-  if (!is.data.frame(data) || dt_is_structured(data)) return("[]")
+  if (!is.data.frame(data) || table_is_structured(data)) return("[]")
   cols <- lapply(names(data), function(nm) {
     list(
       name = nm,

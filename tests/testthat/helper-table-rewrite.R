@@ -344,7 +344,7 @@ tg_rw_groups_click <- function(v) {
   if (!identical(v$action, "filter")) {
     return(NULL)
   }
-  f <- summarize_drill_filters(as.character(unlist(v$column)),
+  f <- table_drill_filters(as.character(unlist(v$column)),
                                as.character(unlist(v$values)))
   if (length(f)) list(type = "categorical", filters = lapply(f, as.list))
 }
@@ -463,7 +463,7 @@ tg_ref_view <- function(s, last) {
     ch <- p$chrome
     # The reference's groups footer was written in the browser, from the
     # held click.
-    filter <- summarize_drill_phrase(s$state$selection$filters)
+    filter <- table_drill_phrase(s$state$selection$filters)
     return(tg_view(
       n = if (identical(p$kind, "flat")) as.integer(p$n),
       labels = if (identical(p$kind, "flat")) tg_text(p$label),

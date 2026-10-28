@@ -30,7 +30,7 @@ summarize_export_df <- function(prep) {
 
   out <- list()
   # A table without `by` has a blank stub header; the column still needs a name.
-  head <- summarize_label_header(prep)
+  head <- groups_label_header(prep)
   out[[if (nzchar(head)) head else " "]] <- as.character(rows$.label)
 
   dropped <- character()
@@ -90,7 +90,7 @@ summarize_export_df <- function(prep) {
     if (identical(kind, "tile")) {
       # A heatmap cell: the value, blank where the screen is empty, with its
       # paint as `.bg:` / `.fg:` columns (write_annotated_xlsx()).
-      paint <- lane_tile_paint(p, rows)
+      paint <- groups_tile_paint(p, rows)
       lab <- p$label %||% full_label(p)
       v <- rows[[key]]
       v[!paint$has] <- NA

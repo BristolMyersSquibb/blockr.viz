@@ -10,7 +10,7 @@ table_groups_view <- function(m, axis = TRUE) {
   prep <- m$prep
   pick <- isTRUE(cells$pick)
   ctx <- table_groups_ctx(prep)
-  stub <- list(name = summarize_label_header(prep), disp = cells$label,
+  stub <- list(name = groups_label_header(prep), disp = cells$label,
                num = FALSE)
   cols <- lapply(seq_along(cells$cols), function(i) {
     table_groups_col(cells$cols[[i]], prep$plan[[i]], prep, ctx, pick, axis)
@@ -26,7 +26,7 @@ table_groups_view <- function(m, axis = TRUE) {
   table_view_arrays(table_groups_compact(out))
 }
 
-# The context summarize_cells() hands its column builders, with value labels
+# The context groups_cells() hands its column builders, with value labels
 # on, so a column that draws none can have its labels rebuilt for `disp`.
 table_groups_ctx <- function(prep) {
   list(rows = prep$rows, n = nrow(prep$rows), prep = prep, mx = prep$bar_max,
@@ -42,7 +42,7 @@ table_groups_col <- function(c, p, prep, ctx, pick, axis) {
     num = identical(c$kind, "num") && !isTRUE(c$text),
     disp = table_groups_disp(c, p, ctx),
     key = c$v,
-    pct = if (!is.null(pct)) summarize_arr(pct),
+    pct = if (!is.null(pct)) groups_arr(pct),
     bg = if (identical(c$kind, "tile")) c$bg,
     fg = if (identical(c$kind, "tile")) c$fg,
     keys = if (pick) table_groups_col_keys(c),
@@ -71,11 +71,11 @@ table_groups_head <- function(m, pick) {
     p <- prep$plan[[i]]
     table_groups_compact(list(
       text = as.character(p$label %||% "")[[1L]],
-      sub = summarize_chr1(p$sub_label), col = i
+      sub = chr_state(p$sub_label), col = i
     ))
   }
   stub <- table_groups_compact(list(
-    text = summarize_label_header(prep), sub = prep$group_label, col = 0L,
+    text = groups_label_header(prep), sub = prep$group_label, col = 0L,
     stub = TRUE
   ))
   fs <- prep$facet_spans

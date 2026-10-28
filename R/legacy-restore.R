@@ -553,9 +553,9 @@ legacy_table_selection <- function(state) {
   filters <- if (length(gc) && length(gc) == length(gv)) {
     stats::setNames(as.list(gv), gc)
   } else {
-    summarize_drill_filters(s$column, s$values)
+    table_drill_filters(s$column, s$values)
   }
-  ck <- dd_col_keys_state(s$col_keys)
+  ck <- table_col_keys_state(s$col_keys)
   columns <- if (length(ck)) {
     stats::setNames(lapply(ck, `[[`, "values"), vapply(ck, `[[`, "", "column"))
   }
