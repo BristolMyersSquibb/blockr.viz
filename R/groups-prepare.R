@@ -101,9 +101,8 @@ groups_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
 #' facet repeats per level, adjacent. `facet` / `color` are the legacy
 #' table-level pair, fanned down onto the rows (groups_migrate_globals()).
 #' @noRd
-groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
+groups_prepare_summaries <- function(data, by, summaries,
                                    facet_layout = "by_summary",
-                                   color = NULL,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
                                    subject = NULL, pct_of = "facet") {
@@ -113,7 +112,7 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   data <- g$data
   keys <- g$keys
 
-  summaries <- groups_prep_norm(summaries, data, color, facet)
+  summaries <- groups_prep_norm(summaries, data)
   if (!is.null(summaries$err)) return(bad(summaries$err))
   summaries <- groups_prep_mappings(summaries, data, g$drawn)
   if (!is.null(summaries$err)) return(bad(summaries$err))
@@ -227,12 +226,10 @@ groups_present <- function(col, data) {
 #' and check every mapped column exists.
 #' @return the summaries or `list(err =)`.
 #' @noRd
-groups_prep_norm <- function(summaries, data, color, facet) {
+groups_prep_norm <- function(summaries, data) {
   summaries <- groups_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(list(err = summaries$err))
   if (!length(summaries)) return(list(err = "Add at least one summary column"))
-  summaries <- groups_migrate_globals(summaries, groups_present(color, data),
-                                    groups_present(facet, data))
   msg <- groups_missing_columns(summaries, data)
   if (!is.null(msg)) return(list(err = msg))
   summaries

@@ -2,6 +2,12 @@
 # generic preparer, per-column domains, scope, facet and fields.
 # Spec: _blockr.design/open/summarize-table/.
 
+# Every summary that can carry a colour coloured by `col`, as the old
+# table-level colour read (groups_migrate_globals()).
+coloured <- function(S, col) {
+  groups_migrate_globals(groups_norm_summaries(S), color = col)
+}
+
 sum_fixture <- function() {
   set.seed(42)
   ae <- do.call(rbind, lapply(1:5, function(i) {
@@ -126,7 +132,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   lv <- groups_levels(ae$ARM)
   # The dot splits like the distribution does: one glyph per level, named by
   # the same geometry key the cell builder reads.
@@ -163,8 +169,8 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   # A group whose rows are all ONE level draws that level alone: grouping by
   # subject (every subject has one SEX) is a single bar in its own colour,
   # not a stack with an empty half.
-  one <- groups_prepare_summaries(ae, by = "USUBJID", summaries = S,
-                                color = "ARM")
+  one <- groups_prepare_summaries(ae, by = "USUBJID",
+                                  summaries = coloured(S, "ARM"))
   segv <- groups_cells(one)$cols[[2L]]$segv
   nonzero <- vapply(seq_along(segv[[1L]]), function(i) {
     sum(vapply(segv, function(x) x[[i]] > 0, logical(1L)))
@@ -180,13 +186,13 @@ test_that("the hover card names the colour column by its label", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   expect_identical(p$plan[[1L]]$cvar, "Treatment Arm")
   expect_identical(p$plan[[2L]]$cvar, "Treatment Arm")
   expect_identical(groups_legend_spec(p)$groups[[1L]]$title, "Treatment Arm")
   # No label: the column name, as before.
   attr(ae$ARM, "label") <- NULL
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   expect_identical(p$plan[[1L]]$cvar, "ARM")
 })
 
@@ -212,7 +218,7 @@ test_that("a split bar only stacks an additive measure", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Mean duration", func = "mean",
                  col = "DUR", show = "bar"))
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   e <- p$plan[[1L]]
   # The parts of a mean are not a composition of it: they sit side by side,
   # and the column's domain reaches the widest of them (scaling them against
@@ -227,7 +233,7 @@ test_that("a split bar only stacks an additive measure", {
   # A count is a composition, so it keeps stacking on the group's total.
   cs <- list(list(type = "simple", name = "Events", func = "count",
                   col = "DUR", show = "bar"))
-  pc <- groups_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
+  pc <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(cs, "ARM"))
   expect_identical(pc$plan[[1L]]$mode, "stacked")
   # Its domain is in percent of N, the unit its bars are drawn in.
   expect_equal(pc$plan[[1L]]$dmax,
@@ -836,7 +842,7 @@ test_that("colour is a table-level dimension every glyph column inherits", {
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   # One pick splits every glyph column that can carry it...
   expect_identical(p$plan[[1L]]$levels, c("Active", "Placebo"))
   expect_identical(p$plan[[2L]]$levels, c("Active", "Placebo"))
