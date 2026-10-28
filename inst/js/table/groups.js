@@ -26,9 +26,9 @@
   function paintLegend(el, lg) {
     const groups = (lg && lg.groups) || [];
     el.hidden = !groups.length;
-    el.innerHTML = groups.map((g) => '<span class="blockr-summarize-legend-group">' +
-      '<span class="blockr-summarize-legend-title">' + esc(g.title) + '</span>' +
-      (g.items || []).map((it) => '<span class="blockr-summarize-legend-item"><i style="background:' +
+    el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
+      '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
+      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item"><i style="background:' +
         esc(it.color) + '"></i>' + esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
@@ -59,10 +59,10 @@
      */
     constructor(frame, scope, opts = {}) {
       super(frame, scope, opts);
-      frame.el.classList.add('blockr-summarize-container');
-      scope.own({ dispose: () => frame.el.classList.remove('blockr-summarize-container') });
+      frame.el.classList.add('vz-table-groups');
+      scope.own({ dispose: () => frame.el.classList.remove('vz-table-groups') });
       this.legend = scope.node(document.createElement('div'));
-      this.legend.className = 'blockr-summarize-legend';
+      this.legend.className = 'vz-table-groups-legend';
       frame.box.before(this.legend);
       const grid = /** @type {TableGrid} */ (this.grid);
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
@@ -100,11 +100,11 @@
     rowKind(i) {
       const m = /** @type {TableModel | null} */ (this.model);
       const ind = m && m.rows && m.rows.indent;
-      if (!ind) return 'blockr-summarize-row';
+      if (!ind) return 'vz-table-groups-row';
       const next = i + 1 < ind.length ? ind[i + 1] : null;
-      if (next != null && next > ind[i]) return 'blockr-summarize-row is-parent';
-      if (ind[i] > 0) return 'blockr-summarize-row is-child' + (next == null || next < ind[i] ? ' is-group-end' : '');
-      return 'blockr-summarize-row';
+      if (next != null && next > ind[i]) return 'vz-table-groups-row is-parent';
+      if (ind[i] > 0) return 'vz-table-groups-row is-child' + (next == null || next < ind[i] ? ' is-group-end' : '');
+      return 'vz-table-groups-row';
     }
 
     /** @param {VizPayload} p */
@@ -143,7 +143,7 @@
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
-               cls: 'blockr-summarize-table', stubCls: 'blockr-summarize-label-col', attrs };
+               cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', attrs };
     }
 
     /** A card draws its column's mark, without the value it prints itself. */
@@ -231,7 +231,7 @@
       const scope = new V.Scope();
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
-      frame.el.classList.add('blockr-summarize-capture');
+      frame.el.classList.add('vz-table-groups-capture');
       const view = new Groups(frame, scope, { still: true });
       view.render(payload);
       return settled(scope)

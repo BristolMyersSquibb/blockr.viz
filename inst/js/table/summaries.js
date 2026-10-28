@@ -111,10 +111,10 @@
       x.textContent = text;
       return x;
     };
-    part('lane-sum-icon', '').innerHTML = icon || '';
-    part('lane-sum-name', title(s));
-    part('lane-sum-desc', describe(s));
-    part('lane-sum-chev', '›');
+    part('vz-table-sum-icon', '').innerHTML = icon || '';
+    part('vz-table-sum-name', title(s));
+    part('vz-table-sum-desc', describe(s));
+    part('vz-table-sum-chev', '›');
   }
 
   /**
@@ -126,7 +126,7 @@
    * @param {VizScope} scope
    */
   function button(cls, text, label, fn, scope) {
-    const b = V.table.ui.button('blockr-btn--quiet blockr-btn--xs lane-sum-ctl ' + cls, text, label,
+    const b = V.table.ui.button('blockr-btn--quiet blockr-btn--xs vz-table-sum-ctl ' + cls, text, label,
                                 fn, scope);
     b.setAttribute('data-blockr-tooltip', label);
     return b;
@@ -147,8 +147,8 @@
       const arg = variant[f];
       const el = document.createElement('div');
       // Tiles take the editor's width, as in the gear's own sections.
-      el.className = 'dd-form-row lane-sum-field' +
-        (arg.gear.control === 'tiles' ? ' lane-sum-field--wide' : '');
+      el.className = 'dd-form-row vz-table-sum-field' +
+        (arg.gear.control === 'tiles' ? ' vz-table-sum-field--wide' : '');
       const lab = document.createElement('label');
       lab.className = 'blockr-label';
       lab.textContent = arg.gear.label;
@@ -179,10 +179,10 @@
     const s = list[k];
     const send = (/** @type {Entry[]} */ next) => ctx.set(next);
     const el = document.createElement('div');
-    el.className = 'lane-sum-row' + (open.has(k) ? ' is-open' : '');
+    el.className = 'vz-table-sum-row' + (open.has(k) ? ' is-open' : '');
     const head = document.createElement('div');
-    head.className = 'lane-sum-head';
-    const name = button('lane-sum-toggle', '', 'Edit ' + title(s), () => {
+    head.className = 'vz-table-sum-head';
+    const name = button('vz-table-sum-toggle', '', 'Edit ' + title(s), () => {
       if (open.has(k)) open.delete(k);
       else open.add(k);
       el.classList.toggle('is-open');
@@ -200,19 +200,19 @@
     head.append(name);
     el.appendChild(head);
     const body = document.createElement('div');
-    body.className = 'lane-sum-body';
+    body.className = 'vz-table-sum-body';
     body.hidden = !open.has(k);
     const variant = variants[/** @type {string} */ (s.type)];
     if (variant) {
       fields(body, s, variant, ctx, (next) => send(list.map((x, j) => (j === k ? next : x))));
     }
     const acts = body.appendChild(document.createElement('div'));
-    acts.className = 'lane-sum-actions';
-    if (k > 0) acts.appendChild(button('lane-sum-up', 'Move up', 'Move up', () => move(-1), ctx.scope));
+    acts.className = 'vz-table-sum-actions';
+    if (k > 0) acts.appendChild(button('vz-table-sum-up', 'Move up', 'Move up', () => move(-1), ctx.scope));
     if (k < list.length - 1) {
-      acts.appendChild(button('lane-sum-down', 'Move down', 'Move down', () => move(1), ctx.scope));
+      acts.appendChild(button('vz-table-sum-down', 'Move down', 'Move down', () => move(1), ctx.scope));
     }
-    acts.appendChild(button('lane-sum-rm', 'Remove', 'Remove this column',
+    acts.appendChild(button('vz-table-sum-rm', 'Remove', 'Remove this column',
                             () => send(list.filter((_, j) => j !== k)), ctx.scope));
     el.appendChild(body);
     return el;
@@ -239,10 +239,10 @@
       opened.set(box, open);
     }
     el.textContent = '';
-    el.classList.add('lane-summaries');
+    el.classList.add('vz-table-summaries');
     list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
     const add = el.appendChild(document.createElement('div'));
-    add.className = 'lane-sum-addcol';
+    add.className = 'vz-table-sum-addcol';
     V.table.ui.pick(add, Object.keys(variants).map((t) => ({
       value: t, label: TYPES[/** @type {'simple'} */ (t)] || t
     })), '', { label: 'Add a column', placeholder: '+ Add a column' }, (t) => {

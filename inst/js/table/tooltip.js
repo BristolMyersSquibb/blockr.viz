@@ -83,10 +83,10 @@
    * @param {Record<string, any>} tt
    */
   function splitLines(c, m, i, cell, t, tt) {
-    const fill = t.closest('.blockr-summarize-fill');
+    const fill = t.closest('.vz-table-groups-fill');
     if (!fill) return '';
     const drawn = m.names.map((_, j) => j).filter((j) => (m.segValues[j][i] || 0) > 0);
-    const hit = hitOf(cell, fill, '.blockr-summarize-fill', drawn);
+    const hit = hitOf(cell, fill, '.vz-table-groups-fill', drawn);
     const cv = tt.cvar ? tt.cvar + ' ' : '';
     const lines = drawn.map((j) => row(cv + m.names[j], num(m.segValues[j][i]) + share(m.segValues[j][i], tt.den),
                                        m.fills[j], hit == null ? null : j === hit)).join('');
@@ -111,7 +111,7 @@
       const g = lv[k];
       return (m.kind === 'box' ? (g.median || [])[i] : (g.center || [])[i]) != null;
     });
-    const hit = hitOf(cell, mark.closest('.blockr-summarize-lv'), '.blockr-summarize-lv', drawn);
+    const hit = hitOf(cell, mark.closest('.vz-table-groups-lv'), '.vz-table-groups-lv', drawn);
     const w = tt.words || {};
     const at = (/** @type {TableLaneGeom} */ g, /** @type {keyof TableLaneRaw} */ k) =>
       (g.raw && g.raw[k] ? /** @type {TableNums} */ (g.raw[k])[i] : null);
@@ -145,7 +145,7 @@
     if (!m.multi) return clauses(m.tip ? m.tip[i] : '', 0);
     const lv = m.lanes || [];
     const drawn = lv.map((_, k) => k).filter((k) => lv[k].from[i] != null || lv[k].to[i] != null);
-    const hit = hitOf(cell, mark.closest('.blockr-summarize-lv'), '.blockr-summarize-lv', drawn);
+    const hit = hitOf(cell, mark.closest('.vz-table-groups-lv'), '.vz-table-groups-lv', drawn);
     const w = tt.words || {};
     const cv = tt.cvar ? tt.cvar + ' ' : '';
     const lines = drawn.map((k) => row(cv + (m.levels || [])[k], lv[k].fromTo ? lv[k].fromTo[i] : '',
@@ -172,16 +172,16 @@
     const h = head(label) + (ctx.length ? note(ctx.join(' · ')) : '');
     let body = '';
     if (m.kind === 'bar') {
-      body = t.closest('.blockr-summarize-fill') && c.disp[i]
+      body = t.closest('.vz-table-groups-fill') && c.disp[i]
         ? row(tt.meas || 'Value', c.disp[i] + (c.pct && c.pct[i] ? ' ' + c.pct[i] : '')) : '';
     } else if (m.kind === 'barsplit') {
       body = splitLines(c, m, i, cell, t, tt);
     } else if (m.kind === 'box' || m.kind === 'pointrange') {
-      const mark = t.closest('.lane-wh, .lane-cap, .lane-box, .lane-med, .lane-fence, .lane-rng, .lane-ctr');
+      const mark = t.closest('.vz-table-lane-wh, .vz-table-lane-cap, .vz-table-lane-box, .vz-table-lane-med, .vz-table-lane-fence, .vz-table-lane-rng, .vz-table-lane-ctr');
       body = !mark ? '' : m.multi ? multiLines(m, i, cell, mark, tt)
         : m.raw && m.raw.center && m.raw.center[i] != null ? dist(m.kind, m, i, tt.words || {}) : '';
     } else if (m.kind === 'pair') {
-      const mark = t.closest('.lane-link, .lane-from, .lane-to');
+      const mark = t.closest('.vz-table-lane-link, .vz-table-lane-from, .vz-table-lane-to');
       body = mark ? pairLines(m, i, cell, mark, tt) : '';
     }
     return body ? h + body : '';
@@ -195,8 +195,8 @@
    * @param {number} x Pointer x within the lane, 0 to 1.
    */
   function laneText(lane, t, x) {
-    if (lane.classList.contains('blockr-summarize-ivcell')) {
-      const seg = t.closest('.lane-seg');
+    if (lane.classList.contains('vz-table-groups-ivcell')) {
+      const seg = t.closest('.vz-table-lane-seg');
       if (seg) return { text: seg.getAttribute('data-tip') || '', color: /** @type {HTMLElement} */ (seg).style.background };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
@@ -231,19 +231,19 @@
     const t = /** @type {Element} */ (e.target);
     const m = model();
     if (!m || !t || !t.closest) return '';
-    const lane = t.closest('.blockr-summarize-ivcell, .blockr-summarize-spcell');
+    const lane = t.closest('.vz-table-groups-ivcell, .vz-table-groups-spcell');
     if (lane) {
-      const seg = t.closest('.lane-seg');
+      const seg = t.closest('.vz-table-lane-seg');
       light(seg ? seg.getAttribute('data-l') : null);
       const r = lane.getBoundingClientRect();
       const l = laneText(lane, t, r.width ? Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) : 0);
       return l && l.text ? laneCard(l) : '';
     }
     light(null);
-    const cell = t.closest('td.blockr-summarize-bar-col, .tc-glyph');
+    const cell = t.closest('td.vz-table-groups-bar-col, .vz-table-card-glyph');
     const rowEl = cell && cell.closest('[data-i]');
     if (!cell || !rowEl) return '';
-    const k = cell.matches('.tc-glyph') ? Number(cell.getAttribute('data-k'))
+    const k = cell.matches('.vz-table-card-glyph') ? Number(cell.getAttribute('data-k'))
       : /** @type {HTMLTableCellElement} */ (cell).cellIndex;
     return card(m, k, Number(rowEl.getAttribute('data-i')), cell, t);
   }
@@ -256,7 +256,7 @@
    */
   function wire(box, scope, model) {
     const tip = scope.node(root.document.body.appendChild(root.document.createElement('div')));
-    tip.className = 'blockr-lane-tip is-card';
+    tip.className = 'vz-table-lane-tip is-card';
     tip.hidden = true;
     /** @type {string | null} */
     let lit = null;
@@ -264,7 +264,7 @@
       if (label === lit) return;
       lit = label;
       box.classList.toggle('seg-hover', !!label);
-      box.querySelectorAll('.lane-seg').forEach((s) =>
+      box.querySelectorAll('.vz-table-lane-seg').forEach((s) =>
         s.classList.toggle('is-same', !!label && s.getAttribute('data-l') === label));
     };
     const hide = () => {

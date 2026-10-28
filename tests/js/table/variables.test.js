@@ -16,9 +16,9 @@ function mount(p, env = loadTable()) {
 
 test('the variables layout draws its Table 1 with sections and the drill', () => {
   const t = mount(payload({ data: table1(), config: VAR }));
-  assert.deepEqual(t.$$('tr.blockr-section-header').map((r) => r.textContent), ['Sex', 'Age', 'Age group']);
-  assert.ok(t.$('.vz-table').classList.contains('drilldown-table-structured'));
-  t.$$('tbody tr.blockr-data-row')[0].children[1].dispatchEvent(new t.win.MouseEvent('click', { bubbles: true }));
+  assert.deepEqual(t.$$('tr.vz-table-section-header').map((r) => r.textContent), ['Sex', 'Age', 'Age group']);
+  assert.ok(t.$('.vz-table').classList.contains('vz-table-structured'));
+  t.$$('tbody tr.vz-table-row')[0].children[1].dispatchEvent(new t.win.MouseEvent('click', { bubbles: true }));
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { '.variable': ['SEX'], '.variable_level': ['F'] },
                                    columns: { ARM: ['Placebo'] } }]);
 });
@@ -27,8 +27,8 @@ test('the cards look draws a Table 1 as a table', () => {
   const m = table1();
   m.cards = { n: 1, cols: [] };
   const t = mount(payload({ data: m, config: Object.assign({ look: 'cards' }, VAR) }));
-  assert.equal(t.$$('tbody tr.blockr-data-row').length, 5);
-  assert.ok(t.$('.blockr-cards-host').hidden);
+  assert.equal(t.$$('tbody tr.vz-table-row').length, 5);
+  assert.ok(t.$('.vz-table-cards').hidden);
 });
 
 test('a pick of variables becomes entries; kept entries keep their keys', () => {
@@ -64,5 +64,5 @@ test('the gear\'s Variables row picks among the columns not in by', () => {
   const shade = env.win.document.createElement('div');
   host.custom('shadings', shade, { values: { layout: 'records', shadings: [] }, columns: COLS,
                                    scope: new env.V.Scope(), set: () => {} });
-  assert.ok(shade.querySelector('.vz-shade-add'));
+  assert.ok(shade.querySelector('.vz-table-shade-add'));
 });

@@ -26,14 +26,14 @@ function check(el, p, where) {
     return;
   }
   if (p.config.look === 'cards' && m.cards && p.config.layout !== 'variables') {
-    assert.ok(el.querySelector('.blockr-cards-host:not([hidden])'), where + ': cards drawn');
+    assert.ok(el.querySelector('.vz-table-cards:not([hidden])'), where + ': cards drawn');
     return;
   }
   assert.ok(table, where + ': a table is drawn');
   for (const c of m.cols) assert.equal(c.disp.length, m.n, where + ': ' + c.name + ' has one entry per row');
   const heads = m.head.reduce((k, r) => k + r.length, 0);
   assert.equal(table.querySelectorAll('thead th').length, heads, where + ': one th per head cell');
-  const rows = table.querySelectorAll('tbody tr.blockr-data-row');
+  const rows = table.querySelectorAll('tbody tr.vz-table-row');
   assert.ok(rows.length <= m.n && (m.n === 0 || rows.length > 0 || m.collapsed), where + ': rows drawn');
   for (const r of rows) assert.equal(r.children.length, m.cols.length, where + ': one cell per column');
   assert.equal(el.innerHTML.includes('<script'), false, where + ': no markup from the data');
@@ -49,8 +49,8 @@ for (const f of FILES) {
       env.b.renderValue(el, p);
       check(el, p.data ? p : Object.assign({}, p, { data: el._viz && el._viz.view.view && el._viz.view.view.model }),
             scenario + ' step ' + (k + 1));
-      const row = el.querySelector('tbody tr.blockr-data-row:not(.dt-row-nodrill)');
-      if (row && el.querySelector('.vz-table.dt-clickable')) {
+      const row = el.querySelector('tbody tr.vz-table-row:not(.vz-table-row-nodrill)');
+      if (row && el.querySelector('.vz-table.vz-table-clickable')) {
         row.dispatchEvent(new env.win.MouseEvent('click', { bubbles: true }));
         const sel = env.selects().at(-1);
         assert.ok(sel === null || (sel.type === 'categorical' && typeof sel.filters === 'object'),

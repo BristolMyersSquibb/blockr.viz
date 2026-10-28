@@ -32,7 +32,7 @@ test('the frame: titles on the left, tools and footer', () => {
   assert.equal(t.$('.vz-head .vz-title').textContent, 'Subjects');
   assert.ok(t.$('.vz-subtitle').hidden);
   assert.equal(t.$('.vz-caption').textContent, 'Source: ADSL');
-  assert.equal(t.$('input.blockr-search').hidden, false);
+  assert.equal(t.$('input.vz-table-search').hidden, false);
   assert.equal(t.$('.vz-download').hidden, false);
 });
 
@@ -40,19 +40,19 @@ test('with no table the tools stay hidden and the message shows', () => {
   const t = mount(payload({ data: {}, derived: { empty: { kind: 'needs', message: 'Connect a data block' } } }));
   assert.equal(t.$('.vd-empty-state').textContent, 'Connect a data block');
   assert.equal(t.$('.vd-empty-state').getAttribute('data-kind'), 'needs');
-  assert.ok(t.$('input.blockr-search').hidden);
+  assert.ok(t.$('input.vz-table-search').hidden);
   assert.ok(t.$('.vz-download').hidden);
   assert.equal(t.$('table'), null);
   t.render({ data: flatModel(2) });
   assert.equal(t.$('.vd-empty-state'), null);
-  assert.equal(t.$('input.blockr-search').hidden, false);
-  assert.equal(t.$$('tbody tr.blockr-data-row').length, 2);
+  assert.equal(t.$('input.vz-table-search').hidden, false);
+  assert.equal(t.$$('tbody tr.vz-table-row').length, 2);
 });
 
 test('download off hides the download slot only', () => {
   const t = mount(payload({ data: flatModel(2), config: { download: false } }));
   assert.ok(t.$('.vz-download').hidden);
-  assert.equal(t.$('input.blockr-search').hidden, false);
+  assert.equal(t.$('input.vz-table-search').hidden, false);
 });
 
 test('an error from R shows in the frame', () => {
@@ -65,22 +65,22 @@ test('an error from R shows in the frame', () => {
 test('the cards look draws a card per column and drills on a card row', () => {
   const t = mount(payload({ data: withCards(4), config: { look: 'cards' } }));
   assert.equal(t.$('table'), null);
-  assert.equal(t.$$('.tc-row').length, 4);
-  assert.deepEqual(t.$$('.tc-colhead b').map((b) => b.textContent), ['Arm', 'Age']);
-  assert.equal(t.$('.tc-row .tc-strip').getAttribute('style'), 'background:#123456');
+  assert.equal(t.$$('.vz-table-card-row').length, 4);
+  assert.deepEqual(t.$$('.vz-table-card-colhead b').map((b) => b.textContent), ['Arm', 'Age']);
+  assert.equal(t.$('.vz-table-card-row .vz-table-card-strip').getAttribute('style'), 'background:#123456');
   assert.equal(t.$('.vz-count').textContent, '4 rows');
-  t.click(t.$$('.tc-row')[3].querySelector('.tc-val'));
+  t.click(t.$$('.vz-table-card-row')[3].querySelector('.vz-table-card-val'));
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: ['Placebo'] } }]);
-  assert.deepEqual(t.$$('.tc-row.dt-row-active').map((r) => r.getAttribute('data-i')), ['0', '3']);
+  assert.deepEqual(t.$$('.vz-table-card-row.vz-table-row-active').map((r) => r.getAttribute('data-i')), ['0', '3']);
 });
 
 test('search narrows the card rows', async () => {
   const t = mount(payload({ data: withCards(6), config: { look: 'cards' } }));
-  const inp = t.$('input.blockr-search');
+  const inp = t.$('input.vz-table-search');
   inp.value = 'low';
   inp.dispatchEvent(new t.win.Event('input'));
   await tick(t.win, 200);
-  assert.deepEqual(t.$$('.tc-row').map((r) => r.getAttribute('data-i')), ['1', '4']);
+  assert.deepEqual(t.$$('.vz-table-card-row').map((r) => r.getAttribute('data-i')), ['1', '4']);
   assert.equal(t.$('.vz-count').textContent, '2 of 6 rows');
 });
 
@@ -89,19 +89,19 @@ test('a single row of cards names the statistic in the card', () => {
   m.cards.multi = false;
   m.cards.cols[1].legend = [{ color: '#f00', label: 'F' }];
   const t = mount(payload({ data: m, config: { look: 'cards' } }));
-  assert.equal(t.$('.tc-colhead'), null);
-  assert.equal(t.$$('.tc .tc-word')[0].textContent, 'Age: ');
-  assert.equal(t.$('.tc-legend span').textContent, 'F');
+  assert.equal(t.$('.vz-table-card-colhead'), null);
+  assert.equal(t.$$('.vz-table-card .vz-table-card-word')[0].textContent, 'Age: ');
+  assert.equal(t.$('.vz-table-card-legend span').textContent, 'F');
 });
 
 test('cards without columns say so; switching back to the table draws it', () => {
   const m = withCards(2);
   m.cards.cols = [];
   const t = mount(payload({ data: m, config: { look: 'cards' }, dataRev: 3 }));
-  assert.equal(t.$('.tc-empty').textContent, 'No summary to show as a card.');
+  assert.equal(t.$('.vz-table-card-empty').textContent, 'No summary to show as a card.');
   t.render({ config: { look: 'table' }, dataRev: 3 });
-  assert.equal(t.$$('tbody tr.blockr-data-row').length, 2);
-  assert.ok(t.$('.blockr-cards-host').hidden);
+  assert.equal(t.$$('tbody tr.vz-table-row').length, 2);
+  assert.ok(t.$('.vz-table-cards').hidden);
 });
 
 test('the cards follow the width of their host', () => {
@@ -116,13 +116,13 @@ test('the cards follow the width of their host', () => {
   const t = mount(null, env);
   Object.defineProperty(t.el, 'clientWidth', { value: 0, configurable: true });
   t.render({ data: withCards(2), config: { look: 'cards' } });
-  const host = t.$('.blockr-cards-host');
+  const host = t.$('.vz-table-cards');
   Object.defineProperty(host, 'clientWidth', { value: 250, configurable: true });
   t.render({ data: withCards(2), config: { look: 'cards' } });
-  assert.equal(t.$('.tc-grid').getAttribute('data-tc-mode'), 'narrow');
+  assert.equal(t.$('.vz-table-card-grid').getAttribute('data-cards-mode'), 'narrow');
   Object.defineProperty(host, 'clientWidth', { value: 360 });
   t.render({ data: withCards(2), config: { look: 'cards' } });
-  assert.equal(t.$('.tc-grid').getAttribute('data-tc-mode'), 'medium');
+  assert.equal(t.$('.vz-table-card-grid').getAttribute('data-cards-mode'), 'medium');
 });
 
 test('another layout replaces the records view and its table', () => {
@@ -132,8 +132,8 @@ test('another layout replaces the records view and its table', () => {
   assert.match(t.$('.vd-empty-text').textContent, /pivot layout/);
   t.render({ data: flatModel(3), config: { layout: 'records' } });
   assert.equal(t.$('.vd-empty-state'), null);
-  assert.equal(t.$$('tbody tr.blockr-data-row').length, 3);
-  assert.equal(t.$$('.dt-table-slot').length, 1);
+  assert.equal(t.$$('tbody tr.vz-table-row').length, 3);
+  assert.equal(t.$$('.vz-table-slot').length, 1);
 });
 
 test('the gear engine, when loaded, is mounted in a tray and updated after the layout', () => {
@@ -193,16 +193,16 @@ test('the shading editor round-trips every key of a rule', () => {
   ctx.scope = new V.Scope();
   V.table.gear.shadings(el, ctx);
   const fire = (x, type) => x.dispatchEvent(new win.Event(type, { bubbles: true }));
-  assert.equal(el.querySelectorAll('.vz-shade-cols label').length, 2);
-  const boxes = el.querySelectorAll('.vz-shade-cols input');
+  assert.equal(el.querySelectorAll('.vz-table-shade-cols label').length, 2);
+  const boxes = el.querySelectorAll('.vz-table-shade-cols input');
   boxes[1].checked = true;
   fire(boxes[1], 'change');
   const mode = el.querySelector('select');
   mode.value = 'Sequential';
   fire(mode, 'change');
-  fire(el.querySelector('.vz-shade-add'), 'click');
-  fire(el.querySelector('.vz-shade-remove'), 'click');
-  assert.ok(el.querySelector('.vz-shade-add').classList.contains('blockr-btn'));
+  fire(el.querySelector('.vz-table-shade-add'), 'click');
+  fire(el.querySelector('.vz-table-shade-remove'), 'click');
+  assert.ok(el.querySelector('.vz-table-shade-add').classList.contains('blockr-btn'));
   const dom = [{ value: -1, label: null }, { value: 1, label: null }];
   assert.deepEqual(sets, [
     [{ mode: 'bar', columns: ['AGE', 'WT'], domain: dom }],
@@ -301,12 +301,12 @@ test('50 mounts and unmounts leave nothing behind', async () => {
     const el = add('tbl');
     const look = k % 2 ? 'cards' : 'table';
     b.renderValue(el, payload({ data: withCards(500), config: { look, drill: 'ARM' } }));
-    const row = el.querySelector('tbody tr.blockr-data-row, .tc-row');
+    const row = el.querySelector('tbody tr.vz-table-row, .vz-table-card-row');
     row.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
     row.dispatchEvent(new win.MouseEvent('mouseover', { bubbles: true }));
     const box = el.querySelector('.blockr-table-wrapper');
     box.dispatchEvent(new win.Event('scroll'));
-    const inp = el.querySelector('input.blockr-search');
+    const inp = el.querySelector('input.vz-table-search');
     inp.value = 'p';
     inp.dispatchEvent(new win.Event('input'));
     el.remove();
@@ -339,8 +339,8 @@ test('table.css rotates the titles the compact look marks', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const css = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'table.css'), 'utf8');
-  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \{/);
-  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.vz-table-col-header \{/);
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.vz-table-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
   const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
   assert.match(dep, /"table\.css"/);
 });
