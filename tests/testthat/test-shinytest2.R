@@ -77,18 +77,18 @@ SEL <- c(
   search = "input.vz-table-search", count = ".vz-count",
   active = ".vz-table-row-active", row_active = "tr.vz-table-row-active",
   # status footer (table and chart)
-  status = ".dd-status-text", clear = ".dd-status-clear", cap = ".dd-status-cap",
+  status = ".vz-status-text", clear = ".vz-status-clear", cap = ".vz-status-note",
   # cards
   card_row = ".vz-table-card-row", card = ".vz-table-card", card_label = ".vz-table-card-rowlab",
   card_glyph = ".vz-table-card-glyph", card_box = ".vz-table-groups-boxcell",
   # chart
-  chart = ".dd-chart",
+  chart = ".vz-chart-panel",
   # gear
   gear = ".blockr-gear-btn", tray = ".blockr-settings",
   tray_open = ".blockr-settings.blockr-settings--open",
   tray_group = ".blockr-tray-nav__group", checkbox = ".blockr-checkbox",
-  section = ".dd-section", section_title = ".dd-section-title",
-  tile = ".dd-layout-tile", tile_on = ".dd-layout-tile--on"
+  section = ".vz-section", section_title = ".vz-section-title",
+  tile = ".vz-tile", tile_on = ".vz-tile--on"
 )
 
 sel_fill <- function(js) {

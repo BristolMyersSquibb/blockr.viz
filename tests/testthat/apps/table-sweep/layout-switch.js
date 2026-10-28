@@ -52,7 +52,7 @@
     if (t.length === 1) {
       const on = segs(t[0]).filter((s) => s.getAttribute("aria-checked") === "true");
       selected = on.length === 1 ? val(on[0]) : on.map(val).join("+") || null;
-      table1 = !!t[0].querySelector('.dd-section[data-section="Variables"]');
+      table1 = !!t[0].querySelector('.vz-section[data-section="Variables"]');
       badge = !!t[0].querySelector(".dd-input-badge");
     }
     return { shown: shown(id), gears: gears(r).length, open: t.length, selected, table1, badge };
