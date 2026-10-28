@@ -90,3 +90,15 @@ test('move, remove, add and fold', () => {
   e.draw(list);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
 });
+
+test('the Show tiles have a drawing for every value and the editor width', () => {
+  const e = editor([{ type: 'simple', func: 'count', show: 'bar' }]);
+  const show = e.built.find((c) => c.key === 'show');
+  for (const v of ['bar', 'number', 'dot', 'tile', 'box', 'pointrange', 'text', 'dumbbell']) {
+    assert.match(show.host.icon('show', v), /^<svg/, v);
+  }
+  assert.equal(show.host.icon('func', 'mean'), '');
+  const row = e.el.querySelector('.lane-sum-field--wide');
+  assert.ok(row);
+  assert.equal(row.querySelector('.blockr-label').textContent, show.label);
+});

@@ -218,6 +218,9 @@
         : null,
       visible: (key, v) => visible(key, v, info()),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
+      // What an empty picker means.
+      placeholder: (key, v) => key === 'columns' ? 'All columns'
+        : key === 'by' && v.layout === 'records' ? 'All' : null,
       // A layout's own editor for a key ("variables.summaries"), else the
       // key's ("shadings").
       custom: (key, el, ctx) => {

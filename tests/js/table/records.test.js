@@ -355,6 +355,10 @@ test('the gear offers the blocks a drill can be sent to', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(host.choices('drill_target', {}))),
                    [{ value: '', label: 'None' }].concat(targets));
   assert.equal(host.choices('format', {}), null);
+  // An empty picker says what it means.
+  assert.equal(host.placeholder('columns', { layout: 'records' }), 'All columns');
+  assert.equal(host.placeholder('by', { layout: 'records' }), 'All');
+  assert.equal(host.placeholder('by', { layout: 'groups' }), null);
 });
 
 test('a prepare script draws its controls and its error under the header', () => {

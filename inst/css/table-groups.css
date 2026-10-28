@@ -445,6 +445,7 @@
 }
 .lane-sum-body[hidden] { display: none; }
 .lane-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lane-sum-field--wide { grid-column: 1 / -1; }
 .lane-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
 .lane-sum-addcol { align-self: flex-start; min-width: 200px; }
