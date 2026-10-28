@@ -293,6 +293,7 @@
         rowClass: (/** @type {number} */ i) => this.rowClass(i),
         secClass: (/** @type {number} */ s) => this.secClass(s),
         click: (/** @type {MouseEvent} */ e) => this.click(e),
+        lit: () => ({ rows: this.rows(), sections: this.sections() }),
         drills: () => clickable(grid.model)
       });
     }
@@ -317,11 +318,23 @@
 
     /** @param {number} s */
     secClass(s) {
+      return this.secLit(s) ? 'vz-table-row-active' : '';
+    }
+
+    /** @param {number} s Whether section `s` is the selection. */
+    secLit(s) {
       const sel = this.ctx.selection();
       const m = this.grid.model;
       const sec = m && m.sections ? m.sections[s] : null;
-      return sel && !this.ctx.transient() && sec && sec.keys && !sel.columns &&
-        equal(sec.keys, sel.filters) ? 'vz-table-row-active' : '';
+      return !!(sel && !this.ctx.transient() && sec && sec.keys && !sel.columns &&
+        equal(sec.keys, sel.filters));
+    }
+
+    /** The section headers the selection lights. */
+    sections() {
+      const m = this.grid.model;
+      const n = m && m.sections ? m.sections.length : 0;
+      return Array.from({ length: n }, (_, s) => s).filter((s) => this.secLit(s));
     }
 
     /** Light the claimed columns; runs after every draw. */

@@ -378,3 +378,34 @@ test('a prepare script draws its controls and its error under the header', () =>
   t.render({ data: flatModel(2), derived: {} });
   assert.equal(band.hidden, true);
 });
+
+test('a layout pick keeps the panel scroll the reader had at the click', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  // The dock panel the block scrolls in.
+  const sc = env.win.document.createElement('div');
+  sc.style.overflowY = 'auto';
+  Object.defineProperty(sc, 'scrollHeight', { value: 2000 });
+  Object.defineProperty(sc, 'clientHeight', { value: 500 });
+  Object.defineProperty(sc, 'scrollTop', { value: 0, writable: true });
+  env.win.document.body.appendChild(sc);
+  const t = mount(null, env);
+  sc.appendChild(t.el);
+  t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
+  sc.scrollTop = 200;
+  const frame = t.$('.vz-table');
+  host.onChange({ layout: 'records' }, {});
+  assert.notEqual(frame.style.minHeight, '');
+  // A shorter tray would pull the panel up before R answers.
+  sc.scrollTop = 95;
+  // A payload that is not the pick changes nothing.
+  t.render({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] } });
+  assert.notEqual(frame.style.minHeight, '');
+  t.render({ data: flatModel(3), config: { layout: 'records' } });
+  assert.equal(t.$('.vz-table').getAttribute('data-layout'), 'records');
+  assert.equal(sc.scrollTop, 200);
+  assert.equal(frame.style.minHeight, '');
+});

@@ -279,6 +279,9 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** The rows and section headers the selection lights; a new model opens
+   *  the folds that would hide them. */
+  lit?(): { rows: Iterable<number>; sections: Iterable<number> };
   /** A body cell drawn by the layout instead (the groups marks); null for
    *  the plain cell. */
   cell?(c: TableCol, i: number): string | null;
@@ -316,6 +319,7 @@ interface TableGrid {
   sort(col: number | null, dir: number): void;
   fold(s: number, shut: boolean): void;
   foldAll(shut: boolean): void;
+  reveal(rows: Iterable<number>, sections?: Iterable<number>): void;
   folds(): boolean;
   draw(): void;
   counts(): { shown: number; total: number };
@@ -470,7 +474,8 @@ interface VizTableNamespace {
     card(model: TableModel, k: number, i: number, cell: Element, t: Element): string;
   };
   gear: {
-    mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
+    mount(frame: TableFrame, scope: VizScope, info: () => TableInfo,
+          onLayout?: (layout: string) => void): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
     shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };

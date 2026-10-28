@@ -15,6 +15,9 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const T = V.table;
 
+  /** How long a layout pick holds the panel when R does not answer it. */
+  const HOLD_MS = 20000;
+
   class TableView {
     /**
      * @param {HTMLElement} el
@@ -33,7 +36,12 @@
       this.view = null;
       /** @type {VizScope | null} */
       this.viewScope = null;
-      this.gear = opts.gear === false ? null : T.gear.mount(this.frame, scope, () => this.info());
+      /** A layout pick R has not drawn yet: the panel's scroll at the
+       * click, and the layout picked. */
+      /** @type {{ sc: Element, top: number, to: string, release: () => void } | null} */
+      this.held = null;
+      this.gear = opts.gear === false ? null
+        : T.gear.mount(this.frame, scope, () => this.info(), (to) => this.hold(to));
       // The prepare script's controls, under the header.
       this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
       if (this.script) this.frame.body.before(this.script.el);
@@ -43,12 +51,16 @@
     render(p) {
       const layout = String((p.config && p.config.layout) || 'records');
       // A switch takes the old layout's rows away before the new one draws,
-      // which would pull a scrolled panel up; it keeps its place.
-      const sc = layout !== this.layout ? this.frame.scroller() : null;
-      const top = sc ? sc.scrollTop : 0;
-      if (layout !== this.layout) this.switchTo(layout);
+      // which would pull a scrolled panel up; it keeps its place, the place
+      // at the click when the gear picked the layout.
+      const switching = layout !== this.layout;
+      const held = switching ? this.held : null;
+      const sc = held ? held.sc : switching ? this.frame.scroller() : null;
+      const top = held ? held.top : sc ? sc.scrollTop : 0;
+      if (switching) this.switchTo(layout);
       if (this.view) {
         this.view.render(p);
+        if (this.held && (switching || layout === this.held.to)) this.unhold();
         if (sc) {
           sc.scrollTop = top;
           this.scope.frame(() => { sc.scrollTop = top; });
@@ -60,6 +72,35 @@
       if (this.gear) this.gear.update(p);
       if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
       this.frame.busyDone();
+    }
+
+    /**
+     * A layout pick in the gear. The tray shows the new layout's rows at
+     * once, and a shorter tray would pull the scrolled panel up before R
+     * sends the new layout: the frame keeps its height until it draws.
+     * @param {string} to
+     */
+    hold(to) {
+      const h = this.held;
+      if (h) {
+        h.release();
+        h.to = to;
+      } else {
+        const sc = this.frame.scroller();
+        if (!sc) return;
+        this.frame.el.style.minHeight = this.frame.el.offsetHeight + 'px';
+        this.held = { sc, top: sc.scrollTop, to, release: () => {} };
+      }
+      // R may refuse the pick; the frame lets go after a while.
+      /** @type {NonNullable<TableView['held']>} */ (this.held).release =
+        this.scope.timeout(() => this.unhold(), HOLD_MS);
+    }
+
+    unhold() {
+      if (!this.held) return;
+      this.held.release();
+      this.held = null;
+      this.frame.el.style.minHeight = '';
     }
 
     /** @param {string} layout */
@@ -87,6 +128,7 @@
     }
 
     dispose() {
+      this.unhold();
       if (this.viewScope) this.viewScope.dispose();
       this.viewScope = null;
       this.view = null;

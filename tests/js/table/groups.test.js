@@ -276,6 +276,20 @@ test('nested groups: parents fold their terms; search keeps the parent', async (
   assert.equal(t.$('.vz-count').textContent, '');
 });
 
+test('a restored selection opens the parents of its rows, and nothing else', () => {
+  const m = nested();
+  m.collapsed = true;
+  const sel = { type: 'categorical', filters: { AESOC: ['Skin'], AEDECOD: ['Rash'] } };
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'], selection: sel }) }));
+  const rows = () => t.$$('tbody tr.vz-table-row');
+  assert.deepEqual(rows().map((r) => r.children[0].textContent), ['Cardiac', 'Skin', 'Rash']);
+  assert.ok(rows()[2].classList.contains('vz-table-row-active'));
+  // A selected parent stays folded: its own row is on screen.
+  const parent = { type: 'categorical', filters: { AESOC: ['Cardiac'] } };
+  const u = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'], selection: parent }) }));
+  assert.deepEqual(u.$$('tbody tr.vz-table-row').map((r) => r.children[0].textContent), ['Cardiac', 'Skin']);
+});
+
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   t.click(t.$('th[data-col-index="1"]'));

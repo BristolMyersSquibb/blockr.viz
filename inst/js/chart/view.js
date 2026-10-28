@@ -37,7 +37,6 @@
       this.scope = scope;
       this.still = !!opts.still;
       /** @type {any[]} */ this.data = [];
-      /** @type {number | null} */ this._lastDataRev = null;
       this._ix = new NS.RowIndex();
       // Bumped whenever the rows change; the model memo keys on it.
       this._rowsGen = 0;
@@ -93,18 +92,18 @@
       this.theme = theme && theme !== 'default' ? theme : null;
     }
 
-    /** A payload from R (core/binding.js hands it over with its rows). The rows are parsed only
-     * when their revision changed. @param {VizPayload} p */
-    render(p) {
+    /** A payload from R, with its rows (core/binding.js). The rows are parsed
+     * and indexed only when the binding says they are new to this view.
+     * @param {VizPayload} p @param {boolean} [rowsChanged] */
+    render(p, rowsChanged = true) {
       const d = /** @type {ChartDerived} */ (p.derived || {});
       this.derived = d;
       this.columns = p.columns || [];
       this._columnsKey = JSON.stringify(this.columns);
-      if (p.data_rev !== this._lastDataRev || !this.data.length) {
+      if (rowsChanged) {
         this._ix = new NS.RowIndex();
         this._rowsGen++;
         this.data = NS.rowsFromPayload(p.data);
-        this._lastDataRev = p.data_rev;
       }
       this.settings = NS.model.settings(p.config, this.columns);
       this.selection.restore(p.config && p.config.selection);
