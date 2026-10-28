@@ -79,6 +79,10 @@
     return sel;
   };
 
+  /** A map's scalar as R sends it: every value of a map comes as an array
+   * (wire_map()), `"range"` as `["range"]`. @param {any} v */
+  const scalar = (v) => (Array.isArray(v) ? v[0] : v);
+
   /**
    * The selection a saved one restores, cleaned, or null for none or one
    * the chart cannot show.
@@ -86,10 +90,11 @@
    */
   const restore = (sel) => {
     if (!sel || typeof sel !== 'object') return null;
-    if (sel.type === 'range') {
-      if (!sel.x || !Array.isArray(sel.x_range)) return null;
+    if (scalar(sel.type) === 'range') {
+      const x = scalar(sel.x);
+      if (!x || !Array.isArray(sel.x_range)) return null;
       const yr = Array.isArray(sel.y_range) && sel.y_range.length ? sel.y_range : null;
-      return range(sel.x, sel.y || null, sel.x_range, yr, clean(sel.filters));
+      return range(x, scalar(sel.y) || null, sel.x_range, yr, clean(sel.filters));
     }
     const filters = clean(sel.filters);
     return filters ? { type: 'categorical', filters } : null;

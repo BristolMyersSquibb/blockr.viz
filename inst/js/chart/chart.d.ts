@@ -278,7 +278,7 @@ interface ChartFamily {
   patch(c: ChartPatchInput): { series: any[]; dimmed: boolean };
   prepare?(slot: ChartSlot, po: any): void;
   actions?(slot: ChartSlot, po: any): boolean;
-  after?(slot: ChartSlot, po: any): void;
+  after?(slot: ChartSlot, po: any, view: ChartView): void;
 }
 
 /** One facet panel: its boxes, its ECharts instance and its hover, brush
@@ -294,6 +294,10 @@ interface ChartSlot {
   dimmed: boolean;
   hover: { si: number | null };
   brushable: boolean;
+  /** The last brush's rectangle, to draw again after a redraw. */
+  brushAreas: any[] | null;
+  /** The selection that brush made, as JSON. */
+  brushSel: string | null;
   zoomArmed: boolean;
   zoom: Record<string, unknown> | null;
   focus: any;

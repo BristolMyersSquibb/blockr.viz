@@ -241,7 +241,7 @@
                         actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         if (existed && hChanged) chart.resize();
-        if (fam.after) fam.after(slot, po);
+        if (fam.after) fam.after(slot, po, this);
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
@@ -351,7 +351,7 @@
         resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
         slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
-                 dimmed: false, hover: { si: null }, brushable: false, zoomArmed: false, zoom: null,
+                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }
