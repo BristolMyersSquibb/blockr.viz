@@ -119,7 +119,7 @@
    * A found element without a view waits for R's first value. A board that
    * builds blocks lazily binds the element when its panel shows, and R
    * speaks a second or more later. The view is built now, so its busy line
-   * exists, and busy-cue.js watch() counts the wait.
+   * exists, and the busy cue's watch() (core/busy.js) counts the wait.
    * @param {HTMLElement} el @param {VizViewClass} View @param {number} grace
    * @param {string} label
    */
