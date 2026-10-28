@@ -1,7 +1,5 @@
-# The records layout's view: the cell model (R/table-model-records.R) as
-# the table the browser draws, `derived$table` in the block's payload. Its
-# shape is the TableModel of inst/js/table/table.d.ts: column-oriented, one
-# vector per column, plain text and values, no markup.
+# The records layout's view: the cell model (R/table-model-records.R) as the
+# table the browser draws, `derived$table` in the block's payload.
 
 #' A flat records table as the browser draws it
 #'
@@ -156,8 +154,6 @@ table_frame_view <- function(v, d, src, layout) {
 }
 
 # Is `drill` the "source" mode, or a column that happens to be called that?
-# The mode exists only where there is no column to choose: a structured
-# table without a column of that name.
 table_drill_is_source <- function(drill, d) {
   identical(drill, "source") && is.data.frame(d) &&
     !"source" %in% names(d) && dt_is_structured(d)

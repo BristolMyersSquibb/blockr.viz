@@ -1,25 +1,7 @@
 # The cards look of the table block -------------------------------------------
-#
 # `look = "cards"` draws the same table as a grid of cards: one card per
 # summary (groups layout) or per column (records layout), one row of cards per
-# row of the table. A card shows a label, the main number in large type, a
-# grey line for a statistic the summary already holds, and the glyph the
-# summarize table draws in that cell.
-#
-# Nothing here computes a mark. The glyph geometry is the summarize table's
-# cell model (summarize_cells()), so a column of cards shares its scale the
-# way a table column does, and the browser draws the glyphs with the
-# groups table's marks (inst/js/table/marks.js). What this file
-# adds is the text of each card, as one list both consumers read:
-#
-#   table_cards_groups()  -> the card model of a groups-layout table
-#   table_cards_records() -> the card model of a records-layout table
-#
-# The model travels on the payload (`cards`), and the table view
-# (inst/js/table/cards.js) draws it. The downloads draw it too:
-# cards_exhibit() wraps it for html_exhibit() (the same view, inlined) and
-# for the painted slide
-# (cards_paint_grob(), which reuses the summarize painter's glyphs).
+# row of the table.
 
 # The summary types a card cannot draw: a swimlane needs the width of a table
 # row, and an expr summary has no main value to print large.

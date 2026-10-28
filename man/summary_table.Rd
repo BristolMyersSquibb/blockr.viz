@@ -75,7 +75,7 @@ their missing values either way. A \code{\link[=drill_source]{drill_source()}} c
 A wide annotated data frame: dotted identity / structure columns
 plus one formatted character column per by-group level, each carrying a
 \code{label} attribute holding its \code{"<group>\\nN = <n>"} header. Consumed by
-\code{\link[=new_table_block]{new_table_block()}} / \code{html_table()} and any renderer that understands the
+\code{\link[=new_table_block]{new_table_block()}}, \code{\link[=html_exhibit]{html_exhibit()}} and any renderer that understands the
 annotated-data-frame convention.
 }
 \description{

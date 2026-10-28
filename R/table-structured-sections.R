@@ -1,6 +1,5 @@
-# The sections and the drill claims of the structured table
-# (R/table-structured.R): build_html_tbody()'s section headers, and
-# dd_row_drill_attrs() / dd_header_drill_attrs() as claims instead of JSON.
+# The sections and the drill claims of the structured table (R/table-
+# structured.R): the section headers and the row and header claims.
 
 # A claim, `{column: [values]}`: the filter a click sends. Values are kept
 # as arrays so a single one is not unboxed on the way to the browser.
@@ -15,10 +14,7 @@ table_structured_claim <- function(columns, values) {
   lapply(values, I)
 }
 
-# The section headers, as TableSection lists. Row `i` opens a header at
-# level `L` when the path of its section columns changed at `L` or above
-# against the previous row (the first row opens all of them); `at` is the
-# 0-based row it stands above, outermost first.
+# The section headers, as TableSection lists.
 table_structured_sections <- function(data, section_cols, drill_on) {
   n <- nrow(data)
   k <- length(section_cols)
@@ -55,10 +51,8 @@ table_structured_diff_from <- function(path) {
   from
 }
 
-# One section: its level, text, the "Sex: " in front when the column carries
-# a label other than its name, and the claim of a click on the value. A
-# group header claims every group above it and itself; a variable block
-# (the synthetic `.variable_block`) names a block and claims nothing.
+# One section: its level, text, the "Sex: " in front when the column carries a
+# label other than its name, and the claim of a click on the value.
 table_structured_section <- function(data, section_cols, path, i, L,
                                      drill_on) {
   sc <- section_cols[[L]]
@@ -85,10 +79,7 @@ table_structured_group_pairs <- function(data, cols, i) {
 }
 
 # What a click on each data row claims, a list with `NULL` for the rows that
-# claim nothing. A level row claims "<.variable> = <.variable_level>", a
-# predicate row its `.filter`, both together an AND; the groups above and the
-# variable block ride along. A records table nested by `by` claims its groups
-# and its own value of the drill column (`drill_col`).
+# claim nothing.
 table_structured_row_keys <- function(data, section_cols, drill_col = NULL) {
   n <- nrow(data)
   keys <- vector("list", n)

@@ -465,8 +465,7 @@ input.blockr-search:focus {
    search bar and its footer pull themselves out by the card's inset
    (--blockr-card-inset, set by blockr.dock), and the first and last columns,
    the search bar and the footer pad their text back in by as much (the
-   structured table's row labels and last column do so in the delta CSS,
-   html_table_delta_css()). */
+   structured table's row labels and last column do so in table-structured.css). */
 .drilldown-table-container > .blockr-table-wrapper,
 .drilldown-table-container > .dt-table-footer,
 .drilldown-table-container > .blockr-html-table-header {

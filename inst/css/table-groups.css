@@ -594,7 +594,7 @@
 }
 
 /* Hierarchy, drawn as the records and variables layouts draw their section
-   headings (R/html-table.R). */
+   headings (table-structured.css). */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
 .blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
 .blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
@@ -613,7 +613,7 @@
   padding-bottom: 5px;
 }
 /* The header's grouping names read as the records layout's "All" next to the
-   fold-all chevron: small, normal weight, muted (html-table.R .dt-foldall). */
+   fold-all chevron: small, normal weight, muted (.dt-foldall). */
 .blockr-summarize-table[data-summarize-nested='1'] thead th.blockr-stub-header .blockr-col-name {
   font-size: 12px;
   line-height: 20px;

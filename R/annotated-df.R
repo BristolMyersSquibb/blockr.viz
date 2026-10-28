@@ -122,22 +122,6 @@ annotation_group_level_cols <- function(data) {
   cols[order(as.integer(sub("^\\.group(\\d+)_level$", "\\1", cols)))]
 }
 
-# Reject summary_table()'s internal long form (`.fmt` template plus an
-# unspread `.group` dimension) at the renderer boundary.
-reject_long_form <- function(data) {
-  if (is.data.frame(data) &&
-      all(c(".fmt", ".group") %in% names(data))) {
-    stop(
-      "This looks like summary_table()'s internal long form (it carries ",
-      "`.fmt` and `.group` columns). The annotated-df contract is the wide ",
-      "display grid -- pass the output of summary_table() (or another ",
-      "as_annotated_df() producer) instead.",
-      call. = FALSE
-    )
-  }
-  invisible(data)
-}
-
 #' Coerce a table object into a plain data frame
 #'
 #' [as_annotated_df()] followed by dropping the reserved `.`-annotation
@@ -393,18 +377,6 @@ annotated_spanner_labels <- function(data) {
   lbl <- lbl[nzchar(names(lbl)) & !is.na(lbl) & nzchar(lbl)]
 
   if (!length(lbl)) NULL else lbl
-}
-
-# One column's keys as the JSON the markup carries.
-#' @noRd
-dd_col_keys_json <- function(entry) {
-  as.character(jsonlite::toJSON(
-    lapply(entry, function(p) {
-      list(column = as.character(p[["column"]]),
-           values = I(as.character(p[["values"]])))
-    }),
-    auto_unbox = TRUE
-  ))
 }
 
 #' @noRd
