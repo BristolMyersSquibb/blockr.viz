@@ -267,14 +267,23 @@
   const brushed = (view, slot, selected) => {
     const m = view._memo.model;
     if (!m || m.family !== 'individual') return;
-    for (const other of view.charts) {
-      if (other !== slot.chart) other.dispatchAction({ type: 'brush', areas: [] });
+    // The other panels' brushes go; their clears are not the reader's.
+    const others = view.charts.filter((c) => c !== slot.chart);
+    if (others.length) {
+      view.selection.suppressBrushClear = true;
+      for (const other of others) other.dispatchAction({ type: 'brush', areas: [] });
+      view.scope.timeout(() => { view.selection.suppressBrushClear = false; }, GUARD_MS);
     }
     const panel = NS.model.panelOf(m, slot.facetVal);
     const opt = slot.chart.getOption();
     const caught = NS.model.individualBrush(m, view.settings, panel, (opt && opt.series) || [], selected);
     const sel = NS.model.brushSelection(m, view.settings, panel, caught);
-    if (sel) view.selection.latch(sel, true);
+    if (!sel) return;
+    // The rectangle drawn again after a redraw catches what it caught.
+    const key = JSON.stringify(sel);
+    if (key === JSON.stringify(view.selection.current)) return;
+    slot.brushSel = key;
+    view.selection.latch(sel, true);
   };
 
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
@@ -296,7 +305,13 @@
       brushed(view, slot, selected);
     });
     chart.on('brush', (/** @type {any} */ params) => {
-      if (!params.areas || params.areas.length === 0) view.selection.brushCleared();
+      const areas = params.areas || [];
+      // Kept in data coordinates: a redraw drops the rectangle (after()).
+      slot.brushAreas = areas.length ? areas.map((/** @type {any} */ a) => ({
+        brushType: a.brushType, coordRange: a.coordRange, xAxisIndex: 0,
+        ...(a.brushType === 'rect' ? { yAxisIndex: 0 } : {})
+      })) : null;
+      if (!areas.length) view.selection.brushCleared();
     });
   };
 
@@ -341,12 +356,16 @@
     // The brush cursor on a brushable scatter, the zoom drag on a line, each
     // released when the panel stops being one; the zoom window back; a
     // hovered band level's ribbon.
-    after(slot, po) {
+    after(slot, po, view) {
       const chart = slot.chart;
       /** @param {string} key @param {Record<string, any>} opt */
       const cursor = (key, opt) => chart.dispatchAction({ type: 'takeGlobalCursor', key, ...opt });
       if (po.brushable) {
         cursor('brush', { brushOption: { brushType: 'rect', brushMode: 'single' } });
+        // The redraw dropped the rectangle; it stays while its selection does.
+        if (slot.brushAreas && slot.brushSel === JSON.stringify(view.selection.current)) {
+          chart.dispatchAction({ type: 'brush', areas: slot.brushAreas });
+        }
       } else if (slot.brushable) {
         cursor('brush', { brushOption: { brushType: false } });
       }

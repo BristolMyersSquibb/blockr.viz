@@ -112,6 +112,43 @@ test('a scatter point is a zero-width range; a brush its extent', () => {
   assert.strictEqual(r.footer, 'Filtered: Analysis Relative Day 1 to 29, Analysis Value 27.4 to 31.1');
 });
 
+test('R\'s echo of a brush keeps the selection, and the redraw draws the rectangle again', () => {
+  const SC = { type: 'scatter', x: 'ADY', y: 'AVAL', drill: 'auto' };
+  const c = D.open(SC);
+  const area = { brushType: 'rect', coordRange: [[1, 29], [27, 32]], range: [[0, 9], [0, 9]] };
+  c.trigger('brush', { areas: [area] });
+  c.trigger('brushSelected', { batch: [{ areas: [area], selected: [{ seriesIndex: 0, dataIndex: [0, 1, 2] }] }] });
+  const sent = D.plain(c.selections());
+  assert.strictEqual(sent.length, 1);
+  // R sends every value of a map as an array (wire_map()).
+  const echo = { type: ['range'], x: ['ADY'], y: ['AVAL'], x_range: sent[0].x_range,
+                 y_range: sent[0].y_range, filters: [] };
+  c.send({ ...SC, selection: echo });
+  assert.strictEqual(c.footer(), 'Filtered: Analysis Relative Day 1 to 29, Analysis Value 27.4 to 31.1');
+  const log = c.chart().log;
+  // After the last full redraw (notMerge), which drops ECharts' brush areas.
+  const last = log.map((x) => x.op === 'setOption' && x.notMerge).lastIndexOf(true);
+  const redrawn = log.slice(last).find((x) => x.op === 'dispatchAction' && x.action.type === 'brush');
+  assert.ok(redrawn, 'the rectangle is drawn again after the redraw');
+  assert.deepStrictEqual(D.plain(redrawn.action.areas),
+                         [{ brushType: 'rect', coordRange: [[1, 29], [27, 32]], xAxisIndex: 0, yAxisIndex: 0 }]);
+  // ECharts reports the redrawn rectangle's points: nothing new goes to R.
+  c.trigger('brushSelected', { batch: [{ areas: [area], selected: [{ seriesIndex: 0, dataIndex: [0, 1, 2] }] }] });
+  assert.strictEqual(c.selections().length, 1);
+  c.close();
+});
+
+test('a brush in one facet panel is not undone by clearing the others', () => {
+  const c = D.open({ type: 'scatter', x: 'ADY', y: 'AVAL', facet: 'SEX', drill: 'auto' });
+  assert.ok(c.block._slots.length > 1);
+  c.trigger('brushSelected', { batch: [{ selected: [{ seriesIndex: 0, dataIndex: [0, 1] }] }] });
+  // The cleared panel reports its empty brush.
+  c.trigger('brush', { areas: [] }, 1);
+  assert.match(c.footer(), /^Filtered: /);
+  assert.strictEqual(D.plain(c.selections()).filter((x) => x === null).length, 0);
+  c.close();
+});
+
 test('a line click waits for a second click; a double-click cancels it', () => {
   const L = { type: 'line', x: 'ADY', y: 'AVAL', series: 'USUBJID', drill: 'auto' };
   const r = run(L, (c) => {
