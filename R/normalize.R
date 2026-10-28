@@ -2,12 +2,8 @@
 # about the data: one kind per column. The rules are pure functions of a
 # block's state, the state before the change, and these kinds.
 
-#' The kind of each column of a data frame
-#'
-#' @param data A data frame, or `NULL`.
-#' @return A named character vector, one of "numeric", "date", "factor",
-#'   "logical" or "character" per column; `NULL` without data.
-#' @noRd
+# The kind of each column of a data frame: a named character vector of
+# "numeric", "date", "factor", "logical" or "character"; NULL without data.
 viz_column_kinds <- function(data) {
   if (!is.data.frame(data)) {
     return(NULL)

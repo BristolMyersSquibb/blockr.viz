@@ -3,20 +3,14 @@
 # with the input's display attributes as the auto tier and the block's
 # settings as the `{@arg}` slots.
 
-#' The title bands of a block view
-#'
-#' One band per line, each the text and the pieces the face paints. A piece
-#' that names a setting is a word that opens it.
-#'
-#' @param v The block's values.
-#' @param d The data the templates are resolved against.
-#' @param auto The input's display attributes (input_display_attrs()).
-#' @param args The settings a template can name, `{@arg}`: a named list.
-#' @return A list: `title`, `subtitle` and `caption`, each `NULL` (no
-#'   line) or `list(text, parts, offers)`; `args`, what each `{@name}`
-#'   prints now; `choices`, the lists a template writes as
-#'   `{@name in a, b}`.
-#' @noRd
+# The title bands of a block view: one per line, each the text and the pieces
+# the face paints. A piece that names a setting is a word that opens it.
+# `v` the block's values, `d` the data the templates resolve against, `auto`
+# the input's display attributes (input_display_attrs()), `args` the named
+# list of settings a template can name. Returns `title`, `subtitle` and
+# `caption`, each NULL (no line) or `list(text, parts, offers)`; `args`, what
+# each `{@name}` prints now; `choices`, the lists a template writes as
+# `{@name in a, b}`.
 viz_titles <- function(v, d, auto, args) {
   tier <- c(title = "label", subtitle = "subtitle", caption = "caption")
   bands <- lapply(stats::setNames(nm = names(tier)), function(b) {

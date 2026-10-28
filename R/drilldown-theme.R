@@ -1,9 +1,8 @@
-# Vendored from blockr.echarts/R/echart-theme.R, so the drill-down block does
-# not depend on blockr.echarts. With both packages loaded the theme name is the
-# same and registration is idempotent.
+# Vendored from blockr.echarts/R/echart-theme.R so the chart block does not
+# depend on blockr.echarts. With both loaded the theme name is the same and
+# registration is idempotent.
 
 .drilldown_theme_env <- new.env(parent = emptyenv())
-.drilldown_theme_env$registered <- FALSE
 
 #' Register the drill-down echarts theme
 #'
@@ -13,7 +12,7 @@
 #' @return NULL, invisibly.
 #' @keywords internal
 echart_theme_blockr_viz <- function() {
-  if (.drilldown_theme_env$registered) {
+  if (isTRUE(.drilldown_theme_env$registered)) {
     return(invisible(NULL))
   }
   .drilldown_theme_env$registered <- TRUE
@@ -31,11 +30,10 @@ echart_theme_blockr_viz <- function() {
 
 #' Reactive for the board-level echarts theme
 #'
-#' Returns a reactive that tracks the board's `echart_theme` option, so the
-#' drill-down block re-renders when the theme changes.
+#' Returns a reactive that tracks the board's `echart_theme` option.
 #'
-#' @param session Ignored. The session that carries the board options comes
-#'   from `blockr.core::get_session()`.
+#' @param session Ignored. The board options come from
+#'   `blockr.core::get_session()`.
 #' @return A reactive resolving to a theme name (e.g. `"default"`, `"blockr"`).
 #' @keywords internal
 setup_drilldown_theme_sync <- function(session = NULL) {
@@ -48,8 +46,7 @@ setup_drilldown_theme_sync <- function(session = NULL) {
 #' ECharts theme board option for drill-down charts
 #'
 #' Board option that adds an "ECharts Theme" selector to the board sidebar.
-#' It matches `blockr.echarts::new_echart_theme_option()`, so boards can use
-#' both.
+#' It matches `blockr.echarts::new_echart_theme_option()`.
 #'
 #' @param value Default theme name.
 #' @param category Settings sidebar category.
@@ -69,19 +66,11 @@ new_drilldown_theme_option <- function(value = "default",
         shiny::NS(id, "echart_theme"),
         "ECharts Theme",
         choices = c(
-          "Default" = "default",
-          "Blockr" = "blockr",
-          "Dark" = "dark",
-          "Vintage" = "vintage",
-          "Westeros" = "westeros",
-          "Essos" = "essos",
-          "Wonderland" = "wonderland",
-          "Walden" = "walden",
-          "Chalk" = "chalk",
-          "Infographic" = "infographic",
-          "Macarons" = "macarons",
-          "Roma" = "roma",
-          "Shine" = "shine",
+          "Default" = "default", "Blockr" = "blockr", "Dark" = "dark",
+          "Vintage" = "vintage", "Westeros" = "westeros", "Essos" = "essos",
+          "Wonderland" = "wonderland", "Walden" = "walden",
+          "Chalk" = "chalk", "Infographic" = "infographic",
+          "Macarons" = "macarons", "Roma" = "roma", "Shine" = "shine",
           "Purple Passion" = "purple-passion"
         ),
         selected = value
@@ -90,14 +79,12 @@ new_drilldown_theme_option <- function(value = "default",
     server = function(..., session) {
       shiny::observeEvent(
         blockr.core::get_board_option_or_null("echart_theme", session),
-        {
-          theme_val <- blockr.core::get_board_option_value(
+        shiny::updateSelectInput(
+          session, "echart_theme",
+          selected = blockr.core::get_board_option_value(
             "echart_theme", session
           )
-          shiny::updateSelectInput(
-            session, "echart_theme", selected = theme_val
-          )
-        }
+        )
       )
     },
     category = category,
