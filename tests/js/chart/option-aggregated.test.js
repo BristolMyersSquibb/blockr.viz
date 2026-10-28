@@ -24,17 +24,18 @@ const BASE = { type: 'bar', y: 'T', orientation: 'horizontal', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
 const VERTICAL = { orientation: 'vertical', x: 'T', y: null };
 
+/** The settings of `cfg` and R's derived, which `cfg` may carry. */
 const settings = (cfg, columns = COLUMNS) => {
-  const { derived, ...config } = { ...BASE, ...cfg };
-  return C.model.settings(config, derived, columns);
+  const { derived = {}, ...config } = { ...BASE, ...cfg };
+  return { c: C.model.settings(config, columns), derived };
 };
 
 const build = (cfg, look = {}, rows = ROWS) => {
-  const c = settings(cfg);
-  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                                     measure, widths: [600, 600], ...look });
-  return { m, o, c, opt: o.panels[0].option };
+  const { c, derived } = settings(cfg);
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.aggregated(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT,
+                                     theme: null, measure, widths: [600, 600], ...look });
+  return { m, o, c, derived, opt: o.panels[0].option };
 };
 const values = (s) => plain(s.data.map((d) => (d && typeof d === 'object' ? d.value : d)));
 
@@ -150,8 +151,8 @@ test('a distribution without a numeric value draws nothing in its panel', () => 
 
 test('legend chips: colour levels; none for pie, treemap and waterfall', () => {
   const legend = (cfg) => {
-    const { m, c } = build(cfg);
-    return plain(C.option.aggregatedLegend(m, c));
+    const { m, c, derived } = build(cfg);
+    return plain(C.option.aggregatedLegend(m, c, derived));
   };
   assert.deepStrictEqual(legend({ color: 'SEV' }), { col: 'SEV', items: [
     { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#E69F00' }] });
@@ -217,11 +218,12 @@ test('format and unit: compact ticks, the unit in the title, values with it', ()
 });
 
 test('the axis name: label and unit, the unit alone, none when the title says it', () => {
-  assert.strictEqual(C.axisName('Term', 'T', { unit: '%' }), 'Term (%)');
-  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%' }), '%');
-  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', {}), 'gdp_2026');
-  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%', derived: { titles: { title: { text: 'Real GDP growth 2026, %' } } } }), '');
-  assert.strictEqual(C.axisName('Count', '.count', { derived: { titles: { title: { text: 'Adverse events' } } } }), 'Count');
+  const titled = (text) => ({ titles: { title: { text } } });
+  assert.strictEqual(C.axisName('Term', 'T', { unit: '%' }, {}), 'Term (%)');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%' }, {}), '%');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', {}, {}), 'gdp_2026');
+  assert.strictEqual(C.axisName('gdp_2026', 'gdp_2026', { unit: '%' }, titled('Real GDP growth 2026, %')), '');
+  assert.strictEqual(C.axisName('Count', '.count', {}, titled('Adverse events')), 'Count');
 });
 
 test('value labels print each value on its own; a line at 0 has no label', () => {
@@ -243,9 +245,10 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
   const run = (cfg) => {
     const { orientation, ...rest } = cfg;
     const axes = orientation === 'vertical' ? { x: 'WEEK', y: 'V' } : { y: 'WEEK', x: 'V' };
-    const c = settings({ ...axes, orientation, func: 'sum', sort_by: 'data', ...rest }, columns);
-    const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns, cfg: c });
-    return C.option.aggregated(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+    const { c, derived } = settings({ ...axes, orientation, func: 'sum', sort_by: 'data', ...rest },
+                                    columns);
+    const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns, cfg: c, derived });
+    return C.option.aggregated(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
                                     measure, widths: [600] }).panels[0].option;
   };
   const cfg = {

@@ -12,10 +12,10 @@
 
   /** A slice or tile per group: its total, the rows behind it, its colour and `label` text. Groups
    * with nothing to show drop out. @param {any} m @param {any} panel
-   * @param {Record<string, any>} cfg */
-  const groupTotals = (m, panel, cfg) => {
-    const gScale = NS.scaleFor(cfg, cfg.category);
-    const palette = NS.paletteOf(cfg);
+   * @param {ChartSettings} cfg @param {ChartDerived} derived */
+  const groupTotals = (m, panel, cfg, derived) => {
+    const gScale = NS.scaleFor(derived, cfg.category);
+    const palette = NS.paletteOf(derived);
     return panel.groups.map((/** @type {string} */ g, /** @type {number} */ i) => {
       const cells = NS.model.cellsOf(m, panel, g);
       const total = cells.reduce((/** @type {number} */ s, /** @type {any} */ a) => s + (a.value ?? 0), 0);
@@ -35,7 +35,7 @@
     /** @type {any} */ look) => {
     const { cfg, ink } = look;
     const P = option.aggregatedCommon(look);
-    const data = groupTotals(m, panel, cfg);
+    const data = groupTotals(m, panel, cfg, look.derived);
     const label = { show: true, fontSize: ink.fontSize };
     const shadow = (/** @type {number} */ a) =>
       ({ itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,' + a + ')' } });

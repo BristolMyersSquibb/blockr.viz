@@ -50,12 +50,12 @@
   /** The panel's series from the band or the points part, with what the option
    * needs beside them. @param {any} k @param {any} panel */
   const panelSeries = (k, panel) => {
-    const { m, look, cfg, lx, ly, width } = k;
+    const { m, look, lx, ly, width } = k;
     if (k.isBand) {
       // On a log axis the band's series are clamped above the axis's floor.
-      const band = cfg.derived.band || {};
-      const b = option.bandParts.band(m, panel, ly ? { ...look, cfg: { ...cfg, derived: { ...cfg.derived,
-        band: { ...band, series: clampBand(band.series, ly.min) } } } } : look);
+      const band = look.derived.band || {};
+      const b = option.bandParts.band(m, panel, ly ? { ...look, derived: { ...look.derived,
+        band: { ...band, series: clampBand(band.series, ly.min) } } } : look);
       return { series: b.series, mlTarget: Math.max(b.markLineIdx, 0), bandMany: b.many,
                band: b.band, pts: null, labelPad: b.labelPad };
     }
@@ -95,7 +95,7 @@
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
-    if (isBand) for (const r of option.bandParts.bandRefLines(cfg, ext, ink, look.columns)) refData.push(r);
+    if (isBand) for (const r of option.bandParts.bandRefLines(cfg, look.derived, ext, ink, look.columns)) refData.push(r);
     // y = x is a diagonal only when both axes use the same scale.
     const identityOn = cfg.identity_line === true && !isLine &&
       m.x.type !== 'category' && m.y.type !== 'category' && !lx === !ly;
@@ -125,7 +125,7 @@
     // A line chart reads values off the y grid and dates off the crosshair,
     // so it has no x grid and no y axis line.
     const grid = { lineStyle: { color: ink.border, type: 'solid', width: 1 } };
-    const xTitle = NS.axisName(k.title(m.x.col), m.x.col, cfg, { unit: false });
+    const xTitle = NS.axisName(k.title(m.x.col), m.x.col, cfg, k.look.derived, { unit: false });
     /** @type {any} */
     const xAxis = {
       ...NS.axes.valueAxis(ink, m.x.type, xTitle, xlab && xlab.bottom ? xlab.bottom + 16 : 28),
@@ -144,7 +144,7 @@
     if (lx) NS.axes.logAxis(xAxis, idLog || lx);
     /** @type {any} */
     const yAxis = {
-      ...NS.axes.valueAxis(ink, m.y.type, NS.axisName(k.title(m.y.col), m.y.col, cfg), 46,
+      ...NS.axes.valueAxis(ink, m.y.type, NS.axisName(k.title(m.y.col), m.y.col, cfg, k.look.derived), 46,
                            { format: m.y.type === 'value' && NS.valueFormat(cfg, { unit: false }) }),
       nameRotate: 90,
       axisTick: { show: false },
@@ -173,7 +173,7 @@
 
     // On a log axis the band's frame is the log domain.
     const ext = (isBand && m.y.type === 'value' && series.length)
-      ? (ly ? { lo: ly.min, hi: ly.max } : option.bandParts.bandExtent(cfg, panel, bandMany)) : null;
+      ? (ly ? { lo: ly.min, hi: ly.max } : option.bandParts.bandExtent(cfg, look.derived, panel, bandMany)) : null;
 
     // One markLine per series is all ECharts allows, so they share one.
     const { refData, idDom, idLog } = panelRefData(k, ext, series);
@@ -254,11 +254,10 @@
 
   /**
    * @param {any} m the individual model
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme: any,
-   *           measure: (s: string) => number, widths?: number[] }} look
+   * @param {ChartLook} look
    */
   const individual = (m, look) => {
-    const logs = (m.logX || m.logY) ? logDomains(m, look.cfg) : null;
+    const logs = (m.logX || m.logY) ? logDomains(m, look.cfg, look.derived) : null;
     const dropped = (m.logDropped || 0) + (logs ? logs.dropped : 0);
     const logNote = dropped
       ? `Log scale: ${dropped} value${dropped === 1 ? '' : 's'} at or below zero not shown.` : null;

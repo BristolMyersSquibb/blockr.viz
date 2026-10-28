@@ -26,7 +26,7 @@
 
   /** What every builder shares: the option's base, the value's title, the aggregation's name and
    * the tooltip's rows.
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme?: string | null }} look
+   * @param {ChartLook} look
    */
   option.aggregatedCommon = (look) => {
     const { cfg, columns, ink } = look;
@@ -66,8 +66,7 @@
 
   /**
    * @param {any} m the aggregated model
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme: any,
-   *           measure: (s: string) => number, widths?: number[] }} look
+   * @param {ChartLook} look
    * @returns {{ panels: Array<{ option: any, height: string, panelH: number, xFit: any }>,
    *             labelNote: string | null }}
    */
@@ -96,22 +95,23 @@
   /**
    * The legend chips: a distribution's split levels, else a bar's colour
    * levels. Pie, treemap and waterfall have none.
-   * @param {any} m @param {Record<string, any>} cfg
+   * @param {any} m @param {ChartSettings} cfg @param {ChartDerived} derived
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
-  const aggregatedLegend = (m, cfg) => {
+  const aggregatedLegend = (m, cfg, derived) => {
     const ct = m.type;
     const levels = m.distribution ? m.levels
       : (ct !== 'pie' && ct !== 'treemap' && !m.cumulative ? m.colors : []);
     if (!levels.length) return null;
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(derived);
     // A highlight lists only the levels it lights.
     const colors = (m.hlColors && !m.distribution)
       ? NS.litLevelColors(levels, m.hlColors, m.colorScale, palette)
       : NS.levelColors(levels, m.colorScale, palette);
     const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
       ({ name, color: colors[i] })).filter((/** @type {any} */ it) => it.color);
-    return items.length ? { col: cfg.color, items } : null;
+    // Levels come from the colour column, so it is set.
+    return items.length ? { col: /** @type {string} */ (cfg.color), items } : null;
   };
 
   // Series patched only while a filter dims something (or to undo it).

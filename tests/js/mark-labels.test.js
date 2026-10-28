@@ -7,6 +7,8 @@ const assert = require('node:assert');
 const { loadPure, measure } = require('./chart/load');
 
 const C = loadPure({ roles: true });
+// R's derived: none in these tests.
+const derived = {};
 
 const COLUMNS = [
   { name: 'G', class: 'string' }, { name: 'K', class: 'string' },
@@ -26,9 +28,9 @@ const agg = (cfg) => {
   const bar = cfg.type === 'bar';
   const c = C.model.settings({ drill: 'auto', func: 'sum', sort_by: 'alpha', sort_dir: 'asc',
                                label: 'L', ...(bar ? { y: 'G', x: 'V', orientation: 'horizontal' }
-                                                    : { x: 'G', y: 'V' }), ...cfg }, {}, COLUMNS);
-  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+                                                    : { x: 'G', y: 'V' }), ...cfg }, COLUMNS);
+  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.aggregated(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
   return { m, opt: o.panels[0].option };
 };
@@ -119,9 +121,9 @@ test('scatter cloud names share one spacer', () => {
   const cols = [{ name: 'X', class: 'number' }, { name: 'Y', class: 'number' },
                 { name: 'K', class: 'string' }];
   const c = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', color: 'K', legend: 'marks',
-                               drill: 'auto' }, {}, cols);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg: c });
-  const opt = C.option.individual(m, { cfg: c, columns: cols, ink: C.INK_DEFAULT, theme: null,
+                               drill: 'auto' }, cols);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg: c, derived });
+  const opt = C.option.individual(m, { cfg: c, derived, columns: cols, ink: C.INK_DEFAULT, theme: null,
                                        measure, widths: [600] }).panels[0].option;
   const names = opt.series.filter((s) => String(s.id || '').startsWith('__legend_'));
   assert.strictEqual(names.length, 2);

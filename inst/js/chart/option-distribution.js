@@ -54,7 +54,7 @@
     const { cfg } = look;
     const P = option.aggregatedCommon(look);
     const isBox = cfg.type === 'boxplot';
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(look.derived);
     const split = m.split;
     const scale = m.colorScale;
     const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>

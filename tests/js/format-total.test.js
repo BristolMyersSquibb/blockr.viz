@@ -8,6 +8,8 @@ const { loadViz, measure } = require('./chart/load');
 
 const viz = loadViz();
 const C = viz.chart;
+// R's derived: none in these tests.
+const derived = {};
 const U = viz.util;
 
 test('a whole number of decimals prints that many, from a number or its text', () => {
@@ -48,9 +50,9 @@ test('bar value labels and ticks follow the fixed decimals', () => {
   const cols = [{ name: 'G', class: 'string' }, { name: 'V', class: 'number' }];
   const c = C.model.settings({ type: 'bar', y: 'G', x: 'V', orientation: 'horizontal',
                                func: 'identity', value_labels: true, format: '2', drill: 'auto',
-                               sort_by: 'alpha', sort_dir: 'asc' }, {}, cols);
-  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: cols, cfg: c });
-  const opt = C.option.aggregated(m, { cfg: c, columns: cols, ink: C.INK_DEFAULT, theme: null,
+                               sort_by: 'alpha', sort_dir: 'asc' }, cols);
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: cols, cfg: c, derived });
+  const opt = C.option.aggregated(m, { cfg: c, derived, columns: cols, ink: C.INK_DEFAULT, theme: null,
                                        measure, widths: [600] }).panels[0].option;
   const s = opt.series[0];
   assert.strictEqual(s.label.formatter({ value: 4.3587 }), '4.36');

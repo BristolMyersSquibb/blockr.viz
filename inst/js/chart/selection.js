@@ -54,7 +54,7 @@
       const key = JSON.stringify(saved ?? null);
       if (key === this._saved) return;
       this._saved = key;
-      this.current = NS.transientDrill(this.view.config) ? null : NS.keys.restore(saved);
+      this.current = NS.transientDrill(this.view.settings) ? null : NS.keys.restore(saved);
       this.byBrush = false;
     }
 
@@ -65,7 +65,7 @@
      */
     click(slot, params, filters) {
       const v = this.view;
-      if (NS.transientDrill(v.config)) {
+      if (NS.transientDrill(v.settings)) {
         this.flash(slot, params);
         v.frame.flash('Drilled down to ' + NS.keys.describe(filters, v.columns));
         this.send({ type: 'categorical', filters });
@@ -105,7 +105,7 @@
      * it or drill is off, where the brush sent nothing. */
     brushCleared() {
       if (this.suppressBrushClear) return;
-      if (NS.drillState(this.view.config) === 'off') return;
+      if (NS.drillState(this.view.settings) === 'off') return;
       this.current = null;
       this.byBrush = false;
       this.brushDrawn = false;

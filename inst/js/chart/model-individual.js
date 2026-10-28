@@ -136,11 +136,12 @@
     }
   };
 
-  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {IndividualModel} */
-  const individual = ({ rows, ix, columns, cfg }) => {
+  const individual = ({ rows, ix, columns, cfg, derived }) => {
     const ct = cfg.type;
-    const { x, y } = cfg;
+    // gate() let only a chart with x and y through.
+    const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const color = cfg.color || null;
     const facet = cfg.facet || null;
     const seriesCol = cfg.series || null;
@@ -155,7 +156,7 @@
       x: { col: x, type: 'value', cats: null, order: null },
       y: { col: y, type: 'value', cats: null },
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
-      palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
+      palette: NS.paletteOf(derived), colorScale: NS.scaleFor(derived, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       logX: false, logY: false, logDropped: 0,
       ttFields: [], legend: null, byColor: false,
@@ -175,7 +176,7 @@
 
     /** @type {string[]} */
     let levels = splitCol
-      ? NS.axes.orderLevels(ix.levels(rows, splitCol, 'nz'), NS.scaleFor(cfg, splitCol),
+      ? NS.axes.orderLevels(ix.levels(rows, splitCol, 'nz'), NS.scaleFor(derived, splitCol),
                             columns, splitCol)
       : [];
     if (isLine && levels.length > TRAJ_HARD_CAP) {

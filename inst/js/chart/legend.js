@@ -177,7 +177,7 @@
     /** @param {string} col @param {string} level */
     _click(col, level) {
       const v = this.view;
-      const cfg = v.config;
+      const cfg = v.settings;
       if (NS.drillState(cfg) === 'off') return;
       const filters = cfg.drill === 'auto'
         ? NS.keys.fromKeys({ [col]: level })

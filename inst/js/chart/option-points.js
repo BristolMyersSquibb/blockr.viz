@@ -115,7 +115,7 @@
       surface: ink.surface,
       smoothOn: isLine && cfg.connect === 'monotone',
       smoother: cfg.smoother,
-      smootherSeries: cfg.derived.smoother,
+      smootherSeries: look.derived.smoother,
       pairs: option.domainParts.intervalPairs(cfg),
       // A colour split stacks its areas, unless the layout says side by side.
       stackArea: isArea && m.splitCol && cfg.position !== 'dodge',

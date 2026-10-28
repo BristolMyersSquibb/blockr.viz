@@ -85,8 +85,8 @@
    * by name. "value" is the total across colour cells. Any other value names a column whose
    * smallest value per group orders it. @param {any[]} cells the panel's aggregate cells
    * @param {any[]} rows @param {VizColumn[]} columns @param {Record<string, any>} cfg
-   * @returns {string[]} */
-  const orderGroups = (cells, rows, columns, cfg) => {
+   * @param {ChartDerived} derived @returns {string[]} */
+  const orderGroups = (cells, rows, columns, cfg, derived) => {
     const groups = [...new Set(cells.map((a) => a.group))];
     const sortBy = cfg.sort_by || 'alpha';
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
@@ -98,7 +98,7 @@
     // close the gap in the distribution it stands for. R's edges list them.
     if (cfg.type === 'histogram') {
       // R's edges, a data frame sent as columns.
-      const edges = cfg.derived.hist && cfg.derived.hist.label;
+      const edges = derived.hist && derived.hist.label;
       const bins = Array.isArray(edges) && edges.length ? edges.map(String) : levels;
       if (bins) return bins;
     }
@@ -279,9 +279,9 @@
    *             hlColors: Set<string> | null }} AggregatedModel
    */
 
-  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {AggregatedModel} */
-  const aggregated = ({ rows, ix, columns, cfg }) => {
+  const aggregated = ({ rows, ix, columns, cfg, derived }) => {
     // A histogram is a bar over the bins R adds to the rows.
     const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
     const { category, color, facet, measure, func } = cfg;
@@ -289,7 +289,7 @@
     /** @type {AggregatedModel} */
     const out = {
       family: 'aggregated', empty: null, type: ct, cumulative: cfg.type === 'waterfall',
-      colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
+      colors: [], colorScale: NS.scaleFor(derived, color), levels: [], split: false,
       distribution, noValue: distribution && (!measure || measure === '.count'),
       ttFields: [], facet: facet || null, nFacets: 1, single: true,
       ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
@@ -320,7 +320,7 @@
     // Fixed scales give every panel the same categories; pie and treemap
     // label their own slices.
     const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
-      ? orderGroups(agg, rows, columns, cfg) : null;
+      ? orderGroups(agg, rows, columns, cfg, derived) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? model.tooltipFields(cfg) : [];
@@ -335,7 +335,7 @@
 
     for (const fv of facets) {
       const cells = ix.get(agg, 'facet', 'raw', fv);
-      const groups = sharedGroups || orderGroups(cells, rows, columns, cfg);
+      const groups = sharedGroups || orderGroups(cells, rows, columns, cfg, derived);
       const restrict = !!facet && fv !== '__all__';
       let axisCounts = null;
       if (countAxis) {

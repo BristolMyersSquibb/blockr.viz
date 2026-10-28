@@ -26,7 +26,7 @@
     // The handler reads the view's live state: an instance outlives many draws.
     attach(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
-        const cfg = view.config;
+        const cfg = view.settings;
         if (NS.drillState(cfg) === 'off') return;
         const m = view._memo.model;
         if (!m || m.family !== 'aggregated') return;

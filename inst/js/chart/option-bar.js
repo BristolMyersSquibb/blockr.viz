@@ -20,7 +20,7 @@
     const { cfg, ink } = look;
     const groups = panel.groups;
     const colors = m.colors;
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(look.derived);
     const isGrouped = cfg.position === 'dodge';
     const isPercent = cfg.position === 'fill';
     const vertical = cfg.orientation === 'vertical';
@@ -154,7 +154,7 @@
       { facet: cfg.facet, category: cfg.category, color: cfg.color })[cfg.percent_of];
     const name = showPercent ? '% of group total'
       : (pctFunc ? '% of ' + (ofCol ? P.title(ofCol) : 'total')
-        : NS.axisName(P.valueTitle, cfg.measure, cfg));
+        : NS.axisName(P.valueTitle, cfg.measure, cfg, k.look.derived));
     const format = asFraction ? (/** @type {number} */ v) => Math.round(v * 100) + '%'
       : NS.valueFormat(cfg, { unit: false });
     return {
@@ -385,7 +385,7 @@
     const { xlab, xFit } = fitXLabels(catLabels, plotW, look, catFmt);
     const catAxis = { ...NS.axes.categoryAxis(panel.groups, ink, { xlab, display: catFmt }),
                       splitLine: { show: false } };
-    const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg), 45, {
+    const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg, look.derived), 45, {
       format: wvf && NS.valueFormat(cfg, { unit: false }), grid: 'dashed' });
     const label = { show: false, distance: 4, color: ink.muted, fontSize: ink.fontSize,
                     fontFamily: ink.face };

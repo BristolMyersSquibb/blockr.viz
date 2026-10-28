@@ -24,11 +24,10 @@ const ROWS = [
 const BASE = { type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
 
 // `derived` is R's derived object (the colour scales).
-const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
-  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+const settingsOf = (cfg, columns = COLUMNS) => C.model.settings({ ...BASE, ...cfg }, columns);
 
 const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.timeline(
-  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns), derived });
 
 test('one mark per row with an x; a missing end makes a dot', () => {
   const m = build({});

@@ -20,17 +20,18 @@ const ROWS = [
 const BASE = { type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
 
 // `derived` in a case is R's derived object.
+/** The settings of `cfg` and R's derived, which `cfg` may carry. */
 const settings = (cfg) => {
-  const { derived, ...config } = { ...BASE, ...cfg };
-  return C.model.settings(config, derived, COLUMNS);
+  const { derived = {}, ...config } = { ...BASE, ...cfg };
+  return { c: C.model.settings(config, COLUMNS), derived };
 };
 
 const build = (cfg = {}, look = {}) => {
-  const c = settings(cfg);
-  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.timeline(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+  const { c, derived } = settings(cfg);
+  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.timeline(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                    measure, ...look });
-  return { m, c, o, opt: o.panels[0].option };
+  return { m, c, derived, o, opt: o.panels[0].option };
 };
 
 test('one custom series without colour, the lanes on an inverted category y', () => {
@@ -57,18 +58,19 @@ test('a series per colour level; a board scale colours the levels', () => {
   const scales = { var: 'SEV', color: { SEVERE: '#aa0000' } };
   const scaled = build({ color: 'SEV', derived: { scales } });
   assert.deepStrictEqual(plain(scaled.opt.color), ['#0072B2', '#aa0000']);
-  const legend = C.option.timelineLegend(scaled.m, scaled.c);
+  const legend = C.option.timelineLegend(scaled.m, scaled.c, scaled.derived);
   assert.deepStrictEqual(plain(legend), { col: 'SEV', items: [
     { name: 'MILD', color: '#0072B2' }, { name: 'SEVERE', color: '#aa0000' }] });
-  assert.strictEqual(C.option.timelineLegend(build().m, build().c), null);
+  const plain0 = build();
+  assert.strictEqual(C.option.timelineLegend(plain0.m, plain0.c, plain0.derived), null);
 });
 
 test('panel height: 28 px a lane plus 80, at least 200, capped', () => {
   assert.strictEqual(build().o.panels[0].height, '200px');
   const rows = Array.from({ length: 300 }, (_, i) => ({ T: 'L' + i, S: i, E: i + 1 }));
-  const cfg = settings({});
-  const m = C.model.timeline({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg });
-  const o = C.option.timeline(m, { cfg, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure });
+  const { c: cfg, derived } = settings({});
+  const m = C.model.timeline({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg, derived });
+  const o = C.option.timeline(m, { cfg, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null, measure });
   assert.strictEqual(o.panels[0].height, (Math.min(C.PANEL_H_CAP, 300 * 28) + 80) + 'px');
 });
 
@@ -121,8 +123,8 @@ test('the tooltip card takes the ink', () => {
 // -- D5 ------------------------------------------------------------------------
 
 const timelinePatch = (cfg, filters, wasDimmed = false) => {
-  const c = settings(cfg);
-  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+  const { c, derived } = settings(cfg);
+  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const lit = filters ? (keys, rows) => C.keys.markLit(keys, rows, filters) : null;
   return plain(C.option.timelinePatch(m, m.panels[0], c, lit, wasDimmed));
 };

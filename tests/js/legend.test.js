@@ -171,6 +171,8 @@ test('marks on a scatter write each colour group at its centre of mass', () => {
 // -- marks: bars ---------------------------------------------------------------
 
 const C = loadPure({ roles: true });
+// R's derived: none in these tests.
+const derived = {};
 const COLUMNS = [{ name: 'T', class: 'string' }, { name: 'SEV', class: 'string' },
                  { name: 'V', class: 'number' }];
 const ROWS = [
@@ -185,12 +187,12 @@ const settingsOf = (cfg) => {
   return C.model.settings({
     type: 'bar', func: 'sum', color: 'SEV', sort_by: 'alpha', sort_dir: 'asc', drill: 'auto',
     ...(vertical ? { x: 'T', y: 'V' } : { y: 'T', x: 'V', orientation: 'horizontal' }), ...cfg
-  }, {}, COLUMNS);
+  }, COLUMNS);
 };
 const build = (cfg) => {
   const c = settingsOf(cfg);
-  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+  const m = C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.aggregated(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
   return { m, c, plan: C.legendPlan(m, c), opt: o.panels[0].option };
 };
@@ -226,9 +228,9 @@ test('marks on a stack spread the names of thin segments a line apart', () => {
   add('b', 'HIGH', 1); add('b', 'LOW', 1); add('b', 'MID', 1);
   const c = C.model.settings({ type: 'bar', x: 'T', func: 'count', color: 'SEV', sort_by: 'alpha',
                                sort_dir: 'asc', orientation: 'vertical', legend: 'marks',
-                               drill: 'auto' }, {}, COLUMNS);
-  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const opt = C.option.aggregated(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+                               drill: 'auto' }, COLUMNS);
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const opt = C.option.aggregated(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                        measure, widths: [600] }).panels[0].option;
   const at = plain(opt.series.filter((s) => String(s.id || '').startsWith('__legend_'))
     .map((s) => [s.label.formatter, s.data[0][1]]));

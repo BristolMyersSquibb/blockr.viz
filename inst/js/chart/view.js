@@ -43,8 +43,9 @@
       this._rowsGen = 0;
       /** @type {VizColumn[]} */ this.columns = [];
       this._columnsKey = '';
-      /** The settings the drawing reads (NS.model.settings()). @type {Record<string, any>} */
-      this.config = {};
+      /** The settings the drawing reads (NS.model.settings()); R's `derived` is
+       * beside them. @type {ChartSettings} */
+      this.settings = /** @type {ChartSettings} */ ({});
       /** @type {ChartDerived} */ this.derived = /** @type {ChartDerived} */ ({});
       /** @type {any[]} */ this.charts = [];
       /** @type {ChartSlot[]} */ this._slots = [];
@@ -84,7 +85,7 @@
     }
 
     /** The family that draws the current type. @returns {ChartFamily} */
-    family() { return NS.families[NS.familyOf(this.config.type)]; }
+    family() { return NS.families[NS.familyOf(this.settings.type)]; }
 
     /** The ECharts theme R named (drilldown-theme-register.js registered
      * it); "default" is ECharts' own. @param {ChartTheme | null | undefined} theme */
@@ -105,7 +106,7 @@
         this.data = NS.rowsFromPayload(p.data);
         this._lastDataRev = p.data_rev;
       }
-      this.config = NS.model.settings(p.config, d, this.columns);
+      this.settings = NS.model.settings(p.config, this.columns);
       this.selection.restore(p.config && p.config.selection);
       this._setTheme(d.theme);
       // The gear first: the title sentences open what it offers.
@@ -130,7 +131,7 @@
     // left out.
     _downloads() {
       const offer = (this.derived.downloads || []).filter((f) => !(this._blank && f.ext === 'png'));
-      this.frame.downloads(this.config.download !== false ? offer : [], () =>
+      this.frame.downloads(this.settings.download !== false ? offer : [], () =>
         NS.picture(this).then((/** @type {VizPicture} */ pic) => V.util.send(this.el.id, 'capture', pic)));
     }
 
@@ -170,7 +171,8 @@
         const panel = m && m.family === fam.name ? m.panels[i] : null;
         const drawn = this._memo.option && this._memo.option.panels[i];
         const patch = panel
-          ? fam.patch({ m, panel, cfg: this.config, current, drawn: drawn && drawn.option,
+          ? fam.patch({ m, panel, cfg: this.settings, derived: this.derived, current,
+                        drawn: drawn && drawn.option,
                         lit, filters, range, dimmed: !!slot.dimmed })
           : { series: current.series.map(() => ({})), dimmed: false };
         slot.dimmed = patch.dimmed;
@@ -180,7 +182,7 @@
 
     _render() {
       this._ink = NS.readInk(this.el);
-      const empty = NS.model.gate(this.data, this.columns, this.config);
+      const empty = NS.model.gate(this.data, this.columns, this.settings, this.derived);
       if (empty) { this._showEmpty(empty); return; }
       this._blank = false;
       this._draw(this.family());
@@ -196,7 +198,7 @@
       const grid = this.chartGrid;
       grid.classList.toggle('dd-chart-grid-single', m.nFacets <= 1);
       // The row width when facet_cols pins it.
-      const cols = parseInt(this.config.facet_cols, 10);
+      const cols = Math.trunc(Number(this.settings.facet_cols) || 0);
       grid.style.gridTemplateColumns =
         (cols > 0 && m.nFacets > 1) ? `repeat(${Math.min(cols, m.nFacets)}, minmax(0, 1fr))` : '';
       // Instances survive a redraw unless the family, panel count or theme changed (an
@@ -245,8 +247,8 @@
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
       this._harmoniseAxes();
-      const plan = NS.legendPlan(m, this.config);
-      this.legend.update(plan.band ? fam.legend(m, this.config) : null, plan);
+      const plan = NS.legendPlan(m, this.settings);
+      this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
       this.frame.note(o.labelNote || null);
       if (fam.alwaysHighlight) {
         this.highlight(true);
@@ -262,8 +264,9 @@
     _model(fam) {
       const memo = this._memo;
       const extra = fam.name + '\u0000' + this._rowsGen + '\u0000' + this._columnsKey;
-      if (memo.models.update(this.config, extra, (/** @type {Record<string, any>} */ cfg) =>
-        fam.model({ rows: this.data, ix: this._ix, columns: this.columns, cfg }))) {
+      if (memo.models.update(this.settings, this.derived, extra,
+        (/** @type {ChartSettings} */ cfg, /** @type {ChartDerived} */ derived) =>
+        fam.model({ rows: this.data, ix: this._ix, columns: this.columns, cfg, derived }))) {
         memo.modelGen++;
       }
       return (memo.model = memo.models.value);
@@ -277,8 +280,9 @@
       const ink = this._ink;
       const extra = fam.name + '\u0000' + memo.modelGen + '\u0000' + JSON.stringify(ink) +
         '\u0000' + (this.theme || '') + '\u0000' + (widths ? widths.join(',') : '');
-      memo.options.update(this.config, extra, (/** @type {Record<string, any>} */ cfg) => fam.option(m, {
-        cfg, columns: this.columns, ink, theme: this.theme,
+      memo.options.update(this.settings, this.derived, extra,
+        (/** @type {ChartSettings} */ cfg, /** @type {ChartDerived} */ derived) => fam.option(m, {
+        cfg, derived, columns: this.columns, ink, theme: this.theme,
         measure: this._measure(ink), widths: widths || []
       }));
       return (memo.option = memo.options.value);
@@ -298,7 +302,7 @@
 
     // One numeric domain across the panels ("fixed"), read back off what each drew.
     _harmoniseAxes() {
-      const mode = NS.facetScales(this.config);
+      const mode = NS.facetScales(this.settings);
       if (mode === 'free') return;
       const charts = this.charts;
       if (charts.length < 2) return;

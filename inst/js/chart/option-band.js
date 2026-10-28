@@ -105,7 +105,7 @@
     const dm = cfg.point_size;
     const lm = cfg.line_width;
     /** @type {any[]} */ const series = [];
-    const panelBand = option.domainParts.bandBucket(cfg, panel);
+    const panelBand = option.domainParts.bandBucket(look.derived, panel);
     if (!panelBand) return { series, band: null, markLineIdx: -1, many: false, labelPad: 0 };
     // `legend: "marks"`: each centre line carries its name at its end.
     const named = NS.legendPlan(m, cfg).marks === 'end';
@@ -157,9 +157,9 @@
   };
 
   /** The reference limits R reduced from their columns (hi, then lo) that hold a number.
-   * @param {any} cfg @returns {any[]} */
-  const refLimits = (cfg) => {
-    const refs = (cfg.derived.band && cfg.derived.band.refs) || {};
+   * @param {ChartDerived} derived @returns {any[]} */
+  const refLimits = (derived) => {
+    const refs = (derived.band && derived.band.refs) || {};
     return [refs.hi, refs.lo].filter((r) => r && Number.isFinite(Number(r.value)));
   };
 
@@ -167,21 +167,21 @@
    * The value axis of a band panel, fitted to what it draws (a custom series
    * puts one datum into the extent) and opened to a reference limit up to
    * 60 % more span, rounded outward. Null when nothing numeric is drawn.
-   * @param {any} cfg @param {any} panel @param {boolean} many
+   * @param {ChartSettings} cfg @param {ChartDerived} derived @param {any} panel @param {boolean} many
    * @returns {{ lo: number, hi: number } | null}
    */
-  const bandExtent = (cfg, panel, many) => {
+  const bandExtent = (cfg, derived, panel, many) => {
     const drawn = ['center', 'lo', 'hi'];
     if (!many) {
       drawn.push('olo', 'ohi');
       if (cfg.box_points === 'outliers') drawn.push('out_y');
     }
-    const vals = option.domainParts.bandValues(cfg, panel, drawn)
+    const vals = option.domainParts.bandValues(derived, panel, drawn)
       .filter((/** @type {any} */ v) => v != null).map(Number).filter(Number.isFinite);
     let lo = NS.minOf(vals), hi = NS.maxOf(vals);
     if (!(Number.isFinite(lo) && Number.isFinite(hi) && hi > lo)) return null;
     const span = hi - lo;
-    for (const r of refLimits(cfg)) {
+    for (const r of refLimits(derived)) {
       const v = Number(r.value);
       const nlo = Math.min(lo, v), nhi = Math.max(hi, v);
       if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
@@ -195,12 +195,12 @@
    * The reference limits R reduced from their columns, as markLine data,
    * named with the column's title and, when it varies, its range. A limit
    * outside the frame is pinned to the edge and says which way.
-   * @param {any} cfg @param {{ lo: number, hi: number } | null} ext @param {any} ink
-   * @param {VizColumn[]} columns
+   * @param {ChartSettings} cfg @param {ChartDerived} derived
+   * @param {{ lo: number, hi: number } | null} ext @param {any} ink @param {VizColumn[]} columns
    */
-  const bandRefLines = (cfg, ext, ink, columns) => {
+  const bandRefLines = (cfg, derived, ext, ink, columns) => {
     const out = [];
-    for (const r of refLimits(cfg)) {
+    for (const r of refLimits(derived)) {
       const v = Number(r.value);
       const base = NS.axes.axisTitle(columns, r.col) + ' ' + V.util.num3(v) +
         (Number(r.n_distinct) > 1

@@ -240,7 +240,7 @@ test('the spec hides what does nothing: stacking without a colour, value lines o
 test('with neither x nor y, a bar stands vertical and asks for X', () => {
   const c = D.open({ type: 'bar', x: null, y: null });
   assert.match(c.block.chartGrid.textContent, /^Pick X to plot/);
-  assert.strictEqual(c.block.config.orientation, 'vertical');
+  assert.strictEqual(c.block.settings.orientation, 'vertical');
   c.close();
 });
 

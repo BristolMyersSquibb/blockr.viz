@@ -24,10 +24,10 @@ const ROWS = [
 const BASE = { type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
 
 // `derived` is R's derived object: the colour scales, the palette.
-const settingsOf = (cfg, derived = {}) => C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
+const settingsOf = (cfg) => C.model.settings({ ...BASE, ...cfg }, COLUMNS);
 
 const model = (cfg, rows = ROWS, derived = {}) => C.model.individual({ rows, ix: new C.RowIndex(),
-  columns: COLUMNS, cfg: settingsOf(cfg, derived) });
+  columns: COLUMNS, cfg: settingsOf(cfg), derived });
 
 test('an unsplit scatter: one series of the rows with an x and a y', () => {
   const m = model({});
@@ -191,8 +191,8 @@ test('the keys of a line or band level: its level and the facet', () => {
 test('a brush: the points\' x and y; with a drill column their rows, each (x, y) once', () => {
   const rows = [{ X: 1, Y: 5, ID: 'a' }, { X: 1, Y: 5, ID: 'b' }, { X: 2, Y: 6, ID: 'c' }];
   const cols = [num('X'), num('Y'), cat('ID')];
-  const cfg = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', drill: 'ID' }, {}, cols);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg });
+  const cfg = C.model.settings({ type: 'scatter', x: 'X', y: 'Y', drill: 'ID' }, cols);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, cfg, derived: {} });
   const series = [{ data: m.panels[0].series[0].pts }];
   const sel = (idx) => idx.map((dataIndex) => ({ seriesIndex: 0, dataIndex }));
   const r = C.model.individualBrush(m, cfg, m.panels[0], series, sel([0, 1, 2, 9999, -1]));

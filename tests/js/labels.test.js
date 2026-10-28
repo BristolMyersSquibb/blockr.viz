@@ -45,27 +45,30 @@ const noBareName = (text, what) => {
   }
 };
 
-const look = (cfg, extra = {}) => ({ cfg, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                                     measure, widths: [600, 600], ...extra });
+const look = (cfg, extra = {}, derived = {}) => ({ cfg, derived, columns: COLUMNS,
+                                                   ink: C.INK_DEFAULT, theme: null,
+                                                   measure, widths: [600, 600], ...extra });
 // An aggregated chart in public names. A bar lies horizontal: its category is
 // y and its measure x. The other types take the category on x, the measure on y.
 const agg = (cfg, rows = ROWS, derived = {}) => {
   const c = C.model.settings({ drill: 'auto', sort_by: 'value', sort_dir: 'desc', ...cfg },
-                             derived, COLUMNS);
-  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.aggregated(m, look(c));
+                             COLUMNS);
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.aggregated(m, look(c, {}, derived));
   return { m, o, opt: o.panels[0].option, c };
 };
 const ind = (cfg, rows = ROWS) => {
-  const c = C.model.settings({ drill: 'auto', ...cfg }, {}, COLUMNS);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+  const derived = {};
+  const c = C.model.settings({ drill: 'auto', ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const o = C.option.individual(m, look(c, { widths: [600] }));
   return { m, o, opt: o.panels[0].option, c };
 };
 const gantt = (cfg) => {
   const c = C.model.settings({ type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM',
-                               drill: 'auto', ...cfg }, {}, COLUMNS);
-  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+                               drill: 'auto', ...cfg }, COLUMNS);
+  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c,
+                               derived: {} });
   const o = C.option.timeline(m, look(c));
   return { m, o, opt: o.panels[0].option };
 };
@@ -80,13 +83,13 @@ test('axisTitle: the label, else the name', () => {
 });
 
 test('axisName: the label with the unit; unlabelled, the unit alone, else the name', () => {
-  const set = (config, derived) => C.model.settings(config, derived, COLUMNS);
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({ unit: 'mg' })), 'Analysis Value (mg)');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({})), 'Analysis Value');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({ unit: 'mg' })), 'mg');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({})), 'PLAIN');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}, {
-    titles: { title: { text: 'Mean analysis value by visit' } } })), '');
+  const set = (config) => C.model.settings(config, COLUMNS);
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({ unit: 'mg' }), {}), 'Analysis Value (mg)');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}), {}), 'Analysis Value');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({ unit: 'mg' }), {}), 'mg');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({}), {}), 'PLAIN');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}),
+                                { titles: { title: { text: 'Mean analysis value by visit' } } }), '');
 });
 
 test('bar: the value axis by the value column\'s label, a count as "Count"', () => {
@@ -246,9 +249,9 @@ test('a line chart past its series cap names the series column by label', () => 
 });
 
 test('a band\'s reference line names its column by label', () => {
-  const cfg = C.model.settings({}, { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8,
-                                                          n_distinct: 1 } } } }, COLUMNS);
-  const lines = C.option.bandParts.bandRefLines(cfg, null, C.INK_DEFAULT, COLUMNS);
+  const cfg = C.model.settings({}, COLUMNS);
+  const derived = { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8, n_distinct: 1 } } } };
+  const lines = C.option.bandParts.bandRefLines(cfg, derived, null, C.INK_DEFAULT, COLUMNS);
   assert.strictEqual(lines[0].label.formatter, 'Upper Limit 8');
 });
 

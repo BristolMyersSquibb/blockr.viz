@@ -26,11 +26,10 @@ const ROWS = [
 const BASE = { type: 'bar', x: 'T', orientation: 'vertical', func: 'count', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
 
-const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
-  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+const settingsOf = (cfg, columns = COLUMNS) => C.model.settings({ ...BASE, ...cfg }, columns);
 
 const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.aggregated(
-  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns), derived });
 
 const groupsOf = (m) => plain(m.panels.map((p) => p.groups));
 
