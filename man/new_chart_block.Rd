@@ -247,8 +247,9 @@ in it is empty.
 
 Argument names and values of blockr.viz before 0.3.0 (\code{chart_type},
 \code{group}, \code{value}, \code{bar_mode}, \code{y_scale}, ...) still work in code, with a
-warning, and boards saved with them restore unchanged. Any other unknown
-argument, or a value an argument does not take, is an error.
+warning, and boards saved with them restore unchanged. A value an
+argument does not take is an error. Any other name is kept as a block
+attribute, for blockr.core and other packages (blockr.dock's \code{visible}).
 }
 
 \examples{

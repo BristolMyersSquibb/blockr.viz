@@ -166,8 +166,9 @@ that filter block instead, and the table keeps no selection of its own.
 
 Argument names of blockr.viz before 0.3.0 (\code{value}, \code{group}, \code{pct_of},
 \code{axis}, ...) still work in code, with a warning. Boards saved with the
-table, tile and summary blocks restore as table blocks. Any other unknown
-argument, or a value an argument does not take, is an error.
+table, tile and summary blocks restore as table blocks. A value an
+argument does not take is an error. Any other name is kept as a block
+attribute, for blockr.core and other packages (blockr.dock's \code{visible}).
 }
 
 \section{Summaries}{

@@ -22,9 +22,10 @@ read.
   the concept is the same: `type`, `x`, `y`, `position`, `y_transform`,
   `percent_of`, `drill_target`, `selection`, `columns`, `by`. The Legacy
   section lists the old names.
-* In code, an unknown argument or a value an argument does not take is an
-  error that names the nearest argument. Old names still work, with a
-  warning.
+* In code, a value an argument does not take is an error. Old names still
+  work, with a warning. Any other name is kept as a block attribute, so
+  another package's attribute (blockr.dock's `visible`) survives a
+  restore.
 * A saved board is healed instead: a value the block does not take is reset
   to its default, with one warning naming it.
 

@@ -47,8 +47,9 @@
 #' @section Older code and boards:
 #' Argument names and values of blockr.viz before 0.3.0 (`chart_type`,
 #' `group`, `value`, `bar_mode`, `y_scale`, ...) still work in code, with a
-#' warning, and boards saved with them restore unchanged. Any other unknown
-#' argument, or a value an argument does not take, is an error.
+#' warning, and boards saved with them restore unchanged. A value an
+#' argument does not take is an error. Any other name is kept as a block
+#' attribute, for blockr.core and other packages (blockr.dock's `visible`).
 #'
 #' @eval viz_spec_params("chart", dots = paste(
 #'   "Arguments for [blockr.core::new_block()] (`block_name`, ...), and",
