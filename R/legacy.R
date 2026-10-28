@@ -158,6 +158,8 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("table", "overall_label", "total_label"),
   legacy_row("table", "nest_hierarchies", "nest"),
   legacy_row("table", "id_var", "id"),
+  legacy_row("table", "drill", "drill", c(`TRUE` = "auto"),
+             rule = "TRUE is \"auto\", FALSE unsets it (0.3.0)"),
   legacy_row("table", "indent_details", NA, rule = "read and dropped"),
   legacy_row("table", "state", NA,
              rule = "the interim single-list payload; unwrapped"),

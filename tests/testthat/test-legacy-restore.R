@@ -335,9 +335,42 @@ test_that("a 0.3.0 summary key reads in code as in a saved board", {
       summaries = list(list(type = "dist", col = "AGE", style = "box"))
     )
   }
-  expect_warning(make(), "from blockr.viz < 0.3.0")
+  expect_warning(make(), "`summaries[[1]]$style` (now `show`)", fixed = TRUE)
   b <- suppressWarnings(make())
   s <- blockr.core::blockr_ser(b)$payload$summaries[[1L]]
   expect_null(s$style)
   expect_identical(s$show, "box")
+})
+
+test_that("0.3.0's drill = TRUE turns the drill on, in code and on a board", {
+  expect_warning(
+    b <- new_table_block(layout = "groups", by = "ARM", drill = TRUE),
+    "`drill` is from an earlier blockr.viz", fixed = TRUE
+  )
+  expect_identical(blockr.core::blockr_ser(b)$payload$drill, "auto")
+  st <- legacy_restore("table", list(layout = "groups", by = "ARM",
+                                     drill = "TRUE"), "0.3.0")
+  restored_ok("table", st)
+  expect_identical(st$drill, "auto")
+  st <- legacy_restore("table", list(layout = "groups", drill = FALSE),
+                       "0.3.0")
+  expect_null(st$drill)
+})
+
+test_that("a block attribute such as blockr.dock's `visible` passes through", {
+  vis <- list("table", "gear")
+  r <- expect_silent(legacy_deser("table_block", list(
+    payload = list(layout = "groups", by = "ARM", visible = vis,
+                   block_name = "T"),
+    constructor = list(version = VIZ_REWRITE_VERSION)
+  )))
+  expect_identical(r$attrs$visible, vis)
+  expect_false("visible" %in% names(r$args))
+  r <- suppressWarnings(legacy_deser("heatmap_block", list(
+    payload = c(heatmap_saved()$payload, list(visible = vis)),
+    constructor = list(version = "0.2.223")
+  )))
+  expect_identical(r$attrs$visible, vis)
+  b <- expect_silent(new_table_block(layout = "groups", visible = vis))
+  expect_identical(attr(b, "visible"), vis)
 })

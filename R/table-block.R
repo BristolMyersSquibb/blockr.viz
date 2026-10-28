@@ -1,57 +1,3 @@
-#' Build just the `<table>` (thead + tbody) plus the data-attributes the table
-#' JS reads off it (drill onclick col/idx, colour mode, digits).
-#'
-#' Split from the chrome (`dt_chrome()`: search bar, gear, scroll container) so
-#' a data or config change re-renders ONLY the table -- the chrome renders once
-#' and is never rebuilt, so there is no whole-panel blank-out and the search
-#' text / scroll position survive a filter. See the block server's
-#' `dt_result` (chrome) / `dt_table` (this) output split.
-#' @noRd
-dt_table_tag <- function(data, label_col = NULL, value_cols = NULL,
-                         shadings = list(), drill = NULL, digits = "number",
-                         row_hex = NULL, color = NULL,
-                         sortable = TRUE, collapsible = TRUE, search = TRUE,
-                         download = FALSE, rotate_titles = FALSE,
-                         group_cols = NULL,
-                         group = character(), summaries = list(),
-                         active = NULL, gear_cols = NULL) {
-  # The inter-block currency is the wide annotated df; summary_table()'s
-  # internal long dialect errors here instead of being silently pivoted.
-  reject_long_form(data)
-  # Display-option states (sortable / collapsible / search / download) ride on
-  # the <table> as data-attributes so the gear popover reads their current
-  # value; the renderer honours `sortable` / `collapsible` here, while `search`
-  # and the download control are realized by the chrome (dt_chrome /
-  # dt_download).
-  toggles <- list(sortable = sortable, collapsible = collapsible,
-                  search = search, download = download,
-                  rotate_titles = rotate_titles)
-  if (dt_is_structured(data)) {
-    return(dt_table_tag_structured(data, drill, digits, toggles,
-                                   active = active))
-  }
-  # Flat path: the cell model (display / shading / raw vectors) is computed
-  # by dt_flat_build() -- ONE builder shared with the block server's
-  # data-push payload (dt_flat_payload), so the pasted HTML here and the
-  # rows table.js assembles client-side cannot drift. See R/table-push.R and
-  # dev/table-data-push-design.md. Numeric columns are formatted with a
-  # single vectorized `formatC(format = "f", drop0trailing = TRUE)` call --
-  # each value formats independently (no decimal alignment across the
-  # column, so 1.5 stays "1.5" while a sibling 2.25 stays "2.25"),
-  # byte-identical to the old per-element `format(round(v), nsmall = 0,
-  # trim = TRUE)` but ~11x faster (the per-cell `vapply(format())` was ~72%
-  # of the build time on a numeric-heavy frame).
-  # NOTE (follow-up): to keep the row-color bar visible when scrolling a
-  # wide table horizontally, the stub cell's bar should become a dedicated
-  # left:0 sticky indicator cell -- which needs the sort/drill column-index
-  # map to skip it.
-  b <- dt_flat_build(data, label_col, value_cols, shadings, drill, digits,
-                     row_hex, color, toggles, group_cols, group, summaries,
-                     active, gear_cols)
-  if (identical(b$kind, "message")) return(b$tag)
-  dt_flat_assemble_tag(b)
-}
-
 # ---------------------------------------------------------------------------
 # Structured ("Table 1") rendering -- section nesting, indents, spanners.
 # Reuses html_table()'s thead / tbody builders so the structure matches the
@@ -92,108 +38,6 @@ dt_structured_numbers <- function(data, data_cols, digits = "number",
     data[[cn]] <- out
   }
   data
-}
-
-#' Build the structured ("Table 1") `<table>` for the interactive table-block.
-#'
-#' Builds the section-aware `<tbody>` and multi-level `<thead>` with
-#' `build_html_tbody()` / `build_html_thead()` (the very builders
-#' `html_table()` uses) and tags it with the drill onclick attributes. The
-#' surrounding chrome (search bar, gear, scroll container, the
-#' `drilldown-table-structured` class that gates the Table-1 CSS) is added once
-#' by `dt_chrome()`. Cell colour over `.fmt` strings is not meaningful, so
-#' structured tables render uncoloured; the stub column is the drill target
-#' when `drill` names it.
-#' @noRd
-dt_table_tag_structured <- function(data, drill, digits, toggles = NULL,
-                                    active = NULL) {
-  sortable    <- toggles$sortable %||% TRUE
-  collapsible <- toggles$collapsible %||% TRUE
-  wrap_titles <- toggles$wrap_titles %||% TRUE
-  view <- annotated_structure_view(data)
-  data <- view$data
-  section_cols <- view$section_cols
-  stub_col     <- if (".label" %in% names(data)) ".label" else NULL
-  styling_cols <- intersect(c(".indent", ".strong", ".emph"), names(data))
-  # Every reserved column (grouping values and their name/label companions)
-  # stays out of the data cells or it leaks in as a literal em-dash column.
-  data_cols    <- setdiff(names(data),
-                          c(view$reserved_cols, stub_col, styling_cols))
-  data <- dt_structured_numbers(data, data_cols, digits, toggles$unit)
-
-  if (length(data_cols) == 0L || nrow(data) == 0L) {
-    # Structured frames carry no gear-picked mappings, so only two states
-    # apply here: no rows vs no data columns left after the structural
-    # (identity / .label / styling) columns.
-    msg <- if (nrow(data) == 0L) "No rows to display"
-           else "No value columns to display"
-    return(dt_table_attrs(dt_message_table(msg), NULL, NULL, digits,
-                          toggles = toggles, gear_cols = "[]"))
-  }
-
-  # Structured drill is opt-in via the gear's picker-less Drill-down checkbox
-  # (config param `drill`, "auto" -- same convention as the grouped table /
-  # tile) or the `drill=` ctor arg. When on, every data row / section header
-  # carries its identity keys as data attributes (see
-  # dd_row_drill_attrs) and the click branch in table.js emits the shared
-  # grouped-filter payload from them.
-  drill_on <- !is.null(drill) && nzchar(drill)
-
-  # Column identity, when the producer stamped it (see annotated_column_keys).
-  # Read only while the drill is on: without a drill a click means nothing, so
-  # a clickable-looking header would be a lie.
-  col_keys <- if (drill_on) annotated_column_keys(data)
-
-  thead <- build_html_thead(
-    data, data_cols, stub_col,
-    stub_sortable = FALSE,
-    sortable = sortable,
-    col_keys = col_keys,
-    collapsible = collapsible
-  )
-  nest <- html_is_nest(data, section_cols, styling_cols)
-  tbody <- build_html_tbody(data, section_cols, stub_col, data_cols,
-                            styling_cols = styling_cols,
-                            collapsible = collapsible,
-                            drill_keys = drill_on, nest = nest,
-                            drill_col = if (drill_on) drill)
-
-  table_tag <- dt_fixed_table_tag(
-    thead, tbody,
-    structured_colgroup(data, data_cols, stub_col, wrap_names = wrap_titles)
-  )
-  if (nest) {
-    table_tag <- htmltools::tagAppendAttributes(table_tag,
-                                                class = "blockr-table-nest")
-  }
-  # The chrome may have been rendered before the data existed, in which case it
-  # carries no `drilldown-table-structured` class. This marker lets table.js
-  # promote it onto the container at wire time.
-  table_tag <- htmltools::tagAppendAttributes(
-    table_tag, `data-dt-structured` = "1"
-  )
-  if (drill_on) {
-    table_tag <- htmltools::tagAppendAttributes(
-      table_tag, `data-dt-structured-drill` = "1"
-    )
-  }
-  # Cells inherit their column's claim by POSITION: one map on the table,
-  # indexed the way `cell.cellIndex` counts, rather than an attribute per
-  # cell (a Table 1 is long, and that would be n x m of the same few strings).
-  if (length(col_keys)) {
-    table_tag <- htmltools::tagAppendAttributes(
-      table_tag,
-      `data-dd-colkeys-map` = dd_col_keys_map_json(
-        data_cols, col_keys, stub_offset = if (is.null(stub_col)) 0L else 1L
-      )
-    )
-  }
-
-  # "[]" (not absent): a structured frame HAS no pickable columns -- the gear
-  # must read that, not fall back to scraping the section-spanner header.
-  dt_table_attrs(table_tag, NULL, NULL, digits,
-                 toggles = toggles, active = active, gear_cols = "[]",
-                 drill_mode = if (drill_on) drill)
 }
 
 #' Cell-colour spec for a table
@@ -818,140 +662,6 @@ dt_has_officer <- function() {
   dt_pkg_installed("officer", "flextable")
 }
 
-#' Table-block chrome: the scoped CSS, the search/gear header, and the scroll
-#' container, with `inner` (a `<table>` tag or a `uiOutput()` slot) dropped into
-#' the scroll wrapper. Rendered ONCE per block -- the gear/search/scroll never
-#' rebuild -- so only `inner` (the table) re-renders on a filter or gear edit.
-#'
-#' `structured` may be `NULL`, meaning "not known yet": the chrome is then built
-#' without the data (the block server renders it before its pipeline has
-#' evaluated, so the control section paints immediately). The delta CSS still
-#' ships -- it is scoped to `.drilldown-table-structured`, so it is inert until
-#' the class lands -- and table.js promotes the class + `data-dt-structured` off
-#' the `<table>` once the body renders. Callers that already hold the data pass
-#' `TRUE`/`FALSE` and get the class server-side, as before.
-#'
-#' `scroll = "page"` makes the box scroll sideways only: the table runs its
-#' full length and whatever scrolls around it (a dock panel, the page) scrolls
-#' it up and down. table.js moves the header down with that scroller
-#' (`followHeader()`), and `max_height` is ignored.
-#' @noRd
-dt_chrome <- function(elem_id, structured, max_height, inner,
-                      search = TRUE, download_slot = NULL,
-                      status_slot = NULL, gear = TRUE,
-                      scroll = c("box", "page")) {
-
-  scroll <- match.arg(scroll)
-  # NULL = undetermined; only a known-flat frame suppresses the delta CSS.
-  unknown <- is.null(structured)
-  wrapper_id <- paste0(
-    "blockr-dt-", sub("^file", "", basename(tempfile("")))
-  )
-
-  shared_css <- htmltools::tags$style(
-    htmltools::HTML(html_table_shared_css_fallback())
-  )
-
-  header_div <- htmltools::tags$div(
-    class = "blockr-html-table-header",
-    htmltools::tags$div(
-      class = "blockr-html-table-toolbar",
-      # Search input, suppressed when the block turns `search` off (gear toggle).
-      if (isTRUE(search)) {
-        htmltools::tags$input(
-          type = "search", class = "blockr-search",
-          placeholder = "Search\u2026", `aria-label` = "Search table"
-        )
-      },
-      # Optional download control (rendered only for the formats the block
-      # turns on: a button for one, a menu for several); sits on the toolbar,
-      # outside the gear.
-      download_slot
-    )
-  )
-
-  scroll_style <- if (identical(scroll, "page")) {
-    NULL
-  } else if (!is.null(max_height)) {
-    paste0("max-height:", max_height, ";overflow:auto;")
-  } else {
-    "overflow:auto;"
-  }
-
-  htmltools::tagList(
-    shared_css,
-    # The delta CSS is the STRUCTURED Table-1 design treatment (section headers,
-    # two-tier arm headers, the stub indent + medium stat/value weights). Inject
-    # it only for structured tables -- a flat data table should match the canonical
-    # html preview (normal-weight cells, plain stub), not carry the Table-1 styling.
-    if (isTRUE(structured) || unknown) {
-      # The Table-1 typography must land the instant the structured <table> is in
-      # the DOM, NOT after table.js promotes `.drilldown-table-structured` onto
-      # the container -- otherwise a structured table paints flat for one frame
-      # and then restyles (a visible flash on every re-render, e.g. a tab
-      # switch). Two scopes, both self-gating so a sibling flat table never
-      # picks up the delta:
-      #   1. `:has(... [data-dt-structured])` -- applies as soon as the marked
-      #      <table> exists inside the container, with no JS in the loop. The
-      #      structured <table> carries `data-dt-structured="1"` from the
-      #      server, so this is flash-free on first paint and every re-render.
-      #   2. `.drilldown-table-structured` -- the class table.js promotes; a
-      #      fallback for browsers without :has() (styles after promotion).
-      # Scope 1 hangs off `.drilldown-table-container`, the class only this
-      # chrome's container carries. The groups and cards containers share
-      # `.blockr-html-table-container`, and every DOM change inside one made
-      # Chrome re-check the :has() and restyle the whole table under it:
-      # 6600 elements per pass on the AE heatmap, several passes per edit.
-      htmltools::tags$style(htmltools::HTML(paste0(
-        html_table_delta_css(
-          scope = paste0(
-            ".drilldown-table-container",
-            ":has(.blockr-table[data-dt-structured=\"1\"])"
-          )
-        ),
-        html_table_delta_css(scope = ".drilldown-table-structured"),
-        html_table_chev_css()
-      )))
-    },
-    drilldown_table_dep(),
-    htmltools::tags$div(
-      id = wrapper_id,
-      class = paste(
-        "blockr-html-table-container drilldown-table-container",
-        if (isTRUE(structured)) "drilldown-table-structured" else NULL
-      ),
-      `data-dt-elem-id` = if (!is.null(elem_id)) elem_id else NULL,
-      # `gear = FALSE` suppresses the settings cogwheel (table.js reads this).
-      # For a caller whose options are fixed and who has nowhere to store an
-      # edit -- see the note at buildCogwheel().
-      `data-dt-gear` = if (!isTRUE(gear)) "0" else NULL,
-      `data-dt-structured` = if (isTRUE(structured)) "1" else NULL,
-      `data-initial-expanded` = if (isTRUE(structured)) "1" else NULL,
-      header_div,
-      htmltools::tags$div(
-        class = paste(
-          c("blockr-table-wrapper",
-            if (identical(scroll, "page")) "dt-scroll-page"),
-          collapse = " "
-        ),
-        style = scroll_style,
-        inner
-      ),
-      # Footer row: the row count on the left, the active-filter status line
-      # (only while a filter is set) on the right. The count is written by table.js (it has to
-      # follow the client-side search, which the server never sees) and hides
-      # itself while empty; the status line is rendered server-side off the
-      # block's filter state (see the block server's dt_status output) so it
-      # also survives a board restore.
-      htmltools::tags$div(
-        class = "dt-table-footer",
-        htmltools::tags$span(class = "dt-row-count", `aria-live` = "polite"),
-        status_slot
-      )
-    )
-  )
-}
-
 #' @noRd
 drilldown_table_dep <- memoise0(function() {
   htmltools::tagList(
@@ -1090,8 +800,10 @@ new_table_block <- function(layout = "records",
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  core <- c("block_name", "block_metadata", "ctor", "ctor_pkg")
-  args <- legacy_ctor_args("table", c(given, dots[setdiff(names(dots), core)]))
+  # Old argument names; any other name is a block attribute (block_name,
+  # blockr.dock's `visible`) that blockr.core keeps.
+  old <- intersect(names(dots), legacy_arg_names("table"))
+  args <- legacy_ctor_args("table", c(given, dots[old]))
   values <- table_normalize(viz_check(spec, args))
   # blockr.core reads the starting state from this frame, by argument name.
   list2env(values, environment())
@@ -1108,9 +820,9 @@ new_table_block <- function(layout = "records",
     class = "table_block",
     ...
   )
-  # blockr.core keeps other `...` as attributes, and would save old names
-  # back into every board.
-  for (nm in setdiff(names(dots), core)) attr(res, nm) <- NULL
+  # blockr.core keeps `...` as attributes, and would save old names back into
+  # every board.
+  for (nm in old) attr(res, nm) <- NULL
   res
 }
 

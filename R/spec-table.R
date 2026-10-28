@@ -304,7 +304,10 @@ table_spec_variables <- function() {
                  "median_q1_q3", "q1_q3", "min_max"),
       null = FALSE,
       applies = "variables",
-      gear = gear("Variables", "columns", "Statistics"),
+      gear = gear("Variables", "columns", "Statistics",
+                  labels = c("N", "n (%)", "Mean", "SD", "Mean (SD)",
+                             "Median", "Median (Q1, Q3)", "Q1, Q3",
+                             "Min, Max")),
       slot = FALSE, ctrl = TRUE, ai = TRUE,
       example = "mean_sd",
       describe = "Rows shown for numeric variables, in the order given."

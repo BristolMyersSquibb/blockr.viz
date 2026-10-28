@@ -64,8 +64,9 @@ legacy_ctor_args <- function(block, args) {
     table = legacy_table_selection(legacy_table_before_030(args))
   )
   named <- legacy_rename(block, named)
-  out <- legacy_drop(block, legacy_entries(block, legacy_map_values(block,
-                                                                    named)))
+  out <- legacy_map_values(block, named)
+  if (identical(block, "table")) out <- legacy_table_drill(out)
+  out <- legacy_drop(block, legacy_entries(block, out))
   if (is.character(out[["script"]]) && length(out$script) > 1L) {
     out$script <- paste(out$script, collapse = "\n")
   }
@@ -80,11 +81,20 @@ legacy_ctor_args <- function(block, args) {
   }, names(out)))
   labels <- "direct_labels" %in% old
   old <- setdiff(old, "direct_labels")
+  old <- if (length(old)) paste0("`", old, "`") else character()
+  # An entry's old key is named with its entry, not the whole list.
+  kinds <- c(summaries = "summary", shadings = "shading")
+  for (nf in names(kinds)) {
+    notes <- legacy_entry_keys(nf, args[[nf]], kinds[[nf]])
+    if (length(notes) && paste0("`", nf, "`") %in% old) {
+      old <- c(setdiff(old, paste0("`", nf, "`")), notes)
+    }
+  }
   if (length(old)) {
     warning(
-      "new_", block, "_block(): ", paste0("`", old, "`", collapse = ", "),
+      "new_", block, "_block(): ", paste(old, collapse = ", "),
       if (length(old) > 1L) " are" else " is",
-      " from blockr.viz < 0.3.0. See ?new_", block, "_block for the ",
+      " from an earlier blockr.viz. See ?new_", block, "_block for the ",
       "current names.",
       call. = FALSE
     )
@@ -211,6 +221,7 @@ legacy_values <- function(block, x, version) {
     }
   }
   if (identical(block, "table")) {
+    x <- legacy_table_drill(x)
     if (legacy_before_rewrite(version)) {
       # An emptied slot from a pre-#144 paste (list()) is unset too.
       if (is.list(x[["color"]]) && !length(x$color)) x["color"] <- list(NULL)
@@ -230,6 +241,37 @@ legacy_values <- function(block, x, version) {
       }
       x$stats <- st
     }
+  }
+  x
+}
+
+# LEGACY: delete with this file
+# The old keys in a list of entries (summaries, shading rules), each as
+# "`summaries[[1]]$style` (now `show`)".
+legacy_entry_keys <- function(field, entries, kind) {
+  rows <- LEGACY_NAMES[LEGACY_NAMES$block == kind &
+                         (is.na(LEGACY_NAMES$new) |
+                            LEGACY_NAMES$old != LEGACY_NAMES$new), ]
+  if (!is.list(entries)) return(character())
+  unlist(lapply(seq_along(entries), function(i) {
+    e <- entries[[i]]
+    hits <- intersect(names(e), rows$old)
+    vapply(hits, function(k) {
+      new <- rows$new[match(k, rows$old)]
+      paste0("`", field, "[[", i, "]]$", k, "` (",
+             if (is.na(new)) "dropped" else paste0("now `", new, "`"), ")")
+    }, character(1L), USE.NAMES = FALSE)
+  }))
+}
+
+# LEGACY: delete with this file
+# 0.3.0 took `drill = TRUE` (in the groups layout any value turned it on),
+# and a board saved it as "TRUE". It is "auto" now; FALSE is off.
+legacy_table_drill <- function(x) {
+  d <- x[["drill"]]
+  if ((is.logical(d) || is.character(d)) && length(d) == 1L &&
+        !is.na(d) && toupper(d) %in% c("TRUE", "FALSE")) {
+    x["drill"] <- list(if (toupper(d) == "TRUE") "auto")
   }
   x
 }
@@ -553,11 +595,9 @@ legacy_restore_summary <- function(payload, version = NULL) {
 legacy_deser <- function(class, data) {
   payload <- data[["payload"]]
   version <- data[["constructor"]][["version"]]
-  is_attr <- if (identical(class, "chart_block")) {
-    !names(payload) %in% legacy_arg_names("chart")
-  } else {
-    names(payload) %in% c(names(formals(blockr.core::new_block)), "block_name")
-  }
+  # Any name that is not one of the saved block's arguments is a block
+  # attribute (block_name, blockr.dock's `visible`).
+  is_attr <- !names(payload) %in% legacy_arg_names(class)
   attrs <- payload[is_attr]
   state <- payload[!is_attr]
   label <- chr_state(attrs[["block_name"]])
@@ -578,9 +618,33 @@ legacy_deser <- function(class, data) {
 # The names a saved chart owns: its arguments and every old name. Anything
 # else in a payload is a block attribute, such as blockr.dock's `visible`.
 legacy_arg_names <- function(block) {
-  unique(c(names(viz_block_spec(block)$args), CHART_LEGACY_ARGS,
-           CHART_RETIRED_ARGS, LEGACY_NAMES$old[LEGACY_NAMES$block == block]))
+  block <- sub("_block$", "", block)
+  table <- c(names(viz_block_spec("table")$args),
+             LEGACY_NAMES$old[LEGACY_NAMES$block == "table"],
+             table_legacy_names("table"))
+  unique(switch(
+    block,
+    chart = c(names(viz_block_spec("chart")$args), CHART_LEGACY_ARGS,
+              CHART_RETIRED_ARGS,
+              LEGACY_NAMES$old[LEGACY_NAMES$block == "chart"]),
+    table = table,
+    summarize_table = c(table, table_legacy_names("summarize")),
+    summary_table = c(table, table_legacy_names("summary"), "stats",
+                      "sections", "by"),
+    tile = TILE_ARGS,
+    heatmap = c(LEGACY_NAMES$old[LEGACY_NAMES$block == "heatmap"],
+                "download", "title", "subtitle", "caption", "script"),
+    character()
+  ))
 }
+
+# LEGACY: delete with this file
+# The retired tile block's arguments.
+TILE_ARGS <- c("value", "group", "by", "name", "summaries", "color", "layout",
+               "overline", "caption", "secondary", "style", "good_when",
+               "format", "unit", "drill", "filter_column", "filter_values",
+               "filter_col", "filter_value", "ctrl_target", "ctrl_table",
+               "measures", "showcase", "state")
 
 # LEGACY: delete with this file
 # The table's selection as the reference saved it, one shape per engine:
