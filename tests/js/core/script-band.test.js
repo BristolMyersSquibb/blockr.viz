@@ -8,16 +8,15 @@ const { loadCore } = require('./load');
 function band() {
   const env = loadCore();
   const doc = env.win.document;
-  const host = doc.body.appendChild(doc.createElement('div'));
-  host.className = 'dd-mapping-band';
+  const parent = doc.body.appendChild(doc.createElement('div'));
   const sets = [];
   const gear = {
     values: () => ({ script_values: { keep: 3 } }),
     set: (v) => sets.push(JSON.parse(JSON.stringify(v)))
   };
   const scope = new env.win.Blockr.viz.Scope();
-  const b = env.win.Blockr.viz.scriptBand(host, scope, gear);
-  return { env, doc, host, sets, b, scope };
+  const b = env.win.Blockr.viz.scriptBand(parent, scope, gear);
+  return { env, doc, host: b.el, sets, b, scope };
 }
 
 const SCRIPT = {
@@ -30,11 +29,11 @@ const SCRIPT = {
 
 test('the band is hidden until a script declares a value or fails', () => {
   const t = band();
-  assert.equal(t.host.style.display, 'none');
+  assert.equal(t.host.hidden, true);
   t.b.update(null);
-  assert.equal(t.host.style.display, 'none');
+  assert.equal(t.host.hidden, true);
   t.b.update(SCRIPT);
-  assert.equal(t.host.style.display, '');
+  assert.equal(t.host.hidden, false);
 });
 
 test('one row per declared value, the declaration that failed named', () => {
@@ -68,5 +67,5 @@ test('a failed script says so; the same script again draws nothing new', () => {
   assert.equal(t.host.firstChild, first);
   t.b.update({ inputs: [] });
   assert.equal(t.host.children.length, 0);
-  assert.equal(t.host.style.display, 'none');
+  assert.equal(t.host.hidden, true);
 });

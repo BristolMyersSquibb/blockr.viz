@@ -228,7 +228,7 @@ interface TableDerived {
   /** The blocks a drill can be sent to, for the gear's Target filter. */
   ctrl_choices?: VizChoice[] | null;
   /** The prepare script's inputs, values and error (core/script-band.js). */
-  script?: VizScriptState | null;
+  script?: VizScript | null;
   /** The pixel ratio of the Image and PowerPoint picture. */
   capture_ratio?: number | null;
 }
@@ -353,8 +353,6 @@ interface TableFrame {
   readonly id: string;
   readonly el: HTMLElement;
   readonly head: HTMLElement;
-  /** The prepare script's band, under the header. */
-  readonly band: HTMLElement;
   readonly tools: HTMLElement;
   readonly box: HTMLElement;
   readonly foot: HTMLElement;

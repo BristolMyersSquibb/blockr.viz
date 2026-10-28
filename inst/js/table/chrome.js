@@ -55,8 +55,6 @@
       this.searchInput.placeholder = 'Search…';
       this.searchInput.setAttribute('aria-label', 'Search table');
       this.downloadSlot = el('div', 'dt-download-slot', this.tools);
-      // The prepare script's controls (core/script-band.js), under the header.
-      this.band = el('div', 'dd-mapping-band', this.el);
       this.box = el('div', 'blockr-table-wrapper', this.el);
       this.box.style.overflow = 'auto';
       this.capEl = el('div', 'dd-table-caption', this.el);

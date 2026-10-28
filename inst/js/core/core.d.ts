@@ -208,27 +208,4 @@ interface VizNamespace {
                   draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
                   timeout?: number }): Promise<VizPicture>;
   captureReply(req: string, p: Promise<VizPicture>): Promise<void>;
-  /** The prepare script's band (script-band.js). */
-  scriptBand(host: HTMLElement, scope: VizScope, gear: VizGear):
-    { update(script: VizScriptState | null | undefined): void };
-}
-
-/** One value a prepare script declares, as R sends it (dd_script_roles()). */
-interface VizScriptInput {
-  key: string;
-  name: string;
-  label: string;
-  kind?: string;
-  options?: unknown[];
-  min?: number | null;
-  max?: number | null;
-  /** Why a declaration could not become a control (kind "error"). */
-  error?: string;
-}
-
-/** derived.script: the declared inputs, their values, the script's error. */
-interface VizScriptState {
-  inputs?: VizScriptInput[];
-  values?: Record<string, unknown>;
-  error?: string | null;
 }
