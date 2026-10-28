@@ -22,6 +22,8 @@ html_exhibit(
   caption = NULL,
   max_height = NULL,
   default_expanded = NULL,
+  sortable = TRUE,
+  collapsible = TRUE,
   ...
 )
 }
@@ -31,8 +33,7 @@ html_exhibit(
 \item{title, subtitle, caption}{Table title / subtitle / footnote. \code{NULL}
 (default) takes them from the annotated data frame's display attributes,
 \code{""} switches them off: the same title-tier convention as
-\code{\link[=static_table]{static_table()}}. The default HTML table renderer currently ignores
-\code{subtitle}.}
+\code{\link[=static_table]{static_table()}}. The default method ignores \code{subtitle}.}
 
 \item{max_height}{CSS max-height of the scroll container, or \code{NULL}
 (default) for none. A report exhibit is printed rather than scrolled.}
@@ -42,7 +43,10 @@ table's height: a table that fits opens expanded, one that does not opens
 at its section rows. The threshold is
 \code{getOption("blockr.viz.html_exhibit_expanded_max_rows")} (24).}
 
-\item{...}{Passed to the underlying renderer.}
+\item{...}{Passed to the method.}
+
+\item{sortable, collapsible}{Logical. Whether the default method's table
+keeps its click-to-sort headers and its fold chevrons.}
 }
 \value{
 A \code{\link[htmltools:tagList]{htmltools::tagList()}}.

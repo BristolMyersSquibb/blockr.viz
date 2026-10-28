@@ -119,9 +119,10 @@ test_that("the three downloads of the issue's table are coloured (#43)", {
       session$flushReact()
       expr <- session$makeScope("expr")
 
-      h <- paste(readLines(expr$output$dl_html, warn = FALSE), collapse = "")
-      for (b in bg) expect_match(h, paste0("background:", b), fixed = TRUE)
-      expect_false(grepl(".bg:", h, fixed = TRUE))
+      p <- static_payloads(readLines(expr$output$dl_html, warn = FALSE))[[1L]]
+      painted <- unlist(lapply(p$data$cols, `[[`, "bg"))
+      for (b in bg) expect_true(b %in% painted)
+      expect_false(any(startsWith(vapply(p$data$cols, `[[`, "", "name"), ".bg:")))
 
       st <- xlsx_styles(expr$output$dl_xlsx)
       for (x in hex) expect_match(st, x, fixed = TRUE)
@@ -215,10 +216,10 @@ test_that("the block's downloads round to its digits (#37)", {
       session$flushReact()
       expr <- session$makeScope("expr")
 
-      h <- paste(readLines(expr$output$dl_html, warn = FALSE), collapse = "")
-      expect_match(h, ">3.81<", fixed = TRUE)
-      expect_match(h, ">2.70<", fixed = TRUE)
-      expect_false(grepl("3.8142", h, fixed = TRUE))
+      p <- static_payloads(readLines(expr$output$dl_html, warn = FALSE))[[1L]]
+      disp <- unlist(lapply(p$data$cols, `[[`, "disp"))
+      expect_true(all(c("3.81", "2.70") %in% disp))
+      expect_false(any(grepl("3.8142", disp, fixed = TRUE)))
 
       sl <- slide_xml(expr$output$dl_pptx)
       expect_match(sl, ">3.81<", fixed = TRUE)
