@@ -342,6 +342,85 @@ test('a payload that changes nothing shown keeps the tray', () => {
   assert.notEqual(t.el.firstElementChild, first);
 });
 
+test('a tile click selects once; R\'s echo leaves the tile alone', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'tb' });
+  const titles = (layout) => ({ titles: {
+    title: { text: 'Subjects', parts: [{ text: 'Subjects' }], offers: [] },
+    args: Object.assign({ layout, look: 'table' }, layout === 'variables' ? { summaries: '' } : {}),
+    choices: [] } });
+  m.gear.update(payload({ layout: 'groups', look: 'table' }, { derived: titles('groups') }));
+  const tile = (v) => m.el.querySelector('.vz-tile[data-value="' + v + '"]');
+  /** Every class change on a layout tile, as `value:on|off`. */
+  const log = [];
+  const mo = new env.win.MutationObserver(() => {});
+  mo.observe(m.el, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  const flush = () => {
+    for (const r of mo.takeRecords()) {
+      if (!r.target.classList.contains('vz-tile')) continue;
+      log.push(r.target.getAttribute('data-value') + ':' +
+               (r.target.classList.contains('vz-tile--on') ? 'on' : 'off'));
+    }
+  };
+
+  try {
+    tile('variables').click();
+    flush();
+    assert.deepEqual(log.filter((x) => x.startsWith('variables')), ['variables:on'],
+                     'the clicked tile turns on once');
+    const drawn = m.el.firstElementChild;
+    const on = tile('variables');
+    assert.ok(on.classList.contains('vz-tile--on'));
+    log.length = 0;
+
+    // A payload sent before R read the click, then R's echo: what R prints
+    // for each argument changed, nothing the tray shows did.
+    m.gear.update(payload({ layout: 'groups', look: 'table' }, { derived: titles('groups') }));
+    m.gear.update(payload({ layout: 'variables', look: 'table' },
+                          { state_rev: 4, data_rev: 2, derived: titles('variables') }));
+    flush();
+    assert.ok(m.el.firstElementChild === drawn, 'the echo keeps the tray');
+    assert.ok(tile('variables') === on, 'and the tile');
+    assert.ok(on.classList.contains('vz-tile--on'));
+    assert.deepEqual(log, [], 'no tile changed class');
+  } finally {
+    mo.disconnect();
+  }
+
+  // The `@` menu reads the titles of the latest payload, not those drawn.
+  assert.equal(m.gear._ctx('title', m.gear.values(), m.scope).titles.args.layout, 'variables');
+
+  // A selected tile keeps its look under the pointer (gear.css).
+  const css = require('node:fs').readFileSync(require('node:path').join(
+    __dirname, '..', '..', '..', 'inst', 'css', 'gear.css'), 'utf8');
+  assert.match(css, /\.vz-tile--on:hover \.vz-tile-face\s*[,{]/);
+});
+
+test('new rows redraw the tray only when they change what it offers', () => {
+  let levels = ['A', 'B'];
+  const host = { choices: (k) => (k === 'drill_target' ? levels.map((v) => ({ value: v, label: v })) : null) };
+  const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', drill: 'auto' }, { host });
+  const first = t.el.firstElementChild;
+  const cfg = { type: 'bar', category: 'ARM', orientation: 'vertical', drill: 'auto' };
+  t.gear.update(payload(cfg, { data_rev: 2 }));
+  assert.ok(t.el.firstElementChild === first, 'same offers, same tray');
+  levels = ['A', 'B', 'C'];
+  t.gear.update(payload(cfg, { data_rev: 3 }));
+  assert.ok(t.el.firstElementChild !== first, 'a new offer redraws');
+});
+
+test('a template row redraws when the arguments it names come or go', () => {
+  const cfg = { type: 'bar', category: 'ARM', orientation: 'vertical', title: 'By {@color}' };
+  const t = setup(cfg);
+  const warn = () => row(t.el, 'title').querySelector('.vz-template-warn');
+  assert.equal(warn().hidden, false, 'nothing is called @color yet');
+  const first = t.el.firstElementChild;
+  t.gear.update(payload(cfg, { derived: { titles: { args: { category: 'ARM' } } } }));
+  assert.ok(t.el.firstElementChild === first, 'other arguments: same warning, same tray');
+  t.gear.update(payload(cfg, { derived: { titles: { args: { category: 'ARM', color: '' } } } }));
+  assert.equal(warn().hidden, true);
+});
+
 test('a field being typed in survives a payload', () => {
   const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', unit: '' });
   const i = inp(t.el, 'unit');

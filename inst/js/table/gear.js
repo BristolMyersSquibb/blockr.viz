@@ -167,7 +167,7 @@
    * Mount the gear, or nothing without the engine.
    * @param {TableFrame} frame
    * @param {VizScope} scope
-   * @param {() => TableInfo} info What the current layout draws.
+   * @param {(layout: string) => TableInfo} info What a layout draws.
    * @param {(layout: string) => void} [onLayout] A layout pick, before the
    *   tray shows the new layout's rows.
    * @returns {TableGearHandle | null}
@@ -184,7 +184,7 @@
         : null,
       // A Table 1 needs its variables (variables.js marks the pick).
       required: (key, v) => key === 'summaries' && v.layout === 'variables',
-      visible: (key, v) => visible(key, v, info()),
+      visible: (key, v) => visible(key, v, info(String(v.layout))),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
       // What an empty picker means.
       placeholder: (key, v) => key === 'columns' ? 'All columns'

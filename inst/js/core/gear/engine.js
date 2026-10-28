@@ -64,7 +64,6 @@
       /** @type {VizTitles} */
       this._titles = {};
       this._rev = 0;
-      this._dataRev = 0;
       /** Optional mappings added from the Add menu, shown while unset. */
       /** @type {Set<string>} */
       this._added = new Set();
@@ -91,7 +90,6 @@
       this._cols = p.columns || [];
       this._titles = /** @type {VizTitles} */ ((p.derived && p.derived.titles) || {});
       this._rev = p.state_rev || 0;
-      this._dataRev = p.data_rev || 0;
       if (this._key() !== this._drawn) this.render();
     }
 
@@ -124,10 +122,23 @@
     }
 
     /** What decides the drawing; a payload that leaves it alone keeps the
-     * tray as it is, open lists included. */
+     * tray as it is, open lists included, R's echo of an edit among them.
+     * The rows reach the tray only through the host's choices, so those
+     * count, not the data revision a new table layout brings. The titles'
+     * arguments, which differ by layout, show only in a template row's
+     * warning; the `@` menu reads them when it opens (ctx.titles is live). */
     _key() {
-      return JSON.stringify([this.values(), this._cols, this._titles, this._dataRev,
-                             Array.from(this._added)]);
+      const values = this.values();
+      const host = this.host;
+      const t = this._titles;
+      const shown = Object.keys(this.spec).filter((k) => this._shown(k, values)).map((k) => [
+        k, this.label(k, values), !!(host.required && host.required(k, values)),
+        (host.choices && host.choices(k, values, this._cols)) || null,
+        /** @type {VizGearField} */ (this.spec[k].gear).control === 'template'
+          ? V.titles.unknownTokens(String(values[k] ?? ''), t, this._cols) : null
+      ]);
+      return JSON.stringify([values, this._cols, [t.title, t.subtitle, t.caption],
+                             Array.from(this._added), shown]);
     }
 
     /** @param {string} key @param {VizValues} [values] */
@@ -156,9 +167,12 @@
      * @returns {VizRowCtx} */
     _ctx(key, values, scope) {
       const required = !!(this.host.required && this.host.required(key, values));
+      const gear = this;
       return {
         key, arg: this.spec[key], label: this.label(key, values), value: values[key], values,
-        columns: this._cols, required, scope, host: this.host, titles: this._titles,
+        columns: this._cols, required, scope, host: this.host,
+        // The latest payload's, as a payload may leave the row drawn.
+        get titles() { return gear._titles; },
         labelOf: (k) => this.label(k, values),
         set: (v) => this.set({ [key]: v })
       };
