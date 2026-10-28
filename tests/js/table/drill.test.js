@@ -31,9 +31,27 @@ test('a row click claims the drill value and lights every row with it', () => {
   assert.equal(t.sent[0].name, 'tbl_select:blockr.viz.selection');
   assert.equal(typeof t.sent[0].value.nonce, 'number');
   assert.deepEqual(t.lit(), [0, 3]);
-  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Arm = Placebo');
-  assert.equal(t.$('.vz-status').hidden, false);
+  assert.equal(t.$('.vz-status').textContent, '', 'the line waits for R');
   assert.ok(t.$('.vz-table').classList.contains('vz-table-clickable'));
+});
+
+test("the selection's line is R's, and appears once when R holds it", () => {
+  const t = mount(payload({ data: flatModel(6), columns: COLUMNS, dataRev: 7 }));
+  const texts = [];
+  const line = () => { const e = t.$('.vz-status-text'); return e ? e.textContent : ''; };
+  new t.win.MutationObserver(() => texts.push(line()))
+    .observe(t.$('.vz-status'), { childList: true, subtree: true, characterData: true });
+  t.click(t.row(3).children[2]);
+  // R echoes the selection with its own words (R/table-records.R), which
+  // can name what the browser cannot: here a column label it does not hold.
+  t.render({ dataRev: 7, columns: COLUMNS, config: { selection: cat({ ARM: ['Placebo'] }) },
+             derived: { receipt: 'Filtered: Planned arm = Placebo' } });
+  return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+    assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Planned arm = Placebo');
+    assert.deepEqual([...new Set(texts.filter(Boolean))], ['Filtered: Planned arm = Placebo'],
+                     'one text, never another first');
+    assert.equal(t.$('.vz-status-clear').hidden, false);
+  });
 });
 
 test('a second click on a lit row clears the drill', () => {
@@ -46,8 +64,10 @@ test('a second click on a lit row clears the drill', () => {
 });
 
 test('the clear button on the receipt clears the drill', () => {
-  const t = mount(payload({ data: flatModel(6) }));
+  const t = mount(payload({ data: flatModel(6), dataRev: 7 }));
   t.click(t.row(1));
+  t.render({ dataRev: 7, config: { selection: cat({ ARM: ['Low'] }) },
+             derived: { receipt: 'Filtered: ARM = Low' } });
   t.click(t.$('.vz-status-clear'));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Low'] }), null]);
   assert.deepEqual(t.lit(), []);
@@ -96,7 +116,7 @@ test('Table 1: a row claims its level, a cell adds its column', () => {
   assert.deepEqual(t.$$('th.vz-table-col-active').map((e) => e.getAttribute('data-h')), ['1,1']);
   assert.deepEqual(t.$$('td.vz-table-col-active').map((e) => e.textContent),
                    ['11', '9', '72 (9)', '8', '12']);
-  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Sex = M, Arm = Active');
+  assert.equal(t.$('.vz-status').textContent, '', 'the line waits for R');
 });
 
 test('Table 1: a stat row is inert', () => {
@@ -141,7 +161,7 @@ test('a keyed section value claims the section; its chevron still folds', () => 
   t.click(sec.querySelector('.vz-table-section-value'));
   assert.deepEqual(t.selects(), [cat({ ARM: ['Placebo'], SEX: ['F'] })]);
   assert.ok(t.$$('tr.vz-table-section-header')[1].classList.contains('vz-table-row-active'));
-  assert.equal(t.$('.vz-status-text').textContent, 'Filtered: Arm = Placebo, Sex = F');
+  assert.equal(t.$('.vz-status').textContent, '', 'the line waits for R');
   // R echoes a click without a column half as `columns: {}`.
   t.render({ data: nested(), columns: COLUMNS,
              config: { selection: { type: 'categorical', filters: { ARM: ['Placebo'], SEX: ['F'] }, columns: {} } } });
