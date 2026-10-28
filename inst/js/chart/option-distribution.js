@@ -15,8 +15,6 @@
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
-  const X_INSET = 65;
-
   /**
    * The interval of a point range as a custom series: a line from lo to hi
    * with caps. `encode` maps both ends to the value axis.
@@ -58,7 +56,7 @@
    * @param {any} m @param {any} panel @param {any} look @param {number} plotW
    */
   const distributionContext = (m, panel, look, plotW) => {
-    const { cfg, ink, measure } = look;
+    const { cfg } = look;
     const P = parts.common(look);
     const isBox = cfg.type === 'boxplot';
     const palette = NS.paletteOf(cfg);
@@ -67,36 +65,42 @@
     const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>
       (scale && scale.color && scale.color[lv]) || NS.paletteAt(palette, i);
     const slots = panel.slots;
+    /** One entry per series level: its name (split only) and colour. */
+    const levelInfo = (split ? m.levels : ['__all__']).map(
+      (/** @type {string} */ lv, /** @type {number} */ li) =>
+        ({ lv, li, name: split ? lv : undefined, hex: split ? hexFor(lv, li) : palette[0] }));
     return {
-      m, look, cfg, ink, measure, plotW, P, ax: P.ax, esc: P.esc,
-      SEP: NS.model.BOX_CAT_SEP, isBox, palette, split, hexFor, slots,
+      m, look, cfg, ink: look.ink, plotW, P, isBox, split, hexFor, slots, levelInfo,
+      SEP: NS.model.BOX_CAT_SEP,
       vertical: cfg.orientation !== 'horizontal',
       bodyMeta: NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se')),
       whiskMeta: NS.agg.statMeta(cfg.whiskers || 'tukey'),
       levels: m.levels,
       cats: slots.map((/** @type {any} */ s) => s.cat),
-      axisOn: NS.countOn(cfg, 'axis'),
-      seriesLevels: split ? m.levels : ['__all__']
+      axisOn: NS.countOn(cfg, 'axis')
     };
   };
 
+  /**
+   * The slots of a level that drew a body, with their category position.
+   * @param {any} k @param {string} lv
+   */
+  const drawnSlots = (k, lv) => k.slots
+    .map((/** @type {any} */ s, /** @type {number} */ ci) => ({ s, ci }))
+    .filter((/** @type {any} */ e) => e.s.level === lv && e.s.body);
+
+  // ECharts reads datum.value unconditionally: an empty slot is NaNs.
+  const emptyBox = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
+
   /** One boxplot series per level. @param {any} k */
-  const distBoxSeries = (k) => {
-    const { split, hexFor, palette, slots, vertical, seriesLevels } = k;
-    return seriesLevels.map((/** @type {string} */ lv, /** @type {number} */ li) => {
-      const hex = split ? hexFor(lv, li) : palette[0];
-      // ECharts reads datum.value unconditionally: an empty slot is NaNs.
-      const EMPTY_BOX = () => ({ value: [NaN, NaN, NaN, NaN, NaN], n: 0 });
-      const data = slots.map((/** @type {any} */ s) => (s.level === lv && s.body)
-        ? { value: [s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n }
-        : EMPTY_BOX());
-      return {
-        type: 'boxplot', name: split ? lv : undefined, data,
-        ...(split ? (vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
-        itemStyle: { color: hex + '22', borderColor: hex }
-      };
-    });
-  };
+  const distBoxSeries = (k) => k.levelInfo.map((/** @type {any} */ { lv, li, name, hex }) => ({
+    type: 'boxplot', name,
+    data: k.slots.map((/** @type {any} */ s) => (s.level === lv && s.body)
+      ? { value: [s.whisker.lo, s.body.lo, s.body.center, s.body.hi, s.whisker.hi], n: s.n }
+      : emptyBox()),
+    ...(k.split ? (k.vertical ? { xAxisIndex: li } : { yAxisIndex: li }) : {}),
+    itemStyle: { color: hex + '22', borderColor: hex }
+  }));
 
   /**
    * Per level: a silent interval under a clickable centre dot, and a line
@@ -104,37 +108,31 @@
    * @param {any} k
    */
   const distRangeSeries = (k) => {
-    const { cfg, split, hexFor, palette, slots, cats, vertical, seriesLevels } = k;
-    const connect = cfg.connect_centers === true;
+    const { cfg, cats, vertical } = k;
     /** @type {any[]} */
     const series = [];
-    seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
-      const hex = split ? hexFor(lv, li) : palette[0];
-      /** @type {any[]} */
-      const centers = [];
-      /** @type {any[]} */
-      const whisks = [];
-      slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
-        if (s.level !== lv || !s.body) return;
-        const b = s.body;
-        centers.push({ value: vertical ? [ci, b.center] : [b.center, ci], name: cats[ci],
-                       center: b.center, n: s.n, lo: b.lo, hi: b.hi });
-        whisks.push([ci, b.lo, b.hi]);
-      });
-      if (connect && centers.length > 1) {
+    for (const { lv, name, hex } of k.levelInfo) {
+      const drawn = drawnSlots(k, lv);
+      const centers = drawn.map(({ s: { body: b, n }, ci }) => ({
+        value: vertical ? [ci, b.center] : [b.center, ci], name: cats[ci],
+        center: b.center, n, lo: b.lo, hi: b.hi }));
+      if (cfg.connect_centers === true && centers.length > 1) {
         series.push({
-          type: 'line', name: split ? lv : undefined, legendHoverLink: false, silent: true,
+          type: 'line', name, legendHoverLink: false, silent: true,
           z: 2, data: centers.map((c) => c.value), showSymbol: false,
           lineStyle: { color: hex, width: 1.4 }, itemStyle: { color: hex },
           emphasis: { disabled: true }, tooltip: { show: false }
         });
       }
-      if (whisks.length) series.push(whiskerSeries(split ? lv : undefined, whisks, hex, !vertical));
+      if (drawn.length) {
+        series.push(whiskerSeries(name, drawn.map(({ s, ci }) => [ci, s.body.lo, s.body.hi]),
+                                  hex, !vertical));
+      }
       series.push({
-        type: 'scatter', name: split ? lv : undefined, data: centers, z: 4, symbolSize: 7,
+        type: 'scatter', name, data: centers, z: 4, symbolSize: 7,
         itemStyle: { color: hex, cursor: 'pointer' }, emphasis: { disabled: true }
       });
-    });
+    }
     return series;
   };
 
@@ -144,22 +142,19 @@
    * @param {any} k
    */
   const distCentroidMarks = (k) => {
-    const { ink, slots, vertical, seriesLevels } = k;
+    const { ink, vertical } = k;
     /** @type {any[]} */
     const marks = [];
-    seriesLevels.forEach((/** @type {string} */ lv, /** @type {number} */ li) => {
-      /** @type {number[][]} */
-      const at = [];
-      slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
-        if (s.level === lv && s.body) at.push(vertical ? [ci, s.body.center] : [s.body.center, ci]);
-      });
+    for (const { lv, li } of k.levelInfo) {
+      const at = drawnSlots(k, lv).map(({ s, ci }) =>
+        vertical ? [ci, s.body.center] : [s.body.center, ci]);
       const c = NS.cloudCentre(at);
-      if (!c) return;
+      if (!c) continue;
       const mark = NS.nameMark('__legend_' + li, lv, c, vertical ? 'top' : 'right', ink,
                                { distance: 8 });
       mark.labelLayout = { moveOverlap: 'shiftY' };
       marks.push(mark);
-    });
+    }
     return marks;
   };
 
@@ -168,58 +163,58 @@
    * @param {any} k
    */
   const distOutlierSeries = (k) => {
-    const { cfg, isBox, split, hexFor, palette, slots, vertical, seriesLevels } = k;
-    return !(isBox && cfg.box_points === 'outliers') ? []
-      : seriesLevels.map((/** @type {string} */ lv, /** @type {number} */ li) => {
-        const hex = split ? hexFor(lv, li) : palette[0];
-        /** @type {[number, number][]} */
-        const pts = [];
-        slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
-          if (s.level !== lv) return;
-          for (const v of s.outliers) pts.push(vertical ? [ci, v] : [v, ci]);
-        });
-        return {
-          type: 'scatter', name: split ? lv : undefined, data: pts, silent: true,
-          symbolSize: 5, z: 3, large: true, largeThreshold: 800,
-          itemStyle: { color: hex, opacity: 0.85, borderColor: hex, borderWidth: 1 }
-        };
-      }).filter((/** @type {any} */ s) => s.data.length > 0);
+    const { cfg, isBox, slots, vertical } = k;
+    if (!(isBox && cfg.box_points === 'outliers')) return [];
+    return k.levelInfo.map((/** @type {any} */ { lv, name, hex }) => {
+      /** @type {[number, number][]} */
+      const pts = [];
+      slots.forEach((/** @type {any} */ s, /** @type {number} */ ci) => {
+        if (s.level !== lv) return;
+        for (const v of s.outliers) pts.push(vertical ? [ci, v] : [v, ci]);
+      });
+      return {
+        type: 'scatter', name, data: pts, silent: true,
+        symbolSize: 5, z: 3, large: true, largeThreshold: 800,
+        itemStyle: { color: hex, opacity: 0.85, borderColor: hex, borderWidth: 1 }
+      };
+    }).filter((/** @type {any} */ s) => s.data.length > 0);
   };
 
   /** The slots' category labels, gutter, x-label fit and formatter.
    * @param {any} k
    */
   const distCategories = (k) => {
-    const { ink, measure, plotW, SEP, split, slots, cats, axisOn, vertical } = k;
+    const { look, plotW, SEP, split, slots, cats, axisOn, vertical } = k;
     /** @type {Map<string, string> | null} */
     const catLabelMap = axisOn ? new Map() : null;
     if (catLabelMap) {
       for (const s of slots) catLabelMap.set(s.cat, s.group + ' (' + s.count + ')');
     }
+    const short = (/** @type {string} */ v) => String(v).split(SEP)[0];
     const catLabels = cats.map((/** @type {string} */ c) => catLabelMap
-      ? /** @type {string} */ (catLabelMap.get(c)) : (split ? c.split(SEP)[0] : c));
-    const gut = NS.axes.yGutter(catLabels, measure);
-    const xlab = vertical
-      ? NS.axes.xAxisLabels(catLabels, (plotW || 0) - X_INSET, false, measure, ink) : null;
+      ? /** @type {string} */ (catLabelMap.get(c)) : (split ? short(c) : c));
     const catFmt = catLabelMap
-      ? (/** @type {string} */ v) => catLabelMap.get(v) || String(v).split(SEP)[0]
-      : (split ? (/** @type {string} */ v) => String(v).split(SEP)[0] : null);
-    return { catLabels, gut, xlab, catFmt };
+      ? (/** @type {string} */ v) => catLabelMap.get(v) || short(v)
+      : (split ? short : null);
+    const fit = vertical ? parts.fitXLabels(catLabels, plotW, look, catFmt) : null;
+    return { catLabels, gut: NS.axes.yGutter(catLabels, look.measure), catFmt,
+             xlab: fit && fit.xlab, xFit: fit ? fit.xFit : undefined };
   };
 
   /** The tooltip formatter; the statistics it names are configurable.
    * @param {any} k
    */
   const distTooltip = (k) => {
-    const { cfg, P, esc, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
+    const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
+    const esc = NS.esc;
     const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
     // A split lists every level of the group, the hovered one marked.
     const colorName = split ? esc(P.title(cfg.color) || cfg.color) + ' ' : '';
+    const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
+      NS.ddNum(lo) + ' – ' + NS.ddNum(hi);
     const splitTooltipFmt = (/** @type {any} */ p) => {
       const at = slots.find((/** @type {any} */ s) => s.cat === p.name);
       if (!at || !at.body) return '';
-      const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
-        NS.ddNum(lo) + ' – ' + NS.ddNum(hi);
       const rows = slots
         .filter((/** @type {any} */ s) => s.group === at.group && s.body)
         .map((/** @type {any} */ s) => NS.tipRow(colorName + esc(s.level),
@@ -232,30 +227,23 @@
         NS.tipNote(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
         rows.join('') + NS.TIP_SEP + NS.tipNote(foot);
     };
-    const boxTooltipFmt = (/** @type {any} */ p) => {
+    const pointTooltipFmt = (/** @type {any} */ p) => {
       const d = p.data;
       // n = 0 is an empty slot.
-      if (!d || !Array.isArray(d.value) || !d.n) return '';
+      if (!d || !d.n || (isBox && !Array.isArray(d.value))) return '';
+      const h = ttHead(p);
+      const lead = (h ? NS.tipHead(esc(h), split ? p.color : null) : '') + NS.tipRow('n', d.n);
+      if (!isBox) {
+        return lead + NS.tipRow(esc(bodyMeta.center), NS.ddNum(d.center)) +
+          NS.tipRow(esc(bodyMeta.range), span(d.lo, d.hi));
+      }
       // ECharts hands a box back as [index, wLo, bLo, center, bHi, wHi].
       const five = d.value.slice(-5);
-      const h = ttHead(p);
-      return (h ? NS.tipHead(esc(h), split ? p.color : null) : '') +
-        NS.tipRow('n', d.n) +
-        NS.tipRow(esc(bodyMeta.center), NS.ddNum(five[2])) +
+      return lead + NS.tipRow(esc(bodyMeta.center), NS.ddNum(five[2])) +
         NS.tipRow('Box (' + esc(bodyMeta.range) + ')', NS.ddNum(five[1]) + ', ' + NS.ddNum(five[3])) +
-        NS.tipRow('Whiskers (' + esc(whiskMeta.range) + ')',
-          NS.ddNum(five[0]) + ' – ' + NS.ddNum(five[4]));
+        NS.tipRow('Whiskers (' + esc(whiskMeta.range) + ')', span(five[0], five[4]));
     };
-    const rangeTooltipFmt = (/** @type {any} */ p) => {
-      const d = p.data;
-      if (!d || !d.n) return '';
-      const h = ttHead(p);
-      return (h ? NS.tipHead(esc(h), split ? p.color : null) : '') +
-        NS.tipRow('n', d.n) +
-        NS.tipRow(esc(bodyMeta.center), NS.ddNum(d.center)) +
-        NS.tipRow(esc(bodyMeta.range), NS.ddNum(d.lo) + ' – ' + NS.ddNum(d.hi));
-    };
-    return split ? splitTooltipFmt : isBox ? boxTooltipFmt : rangeTooltipFmt;
+    return split ? splitTooltipFmt : pointTooltipFmt;
   };
 
   /**
@@ -263,30 +251,18 @@
    * @param {any} k @param {any} cat the result of `distCategories`
    */
   const distAxes = (k, cat) => {
-    const { cfg, ink, P, ax, isBox, split, cats, vertical, seriesLevels } = k;
-    const { xlab, gut, catFmt } = cat;
+    const { cfg, ink, P, isBox, split, cats, vertical, levelInfo } = k;
     // The value axis fits the data rather than holding zero.
     const valAxis = {
-      type: 'value', scale: true, name: NS.unitTitle(P.title(cfg.measure), cfg),
-      nameLocation: 'middle',
-      nameGap: vertical ? 45 : 30, nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize,
-                   ...(NS.valueFormat(cfg, { unit: false })
-                     ? { formatter: NS.valueFormat(cfg, { unit: false }) } : {}) },
-      axisLine: { lineStyle: { color: ink.strong } },
-      ...(vertical ? { splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } } } : {})
+      ...NS.axes.valueAxis(ink, 'value', NS.unitTitle(P.title(cfg.measure), cfg),
+                           vertical ? 45 : 30, { format: NS.valueFormat(cfg, { unit: false }),
+                                                 grid: vertical ? 'dashed' : undefined }),
+      scale: true
     };
-    const catAxis = vertical
-      ? { type: 'category', data: cats,
-          axisLabel: NS.axes.axisLabelWithDisplay(xlab && xlab.axisLabel, catFmt),
-          axisLine: { lineStyle: { color: ink.strong } }, axisTick: { show: false } }
-      : { type: 'category', data: cats, inverse: true,
-          axisLabel: { color: ax.labelColor, fontSize: ax.fontSize, align: 'left',
-                       margin: gut.margin, width: gut.width, overflow: 'truncate', ellipsis: '…',
-                       ...(catFmt ? { formatter: catFmt } : {}) },
-          axisLine: { show: false } };
+    const catAxis = NS.axes.categoryAxis(cats, ink,
+      { xlab: cat.xlab, display: cat.catFmt, gut: cat.gut, ticks: true });
     const catAxes = (isBox && split)
-      ? seriesLevels.map((/** @type {any} */ _, /** @type {number} */ i) =>
+      ? levelInfo.map((/** @type {any} */ _, /** @type {number} */ i) =>
           (i === 0 ? catAxis : { ...catAxis, show: false }))
       : catAxis;
     return { valAxis, catAxes };
@@ -305,14 +281,12 @@
     }
     const pointSeries = distOutlierSeries(k);
     const cat = distCategories(k);
-    const { xlab, gut, catFmt, catLabels } = cat;
-    const bottomBase = 46 + (vertical && xlab ? xlab.bottom : 0);
+    const { xlab, gut } = cat;
+    const bottomBase = 46 + (xlab ? xlab.bottom : 0);
     const { valAxis, catAxes } = distAxes(k, cat);
     NS.axes.addValueLines(series, valAxis, !vertical, false, cfg.y_lines, ink);
     return {
-      xFit: (vertical && xlab) ? { labels: catLabels, inset: X_INSET, decimate: false,
-                                   gutter: xlab.bottom, key: xlab.key, formatter: catFmt }
-        : undefined,
+      xFit: cat.xFit,
       // Horizontal: one 28 px row per drawn slot, capped.
       panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, cats.length * 28) + bottomBase,

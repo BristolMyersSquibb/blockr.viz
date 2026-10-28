@@ -55,9 +55,8 @@
     const colorLevels = m.color ? m.color.levels : [];
     const showLegend = colorLevels.length > 0;
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
-    const ax = { labelColor: ink.muted, fontSize: ink.fontSize, splitLineColor: ink.border };
     return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y: m.y.col, palette,
-             colorLevels, showLegend, colors, ax, onBarLabel: !!cfg.label };
+             colorLevels, showLegend, colors, onBarLabel: !!cfg.label };
   };
 
   /** A bar from start to end on its lane, at least 4px wide, clipped to the plot,
@@ -128,28 +127,11 @@
     };
   };
 
-  /** The time axis, shared by every panel. @param {any} k */
-  const timelineXAxis = (k) => {
-    const { ink, ax, xAxisType, xCats, x, title } = k;
-    return {
-      type: xAxisType,
-      name: title(x),
-      nameLocation: 'middle',
-      nameGap: 28,
-      nameTextStyle: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLabel: { color: ax.labelColor, fontSize: ax.fontSize },
-      axisLine: { lineStyle: { color: ink.strong } },
-      splitLine: { lineStyle: { color: ax.splitLineColor, type: 'dashed' } },
-      scale: true,
-      ...(xCats ? { data: xCats } : {})
-    };
-  };
-
   /** One panel: its bar series, lanes axis and canvas height.
    * @param {any} k @param {any} panel @param {any} renderItem @param {any} formatter
    * @param {any} xAxis */
   const timelinePanel = (k, panel, renderItem, formatter, xAxis) => {
-    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors, ax } = k;
+    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors } = k;
     const layout = seriesMarks(m, panel);
     const data = (/** @type {number[]} */ idx) =>
       idx.map((i) => ({ value: panel.marks[i] }));
@@ -164,6 +146,7 @@
     const gut = NS.axes.yGutter(counts
       ? panel.lanes.map((/** @type {string} */ t) => NS.withCount(t, counts)) : panel.lanes,
       look.measure);
+    const display = counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null;
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
       color: (m.color && m.color.scale && m.color.scale.color && colors) ? colors : palette,
@@ -172,20 +155,8 @@
       legend: showLegend ? { show: false, data: colorLevels } : { show: false },
       grid: { left: gut.gridLeft, right: 10, top: 20, bottom: 48 },
       xAxis,
-      yAxis: {
-        type: 'category',
-        data: panel.lanes,
-        inverse: true,
-        axisLabel: {
-          color: ax.labelColor, fontSize: ax.fontSize,
-          align: 'left', margin: gut.margin, width: gut.width,
-          overflow: 'truncate', ellipsis: '…',
-          ...(counts ? { formatter: (/** @type {any} */ v) => NS.withCount(v, counts) } : {})
-        },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: { show: false }
-      },
+      yAxis: { ...NS.axes.categoryAxis(panel.lanes, ink, { gut, display }),
+               splitLine: { show: false } },
       series
     };
     const height = Math.max(PANEL_MIN_PX,
@@ -202,7 +173,12 @@
     const k = timelineContext(m, look);
     const renderItem = timelineRenderItem(k);
     const formatter = timelineTooltip(k);
-    const xAxis = timelineXAxis(k);
+    // The time axis, shared by every panel.
+    const xAxis = {
+      ...NS.axes.valueAxis(k.ink, k.xAxisType, k.title(k.x), 28, { grid: 'dashed' }),
+      scale: true,
+      ...(k.xCats ? { data: k.xCats } : {})
+    };
     const panels = m.panels.map((/** @type {any} */ panel) =>
       timelinePanel(k, panel, renderItem, formatter, xAxis));
     return { panels };

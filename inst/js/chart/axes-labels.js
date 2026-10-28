@@ -58,12 +58,11 @@
   const orderedCategories = (columns, rows, colName) => {
     const src = rows || [];
     const meta = colMeta(columns, colName);
+    const present = new Set(src.map((r) => String(r[colName] ?? '')));
     if (meta && Array.isArray(meta.levels) && meta.levels.length) {
-      const present = new Set(src.map((r) => String(r[colName] ?? '')));
       const out = meta.levels.map(String).filter((/** @type {string} */ l) => present.has(l));
       const inOut = new Set(out);
-      for (const k of present) if (!inOut.has(k)) { inOut.add(k); out.push(k); }
-      return out;
+      return out.concat([...present].filter((k) => !inOut.has(k)));
     }
     /** @type {Record<string, string>} */
     const companions = { AVISIT: 'AVISITN' };
@@ -78,13 +77,7 @@
       }
       return Object.keys(mins).sort((a, b) => mins[a] - mins[b]);
     }
-    const seen = new Set();
-    const out = [];
-    for (const r of src) {
-      const k = String(r[colName] ?? '');
-      if (!seen.has(k)) { seen.add(k); out.push(k); }
-    }
-    return out;
+    return [...present];
   };
 
   /**
@@ -253,6 +246,37 @@
   };
 
   /**
+   * A titled axis (the title centred on its edge) with ink labels and line.
+   * `grid` ('dashed' or 'solid') adds split lines.
+   * @param {any} ink @param {string} type @param {string} name @param {number} gap
+   * @param {{ format?: any, grid?: string }} [o]
+   */
+  const valueAxis = (ink, type, name, gap, o = {}) => ({
+    type, name, nameLocation: 'middle', nameGap: gap,
+    nameTextStyle: { color: ink.muted, fontSize: ink.fontSize },
+    axisLabel: { color: ink.muted, fontSize: ink.fontSize,
+                 ...(o.format ? { formatter: o.format } : {}) },
+    axisLine: { lineStyle: { color: ink.strong } },
+    ...(o.grid ? { splitLine: { lineStyle: { color: ink.border, type: o.grid } } } : {})
+  });
+
+  /**
+   * A category axis. With `xlab` (the fitted x labels) it runs along x, else
+   * down the left: inverse, its labels cut at the gutter `gut`. `display`
+   * maps a category to its label; `ticks` keeps the left axis's ticks.
+   * @param {any[]} data @param {any} ink
+   * @param {{ xlab?: any, display?: any, gut?: any, ticks?: boolean }} o
+   */
+  const categoryAxis = (data, ink, o) => o.xlab
+    ? { type: 'category', data, axisLabel: axisLabelWithDisplay(o.xlab.axisLabel, o.display),
+        axisLine: { lineStyle: { color: ink.strong } }, axisTick: { show: false } }
+    : { type: 'category', data, inverse: true,
+        axisLabel: { color: ink.muted, fontSize: ink.fontSize, align: 'left',
+                     margin: o.gut.margin, width: o.gut.width, overflow: 'truncate',
+                     ellipsis: '…', ...(o.display ? { formatter: o.display } : {}) },
+        axisLine: { show: false }, ...(o.ticks ? {} : { axisTick: { show: false } }) };
+
+  /**
    * Category labels for an x axis: flat when they fit their slot, else
    * wrapped flat, else turned. `bottom` is the extra grid gutter they cost.
    * @param {any[]} labels @param {number} availW plot width minus the grid's margins
@@ -272,11 +296,10 @@
     // A hidden panel measures 0: assume a typical width.
     const slot = ((availW > 0 ? availW : 600) - SCROLLBAR) / n;
     const base = { color: ink.muted, fontSize: ink.fontSize, interval: 0, lineHeight: LABEL_LINE_H };
+    const fitted = (/** @type {any} */ axisLabel, /** @type {number} */ bottom) =>
+      ({ axisLabel, bottom, key: xLabelKey(axisLabel) });
 
-    if (widest + PAD <= slot) {
-      const axisLabel = { ...base, rotate: 0, __wrapAt: 0, __lines: 1 };
-      return { axisLabel, bottom: 0, key: xLabelKey(axisLabel) };
-    }
+    if (widest + PAD <= slot) return fitted({ ...base, rotate: 0, __wrapAt: 0, __lines: 1 }, 0);
 
     // Flat, unless a word had to break or it takes more than three lines.
     const flatW = Math.max(10, slot - PAD);
@@ -287,7 +310,7 @@
         ...base, rotate: 0, __wrapAt: Math.round(flatW), __lines: flatLines,
         formatter: (/** @type {string} */ v) => wrapLabel(m, v, flatW).lines.join('\n')
       };
-      return { axisLabel, bottom: (flatLines - 1) * LABEL_LINE_H, key: xLabelKey(axisLabel) };
+      return fitted(axisLabel, (flatLines - 1) * LABEL_LINE_H);
     }
 
     // Turned: past two lines the rest joins the last one.
@@ -306,7 +329,7 @@
       ...base, rotate: 90, interval, __wrapAt: TURN_CAP, __lines: turnLines,
       formatter: (/** @type {string} */ v) => turnedLines(v).join('\n')
     };
-    return { axisLabel, bottom: len, key: xLabelKey(axisLabel) };
+    return fitted(axisLabel, len);
   };
 
   // Past this height per label ECharts drops labels silently.
@@ -387,24 +410,17 @@
     };
     /** @param {number} at @param {number} st */
     const onLine = (at, st) => vals.some((v) => Math.abs(v - at) < st * 1e-6);
-    if (valAxis.max == null) {
-      valAxis.max = (/** @type {any} */ e) => {
-        const st = step(e);
-        if (!st) return undefined;
-        const at = Math.ceil(ext(e).hi / st) * st;
-        return onLine(at, st) ? at + st : at;
-      };
-    }
-    if (valAxis.min == null) {
-      valAxis.min = (/** @type {any} */ e) => {
-        const st = step(e);
-        if (!st) return undefined;
-        const at = Math.floor(ext(e).lo / st) * st;
-        // A line at 0 on a bar axis is the baseline itself.
-        if (zero && at === 0) return undefined;
-        return onLine(at, st) ? at - st : at;
-      };
-    }
+    /** The axis edge on `dir` (1 top, -1 bottom): a rounded step past the lines and data. */
+    const edge = (/** @type {number} */ dir) => (/** @type {any} */ e) => {
+      const st = step(e);
+      if (!st) return undefined;
+      const at = dir > 0 ? Math.ceil(ext(e).hi / st) * st : Math.floor(ext(e).lo / st) * st;
+      // A line at 0 on a bar axis is the baseline itself.
+      if (dir < 0 && zero && at === 0) return undefined;
+      return onLine(at, st) ? at + dir * st : at;
+    };
+    if (valAxis.max == null) valAxis.max = edge(1);
+    if (valAxis.min == null) valAxis.min = edge(-1);
   };
 
   const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
@@ -489,7 +505,7 @@
 
   Object.assign(NS.axes, {
     colMeta, axisTitle, axisTypeFor, orderedCategories, orderLevels, yGutter,
-    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay,
+    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay, valueAxis, categoryAxis,
     xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
     LABEL_LINE_H
   });
