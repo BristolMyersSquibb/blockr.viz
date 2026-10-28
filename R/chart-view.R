@@ -170,12 +170,15 @@ chart_exhibit <- function(kit, src, view) {
     )
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
+    # The footer's {dataset} and {filters} are the input's: the numbers the
+    # chart shows carry neither.
+    input <- tryCatch(kit$data(), error = function(e) NULL)
     new_viz_exhibit(
       data, picture = chart_picture(kit$capture()),
       title = text(ti$title), subtitle = text(ti$subtitle),
       caption = text(ti$caption), kind = "chart",
-      meta = list(dataset = tryCatch(dl_dataset(kit$data()),
-                                     error = function(e) NULL))
+      meta = list(dataset = if (is.data.frame(input)) dl_dataset(input),
+                  source = input)
     )
   }
 }
