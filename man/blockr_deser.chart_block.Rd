@@ -2,7 +2,7 @@
 % Please edit documentation in R/legacy-deser.R
 \name{blockr_deser.chart_block}
 \alias{blockr_deser.chart_block}
-\title{Legacy deserialization for the chart block}
+\title{Restore a saved chart block}
 \usage{
 \method{blockr_deser}{chart_block}(x, data, ...)
 }
@@ -10,11 +10,8 @@
 \item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}
 }
 \description{
-Restores boards saved with blockr.viz < 0.3.0, whose chart state carries
-the old argument names (\code{chart_type}, \code{group}/\code{value}, \code{bar_mode},
-\code{tt_fields}, \code{lo}/\code{hi}, the \verb{filter_*} fields, ...). The payload is
-translated by \code{chart_legacy_args()} (R/chart-args.R), the same table the
-constructor uses for old names in code, so a saved chart opens with the
-same picture. Current payloads pass straight through.
+Boards saved with any earlier blockr.viz restore through the legacy tables
+(R/legacy.R): old names and values are translated, bad values are healed
+with one warning.
 }
 \keyword{internal}

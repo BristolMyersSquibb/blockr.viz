@@ -4,9 +4,9 @@
 \alias{chart-prepare-apply}
 \title{Running the chart block's prepare script}
 \description{
-Three small things sit between the parse layer (R/prepare-parse.R,
-R/prepare-expr.R) and the block: run the compiled script on the frame the
-chart draws, splice it into the block's expression behind the click filter,
-and describe its controls to the browser.
+Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the block:
+run the compiled script on the frame the chart draws, splice it into the
+block's expression behind the click filter, and describe its controls to
+the browser.
 }
 \keyword{internal}

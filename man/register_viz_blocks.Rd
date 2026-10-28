@@ -7,7 +7,7 @@
 register_viz_blocks()
 }
 \value{
-Invisibly, the result of \code{\link[blockr.core:register_block]{blockr.core::register_blocks()}}.
+Invisibly, the result of \code{\link[blockr.core:register_blocks]{blockr.core::register_blocks()}}.
 }
 \description{
 Registers the blockr.viz render and shaper blocks with blockr so they

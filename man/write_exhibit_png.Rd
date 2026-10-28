@@ -51,13 +51,12 @@ ggplot.}
 \description{
 The exhibit as one image: what \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} places on a slide,
 without the slide. A summarize table is painted from its cell model and is
-as tall as the table is long (a file has no fixed box, so nothing is
-paged); a ggplot is drawn at the size the plot asks for.
+as tall as the table is long (nothing is paged); a ggplot is drawn at the
+size the plot asks for.
 }
 \details{
-It is a re-render, not a screenshot. The summarize table's marks are drawn
-from the same cell model the browser gets, so the file is sharper than a
-capture, and not pixel-identical to one.
+The image is a re-render from the same cell model the browser gets, so it is
+sharper than a screenshot and not pixel-identical to one.
 }
 \seealso{
 \code{\link[=static_summarize_table]{static_summarize_table()}}, \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}
