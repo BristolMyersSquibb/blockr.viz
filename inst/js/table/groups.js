@@ -82,7 +82,6 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      this.capture = scope.debounce(() => this.sendPicture(), 50);
       T.tooltip.wire(frame.box, scope, () => this.model);
       // One capture listener on the document sees every scroller's scroll:
       // the dock moves a card between containers after it is drawn.
@@ -93,6 +92,8 @@
       }
       /** What the last picture was of. */
       this.pictured = '';
+      /** The picture of `pictured` on its way to R. @type {Promise<unknown> | null} */
+      this.sending = null;
     }
 
     labelsOn() {
@@ -137,7 +138,7 @@
       if (this.still) return { search: false, download: false };
       return { search: has && this.grouped() && cfg.search !== false,
                download: has && cfg.download !== false, downloads: d.downloads,
-               onOpen: () => this.capture() };
+               onOpen: () => this.sendPicture() };
     }
 
     /**
@@ -187,18 +188,23 @@
       return { structured: false, finished: false, numbers: true };
     }
 
-    /** Send R the picture of the table as drawn, once per payload. */
+    /**
+     * Send R the picture of the table as drawn, once per payload.
+     * @returns {Promise<unknown> | null} The sending, which a click on a
+     *   download format waits for; null without a table.
+     */
     sendPicture() {
       const p = /** @type {VizPayload | null} */ (this.payload);
-      if (!p || !this.model) return;
+      if (!p || !this.model) return null;
       const key = p.state_rev + ':' + p.data_rev;
-      if (key === this.pictured) return;
+      if (key === this.pictured) return this.sending;
       this.pictured = key;
       const width = Math.round(this.frame.el.getBoundingClientRect().width) || 900;
-      picture(Object.assign({}, p, { data: this.model }), width).then(
+      this.sending = picture(Object.assign({}, p, { data: this.model }), width).then(
         (pic) => V.util.send(this.frame.id, 'capture', pic),
         // Without a picture R paints the table itself.
         () => { this.pictured = ''; });
+      return this.sending;
     }
   }
 

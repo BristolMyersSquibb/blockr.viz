@@ -104,7 +104,7 @@ interface VizFrame {
   openGear(): void;
   mountGear(o: { block: string; typeKey: string; title: string; host: VizGearHost }): VizGear;
   titles(t: VizTitles | Record<string, VizTitleBand | string | null> | null | undefined): void;
-  downloads(list: VizDownload[] | null | undefined, onOpen?: () => void): void;
+  downloads(list: VizDownload[] | null | undefined, onOpen?: () => unknown): void;
   empty(e: VizEmpty | null | undefined): boolean;
   count(text: string): void;
   status(text: string | null, onClear?: (() => void) | null): void;
@@ -203,7 +203,7 @@ interface VizNamespace {
   binding(name: string, view: string, View: VizViewClass,
           opts?: { grace?: number; busy?: string }): boolean;
   downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
-            scope: VizScope, opts?: { onOpen?: () => void }): void;
+            scope: VizScope, opts?: { onOpen?: () => unknown }): void;
   capture(opts: { width: number; height: number;
                   draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
                   timeout?: number }): Promise<VizPicture>;

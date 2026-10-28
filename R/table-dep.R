@@ -11,7 +11,8 @@ table_view_dep <- memoise0(function() {
       name = "blockr-viz-table",
       version = js_version(script),
       src = system.file(package = "blockr.viz"),
-      script = file.path("js", script),
+      # SnapDOM takes the groups table's picture (table/groups.js picture()).
+      script = c("js/vendor/snapdom.js", file.path("js", script)),
       stylesheet = file.path("css", css)
     )
   )

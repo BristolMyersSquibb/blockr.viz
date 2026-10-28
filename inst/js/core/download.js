@@ -6,6 +6,11 @@
  * The markup is blockr.ui's own (action_menu(), menu_item()), so its page
  * listeners open and close the menu. The links are Shiny download links,
  * bound here so their href arrives, and unbound when the view goes.
+ *
+ * Reaching for the control runs the view's `onOpen`, which sends R the
+ * picture the downloads write. A click on a format while that picture is
+ * still on its way is held until it has gone out, so the first click
+ * writes the picture rather than failing for want of it.
  */
 (function () {
   'use strict';
@@ -41,6 +46,10 @@
   /** @type {WeakMap<HTMLElement, { key: string, offs: (() => void)[] }>} */
   const drawn = new WeakMap();
 
+  // After the picture is sent, Shiny posts the input on its next turn; the
+  // download request must come after it.
+  const SEND_MS = 30;
+
   /** @param {HTMLElement} host */
   const clear = (host) => {
     const shiny = root.Shiny;
@@ -53,9 +62,10 @@
    * @param {HTMLElement} host
    * @param {VizDownload[] | null | undefined} list
    * @param {VizScope} scope The view's scope; the control goes with it.
-   * @param {{ onOpen?: () => void }} [opts] `onOpen` runs when the reader
-   *   reaches for the control (opens the menu, or points at the one tool),
-   *   which is when a chart takes its picture.
+   * @param {{ onOpen?: () => unknown }} [opts] `onOpen` runs when the
+   *   reader reaches for the control (opens the menu, or points at the one
+   *   tool), which is when a view takes its picture. A promise it returns
+   *   holds a click on a format until it settles.
    */
   function downloads(host, list, scope, opts = {}) {
     const items = Array.isArray(list) ? list : [];
@@ -78,8 +88,37 @@
       first.querySelector('.blockr-action-menu__trigger') || first);
     const onOpen = opts.onOpen;
     if (onOpen) {
-      for (const type of ['click', 'pointerenter', 'focus']) {
-        offs.push(scope.on(reach, type, () => onOpen()));
+      /** The picture on its way, or null. @type {Promise<unknown> | null} */
+      let sending = null;
+      const open = () => {
+        const p = onOpen();
+        if (!p || typeof (/** @type {any} */ (p)).then !== 'function') return;
+        const mine = sending = Promise.resolve(p).catch(() => {})
+          .then(() => new Promise((r) => scope.timeout(() => r(null), SEND_MS)))
+          .then(() => { if (sending === mine) sending = null; });
+      };
+      // blockr.ui's menu takes the trigger's click for itself, so the
+      // pointer's way there (and the keyboard's focus) is what runs onOpen.
+      for (const type of ['pointerenter', 'pointerdown', 'focus']) {
+        offs.push(scope.on(reach, type, open));
+      }
+      // A click held for the picture comes back with `through` set. On the
+      // links themselves: an open menu sits outside the host.
+      let through = false;
+      /** @param {Event} e */
+      const hold = (e) => {
+        if (through) { through = false; return; }
+        if (!sending) return;
+        const link = /** @type {HTMLElement} */ (e.currentTarget);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        sending.then(() => {
+          through = true;
+          link.click();
+        });
+      };
+      for (const link of host.querySelectorAll('a.shiny-download-link')) {
+        offs.push(scope.on(link, 'click', hold));
       }
     }
     const shiny = root.Shiny;
