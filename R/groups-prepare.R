@@ -160,6 +160,8 @@ groups_prepare_summaries <- function(data, by, summaries,
     layout = if (!length(fi$cols)) "simple" else "facet",
     bar_max = 0, bar_min = 0,
     group_label = groups_group_label(data, g$group, g$parent),
+    # The row column alone, as a compact matrix's stub header names it.
+    row_label = if (!isTRUE(g$all)) groups_col_name(data, g$group),
     series = series_lv, palette = pal, group = g$group, parent = g$parent,
     color = lead_group$column, color_groups = cg,
     folded = asm$folded, fold_max = asm$fold_max,

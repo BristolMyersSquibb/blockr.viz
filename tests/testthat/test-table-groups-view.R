@@ -140,7 +140,7 @@ tg_expect_axis <- function(want, col, label) {
   expect_identical(!is.null(col$mark$valueWidth), want$has_val, label = paste(label, "slot"))
 }
 
-tg_expect_head <- function(v, want, label) {
+tg_expect_head <- function(v, want, label, compact = FALSE) {
   recorded <- tg_head(want$head)
   expect_length(v$head, length(recorded))
   for (r in seq_along(recorded)) {
@@ -149,8 +149,16 @@ tg_expect_head <- function(v, want, label) {
       w <- recorded[[r]][[k]]
       h <- v$head[[r]][[k]]
       lab <- paste(label, "head", r, k)
-      expect_identical(h$text, w$text %||% "", label = lab)
-      expect_identical(h$sub, w$sub, label = paste(lab, "sub"))
+      if (compact && isTRUE(w$stub)) {
+        # A compact matrix's stub names the row column alone (its label, or
+        # its name without one); the recording joined both `by` names.
+        inner <- utils::tail(strsplit(w$text, " / ", fixed = TRUE)[[1L]], 1L)
+        expect_identical(h$text, inner, label = lab)
+        expect_null(h$sub, label = paste(lab, "sub"))
+      } else {
+        expect_identical(h$text, w$text %||% "", label = lab)
+        expect_identical(h$sub, w$sub, label = paste(lab, "sub"))
+      }
       expect_null(h$axis)
       expect_identical(h$span, w$span, label = paste(lab, "span"))
       expect_identical(h$rows, w$rows, label = paste(lab, "rows"))
@@ -205,14 +213,15 @@ tg_expect_rows <- function(v, w, label) {
   }
 }
 
-tg_check <- function(v, want, label, pick = isTRUE(want$pick)) {
+tg_check <- function(v, want, label, pick = isTRUE(want$pick),
+                     compact = FALSE) {
   tg_expect_rows(v, want, label)
   expect_length(v$cols, length(want$cols) + 1L)
   for (j in seq_along(want$cols)) {
     tg_expect_col(v$cols[[j + 1L]], want$cols[[j]], want$n, pick,
                   paste(label, j))
   }
-  tg_expect_head(v, want, label)
+  tg_expect_head(v, want, label, compact)
 }
 
 test_that("table_groups_to_model() draws what the reference sent", {
@@ -226,7 +235,7 @@ test_that("table_groups_to_model() draws what the reference sent", {
     v <- tm_json(table_groups_to_model(
       m, axis = isTRUE(cs$state$column_axis %||% TRUE)
     ))
-    tg_check(v, want, nm)
+    tg_check(v, want, nm, compact = identical(cs$state$look, "compact"))
     seen <- c(seen, nm)
   }
   expect_gte(length(seen), 20L)
