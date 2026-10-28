@@ -1,5 +1,4 @@
-# The hard floor in points: no exhibit font goes below it, whatever a board
-# asks for.
+# The hard floor in points: no exhibit font goes below it.
 MIN_FONT_FLOOR <- 5
 
 #' The smallest font size any exhibit goes down to
@@ -11,22 +10,15 @@ MIN_FONT_FLOOR <- 5
 exhibit_font_floor <- function() MIN_FONT_FLOOR
 
 # The smallest type an exported table shrinks to before the pptx paginator
-# splits it. One number governs both axes. First hit wins:
-#
-#   1. what the caller passed
-#   2. the board option, when a board is running and carries one
-#   3. `getOption("blockr.viz.ft_min_font_size")`
-#   4. 11pt
-#
-# The board option is read here so every route (decks, block downloads) reads
-# the same value. A script outside Shiny finds no session and falls through.
+# splits it, on both axes. First hit wins: the caller's value, the board
+# option (when a board is running and carries one),
+# `getOption("blockr.viz.ft_min_font_size")`, then 11pt.
 #' The smallest font size an exhibit may use
 #'
 #' For exporters in other blockr packages; not part of the user API.
 #' @keywords internal
 #' @export
 exhibit_min_font_size <- function(x = NULL) {
-
   for (v in list(x, board_min_font_size(),
                  getOption("blockr.viz.ft_min_font_size"))) {
     n <- suppressWarnings(as.numeric(v))
@@ -35,12 +27,11 @@ exhibit_min_font_size <- function(x = NULL) {
       return(max(MIN_FONT_FLOOR, floor(n)))
     }
   }
-
   11
 }
 
 # The board's value, or NULL when there is none: no session, no board
-# options, or a board without this one. Never an error.
+# options, or a board without this one.
 board_min_font_size <- function() {
   tryCatch(
     blockr.core::get_board_option_or_null(
@@ -57,13 +48,9 @@ board_min_font_size <- function() {
 #'
 #' The paginator shrinks a table to this size on both axes before it carries
 #' rows onto another slide or deals columns over several. Set it to the base
-#' size (13pt) to forbid shrinking, or down to 8pt for a deck that must not
-#' split its tables. When even the smallest allowed size does not fit, the
-#' table is split and the download says so.
-#'
-#' One value serves every route out of the app: the deck built by
-#' blockr.outline's slide builder and the PowerPoint download on a table,
-#' summarize table or chart block.
+#' size (13pt) to forbid shrinking. When even the smallest allowed size does
+#' not fit, the table is split and the download says so. One value serves the
+#' decks built by blockr.outline and the PowerPoint download of every block.
 #'
 #' @param value Default floor in points.
 #' @param category Settings sidebar category.
@@ -76,56 +63,28 @@ board_min_font_size <- function() {
 #' @export
 new_exhibit_font_option <- function(value = 11, category = "Table options",
                                     ...) {
-  blockr.core::new_board_option(
-    id = "exhibit_min_font_size",
-    default = value,
-    ui = function(id) {
-      shiny::tagList(
-        shiny::selectInput(
-          shiny::NS(id, "exhibit_min_font_size"),
-          "Smallest table font",
-          choices = c(
-            "13 pt (never shrink)" = "13",
-            "12 pt" = "12",
-            "11 pt" = "11",
-            "10 pt" = "10",
-            "9 pt" = "9",
-            "8 pt" = "8",
-            "7 pt" = "7",
-            # The last step the ladder takes.
-            "6 pt" = "6"
-          ),
-          selected = as.character(value)
-        ),
-        shiny::helpText(
-          paste(
-            "Exported tables shrink to this size to stay on one slide.",
-            "Only what still does not fit is split."
-          )
-        )
+  new_input_option(
+    "exhibit_min_font_size", value,
+    input = function(inputId) {
+      shiny::selectInput(
+        inputId, "Smallest table font",
+        choices = c("13 pt (never shrink)" = "13", "12 pt" = "12",
+                    "11 pt" = "11", "10 pt" = "10", "9 pt" = "9",
+                    "8 pt" = "8", "7 pt" = "7", "6 pt" = "6"),
+        selected = as.character(value)
       )
     },
-    server = function(..., session) {
-      shiny::observeEvent(
-        blockr.core::get_board_option_or_null("exhibit_min_font_size", session),
-        {
-          val <- blockr.core::get_board_option_value(
-            "exhibit_min_font_size", session
-          )
-          shiny::updateSelectInput(
-            session, "exhibit_min_font_size", selected = as.character(val)
-          )
-        }
-      )
+    update = function(session, id, val) {
+      shiny::updateSelectInput(session, id, selected = as.character(val))
     },
-    category = category,
-    ...
+    help = paste("Exported tables shrink to this size to stay on one slide.",
+                 "Only what still does not fit is split."),
+    category = category, ...
   )
 }
 
-# A board with a table on it gets the setting without the app naming it.
-# Duplicates across blocks are dropped by `combine_board_options()`. The chart
-# block does not contribute it: a picture is one slide.
+# A board with a table on it gets the setting. Duplicates across blocks are
+# dropped by `combine_board_options()`. The chart block does not contribute it.
 
 #' @exportS3Method blockr.core::board_options
 board_options.table_block <- function(x, ...) {
@@ -144,9 +103,9 @@ board_options.summarize_table_block <- function(x, ...) {
 # --- what a split table reports ----------------------------------------------
 
 # A table that could not be kept on one slide, signalled as a classed message
-# (`blockr_exhibit_split`) so a download handler can catch it and turn it into
-# a notification. `fit_size` is the size at which it would have been one
-# slide, or NULL when no legible size does.
+# (`blockr_exhibit_split`) that a download handler can turn into a
+# notification. `fit_size` is the size at which it would fit one slide, or NULL
+# when no legible size does.
 #' Tell the reader that an exhibit was split
 #'
 #' For exporters in other blockr packages; not part of the user API.
@@ -154,13 +113,9 @@ board_options.summarize_table_block <- function(x, ...) {
 #' @export
 exhibit_split_note <- function(what, pages = 1L, sets = 1L, size = NULL,
                                floor = NULL, fit_size = NULL) {
+  if (pages <= 1L && sets <= 1L) return(invisible(NULL))
 
-  if (pages <= 1L && sets <= 1L) {
-    return(invisible(NULL))
-  }
-
-  # An untitled exhibit is reported as "A table"; the condition's `what` is
-  # NULL then.
+  # An untitled exhibit is reported as "A table" and `what` is NULL.
   named <- is.character(what) && length(what) == 1L && nzchar(what)
   what <- if (named) what
   subject <- if (named) paste0("'", what, "'") else "A table"
@@ -188,16 +143,9 @@ exhibit_split_note <- function(what, pages = 1L, sets = 1L, size = NULL,
   message(
     structure(
       class = c("blockr_exhibit_split", "message", "condition"),
-      list(
-        message = paste0(txt, "\n"),
-        call = NULL,
-        what = what,
-        pages = pages,
-        sets = sets,
-        size = size,
-        floor = floor,
-        fit_size = fit_size
-      )
+      list(message = paste0(txt, "\n"), call = NULL, what = what,
+           pages = pages, sets = sets, size = size, floor = floor,
+           fit_size = fit_size)
     )
   )
 }

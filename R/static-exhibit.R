@@ -2,14 +2,10 @@
 #'
 #' The print routine a rendered report or deck applies to a block's result.
 #' Objects that already print as themselves (a flextable, a gt table, a
-#' ggplot, an htmlwidget, ready-made HTML) come back untouched; a data frame
+#' ggplot, an htmlwidget, ready-made HTML) come back untouched. A data frame
 #' or any object with an [as_annotated_df()] method (a composer table, a
 #' gtsummary table, ...) is rendered through [static_table()]. Anything else
-#' comes back untouched too.
-#'
-#' The table structure lives in the annotated data frame, so a function block
-#' that emits a composer table prints in a report as it would with a table
-#' block in front of it.
+#' comes back untouched.
 #'
 #' Data frames above `getOption("blockr.viz.static_exhibit_max_rows")` (2000)
 #' rows fall back to the bare print.
@@ -29,8 +25,7 @@
 #' @seealso [static_table()], [as_annotated_df()]
 #' @export
 static_exhibit <- function(x, ...) {
-  # Objects with a print / knit_print method of their own are already the
-  # exhibit.
+  # Objects with a print / knit_print method of their own are the exhibit.
   passthrough <- c(
     "flextable", "ft_group",
     "gt_tbl", "gt_group",
@@ -39,11 +34,7 @@ static_exhibit <- function(x, ...) {
     "shiny.tag", "shiny.tag.list", "html"
   )
 
-  if (inherits(x, passthrough)) {
-    return(x)
-  }
-
-  if (!can_coerce_annotated_df(x)) {
+  if (inherits(x, passthrough) || !can_coerce_annotated_df(x)) {
     return(x)
   }
 
@@ -61,25 +52,18 @@ static_exhibit <- function(x, ...) {
     }
   }
 
-  # static_table() needs flextable; without it the bare print is returned.
+  # Without flextable, or when a method refuses the value, the bare print.
   if (!requireNamespace("flextable", quietly = TRUE)) {
     return(x)
   }
-
-  # A method that refuses this value falls back to the bare print.
   out <- tryCatch(static_table(x, ...), error = function(e) NULL)
-
   if (is.null(out)) x else out
 }
 
 # TRUE when the exhibit is printed into an HTML document. knitr is a Suggests,
 # so a missing knitr means "not HTML".
 exhibit_html_output <- function() {
-
-  if (!requireNamespace("knitr", quietly = TRUE)) {
-    return(FALSE)
-  }
-
+  if (!requireNamespace("knitr", quietly = TRUE)) return(FALSE)
   isTRUE(tryCatch(knitr::is_html_output(), error = function(e) FALSE))
 }
 
@@ -87,25 +71,22 @@ exhibit_html_output <- function() {
 #'
 #' The HTML counterpart of [static_table()]: the same annotated data frame,
 #' rendered as the HTML display table the app draws, with its styles and its
-#' collapse / search script inlined. Nothing in the output talks to Shiny, so
-#' it can be written to a standalone HTML file.
+#' collapse script inlined. Nothing in the output talks to Shiny.
 #'
 #' Called by [static_exhibit()] when the render target is HTML. It is a
-#' generic: an exhibit that carries its own renderer (the summarize table's
-#' glyph model) answers for itself, and everything else falls to the default,
-#' an annotated data frame drawn as the display table.
+#' generic: an exhibit that carries its own renderer (the summarize table)
+#' answers for itself, and everything else is drawn as the display table.
 #'
 #' @param x A data frame or [as_annotated_df()]-coercible table object.
 #' @param title,subtitle,caption Table title / subtitle / footnote. `NULL`
 #'   (default) takes them from the annotated data frame's display attributes,
-#'   `""` switches them off: the same title-tier convention as
-#'   [static_table()]. The default HTML table renderer currently ignores
-#'   `subtitle`.
+#'   `""` switches them off, as in [static_table()]. The default renderer
+#'   ignores `subtitle`.
 #' @param max_height CSS max-height of the scroll container, or `NULL`
-#'   (default) for none. A report exhibit is printed rather than scrolled.
+#'   (default) for none.
 #' @param default_expanded Logical, or `NULL` (default) to decide from the
-#'   table's height: a table that fits opens expanded, one that does not opens
-#'   at its section rows. The threshold is
+#'   table's height: a table that fits opens expanded, a taller one opens at
+#'   its section rows. The threshold is
 #'   `getOption("blockr.viz.html_exhibit_expanded_max_rows")` (24).
 #' @param ... Passed to the underlying renderer.
 #'
@@ -123,7 +104,6 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
                                  caption = NULL,
                                  max_height = NULL, default_expanded = NULL,
                                  ...) {
-
   # Same entry as static_table(): coerce, then spread to the wide grid.
   data <- fmt_to_wide(as_annotated_df(x))
 
@@ -146,31 +126,18 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
   )
 }
 
-# Should a printed table open expanded? Decided from height: a table of at
-# most `blockr.viz.html_exhibit_expanded_max_rows` rows stays expanded,
-# since collapsing a short table hides its numbers. A taller one opens at its
+# Should a printed table open expanded? A table of at most
+# `blockr.viz.html_exhibit_expanded_max_rows` rows stays expanded, since
+# collapsing a short table hides its numbers. A taller one opens at its
 # section rows if it has something to collapse.
 html_exhibit_expanded <- function(data) {
-
   view <- tryCatch(annotated_structure_view(data), error = function(e) NULL)
-
-  if (is.null(view)) {
-    return(TRUE)
-  }
-
   max_rows <- getOption("blockr.viz.html_exhibit_expanded_max_rows", 24L)
 
-  if (!is.numeric(max_rows) || !length(max_rows)) {
+  if (is.null(view) || !is.numeric(max_rows) || !length(max_rows) ||
+        nrow(view$data) <= max_rows[[1L]]) {
     return(TRUE)
   }
-
-  if (nrow(view$data) <= max_rows[[1L]]) {
-    return(TRUE)
-  }
-
-  # A flat table stays expanded whatever its height. Collapsible structures
-  # are section headers (section_cols) and rows that parent deeper rows
-  # through `.indent`.
   !html_table_collapsible(view$data, view$section_cols)
 }
 
@@ -178,14 +145,8 @@ html_exhibit_expanded <- function(data) {
 # build_html_tbody(): a non-empty section axis, or a row immediately followed
 # by a more deeply indented one.
 html_table_collapsible <- function(data, section_cols = character()) {
-
-  if (length(section_cols)) {
-    return(TRUE)
-  }
-
-  if (!".indent" %in% names(data) || nrow(data) < 2L) {
-    return(FALSE)
-  }
+  if (length(section_cols)) return(TRUE)
+  if (!".indent" %in% names(data) || nrow(data) < 2L) return(FALSE)
 
   ind <- suppressWarnings(as.integer(data[[".indent"]]))
   ind[is.na(ind) | ind < 0L] <- 0L

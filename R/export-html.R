@@ -1,15 +1,14 @@
 #' Write an Exhibit to a Self-Contained HTML File
 #'
 #' The HTML sibling of [write_annotated_xlsx()] and [write_exhibit_pptx()]. The
-#' table is drawn by [html_exhibit()] (the markup, CSS and collapse script the
-#' app shows) inside a minimal document shell that carries the title, subtitle
-#' and caption.
+#' table is drawn by [html_exhibit()] inside a minimal document shell that
+#' carries the title, subtitle and caption.
 #'
-#' The file is self-contained: no Shiny, no CDN, no sidecar `lib/` folder.
-#' The display table inlines its own `<style>` and `<script>`. A renderer that
-#' carries dependencies, such as the summarize table's script bundle, has them
-#' read off disk and written into the document. Section collapse and column
-#' sorting work in the saved file, offline.
+#' The file is self-contained: no Shiny, no CDN, no sidecar folder. The
+#' display table inlines its own `<style>` and `<script>`, and the
+#' dependencies of a renderer such as the summarize table are read off disk
+#' and written into the document. Section collapse and column sorting work in
+#' the saved file, offline.
 #'
 #' @param x A data frame, an [as_annotated_df()]-coercible table object, or an
 #'   exhibit that renders itself, such as a `summarize_exhibit` from
@@ -18,12 +17,10 @@
 #' @param title,subtitle Document heading and its muted second line. `NULL` or
 #'   `""` omits each.
 #' @param caption Trailing footnote, rendered under the table.
-#' @param default_expanded Logical. `TRUE` (default) opens every section, since
-#'   the page scrolls and has no height to budget. `FALSE` opens it at its
-#'   section rows.
+#' @param default_expanded Logical. `TRUE` (default) opens every section.
+#'   `FALSE` opens the table at its section rows.
 #' @param collapsible,sortable Logical. Whether the saved page keeps the
 #'   collapse chevrons and the click-to-sort headers (both `TRUE` by default).
-#'   The table block passes its own display toggles through here.
 #' @param ... Passed to [html_exhibit()].
 #'
 #' @return `file`, invisibly.
@@ -41,23 +38,12 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
                                caption = NULL, default_expanded = TRUE,
                                collapsible = TRUE, sortable = TRUE, ...) {
   # The exhibit's own title slot stays empty: the document heading says it.
-  # default_expanded is passed so html_exhibit()'s slide height rule does not
-  # apply to a file that scrolls.
   exhibit <- html_exhibit(
-    x,
-    title = "",
-    subtitle = "",
-    caption = caption,
-    default_expanded = default_expanded,
-    collapsible = collapsible,
-    sortable = sortable,
-    ...
+    x, title = "", subtitle = "", caption = caption,
+    default_expanded = default_expanded, collapsible = collapsible,
+    sortable = sortable, ...
   )
-
   rendered <- htmltools::renderTags(exhibit)
-
-  # Dependencies are written into the file; one that cannot be inlined is an
-  # error (see exhibit_inline_deps()).
   head_extra <- exhibit_inline_deps(rendered$dependencies)
 
   txt <- function(x) {
@@ -99,10 +85,8 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
   invisible(file)
 }
 
-# Charts downloaded as HTML are already a picture of the fully titled chart,
-# so a visible heading above it would print the title twice. The document
-# shell still owns <head><title>. Table-like exhibits keep their heading.
-#' @noRd
+# A chart is already a picture of the fully titled chart, so a visible heading
+# above it would print the title twice. Table-like exhibits keep their heading.
 exhibit_doc_text <- function(x, text) {
   if (inherits(x, "chart_capture") || (inherits(x, "gg") && gg_has_title_band(x))) {
     return(NULL)
@@ -110,12 +94,9 @@ exhibit_doc_text <- function(x, text) {
   text
 }
 
-#' @noRd
 gg_has_title_band <- function(x) {
   labels <- tryCatch(x$labels, error = function(e) NULL)
-  if (!is.list(labels)) {
-    return(FALSE)
-  }
+  if (!is.list(labels)) return(FALSE)
 
   any(vapply(
     labels[c("title", "subtitle", "caption")],
@@ -124,9 +105,8 @@ gg_has_title_band <- function(x) {
   ))
 }
 
-# The document shell's own CSS: the page around the table. The face and greys
-# match the deck theme (inst/revealjs/blockr.scss in blockr.outline). Tabular
-# figures keep columns of counts aligned.
+# The document shell's own CSS: the page around the table. Tabular figures
+# keep columns of counts aligned.
 exhibit_doc_css <- function() {
   paste(
     ":root {",
@@ -172,15 +152,10 @@ exhibit_doc_css <- function() {
 
 # HTML dependencies written into the document as `<style>` / `<script>`
 # blocks, in dependency order. A dependency with no readable local file (a CDN
-# href, a moved package) is an error, since the file would not be
-# self-contained.
-#' @noRd
+# href) is an error, since the file would not be self-contained.
 exhibit_inline_deps <- function(deps) {
-
   out <- character()
-
   for (dep in deps) {
-
     dir <- dep$src$file
 
     if (is.null(dir) || !nzchar(dir) || !dir.exists(dir)) {
@@ -207,7 +182,6 @@ exhibit_inline_deps <- function(deps) {
       out <- c(out, read_one(f, "script"))
     }
   }
-
   out
 }
 

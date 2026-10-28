@@ -1,10 +1,10 @@
-# The exhibit: everything a block's downloads write, in one object.
-# Exporters (R/export-registry.R) read it through the accessors below only,
-# so an exporter can live in another package.
+# The exhibit: everything a block's downloads write, in one object. Exporters
+# (R/export-registry.R) read it through the accessors below only, so an
+# exporter can live in another package.
 
 #' A block's exhibit
 #'
-#' What a block's downloads write: its rows, and when the browser drew the
+#' What a block's downloads write: its rows and, when the browser drew the
 #' block, the picture.
 #'
 #' @param data An annotated data frame ([as_annotated_df()]): the rows as the
@@ -18,8 +18,8 @@
 #' @param kind `"table"` or `"chart"`.
 #' @param meta A named list: `dataset` (the first part of the file name),
 #'   `digits` (the number format the screen rounds to), `collapsible` and
-#'   `sortable` (for the web page), `source` (the frame the download
-#'   footer's provenance is read from, when `data` was built for the export).
+#'   `sortable` (for the web page), `source` (the frame the download footer's
+#'   provenance is read from, when `data` was built for the export).
 #' @return A `viz_exhibit`.
 #' @seealso [register_viz_exporter()]
 #' @export
@@ -66,37 +66,27 @@ exhibit_data <- function(x, display = FALSE) {
 
 #' @rdname exhibit-accessors
 #' @export
-exhibit_picture <- function(x) {
-  stopifnot(inherits(x, "viz_exhibit"))
-  x$picture
-}
+exhibit_picture <- function(x) exhibit_field(x, "picture")
 
 #' @rdname exhibit-accessors
 #' @export
-exhibit_render <- function(x) {
-  stopifnot(inherits(x, "viz_exhibit"))
-  x$render
-}
+exhibit_render <- function(x) exhibit_field(x, "render")
 
 #' @rdname exhibit-accessors
 #' @export
-exhibit_titles <- function(x) {
-  stopifnot(inherits(x, "viz_exhibit"))
-  x$titles
-}
+exhibit_titles <- function(x) exhibit_field(x, "titles")
 
 #' @rdname exhibit-accessors
 #' @export
-exhibit_kind <- function(x) {
-  stopifnot(inherits(x, "viz_exhibit"))
-  x$kind
-}
+exhibit_kind <- function(x) exhibit_field(x, "kind")
 
 #' @rdname exhibit-accessors
 #' @export
-exhibit_meta <- function(x) {
+exhibit_meta <- function(x) exhibit_field(x, "meta")
+
+exhibit_field <- function(x, name) {
   stopifnot(inherits(x, "viz_exhibit"))
-  x$meta
+  x[[name]]
 }
 
 # The exhibit with the board's download footer (R/download-footer.R) as the

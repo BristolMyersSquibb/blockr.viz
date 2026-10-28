@@ -1,8 +1,6 @@
-# The download formats, registered by whoever can write them.
-#
-# A block's download menu lists every registered format that can write the
-# block's exhibit and whose packages are installed. Other packages register
-# their own formats in .onLoad.
+# The download formats, registered by whoever can write them. A block's
+# download menu lists every registered format that can write the block's
+# exhibit and whose packages are installed.
 
 viz_exporter_env <- new.env(parent = emptyenv())
 
@@ -52,20 +50,13 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 
 #' A block's downloads
 #'
-#' Registers one download handler per registered format, `dl_<format>` in
-#' the block's namespace, and returns the menu entries for the view's
-#' payload (`derived$downloads`). The exhibit is read when a format is
-#' clicked, and the board's download footer is put on it before the exporter
-#' writes it.
-#'
-#' @param exhibit A function of no arguments returning a `viz_exhibit`.
-#' @param enabled A function returning whether downloads are on.
-#' @param session The block's Shiny session.
-#' @param filename The word a file is named by when the exhibit has no
-#'   title.
-#' @return A reactive: a list of `list(id, label, ext)`, empty when
-#'   downloads are off.
-#' @noRd
+# Registers one download handler per registered format, `dl_<format>` in the
+# block's namespace, and returns a reactive of the menu entries for the view's
+# payload (`derived$downloads`): a list of `list(id, label, ext)`, empty when
+# `enabled()` is false. The exhibit (a function of no arguments returning a
+# `viz_exhibit`) is read when a format is clicked, and the board's download
+# footer is put on it before the exporter writes it. `filename` names the file
+# when the exhibit has no title.
 viz_downloads <- function(exhibit, enabled = function() TRUE,
                           session = shiny::getDefaultReactiveDomain(),
                           filename = "table") {
