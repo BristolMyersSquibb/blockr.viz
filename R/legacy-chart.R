@@ -10,7 +10,7 @@
 # Arguments older charts had and that have no current meaning. A restore warns
 # and drops them; any other unknown name is a block attribute.
 LEGACY_CHART_RETIRED <- c(
-  "expose", "vlines", "hlines", "ref_x", "ref_y", "step", "smooth",
+  "vlines", "hlines", "ref_x", "ref_y", "step", "smooth",
   "metrics", "group_by", "color_by", "facet_by", "x_col", "y_col",
   "series_by", "x_end_col", "lo_col", "hi_col"
 )

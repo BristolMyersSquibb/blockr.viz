@@ -51,13 +51,13 @@ html_exhibit.cards_exhibit <- function(x, title = NULL, subtitle = NULL,
   if (!is.null(x$cells)) {
     # A groups table's cards: their glyphs are the table's columns.
     g <- table_static_groups(x)
-    g$model$cards <- cards_payload(x$model)
+    g$model$cards <- cards_model(x$model)
     g$config$look <- "cards"
     g$derived$titles <- titles
     return(table_static(g$model, g$config, g$derived))
   }
   model <- list(n = x$model$n, cols = list(), head = list(),
-                cards = cards_payload(x$model))
+                cards = cards_model(x$model))
   table_static(model, list(layout = "records", look = "cards"),
                list(titles = titles))
 }

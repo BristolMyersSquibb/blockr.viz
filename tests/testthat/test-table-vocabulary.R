@@ -45,7 +45,7 @@ test_that("the engine reads the spec's keys", {
     list(type = "dist", col = "AVAL", summary = "mean_sd", show = "text")
   ))
   expect_null(q$err)
-  expect_identical(q$plan[[1L]]$kind, "num")
+  expect_identical(q$plan[[1L]]$kind, "dist_text")
 })
 
 test_that("position sets a colour split's layout", {

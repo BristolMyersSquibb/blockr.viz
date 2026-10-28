@@ -10,67 +10,24 @@
 # functions the screen uses.
 # ---------------------------------------------------------------------------
 
-#' The frame the table block displays, before any formatting.
-#'
-#' Aggregation is a display projection (see table_aggregate()): with a
-#' `group` or `summaries` the table draws the summarised frame, keyed on the
-#' first group column, or a single "Total" row for grand totals. Without
-#' either it draws the input, with the block's own `rowname` / `value` picks.
-#' Shared by the screen's payload and the downloads.
-#'
-#' @return `list(data, label_col, value_cols, agg)`. `label_col` and
-#'   `value_cols` may be NULL (the renderer's defaults apply).
-#' @noRd
-dt_display_frame <- function(data, rowname = NULL, value = NULL,
-                             group = character(), summaries = list()) {
-  agg <- table_aggregate(data, group, summaries)
-  if (!isTRUE(agg$aggregated)) {
-    return(list(data = data, label_col = rowname, value_cols = value,
-                agg = agg))
-  }
-  gl <- length(agg$group)
-  ad <- agg$data
-  # Grand totals (no group): prepend a "Total" stub so there is always a row
-  # label plus at least one metric column to render.
-  if (!gl) {
-    ad <- cbind(
-      stats::setNames(data.frame("Total", stringsAsFactors = FALSE,
-                                 check.names = FALSE), " "),
-      ad
-    )
-  }
-  list(
-    data = ad,
-    label_col = if (gl) agg$group[1L] else " ",
-    value_cols = if (gl) {
-      c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
-    } else {
-      agg$metric_cols
-    },
-    agg = agg
-  )
-}
-
 #' The table block's download frame.
 #'
-#' The displayed columns in display order (rowname first, colour sources
-#' dropped), each shaded column followed by its paint as `.bg:<col>` /
-#' `.fg:<col>`. Numbers keep their full precision here; the writers format
+#' The displayed columns in display order (`rowname` first, then `columns`,
+#' colour sources dropped), each shaded column followed by its paint as
+#' `.bg:<col>` / `.fg:<col>`. Numbers keep their full precision here; the writers format
 #' them. In-cell bars (`mode = "bar"`) are not carried: those columns export
 #' plain. A structured ("Table 1") frame is returned unchanged, as the screen
 #' draws it unshaded and the writers read its structure themselves.
 #' @noRd
-dt_exhibit_frame <- function(data, rowname = NULL, value = NULL,
-                             group = character(), summaries = list(),
+dt_exhibit_frame <- function(data, rowname = NULL, columns = NULL,
                              shadings = list()) {
   if (!is.data.frame(data) || !ncol(data) || table_is_structured(data)) {
     return(data)
   }
-  disp <- dt_display_frame(data, rowname, value, group, summaries)
-  d <- disp$data
-  label_col <- disp$label_col
+  d <- data
+  label_col <- rowname
   if (is.null(label_col) || !label_col %in% names(d)) label_col <- names(d)[1L]
-  value_cols <- intersect(disp$value_cols %||% character(), names(d))
+  value_cols <- intersect(columns %||% character(), names(d))
   # A pick that vanished upstream shows a message on screen; a download has
   # no message to show, so it falls back to every column.
   if (!length(value_cols)) value_cols <- setdiff(names(d), label_col)
@@ -126,13 +83,12 @@ dt_format_digits <- function(data, digits) {
 #'
 #' What [new_table_block()] puts into a rendered report or deck: the table as
 #' the block shows it, as an [annotated data frame][as_annotated_df()] for
-#' [static_exhibit()] to typeset. The rowname comes first, then the value
-#' columns (or the aggregate, with `group` / `summaries`); numbers are
-#' printed in the block's `format` exactly like the screen, and `unit` heads
-#' the numeric columns; cells
-#' shaded by a diverging or sequential rule carry their colours as `.bg:` /
-#' `.fg:` columns, which [static_table()] and the HTML table paint. Colour
-#' source columns are left out. In-cell bars are not drawn.
+#' [static_exhibit()] to typeset. The rowname comes first, then `columns`;
+#' numbers are printed in the block's `format` exactly like the screen, and
+#' `unit` heads the numeric columns; cells shaded by a diverging or
+#' sequential rule carry their colours as `.bg:` / `.fg:` columns, which
+#' [static_table()] and the HTML table paint. Colour source columns are left
+#' out. In-cell bars are not drawn.
 #'
 #' The block's [report_call()] emits
 #' `blockr.viz::static_exhibit(blockr.viz::table_exhibit(<var>, ...))` with
@@ -140,8 +96,7 @@ dt_format_digits <- function(data, digits) {
 #'
 #' @param data The table block's input: a data frame or an
 #'   [as_annotated_df()]-coercible table object.
-#' @param rowname,value,group,summaries,shadings,format,unit As in
-#'   [new_table_block()].
+#' @param rowname,columns,shadings,format,unit As in [new_table_block()].
 #' @param title,subtitle,caption Table text, with the block's three tiers:
 #'   `NULL` takes the input's `label` / `subtitle` / `caption` attribute, `""`
 #'   shows none, any other string is a title template resolved against
@@ -149,7 +104,9 @@ dt_format_digits <- function(data, digits) {
 #'
 #' @return An annotated data frame, with `label`, `subtitle` and `caption`
 #'   attributes carrying the resolved text.
-#' @param digits Old name of `format` (a number of decimals).
+#' @param ... Old argument names, translated with a warning: `value` (now
+#'   `columns`), `digits` (now `format`), and `group` with `summaries`, the
+#'   aggregation the table block no longer does.
 #' @seealso [new_table_block()], [static_exhibit()], [report_call()]
 #' @examples
 #' table_exhibit(
@@ -157,19 +114,20 @@ dt_format_digits <- function(data, digits) {
 #'   format = 2L, title = "Area effect"
 #' )
 #' @export
-table_exhibit <- function(data, rowname = NULL, value = NULL,
-                          group = character(), summaries = list(),
+table_exhibit <- function(data, rowname = NULL, columns = NULL,
                           shadings = list(), format = "number", unit = NULL,
                           title = NULL, subtitle = NULL, caption = NULL,
-                          digits = NULL) {
-  if (!is.null(digits) && missing(format)) {
-    format <- table_digits_format(digits)
-  }
+                          ...) {
   data <- as_annotated_df(data)
   auto <- input_display_attrs(data)
-  out <- dt_exhibit_frame(data, rowname, value,
-                          as.character(group %||% character()),
-                          table_parse_summaries(summaries), shadings)
+  if (...length()) {
+    old <- legacy_table_exhibit(data, rowname, columns, format, list(...))
+    data <- old$data
+    rowname <- old$rowname
+    columns <- old$columns
+    format <- old$format
+  }
+  out <- dt_exhibit_frame(data, rowname, columns, shadings)
   # A structured frame shows its cells as they come, on screen too.
   if (!table_is_structured(data)) {
     # The unit first: it heads the columns that are numeric before
@@ -188,15 +146,10 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
 #' @export
 report_call.table_block <- function(x, var, ...) {
 
-  # The committed block's state lives in its constructor closure, the same
-  # values serialization reads. Old argument names are already translated
-  # there.
-  env <- environment(x[["expr_server"]])
-
-  state <- function(nm) {
-    v <- get0(nm, envir = env, ifnotfound = NULL)
-    if (is.function(v)) NULL else v
-  }
+  # The committed block's state, as a saved board holds it. Old argument
+  # names are already translated there.
+  values <- blockr.core::blockr_ser(x)$payload
+  state <- function(nm) values[[nm]]
 
   # Print-relevant surface only: how the table is built and what it says.
   # Drill, search, the identity row colour and the ctrl transports are not
@@ -210,8 +163,6 @@ report_call.table_block <- function(x, var, ...) {
     c("rowname", "columns", "shadings", "format", "unit")
   }
   defaults <- lapply(viz_block_spec("table")$args, spec_default)
-  # table_exhibit() takes the records' columns as `value`.
-  rename <- c(columns = "value")
 
   args <- list()
 
@@ -220,8 +171,7 @@ report_call.table_block <- function(x, var, ...) {
     if (is.null(v) || !length(v) ||
           (is.character(v) && !any(nzchar(v)))) next
     if (identical_default(v, defaults[[nm]])) next
-    out_nm <- if (nm %in% names(rename)) rename[[nm]] else nm
-    args[[out_nm]] <- v
+    args[[nm]] <- v
   }
 
   for (nm in c("title", "subtitle", "caption")) {

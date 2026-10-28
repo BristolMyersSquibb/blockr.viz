@@ -113,27 +113,23 @@ viz_payload <- function(spec, values, rows, revs, derived = list(),
   )
 }
 
-#' Rows for the browser, written once per content
+#' Rows for the browser and their revision
 #'
-#' A function of a data frame that returns viz_wire_df()'s columns and data
-#' plus a revision. An identical frame returns the last result without
-#' writing. The revision goes up only when the written rows differ, so a
-#' re-evaluation that yields the same rows keeps the client's copy.
+#' A function `(data, columns)` that returns both with a revision: the
+#' chart's written rows (viz_wire_df()), the table's model. The revision goes
+#' up only when `data` differs from the last call's, so a re-evaluation that
+#' yields the same rows, or a click or a title edit, keeps the browser's
+#' copy, sort and folds.
 #' @noRd
 viz_rows <- function() {
   last <- new.env(parent = emptyenv())
   last$rev <- 0L
-  function(df) {
-    if (!is.null(last$out) && identical(df, last$df)) {
-      return(last$out)
-    }
-    w <- viz_wire_df(df)
-    if (!identical(w$data, last$out$data)) {
+  function(data, columns = NULL) {
+    if (last$rev == 0L || !identical(data, last$data)) {
       last$rev <- last$rev + 1L
+      last$data <- data
     }
-    last$df <- df
-    last$out <- c(w, list(rev = last$rev))
-    last$out
+    list(data = data, columns = columns, rev = last$rev)
   }
 }
 

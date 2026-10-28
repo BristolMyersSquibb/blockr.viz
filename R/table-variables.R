@@ -12,7 +12,7 @@
 #' @noRd
 table_variables_part <- function(kit, src) {
   st <- kit$state
-  shown <- shiny::reactive({
+  frame <- shiny::reactive({
     d <- src$rows()
     if (!is.data.frame(d)) {
       return(d)
@@ -23,14 +23,14 @@ table_variables_part <- function(kit, src) {
   # place of the input in the filter.
   built_from <- function(ex) {
     d <- tryCatch(src$rows(), error = function(e) NULL)
-    built <- table_variables_call(table_variables_cfg(table_state_values(st), d))
+    built <- table_variables_call(table_variables_cfg(viz_values(st), d))
     if (is.null(built)) {
       return(ex)
     }
     built[[2L]] <- quote(.(data))
     dd_splice_slot(ex, built)
   }
-  table_frame_part(kit, src, shown, layout = "variables", filter = built_from)
+  table_frame_part(kit, src, frame, layout = "variables", filter = built_from)
 }
 
 # A numeric variable is a `dist` summary, a categorical one a count bar split

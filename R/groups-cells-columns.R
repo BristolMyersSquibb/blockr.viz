@@ -15,13 +15,8 @@ cells_tile <- function(ctx, p) {
   # The matrix cell. An empty count is an empty cell: no square, no "0".
   v <- ctx$rows[[p$key]]
   paint <- groups_tile_paint(p, ctx$rows)
-  disp <- if (ctx$vals_on) {
-    ifelse(paint$has, groups_fmt(v), "")
-  } else {
-    rep("", ctx$n)
-  }
   list(kind = "tile", v = cells_sortv(v), bg = paint$bg, fg = paint$fg,
-       disp = disp)
+       disp = ifelse(paint$has, groups_fmt(v), ""))
 }
 
 cells_barsplit <- function(ctx, p) {
@@ -64,10 +59,9 @@ cells_barsplit <- function(ctx, p) {
 # The row-by-series value matrix of a split bar; a series the rows do not
 # carry is all zero, a non-finite value counts as zero.
 cells_split_matrix <- function(ctx, p) {
-  prefix <- p$prefix %||% ".s_"
   n <- ctx$n
-  mat <- vapply(p$series, function(lv) {
-    x <- ctx$rows[[paste0(prefix, lv)]]
+  mat <- vapply(p$scols, function(cn) {
+    x <- ctx$rows[[cn]]
     if (is.null(x)) rep(0, n) else as.numeric(x)
   }, numeric(n))
   mat <- matrix(mat, nrow = n, dimnames = list(NULL, p$series))
@@ -96,7 +90,7 @@ cells_split_seg <- function(p, mat, tot, emx) {
 # Grouped: each level prints its own value (`ldisp`) in the column's one slot
 # width. Stacked and 100% keep the one total.
 cells_split_label <- function(ctx, p, segv, vraw) {
-  if (identical(p$mode, "grouped") && ctx$vals_on && isTRUE(p$show_val)) {
+  if (identical(p$mode, "grouped")) {
     dom <- cells_axis_domain(p, ctx$prep)
     dig <- cells_val_digits(unlist(segv), dom$d0, dom$d1)
     ldisp <- lapply(segv, function(v) {
@@ -112,7 +106,7 @@ cells_split_label <- function(ctx, p, segv, vraw) {
 # Stacked / 100%: each segment carries its number inside it (the total stays
 # at the end). The stylesheet hides it where the segment is too narrow.
 cells_split_inside <- function(ctx, p, seg, segv) {
-  if (!identical(p$mode, "grouped") && ctx$vals_on && isTRUE(p$show_val)) {
+  if (!identical(p$mode, "grouped")) {
     if (identical(p$mode, "percent")) {
       lapply(seg, function(s) {
         ifelse(!is.na(s) & s > 0, paste0(round(s), "%"), "")

@@ -29,6 +29,13 @@ legacy_ctor_args <- function(block, args) {
 
 # `named` is the state after the renames and translators, `out` the result.
 legacy_translate <- function(block, x, version) {
+  # `expose` drew an always-visible band of controls; the subtitle's {@arg}
+  # words are the controls now. Warned on its own, in code and on restore.
+  if (identical(block, "chart") && "expose" %in% names(x)) {
+    warning("new_chart_block(): `expose` is retired. Name the setting in ",
+            "`subtitle` instead, e.g. \"[, coloured by {label(@color)}]\".",
+            call. = FALSE)
+  }
   named <- legacy_named(block, as.list(x))
   if (identical(block, "table")) named <- legacy_table_selection(named)
   out <- legacy_values(block, legacy_map_values(block, named), version)
@@ -50,7 +57,8 @@ legacy_warn <- function(block, args, named, out) {
       !identical(nm, "script")
   }, names(out)))
   labels <- "direct_labels" %in% old
-  old <- setdiff(old, "direct_labels")
+  # legacy_translate() warns about `expose` itself.
+  old <- setdiff(old, c("direct_labels", "expose"))
   old <- if (length(old)) paste0("`", old, "`") else character()
   kinds <- c(summaries = "summary", shadings = "shading")
   for (nf in names(kinds)) {
@@ -103,11 +111,10 @@ legacy_script <- function(x) {
   x
 }
 
-# Renames without a rule, and the "to logical" ones.
+# The rows a rename and a value map apply (kind "rename" and "logical").
 legacy_rows <- function(block, renamed = TRUE) {
   rows <- LEGACY_NAMES[LEGACY_NAMES$block == block & !is.na(LEGACY_NAMES$new) &
-                         (is.na(LEGACY_NAMES$rule) |
-                            LEGACY_NAMES$rule == "to logical"), ]
+                         LEGACY_NAMES$kind != "code", ]
   if (renamed) rows[rows$old != rows$new, ] else rows
 }
 
@@ -135,7 +142,7 @@ legacy_map_values <- function(block, x) {
     map <- rows$values[[i]]
     hit <- v %in% names(map)
     v[hit] <- unname(map[v[hit]])
-    if (identical(rows$rule[[i]], "to logical")) {
+    if (identical(rows$kind[[i]], "logical")) {
       v <- as.logical(v)
     }
     x[nm] <- list(v)
@@ -242,7 +249,7 @@ legacy_template <- function(block, tpl, state) {
   }
   tpl <- legacy_slots(tpl, legacy_slot_names(block, state))
   rows <- legacy_rows(block, renamed = FALSE)
-  rows <- rows[lengths(rows$values) > 0L & is.na(rows$rule), ]
+  rows <- rows[lengths(rows$values) > 0L & rows$kind == "rename", ]
   for (i in seq_len(nrow(rows))) {
     tpl <- legacy_template_values(tpl, rows$new[[i]], rows$values[[i]])
   }

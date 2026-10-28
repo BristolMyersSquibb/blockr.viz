@@ -18,7 +18,8 @@ out_server <- function(id, df, park, poke) {
       poke()
       shiny::req(!park())
       builds(shiny::isolate(builds()) + 1L)
-      viz_payload(spec, lapply(state, function(rv) rv()), rows(df()), revs)
+      w <- viz_wire_df(df())
+      viz_payload(spec, viz_values(state), rows(w$data, w$columns), revs)
     })
     list(state = state, builds = builds)
   })
@@ -103,12 +104,13 @@ test_that("_need makes the next render send the rows again", {
   })
 })
 
-test_that("rows from viz_rows() are cached by content", {
+test_that("the rows' revision moves only when the rows do", {
   rows <- viz_rows()
-  df <- data.frame(a = 1:3)
-  r1 <- rows(df)
+  r1 <- rows(list(a = 1:3), columns = "a")
   expect_identical(r1$rev, 1L)
-  expect_identical(rows(df), r1)
-  expect_identical(rows(data.frame(a = 1:3))$rev, 1L)
-  expect_identical(rows(data.frame(a = 4:6))$rev, 2L)
+  expect_identical(rows(list(a = 1:3), columns = "a"), r1)
+  expect_identical(rows(list(a = 4:6))$rev, 2L)
+  # The first rows count even when they are empty.
+  expect_identical(viz_rows()(structure(list(), names = character()))$rev,
+                   1L)
 })

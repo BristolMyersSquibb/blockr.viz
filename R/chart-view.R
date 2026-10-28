@@ -11,6 +11,7 @@ chart_view <- function(kit, src) {
   revs <- kit$revs
   session <- kit$session
   rows <- viz_rows()
+  wire_cache <- last_value_cache()
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
@@ -18,7 +19,7 @@ chart_view <- function(kit, src) {
   scale_map <- dd_board_scale_map()
 
   band <- shiny::reactive({
-    v <- chart_state_values(state)
+    v <- viz_values(state)
     d <- src$plain()
     a <- chart_band_args(v, d)
     if (is.null(a)) {
@@ -28,7 +29,7 @@ chart_view <- function(kit, src) {
                function() chart_band(v, d, a))
   })
   smoother <- shiny::reactive({
-    v <- chart_state_values(state)
+    v <- viz_values(state)
     d <- src$plain()
     a <- chart_smoother_args(v, d)
     if (is.null(a)) {
@@ -41,22 +42,24 @@ chart_view <- function(kit, src) {
     d <- src$plain()
     shiny::req(is.data.frame(d))
     inp <- tryCatch(src$input(), error = function(e) NULL)
-    chart_titles(spec, chart_state_values(state), d,
+    chart_titles(spec, viz_values(state), d,
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
                  src$prep$specs())
   })
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(chart_state_values(state), d, src$kinds())
+    cols <- chart_needed_cols(viz_values(state), d, src$kinds())
     d[, cols, drop = FALSE]
   })
 
   payload <- function() {
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    v <- chart_state_values(state)
-    viz_payload(spec, v, rows(shipped()), revs, derived = list(
+    v <- viz_values(state)
+    df <- shipped()
+    w <- wire_cache(df, function() viz_wire_df(df))
+    viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),
       smoother = smoother(),
@@ -119,7 +122,7 @@ chart_titles <- function(spec, v, d, auto, specs) {
 # format is clicked.
 chart_exhibit <- function(kit, src, view) {
   function() {
-    v <- chart_state_values(kit$state)
+    v <- viz_values(kit$state)
     kinds <- src$kinds()
     data <- chart_xlsx_frame(
       src$plain(), chart_type = v$type, group = chart_category(v, kinds),

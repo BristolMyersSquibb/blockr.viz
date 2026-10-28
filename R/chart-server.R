@@ -62,21 +62,16 @@ chart_sources <- function(data, state) {
     last_kinds$v
   })
   src$hist <- shiny::reactive(
-    chart_hist(chart_state_values(state),
+    chart_hist(viz_values(state),
                tryCatch(src$prep$prepared(), error = function(e) NULL))
   )
   src$plain <- shiny::reactive({
-    v <- chart_state_values(state)
+    v <- viz_values(state)
     d <- expand_role_groups(src$prep$prepared(),
                             chart_split_cols(v, src$kinds()))
     chart_hist_data(d, chart_hist(v, d))
   })
   src
-}
-
-# Every value of the state, read reactively.
-chart_state_values <- function(state) {
-  lapply(state, function(rv) rv())
 }
 
 # The category column of an aggregated chart: x, or y when it lies
@@ -119,7 +114,7 @@ chart_expr <- function(data, state, src) {
   last <- new.env(parent = emptyenv())
   shiny::reactive({
     d <- data()
-    parts <- chart_filter_parts(chart_state_values(state), src, members)
+    parts <- chart_filter_parts(viz_values(state), src, members)
     sx <- src$prep$compiled()
     names_in <- if (!is.null(sx) && length(parts$conds)) {
       tryCatch(names(src$raw()), error = function(e) NULL)

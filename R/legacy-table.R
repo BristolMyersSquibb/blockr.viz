@@ -431,7 +431,9 @@ legacy_restore_tile <- function(payload, label = "a tile") {
             "block. Not carried over: ", paste(lost, collapse = ", "), ".",
             call. = FALSE)
   }
-  legacy_restore("table", args, version = NULL)  # unset `color` is "auto"
+  # The tile's rows took the board's colours.
+  args$color <- "auto"
+  legacy_restore("table", args, version = VIZ_REWRITE_VERSION)
 }
 
 # new_heatmap_block() (< 0.3.0): groups, compact, one tile count per `col`
@@ -463,7 +465,9 @@ legacy_restore_heatmap <- function(payload, label = "a heatmap") {
     download = isTRUE(unlist(p[["download"]])),
     title = sentence(p[["title"]]), subtitle = sentence(p[["subtitle"]]),
     caption = sentence(p[["caption"]]),
-    script = p[["script"]], script_values = values
+    script = p[["script"]], script_values = values,
+    # The heatmap's `color` is the tile's paint (`fill`); the rows take none.
+    color = NULL
   )
   warning("new_heatmap_block() is gone: ", label, " restores as a table ",
           "block (groups layout, compact look). See ?new_table_block.",
@@ -486,3 +490,69 @@ LEGACY_TILE_ARGS <- c("value", "group", "by", "name", "summaries", "color", "lay
                "format", "unit", "drill", "filter_column", "filter_values",
                "filter_col", "filter_value", "ctrl_target", "ctrl_table",
                "measures", "showcase", "state")
+
+# table_exhibit() called with the names it took before the rewrite: `value`
+# (now `columns`), `digits` (now `format`), and `group` with `summaries`, the
+# old table block's aggregation, which the block no longer does: the frame is
+# aggregated first (legacy_display_frame()). Returns `data`, `rowname`,
+# `columns` and `format` for table_exhibit().
+legacy_table_exhibit <- function(data, rowname, columns, format, dots) {
+  known <- c("value", "digits", "group", "summaries")
+  bad <- setdiff(names(dots), known)
+  if (length(bad) || is.null(names(dots))) {
+    stop("table_exhibit(): unused argument ",
+         paste0("`", bad, "`", collapse = ", "), ".", call. = FALSE)
+  }
+  warning("table_exhibit(): ", paste0("`", names(dots), "`", collapse = ", "),
+          if (length(dots) > 1L) " are" else " is",
+          " from an earlier blockr.viz. See ?table_exhibit for the current ",
+          "names.", call. = FALSE)
+  if (!is.null(dots$digits)) format <- table_digits_format(dots$digits)
+  disp <- legacy_display_frame(
+    data, rowname, columns %||% dots$value,
+    as.character(dots$group %||% character()),
+    table_parse_summaries(dots$summaries %||% list())
+  )
+  list(data = disp$data, rowname = disp$label_col, columns = disp$value_cols,
+       format = format)
+}
+
+#' The frame the table block displays, before any formatting.
+#'
+#' Aggregation is a display projection (see table_aggregate()): with a
+#' `group` or `summaries` the table draws the summarised frame, keyed on the
+#' first group column, or a single "Total" row for grand totals. Without
+#' either it draws the input, with the block's own `rowname` / `value` picks.
+#'
+#' @return `list(data, label_col, value_cols, agg)`. `label_col` and
+#'   `value_cols` may be NULL (the renderer's defaults apply).
+#' @noRd
+legacy_display_frame <- function(data, rowname = NULL, value = NULL,
+                             group = character(), summaries = list()) {
+  agg <- table_aggregate(data, group, summaries)
+  if (!isTRUE(agg$aggregated)) {
+    return(list(data = data, label_col = rowname, value_cols = value,
+                agg = agg))
+  }
+  gl <- length(agg$group)
+  ad <- agg$data
+  # Grand totals (no group): prepend a "Total" stub so there is always a row
+  # label plus at least one metric column to render.
+  if (!gl) {
+    ad <- cbind(
+      stats::setNames(data.frame("Total", stringsAsFactors = FALSE,
+                                 check.names = FALSE), " "),
+      ad
+    )
+  }
+  list(
+    data = ad,
+    label_col = if (gl) agg$group[1L] else " ",
+    value_cols = if (gl) {
+      c(setdiff(agg$group, agg$group[1L]), agg$metric_cols)
+    } else {
+      agg$metric_cols
+    },
+    agg = agg
+  )
+}

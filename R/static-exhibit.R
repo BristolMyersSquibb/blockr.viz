@@ -143,7 +143,7 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
                             download = FALSE))
   flat <- !table_is_structured(data)
   shown <- if (flat) data[!grepl(ANNOTATION_PAINT_RE, names(data))] else data
-  built <- table_frame_view(v, shown, list(scale_map = function() NULL),
+  built <- table_frame_drawn(v, shown, list(scale_map = function() NULL),
                             "records")
   model <- built$model
   if (!is.null(model) && flat) {

@@ -29,7 +29,7 @@
 #'   or no data column left after the structure columns), where the old path
 #'   drew a message.
 #' @noRd
-table_structured_view <- function(data, drill = NULL, digits = "number",
+table_structured_to_model <- function(data, drill = NULL, digits = "number",
                                   unit = NULL, collapsible = TRUE) {
   p <- table_structured_parts(data)
   data <- table_structured_numbers(p$data, p$data_cols, digits, unit)
@@ -55,7 +55,7 @@ table_structured_view <- function(data, drill = NULL, digits = "number",
     rows = table_structured_rows(data, p$section_cols, drill_on, drill),
     sections = table_structured_sections(data, p$section_cols, drill_on)
   )
-  table_view_arrays(out[!vapply(out, is.null, logical(1L))])
+  table_model_arrays(out[!vapply(out, is.null, logical(1L))])
 }
 
 # The frame split into what the table draws: the data with its synthetic

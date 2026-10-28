@@ -1,128 +1,105 @@
 # Building each summary's columns on the group frames (leaf and parent rows)
 # and its plan entry, the step between the prepared rows and the cell model.
 
+# The frame's column names. Each summary copy writes its columns under its id
+# `sid`: ".s<i>" for summary i, ".s<i>f<j>" for its copy at facet level j.
+# A column is "<sid>_<part>":
+#   v      the value (simple, expr, custom bar and number)
+#   t      text (field, expr, a failed custom summary)
+#   w      a tile's worst `fill` level
+#   bc bl bh wl wh n   a distribution's centre, inner and outer range, size
+#   pts last           a sparkline's points and last value
+#   segs start nseg    a swimlane's segments, first start and count
+#   from to lo hi f d n   a pair's ends, band, colour and dash level, leaf count
+# A colour split repeats a mark's parts per level j under the id
+# "<sid>_L<j>"; a split bar's level `lv` is "<sid>_S_<lv>".
+
+groups_copy_sid <- function(i, j = NULL) {
+  paste0(".s", i, if (!is.null(j)) paste0("f", j))
+}
+
+# The id of a summary's copy without its facet level: copies with the same
+# stem share a scale.
+groups_sid_stem <- function(sid) sub("f[0-9]+$", "", sid)
+
+groups_col <- function(sid, part) paste0(sid, "_", part)
+
+groups_level_sid <- function(sid, j) paste0(sid, "_L", j)
+
+groups_split_col <- function(sid, level) paste0(sid, "_S_", level)
+
 #' Build every summary's columns on the leaf and parent frames and collect the
 #' plan entries.
 #' @return The state `st`: `summaries`, `leaf`, `par_rows`, `plan` and `primary`
 #'   (the first summary and its column id, whose value is the sort key).
 #' @noRd
-groups_build_columns <- function(summaries, leaf, par_rows, ctx) {
+groups_build_columns <- function(summaries, leaf, par_rows, build) {
   st <- list(summaries = summaries, leaf = leaf, par_rows = par_rows,
              plan = list(), primary = NULL)
   for (i in seq_along(summaries)) {
-    st <- groups_build_summary(st, i, ctx)
+    st <- groups_build_summary(st, i, build)
   }
   st
 }
 
 # Facet copies of one summary: one over all rows, or one per facet level.
-groups_summary_copies <- function(s, i, ctx) {
-  data <- ctx$data
+groups_summary_copies <- function(s, i, build) {
+  data <- build$data
   fl <- s$.flevels
   if (is.null(fl)) {
-    return(list(list(suffix = paste0(".s", i), slice = data, level = NULL)))
+    return(list(list(suffix = groups_copy_sid(i), slice = data, level = NULL)))
   }
   lapply(seq_along(fl), function(j) {
     lv <- fl[[j]]
-    list(suffix = paste0(".s", i, "f", j),
+    list(suffix = groups_copy_sid(i, j),
          slice = data[as.character(data[[s$.facet]]) == lv, ,
                       drop = FALSE],
-         level = lv, fcol = s$.facet, qualify = ctx$qualify,
-         named = ctx$n_faceted > 1L)
+         level = lv, fcol = s$.facet, qualify = build$qualify,
+         named = build$n_faceted > 1L)
   })
 }
 
-# One summary's copies: fill the frames, add the plan entries. A failing custom
-# function leaves its column empty, with the error beside it; the copies
-# already built are dropped from leaf and parent rows alike, or the two frames
-# would no longer bind into one table.
-groups_build_summary <- function(st, i, ctx) {
+# One summary's copies: fill the frames, add the plan entries.
+groups_build_summary <- function(st, i, build) {
   s <- st$summaries[[i]]
-  copies <- groups_summary_copies(s, i, ctx)
-  sid1 <- copies[[1L]]$suffix
-  n0 <- length(st$plan)
-  cols0 <- list(leaf = names(st$leaf), par = names(st$par_rows))
+  copies <- groups_summary_copies(s, i, build)
   for (cp in copies) {
-    cp <- groups_copy_denom(cp, s, ctx)
-    res <- groups_fill_copy(st, cp, s, ctx)
-    st <- res$st
-    if (!is.null(res$failed)) {
-      s <- groups_failed_summary(s, res$failed)
-      st$summaries[[i]] <- s
-      sid1 <- paste0(".s", i)
-      st$leaf <- st$leaf[cols0$leaf]
-      if (!is.null(st$par_rows)) st$par_rows <- st$par_rows[cols0$par]
-      st <- groups_replace_failed(st, s, sid1, n0, ctx)
-      break
+    cp <- groups_copy_denom(cp, s, build)
+    st$leaf <- groups_fill(st$leaf, build$keys, build$keys, cp$slice, s,
+                           cp$suffix)
+    if (!is.null(st$par_rows)) {
+      st$par_rows <- groups_fill(st$par_rows, build$parent, build$keys,
+                                 cp$slice, s, cp$suffix, parent_row = TRUE)
     }
     cp <- groups_series_ref(cp, s)
-    entry <- groups_summary_plan(s, cp, ctx$data, ctx$scale_map)
+    entry <- groups_summary_plan(s, cp, build$data, build$scale_map)
     if (!is.null(s$.custom)) entry <- groups_custom_plan(entry, s, cp)
     st$plan <- c(st$plan, list(entry))
   }
-  if (is.null(st$primary)) st$primary <- list(s = s, sid = sid1)
+  if (is.null(st$primary)) {
+    st$primary <- list(s = s, i = i, sid = copies[[1L]]$suffix)
+  }
   st
 }
 
-groups_copy_denom <- function(cp, s, ctx) {
-  data <- ctx$data
+groups_copy_denom <- function(cp, s, build) {
+  data <- build$data
   # A count's N: subjects (count distinct) or rows (count) in the copy's slice,
   # including rows without a group (groups_denom()). On the one row of a
   # table without `by` the count is its own N and would read 100%, so it is
   # skipped; a colour split keeps its shares.
-  same_n <- ctx$all && is.null(s$.color) &&
-    !(ctx$pct_total && !is.null(cp$level))
+  same_n <- build$all && is.null(s$.color) &&
+    !(build$pct_total && !is.null(cp$level))
   if (identical(s$type, "simple") && !same_n &&
         groups_has_pct(chr_state(s$func) %||% "count")) {
-    cp$den <- groups_denom(if (ctx$pct_total) data else cp$slice,
+    cp$den <- groups_denom(if (build$pct_total) data else cp$slice,
                               chr_state(s$func) %||% "count",
                               chr_state(s$col))
   }
   # Every facet copy says its level's N: subjects in the slice, rows when the
   # board declares no subject.
-  if (!is.null(cp$level)) cp$pop <- groups_pop_n(cp$slice, ctx$subject)
+  if (!is.null(cp$level)) cp$pop <- groups_pop_n(cp$slice, build$subject)
   cp
-}
-
-# Fill the leaf and parent frames for one copy. Returns `list(st, failed)`;
-# `failed` is a custom function's error message, else NULL.
-groups_fill_copy <- function(st, cp, s, ctx) {
-  r <- groups_try_fill(st$leaf, ctx$keys, ctx$keys, cp$slice, s, cp$suffix)
-  if (!inherits(r, "groups_custom_error")) {
-    st$leaf <- r
-    if (!is.null(st$par_rows)) {
-      r <- groups_try_fill(st$par_rows, ctx$parent, ctx$keys, cp$slice, s,
-                         cp$suffix, parent_row = TRUE)
-      if (!inherits(r, "groups_custom_error")) st$par_rows <- r
-    }
-  }
-  failed <- if (inherits(r, "groups_custom_error")) conditionMessage(r)
-  list(st = st, failed = failed)
-}
-
-# groups_fill() with a custom function's failure returned as the condition.
-groups_try_fill <- function(target, tkeys, keys, slice, s, sid,
-                          parent_row = FALSE) {
-  tryCatch(
-    groups_fill(target, tkeys, keys, slice, s, sid, parent_row = parent_row),
-    groups_custom_error = function(e) e
-  )
-}
-
-# A failed custom summary is one text column over all rows: drop the plan
-# entries its copies added, fill the dashes and add its single entry.
-groups_replace_failed <- function(st, s, sid1, n0, ctx) {
-  data <- ctx$data
-  cp <- list(suffix = sid1, slice = data, level = NULL)
-  st$plan <- st$plan[seq_len(n0)]
-  st$leaf <- groups_fill(st$leaf, ctx$keys, ctx$keys, data, s, sid1)
-  if (!is.null(st$par_rows)) {
-    st$par_rows <- groups_fill(st$par_rows, ctx$parent, ctx$keys, data, s, sid1,
-                             parent_row = TRUE)
-  }
-  st$plan <- c(st$plan,
-               list(groups_summary_plan(s, cp, data, ctx$scale_map)))
-  st
 }
 
 # The sparkline reference is computed per copy over its slice, so every
@@ -149,11 +126,11 @@ groups_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) 
     return(groups_blank_summary(target, s, sid))
   }
   if (!is.null(s$.failed)) {
-    target[[paste0(sid, "_t")]] <- rep("\u2013", nrow(target))
+    target[[groups_col(sid, "t")]] <- rep("\u2013", nrow(target))
     return(target)
   }
   if (!is.null(s$.custom)) {
-    return(groups_custom_fill(target, tkeys, slice, s, sid))
+    return(groups_custom_fill(target, tkeys, s, sid, parent_row))
   }
   switch(s$type,
     simple = groups_fill_simple(target, tkeys, slice, s, sid),
@@ -177,10 +154,10 @@ groups_put_value <- function(target, slice, out, tkeys, s, f) {
 
 groups_fill_simple <- function(target, tkeys, slice, s, sid) {
   f <- chr_state(s$func) %||% "count"
-  target <- groups_put_value(target, slice, paste0(sid, "_v"), tkeys, s, f)
+  target <- groups_put_value(target, slice, groups_col(sid, "v"), tkeys, s, f)
   # A tile's paint: index of the worst `fill` level among the group's rows.
   if (!is.null(s$.fill)) {
-    target[[paste0(sid, "_w")]] <- groups_tile_worst(
+    target[[groups_col(sid, "w")]] <- groups_tile_worst(
       target, tkeys, slice, s$.fill, s$.fill_levels
     )
   }
@@ -192,9 +169,9 @@ groups_fill_simple <- function(target, tkeys, slice, s, sid) {
     for (j in seq_along(s$.levels)) {
       lv <- s$.levels[[j]]
       out <- if (dot) {
-        paste0(sid, "_L", j, "_bc")
+        groups_col(groups_level_sid(sid, j), "bc")
       } else {
-        paste0(sid, "_S_", lv)
+        groups_split_col(sid, lv)
       }
       target <- groups_put_value(target,
                                slice[as.character(slice[[cc]]) == lv, ,
@@ -207,7 +184,7 @@ groups_fill_simple <- function(target, tkeys, slice, s, sid) {
 groups_put_stats <- function(target, slice, prefix, tkeys, s, stats) {
   agg <- groups_stat_agg(slice, tkeys, chr_state(s$col), stats)
   for (nm in setdiff(names(agg), tkeys)) {
-    target[[paste0(prefix, "_", sub("^\\.", "", nm))]] <-
+    target[[groups_col(prefix, sub("^\\.", "", nm))]] <-
       groups_match_col(target, agg, tkeys, nm)
   }
   target
@@ -231,7 +208,7 @@ groups_fill_dist <- function(target, tkeys, slice, s, sid) {
       target <- groups_put_stats(target,
                                slice[as.character(slice[[cc]]) == lv, ,
                                      drop = FALSE],
-                               paste0(sid, "_L", j), tkeys, s, stats)
+                               groups_level_sid(sid, j), tkeys, s, stats)
     }
   }
   target
@@ -245,7 +222,7 @@ groups_fill_field <- function(target, tkeys, slice, s, sid) {
   ))
   m <- groups_match_field(target, agg, tkeys, ".t")
   m[is.na(m)] <- ""
-  target[[paste0(sid, "_t")]] <- m
+  target[[groups_col(sid, "t")]] <- m
   target
 }
 
@@ -253,7 +230,7 @@ groups_fill_expr <- function(target, tkeys, slice, s, sid) {
   ex <- tryCatch(rlang::parse_expr(chr_state(s$expr)),
                  error = function(e) NULL)
   if (is.null(ex)) {
-    target[[paste0(sid, "_t")]] <- rep("(parse error)", nrow(target))
+    target[[groups_col(sid, "t")]] <- rep("(parse error)", nrow(target))
     return(target)
   }
   g <- dplyr::group_by(slice, dplyr::across(dplyr::all_of(tkeys)))
@@ -262,27 +239,27 @@ groups_fill_expr <- function(target, tkeys, slice, s, sid) {
     error = function(e) NULL
   )
   if (is.null(agg)) {
-    target[[paste0(sid, "_t")]] <- rep("(error)", nrow(target))
+    target[[groups_col(sid, "t")]] <- rep("(error)", nrow(target))
     return(target)
   }
   v <- agg$.t
   if (is.numeric(v)) {
     agg$.t <- as.numeric(v)
-    target[[paste0(sid, "_v")]] <-
+    target[[groups_col(sid, "v")]] <-
       groups_match_col(target, agg, tkeys, ".t")
   } else {
     agg$.t <- as.character(v)
     m <- groups_match_field(target, agg, tkeys, ".t")
     m[is.na(m)] <- ""
-    target[[paste0(sid, "_t")]] <- m
+    target[[groups_col(sid, "t")]] <- m
   }
   target
 }
 
 groups_fill_series <- function(target, tkeys, slice, s, sid) {
   pts <- groups_series_split(slice, target, tkeys, s)
-  target[[paste0(sid, "_pts")]] <- I(pts)
-  target[[paste0(sid, "_last")]] <- vapply(pts, function(p1) {
+  target[[groups_col(sid, "pts")]] <- I(pts)
+  target[[groups_col(sid, "last")]] <- vapply(pts, function(p1) {
     if (length(p1$y)) p1$y[[length(p1$y)]] else NA_real_
   }, numeric(1L))
   target
@@ -290,11 +267,11 @@ groups_fill_series <- function(target, tkeys, slice, s, sid) {
 
 groups_fill_spans <- function(target, tkeys, slice, s, sid) {
   segs <- groups_spans_split(slice, target, tkeys, s)
-  target[[paste0(sid, "_segs")]] <- I(segs)
-  target[[paste0(sid, "_start")]] <- vapply(segs, function(ss) {
+  target[[groups_col(sid, "segs")]] <- I(segs)
+  target[[groups_col(sid, "start")]] <- vapply(segs, function(ss) {
     if (length(ss)) ss[[1L]]$s else NA_real_
   }, numeric(1L))
-  target[[paste0(sid, "_nseg")]] <- lengths(segs)
+  target[[groups_col(sid, "nseg")]] <- lengths(segs)
   target
 }
 
@@ -397,7 +374,7 @@ GROUPS_PAIR_WORDS <- c(identity = "", mean = "Mean", median = "Median",
 groups_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
   parent_row <- length(tkeys) < length(keys)
   target <- groups_pair_ends(target, slice, sid, s, tkeys, keys, parent_row)
-  target[[paste0(sid, "_f")]] <- groups_pair_level_idx(
+  target[[groups_col(sid, "f")]] <- groups_pair_level_idx(
     target, slice, s$.color %||% s$color, s$.levels, tkeys
   )
   cc <- s$.color
@@ -406,7 +383,7 @@ groups_pair_fill <- function(target, tkeys, keys, slice, s, sid) {
       target <- groups_pair_ends(
         target,
         slice[as.character(slice[[cc]]) == s$.levels[[j]], , drop = FALSE],
-        paste0(sid, "_L", j), s, tkeys, keys, parent_row
+        groups_level_sid(sid, j), s, tkeys, keys, parent_row
       )
     }
   }
@@ -484,23 +461,23 @@ groups_pair_band <- function(target, sl, b, tkeys, keys, parent_row) {
 # Both ends, band, dash index and leaf count of one slice under `prefix` (the
 # pooled pair, or one colour level).
 groups_pair_ends <- function(target, sl, prefix, s, tkeys, keys, parent_row) {
-  target[[paste0(prefix, "_from")]] <- groups_pair_per(
+  target[[groups_col(prefix, "from")]] <- groups_pair_per(
     target, sl, s$x_func, s$x, tkeys, keys, parent_row
   )
-  target[[paste0(prefix, "_to")]] <- groups_pair_per(
+  target[[groups_col(prefix, "to")]] <- groups_pair_per(
     target, sl, s$xend_func, s$xend, tkeys, keys, parent_row
   )
-  target[[paste0(prefix, "_lo")]] <- groups_pair_band(
+  target[[groups_col(prefix, "lo")]] <- groups_pair_band(
     target, sl, s$ref_min, tkeys, keys, parent_row
   )
-  target[[paste0(prefix, "_hi")]] <- groups_pair_band(
+  target[[groups_col(prefix, "hi")]] <- groups_pair_band(
     target, sl, s$ref_max, tkeys, keys, parent_row
   )
-  target[[paste0(prefix, "_n")]] <- groups_pair_n_leaf(
+  target[[groups_col(prefix, "n")]] <- groups_pair_n_leaf(
     target, sl, tkeys, keys, parent_row
   )
   dash <- s$linetype
-  target[[paste0(prefix, "_d")]] <- if (!is.null(dash) &&
+  target[[groups_col(prefix, "d")]] <- if (!is.null(dash) &&
                                           length(s$.dlevels)) {
     groups_pair_level_idx(target, sl, dash, s$.dlevels, tkeys)
   } else {

@@ -77,10 +77,14 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   expect_identical(groups_dist_centre_stat(dist(summary = "none",
                                               whiskers = "none")),
                    "median_q1_q3")
-  # Unknown values fall back rather than throwing: a bad style is a dot.
+  # The engine's own `style` falls back to a dot; a value the spec does not
+  # allow is an error, as in the spec check.
   expect_identical(dist(style = "banana")$style, "dot")
-  expect_identical(dist(summary = "banana")$summary, "median_q1_q3")
-  expect_identical(dist(whiskers = "banana")$whiskers, "tukey")
+  bad <- function(...) {
+    groups_norm_summaries(list(list(type = "dist", col = "DUR", ...)))$err
+  }
+  expect_match(bad(summary = "banana"), "unknown `summary` \"banana\"")
+  expect_match(bad(whiskers = "banana"), "unknown `whiskers`")
 })
 
 test_that("legacy `show` still restores the mark it always drew", {
@@ -146,7 +150,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_identical(p$plan[[2L]]$kind, "barsplit")
   expect_null(p$plan[[2L]]$lcols)
   expect_identical(p$plan[[2L]]$series, lv)
-  expect_true(all(paste0(p$plan[[2L]]$prefix, lv) %in% names(p$rows)))
+  expect_true(all(p$plan[[2L]]$scols %in% names(p$rows)))
   expect_identical(p$plan[[3L]]$levels, lv)
   # Every level of a split column is read against ONE scale.
   m <- groups_cells(p)
@@ -225,7 +229,7 @@ test_that("a split bar only stacks an additive measure", {
   # the pooled mean instead would clamp every larger arm at full width).
   expect_identical(e$kind, "barsplit")
   expect_identical(e$mode, "grouped")
-  segs <- unlist(p$rows[, paste0(e$prefix, e$series)])
+  segs <- unlist(p$rows[, e$scols])
   expect_equal(e$dmax, max(c(p$rows[[e$key]], segs), na.rm = TRUE))
   segw <- unlist(groups_cells(p)$cols[[1L]]$seg)
   expect_true(max(segw, na.rm = TRUE) <= 100)
@@ -319,8 +323,8 @@ test_that("axis = FALSE drops every strip", {
   S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
   prep <- groups_prepare_summaries(ae, by = "ARM", summaries = S)
   m <- list(prep = prep, cells = groups_cells(prep))
-  expect_false(is.null(table_groups_view(m, axis = TRUE)$cols[[2L]]$axis))
-  expect_null(table_groups_view(m, axis = FALSE)$cols[[2L]]$axis)
+  expect_false(is.null(table_groups_to_model(m, axis = TRUE)$cols[[2L]]$axis))
+  expect_null(table_groups_to_model(m, axis = FALSE)$cols[[2L]]$axis)
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {
@@ -416,7 +420,7 @@ test_that("by_level reorders into level groups with a two-row header", {
                    c("num", "bar", "num", "bar", "num"))
   # The spanning header row: one cell per level over its two columns, the
   # label and the leading column reaching down both rows.
-  head <- table_groups_view(m)$head
+  head <- table_groups_to_model(m)$head
   expect_length(head, 2L)
   spans <- Filter(function(h) !is.null(h$span), head[[1L]])
   expect_setequal(vapply(spans, function(h) h$text, ""),
@@ -430,7 +434,7 @@ test_that("by_level reorders into level groups with a two-row header", {
   )
   # by_summary (the default) keeps the single header row.
   m2 <- sum_model(ae, by = "TERM", summaries = S)
-  expect_length(table_groups_view(m2)$head, 1L)
+  expect_length(table_groups_to_model(m2)$head, 1L)
 })
 
 test_that("by_level with one summary per level keeps a single header row", {
@@ -620,7 +624,7 @@ test_that("by nests one level: outer parent rows plus inner leaves", {
   m <- sum_model(ae, by = c("SOC", "TERM"), summaries = S)
   expect_identical(sum(as.logical(m$cells$parent_row)), 2L)
   # The view marks the parents: indent 0 and strong, children indent 1.
-  rows <- table_groups_view(m)$rows
+  rows <- table_groups_to_model(m)$rows
   expect_identical(sum(unlist(rows$strong)), 2L)
   # Three or more grouping columns is a config error, said plainly.
   m2 <- sum_model(ae, by = c("SOC", "TERM", "USUBJID"), summaries = S)
@@ -923,7 +927,7 @@ test_that("a table whose every row lacks a group says so instead of failing", {
   # the model the block builds carries the message, it does not throw
   m <- expect_silent(sum_model(ae, by = "TERM", summaries = S))
   expect_identical(m$prep$err, "No rows to display")
-  expect_null(table_groups_view(m))
+  expect_null(table_groups_to_model(m))
 })
 
 test_that("facet columns with nothing to draw are left out, as the chart does", {

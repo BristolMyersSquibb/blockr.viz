@@ -1,7 +1,6 @@
-# The records layout's view: the cell model (R/table-model-records.R) as
-# the table the browser draws, `derived$table` in the block's payload. Its
-# shape is the TableModel of inst/js/table/table.d.ts: column-oriented, one
-# vector per column, plain text and values, no markup.
+# The records layout's TableModel: the cell model (R/table-model-records.R)
+# as the table the browser draws, the payload's `data`. The TableModel's
+# pieces every layout shares are in R/table-model-parts.R.
 
 #' A flat records table as the browser draws it
 #'
@@ -9,13 +8,13 @@
 #' @return A TableModel list: `n`, `stub`, `cols`, `head`, `widths`, `rows`
 #'   and `drill`.
 #' @noRd
-table_records_view <- function(m) {
+table_records_to_model <- function(m) {
   stopifnot(identical(m$kind, "flat"))
-  cols <- c(list(table_view_col(m$stub)), lapply(m$cells, table_view_col))
+  cols <- c(list(table_model_col(m$stub)), lapply(m$cells, table_model_col))
   head <- c(
-    list(table_view_head(m$stub, 0L, stub = TRUE)),
+    list(table_model_head(m$stub, 0L, stub = TRUE)),
     lapply(seq_along(m$cells), function(j) {
-      table_view_head(m$cells[[j]], j)
+      table_model_head(m$cells[[j]], j)
     })
   )
   out <- list(
@@ -24,47 +23,7 @@ table_records_view <- function(m) {
     rows = if (!is.null(m$stub$tint)) list(tint = m$stub$tint),
     drill = m$drill
   )
-  table_view_arrays(out[!vapply(out, is.null, logical(1L))])
-}
-
-#' Per-row vectors as JSON arrays
-#'
-#' Shiny writes an output's value with `auto_unbox`, so a one-row table's
-#' columns would arrive as bare strings. Every vector the TableModel holds
-#' per row or per column is marked as an array.
-#' @param m A TableModel list.
-#' @return The same list.
-#' @noRd
-table_view_arrays <- function(m) {
-  arr <- function(x) if (is.null(x) || is.list(x)) x else I(unname(x))
-  per_col <- c("disp", "raw", "key", "bg", "fg", "bar")
-  m$cols <- lapply(m$cols, function(cc) {
-    cc[intersect(per_col, names(cc))] <- lapply(cc[intersect(per_col,
-                                                             names(cc))], arr)
-    cc
-  })
-  if (!is.null(m$rows)) {
-    keep <- setdiff(names(m$rows), "keys")
-    m$rows[keep] <- lapply(m$rows[keep], arr)
-  }
-  if (!is.null(m$widths)) m$widths <- arr(m$widths)
-  m
-}
-
-# One column of the cell model as a TableCol: name, numeric flag, display
-# text and raw values, and the paint as values.
-table_view_col <- function(cc) {
-  out <- list(name = cc$name, num = isTRUE(cc$num), disp = cc$disp,
-              raw = cc$raw, bg = cc$bg, fg = cc$fg, bar = cc$bar,
-              bar_fill = cc$bar_fill)
-  out[!vapply(out, is.null, logical(1L))]
-}
-
-# A leaf header cell: the column's name, its label on the second line.
-table_view_head <- function(cc, col, stub = FALSE) {
-  out <- list(text = cc$name, sub = cc$label, col = col,
-              stub = if (stub) TRUE)
-  out[!vapply(out, is.null, logical(1L))]
+  table_model_arrays(out[!vapply(out, is.null, logical(1L))])
 }
 
 # --- the records layout's part of the block server (R/table-server.R) -----
@@ -80,7 +39,7 @@ table_view_head <- function(cc, col, stub = FALSE) {
 #' @noRd
 table_records_part <- function(kit, src) {
   st <- kit$state
-  shown <- shiny::reactive({
+  frame <- shiny::reactive({
     d <- src$rows()
     if (length(st$by()) && is.data.frame(d)) {
       d <- table_nest(d, st$by(), st$rowname(), missing = st$missing(),
@@ -88,20 +47,21 @@ table_records_part <- function(kit, src) {
     }
     d
   })
-  table_frame_part(kit, src, shown, layout = "records")
+  table_frame_part(kit, src, frame, layout = "records")
 }
 
 # The part shared by the records and the variables layouts: both draw a
 # frame, flat or structured, and filter it on a click.
-table_frame_part <- function(kit, src, shown, layout, filter = identity) {
+table_frame_part <- function(kit, src, frame, layout, filter = identity) {
   st <- kit$state
-  frame <- function() tryCatch(shown(), error = function(e) NULL)
+  frame_or_null <- function() tryCatch(frame(), error = function(e) NULL)
   list(
-    shown = shown,
-    view = shiny::reactive(table_frame_view(src$values(), frame(), src,
-                                            layout)),
+    frame = frame,
+    drawn = shiny::reactive(
+      table_frame_drawn(src$values(), frame_or_null(), src, layout)
+    ),
     expr = function(sel) {
-      d <- frame()
+      d <- frame_or_null()
       s <- table_click(sel, structured = table_is_structured(d))
       ex <- if (identical(layout, "records") && length(st$by())) {
         table_nest_drill_expr(st$by(), s$filters)
@@ -113,11 +73,11 @@ table_frame_part <- function(kit, src, shown, layout, filter = identity) {
       src$prep$wrap_after(ex)
     },
     claims = function(sel) {
-      table_frame_claims(sel, frame(), st$drill_table(), src$subject())
+      table_frame_claims(sel, frame_or_null(), st$drill_table(), src$subject())
     },
-    receipt = function(sel) table_frame_receipt(sel, frame()),
+    receipt = function(sel) table_frame_receipt(sel, frame_or_null()),
     exhibit = function(tt) {
-      table_frame_exhibit(table_state_values(st), shown(), tt, src, layout)
+      table_frame_exhibit(viz_values(st), frame(), tt, src, layout)
     },
     title_args = function(v) viz_slot_values(kit$spec, v)
   )
@@ -125,12 +85,12 @@ table_frame_part <- function(kit, src, shown, layout, filter = identity) {
 
 # The table model of a frame: structured as it comes, else the flat
 # records table with its tint and, in the cards look, the cards.
-table_frame_view <- function(v, d, src, layout) {
+table_frame_drawn <- function(v, d, src, layout) {
   if (!is.data.frame(d)) {
     return(list(empty = list(kind = "no_data", message = "No data")))
   }
   if (table_is_structured(d)) {
-    m <- table_structured_view(d, drill = v$drill, digits = v$format,
+    m <- table_structured_to_model(d, drill = v$drill, digits = v$format,
                                unit = v$unit,
                                collapsible = isTRUE(v$collapsible))
     if (is.null(m)) {
@@ -145,9 +105,9 @@ table_frame_view <- function(v, d, src, layout) {
   if (identical(m$kind, "message")) {
     return(list(empty = list(kind = "message", message = m$message)))
   }
-  model <- table_records_view(m)
+  model <- table_records_to_model(m)
   if (identical(v$look, "cards") && identical(layout, "records")) {
-    model$cards <- cards_payload(table_cards_records(
+    model$cards <- cards_model(table_cards_records(
       d, label_col = v$rowname, value_cols = v$columns, digits = v$format,
       unit = v$unit, row_hex = tint$hex
     ))
@@ -197,8 +157,7 @@ table_frame_exhibit <- function(v, d, tt, src, layout) {
   shiny::req(is.data.frame(d))
   structured <- table_is_structured(d)
   frame <- dt_unit_labels(
-    dt_exhibit_frame(d, v$rowname, v$columns,
-                     shadings = dd_parse_shadings(v$shadings)),
+    dt_exhibit_frame(d, v$rowname, v$columns, dd_parse_shadings(v$shadings)),
     v$unit
   )
   cards <- if (identical(v$look, "cards") && identical(layout, "records") &&

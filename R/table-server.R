@@ -7,9 +7,12 @@
 # layout's part reads the data.
 #
 # A part is a list of
-#   shown()        reactive: the frame the table is built from, which the
-#                  titles resolve against and the drill claims read
-#   view()         reactive: list(model, empty, derived), the TableModel
+#   frame()        reactive: the frame the table is built from (the rows,
+#                  nested under `by`, for records; the Table 1 for
+#                  variables; the input for groups), which the titles
+#                  resolve against, the drill claims read and the
+#                  downloads write
+#   drawn()        reactive: list(model, empty, derived), the TableModel
 #                  or NULL, what to say instead of a table, and extra
 #                  derived entries
 #   expr(sel)      the emitted filter for the held selection
@@ -57,7 +60,7 @@ table_sources <- function(data, state, session) {
   })
   list(
     prep = prep,
-    values = table_view_values(state),
+    values = table_model_values(state),
     rows = rows,
     columns = shiny::reactive(
       viz_wire_columns(tryCatch(rows(), error = function(e) NULL))
@@ -71,9 +74,9 @@ table_sources <- function(data, state, session) {
 # table from; the spec's slots and the prepare script's values are `{@arg}`.
 table_titles <- function(kit, src, part) {
   shiny::reactive({
-    d <- tryCatch(part()$shown(), error = function(e) NULL)
+    d <- tryCatch(part()$frame(), error = function(e) NULL)
     shiny::req(is.data.frame(d))
-    v <- table_state_values(kit$state)
+    v <- viz_values(kit$state)
     args <- script_title_args(part()$title_args(v), src$prep$specs(),
                               v$script_values)
     viz_titles(v, d, input_display_attrs(d), args)
@@ -83,10 +86,10 @@ table_titles <- function(kit, src, part) {
 # The payload: the state, the current layout's table model as the rows
 # (sent again only when it changes), and what R resolves for the face.
 table_payload <- function(kit, src, part, titles) {
-  rows <- table_model_rows()
+  rows <- viz_rows()
   function() {
-    v <- table_state_values(kit$state)
-    built <- part()$view()
+    v <- viz_values(kit$state)
+    built <- part()$drawn()
     derived <- c(
       list(
         titles = tryCatch(titles(), error = function(e) NULL),
@@ -95,25 +98,10 @@ table_payload <- function(kit, src, part, titles) {
       ),
       built$derived
     )
-    viz_payload(kit$spec, v, rows(built$model, src$columns()), kit$revs,
+    # No table is `{}`; `columns` are the input's, for the gear.
+    data <- built$model %||% structure(list(), names = character())
+    viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
-  }
-}
-
-# The table model as the payload's rows. The revision goes up only when the
-# model changes, so a click or a title edit leaves the browser's table, sort
-# and folds alone. No table is `{}`; `columns` are the input's, for the gear.
-table_model_rows <- function() {
-  last <- new.env(parent = emptyenv())
-  last$rev <- 0L
-  last$data <- NULL
-  function(model, columns = NULL) {
-    data <- model %||% structure(list(), names = character())
-    if (!identical(data, last$data)) {
-      last$rev <- last$rev + 1L
-      last$data <- data
-    }
-    list(data = data, rev = last$rev, columns = columns)
   }
 }
 
@@ -167,17 +155,12 @@ TABLE_FACE_ARGS <- c("selection", "title", "subtitle", "caption",
 
 # The values the table model is built from: every other argument, as one
 # reactive that moves only when one of them does.
-table_view_values <- function(state) {
+table_model_values <- function(state) {
   keep <- setdiff(names(state), TABLE_FACE_ARGS)
-  rv <- shiny::reactiveVal(shiny::isolate(table_state_values(state[keep])))
+  rv <- shiny::reactiveVal(shiny::isolate(viz_values(state[keep])))
   shiny::observe({
-    v <- table_state_values(state[keep])
+    v <- viz_values(state[keep])
     if (!identical(v, shiny::isolate(rv()))) rv(v)
   }, priority = 50)
   rv
-}
-
-# Every value of the state, read reactively (viz_values() isolates).
-table_state_values <- function(state) {
-  lapply(state, function(rv) rv())
 }

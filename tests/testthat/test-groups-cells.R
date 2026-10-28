@@ -1,5 +1,5 @@
 # Summarize table: the cell model of the groups layout (groups_cells())
-# and what the view makes of it. The cell model is what table_groups_view()
+# and what the view makes of it. The cell model is what table_groups_to_model()
 # turns into marks; the rules below pin its numbers, labels and flags.
 
 push_fixture <- function() {
@@ -68,7 +68,7 @@ test_that("a flat table has a row per group and a bar with its own label", {
   expect_length(c1$pct, 4L)
   expect_true(is.numeric(c1$dw))
   # The view: the stub then the bar, one claim per row with the drill on.
-  v <- table_groups_view(m)
+  v <- table_groups_to_model(m)
   expect_identical(v$n, 4L)
   expect_length(v$cols, 2L)
   expect_identical(v$cols[[2]]$mark$kind, "bar")
@@ -85,7 +85,7 @@ test_that("a nested table has levels, parent rows and parent labels", {
   expect_true(any(as.logical(cells$parent_row)))
   expect_true("SOC A" %in% as.character(cells$parent))
   # The view indents the child rows and marks the parent rows strong.
-  rows <- table_groups_view(m)$rows
+  rows <- table_groups_to_model(m)$rows
   expect_identical(as.integer(rows$indent), as.integer(cells$level))
   expect_identical(as.logical(rows$strong), as.logical(cells$parent_row))
 })

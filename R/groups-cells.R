@@ -9,14 +9,15 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
   plan <- prep$plan
   n <- nrow(rows)
 
-  # Shared by every column builder. `vals_on` is the Values switch: off drops
-  # value labels beside marks (number and text columns are untouched).
-  ctx <- list(
-    rows = rows, n = n, prep = prep, mx = prep$bar_max,
-    mn = prep$bar_min %||% 0, vals_on = !isFALSE(cfg$value_labels)
-  )
+  # Shared by every column builder.
+  ctx <- list(rows = rows, n = n, prep = prep, mx = prep$bar_max,
+              mn = prep$bar_min %||% 0)
 
   cols <- lapply(seq_along(plan), function(i) cells_column(ctx, plan[[i]]))
+  # Each column's text per row, which the view prints and sorts by; built
+  # from the value labels before the Values switch drops them.
+  text <- lapply(cols, cells_text)
+  if (isFALSE(cfg$value_labels)) cols <- lapply(cols, cells_drop_labels)
   cols <- cells_annotate(cols, plan)
 
   # A table without `by` has no group to drill on.
@@ -40,11 +41,73 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     # Columns a row click claims, outer to inner (R/table-drill.R).
     path = c(chr_state(prep$parent), chr_state(prep$group)),
     cols = cols,
+    text = text,
     fold = cells_fold_text(prep)
   )
 }
 
-# One plan entry to its column. The first matching branch wins.
+# A column's text per row: a number or text is its own, a mark its value
+# label, a swimlane its segment tooltips. A colour split with one label per
+# level reads "level label, level label".
+cells_text <- function(c) {
+  if (identical(c$kind, "num")) {
+    return(c$disp)
+  }
+  if (identical(c$kind, "interval")) {
+    return(vapply(c$tips, function(tt) {
+      paste(unique(as.character(tt)), collapse = " | ")
+    }, character(1L)))
+  }
+  if (isTRUE(c$multi)) {
+    return(cells_join_levels(c$levels, lapply(c$lv, `[[`, "disp")))
+  }
+  if (identical(c$kind, "barsplit") && !is.null(c$ldisp)) {
+    return(cells_join_levels(c$names, c$ldisp))
+  }
+  c$disp
+}
+
+# One text per row from one label vector per level (`NULL` for a level that
+# prints none): the levels with a label, in order, each led by its name.
+cells_join_levels <- function(levels, labs) {
+  keep <- !vapply(labs, is.null, logical(1L))
+  if (!any(keep)) {
+    return(NULL)
+  }
+  parts <- Map(function(lv, d) {
+    d <- as.character(d)
+    ifelse(nzchar(d), paste(lv, d), "")
+  }, as.character(levels)[keep], labs[keep])
+  vapply(seq_along(parts[[1L]]), function(i) {
+    one <- vapply(parts, function(x) x[[i]], character(1L))
+    paste(one[nzchar(one)], collapse = ", ")
+  }, character(1L))
+}
+
+# The Values switch off: a mark draws no value label beside it (`disp`, `pct`
+# and the slot width `dw`), inside its segments (`ldisp`, `slab`, `sink`) or
+# per colour level. A tile keeps an empty text per square. Number and text
+# columns are untouched.
+cells_drop_labels <- function(c) {
+  if (identical(c$kind, "num")) {
+    return(c)
+  }
+  if (identical(c$kind, "tile")) {
+    c$disp <- rep("", length(c$disp))
+    return(c)
+  }
+  c[c("disp", "pct", "dw", "ldisp", "slab", "sink")] <- NULL
+  if (!is.null(c$lv)) {
+    c$lv <- lapply(c$lv, function(g) {
+      g$disp <- NULL
+      g
+    })
+  }
+  c
+}
+
+# One plan entry to its column, by the entry's kind. The text kinds (`num`,
+# `text`, `dist_text`, `expr`) all become a `num` cell column.
 cells_column <- function(ctx, p) {
   # Per-entry scale, falling back to the prep-level one.
   b <- cells_bounds(p$dmin %||% ctx$mn, p$dmax %||% ctx$mx)
@@ -64,11 +127,11 @@ cells_column <- function(ctx, p) {
     cells_interval(ctx, p)
   } else if (identical(p$kind, "sparkline")) {
     cells_sparkline(ctx, p)
-  } else if (isTRUE(p$raw) && isTRUE(p$text)) {
+  } else if (identical(p$kind, "text")) {
     cells_text_raw(ctx, p)
-  } else if (identical(p$dispkey, "dist_text")) {
+  } else if (identical(p$kind, "dist_text")) {
     cells_dist_text(ctx, p)
-  } else if (!is.null(p$alt_text) && is.null(ctx$rows[[p$key]])) {
+  } else if (identical(p$kind, "expr") && is.null(ctx$rows[[p$key]])) {
     cells_alt_text(ctx, p)
   } else {
     cells_num(ctx, p)
@@ -121,7 +184,6 @@ cells_bounds <- function(e_mn, e_mx) {
 # measures that carry a base.
 cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
   prep <- ctx$prep
-  if (!ctx$vals_on || !isTRUE(p$show_val)) return(NULL)
   dom <- cells_axis_domain(p, prep)
   dig <- cells_val_digits(vraw, dom$d0, dom$d1)
   parts <- cells_num_parts(vraw, denom = p$val_denom,
@@ -192,10 +254,13 @@ cells_fold_text <- function(prep) {
   )
 }
 
+# Plan kinds drawn as a number or text cell, without a mark.
+GROUPS_TEXT_KINDS <- c("num", "text", "dist_text", "expr")
+
 #' The hover card's column description. NULL where the cell prints everything.
 #' @noRd
 cells_tip_meta <- function(p) {
-  if (identical(p$kind, "num")) return(NULL)
+  if (p$kind %in% GROUPS_TEXT_KINDS) return(NULL)
   den <- p$val_denom
   out <- list(
     head = chr_state(p$label),

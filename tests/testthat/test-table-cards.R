@@ -30,7 +30,7 @@ cards_summaries <- function() {
 }
 
 # The groups model in the cards look, and what the view adds to the table
-# (table_groups_payload()): the TableModel with the card model on it.
+# (table_groups_drawn()): the TableModel with the card model on it.
 cards_model_of <- function(data, by = "ARM", summaries = cards_summaries(),
                            look = "cards", ...) {
   sum_model(data, summaries = summaries, by = by, sort_by = "alpha",
@@ -40,7 +40,7 @@ cards_model_of <- function(data, by = "ARM", summaries = cards_summaries(),
 cards_view_of <- function(m, look = "cards") {
   v <- list(look = look, column_axis = TRUE)
   src <- list(scale_map = function() NULL)
-  table_groups_payload(m, v, NULL, src)$model
+  table_groups_drawn(m, v, NULL, src)$model
 }
 
 test_that("look takes table, compact or cards; compact = TRUE still works", {
@@ -171,7 +171,7 @@ test_that("the records model draws each column as a plain number", {
   expect_identical(mb$n, CARDS_MAX_ROWS)
   expect_match(mb$fold, "first 60 of 80")
 
-  js <- jsonlite::toJSON(cards_payload(table_cards_records(d[1, ])),
+  js <- jsonlite::toJSON(cards_model(table_cards_records(d[1, ])),
                          auto_unbox = TRUE)
   # One row still ships arrays.
   expect_match(js, "\"label\":[\"P\"]", fixed = TRUE)
@@ -183,14 +183,14 @@ test_that("the records view carries cards in the records layout only", {
             collapsible = TRUE, drill = NULL, color = NULL, by = character(),
             rowname = NULL, columns = NULL)
   src <- list(scale_map = function() NULL)
-  p <- table_frame_view(v, d, src, "records")
+  p <- table_frame_drawn(v, d, src, "records")
   expect_identical(p$model$cards$cols[[1L]]$label, "N")
   expect_identical(p$model$cards$n, 2L)
   # Another layout draws the frame without them.
-  expect_null(table_frame_view(v, d, src, "variables")$model$cards)
+  expect_null(table_frame_drawn(v, d, src, "variables")$model$cards)
   # The table look has none either.
   v$look <- "table"
-  expect_null(table_frame_view(v, d, src, "records")$model$cards)
+  expect_null(table_frame_drawn(v, d, src, "records")$model$cards)
 })
 
 test_that("the cards exhibit writes html with the model and a painted slide", {

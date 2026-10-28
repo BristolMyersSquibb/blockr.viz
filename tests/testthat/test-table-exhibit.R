@@ -78,19 +78,22 @@ test_that("bar shading exports plain columns", {
 test_that("the download frame follows the display projection", {
   d <- data.frame(arm = c("A", "A", "B"), val = c(1, 3, 10),
                   other = c("x", "y", "z"))
-  # rowname moves first, an explicit value pick drops the rest
-  ex <- dt_exhibit_frame(d, rowname = "other", value = "val")
+  # rowname moves first, an explicit columns pick drops the rest
+  ex <- dt_exhibit_frame(d, rowname = "other", columns = "val")
   expect_identical(names(ex), c("other", "val"))
 
-  # an aggregated table downloads its aggregate, painted
-  ex <- dt_exhibit_frame(d, group = "arm",
-                         summaries = list(list(func = "mean",
-                                               cols = "val")),
-                         shadings = list(list(mode = "sequential",
-                                              cols = list())))
+  # table_exhibit() with the old aggregation prints the aggregate, painted
+  expect_warning(
+    ex <- table_exhibit(d, group = "arm",
+                        summaries = list(list(func = "mean", cols = "val")),
+                        shadings = list(list(mode = "sequential",
+                                             cols = list()))),
+    "`group`, `summaries` are from an earlier blockr.viz"
+  )
   expect_identical(ex$arm, c("A", "B"))
   expect_equal(as.numeric(ex$val), c(2, 10))
   expect_false(anyNA(ex[[".bg:val"]]))
+  expect_error(table_exhibit(d, bogus = 1), "unused argument `bogus`")
 
   # a structured frame is the writers' business and passes through
   st <- data.frame(.label = c("a", "b"), n = c("1", "2"))
@@ -236,7 +239,7 @@ test_that("the block's downloads round to its digits (#37)", {
 test_that("table_exhibit() is the block as a printed table", {
   d <- coef_frame()
   attr(d, "label") <- "From upstream"
-  ex <- table_exhibit(d, digits = 2L, subtitle = "GLMM", caption = "",
+  ex <- table_exhibit(d, format = "number", subtitle = "GLMM", caption = "",
                       shadings = drilldown_table_color("sequential"))
   expect_identical(ex$times_more, "3.81")
   expect_false(anyNA(ex[[".bg:times_more"]]))
@@ -310,7 +313,7 @@ test_that("compact, percent and unit reach cells, cards and downloads", {
   st <- viz_check(viz_block_spec("table"),
                   list(layout = "records", rowname = "term",
                        format = "compact", unit = "CHF"))
-  v <- table_records_view(table_model_records(st, d))
+  v <- table_records_to_model(table_model_records(st, d))
   expect_identical(as.character(v$cols[[3]]$disp), c("1.5K", "2.5M"))
   expect_identical(v$head[[1]][[3]]$sub, "amount (CHF)")
   # Cards: the unit after the number, not in the label.

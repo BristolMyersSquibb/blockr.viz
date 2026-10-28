@@ -1,6 +1,6 @@
 # The records layout's cell model: what the table shows for each row and
 # column (display strings, paint, raw drill values, the stub with its row
-# tint) and the column widths. table_records_view() turns it into the
+# tint) and the column widths. table_records_to_model() turns it into the
 # TableModel.
 
 #' Compute the flat table's cell model: per-column display strings, paint

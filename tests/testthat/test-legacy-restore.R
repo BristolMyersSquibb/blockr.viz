@@ -255,7 +255,7 @@ test_that("a restored heatmap draws one row per subject", {
   st <- table_normalize(viz_check(viz_block_spec("table"), st))
   m <- table_model_groups(st, ae)
   expect_null(m$prep$err)
-  v <- table_groups_view(m)
+  v <- table_groups_to_model(m)
   expect_identical(as.character(v$cols[[1L]]$disp),
                    c("A", "1", "2", "B", "3"))
 })
@@ -371,6 +371,23 @@ test_that("a block attribute such as blockr.dock's `visible` passes through", {
     constructor = list(version = "0.2.223")
   )))
   expect_identical(r$attrs$visible, vis)
-  b <- expect_silent(new_table_block(layout = "groups", visible = vis))
+  b <- expect_silent(blockr.core::blockr_deser(list(
+    object = c("table_block", "transform_block", "block"),
+    payload = list(layout = "groups", by = "ARM", visible = vis),
+    constructor = blockr.core::blockr_ser(new_table_block())$constructor
+  )))
   expect_identical(attr(b, "visible"), vis)
+})
+
+test_that("an unknown name is an error in code, on both blocks (row 28)", {
+  expect_error(new_table_block(colour = "auto"),
+               "unknown argument `colour`. Did you mean `color`?",
+               fixed = TRUE)
+  expect_error(new_chart_block(colour = "a"), "unknown argument `colour`",
+               fixed = TRUE)
+  expect_error(new_table_block(visible = list("table")),
+               "unknown argument `visible`", fixed = TRUE)
+  # blockr.core's own block arguments pass.
+  expect_identical(attr(new_table_block(block_name = "T"), "block_name"),
+                   "T")
 })

@@ -17,7 +17,9 @@ NORM_CHART_FIXED <- c("waterfall", "pie", "treemap")
 #   switched to one of them keeps its category: `x` and `y` swap unless the
 #   change set them.
 # - A histogram has no `y`, orientation or sort.
-# - `ymin` and `ymax` are pairs: an unmatched end is dropped.
+# - `ymin` and `ymax` are pairs: an unmatched end is dropped. In the gear a
+#   half-picked pair is a normal state while editing; in code a mismatched
+#   pair is a mistake, so new_chart_block() refuses it before this runs.
 # - The selection goes when a mapping or the drill changes, and is never held
 #   with a drill target.
 # - `unit`, `drill_target` and `drill_table` are trimmed.

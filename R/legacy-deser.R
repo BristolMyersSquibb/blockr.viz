@@ -14,9 +14,7 @@
 blockr_deser.chart_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
   res <- legacy_deser("chart_block", data)
-  do.call(new_chart_block, c(res$args, res$attrs,
-                             list(ctor = "new_chart_block",
-                                  ctor_pkg = "blockr.viz")))
+  legacy_build(new_chart_block, "new_chart_block", res$args, res$attrs)
 }
 
 #' @rdname blockr_deser.chart_block
@@ -45,21 +43,28 @@ blockr_deser.heatmap_block <- function(x, data, ...) {
 }
 
 legacy_new_table <- function(res) {
-  do.call(new_table_block, c(res$args, res$attrs,
-                             list(ctor = "new_table_block",
-                                  ctor_pkg = "blockr.viz")))
+  legacy_build(new_table_block, "new_table_block", res$args, res$attrs)
+}
+
+# A restored block: the constructor with the saved arguments and blockr.core's
+# block arguments, then every other saved name (blockr.dock's `visible`) as an
+# attribute. In code such a name is an error.
+legacy_build <- function(ctor, name, args, attrs) {
+  core <- intersect(names(attrs), setdiff(VIZ_CORE_BLOCK_ARGS,
+                                          c("ctor", "ctor_pkg")))
+  blk <- do.call(ctor, c(args, attrs[core],
+                         list(ctor = name, ctor_pkg = "blockr.viz")))
+  for (nm in setdiff(names(attrs), VIZ_CORE_BLOCK_ARGS)) {
+    attr(blk, nm) <- attrs[[nm]]
+  }
+  blk
 }
 
 #' @rdname blockr_deser.chart_block
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
-  res <- legacy_deser("table_block", data)
-  do.call(
-    new_table_block,
-    c(res$args, res$attrs,
-      list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
-  )
+  legacy_new_table(legacy_deser("table_block", data))
 }
 
 #' @rdname blockr_deser.chart_block
@@ -73,8 +78,5 @@ blockr_deser.summarize_table_block <- function(x, data, ...) {
   attrs <- saved[is_attr]
   args <- legacy_restore("table", payload,
                          version = data[["constructor"]][["version"]])
-  do.call(
-    new_table_block,
-    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
-  )
+  legacy_build(new_table_block, "new_table_block", args, attrs)
 }
