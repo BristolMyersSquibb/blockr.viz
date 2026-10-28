@@ -146,6 +146,21 @@ dd_shading_visuals <- function(shadings, data, value_cols) {
   out
 }
 
+#' Per-cell inline style for a data bar: a left-anchored CSS gradient whose
+#' width is `|v| / mx * 100%` (absolute-magnitude normalisation, no center
+#' baseline -- matches the crossfilter block). Vectorised over the column so the
+#' table stays on the single-`HTML()` fast path. Returns `""` for a degenerate
+#' column (all-zero / non-finite max), i.e. no bar.
+#' @noRd
+dt_bar_style <- function(v, mx, fill) {
+  if (!is.finite(mx) || mx <= 0) return(rep("", length(v)))
+  # as.character on the rounded value formats each width independently (no
+  # vectorized decimal-alignment, so 100 stays "100", not "100.0").
+  pct <- as.character(round(pmax(0, pmin(100, abs(v) / mx * 100)), 2L))
+  paste0(" style=\"background:linear-gradient(90deg,", fill, " 0 ", pct,
+         "%,transparent ", pct, "%);\"")
+}
+
 #' Readable text colour over a background: white on dark, near-black on
 #' light, by perceived luminance. ONE rule for every painted cell, so a
 #' ramp cell and a scale-map cell (the heatmap block's two paint sources)
@@ -166,8 +181,9 @@ dt_fg_for_hex <- function(hex) {
 #' VECTORIZED over `v` end-to-end (clamp, interpolation t, per-channel lerp,
 #' `rgb()`, and the luminance contrast test all take vectors) and returns
 #' `list(bg =, fg =)` of hex vectors -- the caller styles a whole column in
-#' one call. A 10k x 10 shaded table used to burn 100k scalar closure calls
-#' per render here.
+#' one call, keeping the shaded table on the same vectorized fast path as
+#' dt_bar_style(). A 10k x 10 shaded table used to burn 100k scalar closure
+#' calls per render here.
 #' @noRd
 dt_color_fun <- function(type, domain, palette) {
   lo <- domain[1L]

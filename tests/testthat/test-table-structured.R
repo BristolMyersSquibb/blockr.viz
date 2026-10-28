@@ -290,6 +290,18 @@ ts_frame <- function() {
   d
 }
 
+test_that("a frame with spanners, sections and claims matches the HTML path", {
+  d <- ts_frame()
+  for (drill in list("auto", NULL)) {
+    html <- as.character(dt_table_tag_structured(d, drill, "number"))
+    ref <- ts_read(html)
+    v <- table_structured_view(d, drill = drill)
+    expect_equal(v$widths, ref$widths)
+    ts_expect_equal_head(ts_head(v), ref$head, "frame")
+    ts_expect_equal_body(ts_body(v), ref$body, "frame")
+  }
+})
+
 test_that("the claims name their columns and keep single values as arrays", {
   v <- table_structured_view(ts_frame(), drill = "auto")
   expect_identical(v$rows$keys[[1L]],

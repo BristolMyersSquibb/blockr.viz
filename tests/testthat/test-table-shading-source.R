@@ -56,38 +56,50 @@ test_that("the built table displays counts, paints by source, hides companions",
   d <- toy()
   b <- dt_flat_build(d, "USUBJID", NULL, tmpl_rule(), drill = "USUBJID",
                      digits = 0, toggles = list())
+  html <- as.character(dt_flat_assemble_tag(b))
+  heads <- gsub("<[^>]*>", "", regmatches(
+    html, gregexpr("<span class=\"blockr-col-name\">[^<]*</span>", html)
+  )[[1]])
   # Companion columns never render as display columns.
-  expect_identical(vapply(b$cells, `[[`, "", "name"),
-                   c("Group", "RASH", "NAUSEA"))
-  per_cell <- function(k) {
-    unlist(lapply(b$cells, function(cc) cc[[k]] %||% rep(NA, b$n)))
-  }
-  bg <- per_cell("bg")
-  fg <- per_cell("fg")
-  disp <- per_cell("disp")
+  expect_setequal(heads, c("USUBJID", "Group", "RASH", "NAUSEA"))
+  painted <- grep("background",
+                  regmatches(html, gregexpr("<td[^>]*>[^<]*</td>", html))[[1]],
+                  value = TRUE)
   # Exactly the three cells whose SOURCE is non-missing: s1 RASH (sev 3),
   # s2 NAUSEA (sev 2), s3 RASH (sev 1). s1 NAUSEA has a count but no grade
   # -> displayed unpainted rather than painted by its own value.
-  expect_identical(sum(!is.na(bg)), 3L)
+  expect_length(painted, 3L)
   # The darkest paint belongs to sev 3 -- the count-2 cell, not the count-4
   # one: the paint reads the SOURCE, not the displayed value.
-  expect_identical(fg[which(!is.na(bg) & disp == "2")], "#ffffff")
+  sev3 <- grep(">2<", painted, value = TRUE)
+  expect_length(sev3, 1L)
+  expect_match(sev3, "color:#ffffff", fixed = TRUE)
 })
 
-test_that("rotate_titles sizes the value columns on content", {
+test_that("rotate_titles stamps the attribute and sizes columns on content", {
   d <- toy()
   b <- dt_flat_build(d, "USUBJID", NULL, tmpl_rule(), drill = "USUBJID",
                      digits = 0, toggles = list(rotate_titles = TRUE))
+  html <- as.character(dt_flat_assemble_tag(b))
+  expect_match(html, 'data-dt-rotate-titles="on"', fixed = TRUE)
+  w <- as.integer(gsub("\\D", "", regmatches(
+    html, gregexpr("width: [0-9]+px", html)
+  )[[1]]))
   # Stub keeps the standard estimate; every value column collapses to the
   # 28px content floor (single-digit counts) -- header text no longer sets
   # the width, which is the point of rotating.
-  expect_gt(b$widths[[1L]], 50)
-  expect_true(all(b$widths[-1L] == 28))
+  expect_gt(w[1], 50)
+  expect_true(all(w[-1] == 28L))
 })
 
 test_that("rotate_titles off keeps the header-measured widths", {
   d <- toy()
   b <- dt_flat_build(d, "USUBJID", NULL, list(), drill = NULL,
                      digits = 0, toggles = list())
-  expect_true(all(b$widths >= 60))   # the estimator's floor
+  html <- as.character(dt_flat_assemble_tag(b))
+  expect_match(html, 'data-dt-rotate-titles="off"', fixed = TRUE)
+  w <- as.integer(gsub("\\D", "", regmatches(
+    html, gregexpr("width: [0-9]+px", html)
+  )[[1]]))
+  expect_true(all(w >= 60L))   # the estimator's floor
 })

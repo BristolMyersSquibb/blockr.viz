@@ -1,8 +1,8 @@
 # The stylesheets of the pages R writes itself: the web page download, the
-# groups and cards exhibits (inst/css/exhibit-table-*.css, the text the R
-# strings had). The table view has its own (table_view_dep(),
-# R/table-dep.R); the exporters switch to those once their markup carries
-# the classes the view's rules read.
+# groups and cards exhibits, interactive_table() and the old table chrome
+# (inst/css/exhibit-table-*.css, the text the R strings had). The table view
+# has its own (table_view_dep(), R/table-dep.R); the exporters switch to
+# those once their markup carries the classes the view's rules read.
 
 # A stylesheet of inst/css as one string, read once per session.
 viz_css_file <- local({

@@ -699,7 +699,8 @@ summarize_sp_html <- function(c) {
 
 # Per-element formatting: format() would align decimals across the vector
 # ("100.00" beside "57.14"), while the JS assembler prints String(n) = "100".
-# as.character() on a rounded value matches it exactly.
+# as.character() on a rounded value matches it exactly -- the same reason
+# dt_bar_style() avoids format() for the table block's data bars.
 #' @noRd
 summarize_fmt_w <- function(w) {
   as.character(w)
@@ -754,7 +755,7 @@ summarize_flat_payload <- function(m) {
     fold = m$fold
   )
   # A NULL entry would serialize as {} (jsonlite with no null="null") and read
-  # as truthy in JS. Drop them instead.
+  # as truthy in JS -- the trap dt_payload_json documents. Drop them instead.
   summarize_drop_null(out)
 }
 

@@ -130,6 +130,43 @@ test_that("table_nest() puts a tidy frame under its groups", {
   expect_identical(table_nest(d, by = character()), d)
 })
 
+test_that("a nest's rows start under their innermost heading's name", {
+  d <- data.frame(species = c("a", "a", "b"), island = c("x", "y", "x"),
+                  sex = c("f", "m", "f"), n = 1:3)
+  one <- as.character(dt_table_tag_structured(
+    table_nest(d, by = "species", rowname = "island"), NULL, 2L
+  ))
+  expect_match(one, "blockr-table-nest", fixed = TRUE)
+  expect_match(one, "blockr-section-cell level-1 blockr-section-nest",
+               fixed = TRUE)
+  # One level: the rows keep the base padding, the heading moves to them.
+  expect_no_match(one, "padding-left:calc(", fixed = TRUE)
+
+  two <- as.character(dt_table_tag_structured(
+    table_nest(d, by = c("species", "island"), rowname = "sex"), NULL, 2L
+  ))
+  expect_match(two, "level-2 blockr-section-nest", fixed = TRUE)
+  expect_match(two, "padding-left:calc(40px", fixed = TRUE)
+
+  # A Table 1 without section headers keeps its indent steps.
+  t1 <- as.character(dt_table_tag_structured(
+    summary_table(datasets::mtcars, vars = c("mpg", "cyl")), NULL, 2L
+  ))
+  expect_no_match(t1, "nest", fixed = TRUE)
+})
+
+test_that("a Table 1's statistics start under their variable's name", {
+  d <- data.frame(arm = rep(c("A", "B"), 6), age = 1:12,
+                  sex = rep(c("F", "F", "M"), 4))
+  t1 <- summary_table(d, vars = c("age", "sex"), by = "arm")
+  html <- as.character(dt_table_tag_structured(t1, NULL, 2L))
+  # The variable headings hang their chevrons, as in a nest, and the
+  # statistics (indent 1) keep the base padding: the heading's text edge.
+  expect_match(html, "blockr-section-cell level-1 blockr-section-nest",
+               fixed = TRUE)
+  expect_no_match(html, "padding-left:calc(", fixed = TRUE)
+})
+
 test_that("the records layout nests by `by` and outputs the input rows", {
   d <- data.frame(species = c("a", "a", "b"), island = c("x", "y", "x"),
                   n = 1:3)

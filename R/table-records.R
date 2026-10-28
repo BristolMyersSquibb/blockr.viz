@@ -22,7 +22,7 @@ table_records_view <- function(m) {
     n = m$n, stub = 0L, cols = cols, head = list(head),
     widths = as.numeric(m$widths),
     rows = if (!is.null(m$stub$tint)) list(tint = m$stub$tint),
-    drill = m$onclick_col
+    drill = m$attr_args$onclick_col
   )
   table_view_arrays(out[!vapply(out, is.null, logical(1L))])
 }

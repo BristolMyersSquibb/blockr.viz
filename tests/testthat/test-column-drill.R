@@ -39,6 +39,21 @@ test_that("annotated_column_keys drops malformed entries, keeps good ones", {
   expect_null(annotated_column_keys(data.frame(a = 1)))
 })
 
+test_that("the cell map is indexed the way cellIndex counts", {
+  keys <- annotated_column_keys(ck_frame())
+  # Stub at 0, then the three data columns; Total (the last) has no entry.
+  map <- jsonlite::fromJSON(
+    dd_col_keys_map_json(c("Placebo||n", "Drug X||n", "Total"), keys,
+                         stub_offset = 1L),
+    simplifyVector = FALSE
+  )
+  expect_length(map, 4L)
+  expect_null(map[[1]])
+  expect_equal(map[[2]][[1]]$column, "ARM")
+  expect_equal(map[[3]][[1]]$column, "ARM")
+  expect_null(map[[4]])
+})
+
 test_that("values stay a JSON array, single or pooled", {
   one <- jsonlite::fromJSON(
     dd_col_keys_json(list(list(column = "ARM", values = "Placebo"))),
