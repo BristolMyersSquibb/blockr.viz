@@ -217,7 +217,7 @@ test_that("a pool takes a member's pinned colour", {
 
 test_that("a click on a pooled group filters the input on its members", {
   d <- grouped_df()
-  blk <- new_chart_block(y = "Group")
+  blk <- new_chart_block(category = "Group")
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
