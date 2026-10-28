@@ -151,8 +151,10 @@
      * @returns {TableGridFlags}
      */
     flags(cfg, m) {
+      // The compact look: value-column titles on their side (table.css).
+      const attrs = cfg.look === 'compact' ? { 'data-dt-rotate-titles': 'on' } : undefined;
       return { sortable: cfg.sortable !== false, collapsible: cfg.collapsible !== false,
-               all: this.still };
+               all: this.still, attrs };
     }
 
     /** @returns {TableCardOpts} */

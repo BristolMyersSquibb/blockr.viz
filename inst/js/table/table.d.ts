@@ -309,6 +309,14 @@ interface TableGrid {
 }
 
 /** One table layout's view, drawn into the block's frame. */
+/** How a TableView is built outside the block's binding (static.js). */
+interface TableViewOpts {
+  /** false: no gear and no title slots. */
+  gear?: boolean;
+  /** Every row drawn and no tools, as for a printed page. */
+  still?: boolean;
+}
+
 interface TableLayoutView {
   render(payload: VizPayload): void;
   dispose(): void;
@@ -427,6 +435,8 @@ interface VizTableNamespace {
   picture(payload: VizPayload, width: number, ratio?: number): Promise<VizPicture>;
   /** Draw the tables R wrote into a page without Shiny (static.js). */
   mount(node?: ParentNode): void;
+  /** Draw a payload on an element without the output binding, or redraw it. */
+  renderStatic(el: HTMLElement, payload: VizPayload, opts?: TableViewOpts): void;
   /** The records layout; groups extends it. */
   Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
   html: {
@@ -461,6 +471,7 @@ interface VizTableNamespace {
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;
     title(s: Record<string, unknown>): string;
+    describe(s: Record<string, unknown>): string;
   };
   tooltip: {
     wire(box: HTMLElement, scope: VizScope, model: () => TableModel | null): void;
@@ -470,6 +481,17 @@ interface VizTableNamespace {
     mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
     shadings(el: HTMLElement, ctx: TableGearCtx): void;
+  };
+  /** blockr.ui's controls for the table's own gear rows, with native
+   *  fallbacks (gear.js). */
+  ui: {
+    pick(el: HTMLElement, options: { value: string; label: string }[], value: string,
+         o: { label: string; placeholder?: string }, onPick: (v: string) => void,
+         scope: VizScope): void;
+    check(el: HTMLElement, label: string, on: boolean, onToggle: (on: boolean) => void,
+          scope: VizScope): void;
+    button(cls: string, text: string, label: string, fn: () => void,
+           scope: VizScope): HTMLButtonElement;
   };
 }
 

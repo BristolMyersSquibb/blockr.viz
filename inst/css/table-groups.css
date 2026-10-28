@@ -561,16 +561,22 @@
 .lane-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
 .lane-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
 .lane-sum-head { display: flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 6px; }
-.lane-sum-ctl {
-  flex: none; width: 26px; height: 26px; border: 0; border-radius: var(--blockr-radius-sm, 4px);
-  background: transparent; color: var(--blockr-color-text-muted, #6b7280); cursor: pointer;
-}
-.lane-sum-ctl:hover { background: var(--blockr-color-bg-hover, rgba(17, 24, 39, 0.06));
-                      color: var(--blockr-color-text-default, #111827); }
+/* The buttons are blockr.ui's (blockr-btn--quiet): here only their size. */
+.lane-sum-ctl { flex: none; min-width: 26px; }
 .lane-sum-ctl.lane-sum-toggle {
-  flex: 1 1 auto; width: auto; text-align: left; padding: 0 6px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; color: var(--blockr-color-text-default, #111827);
+  flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
+  justify-content: flex-start; text-align: left; overflow: hidden; white-space: nowrap;
 }
+.lane-sum-icon { flex: none; display: inline-flex; color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-icon svg { width: 20px; height: 14px; }
+.lane-sum-name { flex: none; font-weight: var(--blockr-font-weight-semibold, 600);
+                 color: var(--blockr-color-text-default, #111827); }
+.lane-sum-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
+.lane-sum-chev { flex: none; color: var(--blockr-color-text-muted, #6b7280); transition: transform 120ms; }
+.lane-sum-row.is-open .lane-sum-chev { transform: rotate(90deg); }
+.lane-sum-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+.lane-sum-ctl.lane-sum-rm { margin-left: auto; }
 .lane-sum-ctl.lane-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
 .lane-sum-body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px;
@@ -580,7 +586,7 @@
 .lane-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .lane-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
-.lane-sum-addcol { align-self: flex-start; }
+.lane-sum-addcol { align-self: flex-start; min-width: 200px; }
 
 /* The cursor readout (interval track / sparkline points): one fixed element
    per page, positioned by table/tooltip.js. It follows the pointer, so it is

@@ -6,8 +6,8 @@
 #' @noRd
 table_view_dep <- memoise0(function() {
   script <- file.path("table", js_script_list("table"))
-  css <- c("table-structured.css", "table-groups.css", "table-view.css",
-           "table-cards.css")
+  css <- c("table.css", "table-structured.css", "table-groups.css",
+           "table-view.css", "table-cards.css")
   htmltools::tagList(
     blockr.ui::controls_dep(),
     viz_core_dep(),

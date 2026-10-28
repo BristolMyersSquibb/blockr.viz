@@ -1,0 +1,512 @@
+/* The table view's base rules (inst/js/table/), for every layout: the
+   frame is `.drilldown-table-container`, a groups table adds
+   `.blockr-summarize-container`. One control row, one header cell, one set
+   of body alignments. Written as `:is(...)` so there is ONE definition to
+   keep.
+   `.drilldown-table-structured` rules stay table-only: a summarize table is never a
+   structured Table-1 frame. */
+
+/* Type-based body alignment: numeric cells right (tabular figures), text
+   cells left — matching the header, like the structured table and the
+   canonical html preview. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data {
+  font-variant-numeric: tabular-nums;
+}
+/* Type-based body alignment for the flat table: numeric cells right, text
+   cells left. The structured Table-1 delta CSS is now gated to
+   `.drilldown-table-structured` (see html_table_delta_css()), so it no longer
+   leaks its `td.blockr-data` weight/size/alignment onto the flat table — these
+   rules stand on their own as the flat table's intended alignment. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data.dt-num {
+  text-align: right;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-data.dt-txt {
+  text-align: left;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.blockr-stub {
+  text-align: left;
+}
+/* Table-block rows at 26px, with no rules in the body, like the preview:
+   3px above and below a 20px line. The header cells take 7px. Structured
+   tables set their own cell padding in html_table_delta_css(); these are the
+   flat table's. The summarize table keeps its own rows. */
+.drilldown-table-container .blockr-table tbody td {
+  padding: 3px 12px;
+  line-height: 20px;
+}
+.drilldown-table-container .blockr-table thead th {
+  padding: 7px 12px;
+}
+.drilldown-table-container .blockr-table tbody tr {
+  border-bottom: 0;
+}
+/* Hover: a wash across the row, the whole row being what a flat click
+   claims (or, on a table without a drill, just a reading aid). The shared
+   sheet's hover sits on the <tr>; it moves to the cells so every table-block
+   hover is the one colour. Structured tables with a drill replace this with
+   the claim preview (dt-hot-*, table/drill.js). */
+.drilldown-table-container .blockr-table tbody tr:hover {
+  background-color: transparent;
+}
+.drilldown-table-container .blockr-table tbody tr.blockr-data-row:hover > td {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-data-row {
+  cursor: pointer;
+}
+/* A drill row with an NA drill value emits nothing (no data-raw -> the click
+   is a no-op), so it must not look clickable: default cursor, and the plain
+   row wash every row gets. */
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-data-row.dt-row-nodrill {
+  cursor: default;
+}
+/* Section headers: only those that ARE an identity claim (row-group headers,
+   e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
+   Variable-block headers ("Sex", "Age") are labels, not claims: no keys, no
+   pointer, click is a no-op. */
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table tbody tr.blockr-section-header[data-dd-keys] .blockr-section-value {
+  cursor: pointer;
+}
+/* No drill: the row is inert. The summarize table keeps its own reading-aid
+   tint; the table block's plain row wash is set above. */
+.blockr-summarize-container:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover td {
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
+/* Drill selection: the selected tint and the accent ink across the row, no
+   bar. Structured tables restate this in html_table_delta_css(), after their
+   hover rules. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-row-active td {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+/* Column drill. A header the producer could name (data-dd-colkeys, e.g. an
+   arm) reads as clickable; a Total or a stats spanner carries no keys and
+   stays inert, the same rule the section headers follow above. Its hover is
+   the column it would claim (table/drill.js). */
+:is(.drilldown-table-container, .blockr-summarize-container).dt-clickable .blockr-table thead th.dd-col-drill {
+  cursor: pointer;
+}
+/* The claimed column, painted the same tint the claimed row gets. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-active,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-col-active {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+/* The cell where the two claims cross: one step stronger of the same accent
+   tint, and bold, so it is plainly the darkest of the three without breaking
+   the column. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-row-active td.dt-col-active {
+  background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* ===== Transient drill =====
+   With a ctrl_target set the click is an EVENT sent to another block, so the
+   table lights what was clicked and lets it go -- there is nothing to un-set,
+   and a paint that stayed would show a cohort anyone else can reset. The
+   values are the design system's selected tints (row and column, one step
+   stronger at the cross), with 3px accent bars on the row and the header.
+
+   HOLD is an animation-delay with `both`, so the first frame shows for the
+   whole delay and only then starts to leave.
+
+   The fade is LINEAR and long (1400ms). These tints are 9% alpha -- a range so
+   small that under an ease-in curve the whole perceptible part of the ramp
+   landed in the last ~300ms, and the paint read as held-then-cut rather than
+   as fading. A straight ramp over a longer window spends its time where the
+   eye can follow it. The chart's mark keeps ease-in: a white wash plus a solid
+   ring has room to be decisive, 9% of a tint does not. */
+/* The flash is a pseudo-element LAYER whose OPACITY fades. Two constraints
+   have to hold at once and only this satisfies both:
+
+   1. It must sit above the cell's own background, not replace it. A cell
+      already has one -- the accent-blue hover on a clickable row, zebra
+      striping, a shading fill -- and an animation beats every normal
+      declaration, so animating background-color would drive the cell past
+      those to white and snap back the moment the class comes off.
+   2. It must actually interpolate. `background-image` does NOT: measured in
+      Chrome, a gradient-to-gradient animation holds the FROM value and flips
+      to the TO value at exactly 50%, which is the "stays, then it's gone" the
+      first attempt produced. background-color and opacity both interpolate;
+      opacity on a layer is the one that also satisfies (1).
+
+   z-index -1 against a z-index 0 cell keeps the wash above the cell's
+   background and below its text, so the digits stay crisp under the 20% cross.
+
+   LINEAR: these tints are 9% alpha, a range so small that any ease-in curve
+   spends its visible part in the last few hundred ms and reads as a cut.
+
+   SHORTER than the chart's mark (1200ms total against 1800ms) even though the
+   two are one gesture. A row plus a column is a large area of the screen, and
+   the same duration over a large area reads as longer than over one small mark
+   -- matching the clocks made the table feel like it was waiting for you. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-flash-col {
+  position: relative;
+  z-index: 0;
+}
+/* The header may be sticky, which is already a containing block -- do not
+   touch its position. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead {
+  z-index: 0;
+}
+
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td::after,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody td.dt-flash-col::after,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  animation: dt-flash-out 900ms linear 300ms both;
+}
+
+/* The accent bars ride the same layer, so they fade with it rather than
+   needing an animation of their own. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td:first-child::after {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-flash-colhead::after {
+  box-shadow: inset 0 3px 0 0 var(--blockr-color-border-accent, #2563eb);
+}
+
+/* The cell where the two claims cross: one step darker, same layer. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table tbody tr.dt-flash-row > td.dt-flash-cross::after {
+  background: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+}
+
+@keyframes dt-flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dt-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Flat-table header alignment, driven by the column's data type so the name,
+   sub-label and sort arrow all agree with the body cells: numeric right, text
+   left (the structured table does the same for its arm columns). The type
+   class beats the inherited html-table delta, which right-aligns every header. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.blockr-col-header.dt-col-num {
+  text-align: right;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.blockr-col-header.dt-col-txt {
+  text-align: left;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-num .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-num .dt-th-subrow {
+  justify-content: flex-end;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-txt .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th.dt-col-txt .dt-th-subrow {
+  justify-content: flex-start;
+}
+/* Sticky header for the scrollable table. The structured-Table-1 delta CSS
+   provides its own sticky + scroll-shadow, but that delta is injected only for
+   structured tables — so cover the flat path here (the flat table scrolls,
+   unlike the paginated preview, and benefits from a pinned header). */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+/* Sort indicator placement, matching the html preview: the arrow flows on
+   the lower row immediately to the right of the subtext (small gap, like the
+   preview's type-row) rather than on its own line.
+   - labelled column:   name on top, [label arrow] below
+   - unlabelled column: [name arrow] on the single row */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow {
+  margin-top: 1px;
+}
+/* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
+   to the right edge, level with the numeric columns below. */
+.drilldown-table-structured .blockr-table thead th.blockr-col-header .dt-th-namerow,
+.drilldown-table-structured .blockr-table thead th.blockr-col-header .dt-th-subrow {
+  justify-content: flex-end;
+}
+/* The structured arm sub-line carries its own top margin for the stacked
+   layout; inside the flex subrow the subrow owns the spacing. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow .arm__n {
+  margin-top: 0;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-namerow .blockr-sort-icon,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .dt-th-subrow .blockr-sort-icon {
+  flex: 0 0 auto;
+}
+/* The unsorted arrow reserves no space, so a right-aligned header stays
+   flush-right; the arrow only appears — and nudges the subtext left — once a
+   sort direction is set. (The shared base rule gives it a fixed 12px box,
+   which would otherwise push the subtext off the right edge.) */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon {
+  display: none;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon-asc,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-sort-icon-desc {
+  display: inline-block;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-col-name,
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .arm__name {
+  display: block;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-table thead th .blockr-col-label {
+  font-weight: var(--blockr-font-weight-normal, 400);
+  font-size: 11px;   /* match the canonical html preview's column sub-label */
+  color: var(--blockr-color-text-muted, #6b7280);
+  /* Shrink (ellipsis) rather than reflow when the sort arrow appears under a
+     pinned column width — the arrow nudges the sub-label, never the column. */
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) {
+  position: relative;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-html-table-header {
+  padding-right: 36px;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-hidden-search {
+  display: none !important;
+}
+
+/* Zero-match search feedback (table/dom.js): shown under the
+   header when an active query hides every data row, removed with matches. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-search-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+/* ===== Title / caption bands (chart parity) ===== */
+/* Rendered by table/chrome.js from the RESOLVED title text on the
+   payload; the whole band hides while empty so a title-less table is
+   pixel-identical to before. Mirrors chart.css .dd-chart-titles.
+   The separator line lives UNDER the band: it divides the title from the
+   table's column headers (not the control row from the title), so it only
+   exists while a title/subtitle shows. */
+.dd-table-titles {
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  margin-bottom: 6px;
+}
+
+.dd-table-title {
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: 600;
+  color: var(--blockr-color-text-default, #111827);
+  white-space: pre-line;
+}
+
+.dd-table-subtitle {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  margin-top: 1px;
+  white-space: pre-line;
+}
+
+/* `pre-line`, as on the bands above and on .dd-chart-caption: a newline in
+   the text is a line break, so a caption can carry a second note on its own
+   line. */
+.dd-table-caption {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 4px 2px 0;
+  white-space: pre-line;
+}
+
+/* ===== Control row (search · download · gear) ===== */
+/* The chrome's toolbar moves INTO the gear row (table/gear.js), so
+   search and download sit left of the gear — the chart's cluster — while
+   the gear keeps its canonical top-right position. Scoped to the block
+   container: the shared .blockr-html-table-* chrome is also the plain
+   preview's, which has no gear and keeps its own layout. */
+:is(.drilldown-table-container, .blockr-summarize-container) .blockr-gear-header {
+  gap: 6px;
+}
+/* A layout switch swaps the block's engine containers. Chrome's scroll
+   anchoring would then move a scrolled panel to keep some node in place, so
+   the table jumped by hundreds of pixels; the panel keeps its scroll. */
+.blockr-table-engine { overflow-anchor: none; }
+
+/* Layout E (chart.css .vz-head): the title band sits in the header, on its
+   left, laid out as the chart's. It wraps before the tools, and in the
+   header it has no hairline under it, as the chart's has none. */
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head > .dd-table-titles {
+  padding: 2px 8px 0 2px;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+:is(.drilldown-table-container, .blockr-summarize-container) .vz-head {
+  margin-bottom: 6px;
+}
+
+/* Wrapping column titles. The width estimator measures a header by its
+   longest WORD when wrapping is on (column_widths_px(wrap_names = TRUE)), so
+   the column takes the narrowest width that never breaks a word and the title
+   has to be free to wrap into it. The base preview CSS pins .blockr-col-name
+   to nowrap + ellipsis for the one-line estimate, which would clip instead;
+   lift that here, gated on the toggle so the off-state keeps the old look.
+   `balance` evens the line lengths rather than leaving a trailing orphan. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .blockr-col-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: balance;
+}
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .arm__name {
+  text-wrap: balance;
+}
+
+/* ===== Footer row: row count + filter status ===== */
+/* One flex row under the table. The count (written by the view) sits left,
+   the server-rendered status line (`.dd-status-footer`: "Filtered: ...", and
+   Reset at its far right) takes the rest. Both halves collapse when empty --
+   a table with no drill and no count is pixel-identical to before, so the
+   footer costs no vertical space it does not use. */
+.dt-table-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 var(--blockr-card-inset, 0px);
+}
+
+/* The status half (there only while a filter is set) takes the rest of the
+   row.
+   Two selectors, one job: shiny-sass.css gives a NON-EMPTY `.shiny-html-output`
+   `display: contents`, which erases the slot's own box and promotes the status
+   line itself to flex item -- so whichever of the two is the item, it grows.
+   (Without this the slot measures 0 wide, space-between has nothing to
+   distribute.) */
+.dt-table-footer .dd-status-footer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dt-row-count {
+  padding: 6px 0;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* No count (structured table, error/message state, or the static renderer
+   before any row exists): drop the box, padding included. */
+.dt-row-count:empty {
+  display: none;
+}
+
+/* Rotated column titles (matrix display mode, data-dt-rotate-titles="on").
+   The value-column headers stand upright so the column width is set by the
+   CELL content, not the title -- the subject x term AE heatmap fits several
+   times more terms per viewport this way. writing-mode vertical-rl +
+   rotate(180deg) reads bottom-up (the spreadsheet convention); the stub
+   header (.blockr-stub-header) stays horizontal -- it is the row identity.
+   Gated on the table attribute exactly like wrap-titles above. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header {
+  vertical-align: bottom;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-namerow,
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .dt-th-subrow {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 148px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+/* The table keeps the widths its columns ask for instead of stretching
+   them over the panel: a compact matrix is as wide as its cells. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] {
+  width: auto;
+}
+/* The column sub-label (variable label) has no room in a 30px column;
+   the title carries the identity in matrix mode. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.blockr-col-header .blockr-col-label {
+  display: none;
+}
+/* Dense cells: the standard cell padding would eat a 28px column whole,
+   and centred counts read better than right-aligned ones in a matrix. */
+:is(.drilldown-table-container, .blockr-summarize-container)
+  .blockr-table[data-dt-rotate-titles="on"] tbody td.blockr-data {
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+
+/* In a block card the table runs to the card edges: its scroll box, its
+   search bar and its footer pull themselves out by the card's inset
+   (--blockr-card-inset, set by blockr.dock), and the first and last columns,
+   the search bar and the footer pad their text back in by as much (the
+   structured table's row labels and last column do so in the delta CSS,
+   html_table_delta_css()). The rules, the hover and drill washes and the
+   scroll area reach the edges; every text keeps its place. Whatever else a
+   caller puts in the container (the composer's title row, its code tray)
+   stays on the card's inset. Outside a card the inset is 0. */
+.drilldown-table-container > .blockr-table-wrapper,
+.drilldown-table-container > .dt-table-footer,
+.drilldown-table-container > .blockr-html-table-header {
+  margin-left: calc(-1 * var(--blockr-card-inset, 0px));
+  margin-right: calc(-1 * var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container > .blockr-html-table-header {
+  padding-left: calc(4px + var(--blockr-card-inset, 0px));
+  padding-right: calc(4px + var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :first-child {
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+}
+.drilldown-table-container .blockr-table tr > :last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
+}
+
+/* ===== Summarize table: drill line ===== */
+/* The drill line takes the rest of the footer row, as under a chart and
+   under the table block. It is empty, and gone, while no filter is set. */
+.blockr-summarize-footer > .dd-status-footer {
+  flex: 1 1 auto;
+  padding: 0;
+}
+.blockr-summarize-footer > .dd-status-footer:empty {
+  display: none;
+}
+
+/* The export picture (table/groups.js picture()): the block without its
+   tools, white, with the title band as the header row shows it. */
+.blockr-summarize-capture {
+  background: #fff;
+  padding: 8px 10px;
+}
+.blockr-summarize-capture .dd-table-titles {
+  border-bottom: none;
+  margin-bottom: 4px;
+}
