@@ -39,22 +39,29 @@ registerS3method(
   envir = asNamespace("blockr.core")
 )
 
-# The arm names of the CDISC pilot study. Placebo and Xanomeline High Dose
-# hashed to one colour once; the colour test keeps them in.
-flows_arms <- c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose")
+# The arm names of the CDISC pilot study, plus Screen Failure, which the
+# scale map below does not pin.
+flows_arms <- c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose",
+                "Screen Failure")
 
 flows_adsl <- local({
-  n <- 30
+  n <- 32
   i <- seq_len(n)
   data.frame(
     USUBJID = sprintf("S-%03d", i),
-    ARM = flows_arms[(i - 1L) %% 3L + 1L],
+    ARM = flows_arms[(i - 1L) %% 4L + 1L],
     SEX = ifelse(i %% 2 == 0, "F", "M"),
     AGE = 50 + (i * 7) %% 30,
     WEIGHT = 55 + (i * 11) %% 40,
     stringsAsFactors = FALSE
   )
 })
+
+flows_arm_colours <- c(
+  "Placebo" = "#999999",
+  "Xanomeline Low Dose" = "#56B4E9",
+  "Xanomeline High Dose" = "#0072B2"
+)
 
 build_board <- function() {
   new_dock_board(
@@ -66,6 +73,11 @@ build_board <- function() {
         "scatter", x = "AGE", y = "WEIGHT", color = "ARM",
         drill = "USUBJID", drill_target = "dfilt",
         title = "Weight against age", block_name = "Arms"
+      ),
+      # A second chart coloured by arm, for the unpinned level's colour.
+      arms_bar = new_chart_block(
+        "bar", category = "SEX", value = "AGE", func = "count", color = "ARM",
+        title = "Subjects by sex", block_name = "Arms bar"
       ),
       dfilt = blockr.dm::new_drill_filter_block(block_name = "Drill filter"),
       ctrl_out = new_table_block(rowname = "USUBJID",
@@ -88,26 +100,29 @@ build_board <- function() {
       )
     ),
     links = links(
-      from = c("adsl", "adsl", "dfilt", "adsl", "adsl", "adsl"),
-      to = c("arms", "dfilt", "ctrl_out", "dl", "gear", "words")
+      from = c("adsl", "adsl", "dfilt", "adsl", "adsl", "adsl", "adsl"),
+      to = c("arms", "dfilt", "ctrl_out", "dl", "gear", "words", "arms_bar")
     ),
     views = list(
-      drill = dock_view(c("arms", "ctrl_out"), name = "drill"),
+      drill = dock_view(c("arms", "arms_bar", "ctrl_out"), name = "drill"),
       tools = dock_view(c("dl", "gear", "words"), name = "tools")
     ),
     grids = list(
-      drill = dock_grid(blk("arms"), blk("ctrl_out")),
+      drill = dock_grid(blk("arms"), blk("arms_bar"), blk("ctrl_out")),
       tools = dock_grid(blk("dl"), blk("gear"), blk("words"))
     ),
     extensions = list(ctrl_bridge = new_ctrl_bridge_extension()),
     active = "drill",
-    # A bare binding, as clinical boards register the arm column: its levels
-    # take colours by a hash of their names.
+    # The arms pinned, as a study's scale map does. A level not pinned takes
+    # a colour by a hash of its name, the same in every chart.
     options = c(
       dock_board_options(),
       new_board_options(
         blockr.theme::new_scale_map_option(
-          blockr.theme::new_scale_map(blockr.theme::scale_binding("ARM"))
+          blockr.theme::new_scale_map(blockr.theme::scale_binding(
+            "ARM",
+            color = flows_arm_colours
+          ))
         )
       )
     )

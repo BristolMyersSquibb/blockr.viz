@@ -1,7 +1,8 @@
 # The five flows a reader of a clinical board goes through most, clicked in a
 # browser on one dock board (apps/viz-flows):
 #
-# 1. a chart coloured by treatment arm draws every arm in its own colour,
+# 1. the arms a study pins keep their colours, and a level it does not pin
+#    keeps one colour across charts,
 # 2. a click on a chart sends the subject to a drill filter block, says so
 #    in the footer and latches nothing at the sender,
 # 3. a title and the download switch set in the gear show on the face and
@@ -73,11 +74,11 @@ FLOWS_JS <- "
     if (!f) return null;
     const q = (s) => { const e = f.querySelector(s); return e ? txt(e) : ''; };
     const c = chart(id);
-    let colors = [], cats = [];
+    let colors = {}, cats = [];
     if (c) {
       c.inst.getModel().eachSeries((s) => {
         const st = s.getData().getVisual('style');
-        colors.push(String((st && (st.fill || st.stroke)) || '').toUpperCase());
+        colors[s.name] = String((st && (st.fill || st.stroke)) || '').toUpperCase();
       });
       const o = c.inst.getOption();
       const ax = [].concat(o.xAxis || [], o.yAxis || []).find((a) => a && a.type === 'category');
@@ -116,7 +117,7 @@ FLOWS_JS <- "
 
 flows_face <- function(app, id) {
   f <- app$get_js(sprintf("flows.face('%s')", id))
-  f$colors <- as.character(unlist(f$colors))
+  f$colors <- unlist(f$colors)
   f$cats <- as.character(unlist(f$cats))
   f
 }
@@ -192,19 +193,27 @@ if (run_flows) {
   withr::defer(app$stop(), testthat::teardown_env())
 }
 
-test_that("flows: a chart coloured by arm draws each arm in its own colour", {
+test_that("flows: pinned arms keep their colours, an unpinned level its own", {
   skip_if_not(run_flows, "no headless browser, or under R CMD check")
   flows_view(app, "drill", "arms")
-  f <- flows_face(app, "arms")
-  expect_length(f$colors, 3L)
-  expect_true(all(nzchar(f$colors)))
-  expect_length(unique(f$colors), 3L)
+  pinned <- c("Placebo" = "#999999", "Xanomeline Low Dose" = "#56B4E9",
+              "Xanomeline High Dose" = "#0072B2")
+  scatter <- flows_face(app, "arms")$colors
+  expect_identical(scatter[names(pinned)], pinned)
+  expect_length(unique(scatter[names(pinned)]), 3L)
+  # Screen Failure is not pinned: it takes some colour, and the same one in
+  # a second chart of a different type.
+  expect_true(nzchar(scatter[["Screen Failure"]]))
+  flows_view(app, "drill", "arms_bar")
+  bar <- flows_face(app, "arms_bar")$colors
+  expect_identical(bar[names(pinned)], pinned)
+  expect_identical(bar[["Screen Failure"]], scatter[["Screen Failure"]])
 })
 
 test_that("flows: a chart click drills to the target and latches nothing", {
   skip_if_not(run_flows, "no headless browser, or under R CMD check")
   flows_view(app, "drill", "arms")
-  expect_identical(nrow(flows_result(app, "ctrl_out")), 30L)
+  expect_identical(nrow(flows_result(app, "ctrl_out")), 32L)
 
   p <- app$get_js("flows.item('arms', 0, 0)")
   flows_mouse(app, p)
@@ -307,7 +316,8 @@ test_that("flows: every download format arrives named after the title", {
       ss <- utils::unzip(f, "xl/sharedStrings.xml", exdir = tempfile())
       strs <- paste(readLines(ss, warn = FALSE), collapse = "")
       expect_match(strs, "Mean age by arm", fixed = TRUE)
-      for (a in c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose")) {
+      for (a in c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose",
+                  "Screen Failure")) {
         expect_match(strs, a, fixed = TRUE)
       }
     }
@@ -319,7 +329,7 @@ test_that("flows: a subtitle word opens a menu that changes the mapping", {
   flows_view(app, "tools", "words")
   f <- flows_face(app, "words")
   expect_setequal(f$cats, c("Placebo", "Xanomeline High Dose",
-                            "Xanomeline Low Dose"))
+                            "Xanomeline Low Dose", "Screen Failure"))
 
   flows_click(app, "words", ".vz-subtitle .blockr-slot", "ARM")
   flows_click(app, NULL, ".blockr-select__option", "SEX")
