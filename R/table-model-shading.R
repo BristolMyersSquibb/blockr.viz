@@ -1,12 +1,9 @@
-# Shading in the table model: the `shadings` rules of the records layout
-# resolved to per-column cell visuals (data bars, heatmap ramps, colour
-# sources), and the paint both the screen and the downloads read.
+# Shading in the table model: `shadings` rules resolved to per-column cell
+# visuals (data bars, heatmap ramps, colour sources), and the paint the screen
+# and the downloads share.
 
-#' Normalize the `shadings` list (cell value-encoding rules) from a restored
-#' block state (an R list) or from the gear (a JSON string) to
-#' `list(list(mode, cols), ...)`. Mirrors dd_parse_summaries -- the two lists
-#' share their shape family (`{func, cols}` / `{mode, cols}`).
-#' @noRd
+# Normalizes `shadings` from restored state (a list) or the gear (a JSON
+# string) to list(list(mode, cols), ...).
 dd_parse_shadings <- function(v) {
   if (is.null(v)) return(list())
   ss <- if (is.character(v) && length(v) == 1L) {
@@ -23,14 +20,11 @@ dd_parse_shadings <- function(v) {
       mode = as.character(s$mode %||% s$type %||% "diverging")[1L],
       cols = as.character(unlist(s$cols %||% s$columns %||% character()))
     )
-    # Optional power knobs (per-rule palette / fixed domain / color source)
-    # ride along when present -- the gear never writes them, ctor / legacy
-    # specs may. `source` decouples the painted value from the displayed one
-    # (see dd_shading_visuals).
+    # Optional power knobs the gear never writes. `source` decouples the
+    # painted value from the displayed one (dd_shading_visuals()).
     if (!is.null(s$palette)) out$palette <- s$palette
     if (!is.null(s$domain)) {
-      # A JSON restore delivers c(lo, hi) as a two-element list; the visuals
-      # resolver does arithmetic on it, so normalize to numeric here.
+      # JSON delivers c(lo, hi) as a list; the resolver does arithmetic on it.
       out$domain <- suppressWarnings(as.numeric(unlist(s$domain)))
     }
     if (!is.null(s$source) && nzchar(as.character(s$source)[1L])) {
@@ -40,41 +34,23 @@ dd_parse_shadings <- function(v) {
   })
 }
 
-#' Resolve the `shadings` rules to per-column cell visuals.
-#'
-#' Override semantics, mirroring dd_metric_plan: a rule with EMPTY `cols`
-#' covers ALL numeric columns except those explicitly claimed by other rules
-#' (so `bar on DOSE` + `diverging on []` bars DOSE and shades everything
-#' else); explicit-but-dropped columns stay a visible no-op; among competing
-#' rules the FIRST wins a column. diverging/sequential pool ONE domain across
-#' the rule's resolved columns (a correlation matrix reads on one scale);
-#' `bar` normalizes per column on absolute magnitude.
-#'
-#' **Color source** (diverging/sequential only, ctor-level): a rule may name
-#' a `source` -- the column whose values drive the paint while the cell keeps
-#' displaying its own. Two forms: a plain column name paints ALL of the
-#' rule's columns by that one column's row values (the BI "shade A by B"),
-#' and a `{col}` template (e.g. `"{col} (sev)"`) pairs each shaded column
-#' with its own companion, re-resolved per render so it follows a dynamic
-#' matrix (the AE heatmap: counts displayed, worst grade painted). Columns
-#' referenced as a source are paint metadata, not data for the eye: they are
-#' excluded from shading candidates here and reported in the `"hidden"`
-#' attribute so the caller drops them from the display. The domain pools
-#' over the SOURCE values (that is what is being encoded); sources must be
-#' numeric.
-#'
-#' @return named list: column -> `list(kind = "bar", fill, max)` or
-#'   `list(kind = "bg", fun)` (a dt_color_fun closure, plus `src` when a
-#'   source drives the paint). Unlisted columns render plain. Attribute
-#'   `"hidden"`: source columns the display must drop.
-#' @noRd
+# Resolves `shadings` to per-column cell visuals: column -> list(kind = "bar",
+# fill, max) or list(kind = "bg", fun, src). Unlisted columns render plain.
+# A rule with empty `cols` covers the numeric columns no other rule claims;
+# explicit columns that drop out stay a visible no-op; the first rule wins a
+# column. diverging/sequential pool one domain over the rule's columns; `bar`
+# scales per column on absolute magnitude.
+# `source` (diverging/sequential): the column whose values drive the paint, as
+# a plain name (paints all the rule's columns) or a `{col}` template pairing
+# each column with its own companion. Source columns are not shading
+# candidates and come back in attribute "hidden" for the caller to drop; the
+# domain pools over source values, which must be numeric.
 dd_shading_visuals <- function(shadings, data, value_cols) {
   out <- list()
   if (!length(shadings)) return(out)
   num_cols <- value_cols[vapply(data[value_cols], is.numeric, logical(1L))]
-  # Pass 1 -- expand every rule's `source` against the columns it could
-  # cover, so sources are known BEFORE candidates resolve (a companion
-  # column must never itself end up shaded, or displayed).
+  # Expand each rule's `source` first, so sources are known before candidates
+  # resolve (a companion must never be shaded or displayed).
   expand_src <- function(src, cols) {
     if (grepl("{col}", src, fixed = TRUE)) {
       vapply(cols, function(cn) gsub("{col}", cn, src, fixed = TRUE),
@@ -109,9 +85,8 @@ dd_shading_visuals <- function(shadings, data, value_cols) {
                           max = if (length(v)) max(abs(v)) else 0)
       }
     } else {
-      # Paired source per column (NA = none resolvable -> that column's
-      # paint reads its own values, so a missing companion degrades to the
-      # sourceless behaviour instead of rendering plain).
+      # Paired source per column; NA (none resolvable) paints from the
+      # column's own values.
       src <- as.character(s$source %||% "")[1L]
       srcs <- if (nzchar(src)) {
         sc <- expand_src(src, cols)
@@ -146,50 +121,24 @@ dd_shading_visuals <- function(shadings, data, value_cols) {
   out
 }
 
-#' Per-cell inline style for a data bar: a left-anchored CSS gradient whose
-#' width is `|v| / mx * 100%` (absolute-magnitude normalisation, no center
-#' baseline -- matches the crossfilter block). Vectorised over the column so the
-#' table stays on the single-`HTML()` fast path. Returns `""` for a degenerate
-#' column (all-zero / non-finite max), i.e. no bar.
-#' @noRd
-dt_bar_style <- function(v, mx, fill) {
-  if (!is.finite(mx) || mx <= 0) return(rep("", length(v)))
-  # as.character on the rounded value formats each width independently (no
-  # vectorized decimal-alignment, so 100 stays "100", not "100.0").
-  pct <- as.character(round(pmax(0, pmin(100, abs(v) / mx * 100)), 2L))
-  paste0(" style=\"background:linear-gradient(90deg,", fill, " 0 ", pct,
-         "%,transparent ", pct, "%);\"")
-}
-
-#' Readable text colour over a background: white on dark, near-black on
-#' light, by perceived luminance. ONE rule for every painted cell, so a
-#' ramp cell and a scale-map cell (the heatmap block's two paint sources)
-#' cannot disagree about when text flips to white. Vectorized.
-#' @noRd
+# Text colour over a background: white on dark, near-black on light, by
+# luminance. One rule for every painted cell. Vectorized.
 dt_fg_for_rgb <- function(r, g, b) {
   lum <- (0.299 * r + 0.587 * g + 0.114 * b) / 255
   ifelse(lum < 0.55, "#ffffff", "#111827")
 }
 
-#' @noRd
 dt_fg_for_hex <- function(hex) {
   m <- grDevices::col2rgb(hex)
   dt_fg_for_rgb(m[1L, ], m[2L, ], m[3L, ])
 }
 
-#' Build the heatmap ramp for a shading rule. The returned function is
-#' VECTORIZED over `v` end-to-end (clamp, interpolation t, per-channel lerp,
-#' `rgb()`, and the luminance contrast test all take vectors) and returns
-#' `list(bg =, fg =)` of hex vectors -- the caller styles a whole column in
-#' one call, keeping the shaded table on the same vectorized fast path as
-#' dt_bar_style(). A 10k x 10 shaded table used to burn 100k scalar closure
-#' calls per render here.
-#' @noRd
+# The heatmap ramp for a shading rule: a function vectorized over `v` that
+# returns list(bg =, fg =) hex vectors.
 dt_color_fun <- function(type, domain, palette) {
   lo <- domain[1L]
   hi <- domain[2L]
   hex2rgb <- function(h) grDevices::col2rgb(h)[, 1L]
-  # Per-channel r/g/b vectors -> bg hex + contrast-tested fg hex.
   bg_fg <- function(r, g, b) {
     list(bg = grDevices::rgb(r, g, b, maxColorValue = 255),
          fg = dt_fg_for_rgb(r, g, b))
@@ -200,9 +149,7 @@ dt_color_fun <- function(type, domain, palette) {
     c1 <- hex2rgb(pal[1L])
     c2 <- hex2rgb(pal[2L])
     c3 <- hex2rgb(pal[3L])
-    # Diverging is centred on 0 (white-at-zero); the domain is symmetric around
-    # 0 (set at inference). A meaningful zero is what "diverging" means -- for a
-    # correlation matrix this puts white at r = 0 and gives +/- equal saturation.
+    # Centred on 0 (white at zero); the domain is symmetric around 0.
     mid <- 0
     function(v) {
       v <- pmax(pmin(v, hi), lo)
@@ -228,16 +175,10 @@ dt_color_fun <- function(type, domain, palette) {
   }
 }
 
-#' The paint of one shaded column, as the screen draws it.
-#'
-#' `sv` is a `kind = "bg"` entry of dd_shading_visuals(). Returns
-#' `list(bg =, fg =)`, one hex per row of `data`, NA where the cell is
-#' unpainted: an NA cell, or a row whose paint value is missing. With a colour
-#' SOURCE (`sv$src`) the paint reads the companion column at the same rows
-#' while the cell keeps displaying its own value. dt_flat_build() turns this
-#' into the cell styles, the downloads into paint columns, so the two cannot
-#' disagree.
-#' @noRd
+# The paint of one shaded column as the screen draws it. `sv` is a "bg" entry
+# of dd_shading_visuals(). Returns list(bg =, fg =), a hex per row of `data`,
+# NA where unpainted (an NA cell or a missing paint value). With a colour source
+# (`sv$src`) the paint reads the companion column. Downloads read it too.
 dt_bg_paint <- function(sv, data, col) {
   n <- nrow(data)
   bg <- fg <- rep(NA_character_, n)

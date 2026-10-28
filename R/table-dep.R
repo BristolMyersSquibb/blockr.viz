@@ -1,9 +1,4 @@
-#' The table view's scripts and stylesheets
-#'
-#' blockr.ui's controls (the gear engine draws with them), the JS core and
-#' the specs (viz_core_dep()), the chart's header and gear styles, then the
-#' scripts in inst/js/table/scripts.txt and the view's stylesheets.
-#' @noRd
+# The table view's scripts (inst/js/table/scripts.txt) and stylesheets.
 table_view_dep <- memoise0(function() {
   script <- file.path("table", js_script_list("table"))
   css <- c("table.css", "table-structured.css", "table-groups.css",
@@ -22,21 +17,12 @@ table_view_dep <- memoise0(function() {
   )
 })
 
-#' A table drawn without Shiny
-#'
-#' The element `inst/js/table/static.js` draws on a page without Shiny (the
-#' Web page download, a knitted document): the payload as JSON, under the
-#' table view's scripts and stylesheets. The view draws every row, with no
-#' gear and nothing sent.
-#'
-#' @param model A TableModel list, or `NULL` for none.
-#' @param config The settings the view reads: `layout`, `look`, `by`,
-#'   `sortable`, `column_axis`, `value_labels`, `bar_width`.
-#' @param derived `titles` (strings), `legend`, `empty`.
-#' @param max_height A CSS height for the box, or `NULL` for the table's
-#'   full length.
-#' @return A tag list.
-#' @noRd
+# A table drawn without Shiny (the Web page download, a knitted document):
+# the payload as JSON under the view's dependencies. It draws every row, with
+# no gear. `model` is a TableModel list or NULL; `config` the settings the view
+# reads (`layout`, `look`, `by`, `sortable`, `column_axis`, `value_labels`,
+# `bar_width`); `derived` has `titles`, `legend`, `empty`; `max_height` is a
+# CSS height, NULL for the table's full length.
 table_static <- function(model, config, derived = list(), max_height = NULL) {
   derived <- derived[!vapply(derived, is.null, logical(1L))]
   payload <- list(
@@ -59,23 +45,18 @@ table_static <- function(model, config, derived = list(), max_height = NULL) {
   )
 }
 
-#' The titles of a printed table, as the view's `derived$titles`
-#' @noRd
+# The titles of a printed table, as the view's `derived$titles`.
 table_static_titles <- function(title, subtitle, caption) {
   txt <- function(x) if (is.character(x) && length(x) == 1L && nzchar(x)) x
   list(title = txt(title), subtitle = txt(subtitle), caption = txt(caption))
 }
 
-#' A printed groups table as the view's model and settings
-#'
-#' @param x A `summarize_exhibit`.
-#' @return `list(model, config, derived)` for table_static().
-#' @noRd
+# A printed groups table (a `summarize_exhibit`) as list(model, config,
+# derived) for table_static().
 table_static_groups <- function(x) {
   args <- x$args
   cells <- x$cells
-  # A printed table has nobody to click its chevrons, so a nested one opens
-  # whole, as the painted page draws every row too.
+  # Nobody can click a printed table's chevrons, so a nested one opens whole.
   if (!is.null(cells)) cells$expanded <- TRUE
   axis <- !isFALSE(args$axis)
   list(

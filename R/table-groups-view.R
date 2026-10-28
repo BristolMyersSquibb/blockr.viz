@@ -1,29 +1,6 @@
-# The groups layout's view: the cell model (R/table-model-cells.R) as the
-# table the browser draws, a TableModel (inst/js/table/table.d.ts). The
-# browser lays the marks out from the numbers the cell model computed.
-#
-#   R/table-groups-view.R   the model: columns, header, rows
-#   R/table-groups-text.R   display text, the mark, the column axis
-#
-# What stays out of the model: the selection (`on`, `on_cell` and `pick` of
-# the cell model; the browser lights rows from `config.selection`), the cards
-# look (R/table-cards.R), the column widths, and the chrome: the legend
-# (summarize_legend_spec()) is for `derived`.
-
-#' The groups layout as the browser draws it
-#'
-#' Nesting: a two-level `by` is `rows$indent` (0 for a parent row, 1 for a
-#' child) with `rows$strong` on the parent rows; `collapsed` starts the table
-#' folded. Claims: with the drill on, `rows$keys[[i]]` is the row's path as
-#' `{column: [value]}` (a parent row its outer column, a child both; `NULL`
-#' for a row that does not click). A column's `keys` is the facet level or the
-#' colour levels a click on its cells adds to the row's claim.
-#'
-#' @param m table_model_groups()'s result, `list(prep, cells)`.
-#' @param axis Whether the marks carry `ticks` (the column axis switch).
-#' @return A TableModel list: `n`, `stub`, `cols`, `head`, `rows`,
-#'   `collapsed` and `note` (the line about groups cut by `top_n`). `NULL` when `m$cells` is `NULL` (the preparation
-#'   failed), where the block says why instead of drawing.
+#' The groups layout as the browser draws it (a TableModel).
+#' @return A TableModel list, or `NULL` when `m$cells` is `NULL` (the
+#'   preparation failed).
 #' @noRd
 table_groups_view <- function(m, axis = TRUE) {
   cells <- m$cells
@@ -49,17 +26,15 @@ table_groups_view <- function(m, axis = TRUE) {
   table_view_arrays(table_groups_compact(out))
 }
 
-# The context summarize_cells() hands its column builders, with the value
-# labels on: the labels of a column that draws none are rebuilt from it, for
-# `disp` (table_groups_disp()).
+# The context summarize_cells() hands its column builders, with value labels
+# on, so a column that draws none can have its labels rebuilt for `disp`.
 table_groups_ctx <- function(prep) {
   list(rows = prep$rows, n = nrow(prep$rows), prep = prep, mx = prep$bar_max,
        mn = prep$bar_min %||% 0, vals_on = TRUE)
 }
 
-# One body column. A plain number is `num` (right-aligned); every other kind
-# sorts on `key`, the cell model's sort value. `keys` is what a click on the
-# column's cells adds to the row's claim; `pct` the "(43%)" tail of a count.
+# One body column. A plain number is `num` (right-aligned); other kinds sort on
+# `key`. `keys` is what a click adds to the row's claim; `pct` the "(43%)" tail.
 table_groups_col <- function(c, p, prep, ctx, pick, axis) {
   pct <- if (!is.null(c$pct)) table_groups_text(c$pct)
   table_groups_compact(list(
@@ -76,9 +51,8 @@ table_groups_col <- function(c, p, prep, ctx, pick, axis) {
   ))
 }
 
-# The claim of a click on a cell of this column: the facet level, and for a
-# colour split the column whose levels its segments name (a click on a
-# segment claims the one under it).
+# The claim of a click on a cell: the facet level, and for a colour split the
+# column its segments name.
 table_groups_col_keys <- function(c) {
   cols <- c(c$fkey$column, c$scol)
   if (!length(cols)) {
@@ -89,9 +63,8 @@ table_groups_col_keys <- function(c) {
   table_structured_claim(cols, vals)
 }
 
-# Header rows. One row, the stub's cell then one per column; the by_level
-# facet layout adds a spanning row on top: the stub and the leading columns
-# reach down both rows, and each facet level spans its summaries.
+# Header rows: the stub's cell then one per column. The by_level facet layout
+# adds a spanning row on top; the stub and leading columns span both rows.
 table_groups_head <- function(m, pick) {
   prep <- m$prep
   leaf <- function(i) {
@@ -118,8 +91,7 @@ table_groups_head <- function(m, pick) {
   list(row1, lapply(setdiff(seq_along(prep$plan), lead), leaf))
 }
 
-# The facet levels over their columns: the level, its N, and the claim a
-# click on it makes.
+# The facet levels over their columns: level, its N, and the claim a click makes.
 table_groups_spanners <- function(prep, fs, pick) {
   first <- fs$lead + 1L + c(0L, cumsum(vapply(fs$groups, `[[`, 1L, "n")))
   lapply(seq_along(fs$groups), function(j) {
@@ -137,8 +109,8 @@ table_groups_spanners <- function(prep, fs, pick) {
   })
 }
 
-# Per-row extras. A nested table (two-level `by`) indents its child rows and
-# marks its parent rows strong; with the drill on every row claims its path.
+# Per-row extras: a nested table indents child rows and marks parents strong;
+# with the drill on every row claims its path.
 table_groups_rows <- function(cells, pick) {
   nested <- isTRUE(cells$nested)
   parent <- !is.na(cells$parent_row) & cells$parent_row

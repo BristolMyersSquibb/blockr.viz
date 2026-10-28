@@ -385,3 +385,31 @@ test('dispose empties the tray and stops sending', () => {
   t.gear.set({ x: 'SEX' });
   assert.equal(t.sent.length, 0);
 });
+
+test('the variables layout: Group by, Section by, Individual id, Label and Nest send their keys', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'tb' });
+  m.gear.update(payload({ layout: 'variables', by: [], sections: [], id: null,
+                          total: true, total_label: 'Total', nest: false }));
+  for (const k of ['by', 'sections', 'id', 'stats', 'total', 'total_label', 'nest']) {
+    assert.ok(rows(m.el).includes(k), k + ' is a row');
+  }
+  const pick = (key, i) => {
+    const s = sel(m.el, key);
+    s.options[i].selected = true;
+    s.dispatchEvent(new env.win.Event('change'));
+    return env.sent.at(-1).value.values;
+  };
+  assert.deepEqual(pick('by', 1), { by: ['ARM'] });
+  assert.deepEqual(pick('sections', 2), { sections: ['SEX'] });
+  choose(env.win, sel(m.el, 'id'), 'USUBJID (Subject)');
+  assert.deepEqual(env.sent.at(-1).value.values, { id: 'USUBJID' });
+  const label = inp(m.el, 'total_label');
+  label.value = 'All';
+  label.dispatchEvent(new env.win.Event('blur'));
+  assert.deepEqual(env.sent.at(-1).value.values, { total_label: 'All' });
+  const box = row(m.el, 'nest').querySelector('input');
+  box.checked = true;
+  box.dispatchEvent(new env.win.Event('change'));
+  assert.deepEqual(env.sent.at(-1).value.values, { nest: true });
+});

@@ -15,44 +15,27 @@ drilldown_table_color(
 \arguments{
 \item{type}{\code{"diverging"}, \code{"sequential"}, or \code{"bar"}.}
 
-\item{domain}{\code{NULL} to infer from the data, or \code{c(min, max)}.
-Ignored for \code{"bar"} (always per-column). For \code{"diverging"} the
-inferred domain is symmetric around 0.}
+\item{domain}{\code{NULL} to infer from the data (symmetric around 0 for
+diverging), or \code{c(min, max)}. Ignored for \code{"bar"}.}
 
-\item{palette}{\code{NULL} for type defaults, or a character vector of
-colors -- length 3 for diverging (low/mid/high), length 2 for
-sequential (low/high), length 1 for the bar fill.}
+\item{palette}{\code{NULL} for the defaults, or colours: three for diverging
+(low, mid, high), two for sequential, one for the bar.}
 
-\item{columns}{\code{NULL}/empty to apply to \strong{all} numeric columns (a
-rule, re-resolved against whatever data arrives -- survives upstream
-schema changes), or a character vector to restrict to those columns.
-A picked column that no longer exists is silently skipped.}
+\item{columns}{\code{NULL} for every numeric column, re-resolved on new data,
+or the columns to paint. A missing column is skipped.}
 
-\item{source}{\code{NULL} (the paint reads the shaded column's own values), a
-column name (paint every shaded column by THAT column's row values), or
-a \code{{col}} template such as \code{"{col} (sev)"} (pair each shaded column
-with its own companion, re-resolved per render). The cell keeps
-displaying its own value while the background encodes the source's --
-the AE heatmap's "count shown, worst grade painted". Source columns are
-hidden from the display; sources must be numeric. Diverging/sequential
-only.}
+\item{source}{\code{NULL} to paint by the cell's own value, a column name to
+paint every shaded column by that column, or a template such as
+\code{"{col} (sev)"} for one companion per column. Source columns are hidden
+and must be numeric. Diverging and sequential only.}
 }
 \value{
 A cell-colour spec list.
 }
 \description{
-Describes how numeric cells are decorated. Three modes, all purely
-presentational (the data is never changed):
-}
-\details{
-\itemize{
-\item \code{"diverging"} -- a value-to-background scale centred on 0 with a
-symmetric domain (correlation matrices: -1 white-at-0 +1).
-\item \code{"sequential"} -- a low-to-high background ramp (heatmaps).
-\item \code{"bar"} -- an in-cell horizontal data bar proportional to the value
-(e.g. "patients with most adverse events"), normalised per column on
-absolute magnitude and left-anchored.
-}
+How numeric cells are painted; the data is never changed. \code{"diverging"}
+is a scale centred on 0 (a correlation matrix), \code{"sequential"} a low to
+high ramp, \code{"bar"} an in-cell bar scaled per column on absolute values.
 }
 \examples{
 drilldown_table_color("sequential", domain = c(0, 100))

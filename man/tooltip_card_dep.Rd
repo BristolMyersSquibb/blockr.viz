@@ -11,9 +11,9 @@ An \code{\link[htmltools:htmlDependency]{htmltools::htmlDependency()}}.
 }
 \description{
 The stylesheet behind every blockr.viz data tooltip: a headline with a
-colour swatch, then rows with the name muted on the left and the value on
-the right (\code{dd-tt-head}, \code{dd-tt-sw}, \code{dd-tt-row}, \code{dd-tt-label},
-\code{dd-tt-value}, \code{dd-tt-meta}, \code{dd-tt-sep}). Another package's tooltips
-attach it and use the same classes, so every hover card looks the same.
+colour swatch, then rows with the name on the left and the value on the
+right (\code{dd-tt-head}, \code{dd-tt-sw}, \code{dd-tt-row}, \code{dd-tt-label},
+\code{dd-tt-value}, \code{dd-tt-meta}, \code{dd-tt-sep}). Another package's tooltips can
+attach it and use the same classes.
 }
 \keyword{internal}

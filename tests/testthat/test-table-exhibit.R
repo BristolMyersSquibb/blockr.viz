@@ -13,11 +13,9 @@ seq_rule <- function() drilldown_table_color(type = "sequential")
 screen_paint <- function(data, label_col, shadings, col) {
   b <- dt_flat_build(data, label_col, NULL, dd_parse_shadings(shadings),
                      toggles = list())
-  j <- match(col, setdiff(names(data), label_col))
-  st <- b$cells[[j]]$style
-  bg <- ifelse(nzchar(st), sub(".*background:([^;]+);.*", "\\1", st), NA)
-  fg <- ifelse(nzchar(st), sub(".*color:([^;]+);.*", "\\1", st), NA)
-  list(bg = unname(bg), fg = unname(fg))
+  cc <- b$cells[[match(col, vapply(b$cells, `[[`, "", "name"))]]
+  list(bg = unname(cc$bg %||% rep(NA_character_, b$n)),
+       fg = unname(cc$fg %||% rep(NA_character_, b$n)))
 }
 
 slide_xml <- function(f) {

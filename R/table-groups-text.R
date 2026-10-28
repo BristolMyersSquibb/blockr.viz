@@ -1,7 +1,3 @@
-# The groups view's columns: what a cell says as plain text (`disp`, which
-# the browser searches), its mark, the axis of a column, and the escapes the
-# cell model carries for the HTML path.
-
 # The text the cell model escaped for markup, as the text it stands for.
 table_groups_plain <- function(x) {
   x <- as.character(x)
@@ -18,11 +14,9 @@ table_groups_text <- function(x, escaped = FALSE) {
   x
 }
 
-# The display text of each row of a column. A plain number or text is its
-# own text. A mark has its value label; a mark that draws none (the Values
-# switch off, a column without labels) has the label it would have had,
-# rebuilt from the plan. A swimlane has no single value: its text is the
-# tooltips of its segments, which is what the reference's search read.
+# The display text of each row. A number or text is its own text; a mark has
+# its value label, or the label it would have had (rebuilt from the plan) when
+# it draws none. A swimlane's text is its segment tooltips.
 table_groups_disp <- function(c, p, ctx) {
   if (identical(c$kind, "num")) {
     return(table_groups_text(c$disp, escaped = isTRUE(c$text)))
@@ -71,12 +65,9 @@ table_groups_join_levels <- function(levels, labs) {
   }, character(1L))
 }
 
-# The mark of a column: summarize_payload_col()'s fields (names in
-# R/summarize-push.R), less what the TableCol holds itself: `disp`, `v` (the
-# key), `pct`, the tile paint and the claims. The cell model escapes some text
-# for the HTML path (box and point range tooltips, swimlane tooltips and
-# labels); the browser escapes, so it is plain here. A plain number or text
-# has no mark.
+# The mark of a column: summarize_payload_col()'s fields less what the TableCol
+# holds itself (`disp`, `v`, `pct`, tile paint, claims). Text the cell model
+# escaped is plain here; the browser escapes. A number or text has no mark.
 table_groups_mark <- function(c) {
   if (identical(c$kind, "num")) {
     return(NULL)
@@ -104,11 +95,10 @@ table_groups_tips <- function(x) {
   if (!is.null(x)) summarize_arr(table_groups_plain(x))
 }
 
-# The column axis the header draws: where the ticks sit (percent of the
-# cell, 0 to 100) and their labels, the same numbers summarize_axis_strip()
-# prints, with the "%" of a percent scale already on the last label. `foot`
-# marks a large swimlane, which repeats the axis under the table. `NULL`
-# for a column with no scale or fewer than two ticks.
+# The column axis the header draws: tick positions (percent of the cell) and
+# labels, as summarize_axis_strip() prints them, with the "%" already on the
+# last label. `foot` marks a large swimlane, which repeats the axis under the
+# table. `NULL` without a scale or with fewer than two ticks.
 table_groups_axis <- function(p, prep) {
   dom <- summarize_axis_domain(p, prep)
   if (is.null(dom)) {

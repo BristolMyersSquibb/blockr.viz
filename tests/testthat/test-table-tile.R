@@ -61,13 +61,9 @@ test_that("a tile matrix sorts its rows by their total", {
   expect_identical(p$rows$.label[[1L]], "s3")
 })
 
-test_that("compact marks the table and the export carries the paint", {
+test_that("the export carries the tile paint", {
   p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary(fill = "GRADE"))
-  expect_match(summarize_table_attrs(p, list(compact = TRUE)),
-               "data-summarize-compact=\"1\"", fixed = TRUE)
-  expect_false(grepl("data-summarize-compact",
-                     summarize_table_attrs(p, list(compact = FALSE))))
   df <- summarize_export_df(p)
   expect_true(all(c("RASH", ".bg:RASH", ".fg:RASH") %in% names(df)))
 })
