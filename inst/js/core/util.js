@@ -1,7 +1,8 @@
 // @ts-check
 /**
- * Helpers every block view shares: one HTML escaper and one way to send an
- * input to R. Timers and listeners are not here; they belong to a Scope
+ * Helpers every block view shares: one HTML escaper, one way to send an
+ * input to R, and what a column description (VizColumn) says about its
+ * values. Timers and listeners are not here; they belong to a Scope
  * (scope.js), so they go away with their block.
  */
 (function () {
@@ -43,5 +44,15 @@
     return true;
   };
 
-  V.util = { esc, send };
+  /**
+   * A column that holds numbers: a number or a duration. A date or
+   * date-time is not; isTemporal() names those.
+   * @param {VizColumn | null | undefined} c
+   */
+  const isNumeric = (c) => !!c && (c.class === 'number' || c.class === 'duration');
+
+  /** @param {VizColumn | null | undefined} c */
+  const isTemporal = (c) => !!c && (c.class === 'date' || c.class === 'datetime');
+
+  V.util = { esc, send, isNumeric, isTemporal };
 })();

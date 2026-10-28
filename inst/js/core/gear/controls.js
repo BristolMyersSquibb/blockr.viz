@@ -25,10 +25,6 @@
   /** @param {unknown} a @param {unknown} b */
   const same = (a, b) => JSON.stringify(a == null ? null : a) === JSON.stringify(b == null ? null : b);
 
-  const NUMERIC = ['integer', 'double', 'numeric', 'duration', 'integer64'];
-  /** @param {VizColumn} c */
-  const isNumeric = (c) => NUMERIC.includes(c.class);
-
   /** The number formats both blocks offer (type `format`). */
   /** @type {VizChoice[]} */
   const FORMATS = [
@@ -579,6 +575,6 @@
     (BUILD[control] || textCtl)(el, ctx);
   }
 
-  V.gear.controls = { build, options: choicesFor, toText, fromText, isSet, same, isNumeric, emptyChoice,
+  V.gear.controls = { build, options: choicesFor, toText, fromText, isSet, same, emptyChoice,
                        uiOptions };
 })();

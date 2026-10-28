@@ -10,10 +10,10 @@ const C = loadPure();
 const K = C.keys;
 
 const columns = [
-  { name: 'AETERM', type: 'categorical', label: 'Reported Term' },
-  { name: 'AESEV', type: 'categorical', label: 'Severity' },
-  { name: 'USUBJID', type: 'categorical', label: 'Patient' },
-  { name: 'ARM', type: 'categorical' }
+  { name: 'AETERM', class: 'string', label: 'Reported Term' },
+  { name: 'AESEV', class: 'string', label: 'Severity' },
+  { name: 'USUBJID', class: 'string', label: 'Patient' },
+  { name: 'ARM', class: 'string' }
 ];
 
 test('a filter from keys has one string value per column', () => {
@@ -91,8 +91,8 @@ test('a missing value is a key too: sent as null, named (missing), matched by nu
 });
 
 test('a range in column labels: both ends at one precision, a point with =', () => {
-  const cols = [{ name: 'ADY', type: 'numeric', label: 'Study Day' },
-                { name: 'AVAL', type: 'numeric', label: 'Value' }];
+  const cols = [{ name: 'ADY', class: 'number', label: 'Study Day' },
+                { name: 'AVAL', class: 'number', label: 'Value' }];
   assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [2, 86],
                                        y_range: [21.37, 30] }, cols),
                      'Study Day 2 to 86, Value 21.4 to 30.0');
@@ -158,9 +158,9 @@ test('a point is in a range by its x and y; text compares as text (D11)', () => 
 });
 
 test('a range named in the footer with its panel (D10)', () => {
-  const cols = [{ name: 'ADY', type: 'numeric', label: 'Study Day' },
-                { name: 'AVAL', type: 'numeric', label: 'Value' },
-                { name: 'ARM', type: 'categorical', label: 'Arm' }];
+  const cols = [{ name: 'ADY', class: 'number', label: 'Study Day' },
+                { name: 'AVAL', class: 'number', label: 'Value' },
+                { name: 'ARM', class: 'string', label: 'Arm' }];
   assert.strictEqual(K.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [28, 28], y_range: [41, 41] },
                                      cols, 'value', { ARM: ['Placebo'] }),
                      'Study Day = 28, Value = 41, Arm = Placebo');

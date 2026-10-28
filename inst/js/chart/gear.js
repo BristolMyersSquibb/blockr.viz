@@ -50,8 +50,7 @@
       : []);
     /** @param {string} name */
     const numeric = (name) => {
-      const m = meta().find((/** @type {any} */ c) => c.name === name);
-      return !!m && m.type === 'numeric';
+      return V.util.isNumeric(meta().find((c) => c.name === name));
     };
     return {
       required(key, v) {
@@ -115,7 +114,7 @@
       ? [{ value: 'onset', label: 'Onset' }, { value: 'alpha', label: 'A–Z' }]
       : [{ value: 'value', label: 'By value' }, { value: 'data', label: 'Data order' },
          { value: 'alpha', label: 'A–Z' }];
-    const cols = meta.filter((/** @type {any} */ c) => c.type === 'numeric')
+    const cols = meta.filter(V.util.isNumeric)
       .map((c) => ({ value: c.name, label: c.name, note: c.label && c.label !== c.name ? c.label : '' }));
     return fixed.concat(cols);
   }

@@ -8,8 +8,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'), num('V'),
                  num('D'), cat('SEX', { levels: ['M', 'F', 'U'] })];
 
@@ -72,7 +72,7 @@ test('group order: value, alpha, factor levels, data, a column', () => {
 });
 
 test('data order: a date or a number in its own order, whatever the row order', () => {
-  const cols = [{ name: 'day', type: 'categorical', temporal: 'date' }, num('dose'), num('V')];
+  const cols = [{ name: 'day', class: 'date' }, num('dose'), num('V')];
   const rows = [
     { day: '2025-03-01', dose: 20, V: 1 }, { day: '2025-01-01', dose: 5, V: 9 },
     { day: null, dose: 10, V: 2 }, { day: '2025-02-01', dose: null, V: 4 }
@@ -86,7 +86,7 @@ test('data order: a date or a number in its own order, whatever the row order', 
 
 test('the default sort follows the category column', () => {
   const cols = [cat('country'), cat('quarter', { levels: ['Q1', 'Q2'] }),
-                { name: 'day', type: 'categorical', temporal: 'date' }, num('year'), num('V')];
+                { name: 'day', class: 'date' }, num('year'), num('V')];
   const dflt = (category, extra) => {
     const cfg = { type: 'bar', category, ...extra };
     C.model.defaults(cfg, cols);

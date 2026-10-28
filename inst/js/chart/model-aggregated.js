@@ -117,8 +117,8 @@
       }
       // A date or a number orders by itself, a missing value last. Dates
       // travel as ISO strings, which sort as text.
-      if (meta && (meta.temporal || meta.type === 'numeric')) {
-        const num = !meta.temporal;
+      if (V.util.isTemporal(meta) || V.util.isNumeric(meta)) {
+        const num = !V.util.isTemporal(meta);
         const key = (/** @type {string} */ g) => (num ? Number(g) : g);
         const missing = (/** @type {string} */ g) => g === '' || (num && isNaN(Number(g)));
         const known = groups.filter((g) => !missing(g));

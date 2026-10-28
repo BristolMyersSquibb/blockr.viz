@@ -8,8 +8,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure();
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'),
                  num('S'), num('E'), num('D'), cat('V')];
 

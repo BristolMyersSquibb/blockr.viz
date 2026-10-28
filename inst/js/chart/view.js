@@ -121,7 +121,7 @@
     render(p) {
       const d = /** @type {Record<string, any>} */ (p.derived || {});
       this.derived = d;
-      this.columns = d.column_meta || [];
+      this.columns = p.columns || [];
       this._columnsKey = JSON.stringify(this.columns);
       if (p.data_rev !== this._lastDataRev || !this.data.length) {
         this._ix = new NS.RowIndex();
@@ -133,7 +133,7 @@
       this._restoreSelection(p.config && p.config.selection);
       this._setTheme(d.theme);
       // The gear first: the title sentences open what it offers.
-      if (this._gear) this._gear.update(Object.assign({}, p, { columns: this.columns }));
+      if (this._gear) this._gear.update(p);
       this._titleText = NS.titleText(d.titles);
       this._updateTitles(d.titles);
       this._updateScriptBand(d.script);

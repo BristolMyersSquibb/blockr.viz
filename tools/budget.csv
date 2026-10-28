@@ -33,7 +33,6 @@ R: table shell and shared model,R/table-prepare.R,1200
 R: table shell and shared model,R/table-model-format.R,1200
 R: table shell and shared model,R/table-model-shading.R,1200
 R: table shell and shared model,R/column-kinds.R,1200
-R: table shell and shared model,R/col-meta.R,1200
 R: table shell and shared model,R/table-server.R,1200
 R: table shell and shared model,R/table-expr.R,1200
 R: records,R/table-records*.R,1400

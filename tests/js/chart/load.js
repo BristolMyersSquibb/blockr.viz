@@ -1,8 +1,9 @@
 /* Load the chart's pure scripts into a plain node vm context: no DOM, no ECharts,
  * no Shiny. Returns the namespace they fill (Blockr.viz.chart).
  *
- * The scripts are the ones the page loads, in scripts.txt order, up to the
- * first that needs a browser, plus the generated spec.
+ * The scripts are the core namespace and helpers, then the chart's in
+ * scripts.txt order up to the first that needs a browser, plus the
+ * generated spec.
  */
 'use strict';
 
@@ -22,6 +23,7 @@ function loadPure() {
   ctx.window = ctx;
   const run = (f) => vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), ctx,
                                      { filename: path.join(JS_DIR, f) });
+  for (const f of ['namespace.js', 'util.js']) run(path.join('core', f));
   for (const f of PURE) run(path.join('chart', f));
   run(path.join('spec', 'chart.js'));
   return ctx.Blockr.viz.chart;

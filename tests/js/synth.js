@@ -36,8 +36,8 @@ function synth(n) {
     }
   }
   const nUnique = (k) => new Set(cols[k]).size;
-  const cat = (name) => ({ name, type: 'categorical', n_unique: nUnique(name) });
-  const numc = (name) => ({ name, type: 'numeric', n_unique: nUnique(name) });
+  const cat = (name) => ({ name, class: 'string', n_unique: nUnique(name) });
+  const numc = (name) => ({ name, class: 'number', n_unique: nUnique(name) });
   const columns = [cat('USUBJID'), cat('ARM'), cat('TERM'), cat('GRADE'), cat('AVISIT'),
                    numc('AVISITN'), numc('ADY'), numc('AVAL'), numc('ASTDY'), numc('AENDY')];
   return { columns, data: cols, rows: n * ROWS_PER_PATIENT };

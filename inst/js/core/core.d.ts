@@ -19,12 +19,29 @@ interface VizScope {
   dispose(): void;
 }
 
+/**
+ * One column of the block's input (R/wire.R, viz_wire_columns()). `class`
+ * is the wire class: number, string, bool, date, datetime or duration.
+ * `levels` comes with a factor, `tz` with a date-time, `unit` with a
+ * duration, `kind` with a column mark_column_kinds() marked. `label` is the
+ * variable label, "" when the column has none.
+ */
+interface VizColumn {
+  name: string;
+  class: 'number' | 'string' | 'bool' | 'date' | 'datetime' | 'duration';
+  label: string;
+  n_unique: number;
+  levels?: string[];
+  tz?: string;
+  unit?: string;
+  kind?: 'group' | 'time' | 'value' | 'id';
+}
+
 /** What R sends a block view (R/kit-output.R, viz_payload()). */
 interface VizPayload {
   state_rev: number;
   data_rev: number;
-  columns: Array<{ name: string; class: string; label: string; n_unique: number;
-                   [meta: string]: unknown }>;
+  columns: VizColumn[];
   config: Record<string, unknown>;
   derived: Record<string, unknown>;
   data?: Record<string, unknown> | null;
@@ -72,6 +89,8 @@ interface VizNamespace {
     esc(x: unknown): string;
     send(id: string, kind: 'set' | 'select' | 'capture' | 'need', value: unknown,
          block?: string): boolean;
+    isNumeric(c: VizColumn | null | undefined): boolean;
+    isTemporal(c: VizColumn | null | undefined): boolean;
   };
   Scope: { new (): VizScope; open(): number };
   binding(name: string, view: string, View: VizViewClass,

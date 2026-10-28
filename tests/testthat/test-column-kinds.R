@@ -95,7 +95,7 @@ test_that("the browser payload carries the kind of every marked column", {
     group = "TRT", value = "AVAL"
   )
 
-  meta <- dd_col_meta(d)
+  meta <- viz_wire_columns(d)
   names(meta) <- vapply(meta, `[[`, character(1L), "name")
 
   expect_equal(meta$TRT$kind, "group")
@@ -104,7 +104,7 @@ test_that("the browser payload carries the kind of every marked column", {
   # client reads as "this frame has opinions about some columns, not this
   # one". A frame with NO kinds anywhere is what turns the filtering off.
   expect_null(meta$NOTE$kind)
-  expect_true(all(vapply(dd_col_meta(datasets::iris),
+  expect_true(all(vapply(viz_wire_columns(datasets::iris),
                          function(c) is.null(c$kind), logical(1L))))
 })
 
@@ -112,11 +112,11 @@ test_that("column metadata still carries labels, types and factor order", {
   d <- data.frame(g = factor(c("b", "a"), levels = c("b", "a")), n = c(1, 2))
   attr(d$n, "label") <- "Analysis Value"
 
-  meta <- dd_col_meta(d)
+  meta <- viz_wire_columns(d)
   names(meta) <- vapply(meta, `[[`, character(1L), "name")
 
-  expect_equal(meta$g$type, "categorical")
-  expect_equal(meta$g$levels, list("b", "a"))
-  expect_equal(meta$n$type, "numeric")
+  expect_equal(meta$g$class, "string")
+  expect_equal(as.character(meta$g$levels), c("b", "a"))
+  expect_equal(meta$n$class, "number")
   expect_equal(meta$n$label, "Analysis Value")
 })

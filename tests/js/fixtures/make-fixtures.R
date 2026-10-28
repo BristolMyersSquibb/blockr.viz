@@ -73,7 +73,7 @@ smooth <- function(...) {
 }
 
 fixture <- list(
-  columns = dd_col_meta(d),
+  columns = viz_wire_columns(d),
   data = chart_data_json(d),
   # The same rows, every column dictionary-encoded (the >= 500-row path).
   data_dict = chart_data_json(d, min_rows = 1L, max_ratio = 1),

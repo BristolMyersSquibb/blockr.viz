@@ -9,8 +9,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name, extra) => ({ name, type: 'numeric', ...extra });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name, extra) => ({ name, class: 'number', ...extra });
 const COLUMNS = [cat('ID'), cat('ARM', { label: 'Arm' }), cat('SEX'), cat('VIS', { levels: ['Base', 'W2', 'W4'] }),
                  num('DAY', { label: 'Study Day' }), num('VAL'), num('LO'), num('HI')];
 const ROWS = [

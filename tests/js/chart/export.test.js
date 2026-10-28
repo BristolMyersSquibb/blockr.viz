@@ -222,7 +222,7 @@ test('compose: a chart with nothing drawn says so', async () => {
 
 /** A capture request for `config`, as R's chart_capture_service() sends it. */
 const captureMsg = (env, config, extra = {}) => env.win.JSON.parse(JSON.stringify({
-  state_rev: 1, data_rev: 9, columns: F.columns, derived: { column_meta: F.columns },
+  state_rev: 1, data_rev: 9, columns: F.columns, derived: {},
   config: { ...require('../cases').BASE, ...config }, data: F.data,
   req: 'tok-1', width: 640, height: 360, ratio: 2.5, ...extra
 }));

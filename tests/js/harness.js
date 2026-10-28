@@ -601,7 +601,7 @@ function message(env, id, { columns, data, config, derived, dataRev, stateRev })
     state_rev: stateRev == null ? ++revSeq : stateRev,
     data_rev: dataRev == null ? 1 : dataRev,
     columns: columns || [], config,
-    derived: Object.assign({ column_meta: columns || [] }, derived || {}),
+    derived: Object.assign({}, derived || {}),
     data: typeof data === 'string' ? null : (data == null ? null : data)
   }));
   if (typeof data === 'string') msg.data = data;
@@ -680,7 +680,7 @@ function slotLogs(block) {
  * Draw one chart in a fresh window and return what it did.
  * @param {object} config chart config (build_chart_msg()$config)
  * @param {object|string} data column object (or its JSON string)
- * @param {object[]} columns column metadata (dd_col_meta())
+ * @param {object[]} columns column descriptions (viz_wire_columns())
  * @param {{ width?: number, height?: number, keepOpen?: boolean,
  *           theme?: string, dataRev?: any }} [opts]
  */

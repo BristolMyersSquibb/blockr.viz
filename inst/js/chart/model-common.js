@@ -34,7 +34,7 @@
     if (!hasX) return 'vertical';
     const numeric = (/** @type {string} */ n) => {
       const m = columns.find((col) => col.name === n);
-      return m ? m.type === 'numeric' : null;
+      return m ? V.util.isNumeric(m) : null;
     };
     return numeric(c.x) === true && numeric(c.y) === false ? 'horizontal' : 'vertical';
   };
@@ -75,8 +75,8 @@
     }
     if (fam === 'individual') return;
     if (!set(cfg.sort_by)) {
-      const meta = /** @type {any} */ (columns.find((c) => c.name === cfg.category));
-      const ordered = !!meta && (meta.type === 'numeric' || !!meta.temporal ||
+      const meta = columns.find((c) => c.name === cfg.category);
+      const ordered = !!meta && (V.util.isNumeric(meta) || V.util.isTemporal(meta) ||
         (Array.isArray(meta.levels) && meta.levels.length > 0));
       cfg.sort_by = ordered ? 'data' : 'value';
     }

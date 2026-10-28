@@ -31,14 +31,6 @@ interface VizArg {
 type VizSpec = Record<string, VizArg>;
 type VizValues = Record<string, unknown>;
 
-interface VizColumn {
-  name: string;
-  class: string;
-  label: string;
-  n_unique: number;
-  [meta: string]: unknown;
-}
-
 /** An option. `note` is muted text after the label (a column's variable label). */
 interface VizChoice { value: unknown; label: string; note?: string }
 
@@ -131,7 +123,6 @@ interface VizControlKit {
   fromText(arg: VizArg, text: string): unknown;
   isSet(v: unknown): boolean;
   same(a: unknown, b: unknown): boolean;
-  isNumeric(c: VizColumn): boolean;
   emptyChoice(ctx: VizRowCtx): VizChoice | null;
   uiOptions(choices: VizChoice[]): { options: (string | { value: string; label: string })[]; keys: string[] };
 }

@@ -1,8 +1,9 @@
 # What the chart sends the browser: one payload with the state as the spec
-# writes it (viz_wire()), the rows the current mapping needs, and `derived`:
-# what R computes for the drawing and never takes back. The pieces are cached
-# on exactly their inputs, so a setting that changes only the drawing reuses
-# them.
+# writes it (viz_wire()), the rows the current mapping needs, a description
+# of every column of the input (the gear picks from all of them), and
+# `derived`: what R computes for the drawing and never takes back. The pieces
+# are cached on exactly their inputs, so a setting that changes only the
+# drawing reuses them.
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
@@ -57,7 +58,6 @@ chart_view <- function(kit, src) {
     shiny::req(is.data.frame(d))
     v <- chart_state_values(state)
     viz_payload(spec, v, rows(shipped()), revs, derived = list(
-      column_meta = meta_cache(d, function() dd_col_meta(d)),
       titles = titles(),
       band = band(),
       smoother = smoother(),
@@ -73,7 +73,7 @@ chart_view <- function(kit, src) {
                     values = dd_script_cfg(src$specs(), v$script_values),
                     error = src$run()$error),
       capture_ratio = canvas_capture_ratio()
-    ))
+    ), columns = meta_cache(d, function() viz_wire_columns(d)))
   }
   list(payload = payload, titles = titles)
 }

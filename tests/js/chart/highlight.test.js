@@ -11,8 +11,8 @@ const C = loadPure({ roles: true });
 const MUTED = C.mutedMark(C.INK_DEFAULT);
 const [BLUE, ORANGE] = C.BLOCKR_PALETTE;
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 
 // Countries, their region and two periods: the shape of a relative PPP chart.
 const COLUMNS = [cat('country'), cat('region'), cat('period'), num('x'), num('y')];

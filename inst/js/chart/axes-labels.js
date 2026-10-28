@@ -36,8 +36,8 @@
   const axisTypeFor = (columns, rows, colName, opts = {}) => {
     if (!colName) return 'value';
     const meta = colMeta(columns, colName);
-    if (opts.temporal && meta && /** @type {any} */ (meta).temporal) return 'time';
-    if (meta && meta.type === 'categorical') return 'category';
+    if (opts.temporal && V.util.isTemporal(meta)) return 'time';
+    if (meta && !V.util.isNumeric(meta)) return 'category';
     if (/DT$/i.test(colName)) {
       const sample = (rows || []).find((r) => r[colName] != null);
       if (sample && typeof sample[colName] === 'number' && sample[colName] > 1e11) {

@@ -1,7 +1,7 @@
 /* A column's label is how the chart names it: every axis name, tooltip
  * row, note, legend title, footer clause and menu that names a column shows
  * its label when it has one (R's `label` attribute, sent as `label` in the
- * column metadata, R/col-meta.R), and its name only when it has none.
+ * column description, R/wire.R), and its name only when it has none.
  *
  * Every column below carries a label except PLAIN, so a bare name in any
  * output is a column printed without it. */
@@ -14,8 +14,8 @@ const D = require('./chart/drive');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, label, extra) => ({ name, type: 'categorical', ...(label ? { label } : {}), ...extra });
-const num = (name, label) => ({ name, type: 'numeric', ...(label ? { label } : {}) });
+const cat = (name, label, extra) => ({ name, class: 'string', ...(label ? { label } : {}), ...extra });
+const num = (name, label) => ({ name, class: 'number', ...(label ? { label } : {}) });
 const COLUMNS = [
   cat('AETERM', 'Reported Term'), cat('AESEV', 'Severity'), cat('ARM', 'Planned Arm'),
   cat('USUBJID', 'Subject'), num('ADY', 'Study Day'), num('AVAL', 'Analysis Value'),

@@ -156,8 +156,8 @@ test('a restored range survives the brush cursor being armed', () => {
 test('a drill column lights every bar holding a selected row, not only the clicked one (UX 14)', () => {
   // Subject a has Rash and Fever, b Rash only, c Cough only.
   const data = { T: ['Rash', 'Fever', 'Rash', 'Cough'], ID: ['a', 'a', 'b', 'c'] };
-  const columns = [{ name: 'T', type: 'categorical', n_unique: 3, label: '' },
-                   { name: 'ID', type: 'categorical', n_unique: 3, label: '' }];
+  const columns = [{ name: 'T', class: 'string', n_unique: 3, label: '' },
+                   { name: 'ID', class: 'string', n_unique: 3, label: '' }];
   const c = D.open({ type: 'bar', y: 'T', orientation: 'horizontal', drill: 'ID' },
                    { data, columns });
   c.clickWhere(0, D.at('Fever'));

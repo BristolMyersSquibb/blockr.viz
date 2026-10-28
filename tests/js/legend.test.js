@@ -171,8 +171,8 @@ test('marks on a scatter write each colour group at its centre of mass', () => {
 // -- marks: bars ---------------------------------------------------------------
 
 const C = loadPure({ roles: true });
-const COLUMNS = [{ name: 'T', type: 'categorical' }, { name: 'SEV', type: 'categorical' },
-                 { name: 'V', type: 'numeric' }];
+const COLUMNS = [{ name: 'T', class: 'string' }, { name: 'SEV', class: 'string' },
+                 { name: 'V', class: 'number' }];
 const ROWS = [
   { T: 'a', SEV: 'LOW', V: 2 }, { T: 'a', SEV: 'HIGH', V: 4 },
   { T: 'b', SEV: 'LOW', V: 3 }, { T: 'b', SEV: 'HIGH', V: 1 },
@@ -278,7 +278,7 @@ test('marks fall back to the band, at the bottom, even when the setting was top'
 // Every term with both grades: the last bar carries each level.
 const CROSS = {
   data: { T: ['a', 'a', 'b', 'b', 'b'], G: ['HIGH', 'LOW', 'HIGH', 'LOW', 'LOW'] },
-  columns: [{ name: 'T', type: 'categorical', n_unique: 2 }, { name: 'G', type: 'categorical', n_unique: 2 }]
+  columns: [{ name: 'T', class: 'string', n_unique: 2 }, { name: 'G', class: 'string', n_unique: 2 }]
 };
 
 test('marks through the view on a stacked bar hide the band', () => {

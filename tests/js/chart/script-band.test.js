@@ -61,8 +61,8 @@ test('a failing script is said above the chart; no script, no band', () => {
 
 test("a histogram draws every bin R's edges list, the empty ones too", () => {
   const data = { AVAL: [1, 2, 9], AVAL_bin: ['0–5', '0–5', '5–10'] };
-  const columns = [{ name: 'AVAL', type: 'numeric', n_unique: 3, label: '' },
-                   { name: 'AVAL_bin', type: 'categorical', n_unique: 2, label: '' }];
+  const columns = [{ name: 'AVAL', class: 'number', n_unique: 3, label: '' },
+                   { name: 'AVAL_bin', class: 'string', n_unique: 2, label: '' }];
   const edges = { label: ['0–5', '5–10', '10–15'], lo: [0, 5, 10], hi: [5, 10, 15] };
   const c = D.open({ type: 'histogram', x: 'AVAL' }, { data, columns, derived: { hist: edges } });
   assert.deepStrictEqual(D.plain(c.chart().getOption().xAxis[0].data), ['0–5', '5–10', '10–15']);

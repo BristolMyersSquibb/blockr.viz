@@ -8,8 +8,8 @@ const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'), num('V')];
 const ROWS = [
   { T: 'Rash', ID: 'S01', ARM: 'B', SEV: 'MILD', V: 4 },
@@ -274,7 +274,7 @@ test('value labels print each value on its own; a line at 0 has no label', () =>
 });
 
 test('x_lines and x_ranges on a bar: on the categories, either way round', () => {
-  const columns = [{ name: 'WEEK', type: 'categorical', temporal: 'date' }, num('V')];
+  const columns = [{ name: 'WEEK', class: 'date' }, num('V')];
   const rows = ['2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26']
     .map((d, i) => ({ WEEK: d, V: i + 1 }));
   const run = (cfg) => {

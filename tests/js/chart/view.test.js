@@ -126,7 +126,7 @@ test('an error R sends is said where the chart would be', () => {
 test('the capture service draws a chart off screen and replies once', () => {
   const c = D.open(BAR);
   const handler = c.env.handlers['blockr-viz:capture'];
-  const msg = { state_rev: 1, data_rev: 9, columns: [], derived: { column_meta: require('../cases').F.columns },
+  const msg = { state_rev: 1, data_rev: 9, columns: require('../cases').F.columns, derived: {},
                 config: BAR, data: require('../cases').F.data, req: 'r1', width: 640, height: 360 };
   handler(c.env.win.JSON.parse(JSON.stringify(msg)));
   assert.ok(c.doc.querySelector('.blockr-capture-host'));
@@ -241,12 +241,11 @@ test('with neither x nor y, a bar stands vertical and asks for X', () => {
   c.close();
 });
 
-test('the gear offers every column of the data, not only the shipped ones', () => {
+test('the gear offers every column of the input, not only those whose rows were sent', () => {
   const { F } = require('../cases');
   const c = D.open(BAR);
-  const shipped = F.columns.filter((x) => x.name === 'AETERM');
-  require('../harness').send(c.env, D.ID, { columns: shipped, data: { AETERM: F.data.AETERM },
-                                            config: BAR, derived: { column_meta: F.columns } });
+  require('../harness').send(c.env, D.ID, { columns: F.columns, data: { AETERM: F.data.AETERM },
+                                            config: BAR });
   const names = c.block._gear.slot('color').options.map((o) => o.value);
   assert.ok(names.includes('USUBJID') && names.includes('AVAL'), names.join(' '));
   c.close();
@@ -255,7 +254,7 @@ test('the gear offers every column of the data, not only the shipped ones', () =
 test('a histogram stands its bins on x', () => {
   const { F } = require('../cases');
   const bins = F.data.ADY.map((v) => (v == null ? null : (v < 30 ? '0-30' : '30-90')));
-  const cols = F.columns.concat([{ name: 'ADY_bin', type: 'categorical', n_unique: 2,
+  const cols = F.columns.concat([{ name: 'ADY_bin', class: 'string', n_unique: 2,
                                    levels: ['0-30', '30-90'] }]);
   const c = D.open({ type: 'histogram', x: 'ADY' }, { columns: cols,
                                                        data: { ...F.data, ADY_bin: bins } });
