@@ -90,8 +90,8 @@ dl_tool <- function(ns, spec) {
 #' Install a table's download control
 #'
 #' Registers the download handlers for every format this machine can write and
-#' returns the slot to drop on the table's toolbar (`dt_chrome()`'s
-#' `download_slot`, which [interactive_table()] takes as `download`). Each
+#' returns the slot to drop on a table's toolbar (blockr.sandbox's composer
+#' table places it). Each
 #' format writes the SAME frame the table shows, through that format's own
 #' writer: [write_annotated_xlsx()] for the spreadsheet,
 #' [write_exhibit_html()] for a self-contained page, [write_exhibit_pptx()]

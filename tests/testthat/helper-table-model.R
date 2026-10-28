@@ -34,7 +34,10 @@ tm_payload <- function(messages, type) {
 
 # A payload as the browser read it: JSON, parsed without simplifying.
 tm_json <- function(x) {
-  jsonlite::fromJSON(dt_payload_json(x), simplifyVector = FALSE)
+  jsonlite::fromJSON(
+    jsonlite::toJSON(x, auto_unbox = TRUE, na = "null"),
+    simplifyVector = FALSE
+  )
 }
 
 # The groups table as the block builds it: the spec's state names in,

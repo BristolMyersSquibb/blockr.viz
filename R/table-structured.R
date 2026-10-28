@@ -1,8 +1,7 @@
 # The structured table as the browser draws it: an annotated frame (dotted
 # structure columns, `||` spanner paths, section columns) as the TableModel
-# of inst/js/table/table.d.ts. The old path (dt_table_tag_structured() in
-# R/table-block.R) pastes the same table as HTML; this one hands the browser
-# the parts and lets it build the table.
+# of inst/js/table/table.d.ts: the browser gets the parts and builds the
+# table.
 #
 #   R/table-structured.R           the model: columns, widths, rows
 #   R/table-structured-head.R      the header rows
@@ -10,7 +9,7 @@
 
 #' A structured frame as the browser draws it
 #'
-#' Reads the frame the way `dt_table_tag_structured()` does: the `.label`
+#' Reads the frame the way the HTML export does: the `.label`
 #' column is the stub, `.indent` / `.strong` / `.emph` style the rows, the
 #' `.group<k>_level` columns (and the blocks of `.variable_label`) are the
 #' sections, and every other dotted column stays out of the cells.

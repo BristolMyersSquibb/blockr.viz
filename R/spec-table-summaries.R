@@ -14,18 +14,6 @@ summary_color_arg <- function() {
   )
 }
 
-TABLE_SUMMARY_TYPES <- c("simple", "dist", "field", "sparkline", "spans",
-                         "pair", "expr", "custom")
-
-# The summary types' names in the gear's Add column menu. `type` is the
-# key the records are split by, so it is not a field of the variant specs.
-TABLE_SUMMARY_TYPE_LABELS <- c(
-  simple = "One value", dist = "Distribution", field = "Text",
-  sparkline = "Series", spans = "Events",
-  pair = "Two values, from \u2192 to", expr = "Expression",
-  custom = "Custom summary"
-)
-
 # Keys every summary type takes.
 summary_name_arg <- function() {
   viz_arg(

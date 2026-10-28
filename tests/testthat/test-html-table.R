@@ -51,47 +51,6 @@ test_that("html_table_delta_css() scope gates Table-1 typography to structured",
   expect_true(grepl("input.blockr-search", scoped_css, fixed = TRUE))
 })
 
-test_that("structured dt_chrome scopes the delta; flat dt_chrome omits it", {
-  tbl <- htmltools::tags$table(class = "blockr-table")
-
-  struct <- as.character(htmltools::tagList(
-    dt_chrome("e", structured = TRUE, max_height = NULL, inner = tbl)
-  ))
-  expect_true(grepl("drilldown-table-structured", struct, fixed = TRUE))
-  expect_true(grepl(
-    ".drilldown-table-structured .blockr-table tbody td.blockr-data",
-    struct, fixed = TRUE
-  ))
-
-  flat <- as.character(htmltools::tagList(
-    dt_chrome("e", structured = FALSE, max_height = NULL, inner = tbl)
-  ))
-  expect_false(grepl("drilldown-table-structured", flat, fixed = TRUE))
-  # The flat table never injects the Table-1 weight rule at all.
-  expect_false(grepl("td.blockr-data", flat, fixed = TRUE))
-})
-
-test_that("dt_chrome scroll = 'page' drops the scroll box and the height cap", {
-  tbl <- htmltools::tags$table(class = "blockr-table")
-
-  wrapper <- function(...) {
-    html <- as.character(htmltools::tagList(
-      dt_chrome("e", structured = TRUE, inner = tbl, ...)
-    ))
-    regmatches(html, regexpr("<div class=\"blockr-table-wrapper[^>]*>", html))
-  }
-
-  box <- wrapper(max_height = "600px")
-  expect_false(grepl("dt-scroll-page", box, fixed = TRUE))
-  expect_true(grepl("max-height:600px;overflow:auto;", box, fixed = TRUE))
-
-  page <- wrapper(max_height = "600px", scroll = "page")
-  expect_true(grepl("dt-scroll-page", page, fixed = TRUE))
-  expect_false(grepl("style=", page, fixed = TRUE))
-
-  expect_error(wrapper(max_height = NULL, scroll = "panel"))
-})
-
 test_that("html_table() emits section header rows for .group1_level boundaries", {
   df <- tibble::tibble(
     .group1_level = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),
@@ -537,11 +496,11 @@ test_that("collapse JS recomputes visibility from ancestor state", {
   expect_true(grepl("blockr-hidden-collapse", html, fixed = TRUE))
 })
 
-test_that("wrap_titles narrows arm columns to their longest word", {
+test_that("long arm titles wrap to their longest word", {
   # A long arm label used to set the column width outright (both arms hit the
   # hard 320px cap), pushing the later columns off screen in a narrow panel.
-  # Wrapping measures the longest word instead, so the title wraps into a
-  # column sized for the data.
+  # The structured view measures the longest word instead, so the title wraps
+  # into a column sized for the data.
   skip_if_not_installed("safetyData")
   adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
   adsl$ARM <- c("Placebo" = "Placebo",
@@ -549,33 +508,8 @@ test_that("wrap_titles narrows arm columns to their longest word", {
                 "Xanomeline High Dose" = "Investigational Product 81 mg Twice Daily"
                 )[as.character(adsl$ARM)]
   st <- summary_table(adsl, vars = "AGE", by = "ARM")
-
-  widths <- function(wrap) {
-    h <- paste(as.character(dt_table_tag_structured(
-      st, NULL, 1, toggles = list(wrap_titles = wrap))), collapse = "")
-    as.integer(regmatches(h, gregexpr("(?<=width: )[0-9]+(?=px)", h,
-                                      perl = TRUE))[[1L]])
-  }
-  off <- widths(FALSE)
-  on  <- widths(TRUE)
-  expect_true(all(on <= off))
-  expect_lt(sum(on), sum(off))
-  # The two long arms come down off the 320px cap; the short ones do not move.
-  expect_equal(sum(off == 320L), 2L)
-  expect_equal(sum(on == 320L), 0L)
-})
-
-test_that("wrap_titles defaults on and rides a data attribute the gear reads", {
-  skip_if_not_installed("safetyData")
-  adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
-  st <- summary_table(adsl, vars = "AGE", by = "ARM")
-  render <- function(toggles) {
-    paste(as.character(dt_table_tag_structured(st, NULL, 1, toggles = toggles)),
-          collapse = "")
-  }
-  expect_match(render(list()), 'data-dt-wrap-titles="on"', fixed = TRUE)
-  expect_match(render(list(wrap_titles = FALSE)), 'data-dt-wrap-titles="off"',
-               fixed = TRUE)
+  w <- as.numeric(table_structured_view(st)$widths)
+  expect_false(any(w >= 320))
 })
 
 test_that("delta CSS draws the clinical table style", {

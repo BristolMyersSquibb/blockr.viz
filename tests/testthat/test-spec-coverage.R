@@ -198,11 +198,6 @@ test_that("gear option labels match the values they name", {
   }
 })
 
-test_that("every summary type has a spec and an Add column label", {
-  expect_setequal(names(table_summary_specs()), TABLE_SUMMARY_TYPES)
-  expect_setequal(names(TABLE_SUMMARY_TYPE_LABELS), TABLE_SUMMARY_TYPES)
-})
-
 test_that("the block specs and the nested specs pass viz_spec_check()", {
   expect_s3_class(viz_block_spec("chart"), "viz_spec")
   expect_s3_class(viz_block_spec("table"), "viz_spec")

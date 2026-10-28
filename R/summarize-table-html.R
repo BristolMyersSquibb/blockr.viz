@@ -139,9 +139,8 @@ summarize_message_table <- function(msg = "No data") {
 }
 
 # Chrome: title bands, toolbar (search + legend), scroll wrapper, caption,
-# status line. Mirrors dt_chrome() -- same classes, so the shared table CSS
-# and the design tokens apply unchanged -- plus the summarize table's CSS delta
-# and JS.
+# status line. The shared table classes, so the shared table CSS and the
+# design tokens apply unchanged, plus the summarize table's CSS delta and JS.
 #' @noRd
 summarize_chrome <- function(inner, prep = NULL, max_height = NULL,
                              search = TRUE, title = NULL, subtitle = NULL,

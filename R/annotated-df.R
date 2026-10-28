@@ -466,30 +466,6 @@ dd_col_keys_json <- function(entry) {
   ))
 }
 
-#' The rendered-column-index -> keys map table.js reads off the `<table>`.
-#'
-#' Indexed by `cell.cellIndex`, so the stub (when there is one) occupies slot
-#' 0 and is always null. Columns with no identity are null too: their cells
-#' still drill by row, they just add nothing to the claim.
-#' @noRd
-dd_col_keys_map_json <- function(data_cols, col_keys, stub_offset = 0L) {
-
-  slots <- vector("list", length(data_cols) + stub_offset)
-
-  for (i in seq_along(data_cols)) {
-    entry <- col_keys[[data_cols[[i]]]]
-    if (is.null(entry)) {
-      next
-    }
-    slots[[i + stub_offset]] <- lapply(entry, function(p) {
-      list(column = as.character(p[["column"]]),
-           values = I(as.character(p[["values"]])))
-    })
-  }
-
-  as.character(jsonlite::toJSON(slots, auto_unbox = TRUE, null = "null"))
-}
-
 #' @noRd
 dd_is_string <- function(x) {
   is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
