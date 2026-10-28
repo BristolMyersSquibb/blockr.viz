@@ -93,7 +93,7 @@ record_rw_payload <- function(msgs, expr, cx) {
   d <- p$derived
   view <- record_computed(list(
     rows = if (!is.null(p[["data"]])) record_ref_rows(p[["data"]]),
-    columns = d$column_meta,
+    columns = record_ref_columns(p$columns),
     titles = lapply(d$titles[c("title", "subtitle", "caption")],
                     function(b) b$text),
     band = d$band,
@@ -107,6 +107,23 @@ record_rw_payload <- function(msgs, expr, cx) {
   same <- identical(view[names(view) != "rows"], cx$last_view)
   cx$last_view <- view[names(view) != "rows"]
   if (same && is.null(view$rows)) list() else list(view)
+}
+
+# The payload's column description in the reference's shape: `type`
+# numeric or categorical, `temporal` for a date or date-time, `label` only
+# when set.
+record_ref_columns <- function(cols) {
+  lapply(cols, function(c) {
+    temporal <- switch(c$class, date = "date", datetime = "datetime", NULL)
+    out <- list(name = c$name,
+                type = if (identical(c$class, "number")) "numeric" else "categorical",
+                n_unique = c$n_unique)
+    if (nzchar(c$label)) out$label <- c$label
+    out$temporal <- temporal
+    out$kind <- c$kind
+    if (length(c$levels)) out$levels <- as.list(as.character(c$levels))
+    out
+  })
 }
 
 # The reference's browser view in the same terms.
@@ -226,9 +243,7 @@ record_rw_warnings <- function(w) {
 # behaviour-changes.md. They skip until Christoph decides; an accepted change
 # becomes a translation above, a rejected one a fix.
 record_rw_open <- c(
-  heal_missing_column = "row 1: clearing a column the data lacks clears it",
-  drill_point = "row 9: a point click emits between()",
-  drill_point_date = "row 9: a point click emits between()"
+  heal_missing_column = "row 1: clearing a column the data lacks clears it"
 )
 
 # Messages that changed with an open behaviour change (behaviour-changes.md),

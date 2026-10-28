@@ -4,7 +4,50 @@
     {
       "state_rev": 0,
       "data_rev": 1,
-      "columns": null,
+      "columns": [
+        {
+          "name": ".variable",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": ".variable_label",
+          "class": "string",
+          "label": "",
+          "n_unique": 2
+        },
+        {
+          "name": ".variable_level",
+          "class": "string",
+          "label": "",
+          "n_unique": 5
+        },
+        {
+          "name": ".label",
+          "class": "string",
+          "label": "",
+          "n_unique": 5
+        },
+        {
+          "name": ".indent",
+          "class": "number",
+          "label": "",
+          "n_unique": 1
+        },
+        {
+          "name": "g1",
+          "class": "string",
+          "label": "g1\nN = 6",
+          "n_unique": 3
+        },
+        {
+          "name": "g2",
+          "class": "string",
+          "label": "g2\nN = 6",
+          "n_unique": 3
+        }
+      ],
       "config": {"layout":"records","by":[],"rowname":null,"columns":null,"summaries":[],"id":null,"percent_of":"facet","missing":"level","color":"auto","shadings":[],"format":"number","unit":"","look":"table","facet_layout":"by_summary","sort_by":"value","sort_dir":null,"top_n":null,"value_labels":true,"column_axis":true,"bar_width":"fit","drill":null,"search":true,"sortable":true,"collapsible":true,"download":true,"stats":["mean_sd"],"sections":[],"total":false,"total_label":"Total","nest":false,"title":"Table 1","subtitle":null,"caption":null,"drill_target":"","drill_table":"","script":null,"script_values":{},"selection":null},
       "derived": {
         "titles": {
@@ -48,18 +91,6 @@
           },
           "choices": []
         },
-        "script": {
-          "inputs": [],
-          "values": [],
-          "error": null
-        },
-        "ctrl_choices": [
-          {
-            "value": "auto",
-            "label": "Automatic (no filter block found)"
-          }
-        ],
-        "capture_ratio": 2,
         "downloads": [
           {
             "id": "proxy1-expr-dl_xlsx",
@@ -76,7 +107,19 @@
             "label": "PowerPoint",
             "ext": "pptx"
           }
-        ]
+        ],
+        "script": {
+          "inputs": [],
+          "values": [],
+          "error": null
+        },
+        "ctrl_choices": [
+          {
+            "value": "auto",
+            "label": "Automatic (no filter block found)"
+          }
+        ],
+        "capture_ratio": 2
       },
       "data": {
         "n": 5,

@@ -1,25 +1,12 @@
-# Download file names.
-#
-# The name is the dataset (when the data carries one), the title the file
-# prints, then the time:
+# Download file names: the dataset (when the data carries one), the title the
+# file prints, then the time.
 #
 #   AQ-001_Ozone_by_month_2026-10-02_1432.xlsx
 #   Ozone_by_month_2026-10-02_1432.xlsx       (no dataset on the data)
 #   chart_2026-10-02_1432.xlsx                (no title either)
 #
-# The dataset is the `dataset` field of the `blockr_provenance` attribute,
-# read as a plain attribute.
-
-#' The download file name for one block and format
-#'
-#' @param dataset The dataset name, `dl_dataset()` of the block's data, or
-#'   `NULL`.
-#' @param title The resolved title, as printed on the file, or `NULL`.
-#' @param fallback Word used when there is no title ("chart", "table").
-#' @param ext File extension, without the dot.
-#' @param time When the file was asked for.
-#' @return A file name.
-#' @noRd
+# `dataset` is `dl_dataset()` of the block's data, or NULL; `fallback` is the
+# word used when there is no title; `ext` has no dot.
 dl_filename <- function(dataset, title, fallback, ext, time = Sys.time()) {
   parts <- c(
     dl_name_part(dataset),
@@ -29,8 +16,7 @@ dl_filename <- function(dataset, title, fallback, ext, time = Sys.time()) {
   paste0(paste(parts, collapse = "_"), ".", ext)
 }
 
-#' The `dataset` field of the `blockr_provenance` attribute, or `NULL`
-#' @noRd
+# The `dataset` field of the `blockr_provenance` attribute, or NULL.
 dl_dataset <- function(data) {
   ds <- attr(data, "blockr_provenance", exact = TRUE)$dataset
   if (is.character(ds) && length(ds) == 1L && !is.na(ds) && nzchar(ds)) ds

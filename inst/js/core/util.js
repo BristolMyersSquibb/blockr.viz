@@ -1,8 +1,10 @@
 // @ts-check
 /**
- * Helpers every block view shares: one HTML escaper and one way to send an
- * input to R. Timers and listeners are not here; they belong to a Scope
- * (scope.js), so they go away with their block.
+ * Helpers every block view shares: one HTML escaper, one way to send an
+ * input to R (and a selection, with its nonce), what a column
+ * description (VizColumn) says about its values, and a number for reading. Timers and listeners are
+ * not here; they belong to a Scope (scope.js), so they go away with their
+ * block.
  */
 (function () {
   'use strict';
@@ -43,5 +45,50 @@
     return true;
   };
 
-  V.util = { esc, send };
+  // One counter for the page: every selection a view sends carries a new
+  // number, so R tells a second click on the same mark (or a second clear)
+  // from a board re-evaluation that hands back the value it already had.
+  let nonce = 0;
+
+  /**
+   * Send a view's selection to R as `<id>_select`: `{selection, nonce}`,
+   * `selection` null for a clear.
+   * @param {string} id The view's element id.
+   * @param {Record<string, unknown> | null} selection
+   * @returns {boolean} Whether Shiny took it.
+   */
+  const select = (id, selection) => send(id, 'select', { selection, nonce: ++nonce });
+
+  /**
+   * A column that holds numbers: a number or a duration. A date or
+   * date-time is not; isTemporal() names those.
+   * @param {VizColumn | null | undefined} c
+   */
+  const isNumeric = (c) => !!c && (c.class === 'number' || c.class === 'duration');
+
+  /** @param {VizColumn | null | undefined} c */
+  const isTemporal = (c) => !!c && (c.class === 'date' || c.class === 'datetime');
+
+  /**
+   * A number for reading: up to two decimals, and a value that would round
+   * to 0 keeps two significant digits (0.0034). Display only; the data
+   * keeps full precision. Anything else comes back as it is.
+   * @param {unknown} v
+   * @returns {unknown}
+   */
+  const num = (v) => {
+    if (typeof v !== 'number' || !isFinite(v)) return v;
+    if (Number.isInteger(v)) return v.toLocaleString();
+    if (Math.abs(v) < 0.005) return v.toLocaleString(undefined, { maximumSignificantDigits: 2 });
+    return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  };
+
+  /**
+   * A raw observation for reading: num() of it at three significant digits.
+   * @param {unknown} v
+   * @returns {unknown}
+   */
+  const num3 = (v) => (typeof v === 'number' && isFinite(v) ? num(Number(v.toPrecision(3))) : v);
+
+  V.util = { esc, send, select, isNumeric, isTemporal, num, num3 };
 })();

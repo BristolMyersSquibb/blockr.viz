@@ -28,8 +28,7 @@ for (nm in names(record_scenarios())) {
 test_that("chart recording: constructor cases fail and warn as before", {
   path <- file.path(record_dir(), "ctor-cases.rds")
   skip_if_not(file.exists(path), "no recording")
-  # `expose` is an unknown argument now (behaviour-changes.md row 11).
-  want <- readRDS(path)[setdiff(names(record_ctor_cases()), "expose")]
+  want <- readRDS(path)[names(record_ctor_cases())]
   got <- lapply(record_ctor_cases()[names(want)], record_ctor_run, target)
   failed <- function(x) {
     vapply(x, function(r) inherits(r$value, "record_error"), logical(1L))

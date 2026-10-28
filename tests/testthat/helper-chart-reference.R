@@ -132,9 +132,9 @@ record_ref_set <- function(a, cx) {
     cur <- cx$state
     for (nm in roles) if (nm %in% names(a)) cur[nm] <- list(a[[nm]])
     d <- cx$data
-    is_num <- function(v) if (!v %in% names(d)) NA else is.numeric(d[[v]])
     r <- chart_roles_internal(cur$type, cur$x, cur$y, cur$func,
-                              cur$orientation, is_num)
+                              cur$orientation,
+                              if (is.data.frame(d)) viz_column_kinds(d))
     msg <- put("chart_type", cur$type)
     msg <- put("func", cur$func)
     msg <- put("group", col(r$group))
@@ -303,4 +303,23 @@ record_ref_rows <- function(json) {
       v
     }
   })
+}
+
+# position (public) <-> bar_mode (internal)
+CHART_POSITIONS <- c(stack = "stacked", dodge = "grouped", fill = "percent")
+
+# pct_of values (public -> internal); "total" is no role: one denominator.
+CHART_PCT_OF <- c(facet = "facet", category = "group", color = "color",
+                  total = "total")
+
+chart_position_public <- function(bar_mode) {
+  names(CHART_POSITIONS)[match(bar_mode %||% "stacked", CHART_POSITIONS)] %|NA|%
+    "stack"
+}
+
+# Unknown values pass through, so the constructor can refuse them.
+chart_pct_of_public <- function(pct_of) {
+  pct_of <- pct_of %||% "facet"
+  out <- names(CHART_PCT_OF)[match(pct_of, CHART_PCT_OF)]
+  ifelse(is.na(out), pct_of, out)
 }

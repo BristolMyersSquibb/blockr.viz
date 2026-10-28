@@ -50,13 +50,12 @@ ggplot.}
 }
 \description{
 The exhibit as one image: what \code{\link[=pptx_add_exhibit]{pptx_add_exhibit()}} places on a slide,
-without the slide. A summarize table is painted from its cell model and is
-as tall as the table is long (nothing is paged); a ggplot is drawn at the
-size the plot asks for.
+without the slide. A summarize table is as tall as it is long (nothing is
+paged); a ggplot is drawn at the size the plot asks for.
 }
 \details{
-The image is a re-render from the same cell model the browser gets, so it is
-sharper than a screenshot and not pixel-identical to one.
+The image is a re-render from the cell model the browser gets, not a
+screenshot.
 }
 \examples{
 \dontshow{if (requireNamespace("systemfonts", quietly = TRUE)) withAutoprint(\{ # examplesIf}

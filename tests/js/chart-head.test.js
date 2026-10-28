@@ -16,13 +16,13 @@ const tick = () => new Promise((r) => setImmediate(r));
 test('chart header: titles, tools, gear and tray, in that order', async () => {
   const c = D.open(BAR, { derived: TITLES });
   try {
-    const head = c.block.gearHeader;
+    const head = c.block.frame.head;
     assert.ok(head.classList.contains('vz-head'));
     assert.deepEqual(Array.from(head.children).map(cls),
-      ['dd-chart-titles', 'vz-head__tools', 'blockr-gear-btn', 'blockr-settings']);
-    assert.equal(head.querySelector('.dd-chart-title').textContent, 'A title');
-    assert.equal(head.querySelector('.dd-chart-subtitle').textContent, 'A subtitle');
-    assert.ok(head.querySelector('.vz-head__tools > .dd-chart-dl'), 'the download is a tool');
+      ['vz-head__titles', 'vz-head__tools', 'blockr-gear-btn', 'blockr-settings']);
+    assert.equal(head.querySelector('.vz-title').textContent, 'A title');
+    assert.equal(head.querySelector('.vz-subtitle').textContent, 'A subtitle');
+    assert.ok(head.querySelector('.vz-head__tools > .vz-download'), 'the download is a tool');
   } finally {
     await c.env.close();
   }
@@ -31,20 +31,20 @@ test('chart header: titles, tools, gear and tray, in that order', async () => {
 test('chart header: the gear sets vz-head--open, and a new payload keeps it', async () => {
   const c = D.open(BAR, { derived: TITLES });
   try {
-    const open = () => c.block.gearHeader.classList.contains('vz-head--open');
+    const open = () => c.block.frame.head.classList.contains('vz-head--open');
     assert.equal(open(), false);
-    c.block.gearBtn.click();
+    c.block.frame.tray.button.click();
     await tick();
     assert.ok(open(), 'open');
-    assert.ok(c.block.popoverEl.classList.contains('blockr-settings--open'));
-    assert.equal(c.block.popoverEl.parentNode, c.block.gearHeader, 'the tray is in the header');
+    assert.ok(c.block.frame.tray.band.classList.contains('blockr-settings--open'));
+    assert.equal(c.block.frame.tray.band.parentNode, c.block.frame.head, 'the tray is in the header');
     c.send({ ...c.config, color: 'AESEV' });
     await tick();
     assert.ok(open(), 'a payload while open keeps the open layout');
-    c.block.gearBtn.click();
+    c.block.frame.tray.button.click();
     await tick();
     assert.equal(open(), false, 'closed');
-    assert.equal(c.block.popoverEl.classList.contains('blockr-settings--open'), false);
+    assert.equal(c.block.frame.tray.band.classList.contains('blockr-settings--open'), false);
   } finally {
     await c.env.close();
   }

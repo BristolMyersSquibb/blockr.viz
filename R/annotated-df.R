@@ -8,19 +8,14 @@
 #' display companions, `.indent` (extra display depth) and `.strong` / `.emph`
 #' (emphasis). Two-level column spanners are encoded in the column name as
 #' `Top||Leaf`. The table-level attributes `label` (the title), `subtitle` and
-#' `caption` carry display text; the table and chart blocks use them as the
-#' auto tier of their `title` / `subtitle` / `caption` state and the Excel
-#' export carries them. Section headers are synthesized by the renderer from
-#' grouping-value runs and are never rows of the frame.
+#' `caption` carry display text. Section headers are synthesized by the
+#' renderer from grouping-value runs and are never rows of the frame.
 #'
 #' It is the format [new_table_block()] consumes and [summary_table()]
-#' produces. The full contract lives in the blockr.design spec
-#' (`open/annotated-data-frame/format.md`).
-#'
-#' `as_annotated_df()` coerces a table-producing object (composer, gtsummary,
-#' gt, rtables, ...) into that data frame. Producer packages register one S3
-#' method each, e.g. blockr.sandbox provides the composer methods. A data frame
-#' passes through untouched, so coercion is idempotent.
+#' produces. `as_annotated_df()` coerces a table-producing object (composer,
+#' gtsummary, gt, rtables, ...) into that data frame. Producer packages
+#' register one S3 method each. A data frame passes through untouched, so
+#' coercion is idempotent.
 #'
 #' @param x A table-producing object that has an `as_annotated_df` method.
 #' @param ... Passed on to methods.
@@ -50,8 +45,8 @@ as_annotated_df.default <- function(x, ...) {
   )
 }
 
-# Whether `x` dispatches to a non-default as_annotated_df() method. Method
-# lookup only, the coercion never runs.
+# Whether `x` dispatches to a non-default as_annotated_df() method (lookup
+# only, the coercion never runs).
 has_annotated_df_method <- function(x) {
   found <- function(cls) {
     !is.null(utils::getS3method("as_annotated_df", cls, optional = TRUE))
@@ -60,8 +55,7 @@ has_annotated_df_method <- function(x) {
 }
 
 # The input contract of the renderer blocks: a data frame or an object that
-# coerces through as_annotated_df(). See dev/table-and-chart-architecture.md,
-# "Shape contract".
+# coerces through as_annotated_df().
 can_coerce_annotated_df <- function(x) {
   is.data.frame(x) || has_annotated_df_method(x)
 }
@@ -78,11 +72,9 @@ validate_annotated_df_input <- function(data) {
   }
 }
 
-# The reserved annotation columns (see as_annotated_df()): row stub, hierarchy,
-# identity, emphasis, the `.fmt` template with its `.digits` precision, and
-# `.filter`, the predicate identity of a row that is not a level of anything
-# (see drill_source()). Row-grouping axes are the pairs `.group<k>` /
-# `.group<k>_level` (+ optional `_label`), matched by ANNOTATION_GROUP_RE.
+# The reserved annotation columns (see as_annotated_df()). `.filter` is the
+# predicate identity of a row that is not a level of anything (see
+# drill_source()). The `.group<k>` pairs are matched by ANNOTATION_GROUP_RE.
 # Other dot-prefixed names pass through.
 ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
                      ".digits",
@@ -94,8 +86,7 @@ ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
 # they survive the row and column slicing of the pptx pager.
 ANNOTATION_PAINT_RE <- "^\\.(bg|fg):"
 
-# The reserved annotation columns present in `data`. Renderers exclude them
-# from the data cells and as_plain_df() strips them.
+# The reserved annotation columns present in `data`.
 annotation_cols_in <- function(data) {
   names(data)[names(data) %in% ANNOTATION_COLS |
                 grepl(ANNOTATION_GROUP_RE, names(data)) |
@@ -104,9 +95,8 @@ annotation_cols_in <- function(data) {
 
 #' The paint of one column of an annotated frame
 #'
-#' For exporters in other blockr packages. Returns `list(bg =, fg =)`, one
-#' entry per row with `NA` where unpainted, or `NULL` when the column carries
-#' no paint.
+#' Returns `list(bg =, fg =)`, one entry per row with `NA` where unpainted, or
+#' `NULL` when the column carries no paint.
 #' @keywords internal
 #' @export
 annotation_cell_paint <- function(data, col) {
@@ -126,9 +116,7 @@ annotation_group_level_cols <- function(data) {
 #'
 #' [as_annotated_df()] followed by dropping the reserved `.`-annotation
 #' columns (`.label`, `.indent`, `.strong`, `.emph`, `.fmt`, `.digits`,
-#' `.variable*`, `.group<k>*`). The chart and tile blocks use it, so a chart of
-#' a structured display table charts its data columns. Other dot-prefixed
-#' columns pass through.
+#' `.variable*`, `.group<k>*`). Other dot-prefixed columns pass through.
 #'
 #' @param x A data frame or an object with an [as_annotated_df()] method.
 #' @param ... Passed on to [as_annotated_df()].
@@ -152,30 +140,24 @@ as_plain_df <- function(x, ...) {
 #' drilled annotated frame.
 #'
 #' The frame comes from `attr(x, "source_data")`, which a producer stamps when
-#' it summarises (composer tables via the blockr.sandbox adapter). Pass
-#' `source` to resolve against another frame.
+#' it summarises. Pass `source` to resolve against another frame.
 #'
 #' The claim rule is the one of the control channel ([ctrl_send()]): a
 #' dimension becomes a condition only when the drilled subset resolves it to
 #' exactly one value. An undrilled table claims nothing and `unclaimed` decides
-#' what comes back.
-#'
-#' Two claim modes, as in [ctrl_send()]. A structured table carries ARD
-#' identity columns and `columns` stays `NULL`. An aggregated table (one
-#' display row standing for many records) has none: name its group columns in
-#' `columns`. A frame with neither errors instead of reporting zero rows.
+#' what comes back. A structured table carries ARD identity columns and
+#' `columns` stays `NULL`. An aggregated table (one display row standing for
+#' many records) has none: name its group columns in `columns`. A frame with
+#' neither errors instead of reporting zero rows.
 #'
 #' # Rows defined by a predicate
 #'
 #' A display row such as "Any Serious AEs" is not a level of anything. A
-#' producer writes the predicate it counted with on a **`.filter`** column and
-#' this function applies it to the source. It composes with the pairs: a
-#' predicate row inside a treatment column resolves to the rows matching the
-#' predicate and in that arm. A frame carrying `.filter` needs no `.variable` /
-#' `.variable_level`.
-#'
-#' The expression is the producer's own string, evaluated against `source`,
-#' the frame it was computed on. It must yield a logical vector.
+#' producer writes the predicate it counted with on a **`.filter`** column, as
+#' an R expression string that yields a logical vector when evaluated against
+#' `source`. It composes with the pairs: a predicate row inside a treatment
+#' column resolves to the rows matching the predicate and in that arm. A frame
+#' carrying `.filter` needs no `.variable` / `.variable_level`.
 #'
 #' @param x A drilled annotated data frame, or an object coercible via
 #'   [as_annotated_df()].
@@ -185,9 +167,7 @@ as_plain_df <- function(x, ...) {
 #'   aggregated table. Default `NULL` = read the ARD identity columns
 #'   (`.variable` / `.variable_level`, `.group<k>` pairs) instead.
 #' @param unclaimed What a frame that claims nothing resolves to: `"none"`
-#'   (default), a zero-row frame, or `"all"`, the whole source. The table
-#'   block passes `"all"` before any click, so a listing below a Table 1
-#'   shows every row until one is picked.
+#'   (default), a zero-row frame, or `"all"`, the whole source.
 #'
 #' @return A subset of `source`: the rows the claim selects. When nothing is
 #'   claimed, a zero-row frame or the whole source (`unclaimed`).
@@ -202,11 +182,7 @@ drill_source <- function(x, source = NULL, columns = NULL,
   # The `.filter` column makes a frame resolvable; a single value in it makes
   # this subset a claim.
   has_filter_col <- ".filter" %in% names(x)
-  filter_claim <- if (has_filter_col) {
-    single_value(as.character(x$.filter))
-  } else {
-    NULL
-  }
+  filter_claim <- if (has_filter_col) single_value(as.character(x$.filter))
 
   if (!length(columns) && !has_filter_col &&
         !all(c(".variable", ".variable_level") %in% names(x))) {
@@ -246,8 +222,7 @@ drill_source <- function(x, source = NULL, columns = NULL,
     keep <- keep & eval_row_filter(filter_claim, src)
   }
   for (cl in claims) {
-    # A column the source lacks is a producer mistake (the stamped frame was
-    # too narrow). Zero rows would hide it.
+    # A column the source lacks is a producer mistake. Zero rows would hide it.
     if (!cl$name %in% names(src)) {
       stop(
         "The drill claims `", cl$name, "`, which the source data does not ",
@@ -270,7 +245,6 @@ drill_source <- function(x, source = NULL, columns = NULL,
 
 # Apply a display row's `.filter` predicate to the frame it was computed from.
 # A predicate that does not evaluate is a producer bug and errors.
-#' @noRd
 eval_row_filter <- function(expr_txt, src) {
   parsed <- tryCatch(parse(text = expr_txt), error = function(e) NULL)
   if (is.null(parsed)) {
@@ -296,35 +270,27 @@ eval_row_filter <- function(expr_txt, src) {
 }
 
 # Rewrite an emitted `dplyr::filter(.(data), <cond>)` call so its data slot
-# is coerced: `dplyr::filter(blockr.viz::as_plain_df(.(data)), <cond>)`. The
-# chart and tile exprs use it only when the input is not a data frame.
+# is coerced: `dplyr::filter(blockr.viz::as_plain_df(.(data)), <cond>)`.
 wrap_plain_df_input <- function(ex) {
   ex[[2L]] <- as.call(list(quote(blockr.viz::as_plain_df), ex[[2L]]))
   ex
 }
 
-# ---------------------------------------------------------------------------
-# Column identity (the column / cell drill)
-# ---------------------------------------------------------------------------
+# Column identity (the column / cell drill).
 
-#' Read a frame's column-axis identity.
-#'
-#' The row axis of an annotated frame is in the frame. The column axis is
-#' stamped by a producer that knows it as an optional table-level attribute:
-#'
-#'   attr(data, "column_keys") <- list(
-#'     "Placebo"    = list(list(column = "ARM", values = "Placebo")),
-#'     "Placebo||F" = list(list(column = "ARM", values = "Placebo"),
-#'                         list(column = "SEX", values = "F"))
-#'   )
-#'
-#' keyed by the column path as the frame spells it, so a leaf header looks
-#' itself up by its own name and a spanner by its prefix. A `values` vector of
-#' length > 1 is a pooled column (`ARM %in% c(...)`).
-#'
-#' Without the attribute the renderer emits no column claims. Malformed
-#' entries are dropped one at a time.
-#' @noRd
+# A frame's column-axis identity: the optional table-level attribute
+# `column_keys`, stamped by a producer that knows it,
+#
+#   attr(data, "column_keys") <- list(
+#     "Placebo"    = list(list(column = "ARM", values = "Placebo")),
+#     "Placebo||F" = list(list(column = "ARM", values = "Placebo"),
+#                         list(column = "SEX", values = "F"))
+#   )
+#
+# keyed by the column path as the frame spells it, so a leaf header looks
+# itself up by its own name and a spanner by its prefix. A `values` vector of
+# length > 1 is a pooled column (`ARM %in% c(...)`). Without the attribute the
+# renderer emits no column claims. Malformed entries are dropped one at a time.
 annotated_column_keys <- function(data) {
 
   keys <- attr(data, "column_keys", exact = TRUE)
@@ -345,21 +311,12 @@ annotated_column_keys <- function(data) {
   if (!length(keys)) NULL else keys
 }
 
-#' Display text for the spanner header cells.
-#'
-#' A leaf column carries its header on `attr(col, "label")`. A spanner exists
-#' only as a prefix in the names of the columns beneath it, so a producer that
-#' knows more than the prefix stamps its text as an optional table-level
-#' attribute:
-#'
-#'   attr(data, "spanner_labels") <- c(
-#'     "Xanomeline" = "Xanomeline\nN = 168"
-#'   )
-#'
-#' keyed by the prefix path exactly as `column_keys` is. A newline splits a
-#' strong name line from a quiet sub-line. Without the attribute a group
-#' header renders its prefix.
-#' @noRd
+# Display text for the spanner header cells. A leaf column carries its header
+# on `attr(col, "label")`, a spanner exists only as a prefix in the names of
+# the columns beneath it. A producer that knows more stamps the optional
+# table-level attribute `spanner_labels`, a named character vector keyed by
+# the prefix path exactly as `column_keys` is. A newline splits a strong name
+# line from a quiet sub-line. Without it a group header renders its prefix.
 annotated_spanner_labels <- function(data) {
 
   lbl <- attr(data, "spanner_labels", exact = TRUE)

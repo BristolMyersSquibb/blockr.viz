@@ -93,7 +93,7 @@ test_that("the sender resolves auto, and clears the block it actually sent to", 
           list(list(table = "adsl", column = "SEX", values = list("F")))
         )
 
-        dd_ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
+        ctrl_sender(r_target, r_claims, shiny::reactive(FALSE),
                        session = session)
 
         session$flushReact()
@@ -118,7 +118,7 @@ test_that("the gear's picker offers auto first, labelled with what it found", {
           value_filter_block = c(`Patient Drill` = "pt_drill",
                                  `Global Population Filter` = "global_filter")
         ))
-        choices <- dd_ctrl_choices(session = session)
+        choices <- ctrl_choices(session = session)
         session$flushReact()
 
         expect_identical(
@@ -132,7 +132,7 @@ test_that("the gear's picker offers auto first, labelled with what it found", {
         # the alternative is a picker that looks broken.
         fake_targets(session, list())
         expect_identical(
-          dd_ctrl_auto_choice(session = session),
+          ctrl_auto_choice(session = session),
           c(`Automatic (no filter block found)` = "auto")
         )
       })
@@ -163,4 +163,44 @@ test_that("the table's payload lists the board's filter blocks to send to", {
     },
     args = list(x = blk, data = list(data = shiny::reactive(mtcars)))
   )
+})
+
+test_that("install_ctrl_send() wires send, clear and the board's targets", {
+  dataset <- blockr.core::new_dataset_block("iris", block_name = "Cohort")
+  filt <- function(nm = NULL) {
+    b <- blockr.core::new_dataset_block("mtcars", block_name = nm)
+    class(b) <- c("value_filter_block", class(b))
+    b
+  }
+  board <- shiny::reactiveValues(board = blockr.core::new_board(
+    blocks = blockr.core::as_blocks(list(f1 = filt("Global"), f2 = filt(),
+                                         d = dataset))
+  ))
+  updates <- list()
+  session <- shiny::MockShinySession$new()
+  send <- install_ctrl_send(function(x) updates[[length(updates) + 1L]] <<- x,
+                            board = board, session = session)
+  expect_identical(send, session$userData$blockr_ctrl_send)
+
+  targets <- shiny::isolate(session$userData$blockr_ctrl_targets())
+  expect_identical(targets, c(Global = "f1", Dataset = "f2"))
+  expect_identical(
+    shiny::isolate(session$userData$blockr_ctrl_targets("drill_filter_block")),
+    character()
+  )
+
+  expect_true(ctrl_send("f1", column = "Species", session = session) %||% TRUE)
+  expect_identical(updates[[1L]],
+                   list(blocks = list(mod = list(f1 = list(column = "Species")))))
+  # Only the block that sent may clear, and only once.
+  clear <- session$userData$blockr_ctrl_clear
+  expect_false(clear("f1", list(column = NULL), author = "someone else"))
+  expect_true(clear("f1", list(column = NULL), author = ctrl_author(session)))
+  expect_false(clear("f1", list(column = NULL), author = ctrl_author(session)))
+  expect_length(updates, 2L)
+
+  # Without a board there is nothing to send to.
+  bare <- shiny::MockShinySession$new()
+  install_ctrl_send(function(x) NULL, session = bare)
+  expect_identical(bare$userData$blockr_ctrl_targets(), character())
 })

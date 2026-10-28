@@ -17,8 +17,6 @@
   const T = V.table;
   const esc = V.util.esc;
 
-  /** The picture's pixel ratio unless R says otherwise. */
-  const RATIO = 2;
 
   /**
    * The legend: one titled group per colour column.
@@ -34,13 +32,33 @@
         esc(it.color) + '"></i>' + esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
+  /**
+   * Keeps the header in view while the panel scrolls: moves it down by as
+   * much of the table as has scrolled out of view, and stops at the last row.
+   * @param {TableFrame} frame
+   */
+  function followHeader(frame) {
+    const box = frame.box;
+    const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
+    const table = thead && thead.parentElement;
+    if (!thead || !table) return;
+    const sp = frame.scroller();
+    const top = sp ? sp.getBoundingClientRect().top : 0;
+    // offsetHeight, not a rect: a rect would include the transform set here.
+    const max = table.offsetHeight - thead.offsetHeight;
+    const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
+    thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+    box.classList.toggle('scrolled', y > 0);
+  }
+
   class Groups extends /** @type {any} */ (T.Records) {
     /**
      * @param {TableFrame} frame
      * @param {VizScope} scope
+     * @param {TableLayoutOpts} [opts]
      */
-    constructor(frame, scope) {
-      super(frame, scope);
+    constructor(frame, scope, opts = {}) {
+      super(frame, scope, opts);
       frame.el.classList.add('blockr-summarize-container');
       scope.own({ dispose: () => frame.el.classList.remove('blockr-summarize-container') });
       this.legend = scope.node(document.createElement('div'));
@@ -50,10 +68,18 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      this.capture = scope.debounce(() => this.sendPicture(), 50);
       T.tooltip.wire(frame.box, scope, () => this.model);
+      // One capture listener on the document sees every scroller's scroll:
+      // the dock moves a card between containers after it is drawn.
+      const follow = () => followHeader(frame);
+      if (!this.still) {
+        scope.on(document, 'scroll', follow, { capture: true, passive: true });
+        scope.on(window, 'resize', follow);
+      }
       /** What the last picture was of. */
       this.pictured = '';
+      /** The picture of `pictured` on its way to R. @type {Promise<unknown> | null} */
+      this.sending = null;
     }
 
     labelsOn() {
@@ -98,7 +124,7 @@
       if (this.still) return { search: false, download: false };
       return { search: has && this.grouped() && cfg.search !== false,
                download: has && cfg.download !== false, downloads: d.downloads,
-               onOpen: () => this.capture() };
+               onOpen: () => this.sendPicture() };
     }
 
     /**
@@ -148,18 +174,23 @@
       return { structured: false, finished: false, numbers: true };
     }
 
-    /** Send R the picture of the table as drawn, once per payload. */
+    /**
+     * Send R the picture of the table as drawn, once per payload.
+     * @returns {Promise<unknown> | null} The sending, which a click on a
+     *   download format waits for; null without a table.
+     */
     sendPicture() {
       const p = /** @type {VizPayload | null} */ (this.payload);
-      if (!p || !this.model) return;
+      if (!p || !this.model) return null;
       const key = p.state_rev + ':' + p.data_rev;
-      if (key === this.pictured) return;
+      if (key === this.pictured) return this.sending;
       this.pictured = key;
       const width = Math.round(this.frame.el.getBoundingClientRect().width) || 900;
-      picture(Object.assign({}, p, { data: this.model }), width).then(
+      this.sending = picture(Object.assign({}, p, { data: this.model }), width).then(
         (pic) => V.util.send(this.frame.id, 'capture', pic),
         // Without a picture R paints the table itself.
         () => { this.pictured = ''; });
+      return this.sending;
     }
   }
 
@@ -173,6 +204,14 @@
       ? root.document.fonts.ready : Promise.resolve();
     return fonts.then(() => new Promise((r) => scope.frame(() => scope.frame(() => r(undefined)))));
   }
+
+  /**
+   * The picture's pixel ratio: R's (`derived.capture_ratio`, the board's
+   * option), 2 on a payload without one.
+   * @param {VizPayload} p
+   */
+  const pictureRatio = (p) =>
+    Number(/** @type {TableDerived} */ (p.derived || {}).capture_ratio) || 2;
 
   /**
    * A picture of a groups table drawn off screen from `payload`: every row,
@@ -193,11 +232,11 @@
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
       frame.el.classList.add('blockr-summarize-capture');
-      const view = new Groups(frame, scope);
-      view.still = true;
+      const view = new Groups(frame, scope, { still: true });
       view.render(payload);
       return settled(scope)
-        .then(() => snap.toCanvas(frame.el, { scale: ratio || RATIO, dpr: 1, embedFonts: true,
+        .then(() => snap.toCanvas(frame.el, { scale: ratio || pictureRatio(payload), dpr: 1,
+                                              embedFonts: true,
                                               backgroundColor: '#ffffff' }))
         .then((/** @type {HTMLCanvasElement} */ canvas) => ({
           png: canvas.toDataURL('image/png'),

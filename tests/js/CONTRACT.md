@@ -1,6 +1,6 @@
 # The chart block's R <-> JS contract
 
-What the chart scripts in `inst/js/chart/` (with `busy-cue.js`) send to R and what they accept from R, pinned by the snapshots
+What the chart scripts in `inst/js/chart/` (with the busy cue, `core/busy.js`) send to R and what they accept from R, pinned by the snapshots
 in `__snapshots__/interactions/` (file names in brackets). The click rules
 are the ones decided in blockr.design `open/chart-block-v2/decisions.md`.
 
@@ -140,7 +140,7 @@ instances first). [life-bind-empty, life-remount, life-initialize-twice]
 
 `{ png, width, height }`: a PNG data URL and the composed size in CSS px.
 Sent when `config.capture_export` is true and the hoisted download control
-(`.blockr-action-menu__trigger` or `.dd-chart-dl .blockr-tool` in the gear
+(`.blockr-action-menu__trigger` or `.vz-download .blockr-tool` in the gear
 header) is clicked. Scale is `config.capture_ratio`, else 2.
 [export-capture-input]
 
@@ -198,7 +198,7 @@ requested size) and replies on `blockr_viz_capture_result`. The host is
 removed after a picture, an error or the timeout.
 [export-capture-*]
 
-### `blockr-busy`, `blockr-busy-done` (busy-cue.js)
+### `blockr-busy`, `blockr-busy-done` (core/busy.js)
 
 `{ id, label }` adds `blockr-busy` to the element after 300 ms and writes
 `"<label>… <s> s"` into `.blockr-busy-line`; a second start while one is

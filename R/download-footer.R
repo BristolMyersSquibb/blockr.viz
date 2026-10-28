@@ -1,21 +1,13 @@
 # Download footer -------------------------------------------------------------
 #
-# One line a board prints under everything it lets out. Under a picture it is
-# drawn into the image; under a table written as a table (xlsx, html, pptx)
-# it is the last line of the caption.
+# One line a board prints under everything it lets out: drawn into a picture,
+# or the last caption line of a table written as a table (xlsx, html, pptx).
+# Set per board as the `download_footer` option; the default for a new board is
+# `getOption("blockr.viz.download_footer")`. Empty prints nothing.
 #
-# Set per board as the `download_footer` option (Downloads in the settings
-# sidebar). The default for a new board is
-# `getOption("blockr.viz.download_footer")`. Empty, nothing is printed.
-#
-# The text may name:
-#
-#   {user}      who downloaded: `session$user`, empty without a login
-#   {time}      when: "2026-10-09 14:32"
-#   {filters}   the filter trail, as in a caption
-#   {dataset}, {note}, {path}, ...
-#               any field of the data's `blockr_provenance` attribute
-#
+# The text may name {user} (`session$user`, empty without a login), {time}
+# ("2026-10-09 14:32"), {filters} (the filter trail, as in a caption) and any
+# field of the data's `blockr_provenance` attribute ({dataset}, {note}, ...).
 # A name the data does not have prints nothing.
 
 #' Download footer board option
@@ -39,43 +31,23 @@ new_download_footer_option <- function(
     value = getOption("blockr.viz.download_footer", ""),
     category = "Downloads", ...) {
 
-  blockr.core::new_board_option(
-    id = "download_footer",
-    default = value,
-    ui = function(id) {
-      shiny::tagList(
-        shiny::textAreaInput(
-          shiny::NS(id, "download_footer"),
-          "Footer on downloads",
-          value = value,
-          rows = 2L
-        ),
-        shiny::helpText(
-          paste(
-            "Printed under every downloaded chart and table.",
-            "{user}, {time}, {dataset}, {note} and {filters} are filled in",
-            "at download."
-          )
-        )
-      )
+  new_input_option(
+    "download_footer", value,
+    input = function(inputId) {
+      shiny::textAreaInput(inputId, "Footer on downloads", value = value,
+                           rows = 2L)
     },
-    server = function(..., session) {
-      shiny::observeEvent(
-        blockr.core::get_board_option_or_null("download_footer", session),
-        {
-          val <- blockr.core::get_board_option_value(
-            "download_footer", session
-          )
-          shiny::updateTextAreaInput(session, "download_footer", value = val)
-        }
-      )
+    update = function(session, id, val) {
+      shiny::updateTextAreaInput(session, id, value = val)
     },
-    category = category,
-    ...
+    help = paste("Printed under every downloaded chart and table.",
+                 "{user}, {time}, {dataset}, {note} and {filters} are filled",
+                 "in at download."),
+    category = category, ...
   )
 }
 
-# Chart blocks contribute the option, so a board with one shows the setting.
+# Chart blocks contribute the option. Table blocks add it in R/exhibit-font.R.
 
 #' @exportS3Method blockr.core::board_options
 board_options.chart_block <- function(x, ...) {
@@ -83,31 +55,21 @@ board_options.chart_block <- function(x, ...) {
                                      NextMethod())
 }
 
-# The table and summarize table blocks add this option in R/exhibit-font.R.
-
 # The footer text for one download, or NULL when there is none.
-#' @noRd
 download_footer_text <- function(template, data, user = NULL,
                                  time = Sys.time()) {
 
   template <- as.character(template %||% "")[1L]
-  if (is.na(template) || !nzchar(trimws(template))) {
-    return(NULL)
-  }
+  if (is.na(template) || !nzchar(trimws(template))) return(NULL)
 
   prov <- attr(data, "blockr_provenance", exact = TRUE)
   prov <- if (is.list(prov)) prov else list()
   trail <- attr(data, "blockr_filters", exact = TRUE)
   trail <- trail[!is.na(trail) & nzchar(trail)]
 
-  fields <- c(
-    prov,
-    list(
-      user = user,
-      time = format(time, "%Y-%m-%d %H:%M"),
-      filters = paste(unname(trail), collapse = "; ")
-    )
-  )
+  fields <- c(prov, list(user = user,
+                         time = format(time, "%Y-%m-%d %H:%M"),
+                         filters = paste(unname(trail), collapse = "; ")))
 
   value <- function(name) {
     v <- fields[[name]]
@@ -129,7 +91,6 @@ download_footer_text <- function(template, data, user = NULL,
 
 # The board's footer template, or NULL: no session, no board options, or a
 # board without this one.
-#' @noRd
 board_download_footer <- function(session = blockr.core::get_session()) {
   tryCatch(
     blockr.core::get_board_option_or_null("download_footer", session),
@@ -140,36 +101,25 @@ board_download_footer <- function(session = blockr.core::get_session()) {
 # The footer text for a download, or NULL. `data` is the block's input, for
 # the provenance and the filter trail.
 download_footer_for <- function(data, session) {
-  download_footer_text(
-    board_download_footer(session),
-    tryCatch(data, error = function(e) NULL),
-    user = session$user
-  )
+  download_footer_text(board_download_footer(session),
+                       tryCatch(data, error = function(e) NULL),
+                       user = session$user)
 }
 
-# The caption with the board's footer as its last line, for a download
-# written as a table rather than a picture.
-#' @noRd
+# The caption with the board's footer as its last line.
 download_footer_caption <- function(caption, data, session) {
   txt <- download_footer_for(data, session)
-  if (is.null(txt)) {
-    return(caption)
-  }
+  if (is.null(txt)) return(caption)
   cap <- if (is.character(caption) && length(caption)) caption[[1L]]
   if (is.null(cap) || is.na(cap) || !nzchar(cap)) txt else paste(cap, txt, sep = "\n")
 }
 
 # A picture with the board's footer under it, or the picture itself when
 # there is no footer.
-#' @noRd
 download_footer_stamp <- function(x, data, session) {
-  if (!inherits(x, "chart_capture")) {
-    return(x)
-  }
+  if (!inherits(x, "chart_capture")) return(x)
   txt <- download_footer_for(data, session)
-  if (is.null(txt)) {
-    return(x)
-  }
+  if (is.null(txt)) return(x)
   out <- png_add_footer(x$png, txt, css_width = x$width * 96)
   x$png <- out$png
   x$height <- x$height + out$band / 96
@@ -180,7 +130,6 @@ download_footer_stamp <- function(x, data, session) {
 # picture's width. Sized in CSS pixels, scaled by the density the picture was
 # drawn at, so the text matches the caption the canvas drew. Returns the new
 # bytes and the band's height in CSS pixels.
-#' @noRd
 png_add_footer <- function(png, text, css_width, font_px = 11, pad = 12) {
 
   img <- png::readPNG(png)
@@ -194,23 +143,23 @@ png_add_footer <- function(png, text, css_width, font_px = 11, pad = 12) {
 
   file <- tempfile(fileext = ".png")
   on.exit(unlink(file), add = TRUE)
+  open_device <- function(height) {
+    ragg::agg_png(file, width = w, height = height, units = "px", res = res,
+                  background = "white")
+    graphics::par(mar = c(0, 0, 0, 0), ps = ps)
+    graphics::plot.new()
+    graphics::plot.window(c(0, w), c(0, height), xaxs = "i", yaxs = "i")
+  }
 
   # A first device measures the wrap, since the band's height depends on the
   # number of lines.
-  ragg::agg_png(file, width = w, height = h, units = "px", res = res)
-  graphics::par(mar = c(0, 0, 0, 0), ps = ps)
-  graphics::plot.new()
-  graphics::plot.window(c(0, w), c(0, h), xaxs = "i", yaxs = "i")
+  open_device(h)
   lines <- footer_wrap(text, w - 2 * pad_px)
   grDevices::dev.off()
 
   band <- ceiling(length(lines) * line_px + pad_px)
 
-  ragg::agg_png(file, width = w, height = h + band, units = "px", res = res,
-                background = "white")
-  graphics::par(mar = c(0, 0, 0, 0), ps = ps)
-  graphics::plot.new()
-  graphics::plot.window(c(0, w), c(0, h + band), xaxs = "i", yaxs = "i")
+  open_device(h + band)
   graphics::rasterImage(img, 0, band, w, h + band, interpolate = FALSE)
   ys <- band - pad_px / 2 - (seq_along(lines) - 0.5) * line_px
   graphics::text(pad_px, ys, lines, adj = c(0, 0.5), col = "#6b7280")
@@ -221,7 +170,6 @@ png_add_footer <- function(png, text, css_width, font_px = 11, pad = 12) {
 
 # Words packed into lines no wider than `width` user units on the open
 # device. A word wider than a line gets a line of its own.
-#' @noRd
 footer_wrap <- function(text, width) {
   out <- character()
   for (para in strsplit(text, "\n", fixed = TRUE)[[1L]]) {

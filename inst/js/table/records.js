@@ -21,7 +21,10 @@
    */
   function asSelection(x) {
     const s = /** @type {any} */ (x);
-    return s && typeof s === 'object' && s.filters && typeof s.filters === 'object' ? s : null;
+    if (!(s && typeof s === 'object' && s.filters && typeof s.filters === 'object')) return null;
+    // R writes a click without a column half as `columns: {}`.
+    const cols = s.columns && typeof s.columns === 'object' && Object.keys(s.columns).length;
+    return cols ? s : { type: s.type, filters: s.filters };
   }
 
   /** @param {number} shown @param {number} total */
@@ -31,12 +34,23 @@
     return shown === total ? total + noun : shown + ' of ' + total + noun;
   }
 
+  /**
+   * A structured table: R built it from an annotated frame (a Table 1, the
+   * rows nested under `by`, a finished input), so it has sections, nested
+   * rows or row claims. It takes the Table-1 typography and counts no rows.
+   * @param {TableModel} m
+   */
+  const isStructured = (m) => !!(m.sections && m.sections.length) ||
+    !!(m.rows && (m.rows.keys || m.rows.indent));
+
   class Records {
     /**
      * @param {TableFrame} frame
      * @param {VizScope} scope
+     * @param {TableLayoutOpts} [opts] `still`: a picture or a page without
+     *   Shiny, every row drawn and no tools.
      */
-    constructor(frame, scope) {
+    constructor(frame, scope, opts = {}) {
       this.frame = frame;
       this.scope = scope;
       this.grid = new T.Grid(frame.box, scope);
@@ -50,11 +64,8 @@
       this.payload = null;
       /** The selection shown: R's, or a click R has not answered. */
       this.sel = /** @type {TableSelection | null} */ (null);
-      /** The last claim sent to a drill target. */
-      this.sent = /** @type {TableSelection | null} */ (null);
       this.drawnWith = '';
-      /** A picture or a page without Shiny: every row drawn, no tools. */
-      this.still = false;
+      this.still = !!opts.still;
       /** @type {Record<string, string>} */
       this.labels = {};
       this.drill = T.drill.wire(this.grid, frame, scope, {
@@ -64,10 +75,7 @@
           this.sel = s;
           this.repaint();
         },
-        sent: (s) => {
-          this.sent = s;
-          this.footer();
-        },
+        sent: (s) => frame.flash('Drilled down to ' + T.drill.label(s, this.labels)),
         transient: () => this.transient()
       });
       this.grid.hooks.drawn = () => {
@@ -110,7 +118,6 @@
       const m = /** @type {TableModel | null} */ (data && Array.isArray(data.cols) ? data : null);
       this.labels = Object.fromEntries((p.columns || []).map((c) => [c.name, c.label || c.name]));
       this.sel = asSelection(cfg.selection);
-      if (!this.transient()) this.sent = null;
       const f = this.frame;
       f.titles(d.titles);
       const has = !!m && !d.empty;
@@ -122,10 +129,10 @@
         this.cardsHost.hidden = true;
         f.el.classList.remove('dt-clickable');
         f.count('');
-        f.receipt(null, null);
+        f.status(null);
         return;
       }
-      f.structured(!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys));
+      f.structured(isStructured(m));
       f.el.classList.toggle('dt-clickable', T.drill.clickable(m));
       this.draw(m, cfg);
     }
@@ -136,7 +143,7 @@
      * @param {TableConfig} cfg
      * @param {boolean} has
      * @param {TableDerived} d
-     * @returns {{ search: boolean, download: boolean, downloads?: unknown, onOpen?: () => void }}
+     * @returns {{ search: boolean, download: boolean, downloads?: VizDownload[] | null, onOpen?: () => void }}
      */
     tools(cfg, has, d) {
       if (this.still) return { search: false, download: false };
@@ -168,8 +175,7 @@
      * @param {{ shown: number, total: number }} c
      */
     countLine(m, c) {
-      const structured = !!(m.sections && m.sections.length) || !!(m.rows && m.rows.indent);
-      return structured ? '' : countText(c.shown, c.total);
+      return isStructured(m) ? '' : countText(c.shown, c.total);
     }
 
     /**
@@ -224,7 +230,8 @@
       else this.grid.draw();
     }
 
-    /** The row count and the receipt line. */
+    /** The row count and the status line: what the selection holds. A drill
+     * sent to another block flashes its receipt instead (frame.flash). */
     footer() {
       const m = this.model;
       const f = this.frame;
@@ -233,20 +240,17 @@
         : this.grid.counts();
       // A printed table has no search to count against.
       f.count(this.still ? '' : this.countLine(m, c));
-      if (this.transient()) {
-        f.receipt(this.sent ? 'Drilled down to ' + T.drill.label(this.sent, this.labels) : null,
-                  null);
-        return;
-      }
-      const sel = this.sel;
+      const sel = this.transient() ? null : this.sel;
       if (!sel) {
-        f.receipt(null, null);
+        f.status(null);
         return;
       }
+      // R's words once it holds this selection: it names the columns a
+      // structured table's group levels stand for.
       const d = /** @type {TableDerived} */ (this.payload ? this.payload.derived : {});
       const fromR = T.drill.same(sel, asSelection(this.config().selection)) && d.receipt;
-      f.receipt(fromR || 'Filtered: ' + T.drill.label(sel, this.labels), () => {
-        V.util.send(f.id, 'select', { selection: null, nonce: Date.now() });
+      f.status(fromR || 'Filtered: ' + T.drill.label(sel, this.labels), () => {
+        V.util.select(f.id, null);
         this.sel = null;
         this.repaint();
       });
@@ -255,8 +259,7 @@
     /** @returns {TableInfo} */
     info() {
       const m = this.model;
-      const structured = !!m && (!!(m.sections && m.sections.length) || !!(m.rows && m.rows.keys) ||
-                                 !!(m.rows && m.rows.indent));
+      const structured = !!m && isStructured(m);
       const by = this.config().by;
       return { structured, finished: structured && !(Array.isArray(by) && by.length),
                numbers: !m || m.cols.some((c) => !!c.num) };

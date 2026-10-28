@@ -1,5 +1,9 @@
 # One plan entry per summary column: the mark it draws, its stat columns,
-# colour split, facet and labels, read by the cell model.
+# colour split, facet and labels, read by the cell model. An entry's `kind`
+# and a split bar's `mode` are provisional: the plan is built before any value
+# exists, and groups_summary_domains() settles both over the assembled rows
+# (a bar with a negative value is `bardiv`, a grouped split whose rows each
+# hold one level is stacked).
 
 #' Colour dimension of a distribution column: per-level stat columns, levels
 #' and colours (`groups_level_colors`). `list()` when there is no colour.
@@ -10,7 +14,7 @@ groups_color_split <- function(s, sid, stats, data, scale_map) {
   list(
     levels = lv,
     lcols = lapply(seq_along(lv), function(j) {
-      stats::setNames(paste0(sid, "_L", j, "_", stats), stats)
+      stats::setNames(groups_col(groups_level_sid(sid, j), stats), stats)
     }),
     fills = unname(groups_level_colors(scale_map, s$.color, lv,
                                           data[[s$.color]])[lv]),
@@ -48,8 +52,17 @@ groups_plan_den <- function(cp) {
   }
 }
 
-groups_plan_base <- function(s, cp, sid, label, sub, den) {
-  base <- list(label = label, sub_label = sub, sid = sid, stype = s$type,
+# A plan entry: `base` with the kind's fields set over it; a field the kind
+# sets again replaces the base's. A NULL field stays in the list, so `p$dom`
+# finds it rather than partially matching `p$dom_date`.
+groups_plan_entry <- function(base, ...) {
+  fields <- c(...)
+  base[names(fields)] <- fields
+  base
+}
+
+groups_plan_base <- function(s, cp, sid, label, sub_label, den) {
+  base <- list(label = label, sub_label = sub_label, sid = sid, stype = s$type,
                flevel = cp$level, fcol = cp$fcol, sname = s$name,
                meas = s$name,
                # a zero count is an empty column (groups_drop_empty_facets)
@@ -76,32 +89,34 @@ groups_plan_base <- function(s, cp, sid, label, sub, den) {
 #' @noRd
 groups_summary_plan <- function(s, cp, data, scale_map = NULL) {
   sid <- cp$suffix
-  sub <- groups_plan_sub(s, cp)
+  sub_label <- groups_plan_sub(s, cp)
   den <- groups_plan_den(cp)
-  base <- groups_plan_base(s, cp, sid, groups_plan_label(s, cp), sub, den)
+  base <- groups_plan_base(s, cp, sid, groups_plan_label(s, cp), sub_label, den)
   if (identical(s$type, "simple")) {
     groups_plan_simple(s, sid, base, den, data, scale_map)
   } else if (identical(s$type, "dist")) {
-    groups_plan_dist(s, sid, base, sub, data, scale_map)
+    groups_plan_dist(s, sid, base, data, scale_map)
   } else if (!is.null(s$.failed)) {
-    c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
-                 text = TRUE, failed = s$.failed))
+    groups_plan_entry(base, list(
+      kind = "text", key = groups_col(sid, "t"), failed = s$.failed
+    ))
   } else if (identical(s$type, "field")) {
-    c(base, list(kind = "num", key = paste0(sid, "_t"), raw = TRUE,
-                 text = TRUE,
-                 sub_label = sub %||% dt_col_label(data[[s$col]], s$col)))
+    groups_plan_entry(base, list(kind = "text", key = groups_col(sid, "t")))
   } else if (identical(s$type, "expr")) {
-    # Numeric vs text is decided by the eval; the plan names the numeric
-    # key and groups_cells falls back to the text column when it is absent.
-    c(base, list(kind = "num", key = paste0(sid, "_v"),
-                 alt_text = paste0(sid, "_t")))
+    # Numeric vs text is decided by the eval: `key` is the number, `alt_text`
+    # the text column the cell model reads when there is no number.
+    groups_plan_entry(base, list(
+      kind = "expr", key = groups_col(sid, "v"),
+      alt_text = groups_col(sid, "t")
+    ))
   } else if (identical(s$type, "pair")) {
-    groups_plan_pair(s, sid, base, sub, data, scale_map)
+    groups_plan_pair(s, sid, base, sub_label, data, scale_map)
   } else if (identical(s$type, "sparkline")) {
-    c(base, list(kind = "sparkline", key = paste0(sid, "_last"),
-                 pts = paste0(sid, "_pts"), x = chr_state(s$x),
-                 dom_date = isTRUE(s$.date), ref = cp$ref,
-                 show_val = TRUE))
+    groups_plan_entry(base, list(
+      kind = "sparkline", key = groups_col(sid, "last"),
+      pts = groups_col(sid, "pts"), x = chr_state(s$x),
+      dom_date = isTRUE(s$.date), ref = cp$ref
+    ))
   } else {
     groups_plan_spans(s, sid, base, data, scale_map)
   }
@@ -109,14 +124,19 @@ groups_summary_plan <- function(s, cp, data, scale_map = NULL) {
 
 groups_plan_simple <- function(s, sid, base, den, data, scale_map) {
   if (identical(s$show, "dot")) {
-    c(base, list(kind = "pointrange", key = paste0(sid, "_v"),
-                 cols = c(bc = paste0(sid, "_v")),
-                 # Length from zero, like the bar: the domain keeps its zero.
-                 zero = TRUE,
-                 # No range, so nothing spans the cell: it keeps its hairline.
-                 bare = TRUE,
-                 words = list(center = s$name), show_val = TRUE),
-      groups_color_split(s, sid, "bc", data, scale_map))
+    groups_plan_entry(
+      base,
+      list(
+        kind = "pointrange", key = groups_col(sid, "v"),
+        cols = c(bc = groups_col(sid, "v")),
+        # Length from zero, like the bar: the domain keeps its zero.
+        zero = TRUE,
+        # No range, so nothing spans the cell: it keeps its hairline.
+        bare = TRUE,
+        words = list(center = s$name)
+      ),
+      groups_color_split(s, sid, "bc", data, scale_map)
+    )
   } else if (identical(s$show, "bar") && !is.null(s$.color) &&
                length(s$.levels)) {
     groups_plan_barsplit(s, sid, base, den, data, scale_map)
@@ -124,12 +144,13 @@ groups_plan_simple <- function(s, sid, base, den, data, scale_map) {
     groups_plan_tile(s, sid, base, data, scale_map)
   } else {
     kind <- if (identical(s$show, "bar")) "bar" else "num"
-    c(base, list(kind = kind, key = paste0(sid, "_v"),
-                 fill = if (identical(kind, "bar")) dd_palette(1L),
-                 show_val = identical(kind, "bar"),
-                 # Bar length is the percentage; a number prints "54 (18%)".
-                 denom = den,
-                 combined = !is.null(den) && identical(kind, "num")))
+    groups_plan_entry(base, list(
+      kind = kind, key = groups_col(sid, "v"),
+      fill = if (identical(kind, "bar")) dd_palette(1L),
+      # Bar length is the percentage; a number prints "54 (18%)".
+      denom = den,
+      combined = !is.null(den) && identical(kind, "num")
+    ))
   }
 }
 
@@ -140,26 +161,24 @@ groups_plan_simple <- function(s, sid, base, den, data, scale_map) {
 # `mode` is provisional: if every row holds one level, groups_summary_domains()
 # stacks it back (groups_split_degenerate()).
 groups_plan_barsplit <- function(s, sid, base, den, data, scale_map) {
-  c(base, list(kind = "barsplit", key = paste0(sid, "_v"),
-               prefix = paste0(sid, "_S_"), series = s$.levels,
-               cvar = groups_col_name(data, s$.color),
-               ccol = s$.color,
-               mode = local({
-                 additive <- is.null(s$.custom) && groups_additive(
-                   chr_state(s$func) %||% "count"
-                 )
-                 # Parts of a mean do not add up: side by side.
-                 if (!additive) {
-                   "grouped"
-                 } else {
-                   GROUPS_POSITIONS[[s$position %||% "stack"]]
-                 }
-               }),
-               show_val = TRUE,
-               denom = den,
-               fills = unname(groups_level_colors(
-                 scale_map, s$.color, s$.levels, data[[s$.color]]
-               )[s$.levels])))
+  additive <- is.null(s$.custom) &&
+    groups_additive(chr_state(s$func) %||% "count")
+  groups_plan_entry(base, list(
+    kind = "barsplit", key = groups_col(sid, "v"),
+    series = s$.levels, scols = groups_split_col(sid, s$.levels),
+    cvar = groups_col_name(data, s$.color),
+    ccol = s$.color,
+    # Parts of a mean do not add up: side by side.
+    mode = if (additive) {
+      GROUPS_POSITIONS[[s$position %||% "stack"]]
+    } else {
+      "grouped"
+    },
+    denom = den,
+    fills = unname(groups_level_colors(
+      scale_map, s$.color, s$.levels, data[[s$.color]]
+    )[s$.levels])
+  ))
 }
 
 # Matrix cell: the value in a square, painted by the worst level of `fill`,
@@ -167,64 +186,65 @@ groups_plan_barsplit <- function(s, sid, base, den, data, scale_map) {
 # not fit a rotated title).
 groups_plan_tile <- function(s, sid, base, data, scale_map) {
   base$sub_label <- NULL
-  fills <- if (!is.null(s$.fill)) {
-    groups_tile_colors(scale_map, s$.fill, s$.fill_levels, data[[s$.fill]])
-  }
-  c(base, list(kind = "tile", key = paste0(sid, "_v"),
-               wkey = if (!is.null(s$.fill)) paste0(sid, "_w"),
-               fills = if (!is.null(fills)) unname(fills),
-               flevels_fill = s$.fill_levels,
-               fvar = if (!is.null(s$.fill)) {
-                 groups_col_name(data, s$.fill)
-               },
-               show_val = TRUE))
+  fill <- s$.fill
+  groups_plan_entry(base, list(
+    kind = "tile", key = groups_col(sid, "v"),
+    wkey = if (!is.null(fill)) groups_col(sid, "w"),
+    fills = if (!is.null(fill)) {
+      unname(groups_tile_colors(scale_map, fill, s$.fill_levels,
+                                data[[fill]]))
+    },
+    flevels_fill = s$.fill_levels,
+    fvar = if (!is.null(fill)) groups_col_name(data, fill)
+  ))
 }
 
-groups_plan_dist <- function(s, sid, base, sub, data, scale_map) {
-  stat <- chr_state(s$summary) %||% "median_q1_q3"
-  meta <- GROUPS_STAT_META[[stat]] %||% GROUPS_STAT_META$median_q1_q3
+groups_plan_dist <- function(s, sid, base, data, scale_map) {
   if (identical(s$show, "text")) {
-    return(c(base, list(kind = "num", key = paste0(sid, "_bc"),
-                        dispkey = "dist_text",
-                        lo = paste0(sid, "_bl"), hi = paste0(sid, "_bh"),
-                        sub_label = sub %||% meta$label)))
+    return(groups_plan_entry(base, list(
+      kind = "dist_text", key = groups_col(sid, "bc"),
+      lo = groups_col(sid, "bl"), hi = groups_col(sid, "bh")
+    )))
   }
   # ONE glyph, two styles. Leaf columns follow the pieces switched on, so an
   # absent range ships no columns.
   inner <- chr_state(s$summary) %||% "median_q1_q3"
   outer <- chr_state(s$whiskers) %||% "none"
+  meta <- GROUPS_STAT_META[[inner]] %||% GROUPS_STAT_META$median_q1_q3
   cmeta <- GROUPS_STAT_META[[groups_dist_centre_stat(s)]] %||%
     GROUPS_STAT_META$median_q1_q3
-  cols <- c(bc = paste0(sid, "_bc"), n = paste0(sid, "_n"))
+  wmeta <- GROUPS_STAT_META[[outer]] %||% GROUPS_STAT_META$tukey
+  cols <- c(bc = groups_col(sid, "bc"), n = groups_col(sid, "n"))
   if (!identical(inner, "none")) {
-    cols <- c(cols, bl = paste0(sid, "_bl"), bh = paste0(sid, "_bh"))
+    cols <- c(cols, bl = groups_col(sid, "bl"), bh = groups_col(sid, "bh"))
   }
   if (!identical(outer, "none")) {
-    cols <- c(cols, wl = paste0(sid, "_wl"), wh = paste0(sid, "_wh"))
+    cols <- c(cols, wl = groups_col(sid, "wl"), wh = groups_col(sid, "wh"))
   }
-  wmeta <- GROUPS_STAT_META[[outer]] %||% GROUPS_STAT_META$tukey
-  c(base, list(kind = if (identical(s$style, "box")) "box" else
-                 "pointrange",
-               key = paste0(sid, "_bc"), cols = cols,
-               # A mark with an outer range brings its own rail (bare lane); one
-               # without gets the hairline.
-               bare = identical(outer, "none"),
-               words = list(
-                 center = cmeta$center,
-                 range = if (!identical(inner, "none")) meta$range,
-                 whisk = if (!identical(outer, "none")) wmeta$range
-               ),
-               sub_label = sub %||% groups_dist_sub_label(s, meta, wmeta),
-               show_val = TRUE),
-    groups_color_split(s, sid, names(cols), data, scale_map))
+  groups_plan_entry(
+    base,
+    list(
+      kind = if (identical(s$style, "box")) "box" else "pointrange",
+      key = groups_col(sid, "bc"), cols = cols,
+      # A mark with an outer range brings its own rail (bare lane); one
+      # without gets the hairline.
+      bare = identical(outer, "none"),
+      words = list(
+        center = cmeta$center,
+        range = if (!identical(inner, "none")) meta$range,
+        whisk = if (!identical(outer, "none")) wmeta$range
+      )
+    ),
+    groups_color_split(s, sid, names(cols), data, scale_map)
+  )
 }
 
 groups_pair_cols <- function(prefix) {
-  c(a = paste0(prefix, "_from"), b = paste0(prefix, "_to"),
-    lo = paste0(prefix, "_lo"), hi = paste0(prefix, "_hi"))
+  c(a = groups_col(prefix, "from"), b = groups_col(prefix, "to"),
+    lo = groups_col(prefix, "lo"), hi = groups_col(prefix, "hi"))
 }
 
-groups_plan_pair <- function(s, sid, base, sub, data, scale_map) {
+groups_plan_pair <- function(s, sid, base, sub_label, data, scale_map) {
   lv <- s$.levels
   dlv <- s$.dlevels
   words <- c(
@@ -233,84 +253,64 @@ groups_plan_pair <- function(s, sid, base, sub, data, scale_map) {
     trimws(paste(GROUPS_PAIR_WORDS[[s$xend_func]],
                  groups_col_name(data, s$xend), "\u25cf"))
   )
-  # Set on `base`: c() would append a second `sub_label` that `$` never reads.
-  base$sub_label <- sub %||% paste0(
-    words[[1L]], " \u2192 ", words[[2L]],
-    if (length(dlv) > 1L) {
-      paste0(" \u00b7 dashed: ", groups_col_name(data, s$linetype), " \u2260 ",
-             dlv[[1L]])
-    } else {
-      ""
-    }
-  )
-  c(base, list(kind = "pair", key = paste0(sid, "_to"),
-               cols = groups_pair_cols(sid), ncol = paste0(sid, "_n"),
-               fidx = paste0(sid, "_f"), didx = paste0(sid, "_d"),
-               ref = s$x_lines, levels = lv,
-               words = list(from = words[[1L]], to = words[[2L]]),
-               fills = if (!is.null(lv)) {
-                 unname(groups_level_colors(
-                   scale_map, chr_state(s$color), lv,
-                   data[[chr_state(s$color)]]
-                 )[lv])
-               },
-               show_val = TRUE),
+  dashed <- if (length(dlv) > 1L) {
+    paste0(" \u00b7 dashed: ", groups_col_name(data, s$linetype), " \u2260 ",
+           dlv[[1L]])
+  } else {
+    ""
+  }
+  groups_plan_entry(
+    base,
+    list(
+      kind = "pair", key = groups_col(sid, "to"),
+      sub_label = sub_label %||%
+        paste0(words[[1L]], " \u2192 ", words[[2L]], dashed),
+      cols = groups_pair_cols(sid), ncol = groups_col(sid, "n"),
+      fidx = groups_col(sid, "f"), didx = groups_col(sid, "d"),
+      ref = s$x_lines, levels = lv,
+      words = list(from = words[[1L]], to = words[[2L]]),
+      fills = if (!is.null(lv)) {
+        unname(groups_level_colors(
+          scale_map, chr_state(s$color), lv, data[[chr_state(s$color)]]
+        )[lv])
+      }
+    ),
     # Colour split: one dumbbell per level (groups_pair_fill() writes
     # `<sid>_L<j>_*`).
     if (!is.null(s$.color) && length(lv)) {
-      list(lcols = lapply(seq_along(lv), function(j) {
-             groups_pair_cols(paste0(sid, "_L", j))
-           }),
-           ldidx = paste0(sid, "_L", seq_along(lv), "_d"),
-           lncol = paste0(sid, "_L", seq_along(lv), "_n"),
+      lsid <- groups_level_sid(sid, seq_along(lv))
+      list(lcols = lapply(lsid, groups_pair_cols),
+           ldidx = groups_col(lsid, "d"),
+           lncol = groups_col(lsid, "n"),
            cvar = groups_col_name(data, s$.color))
-    })
+    }
+  )
 }
 
 groups_plan_spans <- function(s, sid, base, data, scale_map) {
   lv <- s$.levels
   x <- chr_state(s$x)
   xend <- chr_state(s$xend)
-  c(base, list(kind = "interval", key = paste0(sid, "_start"),
-               segs = paste0(sid, "_segs"), x = x,
-               xend = xend, levels = lv,
-               dom = groups_axis_domain_attr(data, c(x, xend)),
-               dom_date = isTRUE(s$.date),
-               tfields = intersect(as.character(s$tooltip %||% character()),
-                                   names(data)),
-               # Tooltip names for the colour and extra fields: labels, else
-               # names.
-               cvar = groups_col_name(data, chr_state(s$color)),
-               tlabels = vapply(
-                 intersect(as.character(s$tooltip %||% character()), names(data)),
-                 function(f) groups_col_name(data, f), character(1L),
-                 USE.NAMES = FALSE
-               ),
-               section = identical(s$parent, FALSE),
-               size = chr_state(s$size) %||% "md",
-               fills = if (!is.null(lv)) {
-                 unname(groups_level_colors(
-                   scale_map, chr_state(s$color), lv,
-                   data[[chr_state(s$color)]]
-                 )[lv])
-               } else {
-                 dd_palette(1L)
-               }))
-}
-
-#' The column's sub-label: the pieces of the glyph ("Median . Q1-Q3 . 1.5xIQR"),
-#' a piece that is off is absent.
-#' @noRd
-groups_dist_sub_label <- function(s, meta, wmeta) {
-  parts <- c(
-    if (identical(chr_state(s$summary) %||% "none", "none")) {
-      GROUPS_STAT_META[[groups_dist_centre_stat(s)]]$center
+  color <- chr_state(s$color)
+  tfields <- intersect(as.character(s$tooltip %||% character()), names(data))
+  groups_plan_entry(base, list(
+    kind = "interval", key = groups_col(sid, "start"),
+    segs = groups_col(sid, "segs"), x = x, xend = xend, levels = lv,
+    dom = groups_axis_domain_attr(data, c(x, xend)),
+    dom_date = isTRUE(s$.date),
+    tfields = tfields,
+    # Tooltip names for the colour and extra fields: labels, else names.
+    cvar = groups_col_name(data, color),
+    tlabels = vapply(tfields, function(f) groups_col_name(data, f),
+                     character(1L), USE.NAMES = FALSE),
+    section = identical(s$parent, FALSE),
+    size = chr_state(s$size) %||% "md",
+    fills = if (!is.null(lv)) {
+      unname(groups_level_colors(scale_map, color, lv, data[[color]])[lv])
     } else {
-      meta$label
-    },
-    if (!identical(chr_state(s$whiskers) %||% "none", "none")) wmeta$range
-  )
-  paste(parts, collapse = " \u00b7 ")
+      dd_palette(1L)
+    }
+  ))
 }
 
 #' @noRd
@@ -360,8 +360,7 @@ groups_facet_layout <- function(plan, facet_levels, facet_layout, data,
 groups_level_group <- function(g) {
   lapply(g, function(p) {
     p$label <- p$sname %||% p$label
-    # Every copy: a plan entry can carry `sub_label` twice (c() appends).
-    p[names(p) == "sub_label"] <- NULL
+    p$sub_label <- NULL
     p
   })
 }
@@ -379,32 +378,4 @@ groups_facet_spans <- function(lead, groups, facet_levels, data, shared_facet,
            ))
     })
   )
-}
-
-#' The legend: one group per colour column in use, each titled by its column
-#' since a table can carry more than one colour dimension.
-#' @noRd
-groups_color_groups <- function(summaries, data, drawn, scale_map) {
-  legend_cols <- unique(unlist(lapply(summaries, function(s) {
-    if (groups_color_capable(s)) groups_present(s$color, data)
-  })))
-  color_groups <- Filter(Negate(is.null), lapply(legend_cols, function(cc) {
-    lv <- groups_color_levels(data[[cc]], drawn)
-    if (length(lv) < 2L) return(NULL)
-    list(column = cc, title = groups_col_name(data, cc), levels = lv,
-         palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
-  }))
-  # A tile painted by a worst level gets its own legend group.
-  for (s in summaries) {
-    if (!identical(s$show, "tile") || is.null(s$.fill)) next
-    lv <- s$.fill_levels
-    if (!length(lv)) next
-    color_groups[[length(color_groups) + 1L]] <- list(
-      column = s$.fill,
-      title = paste("Worst", groups_col_name(data, s$.fill)),
-      levels = lv,
-      palette = groups_tile_colors(scale_map, s$.fill, lv, data[[s$.fill]])
-    )
-  }
-  color_groups
 }

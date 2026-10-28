@@ -27,12 +27,13 @@ function withCards(n = 4) {
 
 test('the frame: titles on the left, tools and footer', () => {
   const t = mount(payload({ data: flatModel(3),
-                            derived: { titles: { title: 'Subjects', caption: 'Source: ADSL' } } }));
-  assert.equal(t.$('.vz-head .dd-table-title').textContent, 'Subjects');
-  assert.ok(t.$('.dd-table-subtitle').hidden);
-  assert.equal(t.$('.dd-table-caption').textContent, 'Source: ADSL');
+                            derived: { titles: { title: 'Subjects', caption: 'Source: ADSL' },
+                                       downloads: [{ id: 'tbl_csv', label: 'CSV' }] } }));
+  assert.equal(t.$('.vz-head .vz-title').textContent, 'Subjects');
+  assert.ok(t.$('.vz-subtitle').hidden);
+  assert.equal(t.$('.vz-caption').textContent, 'Source: ADSL');
   assert.equal(t.$('input.blockr-search').hidden, false);
-  assert.equal(t.$('.dt-download-slot').hidden, false);
+  assert.equal(t.$('.vz-download').hidden, false);
 });
 
 test('with no table the tools stay hidden and the message shows', () => {
@@ -40,7 +41,7 @@ test('with no table the tools stay hidden and the message shows', () => {
   assert.equal(t.$('.vd-empty-state').textContent, 'Connect a data block');
   assert.equal(t.$('.vd-empty-state').getAttribute('data-kind'), 'needs');
   assert.ok(t.$('input.blockr-search').hidden);
-  assert.ok(t.$('.dt-download-slot').hidden);
+  assert.ok(t.$('.vz-download').hidden);
   assert.equal(t.$('table'), null);
   t.render({ data: flatModel(2) });
   assert.equal(t.$('.vd-empty-state'), null);
@@ -50,7 +51,7 @@ test('with no table the tools stay hidden and the message shows', () => {
 
 test('download off hides the download slot only', () => {
   const t = mount(payload({ data: flatModel(2), config: { download: false } }));
-  assert.ok(t.$('.dt-download-slot').hidden);
+  assert.ok(t.$('.vz-download').hidden);
   assert.equal(t.$('input.blockr-search').hidden, false);
 });
 
@@ -67,7 +68,7 @@ test('the cards look draws a card per column and drills on a card row', () => {
   assert.equal(t.$$('.tc-row').length, 4);
   assert.deepEqual(t.$$('.tc-colhead b').map((b) => b.textContent), ['Arm', 'Age']);
   assert.equal(t.$('.tc-row .tc-strip').getAttribute('style'), 'background:#123456');
-  assert.equal(t.$('.dt-row-count').textContent, '4 rows');
+  assert.equal(t.$('.vz-count').textContent, '4 rows');
   t.click(t.$$('.tc-row')[3].querySelector('.tc-val'));
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: ['Placebo'] } }]);
   assert.deepEqual(t.$$('.tc-row.dt-row-active').map((r) => r.getAttribute('data-i')), ['0', '3']);
@@ -80,7 +81,7 @@ test('search narrows the card rows', async () => {
   inp.dispatchEvent(new t.win.Event('input'));
   await tick(t.win, 200);
   assert.deepEqual(t.$$('.tc-row').map((r) => r.getAttribute('data-i')), ['1', '4']);
-  assert.equal(t.$('.dt-row-count').textContent, '2 of 6 rows');
+  assert.equal(t.$('.vz-count').textContent, '2 of 6 rows');
 });
 
 test('a single row of cards names the statistic in the card', () => {
@@ -185,7 +186,7 @@ test('the shading editor round-trips every key of a rule', () => {
   const sets = [];
   const ctx = {
     values: { shadings: [{ mode: 'bar', columns: ['AGE'], domain: [{ value: -1, label: null }, { value: 1, label: null }] }] },
-    columns: [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'WT', class: 'numeric', label: 'Weight' },
+    columns: [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'WT', class: 'number', label: 'Weight' },
               { name: 'ARM', class: 'character', label: 'Arm' }],
     set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
   };
@@ -197,7 +198,7 @@ test('the shading editor round-trips every key of a rule', () => {
   boxes[1].checked = true;
   fire(boxes[1], 'change');
   const mode = el.querySelector('select');
-  mode.value = 'sequential';
+  mode.value = 'Sequential';
   fire(mode, 'change');
   fire(el.querySelector('.vz-shade-add'), 'click');
   fire(el.querySelector('.vz-shade-remove'), 'click');
@@ -223,18 +224,18 @@ test('titles paint through the title slots when they are loaded', () => {
   const t = mount(payload({ data: flatModel(2), derived: { titles: {
     title: { text: 'AEs by Arm', parts: [{ text: 'AEs by ' }, { text: 'Arm', arg: 'by' }] },
     subtitle: null, caption: { text: 'Source' } } } }), env);
-  assert.deepEqual(painted, [['dd-table-title', 'AEs by Arm'], ['dd-table-subtitle', null]]);
-  assert.equal(t.$('.dd-table-caption').textContent, 'Source');
-  assert.ok(t.$('.dd-table-subtitle').hidden);
+  assert.deepEqual(painted, [['vz-title', 'AEs by Arm'], ['vz-subtitle', null], ['vz-caption', 'Source']]);
+  assert.equal(t.$('.vz-caption').textContent, 'Source');
+  assert.ok(t.$('.vz-subtitle').hidden);
 });
 
 test('the download control lists the formats R offers', () => {
   const dl = [{ id: 'tbl_xlsx', label: 'Excel', ext: 'xlsx' }, { id: 'tbl_html', label: 'Web page', ext: 'html' }];
   const t = mount(payload({ data: flatModel(2), derived: { downloads: dl }, dataRev: 4 }));
-  assert.deepEqual(t.$$('.dt-download-slot a.shiny-download-link').map((a) => a.id), ['tbl_xlsx', 'tbl_html']);
+  assert.deepEqual(t.$$('.vz-download a.shiny-download-link').map((a) => a.id), ['tbl_xlsx', 'tbl_html']);
   t.render({ dataRev: 4, config: { download: false }, derived: { downloads: dl } });
-  assert.ok(t.$('.dt-download-slot').hidden);
-  assert.equal(t.$$('.dt-download-slot a').length, 0);
+  assert.ok(t.$('.vz-download').hidden);
+  assert.equal(t.$$('.vz-download a').length, 0);
 });
 
 /** Count what a page holds: listeners, observers, timers and frames. */
@@ -342,4 +343,38 @@ test('table.css rotates the titles the compact look marks', () => {
   assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
   const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
   assert.match(dep, /"table\.css"/);
+});
+
+test('the gear offers the blocks a drill can be sent to', () => {
+  let host;
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: (tray, o) => { host = o.host; return { update() {}, dispose() {} }; } };
+  } });
+  const targets = [{ value: 'b2', label: 'Listing' }, { value: 'b3', label: 'Chart' }];
+  mount(payload({ data: flatModel(2), derived: { ctrl_choices: targets } }), env);
+  assert.deepEqual(JSON.parse(JSON.stringify(host.choices('drill_target', {}))),
+                   [{ value: '', label: 'None' }].concat(targets));
+  assert.equal(host.choices('format', {}), null);
+  // An empty picker says what it means.
+  assert.equal(host.placeholder('columns', { layout: 'records' }), 'All columns');
+  assert.equal(host.placeholder('by', { layout: 'records' }), 'All');
+  assert.equal(host.placeholder('by', { layout: 'groups' }), null);
+});
+
+test('a prepare script draws its controls and its error under the header', () => {
+  const env = loadTable({ before: (win) => {
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+      mount: () => ({ update() {}, dispose() {}, values: () => ({}), set() {} }) };
+  } });
+  const script = { inputs: [{ key: 'n', name: 'n', label: 'Rows', kind: 'number' }],
+                   values: { n: 10 }, error: 'boom' };
+  const t = mount(payload({ data: flatModel(2), derived: { script } }), env);
+  const band = t.$('.vz-table > .dd-mapping-band');
+  assert.ok(band);
+  assert.equal(band.hidden, false);
+  assert.equal(band.querySelector('[data-role="n"] .blockr-label').textContent, 'Rows');
+  assert.equal(band.querySelector('.dd-script-failed').textContent, 'Script failed: boom');
+  t.render({ data: flatModel(2), derived: {} });
+  assert.equal(band.hidden, true);
 });

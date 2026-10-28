@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Chart block: the number format of a chart's values (`format`, `unit`), as
- * on the tile block. "number" is NS.ddNum, "compact" 1.2K / 3.4M / 5.6B,
+ * on the tile block. "number" is V.util.num (core), "compact" 1.2K / 3.4M / 5.6B,
  * "percent" a fraction x100, a whole number 0 to 6 that many decimals.
  * `unit` is free text printed after the number. Format "number" with no unit
  * makes valueFormat() return null and callers keep their own formatting.
@@ -9,9 +9,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
 
   /** @param {number} v */
   const compact = (v) => {
@@ -21,7 +20,7 @@
     if (a >= 1e9) return short(1e9, 'B');
     if (a >= 1e6) return short(1e6, 'M');
     if (a >= 1e3) return short(1e3, 'K');
-    return String(NS.ddNum(v));
+    return String(V.util.num(v));
   };
 
   /** @param {number} v @param {number} digits */
@@ -55,7 +54,7 @@
       // `|| 0` folds a negative zero.
       ? (v) => (Math.round(v * 1000) / 10 || 0) + '%'
       : format === 'compact' ? compact
-        : fixed != null ? (v) => fixedNum(v, fixed) : (v) => String(NS.ddNum(v));
+        : fixed != null ? (v) => fixedNum(v, fixed) : (v) => String(V.util.num(v));
     return (v) => {
       const n = Number(v);
       if (v == null || !isFinite(n)) return '';
@@ -73,12 +72,12 @@
   /** An axis name. `title` is the column's label (or name, axes.axisTitle), `col` the column.
    * Labelled: label and unit, "Growth (%)". Else the unit alone, else the column name. Empty when
    * the chart's title carries it. @param {string} title @param {any} col
-   * @param {Record<string, any>} cfg @param {{ unit?: boolean }} [opts] */
-  const axisName = (title, col, cfg, opts = {}) => {
+   * @param {ChartSettings} cfg @param {ChartDerived} derived @param {{ unit?: boolean }} [opts] */
+  const axisName = (title, col, cfg, derived, opts = {}) => {
     const unit = opts.unit !== false && cfg.unit ? String(cfg.unit) : '';
     const labelled = !!title && title !== col;
     const name = labelled ? (unit ? unitTitle(title, cfg) : title) : (unit || title || '');
-    const t = cfg.derived && cfg.derived.titles && cfg.derived.titles.title;
+    const t = derived.titles && derived.titles.title;
     const head = String((t && t.text) || '').toLowerCase();
     if (name && head.includes(name.toLowerCase())) return '';
     return name;

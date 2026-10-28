@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The table's gear: the core gear engine (`Blockr.viz.gear`, gear-api.md)
+ * The table's gear: the core gear engine (`Blockr.viz.gear`, core/gear/)
  * in a tray under the frame's header, opened by the gear button with
  * `Blockr.viz.gear.tray`. The engine builds every row from the spec;
  * this file adds what the spec cannot say:
@@ -12,7 +12,6 @@
  * - the editors of keys the engine has no control for (`custom`): the
  *   shading rules here, a layout's own in its file (`Blockr.viz.table.editors`).
  *
- * Without the engine the view has no gear.
  */
 (function () {
   'use strict';
@@ -50,6 +49,13 @@
     if (v.layout === 'records') return recordsRow(key, v, info);
     return true;
   }
+
+  /**
+   * A number column, as R writes the columns (`class` "number" or
+   * "duration", R/wire.R).
+   * @param {{ class?: unknown }} c
+   */
+  const isNumeric = (c) => c.class === 'number' || c.class === 'duration';
 
   /** blockr.ui's controls, when the page has them. */
   const ui = () => /** @type {any} */ (root.Blockr || {});
@@ -169,12 +175,12 @@
    * The shading rules: one row per rule, and a button that adds one. Every
    * key of a rule goes back as it came, `domain` included.
    * @param {HTMLElement} el
-   * @param {TableGearCtx} ctx
+   * @param {VizCustomCtx} ctx
    */
   function shadings(el, ctx) {
     const rules = /** @type {Record<string, unknown>[]} */ (
       Array.isArray(ctx.values.shadings) ? ctx.values.shadings : []);
-    const numeric = ctx.columns.filter((c) => /^(numeric|integer|double)$/.test(String(c.class)));
+    const numeric = ctx.columns.filter(isNumeric);
     el.textContent = '';
     el.classList.add('vz-shadings');
     rules.forEach((rule, k) => {
@@ -199,13 +205,20 @@
    * @returns {TableGearHandle | null}
    */
   function mount(frame, scope, info) {
-    const G = /** @type {any} */ (V).gear;
-    if (!G || typeof G.mount !== 'function') return null;
-    const t = G.tray(frame.head, scope, 'Table settings');
-    /** @type {TableGearHost} */
+    /** What R resolved with the last payload: the drill targets. */
+    /** @type {TableDerived} */
+    let derived = {};
+    /** @type {VizGearHost} */
     const host = {
+      // The blocks a click can be sent to, as the chart offers them.
+      choices: (key) => key === 'drill_target'
+        ? (/** @type {VizChoice[]} */ ([{ value: '', label: 'None' }])).concat(derived.ctrl_choices || [])
+        : null,
       visible: (key, v) => visible(key, v, info()),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
+      // What an empty picker means.
+      placeholder: (key, v) => key === 'columns' ? 'All columns'
+        : key === 'by' && v.layout === 'records' ? 'All' : null,
       // A layout's own editor for a key ("variables.summaries"), else the
       // key's ("shadings").
       custom: (key, el, ctx) => {
@@ -213,13 +226,18 @@
         if (ed) ed(el, ctx);
       }
     };
-    const engine = scope.own(G.mount(t.band, {
-      block: 'table', id: frame.id, scope, typeKey: 'layout', title: 'Table settings', host
-    }));
-    return { engine, open: () => t.set(true), update: (p) => engine.update(p) };
+    const engine = frame.mountGear({ block: 'table', typeKey: 'layout', title: 'Table settings', host });
+    return {
+      engine, open: frame.openGear,
+      update: (p) => {
+        derived = /** @type {TableDerived} */ (p.derived || {});
+        engine.update(p);
+      }
+    };
   }
 
   V.table.gear = { mount, visible, shadings };
   V.table.ui = { pick, check, button };
+  V.table.isNumeric = isNumeric;
   V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();

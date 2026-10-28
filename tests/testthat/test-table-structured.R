@@ -1,4 +1,4 @@
-# table_structured_view() (R/table-structured.R) against the first render of
+# table_structured_to_model() (R/table-structured.R) against the first render of
 # the structured table recordings. The reference sent the table as HTML; the
 # model is compared with what that HTML says: cell texts in row order, header
 # texts and spans, sections and where they start, indents, row styles,
@@ -168,7 +168,7 @@ ts_expect_equal_head <- function(got, want, nm) {
   }
 }
 
-test_that("table_structured_view() draws what the reference sent", {
+test_that("table_structured_to_model() draws what the reference sent", {
   n <- 0L
   skipped <- character()
   for (layout in c("records", "variables")) {
@@ -185,7 +185,7 @@ test_that("table_structured_view() draws what the reference sent", {
         table_model_variables(cs$state, cs$data)
       }
       if (!grepl("<thead>", want$html, fixed = TRUE)) next
-      v <- table_structured_view(
+      v <- table_structured_to_model(
         frame, drill = cs$state$drill, digits = cs$state$format %||% "number",
         unit = cs$state$unit, collapsible = isTRUE(cs$state$collapsible)
       )
@@ -203,7 +203,7 @@ test_that("a structured model survives the trip to the browser", {
   d <- table_golden_df()
   state <- list(by = "grp", rowname = "cat", format = "number", drill = "auto")
   m <- table_model_records(state, d)
-  v <- table_structured_view(m$data, drill = "cat")
+  v <- table_structured_to_model(m$data, drill = "cat")
   j <- tm_json(v)
   expect_identical(j$n, nrow(m$data))
   expect_null(j$drill)
@@ -234,7 +234,7 @@ test_that("spanners span and a leaf reaches the last header row", {
                   `Arm||M` = c("3", "4"), All = c("5", "6"),
                   check.names = FALSE)
   names(d)[1L] <- ".label"
-  v <- table_structured_view(d)
+  v <- table_structured_to_model(d)
   expect_identical(v$stub, 0L)
   expect_length(v$head, 2L)
   top <- v$head[[1L]]
@@ -247,8 +247,8 @@ test_that("spanners span and a leaf reaches the last header row", {
 
 test_that("a frame with nothing to draw has no model", {
   d <- data.frame(.label = character(), v = character())
-  expect_null(table_structured_view(d))
-  expect_null(table_structured_view(data.frame(.label = "a")))
+  expect_null(table_structured_to_model(d))
+  expect_null(table_structured_to_model(data.frame(.label = "a")))
 })
 
 # A frame no recording has: three header levels, spanner labels with a Big N,
@@ -291,7 +291,7 @@ ts_frame <- function() {
 }
 
 test_that("the claims name their columns and keep single values as arrays", {
-  v <- table_structured_view(ts_frame(), drill = "auto")
+  v <- table_structured_to_model(ts_frame(), drill = "auto")
   expect_identical(v$rows$keys[[1L]],
                    list(.group1_level = I("SOC A"), .group2_level = I("PT 1"),
                         .variable_label = I("Sex"), .variable = I("SEX"),
@@ -305,7 +305,7 @@ test_that("the claims name their columns and keep single values as arrays", {
   expect_identical(as.vector(v$cols[[5L]]$bg),
                    c("#FF0000", NA, NA, NA, "#00FF00"))
   expect_identical(v$cols[[2L]]$disp[[4L]], NA_character_)
-  none <- table_structured_view(ts_frame(), drill = NULL)
+  none <- table_structured_to_model(ts_frame(), drill = NULL)
   expect_null(none$rows$keys)
   expect_null(none$head[[1L]][[2L]]$keys)
 })

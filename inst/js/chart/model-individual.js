@@ -19,15 +19,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const model = /** @type {any} */ (NS.model = NS.model || {});
-
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'x', 'y', 'color', 'facet', 'series', 'tooltip',
-    'derived.scales', 'derived.palette', 'show_n', 'id', 'func', 'highlight',
-    'y_transform', 'x_transform'];
 
   // Line charts: past TRAJ_FULL_MAX series the lines thin and lose their
   // markers, past TRAJ_REDUCED_MAX they thin further, past the cap the rest
@@ -44,7 +38,7 @@
    *             src: any[], muted?: boolean }} IndSeries
    * @typedef {{ facet: string, label: string | null, rows: any[],
    *             series: IndSeries[] }} IndividualPanel
-   * @typedef {{ family: 'individual', empty: string | null, type: string,
+   * @typedef {{ family: 'individual', empty: VizEmpty | null, type: string,
    *             isLine: boolean, isBand: boolean,
    *             x: { col: string, type: string, cats: string[] | null,
    *                  order: Map<string, number> | null, encode?: (v: any) => any,
@@ -91,7 +85,8 @@
    * @param {string[]} facets */
   const buildPanels = (rows, ix, cfg, out, facets) => {
     const { isLine, isBand, splitCol, facet, levels } = out;
-    const { col: x, type: xType, order: xOrder, encode: encodeX } = out.x;
+    const { col: x, type: xType, order: xOrder } = out.x;
+    const encodeX = /** @type {(v: any) => any} */ (out.x.encode);
     const y = out.y.col, yType = out.y.type;
     const encodeY = (/** @type {any} */ v) => yType === 'category' ? String(v ?? '') : Number(v);
     /** @param {any} r */
@@ -141,11 +136,12 @@
     }
   };
 
-  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {IndividualModel} */
-  const individual = ({ rows, ix, columns, cfg }) => {
+  const individual = ({ rows, ix, columns, cfg, derived }) => {
     const ct = cfg.type;
-    const { x, y } = cfg;
+    // gate() let only a chart with x and y through.
+    const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const color = cfg.color || null;
     const facet = cfg.facet || null;
     const seriesCol = cfg.series || null;
@@ -160,7 +156,7 @@
       x: { col: x, type: 'value', cats: null, order: null },
       y: { col: y, type: 'value', cats: null },
       seriesCol, color, splitCol, facet, levels: [], levelColors: [],
-      palette: NS.paletteOf(cfg), colorScale: NS.scaleFor(cfg, color),
+      palette: NS.paletteOf(derived), colorScale: NS.scaleFor(derived, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       logX: false, logY: false, logDropped: 0,
       ttFields: [], legend: null, byColor: false,
@@ -180,7 +176,7 @@
 
     /** @type {string[]} */
     let levels = splitCol
-      ? NS.axes.orderLevels(ix.levels(rows, splitCol, 'nz'), NS.scaleFor(cfg, splitCol),
+      ? NS.axes.orderLevels(ix.levels(rows, splitCol, 'nz'), NS.scaleFor(derived, splitCol),
                             columns, splitCol)
       : [];
     if (isLine && levels.length > TRAJ_HARD_CAP) {
@@ -205,7 +201,6 @@
     highlightSeries(out, rows, ix, cfg);
     return out;
   };
-  individual.FIELDS = MODEL_FIELDS;
 
   /** The highlight on a scatter or line. A line is highlighted when one of its rows holds a
    * highlighted value, a point by its own row. What is not highlighted is `muted` (drawn grey by
@@ -386,13 +381,13 @@
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any} params
    * @param {string} [focusName]
-   * @returns {{ filters: Record<string, any[]> } | { range: any } | null}
+   * @returns {ChartSelection | null}
    */
   const individualClick = (m, cfg, panel, params, focusName) => {
     if (!panel || NS.drillState(cfg) === 'off') return null;
     const explicit = cfg.drill !== 'auto';
-    /** @param {Record<string, any[]> | null} f */
-    const wrap = (f) => (f ? { filters: f } : null);
+    /** @param {Record<string, any[]> | null} f @returns {ChartSelection | null} */
+    const wrap = (f) => (f ? { type: 'categorical', filters: f } : null);
 
     /** @type {string | null} */
     let level = null;
@@ -414,19 +409,20 @@
     if (m.seriesCol && !m.isLine && params.seriesName != null) {
       return wrap(NS.keys.fromKeys(individualKeys(m, panel.facet, params.seriesName)));
     }
-    return withPanel(m, panel,
-      { x_col: m.x.col, y_col: m.y.col, x_range: [v[0], v[0]], y_range: [v[1], v[1]] });
+    return inPanel(m, panel, m.x.col, m.y.col, [v[0], v[0]], [v[1], v[1]]);
   };
 
   /**
    * A range taken in a panel; in a facet panel it carries the panel's key
    * as `filters`.
-   * @param {IndividualModel} m @param {IndividualPanel | null} panel @param {any} range
-   * @returns {{ range: any, filters?: Record<string, any[]> }}
+   * @param {IndividualModel} m @param {IndividualPanel | null} panel
+   * @param {string} x @param {string | null} y @param {any[]} xRange
+   * @param {any[] | null} yRange @returns {ChartRangeSelection}
    */
-  const withPanel = (m, panel, range) => {
+  const inPanel = (m, panel, x, y, xRange, yRange) => {
     const keys = panel ? individualKeys(m, panel.facet, null) : {};
-    return Object.keys(keys).length ? { range, filters: NS.keys.fromKeys(keys) } : { range };
+    return NS.keys.range(x, y, xRange, yRange,
+                         Object.keys(keys).length ? NS.keys.fromKeys(keys) : null);
   };
 
   /**
@@ -493,25 +489,22 @@
    * @param {IndividualPanel | null} panel
    * @param {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
    *           levels: string[] }} b
-   * @returns {{ filters: Record<string, any[]> } |
-   *           { range: any, filters?: Record<string, any[]> } | null}
+   * @returns {ChartSelection | null}
    */
   const brushSelection = (m, cfg, panel, b) => {
     if (b.drill) {
       const f = NS.keys.fromRows(b.drill, b.rows);
-      if (f) return { filters: f };
+      if (f) return { type: 'categorical', filters: f };
     }
     const keys = panel ? individualKeys(m, panel.facet, null) : {};
     if (!b.drill && m.seriesCol && b.levels.length) {
-      return { filters: { [m.seriesCol]: b.levels.map((lv) => (NS.keys.isMissing(lv) ? null : lv)),
+      return { type: 'categorical',
+               filters: { [m.seriesCol]: b.levels.map((lv) => (NS.keys.isMissing(lv) ? null : lv)),
                           ...NS.keys.fromKeys(keys) } };
     }
     if (!b.xVals.length) return null;
-    return withPanel(m, panel, {
-      x_col: cfg.x, y_col: cfg.y,
-      x_range: [NS.minOf(b.xVals), NS.maxOf(b.xVals)],
-      y_range: (!m.isLine && b.yVals.length) ? [NS.minOf(b.yVals), NS.maxOf(b.yVals)] : null
-    });
+    return inPanel(m, panel, cfg.x, cfg.y, [NS.minOf(b.xVals), NS.maxOf(b.xVals)],
+                   (!m.isLine && b.yVals.length) ? [NS.minOf(b.yVals), NS.maxOf(b.yVals)] : null);
   };
 
   /**

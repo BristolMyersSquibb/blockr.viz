@@ -5,8 +5,8 @@
  * the host's hooks, a Scope and `set()`), draws into the row and calls
  * `set(value)` with a value in its wire form. It never sends anything itself.
  *
- * blockr.ui's widgets are used where the page has them (Blockr.Select,
- * Blockr.segmented, Blockr.checkbox); otherwise plain form elements.
+ * The widgets are blockr.ui's (Blockr.Select, Blockr.segmented,
+ * Blockr.checkbox), which every block's dependency attaches.
  */
 (function () {
   'use strict';
@@ -25,10 +25,6 @@
   /** @param {unknown} a @param {unknown} b */
   const same = (a, b) => JSON.stringify(a == null ? null : a) === JSON.stringify(b == null ? null : b);
 
-  const NUMERIC = ['integer', 'double', 'numeric', 'duration', 'integer64'];
-  /** @param {VizColumn} c */
-  const isNumeric = (c) => NUMERIC.includes(c.class);
-
   /** The number formats both blocks offer (type `format`). */
   /** @type {VizChoice[]} */
   const FORMATS = [
@@ -37,9 +33,6 @@
     { value: 3, label: '1,234.568' }, { value: 4, label: '1,234.5679' },
     { value: 'compact', label: '1.2K' }, { value: 'percent', label: '12.3%' }
   ];
-
-  /** Free text that takes more than one line. */
-  const MULTILINE = ['script', 'expr', 'fn'];
 
   /** @type {Record<string, string>} */
   const PLACEHOLDERS = {
@@ -191,9 +184,6 @@
 
   // -- widgets ----------------------------------------------------------------
 
-  /** @param {VizChoice} c */
-  const display = (c) => (c.note ? c.label + ' (' + c.note + ')' : c.label);
-
   /** Choices as Blockr.Select options. Select prints an object as its value
    * with its label muted, which suits a column (name, variable label); a
    * fixed option goes in as its label alone. `keys[i]` is the string that
@@ -211,38 +201,26 @@
     return { options, keys };
   }
 
+  /** What an empty pick shows: the host's words for the key ("All
+   * columns"), else nothing. @param {VizRowCtx} ctx */
+  const placeholderOf = (ctx) =>
+    (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) || undefined;
+
   /** A single pick among `choices`; `onPick` gets the chosen value.
    * @param {HTMLElement} el @param {VizChoice[]} choices @param {unknown} value
    * @param {(v: unknown) => void} onPick @param {VizRowCtx} ctx */
   function pickOne(el, choices, value, onPick, ctx) {
     const at = choices.findIndex((c) => same(c.value, value));
-    const Sel = ui().Select;
-    if (Sel) {
-      const { options, keys } = uiOptions(choices);
-      const inst = Sel.single(el, {
-        options, selected: at < 0 ? '' : keys[at], allowEmpty: true, bordered: true,
-        label: ctx.label,
-        onChange: (/** @type {string} */ v) => {
-          const i = keys.indexOf(v);
-          if (i >= 0) onPick(choices[i].value);
-        }
-      });
-      ctx.scope.own({ dispose: () => inst.destroy() });
-      return;
-    }
-    const sel = document.createElement('select');
-    sel.className = 'dd-select';
-    sel.setAttribute('aria-label', ctx.label);
-    sel.setAttribute('data-gear-input', ctx.key);
-    choices.forEach((c, i) => {
-      const o = document.createElement('option');
-      o.value = String(i);
-      o.textContent = display(c);
-      sel.appendChild(o);
+    const { options, keys } = uiOptions(choices);
+    const inst = ui().Select.single(el, {
+      options, selected: at < 0 ? '' : keys[at], allowEmpty: true, bordered: true,
+      label: ctx.label, placeholder: placeholderOf(ctx),
+      onChange: (/** @type {string} */ v) => {
+        const i = keys.indexOf(v);
+        if (i >= 0) onPick(choices[i].value);
+      }
     });
-    sel.value = at < 0 ? '' : String(at);
-    ctx.scope.on(sel, 'change', () => onPick(choices[Number(sel.value)].value));
-    el.appendChild(sel);
+    ctx.scope.own({ dispose: () => inst.destroy() });
   }
 
   /** Several picks among `choices`, in pick order.
@@ -250,56 +228,22 @@
    * @param {(v: unknown[]) => void} onPick @param {VizRowCtx} ctx */
   function pickMany(el, choices, values, onPick, ctx) {
     const idx = values.map((v) => choices.findIndex((c) => same(c.value, v))).filter((i) => i >= 0);
-    const Sel = ui().Select;
-    if (Sel) {
-      const { options, keys } = uiOptions(choices);
-      const inst = Sel.multi(el, {
-        options, selected: idx.map((i) => keys[i]), bordered: true, label: ctx.label,
-        onChange: (/** @type {string[]} */ v) =>
-          onPick(v.map((k) => keys.indexOf(k)).filter((i) => i >= 0).map((i) => choices[i].value))
-      });
-      ctx.scope.own({ dispose: () => inst.destroy() });
-      return;
-    }
-    const sel = document.createElement('select');
-    sel.multiple = true;
-    sel.className = 'dd-select dd-select--multi';
-    sel.setAttribute('aria-label', ctx.label);
-    sel.setAttribute('data-gear-input', ctx.key);
-    choices.forEach((c, i) => {
-      const o = document.createElement('option');
-      o.value = String(i);
-      o.textContent = display(c);
-      o.selected = idx.includes(i);
-      sel.appendChild(o);
+    const { options, keys } = uiOptions(choices);
+    const inst = ui().Select.multi(el, {
+      options, selected: idx.map((i) => keys[i]), bordered: true, label: ctx.label,
+      placeholder: placeholderOf(ctx),
+      onChange: (/** @type {string[]} */ v) =>
+        onPick(v.map((k) => keys.indexOf(k)).filter((i) => i >= 0).map((i) => choices[i].value))
     });
-    ctx.scope.on(sel, 'change', () => onPick(Array.from(sel.options).filter((o) => o.selected)
-      .map((o) => choices[Number(o.value)].value)));
-    el.appendChild(sel);
+    ctx.scope.own({ dispose: () => inst.destroy() });
   }
 
   /** @param {HTMLElement} el @param {string} label @param {boolean} on
    * @param {(on: boolean) => void} onToggle @param {VizRowCtx} ctx */
   function checkbox(el, label, on, onToggle, ctx) {
-    const box = ui().checkbox;
-    if (box) {
-      const h = box(label, on, onToggle);
-      h.input.setAttribute('data-gear-input', ctx.key);
-      el.appendChild(h.el);
-      return;
-    }
-    const wrap = document.createElement('label');
-    wrap.className = 'blockr-checkbox';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = on;
-    input.setAttribute('data-gear-input', ctx.key);
-    const txt = document.createElement('span');
-    txt.className = 'blockr-checkbox__label';
-    txt.textContent = label;
-    wrap.append(input, txt);
-    ctx.scope.on(input, 'change', () => onToggle(input.checked));
-    el.appendChild(wrap);
+    const h = ui().checkbox(label, on, onToggle);
+    h.input.setAttribute('data-gear-input', ctx.key);
+    el.appendChild(h.el);
   }
 
   /** @param {HTMLElement} el @param {VizChoice[]} choices @param {unknown} value
@@ -308,26 +252,7 @@
     const at = String(choices.findIndex((c) => same(c.value, value)));
     const opts = choices.map((c, i) => ({ value: String(i), label: c.label }));
     const pick = (/** @type {string} */ v) => onPick(choices[Number(v)].value);
-    const seg = ui().segmented;
-    if (seg) {
-      el.appendChild(seg(opts, at, pick, { label: ctx.label }).el);
-      return;
-    }
-    const wrap = document.createElement('div');
-    wrap.className = 'blockr-segmented';
-    wrap.setAttribute('role', 'radiogroup');
-    wrap.setAttribute('aria-label', ctx.label);
-    for (const o of opts) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'blockr-segmented__seg' + (o.value === at ? ' is-selected' : '');
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', o.value === at ? 'true' : 'false');
-      b.textContent = o.label;
-      ctx.scope.on(b, 'click', () => { if (o.value !== at) pick(o.value); });
-      wrap.appendChild(b);
-    }
-    el.appendChild(wrap);
+    el.appendChild(ui().segmented(opts, at, pick, { label: ctx.label }).el);
   }
 
   /** A text field that commits on Enter or when it is left; Escape puts the
@@ -346,7 +271,7 @@
     inp.value = before;
     inp.setAttribute('aria-label', ctx.label);
     inp.setAttribute('data-gear-input', ctx.key);
-    const ph = (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) ||
+    const ph = placeholderOf(ctx) ||
       PLACEHOLDERS[(ctx.arg.gear && ctx.arg.gear.parse) || ''] || '';
     if (ph) inp.placeholder = ph;
     const commit = opts.commit || ((/** @type {string} */ t) => {
@@ -503,8 +428,13 @@
 
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */
   function textCtl(el, ctx) {
-    if (ctx.key === 'script') scriptCtl(el, ctx);
-    else field(el, ctx, { multiline: MULTILINE.includes(ctx.key) });
+    field(el, ctx);
+  }
+
+  /** Text over several lines: an R expression or function.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function code(el, ctx) {
+    field(el, ctx, { multiline: true });
   }
 
   /** @param {HTMLElement} el @param {VizRowCtx} ctx */
@@ -559,8 +489,9 @@
     V.titles.row(el, ctx);
   }
 
-  /** @param {HTMLElement} el @param {VizRowCtx} ctx */
-  function none(el, ctx) {
+  /** The view's own editor for the row (host.custom), or nothing.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function custom(el, ctx) {
     if (!ctx.host.custom) return;
     ctx.host.custom(ctx.key, el, { values: ctx.values, columns: ctx.columns, scope: ctx.scope,
                                    set: ctx.set });
@@ -568,8 +499,8 @@
 
   /** @type {Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>} */
   const BUILD = { column, columns, values: valuesCtl, select, segmented, toggle, number,
-                  text: textCtl, slider,
-                  tiles, template, none };
+                  text: textCtl, code, script: scriptCtl, slider,
+                  tiles, template, custom };
 
   /** Draw a row's controls. A template row draws its own field, preview and
    * help.
@@ -579,6 +510,6 @@
     (BUILD[control] || textCtl)(el, ctx);
   }
 
-  V.gear.controls = { build, options: choicesFor, toText, fromText, isSet, same, isNumeric, emptyChoice,
+  V.gear.controls = { build, options: choicesFor, toText, fromText, isSet, same, emptyChoice,
                        uiOptions };
 })();

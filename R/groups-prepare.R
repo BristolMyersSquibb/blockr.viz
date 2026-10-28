@@ -101,9 +101,8 @@ groups_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
 #' facet repeats per level, adjacent. `facet` / `color` are the legacy
 #' table-level pair, fanned down onto the rows (groups_migrate_globals()).
 #' @noRd
-groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
+groups_prepare_summaries <- function(data, by, summaries,
                                    facet_layout = "by_summary",
-                                   color = NULL,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
                                    subject = NULL, pct_of = "facet") {
@@ -113,7 +112,7 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   data <- g$data
   keys <- g$keys
 
-  summaries <- groups_prep_norm(summaries, data, color, facet)
+  summaries <- groups_prep_norm(summaries, data)
   if (!is.null(summaries$err)) return(bad(summaries$err))
   summaries <- groups_prep_mappings(summaries, data, g$drawn)
   if (!is.null(summaries$err)) return(bad(summaries$err))
@@ -122,16 +121,17 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   sk <- groups_prep_skeleton(data, keys, g$group, g$parent, summaries)
   if (!is.null(sk$err)) return(bad(sk$err))
 
-  ctx <- list(
+  build <- list(
     data = data, keys = keys, parent = g$parent, all = g$all,
     # A count's percentage base: a facet copy's own rows, or the whole table.
     pct_total = identical(chr_state(pct_of), "total"),
     qualify = fi$qualify, n_faceted = fi$n_faceted, scale_map = scale_map,
     subject = subject
   )
-  st <- groups_build_columns(summaries, sk$leaf, sk$par_rows, ctx)
+  summaries <- groups_custom_runs(summaries, build)
+  st <- groups_build_columns(summaries, sk$leaf, sk$par_rows, build)
   summaries <- st$summaries
-  st <- groups_primary_values(st, ctx)
+  st <- groups_primary_values(st, build)
   leaf <- st$leaf
   par_rows <- st$par_rows
   plan <- groups_drop_empty_facets(st$plan, leaf, par_rows)
@@ -158,17 +158,11 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   list(
     rows = rows, plan = fl$plan,
     layout = if (!length(fi$cols)) "simple" else "facet",
-    mark = "summaries", bar_max = 0, bar_min = 0,
+    bar_max = 0, bar_min = 0,
     group_label = groups_group_label(data, g$group, g$parent),
-    series = series_lv,
-    palette = pal, facet_levels = facet_levels,
-    denoms = c(all = groups_n_rows(data)), group = g$group,
-    parent = g$parent,
+    series = series_lv, palette = pal, group = g$group, parent = g$parent,
     color = lead_group$column, color_groups = cg,
-    facet = fi$shared,
     folded = asm$folded, fold_max = asm$fold_max,
-    n_total = if (is.null(g$parent)) nrow(leaf) else nrow(par_rows),
-    note = NULL, pct_ok = FALSE, func = "identity",
     facet_spans = fl$facet_spans,
     failed = unlist(lapply(fl$plan, function(p) p$failed)),
     all = g$all
@@ -233,12 +227,10 @@ groups_present <- function(col, data) {
 #' and check every mapped column exists.
 #' @return the summaries or `list(err =)`.
 #' @noRd
-groups_prep_norm <- function(summaries, data, color, facet) {
+groups_prep_norm <- function(summaries, data) {
   summaries <- groups_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(list(err = summaries$err))
   if (!length(summaries)) return(list(err = "Add at least one summary column"))
-  summaries <- groups_migrate_globals(summaries, groups_present(color, data),
-                                    groups_present(facet, data))
   msg <- groups_missing_columns(summaries, data)
   if (!is.null(msg)) return(list(err = msg))
   summaries
@@ -435,31 +427,29 @@ groups_parent_skeleton <- function(data, skel, parent, show_parent_n) {
 #' it and its columns are dropped.
 #' @return `st` with `.v` set on `leaf` and `par_rows`.
 #' @noRd
-groups_primary_values <- function(st, ctx) {
+groups_primary_values <- function(st, build) {
   ps <- st$primary$s
   pooled <- length(ps$.flevels) && is.null(ps$.custom) &&
     is.null(ps$.failed) && !identical(ps$show, "tile")
   if (pooled) {
     # The colour split adds nothing to the pooled value, so it is left out.
     ps0 <- ps[setdiff(names(ps), c("color", ".color"))]
-    st$leaf$.v <- groups_pool_value(st$leaf, ctx$keys, ps0, ctx)
+    st$leaf$.v <- groups_pool_value(st$leaf, build$keys, ps0, build)
     if (!is.null(st$par_rows)) {
-      st$par_rows$.v <- groups_pool_value(st$par_rows, ctx$parent, ps0, ctx,
+      st$par_rows$.v <- groups_pool_value(st$par_rows, build$parent, ps0, build,
                                         parent_row = TRUE)
     }
   } else {
-    primary_col <- groups_primary_col(st$primary$s, st$primary$sid)
-    st$leaf$.v <- groups_primary_value(st$leaf, st$primary$s, primary_col)
+    st$leaf$.v <- groups_primary_value(st$leaf, ps, st$primary$sid)
     if (!is.null(st$par_rows)) {
-      st$par_rows$.v <- groups_primary_value(st$par_rows, st$primary$s,
-                                           primary_col)
+      st$par_rows$.v <- groups_primary_value(st$par_rows, ps, st$primary$sid)
     }
   }
   # A faceted tile column is a matrix row: its sort key is the row's total
   # across the copies (a subject's AE burden), not its first term's count.
   if (identical(ps$show, "tile") && length(ps$.flevels)) {
-    stem <- sub("f[0-9]+$", "", st$primary$sid)
-    vcols <- paste0(stem, "f", seq_along(ps$.flevels), "_v")
+    vcols <- groups_col(groups_copy_sid(st$primary$i, seq_along(ps$.flevels)),
+                        "v")
     st$leaf$.v <- groups_tile_row_total(st$leaf, vcols)
     if (!is.null(st$par_rows)) {
       st$par_rows$.v <- groups_tile_row_total(st$par_rows, vcols)
@@ -468,11 +458,13 @@ groups_primary_values <- function(st, ctx) {
   st
 }
 
-groups_pool_value <- function(t, tkeys, ps0, ctx, parent_row = FALSE) {
-  sid0 <- ".sP"
-  t0 <- groups_fill(t, tkeys, ctx$keys, ctx$data, ps0, sid0,
-                  parent_row = parent_row)
-  groups_primary_value(t0, ps0, groups_primary_col(ps0, sid0))
+# The summary over all rows, filled under its own id into a copy of the frame
+# that is thrown away: only its primary value is kept.
+groups_pool_value <- function(t, tkeys, ps0, build, parent_row = FALSE) {
+  sid0 <- groups_copy_sid("P")
+  t0 <- groups_fill(t, tkeys, build$keys, build$data, ps0, sid0,
+                    parent_row = parent_row)
+  groups_primary_value(t0, ps0, sid0)
 }
 
 groups_tile_row_total <- function(t, vcols) {
@@ -494,35 +486,27 @@ groups_failed_summary <- function(s, msg) {
 groups_blank_summary <- function(target, s, sid) {
   n <- nrow(target)
   if (identical(s$type, "spans")) {
-    target[[paste0(sid, "_segs")]] <- I(rep(list(list()), n))
-    target[[paste0(sid, "_start")]] <- rep(NA_real_, n)
-    target[[paste0(sid, "_nseg")]] <- rep(0L, n)
+    target[[groups_col(sid, "segs")]] <- I(rep(list(list()), n))
+    target[[groups_col(sid, "start")]] <- rep(NA_real_, n)
+    target[[groups_col(sid, "nseg")]] <- rep(0L, n)
   }
   target
 }
 
+#' A summary copy's primary value per row: the column its sort and label
+#' read. An expr summary that evaluated to text has only its text column.
 #' @noRd
-groups_primary_col <- function(s, sid) {
-  switch(s$type,
-    simple = paste0(sid, "_v"),
-    dist = paste0(sid, "_bc"),
-    field = paste0(sid, "_t"),
-    expr = paste0(sid, "_v"),
-    sparkline = paste0(sid, "_last"),
-    spans = paste0(sid, "_start"),
-    pair = paste0(sid, "_to"),
-    paste0(sid, "_v")
+groups_primary_value <- function(target, s, sid) {
+  part <- switch(s$type,
+    dist = "bc",
+    field = "t",
+    sparkline = "last",
+    spans = "start",
+    pair = "to",
+    "v"
   )
-}
-
-#' @noRd
-groups_primary_value <- function(target, s, col) {
-  v <- target[[col]]
-  if (is.null(v)) {
-    # expr rows may have landed as text.
-    v <- target[[sub("_v$", "_t", col)]]
-  }
-  if (is.null(v)) rep(NA_real_, nrow(target)) else v
+  target[[groups_col(sid, part)]] %||% target[[groups_col(sid, "t")]] %||%
+    rep(NA_real_, nrow(target))
 }
 
 #' Shared ordering, fold and row assembly: rank order, cap, nest.
@@ -541,27 +525,14 @@ groups_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     }
   }
 
-  folded <- 0L
-  fold_max <- NA_real_
   if (is.null(parent)) {
-    rows <- ord(leaf)
-    if (!is.null(top_n) && is.finite(top_n) && top_n > 0 && nrow(rows) > top_n) {
-      rest <- rows[seq.int(top_n + 1L, nrow(rows)), , drop = FALSE]
-      folded <- nrow(rest)
-      fold_max <- suppressWarnings(max(rest$.v, na.rm = TRUE))
-      rows <- rows[seq_len(top_n), , drop = FALSE]
-    }
+    top <- groups_top_n(ord(leaf), top_n)
+    rows <- top$rows
     rows$.level <- 0L
     rows$.is_parent <- FALSE
   } else {
-    par_rows <- ord(par_rows)
-    if (!is.null(top_n) && is.finite(top_n) && top_n > 0 &&
-          nrow(par_rows) > top_n) {
-      rest <- par_rows[seq.int(top_n + 1L, nrow(par_rows)), , drop = FALSE]
-      folded <- nrow(rest)
-      fold_max <- suppressWarnings(max(rest$.v, na.rm = TRUE))
-      par_rows <- par_rows[seq_len(top_n), , drop = FALSE]
-    }
+    top <- groups_top_n(ord(par_rows), top_n)
+    par_rows <- top$rows
     par_rows$.level <- 0L
     par_rows$.is_parent <- TRUE
     leaf$.level <- 1L
@@ -572,13 +543,7 @@ groups_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     pieces <- list()
     for (i in seq_len(nrow(par_rows))) {
       p <- par_rows[i, , drop = FALSE]
-      pkey <- if (!is.null(p$.parent_key)) {
-        p$.parent_key[[1L]]
-      } else if (!is.null(parent) && parent %in% names(p)) {
-        as.character(p[[parent]][[1L]])
-      } else {
-        p$.label[[1L]]
-      }
+      pkey <- p$.parent_key[[1L]]
       kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == pkey, ,
                        drop = FALSE])
       pieces[[length(pieces) + 1L]] <-
@@ -590,7 +555,19 @@ groups_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     }
     rows <- do.call(rbind, pieces)
   }
-  list(rows = rows, folded = folded, fold_max = fold_max)
+  list(rows = rows, folded = top$folded, fold_max = top$fold_max)
+}
+
+# The top N rows of the outer level. The rest fold into one line that says how
+# many (`folded`) and their largest value (`fold_max`).
+groups_top_n <- function(rows, top_n) {
+  if (is.null(top_n) || !is.finite(top_n) || top_n <= 0 ||
+        nrow(rows) <= top_n) {
+    return(list(rows = rows, folded = 0L, fold_max = NA_real_))
+  }
+  rest <- rows[seq.int(top_n + 1L, nrow(rows)), , drop = FALSE]
+  list(rows = rows[seq_len(top_n), , drop = FALSE], folded = nrow(rest),
+       fold_max = suppressWarnings(max(rest$.v, na.rm = TRUE)))
 }
 
 #' Match a stat column from `src` into `target` by `keys`; absent keys stay NA

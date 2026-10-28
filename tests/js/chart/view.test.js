@@ -9,9 +9,9 @@ const assert = require('node:assert');
 const D = require('./drive');
 
 const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
-const rows = (b) => Array.from(b.popoverEl.querySelectorAll('.dd-form-row[data-role]'),
+const rows = (b) => Array.from(b.frame.tray.band.querySelectorAll('.dd-form-row[data-role]'),
                                (r) => r.getAttribute('data-role'));
-const row = (b, key) => b.popoverEl.querySelector('.dd-form-row[data-role="' + key + '"]');
+const row = (b, key) => b.frame.tray.band.querySelector('.dd-form-row[data-role="' + key + '"]');
 
 test('the gear shows the rows the spec offers for the chart type', () => {
   const c = D.open(BAR);
@@ -44,7 +44,7 @@ test('the gear hooks: type groups, drill words, sort orders, drill target', () =
   const heads = Array.from(row(c.block, 'type').querySelectorAll('.dd-type-group-head'),
                            (e) => e.textContent);
   assert.deepStrictEqual(heads, ['Aggregated', 'Individual']);
-  const texts = (key) => c.block._gear.slot(key).options.map((o) => o.label);
+  const texts = (key) => c.block.gear.slot(key).options.map((o) => o.label);
   assert.ok(texts('drill').includes('Auto, the clicked group'));
   assert.ok(texts('sort_by').includes('Data order'));
   assert.ok(texts('drill_target').includes('Filter AE'));
@@ -63,11 +63,11 @@ test('titles: R\'s words are live where the gear has a control, offers after the
   };
   const c = D.open(BAR, { derived: { titles } });
   const b = c.block;
-  assert.strictEqual(b.titleEl.querySelector('.blockr-slot').textContent, 'AETERM');
-  assert.strictEqual(b.titleEl.querySelector('.blockr-slot-offer').textContent, '+ Color');
-  assert.strictEqual(b.subtitleEl.style.display, 'none');
-  assert.strictEqual(b.captionEl.textContent, 'N = 60');
-  assert.strictEqual(b._titleText.title, 'AEs by AETERM');
+  assert.strictEqual(b.frame.titleEl.querySelector('.blockr-slot').textContent, 'AETERM');
+  assert.strictEqual(b.frame.titleEl.querySelector('.blockr-slot-offer').textContent, '+ Color');
+  assert.strictEqual(b.frame.subEl.hidden, true);
+  assert.strictEqual(b.frame.capEl.textContent, 'N = 60');
+  assert.strictEqual(c.env.win.Blockr.viz.chart.titleText(b.derived.titles).title, 'AEs by AETERM');
   c.close();
 });
 
@@ -75,11 +75,11 @@ test('downloads: the formats R offers, while download is on', () => {
   const downloads = [{ id: 'blk-dl_xlsx', ext: 'xlsx', label: 'Excel' },
                      { id: 'blk-dl_png', ext: 'png', label: 'Image' }];
   const c = D.open({ ...BAR, download: true }, { derived: { downloads } });
-  assert.ok(c.block.downloadEl.querySelector('#blk-dl_xlsx'));
-  assert.strictEqual(c.block.downloadEl.hidden, false);
+  assert.ok(c.block.frame.downloadSlot.querySelector('#blk-dl_xlsx'));
+  assert.strictEqual(c.block.frame.downloadSlot.hidden, false);
   c.send({ ...c.config, download: false });
-  assert.strictEqual(c.block.downloadEl.hidden, true);
-  assert.strictEqual(c.block.downloadEl.querySelector('#blk-dl_xlsx'), null);
+  assert.strictEqual(c.block.frame.downloadSlot.hidden, true);
+  assert.strictEqual(c.block.frame.downloadSlot.querySelector('#blk-dl_xlsx'), null);
   c.close();
 });
 
@@ -88,19 +88,22 @@ test('an empty state offers no Image: there is no picture to take', () => {
                      { id: 'blk-dl_png', ext: 'png', label: 'Image' }];
   const c = D.open({ ...BAR, y: null, download: true }, { derived: { downloads } });
   assert.match(c.block.chartGrid.textContent, /^Pick/);
-  assert.ok(c.block.downloadEl.querySelector('#blk-dl_xlsx'));
-  assert.strictEqual(c.block.downloadEl.querySelector('#blk-dl_png'), null);
+  assert.ok(c.block.frame.downloadSlot.querySelector('#blk-dl_xlsx'));
+  assert.strictEqual(c.block.frame.downloadSlot.querySelector('#blk-dl_png'), null);
   c.send({ ...c.config, y: 'AETERM' }, { derived: { downloads } });
-  assert.ok(c.block.downloadEl.querySelector('#blk-dl_png'), 'drawn again: Image is back');
+  assert.ok(c.block.frame.downloadSlot.querySelector('#blk-dl_png'), 'drawn again: Image is back');
   c.close();
 });
 
 test('the theme R names is the ECharts theme; a new one draws new instances', () => {
   const c = D.open(BAR, { derived: { theme: 'dark' } });
   assert.strictEqual(c.chart().theme, 'dark');
-  c.send(c.config, { derived: { theme: { name: 'blockr-light', theme: { color: ['#000'] } } } });
-  assert.strictEqual(c.chart().theme, 'blockr-light');
-  assert.ok(c.env.fake.themes['blockr-light'], 'a theme R sent whole is registered');
+  const first = c.chart();
+  c.send(c.config, { derived: { theme: 'vintage' } });
+  assert.strictEqual(c.chart().theme, 'vintage');
+  assert.notStrictEqual(c.chart(), first);
+  c.send(c.config, { derived: { theme: 'default' } });
+  assert.strictEqual(c.chart().theme, null, "'default' is ECharts' own theme");
   c.close();
 });
 
@@ -109,7 +112,7 @@ test('a payload without rows draws from the rows of its data revision', () => {
   const first = c.block.data;
   c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
   assert.strictEqual(c.block.data, first);
-  assert.ok(c.block.legendEl.querySelector('.dd-legend-chip'));
+  assert.ok(c.block.legend.el.querySelector('.dd-legend-chip'));
   c.send(BAR, { data: null, dataRev: 2 });
   assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),
             'rows it does not hold are asked for');
@@ -126,7 +129,7 @@ test('an error R sends is said where the chart would be', () => {
 test('the capture service draws a chart off screen and replies once', () => {
   const c = D.open(BAR);
   const handler = c.env.handlers['blockr-viz:capture'];
-  const msg = { state_rev: 1, data_rev: 9, columns: [], derived: { column_meta: require('../cases').F.columns },
+  const msg = { state_rev: 1, data_rev: 9, columns: require('../cases').F.columns, derived: {},
                 config: BAR, data: require('../cases').F.data, req: 'r1', width: 640, height: 360 };
   handler(c.env.win.JSON.parse(JSON.stringify(msg)));
   assert.ok(c.doc.querySelector('.blockr-capture-host'));
@@ -173,8 +176,8 @@ test('50 mounts and unmounts leave no listener, timer, scope, node or chart behi
                           config: { ...BAR, color: 'AESEV', facet: 'SEX' } });
     const b = m.block;
     b._slots[0].chart.trigger('click', D.paramsAt(b._slots[0].chart, 0, 0));
-    b._tray.set(true);
-    b._gear.set({ func: 'mean' });
+    b.frame.tray.set(true);
+    b.gear.set({ func: 'mean' });
     m.el.parentElement.remove();
     m.el.__jq['shiny:unbound']();
     c.advance(10000);
@@ -237,17 +240,16 @@ test('the spec hides what does nothing: stacking without a colour, value lines o
 test('with neither x nor y, a bar stands vertical and asks for X', () => {
   const c = D.open({ type: 'bar', x: null, y: null });
   assert.match(c.block.chartGrid.textContent, /^Pick X to plot/);
-  assert.strictEqual(c.block.config.orientation, 'vertical');
+  assert.strictEqual(c.block.settings.orientation, 'vertical');
   c.close();
 });
 
-test('the gear offers every column of the data, not only the shipped ones', () => {
+test('the gear offers every column of the input, not only those whose rows were sent', () => {
   const { F } = require('../cases');
   const c = D.open(BAR);
-  const shipped = F.columns.filter((x) => x.name === 'AETERM');
-  require('../harness').send(c.env, D.ID, { columns: shipped, data: { AETERM: F.data.AETERM },
-                                            config: BAR, derived: { column_meta: F.columns } });
-  const names = c.block._gear.slot('color').options.map((o) => o.value);
+  require('../harness').send(c.env, D.ID, { columns: F.columns, data: { AETERM: F.data.AETERM },
+                                            config: BAR });
+  const names = c.block.gear.slot('color').options.map((o) => o.value);
   assert.ok(names.includes('USUBJID') && names.includes('AVAL'), names.join(' '));
   c.close();
 });
@@ -255,7 +257,7 @@ test('the gear offers every column of the data, not only the shipped ones', () =
 test('a histogram stands its bins on x', () => {
   const { F } = require('../cases');
   const bins = F.data.ADY.map((v) => (v == null ? null : (v < 30 ? '0-30' : '30-90')));
-  const cols = F.columns.concat([{ name: 'ADY_bin', type: 'categorical', n_unique: 2,
+  const cols = F.columns.concat([{ name: 'ADY_bin', class: 'string', n_unique: 2,
                                    levels: ['0-30', '30-90'] }]);
   const c = D.open({ type: 'histogram', x: 'ADY' }, { columns: cols,
                                                        data: { ...F.data, ADY_bin: bins } });

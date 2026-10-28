@@ -5,7 +5,7 @@
 # missing key. It is held as the block's `filters` state: a named list of
 # character vectors, NA for a missing value, NULL when nothing is filtered.
 # The columns AND together, in the block's own output and in a claim sent to
-# a drill target (dd_ctrl_claims()).
+# a drill target (ctrl_claims()).
 
 # A filter from the constructor, saved state or a message, in that shape, or
 # NULL. A JSON null arrives from Shiny as NULL inside a list or as NA; both
@@ -116,16 +116,27 @@ chart_range_cond <- function(rng, data = NULL) {
   }
   xc <- rng$x_col
   xr <- as.list(rng$x_range)
-  yr <- rng$y_range
   if (is.data.frame(data) && xc %in% names(data)) {
     xr <- lapply(xr, chart_time_literal, data[[xc]])
   }
-  cond <- bquote(dplyr::between(.data[[.(xc)]], .(xr[[1L]]), .(xr[[2L]])))
-  if (!is.null(yr) && !is.null(rng$y_col)) {
-    cond <- bquote(.(cond) & dplyr::between(.data[[.(rng$y_col)]], .(yr[1]),
-                                            .(yr[2])))
+  if (is.null(rng$y_range) || is.null(rng$y_col)) {
+    return(chart_between(xc, xr))
   }
-  cond
+  yr <- as.list(rng$y_range)
+  # A click on one point is a range with equal ends on both axes (the kit's
+  # selection has no point type). It reads as `x == v & y == w`, as in 0.3.0;
+  # a brush keeps between(), even a thin one.
+  point <- identical(xr[[1L]], xr[[2L]]) && identical(yr[[1L]], yr[[2L]])
+  if (point) {
+    return(bquote(.data[[.(xc)]] == .(xr[[1L]]) &
+                    .data[[.(rng$y_col)]] == .(yr[[1L]])))
+  }
+  bquote(.(chart_between(xc, xr)) & .(chart_between(rng$y_col, yr)))
+}
+
+# One axis of a brush.
+chart_between <- function(col, ends) {
+  bquote(dplyr::between(.data[[.(col)]], .(ends[[1L]]), .(ends[[2L]])))
 }
 
 # How the assistant reads a filter: "AETERM = Rash; AESEV = (missing)".

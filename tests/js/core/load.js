@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { after } = require('node:test');
 const { Window } = require('happy-dom');
+const { installUiFake } = require('../ui-fake');
 
 const CORE_DIR = path.join(__dirname, '..', '..', '..', 'inst', 'js', 'core');
 
@@ -46,6 +47,8 @@ function loadCore(opts = {}) {
       off: (type) => { if (x.__jq) delete x.__jq[type]; }
     });
   }
+  // The gear draws its widgets with blockr.ui, which these tests stand in for.
+  installUiFake(win);
   // With a sourceURL, so c8 maps the coverage to the file.
   for (const f of CORE_FILES) {
     const file = path.join(CORE_DIR, f);

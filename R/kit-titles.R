@@ -13,7 +13,7 @@
 #' @param auto The input's display attributes (input_display_attrs()).
 #' @param args The settings a template can name, `{@arg}`: a named list.
 #' @return A list: `title`, `subtitle` and `caption`, each `NULL` (no
-#'   line) or `list(text, parts, offers)`; `args`, what each `{@name}`
+#'   line: no text and nothing to offer) or `list(text, parts, offers)`; `args`, what each `{@name}`
 #'   prints now; `choices`, the lists a template writes as
 #'   `{@name in a, b}`.
 #' @noRd
@@ -22,13 +22,16 @@ viz_titles <- function(v, d, auto, args) {
   bands <- lapply(stats::setNames(nm = names(tier)), function(b) {
     text <- resolve_block_title(v[[b]], d, auto = auto[[tier[[b]]]],
                                 args = args)
-    if (!is.character(text) || !length(text) || !nzchar(text)) {
-      return(NULL)
-    }
     parts <- block_title_parts(v[[b]], d, auto = auto[[tier[[b]]]],
                                args = args)
     offers <- as.list(attr(parts, "offers"))
     attr(parts, "offers") <- NULL
+    empty <- !is.character(text) || !length(text) || is.na(text[[1L]]) ||
+      !nzchar(text[[1L]])
+    # A line with no text still shows when it offers words to add.
+    if (empty && !length(offers)) {
+      return(NULL)
+    }
     list(text = text, parts = parts, offers = offers)
   })
   c(bands, list(

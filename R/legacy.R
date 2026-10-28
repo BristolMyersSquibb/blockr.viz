@@ -7,12 +7,18 @@
 #   new     the current name; NA when the old one is read and dropped
 #   values  old value = new value, as a named character vector; empty when
 #           the value is taken as it is
-#   rule    NA for a plain rename, else what the translation does beyond it
+#   rule    NA for a plain rename, else what the translation does beyond it,
+#           in words
+#   kind    who applies the row: "rename" (the rename and the value map),
+#           "logical" (the same, then the value as a logical), "code" (a
+#           translator in R/legacy-*.R; the row documents it)
 #
 # A row with the same name in `old` and `new` maps values only.
 
-legacy_row <- function(block, old, new, values = character(), rule = NA) {
-  list(block = block, old = old, new = new, values = values, rule = rule)
+legacy_row <- function(block, old, new, values = character(), rule = NA,
+                       kind = if (is.na(rule)) "rename" else "code") {
+  list(block = block, old = old, new = new, values = values, rule = rule,
+       kind = kind)
 }
 
 legacy_table <- function(rows) {
@@ -22,6 +28,7 @@ legacy_table <- function(rows) {
     new = vapply(rows, function(r) as.character(r$new), ""),
     values = I(lapply(rows, `[[`, "values")),
     rule = vapply(rows, function(r) as.character(r$rule), ""),
+    kind = vapply(rows, `[[`, "", "kind"),
     stringsAsFactors = FALSE
   )
 }
@@ -30,6 +37,8 @@ LEGACY_NAMES <- legacy_table(list(
 
   # chart -------------------------------------------------------------------
   legacy_row("chart", "chart_type", "type"),
+  legacy_row("chart", "expose", NA,
+             rule = "read and dropped; warns to name the setting in `subtitle`"),
   legacy_row("chart", "baseline", "type", c(cumulative = "waterfall"),
              rule = "only on a bar; \"zero\" is dropped"),
   legacy_row("chart", "type", "type", c(radar = "bar"),
@@ -70,11 +79,14 @@ LEGACY_NAMES <- legacy_table(list(
                `step-end` = "step_end", off = "straight")),
   legacy_row("chart", "box_points", "box_points", c(all = "none")),
   legacy_row("chart", "value_labels", "value_labels",
-             c(on = "TRUE", off = "FALSE"), rule = "to logical"),
+             c(on = "TRUE", off = "FALSE"), rule = "to logical",
+             kind = "logical"),
   legacy_row("chart", "identity_line", "identity_line",
-             c(on = "TRUE", off = "FALSE"), rule = "to logical"),
+             c(on = "TRUE", off = "FALSE"), rule = "to logical",
+             kind = "logical"),
   legacy_row("chart", "connect_centers", "connect_centers",
-             c(on = "TRUE", off = "FALSE"), rule = "to logical"),
+             c(on = "TRUE", off = "FALSE"), rule = "to logical",
+             kind = "logical"),
   legacy_row("chart", "direct_labels", "legend", c(`TRUE` = "marks"),
              rule = "FALSE is dropped"),
   legacy_row("chart", "ctrl_target", "drill_target"),

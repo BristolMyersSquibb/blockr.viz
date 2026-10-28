@@ -1,8 +1,6 @@
-# The download formats, registered by whoever can write them.
-#
-# A block's download menu lists every registered format that can write the
-# block's exhibit and whose packages are installed. Other packages register
-# their own formats in .onLoad.
+# The download formats, registered by whoever can write them. A block's
+# download menu lists every registered format that can write the block's
+# exhibit and whose packages are installed.
 
 viz_exporter_env <- new.env(parent = emptyenv())
 
@@ -63,15 +61,17 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' @param session The block's Shiny session.
 #' @param filename The word a file is named by when the exhibit has no
 #'   title.
+#' @param before A function of no arguments run when a format is clicked,
+#'   before the exhibit is read (the kit's capture sync).
 #' @return A reactive: a list of `list(id, label, ext)`, empty when
 #'   downloads are off.
 #' @noRd
 viz_downloads <- function(exhibit, enabled = function() TRUE,
                           session = shiny::getDefaultReactiveDomain(),
-                          filename = "table") {
+                          filename = "table", before = function() NULL) {
   formats <- viz_exporters()
   for (f in formats) {
-    viz_download_handler(f, exhibit, session, filename)
+    viz_download_handler(f, exhibit, session, filename, before)
   }
   shiny::reactive({
     if (!isTRUE(enabled())) {
@@ -90,10 +90,13 @@ viz_downloads <- function(exhibit, enabled = function() TRUE,
 
 # One format's handler. It is not suspended when hidden, because the menu that
 # links to it is drawn by the view.
-viz_download_handler <- function(f, exhibit, session, filename) {
+viz_download_handler <- function(f, exhibit, session, filename,
+                                 before = function() NULL) {
   id <- paste0("dl_", f$format)
   session$output[[id]] <- shiny::downloadHandler(
+    # The file name is asked for first, so the picture is taken here.
     filename = function() {
+      before()
       x <- tryCatch(exhibit(), error = function(e) NULL)
       if (!inherits(x, "viz_exhibit")) {
         return(paste0(filename, ".", f$ext))
@@ -102,6 +105,7 @@ viz_download_handler <- function(f, exhibit, session, filename) {
                   filename, f$ext)
     },
     content = function(file) {
+      before()
       dl_guard(f$label, f$fun(exhibit_footed(exhibit(), session), file))
     }
   )
@@ -117,4 +121,25 @@ viz_register_exporters <- function() {
                         order = 40)
   register_pptx_exporter()
   invisible(NULL)
+}
+
+#' Say a download failure out loud: show it on screen at click time and keep
+#' the error propagating. Shiny otherwise answers with an HTML error page that
+#' the browser saves as "<session>-<block>-dl_pptx.htm".
+#' @noRd
+dl_guard <- function(what, expr) {
+  withCallingHandlers(
+    expr,
+    error = function(e) {
+      msg <- conditionMessage(e)
+      try(
+        shiny::showNotification(
+          paste0("The ", what, " download failed: ", msg),
+          type = "error", duration = NULL
+        ),
+        silent = TRUE
+      )
+      message("[blockr.viz] ", what, " download failed: ", msg)
+    }
+  )
 }

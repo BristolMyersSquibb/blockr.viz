@@ -8,8 +8,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'), num('V'),
                  num('D'), cat('SEX', { levels: ['M', 'F', 'U'] })];
 
@@ -26,11 +26,10 @@ const ROWS = [
 const BASE = { type: 'bar', x: 'T', orientation: 'vertical', func: 'count', drill: 'auto',
                sort_by: 'value', sort_dir: 'desc' };
 
-const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
-  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+const settingsOf = (cfg, columns = COLUMNS) => C.model.settings({ ...BASE, ...cfg }, columns);
 
 const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.aggregated(
-  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns), derived });
 
 const groupsOf = (m) => plain(m.panels.map((p) => p.groups));
 
@@ -49,7 +48,7 @@ test('a missing group is its own level; missing drop removes it', () => {
 
 test('no cells: the empty state', () => {
   const m = build({ missing: 'drop' }, [{ T: null, ID: 'S01' }]);
-  assert.match(m.empty, /No data to chart/);
+  assert.match(m.empty.message, /No data to chart/);
 });
 
 test('group order: value, alpha, factor levels, data, a column', () => {
@@ -72,7 +71,7 @@ test('group order: value, alpha, factor levels, data, a column', () => {
 });
 
 test('data order: a date or a number in its own order, whatever the row order', () => {
-  const cols = [{ name: 'day', type: 'categorical', temporal: 'date' }, num('dose'), num('V')];
+  const cols = [{ name: 'day', class: 'date' }, num('dose'), num('V')];
   const rows = [
     { day: '2025-03-01', dose: 20, V: 1 }, { day: '2025-01-01', dose: 5, V: 9 },
     { day: null, dose: 10, V: 2 }, { day: '2025-02-01', dose: null, V: 4 }
@@ -86,7 +85,7 @@ test('data order: a date or a number in its own order, whatever the row order', 
 
 test('the default sort follows the category column', () => {
   const cols = [cat('country'), cat('quarter', { levels: ['Q1', 'Q2'] }),
-                { name: 'day', type: 'categorical', temporal: 'date' }, num('year'), num('V')];
+                { name: 'day', class: 'date' }, num('year'), num('V')];
   const dflt = (category, extra) => {
     const cfg = { type: 'bar', category, ...extra };
     C.model.defaults(cfg, cols);
@@ -247,25 +246,6 @@ test('a click sends the keys, a missing one as null; a drill column its values',
   assert.deepStrictEqual(send({ drill: 'ID', facet: 'ARM' }, { T: 'Rash', ARM: 'A' }),
                          { ID: ['S02', 'S03'] });
   assert.strictEqual(send({ drill: '' }, { T: 'Rash' }), null);
-});
-
-test('the model reads only the config fields it lists', () => {
-  const configs = [
-    {}, { color: 'SEV', facet: 'ARM', show_n: 'both', id: 'ID', tooltip: ['ID'] },
-    { type: 'waterfall', y: 'V', func: 'sum' }, { type: 'pie', facet: 'ARM' },
-    { type: 'boxplot', y: 'V', color: 'SEV', box_points: 'outliers' },
-    { type: 'pointrange', y: 'V', summary: 'mean_sd', facet: 'ARM' },
-    { sort_by: 'D' }, { sort_by: 'data' }, { func: 'pct_distinct', y: 'ID', percent_of: 'color' }
-  ];
-  for (const cfg of configs) {
-    const read = new Set();
-    const spy = new Proxy(settingsOf(cfg), { get(t, k) { read.add(k); return t[k]; } });
-    C.model.aggregated({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: spy });
-    // A listed path such as 'derived.scales' covers the read of its root.
-    const listed = (k) => C.model.aggregated.FIELDS.some((f) => f === k || f.startsWith(k + '.'));
-    const extra = [...read].filter((k) => typeof k === 'string' && !listed(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
 });
 
 test('summarizeStat: mean_2sd is two sd around the mean, p5_p95 the 5th to 95th percentile', () => {

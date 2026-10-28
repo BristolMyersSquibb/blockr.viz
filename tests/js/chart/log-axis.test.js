@@ -9,8 +9,8 @@ const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name) => ({ name, type: 'categorical' });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name) => ({ name, class: 'string' });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('CTRY'), cat('REG'), num('YEAR'), num('GDP'), num('LIFE'), num('LO'), num('HI')];
 const ROWS = [
   { CTRY: 'CH', REG: 'EU', YEAR: 2000, GDP: 60000, LIFE: 80, LO: 50000, HI: 70000 },
@@ -23,9 +23,9 @@ const ROWS = [
 const BASE = { type: 'scatter', x: 'GDP', y: 'LIFE' };
 
 const build = (cfg, rows = ROWS, derived = {}) => {
-  const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.individual(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+  const c = C.model.settings({ ...BASE, ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.individual(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600, 600] });
   return { m, o, opt: o.panels[0].option };
 };

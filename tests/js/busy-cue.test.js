@@ -1,4 +1,4 @@
-/* The busy cue (busy-cue.js): R's "blockr-busy" dims a chart after 300 ms;
+/* The busy cue (core/busy.js): R's "blockr-busy" dims a chart after 300 ms;
  * the chart ends it once the new picture is drawn, and R's "blockr-busy-done"
  * ends it when no picture is coming. */
 'use strict';

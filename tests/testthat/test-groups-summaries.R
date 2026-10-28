@@ -2,6 +2,12 @@
 # generic preparer, per-column domains, scope, facet and fields.
 # Spec: _blockr.design/open/summarize-table/.
 
+# Every summary that can carry a colour coloured by `col`, as the old
+# table-level colour read (groups_migrate_globals()).
+coloured <- function(S, col) {
+  groups_migrate_globals(groups_norm_summaries(S), color = col)
+}
+
 sum_fixture <- function() {
   set.seed(42)
   ae <- do.call(rbind, lapply(1:5, function(i) {
@@ -71,10 +77,14 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   expect_identical(groups_dist_centre_stat(dist(summary = "none",
                                               whiskers = "none")),
                    "median_q1_q3")
-  # Unknown values fall back rather than throwing: a bad style is a dot.
+  # The engine's own `style` falls back to a dot; a value the spec does not
+  # allow is an error, as in the spec check.
   expect_identical(dist(style = "banana")$style, "dot")
-  expect_identical(dist(summary = "banana")$summary, "median_q1_q3")
-  expect_identical(dist(whiskers = "banana")$whiskers, "tukey")
+  bad <- function(...) {
+    groups_norm_summaries(list(list(type = "dist", col = "DUR", ...)))$err
+  }
+  expect_match(bad(summary = "banana"), "unknown `summary` \"banana\"")
+  expect_match(bad(whiskers = "banana"), "unknown `whiskers`")
 })
 
 test_that("legacy `show` still restores the mark it always drew", {
@@ -126,7 +136,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   lv <- groups_levels(ae$ARM)
   # The dot splits like the distribution does: one glyph per level, named by
   # the same geometry key the cell builder reads.
@@ -140,7 +150,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_identical(p$plan[[2L]]$kind, "barsplit")
   expect_null(p$plan[[2L]]$lcols)
   expect_identical(p$plan[[2L]]$series, lv)
-  expect_true(all(paste0(p$plan[[2L]]$prefix, lv) %in% names(p$rows)))
+  expect_true(all(p$plan[[2L]]$scols %in% names(p$rows)))
   expect_identical(p$plan[[3L]]$levels, lv)
   # Every level of a split column is read against ONE scale.
   m <- groups_cells(p)
@@ -163,8 +173,8 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   # A group whose rows are all ONE level draws that level alone: grouping by
   # subject (every subject has one SEX) is a single bar in its own colour,
   # not a stack with an empty half.
-  one <- groups_prepare_summaries(ae, by = "USUBJID", summaries = S,
-                                color = "ARM")
+  one <- groups_prepare_summaries(ae, by = "USUBJID",
+                                  summaries = coloured(S, "ARM"))
   segv <- groups_cells(one)$cols[[2L]]$segv
   nonzero <- vapply(seq_along(segv[[1L]]), function(i) {
     sum(vapply(segv, function(x) x[[i]] > 0, logical(1L)))
@@ -180,13 +190,13 @@ test_that("the hover card names the colour column by its label", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   expect_identical(p$plan[[1L]]$cvar, "Treatment Arm")
   expect_identical(p$plan[[2L]]$cvar, "Treatment Arm")
   expect_identical(groups_legend_spec(p)$groups[[1L]]$title, "Treatment Arm")
   # No label: the column name, as before.
   attr(ae$ARM, "label") <- NULL
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   expect_identical(p$plan[[1L]]$cvar, "ARM")
 })
 
@@ -212,14 +222,14 @@ test_that("a split bar only stacks an additive measure", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Mean duration", func = "mean",
                  col = "DUR", show = "bar"))
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   e <- p$plan[[1L]]
   # The parts of a mean are not a composition of it: they sit side by side,
   # and the column's domain reaches the widest of them (scaling them against
   # the pooled mean instead would clamp every larger arm at full width).
   expect_identical(e$kind, "barsplit")
   expect_identical(e$mode, "grouped")
-  segs <- unlist(p$rows[, paste0(e$prefix, e$series)])
+  segs <- unlist(p$rows[, e$scols])
   expect_equal(e$dmax, max(c(p$rows[[e$key]], segs), na.rm = TRUE))
   segw <- unlist(groups_cells(p)$cols[[1L]]$seg)
   expect_true(max(segw, na.rm = TRUE) <= 100)
@@ -227,7 +237,7 @@ test_that("a split bar only stacks an additive measure", {
   # A count is a composition, so it keeps stacking on the group's total.
   cs <- list(list(type = "simple", name = "Events", func = "count",
                   col = "DUR", show = "bar"))
-  pc <- groups_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
+  pc <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(cs, "ARM"))
   expect_identical(pc$plan[[1L]]$mode, "stacked")
   # Its domain is in percent of N, the unit its bars are drawn in.
   expect_equal(pc$plan[[1L]]$dmax,
@@ -313,8 +323,8 @@ test_that("axis = FALSE drops every strip", {
   S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
   prep <- groups_prepare_summaries(ae, by = "ARM", summaries = S)
   m <- list(prep = prep, cells = groups_cells(prep))
-  expect_false(is.null(table_groups_view(m, axis = TRUE)$cols[[2L]]$axis))
-  expect_null(table_groups_view(m, axis = FALSE)$cols[[2L]]$axis)
+  expect_false(is.null(table_groups_to_model(m, axis = TRUE)$cols[[2L]]$axis))
+  expect_null(table_groups_to_model(m, axis = FALSE)$cols[[2L]]$axis)
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {
@@ -410,7 +420,7 @@ test_that("by_level reorders into level groups with a two-row header", {
                    c("num", "bar", "num", "bar", "num"))
   # The spanning header row: one cell per level over its two columns, the
   # label and the leading column reaching down both rows.
-  head <- table_groups_view(m)$head
+  head <- table_groups_to_model(m)$head
   expect_length(head, 2L)
   spans <- Filter(function(h) !is.null(h$span), head[[1L]])
   expect_setequal(vapply(spans, function(h) h$text, ""),
@@ -424,7 +434,7 @@ test_that("by_level reorders into level groups with a two-row header", {
   )
   # by_summary (the default) keeps the single header row.
   m2 <- sum_model(ae, by = "TERM", summaries = S)
-  expect_length(table_groups_view(m2)$head, 1L)
+  expect_length(table_groups_to_model(m2)$head, 1L)
 })
 
 test_that("by_level with one summary per level keeps a single header row", {
@@ -502,8 +512,12 @@ test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
   expect_identical(p$plan[[1L]]$sub_label,
                    paste0("N = ", dplyr::n_distinct(
                      ae$USUBJID[ae$ARM == "Active"])))
-  # One shared facet column, so the by-level reading is still available.
-  expect_identical(p$facet, "ARM")
+  # One shared facet column, so the by-level layout applies: the unfaceted
+  # column leads, then the levels.
+  by_level <- groups_prepare(ae, by = "TERM", summaries = S,
+                             facet_layout = "by_level")
+  expect_identical(vapply(by_level$plan, function(x) x$label, ""),
+                   c("Rows", "Active", "Placebo"))
 })
 
 test_that("columns may facet by DIFFERENT columns; the header names them", {
@@ -521,8 +535,6 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
   # No shared facet column, so the by-level reading has nothing to span and
   # the layout stays by_summary.
   expect_null(p$facet_spans)
-  expect_null(p$facet)
-  expect_identical(p$facet_levels, character())
   expect_identical(p$layout, "facet")
 })
 
@@ -612,7 +624,7 @@ test_that("by nests one level: outer parent rows plus inner leaves", {
   m <- sum_model(ae, by = c("SOC", "TERM"), summaries = S)
   expect_identical(sum(as.logical(m$cells$parent_row)), 2L)
   # The view marks the parents: indent 0 and strong, children indent 1.
-  rows <- table_groups_view(m)$rows
+  rows <- table_groups_to_model(m)$rows
   expect_identical(sum(unlist(rows$strong)), 2L)
   # Three or more grouping columns is a config error, said plainly.
   m2 <- sum_model(ae, by = c("SOC", "TERM", "USUBJID"), summaries = S)
@@ -834,7 +846,7 @@ test_that("colour is a table-level dimension every glyph column inherits", {
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV")
   )
-  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = coloured(S, "ARM"))
   # One pick splits every glyph column that can carry it...
   expect_identical(p$plan[[1L]]$levels, c("Active", "Placebo"))
   expect_identical(p$plan[[2L]]$levels, c("Active", "Placebo"))
@@ -915,7 +927,7 @@ test_that("a table whose every row lacks a group says so instead of failing", {
   # the model the block builds carries the message, it does not throw
   m <- expect_silent(sum_model(ae, by = "TERM", summaries = S))
   expect_identical(m$prep$err, "No rows to display")
-  expect_null(table_groups_view(m))
+  expect_null(table_groups_to_model(m))
 })
 
 test_that("facet columns with nothing to draw are left out, as the chart does", {

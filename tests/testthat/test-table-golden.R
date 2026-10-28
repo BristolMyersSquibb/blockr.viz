@@ -46,10 +46,10 @@ test_that("table recording: constructor cases", {
   path <- file.path(table_golden_dir(), "ctor-cases.rds")
   skip_if_not(file.exists(path), "no recording")
   want <- readRDS(path)
-  # An unknown name is a block attribute, as on the chart (blockr.dock's
-  # `visible`; behaviour-changes.md row 28), so `unknown_arg` builds.
+  # An unknown name is an error in code, as in the reference; only a restore
+  # keeps it as a block attribute (behaviour-changes.md row 28).
   fails_now <- c("bad_layout", "bad_look", "bad_pct_of", "bad_missing",
-                 "bad_format", "format_clamp")
+                 "bad_format", "format_clamp", "unknown_arg")
   for (nm in names(want)) {
     res <- tryCatch(suppressWarnings(table_golden_ctor(
       tg_rw_args(table_golden_ctor_cases()[[nm]])

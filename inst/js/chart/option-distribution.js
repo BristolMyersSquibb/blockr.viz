@@ -9,11 +9,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   /** The interval of a point range as a custom series: a line from lo to hi with caps. `encode`
    * maps both ends to the value axis. @param {any} name @param {any[]} pts [slot, lo, hi] each
@@ -54,9 +52,9 @@
    */
   const distributionContext = (m, panel, look, plotW) => {
     const { cfg } = look;
-    const P = parts.common(look);
+    const P = option.aggregatedCommon(look);
     const isBox = cfg.type === 'boxplot';
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(look.derived);
     const split = m.split;
     const scale = m.colorScale;
     const hexFor = (/** @type {string} */ lv, /** @type {number} */ i) =>
@@ -79,7 +77,7 @@
   };
 
   /** The slots of a level that drew a body, with their category position. @param {any} k
-   * @param {string} lv */
+   * @param {string} lv @returns {Array<{ s: any, ci: number }>} */
   const drawnSlots = (k, lv) => k.slots
     .map((/** @type {any} */ s, /** @type {number} */ ci) => ({ s, ci }))
     .filter((/** @type {any} */ e) => e.s.level === lv && e.s.body);
@@ -182,7 +180,7 @@
     const catFmt = catLabelMap
       ? (/** @type {string} */ v) => catLabelMap.get(v) || short(v)
       : (split ? short : null);
-    const fit = vertical ? parts.fitXLabels(catLabels, plotW, look, catFmt) : null;
+    const fit = vertical ? option.barMarkParts.fitXLabels(catLabels, plotW, look, catFmt) : null;
     return { catLabels, gut: NS.axes.yGutter(catLabels, look.measure), catFmt,
              xlab: fit && fit.xlab, xFit: fit ? fit.xFit : undefined };
   };
@@ -192,42 +190,42 @@
    */
   const distTooltip = (k) => {
     const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
-    const esc = NS.esc;
+    const esc = V.util.esc;
     const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
     // A split lists every level of the group, the hovered one marked.
     const colorName = split ? esc(P.title(cfg.color) || cfg.color) + ' ' : '';
     const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
-      NS.ddNum(lo) + ' – ' + NS.ddNum(hi);
+      V.util.num(lo) + ' – ' + V.util.num(hi);
     const splitTooltipFmt = (/** @type {any} */ p) => {
       const at = slots.find((/** @type {any} */ s) => s.cat === p.name);
       if (!at || !at.body) return '';
       const rows = slots
         .filter((/** @type {any} */ s) => s.group === at.group && s.body)
-        .map((/** @type {any} */ s) => NS.tipRow(colorName + esc(s.level),
-          NS.ddNum(s.body.center) + ' (' + span(s.body.lo, s.body.hi) + ')',
+        .map((/** @type {any} */ s) => V.tooltip.row(colorName + esc(s.level),
+          V.util.num(s.body.center) + ' (' + span(s.body.lo, s.body.hi) + ')',
           hexFor(s.level, levels.indexOf(s.level)), s === at));
       const foot = colorName + esc(at.level) + ' · n ' + at.n +
         (isBox && at.whisker ? ' · Whiskers (' + esc(whiskMeta.range) + ') ' +
           span(at.whisker.lo, at.whisker.hi) : '');
-      return NS.tipHead(esc(at.group)) +
-        NS.tipNote(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
-        rows.join('') + NS.TIP_SEP + NS.tipNote(foot);
+      return V.tooltip.head(esc(at.group)) +
+        V.tooltip.note(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
+        rows.join('') + V.tooltip.SEP + V.tooltip.note(foot);
     };
     const pointTooltipFmt = (/** @type {any} */ p) => {
       const d = p.data;
       // n = 0 is an empty slot.
       if (!d || !d.n || (isBox && !Array.isArray(d.value))) return '';
       const h = ttHead(p);
-      const lead = (h ? NS.tipHead(esc(h), split ? p.color : null) : '') + NS.tipRow('n', d.n);
+      const lead = (h ? V.tooltip.head(esc(h), split ? p.color : null) : '') + V.tooltip.row('n', d.n);
       if (!isBox) {
-        return lead + NS.tipRow(esc(bodyMeta.center), NS.ddNum(d.center)) +
-          NS.tipRow(esc(bodyMeta.range), span(d.lo, d.hi));
+        return lead + V.tooltip.row(esc(bodyMeta.center), V.util.num(d.center)) +
+          V.tooltip.row(esc(bodyMeta.range), span(d.lo, d.hi));
       }
       // ECharts hands a box back as [index, wLo, bLo, center, bHi, wHi].
       const five = d.value.slice(-5);
-      return lead + NS.tipRow(esc(bodyMeta.center), NS.ddNum(five[2])) +
-        NS.tipRow('Box (' + esc(bodyMeta.range) + ')', NS.ddNum(five[1]) + ', ' + NS.ddNum(five[3])) +
-        NS.tipRow('Whiskers (' + esc(whiskMeta.range) + ')', span(five[0], five[4]));
+      return lead + V.tooltip.row(esc(bodyMeta.center), V.util.num(five[2])) +
+        V.tooltip.row('Box (' + esc(bodyMeta.range) + ')', V.util.num(five[1]) + ', ' + V.util.num(five[3])) +
+        V.tooltip.row('Whiskers (' + esc(whiskMeta.range) + ')', span(five[0], five[4]));
     };
     return split ? splitTooltipFmt : pointTooltipFmt;
   };
@@ -290,5 +288,5 @@
     };
   };
 
-  Object.assign(parts, { distribution, whiskerSeries });
+  option.distributionParts = { distribution, whiskerSeries };
 })();

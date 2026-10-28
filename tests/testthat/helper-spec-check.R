@@ -5,7 +5,7 @@
 # The gear controls an argument can be edited with.
 VIZ_CONTROLS <- c(
   "column", "columns", "values", "select", "tiles", "segmented", "toggle",
-  "number", "text", "template", "slider", "none"
+  "number", "text", "code", "script", "template", "slider", "custom"
 )
 
 # Types built with a type_*() function because they have parts.

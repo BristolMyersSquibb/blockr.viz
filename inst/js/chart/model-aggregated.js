@@ -15,15 +15,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const model = /** @type {any} */ (NS.model = NS.model || {});
-
-  // Config fields the model reads; a change to any other field reuses it.
-  const MODEL_FIELDS = ['type', 'category', 'color', 'facet', 'measure', 'func', 'missing',
-    'percent_of', 'sort_by', 'sort_dir', 'facet_scales', 'derived.scales', 'show_n',
-    'id', 'tooltip', 'summary', 'whiskers', 'box_points', 'label', 'highlight'];
 
   // A colour-split distribution slot is `group + SEP + level`: ECharts
   // dedupes a category axis by value, so the bare group would collapse the
@@ -91,8 +85,8 @@
    * by name. "value" is the total across colour cells. Any other value names a column whose
    * smallest value per group orders it. @param {any[]} cells the panel's aggregate cells
    * @param {any[]} rows @param {VizColumn[]} columns @param {Record<string, any>} cfg
-   * @returns {string[]} */
-  const orderGroups = (cells, rows, columns, cfg) => {
+   * @param {ChartDerived} derived @returns {string[]} */
+  const orderGroups = (cells, rows, columns, cfg, derived) => {
     const groups = [...new Set(cells.map((a) => a.group))];
     const sortBy = cfg.sort_by || 'alpha';
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
@@ -104,21 +98,21 @@
     // close the gap in the distribution it stands for. R's edges list them.
     if (cfg.type === 'histogram') {
       // R's edges, a data frame sent as columns.
-      const edges = cfg.derived.hist && cfg.derived.hist.label;
+      const edges = derived.hist && derived.hist.label;
       const bins = Array.isArray(edges) && edges.length ? edges.map(String) : levels;
       if (bins) return bins;
     }
-    const levelAt = new Map((levels || []).map((l, i) => [l, i]));
+    const levelAt = new Map((levels || []).map((/** @type {string} */ l, /** @type {number} */ i) => [l, i]));
 
     const dataOrder = () => {
       const present = new Set(groups);
       if (levels) {
-        return levels.filter((l) => present.has(l)).concat(groups.filter((g) => !levelAt.has(g)));
+        return levels.filter((/** @type {string} */ l) => present.has(l)).concat(groups.filter((g) => !levelAt.has(g)));
       }
       // A date or a number orders by itself, a missing value last. Dates
       // travel as ISO strings, which sort as text.
-      if (meta && (meta.temporal || meta.type === 'numeric')) {
-        const num = !meta.temporal;
+      if (V.util.isTemporal(meta) || V.util.isNumeric(meta)) {
+        const num = !V.util.isTemporal(meta);
         const key = (/** @type {string} */ g) => (num ? Number(g) : g);
         const missing = (/** @type {string} */ g) => g === '' || (num && isNaN(Number(g)));
         const known = groups.filter((g) => !missing(g));
@@ -273,7 +267,7 @@
    * @typedef {{ facet: string, label: string | null, groups: string[], cells: any[],
    *             axisCounts: Map<string, any> | null, ttRep: Record<string, any[]> | null,
    *             slots: any[] | null }} AggregatedPanel
-   * @typedef {{ family: 'aggregated', empty: string | null, type: string,
+   * @typedef {{ family: 'aggregated', empty: VizEmpty | null, type: string,
    *             cumulative: boolean, colors: string[], colorScale: any,
    *             levels: string[], split: boolean, distribution: boolean,
    *             noValue: boolean, ttFields: string[],
@@ -285,9 +279,9 @@
    *             hlColors: Set<string> | null }} AggregatedModel
    */
 
-  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {AggregatedModel} */
-  const aggregated = ({ rows, ix, columns, cfg }) => {
+  const aggregated = ({ rows, ix, columns, cfg, derived }) => {
     // A histogram is a bar over the bins R adds to the rows.
     const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
     const { category, color, facet, measure, func } = cfg;
@@ -295,7 +289,7 @@
     /** @type {AggregatedModel} */
     const out = {
       family: 'aggregated', empty: null, type: ct, cumulative: cfg.type === 'waterfall',
-      colors: [], colorScale: NS.scaleFor(cfg, color), levels: [], split: false,
+      colors: [], colorScale: NS.scaleFor(derived, color), levels: [], split: false,
       distribution, noValue: distribution && (!measure || measure === '.count'),
       ttFields: [], facet: facet || null, nFacets: 1, single: true,
       ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
@@ -326,7 +320,7 @@
     // Fixed scales give every panel the same categories; pie and treemap
     // label their own slices.
     const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
-      ? orderGroups(agg, rows, columns, cfg) : null;
+      ? orderGroups(agg, rows, columns, cfg, derived) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? model.tooltipFields(cfg) : [];
@@ -341,7 +335,7 @@
 
     for (const fv of facets) {
       const cells = ix.get(agg, 'facet', 'raw', fv);
-      const groups = sharedGroups || orderGroups(cells, rows, columns, cfg);
+      const groups = sharedGroups || orderGroups(cells, rows, columns, cfg, derived);
       const restrict = !!facet && fv !== '__all__';
       let axisCounts = null;
       if (countAxis) {
@@ -392,7 +386,6 @@
       out.hlColors = lit;
     }
   };
-  aggregated.FIELDS = MODEL_FIELDS;
 
   /**
    * The aggregate cell of (group, colour) in a panel: the first, or

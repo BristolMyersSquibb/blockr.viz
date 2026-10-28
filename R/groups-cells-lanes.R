@@ -11,14 +11,11 @@ cells_lane <- function(ctx, p, b) {
     isTRUE(p$bare)
   }
   # The value label: the centre, at one precision for the whole column.
-  lab_on <- ctx$vals_on && isTRUE(p$show_val)
-  dig <- if (lab_on) {
-    centres <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
-      if (!is.na(cn["bc"])) rows[[cn[["bc"]]]]
-    }))
-    cells_val_digits(centres, p$dmin, p$dmax)
-  }
-  lane <- list(wd = wd, bare = bare, lab_on = lab_on, dig = dig)
+  centres <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
+    if (!is.na(cn["bc"])) rows[[cn[["bc"]]]]
+  }))
+  dig <- cells_val_digits(centres, p$dmin, p$dmax)
+  lane <- list(wd = wd, bare = bare, dig = dig)
   base <- cells_lane_glyph(ctx, p, b, lane, p$cols)
   if (is.null(p$lcols)) {
     base
@@ -33,9 +30,9 @@ cells_lane <- function(ctx, p, b) {
       g$v <- NULL
       g
     })
-    c(list(kind = p$kind, multi = TRUE, levels = as.character(p$levels),
-           fills = as.character(p$fills), v = base$v, lv = lv),
-      if (lab_on) list(dw = cells_multi_dw(lv)))
+    list(kind = p$kind, multi = TRUE, levels = as.character(p$levels),
+         fills = as.character(p$fills), v = base$v, lv = lv,
+         dw = cells_multi_dw(lv))
   }
 }
 
@@ -55,10 +52,8 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
   bl <- cells_col_or_na(rows, cn, "bl")
   bh <- cells_col_or_na(rows, cn, "bh")
   nn <- cells_col_or_na(rows, cn, "n")
-  lab <- if (lane$lab_on) {
-    disp <- cells_val_str(bc, lane$dig)
-    list(disp = disp, dw = max(c(1L, nchar(disp))))
-  }
+  disp <- cells_val_str(bc, lane$dig)
+  lab <- list(disp = disp, dw = max(c(1L, nchar(disp))))
   # A split glyph's tooltip names its level first.
   pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
   wl <- cells_col_or_na(rows, cn, "wl")
@@ -118,14 +113,13 @@ cells_pair <- function(ctx, p, b) {
   fills <- as.character(p$fills %||% character())
   # The value label is the change from `from` to `to`, at one precision for the
   # column; "+" only where the column holds a negative change.
-  lab_on <- ctx$vals_on && isTRUE(p$show_val)
   deltas <- unlist(lapply(c(list(p$cols), p$lcols), function(cn) {
     rows[[cn[["b"]]]] - rows[[cn[["a"]]]]
   }))
-  dig <- if (lab_on) cells_val_digits(deltas, p$dmin, p$dmax)
+  dig <- cells_val_digits(deltas, p$dmin, p$dmax)
   signed <- any(deltas < 0, na.rm = TRUE)
   pr <- list(dmn = p$dmin %||% ctx$mn, dmx = p$dmax %||% ctx$mx, wd = wd,
-             lab_on = lab_on, dig = dig, signed = signed)
+             dig = dig, signed = signed)
   fi <- rows[[p$fidx]]
   base <- cells_pair_bell(ctx, p, b, pr, p$cols, p$didx, if (length(fills)) {
     ifelse(is.na(fi), NA_character_, fills[pmax(1L, fi)])
@@ -147,7 +141,7 @@ cells_pair <- function(ctx, p, b) {
     list(kind = "pair", multi = TRUE,
          levels = as.character(p$levels), fills = fills,
          rf = base$rf, v = base$v, lv = lv,
-         dw = if (lab_on) cells_multi_dw(lv))
+         dw = cells_multi_dw(lv))
   }
 }
 
@@ -176,10 +170,8 @@ cells_pair_bell <- function(ctx, p, b, pr, cn, didx, fill, lvl = NULL,
   delta <- bb - a
   pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
   tip <- cells_pair_tip(pre, pr$wd, a, bb, lo, hi, nn, band, both, delta)
-  disp <- if (pr$lab_on) {
-    ifelse(both, paste0(ifelse(pr$signed & delta >= 0, "+", ""),
-                        cells_val_str(delta, pr$dig)), "")
-  }
+  disp <- ifelse(both, paste0(ifelse(pr$signed & delta >= 0, "+", ""),
+                               cells_val_str(delta, pr$dig)), "")
   ab <- cells_pair_ends(a, bb, both, delta)
   list(kind = "pair",
        a = pos_w(a), b = pos_w(bb),
@@ -191,7 +183,7 @@ cells_pair_bell <- function(ctx, p, b, pr, cn, didx, fill, lvl = NULL,
        fill = fill,
        dash = !is.na(di) & di > 1L,
        open = open, tip = tip, ab = ab, v = cells_sortv(bb),
-       disp = disp, dw = if (pr$lab_on) max(c(1L, nchar(disp))))
+       disp = disp, dw = max(c(1L, nchar(disp))))
 }
 
 # Plain text: the hover card and the cell attribute each escape it.

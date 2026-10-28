@@ -1,18 +1,12 @@
-# aaa- prefix so it collates first: the *_dep() builders below call memoise0()
-# at package-load time to build their wrappers, so it must already be defined.
+# aaa- prefix so it collates first: the *_dep() builders call memoise0() at
+# package-load time, so it must already be defined.
 
-#' Run a nullary builder at most once per process, caching the result in a
-#' private environment. Base-R memoise (no dependency, no `<<-`): the closure
-#' captures a mutable env and mutates it in place, so nothing rebinds an
-#' enclosing frame. The `exists()` guard (not `is.null`) caches a genuine `NULL`
-#' result too, so a builder that legitimately returns `NULL` is not rebuilt.
-#'
-#' Used for the block htmlDependency builders: each takes no data-dependent args
-#' and returns the same immutable object for the life of the process, and
-#' unmemoised would repeat its disk I/O (packageVersion -> read.dcf +
-#' system.file) on every render and construct. htmlDependency objects are immutable value lists htmltools
-#' already shares across sessions, so one cached copy per process shared across
-#' Shiny sessions is correct.
+# Runs a nullary builder at most once per process and caches the result in a
+# private environment. `exists()` rather than `is.null()` caches a `NULL`
+# result too. Used for the htmlDependency builders: they take no
+# data-dependent arguments, return the same immutable object for the life of
+# the process, and would otherwise repeat their disk I/O on every render. One
+# copy is shared across Shiny sessions.
 #' @noRd
 memoise0 <- function(build) {
   force(build)

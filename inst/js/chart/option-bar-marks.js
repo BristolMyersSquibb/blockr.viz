@@ -7,11 +7,9 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
   // Waterfall sign colours: semantic, so they override the palette.
   const WATERFALL_COLORS = { increase: '#009E73', decrease: '#dc2626', total: '#bbbbbb' };
@@ -98,7 +96,7 @@
   const endFormat = (cfg, fraction) => {
     // `|| 0` folds a negative zero, which would print as "-0".
     if (fraction) return (v) => (Math.round(v * 1000) / 10 || 0) + '%';
-    return NS.valueFormat(cfg) || ((v) => String(NS.ddNum(v || 0)));
+    return NS.valueFormat(cfg) || ((v) => String(V.util.num(v || 0)));
   };
 
   const BAR_MAX = 48;
@@ -339,9 +337,9 @@
     };
   };
 
-  Object.assign(parts, {
+  option.barMarkParts = {
     barRadius, barValueLabels, barMarkLabels, stackNames, boldNames, endFormat, WATERFALL_COLORS,
     asDatum, withItemStyle, labelStyle, fitXLabels,
     BAR: { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET }
-  });
+  };
 })();

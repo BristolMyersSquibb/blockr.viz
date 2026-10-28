@@ -4,13 +4,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadTable } = require('./load');
 
-const COLS = [{ name: 'AGE', class: 'numeric', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
+const COLS = [{ name: 'AGE', class: 'number', label: 'Age' }, { name: 'SEX', class: 'character', label: 'Sex' }];
 
 /** The Columns editor with a recording stand-in for the gear's controls. */
 function editor(summaries) {
   const built = [];
   const env = loadTable({ before: (win) => {
-    win.Blockr.viz.gear = { controls: { build: (el, ctx) => built.push(ctx) } };
+    win.Blockr.viz.gear = { ...win.Blockr.viz.gear,
+                            controls: { ...win.Blockr.viz.gear.controls, build: (el, ctx) => built.push(ctx) } };
   } });
   const sets = [];
   const el = env.win.document.createElement('div');
@@ -72,8 +73,9 @@ test('move, remove, add and fold', () => {
   e.click(e.el.querySelectorAll('.lane-sum-up')[0]);
   e.click(e.el.querySelectorAll('.lane-sum-rm')[1]);
   const add = e.el.querySelector('.lane-sum-addcol select');
-  assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'simple', 'dist']);
-  add.value = 'pair';
+  // blockr.ui's Select (here the test's stand-in) keys its options by label.
+  assert.deepEqual(Array.from(add.options).map((o) => o.value).slice(0, 3), ['', 'Summary', 'Distribution']);
+  add.value = 'Pair';
   add.dispatchEvent(new e.env.win.Event('change'));
   // The first entry moves only down, the last only up.
   assert.equal(e.el.querySelectorAll('.lane-sum-up').length, 1);
@@ -84,8 +86,23 @@ test('move, remove, add and fold', () => {
     [{ type: 'simple' }, { type: 'expr', expr: 'n()' }, { type: 'pair' }]
   ]);
   const toggle = e.el.querySelector('.lane-sum-toggle');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   e.click(toggle);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   e.draw(list);
   assert.equal(e.el.querySelector('.lane-sum-body').hidden, false);
+  assert.equal(e.el.querySelector('.lane-sum-toggle').getAttribute('aria-expanded'), 'true');
+});
+
+test('the Show tiles have a drawing for every value and the editor width', () => {
+  const e = editor([{ type: 'simple', func: 'count', show: 'bar' }]);
+  const show = e.built.find((c) => c.key === 'show');
+  for (const v of ['bar', 'number', 'dot', 'tile', 'box', 'pointrange', 'text', 'dumbbell']) {
+    assert.match(show.host.icon('show', v), /^<svg/, v);
+  }
+  assert.equal(show.host.icon('func', 'mean'), '');
+  const row = e.el.querySelector('.lane-sum-field--wide');
+  assert.ok(row);
+  assert.equal(row.querySelector('.blockr-label').textContent, show.label);
 });

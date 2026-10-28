@@ -12,7 +12,7 @@
 #' @noRd
 table_variables_part <- function(kit, src) {
   st <- kit$state
-  shown <- shiny::reactive({
+  frame <- shiny::reactive({
     d <- src$rows()
     if (!is.data.frame(d)) {
       return(d)
@@ -23,14 +23,14 @@ table_variables_part <- function(kit, src) {
   # place of the input in the filter.
   built_from <- function(ex) {
     d <- tryCatch(src$rows(), error = function(e) NULL)
-    built <- table_variables_call(table_variables_cfg(table_state_values(st), d))
+    built <- table_variables_call(table_variables_cfg(viz_values(st), d))
     if (is.null(built)) {
       return(ex)
     }
     built[[2L]] <- quote(.(data))
-    table_sub_data(ex, built)
+    dd_splice_slot(ex, built)
   }
-  table_frame_part(kit, src, shown, layout = "variables", filter = built_from)
+  table_frame_part(kit, src, frame, layout = "variables", filter = built_from)
 }
 
 # A numeric variable is a `dist` summary, a categorical one a count bar split
@@ -125,21 +125,6 @@ table_variables_call <- function(cfg) {
   args <- table_variables_args(cfg)
   if (is.null(args)) return(NULL)
   as.call(c(list(quote(blockr.viz::summary_table), quote(data)), args))
-}
-
-# Replace every `.(data)` placeholder in a bquoted block expression with
-# `repl`, so the records engine's drill filter applies to the built table.
-table_sub_data <- function(expr, repl) {
-  if (is.call(expr)) {
-    if (identical(expr[[1L]], as.name(".")) && length(expr) == 2L &&
-          identical(expr[[2L]], as.name("data"))) {
-      return(repl)
-    }
-    for (i in seq_along(expr)[-1L]) {
-      if (!is.null(expr[[i]])) expr[[i]] <- table_sub_data(expr[[i]], repl)
-    }
-  }
-  expr
 }
 
 #' Nest a tidy frame into a finished table

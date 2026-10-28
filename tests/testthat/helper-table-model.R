@@ -39,7 +39,7 @@ tm_json <- function(x) {
 
 # The groups table as the block builds it: the spec's state names in,
 # table_model_groups()'s list(prep, cells) out. `cells$cols` is the cell
-# model's columns, the ones table_groups_view() turns into marks. The
+# model's columns, the ones table_groups_to_model() turns into marks. The
 # summaries go in as written (some fixtures use the legacy keys the
 # preparer still reads), so the state is not run through viz_check().
 # Missing groups drop and the sort runs descending, as groups_prepare()

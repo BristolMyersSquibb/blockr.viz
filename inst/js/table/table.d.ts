@@ -2,9 +2,10 @@
  * Types for the table block's scripts (inst/js/table/). Dev tooling only:
  * read by tsconfig.core.json, never served to the browser.
  *
- * `derived.table` is what R computes for the browser (R/table-model.R); the
- * shapes here are the contract between the two. Everything is
- * column-oriented: a vector per column, one entry per row.
+ * The table R computes for the browser travels as `payload.data`
+ * (TableModel, built in R/table-records.R, R/table-groups-view.R and
+ * R/table-structured.R); the shapes here are the contract between the two.
+ * Everything is column-oriented: a vector per column, one entry per row.
  */
 
 /** Column name to values; `null` is a missing value. The shape of
@@ -78,58 +79,75 @@ interface TableAxis {
 type TableNums = (number | null)[];
 type TableTexts = (string | null)[];
 
-/** The marks of the groups layout, as R/table-model-cells*.R computes them.
- *  Positions and widths are percentages of the cell. `dw`: the width of the
- *  value slot beside the mark, in ch. `tt`: what the hover card adds. */
-interface TableMarkBase { dw?: number | null; tt?: unknown }
+/** The marks of the groups layout, as R/groups-cells*.R computes them and
+ *  R/table-groups-cols.R names them. Positions and widths are percentages of
+ *  the cell. `valueWidth`: the width of the value slot beside the mark, in
+ *  ch. `hover`: what the hover card adds. */
+interface TableMarkBase { valueWidth?: number | null; hover?: unknown }
 
 interface TableMarkBar extends TableMarkBase {
-  kind: 'bar'; w: TableNums; sub?: boolean[] | null; fill?: string | null;
+  kind: 'bar'; width: TableNums; sub?: boolean[] | null; fill?: string | null;
 }
 
+/** A colour split: per level, each row's segment width, value, label inside
+ *  the segment and the label's ink; grouped, each level's value text. */
 interface TableMarkSplit extends TableMarkBase {
   kind: 'barsplit'; mode?: string; names: string[]; fills: string[];
-  seg: TableNums[]; segv: TableNums[]; ldisp?: TableTexts[] | null;
-  slab?: TableTexts[] | null; sink?: string[] | null;
+  segWidths: TableNums[]; segValues: TableNums[]; levelValues?: TableTexts[] | null;
+  segLabels?: TableTexts[] | null; segInk?: string[] | null;
 }
 
-interface TableMarkDiv extends TableMarkBase { kind: 'bardiv'; w: TableNums; pos: boolean[] }
+interface TableMarkDiv extends TableMarkBase { kind: 'bardiv'; width: TableNums; positive: boolean[] }
 
-/** A box (wl w1 bl bw bc b2 w2 wh) or a point range (c l rw ol ow). */
+/** The statistics a hover card prints for a box or point range. */
+interface TableLaneRaw {
+  center?: TableNums; low?: TableNums; high?: TableNums;
+  whiskerLow?: TableNums; whiskerHigh?: TableNums;
+}
+
+/** A box or a point range. A box: the low whisker from `whiskerLow`, the box
+ *  from `boxLeft`, the median, the high whisker from `boxRight` to
+ *  `whiskerHigh`. A point range: the fence, the range, the centre. */
 interface TableLaneGeom {
-  wl?: TableNums; w1?: TableNums; bl?: TableNums; bw?: TableNums; bc?: TableNums;
-  b2?: TableNums; w2?: TableNums; wh?: TableNums; c?: TableNums; l?: TableNums;
-  rw?: TableNums; ol?: TableNums; ow?: TableNums; nn?: TableNums;
-  tip?: TableTexts; r?: Record<string, TableNums>; bare?: boolean; disp?: TableTexts;
+  whiskerLow?: TableNums; whiskerLowWidth?: TableNums; boxLeft?: TableNums;
+  boxWidth?: TableNums; median?: TableNums; boxRight?: TableNums;
+  whiskerHighWidth?: TableNums; whiskerHigh?: TableNums;
+  center?: TableNums; rangeLeft?: TableNums; rangeWidth?: TableNums;
+  fenceLeft?: TableNums; fenceWidth?: TableNums; count?: TableNums;
+  tip?: TableTexts; raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
 }
 
 interface TableMarkLane extends TableMarkBase, TableLaneGeom {
   kind: 'box' | 'pointrange'; multi?: boolean; levels?: string[]; fills?: string[];
-  lv?: TableLaneGeom[]; rf?: undefined;
+  lanes?: TableLaneGeom[]; reference?: undefined;
 }
 
-/** A dumbbell: from `a` to `b`, the link `l`/`w`, the band `bl`/`bw`. */
+/** A dumbbell: from `from` to `to`, the link between them, the band behind. */
 interface TablePairGeom {
-  a: TableNums; b: TableNums; l: TableNums; w: TableNums; bl: TableNums; bw: TableNums;
+  from: TableNums; to: TableNums; linkLeft: TableNums; linkWidth: TableNums;
+  bandLeft: TableNums; bandWidth: TableNums;
   fill?: TableTexts; dash?: boolean[]; open?: boolean[]; tip?: TableTexts;
-  disp?: TableTexts; ab?: TableTexts;
+  disp?: TableTexts; fromTo?: TableTexts;
 }
 
 interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
-  kind: 'pair'; rf?: number | null; multi?: boolean; levels?: string[]; fills?: string[];
-  lv?: TablePairGeom[];
+  kind: 'pair'; reference?: number | null; multi?: boolean; levels?: string[]; fills?: string[];
+  lanes?: TablePairGeom[];
 }
 
-/** Swimlane: per row, segments [left, width, level from 1, label?]. */
+/** Swimlane: per row, segments [left, width, level from 1, label?]. `dates`:
+ *  the domain is in days; `large`: the column takes the width it needs. */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
-  d0: number; d1: number; dd?: boolean; lg?: boolean;
+  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
 }
 
+/** Sparkline in a 100 x 36 box: the line's points, the value band, the last
+ *  point, the x and y values for the hover, the reference line and band. */
 interface TableMarkSpark extends TableMarkBase {
-  kind: 'sparkline'; pl: string[]; bd?: TableTexts | null; dx: TableNums; dy: TableNums;
-  xs: string[]; ys: string[]; nn?: TableNums; rc?: number | null; rby?: number | null;
-  rbh?: number | null;
+  kind: 'sparkline'; line: string[]; band?: TableTexts | null; dotX: TableNums; dotY: TableNums;
+  xValues: string[]; yValues: string[]; count?: TableNums; refY?: number | null;
+  refBandY?: number | null; refBandHeight?: number | null;
 }
 
 interface TableMarkTile extends TableMarkBase { kind: 'tile' }
@@ -187,7 +205,7 @@ interface TableCards {
   fold?: string | null;
 }
 
-/** A table to draw: `derived.table`. */
+/** A table to draw: `payload.data`. */
 interface TableModel {
   n: number;
   /** Index of the stub (row names) column, or null. */
@@ -208,14 +226,6 @@ interface TableModel {
   note?: string | null;
 }
 
-/** A title line as R resolves it (viz_titles()): its text, and the words
- *  that name an argument, which the title slots make clickable. */
-interface TableTitleBand {
-  text?: string;
-  parts?: { text: string; arg?: string; by?: string }[];
-  offers?: string[];
-}
-
 interface TableLegend {
   groups: { title: string; items: { color: string; label: string }[] }[];
 }
@@ -223,15 +233,20 @@ interface TableLegend {
 /** The table block's `derived`, as R builds it. The table itself is
  *  `payload.data`. */
 interface TableDerived {
-  titles?: { title?: TableTitleBand | string | null; subtitle?: TableTitleBand | string | null;
-             caption?: TableTitleBand | string | null; [k: string]: unknown } | null;
+  titles?: Record<string, VizTitleBand | string | null> | null;
   /** Say this instead of drawing a table. */
   empty?: { kind: string; message: string } | null;
   /** The drill receipt line, "Filtered: Arm = Placebo". */
   receipt?: string | null;
   /** Groups: one titled group of colours per colour column. */
   legend?: TableLegend | null;
-  downloads?: unknown;
+  downloads?: VizDownload[] | null;
+  /** The blocks a drill can be sent to, for the gear's Target filter. */
+  ctrl_choices?: VizChoice[] | null;
+  /** The prepare script's inputs, values and error (core/script-band.js). */
+  script?: VizScript | null;
+  /** The pixel ratio of the Image and PowerPoint picture. */
+  capture_ratio?: number | null;
 }
 
 /** What the Grid works out once per model (dom.js `structure()`). */
@@ -308,7 +323,6 @@ interface TableGrid {
   headAt(el: Element | null): { th: Element; h: TableHeadCell } | null;
 }
 
-/** One table layout's view, drawn into the block's frame. */
 /** How a TableView is built outside the block's binding (static.js). */
 interface TableViewOpts {
   /** false: no gear and no title slots. */
@@ -317,6 +331,7 @@ interface TableViewOpts {
   still?: boolean;
 }
 
+/** One table layout's view, drawn into the block's frame. */
 interface TableLayoutView {
   render(payload: VizPayload): void;
   dispose(): void;
@@ -334,55 +349,32 @@ interface TableInfo {
   numbers: boolean;
 }
 
-/** The hooks of the core gear engine the table uses (gear-api.md). */
-interface TableGearHost {
-  visible?(key: string, values: Record<string, unknown>): boolean;
-  label?(key: string, values: Record<string, unknown>): string | null | undefined;
-  custom?(key: string, el: HTMLElement, ctx: TableGearCtx): void;
-}
-
-interface TableGearCtx {
-  values: Record<string, unknown>;
-  columns: VizPayload['columns'];
-  scope: VizScope;
-  set(value: unknown): void;
-}
-
 /** The mounted gear: the engine, and a way to open its tray. */
 interface TableGearHandle {
-  engine: { update(p: VizPayload): void; dispose(): void };
+  engine: VizGear;
   open(): void;
   update(p: VizPayload): void;
 }
 
 /** The title slots (core/titles.js): words of a title that open controls. */
-interface TableSlots {
-  paint(el: HTMLElement, band: TableTitleBand | null | undefined): void;
-  dispose(): void;
+/** How a layout draws: `still` is a picture or a page without Shiny. */
+interface TableLayoutOpts {
+  still?: boolean;
 }
 
-type TableLayoutClass = new (frame: TableFrame, scope: VizScope) => TableLayoutView;
+type TableLayoutClass = new (frame: TableFrame, scope: VizScope, opts?: TableLayoutOpts) => TableLayoutView;
 
-/** The block's frame: header, scroll box, footer (chrome.js). */
-interface TableFrame {
-  readonly id: string;
-  readonly el: HTMLElement;
-  readonly head: HTMLElement;
-  readonly tools: HTMLElement;
+/** The block's frame (chrome.js): the core frame with a search box and the
+ * scroll box the layout draws into. */
+interface TableFrame extends VizFrame {
   readonly box: HTMLElement;
-  readonly foot: HTMLElement;
   readonly searchInput: HTMLInputElement;
-  /** Set once the title slots are loaded; titles paint through them. */
-  slots: TableSlots | null;
   query(): string;
   onSearch(fn: (q: string) => void): void;
-  titles(t: TableDerived['titles']): void;
-  showTools(o: { search: boolean; download: boolean; downloads?: unknown;
+  showTools(o: { search: boolean; download: boolean; downloads?: VizDownload[] | null;
                  onOpen?: () => void }): void;
-  empty(e: TableDerived['empty']): boolean;
   structured(on: boolean): void;
-  count(text: string): void;
-  receipt(text: string | null, onClear: (() => void) | null): void;
+  scroller(): Element | null;
 }
 
 interface TableCardOpts {
@@ -425,7 +417,7 @@ interface VizTableNamespace {
   View: VizViewClass;
   /** Gear editors for keys the engine draws no control for, by
    *  "<layout>.<key>" or "<key>". */
-  editors: Record<string, (el: HTMLElement, ctx: TableGearCtx) => void>;
+  editors: Record<string, (el: HTMLElement, ctx: VizCustomCtx) => void>;
   variables: {
     varOf(s: Record<string, unknown>): string | null;
     withVars(summaries: Record<string, unknown>[], vars: string[],
@@ -438,7 +430,7 @@ interface VizTableNamespace {
   /** Draw a payload on an element without the output binding, or redraw it. */
   renderStatic(el: HTMLElement, payload: VizPayload, opts?: TableViewOpts): void;
   /** The records layout; groups extends it. */
-  Records: new (frame: TableFrame, scope: VizScope) => TableLayoutView;
+  Records: new (frame: TableFrame, scope: VizScope, opts?: TableLayoutOpts) => TableLayoutView;
   html: {
     th(model: TableModel, r: number, c: number,
        f: { sortable: boolean; foldAll: boolean; axis?: (c: TableCol) => string }): string;
@@ -480,8 +472,10 @@ interface VizTableNamespace {
   gear: {
     mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
-    shadings(el: HTMLElement, ctx: TableGearCtx): void;
+    shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };
+  /** A number column of the payload's `columns` (gear.js). */
+  isNumeric(c: { class?: unknown }): boolean;
   /** blockr.ui's controls for the table's own gear rows, with native
    *  fallbacks (gear.js). */
   ui: {

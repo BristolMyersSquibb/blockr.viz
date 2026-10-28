@@ -91,14 +91,18 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
 #' @param derived What the server computes for the view (resolved titles,
 #'   series, download formats, an empty state). The client does not send it
 #'   back.
+#' @param columns The column description the view reads, viz_wire_columns()
+#'   shape. By default the shipped rows' columns; a view whose gear picks
+#'   from every column of its input passes that frame's.
 #' @return A list: `state_rev`, `data_rev`, `columns`, `config`, `derived`,
 #'   `data`.
 #' @noRd
-viz_payload <- function(spec, values, rows, revs, derived = list()) {
+viz_payload <- function(spec, values, rows, revs, derived = list(),
+                        columns = rows$columns) {
   list(
     state_rev = revs$now(),
     data_rev = rows$rev,
-    columns = rows$columns,
+    columns = columns,
     config = viz_wire(spec, values),
     derived = if (length(derived)) {
       derived
@@ -109,26 +113,62 @@ viz_payload <- function(spec, values, rows, revs, derived = list()) {
   )
 }
 
-#' Rows for the browser, written once per content
+#' Rows for the browser and their revision
 #'
-#' A function of a data frame that returns viz_wire_df()'s columns and data
-#' plus a revision. An identical frame returns the last result without
-#' writing. The revision goes up only when the written rows differ, so a
-#' re-evaluation that yields the same rows keeps the client's copy.
+#' A function `(data, columns)` that returns both with a revision: the
+#' chart's written rows (viz_wire_df()), the table's model. The revision goes
+#' up only when `data` differs from the last call's, so a re-evaluation that
+#' yields the same rows, or a click or a title edit, keeps the browser's
+#' copy, sort and folds.
 #' @noRd
 viz_rows <- function() {
   last <- new.env(parent = emptyenv())
   last$rev <- 0L
-  function(df) {
-    if (!is.null(last$out) && identical(df, last$df)) {
-      return(last$out)
-    }
-    w <- viz_wire_df(df)
-    if (!identical(w$data, last$out$data)) {
+  function(data, columns = NULL) {
+    if (last$rev == 0L || !identical(data, last$data)) {
       last$rev <- last$rev + 1L
+      last$data <- data
     }
-    last$df <- df
-    last$out <- c(w, list(rev = last$rev))
-    last$out
+    list(data = data, columns = columns, rev = last$rev)
   }
+}
+
+#' A one-slot cache keyed by identical()
+#'
+#' A dock panel visit hands the chart server an equal frame, which invalidates
+#' every reactive that reads it. The costly ones (serializing the rows, the
+#' column metadata, the band and smoother fits, the scale resolution) keep their
+#' last answer and return it while their inputs are identical(). On the same
+#' object that is a pointer comparison; on an equal copy it walks the values,
+#' which is still much cheaper than the work it saves.
+#'
+#' @return A function `(key, compute)` that returns the last value when `key`
+#'   is identical to the last key, and otherwise calls `compute()` and keeps
+#'   its result. A `compute()` that errors leaves the cache as it was.
+#' @noRd
+last_value_cache <- function() {
+  env <- new.env(parent = emptyenv())
+  env$full <- FALSE
+  function(key, compute) {
+    if (env$full && identical(key, env$key)) {
+      return(env$value)
+    }
+    value <- compute()
+    env$key <- key
+    env$value <- value
+    env$full <- TRUE
+    value
+  }
+}
+
+# The busy cue's two messages (inst/js/core/busy.js).
+# `id` is the element the cue dims, the view's element. Blocks outside this
+# package that render through viz send the same two messages.
+
+busy_cue_start <- function(session, id, label = "computing") {
+  session$sendCustomMessage("blockr-busy", list(id = id, label = label))
+}
+
+busy_cue_done <- function(session, id) {
+  session$sendCustomMessage("blockr-busy-done", list(id = id))
 }

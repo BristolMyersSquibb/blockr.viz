@@ -17,9 +17,7 @@ A data frame without the reserved annotation columns.
 \description{
 \code{\link[=as_annotated_df]{as_annotated_df()}} followed by dropping the reserved \code{.}-annotation
 columns (\code{.label}, \code{.indent}, \code{.strong}, \code{.emph}, \code{.fmt}, \code{.digits},
-\verb{.variable*}, \verb{.group<k>*}). The chart and tile blocks use it, so a chart of
-a structured display table charts its data columns. Other dot-prefixed
-columns pass through.
+\verb{.variable*}, \verb{.group<k>*}). Other dot-prefixed columns pass through.
 }
 \examples{
 tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")

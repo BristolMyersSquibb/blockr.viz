@@ -49,55 +49,56 @@
 #' ex
 #' @export
 static_summarize_table <- function(data, ...) {
+  args <- list(...)
+  extra <- args[intersect(names(args), c(".title_args", "scale_map", "subject"))]
+  state <- groups_exhibit_state(args[setdiff(names(args), names(extra))])
+  m <- table_model_groups(state, data, scale_map = extra$scale_map,
+                          subject = extra$subject)
+  targs <- extra$.title_args %||%
+    table_groups_title_args(viz_block_spec("table"), state)
+  title <- function(nm, auto) {
+    resolve_block_title(state[[nm]], data, auto = groups_attr(data, auto),
+                        args = targs)
+  }
+  groups_exhibit(m, data, state, title("title", "label"),
+                 title("subtitle", "subtitle"), title("caption", "caption"),
+                 scale_map = extra$scale_map)
+}
 
-  args <- summarize_legacy_args(list(...))
-  # The block hands over the settings its text names, script values included.
-  targs <- args$.title_args %||% summarize_title_args(args)
-  args$.title_args <- NULL
+# The arguments of a static groups table as the block's state: old names
+# translated, every unset argument at the spec's default.
+groups_exhibit_state <- function(args) {
+  args <- legacy_table_args(args, from = "summarize")
+  args$layout <- "groups"
+  table_normalize(viz_check(viz_block_spec("table"),
+                            legacy_ctor_args("table", args)))
+}
 
-  prep <- do.call(groups_prepare,
-                  c(list(data), args[summarize_prep_args(args)]))
-  cells <- groups_cells(
-    prep,
-    cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
-               value_labels = args$value_labels %||% TRUE,
-               bar_width = args$bar_width)
-  )
-
+# The exhibit of a computed groups model (table_model_groups()): what every
+# download target renders, the screen's numbers and marks.
+groups_exhibit <- function(m, data, state, title = NULL, subtitle = NULL,
+                           caption = NULL, scale_map = NULL) {
   structure(
     list(
-      data = data,
-      args = args,
-      prep = prep,
-      cells = cells,
+      data = data, args = state, prep = m$prep, cells = m$cells,
       # The cards look's text (R/table-cards.R); the spreadsheet ignores it.
-      cards = if (identical(args$look, "cards") && is.null(prep$err)) {
-        table_cards_groups(cells, prep, data = data,
-                           scale_map = args$scale_map)
+      cards = if (identical(state$look, "cards") && is.null(m$prep$err)) {
+        table_cards_groups(m$cells, m$prep, data = data, scale_map = scale_map)
       },
-      title = resolve_block_title(args$title, data,
-                                  auto = groups_attr(data, "label"),
-                                  args = targs),
-      subtitle = resolve_block_title(args$subtitle, data,
-                                     auto = groups_attr(data, "subtitle"),
-                                     args = targs),
-      caption = resolve_block_title(args$caption, data,
-                                    auto = groups_attr(data, "caption"),
-                                    args = targs)
+      title = title, subtitle = subtitle, caption = caption
     ),
     class = c("summarize_exhibit", "blockr_exhibit")
   )
 }
 
-# The settings a title, subtitle or caption can name as `{@arg}` /
-# `{label(@arg)}`, for this block's roles. `by` is the innermost grouping
-# column (each row); an outer one is the parent. The first summary stands in
-# for the settings the single ranked bar had at block level.
-#' @noRd
-summarize_title_args <- function(args) {
-  by <- as.character(unlist(args$by %||% character()))
-  s1 <- if (length(args$summaries) && is.list(args$summaries[[1L]])) {
-    args$summaries[[1L]]
+# The settings a groups title can name beyond the spec's slots: the first
+# summary's roles, for the single ranked bar's sentences. `by` is the
+# innermost grouping column (each row); an outer one is the parent. Unset
+# roles go, so a prepare script's value of the same name can stand in.
+groups_title_roles <- function(v) {
+  by <- as.character(unlist(v$by %||% character()))
+  s1 <- if (length(v$summaries) && is.list(v$summaries[[1L]])) {
+    v$summaries[[1L]]
   } else {
     list()
   }
@@ -107,22 +108,11 @@ summarize_title_args <- function(args) {
     parent = if (length(by) == 2L) by[[1L]],
     value = chr_state(s1[["col"]]),
     func = chr_state(s1[["func"]]),
-    id_var = args$id_var,
     color = chr_state(s1[["color"]]),
     facet = chr_state(s1[["facet"]]),
-    fill = chr_state(s1[["fill"]]),
-    sort_by = args$sort_by, top_n = args$top_n,
-    drill = args$drill
+    fill = chr_state(s1[["fill"]])
   )
-  # Unset roles go, so a prepare script's value of the same name can stand in.
   out[!vapply(out, is.null, logical(1L))]
-}
-
-# Which of the caller's arguments groups_prepare() takes. The rest belongs
-# to the chrome and goes to the renderer.
-#' @noRd
-summarize_prep_args <- function(args) {
-  names(args) %in% names(formals(groups_prepare))
 }
 
 #' @export
@@ -188,113 +178,55 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
-
-  if (!requireNamespace("officer", quietly = TRUE)) {
-    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
-  }
-  summarize_paint_require()
-
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
-
-  slide_w <- tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333)
-  slide_h <- tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5)
-
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  slide_title <- has_title && pptx_layout_has_title(doc, layout, master)
-
-  # The picture starts below the title's rendered text; the rest of the slide,
-  # down to the top of the layout's footer, is the row budget.
+  pptx_paint_require()
+  s <- pptx_slide_context(doc, title, layout, master)
+  # The picture starts below the title's rendered text; the rest of the
+  # slide, down to the top of the layout's footer, is the row budget.
   top <- top %||% max(
     1.1,
-    if (slide_title) {
-      pptx_title_bottom(doc, layout, master, template %||% "",
+    if (s$slide_title) {
+      pptx_title_bottom(doc, s$layout, s$master, template %||% "",
                         pptx_page_title(title, c(99L, 99L))) %||% 0
     } else {
       0
     }
   )
-  width <- pptx_content_width(template) %||% (slide_w - 0.8)
-  budget <- pptx_body_bottom(doc, layout, master, slide_h) - top
-
   common <- list(
     x$cells, x$prep,
-    width_in = width, max_height = budget,
-    title = if (slide_title) "" else (title %||% x$title),
+    width_in = pptx_content_width(template) %||% (s$width - 0.8),
+    max_height = pptx_body_bottom(doc, s$layout, s$master, s$height) - top,
+    title = if (s$slide_title) "" else (title %||% x$title),
     subtitle = subtitle %||% x$subtitle,
     caption = caption %||% x$caption
   )
-
-  # One slide at a smaller size beats two at the full size, down to
-  # `min_font_size`. Nothing is painted until the size is settled.
-  min_font_size <- exhibit_min_font_size(min_font_size)
-  fits_one <- function(fs) {
-    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= x$cells$n
-  }
-
-  if (!fits_one(font_size) && min_font_size < font_size) {
-    for (s in seq(font_size - 1, min_font_size)) {
-      if (fits_one(s)) {
-        font_size <- s
-        break
-      }
-    }
-  }
-
-  pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
-
-  if (length(pages) > 1L) {
-    # Search below the floor only to tell the reader the size that would fit.
-    fit <- NULL
-    below <- seq_len(max(0, min(font_size, min_font_size) - MIN_FONT_FLOOR))
-    for (s in min(font_size, min_font_size) - below) {
-      if (fits_one(s)) {
-        fit <- s
-        break
-      }
-    }
-    exhibit_split_note(title %||% x$title, pages = length(pages),
-                       size = font_size, floor = min_font_size,
-                       fit_size = fit)
-  }
-
-  for (k in seq_along(pages)) {
-    p <- pages[[k]]
-    f <- tempfile(fileext = ".png")
-    rp_write_png(p, f, res = res)
-    doc <- officer::add_slide(doc, layout = layout, master = master)
-    if (slide_title) {
-      doc <- tryCatch(
-        officer::ph_with(
-          doc, pptx_page_title(title, c(k, length(pages))),
-          location = officer::ph_location_type(type = "title")),
-        error = function(e) doc)
-    }
-    # Never scaled: the type was sized for this box.
-    doc <- officer::ph_with(
-      doc, officer::external_img(f, width = p$width, height = p$height),
-      location = officer::ph_location(
-        left = (slide_w - p$width) / 2, top = top,
-        width = p$width, height = p$height))
-  }
-
-  doc
+  pages <- summarize_pptx_pages(common, x$cells$n, font_size, min_font_size,
+                                title %||% x$title)
+  pptx_add_pictures(doc, pages, s, top, title, res)
 }
 
-# The single ranked bar's arguments as the column list they map to
-# (table_legacy_args()). `id_var` alone is passed through for the sentence.
-#' @noRd
-summarize_legacy_args <- function(args) {
-  ranked <- c("group", "value", "func", "parent", "color", "bar_mode",
-              "facet", "cols", "fields")
-  set <- !vapply(args, is.null, logical(1L))
-  if (!any(names(args)[set] %in% ranked)) return(args[!names(args) %in% ranked])
-  out <- table_legacy_args(args, from = "summarize")
-  out$id_var <- out[["id"]] %||% args[["id_var"]]
-  out[setdiff(names(out), c("id", "layout", "selection"))]
+# The painted pages at the largest size that keeps the table on one slide,
+# stepping down to `min_font_size`; one slide at a smaller size beats two at
+# the full size. Nothing is painted until the size is settled. A table that
+# still splits says so, with the size that would have fit.
+summarize_pptx_pages <- function(common, n, font_size, min_font_size, what) {
+  min_font_size <- exhibit_min_font_size(min_font_size)
+  fits_one <- function(fs) {
+    do.call(summarize_paint_per_page, c(common, list(fs = fs))) >= n
+  }
+  first_fit <- function(sizes) {
+    for (fs in sizes) if (fits_one(fs)) return(fs)
+    NULL
+  }
+  if (!fits_one(font_size) && min_font_size < font_size) {
+    font_size <- first_fit(seq(font_size - 1, min_font_size)) %||% font_size
+  }
+  pages <- do.call(summarize_paint_pages, c(common, list(fs = font_size)))
+  if (length(pages) > 1L) {
+    # Search below the floor only to tell the reader the size that would fit.
+    low <- min(font_size, min_font_size)
+    below <- seq_len(max(0, low - MIN_FONT_FLOOR))
+    exhibit_split_note(what, pages = length(pages), size = font_size,
+                       floor = min_font_size, fit_size = first_fit(low - below))
+  }
+  pages
 }

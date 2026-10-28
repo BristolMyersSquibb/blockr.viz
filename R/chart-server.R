@@ -19,15 +19,17 @@ chart_server <- function(id, data, init) {
         normalize = function(v) {
           chart_normalize(v, viz_values(kit$state), shiny::isolate(src$kinds()))
         },
-        claims = chart_claims(kit, src)
+        claims = chart_claims(kit, src),
+        script = src$prep
       )
     }
   )
 }
 
-# The data the chart draws: the input, coerced; the prepare script's output;
-# the column kinds the cross-argument rules read; and the frame expanded by
-# group definitions, with a histogram's bin column.
+# The data the chart draws: the input, coerced; the prepare script and its
+# output (`prep`, viz_script_sources()); the column kinds the cross-argument
+# rules read; and the frame expanded by group definitions, with a
+# histogram's bin column.
 chart_sources <- function(data, state) {
   src <- list()
   src$input <- shiny::reactive({
@@ -50,64 +52,26 @@ chart_sources <- function(data, state) {
     attr(out, "blockr_filters") <- attr(d, "blockr_filters", exact = TRUE)
     out
   })
-  src <- c(src, chart_script_sources(src$raw, state))
+  src$prep <- viz_script_sources(src$raw, state)
   # Kept while the data is gone (a hidden panel makes data() throw), so an
   # inferred orientation does not flip on a view switch.
   last_kinds <- new.env(parent = emptyenv())
   src$kinds <- shiny::reactive({
-    d <- tryCatch(src$prepared(), error = function(e) NULL)
+    d <- tryCatch(src$prep$prepared(), error = function(e) NULL)
     if (is.data.frame(d) && ncol(d)) last_kinds$v <- viz_column_kinds(d)
     last_kinds$v
   })
   src$hist <- shiny::reactive(
-    chart_hist(chart_state_values(state),
-               tryCatch(src$prepared(), error = function(e) NULL))
+    chart_hist(viz_values(state),
+               tryCatch(src$prep$prepared(), error = function(e) NULL))
   )
   src$plain <- shiny::reactive({
-    v <- chart_state_values(state)
-    d <- expand_role_groups(src$prepared(),
+    v <- viz_values(state)
+    d <- expand_role_groups(src$prep$prepared(),
                             chart_split_cols(v, src$kinds()))
     chart_hist_data(d, chart_hist(v, d))
   })
   src
-}
-
-# The prepare script: parsed, its declarations read against the data, run. A
-# failed script draws an empty frame with the input's columns, so the payload
-# still goes out and carries the error.
-chart_script_sources <- function(raw, state) {
-  out <- list()
-  out$parsed <- shiny::reactive(cb_parse(state$script()))
-  # Kept while the data is gone, or the expression flips on a view switch.
-  last <- new.env(parent = emptyenv())
-  last$specs <- list()
-  out$specs <- shiny::reactive({
-    d <- tryCatch(raw(), error = function(e) NULL)
-    parsed <- out$parsed()
-    if (is.null(d) && length(last$specs)) {
-      return(last$specs)
-    }
-    specs <- cb_specs(parsed, d)
-    if (!identical(specs, last$specs)) last$specs <- specs
-    last$specs
-  })
-  out$run <- shiny::reactive({
-    dd_prepare_run(raw(), out$parsed(), out$specs(), state$script_values())
-  })
-  out$prepared <- shiny::reactive({
-    run <- out$run()
-    if (is.null(run$error)) {
-      return(run$data)
-    }
-    d <- tryCatch(raw(), error = function(e) NULL)
-    if (is.data.frame(d)) d[0, , drop = FALSE]
-  })
-  out
-}
-
-# Every value of the state, read reactively.
-chart_state_values <- function(state) {
-  lapply(state, function(rv) rv())
 }
 
 # The category column of an aggregated chart: x, or y when it lies
@@ -150,9 +114,8 @@ chart_expr <- function(data, state, src) {
   last <- new.env(parent = emptyenv())
   shiny::reactive({
     d <- data()
-    parts <- chart_filter_parts(chart_state_values(state), src, members)
-    sx <- cb_expr(src$parsed(), src$specs(), state$script_values(),
-                  slot = TRUE)
+    parts <- chart_filter_parts(viz_values(state), src, members)
+    sx <- src$prep$compiled()
     names_in <- if (!is.null(sx) && length(parts$conds)) {
       tryCatch(names(src$raw()), error = function(e) NULL)
     }
@@ -214,7 +177,7 @@ chart_filter_parts <- function(v, src, members) {
 # claim. The kit sends them.
 chart_claims <- function(kit, src) {
   shiny::reactive({
-    d <- tryCatch(src$prepared(), error = function(e) NULL)
+    d <- tryCatch(src$prep$prepared(), error = function(e) NULL)
     if (kit$transient()) {
       c1 <- kit$claim()
       if (is.null(c1)) {
@@ -227,7 +190,7 @@ chart_claims <- function(kit, src) {
         chart_selection_filters(sel)
       }
     }
-    dd_ctrl_claims(d, kit$state$drill_table(), filters %||% list(),
-                   subject = dd_ctrl_subject(kit$session))
+    ctrl_claims(d, kit$state$drill_table(), filters %||% list(),
+                   subject = ctrl_subject(kit$session))
   })
 }

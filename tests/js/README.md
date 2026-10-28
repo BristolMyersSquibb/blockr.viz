@@ -1,8 +1,8 @@
 # JavaScript tests for the chart block
 
 The chart scripts in `inst/js/chart/` run in node with happy-dom, loaded
-the way the page loads them: blockr.ui's controls, `busy-cue.js`,
-`drilldown-theme-register.js`, the JS core, then the chart scripts in the order
+the way the page loads them: blockr.ui's controls,
+`drilldown-theme-register.js`, the JS core (with the busy cue, `core/busy.js`), then the chart scripts in the order
 `scripts.txt` lists them. A chart is
 created by the input binding's `initialize` and drawn by the `drilldown-data`
 message handler. echarts is a fake that records what the chart asks of it
@@ -40,7 +40,7 @@ UPDATE_SNAPSHOTS=1 npm test
 and review the diff of `__snapshots__/` before committing it.
 
 The fixture is built by `fixtures/make-fixtures.R` with the package's own
-payload builders (`dd_col_meta()`, `chart_data_json()`,
+payload builders (`viz_wire_columns()`, `chart_data_json()`,
 `compute_band_series()`, `compute_smoother_series()`). Rebuild it with
 `Rscript tests/js/fixtures/make-fixtures.R` from the package root, then
 update the snapshots.

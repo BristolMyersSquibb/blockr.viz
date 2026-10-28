@@ -192,3 +192,79 @@ test_that("the facet_cols option sets the panels per row of a new chart", {
   )
   expect_identical(st$facet_cols, 2L)
 })
+
+test_that("a deck asks a live chart for a picture and collects the reply", {
+  skip_if_not_installed("png")
+  f <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(1, c(4, 6, 3)), f)
+  url <- paste0("data:image/png;base64,",
+                gsub("\n", "", jsonlite::base64_enc(readBin(f, "raw",
+                                                            file.size(f)))))
+  blk <- new_chart_block(type = "bar", x = "arm")
+  srv_run(blk, function(session, expr, visit) {
+    root <- session$rootScope()
+    sent <- list()
+    root$sendCustomMessage <- function(type, message) {
+      sent[[length(sent) + 1L]] <<- list(type = type, message = message)
+    }
+    ids <- chart_capture_ids(session)
+    expect_length(ids, 1L)
+    expect_null(chart_capture_for("not_a_block", session))
+    expect_error(chart_capture_request("nope", 600, 400, session),
+                 "no chart capture registered")
+
+    tok <- chart_capture_request(ids, 600, 400, session)
+    expect_match(tok, "^cap-")
+    req <- Filter(function(m) identical(m$type, "blockr-viz:capture"), sent)
+    expect_length(req, 1L)
+    expect_identical(req[[1L]]$message$req, tok)
+    expect_identical(req[[1L]]$message$width, 600)
+
+    expect_null(chart_capture_collect(tok, session))
+    root$setInputs(blockr_viz_capture_result = list(
+      req = tok, png = url, width = 600, height = 400
+    ))
+    cap <- chart_capture_collect(tok, session)
+    expect_s3_class(cap, "chart_capture")
+    expect_equal(c(cap$width, cap$height), c(600, 400) / 96)
+
+    tok2 <- chart_capture_request(ids, 300, 200, session)
+    root$setInputs(blockr_viz_capture_result = list(req = tok2,
+                                                    error = "no canvas"))
+    expect_error(chart_capture_collect(tok2, session), "no canvas")
+
+    skip_if_not_installed("officer")
+    img <- chart_capture_img(cap, max_width = 3)
+    expect_equal(attr(img, "pptx_width"), 3)
+    expect_equal(attr(img, "pptx_height"), 2)
+    # Without a box the picture grows to at most twice its size.
+    expect_equal(attr(chart_capture_img(cap), "pptx_width"), 2 * cap$width)
+  })
+})
+
+test_that("the board's ECharts theme option reaches the chart", {
+  opt <- new_drilldown_theme_option("dark")
+  expect_identical(blockr.core::board_option_id(opt), "echart_theme")
+  ui <- as.character(blockr.core::board_option_ui(opt, id = "opts"))
+  expect_match(ui, "ECharts Theme", fixed = TRUE)
+  expect_match(ui, '<option value="dark" selected>Dark</option>',
+               fixed = TRUE)
+  expect_match(ui, "purple-passion", fixed = TRUE)
+
+  blk <- new_chart_block(type = "bar", x = "arm")
+  srv_run(blk, function(session, expr, visit) {
+    expect_identical(srv_payload(expr)$derived$theme, "default")
+  })
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$userData$board_options <- list(
+        echart_theme = shiny::reactiveVal("dark")
+      )
+      session$flushReact()
+      expect_identical(srv_payload(session$makeScope("expr"))$derived$theme,
+                       "dark")
+    },
+    args = list(x = blk, data = list(data = shiny::reactive(srv_df())))
+  )
+})

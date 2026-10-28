@@ -8,11 +8,21 @@ test_that("the chart dependency lists the core, then every chart script", {
   core <- deps[[match("blockr-viz-core", names)]]
   chart <- deps[[match("chart-js", names)]]
   expect_lt(match("blockr-viz-core", names), match("chart-js", names))
-  expect_identical(core$script[[1]], "core/namespace.js")
+  expect_identical(core$script[[1L]], "core/namespace.js")
   expect_true(all(c("spec/chart.js", "core/gear/engine.js") %in% core$script))
-  expect_identical(chart$script[-(1:2)], file.path("chart", js_script_list("chart")))
+  expect_identical(chart$script,
+                   c("drilldown-theme-register.js",
+                     file.path("chart", js_script_list("chart"))))
+  # The busy cue loads with the core: every view's output answers it.
+  expect_true("core/busy.js" %in% core$script)
   expect_identical(utils::tail(chart$script, 1), "chart/view.js")
   for (d in list(core, chart)) {
     expect_true(all(file.exists(file.path(d$src$file, d$script))))
   }
+})
+
+test_that("a table-only page gets the busy cue too", {
+  deps <- htmltools::findDependencies(table_view_dep())
+  core <- deps[[match("blockr-viz-core", vapply(deps, `[[`, "", "name"))]]
+  expect_true("core/busy.js" %in% core$script)
 })

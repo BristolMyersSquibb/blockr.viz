@@ -100,9 +100,9 @@ new_table_block <- function(layout = "records",
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
   dots <- list(...)
-  # Old argument names; any other name is a block attribute (block_name,
-  # blockr.dock's `visible`) that blockr.core keeps.
-  old <- intersect(names(dots), legacy_arg_names("table"))
+  # blockr.core's block arguments pass through; any other name is an old
+  # argument name, or unknown, which viz_check() refuses.
+  old <- setdiff(names(dots), VIZ_CORE_BLOCK_ARGS)
   args <- legacy_ctor_args("table", c(given, dots[old]))
   values <- table_normalize(viz_check(spec, args))
   # blockr.core reads the starting state from this frame.

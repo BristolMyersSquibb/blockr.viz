@@ -1,7 +1,7 @@
 /* A column's label is how the chart names it: every axis name, tooltip
  * row, note, legend title, footer clause and menu that names a column shows
  * its label when it has one (R's `label` attribute, sent as `label` in the
- * column metadata, R/col-meta.R), and its name only when it has none.
+ * column description, R/wire.R), and its name only when it has none.
  *
  * Every column below carries a label except PLAIN, so a bare name in any
  * output is a column printed without it. */
@@ -14,8 +14,8 @@ const D = require('./chart/drive');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, label, extra) => ({ name, type: 'categorical', ...(label ? { label } : {}), ...extra });
-const num = (name, label) => ({ name, type: 'numeric', ...(label ? { label } : {}) });
+const cat = (name, label, extra) => ({ name, class: 'string', ...(label ? { label } : {}), ...extra });
+const num = (name, label) => ({ name, class: 'number', ...(label ? { label } : {}) });
 const COLUMNS = [
   cat('AETERM', 'Reported Term'), cat('AESEV', 'Severity'), cat('ARM', 'Planned Arm'),
   cat('USUBJID', 'Subject'), num('ADY', 'Study Day'), num('AVAL', 'Analysis Value'),
@@ -45,27 +45,30 @@ const noBareName = (text, what) => {
   }
 };
 
-const look = (cfg, extra = {}) => ({ cfg, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                                     measure, widths: [600, 600], ...extra });
+const look = (cfg, extra = {}, derived = {}) => ({ cfg, derived, columns: COLUMNS,
+                                                   ink: C.INK_DEFAULT, theme: null,
+                                                   measure, widths: [600, 600], ...extra });
 // An aggregated chart in public names. A bar lies horizontal: its category is
 // y and its measure x. The other types take the category on x, the measure on y.
 const agg = (cfg, rows = ROWS, derived = {}) => {
   const c = C.model.settings({ drill: 'auto', sort_by: 'value', sort_dir: 'desc', ...cfg },
-                             derived, COLUMNS);
-  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.aggregated(m, look(c));
+                             COLUMNS);
+  const m = C.model.aggregated({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.aggregated(m, look(c, {}, derived));
   return { m, o, opt: o.panels[0].option, c };
 };
 const ind = (cfg, rows = ROWS) => {
-  const c = C.model.settings({ drill: 'auto', ...cfg }, {}, COLUMNS);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+  const derived = {};
+  const c = C.model.settings({ drill: 'auto', ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
   const o = C.option.individual(m, look(c, { widths: [600] }));
   return { m, o, opt: o.panels[0].option, c };
 };
 const gantt = (cfg) => {
   const c = C.model.settings({ type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM',
-                               drill: 'auto', ...cfg }, {}, COLUMNS);
-  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
+                               drill: 'auto', ...cfg }, COLUMNS);
+  const m = C.model.timeline({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c,
+                               derived: {} });
   const o = C.option.timeline(m, look(c));
   return { m, o, opt: o.panels[0].option };
 };
@@ -80,13 +83,13 @@ test('axisTitle: the label, else the name', () => {
 });
 
 test('axisName: the label with the unit; unlabelled, the unit alone, else the name', () => {
-  const set = (config, derived) => C.model.settings(config, derived, COLUMNS);
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({ unit: 'mg' })), 'Analysis Value (mg)');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({})), 'Analysis Value');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({ unit: 'mg' })), 'mg');
-  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({})), 'PLAIN');
-  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}, {
-    titles: { title: { text: 'Mean analysis value by visit' } } })), '');
+  const set = (config) => C.model.settings(config, COLUMNS);
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({ unit: 'mg' }), {}), 'Analysis Value (mg)');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}), {}), 'Analysis Value');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({ unit: 'mg' }), {}), 'mg');
+  assert.strictEqual(C.axisName('PLAIN', 'PLAIN', set({}), {}), 'PLAIN');
+  assert.strictEqual(C.axisName('Analysis Value', 'AVAL', set({}),
+                                { titles: { title: { text: 'Mean analysis value by visit' } } }), '');
 });
 
 test('bar: the value axis by the value column\'s label, a count as "Count"', () => {
@@ -246,9 +249,9 @@ test('a line chart past its series cap names the series column by label', () => 
 });
 
 test('a band\'s reference line names its column by label', () => {
-  const cfg = C.model.settings({}, { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8,
-                                                          n_distinct: 1 } } } }, COLUMNS);
-  const lines = C.option.indParts.bandRefLines(cfg, null, C.INK_DEFAULT, COLUMNS);
+  const cfg = C.model.settings({}, COLUMNS);
+  const derived = { band: { refs: { hi: { col: 'ANRHI', value: 8, lo: 8, hi: 8, n_distinct: 1 } } } };
+  const lines = C.option.bandParts.bandRefLines(cfg, derived, null, C.INK_DEFAULT, COLUMNS);
   assert.strictEqual(lines[0].label.formatter, 'Upper Limit 8');
 });
 
@@ -260,8 +263,8 @@ test('the filter line names columns by label, the histogram bin by x\'s label', 
   assert.strictEqual(C.keys.describe({ ADY_bin: ['0-5'] }, COLUMNS), 'Study Day = 0-5');
   assert.strictEqual(C.keys.describe({ PLAIN: ['p'] }, COLUMNS), 'PLAIN = p');
   assert.strictEqual(
-    C.keys.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [1, 7], y_range: [2, 9] },
-                         COLUMNS, 'value', { ARM: ['A'] }),
+    C.keys.describeRange({ type: 'range', x: 'ADY', y: 'AVAL', x_range: [1, 7], y_range: [2, 9],
+                           filters: { ARM: ['A'] } }, COLUMNS, 'value'),
     'Study Day 1 to 7, Analysis Value 2 to 9, Planned Arm = A');
 });
 
@@ -272,11 +275,11 @@ const draw = (config, derived) => D.open({ ...DRAWN, ...config }, { data: ROWS, 
 
 test('drawn: the legend title is the colour column\'s label, none without one', () => {
   const c = draw({ color: 'AESEV' });
-  const t = c.block.legendEl.querySelector('.dd-legend-title');
+  const t = c.block.legend.el.querySelector('.dd-legend-title');
   assert.strictEqual(t && t.textContent, 'Severity');
   c.close();
   const p = draw({ color: 'PLAIN' });
-  assert.strictEqual(p.block.legendEl.querySelector('.dd-legend-title'), null);
+  assert.strictEqual(p.block.legend.el.querySelector('.dd-legend-title'), null);
   p.close();
 });
 
@@ -298,8 +301,8 @@ test('drawn: a click names its filter by label in the footer', () => {
 
 test('drawn: the gear\'s column menus show each label', () => {
   const c = draw({ color: 'AESEV' });
-  c.block._tray.set(true);
-  const sel = c.block.popoverEl.querySelector('[data-role="color"] .blockr-select');
+  c.block.frame.tray.set(true);
+  const sel = c.block.frame.tray.band.querySelector('[data-role="color"] .blockr-select');
   sel.querySelector('.blockr-select__control').click();
   const lb = c.doc.getElementById(sel.querySelector('.blockr-select__search')
     .getAttribute('aria-controls'));
@@ -314,7 +317,7 @@ test('drawn: a word printed from a label opens a list led by labels', () => {
   const c = draw({ color: 'AESEV' }, { titles: { subtitle: {
     text: 'by Severity', parts: [{ text: 'by ' }, { text: 'Severity', arg: 'color', by: 'label' }]
   } } });
-  const w = Array.from(c.block.subtitleEl.querySelectorAll('.blockr-slot'))
+  const w = Array.from(c.block.frame.subEl.querySelectorAll('.blockr-slot'))
     .find((x) => x.textContent === 'Severity');
   w.click();
   const menus = c.doc.querySelectorAll('.blockr-select__dropdown--menu');

@@ -8,7 +8,7 @@ draws. The JS side is `inst/js/table/` (its view reads the TableModel of
 
 ```
 new_table_block(...)                     R/table-block.R
-  legacy_ctor_args()  old names          R/legacy-restore.R, R/legacy.R
+  legacy_ctor_args()  old names          R/legacy-restore.R (legacy_translate())
   viz_check()         the spec           R/spec-table.R, R/spec-table-summaries.R
   table_normalize()   cross-argument     R/table-normalize.R
         |
@@ -20,11 +20,21 @@ table_server()                           R/table-server.R
     groups     table_groups_part()       R/table-groups.R
     variables  table_variables_part()    R/table-variables.R
         |
-part$view()  ->  table_payload()  ->  viz_payload()  (R/kit-output.R)
-  payload.data     the TableModel (only sent again when it changes)
+part$drawn()  ->  table_payload()  ->  viz_payload()  (R/kit-output.R)
+  payload.data     the TableModel (viz_rows() moves data_rev only when it
+                   changes)
   payload.columns  the input's columns, for the gear's pickers
-  payload.derived  titles, empty state, receipt, downloads, script values
+  payload.derived  titles (viz_titles(), R/kit-titles.R, the chart's rule
+                   too), empty state, receipt, downloads, script values
 ```
+
+A part (R/table-server.R lists its members) has `frame()`, the frame the
+layout builds its table from (the rows, nested under `by`, for records; the
+Table 1 for variables; the input for groups), and `drawn()`, the TableModel
+or what to say instead. The TableModel's shared pieces (a column, a header
+cell, the arrays) are R/table-model-parts.R. The `*_to_model()` functions
+turn a layout's cell model into a TableModel; "payload" is only the wire
+object.
 
 The state holds the spec's argument names (`layout`, `by`, `summaries`,
 `drill`, ...). Each layout's model reads them through `R/table-model.R`
@@ -34,7 +44,10 @@ The state holds the spec's argument names (`layout`, `by`, `summaries`,
 A part also gives `expr(sel)` (the emitted filter, R/table-expr.R),
 `claims(sel)` and `receipt(sel)` (what a click claims and how it reads,
 R/table-drill.R) and `exhibit(tt)` (what the downloads write,
-R/table-exhibit.R and R/table-download.R).
+R/table-exhibit.R and R/table-download.R). The groups exhibit is built from
+the model the screen draws (`groups_exhibit()`, R/summarize-exhibit.R);
+`static_summarize_table()`, which a report call emits, builds the same model
+from `new_table_block()`'s arguments with the spec's defaults.
 
 ## The groups layout
 
@@ -48,12 +61,21 @@ with its own name prefix:
    R/groups-build.R (per type), R/groups-custom.R (custom functions),
    R/groups-stats.R (box and point-range statistics), R/groups-tile.R,
    R/groups-aggregate.R and R/groups-sort.R; the plan entries from
-   R/groups-plan.R and their scales from R/groups-domains.R.
+   R/groups-plan.R and their scales from R/groups-domains.R. Every column
+   name of those rows is spelled by `groups_col()` and its siblings (the
+   protocol is listed at the top of R/groups-build.R). Enum values and
+   defaults of a summary entry come from the spec. A custom summary's
+   function runs once per copy before the build (`groups_custom_runs()`);
+   a failure there makes it the failed column. A plan entry's `kind` and a
+   split bar's `mode` are provisional until `groups_summary_domains()`.
+   The legend is R/groups-labels.R.
 2. `groups_cells()` (R/groups-cells*.R, prefix `cells_`): the drawing
    geometry of each column from those rows: bar widths, box and range
-   positions, swimlane segments, sparkline paths, tooltips, value labels.
-3. `table_groups_view()` (R/table-groups-view.R, R/table-groups-cols.R):
-   the TableModel. Each cell model column becomes a TableCol: its text,
+   positions, swimlane segments, sparkline paths, tooltips, value labels,
+   and each column's text (`cells$text`). The labels are always built; the
+   Values switch off drops them from the marks, not from the text.
+3. `table_groups_to_model()` (R/table-groups-view.R,
+   R/table-groups-cols.R): the TableModel. Each cell model column becomes a TableCol: its text,
    its mark (the cell model's fields as JSON arrays) and its axis; the head
    rows, row claims and nesting come from the prepared model.
 
@@ -67,7 +89,8 @@ picture export (R/summarize-paint.R) read.
 Records: `table_model_records()` builds `dt_flat_build()`'s cell model
 (R/table-model-records.R): display strings, paint from the `shadings` rules
 (R/table-model-shading.R), number formats (R/table-model-format.R), drill
-raw values and widths. `table_records_view()` turns it into the TableModel.
+raw values and widths. `table_records_to_model()` turns it into the
+TableModel.
 A nested or structured frame (dotted columns, `table_is_structured()`) goes
 through R/table-structured*.R instead. `look = "cards"` draws cards
 (R/table-cards.R).
@@ -82,6 +105,7 @@ structured frame (R/table-variables.R).
 | R/table-block.R | the constructor, its UI and the assistant's text about the block |
 | R/table-server.R | the server, the sources, titles and the payload |
 | R/table-model.R | each layout's model from state and data |
+| R/table-model-parts.R | the TableModel's column, header cell and arrays |
 | R/table-prepare.R | the prepare script run on the input |
 | R/table-normalize.R | rules between arguments |
 | R/table-drill.R | click claims, receipts and drill filters |
@@ -90,6 +114,20 @@ structured frame (R/table-variables.R).
 | R/table-model-format.R, R/table-model-shading.R | number formats, shading |
 | R/table-dep.R | the view's scripts and stylesheets |
 | R/legacy*.R | boards and code from earlier blockr.viz (delete with them) |
+
+## Legacy
+
+Everything about earlier versions is in R/legacy*.R: the rename and value
+table `LEGACY_NAMES` (R/legacy.R), the translators a rename cannot say
+(R/legacy-chart.R, R/legacy-table.R, which also restores the tile and
+heatmap blocks), the restore methods (R/legacy-deser.R), and one pipeline
+both entry points run (`legacy_translate()`, R/legacy-restore.R): a restore
+heals what is left, the constructor warns and leaves bad values to the
+spec. Rules for forms the blocks before the rewrite saved apply to those
+boards only. A row's `kind` says who applies it (the rename and value map,
+or a translator in code); its `rule` is words. `table_exhibit()`'s old
+arguments, including the records aggregation the block no longer does, go
+through `legacy_table_exhibit()`.
 
 ## Tests
 

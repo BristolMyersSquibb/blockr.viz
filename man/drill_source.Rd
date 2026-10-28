@@ -18,9 +18,7 @@ aggregated table. Default \code{NULL} = read the ARD identity columns
 (\code{.variable} / \code{.variable_level}, \verb{.group<k>} pairs) instead.}
 
 \item{unclaimed}{What a frame that claims nothing resolves to: \code{"none"}
-(default), a zero-row frame, or \code{"all"}, the whole source. The table
-block passes \code{"all"} before any click, so a listing below a Table 1
-shows every row until one is picked.}
+(default), a zero-row frame, or \code{"all"}, the whole source.}
 }
 \value{
 A subset of \code{source}: the rows the claim selects. When nothing is
@@ -36,29 +34,23 @@ drilled annotated frame.
 }
 \details{
 The frame comes from \code{attr(x, "source_data")}, which a producer stamps when
-it summarises (composer tables via the blockr.sandbox adapter). Pass
-\code{source} to resolve against another frame.
+it summarises. Pass \code{source} to resolve against another frame.
 
 The claim rule is the one of the control channel (\code{\link[=ctrl_send]{ctrl_send()}}): a
 dimension becomes a condition only when the drilled subset resolves it to
 exactly one value. An undrilled table claims nothing and \code{unclaimed} decides
-what comes back.
-
-Two claim modes, as in \code{\link[=ctrl_send]{ctrl_send()}}. A structured table carries ARD
-identity columns and \code{columns} stays \code{NULL}. An aggregated table (one
-display row standing for many records) has none: name its group columns in
-\code{columns}. A frame with neither errors instead of reporting zero rows.
+what comes back. A structured table carries ARD identity columns and
+\code{columns} stays \code{NULL}. An aggregated table (one display row standing for
+many records) has none: name its group columns in \code{columns}. A frame with
+neither errors instead of reporting zero rows.
 }
 \section{Rows defined by a predicate}{
 A display row such as "Any Serious AEs" is not a level of anything. A
-producer writes the predicate it counted with on a \strong{\code{.filter}} column and
-this function applies it to the source. It composes with the pairs: a
-predicate row inside a treatment column resolves to the rows matching the
-predicate and in that arm. A frame carrying \code{.filter} needs no \code{.variable} /
-\code{.variable_level}.
-
-The expression is the producer's own string, evaluated against \code{source},
-the frame it was computed on. It must yield a logical vector.
+producer writes the predicate it counted with on a \strong{\code{.filter}} column, as
+an R expression string that yields a logical vector when evaluated against
+\code{source}. It composes with the pairs: a predicate row inside a treatment
+column resolves to the rows matching the predicate and in that arm. A frame
+carrying \code{.filter} needs no \code{.variable} / \code{.variable_level}.
 }
 
 \examples{

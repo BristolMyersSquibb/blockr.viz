@@ -106,7 +106,7 @@ test_that("declared kinds reach the browser in the engine's vocabulary", {
     "data"
   )
   ps <- parsed_of(txt)
-  roles <- dd_script_roles(ps$specs)
+  roles <- script_control_records(ps$specs)
   names(roles) <- vapply(roles, `[[`, character(1L), "name")
 
   expect_equal(roles$num$kind, "number")
@@ -133,7 +133,7 @@ test_that("a declaration that cannot become a control says why", {
   # levels. Carried through with its message rather than dropped: a knob that
   # quietly fails to appear is the hardest kind to debug.
   ps <- parsed_of("site <- factor(character(), levels = unique(data$NOPE))\ndata")
-  roles <- dd_script_roles(ps$specs)
+  roles <- script_control_records(ps$specs)
   expect_length(roles, 1L)
   expect_equal(roles[[1L]]$kind, "error")
   expect_true(nzchar(roles[[1L]]$error))
@@ -142,11 +142,11 @@ test_that("a declaration that cannot become a control says why", {
 
 test_that("a control the user has not touched shows what the script says", {
   ps <- parsed_of(script_of("n <- 7", "flag <- FALSE", "data"))
-  cfg <- dd_script_cfg(ps$specs, list())
+  cfg <- script_control_values(ps$specs, list())
   expect_equal(cfg$sv_n, 7)
   expect_equal(cfg$sv_flag, "off")
 
-  cfg <- dd_script_cfg(ps$specs, list(n = 2, flag = TRUE))
+  cfg <- script_control_values(ps$specs, list(n = 2, flag = TRUE))
   expect_equal(cfg$sv_n, 2)
   expect_equal(cfg$sv_flag, "on")
 })
@@ -399,4 +399,41 @@ test_that("a script's values are title slots, at the script's default until set"
   # A value never shadows a block setting of the same name.
   expect_identical(script_title_args(roles, ps$specs, list(by = "x"))$by,
                    "Species")
+})
+
+test_that("annotations bound a control, helpers feed a declaration lazily", {
+  ps <- parsed_of(script_of(
+    "n <- 6 #| number(min = 1, max = 50, label = 'Rows')",
+    "k <- 2 #| min = 0, max = 5",
+    "lv <- unique(as.character(data$Species))",
+    "sp <- factor(\"setosa\", levels = lv)",
+    "on <- TRUE",
+    "d0 <- as.Date(\"2026-01-01\")",
+    "w <- \"x\"",
+    "w <- toupper(w)",
+    "pick <- factor(c(\"a\", \"b\"), levels = c(\"a\", \"b\", \"c\"))",
+    "utils::head(dplyr::filter(data, Species %in% sp), n)"
+  ))
+  by_name <- stats::setNames(ps$specs,
+                             vapply(ps$specs, `[[`, "", "name"))
+  expect_named(by_name, c("n", "k", "sp", "on", "d0", "pick"))
+  expect_equal(by_name$n[c("min", "max", "label")],
+               list(min = 1, max = 50, label = "Rows"))
+  expect_equal(by_name$k[c("min", "max")], list(min = 0, max = 5))
+  expect_identical(by_name$sp$default, "setosa")
+  role <- script_control_records(ps$specs)[[1L]]
+  expect_identical(role$label, "Rows")
+
+  # Values arrive from the browser as text and lists, and are read by kind.
+  out <- dd_prepare_run(datasets::iris, ps$parsed, ps$specs, list(
+    n = "3", on = list("false"), d0 = "2026-02-01", pick = list(),
+    sp = list("versicolor")
+  ))
+  expect_null(out$error)
+  expect_identical(nrow(out$data), 3L)
+  expect_identical(unique(as.character(out$data$Species)), "versicolor")
+  expect_identical(cb_coerce(list(), by_name$pick), character())
+  expect_false(cb_coerce(list("false"), by_name$on))
+  expect_identical(cb_coerce("2026-02-01", by_name$d0), as.Date("2026-02-01"))
+  expect_null(cb_coerce("abc", by_name$n))
 })

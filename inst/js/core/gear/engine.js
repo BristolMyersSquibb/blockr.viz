@@ -21,9 +21,6 @@
   const S = V.gear.sections;
   const C = V.gear.controls;
 
-  /** Free text that takes more than one line (controls.js draws a textarea). */
-  const MULTILINE = ['script', 'expr', 'fn'];
-
   /**
    * How wide a row is in the section's grid (chart.css): tiles, editors,
    * templates and multi-line text take the whole width; a control with a
@@ -33,8 +30,8 @@
    */
   const rowClass = (ctx, boxed) => {
     const control = ctx.arg.gear ? ctx.arg.gear.control : '';
-    if (control === 'tiles' || control === 'none' || control === 'template') return ' dd-role-tiles';
-    if (MULTILINE.includes(ctx.key)) return ' dd-script-row';
+    if (control === 'tiles' || control === 'custom' || control === 'template') return ' dd-role-tiles';
+    if (control === 'code' || control === 'script') return ' dd-script-row';
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' dd-role-paired';
     }
@@ -74,7 +71,7 @@
       /** @type {string | null} */
       this._group = null;
       /** @type {VizScope | null} */
-      this._rs = null;
+      this._renderScope = null;
       this._drawn = '';
       this.disposed = false;
     }
@@ -149,7 +146,7 @@
     _shown(key, values) {
       const arg = this.spec[key];
       if (!arg || !arg.gear) return false;
-      if (arg.gear.control === 'none' && !this.host.custom) return false;
+      if (arg.gear.control === 'custom' && !this.host.custom) return false;
       if (this.typeKey && !S.applies(arg, values[this.typeKey])) return false;
       if (arg.gear.when && !C.isSet(values[arg.gear.when])) return false;
       return !this.host.visible || this.host.visible(key, values) !== false;
@@ -170,8 +167,8 @@
     render() {
       if (this.disposed) return;
       const focus = this._saveFocus();
-      if (this._rs) this._rs.dispose();
-      const rs = this._rs = new V.Scope();
+      if (this._renderScope) this._renderScope.dispose();
+      const rs = this._renderScope = new V.Scope();
       const values = this.values();
       this._drawn = this._key();
       this.el.textContent = '';
@@ -228,31 +225,11 @@
         this.render();
       };
       const labels = keys.map((k) => this.label(k, values));
-      const Sel = /** @type {VizUi} */ (root.Blockr).Select;
-      if (Sel) {
-        const inst = Sel.single(row, {
-          options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
-          label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
-        });
-        scope.own({ dispose: () => inst.destroy() });
-        return;
-      }
-      const sel = document.createElement('select');
-      sel.className = 'dd-select dd-add-select';
-      sel.setAttribute('aria-label', 'Add a mapping');
-      sel.setAttribute('data-gear-input', '.add');
-      const first = document.createElement('option');
-      first.value = '';
-      first.textContent = '+ Add a mapping';
-      sel.appendChild(first);
-      keys.forEach((key, i) => {
-        const o = document.createElement('option');
-        o.value = key;
-        o.textContent = labels[i];
-        sel.appendChild(o);
+      const inst = /** @type {VizUi} */ (root.Blockr).Select.single(row, {
+        options: labels, selected: '', allowEmpty: true, placeholder: '+ Add a mapping',
+        label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
       });
-      scope.on(sel, 'change', () => add(sel.value));
-      row.appendChild(sel);
+      scope.own({ dispose: () => inst.destroy() });
     }
 
     /** A field being typed in, so a re-render can put it back. */
@@ -287,7 +264,7 @@
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
       const arg = this.spec[key];
-      if (!arg || !arg.gear || arg.gear.control === 'none') return null;
+      if (!arg || !arg.gear || arg.gear.control === 'custom') return null;
       const values = this.values();
       const name = arg.type.name;
       const listed = this._listed(key);
@@ -327,19 +304,18 @@
     dispose() {
       if (this.disposed) return;
       this.disposed = true;
-      if (this._rs) this._rs.dispose();
-      this._rs = null;
+      if (this._renderScope) this._renderScope.dispose();
+      this._renderScope = null;
       this._pending.clear();
       this.el.textContent = '';
     }
   }
 
   /**
-   * A gear button and its tray, appended to a view's header `head`: blockr.ui's
-   * Blockr.gearTray when the page has it, else the button toggles the tray.
-   * The header gets `vz-head--open` while the tray is open; a tray left open
-   * is closed when `scope` goes, which takes it off blockr.ui's dismiss
-   * stack.
+   * A gear button and its tray, appended to a view's header `head`, opened
+   * and closed by blockr.ui's Blockr.gearTray. The header gets
+   * `vz-head--open` while the tray is open; a tray left open is closed when
+   * `scope` goes, which takes it off blockr.ui's dismiss stack.
    * @param {HTMLElement} head @param {VizScope} scope @param {string} label
    * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
    *             isOpen(): boolean }}
@@ -352,26 +328,13 @@
     const band = document.createElement('div');
     band.className = 'blockr-settings blockr-settings--beak dd-popover';
     head.append(btn, band);
-    const ui = root.Blockr;
-    let open = false;
-    const own = ui.gearTray ? ui.gearTray(band, btn, { label }) : null;
-    const set = (/** @type {boolean} */ on) => {
-      if (own) { own.set(on); return; }
-      open = on;
-      band.classList.toggle('blockr-settings--open', on);
-      btn.classList.toggle('blockr-gear-active', on);
-      btn.setAttribute('aria-expanded', String(on));
-    };
-    if (!own) {
-      btn.setAttribute('aria-label', label);
-      btn.setAttribute('aria-expanded', 'false');
-      scope.on(btn, 'click', () => set(!open));
-    }
+    const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
+    const set = (/** @type {boolean} */ on) => tray.set(on);
     const sync = () => head.classList.toggle('vz-head--open',
                                              btn.getAttribute('aria-expanded') === 'true');
     scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
     scope.own({ dispose: () => set(false) });
-    return { band, button: btn, set, isOpen: () => (own ? own.isOpen() : open) };
+    return { band, button: btn, set, isOpen: () => tray.isOpen() };
   };
 
   /**

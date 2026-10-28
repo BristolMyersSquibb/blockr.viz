@@ -29,12 +29,10 @@ exhibit that renders itself, such as a \code{summarize_exhibit} from
 \item{caption}{Trailing footnote, rendered under the table.}
 
 \item{default_expanded}{Logical. \code{TRUE} (default) opens every section, since
-the page scrolls and has no height to budget. \code{FALSE} opens it at its
-section rows.}
+the page scrolls and has no height to budget. \code{FALSE} opens the table at its section rows.}
 
 \item{collapsible, sortable}{Logical. Whether the saved page keeps the
-collapse chevrons and the click-to-sort headers (both \code{TRUE} by default).
-The table block passes its own display toggles through here.}
+collapse chevrons and the click-to-sort headers (both \code{TRUE} by default).}
 
 \item{...}{Passed to \code{\link[=html_exhibit]{html_exhibit()}}.}
 }
@@ -43,16 +41,15 @@ The table block passes its own display toggles through here.}
 }
 \description{
 The HTML sibling of \code{\link[=write_annotated_xlsx]{write_annotated_xlsx()}} and \code{\link[=write_exhibit_pptx]{write_exhibit_pptx()}}. The
-table is drawn by \code{\link[=html_exhibit]{html_exhibit()}} (the markup, CSS and collapse script the
-app shows) inside a minimal document shell that carries the title, subtitle
-and caption.
+table is drawn by \code{\link[=html_exhibit]{html_exhibit()}} inside a minimal document shell that
+carries the title, subtitle and caption.
 }
 \details{
-The file is self-contained: no Shiny, no CDN, no sidecar \verb{lib/} folder.
-The display table inlines its own \verb{<style>} and \verb{<script>}. A renderer that
-carries dependencies, such as the summarize table's script bundle, has them
-read off disk and written into the document. Section collapse and column
-sorting work in the saved file, offline.
+The file is self-contained: no Shiny, no CDN, no sidecar folder. The
+display table inlines its own \verb{<style>} and \verb{<script>}, and the
+dependencies of a renderer such as the summarize table are read off disk
+and written into the document. Section collapse and column sorting work in
+the saved file, offline.
 }
 \examples{
 f <- tempfile(fileext = ".html")

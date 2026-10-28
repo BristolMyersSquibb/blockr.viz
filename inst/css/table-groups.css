@@ -26,6 +26,25 @@
   --blockr-summarize-lane-max: 320px;
 }
 .blockr-summarize-table { width: 100%; }
+/* A groups table runs its full length and the panel around it scrolls up
+   and down; the box scrolls sideways only. blockr.ui's preview stylesheet
+   makes every .blockr-table-wrapper a 400px scroll box, hence max-height.
+   The header cannot stick to the panel from inside a box that scrolls
+   sideways, so groups.js moves it down instead. Separate borders, because
+   with collapsed ones the table paints the line under the moved header in
+   place, and a strip of rows shows through. */
+.blockr-summarize-container > .vz-body > .blockr-table-wrapper {
+  max-height: none;
+  overflow-y: hidden;
+}
+.blockr-summarize-container .blockr-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.blockr-summarize-container .blockr-table thead {
+  position: relative;
+  z-index: 3;
+}
 /* Column widths ride on the CELLS: the header cells come from the table
    block's (table/html.js), so they carry its classes, not ours. */
 .blockr-summarize-table td.blockr-summarize-bar-col {
@@ -175,14 +194,6 @@
 /* Sorting affordance: none of our own. The header cells are the records
    layout's (table/html.js), so the .blockr-sortable cursor and the
    .blockr-sort-icon arrow come from table.css and read the same. */
-
-/* The by_level facet layout's spanning header row (one cell per facet
-   level over its summary group) -- centred, with a hairline under the
-   span so the group reads as one unit. */
-.blockr-summarize-table th.blockr-th-group {
-  text-align: center;
-  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
-}
 
 /* Bars: segments TOUCH, and only the VALUE end is rounded. The end a bar grows
    to is a measurement and gets the cosmetic --blockr-mark-radius; the end at
@@ -583,6 +594,7 @@
 }
 .lane-sum-body[hidden] { display: none; }
 .lane-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lane-sum-field--wide { grid-column: 1 / -1; }
 .lane-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
                                 color: var(--blockr-color-text-muted, #6b7280); }
 .lane-sum-addcol { align-self: flex-start; min-width: 200px; }
@@ -713,8 +725,7 @@
    A heading has 11px above it and 3px below; the last row of a group has
    7px below it. */
 .blockr-summarize-table[data-summarize-nested='1'] td.blockr-summarize-label-col,
-.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header,
-.blockr-summarize-table[data-summarize-nested='1'] tr.blockr-summarize-fold > td {
+.blockr-summarize-table[data-summarize-nested='1'] th.blockr-stub-header{
   padding-left: 24px;
 }
 .blockr-summarize-table[data-summarize-nested='1'] tbody tr.is-parent > td {
@@ -752,20 +763,14 @@
   text-overflow: clip;
   white-space: normal;
 }
-.blockr-summarize-table tr.blockr-summarize-fold td {
-  font-style: italic;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.blockr-summarize-table tr.blockr-summarize-hidden-search { display: none; }
 
-/* Legend + footer. */
-/* The legend is its own row under the control row (search + gear), so a long
-   legend can never push the search box around. */
 /* A column whose custom function failed: dashes, grey. The error itself is
    the block's (blockr conditions). */
 .blockr-summarize-table td.blockr-summarize-txt.is-failed {
   color: var(--blockr-color-text-muted, #9ca3af);
 }
+/* The legend is its own row under the control row (search + gear), so a long
+   legend can never push the search box around. */
 .blockr-summarize-legend {
   padding: 0.35rem 0.25rem 0.15rem;
   display: flex;
@@ -799,17 +804,6 @@
   border-radius: 2px;
   display: inline-block;
 }
-.blockr-summarize-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0.1rem 0;
-  font-size: 0.75rem;
-  color: var(--blockr-color-text-muted, #6b7280);
-}
-.blockr-summarize-note { color: var(--blockr-color-text-warning, #b45309); }
 /* The tile: a square mark with its value, painted by the cell's level. An
    empty cell is truly empty. */
 .blockr-summarize-table td.blockr-summarize-tile-col {

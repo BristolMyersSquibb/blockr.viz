@@ -100,8 +100,9 @@ test_that("the empty-able and the controllable arguments come from the spec", {
 })
 
 test_that("a chart keeps block attributes it does not own through a restore", {
-  blk <- new_chart_block(type = "bar", x = "a", visible = "outputs")
-  expect_identical(attr(blk, "visible"), "outputs")
+  # A saved board carries blockr.dock's `visible`; in code it is an error.
+  blk <- new_chart_block(type = "bar", x = "a")
+  attr(blk, "visible") <- "outputs"
   expect_silent(out <- blockr.core::blockr_deser(blockr.core::blockr_ser(blk)))
   expect_identical(attr(out, "visible"), "outputs")
   expect_warning(old <- new_chart_block(chart_type = "line"), "`chart_type`")
@@ -128,4 +129,9 @@ test_that("the table's pct_of reads as percent_of, in code and in a saved board"
   st <- legacy_restore("table", list(layout = "groups", pct_of = "total"))
   expect_identical(st$percent_of, "total")
   expect_false("pct_of" %in% names(st))
+})
+
+test_that("the old summary table constructor is the variables layout", {
+  b <- new_summary_table_block(by = "ARM")
+  expect_identical(blockr.core::blockr_ser(b)$payload$layout, "variables")
 })

@@ -1,11 +1,12 @@
-#' Running the chart block's prepare script
+#' Running a block's prepare script
 #'
-#' Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the block:
-#' run the compiled script on the frame the chart draws, splice it into the
-#' block's expression behind the click filter, and describe its controls to
-#' the browser.
+#' Between the parse layer (R/prepare-parse.R, R/prepare-expr.R) and the
+#' block's reactives (viz_script_sources(), R/kit-script.R): run the compiled
+#' script on the frame the block draws, and splice it into the block's
+#' expression. Its controls as the browser and the titles see them are in
+#' R/prepare-controls.R.
 #'
-#' @name chart-prepare-apply
+#' @name prepare-apply
 #' @keywords internal
 NULL
 
@@ -44,7 +45,7 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
     return(list(data = data, error = NULL))
   }
 
-  body <- cb_expr(parsed, specs, values, data_name = "data", slot = FALSE)
+  body <- cb_expr(parsed, specs, values, slot = FALSE)
 
   # All declarations and no body is a half-written script, not an error.
   if (is.null(body)) {
@@ -113,15 +114,19 @@ dd_drill_post <- function(cols, src_cols = NULL) {
 
 #' Splice an expression into every `.(data)` slot of another
 #'
-#' The block's expression is the click filter with the script wrapped around
-#' it, so the drill filter applies to the source rows: a click names a mark by
-#' a column the upstream data has, which the script may not keep. The script's
-#' `.(data)` marker is replaced by the whole filter call, which carries the one
-#' remaining marker. A click on a column the script makes is filtered after
-#' the script (dd_drill_post()).
+#' A block's expression is built from pieces that each read `.(data)`: the
+#' compiled prepare script, the click filter, the code that builds a table.
+#' Nesting one into another replaces the outer piece's marker with the inner
+#' piece, which carries the one remaining marker.
 #'
-#' @param e The outer expression (the compiled script).
-#' @param repl The expression to splice in (the filter call).
+#' The chart puts the click filter inside the script, so it filters the
+#' source rows: a click names a mark by a column the upstream data has,
+#' which the script may not keep. A click on a column the script makes is
+#' filtered after the script (dd_drill_post()). The table puts the script
+#' inside its filter, and the variables layout its build call.
+#'
+#' @param e The outer expression.
+#' @param repl The expression to splice in.
 #' @noRd
 dd_splice_slot <- function(e, repl) {
 
@@ -133,160 +138,4 @@ dd_splice_slot <- function(e, repl) {
     return(e)
   }
   cb_map_args(e, function(a) dd_splice_slot(a, repl))
-}
-
-
-#' Describe a script's controls for the browser
-#'
-#' One record per control, in the engine's role vocabulary, so the band renders
-#' them with the `_buildControl()` every mapping row uses. A flag becomes the
-#' engine's boolean `segmented`; the other kinds map across unchanged.
-#'
-#' Specs that failed (a mistyped column name in a factor's levels) are carried
-#' through with their message, so a missing control says why.
-#'
-#' @param specs Input specs from [cb_specs()].
-#' @return A list of records, JSON-ready.
-#' @noRd
-dd_script_roles <- function(specs) {
-
-  lapply(specs, function(s) {
-
-    label <- gsub("[._]", " ", s$name)
-    label <- paste0(toupper(substr(label, 1L, 1L)), substring(label, 2L))
-
-    label <- s$label %||% label
-
-    if (!is.null(s$error) || is.na(s$kind)) {
-      return(list(name = s$name, key = dd_script_key(s$name), label = label,
-                  kind = "error", error = s$error %||% "no control"))
-    }
-
-    rec <- list(
-      name = s$name,
-      key = dd_script_key(s$name),
-      label = label,
-      kind = switch(s$kind,
-        select = if (isTRUE(s$multiple)) "multi" else "select",
-        flag = "segmented",
-        s$kind
-      )
-    )
-
-    if (identical(s$kind, "select")) {
-      # Bare strings, not {value, label} pairs: the select would show a
-      # labelled option as "setosa (setosa)".
-      rec$options <- as.list(as.character(s$choices))
-    }
-    if (identical(s$kind, "flag")) {
-      rec$options <- list(list(value = "on", label = rec$label),
-                          list(value = "off", label = rec$label))
-    }
-    for (k in c("min", "max", "step", "placeholder")) {
-      if (!is.null(s[[k]])) rec[[k]] <- s[[k]]
-    }
-
-    rec
-  })
-}
-
-
-#' The config key a script control writes to
-#'
-#' Script controls use the ordinary config channel, so they share the gear's
-#' change path (debounce, restore, the band's renderer). The prefix keeps a
-#' script variable called `color` from writing the chart's colour mapping.
-#'
-#' @param name The declared variable name.
-#' @noRd
-dd_script_key <- function(name) {
-  paste0("sv_", name)
-}
-
-
-
-#' Current script values, in the engine's vocabulary
-#'
-#' The band's controls are config rows and read their value from the config
-#' object. An untouched control shows the declaration's value.
-#'
-#' @param specs Input specs from [cb_specs()].
-#' @param values Named list of current control values.
-#' @return A named list of `sv_*` config entries.
-#' @noRd
-dd_script_cfg <- function(specs, values = list()) {
-
-  out <- list()
-
-  for (s in specs) {
-
-    if (!is.null(s$error) || is.na(s$kind)) {
-      next
-    }
-
-    v <- values[[s$name]]
-    if (is.null(v)) {
-      v <- s$default
-    }
-
-    out[[dd_script_key(s$name)]] <- switch(
-      s$kind,
-      flag = if (isTRUE(as.logical(v))) "on" else "off",
-      # as.list() keeps a single pick a JSON array instead of a string.
-      select = if (isTRUE(s$multiple)) as.list(as.character(v)) else
-        as.character(v)[[1L]],
-      date = format(as.Date(v)),
-      number = as.numeric(v)[[1L]],
-      as.character(v)[[1L]]
-    )
-  }
-
-  out
-}
-
-
-#' A block's arguments plus its script values, as a title template reads them
-#'
-#' A template names a declared value by its variable (`{@top_n}`), so the
-#' script's values join the block's own roles. A role wins a collision. An
-#' untouched value falls back to the declaration's default. A flag prints its
-#' control's label when on and nothing when off, so a `[ ... ]` clause can
-#' carry it.
-#'
-#' @param roles Named list of the block's own arguments.
-#' @param specs Input specs from [cb_specs()].
-#' @param values Named list of current control values.
-#' @return A named list.
-#' @noRd
-script_title_args <- function(roles, specs, values = list()) {
-
-  vals <- values
-  for (s in specs) {
-    if (!is.null(s$error) || is.na(s$kind)) next
-    if (is.null(vals[[s$name]])) vals[[s$name]] <- s$default
-  }
-
-  if (!length(vals)) {
-    return(roles)
-  }
-
-  vals <- vals[setdiff(names(vals), names(roles))]
-  specs_ok <- Filter(function(s) is.null(s$error) && !is.na(s$kind), specs)
-  vals <- vals[names(vals) %in% vapply(specs_ok, `[[`, "", "name")]
-
-  recs <- dd_script_roles(specs_ok)
-  labs <- stats::setNames(
-    vapply(recs, function(r) as.character(r$label %||% r$name)[[1L]], ""),
-    vapply(recs, function(r) as.character(r$name)[[1L]], "")
-  )
-
-  for (nm in names(vals)) {
-    v <- vals[[nm]]
-    if (is.logical(v) && length(v) == 1L) {
-      w <- if (nm %in% names(labs)) unname(labs[[nm]]) else nm
-      vals[[nm]] <- if (isTRUE(v)) w else ""
-    }
-  }
-
-  c(roles, vals)
 }

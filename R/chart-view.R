@@ -1,8 +1,9 @@
 # What the chart sends the browser: one payload with the state as the spec
-# writes it (viz_wire()), the rows the current mapping needs, and `derived`:
-# what R computes for the drawing and never takes back. The pieces are cached
-# on exactly their inputs, so a setting that changes only the drawing reuses
-# them.
+# writes it (viz_wire()), the rows the current mapping needs, a description
+# of every column of the input (the gear picks from all of them), and
+# `derived`: what R computes for the drawing and never takes back. The pieces
+# are cached on exactly their inputs, so a setting that changes only the
+# drawing reuses them.
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
@@ -10,15 +11,15 @@ chart_view <- function(kit, src) {
   revs <- kit$revs
   session <- kit$session
   rows <- viz_rows()
+  wire_cache <- last_value_cache()
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
-  board_theme <- setup_drilldown_theme_sync(session)
+  board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
-  ctrl_choices <- dd_ctrl_choices()
 
   band <- shiny::reactive({
-    v <- chart_state_values(state)
+    v <- viz_values(state)
     d <- src$plain()
     a <- chart_band_args(v, d)
     if (is.null(a)) {
@@ -28,7 +29,7 @@ chart_view <- function(kit, src) {
                function() chart_band(v, d, a))
   })
   smoother <- shiny::reactive({
-    v <- chart_state_values(state)
+    v <- viz_values(state)
     d <- src$plain()
     a <- chart_smoother_args(v, d)
     if (is.null(a)) {
@@ -41,39 +42,35 @@ chart_view <- function(kit, src) {
     d <- src$plain()
     shiny::req(is.data.frame(d))
     inp <- tryCatch(src$input(), error = function(e) NULL)
-    chart_titles(spec, chart_state_values(state), d,
+    chart_titles(spec, viz_values(state), d,
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
-                 src$specs())
+                 src$prep$specs())
   })
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(chart_state_values(state), d, src$kinds())
+    cols <- chart_needed_cols(viz_values(state), d, src$kinds())
     d[, cols, drop = FALSE]
   })
 
   payload <- function() {
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    v <- chart_state_values(state)
-    viz_payload(spec, v, rows(shipped()), revs, derived = list(
-      column_meta = meta_cache(d, function() dd_col_meta(d)),
+    v <- viz_values(state)
+    df <- shipped()
+    w <- wire_cache(df, function() viz_wire_df(df))
+    viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
-      scales = chart_config_json(dd_scales_config(
+      scales = shiny_json(dd_scales_config(
         scale_map(), v$type, color = v$color,
         group = chart_category(v, src$kinds()), data = d
       )),
       palette = as.list(dd_palette()),
-      theme = board_theme(),
-      ctrl_choices = dd_ctrl_choices_list(ctrl_choices()),
-      script = list(inputs = dd_script_roles(src$specs()),
-                    values = dd_script_cfg(src$specs(), v$script_values),
-                    error = src$run()$error),
-      capture_ratio = canvas_capture_ratio()
-    ))
+      theme = board_theme()
+    ), columns = meta_cache(d, function() viz_wire_columns(d)))
   }
   list(payload = payload, titles = titles)
 }
@@ -111,48 +108,12 @@ chart_needed_cols <- function(v, d, kinds) {
   needed[nzchar(needed) & needed %in% names(d)]
 }
 
-# The chart text resolved against the data, in the shape core/titles.js
-# reads: each band its text, its pieces (the words a reader may set) and the
-# settings offered where a clause dropped; NULL with nothing to show. `args` is
-# what each `{@arg}` prints now, `choices` the lists a sentence gives its
-# words. Slots name the spec's arguments, plus the prepare script's declared
-# values.
+# The chart text (viz_titles()): slots name the spec's arguments, the
+# prepare script's declared values and the highlight.
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
-  band <- function(tpl, auto_text) {
-    text <- resolve_block_title(tpl, d, auto = auto_text, args = a)
-    parts <- block_title_parts(tpl, d, auto = auto_text, args = a)
-    offers <- as.list(attr(parts, "offers"))
-    empty <- !length(text) || is.na(text[[1L]]) || !nzchar(text[[1L]])
-    if (empty && !length(offers)) {
-      return(NULL)
-    }
-    list(text = text, parts = parts, offers = offers)
-  }
-  list(
-    title = band(v$title, auto$label),
-    subtitle = band(v$subtitle, auto$subtitle),
-    caption = band(v$caption, auto$caption),
-    args = lapply(stats::setNames(nm = names(a)), arg_token_value, args = a),
-    choices = lapply(
-      template_slot_choices(list(v$title, v$subtitle, v$caption)), as.list
-    )
-  )
-}
-
-# An export can ask for a picture of the chart whether or not its panel was
-# open: the browser draws it offscreen from this payload.
-chart_capture_service <- function(session, el, payload) {
-  register_chart_capture(el, function(token, width, height) {
-    msg <- tryCatch(shiny::isolate(payload()), error = function(e) NULL)
-    if (is.null(msg)) {
-      stop("chart block '", el, "' has no data to draw yet", call. = FALSE)
-    }
-    session$sendCustomMessage("blockr-viz:capture", c(
-      msg, list(req = token, width = width, height = height)
-    ))
-  })
+  viz_titles(v, d, auto, a)
 }
 
 # What the downloads write (export-registry.R): the numbers the chart shows,
@@ -161,7 +122,7 @@ chart_capture_service <- function(session, el, payload) {
 # format is clicked.
 chart_exhibit <- function(kit, src, view) {
   function() {
-    v <- chart_state_values(kit$state)
+    v <- viz_values(kit$state)
     kinds <- src$kinds()
     data <- chart_xlsx_frame(
       src$plain(), chart_type = v$type, group = chart_category(v, kinds),
@@ -170,12 +131,15 @@ chart_exhibit <- function(kit, src, view) {
     )
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
+    # The footer's {dataset} and {filters} are the input's: the numbers the
+    # chart shows carry neither.
+    input <- tryCatch(kit$data(), error = function(e) NULL)
     new_viz_exhibit(
-      data, picture = chart_picture(kit$capture()),
+      data, picture = kit$capture(),
       title = text(ti$title), subtitle = text(ti$subtitle),
       caption = text(ti$caption), kind = "chart",
-      meta = list(dataset = tryCatch(dl_dataset(kit$data()),
-                                     error = function(e) NULL))
+      meta = list(dataset = if (is.data.frame(input)) dl_dataset(input),
+                  source = input)
     )
   }
 }
@@ -188,14 +152,6 @@ chart_value_col <- function(v, kinds) {
     return(NULL)
   }
   if (identical(cat, v$x)) v$y else v$x
-}
-
-# The browser's picture as a chart_capture, or NULL.
-chart_picture <- function(cap) {
-  if (is.null(cap) || inherits(cap, "chart_capture")) {
-    return(cap)
-  }
-  new_chart_capture(chart_capture_decode(cap$png), cap$width, cap$height)
 }
 
 # What the Excel download holds: one row per mark for the aggregated types

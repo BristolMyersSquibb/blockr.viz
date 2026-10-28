@@ -9,8 +9,8 @@ const { loadPure, plain, measure } = require('./load');
 
 const C = loadPure({ roles: true });
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name, extra) => ({ name, type: 'numeric', ...extra });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name, extra) => ({ name, class: 'number', ...extra });
 const COLUMNS = [cat('ID'), cat('ARM', { label: 'Arm' }), cat('SEX'), cat('VIS', { levels: ['Base', 'W2'] }),
                  num('DAY', { label: 'Study Day' }), num('VAL'), num('LO'), num('HI')];
 const ROWS = [
@@ -23,9 +23,9 @@ const BASE = { type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' };
 
 // `derived` is what R computes beside the config: the band, the smoother.
 const build = (cfg, look = {}, derived = {}) => {
-  const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
-  const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-  const o = C.option.individual(m, { cfg: c, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
+  const c = C.model.settings({ ...BASE, ...cfg }, COLUMNS);
+  const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c, derived });
+  const o = C.option.individual(m, { cfg: c, derived, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600, 600, 600], ...look });
   return { m, o, c, po: o.panels[0], opt: o.panels[0].option };
 };
@@ -266,41 +266,16 @@ test('D5: a band level dims with its halo and ribbon', () => {
                          [1, 1, 1, 0.15, 0.15]);
 });
 
-test('the option reads only the config fields it and the model list', () => {
-  const configs = [
-    [{}],
-    [{ color: 'ARM', facet: 'SEX', ymin: ['LO'], ymax: ['HI'], x_lines: [{ value: 1, label: null }],
-       y_lines: [{ value: 2, label: null }] }],
-    [{ type: 'line', series: 'ID', connect: 'straight', line_width: 2 }],
-    [{ type: 'line', x: 'VIS', color: 'ARM', point_size: 2 }],
-    [{ smoother: 'lm', identity_line: true, drill: null }, { smoother: {} }],
-    [{ type: 'band', color: 'ARM', box_points: 'outliers' },
-     { band: { series: BAND, refs: { hi: { col: 'HI', value: 7 } } } }]
-  ];
-  const allowed = new Set([...C.model.individual.FIELDS, ...C.option.individual.FIELDS]);
-  for (const [cfg, derived] of configs) {
-    const c = C.model.settings({ ...BASE, ...cfg }, derived, COLUMNS);
-    const m = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: COLUMNS, cfg: c });
-    const read = new Set();
-    // `derived` is read through too: a field is listed as `derived.<key>`.
-    const dspy = new Proxy(c.derived, { get(t, k) { read.add('derived.' + String(k)); return t[k]; } });
-    const spy = new Proxy(c, { get(t, k) { if (k !== 'derived') read.add(k); return k === 'derived' ? dspy : t[k]; } });
-    C.option.individual(m, { cfg: spy, columns: COLUMNS, ink: C.INK_DEFAULT, theme: null,
-                             measure, widths: [600, 600, 600] });
-    const extra = [...read].filter((k) => typeof k === 'string' && !allowed.has(k));
-    assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
-  }
-});
-
 test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the month', () => {
-  const columns = [{ name: 'MONTH', type: 'categorical', temporal: 'date' }, num('VAL'), cat('G')];
+  const columns = [{ name: 'MONTH', class: 'date' }, num('VAL'), cat('G')];
   const rows = ['2020-01-01', '2020-02-01', '2020-03-01'].flatMap((d, i) =>
     [{ MONTH: d, VAL: i, G: 'a' }, { MONTH: d, VAL: i + 5, G: 'b' }]);
-  const c = C.model.settings({ type: 'line', x: 'MONTH', y: 'VAL', color: 'G' }, {}, columns);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
+  const derived = {};
+  const c = C.model.settings({ type: 'line', x: 'MONTH', y: 'VAL', color: 'G' }, columns);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c, derived });
   assert.strictEqual(m.x.type, 'time');
   assert.strictEqual(m.x.period, 'month');
-  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+  const o = C.option.individual(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
   const opt = o.panels[0].option;
   assert.strictEqual(opt.useUTC, true);
@@ -314,14 +289,15 @@ test('a Date x is a time axis: ISO dates placed in ms, the tooltip names the mon
 });
 
 test('a quarterly line over ten years on a 650 px card has no dots', () => {
-  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'D', class: 'date' }, num('VAL')];
   const rows = (n) => Array.from({ length: n }, (_, i) =>
     ({ D: new Date(Date.UTC(2015, 3 * i, 1)).toISOString().slice(0, 10), VAL: i }));
-  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
+  const derived = {};
+  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, columns);
   const dots = (n) => {
     const r = rows(n);
-    const m = C.model.individual({ rows: r, ix: new C.RowIndex(), columns, cfg: c });
-    return C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+    const m = C.model.individual({ rows: r, ix: new C.RowIndex(), columns, cfg: c, derived });
+    return C.option.individual(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
                                     measure, widths: [650] }).panels[0].option.series[0].showSymbol;
   };
   // about 16 px apart: the 9 px dots would cover most of the line
@@ -331,12 +307,13 @@ test('a quarterly line over ten years on a 650 px card has no dots', () => {
 });
 
 test('a dense line has no dots; a gantt keeps a Date x a category', () => {
-  const columns = [{ name: 'D', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'D', class: 'date' }, num('VAL')];
   const rows = Array.from({ length: 200 }, (_, i) =>
     ({ D: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10), VAL: i }));
-  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, {}, columns);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
-  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+  const derived = {};
+  const c = C.model.settings({ type: 'line', x: 'D', y: 'VAL' }, columns);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c, derived });
+  const o = C.option.individual(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
   assert.strictEqual(o.panels[0].option.series[0].showSymbol, false);
   assert.strictEqual(m.x.period, 'day');
@@ -383,16 +360,17 @@ test('an area fills and stacks a colour split, from zero, without dots', () => {
 });
 
 test('x_lines on a Date x: placed as dates, labelled by name or by the date', () => {
-  const columns = [{ name: 'DAY', type: 'categorical', temporal: 'date' }, num('VAL')];
+  const columns = [{ name: 'DAY', class: 'date' }, num('VAL')];
   const rows = ['2026-10-14', '2026-10-21', '2026-10-28'].map((d, i) => ({ DAY: d, VAL: i }));
+  const derived = {};
   const c = C.model.settings({
     type: 'line', x: 'DAY', y: 'VAL',
     x_lines: [{ value: '2026-10-21', label: 'Listed' }, { value: '2026-10-27', label: null },
               { value: 'junk', label: null }],
     x_ranges: { Up: [{ value: '2026-10-21', label: null }, { value: '2026-10-28', label: null }] }
-  }, {}, columns);
-  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c });
-  const o = C.option.individual(m, { cfg: c, columns, ink: C.INK_DEFAULT, theme: null,
+  }, columns);
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns, cfg: c, derived });
+  const o = C.option.individual(m, { cfg: c, derived, columns, ink: C.INK_DEFAULT, theme: null,
                                      measure, widths: [600] });
   const ml = o.panels[0].option.series[0].markLine.data;
   // Junk draws nothing.

@@ -1,27 +1,23 @@
 // @ts-check
 /**
  * Chart block: the aggregated option. One ECharts option per panel, built by
- * the chart type's builder (option-bar.js, option-radial.js,
- * option-distribution.js), with its canvas height, the `xFit` inputs a resize
- * re-fits and a thinned-label note. Also the legend chips and the highlight
- * patch, which dims the marks a filter does not light.
+ * the chart type's builder, with its canvas height, the `xFit` inputs a
+ * resize re-fits and a thinned-label note. Also the legend chips and the
+ * highlight patch, which dims the marks a filter does not light.
+ *
+ * Each builder file exports under its own name: option.barParts (bar,
+ * waterfall), option.radialParts (pie, treemap), option.distributionParts
+ * (box plot, point range), with option.barMarkParts beside them. Here the
+ * part they all share, option.aggregatedCommon(), and builderOf(), which
+ * names the builder of each type.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
-  const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
-  const { withItemStyle } = parts;
-
-  // Config fields the option reads beside the model's.
-  const OPTION_FIELDS = ['type', 'position', 'orientation', 'value_labels', 'y_lines',
-    'percent_of', 'waterfall_totals', 'connect_centers', 'drill', 'derived.palette',
-    'derived.scales', 'measure', 'func', 'show_n', 'summary', 'whiskers', 'box_points',
-    'category', 'color', 'facet', 'format', 'unit', 'derived.titles', 'legend', 'x_lines',
-    'x_ranges'];
+  const { withItemStyle } = option.barMarkParts;
 
   // The opacity of a mark a filter does not light.
   const DIM = 0.15;
@@ -29,9 +25,10 @@
   const DEFAULT_PANEL_H = 350;
 
   /** What every builder shares: the option's base, the value's title, the aggregation's name and
-   * the tooltip's rows. @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any }} look
+   * the tooltip's rows.
+   * @param {ChartLook} look
    */
-  parts.common = (look) => {
+  option.aggregatedCommon = (look) => {
     const { cfg, columns, ink } = look;
     const title = (/** @type {any} */ col) => NS.axes.axisTitle(columns, col);
     const fn = cfg.func || 'count';
@@ -50,7 +47,7 @@
       aggPairs: (/** @type {number} */ value, /** @type {number} */ n,
                  /** @type {number} */ percent) => {
         /** @type {Array<[string, any]>} */
-        const pairs = [[aggLabel, NS.ddNum(value)]];
+        const pairs = [[aggLabel, V.util.num(value)]];
         if (percent != null) pairs.push(['Share', Math.round(percent) + '%']);
         if (cfg.func !== 'count' && cfg.func !== 'identity' && n != null) pairs.push(['n', n]);
         return pairs;
@@ -61,16 +58,15 @@
   /** The builder for a chart type. @param {any} m */
   const builderOf = (m) => {
     const ct = m.type;
-    if (ct === 'pie') return parts.pie;
-    if (NS.DISTRIBUTION_TYPES.includes(ct)) return parts.distribution;
-    if (ct === 'treemap') return parts.treemap;
-    return m.cumulative ? parts.waterfall : parts.bar;
+    if (ct === 'pie') return option.radialParts.pie;
+    if (NS.DISTRIBUTION_TYPES.includes(ct)) return option.distributionParts.distribution;
+    if (ct === 'treemap') return option.radialParts.treemap;
+    return m.cumulative ? option.barParts.waterfall : option.barParts.bar;
   };
 
   /**
    * @param {any} m the aggregated model
-   * @param {{ cfg: Record<string, any>, columns: VizColumn[], ink: any, theme: any,
-   *           measure: (s: string) => number, widths?: number[] }} look
+   * @param {ChartLook} look
    * @returns {{ panels: Array<{ option: any, height: string, panelH: number, xFit: any }>,
    *             labelNote: string | null }}
    */
@@ -95,27 +91,27 @@
     });
     return { panels, labelNote };
   };
-  aggregated.FIELDS = OPTION_FIELDS;
 
   /**
    * The legend chips: a distribution's split levels, else a bar's colour
    * levels. Pie, treemap and waterfall have none.
-   * @param {any} m @param {Record<string, any>} cfg
+   * @param {any} m @param {ChartSettings} cfg @param {ChartDerived} derived
    * @returns {{ col: string, items: Array<{ name: string, color: string }> } | null}
    */
-  const aggregatedLegend = (m, cfg) => {
+  const aggregatedLegend = (m, cfg, derived) => {
     const ct = m.type;
     const levels = m.distribution ? m.levels
       : (ct !== 'pie' && ct !== 'treemap' && !m.cumulative ? m.colors : []);
     if (!levels.length) return null;
-    const palette = NS.paletteOf(cfg);
+    const palette = NS.paletteOf(derived);
     // A highlight lists only the levels it lights.
     const colors = (m.hlColors && !m.distribution)
       ? NS.litLevelColors(levels, m.hlColors, m.colorScale, palette)
       : NS.levelColors(levels, m.colorScale, palette);
     const items = levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
       ({ name, color: colors[i] })).filter((/** @type {any} */ it) => it.color);
-    return items.length ? { col: cfg.color, items } : null;
+    // Levels come from the colour column, so it is set.
+    return items.length ? { col: /** @type {string} */ (cfg.color), items } : null;
   };
 
   // Series patched only while a filter dims something (or to undo it).

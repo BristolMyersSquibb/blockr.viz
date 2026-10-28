@@ -285,7 +285,10 @@
 
 /* ===== Type tiles ===== */
 /* Positions the gear popover. */
-.dd-card { position: relative; }
+.vz-frame { position: relative; }
+/* The frame hides a part with `hidden`; a part's own display rule must not
+   show it again. */
+.vz-frame [hidden] { display: none !important; }
 .dd-layout-tiles {
   display: grid;
   /* Five a row in a 560px gear, three in a 360px panel. */
@@ -486,16 +489,15 @@
 }
 
 /* ===== Title, subtitle, caption =====
-   Rendered by chart/chrome.js _updateTitles() from the resolved title text.
-   The whole band hides while empty, so a chart without titles has no gap. */
-.dd-chart-titles { padding: 2px 2px 6px; }
-.dd-chart-title {
+   Painted by core/frame.js titles() from the resolved title text. A band
+   hides while empty, so a block without titles has no gap. */
+.vz-title {
   font-size: var(--blockr-font-size-lg, 1rem);
   font-weight: 600;
   color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
-.dd-chart-subtitle {
+.vz-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
   color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
@@ -506,7 +508,7 @@
    denominator) on its own line. `\n` in the template is that newline
    (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and the
    text stays a text node: bands are data-derived, never HTML. */
-.dd-chart-caption {
+.vz-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-grey-500, #6b7280);
   padding: 6px 2px 0;
@@ -550,10 +552,10 @@
    line it would sit on the underlined words above it. A subtitle or caption
    carrying offers gets taller lines throughout, which keeps its spacing even
    whether a line holds words, offers or both. */
-:is(.dd-chart-subtitle, .dd-table-subtitle):has(.blockr-slot-offer) { line-height: 2.25; }
+.vz-subtitle:has(.blockr-slot-offer) { line-height: 2.25; }
 /* The caption's text is a pixel smaller, so it needs more line height for the
    same gap. */
-:is(.dd-chart-caption, .dd-table-caption):has(.blockr-slot-offer) { line-height: 2.35; }
+.vz-caption:has(.blockr-slot-offer) { line-height: 2.35; }
 .blockr-slot-offer:hover,
 .blockr-slot-offer:focus-visible {
   border-color: var(--blockr-color-primary, #2563eb);
@@ -589,7 +591,7 @@
 }
 
 /* ===== Legend band =====
-   One legend for the whole chart (chart/chrome.js _updateLegendBand), shown
+   One legend for the whole chart (chart/legend.js), shown
    once under a facet grid, or above it with `legend = "top"`. Left-aligned on
    the title's and the caption's edge, in the chart text's size
    (--blockr-mark-font-size, as the axes and the names on the marks) and the
@@ -676,22 +678,28 @@
    The fade is linear, not the mark's ease-in. Grey text is invisible around
    opacity 0.3, so only the top two thirds of the ramp are seen; under ease-in
    that stretch was squeezed into the last ~350ms and the line read as cut.
-   The `animation` shorthand is set inline by chart/chrome.js, not here:
-   _updateStatus() rebuilds this element on every chart re-render, and a fresh
+   The `animation` shorthand is set inline by core/frame.js, not here: the
+   frame repaints this element on every change of the line, and a fresh
    element would restart the animation. The delay is computed from the age of
    the receipt, so a rebuild resumes the fade instead of replaying it. Only
    the keyframes and the colour belong in CSS. */
 .dd-status-receipt { color: var(--blockr-color-text-secondary, #374151); }
-/* The chart's line sits under the caption and is there only while a filter or
-   a receipt is (chart/chrome.js _updateStatus): nothing filtered, no line and
-   no gap. There is no Reset; a second click on the selected mark clears. */
-.dd-card > .dd-status-footer {
+/* The frame's footer sits under the caption: a count and the status line,
+   each there only while it has words (core/frame.js): nothing filtered, no
+   line and no gap. A second click on the selected mark also clears. */
+.vz-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vz-foot > .vz-count:empty,
+.vz-foot > .dd-status-footer:empty { display: none; }
+.vz-foot > .dd-status-footer {
   justify-content: flex-start;
   gap: 12px;
   padding: 4px 2px 0;
 }
-.dd-card > .dd-status-footer:empty { display: none; }
-.dd-card > .dd-status-footer .dd-status-cap { margin-left: 0; }
+.vz-foot .dd-status-cap { margin-left: 0; }
 /* The resting line coming back after a receipt. Without this it snaps into the
    slot the receipt just dissolved out of, which moves the cut one step later
    and does not remove it. */
@@ -750,7 +758,7 @@
 .vz-head.vz-head--open { grid-template-areas: ". . gear" "tray tray tray" "titles tools tools"; }
 .vz-head.vz-head--open > .vz-head__tools { justify-self: end; }
 .vz-head.vz-head--open > .blockr-settings { margin: 8px 0 10px; }
-.dd-card .vz-head > .dd-chart-titles { padding: 2px 8px 0 2px; }
+.vz-frame > .vz-head > .vz-head__titles { padding: 2px 8px 0 2px; }
 
 /* ===== Exposed mapping band =====
    Mapping roles promoted out of the gear onto the block's face (the chart

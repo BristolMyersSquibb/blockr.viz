@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { after } = require('node:test');
 const { Window } = require('happy-dom');
+const { installUiFake } = require('../ui-fake');
 const { CORE_FILES } = require('./load');
 
 const JS = path.join(__dirname, '..', '..', '..', 'inst', 'js');
@@ -79,6 +80,8 @@ function loadGear(opts = {}) {
   if (opts.ui) {
     for (const f of UI_FILES) win.eval(fs.readFileSync(path.join(findUi(), f), 'utf8'));
     win.Blockr.icons = win.Blockr.icons || {};
+  } else {
+    installUiFake(win);
   }
   const listeners = countListeners(win);
   // With a sourceURL, so c8 maps the coverage to the file.

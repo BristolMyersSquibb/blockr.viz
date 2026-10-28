@@ -32,15 +32,15 @@ html_exhibit(
 
 \item{title, subtitle, caption}{Table title / subtitle / footnote. \code{NULL}
 (default) takes them from the annotated data frame's display attributes,
-\code{""} switches them off: the same title-tier convention as
-\code{\link[=static_table]{static_table()}}. The default method ignores \code{subtitle}.}
+\code{""} switches them off, as in \code{\link[=static_table]{static_table()}}. The default renderer
+ignores \code{subtitle}.}
 
 \item{max_height}{CSS max-height of the scroll container, or \code{NULL}
-(default) for none. A report exhibit is printed rather than scrolled.}
+(default) for none.}
 
 \item{default_expanded}{Logical, or \code{NULL} (default) to decide from the
-table's height: a table that fits opens expanded, one that does not opens
-at its section rows. The threshold is
+table's height: a table that fits opens expanded, a taller one opens at
+its section rows. The threshold is
 \code{getOption("blockr.viz.html_exhibit_expanded_max_rows")} (24).}
 
 \item{...}{Passed to the method.}
@@ -54,14 +54,12 @@ A \code{\link[htmltools:tagList]{htmltools::tagList()}}.
 \description{
 The HTML counterpart of \code{\link[=static_table]{static_table()}}: the same annotated data frame,
 rendered as the HTML display table the app draws, with its styles and its
-collapse / search script inlined. Nothing in the output talks to Shiny, so
-it can be written to a standalone HTML file.
+collapse script inlined. Nothing in the output talks to Shiny.
 }
 \details{
 Called by \code{\link[=static_exhibit]{static_exhibit()}} when the render target is HTML. It is a
-generic: an exhibit that carries its own renderer (the summarize table's
-glyph model) answers for itself, and everything else falls to the default,
-an annotated data frame drawn as the display table.
+generic: an exhibit that carries its own renderer (the summarize table)
+answers for itself, and everything else is drawn as the display table.
 }
 \examples{
 tbl <- summary_table(iris, vars = "Sepal.Length", by = "Species")

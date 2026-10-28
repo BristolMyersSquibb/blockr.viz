@@ -8,8 +8,8 @@ const { loadPure, plain } = require('./load');
 
 const C = loadPure();
 
-const cat = (name, extra) => ({ name, type: 'categorical', ...extra });
-const num = (name) => ({ name, type: 'numeric' });
+const cat = (name, extra) => ({ name, class: 'string', ...extra });
+const num = (name) => ({ name, class: 'number' });
 const COLUMNS = [cat('T', { label: 'Term' }), cat('ID'), cat('ARM'), cat('SEV'),
                  num('S'), num('E'), num('D'), cat('V')];
 
@@ -24,11 +24,10 @@ const ROWS = [
 const BASE = { type: 'gantt', x: 'S', xend: 'E', y: 'T', drill: 'auto' };
 
 // `derived` is R's derived object (the colour scales).
-const settingsOf = (cfg, columns = COLUMNS, derived = {}) =>
-  C.model.settings({ ...BASE, ...cfg }, derived, columns);
+const settingsOf = (cfg, columns = COLUMNS) => C.model.settings({ ...BASE, ...cfg }, columns);
 
 const build = (cfg, rows = ROWS, columns = COLUMNS, derived = {}) => C.model.timeline(
-  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns, derived) });
+  { rows, ix: new C.RowIndex(), columns, cfg: settingsOf(cfg, columns), derived });
 
 test('one mark per row with an x; a missing end makes a dot', () => {
   const m = build({});
@@ -50,7 +49,7 @@ test('one mark per row with an x; a missing end makes a dot', () => {
 
 test('no x or y: an empty state', () => {
   const m = build({ x: '' });
-  assert.match(m.empty, /Select X \(start\) and Y \(term\) columns/);
+  assert.match(m.empty.message, /Select X \(start\) and Y \(term\) columns/);
   assert.strictEqual(m.panels.length, 0);
 });
 

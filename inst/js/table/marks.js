@@ -61,12 +61,12 @@
    * @param {number} i Row.
    */
   function segment(c, j, i) {
-    const lab = c.mode !== 'grouped' && c.slab ? at(c.slab[j], i) : null;
+    const lab = c.mode !== 'grouped' && c.segLabels ? at(c.segLabels[j], i) : null;
     return '<div class="blockr-summarize-fill' + (lab ? ' has-lab' : '') + '" data-seg="' + j +
-      '" style="width:' + n(c.seg[j][i]) + '%;background:' + col(c.fills[j]) + '"' +
-      tipAttr(c.names[j] + ': ' + (c.segv[j][i] == null ? '' : c.segv[j][i])) + '>' +
+      '" style="width:' + n(c.segWidths[j][i]) + '%;background:' + col(c.fills[j]) + '"' +
+      tipAttr(c.names[j] + ': ' + (c.segValues[j][i] == null ? '' : c.segValues[j][i])) + '>' +
       (lab ? '<span class="blockr-summarize-seglab lw-' + String(lab).length + '" style="color:' +
-        col(c.sink ? c.sink[j] : '') + '">' + esc(lab) + '</span>' : '') + '</div>';
+        col(c.segInk ? c.segInk[j] : '') + '">' + esc(lab) + '</span>' : '') + '</div>';
   }
 
   /**
@@ -77,15 +77,15 @@
    */
   function split(c, i, labels) {
     const grouped = c.mode === 'grouped';
-    const ldisp = labels ? c.ldisp : null;
+    const ldisp = labels ? c.levelValues : null;
     let out = '';
     c.names.forEach((_, j) => {
-      if (!((c.segv[j][i] || 0) > 0)) return;
+      if (!((c.segValues[j][i] || 0) > 0)) return;
       const body = segment(c, j, i);
       if (grouped && ldisp) {
         out += '<div class="blockr-summarize-lv blockr-summarize-barwrap">' +
           '<div class="blockr-summarize-track is-lv">' + body + '</div>' +
-          barval(esc(at(ldisp[j], i)), c.dw) + '</div>';
+          barval(esc(at(ldisp[j], i)), c.valueWidth) + '</div>';
       } else {
         out += grouped ? '<div class="blockr-summarize-row3">' + body + '</div>' : body;
       }
@@ -113,14 +113,18 @@
   function box(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('bc') == null) return lane('boxcell', g, i, false) + '</div>';
+    if (v('median') == null) return lane('boxcell', g, i, false) + '</div>';
     let s = lane('boxcell', g, i, true);
-    if (v('w1') != null) s += '<i class="lane-wh" style="' + span(v('wl'), v('w1')) + '"></i>';
-    if (v('w2') != null) s += '<i class="lane-wh" style="' + span(v('b2'), v('w2')) + '"></i>';
-    if (v('w1') != null) s += '<i class="lane-cap" style="left:' + n(v('wl')) + '%"></i>';
-    if (v('w2') != null) s += '<i class="lane-cap" style="left:' + n(v('wh')) + '%"></i>';
-    if (v('bw') != null) s += '<i class="lane-box" style="' + span(v('bl'), v('bw')) + '"></i>';
-    return s + '<i class="lane-med" style="left:' + n(v('bc')) + '%"></i></div>';
+    if (v('whiskerLowWidth') != null) {
+      s += '<i class="lane-wh" style="' + span(v('whiskerLow'), v('whiskerLowWidth')) + '"></i>';
+    }
+    if (v('whiskerHighWidth') != null) {
+      s += '<i class="lane-wh" style="' + span(v('boxRight'), v('whiskerHighWidth')) + '"></i>';
+    }
+    if (v('whiskerLowWidth') != null) s += '<i class="lane-cap" style="left:' + n(v('whiskerLow')) + '%"></i>';
+    if (v('whiskerHighWidth') != null) s += '<i class="lane-cap" style="left:' + n(v('whiskerHigh')) + '%"></i>';
+    if (v('boxWidth') != null) s += '<i class="lane-box" style="' + span(v('boxLeft'), v('boxWidth')) + '"></i>';
+    return s + '<i class="lane-med" style="left:' + n(v('median')) + '%"></i></div>';
   }
 
   /**
@@ -131,32 +135,32 @@
   function pointrange(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('c') == null) return lane('prcell', g, i, false) + '</div>';
+    if (v('center') == null) return lane('prcell', g, i, false) + '</div>';
     let s = lane('prcell', g, i, true);
-    if (v('ow') != null) s += '<i class="lane-fence" style="' + span(v('ol'), v('ow')) + '"></i>';
-    if (v('rw') != null) s += '<i class="lane-rng" style="' + span(v('l'), v('rw')) + '"></i>';
-    return s + '<i class="lane-ctr" style="left:' + n(v('c')) + '%"></i></div>';
+    if (v('fenceWidth') != null) s += '<i class="lane-fence" style="' + span(v('fenceLeft'), v('fenceWidth')) + '"></i>';
+    if (v('rangeWidth') != null) s += '<i class="lane-rng" style="' + span(v('rangeLeft'), v('rangeWidth')) + '"></i>';
+    return s + '<i class="lane-ctr" style="left:' + n(v('center')) + '%"></i></div>';
   }
 
   /**
    * Pair (dumbbell): band, reference line, link, then the two ends.
    * @param {TablePairGeom} g
    * @param {number} i
-   * @param {number | null | undefined} rf
+   * @param {number | null | undefined} ref The reference line.
    */
-  function pair(g, i, rf) {
+  function pair(g, i, ref) {
     const fill = at(g.fill, i);
     let s = '<div class="blockr-summarize-lane blockr-summarize-pacell' +
       (g.dash && g.dash[i] ? ' is-dash' : '') + '"' +
       (fill != null ? ' style="--blockr-summarize-fill:' + col(fill) + '"' : '') +
       tipAttr(at(g.tip, i)) + '>';
-    if (g.bw[i] != null) s += '<i class="lane-band" style="' + span(g.bl[i], g.bw[i]) + '"></i>';
-    if (rf != null) s += '<i class="lane-ref" style="left:' + n(rf) + '%"></i>';
-    if (g.w[i] != null) s += '<i class="lane-link" style="' + span(g.l[i], g.w[i]) + '"></i>';
-    if (g.a[i] != null) s += '<i class="lane-from" style="left:' + n(g.a[i]) + '%"></i>';
-    if (g.b[i] != null) {
+    if (g.bandWidth[i] != null) s += '<i class="lane-band" style="' + span(g.bandLeft[i], g.bandWidth[i]) + '"></i>';
+    if (ref != null) s += '<i class="lane-ref" style="left:' + n(ref) + '%"></i>';
+    if (g.linkWidth[i] != null) s += '<i class="lane-link" style="' + span(g.linkLeft[i], g.linkWidth[i]) + '"></i>';
+    if (g.from[i] != null) s += '<i class="lane-from" style="left:' + n(g.from[i]) + '%"></i>';
+    if (g.to[i] != null) {
       s += '<i class="lane-to' + (g.open && g.open[i] ? ' is-open' : '') + '" style="left:' +
-        n(g.b[i]) + '%"></i>';
+        n(g.to[i]) + '%"></i>';
     }
     return s + '</div>';
   }
@@ -167,8 +171,8 @@
    * @param {number} i
    */
   function interval(c, i) {
-    let s = '<div class="blockr-summarize-lane blockr-summarize-ivcell" data-d0="' + n(c.d0) +
-      '" data-d1="' + n(c.d1) + '"' + (c.dd ? ' data-dd="1"' : '') + '>';
+    let s = '<div class="blockr-summarize-lane blockr-summarize-ivcell" data-d0="' + n(c.domainStart) +
+      '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') + '>';
     (c.segs[i] || []).forEach((g, j) => {
       s += '<i class="lane-seg" style="' + span(g[0], g[1]) + ';background:' +
         col(c.fills[Number(g[2]) - 1]) + '"' + (g.length > 3 ? ' data-l="' + esc(g[3]) + '"' : '') +
@@ -188,24 +192,24 @@
    */
   function sparkline(c, i) {
     let s = '<div class="blockr-summarize-lane blockr-summarize-spcell" data-xs="' +
-      esc(c.xs[i]) + '" data-ys="' + esc(c.ys[i]) + '">' +
+      esc(c.xValues[i]) + '" data-ys="' + esc(c.yValues[i]) + '">' +
       '<svg viewBox="0 0 100 36" preserveAspectRatio="none">';
-    if (c.rby != null) {
-      s += '<rect class="lane-refband" x="0" y="' + n(c.rby) + '" width="100" height="' +
-        n(c.rbh) + '"></rect>';
+    if (c.refBandY != null) {
+      s += '<rect class="lane-refband" x="0" y="' + n(c.refBandY) + '" width="100" height="' +
+        n(c.refBandHeight) + '"></rect>';
     }
-    if (c.bd && c.bd[i] != null) s += '<polygon class="lane-band" points="' + points(c.bd[i]) + '"></polygon>';
-    if (c.rc != null) {
-      s += '<line class="lane-refline" x1="0" y1="' + n(c.rc) + '" x2="100" y2="' + n(c.rc) +
+    if (c.band && c.band[i] != null) s += '<polygon class="lane-band" points="' + points(c.band[i]) + '"></polygon>';
+    if (c.refY != null) {
+      s += '<line class="lane-refline" x1="0" y1="' + n(c.refY) + '" x2="100" y2="' + n(c.refY) +
         '" vector-effect="non-scaling-stroke"></line>';
     }
-    if (c.pl[i]) {
-      s += '<polyline class="lane-ln" points="' + points(c.pl[i]) +
+    if (c.line[i]) {
+      s += '<polyline class="lane-ln" points="' + points(c.line[i]) +
         '" vector-effect="non-scaling-stroke"></polyline>';
     }
     s += '</svg>';
-    if (c.dx[i] != null) {
-      s += '<i class="lane-dot" style="left:' + n(c.dx[i]) + '%;top:' + n(c.dy[i]) + '%"></i>';
+    if (c.dotX[i] != null) {
+      s += '<i class="lane-dot" style="left:' + n(c.dotX[i]) + '%;top:' + n(c.dotY[i]) + '%"></i>';
     }
     return s + '</div>';
   }
@@ -217,8 +221,8 @@
    * @param {number} i
    */
   function drawn(c, g, i) {
-    if (c.kind === 'pair') return g.a[i] != null || g.b[i] != null;
-    return (c.kind === 'box' ? g.bc[i] : g.c[i]) != null;
+    if (c.kind === 'pair') return g.from[i] != null || g.to[i] != null;
+    return (c.kind === 'box' ? g.median[i] : g.center[i]) != null;
   }
 
   /**
@@ -230,14 +234,14 @@
    */
   function multi(c, i, labels) {
     let s = '<div class="blockr-summarize-multi">';
-    (c.lv || []).forEach((g, j) => {
+    (c.lanes || []).forEach((g, j) => {
       if (!drawn(c, g, i)) return;
-      const inner = c.kind === 'pair' ? pair(/** @type {TablePairGeom} */ (g), i, c.rf)
+      const inner = c.kind === 'pair' ? pair(/** @type {TablePairGeom} */ (g), i, c.reference)
         : c.kind === 'box' ? box(g, i) : pointrange(g, i);
-      const lab = labels && g.disp && c.dw != null;
+      const lab = labels && g.disp && c.valueWidth != null;
       s += '<div class="blockr-summarize-lv' + (lab ? ' blockr-summarize-barwrap' : '') +
         '" style="--blockr-summarize-fill:' + col((c.fills || [])[j]) + '">' + inner +
-        (lab ? barval(esc(at(g.disp, i)), c.dw) : '') + '</div>';
+        (lab ? barval(esc(at(g.disp, i)), c.valueWidth) : '') + '</div>';
     });
     return s + '</div>';
   }
@@ -252,12 +256,12 @@
   function glyph(c, i, labels) {
     if (!c) return '';
     switch (c.kind) {
-      case 'bar': return track(c.w[i], c.fill, !!(c.sub && c.sub[i]));
+      case 'bar': return track(c.width[i], c.fill, !!(c.sub && c.sub[i]));
       case 'barsplit': return split(c, i, labels);
-      case 'bardiv': return diverging(c.w[i], !!c.pos[i]);
+      case 'bardiv': return diverging(c.width[i], !!c.positive[i]);
       case 'box': return c.multi ? multi(c, i, labels) : box(c, i);
       case 'pointrange': return c.multi ? multi(c, i, labels) : pointrange(c, i);
-      case 'pair': return c.multi ? multi(c, i, labels) : pair(/** @type {TablePairGeom} */ (c), i, c.rf);
+      case 'pair': return c.multi ? multi(c, i, labels) : pair(/** @type {TablePairGeom} */ (c), i, c.reference);
       case 'interval': return interval(c, i);
       case 'sparkline': return sparkline(c, i);
       default: return '';
@@ -294,14 +298,16 @@
           esc(c.disp[i]) + '</td>';
     }
     if (m.kind === 'interval') {
-      return '<td class="blockr-summarize-bar-col' + (m.lg ? ' blockr-summarize-wide' : '') + '">' +
+      return '<td class="blockr-summarize-bar-col' + (m.large ? ' blockr-summarize-wide' : '') + '">' +
         glyph(m, i, o.labels) + '</td>';
     }
     const g = glyph(m, i, o.labels);
-    const own = m.kind === 'barsplit' || (/** @type {any} */ (m).multi);
-    const lab = o.labels && !own && 'dw' in m && m.dw != null && c.disp[i] != null;
+    // A grouped split and a multi lane label each level; a stacked split
+    // keeps its one total beside the bar.
+    const own = (m.kind === 'barsplit' && m.mode === 'grouped') || (/** @type {any} */ (m).multi);
+    const lab = o.labels && !own && 'valueWidth' in m && m.valueWidth != null && c.disp[i] != null;
     return '<td class="blockr-summarize-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (lab
-      ? '<div class="blockr-summarize-barwrap">' + g + barval(value(c, i), /** @type {any} */ (m).dw) +
+      ? '<div class="blockr-summarize-barwrap">' + g + barval(value(c, i), /** @type {any} */ (m).valueWidth) +
         '</div>'
       : g) + '</td>';
   }
@@ -315,7 +321,7 @@
   function axis(c, labels) {
     const a = c.axis;
     if (!a || !a.at || a.at.length < 2) return '';
-    const dw = labels && c.mark && 'dw' in c.mark ? /** @type {any} */ (c.mark).dw : null;
+    const dw = labels && c.mark && 'valueWidth' in c.mark ? /** @type {any} */ (c.mark).valueWidth : null;
     const ticks = a.at.map((p, k) => '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
       ' style="left:' + n(p) + '%">' + esc(a.labels[k]) + '</span>').join('');
     return '<div class="blockr-summarize-axis' + (dw != null ? ' has-val' : '') + '">' +

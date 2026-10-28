@@ -8,57 +8,6 @@ table_groups_text <- function(x) {
   x
 }
 
-# The display text of each row. A number or text is its own text; a mark has
-# its value label, or the label it would have had (rebuilt from the plan) when
-# it draws none. A swimlane's text is its segment tooltips.
-table_groups_disp <- function(c, p, ctx) {
-  if (identical(c$kind, "num")) {
-    return(table_groups_text(c$disp))
-  }
-  if (identical(c$kind, "interval")) {
-    return(table_groups_text(vapply(c$tips, function(tt) {
-      paste(unique(as.character(tt)), collapse = " | ")
-    }, character(1L))))
-  }
-  lab <- table_groups_labels(c)
-  if (is.null(lab) || !any(nzchar(lab))) {
-    p$show_val <- TRUE
-    lab <- table_groups_labels(cells_column(ctx, p))
-  }
-  table_groups_text(lab %||% rep(NA_character_, ctx$n))
-}
-
-# The value label of a cell model column, per row; `NULL` when it has none.
-# A colour split with one label per level reads "level label, level label".
-table_groups_labels <- function(c) {
-  if (isTRUE(c$multi)) {
-    return(table_groups_join_levels(
-      c$levels, lapply(c$lv, function(g) g$disp)
-    ))
-  }
-  if (identical(c$kind, "barsplit") && !is.null(c$ldisp)) {
-    return(table_groups_join_levels(c$names, c$ldisp))
-  }
-  if (is.null(c$disp)) NULL else as.character(c$disp)
-}
-
-# One text per row from one label vector per level (`NULL` for a level that
-# prints none): the levels with a label, in order, each led by its name.
-table_groups_join_levels <- function(levels, labs) {
-  keep <- !vapply(labs, is.null, logical(1L))
-  if (!any(keep)) {
-    return(NULL)
-  }
-  parts <- Map(function(lv, d) {
-    d <- as.character(d)
-    ifelse(nzchar(d), paste(lv, d), "")
-  }, as.character(levels)[keep], labs[keep])
-  vapply(seq_along(parts[[1L]]), function(i) {
-    one <- vapply(parts, function(x) x[[i]], character(1L))
-    paste(one[nzchar(one)], collapse = ", ")
-  }, character(1L))
-}
-
 # The mark of a column: the cell model's own fields less what the TableCol
 # holds itself (`disp`, `v`, `pct`, tile paint, claims), per-row vectors as
 # arrays. Flags travel only when true, empty references not at all. A number
@@ -77,8 +26,50 @@ table_groups_mark <- function(c) {
   labelled <- !is.null(c$disp) || isTRUE(c$multi) ||
     (identical(c$kind, "barsplit") && !is.null(c$ldisp))
   if (!labelled) g$dw <- NULL
-  groups_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
-                                        top = TRUE))
+  table_groups_wire(
+    groups_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
+                                       top = TRUE)),
+    c$kind
+  )
+}
+
+# The names the browser reads for the cell model's short keys, by mark kind.
+# The cell model and the PowerPoint painter keep the short ones.
+TABLE_GROUPS_KEYS <- list(
+  all = c(dw = "valueWidth", tt = "hover", nn = "count", lv = "lanes",
+          rf = "reference", ab = "fromTo", r = "raw"),
+  bar = c(w = "width"),
+  bardiv = c(w = "width", pos = "positive"),
+  barsplit = c(seg = "segWidths", segv = "segValues", slab = "segLabels",
+               sink = "segInk", ldisp = "levelValues"),
+  box = c(wl = "whiskerLow", w1 = "whiskerLowWidth", bl = "boxLeft",
+          bw = "boxWidth", bc = "median", b2 = "boxRight",
+          w2 = "whiskerHighWidth", wh = "whiskerHigh"),
+  pointrange = c(c = "center", l = "rangeLeft", rw = "rangeWidth",
+                 ol = "fenceLeft", ow = "fenceWidth"),
+  pair = c(a = "from", b = "to", l = "linkLeft", w = "linkWidth",
+           bl = "bandLeft", bw = "bandWidth"),
+  sparkline = c(pl = "line", bd = "band", dx = "dotX", dy = "dotY",
+                xs = "xValues", ys = "yValues", rc = "refY",
+                rby = "refBandY", rbh = "refBandHeight"),
+  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
+               lg = "large")
+)
+# The raw statistics a hover card prints (`r`).
+TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",
+                      wl = "whiskerLow", wh = "whiskerHigh")
+
+table_groups_wire <- function(g, kind) {
+  rename <- function(nm, map) {
+    hit <- nm %in% names(map)
+    nm[hit] <- map[nm[hit]]
+    nm
+  }
+  if (!is.null(g$r)) names(g$r) <- rename(names(g$r), TABLE_GROUPS_RAW)
+  if (!is.null(g$lv)) g$lv <- lapply(g$lv, table_groups_wire, kind = kind)
+  names(g) <- rename(names(g),
+                     c(TABLE_GROUPS_KEYS$all, TABLE_GROUPS_KEYS[[kind]]))
+  g
 }
 
 # A point range's fence band only where it has an outer range, per level.
