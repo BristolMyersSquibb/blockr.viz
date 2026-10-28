@@ -189,16 +189,19 @@ test('the shading editor round-trips every key of a rule', () => {
               { name: 'ARM', class: 'character', label: 'Arm' }],
     set: (x) => sets.push(JSON.parse(JSON.stringify(x)))
   };
+  ctx.scope = new V.Scope();
   V.table.gear.shadings(el, ctx);
+  const fire = (x, type) => x.dispatchEvent(new win.Event(type, { bubbles: true }));
   assert.equal(el.querySelectorAll('.vz-shade-cols label').length, 2);
   const boxes = el.querySelectorAll('.vz-shade-cols input');
   boxes[1].checked = true;
-  boxes[1].onchange();
+  fire(boxes[1], 'change');
   const mode = el.querySelector('select');
   mode.value = 'sequential';
-  mode.onchange();
-  el.querySelector('.vz-shade-add').onclick();
-  el.querySelector('.vz-shade-remove').onclick();
+  fire(mode, 'change');
+  fire(el.querySelector('.vz-shade-add'), 'click');
+  fire(el.querySelector('.vz-shade-remove'), 'click');
+  assert.ok(el.querySelector('.vz-shade-add').classList.contains('blockr-btn'));
   const dom = [{ value: -1, label: null }, { value: 1, label: null }];
   assert.deepEqual(sets, [
     [{ mode: 'bar', columns: ['AGE', 'WT'], domain: dom }],
@@ -317,4 +320,26 @@ test('50 mounts and unmounts leave nothing behind', async () => {
   assert.deepEqual(fifty, one);
   // One timer stays from the binding: it drops the last block's rows.
   assert.deepEqual(one, Object.assign({}, base, { timers: base.timers + 1 }));
+});
+
+test('the compact look turns the column titles on their side', () => {
+  const p = payload({ data: flatModel(3), config: { look: 'compact' } });
+  const t = mount(p);
+  assert.equal(t.$('table.blockr-table').getAttribute('data-dt-rotate-titles'), 'on');
+  t.render({ data: null, dataRev: p.data_rev, config: { look: 'table' } });
+  assert.equal(t.$('table.blockr-table').getAttribute('data-dt-rotate-titles'), null);
+  const el = t.win.document.body.appendChild(t.win.document.createElement('div'));
+  t.V.table.renderStatic(el, payload({ data: flatModel(3), config: { look: 'compact' } }),
+                         { gear: false, still: true });
+  assert.equal(el.querySelector('table.blockr-table').getAttribute('data-dt-rotate-titles'), 'on');
+});
+
+test('table.css rotates the titles the compact look marks', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'table.css'), 'utf8');
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \{/);
+  assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.blockr-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
+  const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
+  assert.match(dep, /"table\.css"/);
 });

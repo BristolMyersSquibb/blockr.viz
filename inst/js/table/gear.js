@@ -51,48 +51,117 @@
     return true;
   }
 
+  /** blockr.ui's controls, when the page has them. */
+  const ui = () => /** @type {any} */ (root.Blockr || {});
+
+  /**
+   * A pick among `options`: blockr.ui's Select, else a native select.
+   * @param {HTMLElement} el
+   * @param {{ value: string, label: string }[]} options
+   * @param {string} value '' for none: the placeholder shows.
+   * @param {{ label: string, placeholder?: string }} o
+   * @param {(v: string) => void} onPick
+   * @param {VizScope} scope
+   */
+  function pick(el, options, value, o, onPick, scope) {
+    const Sel = ui().Select;
+    if (Sel && typeof Sel.single === 'function') {
+      // Labels, as the engine passes them: an object option shows its value.
+      const labels = options.map((x) => x.label);
+      const at = options.findIndex((x) => x.value === value);
+      const inst = Sel.single(el, { options: labels, selected: at < 0 ? '' : labels[at],
+                                    allowEmpty: !!o.placeholder, placeholder: o.placeholder,
+                                    bordered: true, label: o.label,
+                                    onChange: (/** @type {string} */ v) => {
+                                      const k = labels.indexOf(v);
+                                      if (k >= 0) onPick(options[k].value);
+                                    } });
+      scope.own({ dispose: () => inst.destroy() });
+      return;
+    }
+    const sel = document.createElement('select');
+    sel.className = 'dd-select';
+    sel.setAttribute('aria-label', o.label);
+    const all = (o.placeholder ? [{ value: '', label: o.placeholder }] : []).concat(options);
+    for (const x of all) {
+      const opt = sel.appendChild(document.createElement('option'));
+      opt.value = x.value;
+      opt.textContent = x.label;
+      opt.selected = x.value === value;
+    }
+    scope.on(sel, 'change', () => { if (sel.value) onPick(sel.value); });
+    el.appendChild(sel);
+  }
+
+  /**
+   * A checkbox: blockr.ui's, else a native one in its markup.
+   * @param {HTMLElement} el
+   * @param {string} label
+   * @param {boolean} on
+   * @param {(on: boolean) => void} onToggle
+   * @param {VizScope} scope
+   */
+  function check(el, label, on, onToggle, scope) {
+    const box = ui().checkbox;
+    if (typeof box === 'function') {
+      el.appendChild(box(label, on, onToggle).el);
+      return;
+    }
+    const wrap = el.appendChild(document.createElement('label'));
+    wrap.className = 'blockr-checkbox';
+    const input = wrap.appendChild(document.createElement('input'));
+    input.type = 'checkbox';
+    input.checked = on;
+    wrap.append(' ' + label);
+    scope.on(input, 'change', () => onToggle(input.checked));
+  }
+
+  /**
+   * A design-system button.
+   * @param {string} cls Its own class and the blockr-btn modifiers.
+   * @param {string} text
+   * @param {string} label
+   * @param {() => void} fn
+   * @param {VizScope} scope
+   */
+  function button(cls, text, label, fn, scope) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'blockr-btn ' + cls;
+    b.textContent = text;
+    b.setAttribute('aria-label', label);
+    scope.on(b, 'click', fn);
+    return b;
+  }
+
   /**
    * One shading rule: its mode and the numeric columns it paints (none:
    * every numeric column no earlier rule names).
    * @param {Record<string, unknown>} rule
    * @param {VizPayload['columns']} numeric
    * @param {(next: Record<string, unknown> | null) => void} put
+   * @param {VizScope} scope
    */
-  function ruleEl(rule, numeric, put) {
+  function ruleEl(rule, numeric, put, scope) {
     const el = document.createElement('div');
     el.className = 'vz-shade-rule';
-    const mode = document.createElement('select');
+    const mode = el.appendChild(document.createElement('div'));
     mode.className = 'vz-shade-mode';
-    mode.setAttribute('aria-label', 'Mode');
-    mode.innerHTML = MODES.map(([value, label]) => '<option value="' + value + '"' +
-      (rule.mode === value ? ' selected' : '') + '>' + label + '</option>').join('');
-    mode.onchange = () => put(Object.assign({}, rule, { mode: mode.value }));
-    el.appendChild(mode);
+    pick(mode, MODES.map(([value, label]) => ({ value, label })), String(rule.mode || ''),
+         { label: 'Mode' }, (v) => put(Object.assign({}, rule, { mode: v })), scope);
     const on = new Set(/** @type {string[]} */ (rule.columns || []));
-    const cols = document.createElement('div');
+    const cols = el.appendChild(document.createElement('div'));
     cols.className = 'vz-shade-cols';
     for (const c of numeric) {
-      const lab = document.createElement('label');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.checked = on.has(c.name);
-      box.onchange = () => {
-        if (box.checked) on.add(c.name);
+      check(cols, c.label || c.name, on.has(c.name), (now) => {
+        if (now) on.add(c.name);
         else on.delete(c.name);
         const picked = numeric.map((x) => x.name).filter((n) => on.has(n));
         put(Object.assign({}, rule, { columns: picked.length ? picked : null }));
-      };
-      lab.append(box, ' ' + (c.label || c.name));
-      cols.appendChild(lab);
+      }, scope);
     }
-    el.appendChild(cols);
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'vz-shade-remove';
-    del.setAttribute('aria-label', 'Remove rule');
-    del.textContent = '×';
-    del.onclick = () => put(null);
-    el.appendChild(del);
+    el.appendChild(button('blockr-btn--quiet blockr-btn--xs vz-shade-remove', '×', 'Remove rule',
+                          () => put(null), scope));
     return el;
   }
 
@@ -107,20 +176,19 @@
       Array.isArray(ctx.values.shadings) ? ctx.values.shadings : []);
     const numeric = ctx.columns.filter((c) => /^(numeric|integer|double)$/.test(String(c.class)));
     el.textContent = '';
+    el.classList.add('vz-shadings');
     rules.forEach((rule, k) => {
       el.appendChild(ruleEl(rule, numeric, (next) => {
         const out = rules.slice();
         if (next) out[k] = next;
         else out.splice(k, 1);
         ctx.set(out);
-      }));
+      }, ctx.scope));
     });
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'vz-shade-add';
-    add.textContent = rules.length ? 'Add a rule' : 'Shade cells';
-    add.onclick = () => ctx.set(rules.concat([{ mode: 'diverging', columns: null, domain: null }]));
-    el.appendChild(add);
+    el.appendChild(button('blockr-btn--secondary blockr-btn--s vz-shade-add',
+                          rules.length ? 'Add a rule' : 'Shade cells', 'Add a shading rule',
+                          () => ctx.set(rules.concat([{ mode: 'diverging', columns: null, domain: null }])),
+                          ctx.scope));
   }
 
   /**
@@ -152,5 +220,6 @@
   }
 
   V.table.gear = { mount, visible, shadings };
+  V.table.ui = { pick, check, button };
   V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();
