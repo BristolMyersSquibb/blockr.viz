@@ -82,7 +82,8 @@ ANNOTATION_COLS <- c(".label", ".indent", ".strong", ".emph", ".fmt",
                      ".filter")
 ANNOTATION_GROUP_RE <- "^\\.group\\d+(_level|_label)?$"
 # Per-cell paint: `.bg:<col>` / `.fg:<col>` hold one hex colour per row for
-# data column `<col>`, NA where the cell is unpainted.
+# data column `<col>`, NA where the cell is unpainted. They are columns so
+# they survive the row and column slicing of the pptx pager.
 ANNOTATION_PAINT_RE <- "^\\.(bg|fg):"
 
 # The reserved annotation columns present in `data`.

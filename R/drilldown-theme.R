@@ -58,13 +58,11 @@ setup_drilldown_theme_sync <- function(session = NULL) {
 #' @export
 new_drilldown_theme_option <- function(value = "default",
                                        category = "Chart options", ...) {
-  blockr.core::new_board_option(
-    id = "echart_theme",
-    default = value,
-    ui = function(id) {
+  new_input_option(
+    "echart_theme", value,
+    input = function(inputId) {
       shiny::selectInput(
-        shiny::NS(id, "echart_theme"),
-        "ECharts Theme",
+        inputId, "ECharts Theme",
         choices = c(
           "Default" = "default", "Blockr" = "blockr", "Dark" = "dark",
           "Vintage" = "vintage", "Westeros" = "westeros", "Essos" = "essos",
@@ -76,18 +74,9 @@ new_drilldown_theme_option <- function(value = "default",
         selected = value
       )
     },
-    server = function(..., session) {
-      shiny::observeEvent(
-        blockr.core::get_board_option_or_null("echart_theme", session),
-        shiny::updateSelectInput(
-          session, "echart_theme",
-          selected = blockr.core::get_board_option_value(
-            "echart_theme", session
-          )
-        )
-      )
+    update = function(session, id, val) {
+      shiny::updateSelectInput(session, id, selected = val)
     },
-    category = category,
-    ...
+    category = category, ...
   )
 }

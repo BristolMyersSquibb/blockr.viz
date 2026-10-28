@@ -159,7 +159,8 @@ pptx_add_exhibit.summarize_exhibit <- function(doc, x, title = NULL,
                                                max_rows = NULL, max_cols = NULL,
                                                min_font_size = NULL,
                                                ...) {
-  s <- pptx_paint_setup(doc, layout, master, title)
+  pptx_paint_require()
+  s <- pptx_slide_context(doc, title, layout, master)
   # The picture starts below the title's rendered text.
   top <- top %||% max(
     1.1,
@@ -213,54 +214,6 @@ summarize_pptx_pages <- function(common, n, title, font_size, min_font_size) {
                        floor = min_font_size, fit_size = fit)
   }
   pages
-}
-
-# Layout, master and slide size for painted pages, and whether the layout
-# carries the title.
-#' @noRd
-pptx_paint_setup <- function(doc, layout, master, title) {
-  if (!requireNamespace("officer", quietly = TRUE)) {
-    stop("pptx_add_exhibit() needs the 'officer' package.", call. = FALSE)
-  }
-  summarize_paint_require()
-  layouts <- officer::layout_summary(doc)
-  layout <- layout %||% if ("Title and Content" %in% layouts$layout) {
-    "Title and Content"
-  } else {
-    layouts$layout[[1L]]
-  }
-  master <- master %||% layouts$master[match(layout, layouts$layout)]
-  has_title <- is.character(title) && length(title) == 1L && nzchar(title)
-  list(
-    layout = layout, master = master,
-    width = tryCatch(officer::slide_size(doc)$width, error = function(e) 13.333),
-    height = tryCatch(officer::slide_size(doc)$height, error = function(e) 7.5),
-    slide_title = has_title && pptx_layout_has_title(doc, layout, master)
-  )
-}
-
-# One slide per painted page, centred, at the size it was painted for.
-#' @noRd
-pptx_add_pictures <- function(doc, pages, s, top, title, res) {
-  for (k in seq_along(pages)) {
-    p <- pages[[k]]
-    f <- tempfile(fileext = ".png")
-    rp_write_png(p, f, res = res)
-    doc <- officer::add_slide(doc, layout = s$layout, master = s$master)
-    if (s$slide_title) {
-      doc <- tryCatch(
-        officer::ph_with(
-          doc, pptx_page_title(title, c(k, length(pages))),
-          location = officer::ph_location_type(type = "title")),
-        error = function(e) doc)
-    }
-    doc <- officer::ph_with(
-      doc, officer::external_img(f, width = p$width, height = p$height),
-      location = officer::ph_location(
-        left = (s$width - p$width) / 2, top = top,
-        width = p$width, height = p$height))
-  }
-  doc
 }
 
 # The single ranked bar's arguments as the column list they map to

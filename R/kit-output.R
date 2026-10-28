@@ -70,6 +70,7 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
 # `derived` is what the server computes for the view (resolved titles, series,
 # download formats, an empty state); the client does not send it back.
 viz_payload <- function(spec, values, rows, revs, derived = list()) {
+  # An empty `derived` stays a named list, so it is an object on the wire.
   if (!length(derived)) derived <- structure(list(), names = character())
   list(
     state_rev = revs$now(),

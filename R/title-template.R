@@ -241,7 +241,7 @@ resolve_title_token <- function(token, data, args = list()) {
   if (!length(vals)) return(plain(""))
   if (length(vals) > TITLE_MAX_VALUES) {
     # \u-escaped: R sources must stay ASCII.
-    vals <- c(vals[seq_len(TITLE_MAX_VALUES)], "…")
+    vals <- c(vals[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
   plain(paste(vals, collapse = ", "))
 }

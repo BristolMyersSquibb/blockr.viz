@@ -43,7 +43,8 @@ pptx_fit_size <- function(ft, build, budget, size,
 }
 
 # Did the width allocator run out of slide? True when a data cell is narrower
-# than its longest word or a header breaks inside a word.
+# than its longest word or a header breaks inside a word. Splitting rows helps
+# with neither, so this is separate from the height check.
 pptx_width_squeezed <- function(ft) {
   sq <- attr(ft, "width_squeeze")
   isTRUE(sq[["cell"]]) || isTRUE(sq[["header"]])
@@ -424,6 +425,16 @@ pptx_title_bottom <- function(doc, layout, master, template, title,
     },
     error = function(e) NULL
   )
+}
+
+# Where the table starts: below the title's text, and not above `min_top`.
+pptx_table_top <- function(doc, ctx, template, title, min_top = NULL) {
+  max(min_top %||% 1.1,
+      if (ctx$slide_title) {
+        pptx_title_bottom(doc, ctx$layout, ctx$master, template, title) %||% 0
+      } else {
+        0
+      })
 }
 
 # Point size of the title text, from the master's title style. OOXML sizes

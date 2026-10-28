@@ -17,8 +17,8 @@
 #' @param title,subtitle Document heading and its muted second line. `NULL` or
 #'   `""` omits each.
 #' @param caption Trailing footnote, rendered under the table.
-#' @param default_expanded Logical. `TRUE` (default) opens every section.
-#'   `FALSE` opens the table at its section rows.
+#' @param default_expanded Logical. `TRUE` (default) opens every section, since
+#'   the page scrolls and has no height to budget. `FALSE` opens the table at its section rows.
 #' @param collapsible,sortable Logical. Whether the saved page keeps the
 #'   collapse chevrons and the click-to-sort headers (both `TRUE` by default).
 #' @param ... Passed to [html_exhibit()].
@@ -38,6 +38,8 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
                                caption = NULL, default_expanded = TRUE,
                                collapsible = TRUE, sortable = TRUE, ...) {
   # The exhibit's own title slot stays empty: the document heading says it.
+  # default_expanded is passed so html_exhibit()'s slide height rule does not
+  # apply to a file that scrolls.
   exhibit <- html_exhibit(
     x, title = "", subtitle = "", caption = caption,
     default_expanded = default_expanded, collapsible = collapsible,

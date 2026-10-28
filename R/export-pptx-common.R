@@ -235,16 +235,6 @@ pptx_add_exhibit.default <- function(doc, x, title = NULL, subtitle = NULL,
   doc
 }
 
-# Where the table starts: below the title's text, and not above `min_top`.
-pptx_table_top <- function(doc, ctx, template, title, min_top = NULL) {
-  max(min_top %||% 1.1,
-      if (ctx$slide_title) {
-        pptx_title_bottom(doc, ctx$layout, ctx$master, template, title) %||% 0
-      } else {
-        0
-      })
-}
-
 # Builds one page of the table: `build(data, rows, size, plan, continued,
 # page)` calls static_table() on the rows (all when NULL), with the layout
 # decisions in `plan` made on the whole table so every page matches.
@@ -359,7 +349,8 @@ pptx_report_plans <- function(plans, title, n_cols, min_font_size) {
   )
 }
 
-# One slide with one table (or page of a table), centred.
+# One slide with one table (or page of a table), centred. `top` is measured
+# from the layout's title and overrides static_table()'s own default.
 pptx_add_table_slide <- function(doc, ft, ctx, top, title = NULL) {
 
   doc <- pptx_blank_slide(doc, ctx, title)

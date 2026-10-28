@@ -64,7 +64,8 @@ pptx_add_exhibit.cards_exhibit <- function(doc, x, title = NULL,
                                              "blockr.viz.paint_res", 300),
                                            ...) {
   title <- title %||% x$title
-  s <- pptx_paint_setup(doc, layout, master, title)
+  pptx_paint_require()
+  s <- pptx_slide_context(doc, title, layout, master)
   top <- top %||% if (s$slide_title) 1.3 else 0.5
   pages <- cards_paint_pages(
     x, width_in = pptx_content_width(template) %||% (s$width - 0.8),

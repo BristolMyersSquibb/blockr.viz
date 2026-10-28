@@ -159,6 +159,7 @@ report_call.table_block <- function(x, var, ...) {
   }
 
   # Print-relevant surface only: how the table is built and what it says.
+  # Drill, search, sort and the ctrl transports are not part of a printed table.
   groups <- identical(state("layout"), "groups")
   spec <- if (groups) {
     list(by = NULL, summaries = NULL, id = NULL,
