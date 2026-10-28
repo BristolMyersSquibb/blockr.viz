@@ -355,3 +355,25 @@ test_that("a choice list is optional and lists merge per argument", {
     list(func = c("mean", "median"))
   )
 })
+
+test_that("the groups layout's slots print its settings and its first summary", {
+  v <- list(
+    by = c("ARM", "SEX"), id = "USUBJID", sort_by = "value", top_n = 5L,
+    drill = "auto",
+    summaries = list(list(type = "simple", col = "AGE", func = "mean",
+                          color = "RACE", facet = "SITE", fill = "GRADE")),
+    title = paste("{@group} {@parent} {@by} {@value} {@id_var} {@color}",
+                  "{@facet} {@fill} {@sort_by} {@top_n} {@drill}")
+  )
+  args <- table_groups_title_args(viz_block_spec("table"), v)
+  d <- data.frame(ARM = "A", SEX = "F", AGE = 1)
+  expect_identical(
+    viz_titles(v, d, list(), args)$title$text,
+    "ARM ARM SEX AGE USUBJID RACE SITE GRADE value 5 auto"
+  )
+  # One `by`: group and by are that column, no parent.
+  one <- table_groups_title_args(viz_block_spec("table"),
+                                 modifyList(v, list(by = "ARM")))
+  expect_identical(c(one$group, one$by), c("ARM", "ARM"))
+  expect_null(one$parent)
+})

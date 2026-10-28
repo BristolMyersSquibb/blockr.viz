@@ -189,3 +189,19 @@ test_that("the PowerPoint files reach nothing internal", {
   internal <- setdiff(intersect(reached, ls(ns, all.names = TRUE)), allowed)
   expect_identical(sort(internal), character())
 })
+
+test_that("a failed download shows a notification and still fails", {
+  said <- NULL
+  local_mocked_bindings(
+    showNotification = function(ui, ..., type = "default") {
+      said <<- list(ui = ui, type = type)
+    },
+    .package = "shiny"
+  )
+  expect_error(
+    expect_message(dl_guard("Excel", stop("disk full")), "download failed"),
+    "disk full"
+  )
+  expect_identical(said$type, "error")
+  expect_identical(said$ui, "The Excel download failed: disk full")
+})

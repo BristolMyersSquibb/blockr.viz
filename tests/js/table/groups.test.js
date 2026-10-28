@@ -429,3 +429,10 @@ test('hover: a card glyph gives its column\'s card', () => {
   assert.match(c.text, /^Placebo/);
   assert.match(c.text, /10 \(17%\)/);
 });
+
+test('bar_width: narrow, medium and wide set the table width; fit leaves it', () => {
+  for (const w of ['narrow', 'medium', 'wide', 'fit']) {
+    const t = mount(payload({ data: groups(), config: Object.assign({ bar_width: w }, G) }));
+    assert.equal(t.$('table').getAttribute('data-summarize-width'), w === 'fit' ? null : w, w);
+  }
+});

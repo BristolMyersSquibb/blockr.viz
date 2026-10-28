@@ -267,3 +267,13 @@ test('the model reads only the config fields it lists', () => {
     assert.deepStrictEqual(extra, [], `${JSON.stringify(cfg)} reads ${extra}`);
   }
 });
+
+test('summarizeStat: mean_2sd is two sd around the mean, p5_p95 the 5th to 95th percentile', () => {
+  const s = C.model.summarizeStat([2, 4], 'mean_2sd');
+  assert.strictEqual(s.center, 3);
+  assert.ok(Math.abs(s.lo - (3 - 2 * Math.SQRT2)) < 1e-12);
+  assert.ok(Math.abs(s.hi - (3 + 2 * Math.SQRT2)) < 1e-12);
+  const v = [];
+  for (let i = 0; i <= 100; i++) v.push(i);
+  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'p5_p95')), { center: 50, lo: 5, hi: 95 });
+});

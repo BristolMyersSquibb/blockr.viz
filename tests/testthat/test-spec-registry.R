@@ -72,3 +72,14 @@ test_that("slots print single values as they are and lists joined", {
   expect_identical(out$x_lines, "2024-01-02, 2024-02-01")
   expect_null(viz_slot_values(s, viz_check(s, list()))$y_lines)
 })
+
+test_that("the table's registry entry gives the assistant its arguments and guidance", {
+  b <- blockr.core::available_blocks()[["table_block"]]
+  args <- attr(b, "arguments")
+  expect_true(blockr.core::is_arg_specs(args))
+  expect_true(all(c("layout", "by", "summaries", "look", "drill", "stats") %in%
+                    names(args)))
+  expect_identical(names(args), names(viz_registry_args(viz_block_spec("table"))))
+  expect_identical(attr(b, "guidance"), table_guidance())
+  expect_match(attr(b, "guidance"), "layout", fixed = TRUE)
+})
