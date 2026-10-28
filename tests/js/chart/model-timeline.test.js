@@ -50,7 +50,7 @@ test('one mark per row with an x; a missing end makes a dot', () => {
 
 test('no x or y: an empty state', () => {
   const m = build({ x: '' });
-  assert.match(m.empty, /Select X \(start\) and Y \(term\) columns/);
+  assert.match(m.empty.message, /Select X \(start\) and Y \(term\) columns/);
   assert.strictEqual(m.panels.length, 0);
 });
 

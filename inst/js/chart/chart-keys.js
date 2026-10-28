@@ -7,16 +7,18 @@
  * as a filter {col: [values]}, the footer names the filter in column labels,
  * and a restored filter lights the marks that hold filtered rows. A missing
  * value ('' or null) is a key too, sent as null, which R matches with
- * is.na(). A range filter (a point or a brush on numeric axes) is {x_col,
- * y_col, x_range, y_range}, with the panel's key in `filters` in a facet
- * panel.
+ * is.na().
+ *
+ * A selection has the shape R reads (R/kit-input.R), in memory as on the
+ * wire: `{type: 'categorical', filters}`, or for a point or a brush on
+ * numeric axes `{type: 'range', x, y, x_range, y_range}`, with the panel's
+ * key in `filters` when it was taken in a facet panel.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
 
   /** @typedef {Record<string, any[]>} Filters */
 
@@ -64,46 +66,33 @@
   };
 
   /**
-   * The categorical filter a saved selection restores, or null.
-   * @param {Record<string, any>} cfg @returns {Filters | null}
+   * A range selection on columns `x` and `y`. `y` goes with `y_range`, and
+   * the panel's key in `filters` only when there is one.
+   * @param {string} x @param {string | null} y @param {any[]} xRange
+   * @param {any[] | null} yRange @param {Filters | null} [filters]
+   * @returns {ChartRangeSelection}
    */
-  const restored = (cfg) => {
-    const sel = cfg.selection;
-    if (!sel || sel.type === 'range') return null;
-    return clean(sel.filters);
-  };
-
-  /**
-   * The range filter a saved selection restores, with the facet key it was
-   * taken in, or null.
-   * @param {Record<string, any>} cfg
-   * @returns {{ range: { x_col: string, y_col: string | null, x_range: any[],
-   *                      y_range: any[] | null }, filters: Filters | null } | null}
-   */
-  const restoredRange = (cfg) => {
-    const r = cfg.selection;
-    if (!r || r.type !== 'range' || !r.x || !Array.isArray(r.x_range)) return null;
-    const yr = Array.isArray(r.y_range) && r.y_range.length ? r.y_range : null;
-    return {
-      range: { x_col: r.x, y_col: yr ? (r.y || null) : null, x_range: r.x_range, y_range: yr },
-      filters: clean(r.filters)
-    };
-  };
-
-  /**
-   * A range as the selection R reads, plus the facet key in `filters` when
-   * it was taken in a facet panel.
-   * @param {{ x_col: any, y_col: any, x_range: any, y_range: any }} range
-   * @param {Filters | null} [filters]
-   */
-  const rangeSelection = (range, filters) => {
-    /** @type {Record<string, any>} */
-    const sel = {
-      type: 'range', x: range.x_col, y: range.y_range ? range.y_col : null,
-      x_range: range.x_range, y_range: range.y_range
-    };
+  const range = (x, y, xRange, yRange, filters) => {
+    /** @type {ChartRangeSelection} */
+    const sel = { type: 'range', x, y: yRange ? y : null, x_range: xRange, y_range: yRange };
     if (filters && Object.keys(filters).length) sel.filters = filters;
     return sel;
+  };
+
+  /**
+   * The selection a saved one restores, cleaned, or null for none or one
+   * the chart cannot show.
+   * @param {any} sel @returns {ChartSelection | null}
+   */
+  const restore = (sel) => {
+    if (!sel || typeof sel !== 'object') return null;
+    if (sel.type === 'range') {
+      if (!sel.x || !Array.isArray(sel.x_range)) return null;
+      const yr = Array.isArray(sel.y_range) && sel.y_range.length ? sel.y_range : null;
+      return range(sel.x, sel.y || null, sel.x_range, yr, clean(sel.filters));
+    }
+    const filters = clean(sel.filters);
+    return filters ? { type: 'categorical', filters } : null;
   };
 
   // Above this many values a column is named with its count, not its values.
@@ -148,18 +137,15 @@
    * The words for a range filter: "Study Day 2 to 86, Value 21.4 to 30.0";
    * a point reads "Study Day = 15, Value = 29.2". The facet key of a range
    * taken in a panel follows: ", Arm = Placebo".
-   * @param {{ x_col: string, y_col: string | null, x_range: any[],
-   *           y_range: any[] | null }} range
+   * @param {ChartRangeSelection} sel
    * @param {VizColumn[]} columns @param {string} [xAxisType]
-   * @param {Filters | null} [filters]
    */
-  const describeRange = (range, columns, xAxisType, filters) => {
-    const parts = [NS.axes.axisTitle(columns, range.x_col) + ' ' +
-                   rangeWords(range.x_range, xAxisType)];
-    if (range.y_range && range.y_col) {
-      parts.push(NS.axes.axisTitle(columns, range.y_col) + ' ' + rangeWords(range.y_range));
+  const describeRange = (sel, columns, xAxisType) => {
+    const parts = [NS.axes.axisTitle(columns, sel.x) + ' ' + rangeWords(sel.x_range, xAxisType)];
+    if (sel.y_range && sel.y) {
+      parts.push(NS.axes.axisTitle(columns, sel.y) + ' ' + rangeWords(sel.y_range));
     }
-    if (filters && Object.keys(filters).length) parts.push(describe(filters, columns));
+    if (sel.filters && Object.keys(sel.filters).length) parts.push(describe(sel.filters, columns));
     return parts.join(', ');
   };
 
@@ -208,11 +194,11 @@
   };
 
   /**
-   * Is a drawn point ([x, y, ...]) inside a range filter?
-   * @param {any[]} p @param {{ x_range: any[], y_range: any[] | null }} range
+   * Is a drawn point ([x, y, ...]) inside a range selection?
+   * @param {any[]} p @param {{ x_range: any[], y_range: any[] | null }} sel
    */
-  const pointInRange = (p, range) =>
-    within(p[0], range.x_range) && within(p[1], range.y_range);
+  const pointInRange = (p, sel) =>
+    within(p[0], sel.x_range) && within(p[1], sel.y_range);
 
   /**
    * Is a mark lit under a filter? When every filtered column is one of the
@@ -232,7 +218,7 @@
     return false;
   };
 
-  NS.keys = { isMissing, fromKeys, fromRows, restored, restoredRange, rangeSelection,
+  NS.keys = { isMissing, fromKeys, fromRows, range, restore,
               describe, describeRange, rowMatches, pointInRange, markLit,
               MAX_LISTED };
 })();

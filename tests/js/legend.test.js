@@ -1,6 +1,6 @@
 /* The legend setting: where the band sits, its title and swatch, and what
- * "marks" does per chart type (common.js legendPlan, chrome.js
- * _updateLegendBand, the option builders). */
+ * "marks" does per chart type (legend.js: legendPlan and the band, the
+ * option builders). */
 'use strict';
 
 const test = require('node:test');
@@ -29,7 +29,7 @@ const lastOption = (r, slot = 0) => {
     c.option.series && c.option.series.some((s) => s.type));
   return calls[calls.length - 1].option;
 };
-const band = (r) => (r.block.legendEl.style.display === 'none' ? null : r.block.legendEl);
+const band = (r) => (r.block.legend.el.hidden ? null : r.block.legend.el);
 const markNames = (opt) => opt.series.filter((s) => String(s.id || '').startsWith('__legend_'))
   .map((s) => s.label.formatter);
 
@@ -40,7 +40,7 @@ test('the band sits below the plot by default and above it with legend = "top"',
   const el = band(below);
   assert.ok(el);
   assert.strictEqual(el.previousElementSibling, below.block.chartGrid);
-  assert.strictEqual(el.nextElementSibling, below.block.captionEl);
+  assert.strictEqual(el.parentNode.nextElementSibling, below.block.frame.capEl);
   below.env.close();
 
   const above = draw({ chart_type: 'bar', ...AE, color: 'AESEV', legend: 'top' });
@@ -49,7 +49,7 @@ test('the band sits below the plot by default and above it with legend = "top"',
   assert.ok(top.classList.contains('dd-legend-band--top'));
   // The title band is the header's, which comes before.
   assert.ok(top.compareDocumentPosition(above.block.chartGrid) & 4);
-  assert.ok(above.block.card.firstElementChild.contains(above.block.titleEl));
+  assert.ok(above.block.frame.el.firstElementChild.contains(above.block.frame.titleEl));
   above.env.close();
 });
 

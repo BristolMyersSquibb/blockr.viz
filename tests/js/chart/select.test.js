@@ -23,7 +23,7 @@ test('a bar click selects its category; again, or a click beside the bars, clear
   const r = run(BAR, (c) => {
     c.clickWhere(0, D.at('Nausea'));
     assert.strictEqual(c.footer(), 'Filtered: Reported Term = Nausea');
-    assert.strictEqual(c.block.clearBtn.hidden, false);
+    assert.strictEqual(c.block.frame.clearBtn.hidden, false);
     c.clickWhere(0, D.at('Nausea'));
     c.clickWhere(0, D.at('Rash'));
     c.zr('click', {});
@@ -35,7 +35,7 @@ test('a bar click selects its category; again, or a click beside the bars, clear
 test('the clear button on the footer clears the selection (UX 15)', () => {
   const r = run(BAR, (c) => {
     c.clickWhere(0, D.at('Rash'));
-    c.block.clearBtn.click();
+    c.block.frame.clearBtn.click();
   });
   assert.deepStrictEqual(r.sent, [cat({ AETERM: ['Rash'] }), null]);
   assert.strictEqual(r.footer, null);
@@ -77,18 +77,18 @@ test('with a drill target a click is an event: sent every time, nothing latched'
   const r = run({ ...BAR, drill_target: 'flt_ae' }, (c) => {
     c.clickWhere(0, D.at('Nausea'));
     c.clickWhere(0, D.at('Nausea'));
-    assert.strictEqual(c.block._filter, null);
-    assert.match(c.block.statusEl.textContent, /^Drilled down to Reported Term = Nausea/);
+    assert.strictEqual(c.block.selection.current, null);
+    assert.match(c.block.frame.statusEl.textContent, /^Drilled down to Reported Term = Nausea/);
     c.advance(4000);
-    assert.strictEqual(c.block.statusEl.textContent, '');
+    assert.strictEqual(c.block.frame.statusEl.textContent, '');
   });
   assert.deepStrictEqual(r.sent, [cat({ AETERM: ['Nausea'] }), cat({ AETERM: ['Nausea'] })]);
 });
 
 test('a legend chip selects its level', () => {
   const r = run({ ...BAR, color: 'AESEV' }, (c) => {
-    c.block.legendEl.querySelectorAll('.dd-legend-chip')[1].click();
-    assert.ok(c.block.legendEl.querySelector('.dd-legend-chip-on'));
+    c.block.legend.el.querySelectorAll('.dd-legend-chip')[1].click();
+    assert.ok(c.block.legend.el.querySelector('.dd-legend-chip-on'));
   });
   assert.deepStrictEqual(r.sent, [cat({ AESEV: ['MILD'] })]);
 });

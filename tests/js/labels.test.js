@@ -260,8 +260,8 @@ test('the filter line names columns by label, the histogram bin by x\'s label', 
   assert.strictEqual(C.keys.describe({ ADY_bin: ['0-5'] }, COLUMNS), 'Study Day = 0-5');
   assert.strictEqual(C.keys.describe({ PLAIN: ['p'] }, COLUMNS), 'PLAIN = p');
   assert.strictEqual(
-    C.keys.describeRange({ x_col: 'ADY', y_col: 'AVAL', x_range: [1, 7], y_range: [2, 9] },
-                         COLUMNS, 'value', { ARM: ['A'] }),
+    C.keys.describeRange({ type: 'range', x: 'ADY', y: 'AVAL', x_range: [1, 7], y_range: [2, 9],
+                           filters: { ARM: ['A'] } }, COLUMNS, 'value'),
     'Study Day 1 to 7, Analysis Value 2 to 9, Planned Arm = A');
 });
 
@@ -272,11 +272,11 @@ const draw = (config, derived) => D.open({ ...DRAWN, ...config }, { data: ROWS, 
 
 test('drawn: the legend title is the colour column\'s label, none without one', () => {
   const c = draw({ color: 'AESEV' });
-  const t = c.block.legendEl.querySelector('.dd-legend-title');
+  const t = c.block.legend.el.querySelector('.dd-legend-title');
   assert.strictEqual(t && t.textContent, 'Severity');
   c.close();
   const p = draw({ color: 'PLAIN' });
-  assert.strictEqual(p.block.legendEl.querySelector('.dd-legend-title'), null);
+  assert.strictEqual(p.block.legend.el.querySelector('.dd-legend-title'), null);
   p.close();
 });
 
@@ -298,8 +298,8 @@ test('drawn: a click names its filter by label in the footer', () => {
 
 test('drawn: the gear\'s column menus show each label', () => {
   const c = draw({ color: 'AESEV' });
-  c.block._tray.set(true);
-  const sel = c.block.popoverEl.querySelector('[data-role="color"] .blockr-select');
+  c.block.frame.tray.set(true);
+  const sel = c.block.frame.tray.band.querySelector('[data-role="color"] .blockr-select');
   sel.querySelector('.blockr-select__control').click();
   const lb = c.doc.getElementById(sel.querySelector('.blockr-select__search')
     .getAttribute('aria-controls'));
@@ -314,7 +314,7 @@ test('drawn: a word printed from a label opens a list led by labels', () => {
   const c = draw({ color: 'AESEV' }, { titles: { subtitle: {
     text: 'by Severity', parts: [{ text: 'by ' }, { text: 'Severity', arg: 'color', by: 'label' }]
   } } });
-  const w = Array.from(c.block.subtitleEl.querySelectorAll('.blockr-slot'))
+  const w = Array.from(c.block.frame.subEl.querySelectorAll('.blockr-slot'))
     .find((x) => x.textContent === 'Severity');
   w.click();
   const menus = c.doc.querySelectorAll('.blockr-select__dropdown--menu');

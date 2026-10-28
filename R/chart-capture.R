@@ -1,7 +1,7 @@
 # The chart as the browser drew it -------------------------------------------
 #
 # A chart's downloads and slides carry the picture the browser drew.
-# `_downloadImage()` in chart/export.js composes the whole block on an
+# `picture()` in chart/export.js composes the whole block on an
 # offscreen canvas (title band, facet panels, facet labels, legend chips,
 # caption) and sends the bitmap up; the png, html and pptx downloads write
 # that. A chart whose panel was never drawn is drawn offscreen by the capture

@@ -7,9 +7,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
 
   const { timeValue } = NS.axes;
 
@@ -331,7 +330,8 @@
    * One helper line as a markLine datum: a quiet dash behind the data, its
    * value at the end. `text` replaces the value (null: no label); `flipped`:
    * the y axis runs top-down, so a vertical line is labelled at its start.
-   * @param {number} v @param {boolean} vertical @param {number} width
+   * @param {number | string} v The value, or a category on a category axis.
+   * @param {boolean} vertical @param {number} width
    * @param {string | null | undefined} text @param {boolean} flipped
    * @param {{ text: string, muted: string, fontSize?: number }} ink
    */
@@ -341,7 +341,7 @@
     label: {
       show: text !== null,
       position: vertical ? (flipped ? 'start' : 'end') : 'insideEndTop',
-      formatter: text != null ? text : String(NS.ddNum(v)),
+      formatter: text != null ? text : String(V.util.num(v)),
       color: ink.muted, fontSize: ink.fontSize || 12, opacity: 1
     }
   });
@@ -352,18 +352,18 @@
    * the reader types percent @param {any} lines `[{value, label}]`
    * @param {{ text: string, muted: string }} ink */
   const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
-    const keep = NS.labelled(lines).filter((x) => Number.isFinite(Number(x.value)));
+    const keep = /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(lines)).filter((x) => Number.isFinite(Number(x.value)));
     const nm = keep.map((x) => x.label);
     const typed = keep.map((x) => Number(x.value));
-    const vals = typed.map((v) => (fraction ? v / 100 : v));
+    const vals = typed.map((/** @type {number} */ v) => (fraction ? v / 100 : v));
     if (!vals.length || !series.length) return;
     series[0].markLine = {
       silent: true, symbol: 'none',
       // onX: a horizontal chart, whose category axis is inverse.
-      data: vals.map((v, i) => guideLine(v, onX, 1,
+      data: vals.map((/** @type {number} */ v, /** @type {number} */ i) => guideLine(v, onX, 1,
         nm[i] ? String(nm[i])
           : typed[i] === 0 ? null
-            : (fraction ? NS.ddNum(typed[i]) + '%' : undefined), onX, ink))
+            : (fraction ? V.util.num(typed[i]) + '%' : undefined), onX, ink))
     };
     // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on
     // the rounded edge would read as the frame, so the edge moves a step out.
@@ -383,7 +383,7 @@
       return rel >= 5 ? mag : (rel >= 2 ? mag / 2 : mag / 5);
     };
     /** @param {number} at @param {number} st */
-    const onLine = (at, st) => vals.some((v) => Math.abs(v - at) < st * 1e-6);
+    const onLine = (/** @type {number} */ at, /** @type {number} */ st) => vals.some((v) => Math.abs(v - at) < st * 1e-6);
     /** The axis edge on `dir` (1 top, -1 bottom): a rounded step past the lines and data. */
     const edge = (/** @type {number} */ dir) => (/** @type {any} */ e) => {
       const st = step(e);
@@ -441,7 +441,7 @@
     const key = onX ? 'xAxis' : 'yAxis';
     /** @type {any[]} */
     const data = [];
-    NS.labelled(lines).forEach(({ value: v, label }) => {
+    /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(lines)).forEach(({ value: v, label }) => {
       const c = catOf(v, cats);
       if (c == null) return;
       // Unnamed, a line on its own category needs no label.

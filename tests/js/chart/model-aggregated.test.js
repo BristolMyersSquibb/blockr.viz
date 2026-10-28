@@ -49,7 +49,7 @@ test('a missing group is its own level; missing drop removes it', () => {
 
 test('no cells: the empty state', () => {
   const m = build({ missing: 'drop' }, [{ T: null, ID: 'S01' }]);
-  assert.match(m.empty, /No data to chart/);
+  assert.match(m.empty.message, /No data to chart/);
 });
 
 test('group order: value, alpha, factor levels, data, a column', () => {

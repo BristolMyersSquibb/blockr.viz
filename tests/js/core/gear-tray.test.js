@@ -9,16 +9,6 @@ const noNav = { skip: !hasTrayNav() && 'blockr.ui without trayNav (set BLOCKR_UI
 const tick = (win, ms = 5) => new Promise((r) => win.setTimeout(r, ms));
 const TITLES = { title: { parts: [{ text: 'ARM', arg: 'x' }] }, args: { x: 'ARM' } };
 
-test('without Blockr.trayNav the sections stand in one column', () => {
-  const env = loadGear();
-  const m = mountGear(env);
-  m.gear.update(payload({ type: 'bar', x: 'ARM' }));
-  assert.equal(m.el.querySelector('.blockr-tray-nav'), null);
-  assert.ok(m.el.children.length > 5);
-  assert.equal(m.el.getAttribute('role'), 'dialog');
-  assert.equal(m.el.getAttribute('aria-label'), 'Settings');
-});
-
 test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env, { title: 'Chart settings' });

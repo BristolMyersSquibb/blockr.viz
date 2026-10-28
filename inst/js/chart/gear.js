@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Chart block: what the chart tells the core gear engine (gear-api.md)
+ * Chart block: what the chart tells the core gear engine (VizGearHost)
  * beyond the spec: the type tiles, which axis is required, choices drawn
  * from the data or the board (sort orders, column values, drill targets),
  * per-type labels and rows that wait for another setting.
@@ -8,9 +8,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
 
   const TILES = [
     { label: 'Aggregated', values: ['bar', 'histogram', 'waterfall', 'pie', 'treemap',
@@ -34,7 +33,7 @@
   /** The keys of an aggregated chart's category and aggregated column.
    * @param {Record<string, any>} v @param {VizColumn[]} meta */
   const roleKeys = (v, meta) => {
-    const type = v.type || 'bar';
+    const type = String(v.type || 'bar');
     if (NS.model.FIXED.includes(type) || type === 'histogram') return { cat: 'x', val: 'y' };
     const lie = v.orientation || NS.model.inferLie(v, meta);
     return lie === 'horizontal' ? { cat: 'y', val: 'x' } : { cat: 'x', val: 'y' };
@@ -50,11 +49,11 @@
       : []);
     /** @param {string} name */
     const numeric = (name) => {
-      return V.util.isNumeric(meta().find((c) => c.name === name));
+      return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));
     };
     return {
       required(key, v) {
-        const type = v.type || 'bar';
+        const type = String(v.type || 'bar');
         if (NS.familyOf(type) !== 'aggregated') return key === 'x' || key === 'y';
         const r = roleKeys(v, meta());
         if (key === r.cat) return true;
@@ -62,7 +61,7 @@
         return key === r.val && type !== 'histogram' && !counts;
       },
       label(key, v) {
-        const type = v.type || 'bar';
+        const type = String(v.type || 'bar');
         if (type === 'band' && key === 'x') return 'Timeline';
         if (type === 'band' && key === 'y') return 'Value';
         if (type === 'bar' && key === 'y_lines') return 'Reference lines';
@@ -77,13 +76,13 @@
       },
       tiles: (key) => (key === 'type' ? TILES : null),
       columns(key, v, cols) {
-        const type = v.type || 'bar';
+        const type = String(v.type || 'bar');
         const num = ['ref_min', 'ref_max', 'ymin', 'ymax'].includes(key) ||
           (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram');
         return num ? cols.filter((c) => numeric(c.name)) : cols;
       },
       choices(key, v) {
-        const type = v.type || 'bar';
+        const type = String(v.type || 'bar');
         if (key === 'drill') return [{ value: 'auto', label: autoLabel(type) }];
         if (key === 'drill_target') {
           const list = view.derived.ctrl_choices || [];
@@ -91,9 +90,9 @@
         }
         if (key === 'facet_cols') return FACET_COLS.map((n) => ({ value: n, label: n + ' per row' }));
         if (key === 'sort_by') return sortChoices(type, meta());
-        if (key === 'waterfall_totals') return levels(v.x);
+        if (key === 'waterfall_totals') return levels(String(v.x ?? ''));
         if (key === 'highlight') {
-          const h = v.highlight && Object.keys(v.highlight)[0];
+          const h = v.highlight ? Object.keys(/** @type {object} */ (v.highlight))[0] : null;
           return h ? levels(h) : [];
         }
         return null;

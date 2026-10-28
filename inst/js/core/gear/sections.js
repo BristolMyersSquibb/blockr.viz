@@ -5,8 +5,8 @@
  *
  * A section is a spec argument's `gear.group`. Sections fall into the tray's
  * groups (Data, Sort, Format, Titles, Interaction), so a user meets the same
- * groups in a chart and in a table. With blockr.ui's `Blockr.trayNav` one
- * group shows at a time; without it the sections stand in one column.
+ * groups in a chart and in a table. blockr.ui's `Blockr.trayNav` shows one
+ * group at a time.
  */
 (function () {
   'use strict';
@@ -107,8 +107,8 @@
   }
 
   /**
-   * Put the built sections into the tray: grouped through Blockr.trayNav
-   * when blockr.ui has it, else one after the other.
+   * Put the built sections into the tray, grouped through blockr.ui's
+   * Blockr.trayNav.
    * @param {HTMLElement} pop
    * @param {{ plan: VizSectionPlan, el: HTMLElement, titleEl: HTMLElement }[]} built
    * @param {string | null} current The group to show.
@@ -117,10 +117,6 @@
    */
   function assemble(pop, built, current, onPick, label) {
     const ui = /** @type {VizUi} */ (root.Blockr);
-    if (typeof ui.trayNav !== 'function') {
-      for (const b of built) pop.appendChild(b.el);
-      return;
-    }
     const groups = GROUPS.map(([key, title]) => ({
       key, title,
       sections: built.filter((b) => b.plan.group === key)

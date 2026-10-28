@@ -3,45 +3,26 @@
  * Chart block: the chart view, one per chart container.
  *
  * It holds what R sent (columns, rows, config) and the reader's state (the
- * selection, the gear), and draws by running the family's model and option:
- * one ECharts instance per facet panel in a CSS grid. The model is memoised
- * on the rows and the config fields it reads, the option on the model and
- * its fields; a click patches opacities; a resize only resizes.
+ * selection, the gear), and draws by running the family's model and option
+ * (family-*.js): one ECharts instance per facet panel in a CSS grid.
+ * The model is memoised on the rows and the config fields it reads, the
+ * option on the model and its fields; a click patches opacities; a resize
+ * only resizes.
  *
  * Built by the shared output binding (core/binding.js) with a Scope that
- * owns everything set up outside the element. The chrome, interactions and
- * export are mixed in from chrome.js, interact.js and export.js.
+ * owns everything set up outside the element. The view owns its parts: the
+ * core frame (header, titles, gear, downloads, footer), the script band,
+ * the legend band and the selection.
  */
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const mk = NS.mk;
 
-  // `widths`: the option reads each panel's width. `alwaysHighlight`: every
-  // draw ends with a highlight patch; the others patch only while a filter
-  // dims. `prepare` / `after`: view methods run on a panel's slot before and
-  // after its option is set. `actions`: tells whether `after` dispatches an
-  // action.
-  /** @typedef {{ model: any, option: any, legend: any, widths: boolean,
-   *              alwaysHighlight: boolean, prepare?: string, after?: string,
-   *              actions?: string }} FamilyImpl */
-  /** @type {Record<string, FamilyImpl>} */
-  const FAMILIES = {
-    aggregated: { model: NS.model.aggregated, option: NS.option.aggregated,
-                  legend: NS.option.aggregatedLegend, widths: true, alwaysHighlight: true },
-    timeline: { model: NS.model.timeline, option: NS.option.timeline,
-                legend: NS.option.timelineLegend, widths: false, alwaysHighlight: false },
-    individual: { model: NS.model.individual, option: NS.option.individual,
-                  legend: NS.option.individualLegend, widths: true, alwaysHighlight: false,
-                  prepare: '_individualPrepare', after: '_individualAfter',
-                  actions: '_individualActions' }
-  };
-
-  const NO_VALUE_HTML = '<div class="vd-empty-state"><p class="vd-empty-text">' +
-    'Pick a numeric Value to plot its distribution</p></div>';
+  /** @type {VizEmpty} */
+  const NO_VALUE = { kind: 'empty', message: 'Pick a numeric Value to plot its distribution' };
 
   /** A memo key of the config fields; `derived.x` is R's derived x.
    * @param {Record<string, any>} cfg @param {string[]} fields */
@@ -53,45 +34,46 @@
     return JSON.stringify(out);
   };
 
-  /** @type {any} */ let measureCtx = null;
+  /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
-  const Mixins = /** @type {any} */ (function Mixins() {});
-  Object.assign(Mixins.prototype, NS.chrome, NS.scriptBand, NS.interact, NS.exporter);
-
-  class ChartView extends Mixins {
-    /** @param {HTMLElement & Record<string, any>} el @param {VizScope} scope */
+  class ChartView {
+    /** @param {HTMLElement} el @param {VizScope} scope */
     constructor(el, scope) {
-      super();
-      /** @type {any} */ this.el = el;
+      this.el = el;
       this.scope = scope;
       /** @type {any[]} */ this.data = [];
-      /** @type {any} */ this._lastDataRev = null;
-      /** @type {any} */ this._lastSelection = null;
+      /** @type {number | null} */ this._lastDataRev = null;
       this._ix = new NS.RowIndex();
       // Bumped whenever the rows change; the model memo keys on it.
       this._rowsGen = 0;
       /** @type {VizColumn[]} */ this.columns = [];
-      /** @type {Record<string, any>} */ this.config = {};
-      /** @type {Record<string, any>} */ this.derived = {};
+      this._columnsKey = '';
+      /** The settings the drawing reads (NS.model.settings()). @type {Record<string, any>} */
+      this.config = {};
+      /** @type {ChartDerived} */ this.derived = /** @type {ChartDerived} */ ({});
       /** @type {any[]} */ this.charts = [];
-      /** @type {any[]} */ this._slots = [];
+      /** @type {ChartSlot[]} */ this._slots = [];
       /** @type {string | null} */ this._renderShape = null;
       /** Owns the panels' ECharts instances; a new shape gets a new one.
        * @type {VizScope | null} */
       this._shapeScope = null;
-      // The selection (chart-keys.js): {type: 'categorical', filters} or
-      // {type: 'range', range, filters (the facet key)}, `brush` when a brush made it.
-      /** @type {{ type: 'categorical' | 'range', filters?: Record<string, any[]> | null,
-       *           range?: any, brush?: boolean } | null} */
-      this._filter = null;
       this.drawn = false;
-      this._drillSeq = 0;
+      /** An empty state is drawn. */
+      this._blank = false;
       /** @type {string | null} */ this.theme = null;
-      this._ink = NS.INK_DEFAULT;
+      /** @type {Ink} */ this._ink = NS.INK_DEFAULT;
       /** @type {{ modelKey: string | null, model: any, optionKey: string | null, option: any }} */
       this._memo = { modelKey: null, model: null, optionKey: null, option: null };
       /** @type {(() => void) | null} */ this._settle = null;
-      this._buildDOM();
+      this.selection = new NS.Selection(this);
+      this.frame = new V.Frame(el, scope, { cls: 'vz-chart' });
+      this.gear = this.frame.mountGear({ block: 'chart', typeKey: 'type',
+                                         title: 'Chart settings', host: NS.gear.host(this) });
+      const body = this.frame.body;
+      this.band = V.scriptBand(body, scope, this.gear);
+      this.chartGrid = mk('div', 'dd-chart-grid', body);
+      this.legend = new NS.Legend(this, body);
+      this.status();
       // One resize per animation frame.
       /** @type {(() => void) | null} */ let pending = null;
       scope.resize(this.chartGrid, () => {
@@ -103,23 +85,19 @@
       });
     }
 
-    _family() { return NS.familyOf(this.config.type); }
+    /** The family that draws the current type. @returns {ChartFamily} */
+    family() { return NS.families[NS.familyOf(this.config.type)]; }
 
-    /** The ECharts theme R named; a theme R sent whole is registered once.
-     * @param {any} theme */
+    /** The ECharts theme R named (drilldown-theme-register.js registered
+     * it); "default" is ECharts' own. @param {ChartTheme | null | undefined} theme */
     _setTheme(theme) {
-      let name = typeof theme === 'string' ? theme : (theme && theme.name) || null;
-      if (theme && typeof theme === 'object' && theme.theme && name) {
-        root.echarts.registerTheme(name, theme.theme);
-      }
-      if (name === 'default') name = null;
-      this.theme = name;
+      this.theme = theme && theme !== 'default' ? theme : null;
     }
 
     /** A payload from R (core/binding.js hands it over with its rows). The rows are parsed only
      * when their revision changed. @param {VizPayload} p */
     render(p) {
-      const d = /** @type {Record<string, any>} */ (p.derived || {});
+      const d = /** @type {ChartDerived} */ (p.derived || {});
       this.derived = d;
       this.columns = p.columns || [];
       this._columnsKey = JSON.stringify(this.columns);
@@ -130,61 +108,92 @@
         this._lastDataRev = p.data_rev;
       }
       this.config = NS.model.settings(p.config, d, this.columns);
-      this._restoreSelection(p.config && p.config.selection);
+      this.selection.restore(p.config && p.config.selection);
       this._setTheme(d.theme);
       // The gear first: the title sentences open what it offers.
-      if (this._gear) this._gear.update(p);
-      this._titleText = NS.titleText(d.titles);
-      this._updateTitles(d.titles);
-      this._updateScriptBand(d.script);
+      this.gear.update(p);
+      this.frame.titles(d.titles);
+      this.band.update(d.script);
       this.drawn = false;
       this._render();
-      this._updateDownloads(d.downloads);
-      this._busyDone();
-    }
-
-    _busyDone() {
-      const busy = root.Blockr.busy;
-      if (!busy) return;
-      this.scope.frame(() => this.scope.frame(() => busy.stop(this.el.id)));
-    }
-
-    // A saved selection R sent back. Only a changed one replaces what the
-    // reader sees; a transient chart restores none.
-    /** @param {any} sel */
-    _restoreSelection(sel) {
-      const key = JSON.stringify(sel ?? null);
-      if (key === this._lastSelection) return;
-      this._lastSelection = key;
-      if (NS.transientDrill(this.config)) { this._filter = null; return; }
-      const range = NS.keys.restoredRange(this.config);
-      const saved = range ? null : NS.keys.restored(this.config);
-      this._filter = range ? { type: 'range', range: range.range, filters: range.filters }
-        : (saved ? { type: 'categorical', filters: saved } : null);
+      this._downloads();
+      this.frame.busyDone();
     }
 
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
-      this._showEmpty(NS.model.emptyState(NS.esc(message)));
-      this._updateDownloads(this.derived.downloads);
-      this._busyDone();
+      this._showEmpty({ kind: 'error', message });
+      this._downloads();
+      this.frame.busyDone();
+    }
+
+    // The formats R offers. Opening the control sends the picture to R; an
+    // empty state has none, so Image is left out.
+    _downloads() {
+      const offer = (this.derived.downloads || []).filter((f) => !(this._blank && f.ext === 'png'));
+      this.frame.downloads(this.config.download !== false ? offer : [], () => {
+        NS.picture(this).then((/** @type {VizPicture} */ pic) => V.util.send(this.el.id, 'capture', pic), () => {});
+      });
+    }
+
+    /** The footer: what the selection holds, with its clear button. */
+    status() {
+      this.frame.status(this.selection.words(), () => this.selection.clear());
+    }
+
+    /** The footer, the legend chips, then the marks. @param {boolean} [lazy] */
+    highlight(lazy) {
+      this.status();
+      this.legend.mark(this.selection.current);
+      this._applyHighlight(lazy);
+    }
+
+    // The selection as opacities, one patch per panel and nothing redrawn:
+    // a mark is lit when its keys match the selection's filters, or, for a
+    // filter on a column it does not carry, when one of its rows does. A
+    // range dims the points outside it. `lazy`: part of a draw, so ECharts
+    // applies the patch with the draw's other follow-ups.
+    /** @param {boolean} [lazy] */
+    _applyHighlight(lazy) {
+      const fam = this.family();
+      const m = this._memo.model;
+      const sel = this.selection.current;
+      const filters = sel ? (sel.filters || null) : null;
+      const range = sel && sel.type === 'range' ? sel : null;
+      /** @type {ChartLit | null} */
+      const lit = filters
+        ? (keys, rows) => NS.keys.markLit(keys,
+            rows || (() => NS.model.rowsUnder(this.data, this._ix, keys)), filters)
+        : null;
+      this._slots.forEach((slot, i) => {
+        if (!slot || !slot.chart) return;
+        const current = slot.chart.getOption();
+        if (!current || !current.series) return;
+        const panel = m && m.family === fam.name ? m.panels[i] : null;
+        const drawn = this._memo.option && this._memo.option.panels[i];
+        const patch = panel
+          ? fam.patch({ m, panel, cfg: this.config, current, drawn: drawn && drawn.option,
+                        lit, filters, range, dimmed: !!slot.dimmed })
+          : { series: current.series.map(() => ({})), dimmed: false };
+        slot.dimmed = patch.dimmed;
+        slot.chart.setOption({ series: patch.series }, lazy ? { lazyUpdate: true } : false);
+      });
     }
 
     _render() {
       this._ink = NS.readInk(this.el);
       const empty = NS.model.gate(this.data, this.columns, this.config);
       if (empty) { this._showEmpty(empty); return; }
-      const fam = this._family();
       this._blank = false;
-      this._draw(fam, FAMILIES[fam]);
+      this._draw(this.family());
       // Once more after layout settles.
       if (this._settle) this._settle();
       this._settle = this.scope.timeout(() => { this._resizeCharts(); }, 300);
     }
 
-    /** @param {string} fam @param {FamilyImpl} impl */
-    _draw(fam, impl) {
-      const m = this._model(impl);
+    /** @param {ChartFamily} fam */
+    _draw(fam) {
+      const m = this._model(fam);
       if (m.empty) { this._showEmpty(m.empty); return; }
       const grid = this.chartGrid;
       grid.classList.toggle('dd-chart-grid-single', m.nFacets <= 1);
@@ -194,19 +203,19 @@
         (cols > 0 && m.nFacets > 1) ? `repeat(${Math.min(cols, m.nFacets)}, minmax(0, 1fr))` : '';
       // Instances survive a redraw unless the family, panel count or theme changed (an
       // ECharts theme is fixed at init).
-      const shape = fam + '|' + m.panels.length + '|' + (this.theme || '');
+      const shape = fam.name + '|' + m.panels.length + '|' + (this.theme || '');
       if (this._renderShape !== shape) {
         this._teardownCharts();
         this._renderShape = shape;
       }
       // Every panel is laid out before any width is read, so the first panel
-      // fits its labels to its own track (B9).
+      // fits its labels to its own track, not to the whole grid.
       m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
         this._ensureSlot(i, panel.label, m.single).facetVal = panel.facet;
       });
       const widths = m.panels.map((/** @type {any} */ _, /** @type {number} */ i) =>
         this._slots[i].chartDiv.clientWidth);
-      const o = this._option(impl, m, impl.widths ? widths : null);
+      const o = this._option(fam, m, fam.widths ? widths : null);
       m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
         const slot = this._slots[i];
         const po = o.panels[i];
@@ -215,7 +224,8 @@
           slot.scope = null;
           slot.chart = null;
           this._setSlotHeight(slot, po.height);
-          slot.chartDiv.innerHTML = NO_VALUE_HTML;
+          slot.chartDiv.textContent = '';
+          V.Frame.message(slot.chartDiv, NO_VALUE);
           return;
         }
         const hChanged = this._setSlotHeight(slot, po.height);
@@ -225,35 +235,35 @@
         // updates it), plus the slot and its height without the gutter.
         chart.__xFit = po.xFit
           ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
-        if (impl.prepare) this[impl.prepare](slot, po);
+        if (fam.prepare) fam.prepare(slot, po);
         // When an action follows, ECharts runs it with the option in one update.
-        const actionFollows = !!impl.actions && this[impl.actions](slot, po);
+        const actionFollows = !!fam.actions && fam.actions(slot, po);
         chart.setOption(po.option, actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         if (existed && hChanged) chart.resize();
-        if (impl.after) this[impl.after](slot, po);
+        if (fam.after) fam.after(slot, po);
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
       this._harmoniseAxes();
       const plan = NS.legendPlan(m, this.config);
-      this._updateLegendBand(plan.band ? impl.legend(m, this.config) : null, plan);
-      this._capMessage = o.labelNote || null;
-      if (impl.alwaysHighlight) {
-        this._updateHighlight(true);
+      this.legend.update(plan.band ? fam.legend(m, this.config) : null, plan);
+      this.frame.note(o.labelNote || null);
+      if (fam.alwaysHighlight) {
+        this.highlight(true);
       } else {
-        this._updateStatus();
-        if (this._filter) this._applyHighlight(true);
+        this.status();
+        if (this.selection.current) this._applyHighlight(true);
       }
       this.drawn = true;
     }
 
-    /** @param {{ model: any }} impl */
-    _model(impl) {
+    /** @param {ChartFamily} fam */
+    _model(fam) {
       const key = this._rowsGen + '\u0000' + this._columnsKey + '\u0000' +
-        pick(this.config, impl.model.FIELDS);
+        pick(this.config, fam.model.FIELDS);
       if (this._memo.modelKey !== key) {
-        this._memo.model = impl.model({ rows: this.data, ix: this._ix,
+        this._memo.model = fam.model({ rows: this.data, ix: this._ix,
                                         columns: this.columns, cfg: this.config });
         this._memo.modelKey = key;
         this._memo.optionKey = null;
@@ -261,14 +271,14 @@
       return this._memo.model;
     }
 
-    /** @param {{ option: any }} impl @param {any} m @param {number[] | null} widths */
-    _option(impl, m, widths) {
+    /** @param {ChartFamily} fam @param {any} m @param {number[] | null} widths */
+    _option(fam, m, widths) {
       const ink = this._ink;
-      const key = this._memo.modelKey + '\u0000' + pick(this.config, impl.option.FIELDS) +
+      const key = this._memo.modelKey + '\u0000' + pick(this.config, fam.option.FIELDS) +
         '\u0000' + JSON.stringify(ink) + '\u0000' + (this.theme || '') +
         '\u0000' + (widths ? widths.join(',') : '');
       if (this._memo.optionKey !== key) {
-        this._memo.option = impl.option(m, {
+        this._memo.option = fam.option(m, {
           cfg: this.config, columns: this.columns, ink, theme: this.theme,
           measure: this._measure(ink), widths: widths || []
         });
@@ -281,11 +291,12 @@
     /** @param {string} font @returns {(s: string) => number} */
     _measureFont(font) {
       const ctx = measureCtx || (measureCtx = document.createElement('canvas').getContext('2d'));
+      if (!ctx) return (s) => 7 * s.length;
       ctx.font = font;
       return (s) => ctx.measureText(s).width;
     }
 
-    /** The axis font. @param {typeof NS.INK_DEFAULT} ink */
+    /** The axis font. @param {Ink} ink */
     _measure(ink) { return this._measureFont(`${ink.fontSize}px ${ink.face}`); }
 
     // One numeric domain across the panels ("fixed"), read back off what each drew.
@@ -315,17 +326,19 @@
       this.chartGrid.innerHTML = '';
     }
 
-    /** @param {string} html */
-    _showEmpty(html) {
+    /** Say why there is no chart where it would be. @param {VizEmpty} e */
+    _showEmpty(e) {
       this._teardownCharts();
-      this._updateLegendBand(null);
-      this.chartGrid.innerHTML = html;
-      this._updateStatus();
+      this.legend.update(null);
+      V.Frame.message(this.chartGrid, e);
+      this.frame.note(null);
+      this.status();
       this.drawn = true;
       this._blank = true;
     }
 
-    /** @param {number} i @param {string | null} facetLabel @param {boolean} singleFacet */
+    /** @param {number} i @param {string | null} facetLabel @param {boolean} singleFacet
+     * @returns {ChartSlot} */
     _ensureSlot(i, facetLabel, singleFacet) {
       let slot = this._slots[i];
       if (!slot) {
@@ -337,9 +350,9 @@
         resetBtn.textContent = 'Reset zoom';
         resetBtn.hidden = true;
         container.classList.add('dd-zoom-host');
-        slot = { container, labelEl, chartDiv, resetBtn, chart: null, facetVal: null, dimmed: false,
-                 hover: { si: null }, brushable: false, zoomArmed: false, zoom: null,
-                 focus: null, focusSi: null, band: null, bandFocus: null };
+        slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
+                 dimmed: false, hover: { si: null }, brushable: false, zoomArmed: false, zoom: null,
+                 focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }
       if (slot.labelEl) {
@@ -349,19 +362,28 @@
       return slot;
     }
 
-    /** @param {any} slot @param {string} family */
-    _ensureSlotChart(slot, family) {
+    /** A new ECharts instance gets the family's handlers, and a click on
+     * empty plot space that clears the selection, unless a line is under
+     * the cursor (the click picks it).
+     * @param {ChartSlot} slot @param {ChartFamily} fam */
+    _ensureSlotChart(slot, fam) {
       if (!slot.chart) {
-        slot.chartDiv.innerHTML = '';
+        slot.chartDiv.textContent = '';
         const shape = this._shapeScope || (this._shapeScope = this.scope.own(new V.Scope()));
-        slot.scope = shape.own(new V.Scope());
-        slot.chart = slot.scope.own(echarts.init(slot.chartDiv, this.theme || undefined));
-        this._attachHandlers(slot, family);
+        const scope = slot.scope = shape.own(new V.Scope());
+        slot.chart = scope.own(root.echarts.init(slot.chartDiv, this.theme || undefined));
+        fam.attach(this, slot);
+        slot.chart.getZr().on('click', (/** @type {any} */ e) => {
+          if (e && e.target) return;
+          if (slot.focus && slot.focusSi != null) return;
+          const sel = this.selection;
+          if (sel.current || sel.brushDrawn) sel.clear();
+        });
       }
       return slot.chart;
     }
 
-    /** @param {any} slot @param {string} h */
+    /** @param {ChartSlot} slot @param {string} h */
     _setSlotHeight(slot, h) {
       if (slot.chartDiv.style.height === h) return false;
       slot.chartDiv.style.height = h;

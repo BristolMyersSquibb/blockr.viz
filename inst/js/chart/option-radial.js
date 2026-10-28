@@ -6,9 +6,8 @@
 (function () {
   'use strict';
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
-  const B = /** @type {any} */ (root.Blockr = root.Blockr || {});
-  const V = /** @type {any} */ (B.viz = B.viz || { spec: {} });
-  const NS = /** @type {any} */ (V.chart = V.chart || {});
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const NS = V.chart;
   const option = /** @type {any} */ (NS.option = NS.option || {});
   const parts = /** @type {any} */ (option.aggParts = option.aggParts || {});
 
@@ -57,7 +56,7 @@
               nodeClick: false, breadcrumb: { show: false },
               label: { ...label,
                        formatter: (/** @type {any} */ p) =>
-                         markText(p) + '\n' + NS.ddNum(Number(p.value)) },
+                         markText(p) + '\n' + V.util.num(Number(p.value)) },
               itemStyle: { borderColor: ink.surface, borderWidth: 2, gapWidth: 2 },
               emphasis: shadow(0.15) }]
       }
