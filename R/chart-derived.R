@@ -1,22 +1,16 @@
-# What the chart computes in R for the browser beside the rows: the band,
-# the smoother and the histogram bins. Pure functions of the state (public
-# argument names, as in CHART_SPEC) and the data; the server caches them.
-#
-#   chart_band()     the band's series, its reference lines, or why it is empty
-#   chart_smoother() the trend lines of a scatter
-#   chart_hist()     a histogram's bin column and the edges a click filters on
-#
-# The `*_args()` helpers give the arguments each computation reads, so the
-# server can key its cache on exactly those columns and settings.
+# What the chart computes in R for the browser: the band, the smoother and the
+# histogram bins. Pure functions of the state (public argument names) and the
+# data. The `*_args()` helpers give the arguments each one reads, so the
+# server can key its cache on exactly those.
 
-# A configured column counts only when the data has it.
+# A configured column, if the data has it.
 chart_col_in <- function(data, col) {
   if (length(col) && nzchar(col[[1L]]) && col[[1L]] %in% names(data)) {
     col[[1L]]
   }
 }
 
-# The columns named in `args`, the part of the data a computation reads.
+# The data columns named in `args`.
 chart_args_cols <- function(args, data) {
   intersect(as.character(unlist(args[grepl("_col$|_by$", names(args))])),
             names(data))
@@ -40,9 +34,8 @@ chart_band_args <- function(state, data) {
   )
 }
 
-# list(series, refs, note): the band per facet and series level, the
-# reference lines reduced from `ref_max` / `ref_min`, and a sentence on why
-# the band is empty when it is. NULL on any other type.
+# list(series, refs, note): the band, the reference lines from `ref_max` /
+# `ref_min`, and why the band is empty when it is. NULL on any other type.
 chart_band <- function(state, data, args = chart_band_args(state, data)) {
   if (is.null(args)) {
     return(NULL)
@@ -57,7 +50,7 @@ chart_band <- function(state, data, args = chart_band_args(state, data)) {
   )
   refs <- list(hi = band_reference(data, chart_col_in(data, state$ref_max)),
                lo = band_reference(data, chart_col_in(data, state$ref_min)))
-  refs <- refs[!vapply(refs, is.null, logical(1L))]
+  refs <- Filter(Negate(is.null), refs)
   list(
     series = series,
     refs = if (length(refs)) refs,
@@ -68,10 +61,9 @@ chart_band <- function(state, data, args = chart_band_args(state, data)) {
   )
 }
 
-# The statistic of a box, a point range or a band over a numeric vector:
-# list(center, lo, hi), NULL when empty. The R twin of summarizeStat() in
-# inst/js/chart/model-aggregated.js: type 7 quantiles, the sample sd. "tukey"
-# is the 1.5 IQR fence clipped to the data, as the boxplot draws it.
+# list(center, lo, hi) of a numeric vector, NULL when empty. The R twin of
+# summarizeStat() in inst/js/chart/model-aggregated.js. "tukey" is the 1.5 IQR
+# fence clipped to the data.
 summarize_stat <- function(vals, stat = "median_q1_q3") {
   vals <- sort(vals[is.finite(vals)])
   n <- length(vals)
@@ -104,9 +96,9 @@ summarize_stat <- function(vals, stat = "median_q1_q3") {
   )
 }
 
-# Half-width of the window around one grid point: `window_size` in x units
-# when "fixed"; when "adaptive", wide enough to hold `window_size` distinct
-# ids (rows without an id), at most `max_half`.
+# Half-width of the window around a grid point: `window_size` in x units when
+# "fixed"; when "adaptive", wide enough for `window_size` distinct ids (rows
+# without an id), at most `max_half`.
 band_half_width <- function(dist, id_code, n_ids, window, window_size,
                             max_half) {
   if (identical(window, "fixed")) return(window_size)
@@ -129,14 +121,14 @@ band_half_width <- function(dist, id_code, n_ids, window, window_size,
   max_half
 }
 
-# The band: at each of `n_grid` points across the x range, the observations
-# in a window around it, summarized like a box (`summary` inside, `whiskers`
-# outside, "none" for no outer interval). Keyed by facet level, then by
-# series (else colour) level, `__all__` where there is none. Each entry
-# holds x, center, lo, hi, olo, ohi, n (distinct ids in the window) and hw
-# (the half-width); a point with fewer than `min_n` ids is null, so the band
-# breaks there. Points outside the local Tukey fence come as out_x, out_y,
-# out_id. NULL when nothing can be drawn.
+# The band: at each of `n_grid` points across the x range, the observations in
+# a window around it, summarized like a box (`summary` inside, `whiskers`
+# outside, "none" for none). Keyed by facet level, then by series (else
+# colour) level, `__all__` where there is none. Each entry holds x, center,
+# lo, hi, olo, ohi, n (distinct ids in the window) and hw (half-width); a
+# point with fewer than `min_n` ids is null, so the band breaks there. Points
+# outside the local Tukey fence come as out_x, out_y, out_id. NULL when
+# nothing can be drawn.
 compute_band_series <- function(data, x_col, y_col, color_by, series_by,
                                 facet_by = NULL,
                                 summary = "median_q1_q3",
@@ -155,28 +147,19 @@ compute_band_series <- function(data, x_col, y_col, color_by, series_by,
   split_col <- series_by %||% color_by
   if (!is.null(facet_by) && !(facet_by %in% names(data))) facet_by <- NULL
 
-  # Only the columns the band reads, so the row filter and the splits below
-  # copy two to five columns rather than the whole frame.
   keep <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
   cols <- intersect(c(x_col, y_col, split_col, facet_by, id_col), names(data))
   data <- data[keep, cols, drop = FALSE]
   if (nrow(data) == 0L) return(NULL)
 
-  # One grid across the WHOLE x range, not per group: the panels share an x
-  # axis, and a per-group grid would put each arm's points at different days
-  # so a tooltip could not report them together.
+  # One grid across the whole x range, so the groups share their x values.
   rng <- range(data[[x_col]])
   if (!is.finite(rng[1L]) || rng[1L] == rng[2L]) return(NULL)
   grid <- seq(rng[1L], rng[2L], length.out = max(10L, as.integer(n_grid)))
-  # An adaptive window may not find its quota near the ends of a sparse
-  # series; cap it at a quarter of the span so it degrades to "wide" rather
-  # than "the whole study".
+  # An adaptive window that cannot find its quota is capped at a quarter of
+  # the span.
   max_half <- diff(rng) / 4
 
-
-  # Keyed facet level -> series level. Both tiers fall back to `__all__`, so
-  # an unfaceted, uncoloured chart is simply res$__all__$__all__ and the
-  # renderer reads one shape whatever is mapped.
   by_series <- function(d) {
     grp <- if (!is.null(split_col) && split_col %in% names(d)) {
       split(d, as.character(d[[split_col]]))
@@ -188,17 +171,20 @@ compute_band_series <- function(data, x_col, y_col, color_by, series_by,
                   whiskers = whiskers, window = window,
                   window_size = window_size, min_n = min_n,
                   max_half = max_half)
-    out <- out[!vapply(out, is.null, logical(1L))]
-    if (length(out) == 0L) NULL else out
+    nonempty(out)
   }
   panels <- if (is.null(facet_by)) {
     list(`__all__` = data)
   } else {
     split(data, as.character(data[[facet_by]]))
   }
-  res <- lapply(panels, by_series)
-  res <- res[!vapply(res, is.null, logical(1L))]
-  if (length(res) == 0L) NULL else res
+  nonempty(lapply(panels, by_series))
+}
+
+# The non-NULL elements of a list, NULL when none are left.
+nonempty <- function(x) {
+  x <- Filter(Negate(is.null), x)
+  if (length(x)) x
 }
 
 # The band of one group over the shared grid (see compute_band_series()).
@@ -217,8 +203,7 @@ band_group <- function(d, x_col, y_col, id_col, grid, summary, whiskers,
     olo = rep(NA_real_, ng), ohi = rep(NA_real_, ng),
     n = integer(ng), hw = rep(NA_real_, ng)
   )
-  # Tukey band kept alongside the drawn one: the outlier test is always the
-  # Tukey fence, whatever `whiskers` shows.
+  # The outlier test is always the Tukey fence, whatever `whiskers` shows.
   tlo <- rep(NA_real_, ng)
   thi <- rep(NA_real_, ng)
 
@@ -257,8 +242,7 @@ band_group <- function(d, x_col, y_col, id_col, grid, summary, whiskers,
     is_out <- integer()
   }
 
-  # NA -> NULL in the JSON, so the renderer sees a hole it can break the
-  # ribbon on rather than a zero.
+  # NA -> NULL in the JSON: a hole the ribbon breaks on.
   num <- function(v) lapply(unname(v), function(z) if (is.na(z)) NULL else z)
   res <- list(
     x = as.list(unname(grid)),
@@ -277,8 +261,8 @@ band_group <- function(d, x_col, y_col, id_col, grid, summary, whiskers,
   res
 }
 
-# A reference limit is a column per record (ANRHI), reduced to its median
-# for one line, with its range: list(col, value, lo, hi, n_distinct).
+# A reference limit column (ANRHI) reduced to its median, with its range:
+# list(col, value, lo, hi, n_distinct).
 band_reference <- function(data, col) {
   if (is.null(col) || !nzchar(col)) return(NULL)
   if (is.null(data) || !(col %in% names(data))) return(NULL)
@@ -290,8 +274,8 @@ band_reference <- function(data, col) {
        n_distinct = length(unique(v)))
 }
 
-# Why compute_band_series() drew nothing: the first guard that fires, as a
-# sentence. NULL when x or y is unset.
+# Why compute_band_series() drew nothing, as a sentence. NULL when x or y is
+# unset.
 band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
   if (is.null(x_col) || is.null(y_col) || !nzchar(x_col) || !nzchar(y_col)) {
     return(NULL)
@@ -299,13 +283,11 @@ band_empty_reason <- function(data, x_col, y_col, min_n = 12, id_col = NULL) {
   if (is.null(data) || nrow(data) == 0L) {
     return("This block received no rows.")
   }
-  # A missing column has no label to show, so it is named.
   for (col in c(x_col, y_col)) {
     if (!col %in% names(data)) {
       return(sprintf("Column \"%s\" is not in the data.", col))
     }
   }
-  # The others name the column as the chart does: its label, else its name.
   x_lab <- title_column_label(data, x_col)
   y_lab <- title_column_label(data, y_col)
   if (!is.numeric(data[[x_col]])) {
@@ -350,8 +332,7 @@ chart_smoother_args <- function(state, data) {
   )
 }
 
-chart_smoother <- function(state, data,
-                           args = chart_smoother_args(state, data)) {
+chart_smoother <- function(state, data, args = chart_smoother_args(state, data)) {
   if (is.null(args)) {
     return(NULL)
   }
@@ -365,11 +346,11 @@ chart_smoother <- function(state, data,
   )
 }
 
-# Trend lines, "lm" or "loess", one per series (else colour) level and per
-# facet panel: a fit belongs to its panel. Each is list(x, y) over 100 points
-# across the group's x range. On a log axis the fit runs on log10 and comes
-# back in raw units; rows at or below zero are left out. A loess over more
-# than `loess_max` points runs on that many bins of equal count.
+# Trend lines, "lm" or "loess", one per series (else colour) level and facet
+# panel. Each is list(x, y) over 100 points across the group's x range. On a
+# log axis the fit runs on log10 and comes back in raw units; rows at or below
+# zero are left out. A loess over more than `loess_max` points runs on that
+# many bins of equal count.
 compute_smoother_series <- function(data, smoother, x_col, y_col,
                                      color_by, series_by, facet_by = NULL,
                                      loess_max = 5000L, x_log = FALSE,
@@ -379,17 +360,8 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
   if (is.null(x_col) || is.null(y_col)) return(NULL)
   if (!all(c(x_col, y_col) %in% names(data))) return(NULL)
   if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) return(NULL)
-
   split_col <- series_by %||% color_by
-  # Only the columns the fits read, so the splits below copy two to four
-  # columns rather than the whole frame.
   data <- data[intersect(c(x_col, y_col, split_col, facet_by), names(data))]
-
-
-  drop_empty <- function(x) {
-    x <- x[!vapply(x, is.null, logical(1L))]
-    if (length(x) == 0L) NULL else x
-  }
 
   fit_groups <- function(d) {
     if (nrow(d) == 0L) return(NULL)
@@ -398,7 +370,7 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
     } else {
       groups <- list(`__all__` = d)
     }
-    drop_empty(lapply(groups, smoother_fit, smoother = smoother,
+    nonempty(lapply(groups, smoother_fit, smoother = smoother,
                       x_col = x_col, y_col = y_col, x_log = x_log,
                       y_log = y_log, loess_max = loess_max))
   }
@@ -407,10 +379,8 @@ compute_smoother_series <- function(data, smoother, x_col, y_col,
     return(fit_groups(data))
   }
 
-  # One fit per panel. split() drops NA levels, so a panel whose facet value
-  # is missing gets no entry and the renderer draws no line there -- better
-  # than lending it another panel's fit.
-  drop_empty(lapply(split(data, as.character(data[[facet_by]])), fit_groups))
+  # split() drops NA levels: a panel with a missing facet value gets no line.
+  nonempty(lapply(split(data, as.character(data[[facet_by]])), fit_groups))
 }
 
 # One trend line over one group's rows (see compute_smoother_series()).
@@ -437,9 +407,8 @@ smoother_fit <- function(d, smoother, x_col, y_col, x_log, y_log,
     xv <- rowsum(xv[o], bin, reorder = FALSE)[, 1L] / cnt
     yv <- rowsum(yv[o], bin, reorder = FALSE)[, 1L] / cnt
     surface <- "interpolate"
-    # An interpolated surface is NA outside the fitted x, and the outer
-    # bin means sit just inside the data's range. Read the ends at the
-    # nearest fitted x so the line still spans the whole range.
+    # An interpolated surface is NA outside the fitted x: read the ends at
+    # the nearest fitted x so the line spans the whole range.
     at <- pmin(pmax(xs, min(xv)), max(xv))
   }
   ys <- tryCatch({
@@ -462,9 +431,9 @@ smoother_fit <- function(d, smoother, x_col, y_col, x_log, y_log,
 
 # --- histogram -------------------------------------------------------------
 
-# list(col, bin, edges): the bin column (named after x, carrying x's label),
-# its values, and the edges a click on a bin filters on. NULL unless the
-# chart is a histogram over a numeric x.
+# list(col, bin, edges): the bin column (named after x, with x's label), its
+# values, and the edges a click on a bin filters on. NULL unless the chart is
+# a histogram over a numeric x.
 chart_hist <- function(state, data) {
   x <- state$x
   if (!identical(state$type, "histogram") || !is.data.frame(data) ||
@@ -478,10 +447,7 @@ chart_hist <- function(state, data) {
 
 # The data with the histogram's bin column added.
 chart_hist_data <- function(data, hist) {
-  if (is.null(hist)) {
-    return(data)
-  }
-  data[[hist$col]] <- hist$bin
+  if (!is.null(hist)) data[[hist$col]] <- hist$bin
   data
 }
 
@@ -508,8 +474,8 @@ chart_bins <- function(v, bins = 30) {
   list(
     bin = factor(bin, levels = labels),
     edges = data.frame(label = labels, lo = utils::head(br, -1L),
-                       hi = utils::tail(br, -1L), last = c(rep(FALSE,
-                       length(labels) - 1L), TRUE))
+                       hi = utils::tail(br, -1L),
+                       last = seq_along(labels) == length(labels))
   )
 }
 
@@ -523,11 +489,9 @@ chart_bin_cond <- function(x, labels, edges) {
     return(NULL)
   }
   parts <- lapply(seq_len(nrow(e)), function(i) {
-    if (isTRUE(e$last[[i]])) {
-      bquote(.data[[.(x)]] >= .(e$lo[[i]]) & .data[[.(x)]] <= .(e$hi[[i]]))
-    } else {
-      bquote(.data[[.(x)]] >= .(e$lo[[i]]) & .data[[.(x)]] < .(e$hi[[i]]))
-    }
+    upper <- if (isTRUE(e$last[[i]])) quote(`<=`) else quote(`<`)
+    bquote(.data[[.(x)]] >= .(e$lo[[i]]) &
+             .(upper)(.data[[.(x)]], .(e$hi[[i]])))
   })
   Reduce(function(a, b) bquote((.(a)) | (.(b))), parts)
 }
