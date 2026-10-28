@@ -8,12 +8,12 @@ new_chart_block(
   type = "bar",
   ...,
   x = NULL,
+  xend = NULL,
   y = NULL,
   func = "count",
   color = NULL,
   facet = NULL,
   series = NULL,
-  xend = NULL,
   label = NULL,
   orientation = NULL,
   position = "stack",
@@ -74,6 +74,8 @@ new_chart_block(
 
 \item{x}{Column on the horizontal axis. For an aggregated type one of x and y is the category and the other the column \code{func} aggregates. Gantt: the interval start. Histogram: the column that is binned. Default \code{NULL}: unset.}
 
+\item{xend}{Interval end. A row without an end is drawn as a dot at \code{x}. Default \code{NULL}: dots at x.}
+
 \item{y}{Column on the vertical axis. With \code{func = "count"} set only the category column. Gantt: the lane. Pie and treemap: the value. Default \code{NULL}: unset.}
 
 \item{func}{Aggregation of the value column per category. "identity" draws the value as is; "pct_distinct" is the share of the panel's distinct values (see \code{percent_of}). One of \code{"count"}, \code{"count_distinct"}, \code{"pct_distinct"}, \code{"mean"}, \code{"median"}, \code{"sum"}, \code{"min"}, \code{"max"}, \code{"identity"}. Default: \code{"count"}.}
@@ -83,8 +85,6 @@ new_chart_block(
 \item{facet}{Column to facet by, one small panel per level. Default \code{NULL}: one panel.}
 
 \item{series}{Column whose values split rows into separate series: one line or point group per value, the bar label on a gantt. Default \code{NULL}: no series.}
-
-\item{xend}{Interval end. A row without an end is drawn as a dot at \code{x}. Default \code{NULL}: dots at x.}
 
 \item{label}{Column written on the marks. A bar, slice or tile shows it only when its rows agree on one value. Default \code{NULL}: no labels.}
 
