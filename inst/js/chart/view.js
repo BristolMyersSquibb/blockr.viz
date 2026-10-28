@@ -27,10 +27,15 @@
   /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
   class ChartView {
-    /** @param {HTMLElement} el @param {VizScope} scope */
-    constructor(el, scope) {
+    /**
+     * @param {HTMLElement} el @param {VizScope} scope
+     * @param {{ still?: boolean }} [opts] `still` draws without animation
+     *   (the capture service's picture).
+     */
+    constructor(el, scope, opts = {}) {
       this.el = el;
       this.scope = scope;
+      this.still = !!opts.still;
       /** @type {any[]} */ this.data = [];
       /** @type {number | null} */ this._lastDataRev = null;
       this._ix = new NS.RowIndex();
@@ -231,7 +236,8 @@
         if (fam.prepare) fam.prepare(slot, po);
         // When an action follows, ECharts runs it with the option in one update.
         const actionFollows = !!fam.actions && fam.actions(slot, po);
-        chart.setOption(po.option, actionFollows ? { notMerge: true, lazyUpdate: true } : true);
+        chart.setOption(this.still ? { ...po.option, animation: false } : po.option,
+                        actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         if (existed && hChanged) chart.resize();
         if (fam.after) fam.after(slot, po);

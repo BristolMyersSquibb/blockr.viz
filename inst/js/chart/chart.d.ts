@@ -303,7 +303,7 @@ interface ChartView extends VizView {
   _measureFont(font: string): (s: string) => number;
 }
 
-type ChartViewClass = new (el: HTMLElement, scope: VizScope) => ChartView;
+type ChartViewClass = new (el: HTMLElement, scope: VizScope, opts?: { still?: boolean }) => ChartView;
 
 /** The view's selection (selection.js). */
 interface ChartSelectionState {
