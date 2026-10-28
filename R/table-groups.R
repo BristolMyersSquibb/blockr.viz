@@ -58,10 +58,8 @@ table_groups_payload <- function(m, v, d, src) {
       m$cells, m$prep, data = d, scale_map = src$scale_map()
     ))
   }
-  derived <- list(legend = groups_legend_spec(m$prep),
-                  note = m$prep$note)
-  list(model = model, derived = derived[!vapply(derived, is.null,
-                                                logical(1L))])
+  legend <- groups_legend_spec(m$prep)
+  list(model = model, derived = if (!is.null(legend)) list(legend = legend))
 }
 
 # The settings a groups title can name: the spec's slots plus the first

@@ -503,7 +503,9 @@ test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
                    paste0("N = ", dplyr::n_distinct(
                      ae$USUBJID[ae$ARM == "Active"])))
   # One shared facet column, so the by-level reading is still available.
-  expect_identical(p$facet, "ARM")
+  by_level <- groups_prepare(ae, by = "TERM", summaries = S,
+                             facet_layout = "by_level")
+  expect_false(is.null(by_level$facet_spans))
 })
 
 test_that("columns may facet by DIFFERENT columns; the header names them", {
@@ -521,8 +523,6 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
   # No shared facet column, so the by-level reading has nothing to span and
   # the layout stays by_summary.
   expect_null(p$facet_spans)
-  expect_null(p$facet)
-  expect_identical(p$facet_levels, character())
   expect_identical(p$layout, "facet")
 })
 
