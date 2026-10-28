@@ -89,9 +89,6 @@
     return arg && arg.gear ? arg.gear.label : key;
   };
 
-  // Above this many colour levels a legend cannot be read.
-  const MAX_COLOR_LEVELS = 15;
-
   /** Why there is no chart, in plain text. @param {string} message @returns {VizEmpty} */
   const emptyState = (message) => ({ kind: 'empty', message });
 
@@ -142,17 +139,6 @@
       return emptyState(String(band.note));
     }
 
-    const color = cfg.color;
-    if (color) {
-      const nColors = new Set(rows.map((r) => r[color])).size;
-      if (nColors > MAX_COLOR_LEVELS) {
-        const hint = fam === 'aggregated'
-          ? `Pick a column with ≤${MAX_COLOR_LEVELS} categories.`
-          : 'Use ' + specLabel('series') + ' to split into series (e.g. USUBJID); keep ' +
-            specLabel('color') + ' for low-cardinality grouping (e.g. ARM).';
-        return emptyState(`Too many color levels (${nColors}). ${hint}`);
-      }
-    }
     return null;
   };
 

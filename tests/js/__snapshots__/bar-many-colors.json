@@ -1,0 +1,1685 @@
+{
+ "config": {
+  "position": "stack",
+  "value_labels": false,
+  "line_width": 1,
+  "point_size": 1,
+  "connect": "monotone",
+  "smoother": "none",
+  "identity_line": false,
+  "box_points": "none",
+  "connect_centers": false,
+  "show_n": "none",
+  "missing": "level",
+  "facet_scales": "fixed",
+  "download": false,
+  "type": "bar",
+  "category": "AETERM",
+  "value": null,
+  "orientation": "horizontal",
+  "func": "count",
+  "color": "ADY",
+  "drill": "auto"
+ },
+ "derived": null,
+ "resend": null,
+ "error": null,
+ "dom": {
+  "title": null,
+  "subtitle": null,
+  "caption": null,
+  "legend": null,
+  "status": "",
+  "empty": [],
+  "grid": {
+   "single": true,
+   "columns": null
+  },
+  "slots": [
+   {
+    "label": null,
+    "height": "272px",
+    "chart": true
+   }
+  ]
+ },
+ "slots": [
+  {
+   "theme": null,
+   "calls": [
+    {
+     "op": "setOption",
+     "notMerge": true,
+     "option": {
+      "backgroundColor": "transparent",
+      "textStyle": {
+       "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+      },
+      "tooltip": {
+       "trigger": "item",
+       "confine": true,
+       "formatter": "[fn]",
+       "backgroundColor": "#ffffff",
+       "borderColor": "#e5e7eb",
+       "borderWidth": 1,
+       "padding": [
+        6,
+        10
+       ],
+       "textStyle": {
+        "color": "#111827",
+        "fontSize": 12,
+        "fontFamily": "\"Open Sans\", system-ui, sans-serif"
+       },
+       "extraCssText": "border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.1);"
+      },
+      "legend": {
+       "show": false,
+       "data": [
+        "0",
+        "1",
+        "14",
+        "15",
+        "16",
+        "17",
+        "2",
+        "28",
+        "29",
+        "3",
+        "30",
+        "31",
+        "56",
+        "57",
+        "58",
+        "59",
+        "84",
+        "85",
+        "86",
+        "87"
+       ]
+      },
+      "grid": {
+       "left": 160,
+       "right": 5,
+       "top": 30,
+       "bottom": 46
+      },
+      "xAxis": {
+       "type": "value",
+       "name": "Count",
+       "nameLocation": "middle",
+       "nameGap": 30,
+       "nameTextStyle": {
+        "color": "#6b7280",
+        "fontSize": 12
+       },
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 12
+       },
+       "axisLine": {
+        "lineStyle": {
+         "color": "#d1d5db"
+        }
+       },
+       "splitLine": {
+        "lineStyle": {
+         "color": "#e5e7eb",
+         "type": "dashed"
+        }
+       }
+      },
+      "yAxis": {
+       "type": "category",
+       "data": [
+        "Upper respiratory tract infection",
+        "Nausea",
+        "Headache",
+        "Rash",
+        "Fatigue",
+        "Dizziness",
+        ""
+       ],
+       "inverse": true,
+       "axisLabel": {
+        "color": "#6b7280",
+        "fontSize": 12,
+        "align": "left",
+        "margin": 150,
+        "width": 145,
+        "overflow": "truncate",
+        "ellipsis": "…"
+       },
+       "axisLine": {
+        "show": false
+       },
+       "axisTick": {
+        "show": false
+       }
+      },
+      "series": [
+       {
+        "type": "bar",
+        "name": "0",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#0072B2"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "1",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#E69F00"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "14",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#009E73"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "15",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#CC79A7"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "16",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#56B4E9"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "17",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#D55E00"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "2",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "28",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "29",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "3",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "30",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "31",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         null,
+         null,
+         1
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "56",
+        "data": [
+         null,
+         1,
+         null,
+         null,
+         1,
+         null,
+         1
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "57",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         null,
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         }
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "58",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "59",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "84",
+        "data": [
+         1,
+         null,
+         1,
+         null,
+         null,
+         1,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "85",
+        "data": [
+         null,
+         1,
+         null,
+         1,
+         1,
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "86",
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         null,
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       },
+       {
+        "type": "bar",
+        "name": "87",
+        "data": [
+         null,
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ]
+          }
+         },
+         null,
+         null
+        ],
+        "stack": "stack",
+        "itemStyle": {
+         "color": "#9AA0A6"
+        },
+        "barWidth": "60%",
+        "barMaxWidth": 48,
+        "emphasis": {
+         "focus": "self"
+        }
+       }
+      ]
+     },
+     "probes": {
+      "tooltip": [
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>",
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 56</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#0072B2\"></span><span class=\"vz-tt-label\">Analysis Relative Day 0</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#CC79A7\"></span><span class=\"vz-tt-label\">Analysis Relative Day 15</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#D55E00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 17</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 2</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-hit\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 28</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 30</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 57</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 59</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 84</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 86</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">10</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#E69F00\"></span><span class=\"vz-tt-label\">Analysis Relative Day 1</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#009E73\"></span><span class=\"vz-tt-label\">Analysis Relative Day 14</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#56B4E9\"></span><span class=\"vz-tt-label\">Analysis Relative Day 16</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 29</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 3</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 31</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 58</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 85</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-row is-dim\"><span class=\"vz-tt-sw\" style=\"background:#9AA0A6\"></span><span class=\"vz-tt-label\">Analysis Relative Day 87</span><span class=\"vz-tt-value\">1</span></div><div class=\"vz-tt-sep\"></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Count</span><span class=\"vz-tt-value\">9</span></div>"
+      ]
+     }
+    },
+    {
+     "op": "setOption",
+     "notMerge": false,
+     "option": {
+      "series": [
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       },
+       {
+        "data": [
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": 1,
+          "itemStyle": {
+           "borderRadius": [
+            0,
+            2,
+            2,
+            0
+           ],
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         },
+         {
+          "value": null,
+          "itemStyle": {
+           "opacity": 1
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "disposed": 0,
+ "inputs": []
+}

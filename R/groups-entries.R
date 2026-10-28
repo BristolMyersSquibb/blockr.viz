@@ -21,9 +21,8 @@ GROUPS_ONE_MARK <- c(field = "text", sparkline = "sparkline",
 # GROUPS_STATS / GROUPS_WHISKERS.
 GROUPS_DIST_STYLES <- c("dot", "box")
 
-# Ceiling on a mapped dimension's levels, the chart block's (MAX_COLOR_LEVELS
-# in chart/model-common.js). In a facet a level is a COLUMN, so a wide table is
-# no reading either. Pointing either at a subject id must fail loudly, naming
+# Ceiling on a mapped dimension's levels. In a facet a level is a COLUMN, so a
+# wide table is no reading either. Pointing either at a subject id must fail loudly, naming
 # the column.
 GROUPS_MAX_LEVELS <- 15L
 
