@@ -395,6 +395,18 @@ annotated_spanner_labels <- function(data) {
   if (!length(lbl)) NULL else lbl
 }
 
+# One column's keys as the JSON the markup carries.
+#' @noRd
+dd_col_keys_json <- function(entry) {
+  as.character(jsonlite::toJSON(
+    lapply(entry, function(p) {
+      list(column = as.character(p[["column"]]),
+           values = I(as.character(p[["values"]])))
+    }),
+    auto_unbox = TRUE
+  ))
+}
+
 #' @noRd
 dd_is_string <- function(x) {
   is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
