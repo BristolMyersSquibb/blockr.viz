@@ -168,9 +168,11 @@
    * @param {TableFrame} frame
    * @param {VizScope} scope
    * @param {() => TableInfo} info What the current layout draws.
+   * @param {(layout: string) => void} [onLayout] A layout pick, before the
+   *   tray shows the new layout's rows.
    * @returns {TableGearHandle | null}
    */
-  function mount(frame, scope, info) {
+  function mount(frame, scope, info, onLayout) {
     /** What R resolved with the last payload: the drill targets. */
     /** @type {TableDerived} */
     let derived = {};
@@ -190,6 +192,9 @@
       custom: (key, el, ctx) => {
         const ed = V.table.editors[ctx.values.layout + '.' + key] || V.table.editors[key];
         if (ed) ed(el, ctx);
+      },
+      onChange: (changed) => {
+        if (onLayout && typeof changed.layout === 'string') onLayout(changed.layout);
       }
     };
     const engine = frame.mountGear({ block: 'table', typeKey: 'layout', title: 'Table settings', host });

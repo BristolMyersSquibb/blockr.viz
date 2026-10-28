@@ -474,7 +474,8 @@ interface VizTableNamespace {
     card(model: TableModel, k: number, i: number, cell: Element, t: Element): string;
   };
   gear: {
-    mount(frame: TableFrame, scope: VizScope, info: () => TableInfo): TableGearHandle | null;
+    mount(frame: TableFrame, scope: VizScope, info: () => TableInfo,
+          onLayout?: (layout: string) => void): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
     shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };
