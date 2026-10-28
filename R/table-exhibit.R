@@ -199,28 +199,27 @@ report_call.table_block <- function(x, var, ...) {
   }
 
   # Print-relevant surface only: how the table is built and what it says.
-  # Drill, search, sort, the identity row colour and the ctrl transports are
-  # not part of a printed table.
+  # Drill, search, the identity row colour and the ctrl transports are not
+  # part of a printed table. Settings at the spec's default are left out.
   groups <- identical(state("layout"), "groups")
-  spec <- if (groups) {
-    list(by = NULL, summaries = NULL, id = NULL,
-         facet_layout = "by_summary", sort_by = "value", sort_dir = "desc",
-         top_n = NULL, axis = TRUE, value_labels = TRUE,
-         pct_of = "facet", missing = "drop", format = NULL, unit = NULL)
+  keys <- if (groups) {
+    c("by", "summaries", "id", "facet_layout", "sort_by", "sort_dir",
+      "top_n", "column_axis", "value_labels", "percent_of", "missing",
+      "format", "unit", "look", "bar_width")
   } else {
-    list(rowname = NULL, columns = NULL, shadings = NULL, format = "number",
-         unit = NULL)
+    c("rowname", "columns", "shadings", "format", "unit")
   }
-  # The static builders keep the engines' names.
-  rename <- c(columns = "value", id = "id_var")
+  defaults <- lapply(viz_block_spec("table")$args, spec_default)
+  # table_exhibit() takes the records' columns as `value`.
+  rename <- c(columns = "value")
 
   args <- list()
 
-  for (nm in names(spec)) {
+  for (nm in keys) {
     v <- state(nm)
     if (is.null(v) || !length(v) ||
           (is.character(v) && !any(nzchar(v)))) next
-    if (identical_default(v, spec[[nm]])) next
+    if (identical_default(v, defaults[[nm]])) next
     out_nm <- if (nm %in% names(rename)) rename[[nm]] else nm
     args[[out_nm]] <- v
   }

@@ -362,7 +362,7 @@ test_that("the groups layout's slots print its settings and its first summary", 
     drill = "auto",
     summaries = list(list(type = "simple", col = "AGE", func = "mean",
                           color = "RACE", facet = "SITE", fill = "GRADE")),
-    title = paste("{@group} {@parent} {@by} {@value} {@id_var} {@color}",
+    title = paste("{@group} {@parent} {@by} {@value} {@id} {@color}",
                   "{@facet} {@fill} {@sort_by} {@top_n} {@drill}")
   )
   args <- table_groups_title_args(viz_block_spec("table"), v)
@@ -376,4 +376,14 @@ test_that("the groups layout's slots print its settings and its first summary", 
                                  modifyList(v, list(by = "ARM")))
   expect_identical(c(one$group, one$by), c("ARM", "ARM"))
   expect_null(one$parent)
+})
+
+test_that("a line with no text stays while it offers a setting, in both blocks", {
+  d <- data.frame(a = 1)
+  v <- list(title = "[by {label(@color)}]", subtitle = "", color = NULL)
+  tt <- viz_titles(v, d, list(), list(color = NULL))
+  expect_identical(tt$title$text, "")
+  expect_identical(tt$title$offers, list("color"))
+  # Nothing to show and nothing to offer: no line.
+  expect_null(tt$subtitle)
 })

@@ -101,9 +101,8 @@ groups_drop_empty_facets <- function(plan, leaf, par_rows = NULL) {
 #' facet repeats per level, adjacent. `facet` / `color` are the legacy
 #' table-level pair, fanned down onto the rows (groups_migrate_globals()).
 #' @noRd
-groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
+groups_prepare_summaries <- function(data, by, summaries,
                                    facet_layout = "by_summary",
-                                   color = NULL,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
                                    subject = NULL, pct_of = "facet") {
@@ -113,7 +112,7 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   data <- g$data
   keys <- g$keys
 
-  summaries <- groups_prep_norm(summaries, data, color, facet)
+  summaries <- groups_prep_norm(summaries, data)
   if (!is.null(summaries$err)) return(bad(summaries$err))
   summaries <- groups_prep_mappings(summaries, data, g$drawn)
   if (!is.null(summaries$err)) return(bad(summaries$err))
@@ -158,17 +157,11 @@ groups_prepare_summaries <- function(data, by, summaries, facet = NULL,
   list(
     rows = rows, plan = fl$plan,
     layout = if (!length(fi$cols)) "simple" else "facet",
-    mark = "summaries", bar_max = 0, bar_min = 0,
+    bar_max = 0, bar_min = 0,
     group_label = groups_group_label(data, g$group, g$parent),
-    series = series_lv,
-    palette = pal, facet_levels = facet_levels,
-    denoms = c(all = groups_n_rows(data)), group = g$group,
-    parent = g$parent,
+    series = series_lv, palette = pal, group = g$group, parent = g$parent,
     color = lead_group$column, color_groups = cg,
-    facet = fi$shared,
     folded = asm$folded, fold_max = asm$fold_max,
-    n_total = if (is.null(g$parent)) nrow(leaf) else nrow(par_rows),
-    note = NULL, pct_ok = FALSE, func = "identity",
     facet_spans = fl$facet_spans,
     failed = unlist(lapply(fl$plan, function(p) p$failed)),
     all = g$all
@@ -233,12 +226,10 @@ groups_present <- function(col, data) {
 #' and check every mapped column exists.
 #' @return the summaries or `list(err =)`.
 #' @noRd
-groups_prep_norm <- function(summaries, data, color, facet) {
+groups_prep_norm <- function(summaries, data) {
   summaries <- groups_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(list(err = summaries$err))
   if (!length(summaries)) return(list(err = "Add at least one summary column"))
-  summaries <- groups_migrate_globals(summaries, groups_present(color, data),
-                                    groups_present(facet, data))
   msg <- groups_missing_columns(summaries, data)
   if (!is.null(msg)) return(list(err = msg))
   summaries

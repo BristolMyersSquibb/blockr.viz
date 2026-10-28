@@ -111,34 +111,12 @@ chart_needed_cols <- function(v, d, kinds) {
   needed[nzchar(needed) & needed %in% names(d)]
 }
 
-# The chart text resolved against the data, in the shape core/titles.js
-# reads: each band its text, its pieces (the words a reader may set) and the
-# settings offered where a clause dropped; NULL with nothing to show. `args` is
-# what each `{@arg}` prints now, `choices` the lists a sentence gives its
-# words. Slots name the spec's arguments, plus the prepare script's declared
-# values.
+# The chart text (viz_titles()): slots name the spec's arguments, the
+# prepare script's declared values and the highlight.
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
-  band <- function(tpl, auto_text) {
-    text <- resolve_block_title(tpl, d, auto = auto_text, args = a)
-    parts <- block_title_parts(tpl, d, auto = auto_text, args = a)
-    offers <- as.list(attr(parts, "offers"))
-    empty <- !length(text) || is.na(text[[1L]]) || !nzchar(text[[1L]])
-    if (empty && !length(offers)) {
-      return(NULL)
-    }
-    list(text = text, parts = parts, offers = offers)
-  }
-  list(
-    title = band(v$title, auto$label),
-    subtitle = band(v$subtitle, auto$subtitle),
-    caption = band(v$caption, auto$caption),
-    args = lapply(stats::setNames(nm = names(a)), arg_token_value, args = a),
-    choices = lapply(
-      template_slot_choices(list(v$title, v$subtitle, v$caption)), as.list
-    )
-  )
+  viz_titles(v, d, auto, a)
 }
 
 # An export can ask for a picture of the chart whether or not its panel was

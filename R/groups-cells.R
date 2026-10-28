@@ -4,7 +4,7 @@
 #' `dw` is the label slot width in ch, one number per column so every row
 #' reserves the same slot.
 #' @noRd
-groups_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
+groups_cells <- function(prep, drill = NULL, cfg = NULL) {
   rows <- prep$rows
   plan <- prep$plan
   n <- nrow(rows)
@@ -19,7 +19,6 @@ groups_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   cols <- lapply(seq_along(plan), function(i) cells_column(ctx, plan[[i]]))
   cols <- cells_annotate(cols, plan)
 
-  st <- cells_row_state(prep, rows, active)
   # A table without `by` has no group to drill on.
   if (isTRUE(prep$all)) drill <- NULL
 
@@ -37,8 +36,6 @@ groups_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     ),
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
-    on = st$on,
-    on_cell = st$on_cell,
     pick = !is.null(drill),
     # Columns a row click claims, outer to inner (R/table-drill.R).
     path = c(chr_state(prep$parent), chr_state(prep$group)),
@@ -160,22 +157,6 @@ cells_annotate <- function(cols, plan) {
     }
   }
   cols
-}
-
-# A stored click is the row's path plus what a cell added; the cell part goes
-# to the client.
-cells_row_state <- function(prep, rows, active) {
-  path <- c(chr_state(prep$parent), chr_state(prep$group))
-  filters <- table_drill_filters(active$col, active$vals)
-  on_path <- names(filters) %in% path
-  on <- table_drill_on(
-    rows, chr_state(prep$group), chr_state(prep$parent),
-    filters[on_path]
-  )
-  on_cell <- if (any(on) && any(!on_path)) {
-    lapply(filters[!on_path], function(v) as.character(v)[[1L]])
-  }
-  list(on = on, on_cell = on_cell)
 }
 
 #' @noRd

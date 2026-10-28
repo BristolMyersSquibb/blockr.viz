@@ -49,3 +49,32 @@ legacy_new_table <- function(res) {
                              list(ctor = "new_table_block",
                                   ctor_pkg = "blockr.viz")))
 }
+
+#' @rdname blockr_deser.chart_block
+#' @export
+blockr_deser.table_block <- function(x, data, ...) {
+  stopifnot(all(c("constructor", "payload") %in% names(data)))
+  res <- legacy_deser("table_block", data)
+  do.call(
+    new_table_block,
+    c(res$args, res$attrs,
+      list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
+  )
+}
+
+#' @rdname blockr_deser.chart_block
+#' @export
+blockr_deser.summarize_table_block <- function(x, data, ...) {
+  stopifnot("payload" %in% names(data))
+  saved <- data[["payload"]]
+  is_attr <- !names(saved) %in% legacy_arg_names("summarize_table")
+  payload <- legacy_table_args(saved[!is_attr], from = "summarize")
+  payload$layout <- "groups"
+  attrs <- saved[is_attr]
+  args <- legacy_restore("table", payload,
+                         version = data[["constructor"]][["version"]])
+  do.call(
+    new_table_block,
+    c(args, attrs, list(ctor = "new_table_block", ctor_pkg = "blockr.viz"))
+  )
+}
