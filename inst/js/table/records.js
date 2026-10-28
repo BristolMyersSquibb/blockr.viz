@@ -61,8 +61,6 @@
       this.payload = null;
       /** The selection shown: R's, or a click R has not answered. */
       this.sel = /** @type {TableSelection | null} */ (null);
-      /** The last claim sent to a drill target. */
-      this.sent = /** @type {TableSelection | null} */ (null);
       this.drawnWith = '';
       this.still = !!opts.still;
       /** @type {Record<string, string>} */
@@ -74,10 +72,7 @@
           this.sel = s;
           this.repaint();
         },
-        sent: (s) => {
-          this.sent = s;
-          this.footer();
-        },
+        sent: (s) => frame.flash('Drilled down to ' + T.drill.label(s, this.labels)),
         transient: () => this.transient()
       });
       this.grid.hooks.drawn = () => {
@@ -120,7 +115,6 @@
       const m = /** @type {TableModel | null} */ (data && Array.isArray(data.cols) ? data : null);
       this.labels = Object.fromEntries((p.columns || []).map((c) => [c.name, c.label || c.name]));
       this.sel = asSelection(cfg.selection);
-      if (!this.transient()) this.sent = null;
       const f = this.frame;
       f.titles(d.titles);
       const has = !!m && !d.empty;
@@ -132,7 +126,7 @@
         this.cardsHost.hidden = true;
         f.el.classList.remove('dt-clickable');
         f.count('');
-        f.receipt(null, null);
+        f.status(null);
         return;
       }
       f.structured(isStructured(m));
@@ -146,7 +140,7 @@
      * @param {TableConfig} cfg
      * @param {boolean} has
      * @param {TableDerived} d
-     * @returns {{ search: boolean, download: boolean, downloads?: unknown, onOpen?: () => void }}
+     * @returns {{ search: boolean, download: boolean, downloads?: VizDownload[] | null, onOpen?: () => void }}
      */
     tools(cfg, has, d) {
       if (this.still) return { search: false, download: false };
@@ -233,7 +227,8 @@
       else this.grid.draw();
     }
 
-    /** The row count and the receipt line. */
+    /** The row count and the status line: what the selection holds. A drill
+     * sent to another block flashes its receipt instead (frame.flash). */
     footer() {
       const m = this.model;
       const f = this.frame;
@@ -242,20 +237,17 @@
         : this.grid.counts();
       // A printed table has no search to count against.
       f.count(this.still ? '' : this.countLine(m, c));
-      if (this.transient()) {
-        f.receipt(this.sent ? 'Drilled down to ' + T.drill.label(this.sent, this.labels) : null,
-                  null);
-        return;
-      }
-      const sel = this.sel;
+      const sel = this.transient() ? null : this.sel;
       if (!sel) {
-        f.receipt(null, null);
+        f.status(null);
         return;
       }
+      // R's words once it holds this selection: it names the columns a
+      // structured table's group levels stand for.
       const d = /** @type {TableDerived} */ (this.payload ? this.payload.derived : {});
       const fromR = T.drill.same(sel, asSelection(this.config().selection)) && d.receipt;
-      f.receipt(fromR || 'Filtered: ' + T.drill.label(sel, this.labels), () => {
-        V.util.send(f.id, 'select', { selection: null, nonce: Date.now() });
+      f.status(fromR || 'Filtered: ' + T.drill.label(sel, this.labels), () => {
+        V.util.select(f.id, null);
         this.sel = null;
         this.repaint();
       });

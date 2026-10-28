@@ -62,7 +62,7 @@ test_that("selections have one shape", {
   clear <- viz_read_selection(json('{"selection": null, "nonce": 6}'))
   expect_null(clear$selection)
   expect_identical(clear$nonce, 6)
-  # The table's receipt clear sends Date.now().
+  # A nonce past the 32-bit range reads as it is.
   expect_silent(late <- viz_read_selection(
     json('{"selection": null, "nonce": 1793173863956}')
   ))
