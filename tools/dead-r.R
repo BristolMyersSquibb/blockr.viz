@@ -6,7 +6,9 @@
 # generics), .onLoad / .onAttach / .onUnload, every string in R/ that names
 # an object (register_blocks("new_chart_block"), do.call("f")), and every
 # name used in a top-level expression that is not `name <- function`
-# (constants, memoise0(function() ...)). Edges are all.names() over each
+# (constants, memoise0(function() ...)), and every name called from a
+# roxygen `@eval` line, which runs when the docs are built. Edges are
+# all.names() over each
 # function's body and formals, plus the functions held in a wrapper's
 # closure. A local variable named like an object counts as a use, so the
 # list can miss dead code but does not report live code.
@@ -43,12 +45,23 @@ top_level <- unlist(lapply(r_files, function(f) {
   }))
 }))
 
+# `#' @eval viz_spec_params("chart")`: code roxygen runs at docs time.
+doc_eval <- unlist(lapply(r_files, function(f) {
+  x <- readLines(f, warn = FALSE)
+  e <- sub("^#'\\s*@eval\\s+", "", grep("^#'\\s*@eval\\s", x, value = TRUE))
+  unlist(lapply(e, function(code) {
+    tryCatch(all.names(str2lang(code)), error = function(err) {
+      regmatches(code, regexpr("^[A-Za-z_.][A-Za-z0-9_.]*", code))
+    })
+  }))
+}))
+
 s3 <- parseNamespaceFile(basename(pkg_dir), dirname(pkg_dir))$S3methods
 s3_fun <- ifelse(is.na(s3[, 3L]), paste(s3[, 1L], s3[, 2L], sep = "."),
                  s3[, 3L])
 
 roots <- intersect(
-  unique(c(top_level, getNamespaceExports(ns), s3_fun,
+  unique(c(top_level, doc_eval, getNamespaceExports(ns), s3_fun,
            ".onLoad", ".onAttach", ".onUnload", strings)),
   nodes
 )

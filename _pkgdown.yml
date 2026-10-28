@@ -1,0 +1,73 @@
+url: https://bristolmyerssquibb.github.io/blockr.viz/
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [reference, articles, news]
+
+articles:
+  - title: Blocks
+    contents:
+      - chart
+      - table
+
+# The public exports. Helpers for other blockr packages carry
+# `@keywords internal` and stay off the index.
+reference:
+  - title: Blocks
+    contents:
+      - new_chart_block
+      - new_table_block
+      - register_viz_blocks
+  - title: Data for the table
+    desc: >
+      A finished table from R code, and the summary statistics the
+      variables layout draws.
+    contents:
+      - as_annotated_df
+      - as_plain_df
+      - summary_table
+      - drill_source
+  - title: Downloads
+    desc: >
+      What a block's downloads write, and how another package adds a
+      format.
+    contents:
+      - new_viz_exhibit
+      - exhibit-accessors
+      - register_viz_exporter
+      - write_annotated_xlsx
+      - write_exhibit_html
+      - write_exhibit_png
+      - write_exhibit_pptx
+  - title: Tables and charts in reports and slides
+    contents:
+      - table_exhibit
+      - static_exhibit
+      - static_table
+      - static_summarize_table
+      - html_exhibit
+      - pptx_add_exhibit
+      - report_call
+      - exhibit-options
+  - title: A table in another block
+    contents:
+      - interactive_table
+  - title: Sending a click to another block
+    contents:
+      - ctrl_send
+      - ctrl_targets
+      - ctrl_auto_target
+      - new_ctrl_bridge_extension
+  - title: Board options
+    contents:
+      - new_exhibit_font_option
+      - new_download_footer_option
+  - title: Superseded
+    desc: >
+      Kept so older code runs.
+    contents:
+      - new_summary_table_block
+      - new_summarize_table_block
+      - drilldown_table_color
