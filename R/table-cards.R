@@ -9,15 +9,16 @@
 # Nothing here computes a mark. The glyph geometry is the summarize table's
 # cell model (summarize_cells()), so a column of cards shares its scale the
 # way a table column does, and the browser draws the glyphs with the
-# summarize table's own emitters (inst/js/summarize-table.js). What this file
+# groups table's marks (inst/js/table/marks.js). What this file
 # adds is the text of each card, as one list both consumers read:
 #
 #   table_cards_groups()  -> the card model of a groups-layout table
 #   table_cards_records() -> the card model of a records-layout table
 #
-# The model travels on the engine's payload (`cards`), and table-cards.js
-# draws it. The downloads draw it too: cards_exhibit() wraps it for
-# html_exhibit() (the same JS, inlined) and for the painted slide
+# The model travels on the payload (`cards`), and the table view
+# (inst/js/table/cards.js) draws it. The downloads draw it too:
+# cards_exhibit() wraps it for html_exhibit() (the same view, inlined) and
+# for the painted slide
 # (cards_paint_grob(), which reuses the summarize painter's glyphs).
 
 # The summary types a card cannot draw: a swimlane needs the width of a table
@@ -335,17 +336,3 @@ cards_payload <- function(model) {
     fold = model$fold
   ))
 }
-
-#' The cards stylesheet and script. Loaded only by a table in the cards look:
-#' the block's UI asks for it then, and a switch to cards asks for it through
-#' a uiOutput (new_table_block()).
-#' @noRd
-table_cards_dep <- memoise0(function() {
-  htmltools::htmlDependency(
-    name = "blockr-viz-table-cards",
-    version = paste0(utils::packageVersion("blockr.viz"), ".1"),
-    src = system.file(package = "blockr.viz"),
-    script = "js/table-cards.js",
-    stylesheet = "css/table-cards.css"
-  )
-})

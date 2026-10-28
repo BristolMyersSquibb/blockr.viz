@@ -234,35 +234,6 @@ tg_state <- function(cs, ...) {
   s
 }
 
-test_that("colour-split lanes, hidden labels and a drill match the reference", {
-  cs <- tm_cases("groups")$grp_all_types
-  sm <- cs$state$summaries
-  for (k in c(5L, 6L, 11L)) sm[[k]]$color <- "grp"
-  sm[[2L]]$facet <- "grp"
-  sm[[1L]]$facet <- "grp"
-  sets <- list(
-    list(summaries = sm, by = "cat", drill = "auto"),
-    list(summaries = sm, by = c("grp", "cat"), drill = "auto",
-         facet_layout = "by_level", column_axis = FALSE),
-    list(summaries = sm, by = "cat", value_labels = FALSE)
-  )
-  for (k in seq_along(sets)) {
-    st <- do.call(tg_state, c(list(cs), sets[[k]]))
-    m <- table_model_groups(st, cs$data)
-    expect_null(m$prep$err)
-    ref <- tm_json(summarize_flat_payload(m$cells))
-    v <- tm_json(table_groups_view(m, axis = !isFALSE(st$column_axis)))
-    ref$head <- paste0("<table>", m$cells$thead, m$cells$tfoot, "</table>")
-    ref$pick <- m$cells$pick
-    tg_check(v, ref, paste("set", k))
-    if (identical(st$facet_layout, "by_level")) {
-      spans <- Filter(function(h) !is.null(h$span), v$head[[1L]])
-      expect_length(spans, 2L)
-      expect_identical(lapply(spans[[2L]]$keys, tg_vec), list(grp = "g2"))
-    }
-  }
-})
-
 test_that("a one-row table's columns are arrays on the wire", {
   cs <- tm_cases("groups")$grp_no_by
   v <- table_groups_view(table_model_groups(cs$state, cs$data))

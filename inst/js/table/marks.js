@@ -65,7 +65,7 @@
     return '<div class="blockr-summarize-fill' + (lab ? ' has-lab' : '') + '" data-seg="' + j +
       '" style="width:' + n(c.seg[j][i]) + '%;background:' + col(c.fills[j]) + '"' +
       tipAttr(c.names[j] + ': ' + (c.segv[j][i] == null ? '' : c.segv[j][i])) + '>' +
-      (lab ? '<span class="blockr-summarize-seglab w' + String(lab).length + '" style="color:' +
+      (lab ? '<span class="blockr-summarize-seglab lw-' + String(lab).length + '" style="color:' +
         col(c.sink ? c.sink[j] : '') + '">' + esc(lab) + '</span>' : '') + '</div>';
   }
 

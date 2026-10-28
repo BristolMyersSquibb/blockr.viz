@@ -41,8 +41,6 @@
      */
     constructor(frame, scope) {
       super(frame, scope);
-      /** A picture: everything drawn, no tools, no drill line. */
-      this.still = false;
       frame.el.classList.add('blockr-summarize-container');
       scope.own({ dispose: () => frame.el.classList.remove('blockr-summarize-container') });
       this.legend = scope.node(document.createElement('div'));

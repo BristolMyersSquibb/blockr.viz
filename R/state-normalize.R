@@ -43,7 +43,7 @@ chr_vec_state <- function(x) {
 # A boolean toggle slot: always a length-1 logical, never a string.
 #
 # The JS gear renders a two-option segmented control and transports its value
-# as the strings "on" / "off" (table.js SORTABLE_OPT). That is the CONTROL's
+# as the strings "on" / "off". That is the CONTROL's
 # wire format, not the block's API: table-block coerces it at the boundary
 # (`as_toggle()`), so `sortable` et al. are plain logicals. Older chart
 # boards carry the literal "off" for `identity_line`.

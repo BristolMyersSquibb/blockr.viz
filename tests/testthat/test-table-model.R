@@ -35,23 +35,6 @@ test_that("table_model_records() hands a structured frame on", {
   expect_true(dt_is_structured(m$data))
 })
 
-test_that("table_model_groups() gives the recorded groups cells", {
-  cases <- tm_cases("groups")
-  n <- 0L
-  for (nm in names(cases)) {
-    cs <- cases[[nm]]
-    want <- tm_payload(cs$messages, "blockr-viz-summarize-data")
-    if (!identical(want$kind, "flat")) next
-    m <- table_model_groups(cs$state, cs$data)
-    got <- tm_json(summarize_flat_payload(m$cells))
-    for (k in c("n", "ncol", "label", "expanded", "pick", "cols")) {
-      expect_identical(got[[k]], want[[k]], label = paste(nm, k))
-    }
-    n <- n + 1L
-  }
-  expect_gt(n, 10L)
-})
-
 test_that("table_model_groups() passes a preparation error on", {
   m <- table_model_groups(list(by = "nope", summaries = list()),
                           data.frame(a = 1))

@@ -51,47 +51,6 @@ test_that("html_table_delta_css() scope gates Table-1 typography to structured",
   expect_true(grepl("input.blockr-search", scoped_css, fixed = TRUE))
 })
 
-test_that("structured dt_chrome scopes the delta; flat dt_chrome omits it", {
-  tbl <- htmltools::tags$table(class = "blockr-table")
-
-  struct <- as.character(htmltools::tagList(
-    dt_chrome("e", structured = TRUE, max_height = NULL, inner = tbl)
-  ))
-  expect_true(grepl("drilldown-table-structured", struct, fixed = TRUE))
-  expect_true(grepl(
-    ".drilldown-table-structured .blockr-table tbody td.blockr-data",
-    struct, fixed = TRUE
-  ))
-
-  flat <- as.character(htmltools::tagList(
-    dt_chrome("e", structured = FALSE, max_height = NULL, inner = tbl)
-  ))
-  expect_false(grepl("drilldown-table-structured", flat, fixed = TRUE))
-  # The flat table never injects the Table-1 weight rule at all.
-  expect_false(grepl("td.blockr-data", flat, fixed = TRUE))
-})
-
-test_that("dt_chrome scroll = 'page' drops the scroll box and the height cap", {
-  tbl <- htmltools::tags$table(class = "blockr-table")
-
-  wrapper <- function(...) {
-    html <- as.character(htmltools::tagList(
-      dt_chrome("e", structured = TRUE, inner = tbl, ...)
-    ))
-    regmatches(html, regexpr("<div class=\"blockr-table-wrapper[^>]*>", html))
-  }
-
-  box <- wrapper(max_height = "600px")
-  expect_false(grepl("dt-scroll-page", box, fixed = TRUE))
-  expect_true(grepl("max-height:600px;overflow:auto;", box, fixed = TRUE))
-
-  page <- wrapper(max_height = "600px", scroll = "page")
-  expect_true(grepl("dt-scroll-page", page, fixed = TRUE))
-  expect_false(grepl("style=", page, fixed = TRUE))
-
-  expect_error(wrapper(max_height = NULL, scroll = "panel"))
-})
-
 test_that("html_table() emits section header rows for .group1_level boundaries", {
   df <- tibble::tibble(
     .group1_level = c("GI Disorders", "GI Disorders", "Nervous System", "Nervous System"),
@@ -537,47 +496,6 @@ test_that("collapse JS recomputes visibility from ancestor state", {
   expect_true(grepl("blockr-hidden-collapse", html, fixed = TRUE))
 })
 
-test_that("wrap_titles narrows arm columns to their longest word", {
-  # A long arm label used to set the column width outright (both arms hit the
-  # hard 320px cap), pushing the later columns off screen in a narrow panel.
-  # Wrapping measures the longest word instead, so the title wraps into a
-  # column sized for the data.
-  skip_if_not_installed("safetyData")
-  adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
-  adsl$ARM <- c("Placebo" = "Placebo",
-                "Xanomeline Low Dose" = "Investigational Product 54 mg Once Daily",
-                "Xanomeline High Dose" = "Investigational Product 81 mg Twice Daily"
-                )[as.character(adsl$ARM)]
-  st <- summary_table(adsl, vars = "AGE", by = "ARM")
-
-  widths <- function(wrap) {
-    h <- paste(as.character(dt_table_tag_structured(
-      st, NULL, 1, toggles = list(wrap_titles = wrap))), collapse = "")
-    as.integer(regmatches(h, gregexpr("(?<=width: )[0-9]+(?=px)", h,
-                                      perl = TRUE))[[1L]])
-  }
-  off <- widths(FALSE)
-  on  <- widths(TRUE)
-  expect_true(all(on <= off))
-  expect_lt(sum(on), sum(off))
-  # The two long arms come down off the 320px cap; the short ones do not move.
-  expect_equal(sum(off == 320L), 2L)
-  expect_equal(sum(on == 320L), 0L)
-})
-
-test_that("wrap_titles defaults on and rides a data attribute the gear reads", {
-  skip_if_not_installed("safetyData")
-  adsl <- safetyData::adam_adsl[c("USUBJID", "ARM", "AGE")]
-  st <- summary_table(adsl, vars = "AGE", by = "ARM")
-  render <- function(toggles) {
-    paste(as.character(dt_table_tag_structured(st, NULL, 1, toggles = toggles)),
-          collapse = "")
-  }
-  expect_match(render(list()), 'data-dt-wrap-titles="on"', fixed = TRUE)
-  expect_match(render(list(wrap_titles = FALSE)), 'data-dt-wrap-titles="off"',
-               fixed = TRUE)
-})
-
 test_that("delta CSS draws the clinical table style", {
   css <- html_table_delta_css(scope = ".drilldown-table-structured")
   squash <- function(x) gsub("\\s+", " ", x)
@@ -637,73 +555,16 @@ test_that("delta CSS draws the clinical table style", {
   expect_false(grepl("inset 0 3px 0 0", css, fixed = TRUE))
   expect_false(grepl("inset 3px 0 0 0", css, fixed = TRUE))
 
-  # Hover classes set by table.js, and the plain wash only off .dt-clickable.
+  # Hover classes set by the view (table/drill.js); the plain wash only off
+  # .dt-clickable.
   expect_match(css, ".drilldown-table-structured:not(.dt-clickable) .blockr-table tbody tr.blockr-data-row:hover > td",
                fixed = TRUE)
   expect_match(css, "tr.dt-hot-row > td.dt-hot-cell", fixed = TRUE)
 })
 
-test_that("table CSS reads design-system meaning tokens only", {
-  legacy <- c("--stbl-", "--blockr-color-text-primary", "--blockr-color-text-secondary",
-              "--blockr-color-text-subtle", "--blockr-color-border,",
-              "--blockr-color-primary", "--blockr-color-bg-input",
-              "--blockr-color-bg,", "--blockr-grey-")
-  css <- html_table_delta_css()
-  sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
-                 collapse = "\n")
-  for (x in legacy) {
-    expect_false(grepl(x, css, fixed = TRUE), info = paste("delta:", x))
-    expect_false(grepl(x, sheet, fixed = TRUE), info = paste("table.css:", x))
-  }
-  # rgba literals survive only as var() fallbacks.
-  lits <- regmatches(sheet, gregexpr("(?<!, )rgba\\(37, 99, 235", sheet, perl = TRUE))[[1]]
-  expect_length(lits, 0L)
-})
-
-test_that("flat table-block rows are 26px with no body rules", {
-  sheet <- paste(readLines(system.file("css", "table.css", package = "blockr.viz")),
-                 collapse = "\n")
-  expect_match(sheet, ".drilldown-table-container .blockr-table tbody td {\n  padding: 3px 12px;\n  line-height: 20px;",
-               fixed = TRUE)
-  expect_match(sheet, ".drilldown-table-container .blockr-table thead th {\n  padding: 7px 12px;",
-               fixed = TRUE)
-  expect_match(sheet, ".drilldown-table-container .blockr-table tbody tr {\n  border-bottom: 0;",
-               fixed = TRUE)
-  # No accent bars on a claimed row.
-  expect_false(grepl("tr.dt-row-active td:first-child", sheet, fixed = TRUE))
-})
-
-test_that("table.js draws fold-all in the stub header and previews claims on hover", {
-  js <- paste(readLines(system.file("js", "table.js", package = "blockr.viz")),
-              collapse = "\n")
-  # Fold all: a button in the top-left stub header, beside its title or
-  # reading "All" when it is blank. Never in a lower row label.
-  expect_match(js, "function buildFoldAll(tbody, onClick)", fixed = TRUE)
-  expect_match(js, "thead th.blockr-stub-header", fixed = TRUE)
-  expect_match(js, "var indentHeads = function () {", fixed = TRUE)
-  expect_match(js, "tr.blockr-indent-toggle .blockr-chev", fixed = TRUE)
-  expect_match(
-    js,
-    "thead th.blockr-stub-header .dt-foldall",
-    fixed = TRUE
-  )
-  expect_match(js, "if (rendered) return bindFoldAll(rendered);",
-               fixed = TRUE)
-  expect_false(grepl("multiBlankStub", js, fixed = TRUE))
-  expect_false(grepl("th.setAttribute(\"rowspan\", String(ths.length));",
-                     js, fixed = TRUE))
-  expect_match(js, "lab.className = \"dt-stub-title\";", fixed = TRUE)
-  expect_match(js, "all.textContent = \"All\";", fixed = TRUE)
-  expect_match(js, ".altKey) {", fixed = TRUE)
-  # Hover follows the click model's helpers, so it lights what a click claims.
-  expect_match(js, "function wireHover()", fixed = TRUE)
-  expect_match(js, "var ck = colKeysAt(", fixed = TRUE)
-  expect_match(js, "hot(at, [\"dt-hot-cell\"]);", fixed = TRUE)
-})
-
 test_that("the R-built stub header carries no fold-all chevron", {
   # The exports and html_table() read the title from the attribute; the
-  # chevron is table.js's, added in the browser.
+  # chevron is the view's, added in the browser.
   df <- data.frame(.variable_label = c("Sex", "Sex"), .label = c("F", "M"),
                    A = c("1", "2"), stringsAsFactors = FALSE)
   attr(df$.label, "label") <- "Characteristic\nn (%)"

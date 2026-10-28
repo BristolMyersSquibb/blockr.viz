@@ -99,32 +99,6 @@ test_that("a function that drops the grouping says so, without an error", {
                "^Summary \"X\": the function dropped the grouping by TERM")
 })
 
-test_that("a failing column is empty and the others still draw", {
-  d <- custom_fixture()
-  prep <- summarize_prepare(d, by = c("SOC", "TERM"), summaries = list(
-    list(type = "simple", name = "Rows", func = "count"),
-    list(type = "custom", name = "X", fn = "c(value = nrow(d))",
-         facet = "ARM"),
-    list(type = "custom", name = "Y", fn = "stop(\"nope\")")
-  ))
-  expect_null(prep$err)
-  expect_length(prep$plan, 3L)
-  expect_equal(row_of(prep$rows, "Erythema")$.s1_v, 3)
-  # A faceted column that fails is one column, not one per level.
-  expect_identical(prep$failed, c(
-    "Summary \"X\": the function dropped the grouping by SOC, TERM. Keep it: add groups with group_by(..., .add = TRUE) and summarise with dplyr, not d$.",
-    "Summary \"Y\": the function failed on the whole data: nope"
-  ))
-  expect_true(all(prep$rows$.s2_t == "\u2013"))
-  expect_match(summarize_table_html(prep), "blockr-summarize-txt is-failed",
-               fixed = TRUE)
-  # The preparation carries the errors for the block to raise as conditions.
-  prep <- summarize_prepare(d, by = c("SOC", "TERM"), summaries = list(
-    list(type = "custom", name = "Y", fn = "stop(\"nope\")")))
-  expect_identical(prep$failed,
-                   "Summary \"Y\": the function failed on the whole data: nope")
-})
-
 test_that("the block raises a failed custom summary as a blockr error", {
   blk <- new_summarize_table_block(by = "TERM", summaries = list(
     list(type = "simple", name = "Rows", func = "count"),

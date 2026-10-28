@@ -203,9 +203,10 @@ test_that("the cards exhibit writes html with the model and a painted slide", {
   on.exit(unlink(f), add = TRUE)
   write_exhibit_html(ce, f, title = "T")
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-  expect_match(html, "data-cards-static", fixed = TRUE)
-  expect_match(html, "BlockrTableCards", fixed = TRUE)
-  expect_match(html, "\"label\":\"Rows\"", fixed = TRUE)
+  p <- static_payloads(html)[[1L]]
+  expect_identical(p$config$look, "cards")
+  expect_identical(p$config$layout, "groups")
+  expect_identical(p$data$cards$cols[[1L]]$label, "Rows")
 
   skip_if_not(summarize_paint_ready())
   skip_if_not_installed("officer")

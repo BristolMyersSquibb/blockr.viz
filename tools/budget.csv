@@ -106,25 +106,28 @@ R: legacy,R/legacy-deser.R,400
 R: legacy,R/summarize-block.R,400
 JS: core,inst/js/core/*.js,1300
 JS: core,inst/js/busy-cue.js,1300
-JS: core,inst/js/capture-pages.js,1300
 JS: core,inst/js/drilldown-theme-register.js,1300
 JS: gear,inst/js/core/gear/**.js,2600
-JS: gear,inst/js/drilldown-config.js,2600
-JS: gear,inst/js/drilldown-agg.js,2600
 JS: chart,inst/js/chart/**.js,6500
 JS: table shared,inst/js/table/dom.js,700
 JS: table shared,inst/js/table/gear.js,700
+JS: table shared,inst/js/table/html.js,700
+JS: table shared,inst/js/table/drill.js,700
+JS: table shared,inst/js/table/chrome.js,700
+JS: table shared,inst/js/table/view.js,700
+JS: table shared,inst/js/table/static.js,700
 JS: records and cards,inst/js/table/records.js,1600
 JS: records and cards,inst/js/table/cards.js,1600
-JS: records and cards,inst/js/table.js,1600
-JS: records and cards,inst/js/table-cards.js,1600
 JS: groups,inst/js/table/groups.js,2000
-JS: groups,inst/js/summarize-table.js,2000
+JS: groups,inst/js/table/marks.js,2000
+JS: groups,inst/js/table/tooltip.js,2000
+JS: groups,inst/js/table/summaries.js,2000
 JS: variables,inst/js/table/variables.js,450
-JS: variables,inst/js/summary-table-block.js,450
 JS: hand-written types,inst/js/types.d.ts,300
 JS: hand-written types,inst/js/derived.d.ts,300
 JS: hand-written types,inst/js/core/core.d.ts,300
+JS: hand-written types,inst/js/table/table.d.ts,300
+JS: hand-written types,inst/js/core/gear/gear.d.ts,300
 CSS,inst/css/**.css,2000
 not counted,inst/js/vendor/**,0
 not counted,inst/js/spec/**,0

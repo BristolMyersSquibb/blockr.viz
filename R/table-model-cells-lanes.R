@@ -122,7 +122,7 @@ cells_lane_tip <- function(pre, wd, nn, bc, bl, bh, wl, wh) {
   )))
 }
 
-# The statistics themselves, for the hover card (summarize-table.js): the
+# The statistics themselves, for the hover card (table/tooltip.js): the
 # geometry above is in percent of the lane and cannot be read back.
 cells_lane_stats <- function(st) {
   lapply(st[vapply(st, function(x) any(!is.na(x)), logical(1L))],

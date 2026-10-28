@@ -14,3 +14,4 @@ records.js
 groups.js
 variables.js
 view.js
+static.js
