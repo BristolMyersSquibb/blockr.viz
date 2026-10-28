@@ -48,11 +48,14 @@ test_that("the source mode wraps the filter and adds the column's arm", {
   )
 })
 
-test_that("a groups click is the filters as they are", {
+test_that("a groups click is its filters and its column claim", {
   sel <- list(type = "categorical", filters = list(grp = "g1", cat = "a"))
   expect_identical(table_selection_groups(sel),
                    list(grp = "g1", cat = "a"))
   expect_identical(table_selection_groups(NULL), list())
+  cell <- list(type = "categorical", filters = list(ARM = "A"),
+               columns = list(SEX = "M"))
+  expect_identical(table_selection_groups(cell), list(ARM = "A", SEX = "M"))
 })
 
 test_that("a table selection saved by the reference reads in the kit's shape", {
