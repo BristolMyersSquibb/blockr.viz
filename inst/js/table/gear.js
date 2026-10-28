@@ -50,18 +50,11 @@
     return true;
   }
 
-  /**
-   * A number column, as R writes the columns (`class` "number" or
-   * "duration", R/wire.R).
-   * @param {{ class?: unknown }} c
-   */
-  const isNumeric = (c) => c.class === 'number' || c.class === 'duration';
-
-  /** blockr.ui's controls, when the page has them. */
-  const ui = () => /** @type {any} */ (root.Blockr || {});
+  /** blockr.ui's controls; the table's dependency attaches them. */
+  const ui = () => /** @type {VizUi} */ (root.Blockr);
 
   /**
-   * A pick among `options`: blockr.ui's Select, else a native select.
+   * A pick among `options`, with blockr.ui's Select.
    * @param {HTMLElement} el
    * @param {{ value: string, label: string }[]} options
    * @param {string} value '' for none: the placeholder shows.
@@ -70,56 +63,29 @@
    * @param {VizScope} scope
    */
   function pick(el, options, value, o, onPick, scope) {
-    const Sel = ui().Select;
-    if (Sel && typeof Sel.single === 'function') {
-      // Labels, as the engine passes them: an object option shows its value.
-      const labels = options.map((x) => x.label);
-      const at = options.findIndex((x) => x.value === value);
-      const inst = Sel.single(el, { options: labels, selected: at < 0 ? '' : labels[at],
-                                    allowEmpty: !!o.placeholder, placeholder: o.placeholder,
-                                    bordered: true, label: o.label,
-                                    onChange: (/** @type {string} */ v) => {
-                                      const k = labels.indexOf(v);
-                                      if (k >= 0) onPick(options[k].value);
-                                    } });
-      scope.own({ dispose: () => inst.destroy() });
-      return;
-    }
-    const sel = document.createElement('select');
-    sel.className = 'dd-select';
-    sel.setAttribute('aria-label', o.label);
-    const all = (o.placeholder ? [{ value: '', label: o.placeholder }] : []).concat(options);
-    for (const x of all) {
-      const opt = sel.appendChild(document.createElement('option'));
-      opt.value = x.value;
-      opt.textContent = x.label;
-      opt.selected = x.value === value;
-    }
-    scope.on(sel, 'change', () => { if (sel.value) onPick(sel.value); });
-    el.appendChild(sel);
+    // Labels, as the engine passes them: an object option shows its value.
+    const labels = options.map((x) => x.label);
+    const at = options.findIndex((x) => x.value === value);
+    const inst = ui().Select.single(el, {
+      options: labels, selected: at < 0 ? '' : labels[at],
+      allowEmpty: !!o.placeholder, placeholder: o.placeholder, bordered: true, label: o.label,
+      onChange: (/** @type {string} */ v) => {
+        const k = labels.indexOf(v);
+        if (k >= 0) onPick(options[k].value);
+      }
+    });
+    scope.own({ dispose: () => inst.destroy() });
   }
 
   /**
-   * A checkbox: blockr.ui's, else a native one in its markup.
+   * A checkbox, blockr.ui's.
    * @param {HTMLElement} el
    * @param {string} label
    * @param {boolean} on
    * @param {(on: boolean) => void} onToggle
-   * @param {VizScope} scope
    */
-  function check(el, label, on, onToggle, scope) {
-    const box = ui().checkbox;
-    if (typeof box === 'function') {
-      el.appendChild(box(label, on, onToggle).el);
-      return;
-    }
-    const wrap = el.appendChild(document.createElement('label'));
-    wrap.className = 'blockr-checkbox';
-    const input = wrap.appendChild(document.createElement('input'));
-    input.type = 'checkbox';
-    input.checked = on;
-    wrap.append(' ' + label);
-    scope.on(input, 'change', () => onToggle(input.checked));
+  function check(el, label, on, onToggle) {
+    el.appendChild(ui().checkbox(label, on, onToggle).el);
   }
 
   /**
@@ -164,7 +130,7 @@
         else on.delete(c.name);
         const picked = numeric.map((x) => x.name).filter((n) => on.has(n));
         put(Object.assign({}, rule, { columns: picked.length ? picked : null }));
-      }, scope);
+      });
     }
     el.appendChild(button('blockr-btn--quiet blockr-btn--xs vz-table-shade-remove', '×', 'Remove rule',
                           () => put(null), scope));
@@ -180,7 +146,7 @@
   function shadings(el, ctx) {
     const rules = /** @type {Record<string, unknown>[]} */ (
       Array.isArray(ctx.values.shadings) ? ctx.values.shadings : []);
-    const numeric = ctx.columns.filter(isNumeric);
+    const numeric = ctx.columns.filter(V.util.isNumeric);
     el.textContent = '';
     el.classList.add('vz-table-shadings');
     rules.forEach((rule, k) => {
@@ -238,6 +204,5 @@
 
   V.table.gear = { mount, visible, shadings };
   V.table.ui = { pick, check, button };
-  V.table.isNumeric = isNumeric;
   V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();
