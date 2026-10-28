@@ -129,10 +129,8 @@ js_enum <- function(path, anchor) {
   sub("value:\\s*['\"]([^'\"]+)['\"]", "\\1", vals, perl = TRUE)
 }
 
-test_that("LANE_STATS is the chart's SUMMARY_STATS, in the same order", {
-  js <- system.file("js", "chart", "agg.js", package = "blockr.viz")
-  expect_true(file.exists(js))
-  expect_identical(js_enum(js, "const SUMMARY_STATS"), LANE_STATS)
+test_that("LANE_STATS is the chart's summary statistics, in the same order", {
+  expect_identical(viz_block_spec("chart")$args$summary$values, LANE_STATS)
 })
 
 test_that("summarize-table.js LANE_STATS mirrors R's, values and labels", {
