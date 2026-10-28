@@ -1,10 +1,8 @@
 # LEGACY: delete with this file.
 #
-# The one place for argument names and values of blockr.viz < 0.3.0, with
-# R/legacy-restore.R, which applies them. The specs (R/spec-chart.R,
-# R/spec-table.R) carry only the current names.
-# Written from the legacy tables in _scratch/viz-cran-review/spec-chart.md
-# and spec-table.md.
+# Argument names and values of blockr.viz < 0.3.0, applied by
+# R/legacy-restore.R. The specs (R/spec-chart.R, R/spec-table.R) carry only the
+# current names.
 #
 # LEGACY_NAMES has one row per old name or old value:
 #
@@ -150,7 +148,7 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("table", "summaries", "summaries",
              rule = paste("an old aggregation list(func, cols) becomes one",
                           "number column per function and column")),
-  # the summary table block, restored as layout = "variables"
+  # the summary table block restores as layout = "variables"
   legacy_row("table", "vars", "summaries",
              rule = "one entry per variable; layout = \"variables\""),
   legacy_row("table", "add_overall", "total"),

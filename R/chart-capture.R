@@ -2,15 +2,13 @@
 #
 # A chart's downloads and slides carry the picture the browser drew.
 # `_downloadImage()` in chart/export.js composes the whole block on an
-# offscreen canvas (title band, every facet panel at its grid position, facet
-# labels, legend chips, caption) and sends the bitmap up; the png / html /
-# pptx downloads write that. A chart whose panel was never drawn is drawn
-# offscreen by the capture service further down.
+# offscreen canvas (title band, facet panels, facet labels, legend chips,
+# caption) and sends the bitmap up; the png, html and pptx downloads write
+# that. A chart whose panel was never drawn is drawn offscreen by the capture
+# service below.
 
-# How many device pixels per CSS pixel the canvas composes with. 2 is what
-# the screen wants; a bitmap headed for an 11.9in slide is placed four times
-# larger than it was drawn, so a deck wants more. Nothing about the layout
-# changes with it -- only how finely the same picture is drawn.
+# Device pixels per CSS pixel the canvas composes with: 2 for the screen, up
+# to 6 for a deck. The layout does not change with it.
 #' @noRd
 canvas_capture_ratio <- function() {
   r <- suppressWarnings(as.numeric(
@@ -19,9 +17,8 @@ canvas_capture_ratio <- function() {
   if (!is.finite(r) || r < 1) 2 else min(r, 6)
 }
 
-# A captured bitmap, with the CSS-pixel box it was composed at. Sized in
-# inches at 96 dpi, the density the canvas draws in, so an exhibit lands at
-# the size it had on screen.
+# A captured bitmap, sized in inches at 96 dpi from the CSS-pixel box it was
+# composed at, so an exhibit lands at its on-screen size.
 #' @noRd
 new_chart_capture <- function(png, width, height) {
 
@@ -71,9 +68,8 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
                                        max_height = NULL,
                                        default_expanded = NULL, ...) {
 
-  # The image inline as a data URI, so the page carries it. jsonlite's
-  # base64_enc() wraps its output at 80 columns, and a data URI with newlines
-  # does not load, so they are taken out.
+  # Inline data URI. base64_enc() wraps at 80 columns and a data URI with
+  # newlines does not load, so the newlines are removed.
   f <- chart_capture_file(x)
   on.exit(unlink(f), add = TRUE)
 
@@ -90,19 +86,17 @@ html_exhibit.chart_capture <- function(x, title = NULL, subtitle = NULL,
 
 # -- The capture service, R side ---------------------------------------------
 #
-# A deck asks for pictures of charts it does not own, some of whose panels are
-# closed. The block cannot be reached through its module (a closed panel has
-# no UI in the page at all), so each chart block registers a REQUEST FUNCTION
-# in the session while it lives, and the deck calls that.
+# A deck asks for pictures of charts it does not own, some with closed panels.
+# A closed panel has no UI in the page, so the block cannot be reached through
+# its module. Each chart block registers a request function in the session
+# while it lives, and the deck calls that.
 #
-# The exchange is asynchronous by nature -- the picture comes back over the
-# websocket -- so it is request now, collect later: `chart_capture_request()`
-# returns a token, the replies land in one session-level input, and
-# `chart_captures_ready()` says when the set is complete. An export therefore
-# runs in two steps: ask, then write the file once the pictures are in.
+# The picture comes back over the websocket, so an export runs in two steps:
+# `chart_capture_request()` returns a token, the replies land in one
+# session-level input, and the file is written once the pictures are in.
 
-# The registry, created on first use. Keyed by block id, so a deck that knows
-# its chart blocks can address them without knowing anything else.
+# The registry of request functions, created on first use and keyed by chart
+# element id.
 #' @noRd
 capture_registry <- function(session = shiny::getDefaultReactiveDomain()) {
 
@@ -115,8 +109,8 @@ capture_registry <- function(session = shiny::getDefaultReactiveDomain()) {
   root$userData$blockr_viz_captures
 }
 
-# Called by a chart block for itself. `send` takes (token, width, height) and
-# posts the request to the browser.
+# Registers a chart block's request function. `send` takes (token, width,
+# height) and posts the request to the browser.
 #' @noRd
 register_chart_capture <- function(id, send,
                                    session = shiny::getDefaultReactiveDomain()) {
@@ -136,12 +130,11 @@ register_chart_capture <- function(id, send,
 #' The capture service: a deck asks the browser for a picture of a chart
 #' block, at a box it chooses, and gets the bitmap back. Every chart block
 #' registers itself while it lives, so a block whose panel was never opened
-#' can still be drawn (offscreen, at the export's size).
+#' can still be drawn offscreen at the export's size.
 #'
-#' The exchange is asynchronous, because the picture crosses the websocket:
-#' `chart_capture_request()` returns a token and `chart_capture_collect()`
-#' turns into an exhibit once the reply lands. An export therefore asks
-#' first and writes the file when the pictures are in.
+#' The picture crosses the websocket, so the exchange is asynchronous:
+#' `chart_capture_request()` returns a token, and `chart_capture_collect()`
+#' returns an exhibit once the reply lands.
 #'
 #' @param block_id A block id, as the board knows it.
 #' @param width,height The box to draw into, in CSS pixels.
@@ -159,10 +152,8 @@ chart_capture_ids <- function(session = shiny::getDefaultReactiveDomain()) {
   shiny::isolate(names(capture_registry(session)))
 }
 
-# The registry key for a block id. Keys are the chart's element id, which
-# carries the block id as a segment ("<board>-block_<id>-expr-..."), because
-# the module id inside a block server is the same string for every chart on
-# the board.
+# The registry key for a block id. A key is the chart's element id, which
+# carries the block id as a segment ("<board>-block_<id>-expr-...").
 #' @rdname chart_capture_ids
 #' @export
 chart_capture_for <- function(block_id,
@@ -174,10 +165,9 @@ chart_capture_for <- function(block_id,
   if (!length(hit)) NULL else hit[[1L]]
 }
 
-# Ask one registered chart for a picture at `width` x `height` CSS px. The
-# token identifies the reply; a chart that is not registered (never mounted,
-# a block that is not a chart) is an error rather than a silent omission --
-# a deck with a chart missing is worse than a deck that says which one.
+# Asks one registered chart for a picture at `width` x `height` CSS px. The
+# token identifies the reply. A chart that is not registered is an error, so a
+# deck never silently misses a chart.
 #' @rdname chart_capture_ids
 #' @export
 chart_capture_request <- function(id, width, height,
@@ -194,8 +184,8 @@ chart_capture_request <- function(id, width, height,
   token
 }
 
-# The replies, keyed by token. One session-level input carries all of them:
-# the browser answers from the capture host, which belongs to no block.
+# The replies, keyed by token. One session-level input carries all of them,
+# because the browser answers from a capture host that belongs to no block.
 #' @noRd
 chart_capture_results <- function(session = shiny::getDefaultReactiveDomain()) {
 
@@ -215,8 +205,8 @@ chart_capture_results <- function(session = shiny::getDefaultReactiveDomain()) {
   root$userData$blockr_viz_capture_results
 }
 
-# The capture for a token: NULL while it is still in flight, a chart_capture
-# once it lands, an error when the browser could not draw it.
+# The capture for a token: NULL while in flight, a chart_capture once it lands,
+# an error when the browser could not draw it.
 #' @rdname chart_capture_ids
 #' @export
 chart_capture_collect <- function(token,
@@ -235,9 +225,8 @@ chart_capture_collect <- function(token,
   new_chart_capture(chart_capture_decode(msg$png), msg$width, msg$height)
 }
 
-# The bitmap as something officer can place. Sized in inches at the density
-# it was composed with, and fitted into `max_width` / `max_height` when the
-# caller has a box in mind, keeping the aspect.
+# The bitmap as an officer image, in inches, fitted into `max_width` and
+# `max_height` when given and keeping the aspect.
 #' @param x A capture, from `chart_capture_collect()`.
 #' @param max_width,max_height Optional box, in inches.
 #' @rdname chart_capture_ids
