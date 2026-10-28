@@ -24,13 +24,7 @@
   padding: 0 4px;
   color: var(--blockr-color-text-secondary, #374151);
 }
-.dd-title-shows {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 7px;
-  padding-left: 2px;
-}
+.dd-title-shows { display: flex; align-items: baseline; gap: 8px; margin-top: 7px; padding-left: 2px; }
 .dd-title-row--dirty .dd-title-shows { opacity: 0.45; }
 .dd-title-turn {
   flex: 0 0 auto;
@@ -131,13 +125,7 @@
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-muted, #6b7280);
 }
-.dd-at-val {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.dd-at-val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-at-val--unset { font-style: italic; }
 .dd-at-tok {
   flex: 0 0 auto;
@@ -271,10 +259,7 @@
   box-shadow: inset 0 0 0 1px var(--blockr-color-border-accent, #2563eb);
 }
 .dd-layout-tile.is-disabled,
-.dd-layout-tile.is-disabled:hover {
-  color: var(--blockr-color-text-disabled, #9ca3af);
-  cursor: not-allowed;
-}
+.dd-layout-tile.is-disabled:hover { color: var(--blockr-color-text-disabled, #9ca3af); cursor: not-allowed; }
 .dd-layout-tile.is-disabled .dd-layout-tile-face,
 .dd-layout-tile.is-disabled:hover .dd-layout-tile-face {
   background: var(--blockr-color-bg-surface, #fff);
@@ -565,6 +550,20 @@
 /* A script spans every track (`flex` does nothing on a grid item). */
 .dd-script-row { grid-column: 1 / -1; width: 100%; }
 .dd-script-row .dd-form-help { display: block; margin-top: 6px; }
+.dd-script-row .dd-row-controls { flex-direction: column; }
+.dd-script-wrap { display: block; width: 100%; }
+.dd-script-editor {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--blockr-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
 
 /* ===== Busy cue (inst/js/busy-cue.js) ===== */
 .blockr-busy-line {
