@@ -1,10 +1,9 @@
 # What a block view sends the browser: one payload through a Shiny output.
 #
-# Shiny keeps an output's last value on the client and hands it to the
-# binding again whenever an element under that id binds, so a re-mounted
-# panel draws without asking R. The binding (inst/js/core/binding.js) keeps
-# rows per id, because R leaves them out of a payload whose data revision
-# the client already holds.
+# Shiny keeps an output's last value on the client and hands it to the binding
+# whenever an element under that id binds, so a re-mounted panel draws without
+# asking R. The binding (inst/js/core/binding.js) keeps rows per id, because R
+# leaves them out of a payload whose data revision the client holds.
 
 #' The element a block view draws into
 #'
@@ -34,15 +33,14 @@ viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
 #'
 #' `build()` returns the payload from viz_payload(). Nothing goes out when it
 #' is identical to the last one, or when it stops on a silent `req()` (a
-#' block the dock has parked): the render cancels, and the client keeps its
-#' value and its picture. The rows go out only when their revision changed.
-#' A client that holds no rows for a payload's revision asks through
-#' `<id>_need`; the next render then sends everything.
+#' block the dock has parked): the render cancels and the client keeps its
+#' value and picture. The rows go out only when their revision changed. A
+#' client that holds no rows for a payload's revision asks through
+#' `<id>_need`, and the next render sends everything.
 #'
-#' The busy cue goes out first, before `build()` reads the input, so the
-#' browser hears of a recompute before it starts. A render that draws
-#' nothing (cancelled, or an error) ends the cue here; one that draws, the
-#' view ends once it has drawn.
+#' The busy cue goes out before `build()` reads the input. A render that draws
+#' nothing (cancelled, or an error) ends the cue here; otherwise the view ends
+#' it once it has drawn.
 #'
 #' @param output,input The block's Shiny output and input.
 #' @param id The output id.
@@ -91,7 +89,8 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
 #' @param rows The rows from a viz_rows() cache.
 #' @param revs The block's revision counter.
 #' @param derived What the server computes for the view (resolved titles,
-#'   series, download formats, an empty state), never sent back.
+#'   series, download formats, an empty state). The client does not send it
+#'   back.
 #' @return A list: `state_rev`, `data_rev`, `columns`, `config`, `derived`,
 #'   `data`.
 #' @noRd
@@ -114,8 +113,8 @@ viz_payload <- function(spec, values, rows, revs, derived = list()) {
 #'
 #' A function of a data frame that returns viz_wire_df()'s columns and data
 #' plus a revision. An identical frame returns the last result without
-#' writing anything; the revision goes up only when the written rows differ,
-#' so a re-evaluation that yields the same rows keeps the client's copy.
+#' writing. The revision goes up only when the written rows differ, so a
+#' re-evaluation that yields the same rows keeps the client's copy.
 #' @noRd
 viz_rows <- function() {
   last <- new.env(parent = emptyenv())

@@ -1,34 +1,29 @@
 #' Write an Exhibit to a Self-Contained HTML File
 #'
-#' The HTML sibling of [write_annotated_xlsx()] and [write_exhibit_pptx()]: one
-#' annotated data frame, one file, nothing to unpack. The table is drawn by
-#' [html_exhibit()] -- the same markup, CSS and collapse script the app itself
-#' shows -- wrapped in a minimal document shell that carries the title,
-#' subtitle and caption.
+#' The HTML sibling of [write_annotated_xlsx()] and [write_exhibit_pptx()]. The
+#' table is drawn by [html_exhibit()] (the markup, CSS and collapse script the
+#' app shows) inside a minimal document shell that carries the title, subtitle
+#' and caption.
 #'
-#' The file is self-contained, always. The display table inlines its own `<style>`
-#' and `<script>` next to the table and talks to nothing outside them (no
-#' Shiny, no CDN, no sidecar `lib/` folder), so for a display table there is
-#' nothing to bundle. A renderer that does carry dependencies -- the summarize
-#' table's shared script bundle -- has them read off disk and written into the
-#' document. Section collapse and column sorting keep working in the saved
-#' file, offline, which is the difference between this and a screenshot.
+#' The file is self-contained: no Shiny, no CDN, no sidecar `lib/` folder.
+#' The display table inlines its own `<style>` and `<script>`. A renderer that
+#' carries dependencies, such as the summarize table's script bundle, has them
+#' read off disk and written into the document. Section collapse and column
+#' sorting work in the saved file, offline.
 #'
 #' @param x A data frame, an [as_annotated_df()]-coercible table object, or an
-#'   exhibit that renders itself -- a `summarize_exhibit` from
-#'   [static_summarize_table()], whose glyphs exist only in this markup.
+#'   exhibit that renders itself, such as a `summarize_exhibit` from
+#'   [static_summarize_table()].
 #' @param file Path to write the `.html` to.
 #' @param title,subtitle Document heading and its muted second line. `NULL` or
 #'   `""` omits each.
 #' @param caption Trailing footnote, rendered under the table.
-#' @param default_expanded Logical. `TRUE` (default) opens every section, which
-#'   is what a downloaded file is for: the page scrolls, so there is no height
-#'   to budget, and a reader who asked for the table wants the numbers, not
-#'   nine headers to click. `FALSE` opens it at its section rows.
+#' @param default_expanded Logical. `TRUE` (default) opens every section, since
+#'   the page scrolls and has no height to budget. `FALSE` opens it at its
+#'   section rows.
 #' @param collapsible,sortable Logical. Whether the saved page keeps the
 #'   collapse chevrons and the click-to-sort headers (both `TRUE` by default).
-#'   The table block passes its own display toggles through here, so a table
-#'   shown without collapsing downloads without it.
+#'   The table block passes its own display toggles through here.
 #' @param ... Passed to [html_exhibit()].
 #'
 #' @return `file`, invisibly.
@@ -45,16 +40,9 @@
 write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
                                caption = NULL, default_expanded = TRUE,
                                collapsible = TRUE, sortable = TRUE, ...) {
-
-  # The exhibit's own title slot stays empty: the document heading below says
-  # it once, and a <caption> repeating it two lines further down reads as a
-  # rendering accident rather than a design.
-  #
-  # default_expanded is passed rather than left to html_exhibit()'s height
-  # rule. That rule exists for the slide: a sixty-row table printed onto a
-  # reveal.js slide has a fixed box to fit and trades rows for reach. A
-  # downloaded file has no such box -- it scrolls, and it prints -- so the
-  # rule would only cost the reader nine clicks on a demographics table.
+  # The exhibit's own title slot stays empty: the document heading says it.
+  # default_expanded is passed so html_exhibit()'s slide height rule does not
+  # apply to a file that scrolls.
   exhibit <- html_exhibit(
     x,
     title = "",
@@ -68,25 +56,16 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
 
   rendered <- htmltools::renderTags(exhibit)
 
-  # Self-contained or nothing. `html_table()` inlines its own style and script
-  # and so arrives here with no dependencies at all; the summarize table's
-  # renderer carries the shared bundle (Blockr.Select, the gear engine, the
-  # summarize table script), and those are read off disk and written INTO the
-  # file, the same way blockr.outline's HTML deck carries them. What cannot be
-  # inlined -- a CDN href, a file that has gone -- is a dependency the download
-  # would not carry, so it is a refusal rather than a silently broken artifact.
-  head_extra <- character()
-
-  if (length(rendered$dependencies)) {
-    head_extra <- exhibit_inline_deps(rendered$dependencies)
-  }
+  # Dependencies are written into the file; one that cannot be inlined is an
+  # error (see exhibit_inline_deps()).
+  head_extra <- exhibit_inline_deps(rendered$dependencies)
 
   txt <- function(x) {
     if (is.character(x) && length(x) == 1L && nzchar(x)) x else NULL
   }
 
-  body_title <- exhibit_doc_title(x, title)
-  subtitle <- exhibit_doc_subtitle(x, subtitle)
+  body_title <- exhibit_doc_text(x, title)
+  subtitle <- exhibit_doc_text(x, subtitle)
   head_title <- txt(title) %||% "Table"
 
   writeLines(
@@ -120,34 +99,15 @@ write_exhibit_html <- function(x, file, title = NULL, subtitle = NULL,
   invisible(file)
 }
 
-# Charts downloaded as HTML are already a picture of the fully titled chart:
-# the image includes its title band, subtitle, caption and legend. The document
-# shell still owns <head><title>, but a visible heading above the image would
-# print the chart title twice. Table-like exhibits keep their document heading.
+# Charts downloaded as HTML are already a picture of the fully titled chart,
+# so a visible heading above it would print the title twice. The document
+# shell still owns <head><title>. Table-like exhibits keep their heading.
 #' @noRd
-exhibit_doc_title <- function(x, title) {
-  if (inherits(x, "chart_capture")) {
+exhibit_doc_text <- function(x, text) {
+  if (inherits(x, "chart_capture") || (inherits(x, "gg") && gg_has_title_band(x))) {
     return(NULL)
   }
-
-  if (inherits(x, "gg") && gg_has_title_band(x)) {
-    return(NULL)
-  }
-
-  title
-}
-
-#' @noRd
-exhibit_doc_subtitle <- function(x, subtitle) {
-  if (inherits(x, "chart_capture")) {
-    return(NULL)
-  }
-
-  if (inherits(x, "gg") && gg_has_title_band(x)) {
-    return(NULL)
-  }
-
-  subtitle
+  text
 }
 
 #' @noRd
@@ -164,15 +124,9 @@ gg_has_title_band <- function(x) {
   ))
 }
 
-# The document shell's own CSS -- the page around the table, never the table.
-# Deliberately short: everything the exhibit needs it brings with it, so what
-# is left is the page's typeface, its measure and its heading block.
-#
-# The face and the greys are the deck theme's (inst/revealjs/blockr.scss in
-# blockr.outline), so a table downloaded as HTML and the same table on a slide
-# are recognisably the same artifact. Tabular figures for the same reason they
-# are set there: a column of counts that does not align on the digit is what
-# makes a clinical table look unfinished.
+# The document shell's own CSS: the page around the table. The face and greys
+# match the deck theme (inst/revealjs/blockr.scss in blockr.outline). Tabular
+# figures keep columns of counts aligned.
 exhibit_doc_css <- function() {
   paste(
     ":root {",
@@ -208,8 +162,7 @@ exhibit_doc_css <- function() {
     "  max-width: 46em;",
     "  margin: 0 0 1.4em;",
     "}",
-    # Printing the download is a first-class use of it (the reason a reviewer
-    # asks for HTML rather than xlsx), and the screen margins waste a page.
+    # The screen margins waste a printed page.
     "@media print {",
     "  .blockr-exhibit-doc { max-width: none; padding: 0; }",
     "}",
@@ -217,19 +170,10 @@ exhibit_doc_css <- function() {
   )
 }
 
-# An HTML dependency written INTO the document rather than linked beside it.
-#
-# A download is a file somebody mails on; a `<link href="lib/...">` beside it
-# is a promise the recipient's machine cannot keep. So each stylesheet and
-# script is read off disk and emitted as a `<style>` / `<script>` block, in
-# dependency order. Anything with no readable local file -- a CDN href, a
-# package that has moved -- is an error here rather than a table that arrives
-# unstyled on somebody else's laptop.
-#
-# blockr.outline's deck writer does the same job for the same reason
-# (deck_inline_deps); it drops what it cannot inline because a deck of twenty
-# exhibits should not fail over one widget. A single-table download has no
-# such trade: there is nothing else in the file.
+# HTML dependencies written into the document as `<style>` / `<script>`
+# blocks, in dependency order. A dependency with no readable local file (a CDN
+# href, a moved package) is an error, since the file would not be
+# self-contained.
 #' @noRd
 exhibit_inline_deps <- function(deps) {
 

@@ -162,7 +162,7 @@ html_table <- function(data,
   htmltools::tagList(
     shared_css,
     htmltools::tags$style(htmltools::HTML(
-      paste0(html_table_delta_css(), html_table_chev_css())
+      html_table_delta_css()
     )),
     htmltools::tags$div(
       id = wrapper_id,

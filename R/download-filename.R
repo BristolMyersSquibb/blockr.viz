@@ -1,19 +1,14 @@
 # Download file names.
 #
-# One rule for every block that downloads: the dataset the board read, when
-# the data says, then the title the file prints, then the time.
+# The name is the dataset (when the data carries one), the title the file
+# prints, then the time:
 #
 #   AQ-001_Ozone_by_month_2026-10-02_1432.xlsx
 #   Ozone_by_month_2026-10-02_1432.xlsx       (no dataset on the data)
 #   chart_2026-10-02_1432.xlsx                (no title either)
 #
-# The dataset is the `dataset` field of a `blockr_provenance` attribute, set by
-# whatever read the data (blockr.sandbox's study reader writes the study code)
-# and carried down to the chart by blockr.dm's filter trail. Read here as a
-# plain attribute, so this package needs neither.
-#
-# The time is always there, so two downloads of one block after a filter
-# change do not collide into "(1)".
+# The dataset is the `dataset` field of the `blockr_provenance` attribute,
+# read as a plain attribute.
 
 #' The download file name for one block and format
 #'
@@ -41,11 +36,10 @@ dl_dataset <- function(data) {
   if (is.character(ds) && length(ds) == 1L && !is.na(ds) && nzchar(ds)) ds
 }
 
-# One part of the name: tags out, ASCII only (a title can carry "±" or
-# an em dash), then the words joined by `_`. A word is a run of letters,
-# digits, `.` and `-` holding at least one letter or digit, so "AQ-001"
-# stays whole and a lone dash between words goes. Case is kept. NULL when
-# nothing is left.
+# One part of the name: tags out, ASCII only, then the words joined by `_`.
+# A word is a run of letters, digits, `.` and `-` holding at least one letter
+# or digit, so "AQ-001" stays whole and a lone dash goes. Case is kept. NULL
+# when nothing is left.
 dl_name_part <- function(x, max = 40L) {
   if (!is.character(x) || !length(x) || is.na(x[[1L]])) {
     return(NULL)

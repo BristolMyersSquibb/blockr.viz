@@ -1,18 +1,13 @@
-# Make the drilldown blocks legible to the blockr.ai assistant. Their result is a
-# passthrough data.frame (a filter that only narrows on click), so the data
-# effect is blind and even reads as a no-op. The meaningful artifact is the CHART
-# CONFIG -- the column-to-role bindings. These `config_effect()` methods describe
-# that config and flag bindings that reference columns absent from the input, so
-# the model gets real feedback instead of "no rows or columns changed".
+# config_effect() methods for the blockr.ai assistant. A chart or table block
+# passes its data through, so the data effect shows no change. These methods
+# describe the block's config, the column-to-role bindings, and flag bindings
+# that name columns absent from the input.
 #
-# Registered onto blockr.ai's generic at load (defensive: no hard dependency on
-# blockr.ai, no-op when it is absent or too old to export config_effect).
+# They are registered onto blockr.ai's generic at load. Without blockr.ai, or
+# with a version that does not export config_effect, registration is a no-op.
 
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
-# Column-valued roles, in display order, for the chart block. y_lines / x_lines
-# are NOT roles: they hold helper-line positions, not column names
-# (reported separately below, never validated against the columns).
+# Column-valued roles of the chart block, in display order. y_lines and
+# x_lines hold line positions, not column names, and are reported separately.
 dd_chart_roles <- c("x", "y", "xend", "color", "facet", "series", "label",
                     "drill", "ymin", "ymax", "id")
 
@@ -28,19 +23,17 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
     if (is.null(v) || !nzchar(as.character(v)[1])) next
     v <- as.character(v)[1]
     parts <- c(parts, paste0(r, "=", v))
-    # `.count`/`auto` are sentinels, not columns; everything else must exist.
+    # ".count" and "auto" are sentinels; every other value must be a column.
     if (!is.null(cols) && !(v %in% c(".count", "auto")) && !(v %in% cols)) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
     }
   }
-  # Helper lines: the positions (numbers, dates, categories), echoed
-  # verbatim so the model sees them configured.
+  # Helper line positions are echoed as given.
   for (r in c("y_lines", "x_lines")) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))
   }
-  # Distribution statistics (boxplot/pointrange), echoed so the model sees
-  # which convention is configured.
+  # Distribution statistics of boxplot and pointrange.
   if (ct %in% c("boxplot", "pointrange")) {
     s <- as.character(args$summary %||% "")[1]
     if (nzchar(s)) parts <- c(parts, paste0("summary=", s))
@@ -95,7 +88,7 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
   check("rowname", args$rowname)
   check("columns", args$columns)
   check("by", args$by)
-  # `drill` may be a mode ("auto", "source") rather than a column.
+  # `drill` is a mode ("auto", "source") or a column.
   dr <- as.character(args$drill %||% "")[1]
   if (nzchar(dr)) {
     if (dr %in% c("auto", "source")) {

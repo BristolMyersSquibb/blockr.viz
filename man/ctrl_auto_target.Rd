@@ -13,14 +13,12 @@ ctrl_auto_target(session = shiny::getDefaultReactiveDomain())
 The block id, \code{""} when the board offers no single candidate.
 }
 \description{
-What \code{ctrl_target = "auto"} resolves to. A sender set to \code{"auto"} is told
-where to send by the board rather than by its own configuration: the one
-\code{blockr.dm::new_drill_filter_block()} on the board, or -- on a board that
-carries none -- the one value filter block, if there is exactly one.
+What \code{ctrl_target = "auto"} resolves to: the one
+\code{blockr.dm::new_drill_filter_block()} on the board or, on a board without
+one, the one value filter block.
 }
 \details{
-Two or more candidates resolve to nothing rather than to a winner: with
-several filter blocks in play only the board author knows which one means
-"the cohort the user just drilled into", so the sender stays quiet and the
-gear's target picker is there to name one.
+Two or more candidates resolve to nothing, so the sender stays quiet until
+the gear's target picker names one. A board that carries any drill filter
+ignores value filters, even when its drill filters are ambiguous.
 }

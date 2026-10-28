@@ -1,6 +1,6 @@
-# Vendored from blockr.echarts/R/echart-theme.R. Kept local so the drill-down
-# block doesn't depend on blockr.echarts. If blockr.echarts and blockr.viz are
-# both loaded, the theme name is identical and registration is idempotent.
+# Vendored from blockr.echarts/R/echart-theme.R, so the drill-down block does
+# not depend on blockr.echarts. With both packages loaded the theme name is the
+# same and registration is idempotent.
 
 .drilldown_theme_env <- new.env(parent = emptyenv())
 .drilldown_theme_env$registered <- FALSE
@@ -8,8 +8,7 @@
 #' Register the drill-down echarts theme
 #'
 #' Registers the colorblind-friendly "blockr" echarts theme. Called from
-#' `.onLoad()` so any drill-down chart that renders after package load can
-#' reference it by name.
+#' `.onLoad()`.
 #'
 #' @return NULL, invisibly.
 #' @keywords internal
@@ -32,12 +31,11 @@ echart_theme_blockr_viz <- function() {
 
 #' Reactive for the board-level echarts theme
 #'
-#' Returns a reactive that tracks the board's `echart_theme` option. Used by
-#' the drill-down block to re-render charts when the theme changes.
+#' Returns a reactive that tracks the board's `echart_theme` option, so the
+#' drill-down block re-renders when the theme changes.
 #'
-#' @param session Shiny session; ignored -- the helper uses
-#'   `blockr.core::get_session()` to reach the session that carries the
-#'   board options.
+#' @param session Ignored. The session that carries the board options comes
+#'   from `blockr.core::get_session()`.
 #' @return A reactive resolving to a theme name (e.g. `"default"`, `"blockr"`).
 #' @keywords internal
 setup_drilldown_theme_sync <- function(session = NULL) {
@@ -50,8 +48,8 @@ setup_drilldown_theme_sync <- function(session = NULL) {
 #' ECharts theme board option for drill-down charts
 #'
 #' Board option that adds an "ECharts Theme" selector to the board sidebar.
-#' Matches `blockr.echarts::new_echart_theme_option()` so boards can mix the
-#' two mechanisms without collision.
+#' It matches `blockr.echarts::new_echart_theme_option()`, so boards can use
+#' both.
 #'
 #' @param value Default theme name.
 #' @param category Settings sidebar category.

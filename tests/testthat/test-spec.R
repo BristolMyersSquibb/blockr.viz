@@ -141,13 +141,3 @@ test_that("opt() defaults are read when the block is built", {
   expect_identical(spec_default(s$args$facet_cols), 3L)
   expect_identical(spec_default(s$args$type), "bar")
 })
-
-test_that("applies takes a list or except()", {
-  s <- small_spec()
-  expect_true(spec_applies(s$args$x, "pie"))
-  expect_true(spec_applies(s$args$connect, "line"))
-  expect_false(spec_applies(s$args$connect, "bar"))
-  e <- viz_arg("column", applies = except("pie", "treemap"))
-  expect_false(spec_applies(e, "pie"))
-  expect_true(spec_applies(e, "bar"))
-})

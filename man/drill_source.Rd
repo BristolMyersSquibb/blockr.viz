@@ -27,52 +27,38 @@ A subset of \code{source}: the rows the claim selects. When nothing is
 claimed, a zero-row frame or the whole source (\code{unclaimed}).
 }
 \description{
-A drill on a structured (annotated) table yields a subset of the DISPLAY
-frame: the clicked row, not the records it summarises. The row does carry
-the machine claim (\code{.variable} / \code{.variable_level}, plus any enclosing
-\verb{.group<k>} pairs) which reads "source rows where SEX == 'F'", so the
-records are recoverable by anything that still holds the frame the table
-was computed from. \code{drill_source()} is that resolution step: give it a
-drilled annotated frame and it returns the matching source rows.
+A drill on a structured (annotated) table yields a subset of the display
+frame: the clicked row, not the records it summarises. The row carries the
+machine claim (\code{.variable} / \code{.variable_level}, plus any enclosing
+\verb{.group<k>} pairs), so the records are recoverable from the frame the table
+was computed from. \code{drill_source()} returns the source rows that match a
+drilled annotated frame.
 }
 \details{
-The frame comes from \code{attr(x, "source_data")}, which a producer stamps
-when it summarises (composer tables via the blockr.sandbox adapter; see
-\code{as_annotated_df.composed_table}). Pass \code{source} explicitly to resolve
-against a frame the input does not carry.
+The frame comes from \code{attr(x, "source_data")}, which a producer stamps when
+it summarises (composer tables via the blockr.sandbox adapter). Pass
+\code{source} to resolve against another frame.
 
-The claim rule is the one the control channel uses (\code{\link[=ctrl_send]{ctrl_send()}}): a
+The claim rule is the one of the control channel (\code{\link[=ctrl_send]{ctrl_send()}}): a
 dimension becomes a condition only when the drilled subset resolves it to
-EXACTLY ONE value. One value is a decision; many is not a claim. So an
-undrilled table (every level still present) claims nothing and this
-returns ZERO rows rather than the whole source -- "no click, no cohort",
-never a silent everything.
+exactly one value. An undrilled table claims nothing and \code{unclaimed} decides
+what comes back.
 
-Two claim modes, the same split \code{\link[=ctrl_send]{ctrl_send()}} uses. A structured table
-carries ARD identity columns and the claim is read off those, so \code{columns}
-stays \code{NULL}. An AGGREGATED table (one display row standing for many
-records) has no identity columns: name its group columns in \code{columns} and
-the claim is read off those instead. A frame with neither is not
-resolvable and errors, rather than reporting zero rows as if nobody
-matched.
+Two claim modes, as in \code{\link[=ctrl_send]{ctrl_send()}}. A structured table carries ARD
+identity columns and \code{columns} stays \code{NULL}. An aggregated table (one
+display row standing for many records) has none: name its group columns in
+\code{columns}. A frame with neither errors instead of reporting zero rows.
 }
 \section{Rows defined by a predicate}{
-Some display rows are not a level of anything. "Any Serious AEs" is one
-row standing for a condition, and a producer that writes it has no
-variable/level pair to offer -- only the predicate it counted with. Such a
-row is resolvable all the same, and exactly so: carry the predicate on a
-\strong{\code{.filter}} column and this applies it to the source.
+A display row such as "Any Serious AEs" is not a level of anything. A
+producer writes the predicate it counted with on a \strong{\code{.filter}} column and
+this function applies it to the source. It composes with the pairs: a
+predicate row inside a treatment column resolves to the rows matching the
+predicate and in that arm. A frame carrying \code{.filter} needs no \code{.variable} /
+\code{.variable_level}.
 
-It composes with the pairs rather than replacing them, so a predicate row
-inside a treatment column resolves to "rows matching the predicate AND in
-that arm". A frame carrying \code{.filter} needs no \code{.variable} /
-\code{.variable_level} at all.
-
-The expression is evaluated against \code{source}. That is deliberate and not a
-widening of trust: it is the producer's own string, which it already
-evaluated to compute the number on screen. Applying the same expression to
-the same frame is what makes the resolution exact instead of a
-reconstruction. It must yield a logical vector.
+The expression is the producer's own string, evaluated against \code{source},
+the frame it was computed on. It must yield a logical vector.
 }
 
 \examples{

@@ -1,13 +1,12 @@
-# A block's title, subtitle and caption, resolved for its view. The chart
-# and the table resolve them the same way (R/title-template.R): against the
-# data the view shows, with the input's own display attributes as the auto
-# tier and the block's settings as the `{@arg}` slots.
+# A block's title, subtitle and caption, resolved for its view the same way
+# for chart and table (R/title-template.R): against the data the view shows,
+# with the input's display attributes as the auto tier and the block's
+# settings as the `{@arg}` slots.
 
 #' The title bands of a block view
 #'
-#' The shape of gear-api.md: one band per line, each the text and the pieces
-#' the face paints, where a piece that names a setting is a word that opens
-#' it.
+#' One band per line, each the text and the pieces the face paints. A piece
+#' that names a setting is a word that opens it.
 #'
 #' @param v The block's values.
 #' @param d The data the templates are resolved against.

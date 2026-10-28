@@ -923,6 +923,53 @@
 @container (max-width: 452px) {
   .dd-mapping-band { grid-template-columns: 1fr; }
 }
+/* The popover rows are laid out for a narrow column; on the face they sit in
+   the grid, so they drop the popover's own spacing and take the 42px shell. */
+.dd-mapping-band .dd-band-row {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+.dd-mapping-band .dd-band-row .dd-row-head {
+  margin-bottom: 5px;
+}
+.dd-mapping-band .dd-band-row .blockr-label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: 500;
+  color: var(--blockr-color-text-secondary, #6b7280);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-mapping-band .dd-band-row .dd-row-controls > * {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* The help line under a picker is gear voice (it explains a choice while you
+   are configuring). On the face it would double the band's height on every
+   block, so it is dropped -- the label and the value carry the reading. */
+.dd-mapping-band .dd-band-row .dd-form-help {
+  display: none;
+}
+/* 5px under the label, exactly as .fb-field-label sets. The head is a flex
+   box whose own height can exceed the label's line box, so it is zeroed and
+   the gap put on the head itself. */
+.dd-mapping-band .dd-band-row .dd-row-head {
+  margin: 0 0 5px;
+  padding: 0;
+  min-height: 0;
+  line-height: inherit;
+}
+/* The popover label carries its own 4px bottom margin, which stacks with the
+   head's 5px and made the gap 9px against the code block's 5px. */
+.dd-mapping-band .dd-band-row .blockr-label {
+  line-height: 19.5px;
+  margin-bottom: 0;
+}
 
 .dd-mapping-band .blockr-text-input {
   padding: 10px 14px;
@@ -948,6 +995,22 @@
 .dd-script-row .dd-form-help {
   display: block;
   margin-top: 6px;
+}
+
+/* A script that threw, and a declaration that could not become a control.
+   Both read as errors rather than as help text, because both mean a knob the
+   user expected is not there. */
+.dd-script-failed {
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.dd-mapping-band .dd-script-input-error .dd-form-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.dd-mapping-band .dd-script-failed {
+  grid-column: 1 / -1;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
 }
 
 /* The data tooltip's content (.dd-tt-*) is in tooltip.css (tooltip_card_dep()). */

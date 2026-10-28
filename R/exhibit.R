@@ -1,10 +1,6 @@
 # The exhibit: everything a block's downloads write, in one object.
-#
-# A block hands its download menu a function that returns an exhibit; each
-# exporter (R/export-registry.R) reads it through the accessors below and
-# nothing else of the block. That is what lets an exporter live in another
-# package: blockr.outline registers PowerPoint the same way viz registers
-# Excel.
+# Exporters (R/export-registry.R) read it through the accessors below only,
+# so an exporter can live in another package.
 
 #' A block's exhibit
 #'
@@ -104,8 +100,7 @@ exhibit_meta <- function(x) {
 }
 
 # The exhibit with the board's download footer (R/download-footer.R) as the
-# caption's last line and, on a picture, drawn under it. Done once, before
-# any exporter sees the exhibit.
+# caption's last line and, on a picture, drawn under it.
 exhibit_footed <- function(x, session) {
   src <- x$meta$source %||% x$data
   x$titles$caption <- download_footer_caption(x$titles$caption, src, session)

@@ -51,12 +51,11 @@ exhibit once it arrives.
 The capture service: a deck asks the browser for a picture of a chart
 block, at a box it chooses, and gets the bitmap back. Every chart block
 registers itself while it lives, so a block whose panel was never opened
-can still be drawn (offscreen, at the export's size).
+can still be drawn offscreen at the export's size.
 }
 \details{
-The exchange is asynchronous, because the picture crosses the websocket:
-\code{chart_capture_request()} returns a token and \code{chart_capture_collect()}
-turns into an exhibit once the reply lands. An export therefore asks
-first and writes the file when the pictures are in.
+The picture crosses the websocket, so the exchange is asynchronous:
+\code{chart_capture_request()} returns a token, and \code{chart_capture_collect()}
+returns an exhibit once the reply lands.
 }
 \keyword{internal}

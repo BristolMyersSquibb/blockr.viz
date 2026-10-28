@@ -1,29 +1,24 @@
 # Taking a summarize table away ------------------------------------------------
 #
-# Four files, one exhibit. Each format gets what it is good at rather than a
-# transcription of the screen:
+# Each format gets what it is good at:
 #
-#   xlsx  the NUMBERS behind the marks, one column per statistic
+#   xlsx  the numbers behind the marks, one column per statistic
 #   html  the table itself, script and styles inlined
-#   pptx  painted pages (see R/summarize-paint.R for why a picture)
+#   pptx  painted pages (see R/summarize-paint.R)
 #   png   one picture, however tall it needs to be
 #
-# The spreadsheet is deliberately not a picture: `openxlsx::insertImage()`
-# anchors to a cell RANGE rather than a cell, so images neither sort nor resize
-# with the data -- and someone who opens the xlsx came to pivot, not to look.
-# A box glyph is three or five numbers; the download hands over the numbers.
+# The spreadsheet is not a picture: someone who opens it came to pivot, and
+# `openxlsx::insertImage()` images neither sort nor resize with the data.
 
 #' The Numbers Behind the Marks
 #'
 #' A summarize table's glyphs as a plain data frame: the row stub, then one
-#' column per statistic each mark is drawn from -- a bar's value, a box's
-#' centre, its inner range and its whiskers, a dot range's fence. This is what
-#' the Excel download writes, and what anyone wanting the table's numbers
-#' rather than its picture should ask for.
+#' column per statistic each mark is drawn from (a bar's value, a box's centre,
+#' inner range and whiskers, a dot range's fence). This is what the Excel
+#' download writes.
 #'
-#' Marks with no scalar behind them are left out and say so through
-#' `attr(, "dropped")`: a swimlane is a set of intervals per row and a
-#' sparkline a series, neither of which is a cell.
+#' Marks with no scalar behind them (a swimlane's intervals, a sparkline's
+#' series) are left out and listed in `attr(, "dropped")`.
 #'
 #' @param prep A prepared summarize table (internal).
 #' @return A data frame, with `.indent` when the table is nested.
@@ -34,16 +29,14 @@ summarize_export_df <- function(prep) {
   n <- nrow(rows)
 
   out <- list()
-  # The one row of a table without `by` has a blank header on screen; a
-  # spreadsheet column needs a name, so it gets a blank one.
+  # A table without `by` has a blank stub header; the column still needs a name.
   head <- summarize_label_header(prep)
   out[[if (nzchar(head)) head else " "]] <- as.character(rows$.label)
 
   dropped <- character()
 
-  # The words a distribution's own header uses ("Median", "Q1-Q3",
-  # "P10-P90"), so the spreadsheet's column names read the same as the screen
-  # and nobody has to work out which quantile `bl` was.
+  # Column names use the words of the distribution's header ("Median",
+  # "Q1-Q3", "P10-P90"), as on screen.
   role_label <- function(p, role) {
     w <- p$words %||% list()
     switch(
@@ -64,9 +57,8 @@ summarize_export_df <- function(prep) {
     )
   }
 
-  # A faceted column's own label is the facet LEVEL ("Placebo"), which says
-  # nothing on its own once the table is a grid of columns; the measure name
-  # is in the second header tier. Both, joined, is what the cell means.
+  # A faceted column's label is the facet level ("Placebo"); the measure name
+  # is in the second header tier. Joined, they name the cell.
   full_label <- function(p) {
     lab <- p$label %||% ""
     sub <- p$sname %||% p$sub_label %||% ""
@@ -83,8 +75,7 @@ summarize_export_df <- function(prep) {
     }
 
     if (!is.null(p$cols) && length(p$cols)) {
-      # A distribution: every statistic it was drawn from, in the order the
-      # mark reads (centre, spread, extent).
+      # A distribution: every statistic it was drawn from, in reading order.
       for (role in names(p$cols)) {
         key <- p$cols[[role]]
         if (is.null(rows[[key]])) next
@@ -98,7 +89,7 @@ summarize_export_df <- function(prep) {
     if (is.null(key) || is.null(rows[[key]])) next
     if (identical(kind, "tile")) {
       # A heatmap cell: the value, blank where the screen is empty, with its
-      # paint as `.bg:` / `.fg:` companions (write_annotated_xlsx()).
+      # paint as `.bg:` / `.fg:` columns (write_annotated_xlsx()).
       paint <- lane_tile_paint(p, rows)
       lab <- p$label %||% full_label(p)
       v <- rows[[key]]
@@ -113,9 +104,7 @@ summarize_export_df <- function(prep) {
 
   df <- as.data.frame(out, check.names = FALSE, stringsAsFactors = FALSE)
 
-  # Nesting travels as `.indent`, which write_annotated_xlsx() already reads:
-  # a preferred term under its system organ class is indented in the sheet the
-  # way it is on screen, rather than losing its parent entirely.
+  # Nesting travels as `.indent`, which write_annotated_xlsx() reads.
   if (!is.null(rows$.level) && any(rows$.level > 0L)) {
     df$.indent <- as.integer(rows$.level)
   }
@@ -128,12 +117,11 @@ summarize_export_df <- function(prep) {
 #'
 #' The exhibit as one image: what [pptx_add_exhibit()] places on a slide,
 #' without the slide. A summarize table is painted from its cell model and is
-#' as tall as the table is long (a file has no fixed box, so nothing is
-#' paged); a ggplot is drawn at the size the plot asks for.
+#' as tall as the table is long (nothing is paged); a ggplot is drawn at the
+#' size the plot asks for.
 #'
-#' It is a re-render, not a screenshot. The summarize table's marks are drawn
-#' from the same cell model the browser gets, so the file is sharper than a
-#' capture, and not pixel-identical to one.
+#' The image is a re-render from the same cell model the browser gets, so it is
+#' sharper than a screenshot and not pixel-identical to one.
 #'
 #' @param x A `summarize_exhibit` from [static_summarize_table()], or a
 #'   ggplot.

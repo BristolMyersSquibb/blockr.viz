@@ -46,8 +46,10 @@ function loadCore(opts = {}) {
       off: (type) => { if (x.__jq) delete x.__jq[type]; }
     });
   }
+  // With a sourceURL, so c8 maps the coverage to the file.
   for (const f of CORE_FILES) {
-    win.eval(fs.readFileSync(path.join(CORE_DIR, f), 'utf8'));
+    const file = path.join(CORE_DIR, f);
+    win.eval(fs.readFileSync(file, 'utf8') + '\n//# sourceURL=file://' + file);
   }
   const trigger = (el, type) => { if (el.__jq && el.__jq[type]) el.__jq[type](); };
   return { win, V: win.Blockr.viz, sent, outputs, trigger, bound };
