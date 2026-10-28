@@ -1,3 +1,6 @@
+# The groups view's TableCol parts: each column's text, its mark and its
+# axis.
+
 # Text per row, `NA` (null on the wire) where the cell is empty.
 table_groups_text <- function(x) {
   x <- as.character(x)
@@ -74,7 +77,7 @@ table_groups_mark <- function(c) {
   labelled <- !is.null(c$disp) || isTRUE(c$multi) ||
     (identical(c$kind, "barsplit") && !is.null(c$ldisp))
   if (!labelled) g$dw <- NULL
-  summarize_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
+  groups_drop_null(table_groups_pack(table_groups_fence(g), c$kind,
                                         top = TRUE))
 }
 
@@ -101,13 +104,13 @@ table_groups_pack <- function(g, kind, top) {
                        (top && nm == "fill" && identical(kind, "bar"))) {
       x
     } else if (nm == "segs") {
-      lapply(x, function(ss) if (length(ss)) ss else summarize_arr(list()))
+      lapply(x, function(ss) if (length(ss)) ss else groups_arr(list()))
     } else if (nm == "lv") {
       lapply(x, table_groups_pack, kind = kind, top = FALSE)
     } else if (is.list(x)) {
-      lapply(x, summarize_arr)
+      lapply(x, groups_arr)
     } else {
-      summarize_arr(x)
+      groups_arr(x)
     }
   }
   out
@@ -117,17 +120,17 @@ table_groups_pack <- function(g, kind, top) {
 # labels, with the "%" already on the last label. `foot` marks a large swimlane, which repeats the axis under the
 # table. `NULL` without a scale or with fewer than two ticks.
 table_groups_axis <- function(p, prep) {
-  dom <- summarize_axis_domain(p, prep)
+  dom <- cells_axis_domain(p, prep)
   if (is.null(dom)) {
     return(NULL)
   }
   t <- if (isTRUE(dom$date)) {
-    summarize_axis_date_ticks(dom$d0, dom$d1)
+    cells_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- summarize_axis_ticks(
+    at <- cells_axis_ticks(
       dom$d0, dom$d1, k = if (identical(p$kind, "interval")) 7L else 4L
     )
-    list(at = at, labels = lane_fmt(at))
+    list(at = at, labels = groups_fmt(at))
   }
   if (length(t$at) < 2L) {
     return(NULL)
@@ -138,20 +141,20 @@ table_groups_axis <- function(p, prep) {
   }
   pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
   table_groups_compact(list(
-    at = summarize_arr(pos), labels = summarize_arr(t$labels),
+    at = groups_arr(pos), labels = groups_arr(t$labels),
     foot = if (identical(p$kind, "interval") && identical(p$size, "lg")) TRUE
   ))
 }
 
 # A vector as a JSON array, also at length one.
-summarize_arr <- function(x) {
+groups_arr <- function(x) {
   I(unname(if (is.factor(x)) as.character(x) else x))
 }
 
-summarize_drop_null <- function(x) {
+groups_drop_null <- function(x) {
   if (!is.list(x)) return(x)
   x <- x[!vapply(x, is.null, logical(1L))]
   lapply(x, function(e) {
-    if (is.list(e) && !inherits(e, "AsIs")) summarize_drop_null(e) else e
+    if (is.list(e) && !inherits(e, "AsIs")) groups_drop_null(e) else e
   })
 }

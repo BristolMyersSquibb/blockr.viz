@@ -18,7 +18,7 @@ tile_summary <- function(...) {
 }
 
 test_that("tile columns order by count and carry the worst level", {
-  p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
+  p <- groups_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary(fill = "GRADE"))
   expect_null(p$err)
   labels <- vapply(p$plan, function(x) x$label, "")
@@ -31,9 +31,9 @@ test_that("tile columns order by count and carry the worst level", {
 })
 
 test_that("without a paint column the tile is painted by its value", {
-  p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
+  p <- groups_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary())
-  m <- summarize_cells(p)
+  m <- groups_cells(p)
   rash <- m$cols[[1L]]
   expect_false(all(is.na(rash$bg)))
   expect_true(is.null(p$plan[[1L]]$wkey))
@@ -41,12 +41,12 @@ test_that("without a paint column the tile is painted by its value", {
 
 test_that("a tile facet takes many levels, other marks keep the cap", {
   d <- data.frame(g = "a", t = sprintf("T%02d", 1:40))
-  ok <- lane_prepare_summaries(d, by = "g", summaries = list(list(
+  ok <- groups_prepare_summaries(d, by = "g", summaries = list(list(
     type = "simple", func = "count", show = "tile", facet = "t"
   )))
   expect_null(ok$err)
   expect_length(ok$plan, 40L)
-  bad <- lane_prepare_summaries(d, by = "g", summaries = list(list(
+  bad <- groups_prepare_summaries(d, by = "g", summaries = list(list(
     type = "simple", func = "count", show = "bar", facet = "t"
   )))
   expect_match(bad$err, "at most 15", fixed = TRUE)
@@ -56,13 +56,13 @@ test_that("a tile matrix sorts its rows by their total", {
   # Every subject has two events; one more makes s3 the burden.
   d <- rbind(tile_fixture(), data.frame(ARM = "B", SUBJ = "s3",
                                         TERM = "COUGH", GRADE = "MILD"))
-  p <- lane_prepare_summaries(d, by = "SUBJ", summaries = tile_summary(),
+  p <- groups_prepare_summaries(d, by = "SUBJ", summaries = tile_summary(),
                               sort_by = "value", sort_dir = "desc")
   expect_identical(p$rows$.label[[1L]], "s3")
 })
 
 test_that("the export carries the tile paint", {
-  p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
+  p <- groups_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary(fill = "GRADE"))
   df <- summarize_export_df(p)
   expect_true(all(c("RASH", ".bg:RASH", ".fg:RASH") %in% names(df)))
@@ -92,9 +92,9 @@ test_that("the block's look is one setting for every layout", {
 })
 
 test_that("group rows of a tile matrix are headers without tiles", {
-  p <- lane_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
+  p <- groups_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary(fill = "GRADE"))
-  m <- summarize_cells(p)
+  m <- groups_cells(p)
   grp <- p$rows$.level == 0L
   expect_true(any(grp))
   for (cc in m$cols) expect_true(all(is.na(cc$bg[grp])))
@@ -107,7 +107,7 @@ test_that("table_nest() puts a tidy frame under its groups", {
   expect_identical(out$.group1_level, c("b", "b", "a"))
   expect_identical(out$.label, c("x", "z", "y"))
   expect_identical(names(out), c(".group1", ".group1_level", ".label", "n"))
-  expect_true(dt_is_structured(out))
+  expect_true(table_is_structured(out))
   expect_identical(table_nest(d, by = character()), d)
 })
 

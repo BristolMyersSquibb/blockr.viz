@@ -5,7 +5,7 @@
 #' The frame the screen draws (dt_flat_build()): the rowname first, the value
 #' columns after it, the colour sources dropped. With a `group` or `summaries`
 #' it is the aggregate, keyed on the first group column, or a single "Total"
-#' row for grand totals (see dd_table_aggregate()). Each shaded column is
+#' row for grand totals (see table_aggregate()). Each shaded column is
 #' followed by its paint as `.bg:<col>` / `.fg:<col>` (see
 #' annotation_cell_paint()). Numbers keep their full precision; the writers
 #' format them. In-cell bars are not carried. A structured ("Table 1") frame
@@ -14,10 +14,10 @@
 dt_exhibit_frame <- function(data, rowname = NULL, value = NULL,
                              group = character(), summaries = list(),
                              shadings = list()) {
-  if (!is.data.frame(data) || !ncol(data) || dt_is_structured(data)) {
+  if (!is.data.frame(data) || !ncol(data) || table_is_structured(data)) {
     return(data)
   }
-  agg <- dd_table_aggregate(data, group, summaries)
+  agg <- table_aggregate(data, group, summaries)
   d <- data
   label_col <- rowname
   value_cols <- value
@@ -134,10 +134,10 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
   auto <- input_display_attrs(data)
   out <- dt_exhibit_frame(data, rowname, value,
                           as.character(group %||% character()),
-                          dd_parse_summaries(summaries), shadings)
+                          table_parse_summaries(summaries), shadings)
   # A structured frame shows its cells as they come, on screen too. The unit
   # goes first: it heads the columns that are numeric before formatting.
-  if (!dt_is_structured(data)) {
+  if (!table_is_structured(data)) {
     out <- dt_format_digits(dt_unit_labels(out, unit), format)
   }
   attr(out, "label") <- resolve_block_title(title, data, auto = auto$label)

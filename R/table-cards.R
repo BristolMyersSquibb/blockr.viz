@@ -1,7 +1,25 @@
 # The cards look of the table block -------------------------------------------
+#
 # `look = "cards"` draws the same table as a grid of cards: one card per
 # summary (groups layout) or per column (records layout), one row of cards per
-# row of the table.
+# row of the table. A card shows a label, the main number in large type, a
+# grey line for a statistic the summary already holds, and the glyph the
+# summarize table draws in that cell.
+#
+# Nothing here computes a mark. The glyph geometry is the summarize table's
+# cell model (summarize_cells()), so a column of cards shares its scale the
+# way a table column does, and the browser draws the glyphs with the
+# groups table's marks (inst/js/table/marks.js). What this file
+# adds is the text of each card, as one list both consumers read:
+#
+#   table_cards_groups()  -> the card model of a groups-layout table
+#   table_cards_records() -> the card model of a records-layout table
+#
+# The model travels on the payload (`cards`), and the table view
+# (inst/js/table/cards.js) draws it. The downloads draw it too:
+# cards_exhibit() wraps it for html_exhibit() (the same view, inlined) and
+# for the painted slide
+# (cards_paint_grob(), which reuses the summarize painter's glyphs).
 
 # The summary types a card cannot draw: a swimlane needs the width of a table
 # row, and an expr summary has no main value to print large.
@@ -27,8 +45,8 @@ cards_num <- function(x, dig = NA_integer_) {
 
 #' The card model of a groups-layout table.
 #'
-#' @param m The cell model, [summarize_cells()].
-#' @param prep The prepared table, [summarize_prepare()].
+#' @param m The cell model, [groups_cells()].
+#' @param prep The prepared table, [groups_prepare()].
 #' @param data The table's input, for the row colours' scale-map lookup.
 #' @param scale_map The board scale map, or `NULL`.
 #' @return A list: `n`, `multi` (draw row heads and column heads), `label`
@@ -76,9 +94,9 @@ cards_groups_col <- function(p, c, k, rows, prep) {
       rows[[nm]]
     }
   }
-  dom <- summarize_axis_domain(p, prep)
+  dom <- cells_axis_domain(p, prep)
   digits <- function(...) {
-    summarize_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
+    cells_val_digits(c(...), dom$d0 %||% p$dmin, dom$d1 %||% p$dmax)
   }
   sub <- NULL
   # The statistic the grey line holds ("Q1-Q3", "95% CI"): a card in a
@@ -119,7 +137,7 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     bc <- get(p$key)
     bl <- get(p$lo)
     bh <- get(p$hi)
-    dig <- summarize_val_digits(c(bc, bl, bh))
+    dig <- cells_val_digits(c(bc, bl, bh))
     main <- cards_num(bc, dig)
     sub <- ifelse(is.na(bl) | is.na(bh), "",
                   paste0(cards_num(bl, dig), " to ", cards_num(bh, dig)))
@@ -138,7 +156,7 @@ cards_groups_col <- function(p, c, k, rows, prep) {
       get(p$key)
     }
     main <- if (is.null(prep$format)) {
-      cards_num(v, summarize_val_digits(v))
+      cards_num(v, cells_val_digits(v))
     } else {
       out <- rep("", n)
       ok <- !is.na(v)
@@ -179,8 +197,8 @@ cards_groups_col <- function(p, c, k, rows, prep) {
     }
     # The column's domain in two significant digits: the cards have no
     # axis, so the head says what the marks are drawn against.
-    paste0(lane_fmt(signif(d0, 2L)), unit, " to ",
-           lane_fmt(signif(d1, 2L)), unit)
+    paste0(groups_fmt(signif(d0, 2L)), unit, " to ",
+           groups_fmt(signif(d1, 2L)), unit)
   }
   legend <- if (identical(kind, "barsplit")) {
     cards_legend(c$names, c$fills)
@@ -228,8 +246,8 @@ cards_row_hex <- function(rows, prep, data, scale_map) {
     tryCatch(dd_resolve_scales(scale_map, col, data[[col]])$color,
              error = function(e) NULL)
   }
-  inner <- pal_for(summarize_chr1(prep$group))
-  outer <- pal_for(summarize_chr1(prep$parent))
+  inner <- pal_for(chr_state(prep$group))
+  outer <- pal_for(chr_state(prep$parent))
   if (is.null(inner) && is.null(outer)) return(NULL)
   lab <- as.character(rows$.label)
   par <- if (is.null(rows$.is_parent)) {
@@ -300,13 +318,13 @@ table_cards_records <- function(data, label_col = NULL, value_cols = NULL,
 cards_payload <- function(model) {
   if (is.null(model)) return(NULL)
   arr <- function(x) I(unname(as.character(x)))
-  summarize_drop_null(list(
+  groups_drop_null(list(
     n = model$n,
     multi = isTRUE(model$multi),
     label = arr(model$label),
     hex = if (!is.null(model$hex)) arr(model$hex),
     cols = lapply(model$cols, function(c) {
-      summarize_drop_null(list(
+      groups_drop_null(list(
         label = c$label, range = c$range, word = c$word,
         legend = c$legend, glyph = c$glyph,
         text = if (isTRUE(c$text)) TRUE,

@@ -69,7 +69,7 @@ table_static_groups <- function(x) {
       bar_width = args$bar_width %||% "fit"
     ),
     derived = list(
-      legend = summarize_legend_spec(x$prep),
+      legend = groups_legend_spec(x$prep),
       empty = if (!is.null(x$prep$err)) {
         list(kind = "message", message = x$prep$err)
       }

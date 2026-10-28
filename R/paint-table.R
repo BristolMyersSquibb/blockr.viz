@@ -16,7 +16,7 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   hdr <- vapply(plan, function(p) p$label %||% "", character(1L))
   sub <- vapply(plan, function(p) p$sub_label %||% "", character(1L))
 
-  stub_lab <- summarize_label_header(prep)
+  stub_lab <- groups_label_header(prep)
   indent <- ifelse(m$level > 0L, PAINT_INDENT, 0)
   stub_w <- max(
     paint_w(paste0(m$label), fs, family) + max(indent),
@@ -91,16 +91,16 @@ paint_row_heights <- function(m, row_h, px, fs) {
 # The domain printed once per glyph column, from the numbers the marks were
 # scaled with.
 paint_axis <- function(p, prep, x, w, ytop, gl) {
-  dom <- summarize_axis_domain(p, prep)
+  dom <- cells_axis_domain(p, prep)
   if (is.null(dom)) return(list())
   t <- if (isTRUE(dom$date)) {
-    summarize_axis_date_ticks(dom$d0, dom$d1)
+    cells_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- summarize_axis_ticks(
+    at <- cells_axis_ticks(
       dom$d0, dom$d1,
       k = if (identical(p$kind, "interval")) 7L else 4L
     )
-    list(at = at, labels = lane_fmt(at))
+    list(at = at, labels = groups_fmt(at))
   }
   if (length(t$at) < 2L) return(list())
   last <- length(t$at)
@@ -117,7 +117,7 @@ paint_axis <- function(p, prep, x, w, ytop, gl) {
 # Every band's height. The painter lays the picture out from it and the pager
 # decides how many rows a slide holds from it.
 paint_legend_spec <- function(prep) {
-  tryCatch(summarize_legend_spec(prep), error = function(e) NULL)
+  tryCatch(groups_legend_spec(prep), error = function(e) NULL)
 }
 
 paint_has <- function(s) !is.null(s) && nzchar(s)

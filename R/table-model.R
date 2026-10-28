@@ -8,29 +8,21 @@
 
 # The records layout's cell model: dt_flat_build()'s (`kind` "flat" or
 # "message"), or list(kind = "structured", data) for a frame that carries its
-# own structure. `tint` is table_model_tint()'s list(col, hex); `gear_cols` is
-# JSON, NULL reads the columns off `data`.
-table_model_records <- function(state, data, tint = NULL, active = NULL,
-                                gear_cols = NULL) {
+# own structure. `tint` is table_model_tint()'s list(col, hex).
+table_model_records <- function(state, data, tint = NULL) {
   if (length(state$by) && is.data.frame(data)) {
     data <- table_nest(data, state$by, state$rowname,
                        missing = state$missing %||% "level",
                        columns = state$columns)
   }
-  if (dt_is_structured(data)) {
+  if (table_is_structured(data)) {
     return(list(kind = "structured", data = data))
   }
-  toggles <- list(
-    sortable = isTRUE(state$sortable), collapsible = isTRUE(state$collapsible),
-    search = isTRUE(state$search), download = isTRUE(state$download),
-    rotate_titles = identical(state$look, "compact"), unit = state$unit
-  )
   data <- dt_unit_labels(data, state$unit, state$rowname)
   dt_flat_build(
     data, state$rowname, state$columns, dd_parse_shadings(state$shadings),
     state$drill, state$format %||% "number", row_hex = tint$hex,
-    color = tint$col, toggles = toggles, active = active,
-    gear_cols = gear_cols
+    rotate = identical(state$look, "compact")
   )
 }
 
@@ -49,11 +41,11 @@ table_model_tint <- function(state, data, scale_map = NULL) {
   list(col = color, hex = dd_ident_hex(scale_map, color, data))
 }
 
-# The groups layout's list(prep, cells): summarize_prepare()'s rows and plan,
-# and summarize_cells()'s cell model, which is NULL when `prep$err` is set.
+# The groups layout's list(prep, cells): groups_prepare()'s rows and plan,
+# and groups_cells()'s cell model, which is NULL when `prep$err` is set.
 table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
                                active = NULL) {
-  prep <- summarize_prepare(
+  prep <- groups_prepare(
     data, summaries = state$summaries, by = state$by,
     facet_layout = state$facet_layout %||% "by_summary",
     sort_by = state$sort_by %||% "value",
@@ -74,7 +66,7 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
     bar_width = state$bar_width, drill = state$drill
   )
   list(prep = prep,
-       cells = summarize_cells(prep, drill = drill, active = active,
+       cells = groups_cells(prep, drill = drill, active = active,
                                cfg = cfg))
 }
 
@@ -106,4 +98,11 @@ table_variables_cfg <- function(state, data = NULL) {
     total = state$total, total_label = state$total_label, nest = state$nest,
     id = state$id, missing = state$missing
   )
+}
+
+# Whether a wide frame carries the dotted structure columns (`.group<k>*`,
+# `.variable*`, `.label`, `.indent`, `.strong`) that summary_table() writes.
+table_is_structured <- function(data) {
+  any(grepl("^\\.(group\\d+(_level|_label)?|variable(_level|_label)?|label|indent|strong)$",
+            names(data)))
 }

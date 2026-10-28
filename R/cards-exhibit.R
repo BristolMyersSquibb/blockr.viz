@@ -195,9 +195,9 @@ cards_dims <- function(md, cells, width_in, fs, family, rows, title, subtitle,
   cw <- (width_in - head_w - gap * (per_line - 1L) -
            (if (multi) gap else 0)) / per_line
   col_head_h <- if (multi) fs / 72 * (if (any_legend) 4.1 else 2.8) else 0
-  title_h <- if (summarize_nz(title)) fs / 72 * 2.4 else 0
-  subt_h <- if (summarize_nz(subtitle)) fs / 72 * 1.7 else 0
-  cap_h <- if (summarize_nz(caption)) fs / 72 * 1.8 else 0
+  title_h <- if (dd_is_string(title)) fs / 72 * 2.4 else 0
+  subt_h <- if (dd_is_string(subtitle)) fs / 72 * 1.7 else 0
+  cap_h <- if (dd_is_string(caption)) fs / 72 * 1.8 else 0
   fold_h <- if (!is.null(md$fold)) fs / 72 * 1.6 else 0
   row_h <- card_h + gap
   top_pad <- fs / 72 * 0.4

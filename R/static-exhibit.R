@@ -123,7 +123,7 @@ html_exhibit.default <- function(x, title = NULL, subtitle = NULL,
   v <- viz_check(spec, list(layout = "records", sortable = isTRUE(sortable),
                             collapsible = isTRUE(collapsible), search = FALSE,
                             download = FALSE))
-  flat <- !dt_is_structured(data)
+  flat <- !table_is_structured(data)
   shown <- if (flat) data[!grepl(ANNOTATION_PAINT_RE, names(data))] else data
   built <- table_frame_view(v, shown, list(scale_map = function() NULL),
                             "records")
@@ -180,8 +180,8 @@ html_exhibit_expanded <- function(data) {
 }
 
 # Does this display grid render any collapsible row? The structured table's
-# two rules: a non-empty section axis, or a row immediately followed
-# by a more deeply indented one.
+# two rules: a non-empty section axis, or a row immediately followed by a
+# more deeply indented one.
 html_table_collapsible <- function(data, section_cols = character()) {
   if (length(section_cols)) return(TRUE)
   if (!".indent" %in% names(data) || nrow(data) < 2L) return(FALSE)

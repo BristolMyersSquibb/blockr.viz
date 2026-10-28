@@ -226,7 +226,7 @@ test_that("a header label with HTML is plain text and a sub line", {
   expect_identical(lab("<b>A &amp; B</b>"), list(text = "A & B"))
   expect_identical(lab(NULL), list(text = "fallback"))
   expect_identical(lab(""), list(text = "fallback"))
-  expect_true(dt_is_structured(d))
+  expect_true(table_is_structured(d))
 })
 
 test_that("spanners span and a leaf reaches the last header row", {

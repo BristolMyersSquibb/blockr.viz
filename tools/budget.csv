@@ -25,6 +25,8 @@ R: chart,R/describe-chart.R,1800
 R: chart,R/scale-map-resolve.R,1800
 R: table shell and shared model,R/table-block.R,1200
 R: table shell and shared model,R/table-model.R,1200
+R: table shell and shared model,R/table-drill.R,1200
+R: table shell and shared model,R/table-aggregate.R,1200
 R: table shell and shared model,R/table-normalize.R,1200
 R: table shell and shared model,R/table-push.R,1200
 R: table shell and shared model,R/table-prepare.R,1200
@@ -42,10 +44,7 @@ R: records,R/table-cards.R,1400
 R: records,R/table-structured*.R,1400
 R: records,R/table-css.R,1400
 R: groups,R/table-groups*.R,3600
-R: groups,R/table-model-groups*.R,3600
-R: groups,R/table-model-cells*.R,3600
-R: groups,R/summarize-table*.R,3600
-R: groups,R/summarize-drill.R,3600
+R: groups,R/groups-*.R,3600
 R: variables,R/table-variables*.R,900
 R: variables,R/summary-stats.R,900
 R: variables,R/summary-table*.R,900

@@ -42,17 +42,17 @@ static_summarize_table <- function(data, ...) {
   targs <- args$.title_args %||% summarize_title_args(args)
   args$.title_args <- NULL
 
-  prep <- do.call(summarize_prepare,
+  prep <- do.call(groups_prepare,
                   c(list(data),
-                    args[names(args) %in% names(formals(summarize_prepare))]))
-  cells <- summarize_cells(
+                    args[names(args) %in% names(formals(groups_prepare))]))
+  cells <- groups_cells(
     prep,
     cfg = list(axis = args$axis %||% TRUE, sortable = args$sortable %||% TRUE,
                value_labels = args$value_labels %||% TRUE,
                bar_width = args$bar_width)
   )
   text <- function(role, attr = role) {
-    resolve_block_title(args[[role]], data, auto = summarize_attr(data, attr),
+    resolve_block_title(args[[role]], data, auto = groups_attr(data, attr),
                         args = targs)
   }
 
@@ -86,12 +86,12 @@ summarize_title_args <- function(args) {
     by = if (length(by)) by[[length(by)]],
     group = if (length(by)) by[[1L]],
     parent = if (length(by) == 2L) by[[1L]],
-    value = summarize_chr1(s1[["col"]]),
-    func = summarize_chr1(s1[["func"]]),
+    value = chr_state(s1[["col"]]),
+    func = chr_state(s1[["func"]]),
     id_var = args$id_var,
-    color = summarize_chr1(s1[["color"]]),
-    facet = summarize_chr1(s1[["facet"]]),
-    fill = summarize_chr1(s1[["fill"]]),
+    color = chr_state(s1[["color"]]),
+    facet = chr_state(s1[["facet"]]),
+    fill = chr_state(s1[["fill"]]),
     sort_by = args$sort_by, top_n = args$top_n,
     drill = args$drill
   )

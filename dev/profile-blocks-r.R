@@ -91,7 +91,7 @@ add("blockr.viz", "table", "render:structured:chrome",
     bench(dt_chrome(elem_id = "x", structured = TRUE, max_height = "600px",
                     inner = "body")))
 add("blockr.viz", "table", "render:structured:is_structured",
-    bench(dt_is_structured(summ_df)))
+    bench(table_is_structured(summ_df)))
 add("blockr.viz", "table", "render:structured:body",
     bench(dt_table_tag(summ_df, drill = NULL)),
     note = sprintf("%dx%d structured", nrow(summ_df), ncol(summ_df)))

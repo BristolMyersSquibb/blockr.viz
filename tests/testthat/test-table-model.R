@@ -20,8 +20,6 @@ test_that("table_model_records() gives the recorded records cells", {
                        vapply(want$cols[[j]]$disp, function(x) as.character(x %||% NA), ""),
                        label = paste(nm, j, "disp"))
     }
-    expect_identical(which(m$nodrill) - 1L, as.integer(unlist(want$nodrill)),
-                     label = paste(nm, "nodrill"))
     n <- n + 1L
   }
   expect_gt(n, 10L)
@@ -32,7 +30,7 @@ test_that("table_model_records() hands a structured frame on", {
   d <- data.frame(grp = c("a", "b"), id = c("x", "y"), v = 1:2)
   m <- table_model_records(st, d)
   expect_identical(m$kind, "structured")
-  expect_true(dt_is_structured(m$data))
+  expect_true(table_is_structured(m$data))
 })
 
 test_that("table_model_groups() passes a preparation error on", {
@@ -50,7 +48,7 @@ test_that("table_model_variables() builds the recorded Table 1", {
     want <- tm_payload(cs$messages, "blockr-viz-table-data")
     if (!identical(want$kind, "html")) next
     tab <- table_model_variables(cs$state, cs$data)
-    expect_true(dt_is_structured(tab), label = nm)
+    expect_true(table_is_structured(tab), label = nm)
     # The rows the reference drew: every variable label is in its table.
     labels <- unique(as.character(tab$.label))
     for (lb in labels[nzchar(labels)]) {
