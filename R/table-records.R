@@ -84,8 +84,13 @@ table_frame_part <- function(kit, src, frame, layout, filter = identity) {
 }
 
 # The table model of a frame: structured as it comes, else the flat
-# records table with its tint and, in the cards look, the cards.
+# records table with its tint and, in the cards look, the cards. The
+# variables layout without a variable asks for one.
 table_frame_drawn <- function(v, d, src, layout) {
+  if (identical(layout, "variables") && !length(table_variables_cfg(v)$vars)) {
+    return(list(empty = list(kind = "needs",
+                             message = "Pick variables to summarise")))
+  }
   if (!is.data.frame(d)) {
     return(list(empty = list(kind = "no_data", message = "No data")))
   }

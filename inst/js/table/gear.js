@@ -182,6 +182,8 @@
       choices: (key) => key === 'drill_target'
         ? (/** @type {VizChoice[]} */ ([{ value: '', label: 'None' }])).concat(derived.ctrl_choices || [])
         : null,
+      // A Table 1 needs its variables (variables.js marks the pick).
+      required: (key, v) => key === 'summaries' && v.layout === 'variables',
       visible: (key, v) => visible(key, v, info()),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
       // What an empty picker means.

@@ -60,9 +60,16 @@ test_that("table_model_variables() builds the recorded Table 1", {
   expect_gt(n, 3L)
 })
 
-test_that("table_model_variables() returns the data without variables", {
+test_that("the variables layout asks for variables instead of drawing the input", {
   d <- data.frame(a = 1:2)
-  expect_identical(table_model_variables(list(summaries = list()), d), d)
+  # A row count names no variable.
+  v <- list(summaries = list(table_seed_summary()), by = character())
+  expect_null(table_model_variables(v, d))
+  drawn <- table_frame_drawn(v, NULL, src = NULL, layout = "variables")
+  expect_identical(drawn$empty,
+                   list(kind = "needs", message = "Pick variables to summarise"))
+  # The records layout draws a missing frame as no data.
+  expect_identical(table_frame_drawn(v, NULL, NULL, "records")$empty$kind, "no_data")
 })
 
 test_that("the row tint follows the color setting", {

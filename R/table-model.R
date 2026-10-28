@@ -77,11 +77,12 @@ table_sort_dir <- function(state) {
 }
 
 # The variables layout's Table 1: summary_table()'s frame for the summaries'
-# variables less the `by` columns, or `data` while no summary names a variable.
+# variables less the `by` columns, or NULL while no summary names a variable
+# (the layout then asks for them, table_frame_drawn()).
 table_model_variables <- function(state, data) {
   args <- table_variables_args(table_variables_cfg(state, data))
   if (is.null(args)) {
-    return(data)
+    return(NULL)
   }
   do.call(summary_table, c(list(data), args))
 }

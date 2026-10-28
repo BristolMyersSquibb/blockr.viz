@@ -54,6 +54,10 @@ function installUiFake(win) {
     multi: (el, cfg) => select(el, cfg, true)
   };
 
+  B.setRequiredEmpty = B.setRequiredEmpty || ((el, empty) => {
+    el.classList.toggle('blockr-field--required-empty', !!empty);
+  });
+
   B.checkbox = B.checkbox || ((label, checked, onChange) => {
     const el = doc.createElement('label');
     el.className = 'blockr-checkbox';
