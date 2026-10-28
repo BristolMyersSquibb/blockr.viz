@@ -1,7 +1,9 @@
+# The cell model's scales as printed: axis domains and ticks, value digits.
+
 #' The domain a column's marks are drawn against, as the axis prints it: the
-#' numbers `summarize_cells()` scales with. `NULL` for a column with no scale.
+#' numbers `groups_cells()` scales with. `NULL` for a column with no scale.
 #' @noRd
-summarize_axis_domain <- function(p, prep = NULL) {
+cells_axis_domain <- function(p, prep = NULL) {
   ok <- function(a, b) {
     length(a) && length(b) && is.finite(a) && is.finite(b) && b > a
   }
@@ -37,7 +39,7 @@ summarize_axis_domain <- function(p, prep = NULL) {
 #' Nice tick values: the 1 / 2 / 2.5 / 5 / 10 ladder, taking the step closest
 #' to an even split. Ticks outside the domain are cut, not clamped.
 #' @noRd
-summarize_axis_ticks <- function(d0, d1, k = 4L) {
+cells_axis_ticks <- function(d0, d1, k = 4L) {
   raw <- (d1 - d0) / max(1L, k - 1L)
   if (!is.finite(raw) || raw <= 0) return(numeric())
   mag <- 10^floor(log10(raw))
@@ -48,16 +50,16 @@ summarize_axis_ticks <- function(d0, d1, k = 4L) {
 }
 
 #' Decimals for a column's value labels: one finer than its axis ticks. Whole
-#' numbers stay whole. `NA` without an axis (labels keep lane_fmt()). `x` is
+#' numbers stay whole. `NA` without an axis (labels keep groups_fmt()). `x` is
 #' every value the column prints, all colour levels, so it has one precision.
 #' @noRd
-summarize_val_digits <- function(x, d0 = NULL, d1 = NULL) {
+cells_val_digits <- function(x, d0 = NULL, d1 = NULL) {
   x <- x[is.finite(x)]
   if (length(x) && all(abs(x - round(x)) < 1e-9)) return(0L)
   if (!length(d0) || !length(d1) || !is.finite(d0) || !is.finite(d1)) {
     return(NA_integer_)
   }
-  at <- summarize_axis_ticks(d0, d1)
+  at <- cells_axis_ticks(d0, d1)
   if (length(at) < 2L) return(NA_integer_)
   step <- at[[2L]] - at[[1L]]
   dig <- 0L
@@ -67,11 +69,11 @@ summarize_val_digits <- function(x, d0 = NULL, d1 = NULL) {
   dig + 1L
 }
 
-#' A value label at `dig` decimals (summarize_val_digits()); `NA` digits fall
-#' back to lane_fmt(). An NA value prints as "".
+#' A value label at `dig` decimals (cells_val_digits()); `NA` digits fall
+#' back to groups_fmt(). An NA value prints as "".
 #' @noRd
-summarize_val_str <- function(x, dig) {
-  if (is.na(dig)) return(lane_fmt(x))
+cells_val_str <- function(x, dig) {
+  if (is.na(dig)) return(groups_fmt(x))
   out <- formatC(x, format = "f", digits = dig, big.mark = "")
   out[is.na(x)] <- ""
   out
@@ -80,14 +82,14 @@ summarize_val_str <- function(x, dig) {
 #' The value slot of a colour-split column: one width for every level's
 #' label, so the lanes of all levels and rows end at the same x.
 #' @noRd
-summarize_multi_dw <- function(lv) {
+cells_multi_dw <- function(lv) {
   max(c(1L, unlist(lapply(lv, function(g) nchar(g$disp %||% "")))))
 }
 
 #' The ink for a number printed ON a fill: white on a dark fill, the text
 #' colour on a light one (the palette's yellow would swallow white).
 #' @noRd
-summarize_ink <- function(fills) {
+cells_ink <- function(fills) {
   vapply(fills, function(f) {
     rgb <- tryCatch(grDevices::col2rgb(f)[, 1L] / 255,
                     error = function(e) c(0, 0, 0))
@@ -99,7 +101,7 @@ summarize_ink <- function(fills) {
 
 # The calendar ladder: step, length in days and tick format. Steps are real
 # calendar units because "every 30 days" drifts through the months.
-SUMMARIZE_DATE_STEPS <- list(
+CELLS_DATE_STEPS <- list(
   list(by = "1 day", days = 1, fmt = "%d %b", unit = "day"),
   list(by = "2 days", days = 2, fmt = "%d %b", unit = "day"),
   list(by = "1 week", days = 7, fmt = "%d %b", unit = "week"),
@@ -116,15 +118,15 @@ SUMMARIZE_DATE_STEPS <- list(
 #' Nice tick dates across a day-numbered domain: three ticks, since a date
 #' label is about three times as wide as a number.
 #' @noRd
-summarize_axis_date_ticks <- function(d0, d1, k = 3L) {
+cells_axis_date_ticks <- function(d0, d1, k = 3L) {
   raw <- (d1 - d0) / max(1L, k - 1L)
   if (!is.finite(raw) || raw <= 0) {
     return(list(at = numeric(), labels = character()))
   }
-  st <- SUMMARIZE_DATE_STEPS[[which.min(abs(
-    vapply(SUMMARIZE_DATE_STEPS, `[[`, numeric(1L), "days") - raw
+  st <- CELLS_DATE_STEPS[[which.min(abs(
+    vapply(CELLS_DATE_STEPS, `[[`, numeric(1L), "days") - raw
   ))]]
-  from <- summarize_axis_date_start(as.Date(d0, origin = "1970-01-01"), st)
+  from <- cells_axis_date_start(as.Date(d0, origin = "1970-01-01"), st)
   at <- seq(from, as.Date(ceiling(d1), origin = "1970-01-01"), by = st$by)
   at <- at[as.numeric(at) >= d0 & as.numeric(at) <= d1]
   list(at = as.numeric(at), labels = format(at, st$fmt))
@@ -133,7 +135,7 @@ summarize_axis_date_ticks <- function(d0, d1, k = 3L) {
 #' The first tick: the earliest boundary of the step's unit at or after the
 #' domain start (month firsts, January 1sts).
 #' @noRd
-summarize_axis_date_start <- function(d, st) {
+cells_axis_date_start <- function(d, st) {
   if (identical(st$unit, "day")) return(d)
   if (identical(st$unit, "week")) {
     # Monday, the ISO week boundary.

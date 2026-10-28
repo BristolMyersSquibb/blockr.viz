@@ -24,7 +24,7 @@ sum_fixture <- function() {
 }
 
 test_that("normalization fills defaults and names the broken row", {
-  s <- lane_norm_summaries(list(list(type = "dist", col = "DUR")))
+  s <- groups_norm_summaries(list(list(type = "dist", col = "DUR")))
   # The house default is the dot style with both ranges on; `show` is the
   # legacy mirror of the style, not the axis itself.
   expect_identical(s[[1L]]$style, "dot")
@@ -35,27 +35,27 @@ test_that("normalization fills defaults and names the broken row", {
   expect_identical(s[[1L]]$name, "DUR")
 
   # Fields are group facts: always pooled.
-  s <- lane_norm_summaries(list(list(type = "field", col = "ARM",
+  s <- groups_norm_summaries(list(list(type = "field", col = "ARM",
                                      scope = "cell")))
   expect_identical(s[[1L]]$scope, "pooled")
 
-  expect_match(lane_norm_summaries(list(list(type = "nope")))$err,
+  expect_match(groups_norm_summaries(list(list(type = "nope")))$err,
                "unknown type")
-  expect_match(lane_norm_summaries(list(list(type = "dist")))$err,
+  expect_match(groups_norm_summaries(list(list(type = "dist")))$err,
                "`col` is required")
   expect_match(
-    lane_norm_summaries(list(list(type = "spans", x = "ASTDY")))$err,
+    groups_norm_summaries(list(list(type = "spans", x = "ASTDY")))$err,
     "`xend` is required"
   )
 })
 
 test_that("box and dot are ONE mark: style over centre + inner + outer", {
   dist <- function(...) {
-    lane_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
+    groups_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
   }
   # The style picks the drawing, never which numbers exist: both carry the
   # same three pieces.
-  for (st in LANE_DIST_STYLES) {
+  for (st in GROUPS_DIST_STYLES) {
     s <- dist(style = st)
     expect_identical(s$summary, "median_q1_q3")
     expect_identical(s$whiskers, "tukey")
@@ -65,10 +65,10 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
   expect_identical(dist(summary = "none")$summary, "none")
   # A centre is never absent: with the inner range off, the outer range's
   # centre stands in; with both off, the median.
-  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+  expect_identical(groups_dist_centre_stat(dist(summary = "none",
                                               whiskers = "min_max")),
                    "min_max")
-  expect_identical(lane_dist_centre_stat(dist(summary = "none",
+  expect_identical(groups_dist_centre_stat(dist(summary = "none",
                                               whiskers = "none")),
                    "median_q1_q3")
   # Unknown values fall back rather than throwing: a bad style is a dot.
@@ -79,7 +79,7 @@ test_that("box and dot are ONE mark: style over centre + inner + outer", {
 
 test_that("legacy `show` still restores the mark it always drew", {
   dist <- function(...) {
-    lane_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
+    groups_norm_summaries(list(list(type = "dist", col = "DUR", ...)))[[1L]]
   }
   # A saved board that said "pointrange" drew a centre and ONE range -- so it
   # restores as the dot style with no outer, not as the new default.
@@ -99,7 +99,7 @@ test_that("legacy `show` still restores the mark it always drew", {
 test_that("the ground follows the mark: only a bare mark keeps a hairline", {
   d <- sum_fixture()
   plan1 <- function(...) {
-    p <- lane_prepare_summaries(
+    p <- groups_prepare_summaries(
       d, by = "TERM",
       summaries = list(list(type = "dist", col = "DUR", ...))
     )
@@ -126,8 +126,8 @@ test_that("the colour dimension reaches every lane mark, dot included", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
-  lv <- summarize_levels(ae$ARM)
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  lv <- groups_levels(ae$ARM)
   # The dot splits like the distribution does: one glyph per level, named by
   # the same geometry key the cell builder reads.
   expect_identical(p$plan[[1L]]$levels, lv)
@@ -143,7 +143,7 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   expect_true(all(paste0(p$plan[[2L]]$prefix, lv) %in% names(p$rows)))
   expect_identical(p$plan[[3L]]$levels, lv)
   # Every level of a split column is read against ONE scale.
-  m <- summarize_cells(p)
+  m <- groups_cells(p)
   expect_true(isTRUE(m$cols[[1L]]$multi))
   expect_length(m$cols[[1L]]$lv, length(lv))
   # Nothing spans the cell, so the dot keeps its hairline in every level.
@@ -163,9 +163,9 @@ test_that("the colour dimension reaches every lane mark, dot included", {
   # A group whose rows are all ONE level draws that level alone: grouping by
   # subject (every subject has one SEX) is a single bar in its own colour,
   # not a stack with an empty half.
-  one <- lane_prepare_summaries(ae, by = "USUBJID", summaries = S,
+  one <- groups_prepare_summaries(ae, by = "USUBJID", summaries = S,
                                 color = "ARM")
-  segv <- summarize_cells(one)$cols[[2L]]$segv
+  segv <- groups_cells(one)$cols[[2L]]$segv
   nonzero <- vapply(seq_along(segv[[1L]]), function(i) {
     sum(vapply(segv, function(x) x[[i]] > 0, logical(1L)))
   }, integer(1L))
@@ -180,13 +180,13 @@ test_that("the hover card names the colour column by its label", {
          col = "USUBJID", show = "bar"),
     list(type = "dist", name = "Duration", col = "DUR")
   )
-  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
   expect_identical(p$plan[[1L]]$cvar, "Treatment Arm")
   expect_identical(p$plan[[2L]]$cvar, "Treatment Arm")
-  expect_identical(summarize_legend_spec(p)$groups[[1L]]$title, "Treatment Arm")
+  expect_identical(groups_legend_spec(p)$groups[[1L]]$title, "Treatment Arm")
   # No label: the column name, as before.
   attr(ae$ARM, "label") <- NULL
-  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
   expect_identical(p$plan[[1L]]$cvar, "ARM")
 })
 
@@ -202,7 +202,7 @@ test_that("hover text names columns by their labels", {
     list(type = "pair", name = "Onset to end", x = "ASTDY",
          x_func = "mean", xend = "AENDY", xend_func = "mean")
   )
-  m <- summarize_cells(summarize_prepare(ae, by = "TERM", summaries = S))
+  m <- groups_cells(groups_prepare(ae, by = "TERM", summaries = S))
   expect_match(m$cols[[1L]]$tips[[1L]][[1L]],
                "^Severity (MILD|MOD) .* Treatment Arm: ")
   expect_match(m$cols[[2L]]$tt$sub, "Start Day.*End Day")
@@ -212,7 +212,7 @@ test_that("a split bar only stacks an additive measure", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Mean duration", func = "mean",
                  col = "DUR", show = "bar"))
-  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
   e <- p$plan[[1L]]
   # The parts of a mean are not a composition of it: they sit side by side,
   # and the column's domain reaches the widest of them (scaling them against
@@ -221,13 +221,13 @@ test_that("a split bar only stacks an additive measure", {
   expect_identical(e$mode, "grouped")
   segs <- unlist(p$rows[, paste0(e$prefix, e$series)])
   expect_equal(e$dmax, max(c(p$rows[[e$key]], segs), na.rm = TRUE))
-  segw <- unlist(summarize_cells(p)$cols[[1L]]$seg)
+  segw <- unlist(groups_cells(p)$cols[[1L]]$seg)
   expect_true(max(segw, na.rm = TRUE) <= 100)
 
   # A count is a composition, so it keeps stacking on the group's total.
   cs <- list(list(type = "simple", name = "Events", func = "count",
                   col = "DUR", show = "bar"))
-  pc <- lane_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
+  pc <- groups_prepare_summaries(ae, by = "TERM", summaries = cs, color = "ARM")
   expect_identical(pc$plan[[1L]]$mode, "stacked")
   # Its domain is in percent of N, the unit its bars are drawn in.
   expect_equal(pc$plan[[1L]]$dmax,
@@ -236,10 +236,10 @@ test_that("a split bar only stacks an additive measure", {
 
 test_that("the column axis prints the domain once, on glyph columns only", {
   # Nice steps, and never a tick outside the domain it labels.
-  expect_identical(summarize_axis_ticks(0, 100), c(0, 25, 50, 75, 100))
-  expect_identical(summarize_axis_ticks(2, 9), c(2.5, 5, 7.5))
-  expect_length(summarize_axis_ticks(1, 1), 0L)
-  expect_length(summarize_axis_ticks(NA_real_, 1), 0L)
+  expect_identical(cells_axis_ticks(0, 100), c(0, 25, 50, 75, 100))
+  expect_identical(cells_axis_ticks(2, 9), c(2.5, 5, 7.5))
+  expect_length(cells_axis_ticks(1, 1), 0L)
+  expect_length(cells_axis_ticks(NA_real_, 1), 0L)
 
   ax <- function(p, prep = NULL) table_groups_axis(p, prep)
   at_label <- function(a, lab) as.numeric(a$at)[match(lab, a$labels)]
@@ -269,7 +269,7 @@ test_that("the column axis prints the domain once, on glyph columns only", {
 test_that("large swimlanes repeat the axis below the table", {
   ae <- sum_fixture()
   foot <- function(size) {
-    p <- summarize_prepare(ae, by = "USUBJID", summaries = list(
+    p <- groups_prepare(ae, by = "USUBJID", summaries = list(
       c(list(type = "spans", x = "ASTDY", xend = "AENDY"), size)
     ))
     isTRUE(table_groups_axis(p$plan[[1L]], p)$foot)
@@ -280,7 +280,7 @@ test_that("large swimlanes repeat the axis below the table", {
 
 test_that("swimlane parent rows can act as section headers", {
   ae <- sum_fixture()
-  prep <- summarize_prepare(
+  prep <- groups_prepare(
     ae, by = c("ARM", "USUBJID"), summaries = list(
       list(type = "spans", x = "ASTDY", xend = "AENDY", parent = FALSE)
     )
@@ -293,14 +293,14 @@ test_that("swimlane parent rows can act as section headers", {
   expect_equal(nrow(child), 19L)
   expect_true(all(lengths(parent[[seg_col]]) == 0L))
   expect_true(any(lengths(child[[seg_col]]) > 0L))
-  expect_true(summarize_cells(prep)$expanded)
+  expect_true(groups_cells(prep)$expanded)
 })
 
 test_that("interval columns keep an explicit axis domain", {
   ae <- sum_fixture()
   attr(ae$ASTDY, "blockr_domain") <- c(100, 350)
   attr(ae$AENDY, "blockr_domain") <- c(100, 350)
-  prep <- summarize_prepare(
+  prep <- groups_prepare(
     ae, by = "USUBJID", summaries = list(
       list(type = "spans", x = "ASTDY", xend = "AENDY")
     )
@@ -311,18 +311,18 @@ test_that("interval columns keep an explicit axis domain", {
 test_that("axis = FALSE drops every strip", {
   ae <- sum_fixture()
   S <- list(list(type = "dist", name = "Duration", col = "DUR", show = "box"))
-  prep <- lane_prepare_summaries(ae, by = "ARM", summaries = S)
-  m <- list(prep = prep, cells = summarize_cells(prep))
+  prep <- groups_prepare_summaries(ae, by = "ARM", summaries = S)
+  m <- list(prep = prep, cells = groups_cells(prep))
   expect_false(is.null(table_groups_view(m, axis = TRUE)$cols[[2L]]$axis))
   expect_null(table_groups_view(m, axis = FALSE)$cols[[2L]]$axis)
 })
 
 test_that("the field join is distinct values with a fold cap, never first()", {
-  expect_identical(lane_field_join(c("A", "A", "A")), "A")
-  expect_identical(lane_field_join(c("B", "A", "B")), "B, A")
-  expect_identical(lane_field_join(letters[1:5]), "a, b, c, +2 more")
-  expect_identical(lane_field_join(letters[1:12]), "12 values")
-  expect_identical(lane_field_join(c(NA, "", "X")), "X")
+  expect_identical(groups_field_join(c("A", "A", "A")), "A")
+  expect_identical(groups_field_join(c("B", "A", "B")), "B, A")
+  expect_identical(groups_field_join(letters[1:5]), "a, b, c, +2 more")
+  expect_identical(groups_field_join(letters[1:12]), "12 values")
+  expect_identical(groups_field_join(c(NA, "", "X")), "X")
 })
 
 test_that("a mixed column list renders every row type through one table", {
@@ -354,7 +354,7 @@ test_that("a mixed column list renders every row type through one table", {
   # broken-constancy case is VISIBLE, not silently truncated to one row.
   expect_match(cols[[4]]$disp[[1]], ", ")
   # The legend comes from the spans colour: one group, titled by its column.
-  leg <- summarize_legend_spec(m$prep)
+  leg <- groups_legend_spec(m$prep)
   expect_length(leg$groups, 1L)
   expect_identical(leg$groups[[1L]]$title, "SEV")
 })
@@ -431,7 +431,7 @@ test_that("by_level with one summary per level keeps a single header row", {
   ae <- sum_fixture()
   S <- list(list(type = "simple", name = "Subjects", func = "count_distinct",
                  col = "USUBJID", show = "bar", facet = "ARM"))
-  p <- summarize_prepare(ae, by = "TERM", summaries = S,
+  p <- groups_prepare(ae, by = "TERM", summaries = S,
                          facet_layout = "by_level")
   expect_null(p$facet_spans)
   # Headed by the level over its N, never by the summary name.
@@ -446,7 +446,7 @@ test_that("colour is the SUMMARY's mapping: one column splits, the next does not
     list(type = "dist", name = "Split", col = "DUR", color = "SEV"),
     list(type = "dist", name = "Plain", col = "DUR")
   )
-  p <- summarize_prepare(ae, by = "TERM", summaries = S)
+  p <- groups_prepare(ae, by = "TERM", summaries = S)
   # Only the mapped column carries per-level geometry.
   expect_identical(p$plan[[1L]]$levels, c("MILD", "MOD"))
   expect_null(p$plan[[2L]]$levels)
@@ -461,7 +461,7 @@ test_that("two colour columns give two titled legend groups", {
     list(type = "dist", name = "By severity", col = "DUR", color = "SEV"),
     list(type = "dist", name = "By arm", col = "DUR", color = "ARM")
   )
-  leg <- summarize_legend_spec(sum_model(ae, by = "TERM", summaries = S)$prep)
+  leg <- groups_legend_spec(sum_model(ae, by = "TERM", summaries = S)$prep)
   expect_identical(vapply(leg$groups, function(g) g$title, ""),
                    c("SEV", "ARM"))
   expect_length(leg$groups[[1L]]$items, 2L)
@@ -477,7 +477,7 @@ test_that("a colour column with BLANK values still builds its table", {
                  color = "SEV"))
   m <- sum_model(ae, by = "TERM", summaries = S)
   expect_null(m$prep$err)
-  leg <- summarize_legend_spec(m$prep)
+  leg <- groups_legend_spec(m$prep)
   expect_identical(
     vapply(leg$groups[[1L]]$items, `[[`, character(1L), "label"),
     c("(Missing)", "MILD", "MOD")
@@ -491,7 +491,7 @@ test_that("facet is the SUMMARY's mapping: only mapped columns repeat", {
          col = "USUBJID", show = "bar", facet = "ARM"),
     list(type = "simple", name = "Rows", func = "count", show = "bar")
   )
-  p <- summarize_prepare(ae, by = "TERM", summaries = S)
+  p <- groups_prepare(ae, by = "TERM", summaries = S)
   # Two copies of the faceted column, one of the plain one.
   expect_length(p$plan, 3L)
   # With one facet column across the table the level alone labels a copy.
@@ -514,7 +514,7 @@ test_that("columns may facet by DIFFERENT columns; the header names them", {
     list(type = "dist", name = "Duration", col = "DUR", summary = "mean_se",
          show = "text", facet = "SEV")
   )
-  p <- summarize_prepare(ae, by = "TERM", summaries = S,
+  p <- groups_prepare(ae, by = "TERM", summaries = S,
                          facet_layout = "by_level")
   expect_identical(vapply(p$plan, function(x) x$label, ""),
                    c("ARM: Active", "ARM: Placebo", "SEV: MILD", "SEV: MOD"))
@@ -532,21 +532,21 @@ test_that("a one-level facet column draws one copy labelled with the level", {
   ae$ONE <- "only"
   S <- list(list(type = "simple", name = "Rows", func = "count",
                  show = "bar", facet = "ONE"))
-  p <- summarize_prepare(ae, by = "TERM", summaries = S)
+  p <- groups_prepare(ae, by = "TERM", summaries = S)
   expect_null(p$err)
   expect_identical(vapply(p$plan, function(x) x$label, ""), "only")
 })
 
 test_that("the retired table-level pair fans down onto the rows it applied to", {
   ae <- sum_fixture()
-  S <- lane_norm_summaries(list(
+  S <- groups_norm_summaries(list(
     list(type = "dist", name = "Split", col = "DUR"),
     list(type = "dist", name = "Text", col = "DUR", show = "text"),
     list(type = "simple", name = "Overall", func = "count", show = "bar",
          scope = "pooled"),
     list(type = "field", name = "Arms", col = "ARM")
   ))
-  m <- lane_migrate_globals(S, color = "SEV", facet = "ARM")
+  m <- groups_migrate_globals(S, color = "SEV", facet = "ARM")
   # Colour reaches every column that can draw a split, never a text cell;
   # the facet reaches the cell-scoped rows, never a pooled one or a field.
   expect_identical(vapply(m, function(s) s$color %||% "", ""),
@@ -554,8 +554,8 @@ test_that("the retired table-level pair fans down onto the rows it applied to", 
   expect_identical(vapply(m, function(s) s$facet %||% "", ""),
                    c("ARM", "ARM", "", ""))
   # A row that names its own keeps it.
-  own <- lane_migrate_globals(
-    lane_norm_summaries(list(list(type = "dist", col = "DUR",
+  own <- groups_migrate_globals(
+    groups_norm_summaries(list(list(type = "dist", col = "DUR",
                                   color = "ARM", facet = "SEV"))),
     color = "SEV", facet = "ARM"
   )
@@ -584,7 +584,7 @@ test_that("the ctor migrates the retired pair into the block's STATE", {
 })
 
 test_that("the ctor moves a ranked-bar grouping into `by`", {
-  # summarize_prepare() falls back to group/parent when `by` is unset, so such a
+  # groups_prepare() falls back to group/parent when `by` is unset, so such a
   # board DRAWS -- while the summarize gear's required "Group by" row shows
   # empty. The state has to say what the table is doing.
   b <- new_summarize_table_block(group = "TERM", parent = "SOC",
@@ -732,27 +732,27 @@ test_that("sort_by data honors factor levels, else first appearance", {
   )
   S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
 
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "data", sort_dir = "asc")
   expect_identical(p$rows$.label, visits)
   # The direction still applies -- reverse chronological is a real ask.
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "data", sort_dir = "desc")
   expect_identical(p$rows$.label, rev(visits))
   # Alphabetical is what this exists to avoid.
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "alpha", sort_dir = "asc")
   expect_identical(p$rows$.label, c("Baseline", "Week 10", "Week 2"))
 
   # No factor: the order the rows arrive in (ADaM is visit-sorted).
   d$AVISIT <- as.character(d$AVISIT)
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "data", sort_dir = "asc")
   expect_identical(p$rows$.label, rev(visits))
 
   # Nested: parents in data order, each parent's children too.
   d$ARM <- rep(c("Placebo", "Active"), length.out = nrow(d))
-  p <- lane_prepare_summaries(d, by = c("ARM", "AVISIT"), summaries = S,
+  p <- groups_prepare_summaries(d, by = c("ARM", "AVISIT"), summaries = S,
                               sort_by = "data", sort_dir = "asc")
   expect_identical(p$rows$.label[p$rows$.is_parent], c("Placebo", "Active"))
   expect_identical(p$rows$.label[!p$rows$.is_parent], rep(rev(visits), 2L))
@@ -770,16 +770,16 @@ test_that("sort_by a raw numeric column orders by the group minimum", {
     stringsAsFactors = FALSE
   )
   S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "data", sort_dir = "asc")
   expect_identical(p$rows$.label,
                    c("Baseline", "Week 4", "End of Treatment", "Week 8"))
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "AVISITN", sort_dir = "asc")
   expect_identical(p$rows$.label,
                    c("Baseline", "Week 4", "Week 8", "End of Treatment"))
   # A summary column of the same name still wins the keyword race.
-  p <- lane_prepare_summaries(d, by = "AVISIT", summaries = S,
+  p <- groups_prepare_summaries(d, by = "AVISIT", summaries = S,
                               sort_by = "N", sort_dir = "desc")
   expect_identical(p$rows$.label[[1L]], "Baseline")
 })
@@ -792,7 +792,7 @@ test_that("a distribution's domain is its data, not zero and not n", {
     V = c(rnorm(40L, 76, 4), rnorm(40L, 72, 4)),
     stringsAsFactors = FALSE
   )
-  box <- lane_prepare_summaries(
+  box <- groups_prepare_summaries(
     d, by = "G",
     summaries = list(list(type = "dist", name = "V", col = "V", show = "box"))
   )$plan[[1L]]
@@ -804,7 +804,7 @@ test_that("a distribution's domain is its data, not zero and not n", {
 
   # A simple row's dot IS a length from zero (a bar with less ink), so it
   # keeps the zero anchor.
-  dot <- lane_prepare_summaries(
+  dot <- groups_prepare_summaries(
     d, by = "G",
     summaries = list(list(type = "simple", name = "N", func = "count",
                           show = "dot"))
@@ -816,7 +816,7 @@ test_that("the colour split takes the board's fixed colours", {
   skip_if_not_installed("blockr.theme")
   ae <- sum_fixture()
   map <- list(SEV = list(color = c(MILD = "#123456", MOD = "#654321")))
-  p <- lane_prepare_summaries(
+  p <- groups_prepare_summaries(
     ae, by = "TERM",
     summaries = list(list(type = "dist", col = "DUR", show = "box",
                           color = "SEV")),
@@ -834,7 +834,7 @@ test_that("colour is a table-level dimension every glyph column inherits", {
     list(type = "spans", name = "Episodes", x = "ASTDY", xend = "AENDY",
          color = "SEV")
   )
-  p <- lane_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
+  p <- groups_prepare_summaries(ae, by = "TERM", summaries = S, color = "ARM")
   # One pick splits every glyph column that can carry it...
   expect_identical(p$plan[[1L]]$levels, c("Active", "Placebo"))
   expect_identical(p$plan[[2L]]$levels, c("Active", "Placebo"))
@@ -852,22 +852,22 @@ test_that("a numeric grouping column orders numerically, not as text", {
   d <- data.frame(ADY = c(2, 10, 1, 2, 10, 1, 100, 100), V = 1:8)
   S <- list(list(type = "simple", name = "N", func = "count", show = "bar"))
   for (sb in c("data", "label")) {
-    p <- lane_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
+    p <- groups_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
                                 sort_dir = "asc")
     expect_identical(p$rows$.label, c("1", "2", "10", "100"), info = sb)
-    p <- lane_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
+    p <- groups_prepare_summaries(d, by = "ADY", summaries = S, sort_by = sb,
                                 sort_dir = "desc")
     expect_identical(p$rows$.label, c("100", "10", "2", "1"), info = sb)
   }
 
   # The same for a numeric PARENT, a facet and a colour split: every level
-  # list runs through summarize_levels().
+  # list runs through groups_levels().
   d$G <- rep(c("b", "a"), 4)
-  p <- lane_prepare_summaries(d, by = c("ADY", "G"), summaries = S,
+  p <- groups_prepare_summaries(d, by = c("ADY", "G"), summaries = S,
                               sort_by = "data", sort_dir = "asc")
   expect_identical(p$rows$.label[p$rows$.is_parent], c("1", "2", "10", "100"))
-  expect_identical(summarize_levels(c(2, 10, 1, 100)), c("1", "2", "10", "100"))
-  expect_identical(summarize_levels(as.Date(c("2024-01-10", "2024-01-02"))),
+  expect_identical(groups_levels(c(2, 10, 1, 100)), c("1", "2", "10", "100"))
+  expect_identical(groups_levels(as.Date(c("2024-01-10", "2024-01-02"))),
                    c("2024-01-02", "2024-01-10"))
 })
 
@@ -886,7 +886,7 @@ test_that("a count column carries its N and draws no row for a missing group", {
     list(type = "simple", name = "Patients", func = "count_distinct",
          col = "USUBJID", show = "bar", facet = "ARM")
   )
-  p <- summarize_prepare(pop, by = "TERM", summaries = S)
+  p <- groups_prepare(pop, by = "TERM", summaries = S)
   expect_false(anyNA(p$rows$.label))
   n_all <- dplyr::n_distinct(pop$USUBJID)
   expect_identical(p$plan[[1L]]$sub_label, paste0("N = ", n_all))
@@ -894,11 +894,11 @@ test_that("a count column carries its N and draws no row for a missing group", {
   expect_equal(p$plan[[2L]]$val_denom,
                dplyr::n_distinct(pop$USUBJID[pop$ARM == "Active"]))
   # The label reads "n (x%)".
-  m <- summarize_cells(p)
+  m <- groups_cells(p)
   expect_true(all(grepl("^\\(\\d+%\\)$", m$cols[[1L]]$pct[nzchar(m$cols[[1L]]$pct)])))
   # Two faceted columns keep their names beside N.
   S2 <- c(S[2L], list(modifyList(S[[2L]], list(name = "Again"))))
-  p2 <- summarize_prepare(pop, by = "TERM", summaries = S2)
+  p2 <- groups_prepare(pop, by = "TERM", summaries = S2)
   expect_match(p2$plan[[1L]]$sub_label, "^Patients · N = ")
 })
 
@@ -907,9 +907,9 @@ test_that("a table whose every row lacks a group says so instead of failing", {
   ae$TERM <- NA
   S <- list(list(type = "simple", name = "n", func = "count_distinct",
                  col = "USUBJID", show = "bar"))
-  p <- summarize_prepare(ae, by = "TERM", summaries = S)
+  p <- groups_prepare(ae, by = "TERM", summaries = S)
   expect_identical(p$err, "No rows to display")
-  p2 <- summarize_prepare(ae, by = c("ARM", "TERM"),
+  p2 <- groups_prepare(ae, by = c("ARM", "TERM"),
                           summaries = S)
   expect_false(is.null(p2$err) && anyNA(p2$rows$.label))
   # the model the block builds carries the message, it does not throw
@@ -931,7 +931,7 @@ test_that("facet columns with nothing to draw are left out, as the chart does", 
 
   S <- list(list(type = "simple", name = "n", func = "count_distinct",
                  col = "USUBJID", show = "bar", facet = "ARM"))
-  p <- summarize_prepare(pop, by = "TERM", summaries = S)
+  p <- groups_prepare(pop, by = "TERM", summaries = S)
   labels <- vapply(p$plan, function(x) x$label, "")
   expect_false(any(c("Gone", "Empty") %in% labels))
   expect_setequal(labels, c("Active", "Placebo"))
@@ -939,7 +939,7 @@ test_that("facet columns with nothing to draw are left out, as the chart does", 
   # a distribution column: a level with no values goes too
   D <- list(list(type = "dist", name = "Dur", col = "DUR", show = "box",
                  facet = "ARM"))
-  pd <- summarize_prepare(pop, by = "TERM", summaries = D)
+  pd <- groups_prepare(pop, by = "TERM", summaries = D)
   expect_false(any(c("Gone", "Empty") %in%
                      vapply(pd$plan, function(x) x$label, "")))
   expect_false(any(c("Gone", "Empty") %in% p$facet_levels))
@@ -958,19 +958,19 @@ test_that("every facet copy carries its level's N, counted in subjects", {
     list(type = "dist", name = "Age", col = "AGE", show = "box",
          facet = "ARM")
   )
-  p <- summarize_prepare(d, by = "TERM", summaries = S, subject = "USUBJID")
+  p <- groups_prepare(d, by = "TERM", summaries = S, subject = "USUBJID")
   subs <- vapply(p$plan, function(x) x$sub_label, "")
   # rows with no TERM (the population join's) are in the N
   expect_identical(subs, c("Patients · N = 2", "Patients · N = 3",
                            "Age · N = 2", "Age · N = 3"))
 
   # no subject column: the level's rows
-  p0 <- summarize_prepare(d, by = "TERM", summaries = S[2])
+  p0 <- groups_prepare(d, by = "TERM", summaries = S[2])
   expect_identical(vapply(p0$plan, function(x) x$sub_label, ""),
                    c("Age · N = 3", "Age · N = 4"))
 
   # by_level: the N moves up into the level's span
-  pl <- summarize_prepare(d, by = "TERM", summaries = S,
+  pl <- groups_prepare(d, by = "TERM", summaries = S,
                           facet_layout = "by_level", subject = "USUBJID")
   expect_identical(vapply(pl$facet_spans$groups, function(g) g$pop, 1L),
                    c(2L, 3L))
@@ -979,7 +979,7 @@ test_that("every facet copy carries its level's N, counted in subjects", {
   expect_true(any(grepl("N = 3", unlist(head), fixed = TRUE)))
 
   # a mean's facet N is subjects too
-  pm <- summarize_prepare(d, by = "TERM", subject = "USUBJID", summaries = list(
+  pm <- groups_prepare(d, by = "TERM", subject = "USUBJID", summaries = list(
     list(type = "simple", name = "Age", func = "mean", col = "AGE",
          show = "bar", facet = "ARM")
   ))

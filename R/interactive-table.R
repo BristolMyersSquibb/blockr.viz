@@ -125,7 +125,7 @@ interactive_table_payload <- function(x, drill, drill_target, sortable,
 # column. A string names the column. Anything else: no drill.
 interactive_table_drill <- function(drill, d) {
   if (isTRUE(drill)) {
-    if (dt_is_structured(d)) "auto" else names(d)[!startsWith(names(d), ".")][1L]
+    if (table_is_structured(d)) "auto" else names(d)[!startsWith(names(d), ".")][1L]
   } else if (is.character(drill) && length(drill) == 1L && nzchar(drill)) {
     drill
   }

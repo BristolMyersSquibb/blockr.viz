@@ -1,6 +1,8 @@
+# The tile mark: a square cell painted by the worst level of `fill`.
+
 # Levels of a tile's paint column in order of severity: factor levels, numeric
 # order, else sorted values.
-lane_ord_levels <- function(x) {
+groups_ord_levels <- function(x) {
   if (is.factor(x)) return(levels(x))
   if (is.numeric(x)) return(as.character(sort(unique(x[is.finite(x)]))))
   x <- as.character(x)
@@ -9,7 +11,7 @@ lane_ord_levels <- function(x) {
 
 # Colours per level: the board's scale map when it covers every level, else a
 # light-to-dark ramp (worst darkest).
-lane_tile_colors <- function(map, col, levels, column = NULL) {
+groups_tile_colors <- function(map, col, levels, column = NULL) {
   levels <- as.character(levels)
   if (!length(levels)) return(character())
   if (!is.null(map) && has_blockr_theme()) {
@@ -19,17 +21,17 @@ lane_tile_colors <- function(map, col, levels, column = NULL) {
       return(stats::setNames(unname(pal[levels]), levels))
     }
   }
-  stats::setNames(lane_tile_ramp(length(levels)), levels)
+  stats::setNames(groups_tile_ramp(length(levels)), levels)
 }
 
-lane_tile_ramp <- function(n) {
+groups_tile_ramp <- function(n) {
   if (n <= 0L) return(character())
   if (n == 1L) return("#7fa2ee")
   grDevices::colorRampPalette(c("#cdd9f7", "#7fa2ee", "#2f5bd3"))(n)
 }
 
 # Worst `fill` level index per target row; NA where the group has no rows.
-lane_tile_worst <- function(target, tkeys, slice, fill, levels) {
+groups_tile_worst <- function(target, tkeys, slice, fill, levels) {
   if (!nrow(slice)) return(rep(NA_integer_, nrow(target)))
   idx <- match(as.character(slice[[fill]]), levels)
   key_of <- function(d) {
@@ -46,7 +48,7 @@ lane_tile_worst <- function(target, tkeys, slice, fill, levels) {
 
 # Tile paint per row: `bg`/`fg` hex (NA = empty cell), `has` (cell shows a
 # value). By the worst `fill` level, else on a ramp from zero to `dmax`.
-lane_tile_paint <- function(p, rows) {
+groups_tile_paint <- function(p, rows) {
   v <- rows[[p$key]]
   n <- length(v)
   has <- is.finite(v) & !(isTRUE(p$zero_empty) & v %in% 0)
@@ -62,7 +64,7 @@ lane_tile_paint <- function(p, rows) {
     bg[has & is.na(w)] <- fills[[1L]]
   } else {
     mxv <- p$dmax %||% 0
-    ramp <- lane_tile_ramp(101L)
+    ramp <- groups_tile_ramp(101L)
     k <- if (is.finite(mxv) && mxv > 0) {
       round(pmin(1, pmax(0, v / mxv)) * 100) + 1
     } else {

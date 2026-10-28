@@ -12,7 +12,7 @@
 
 #' The frame the table block displays, before any formatting.
 #'
-#' Aggregation is a display projection (see dd_table_aggregate()): with a
+#' Aggregation is a display projection (see table_aggregate()): with a
 #' `group` or `summaries` the table draws the summarised frame, keyed on the
 #' first group column, or a single "Total" row for grand totals. Without
 #' either it draws the input, with the block's own `rowname` / `value` picks.
@@ -23,7 +23,7 @@
 #' @noRd
 dt_display_frame <- function(data, rowname = NULL, value = NULL,
                              group = character(), summaries = list()) {
-  agg <- dd_table_aggregate(data, group, summaries)
+  agg <- table_aggregate(data, group, summaries)
   if (!isTRUE(agg$aggregated)) {
     return(list(data = data, label_col = rowname, value_cols = value,
                 agg = agg))
@@ -63,7 +63,7 @@ dt_display_frame <- function(data, rowname = NULL, value = NULL,
 dt_exhibit_frame <- function(data, rowname = NULL, value = NULL,
                              group = character(), summaries = list(),
                              shadings = list()) {
-  if (!is.data.frame(data) || !ncol(data) || dt_is_structured(data)) {
+  if (!is.data.frame(data) || !ncol(data) || table_is_structured(data)) {
     return(data)
   }
   disp <- dt_display_frame(data, rowname, value, group, summaries)
@@ -169,9 +169,9 @@ table_exhibit <- function(data, rowname = NULL, value = NULL,
   auto <- input_display_attrs(data)
   out <- dt_exhibit_frame(data, rowname, value,
                           as.character(group %||% character()),
-                          dd_parse_summaries(summaries), shadings)
+                          table_parse_summaries(summaries), shadings)
   # A structured frame shows its cells as they come, on screen too.
-  if (!dt_is_structured(data)) {
+  if (!table_is_structured(data)) {
     # The unit first: it heads the columns that are numeric before
     # formatting turns them into text.
     out <- dt_format_digits(dt_unit_labels(out, unit), format)

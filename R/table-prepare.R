@@ -24,7 +24,7 @@ table_prepare <- function(data, state) {
     src <- if (!is.null(sx) && length(filters)) {
       tryCatch(names(raw()), error = function(e) NULL)
     }
-    summarize_drill_wrap(sx, filters, members, src)
+    table_drill_wrap(sx, filters, members, src)
   }
   prep
 }

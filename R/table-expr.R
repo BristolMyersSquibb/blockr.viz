@@ -22,7 +22,7 @@ table_records_expr <- function(sel, source = FALSE) {
   ex <- table_records_source(ex, claim_cols, source)
   ck <- sel$col_keys
   # The arm of the clicked cell or header, on the source rows.
-  if (length(ck) && isTRUE(source)) ex <- dd_col_keys_filter(ex, ck)
+  if (length(ck) && isTRUE(source)) ex <- table_col_keys_filter(ex, ck)
   ex
 }
 
@@ -32,7 +32,7 @@ table_records_filter <- function(grouped, gc, gv, col, vals) {
   if (grouped) {
     # A pure subset of the annotated df: the identity columns already carry
     # the selection.
-    cond <- dd_group_filter_call(gc, gv)
+    cond <- table_group_filter_call(gc, gv)
     return(blockr.core::bbquote(
       dplyr::filter(blockr.viz::as_annotated_df(.(data)), .(cond)),
       list(cond = cond)
@@ -103,7 +103,7 @@ table_selection_records <- function(sel, structured = FALSE) {
 }
 
 # The kit's selection as the groups layout's filters, column to values, as
-# summarize_drill_expr() reads them; empty for no click.
+# table_drill_expr() reads them; empty for no click.
 table_selection_groups <- function(sel) {
   f <- if (is.list(sel)) sel$filters
   if (!length(f)) {

@@ -1,5 +1,7 @@
-# The records layout's view: the cell model (R/table-model-records.R) as the
-# table the browser draws, `derived$table` in the block's payload.
+# The records layout's view: the cell model (R/table-model-records.R) as
+# the table the browser draws, `derived$table` in the block's payload. Its
+# shape is the TableModel of inst/js/table/table.d.ts: column-oriented, one
+# vector per column, plain text and values, no markup.
 
 #' A flat records table as the browser draws it
 #'
@@ -20,7 +22,7 @@ table_records_view <- function(m) {
     n = m$n, stub = 0L, cols = cols, head = list(head),
     widths = as.numeric(m$widths),
     rows = if (!is.null(m$stub$tint)) list(tint = m$stub$tint),
-    drill = m$onclick_col
+    drill = m$drill
   )
   table_view_arrays(out[!vapply(out, is.null, logical(1L))])
 }
@@ -100,7 +102,7 @@ table_frame_part <- function(kit, src, shown, layout, filter = identity) {
                                             layout)),
     expr = function(sel) {
       d <- frame()
-      s <- table_selection_records(sel, structured = dt_is_structured(d))
+      s <- table_selection_records(sel, structured = table_is_structured(d))
       ex <- if (identical(layout, "records") && length(st$by())) {
         table_nest_drill_expr(st$by(), s$group_cols, s$group_vals)
       } else {
@@ -127,7 +129,7 @@ table_frame_view <- function(v, d, src, layout) {
   if (!is.data.frame(d)) {
     return(list(empty = list(kind = "no_data", message = "No data")))
   }
-  if (dt_is_structured(d)) {
+  if (table_is_structured(d)) {
     m <- table_structured_view(d, drill = v$drill, digits = v$format,
                                unit = v$unit,
                                collapsible = isTRUE(v$collapsible))
@@ -154,15 +156,17 @@ table_frame_view <- function(v, d, src, layout) {
 }
 
 # Is `drill` the "source" mode, or a column that happens to be called that?
+# The mode exists only where there is no column to choose: a structured
+# table without a column of that name.
 table_drill_is_source <- function(drill, d) {
   identical(drill, "source") && is.data.frame(d) &&
-    !"source" %in% names(d) && dt_is_structured(d)
+    !"source" %in% names(d) && table_is_structured(d)
 }
 
 # The claims of a click on a frame: the clicked rows' identity, or the
 # clicked column's values, and the clicked cell's or header's column.
 table_frame_claims <- function(sel, d, table, subject) {
-  s <- table_selection_records(sel, structured = dt_is_structured(d))
+  s <- table_selection_records(sel, structured = table_is_structured(d))
   filters <- if (length(s$group_cols)) {
     stats::setNames(as.list(s$group_vals), s$group_cols)
   } else if (!is.null(s$column) && length(s$values)) {
@@ -179,10 +183,10 @@ table_frame_claims <- function(sel, d, table, subject) {
 
 # The footer's "Filtered: ..." line for the held selection.
 table_frame_receipt <- function(sel, d) {
-  s <- table_selection_records(sel, structured = dt_is_structured(d))
-  col_lab <- dd_col_keys_label(s$col_keys)
+  s <- table_selection_records(sel, structured = table_is_structured(d))
+  col_lab <- table_col_keys_label(s$col_keys)
   if (length(s$group_cols) || length(col_lab)) {
-    lab <- c(dt_claim_label(s$group_cols, s$group_vals, dt_group_names(d)),
+    lab <- c(table_claim_label(s$group_cols, s$group_vals, table_group_names(d)),
              col_lab)
     return(if (length(lab)) paste0("Filtered: ", paste(lab, collapse = ", ")))
   }
@@ -198,7 +202,7 @@ table_frame_receipt <- function(sel, d) {
 # the cards look writes cards.
 table_frame_exhibit <- function(v, d, tt, src, layout) {
   shiny::req(is.data.frame(d))
-  structured <- dt_is_structured(d)
+  structured <- table_is_structured(d)
   frame <- dt_unit_labels(
     dt_exhibit_frame(d, v$rowname, v$columns,
                      shadings = dd_parse_shadings(v$shadings)),

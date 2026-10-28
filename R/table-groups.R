@@ -32,7 +32,7 @@ table_groups_part <- function(kit, src) {
                      subject = src$subject())
     },
     receipt = function(sel) {
-      p <- summarize_drill_phrase(table_selection_groups(sel))
+      p <- table_drill_phrase(table_selection_groups(sel))
       if (!is.null(p)) paste0("Filtered: ", p)
     },
     exhibit = function(tt) {
@@ -58,7 +58,7 @@ table_groups_payload <- function(m, v, d, src) {
       m$cells, m$prep, data = d, scale_map = src$scale_map()
     ))
   }
-  derived <- list(legend = summarize_legend_spec(m$prep),
+  derived <- list(legend = groups_legend_spec(m$prep),
                   note = m$prep$note)
   list(model = model, derived = derived[!vapply(derived, is.null,
                                                 logical(1L))])

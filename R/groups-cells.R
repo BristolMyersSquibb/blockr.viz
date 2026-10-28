@@ -4,7 +4,7 @@
 #' `dw` is the label slot width in ch, one number per column so every row
 #' reserves the same slot.
 #' @noRd
-summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
+groups_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
   rows <- prep$rows
   plan <- prep$plan
   n <- nrow(rows)
@@ -31,7 +31,7 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     expanded = any(vapply(plan, function(p) isTRUE(p$section), logical(1L))) ||
       isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
-    parent = summarize_parent_labels(rows),
+    parent = cells_parent_labels(rows),
     parent_key = as.character(
       if (!is.null(rows$.parent_key)) rows$.parent_key else rows$.parent
     ),
@@ -40,10 +40,10 @@ summarize_cells <- function(prep, drill = NULL, active = NULL, cfg = NULL) {
     on = st$on,
     on_cell = st$on_cell,
     pick = !is.null(drill),
-    # Columns a row click claims, outer to inner (R/summarize-drill.R).
-    path = c(summarize_chr1(prep$parent), summarize_chr1(prep$group)),
+    # Columns a row click claims, outer to inner (R/table-drill.R).
+    path = c(chr_state(prep$parent), chr_state(prep$group)),
     cols = cols,
-    fold = summarize_fold_text(prep)
+    fold = cells_fold_text(prep)
   )
 }
 
@@ -125,15 +125,15 @@ cells_bounds <- function(e_mn, e_mx) {
 cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
   prep <- ctx$prep
   if (!ctx$vals_on || !isTRUE(p$show_val)) return(NULL)
-  dom <- summarize_axis_domain(p, prep)
-  dig <- summarize_val_digits(vraw, dom$d0, dom$d1)
-  parts <- summarize_num_parts(vraw, denom = p$val_denom,
+  dom <- cells_axis_domain(p, prep)
+  dig <- cells_val_digits(vraw, dom$d0, dom$d1)
+  parts <- cells_num_parts(vraw, denom = p$val_denom,
                                combined = !is.null(p$val_denom),
                                signed = signed,
                                fmt = if (!is.null(prep$format)) {
                                  function(v) dt_format_num(v, prep$format)
                                } else if (!is.na(dig)) {
-                                 function(v) summarize_val_str(v, dig)
+                                 function(v) cells_val_str(v, dig)
                                })
   # formatC pads "fg" output; trim before measuring the label slot.
   parts$disp <- trimws(parts$disp)
@@ -148,7 +148,7 @@ cells_val_parts <- function(ctx, p, vraw, signed = FALSE) {
 # a facet column its level, a colour split the level of the segment hit.
 cells_annotate <- function(cols, plan) {
   for (i in seq_along(cols)) {
-    cols[[i]]$tt <- summarize_tip_meta(plan[[i]])
+    cols[[i]]$tt <- cells_tip_meta(plan[[i]])
   }
   for (i in seq_along(cols)) {
     pl <- plan[[i]]
@@ -165,11 +165,11 @@ cells_annotate <- function(cols, plan) {
 # A stored click is the row's path plus what a cell added; the cell part goes
 # to the client.
 cells_row_state <- function(prep, rows, active) {
-  path <- c(summarize_chr1(prep$parent), summarize_chr1(prep$group))
-  filters <- summarize_drill_filters(active$col, active$vals)
+  path <- c(chr_state(prep$parent), chr_state(prep$group))
+  filters <- table_drill_filters(active$col, active$vals)
   on_path <- names(filters) %in% path
-  on <- summarize_drill_on(
-    rows, summarize_chr1(prep$group), summarize_chr1(prep$parent),
+  on <- table_drill_on(
+    rows, chr_state(prep$group), chr_state(prep$parent),
     filters[on_path]
   )
   on_cell <- if (any(on) && any(!on_path)) {
@@ -179,7 +179,7 @@ cells_row_state <- function(prep, rows, active) {
 }
 
 #' @noRd
-summarize_parent_labels <- function(rows) {
+cells_parent_labels <- function(rows) {
   parent <- as.character(rows$.parent)
   key <- if (!is.null(rows$.parent_key)) {
     as.character(rows$.parent_key)
@@ -197,7 +197,7 @@ summarize_parent_labels <- function(rows) {
 
 #' The fold row's text, or NULL when nothing was capped.
 #' @noRd
-summarize_fold_text <- function(prep) {
+cells_fold_text <- function(prep) {
   if (!isTRUE(prep$folded > 0L)) return(NULL)
   paste0(
     "Other \u2014 ", prep$folded, " ",
@@ -213,14 +213,14 @@ summarize_fold_text <- function(prep) {
 
 #' The hover card's column description. NULL where the cell prints everything.
 #' @noRd
-summarize_tip_meta <- function(p) {
+cells_tip_meta <- function(p) {
   if (identical(p$kind, "num")) return(NULL)
   den <- p$val_denom
   out <- list(
-    head = summarize_chr1(p$label),
-    sub = summarize_chr1(p$sub_label),
-    meas = summarize_chr1(p$meas),
-    cvar = summarize_chr1(p$cvar),
+    head = chr_state(p$label),
+    sub = chr_state(p$sub_label),
+    meas = chr_state(p$meas),
+    cvar = chr_state(p$cvar),
     den = if (is.numeric(den) && length(den) == 1L && is.finite(den) &&
                 den > 0) den,
     words = p$words

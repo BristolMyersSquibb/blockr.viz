@@ -55,7 +55,13 @@ input.blockr-search:focus {
   box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
   background-color: var(--blockr-color-bg-surface, #ffffff);
 }
-/* Column headers. */
+/* Column headers. Every cell carries a 1px bottom border so the header keeps
+   its height, but only a leaf column header paints a rule, and that rule is a
+   background line 12px short of the cell: a gap between columns instead of
+   one full-width line. It sits flush right, over the right-aligned numbers.
+   The border is transparent and still wins the collapsed-border conflict
+   against the row's own rule (cell beats row at equal width), which is what
+   keeps the shared sheet's full-width header line off. */
 .drilldown-table-structured .blockr-table thead th {
   vertical-align: bottom;
   white-space: normal;
@@ -74,7 +80,8 @@ input.blockr-search:focus {
 /* One unbroken rule under the whole header, in the grey of the card's rule
    above the table: under every cell of the last header row and under the
    cells that span down to it (the row-label title, a column without a
-   spanner). */
+   spanner). A spanner's tile sits above it. Drawn on the cells rather than
+   as a border, which would not travel with the sticky header. */
 .drilldown-table-structured .blockr-table thead th {
   background-image: none;
 }
@@ -92,8 +99,13 @@ input.blockr-search:focus {
   padding-right: calc(12px + var(--blockr-card-inset, 0px));
 }
 /* A group header sits ABOVE the columns it names, so it cannot read smaller
-   than them: without the size here it falls through to the 11px meta size
-   the header band uses and the parent ends up smaller than its children. */
+   than them: without the size here it falls through to the 11px meta size the
+   header band uses and the parent ends up smaller than its children.
+   The tile is what says how far the group reaches -- four groups side by side
+   have nothing else to separate them, and a fill that runs edge to edge just
+   makes one grey band with words in it. The inset gutters cut that band into
+   tiles; the wash is translucent so a drill-active column still shows through.
+   The last spanner keeps its gutter clear of the card's inset too. */
 .drilldown-table-structured .blockr-table thead th.blockr-col-header.group {
   text-align: center;
   font-size: 13.5px;
@@ -116,7 +128,8 @@ input.blockr-search:focus {
   justify-content: center;
 }
 /* The claimed-column paint has to be restated for a group cell, because the
-   tile above sets both of the properties it uses. */
+   tile above sets both of the properties it uses. The gutters stay so the
+   tile keeps its shape. */
 .drilldown-table-structured .blockr-table thead th.blockr-col-header.group.dt-col-active {
   background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
   color: var(--blockr-color-text-accent, #2563eb);
@@ -124,8 +137,9 @@ input.blockr-search:focus {
     inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
     inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
 }
-/* A group below the top row is already inside a tile, so it drops its own
-   and reads like a leaf: a tile in a tile is only more grey. */
+/* A group below the top row is already inside a tile, so it drops its own and
+   reads like a leaf: a tile in a tile is only more grey. Over a single column
+   it sits flush right, above the number, like the leaf under it. */
 .drilldown-table-structured .blockr-table thead th.blockr-col-header.group.group-inner {
   background: none;
   border-radius: 0;
@@ -165,8 +179,8 @@ input.blockr-search:focus {
   font-size: 13.5px;
 }
 /* The first-column title is the producer's text (attr(.label, "label")), in
-   the body's size and ink, padded in by the card's inset like the row labels
-   under it. */
+   the body's size and ink, padded in by the card's inset like the row
+   labels under it. */
 .drilldown-table-structured .blockr-table thead th.blockr-stub-header {
   text-align: left;
   padding-left: calc(12px + var(--blockr-card-inset, 0px));
@@ -181,7 +195,8 @@ input.blockr-search:focus {
 }
 /* Fold all (table/html.js adds it when the table folds and has groups): the
    chevron hangs to the left, so the title starts on the rows' 24px text edge
-   (3px padding + 12px chevron + 9px gap), as the group headings do. */
+   (3px padding + 12px chevron + 9px gap), as the group headings do. Only
+   the chevron is the button; without a title it carries "All". */
 .drilldown-table-structured thead th.blockr-stub-header.dt-has-foldall {
   padding-left: calc(3px + var(--blockr-card-inset, 0px));
 }
@@ -218,8 +233,13 @@ input.blockr-search:focus {
   outline-offset: var(--blockr-focus-offset, 2px);
   border-radius: 2px;
 }
-/* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned to
-   the top so a wrapped label stays level with its numbers, in the body ink. */
+/* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned
+   to the top so a wrapped label stays level with its numbers, in the body
+   ink. The 24px left padding is the indent-0 BASE: nested rows add
+   `row_indent * 16px` on top (table/html.js), so level 1 sits at 40px,
+   level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
+   makes the indentation visible. 3px above and below the 20px line is a
+   26px row, as in the preview. */
 .drilldown-table-structured .blockr-table tbody td.blockr-stub {
   text-align: left;
   vertical-align: top;
@@ -234,7 +254,8 @@ input.blockr-search:focus {
   color: var(--blockr-color-text-default, #111827);
 }
 /* Value cells - right-aligned, tabular figures, top-aligned to match the
-   wrapping stub. */
+   wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
+   comes from the data via `.bold` rows, not a blanket medium weight. */
 .drilldown-table-structured .blockr-table tbody td.blockr-data {
   text-align: right;
   vertical-align: top;
@@ -254,7 +275,10 @@ input.blockr-search:focus {
 .drilldown-table-structured .blockr-table tbody td.blockr-data.blockr-dash {
   color: var(--blockr-color-text-muted, #6b7280);
 }
-/* No rules in the body. */
+/* No rules in the body. 26px rows: 3px above and below a 20px line, set
+   here rather than inherited, so the height does not depend on the base
+   sheet's line height. Groups are set apart by space (the group's last row
+   and the next heading's top padding). */
 .drilldown-table-structured .blockr-table tbody tr {
   border-bottom: 0;
 }
@@ -268,7 +292,11 @@ input.blockr-search:focus {
 .drilldown-table-structured .blockr-table tbody tr.blockr-italic td {
   font-style: italic;
 }
-/* Hover. */
+/* Hover. A table nothing can be clicked in keeps a plain row wash. A table
+   whose rows drill (`.dt-clickable`) shows what a click would claim instead:
+   table/drill.js sets dt-hot-row / dt-hot-col / dt-hot-cell from the click
+   model, so the plain :hover wash is off there. The shared sheet's
+   own hover sits on the <tr>; it goes, or it would show under both. */
 .drilldown-table-structured .blockr-table tbody tr:hover {
   background-color: transparent;
 }
@@ -295,8 +323,8 @@ input.blockr-search:focus {
   background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 9%, transparent);
 }
 /* Drill state: the claimed row and column take the selected tint and the
-   accent ink, with no bars; the cell where the two cross is one step
-   stronger and bold. */
+   accent ink, with no bars; the cell where the two cross is one step stronger
+   and bold. After the hover rules, so a claim shows through the hover. */
 .drilldown-table-structured .blockr-table tbody tr.dt-row-active > td,
 .drilldown-table-structured .blockr-table tbody td.dt-col-active,
 .drilldown-table-structured .blockr-table thead th.blockr-col-header.dt-col-active {
@@ -311,7 +339,9 @@ input.blockr-search:focus {
   background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
-/* Group header row + full-width clickable button. */
+/* Group header row + full-width clickable button. The td carries no
+   padding (so the bigger hit target reaches the row edges); the button
+   carries it. */
 .drilldown-table-structured .blockr-table tbody tr.blockr-section-header {
   cursor: pointer;
 }
@@ -364,7 +394,10 @@ input.blockr-search:focus {
   font-size: 13px;
 }
 /* The design system's chevron: 12px, a 1.4px stroke at any size, muted,
-   darker on hover of its heading. */
+   darker on hover of its heading. Down while open, right when folded (the
+   ROW carries `collapsed`). The svg keeps its 24-unit path; the stroke is
+   pinned by the `.blockr-html-table-container .blockr-chev path` rule at the
+   end of this sheet. */
 .drilldown-table-structured .blockr-chev {
   width: 12px;
   height: 12px;
@@ -378,7 +411,9 @@ input.blockr-search:focus {
 .drilldown-table-structured tr.blockr-section-header.collapsed .blockr-chev {
   transform: rotate(-90deg);
 }/* Indent-derived collapse: a chevron button sits before the label of any row
-   that heads a deeper-indented group. */
+   that heads a deeper-indented group. Reuses the section chevron, rotating when
+   the row is collapsed. The button is a bare affordance so clicking the label /
+   cells still drills. */
 .drilldown-table-structured .blockr-indent-btn {
   border: 0;
   background: transparent;
@@ -404,7 +439,10 @@ input.blockr-search:focus {
   font-weight: var(--blockr-font-weight-normal, 400);
   margin-right: 4px;
 }
-/* Sticky header + scroll shadow. */
+/* Sticky header + scroll shadow. The header stays put while the body
+   scrolls; a soft shadow fades in once the scroll container is scrolled
+   (the JS toggles `.scrolled` on .blockr-table-wrapper). background-color,
+   not the shorthand, so a leaf keeps its column rule. */
 .drilldown-table-structured .blockr-table thead th {
   position: sticky;
   top: 0;

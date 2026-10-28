@@ -3,7 +3,7 @@
 # Reproduces the production complaint: switching to a view whose blocks are
 # dormant, the filter block appears instantly (static JS-hydrated DOM) while
 # the table block's control section used to wait for the whole upstream chain
-# to evaluate, because `output$dt_result` req()'d `dt_is_structured(data())`.
+# to evaluate, because `output$dt_result` req()'d `table_is_structured(data())`.
 #
 # The Setup view is the landing view, so everything in Report starts dormant.
 # Switch to Report and watch: the search box, gear and scroll container are
