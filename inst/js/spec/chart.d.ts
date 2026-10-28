@@ -4,12 +4,12 @@
 interface ChartConfig {
   type: 'bar' | 'histogram' | 'waterfall' | 'pie' | 'treemap' | 'boxplot' | 'pointrange' | 'scatter' | 'line' | 'area' | 'band' | 'gantt';
   x: string | null;
+  xend: string | null;
   y: string | null;
   func: 'count' | 'count_distinct' | 'pct_distinct' | 'mean' | 'median' | 'sum' | 'min' | 'max' | 'identity';
   color: string | null;
   facet: string | null;
   series: string | null;
-  xend: string | null;
   label: string | null;
   orientation: 'horizontal' | 'vertical' | null;
   position: 'stack' | 'dodge' | 'fill';

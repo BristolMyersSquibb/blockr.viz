@@ -28,10 +28,6 @@
     'series', 'label', 'tooltip', 'drill', 'derived.scales', 'show_n', 'id', 'func',
     'facet_scales'];
 
-  /** @param {Record<string, any>} cfg @returns {string[]} */
-  const ttFieldsOf = (cfg) => [].concat(cfg.tooltip || [])
-    .map(String).filter((c) => c && c !== 'null');
-
   /**
    * @typedef {{ facet: string, label: string | null, lanes: string[],
    *             laneCounts: Map<string, any> | null, marks: any[][],
@@ -44,40 +40,11 @@
    *             ttFields: string[], panels: TimelinePanel[] }} TimelineModel
    */
 
-  /**
-   * One mark per row with an x and a known lane, and the row behind each
-   * mark, for a filter on a column the mark does not carry.
-   * @param {any} k @param {any[]} prow @param {Map<string, number>} laneOf
-   */
-  const panelMarks = (k, prow, laneOf) => {
-    const { cfg, xCoord, ttFields, drill } = k;
-    const { x, xend, y, color, series, label } = cfg;
-    const marks = [];
-    const markRows = [];
-    for (const r of prow) {
-      if (r[x] == null) continue;
-      const term = String(r[y] ?? '');
-      const lane = laneOf.get(term);
-      if (lane === undefined) continue;
-      const s = xCoord(r[x]);
-      const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
-      marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, r[color] ?? '',
-                  (label != null ? (r[label] ?? '') : ''),
-                  r[series] ?? '',
-                  (drill != null ? (r[drill] ?? '') : ''),
-                  ttFields.length ? ttFields.map((/** @type {any} */ c) => r[c] ?? '') : 0]);
-      markRows.push(r);
-    }
-    return { marks, markRows };
-  };
-
-  /**
-   * @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
-   * @returns {TimelineModel}
-   */
+  /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: Record<string, any> }} input
+   * @returns {TimelineModel} */
   const timeline = ({ rows, ix, columns, cfg }) => {
     const { x, xend, y, color, facet, sort_by, series, label } = cfg;
-    const ttFields = ttFieldsOf(cfg);
+    const ttFields = model.tooltipFields(cfg);
     // The drill column's value rides on every mark.
     const drill = NS.drillColumn(cfg);
     const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
@@ -110,13 +77,7 @@
     // An x value as a coordinate: a category's first position, or the number.
     const xPos = xCats ? NS.firstIndex(xCats) : null;
     /** @param {any} v */
-    const xCoord = (v) => {
-      if (xPos) {
-        const i = xPos.get(String(v ?? ''));
-        return i === undefined ? 0 : i;
-      }
-      return Number(v);
-    };
+    const xCoord = (v) => (xPos ? (xPos.get(String(v ?? '')) ?? 0) : Number(v));
 
     // Lanes in sort order: by name for 'alpha', else by the smallest value
     // per lane of x ('onset') or of a column; a lane without one is left out.
@@ -140,43 +101,52 @@
       return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
     };
 
-    const panels = [];
-    for (const fv of facets) {
-      const prow = fv === '__all__' ? rows : ix.get(rows, facet, 'raw', fv);
-      if (prow.length) panels.push({ fv, rows: prow });
-    }
-
-    const labels = NS.model.facetLabels(rows, cfg, panels.map((p) => p.fv));
+    const facetLabel = model.facetLabels(rows, cfg, out.nFacets);
     // Fixed scales give every panel the same lanes; free scales keep each its own.
     const sharedTerms = NS.facetScales(cfg) !== 'free' ? sortTerms(rows) : null;
     const countAxis = NS.countOn(cfg, 'axis');
 
-    for (const { fv, rows: prow } of panels) {
+    for (const fv of facets) {
+      const prow = fv === '__all__' ? rows : ix.get(rows, facet, 'raw', fv);
+      if (!prow.length) continue;
       const terms = sharedTerms || sortTerms(prow);
-      // Events per lane, or distinct ids; a lane has no "as is" value.
-      const laneCounts = countAxis ? NS.labelCounts(prow, { id: cfg.id }, y) : null;
-
       /** @type {Map<string, number>} */
       const laneOf = new Map();
       terms.forEach((t, i) => laneOf.set(t, i));
 
-      const { marks, markRows } = panelMarks({ cfg, xCoord, ttFields, drill }, prow, laneOf);
+      // One mark per row with an x and a known lane; `markRows` is the row
+      // behind each mark, for a filter on a column the mark does not carry.
+      const marks = [];
+      const markRows = [];
+      for (const r of prow) {
+        if (r[x] == null) continue;
+        const term = String(r[y] ?? '');
+        const lane = laneOf.get(term);
+        if (lane === undefined) continue;
+        const s = xCoord(r[x]);
+        const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
+        marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, r[color] ?? '',
+                    (label != null ? (r[label] ?? '') : ''),
+                    r[series] ?? '',
+                    (drill != null ? (r[drill] ?? '') : ''),
+                    ttFields.length ? ttFields.map((c) => r[c] ?? '') : 0]);
+        markRows.push(r);
+      }
       out.panels.push({
         facet: fv,
-        label: (!out.single && fv !== '__all__') ? labels.get(fv) : null,
-        lanes: terms, laneCounts, marks, rows: markRows
+        label: facetLabel(fv),
+        // Events per lane, or distinct ids; a lane has no "as is" value.
+        lanes: terms, laneCounts: countAxis ? NS.labelCounts(prow, { id: cfg.id }, y) : null,
+        marks, rows: markRows
       });
     }
     return out;
   };
   timeline.FIELDS = MODEL_FIELDS;
 
-  /**
-   * The keys of a timeline mark: its lane, and the facet in a facet panel.
-   * The colour is no key.
+  /** The keys of a timeline mark: its lane, and the facet in a facet panel. The colour is no key.
    * @param {Record<string, any>} cfg @param {any} facetVal @param {any[]} mark
-   * @returns {Record<string, any>}
-   */
+   * @returns {Record<string, any>} */
   const timelineKeys = (cfg, facetVal, mark) => {
     /** @type {Record<string, any>} */
     const keys = { [cfg.y]: mark[3] };

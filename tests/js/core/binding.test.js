@@ -158,3 +158,16 @@ test('without a busy label, finding an element builds nothing', () => {
   b.find(win.document);
   assert.deepEqual(log, []);
 });
+
+test('a light/dark switch draws the last value again; an unmounted view is left alone', async () => {
+  const { b, add, log, win } = setup({ grace: 0 });
+  const el = add('a');
+  b.renderValue(el, payload(1, { g: ['x'] }));
+  win.document.documentElement.setAttribute('data-bs-theme', 'dark');
+  await Promise.resolve();
+  assert.deepEqual(log.filter((l) => l[0] === 'render'), [['render', 1, ['x']], ['render', 1, ['x']]]);
+  el._viz.scope.dispose();
+  win.document.documentElement.setAttribute('data-bs-theme', 'light');
+  await Promise.resolve();
+  assert.equal(log.filter((l) => l[0] === 'render').length, 2);
+});

@@ -18,12 +18,9 @@
 
   const BASE_LINE_WIDTH = 1.4;
 
-  /**
-   * A ribbon between two edges: one polygon per run where both exist, so a
-   * band cut for thin n breaks. Null when no run has two points.
-   * @param {any} name @param {any} b @param {string} loKey @param {string} hiKey
-   * @param {string} clr @param {number} op
-   */
+  /** A ribbon between two edges: one polygon per run where both exist, so a band cut for thin n
+   * breaks. Null when no run has two points. @param {any} name @param {any} b @param {string} loKey
+   * @param {string} hiKey @param {string} clr @param {number} op */
   const ribbon = (name, b, loKey, hiKey, clr, op) => {
     const lo = b[loKey], hi = b[hiKey];
     if (!Array.isArray(lo) || !Array.isArray(hi)) return null;
@@ -96,18 +93,13 @@
       itemStyle: { color: clr, cursor: 'pointer' },
       lineStyle: { color: clr, width: (BASE_LINE_WIDTH + 0.8) * lm },
       emphasis: { disabled: true },
-      ...(named && nm ? {
-        endLabel: { show: true, formatter: '{a}', distance: 6,
-                    color: ink.text, fontSize: ink.fontSize, fontWeight: 600 },
-        labelLayout: { moveOverlap: 'shiftY' }
-      } : {})
+      ...(named && nm ? parts.endLabelOf(ink) : {})
     });
     return at;
   };
 
-  /**
-   * The band series of one panel.
-   * @param {any} m the individual model @param {any} panel @param {any} look
+  /** The band series of one panel. @param {any} m the individual model @param {any} panel
+   * @param {any} look
    * @returns {{ series: any[], band: any, markLineIdx: number, many: boolean, labelPad: number }}
    */
   const band = (m, panel, look) => {
@@ -155,11 +147,6 @@
       centerIdx[cl] = at;
       if (firstCenter < 0) firstCenter = at;
     }
-    let labelPad = 0;
-    if (named) {
-      for (const cl of levels) labelPad = Math.max(labelPad, String(cl).length);
-      labelPad = labelPad ? Math.min(160, labelPad * 6.5 + 12) : 0;
-    }
     return {
       series,
       // What the hover picker patches: ribbon data only.
@@ -167,8 +154,15 @@
       // Helper lines hang off a centre line, which the hover never empties.
       markLineIdx: firstCenter,
       many,
-      labelPad
+      labelPad: named ? parts.endLabelPad(levels) : 0
     };
+  };
+
+  /** The reference limits R reduced from their columns (hi, then lo) that hold a number.
+   * @param {any} cfg @returns {any[]} */
+  const refLimits = (cfg) => {
+    const refs = (cfg.derived.band && cfg.derived.band.refs) || {};
+    return [refs.hi, refs.lo].filter((r) => r && Number.isFinite(Number(r.value)));
   };
 
   /**
@@ -179,30 +173,18 @@
    * @returns {{ lo: number, hi: number } | null}
    */
   const bandExtent = (cfg, panel, many) => {
-    let lo = Infinity, hi = -Infinity;
-    const scan = (/** @type {any} */ v) => {
-      if (v == null) return;
-      const n = Number(v);
-      if (!Number.isFinite(n)) return;
-      if (n < lo) lo = n;
-      if (n > hi) hi = n;
-    };
     const drawn = ['center', 'lo', 'hi'];
     if (!many) {
       drawn.push('olo', 'ohi');
       if (cfg.box_points === 'outliers') drawn.push('out_y');
     }
-    for (const b of Object.values(parts.log.bandBucket(cfg, panel) || {})) {
-      if (!b) continue;
-      for (const key of drawn) if (Array.isArray(b[key])) for (const v of b[key]) scan(v);
-    }
+    const vals = parts.log.bandValues(cfg, panel, drawn)
+      .filter((v) => v != null).map(Number).filter(Number.isFinite);
+    let lo = NS.minOf(vals), hi = NS.maxOf(vals);
     if (!(Number.isFinite(lo) && Number.isFinite(hi) && hi > lo)) return null;
     const span = hi - lo;
-    const refs = cfg.derived.band.refs;
-    for (const k of ['hi', 'lo']) {
-      const r = refs && refs[k];
-      const v = r ? Number(r.value) : NaN;
-      if (!Number.isFinite(v)) continue;
+    for (const r of refLimits(cfg)) {
+      const v = Number(r.value);
       const nlo = Math.min(lo, v), nhi = Math.max(hi, v);
       if (nhi - nlo <= span * 1.6) { lo = nlo; hi = nhi; }
     }
@@ -219,12 +201,8 @@
    * @param {VizColumn[]} columns
    */
   const bandRefLines = (cfg, ext, ink, columns) => {
-    const refs = cfg.derived.band && cfg.derived.band.refs;
     const out = [];
-    if (!refs) return out;
-    for (const k of ['hi', 'lo']) {
-      const r = refs[k];
-      if (!r || !Number.isFinite(Number(r.value))) continue;
+    for (const r of refLimits(cfg)) {
       const v = Number(r.value);
       const base = NS.axes.axisTitle(columns, r.col) + ' ' + NS.ddNum3(v) +
         (Number(r.n_distinct) > 1

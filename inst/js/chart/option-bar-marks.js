@@ -29,11 +29,22 @@
   /** @param {any} d */
   const valOf = (d) => (d != null && typeof d === 'object') ? d.value : d;
 
-  /**
-   * The tallest positive stack, which ECharts scales the value axis from.
-   * @param {any[]} series @param {number} n groups
-   */
-  const stackTop = (series, n) => {
+  /** A series datum as an object. @param {any} d */
+  const asDatum = (d) => (d !== null && typeof d === 'object' && !Array.isArray(d)) ? d : { value: d };
+
+  /** A datum with `style` merged into its itemStyle. @param {any} d @param {Record<string, any>} style */
+  const withItemStyle = (d, style) => {
+    const o = asDatum(d);
+    return { ...o, itemStyle: { ...o.itemStyle, ...style } };
+  };
+
+  /** Text style of a label on the marks. @param {any} ink */
+  const labelStyle = (ink) => ({ color: ink.muted, fontSize: ink.fontSize, fontFamily: ink.face });
+
+  /** The tallest positive stack, which ECharts scales the value axis from, and the value one px of
+   * the axis spans (0 without a length). @param {any[]} series @param {number} n groups
+   * @param {number} valuePx */
+  const stackScale = (series, n, valuePx) => {
     let top = 0;
     for (let g = 0; g < n; g++) {
       let sum = 0;
@@ -43,15 +54,30 @@
       }
       top = Math.max(top, sum);
     }
-    return top;
+    return { top, perPx: top > 0 && valuePx > 0 ? top / valuePx : 0 };
   };
 
-  /**
-   * Headroom for labels past the bars: sets the axis boundary gap and returns
-   * the px a grid needs on its right for the widest end label.
-   * @param {Array<{ v: number, text: string }>} ends @param {any} valAxis
-   * @param {boolean} vertical @param {number} plotPx @param {(s: string) => number} textW
-   */
+  /** A group's drawn segments, bottom up: the series index, the datum, its value and the middle of
+   * its stretch on the axis. @param {any[]} series @param {number} gi */
+  const segmentsAt = (series, gi) => {
+    let pos = 0, neg = 0;
+    /** @type {Array<{ si: number, d: any, v: number, at: number }>} */
+    const out = [];
+    series.forEach((s, si) => {
+      const d = s.data[gi];
+      const v = Number(valOf(d));
+      if (valOf(d) == null || !Number.isFinite(v) || v === 0) return;
+      const at = (v >= 0 ? pos : neg) + v / 2;
+      if (v >= 0) pos += v; else neg += v;
+      out.push({ si, d, v, at });
+    });
+    return out;
+  };
+
+  /** Headroom for labels past the bars: sets the axis boundary gap and returns the px a grid needs
+   * on its right for the widest end label. @param {Array<{ v: number, text: string }>} ends
+   * @param {any} valAxis @param {boolean} vertical @param {number} plotPx
+   * @param {(s: string) => number} textW */
   const endRoom = (ends, valAxis, vertical, plotPx, textW) => {
     const hasPos = ends.some((e) => e.v > 0);
     const hasNeg = ends.some((e) => e.v < 0);
@@ -67,6 +93,14 @@
     return Math.max(0, Math.ceil(w + 8 - room));
   };
 
+  /** The formatter of a label at a bar's end; `fraction`: values are shares.
+   * @param {Record<string, any>} cfg @param {boolean} fraction @returns {(v: number) => string} */
+  const endFormat = (cfg, fraction) => {
+    // `|| 0` folds a negative zero, which would print as "-0".
+    if (fraction) return (v) => (Math.round(v * 1000) / 10 || 0) + '%';
+    return NS.valueFormat(cfg) || ((v) => String(NS.ddNum(v || 0)));
+  };
+
   const BAR_MAX = 48;
   const ROW_BAND = 28;     // horizontal row height, one bar per row
   const GROUP_BAR = 14;    // horizontal grouped: px per series bar
@@ -79,26 +113,21 @@
    * bar per bar, a percent bar per segment where the share fits. Returns the
    * px a grid needs on its right. Mutates `series` and `valAxis`.
    * @param {any[]} series @param {any} valAxis
-   * @param {{ax: any, vertical: boolean, stacked: boolean, percent: boolean,
+   * @param {{ink: any, vertical: boolean, stacked: boolean, percent: boolean,
    *          fraction: boolean, plotPx: number, bandPx: number,
-   *          measure: (s: string) => number, face: string,
-   *          cfg: Record<string, any>}} o
+   *          measure: (s: string) => number, cfg: Record<string, any>}} o
    * @returns {number}
    */
   const barValueLabels = (series, valAxis, o) => {
     const textW = o.measure;
-    const vf = NS.valueFormat(o.cfg);
-    // `|| 0` folds a negative zero, which would print as "-0".
-    const fmt = o.fraction
-      ? (/** @type {number} */ v) => (Math.round(v * 1000) / 10 || 0) + '%'
-      : (vf || ((/** @type {number} */ v) => String(NS.ddNum(v || 0))));
-    const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
+    const fmt = endFormat(o.cfg, o.fraction);
+    const style = labelStyle(o.ink);
 
     if (o.percent) {
       const barW = Math.min(48, 0.6 * o.bandPx);
       /** @param {number} v @param {string} t */
       const fits = (v, t) => !o.plotPx || (o.vertical
-        ? v * o.plotPx >= o.ax.fontSize + 4 && (!o.bandPx || barW >= textW(t) + 4)
+        ? v * o.plotPx >= o.ink.fontSize + 4 && (!o.bandPx || barW >= textW(t) + 4)
         : v * o.plotPx >= textW(t) + 6);
       for (const s of series) {
         s.label = { show: true, position: 'inside', ...style, color: '#fff',
@@ -140,13 +169,10 @@
         addEnd(tot);
         // The label rides the outermost segment of the total's sign.
         for (let si = series.length - 1; si >= 0; si--) {
-          const d = series[si].data[gi];
-          const v = valOf(d);
+          const v = valOf(series[si].data[gi]);
           if (v == null || (tot < 0 ? v > 0 : v < 0)) continue;
-          series[si].data[gi] = {
-            ...((typeof d === 'object') ? d : { value: d }),
-            label: { show: true, formatter: fmt(tot) }
-          };
+          series[si].data[gi] = { ...asDatum(series[si].data[gi]),
+                                  label: { show: true, formatter: fmt(tot) } };
           break;
         }
       }
@@ -164,40 +190,31 @@
    * @param {any} valAxis
    * @param {{ textAt: (si: number, gi: number) => string | null, groups: string[],
    *           nBars: number, vertical: boolean, stack: boolean, percent: boolean,
-   *           valueLabels: boolean, valuePx: number, bandPx: number, ax: any,
-   *           face: string, measure: (s: string) => number }} o
+   *           valueLabels: boolean, valuePx: number, bandPx: number, ink: any,
+   *           measure: (s: string) => number }} o
    * @returns {number}
    */
   const barMarkLabels = (series, valAxis, o) => {
     const bars = series.slice(0, o.nBars);
-    const style = { color: o.ax.labelColor, fontSize: o.ax.fontSize, fontFamily: o.face };
+    const style = labelStyle(o.ink);
 
     if (o.stack) {
-      const top = stackTop(bars, o.groups.length);
-      const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
+      const { perPx } = stackScale(bars, o.groups.length, o.valuePx);
       const barW = Math.min(BAR_MAX, 0.6 * (o.bandPx || BAR_MAX / 0.6));
       /** @type {any[]} */
       const data = [];
       for (let gi = 0; gi < o.groups.length; gi++) {
-        let pos = 0, neg = 0;
-        bars.forEach((s, si) => {
-          const d = s.data[gi];
-          const v = Number(valOf(d));
-          if (valOf(d) == null || !Number.isFinite(v) || v === 0) return;
-          const mid = v >= 0 ? pos + v / 2 : neg + v / 2;
-          if (v >= 0) pos += v; else neg += v;
+        for (const { si, d, v, at } of segmentsAt(bars, gi)) {
           const t = o.textAt(si, gi);
-          if (t == null) return;
+          if (t == null) continue;
           const shown = (o.percent && o.valueLabels) ? t + ' · ' + Math.round(v * 100) + '%' : t;
           const w = o.measure(shown);
           const len = perPx ? Math.abs(v) / perPx : Infinity;
-          const fits = o.vertical ? len >= o.ax.fontSize + 4 && barW >= w + 4 : len >= w + 6;
-          if (!fits) return;
-          if (o.percent && o.valueLabels) {
-            s.data[gi] = { ...((typeof d === 'object') ? d : { value: d }), label: { show: false } };
-          }
-          data.push(o.vertical ? [o.groups[gi], mid, shown] : [mid, o.groups[gi], shown]);
-        });
+          const fits = o.vertical ? len >= o.ink.fontSize + 4 && barW >= w + 4 : len >= w + 6;
+          if (!fits) continue;
+          if (o.percent && o.valueLabels) bars[si].data[gi] = { ...asDatum(d), label: { show: false } };
+          data.push(o.vertical ? [o.groups[gi], at, shown] : [at, o.groups[gi], shown]);
+        }
       }
       if (data.length) {
         series.push({
@@ -251,29 +268,15 @@
   const stackNames = (series, o) => {
     const n = o.groups.length;
     // The bar to name: the last (or first) one with a segment.
-    /** @param {number} gi */
-    const filled = (gi) => series.some((s) => {
-      const v = valOf(s.data[gi]);
-      return v != null && Number(v) !== 0;
-    });
     let gi = o.vertical ? n - 1 : 0;
-    while (gi >= 0 && gi < n && !filled(gi)) gi += o.vertical ? -1 : 1;
+    while (gi >= 0 && gi < n && !segmentsAt(series, gi).length) gi += o.vertical ? -1 : 1;
     if (gi < 0 || gi >= n) return 0;
-    const top = stackTop(series, n);
-    const perPx = top > 0 && o.valuePx > 0 ? top / o.valuePx : 0;
-    /** @type {Array<{ si: number, name: string, at: number, w: number }>} */
-    const items = [];
-    let pos = 0, neg = 0;
-    series.forEach((s, si) => {
-      const v = Number(valOf(s.data[gi]));
-      if (valOf(s.data[gi]) == null || !Number.isFinite(v) || v === 0) return;
-      let mid;
-      if (v >= 0) { mid = pos + v / 2; pos += v; } else { mid = neg + v / 2; neg += v; }
-      const name = String(s.name);
-      // A missing level has no name to write.
-      if (!name) return;
-      items.push({ si, name, at: mid, w: o.measure(name) });
-    });
+    const { top, perPx } = stackScale(series, n, o.valuePx);
+    // A missing level has no name to write.
+    const items = segmentsAt(series, gi)
+      .map(({ si, at }) => ({ si, at, name: String(series[si].name) }))
+      .filter((it) => it.name)
+      .map((it) => ({ ...it, w: o.measure(it.name) }));
     // Thin segments put names closer than a line: spread them, each at least
     // a line (a name's width) from the next, and keep the run on the axis.
     if (perPx) {
@@ -309,22 +312,18 @@
     return Math.max(0, Math.ceil(widest + 6 + o.barPx / 2 + 4 - o.bandPx / 2));
   };
 
-  /**
-   * The denominator of "% of panel", named by its column's label.
-   * @param {Record<string, any>} cfg @param {(col: any) => string} title
-   */
-  const pctName = (cfg, title) => {
-    /** @type {Record<string, any>} */
-    const roleCol = { facet: cfg.facet, category: cfg.category, color: cfg.color };
-    const col = roleCol[cfg.percent_of];
-    return col ? '% of ' + title(col) : '% of total';
+  /** The x labels of a vertical category axis fitted to the plot, with the `xFit` inputs a resize
+   * re-fits them from. @param {any[]} labels @param {number} plotW @param {any} look
+   * @param {any} display maps a category to its label (or null) @param {any} [decorate] */
+  const fitXLabels = (labels, plotW, look, display, decorate) => {
+    const xlab = NS.axes.xAxisLabels(labels, (plotW || 0) - X_INSET, false, look.measure, look.ink);
+    return { xlab, xFit: { labels, inset: X_INSET, decimate: false, gutter: xlab.bottom,
+                           key: xlab.key, formatter: display, decorate } };
   };
 
-  /**
-   * An axis label that sets the names in `lit` in semibold text ink, line by
-   * line. A name holding rich-text syntax stays as it is.
-   * @param {any} axisLabel @param {Set<string>} lit @param {any} ink
-   */
+  /** An axis label that sets the names in `lit` in semibold text ink, line by line. A name holding
+   * rich-text syntax stays as it is. @param {any} axisLabel @param {Set<string>} lit
+   * @param {any} ink */
   const boldNames = (axisLabel, lit, ink) => {
     const base = axisLabel || {};
     const fmt = base.formatter;
@@ -341,7 +340,8 @@
   };
 
   Object.assign(parts, {
-    barRadius, barValueLabels, barMarkLabels, stackNames, pctName, boldNames, WATERFALL_COLORS,
+    barRadius, barValueLabels, barMarkLabels, stackNames, boldNames, endFormat, WATERFALL_COLORS,
+    asDatum, withItemStyle, labelStyle, fitXLabels,
     BAR: { BAR_MAX, ROW_BAND, GROUP_BAR, GROUP_PAD, X_INSET }
   });
 })();

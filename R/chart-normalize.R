@@ -81,7 +81,7 @@ chart_lies <- function(state, kinds) {
 #   otherwise the value.
 # - Both set: a numeric x beside a non-numeric y is horizontal; any other
 #   pair, or one whose kinds are unknown, is vertical, as in ggplot2.
-# - Neither set: bar horizontal, boxplot and pointrange vertical.
+# - Neither set: vertical.
 chart_infer_lie <- function(state, kinds) {
   type <- state[["type"]] %||% "bar"
   has_x <- length(state[["x"]]) > 0L
@@ -96,7 +96,7 @@ chart_infer_lie <- function(state, kinds) {
     num_y <- kind_is_numeric(kinds, state[["y"]])
     return(if (isTRUE(num_x) && isFALSE(num_y)) "horizontal" else "vertical")
   }
-  if (identical(type, "bar")) "horizontal" else "vertical"
+  "vertical"
 }
 
 chart_pair_intervals <- function(state) {

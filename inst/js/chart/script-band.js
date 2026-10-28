@@ -12,11 +12,8 @@
   const NS = /** @type {any} */ (V.chart);
   const mk = NS.mk;
 
-  /**
-   * A declared control as a spec argument the gear can draw (R's
-   * dd_script_roles(): kind select, multi, segmented, number, date, text).
-   * @param {any} sp @returns {any}
-   */
+  /** A declared control as a spec argument the gear can draw (R's dd_script_roles(): kind select,
+   * multi, segmented, number, date, text). @param {any} sp @returns {any} */
   const argOf = (sp) => {
     const gear = { label: sp.label };
     const bounds = { min: sp.min ?? null, max: sp.max ?? null, minOpen: false };

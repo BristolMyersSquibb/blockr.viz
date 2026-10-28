@@ -55,6 +55,11 @@
     return bs ? (bs[panel.facet] || bs['__all__'] || null) : null;
   };
 
+  /** The values of a band panel's series under `keys`, across levels.
+   * @param {any} cfg @param {any} panel @param {string[]} keys @returns {any[]} */
+  const bandValues = (cfg, panel, keys) => Object.values(bandBucket(cfg, panel) || {})
+    .flatMap((b) => (b ? keys.flatMap((key) => (Array.isArray(b[key]) ? b[key] : [])) : []));
+
   /**
    * [lo, hi] of the positive values one panel draws along an axis (on y also
    * the interval ends and the band), or null.
@@ -76,23 +81,15 @@
         for (const r of s.rows) for (const [a, b] of pairs) { scan(r[a]); scan(r[b]); }
       }
       if (m.isBand) {
-        for (const b of Object.values(bandBucket(cfg, panel) || {})) {
-          if (!b) continue;
-          for (const key of ['center', 'lo', 'hi', 'olo', 'ohi', 'out_y']) {
-            if (Array.isArray(b[key])) for (const v of b[key]) scan(v);
-          }
-        }
+        for (const v of bandValues(cfg, panel, ['center', 'lo', 'hi', 'olo', 'ohi', 'out_y'])) scan(v);
       }
     }
     return Number.isFinite(lo) ? [lo, hi] : null;
   };
 
-  /**
-   * Each panel's log domain per axis (null on a linear axis), shared across
-   * the panels where the facet scales are, and the count of guide lines and
-   * band outliers at or below zero a log axis leaves out.
-   * @param {any} m @param {Record<string, any>} cfg
-   */
+  /** Each panel's log domain per axis (null on a linear axis), shared across the panels where the
+   * facet scales are, and the count of guide lines and band outliers at or below zero a log axis
+   * leaves out. @param {any} m @param {Record<string, any>} cfg */
   const logDomains = (m, cfg) => {
     const mode = NS.facetScales(cfg);
     const n = m.panels.length;
@@ -113,11 +110,7 @@
     if (m.logY) {
       dropped += NS.labelled(cfg.y_lines).filter((x) => !pos(x.value)).length;
       if (m.isBand && cfg.box_points === 'outliers') {
-        for (const p of m.panels) {
-          for (const b of Object.values(bandBucket(cfg, p) || {})) {
-            if (b && Array.isArray(b.out_y)) dropped += b.out_y.filter((v) => !pos(v)).length;
-          }
-        }
+        for (const p of m.panels) dropped += bandValues(cfg, p, ['out_y']).filter((v) => !pos(v)).length;
       }
     }
     if (m.logX) dropped += NS.labelled(cfg.x_lines).filter((x) => !pos(x.value)).length;
@@ -128,28 +121,26 @@
     };
   };
 
-  /**
-   * A band on a log axis: a low edge at or below zero is cut at the floor, a
-   * high edge or centre there is a gap, outliers there are dropped.
-   * @param {any} bs the band's series @param {number} floor
-   */
+  /** A band on a log axis: a low edge at or below zero is cut at the floor, a high edge or centre
+   * there is a gap, outliers there are dropped. @param {any} bs the band's series
+   * @param {number} floor */
   const clampBand = (bs, floor) => {
     if (!bs) return bs;
     /** @param {any} b */
     const clampLevel = (b) => {
       const c = { ...b };
-      for (const key of ['lo', 'olo']) {
-        if (Array.isArray(b[key])) {
-          c[key] = b[key].map((/** @type {any} */ v) => (v == null ? null : (pos(v) ? v : floor)));
-        }
-      }
-      for (const key of ['center', 'hi', 'ohi']) {
-        if (Array.isArray(b[key])) c[key] = b[key].map((/** @type {any} */ v) => (pos(v) ? v : null));
-      }
+      /** @param {string[]} keys @param {(v: any) => any} fn */
+      const map = (keys, fn) => {
+        for (const key of keys) if (Array.isArray(b[key])) c[key] = b[key].map(fn);
+      };
+      map(['lo', 'olo'], (v) => (v == null ? null : (pos(v) ? v : floor)));
+      map(['center', 'hi', 'ohi'], (v) => (pos(v) ? v : null));
       if (Array.isArray(b.out_y)) {
         const keep = b.out_y.map(pos);
         for (const key of ['out_x', 'out_y', 'out_id']) {
-          if (Array.isArray(b[key])) c[key] = b[key].filter((/** @type {any} */ _, /** @type {number} */ i) => keep[i]);
+          if (Array.isArray(b[key])) {
+            c[key] = b[key].filter((/** @type {any} */ _, /** @type {number} */ i) => keep[i]);
+          }
         }
       }
       return c;
@@ -163,5 +154,5 @@
     return out;
   };
 
-  parts.log = { niceDomain, identityDomain, pos, intervalPairs, bandBucket, logDomains, clampBand };
+  parts.log = { niceDomain, identityDomain, pos, intervalPairs, bandBucket, bandValues, logDomains, clampBand };
 })();
