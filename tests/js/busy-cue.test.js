@@ -9,7 +9,7 @@ const h = require('./harness');
 const { F, aggregated } = require('./cases');
 
 const config = aggregated.find((c) => c.name === 'bar-group').config;
-const busy = (el) => el.classList.contains('blockr-busy');
+const busy = (el) => el.classList.contains('vz-busy');
 
 test('a slow draw shows the cue, and the drawn picture ends it', () => {
   const env = h.createEnv();
@@ -21,7 +21,7 @@ test('a slow draw shows the cue, and the drawn picture ends it', () => {
   assert.ok(!busy(el), 'nothing in the first 300 ms');
   env.flushTimers(1);
   assert.ok(busy(el));
-  assert.match(el.querySelector('.blockr-busy-line').textContent, /^drawing… \d+\.\d s$/);
+  assert.match(el.querySelector('.vz-busy-line').textContent, /^drawing… \d+\.\d s$/);
 
   h.send(env, id, { columns: F.columns, data: F.data,
                     config: { ...config, orientation: 'vertical' }, dataRev: 2 });
@@ -90,13 +90,40 @@ test('a chart with no picture counts from when its panel shows', () => {
   env.flushTimers(1);
   env.flushTimers(1);
   assert.ok(busy(el), 'shown: the clock runs before R has said anything');
-  assert.match(el.querySelector('.blockr-busy-line').textContent, /^drawing… \d+\.\d s$/);
+  assert.match(el.querySelector('.vz-busy-line').textContent, /^drawing… \d+\.\d s$/);
 
   env.handlers['blockr-busy']({ id, label: 'drawing' });
   assert.ok(busy(el), "R's start keeps the clock");
   h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
   env.flushTimers(500);
   assert.ok(!busy(el), 'the picture ends it');
+  env.close();
+});
+
+test('a view opened again without new data does not start the clock', () => {
+  const env = h.createEnv();
+  const first = h.mount(env);
+  const id = first.id;
+  hide(first.el);
+  env.binding.find(env.win.document);
+  front(env, first.el);
+  env.flushTimers(1);
+  h.send(env, id, { columns: F.columns, data: F.data, config, dataRev: 1 });
+  env.flushTimers(500);
+  assert.ok(!busy(first.el), 'the first picture ends the first wait');
+
+  // The dock builds the panel again: a new element under the same id, found
+  // and shown, and no new value from R, since nothing changed.
+  first.el.parentElement.remove();
+  const again = h.mount(env, id);
+  hide(again.el);
+  env.binding.find(env.win.document);
+  front(env, again.el);
+  env.flushTimers(1);
+  env.flushTimers(1);
+  env.flushTimers(1000);
+  assert.ok(!busy(again.el), 'no clock: this output has drawn before');
+  assert.strictEqual(again.el.querySelector('.vz-busy-line').textContent, '');
   env.close();
 });
 

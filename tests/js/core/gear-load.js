@@ -125,10 +125,10 @@ const lastSet = (env) => {
 };
 
 /** Rows shown, in order. */
-const rows = (el) => Array.from(el.querySelectorAll('.dd-form-row[data-role]'))
+const rows = (el) => Array.from(el.querySelectorAll('.vz-row[data-role]'))
   .map((r) => r.getAttribute('data-role'));
 
-const row = (el, key) => el.querySelector('.dd-form-row[data-role="' + key + '"]');
+const row = (el, key) => el.querySelector('.vz-row[data-role="' + key + '"]');
 
 /** Pick the option whose text is `text` in a native select. */
 function choose(win, sel, text) {

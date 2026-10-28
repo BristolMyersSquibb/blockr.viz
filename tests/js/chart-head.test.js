@@ -1,5 +1,5 @@
 /* The chart's header (layout E): titles, download, gear and tray in one
- * element, placed by chart.css on the vz-head--open state. Closed, one row:
+ * element, placed by frame.css on the vz-head--open state. Closed, one row:
  * titles, tools, gear. Open, the gear on top, the tray, then titles and
  * tools. The DOM order stays the same in both states. */
 'use strict';

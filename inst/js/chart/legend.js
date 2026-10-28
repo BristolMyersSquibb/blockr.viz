@@ -117,7 +117,7 @@
     /** @param {ChartView} view @param {HTMLElement} parent */
     constructor(view, parent) {
       this.view = view;
-      this.el = mk('div', 'dd-legend-band', parent);
+      this.el = mk('div', 'vz-chart-legend', parent);
       this.el.hidden = true;
       /** The column the chips are levels of. @type {string | null} */
       this.col = null;
@@ -148,13 +148,13 @@
       const meta = NS.axes.colMeta(this.view.columns, spec.col);
       const title = meta && meta.label && meta.label !== meta.name ? meta.label : null;
       if (title && !spec.items.some((it) => String(it.name) === title)) {
-        mk('span', 'dd-legend-title', el).textContent = title;
+        mk('span', 'vz-chart-legend-title', el).textContent = title;
       }
       for (const it of spec.items) {
-        const chip = /** @type {HTMLButtonElement} */ (mk('button', 'dd-legend-chip', el));
+        const chip = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-legend-chip', el));
         chip.type = 'button';
         chip.dataset.level = it.name;
-        const sw = mk('span', 'dd-legend-swatch dd-legend-swatch--' + plan.swatch, chip);
+        const sw = mk('span', 'vz-chart-legend-swatch vz-chart-legend-swatch--' + plan.swatch, chip);
         sw.style.background = it.color;
         mk('span', '', chip).textContent = it.name;
         scope.on(chip, 'click', () => this._click(spec.col, it.name));
@@ -167,7 +167,7 @@
     _place(top) {
       const el = this.el;
       const grid = this.view.chartGrid;
-      el.classList.toggle('dd-legend-band--top', top);
+      el.classList.toggle('vz-chart-legend--top', top);
       const inPlace = top ? el.nextElementSibling === grid : el.previousElementSibling === grid;
       if (!inPlace) grid.parentNode?.insertBefore(el, top ? grid : grid.nextSibling);
     }
@@ -191,9 +191,9 @@
       const f = sel && sel.filters;
       const vals = f && f[this.col];
       const on = vals ? new Set(vals.map((v) => (NS.keys.isMissing(v) ? '' : String(v)))) : null;
-      for (const chip of this.el.querySelectorAll('.dd-legend-chip')) {
+      for (const chip of this.el.querySelectorAll('.vz-chart-legend-chip')) {
         const c = /** @type {HTMLElement} */ (chip);
-        c.classList.toggle('dd-legend-chip-on', !!on && on.has(c.dataset.level || ''));
+        c.classList.toggle('vz-chart-legend-chip--on', !!on && on.has(c.dataset.level || ''));
       }
     }
   }

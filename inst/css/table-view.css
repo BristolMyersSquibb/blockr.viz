@@ -27,11 +27,11 @@
 }
 
 /* The receipt's clear button, after the text. */
-.vz-table .dd-status-footer {
+.vz-table .vz-status {
   justify-content: flex-start;
   gap: 4px;
 }
-.vz-table .dd-status-clear {
+.vz-table .vz-status-clear {
   font-size: var(--blockr-font-size-sm, 0.875rem);
   line-height: 1;
   color: var(--blockr-grey-400, #9ca3af);
@@ -41,7 +41,7 @@
   cursor: pointer;
   padding: 0 4px;
 }
-.vz-table .dd-status-clear:hover {
+.vz-table .vz-status-clear:hover {
   color: var(--blockr-grey-700, #374151);
   background: var(--blockr-color-bg-hover, #f3f4f6);
 }

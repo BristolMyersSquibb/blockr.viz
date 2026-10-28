@@ -100,11 +100,11 @@
     }
     for (const arg of ((band && band.offers) || []).slice(0, 3)) {
       const chip = document.createElement('span');
-      chip.className = 'dd-title-offer';
+      chip.className = 'vz-template-offer';
       chip.textContent = '+ ' + label(arg);
       el.appendChild(chip);
     }
-    el.classList.toggle('dd-title-preview-body--empty', !el.childNodes.length);
+    el.classList.toggle('vz-template-preview--empty', !el.childNodes.length);
   }
 
   /** Under the field, flipped above it when there is no room below.
@@ -127,14 +127,14 @@
   function menuItem(it, s, pick, hl) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'dd-at-item' + (it.indent ? ' dd-at-item--sub' : '');
+    b.className = 'vz-at-item' + (it.indent ? ' vz-at-item--sub' : '');
     const lab = document.createElement('b');
     lab.textContent = it.label;
     const val = document.createElement('span');
-    val.className = 'dd-at-val' + (it.val ? '' : ' dd-at-val--unset');
+    val.className = 'vz-at-val' + (it.val ? '' : ' vz-at-val--unset');
     val.textContent = it.val || (it.indent ? '' : 'unset');
     const tok = document.createElement('span');
-    tok.className = 'dd-at-tok';
+    tok.className = 'vz-at-tok';
     tok.textContent = it.tok;
     b.append(lab, val, tok);
     const idx = s.items.length;
@@ -163,25 +163,25 @@
       });
       if (!hits.length) return;
       const h = document.createElement('div');
-      h.className = 'dd-at-head';
+      h.className = 'vz-at-head';
       h.textContent = g.head;
       s.el.appendChild(h);
       if (g.note && !q) {
         const n = document.createElement('div');
-        n.className = 'dd-at-note';
+        n.className = 'vz-at-note';
         n.textContent = g.note;
         s.el.appendChild(n);
       }
       for (const it of hits) s.el.appendChild(menuItem(it, s, pick, hl));
       if (gi < groups.length - 1) {
         const sep = document.createElement('div');
-        sep.className = 'dd-at-sep';
+        sep.className = 'vz-at-sep';
         s.el.appendChild(sep);
       }
     });
     if (!s.items.length) {
       const n = document.createElement('div');
-      n.className = 'dd-at-note';
+      n.className = 'vz-at-note';
       n.textContent = 'Nothing matches "' + s.query + '".';
       s.el.appendChild(n);
     }
@@ -204,7 +204,7 @@
     const hl = () => {
       if (!st) return;
       const s = st;
-      s.items.forEach((it, i) => it.el.classList.toggle('dd-at-item--hl', i === s.idx));
+      s.items.forEach((it, i) => it.el.classList.toggle('vz-at-item--hl', i === s.idx));
       const cur = s.items[s.idx];
       if (cur && typeof cur.el.scrollIntoView === 'function') cur.el.scrollIntoView({ block: 'nearest' });
     };
@@ -230,7 +230,7 @@
       close();
       const scope = ctx.scope.own(new V.Scope());
       const el = scope.node(document.body.appendChild(document.createElement('div')));
-      el.className = 'dd-at-menu';
+      el.className = 'vz-at-menu';
       st = { el, pos: Math.max(0, (inp.selectionStart || 1) - 1), query: '', idx: 0, items: [],
              scope };
       const layer = ui().layer;
@@ -280,7 +280,7 @@
     const before = ctx.value == null ? '' : String(ctx.value);
     const inp = document.createElement('input');
     inp.type = 'text';
-    inp.className = 'blockr-text-input dd-text dd-template';
+    inp.className = 'blockr-text-input vz-text vz-template';
     inp.value = before;
     inp.spellcheck = false;
     inp.setAttribute('aria-label', ctx.label);
@@ -288,31 +288,31 @@
     const ph = ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values);
     if (ph) inp.placeholder = ph;
     const shows = document.createElement('div');
-    shows.className = 'dd-title-shows';
+    shows.className = 'vz-template-shows';
     const turn = document.createElement('span');
-    turn.className = 'dd-title-turn';
+    turn.className = 'vz-template-turn';
     turn.setAttribute('aria-hidden', 'true');
     turn.textContent = '↳';
     const body = document.createElement('span');
-    body.className = 'dd-title-preview-body';
+    body.className = 'vz-template-preview';
     paintPreview(body, band, ctx.labelOf);
     const stale = document.createElement('span');
-    stale.className = 'dd-title-stale';
+    stale.className = 'vz-template-stale';
     stale.textContent = 'not applied';
     shows.append(turn, body, stale);
     const warn = document.createElement('div');
-    warn.className = 'dd-title-warn';
+    warn.className = 'vz-template-warn';
     const help = document.createElement('div');
-    help.className = 'dd-form-help';
+    help.className = 'vz-help';
     const at = document.createElement('code');
-    at.className = 'dd-at-key';
+    at.className = 'vz-at-key';
     at.textContent = '@';
     help.append('Type ', at, ' for a setting or a value');
     el.append(inp, shows, warn, help);
 
     const menu = atMenu(inp, ctx);
     const sync = () => {
-      (el.closest('.dd-form-row') || el).classList.toggle('dd-title-row--dirty', inp.value !== before);
+      (el.closest('.vz-row') || el).classList.toggle('vz-row--dirty', inp.value !== before);
       const bad = unknownTokens(inp.value, ctx.titles, ctx.columns);
       warn.hidden = !bad.length;
       warn.textContent = bad.length

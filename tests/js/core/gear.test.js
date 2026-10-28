@@ -33,7 +33,7 @@ test('rows follow the spec: applies, when and the host hide rows', () => {
 
 test('sections come in tray order with spec labels', () => {
   const t = setup({ type: 'bar', x: 'ARM' });
-  const titles = Array.from(t.el.querySelectorAll('.dd-section-title')).map((e) => e.textContent);
+  const titles = Array.from(t.el.querySelectorAll('.vz-section-title')).map((e) => e.textContent);
   assert.deepEqual(titles.slice(0, 3), ['Chart type', 'Mapping', 'Prepare script']);
   assert.ok(titles.indexOf('Order') < titles.indexOf('Look'));
   assert.ok(titles.indexOf('Look') < titles.indexOf('Titles'));
@@ -83,7 +83,7 @@ test('column on a columns argument sends an array', () => {
 test('optional mappings wait in the Add menu until set or added', () => {
   const t = setup({ type: 'bar', x: 'ARM' });
   assert.ok(!rows(t.el).includes('color'));
-  const add = t.el.querySelector('.dd-add-wrap select');
+  const add = t.el.querySelector('.vz-add select');
   const offered = Array.from(add.options).map((o) => o.textContent);
   assert.ok(offered.includes('Color') && offered.includes('Facet'));
   assert.ok(!offered.includes('Series'), 'series does not apply to a bar');
@@ -165,9 +165,9 @@ test('tiles: the chart type, grouped by the host, keys move the pick', () => {
     { label: 'Aggregated', values: ['bar', 'histogram', 'pie'] },
     { label: 'Individual', values: ['scatter', 'line'] }] } });
   const r = row(t.el, 'type');
-  assert.deepEqual(Array.from(r.querySelectorAll('.dd-type-group-head')).map((e) => e.textContent),
+  assert.deepEqual(Array.from(r.querySelectorAll('.vz-tile-group-head')).map((e) => e.textContent),
     ['Aggregated', 'Individual']);
-  const tiles = Array.from(r.querySelectorAll('.dd-layout-tile'));
+  const tiles = Array.from(r.querySelectorAll('.vz-tile'));
   assert.equal(tiles.length, 5);
   assert.ok(tiles[0].querySelector('svg'), 'the bar has its drawing');
   assert.equal(tiles[0].getAttribute('aria-checked'), 'true');
@@ -272,9 +272,9 @@ test('the prepare script sits behind a checkbox; unticking drops the script', ()
   const t = setup({ type: 'bar', x: 'ARM', script: null });
   const box = byKey(t.el, 'script_on');
   assert.equal(box.checked, false);
-  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, 'none');
+  assert.equal(byKey(t.el, 'script').closest('.vz-script-wrap').style.display, 'none');
   box.click();
-  assert.equal(byKey(t.el, 'script').closest('.dd-script-wrap').style.display, '');
+  assert.equal(byKey(t.el, 'script').closest('.vz-script-wrap').style.display, '');
   const u = setup({ type: 'bar', x: 'ARM', script: 'data <- data' });
   assert.equal(byKey(u.el, 'script_on').checked, true);
   byKey(u.el, 'script_on').click();
@@ -288,7 +288,7 @@ test('slider: sends a number on change', () => {
   assert.equal(i.min, '0.5');
   i.value = '2';
   i.dispatchEvent(new t.win.Event('input'));
-  assert.equal(row(t.el, 'line_width').querySelector('.dd-slider-value').textContent, '2×');
+  assert.equal(row(t.el, 'line_width').querySelector('.vz-slider-value').textContent, '2×');
   i.dispatchEvent(new t.win.Event('change'));
   assert.deepEqual(lastSet(t).values, { line_width: 2 });
 });
@@ -349,7 +349,7 @@ test('the table follows its own spec: layout tiles and per-layout rows', () => {
   const env = loadGear();
   const m = mountGear(env, { block: 'table', id: 'tb' });
   m.gear.update(payload({ layout: 'records', look: 'table' }));
-  const tiles = Array.from(row(m.el, 'layout').querySelectorAll('.dd-layout-tile-name'))
+  const tiles = Array.from(row(m.el, 'layout').querySelectorAll('.vz-tile-name'))
     .map((e) => e.textContent);
   assert.deepEqual(tiles, ['List', 'Per group', 'Per variable']);
   assert.ok(row(m.el, 'look').querySelector('svg'));

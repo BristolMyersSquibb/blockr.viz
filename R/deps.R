@@ -1,14 +1,17 @@
 # The JS core (inst/js/core/: the Blockr.viz namespace, Scope, the shared
-# output binding, the gear engine, titles, downloads and capture) and the
-# generated specs, as one dependency. Block views load after it.
+# output binding, the frame, the gear engine, titles, downloads and capture),
+# the generated specs and the frame's and the gear's styles, as one
+# dependency. Block views load after it.
 viz_core_dep <- memoise0(function() {
-  script <- c(file.path("core", js_script_list("core")),
-              "spec/chart.js", "spec/table.js")
+  script <- file.path("js", c(file.path("core", js_script_list("core")),
+                              "spec/chart.js", "spec/table.js"))
+  css <- file.path("css", c("frame.css", "gear.css"))
   htmltools::htmlDependency(
     name = "blockr-viz-core",
-    version = js_version(script),
-    src = system.file("js", package = "blockr.viz"),
-    script = script
+    version = js_version(c(script, css), "."),
+    src = system.file(package = "blockr.viz"),
+    script = script,
+    stylesheet = css
   )
 })
 

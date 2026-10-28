@@ -1,4 +1,4 @@
-# Legend-band verification: the HTML band (.dd-legend-band) is now the ONLY
+# Legend-band verification: the HTML band (.vz-chart-legend) is now the ONLY
 # legend -- no family draws a native in-canvas ECharts legend any more.
 # Each family appears TWICE, unfaceted and faceted, so the two modes that used
 # to render different legends can be compared side by side. The legend title

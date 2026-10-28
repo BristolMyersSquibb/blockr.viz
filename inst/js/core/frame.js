@@ -10,7 +10,7 @@
  * moment after a drill sent to another block the receipt of that drill
  * instead. The frame owns the words' place and timing; the view writes them.
  *
- * The header's layout is in chart.css (`.vz-head`); in a narrow block the
+ * The header's layout is in frame.css (`.vz-head`); in a narrow block the
  * tools take their own row.
  */
 (function () {
@@ -46,14 +46,14 @@
    * @returns {boolean} Whether a message is shown.
    */
   function message(parent, e) {
-    let msg = /** @type {HTMLElement | null} */ (parent.querySelector(':scope > .vd-empty-state'));
+    let msg = /** @type {HTMLElement | null} */ (parent.querySelector(':scope > .vz-empty'));
     if (!e) {
       if (msg) msg.remove();
       return false;
     }
     if (!msg) {
-      msg = el('div', 'vd-empty-state');
-      el('p', 'vd-empty-text', msg);
+      msg = el('div', 'vz-empty');
+      el('p', 'vz-empty-text', msg);
       parent.prepend(msg);
     }
     msg.setAttribute('data-kind', e.kind || 'empty');
@@ -87,14 +87,14 @@
       this.subEl = el('div', 'vz-subtitle', this.titleBox);
       this.tools = el('div', 'vz-head__tools', this.head);
       this.downloadSlot = el('div', 'vz-download', this.tools);
-      el('div', 'blockr-busy-line', this.el).setAttribute('aria-live', 'polite');
+      el('div', 'vz-busy-line', this.el).setAttribute('aria-live', 'polite');
       this.body = el('div', 'vz-body', this.el);
       this.capEl = el('div', 'vz-caption', this.el);
       this.foot = el('div', 'vz-foot', this.el);
       this.countEl = el('span', 'vz-count', this.foot);
       this.countEl.setAttribute('aria-live', 'polite');
-      this.statusEl = el('div', 'dd-status-footer', this.foot);
-      this.clearBtn = /** @type {HTMLButtonElement} */ (el('button', 'dd-status-clear'));
+      this.statusEl = el('div', 'vz-status', this.foot);
+      this.clearBtn = /** @type {HTMLButtonElement} */ (el('button', 'vz-status-clear'));
       this.clearBtn.type = 'button';
       this.clearBtn.textContent = '×';
       this.clearBtn.setAttribute('aria-label', 'Clear filter');
@@ -234,10 +234,10 @@
       if (this._receipt) {
         const age = performance.now() - this._receipt.at;
         if (age < RECEIPT_HOLD_MS + RECEIPT_FADE_MS) {
-          const rec = el('span', 'dd-status-text dd-status-receipt', bar);
+          const rec = el('span', 'vz-status-text vz-status-receipt', bar);
           rec.textContent = this._receipt.text;
           // A negative delay resumes the fade where the receipt is.
-          rec.style.animation = `dd-receipt-out ${RECEIPT_FADE_MS}ms linear ` +
+          rec.style.animation = `vz-receipt-out ${RECEIPT_FADE_MS}ms linear ` +
             `${RECEIPT_HOLD_MS - age}ms both`;
           this.scope.on(rec, 'animationend', () => this._dropReceipt());
           return;
@@ -246,14 +246,14 @@
       }
       const line = this._line;
       if (line.text) {
-        el('span', 'dd-status-text' + (this._returning ? ' dd-status-returning' : ''), bar)
+        el('span', 'vz-status-text' + (this._returning ? ' vz-status-returning' : ''), bar)
           .textContent = line.text;
         if (line.onClear) {
           bar.appendChild(this.clearBtn);
           this.clearBtn.hidden = false;
         }
       }
-      if (this._note) el('span', 'dd-status-cap', bar).textContent = this._note;
+      if (this._note) el('span', 'vz-status-note', bar).textContent = this._note;
     }
 
     /** End R's busy cue once the view is on screen: two frames, so the

@@ -9,9 +9,9 @@ const assert = require('node:assert');
 const D = require('./drive');
 
 const BAR = { type: 'bar', y: 'AETERM', orientation: 'horizontal', drill: 'auto' };
-const rows = (b) => Array.from(b.frame.tray.band.querySelectorAll('.dd-form-row[data-role]'),
+const rows = (b) => Array.from(b.frame.tray.band.querySelectorAll('.vz-row[data-role]'),
                                (r) => r.getAttribute('data-role'));
-const row = (b, key) => b.frame.tray.band.querySelector('.dd-form-row[data-role="' + key + '"]');
+const row = (b, key) => b.frame.tray.band.querySelector('.vz-row[data-role="' + key + '"]');
 
 test('the gear shows the rows the spec offers for the chart type', () => {
   const c = D.open(BAR);
@@ -41,7 +41,7 @@ test('a gear edit goes to R as the changed key, with the payload revision', () =
 
 test('the gear hooks: type groups, drill words, sort orders, drill target', () => {
   const c = D.open(BAR, { derived: { ctrl_choices: [{ value: 'flt_ae', label: 'Filter AE' }] } });
-  const heads = Array.from(row(c.block, 'type').querySelectorAll('.dd-type-group-head'),
+  const heads = Array.from(row(c.block, 'type').querySelectorAll('.vz-tile-group-head'),
                            (e) => e.textContent);
   assert.deepStrictEqual(heads, ['Aggregated', 'Individual']);
   const texts = (key) => c.block.gear.slot(key).options.map((o) => o.label);
@@ -112,7 +112,7 @@ test('a payload without rows draws from the rows of its data revision', () => {
   const first = c.block.data;
   c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
   assert.strictEqual(c.block.data, first);
-  assert.ok(c.block.legend.el.querySelector('.dd-legend-chip'));
+  assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
   c.send(BAR, { data: null, dataRev: 2 });
   assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),
             'rows it does not hold are asked for');
@@ -132,7 +132,7 @@ test('the capture service draws a chart off screen and replies once', () => {
   const msg = { state_rev: 1, data_rev: 9, columns: require('../cases').F.columns, derived: {},
                 config: BAR, data: require('../cases').F.data, req: 'r1', width: 640, height: 360 };
   handler(c.env.win.JSON.parse(JSON.stringify(msg)));
-  assert.ok(c.doc.querySelector('.blockr-capture-host'));
+  assert.ok(c.doc.querySelector('.vz-capture-host'));
   return new Promise((resolve) => setImmediate(resolve)).then(async () => {
     for (let i = 0; i < 40; i++) {
       c.advance(100);
@@ -143,7 +143,7 @@ test('the capture service draws a chart off screen and replies once', () => {
     assert.strictEqual(reply[0].value.req, 'r1');
     // happy-dom lays nothing out, so the grid has no size and the reply says so.
     assert.ok(reply[0].value.png || /no size|nothing drawn/.test(reply[0].value.error));
-    assert.strictEqual(c.doc.querySelector('.blockr-capture-host'), null, 'the host is gone');
+    assert.strictEqual(c.doc.querySelector('.vz-capture-host'), null, 'the host is gone');
     c.close();
   });
 });

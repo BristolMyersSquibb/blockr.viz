@@ -399,7 +399,7 @@ input.vz-table-search:focus {
 }
 
 /* ===== Footer row: row count + filter status ===== */
-/* The frame's footer (chart.css .vz-foot): the count left, the status line
+/* The frame's footer (frame.css .vz-foot): the count left, the status line
    ("Filtered: ...", with its clear button) taking the rest. Both halves
    collapse when empty. */
 .vz-table > .vz-foot {
@@ -408,7 +408,7 @@ input.vz-table-search:focus {
 
 /* The status half (there only while a filter is set) takes the rest of the
    row. */
-.vz-table > .vz-foot > .dd-status-footer {
+.vz-table > .vz-foot > .vz-status {
   flex: 1 1 auto;
   min-width: 0;
 }

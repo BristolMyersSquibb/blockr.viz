@@ -87,8 +87,8 @@ test('with a drill target a click is an event: sent every time, nothing latched'
 
 test('a legend chip selects its level', () => {
   const r = run({ ...BAR, color: 'AESEV' }, (c) => {
-    c.block.legend.el.querySelectorAll('.dd-legend-chip')[1].click();
-    assert.ok(c.block.legend.el.querySelector('.dd-legend-chip-on'));
+    c.block.legend.el.querySelectorAll('.vz-chart-legend-chip')[1].click();
+    assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip--on'));
   });
   assert.deepStrictEqual(r.sent, [cat({ AESEV: ['MILD'] })]);
 });

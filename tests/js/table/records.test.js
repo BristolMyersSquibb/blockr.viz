@@ -38,13 +38,13 @@ test('the frame: titles on the left, tools and footer', () => {
 
 test('with no table the tools stay hidden and the message shows', () => {
   const t = mount(payload({ data: {}, derived: { empty: { kind: 'needs', message: 'Connect a data block' } } }));
-  assert.equal(t.$('.vd-empty-state').textContent, 'Connect a data block');
-  assert.equal(t.$('.vd-empty-state').getAttribute('data-kind'), 'needs');
+  assert.equal(t.$('.vz-empty').textContent, 'Connect a data block');
+  assert.equal(t.$('.vz-empty').getAttribute('data-kind'), 'needs');
   assert.ok(t.$('input.vz-table-search').hidden);
   assert.ok(t.$('.vz-download').hidden);
   assert.equal(t.$('table'), null);
   t.render({ data: flatModel(2) });
-  assert.equal(t.$('.vd-empty-state'), null);
+  assert.equal(t.$('.vz-empty'), null);
   assert.equal(t.$('input.vz-table-search').hidden, false);
   assert.equal(t.$$('tbody tr.vz-table-row').length, 2);
 });
@@ -58,8 +58,8 @@ test('download off hides the download slot only', () => {
 test('an error from R shows in the frame', () => {
   const t = mount(payload({ data: flatModel(2) }));
   t.b.renderError(t.el, { message: 'Column AGE is gone' });
-  assert.equal(t.$('.vd-empty-state').getAttribute('data-kind'), 'error');
-  assert.equal(t.$('.vd-empty-text').textContent, 'Column AGE is gone');
+  assert.equal(t.$('.vz-empty').getAttribute('data-kind'), 'error');
+  assert.equal(t.$('.vz-empty-text').textContent, 'Column AGE is gone');
 });
 
 test('the cards look draws a card per column and drills on a card row', () => {
@@ -129,9 +129,9 @@ test('another layout replaces the records view and its table', () => {
   const t = mount(payload({ data: flatModel(3) }));
   t.render({ data: flatModel(3), config: { layout: 'pivot' } });
   assert.equal(t.$('table'), null);
-  assert.match(t.$('.vd-empty-text').textContent, /pivot layout/);
+  assert.match(t.$('.vz-empty-text').textContent, /pivot layout/);
   t.render({ data: flatModel(3), config: { layout: 'records' } });
-  assert.equal(t.$('.vd-empty-state'), null);
+  assert.equal(t.$('.vz-empty'), null);
   assert.equal(t.$$('tbody tr.vz-table-row').length, 3);
   assert.equal(t.$$('.vz-table-slot').length, 1);
 });
@@ -149,7 +149,7 @@ test('the gear engine, when loaded, is mounted in a tray and updated after the l
     };
   } });
   const t = mount(payload({ data: flatModel(2) }), env);
-  assert.deepEqual(log, [['mount', 'blockr-settings blockr-settings--beak dd-popover', 'table', 'tbl', 'layout'],
+  assert.deepEqual(log, [['mount', 'blockr-settings blockr-settings--beak vz-tray', 'table', 'tbl', 'layout'],
                          ['update', 'records']]);
   const btn = t.$('.vz-head > .blockr-gear-btn');
   t.click(btn);
@@ -370,11 +370,11 @@ test('a prepare script draws its controls and its error under the header', () =>
   const script = { inputs: [{ key: 'n', name: 'n', label: 'Rows', kind: 'number' }],
                    values: { n: 10 }, error: 'boom' };
   const t = mount(payload({ data: flatModel(2), derived: { script } }), env);
-  const band = t.$('.vz-table > .dd-mapping-band');
+  const band = t.$('.vz-table > .vz-script-band');
   assert.ok(band);
   assert.equal(band.hidden, false);
   assert.equal(band.querySelector('[data-role="n"] .blockr-label').textContent, 'Rows');
-  assert.equal(band.querySelector('.dd-script-failed').textContent, 'Script failed: boom');
+  assert.equal(band.querySelector('.vz-script-failed').textContent, 'Script failed: boom');
   t.render({ data: flatModel(2), derived: {} });
   assert.equal(band.hidden, true);
 });

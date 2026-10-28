@@ -412,10 +412,10 @@
      },
      "probes": {
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Baseline</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">27.4</span></div>",
-       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 2</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">29.2</span></div>",
-       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 4</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">31.1</span></div>",
-       "<div class=\"dd-tt-head\"><span>Analysis Value</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">AVISIT</span><span class=\"dd-tt-value\">Week 8</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">Analysis Value</span><span class=\"dd-tt-value\">34.5</span></div>"
+       "<div class=\"vz-tt-head\"><span>Analysis Value</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Baseline</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Analysis Value</span><span class=\"vz-tt-value\">27.4</span></div>",
+       "<div class=\"vz-tt-head\"><span>Analysis Value</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 2</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Analysis Value</span><span class=\"vz-tt-value\">29.2</span></div>",
+       "<div class=\"vz-tt-head\"><span>Analysis Value</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 4</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Analysis Value</span><span class=\"vz-tt-value\">31.1</span></div>",
+       "<div class=\"vz-tt-head\"><span>Analysis Value</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">AVISIT</span><span class=\"vz-tt-value\">Week 8</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Analysis Value</span><span class=\"vz-tt-value\">34.5</span></div>"
       ]
      }
     }

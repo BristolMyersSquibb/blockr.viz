@@ -21,9 +21,8 @@ chart_js_dep <- memoise0(function() {
   )
 })
 
-# chart.css, shared by the chart block and the table block (which reuses the
-# chart's gear and popover styling). One definition serves both pages, and the
-# version comes from the file's contents.
+# chart.css, the chart's own styles, and the tooltip card. The version comes
+# from the file's contents.
 chart_css_dep <- memoise0(function() {
   htmltools::tagList(
     tooltip_card_dep(),
@@ -40,8 +39,8 @@ chart_css_dep <- memoise0(function() {
 #'
 #' The stylesheet behind every blockr.viz data tooltip: a headline with a
 #' colour swatch, then rows with the name on the left and the value on the
-#' right (`dd-tt-head`, `dd-tt-sw`, `dd-tt-row`, `dd-tt-label`,
-#' `dd-tt-value`, `dd-tt-meta`, `dd-tt-sep`). Another package's tooltips can
+#' right (`vz-tt-head`, `vz-tt-sw`, `vz-tt-row`, `vz-tt-label`,
+#' `vz-tt-value`, `vz-tt-meta`, `vz-tt-sep`). Another package's tooltips can
 #' attach it and use the same classes.
 #'
 #' @return An [htmltools::htmlDependency()].

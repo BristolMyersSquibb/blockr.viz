@@ -24,7 +24,7 @@
     const doc = root.document;
     const scope = new V.Scope();
     const host = scope.node(doc.body.appendChild(doc.createElement('div')));
-    host.className = 'blockr-capture-host';
+    host.className = 'vz-capture-host';
     host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' +
       opts.width + 'px;height:' + opts.height + 'px;';
     const ms = opts.timeout == null ? 20000 : opts.timeout;

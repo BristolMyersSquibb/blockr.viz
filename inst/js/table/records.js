@@ -230,8 +230,12 @@
       else this.grid.draw();
     }
 
-    /** The row count and the status line: what the selection holds. A drill
-     * sent to another block flashes its receipt instead (frame.flash). */
+    /** The row count and the status line: what the selection holds, in R's
+     * words (`derived.receipt`), shown once R holds the selection the view
+     * lights. Only R names the column a structured table's group level
+     * stands for, so the browser writes no line of its own and a click's line
+     * appears once, when R answers. A drill sent to another block flashes its
+     * receipt instead (frame.flash). */
     footer() {
       const m = this.model;
       const f = this.frame;
@@ -241,15 +245,13 @@
       // A printed table has no search to count against.
       f.count(this.still ? '' : this.countLine(m, c));
       const sel = this.transient() ? null : this.sel;
-      if (!sel) {
+      const d = /** @type {TableDerived} */ (this.payload ? this.payload.derived : {});
+      const held = !!sel && T.drill.same(sel, asSelection(this.config().selection));
+      if (!held || !d.receipt) {
         f.status(null);
         return;
       }
-      // R's words once it holds this selection: it names the columns a
-      // structured table's group levels stand for.
-      const d = /** @type {TableDerived} */ (this.payload ? this.payload.derived : {});
-      const fromR = T.drill.same(sel, asSelection(this.config().selection)) && d.receipt;
-      f.status(fromR || 'Filtered: ' + T.drill.label(sel, this.labels), () => {
+      f.status(d.receipt, () => {
         V.util.select(f.id, null);
         this.sel = null;
         this.repaint();

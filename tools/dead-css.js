@@ -3,7 +3,7 @@
 //   node tools/dead-css.js [pkg-dir]
 //
 // The corpus is every class-like token in R/ and inst/js/. A token ending
-// in "-" ('dd-tt-' + kind) counts as a prefix of every class starting with
+// in "-" ('vz-tt-' + kind) counts as a prefix of every class starting with
 // it. With no CSS or JS in R strings the corpus is complete. Exits 1 if any
 // class is not emitted.
 const fs = require('node:fs');

@@ -20,7 +20,7 @@ const FILES = fs.existsSync(DIR)
 function check(el, p, where) {
   const m = p.data;
   const table = el.querySelector('table.blockr-table');
-  const empty = el.querySelector('.vd-empty-state');
+  const empty = el.querySelector('.vz-empty');
   if (!m || !Array.isArray(m.cols)) {
     if (p.derived && p.derived.empty) assert.ok(empty, where + ': the empty message shows');
     return;

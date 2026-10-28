@@ -475,15 +475,12 @@ interface VizTableNamespace {
     shadings(el: HTMLElement, ctx: VizCustomCtx): void;
   };
   /** A number column of the payload's `columns` (gear.js). */
-  isNumeric(c: { class?: unknown }): boolean;
-  /** blockr.ui's controls for the table's own gear rows, with native
-   *  fallbacks (gear.js). */
+  /** blockr.ui's controls for the table's own gear rows (gear.js). */
   ui: {
     pick(el: HTMLElement, options: { value: string; label: string }[], value: string,
          o: { label: string; placeholder?: string }, onPick: (v: string) => void,
          scope: VizScope): void;
-    check(el: HTMLElement, label: string, on: boolean, onToggle: (on: boolean) => void,
-          scope: VizScope): void;
+    check(el: HTMLElement, label: string, on: boolean, onToggle: (on: boolean) => void): void;
     button(cls: string, text: string, label: string, fn: () => void,
            scope: VizScope): HTMLButtonElement;
   };

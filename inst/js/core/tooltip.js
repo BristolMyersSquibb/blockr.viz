@@ -12,11 +12,11 @@
 
   /** A colour swatch, or nothing without a colour. @param {unknown} c */
   const swatch = (c) => (typeof c === 'string' && c
-    ? '<span class="dd-tt-sw" style="background:' + esc(c) + '"></span>' : '');
+    ? '<span class="vz-tt-sw" style="background:' + esc(c) + '"></span>' : '');
 
   /** @param {string} html @param {unknown} [color] */
   const head = (html, color) =>
-    '<div class="dd-tt-head">' + swatch(color) + '<span>' + html + '</span></div>';
+    '<div class="vz-tt-head">' + swatch(color) + '<span>' + html + '</span></div>';
 
   /**
    * A label/value row. `hit` marks a row of a card listing every level of a
@@ -25,12 +25,12 @@
    * @param {boolean | null} [hit]
    */
   const row = (label, value, color, hit) =>
-    '<div class="dd-tt-row' + (hit === true ? ' is-hit' : hit === false ? ' is-dim' : '') +
-    '">' + swatch(color) + '<span class="dd-tt-label">' +
-    label + '</span><span class="dd-tt-value">' + value + '</span></div>';
+    '<div class="vz-tt-row' + (hit === true ? ' is-hit' : hit === false ? ' is-dim' : '') +
+    '">' + swatch(color) + '<span class="vz-tt-label">' +
+    label + '</span><span class="vz-tt-value">' + value + '</span></div>';
 
   /** A muted line of its own, for what the rows below it are. @param {string} html */
-  const note = (html) => '<div class="dd-tt-row dd-tt-label">' + html + '</div>';
+  const note = (html) => '<div class="vz-tt-row vz-tt-label">' + html + '</div>';
 
-  V.tooltip = { swatch, head, row, note, SEP: '<div class="dd-tt-sep"></div>' };
+  V.tooltip = { swatch, head, row, note, SEP: '<div class="vz-tt-sep"></div>' };
 })();

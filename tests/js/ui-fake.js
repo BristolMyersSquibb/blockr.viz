@@ -23,7 +23,7 @@ function installUiFake(win) {
   /** @param {HTMLElement} el @param {Record<string, any>} cfg @param {boolean} multi */
   const select = (el, cfg, multi) => {
     const sel = doc.createElement('select');
-    sel.className = multi ? 'dd-select dd-select--multi' : 'dd-select';
+    sel.className = multi ? 'ui-fake-select ui-fake-select--multi' : 'ui-fake-select';
     sel.multiple = multi;
     if (cfg.label) sel.setAttribute('aria-label', cfg.label);
     if (cfg.placeholder) {

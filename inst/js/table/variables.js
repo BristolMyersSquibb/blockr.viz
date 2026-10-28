@@ -35,7 +35,7 @@
    * @param {VizPayload['columns']} columns
    */
   function withVars(summaries, vars, columns) {
-    const numeric = new Set(columns.filter(T.isNumeric)
+    const numeric = new Set(columns.filter(V.util.isNumeric)
       .map((c) => c.name));
     return vars.map((v) => summaries.find((s) => varOf(s) === v) ||
       (numeric.has(v) ? { type: 'dist', col: v } : { type: 'simple', color: v }));

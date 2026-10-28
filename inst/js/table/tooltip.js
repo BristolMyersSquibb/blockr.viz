@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * The hover card of the groups marks, in the chart's card style (the
- * .dd-tt-* rules): the row as the headline, the column's context under it,
+ * .vz-tt-* rules): the row as the headline, the column's context under it,
  * then one labelled line per number. A bar names its value, a colour split
  * every level with its count and share, a box or a point range its
  * statistics, a pair its two ends. A swimlane segment or a sparkline point
@@ -27,16 +27,16 @@
   /** @param {unknown} v @param {unknown} den */
   const share = (v, den) => typeof v === 'number' && typeof den === 'number' && den
     ? ' (' + Math.round(v / den * 100) + '%)' : '';
-  const sw = (/** @type {unknown} */ c) => c ? '<span class="dd-tt-sw" style="background:' + esc(c) + '"></span>' : '';
+  const sw = (/** @type {unknown} */ c) => c ? '<span class="vz-tt-sw" style="background:' + esc(c) + '"></span>' : '';
   const head = (/** @type {unknown} */ t, /** @type {unknown} */ c = null) =>
-    '<div class="dd-tt-head">' + sw(c) + '<span>' + esc(t) + '</span></div>';
+    '<div class="vz-tt-head">' + sw(c) + '<span>' + esc(t) + '</span></div>';
   /** @param {unknown} label @param {unknown} value @param {unknown} [c] @param {boolean | null} [hit] */
-  const row = (label, value, c, hit) => '<div class="dd-tt-row' +
+  const row = (label, value, c, hit) => '<div class="vz-tt-row' +
     (hit === true ? ' is-hit' : hit === false ? ' is-dim' : '') + '">' + sw(c) +
-    '<span class="dd-tt-label">' + esc(label) + '</span><span class="dd-tt-value">' + esc(value) +
+    '<span class="vz-tt-label">' + esc(label) + '</span><span class="vz-tt-value">' + esc(value) +
     '</span></div>';
-  const note = (/** @type {unknown} */ t) => '<div class="dd-tt-row dd-tt-label">' + esc(t) + '</div>';
-  const SEP = '<div class="dd-tt-sep"></div>';
+  const note = (/** @type {unknown} */ t) => '<div class="vz-tt-row vz-tt-label">' + esc(t) + '</div>';
+  const SEP = '<div class="vz-tt-sep"></div>';
   /** @param {unknown} lo @param {unknown} hi */
   const range = (lo, hi) => lo == null || hi == null ? 'undefined (n < 2)' : num(lo) + ' – ' + num(hi);
 

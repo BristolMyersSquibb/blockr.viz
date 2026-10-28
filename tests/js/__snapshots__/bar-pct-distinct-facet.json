@@ -199,13 +199,13 @@
        ]
       },
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">100% (6)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">100% (6)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">50% (3)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">66.7% (4)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">50% (4)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">83.3% (6)</span></div>",
-       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">16.7% (1)</span></div>"
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">100% (6)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">100% (6)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">50% (3)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">66.7% (4)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">50% (4)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">83.3% (6)</span></div>",
+       "<div class=\"vz-tt-head\"><span></span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">16.7% (1)</span></div>"
       ],
       "seriesLabels": {
        "series0": [
@@ -437,13 +437,13 @@
        ]
       },
       "tooltip": [
-       "<div class=\"dd-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">66.7% (4)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Headache</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">66.7% (4)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Rash</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">100% (6)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Fatigue</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">83.3% (5)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Nausea</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">100% (6)</span></div>",
-       "<div class=\"dd-tt-head\"><span>Dizziness</span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">50% (3)</span></div>",
-       "<div class=\"dd-tt-head\"><span></span></div><div class=\"dd-tt-row\"><span class=\"dd-tt-label\">pct_distinct of USUBJID</span><span class=\"dd-tt-value\">33.3% (2)</span></div>"
+       "<div class=\"vz-tt-head\"><span>Upper respiratory tract infection</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">66.7% (4)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Headache</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">66.7% (4)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Rash</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">100% (6)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Fatigue</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">83.3% (5)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Nausea</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">100% (6)</span></div>",
+       "<div class=\"vz-tt-head\"><span>Dizziness</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">50% (3)</span></div>",
+       "<div class=\"vz-tt-head\"><span></span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">pct_distinct of USUBJID</span><span class=\"vz-tt-value\">33.3% (2)</span></div>"
       ],
       "seriesLabels": {
        "series0": [

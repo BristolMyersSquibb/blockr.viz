@@ -49,7 +49,7 @@
    * @returns {VizScriptBand}
    */
   V.scriptBand = (parent, scope, gear) => {
-    const band = el('div', 'dd-mapping-band', parent);
+    const band = el('div', 'vz-script-band', parent);
     band.hidden = true;
     /** @type {string | null} */
     let last = null;
@@ -58,16 +58,16 @@
 
     /** @param {VizScriptControl} sp @param {unknown} value @param {VizScope} s */
     const control = (sp, value, s) => {
-      const row = el('div', 'dd-form-row dd-band-row', band);
+      const row = el('div', 'vz-row vz-script-band-row', band);
       row.setAttribute('data-role', sp.key);
       const arg = argOf(sp);
       if (arg.gear?.control !== 'toggle') {
-        el('span', 'blockr-label', el('div', 'dd-row-head', row)).textContent = sp.label;
+        el('span', 'blockr-label', el('div', 'vz-row-head', row)).textContent = sp.label;
       }
       const set = (/** @type {unknown} */ v) => gear.set({
         script_values: { .../** @type {object} */ (gear.values().script_values || {}), [sp.name]: v }
       });
-      V.gear.controls.build(el('div', 'dd-row-controls', row), {
+      V.gear.controls.build(el('div', 'vz-row-controls', row), {
         key: sp.key, arg, label: sp.label, value: valueOf(sp, value), values: {},
         columns: [], required: true, scope: s, host: {}, titles: {},
         labelOf: (/** @type {string} */ k) => k, set
@@ -77,9 +77,9 @@
     // A declaration that could not become a control, named with its reason.
     /** @param {VizScriptFailed} sp */
     const failed = (sp) => {
-      const row = el('div', 'dd-form-row dd-band-row dd-script-input-error', band);
-      el('span', 'blockr-label', el('div', 'dd-row-head', row)).textContent = sp.label;
-      el('span', 'dd-form-help', row).textContent = sp.error || 'no control';
+      const row = el('div', 'vz-row vz-script-band-row vz-script-input-error', band);
+      el('span', 'blockr-label', el('div', 'vz-row-head', row)).textContent = sp.label;
+      el('span', 'vz-help', row).textContent = sp.error || 'no control';
     };
 
     /** Redrawn only when the script's inputs, values or error changed.
@@ -99,7 +99,7 @@
         else control(sp, values[sp.key], own);
       }
       if (s.error) {
-        el('div', 'dd-form-row dd-band-row dd-script-failed', band).textContent =
+        el('div', 'vz-row vz-script-band-row vz-script-failed', band).textContent =
           'Script failed: ' + s.error;
       }
       band.hidden = !(inputs.length || s.error);

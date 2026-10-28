@@ -275,17 +275,17 @@ const draw = (config, derived) => D.open({ ...DRAWN, ...config }, { data: ROWS, 
 
 test('drawn: the legend title is the colour column\'s label, none without one', () => {
   const c = draw({ color: 'AESEV' });
-  const t = c.block.legend.el.querySelector('.dd-legend-title');
+  const t = c.block.legend.el.querySelector('.vz-chart-legend-title');
   assert.strictEqual(t && t.textContent, 'Severity');
   c.close();
   const p = draw({ color: 'PLAIN' });
-  assert.strictEqual(p.block.legend.el.querySelector('.dd-legend-title'), null);
+  assert.strictEqual(p.block.legend.el.querySelector('.vz-chart-legend-title'), null);
   p.close();
 });
 
 test('drawn: facet strips show the facet values, never the column', () => {
   const c = draw({ facet: 'ARM' });
-  const strips = Array.from(c.block.el.querySelectorAll('.dd-facet-label'), (e) => e.textContent);
+  const strips = Array.from(c.block.el.querySelectorAll('.vz-chart-facet-label'), (e) => e.textContent);
   assert.deepStrictEqual(strips, ['A', 'B']);
   c.close();
 });

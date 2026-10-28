@@ -87,13 +87,13 @@ test('the tooltip: the lane, the interval and its length, the colour, extra fiel
   const tip = opt.tooltip.formatter;
   const bar = tip({ value: [4, 9, 0, 'Rash', 'MILD', '', '', 'Rash', ['S01']] });
   assert.match(bar, /<span>Rash<\/span>/);
-  assert.match(bar, /Start<\/span><span class="dd-tt-value">4</);
-  assert.match(bar, /E<\/span><span class="dd-tt-value">9 \(5\)</);
-  assert.match(bar, /SEV<\/span><span class="dd-tt-value">MILD</);
-  assert.match(bar, /ID<\/span><span class="dd-tt-value">S01</);
+  assert.match(bar, /Start<\/span><span class="vz-tt-value">4</);
+  assert.match(bar, /E<\/span><span class="vz-tt-value">9 \(5\)</);
+  assert.match(bar, /SEV<\/span><span class="vz-tt-value">MILD</);
+  assert.match(bar, /ID<\/span><span class="vz-tt-value">S01</);
   // A single day names one date.
   const dot = tip({ value: [2, 2, 1, 'Nausea', '', '', '', 'Nausea', ['S02']] });
-  assert.match(dot, /Start<\/span><span class="dd-tt-value">2</);
+  assert.match(dot, /Start<\/span><span class="vz-tt-value">2</);
   assert.doesNotMatch(dot, /\(0\)/);
   // HTML in a value is escaped.
   assert.match(tip({ value: [1, 1, 0, '<b>', '', '', '', '', 0] }), /&lt;b&gt;/);
