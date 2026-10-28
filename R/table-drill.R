@@ -36,42 +36,6 @@ table_drill_phrase <- function(filters) {
   )
 }
 
-#' Rows lit by the stored click: those whose own path ends on the last filtered
-#' column and holds every filtered value.
-#' @noRd
-table_drill_on <- function(rows, group, parent, filters) {
-  n <- nrow(rows)
-  if (!length(filters) || is.null(group)) {
-    return(rep(FALSE, n))
-  }
-  label <- as.character(rows$.label)
-  is_par <- if (is.null(rows$.is_parent)) rep(FALSE, n) else rows$.is_parent
-  par_val <- if (is.null(rows$.parent)) {
-    rep(NA_character_, n)
-  } else {
-    as.character(rows$.parent)
-  }
-  own_col <- if (is.null(parent)) {
-    rep(group, n)
-  } else {
-    ifelse(is_par, parent, group)
-  }
-  last <- names(filters)[[length(filters)]]
-  on <- own_col == last
-  for (nm in names(filters)) {
-    vals <- filters[[nm]]
-    hit <- if (!is.null(parent) && identical(nm, parent)) {
-      ifelse(is_par, label, par_val) %in% vals
-    } else if (identical(nm, group)) {
-      !is_par & label %in% vals
-    } else {
-      rep(FALSE, n)
-    }
-    on <- on & hit
-  }
-  on
-}
-
 #' The click as a `dplyr::filter()` call on `data`. `members` maps a grouped
 #' column to the raw values its clicked group pools. A click on "(Missing)"
 #' claims missing values.

@@ -51,31 +51,30 @@ table_model_tint <- function(state, data, scale_map = NULL) {
 
 # The groups layout's list(prep, cells): groups_prepare()'s rows and plan,
 # and groups_cells()'s cell model, which is NULL when `prep$err` is set.
-table_model_groups <- function(state, data, scale_map = NULL, subject = NULL,
-                               active = NULL) {
+table_model_groups <- function(state, data, scale_map = NULL, subject = NULL) {
+  state <- table_state_defaults(state)
   prep <- groups_prepare(
     data, summaries = state$summaries, by = state$by,
-    facet_layout = state$facet_layout %||% "by_summary",
-    sort_by = state$sort_by %||% "value",
-    sort_dir = table_sort_dir(state),
-    top_n = state$top_n, scale_map = scale_map, subject = subject,
-    pct_of = state$percent_of %||% "facet",
-    missing = state$missing %||% "level",
-    format = state$format, unit = state$unit
+    facet_layout = state$facet_layout, sort_by = state$sort_by,
+    sort_dir = table_sort_dir(state), top_n = state$top_n,
+    scale_map = scale_map, subject = subject, pct_of = state$percent_of,
+    missing = state$missing, format = state$format, unit = state$unit
   )
   if (!is.null(prep$err)) {
     return(list(prep = prep, cells = NULL))
   }
-  drill <- if (length(state$by)) state$drill
-  cfg <- list(
-    value_labels = state$value_labels, sortable = state$sortable,
-    axis = state$column_axis, compact = identical(state$look, "compact"),
-    look = state$look, search = state$search, download = state$download,
-    bar_width = state$bar_width, drill = state$drill
-  )
+  cfg <- list(value_labels = state$value_labels,
+              compact = identical(state$look, "compact"))
   list(prep = prep,
-       cells = groups_cells(prep, drill = drill, active = active,
-                               cfg = cfg))
+       cells = groups_cells(prep, drill = if (length(state$by)) state$drill,
+                            cfg = cfg))
+}
+
+# A partial state completed with the spec's defaults.
+table_state_defaults <- function(state) {
+  d <- lapply(viz_block_spec("table")$args, spec_default)
+  for (nm in names(state)) d[nm] <- list(state[[nm]])
+  d
 }
 
 # The groups layout's sort direction; unset, descending for `sort_by = "value"`
