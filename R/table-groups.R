@@ -28,7 +28,7 @@ table_groups_part <- function(kit, src) {
     },
     claims = function(sel) {
       d <- tryCatch(shown(), error = function(e) NULL)
-      dd_ctrl_claims(d, st$drill_table(), table_selection_groups(sel),
+      ctrl_claims(d, st$drill_table(), table_selection_groups(sel),
                      subject = src$subject())
     },
     receipt = function(sel) {
@@ -37,7 +37,7 @@ table_groups_part <- function(kit, src) {
     },
     exhibit = function(tt) {
       table_groups_exhibit(table_state_values(st), shown(), tt, src,
-                           table_picture(kit$capture()))
+                           kit$capture())
     },
     title_args = function(v) table_groups_title_args(kit$spec, v)
   )

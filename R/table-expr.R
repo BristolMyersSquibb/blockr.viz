@@ -63,7 +63,7 @@ table_records_filter <- function(grouped, gc, gv, col, vals) {
 
 # `drill = "source"` wraps whatever the drill built. With no click the output
 # is every source row (`unclaimed = "all"`); a click claiming nothing
-# resolvable gives zero rows. `columns` follows dd_ctrl_claims(): dotted names
+# resolvable gives zero rows. `columns` follows ctrl_claims(): dotted names
 # are ARD identity columns (identity mode, no `columns`), undotted ones the
 # source columns an aggregated table claims.
 table_records_source <- function(ex, claim_cols, source) {

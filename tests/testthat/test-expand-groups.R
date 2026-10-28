@@ -121,20 +121,20 @@ test_that("chart roles decide whether the chart expands", {
 
 test_that("a pooled click claims the source column as a set (overlap)", {
   d <- grouped_df()
-  out <- dd_ctrl_claims(d, "adsl", list(Group = "All"))
+  out <- ctrl_claims(d, "adsl", list(Group = "All"))
   expect_length(out, 1L)
   expect_equal(out[[1]]$name, "TRT")
   expect_equal(out[[1]]$mode, "multi")
   expect_equal(out[[1]]$values, c("Low", "High"))
 
   # A single-level group still claims one value.
-  out <- dd_ctrl_claims(d, "adsl", list(Group = "High"))
+  out <- ctrl_claims(d, "adsl", list(Group = "High"))
   expect_equal(out[[1]]$values, "High")
 })
 
 test_that("a pooled click claims the source as a set (partition)", {
   d <- grouped_df(overlap = FALSE)
-  out <- dd_ctrl_claims(d, "", list(Group = "All"))
+  out <- ctrl_claims(d, "", list(Group = "All"))
   expect_equal(out[[1]]$name, "TRT")
   expect_equal(out[[1]]$values, c("Low", "High"))
   expect_null(out[[1]]$table)
@@ -143,20 +143,20 @@ test_that("a pooled click claims the source as a set (partition)", {
 test_that("without a source column the group column claims its members", {
   d <- grouped_df()
   d$TRT <- NULL
-  out <- dd_ctrl_claims(d, "", list(Group = "All"))
+  out <- ctrl_claims(d, "", list(Group = "All"))
   expect_equal(out[[1]]$name, "Group")
   expect_equal(out[[1]]$values, c("Low", "High"))
 
   # Same answer from the expanded frame a chart draws.
   e <- expand_groups(d)
-  out <- dd_ctrl_claims(e, "", list(Group = "All"))
+  out <- ctrl_claims(e, "", list(Group = "All"))
   expect_equal(out[[1]]$values, c("Low", "High"))
 })
 
 test_that("group claims sit beside ordinary ones", {
   d <- grouped_df()
   d$SEX <- c("F", "M", "F", "F", "F", "M")
-  out <- dd_ctrl_claims(d, "", list(Group = "All", SEX = "F"))
+  out <- ctrl_claims(d, "", list(Group = "All", SEX = "F"))
   expect_equal(vapply(out, `[[`, "", "name"), c("TRT", "SEX"))
   expect_equal(out[[1]]$values, c("Low", "High"))
   expect_equal(out[[2]]$values, "F")

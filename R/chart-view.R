@@ -15,7 +15,6 @@ chart_view <- function(kit, src) {
   meta_cache <- last_value_cache()
   board_theme <- setup_drilldown_theme_sync(session)
   scale_map <- dd_board_scale_map()
-  ctrl_choices <- dd_ctrl_choices()
 
   band <- shiny::reactive({
     v <- chart_state_values(state)
@@ -43,7 +42,7 @@ chart_view <- function(kit, src) {
     inp <- tryCatch(src$input(), error = function(e) NULL)
     chart_titles(spec, chart_state_values(state), d,
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
-                 src$specs())
+                 src$prep$specs())
   })
   shipped <- shiny::reactive({
     d <- src$plain()
@@ -67,12 +66,7 @@ chart_view <- function(kit, src) {
         group = chart_category(v, src$kinds()), data = d
       )),
       palette = as.list(dd_palette()),
-      theme = board_theme(),
-      ctrl_choices = dd_ctrl_choices_list(ctrl_choices()),
-      script = list(inputs = dd_script_roles(src$specs()),
-                    values = dd_script_cfg(src$specs(), v$script_values),
-                    error = src$run()$error),
-      capture_ratio = canvas_capture_ratio()
+      theme = board_theme()
     ))
   }
   list(payload = payload, titles = titles)
@@ -141,8 +135,10 @@ chart_titles <- function(spec, v, d, auto, specs) {
   )
 }
 
-# An export can ask for a picture of the chart whether or not its panel was
-# open: the browser draws it offscreen from this payload.
+# The capture service's request function for this chart (R/chart-capture.R):
+# a blockr.outline deck can ask for a picture whether or not the panel was
+# open, and the browser draws it offscreen from this payload. The block's own
+# downloads use the `chart_capture` input instead (viz_capture_observer()).
 chart_capture_service <- function(session, el, payload) {
   register_chart_capture(el, function(token, width, height) {
     msg <- tryCatch(shiny::isolate(payload()), error = function(e) NULL)
@@ -171,7 +167,7 @@ chart_exhibit <- function(kit, src, view) {
     ti <- view$titles()
     text <- function(band) if (!is.null(band)) band$text
     new_viz_exhibit(
-      data, picture = chart_picture(kit$capture()),
+      data, picture = kit$capture(),
       title = text(ti$title), subtitle = text(ti$subtitle),
       caption = text(ti$caption), kind = "chart",
       meta = list(dataset = tryCatch(dl_dataset(kit$data()),
@@ -188,14 +184,6 @@ chart_value_col <- function(v, kinds) {
     return(NULL)
   }
   if (identical(cat, v$x)) v$y else v$x
-}
-
-# The browser's picture as a chart_capture, or NULL.
-chart_picture <- function(cap) {
-  if (is.null(cap) || inherits(cap, "chart_capture")) {
-    return(cap)
-  }
-  new_chart_capture(chart_capture_decode(cap$png), cap$width, cap$height)
 }
 
 # What the Excel download holds: one row per mark for the aggregated types

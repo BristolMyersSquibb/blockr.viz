@@ -101,8 +101,14 @@ viz_selection_observer <- function(input, id, state, revs, transient,
 
 #' Keep the browser's last picture of the view
 #'
-#' Reads `<id>_capture` into `capture`, outside the state: a picture is a
-#' product of the last render, not a setting.
+#' Reads `<id>_capture` (checked by its input handler, viz_read_capture())
+#' into `capture`, outside the state: a picture is a product of the last
+#' render, not a setting. The message is decoded here, once, so `capture()`
+#' holds a `chart_capture` or NULL for every block's exhibit.
+#'
+#' This is the picture the downloads write. The browser sends it when the
+#' download menu opens. blockr.outline decks use the capture service
+#' instead (R/chart-capture.R).
 #'
 #' @param input The block's Shiny input.
 #' @param id The view's element id.
@@ -111,7 +117,9 @@ viz_selection_observer <- function(input, id, state, revs, transient,
 #' @noRd
 viz_capture_observer <- function(input, id, capture) {
   name <- paste0(id, "_capture")
-  obs <- shiny::observeEvent(input[[name]], capture(input[[name]]))
+  obs <- shiny::observeEvent(input[[name]], {
+    capture(chart_capture_read(input[[name]]))
+  })
   invisible(obs)
 }
 
@@ -123,16 +131,17 @@ viz_capture_observer <- function(input, id, capture) {
 #' - the revision tracker;
 #' - the settings observer, which runs the block's `normalize()` over every
 #'   change from the gear;
-#' - the selection and capture observers;
-#' - the payload output, with the busy cue while the input recomputes, and
-#'   the download menu when the block gives an exhibit;
+#' - the selection and capture observers, and the drop of a picture whose
+#'   rows the view no longer draws (viz_with_shared());
+#' - the payload output, with the busy cue while the input recomputes; the
+#'   kit adds the entries every block's `derived` carries (viz_with_shared());
 #' - the drill sender, when the block gives claims.
 #'
 #' Everything particular to the block comes from `setup(kit)`: it builds the
 #' block's reactives from `kit` (`input`, `output`, `session`, `spec`,
 #' `state`, `revs`, `el`, the element id the view draws into, `data`,
 #' `claim` and `transient` for clicks sent to a drill target, and `capture`,
-#' the browser's last picture). A spec without `drill_target` never goes
+#' the browser's last picture as a `chart_capture`, or NULL). A spec without `drill_target` never goes
 #' transient: it holds every click. `setup()` returns a list:
 #'
 #' - `payload`: a function of no arguments returning viz_payload()'s list;
@@ -144,9 +153,11 @@ viz_capture_observer <- function(input, id, capture) {
 #' - `normalize`: a function of the full value list, the block's rules
 #'   between arguments (chart_normalize(), table_normalize()); optional;
 #' - `claims`: a reactive of the conditions a drill target receives
-#'   (dd_ctrl_claims()); optional, no sender without it;
+#'   (ctrl_claims()); optional, no sender without it;
 #' - `cond`: a reactiveValues of the block's own conditions (`error`,
-#'   `warning`, `message`), which blockr.core shows with the block; optional.
+#'   `warning`, `message`), which blockr.core shows with the block; optional;
+#' - `script`: the block's viz_script_sources(); optional, no `script` entry
+#'   in the payload without it.
 #'
 #' `setup()` wires anything else itself, with what `kit` holds.
 #'
@@ -171,7 +182,7 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
                            kit$claim)
     viz_capture_observer(input, view, kit$capture)
     viz_payload_output(output, input, view,
-                       viz_with_downloads(kit, parts, view),
+                       viz_with_shared(kit, parts, view),
                        session = session, el = kit$el)
     if (!is.null(parts$claims)) {
       viz_drill_sender(kit, parts$claims, init$selection)
@@ -199,22 +210,40 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
   )
 }
 
-# The payload with the download menu in `derived$downloads`, when the block
-# gives an exhibit. `derived` stays a named list, an object on the wire.
-viz_with_downloads <- function(kit, parts, view) {
-  if (!is.function(parts$exhibit)) {
-    return(parts$payload)
+# The payload with the entries every block's `derived` carries beside its
+# own: the download menu, when the block gives an exhibit; the prepare
+# script's controls and error, when it gives one; the drill targets the gear
+# offers; the ratio the browser composes a picture at. `derived` stays a
+# named list, an object on the wire.
+#
+# A picture of rows the view no longer draws must not reach a download, so
+# the capture is dropped when the payload's data revision moves. The view
+# draws before its menu opens, so a download reads a fresh picture or none.
+viz_with_shared <- function(kit, parts, view) {
+  menu <- if (is.function(parts$exhibit)) {
+    enabled <- if (is.null(kit$state$download)) {
+      function() TRUE
+    } else {
+      function() isTRUE(kit$state$download())
+    }
+    viz_downloads(parts$exhibit, enabled = enabled, session = kit$session,
+                  filename = view)
   }
-  enabled <- if (is.null(kit$state$download)) {
-    function() TRUE
-  } else {
-    function() isTRUE(kit$state$download())
-  }
-  menu <- viz_downloads(parts$exhibit, enabled = enabled,
-                        session = kit$session, filename = view)
+  choices <- ctrl_choices(kit$session)
+  drawn <- new.env(parent = emptyenv())
   function() {
     p <- parts$payload()
-    if (!is.null(p)) p$derived$downloads <- menu()
+    if (is.null(p)) {
+      return(p)
+    }
+    if (!is.null(drawn$rev) && !identical(p$data_rev, drawn$rev)) {
+      kit$capture(NULL)
+    }
+    drawn$rev <- p$data_rev
+    if (!is.null(menu)) p$derived$downloads <- menu()
+    if (!is.null(parts$script)) p$derived$script <- parts$script$derived()
+    p$derived$ctrl_choices <- ctrl_choices_list(choices())
+    p$derived$capture_ratio <- canvas_capture_ratio()
     p
   }
 }
@@ -223,8 +252,8 @@ viz_with_downloads <- function(kit, parts, view) {
 # set each click is sent once, by its nonce. Without one the held selection is
 # the claim, and nothing goes out while it is the one the block was built with.
 viz_drill_sender <- function(kit, claims, sel0) {
-  latch <- dd_ctrl_pristine(function() kit$state$selection(), sel0)
-  dd_ctrl_sender(
+  latch <- ctrl_pristine(function() kit$state$selection(), sel0)
+  ctrl_sender(
     kit$state$drill_target, claims,
     function() {
       still <- latch()
