@@ -133,3 +133,21 @@ test('Escape closes the gear tray of a chart or table view, and focus goes to th
   }
   scope.dispose();
 });
+
+test('without Blockr.trayNav the tray lists every group, and says so once', () => {
+  const env = loadGear();
+  delete env.win.Blockr.trayNav;
+  const warns = [];
+  env.win.console.warn = (...a) => warns.push(a.join(' '));
+  const m = mountGear(env);
+  m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical' }));
+  const heads = Array.from(m.el.querySelectorAll('.vz-tray-groups > .vz-tray-group-title'))
+    .map((h) => h.textContent);
+  assert.deepEqual(heads, ['Data', 'Sort', 'Format', 'Titles', 'Interaction']);
+  assert.ok(row(m.el, 'category'), 'the controls are there');
+  // A second render and a second gear warn no more.
+  m.gear.update(payload({ type: 'bar', category: 'SEX', orientation: 'vertical' }));
+  mountGear(env).gear.update(payload({ type: 'scatter', x: 'AGE', y: 'AVAL' }));
+  assert.equal(warns.length, 1);
+  assert.match(warns[0], /trayNav/);
+});

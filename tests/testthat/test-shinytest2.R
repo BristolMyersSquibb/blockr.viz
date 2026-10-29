@@ -629,15 +629,16 @@ test_that("summary_table gear: toggling 'overall' adds a Total column to the out
   before <- get_block_result("summary")
   expect_false("Total" %in% names(before))
 
-  # The block has one gear, the table's. Open it and tick "Overall column":
-  # this drives the gear's checkbox -> state -> R -> output.
+  # The block has one gear, the table's. Open it and tick "Overall column"
+  # (the checkbox itself reads "Add"): this drives the gear's checkbox ->
+  # state -> R -> output.
   gears <- "Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] @gear@')).filter(function(x){return x.offsetParent;})"
   expect_equal(js_get(paste0(gears, ".length")), 1L)
   js_run(paste0("(function(){var g=", gears, "[0]; g.scrollIntoView({block:'center'}); g.click();})()"))
   app$wait_for_idle()
   Sys.sleep(0.3)
   js_run(
-    "(function(){var b=Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] @checkbox@')).filter(function(x){return /overall/i.test(x.textContent);})[0]; if(b) b.querySelector('input').click();})()"
+    "(function(){var b=Array.from(document.querySelectorAll('[id^=\"board-block_summary\"] input[data-gear-input=\"total\"]')).filter(function(x){return x.closest('@checkbox@').offsetParent;})[0]; if(b) b.click();})()"
   )
   app$wait_for_idle()
   Sys.sleep(0.5)
@@ -997,11 +998,11 @@ test_that("facet_scales = free hands every panel back its own axis", {
 })
 
 # --- Colour-split boxplot: every box ON its slot's tick ---------------------
-# ECharts lays out all boxplot series sharing a category axis as a dodged
-# group (one sub-band per series). A colour-split boxplot is one series per
-# level with each box already in its own (group, level) slot, so the dodge
-# pushed level 0 left of its tick and the last level right of it. Each level
-# now rides its own hidden category axis over the same slots; what is
+# A colour-split boxplot is one series per level with each box already in
+# its own (group, level) slot. ECharts dodges series that share a category
+# axis, which pushed level 0 left of its tick and the last level right of
+# it, so each level rides its own hidden category axis over the same slots.
+# The boxes are solid, drawn by custom series (one group per box); what is
 # asserted is the geometry: every drawn box is centred on its tick.
 
 box_geometry <- function(block_id) {
@@ -1016,14 +1017,14 @@ box_geometry <- function(block_id) {
          if (a.get('show') !== false) out.shown_x_axes++;
        });
        m.eachSeries(function(s) {
-         if (s.subType !== 'boxplot') return;
+         if (s.subType !== 'custom') return;
          out.series++;
          var d = s.getData();
          for (var k = 0; k < d.count(); k++) {
            var g = d.getItemGraphicEl(k);
-           if (!g || !g.shape || !g.shape.points) continue;
-           var xs = g.shape.points.map(function(p) { return p[0]; });
-           var cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+           if (!g) continue;
+           var r = g.getBoundingRect();
+           var cx = r.x + r.width / 2;
            out.offsets.push(cx - c.convertToPixel({xAxisIndex: 0}, k));
          }
        });
@@ -1077,4 +1078,72 @@ test_that("a chart whose labels all fit says nothing", {
   skip_if_no_app()
   chart_settle("chart")
   expect_null(chart_cap_text("chart"))
+})
+
+# A tall chart (320 bars, 4,000 px) must not put its status line below the
+# visible part of its panel: the footer sticks to the bottom of whatever
+# scrolls. A dock panel scrolls; here the block's card is given a panel's
+# height. Without it the line, and a drill's receipt, sat 3,000 px down.
+test_that("a tall chart keeps its status line in view", {
+  skip_if_no_app()
+  chart_settle("chart_many")
+  pos <- js_get(sprintf(
+    "(function(){
+       var v = document.querySelector('%s');
+       var box = v.closest('.card-body');
+       box.style.maxHeight = '600px';
+       box.scrollTop = 0;
+       var f = v.querySelector('.vz-foot').getBoundingClientRect();
+       var b = box.getBoundingClientRect();
+       var c = v.querySelector('@chart@').getBoundingClientRect();
+       var out = {top: f.top - b.top, bottom: b.bottom - f.bottom,
+                  panel: b.height, chart: c.height};
+       box.style.maxHeight = '';
+       return out;
+     })()",
+    view_sel("chart_many", "chart")
+  ))
+  expect_gt(pos$chart, pos$panel)
+  expect_gte(pos$top, 0)
+  expect_gte(pos$bottom, -1)
+  expect_match(chart_cap_text("chart_many"), "Axis labels thinned", fixed = TRUE)
+})
+
+# Dark mode: the prepare script's band and the notch over the open gear take
+# the theme's colours. The injected rule is the older beak rule blockr.stats
+# and blockr.io still ship (white), which loads after blockr.ui's on a board
+# that has those blocks.
+test_that("dark mode: the script band and the gear's notch follow the theme", {
+  skip_if_no_app()
+  sel <- chart_settle("chart_script")
+  js_run(
+    "document.documentElement.setAttribute('data-bs-theme', 'dark');
+     var s = document.createElement('style'); s.id = 'old-beak';
+     s.textContent = '.blockr-settings--beak.blockr-settings--open::before' +
+       '{background:#fff;border-left:1px solid #e5e7eb}';
+     document.head.appendChild(s);"
+  )
+  withr::defer(js_run(
+    "document.documentElement.setAttribute('data-bs-theme', 'light');
+     document.getElementById('old-beak').remove();"
+  ))
+  gear_open("chart_script")
+  col <- js_get(sprintf(
+    "(function(){
+       var probe = document.createElement('div');
+       probe.style.background = 'var(--blockr-color-bg-surface)';
+       document.body.appendChild(probe);
+       var surface = getComputedStyle(probe).backgroundColor; probe.remove();
+       var band = document.querySelector('%s .vz-script-band');
+       var tray = document.querySelector('%s @tray_open@');
+       return {surface: surface,
+               band: band ? getComputedStyle(band).backgroundColor : null,
+               tray: getComputedStyle(tray).backgroundColor,
+               beak: getComputedStyle(tray, '::before').backgroundColor};
+     })()", sel, sel
+  ))
+  expect_false(identical(col$surface, "rgb(255, 255, 255)"))
+  expect_identical(col$band, col$surface)
+  expect_identical(col$beak, col$tray)
+  gear_open("chart_script")
 })

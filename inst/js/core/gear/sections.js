@@ -129,8 +129,38 @@
       sections: built.filter((b) => b.plan.group === key)
         .map((b) => ({ el: b.el, title: '', titleEl: b.titleEl }))
     }));
+    if (typeof ui.trayNav !== 'function') {
+      pop.appendChild(plainList(groups));
+      return;
+    }
     const nav = ui.trayNav(groups, { current: current || undefined, onPick, label });
     pop.appendChild(nav.el);
+  }
+
+  let warned = false;
+
+  /**
+   * The tray without blockr.ui's trayNav (an older blockr.ui): every group
+   * under its own heading, one after the other. Said once in the console.
+   * @param {{ key: string, title: string, sections: { el: HTMLElement }[] }[]} groups
+   */
+  function plainList(groups) {
+    if (!warned) {
+      warned = true;
+      console.warn('blockr.viz: this blockr.ui has no Blockr.trayNav; the gear ' +
+        'shows its groups as a plain list. Update blockr.ui for the index.');
+    }
+    const list = document.createElement('div');
+    list.className = 'vz-tray-groups';
+    for (const g of groups) {
+      if (!g.sections.length) continue;
+      const head = document.createElement('div');
+      head.className = 'vz-tray-group-title';
+      head.textContent = g.title;
+      list.appendChild(head);
+      for (const s of g.sections) list.appendChild(s.el);
+    }
+    return list;
   }
 
   V.gear.sections = { GROUPS, plan, sectionEl, assemble, applies };

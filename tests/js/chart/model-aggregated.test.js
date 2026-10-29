@@ -205,6 +205,27 @@ test('a box plot faceted by a column the data lacks has no empty slots', () => {
   assert.deepStrictEqual(plain(m.panels[0].slots.map((x) => x.cat)), ['a\u0000x', 'a\u0000y', 'b\u0000x']);
 });
 
+test('a facet with one panel keeps no empty distribution slot', () => {
+  // Every row in one facet value (or a facet column with nothing in it, or
+  // one the column list has not caught up with): one panel, no grid to
+  // line up, so the slots without rows go.
+  const rows = [{ G: 'a', C: 'x', F: 'p', V: 1 }, { G: 'a', C: 'y', F: 'p', V: 2 },
+                { G: 'b', C: 'x', F: 'p', V: 3 }];
+  const cols = [cat('G'), cat('C'), cat('F'), num('V')];
+  for (const type of ['boxplot', 'pointrange']) {
+    const m = build({ type, category: 'G', color: 'C', facet: 'F', value: 'V',
+                      sort_by: 'data', sort_dir: 'asc' }, rows, cols);
+    assert.strictEqual(m.panels.length, 1);
+    assert.deepStrictEqual(plain(m.panels[0].slots.map((x) => x.cat)),
+                           ['a\u0000x', 'a\u0000y', 'b\u0000x'], type);
+  }
+  const blank = rows.map((r) => ({ ...r, F: null }));
+  const m = build({ type: 'boxplot', category: 'G', color: 'C', facet: 'F', value: 'V',
+                    sort_by: 'data', sort_dir: 'asc' }, blank, cols);
+  assert.deepStrictEqual(plain(m.panels[0].slots.map((x) => x.cat)),
+                         ['a\u0000x', 'a\u0000y', 'b\u0000x']);
+});
+
 test('a fixed facet grid keeps every distribution slot in every panel', () => {
   const rows = [{ G: 'a', C: 'x', F: 'p', V: 1 }, { G: 'b', C: 'y', F: 'q', V: 2 }];
   const cols = [cat('G'), cat('C'), cat('F'), num('V')];
