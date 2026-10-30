@@ -8,7 +8,11 @@
 # 3. a title and the download switch set in the gear show on the face and
 #    survive a save and restore,
 # 4. every download format arrives, named after the title, with its content,
-# 5. a word of the subtitle opens a menu that changes the mapping.
+# 5. a word of the subtitle opens a menu that changes the mapping,
+# 6. a prepare script's value named in a subtitle is a word that sets it, with
+#    no second control in the script band, on a table, a chart and a table
+#    saved by blockr.viz 0.2.x, and a restored board's Titles row loads
+#    unedited ("not applied" hidden).
 #
 # Clicks and key presses are real input events (DevTools protocol). The app
 # loads blockr.viz from this source tree (BLOCKR_VIZ_SRC). Skipped without a
@@ -342,4 +346,122 @@ test_that("flows: a subtitle word opens a menu that changes the mapping", {
   expect_setequal(f$cats, c("F", "M"))
   st <- flows_saved_block(app, "words")$payload$category
   expect_identical(unlist(st), "SEX")
+})
+
+# The words of a block's subtitle, and the script band's rows (by config key)
+# with whether the band shows.
+flows_script_face <- function(app, id) {
+  f <- app$get_js(sprintf("(function () {
+    const f = flows.frame('%s');
+    if (!f) return null;
+    const band = f.querySelector('.vz-script-band');
+    return {
+      sub: (f.querySelector('.vz-subtitle') || {}).textContent || '',
+      words: [...f.querySelectorAll('.vz-subtitle .blockr-slot')].map((w) => w.textContent),
+      band: [...f.querySelectorAll('.vz-script-band-row')].map((r) => r.getAttribute('data-role')),
+      shown: !!band && !band.hidden
+    };
+  })()", id))
+  f$words <- as.character(unlist(f$words))
+  f$band <- as.character(unlist(f$band))
+  f
+}
+
+# Click the subtitle word `word`, type `value` over it and press Enter.
+flows_set_word <- function(app, id, word, value) {
+  flows_click(app, id, ".vz-subtitle .blockr-slot", word)
+  expect_true(app$get_js(
+    "!!document.activeElement && document.activeElement.classList.contains('blockr-slot-input')"
+  ), label = paste("the word", word, "turned into a field"))
+  app$run_js("document.activeElement.select();")
+  flows_type(app, value)
+}
+
+# The Titles group of a block's gear: is the subtitle row marked edited, and
+# does its "not applied" label show?
+flows_titles_row <- function(app, id) {
+  flows_click(app, id, ".blockr-gear-btn")
+  flows_click(app, id, NAV, "Titles")
+  r <- app$get_js(sprintf("(function () {
+    const f = flows.frame('%s');
+    const inp = f.querySelector('.vz-tray [data-gear-input=\"subtitle\"]');
+    if (!inp) return null;
+    const row = inp.closest('.vz-row');
+    const stale = row.querySelector('.vz-template-stale');
+    return { value: inp.value, dirty: row.classList.contains('vz-row--dirty'),
+             stale: getComputedStyle(stale).display };
+  })()", id))
+  flows_click(app, id, ".blockr-gear-btn")
+  r
+}
+
+test_that("flows: script values in a subtitle are its words, not band rows", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "script", "script_tbl")
+  tbl <- flows_script_face(app, "script_tbl")
+  expect_identical(tbl$words, c("Arm", "1", "Patients"))
+  expect_identical(tbl$band, character())
+  expect_false(tbl$shown)
+
+  flows_view(app, "script", "script_chart")
+  ch <- flows_script_face(app, "script_chart")
+  expect_identical(ch$words, "50")
+  expect_identical(ch$band, "sv_sex", label = "the value no word names keeps its row")
+  expect_true(ch$shown)
+
+  flows_view(app, "script", "legacy")
+  old <- flows_script_face(app, "legacy")
+  expect_identical(old$words, c("Arm", "2", "Patients"),
+                   label = "the 0.2.x table's saved value")
+  expect_identical(old$band, character())
+})
+
+test_that("flows: a script word sets its value, the subtitle and the result follow", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "script", "script_chart")
+  n0 <- nrow(flows_result(app, "script_chart"))
+  flows_set_word(app, "script_chart", "50", "60")
+  ch <- flows_script_face(app, "script_chart")
+  expect_match(ch$sub, "aged 60 or older", fixed = TRUE)
+  expect_identical(ch$words, "60")
+  expect_identical(ch$band, "sv_sex")
+  res <- flows_result(app, "script_chart")
+  expect_true(all(res$AGE >= 60))
+  expect_lt(nrow(res), n0)
+  expect_identical(unlist(flows_saved_block(app, "script_chart")$payload$script_values),
+                   c(min_age = 60))
+
+  flows_view(app, "script", "script_tbl")
+  flows_set_word(app, "script_tbl", "1", "3")
+  tbl <- flows_script_face(app, "script_tbl")
+  expect_match(tbl$sub, "with at least 3 Patients", fixed = TRUE)
+  expect_identical(tbl$band, character())
+  expect_identical(unlist(flows_saved_block(app, "script_tbl")$payload$script_values),
+                   c(min_share = 3))
+})
+
+test_that("flows: restored script subtitles keep their words; Titles loads unedited", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "script", "legacy")
+  r <- flows_titles_row(app, "legacy")
+  # The saved template's line break, as the `\n` R reads as one.
+  expect_identical(r$value, "By: {@rows}\\n[with at least {@min_share} {@share_unit}]")
+  expect_false(r$dirty)
+  expect_identical(r$stale, "none")
+
+  # The board as saved after the edits above, restored.
+  saved <- withr::local_tempfile(fileext = ".json")
+  writeLines(app$get_values(export = "saved")$export$saved, saved)
+  app3 <- flows_app("viz-flows-script-restore", restore = saved)
+  withr::defer(app3$stop())
+  flows_view(app3, "script", "script_chart")
+  ch <- flows_script_face(app3, "script_chart")
+  expect_identical(ch$words, "60")
+  expect_identical(ch$band, "sv_sex")
+  for (id in c("script_chart", "script_tbl", "legacy")) {
+    flows_view(app3, "script", id)
+    r <- flows_titles_row(app3, id)
+    expect_false(r$dirty, label = paste(id, "subtitle row marked edited"))
+    expect_identical(r$stale, "none", label = paste(id, "'not applied'"))
+  }
 })
