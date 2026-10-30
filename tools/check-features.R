@@ -10,10 +10,11 @@
 #   [test: tests/js/legend.test.js :: legend = "none" draws no band]
 #
 # The results are JUnit files: testthat's JunitReporter (one suite per test
-# file, test names with every run of non-alphanumerics turned into "_") and
-# node's `--test-reporter=junit` (a `file` attribute per test). A link
-# passes when its test is in the results and none of its runs failed,
-# errored or skipped.
+# file, test names with every run of characters other than letters, digits,
+# "." and "_" turned into "_", as testthat's classnameOK() does) and node's
+# `--test-reporter=junit` (a `file` attribute per test). A link passes when
+# its test is in the results and none of its runs failed, errored or
+# skipped.
 #
 # Fails on a row without a link, a link to a test that is not in the
 # results, and a link to a test that did not pass.
@@ -24,7 +25,7 @@ stopifnot(identical(args[1L], "--results"), !is.na(sep))
 result_files <- args[seq(2L, sep - 1L)]
 feature_files <- args[-seq_len(sep)]
 
-mangle <- function(x) gsub("[^A-Za-z0-9]+", "_", x)
+mangle <- function(x) gsub("[^._A-Za-z0-9]+", "_", x)
 
 # node escapes the test name twice (`&amp;quot;`); undo the second time.
 unescape <- function(x) {

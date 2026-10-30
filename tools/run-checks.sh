@@ -41,7 +41,8 @@ step "tsc"                  npm run --silent typecheck
 step "JS tests"             node --test --test-concurrency=1 \
                               --test-reporter=spec --test-reporter-destination=stdout \
                               --test-reporter=junit --test-reporter-destination="$out/node.xml" \
-                              tests/js/*.test.js tests/js/chart/*.test.js
+                              tests/js/*.test.js tests/js/chart/*.test.js \
+                              tests/js/core/*.test.js tests/js/table/*.test.js
 if [ "$fast" = 0 ]; then
   step "R tests"            Rscript -e '
     r <- testthat::test_local(".", reporter = testthat::MultiReporter$new(list(
