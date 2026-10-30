@@ -65,6 +65,17 @@ interface VizGearHost {
   onChange?(changed: VizValues, values: VizValues): void;
   /** Sends an edit in place of the engine (`<id>_set`); for a page without Shiny. */
   send?(msg: { rev: number; values: VizValues }): void;
+  /** What a word in the titles opens when the host knows better than the spec: a word
+   * naming part of a setting (the groups layout's `{@value}`, its first summary's column).
+   * `write` turns the picked value into the settings to send. Null leaves it to the spec. */
+  slot?(key: string, values: VizValues): VizHostSlot | null | undefined;
+}
+
+interface VizHostSlot {
+  arg: VizArg;
+  value: unknown;
+  label: string;
+  write(value: unknown): VizValues;
 }
 
 interface VizCustomCtx {
@@ -132,8 +143,9 @@ interface VizGear {
   scriptSlot(name: string): VizSlotOpener | null;
   /** The script controls the titles' words open (the band leaves them out). */
   scriptWords(): Set<string>;
-  /** The script's controls, for a view that paints titles before the gear's update. */
-  useScript(script: VizScript | null | undefined): void;
+  /** Take a payload's settings, columns, titles and script without drawing, for a view
+   * that paints its titles before the gear's update. */
+  prime(payload: VizPayload): void;
   label(key: string): string;
   render(): void;
   dispose(): void;

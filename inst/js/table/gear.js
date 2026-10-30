@@ -168,6 +168,45 @@
                           ctx.scope));
   }
 
+  /** The groups layout's words that do not name a setting of their own (R's
+   * groups_title_roles()): `{@by}` prints the innermost row column and `{@parent}` the
+   * outer one; `{@value}`, `{@func}`, `{@facet}`, `{@fill}` and a set `{@color}` print the
+   * first summary's column, statistic, facet, fill and colour. Each word opens the part
+   * it prints, as 0.2.x's summarize table did (`{@group}` opened its one column): a
+   * column word replaces its column, keeping the other level. Null for any other word.
+   * @param {string} key @param {VizValues} v @returns {VizHostSlot | null} */
+  function groupsSlot(key, v) {
+    if (v.layout !== 'groups') return null;
+    const by = (Array.isArray(v.by) ? v.by : (v.by == null ? [] : [v.by])).map(String);
+    const column = (/** @type {string} */ label, /** @type {boolean} */ nullable) =>
+      /** @type {VizArg} */ ({ type: { name: 'column' }, nullable, gear: { control: 'column', label } });
+    const inner = key === 'by' || (key === 'group' && by.length === 1);
+    const outer = (key === 'parent' || key === 'group') && by.length === 2;
+    if (inner && by.length) {
+      const keep = by.slice(0, -1);
+      return { arg: column(BY_LABEL.groups, false), value: by[by.length - 1], label: BY_LABEL.groups,
+               write: (x) => ({ by: x == null ? keep : keep.concat([String(x)]) }) };
+    }
+    if (outer) {
+      return { arg: column('Outer rows', true), value: by[0], label: 'Outer rows',
+               write: (x) => ({ by: x == null ? [by[1]] : [String(x), by[1]] }) };
+    }
+    const FIELD = /** @type {Record<string, string>} */ (
+      { value: 'col', func: 'func', facet: 'facet', fill: 'fill', color: 'color' });
+    const field = FIELD[key];
+    const sums = Array.isArray(v.summaries) ? v.summaries : [];
+    const s1 = /** @type {Record<string, unknown> | null} */ (
+      sums[0] && typeof sums[0] === 'object' ? sums[0] : null);
+    if (!field || !s1) return null;
+    // An unset summary colour leaves `{@color}` to the table's own colour, as R prints it.
+    if (key === 'color' && s1.color == null) return null;
+    const spec = /** @type {any} */ (V.spec).table.summaries.type;
+    const arg = (spec.variants[String(s1[spec.key] || 'simple')] || {})[field];
+    if (!arg || !arg.gear) return null;
+    return { arg, value: s1[field] ?? null, label: arg.gear.label,
+             write: (x) => ({ summaries: [Object.assign({}, s1, { [field]: x })].concat(sums.slice(1)) }) };
+  }
+
   /**
    * Mount the gear, or nothing without the engine.
    * @param {TableFrame} frame
@@ -191,6 +230,8 @@
       required: (key, v) => key === 'summaries' && v.layout === 'variables',
       visible: (key, v) => visible(key, v, info(String(v.layout))),
       label: (key, v) => key === 'by' ? BY_LABEL[/** @type {'records'} */ (v.layout)] : null,
+      // The groups layout's words for parts of `by` and of the first summary.
+      slot: groupsSlot,
       // What an empty picker means.
       placeholder: (key, v) => key === 'columns' ? 'All columns'
         : key === 'by' && v.layout === 'records' ? 'All' : null,
@@ -214,7 +255,7 @@
     };
   }
 
-  V.table.gear = { mount, visible, shadings };
+  V.table.gear = { mount, visible, shadings, groupsSlot };
   V.table.ui = { pick, check, button };
   V.table.editors = Object.assign(V.table.editors || {}, { shadings });
 })();

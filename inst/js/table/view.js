@@ -58,10 +58,10 @@
       const switching = layout !== this.layout;
       const at = switching ? this.held || this.frame.scrollPlace() : null;
       if (switching) this.switchTo(layout);
-      // The layouts paint the titles, before the gear's update: the words that name the
-      // prepare script's values need its controls now.
+      // The layouts paint the titles before the gear's update; their words need the
+      // payload's settings, columns and script controls now.
       const engine = this.gear && this.gear.engine;
-      if (engine && engine.useScript) engine.useScript(/** @type {TableDerived} */ (p.derived || {}).script);
+      if (engine && engine.prime) engine.prime(p);
       if (this.view) {
         this.view.render(p);
         if (this.held && (switching || layout === this.held.to)) this.unhold();

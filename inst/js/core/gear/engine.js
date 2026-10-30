@@ -95,10 +95,7 @@
           this._pending.delete(key);
         }
       }
-      this._cfg = cfg;
-      this._cols = p.columns || [];
-      this._titles = /** @type {VizTitles} */ ((p.derived && p.derived.titles) || {});
-      this.useScript(/** @type {any} */ (p.derived || {}).script);
+      this.prime(p);
       this._rev = p.state_rev || 0;
       if (this._key() !== this._drawn) this.render();
     }
@@ -295,11 +292,20 @@
       }
     }
 
-    /** The prepare script's controls as R last sent them. A view whose titles are painted
-     * before the gear's update (the table's layouts) hands them over first.
-     * @param {VizScript | null | undefined} script */
-    useScript(script) {
-      this._script = script || null;
+    /** Take what the words in the titles read from a payload (the settings, the columns,
+     * the titles and the prepare script's controls) without drawing the tray. A view
+     * whose titles are painted before the gear's update (the table's layouts paint them
+     * before the gear reads what they draw) primes the gear first; otherwise a word that
+     * needs the columns (a column menu) or the current value (a flag) would be plain text,
+     * or wrong, until the next payload.
+     * @param {VizPayload} p */
+    prime(p) {
+      if (this.disposed) return;
+      this._cfg = p.config || {};
+      this._cols = p.columns || [];
+      const d = /** @type {any} */ (p.derived || {});
+      this._titles = /** @type {VizTitles} */ (d.titles || {});
+      this._script = d.script || null;
     }
 
     /** What a click on the sentence's word for `key` opens: the block's setting of that
@@ -307,19 +313,29 @@
      * value by its variable, `{@min_share}`).
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
-      return this.spec[key] ? this._specSlot(key) : this.scriptSlot(key);
+      const values = this.values();
+      // The host first: a word that names part of a setting (the groups layout's
+      // `{@value}` is its first summary's column) or names a setting differently.
+      const own = this.host.slot && this.host.slot(key, values);
+      if (own) {
+        return this._argSlot(key, own.arg, own.value, own.label,
+                             (v) => this.set(own.write(v)), values);
+      }
+      if (this.spec[key]) {
+        return this._argSlot(key, this.spec[key], values[key], this.label(key, values),
+                             (v) => this.set({ [key]: v }), values);
+      }
+      return this.scriptSlot(key);
     }
 
-    /** @param {string} key @returns {VizSlotOpener | null} */
-    _specSlot(key) {
-      const arg = this.spec[key];
-      if (!arg.gear || arg.gear.control === 'custom') return null;
-      const values = this.values();
+    /** The opener for a word whose setting is `arg`, holding `value`, written by `set`.
+     * @param {string} key @param {VizArg} arg @param {unknown} value @param {string} label
+     * @param {(v: unknown) => void} set @param {VizValues} values
+     * @returns {VizSlotOpener | null} */
+    _argSlot(key, arg, value, label, set, values) {
+      if (!arg || !arg.gear || arg.gear.control === 'custom') return null;
       const name = arg.type.name;
       const listed = this._listed(key);
-      const set = (/** @type {unknown} */ v) => this.set({ [key]: v });
-      const label = this.label(key, values);
-      const value = values[key];
       if (name === 'bool') return { kind: 'flag', value: value === true, set, label };
       if ((name === 'number' || name === 'integer') && !listed) {
         const b = arg.bounds || { min: null, max: null, minOpen: false };
@@ -334,7 +350,7 @@
       if (['map', 'records', 'records_by', 'named'].includes(name)) return null;
       // Free text stays in the gear; a string picked from a list is a menu.
       if ((name === 'string' || name === 'template') && arg.gear.control !== 'select') return null;
-      const ctx = this._ctx(key, values, this.scope);
+      const ctx = Object.assign(this._ctx(key, values, this.scope), { arg, value, label, set });
       const empty = name === 'columns' || name === 'enums' ? null : C.emptyChoice(ctx);
       let options = /** @type {VizChoice[]} */ (empty ? [empty] : []).concat(C.options(ctx));
       if (listed) {
@@ -356,6 +372,7 @@
      */
     scriptSlot(name) {
       if (this.spec[name] || !this._script || !this.spec.script_values) return null;
+      if (this.host.slot && this.host.slot(name, this.values())) return null;
       const sp = /** @type {VizScriptControl | undefined} */ (
         (this._script.inputs || []).find((x) => x && x.name === name && x.kind !== 'error'));
       if (!sp) return null;

@@ -497,6 +497,8 @@ interface VizTableNamespace {
           onLayout?: (layout: string) => void): TableGearHandle | null;
     visible(key: string, v: Record<string, unknown>, info: TableInfo): boolean;
     shadings(el: HTMLElement, ctx: VizCustomCtx): void;
+    /** What a groups layout's title word opens (the host's slot()). */
+    groupsSlot(key: string, v: VizValues): VizHostSlot | null;
   };
   /** A number column of the payload's `columns` (gear.js). */
   /** blockr.ui's controls for the table's own gear rows (gear.js). */
