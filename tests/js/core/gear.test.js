@@ -565,7 +565,7 @@ test('slot(): what a sentence word opens', () => {
     {});
   t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count', value_labels: false },
     { derived: { titles: { choices: { func: ['mean', 'median'] } } } }));
-  assert.deepEqual(plain(t.gear.slot('value_labels')), { kind: 'flag', value: false });
+  assert.deepEqual(plain(t.gear.slot('value_labels')), { kind: 'flag', value: false, label: 'Value labels' });
   assert.equal(t.gear.slot('bins').kind, 'number');
   assert.equal(t.gear.slot('value_lines').kind, 'entry');
   assert.equal(t.gear.slot('unit'), null);

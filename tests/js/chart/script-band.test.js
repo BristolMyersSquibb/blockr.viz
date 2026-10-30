@@ -68,3 +68,38 @@ test("a histogram draws every bin R's edges list, the empty ones too", () => {
   assert.deepStrictEqual(D.plain(c.chart().getOption().xAxis[0].data), ['0–5', '5–10', '10–15']);
   c.close();
 });
+
+// A value the subtitle names (`Top {@top_n} terms`) is a word on the face and not a row in
+// the band: production 0.2.x drew script values so, and the rewrite had lost it.
+const NAMED = (n) => ({ subtitle: { parts: [{ text: 'Top ' }, { text: String(n), arg: 'top_n' },
+                                            { text: ' terms' }] } });
+
+test('a script value the subtitle names is a word on the face, not a band row', () => {
+  const c = D.open(BAR, { derived: { titles: NAMED(10), script: SCRIPT } });
+  const sub = c.block.frame.subEl;
+  const word = sub.querySelector('.blockr-slot');
+  assert.ok(word, 'the value is a clickable word');
+  assert.strictEqual(word.textContent, '10');
+  assert.deepStrictEqual([...c.block.band.el.querySelectorAll('[data-role]')].map((r) => r.dataset.role),
+                         ['sv_serious', 'sv_arm'], 'the band keeps only the controls no word opens');
+  c.close();
+});
+
+test('the word sets the value; R echoes the new subtitle; a dropped word brings the row back', () => {
+  const c = D.open(BAR, { derived: { titles: NAMED(10), script: SCRIPT } });
+  c.block.frame.subEl.querySelector('.blockr-slot').click();
+  const input = c.block.frame.subEl.querySelector('input.blockr-slot-input');
+  assert.strictEqual(input.value, '10');
+  input.value = '5';
+  input.dispatchEvent(new c.env.win.KeyboardEvent('keydown', { key: 'Enter' }));
+  assert.deepStrictEqual(D.plain(c.sets()), [{ script_values: { top_n: 5 } }]);
+  const echoed = { ...SCRIPT, values: { ...SCRIPT.values, sv_top_n: 5 } };
+  c.send({ ...BAR, script_values: { top_n: 5 } }, { derived: { titles: NAMED(5), script: echoed } });
+  assert.strictEqual(c.block.frame.subEl.textContent, 'Top 5 terms');
+  assert.strictEqual(c.block.band.el.querySelector('[data-role="sv_top_n"]'), null);
+  c.send({ ...BAR, script_values: { top_n: 5 } }, { derived: { titles: { subtitle: { text: 'All terms' } },
+                                                             script: echoed } });
+  assert.ok(c.block.band.el.querySelector('[data-role="sv_top_n"]'), 'no word, so the band has the control');
+  assert.strictEqual(input.isConnected, false);
+  c.close();
+});

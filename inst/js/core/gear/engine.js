@@ -69,6 +69,9 @@
       this._cols = [];
       /** @type {VizTitles} */
       this._titles = {};
+      /** The prepare script's controls (`derived.script`), for the words that name them. */
+      /** @type {VizScript | null} */
+      this._script = null;
       this._rev = 0;
       /** Optional mappings added from the Add menu, shown while unset. */
       /** @type {Set<string>} */
@@ -95,6 +98,7 @@
       this._cfg = cfg;
       this._cols = p.columns || [];
       this._titles = /** @type {VizTitles} */ ((p.derived && p.derived.titles) || {});
+      this.useScript(/** @type {any} */ (p.derived || {}).script);
       this._rev = p.state_rev || 0;
       if (this._key() !== this._drawn) this.render();
     }
@@ -291,21 +295,42 @@
       }
     }
 
-    /** What a click on the sentence's word for `key` opens.
+    /** The prepare script's controls as R last sent them. A view whose titles are painted
+     * before the gear's update (the table's layouts) hands them over first.
+     * @param {VizScript | null | undefined} script */
+    useScript(script) {
+      this._script = script || null;
+    }
+
+    /** What a click on the sentence's word for `key` opens: the block's setting of that
+     * name, else the prepare script's control of that name (a template names a script
+     * value by its variable, `{@min_share}`).
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
+      return this.spec[key] ? this._specSlot(key) : this.scriptSlot(key);
+    }
+
+    /** @param {string} key @returns {VizSlotOpener | null} */
+    _specSlot(key) {
       const arg = this.spec[key];
-      if (!arg || !arg.gear || arg.gear.control === 'custom') return null;
+      if (!arg.gear || arg.gear.control === 'custom') return null;
       const values = this.values();
       const name = arg.type.name;
       const listed = this._listed(key);
-      if (name === 'bool') return { kind: 'flag', value: values[key] === true };
+      const set = (/** @type {unknown} */ v) => this.set({ [key]: v });
+      const label = this.label(key, values);
+      const value = values[key];
+      if (name === 'bool') return { kind: 'flag', value: value === true, set, label };
       if ((name === 'number' || name === 'integer') && !listed) {
         const b = arg.bounds || { min: null, max: null, minOpen: false };
         return { kind: 'number', min: b.min == null ? -Infinity : b.min,
-                 max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1 };
+                 max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1,
+                 value, set, label };
       }
-      if ((name === 'numbers' || name === 'values') && !listed) return { kind: 'entry' };
+      if ((name === 'numbers' || name === 'values') && !listed) {
+        return { kind: 'entry', value, set, label,
+                 toText: (v) => C.toText(arg, v), fromText: (s) => C.fromText(arg, s) };
+      }
       if (['map', 'records', 'records_by', 'named'].includes(name)) return null;
       // Free text stays in the gear; a string picked from a list is a menu.
       if ((name === 'string' || name === 'template') && arg.gear.control !== 'select') return null;
@@ -313,13 +338,70 @@
       const empty = name === 'columns' || name === 'enums' ? null : C.emptyChoice(ctx);
       let options = /** @type {VizChoice[]} */ (empty ? [empty] : []).concat(C.options(ctx));
       if (listed) {
-        const cur = values[key];
         options = options.filter((o) => o.value == null || listed.includes(String(o.value)) ||
-          C.same(o.value, cur));
+          C.same(o.value, value));
       }
       if (!options.length) return null;
-      return { kind: 'menu', options, selected: values[key] ?? null,
-               multi: name === 'columns' || name === 'enums' };
+      return { kind: 'menu', options, selected: value ?? null,
+               multi: name === 'columns' || name === 'enums', set, label };
+    }
+
+    /**
+     * The prepare script's control for the variable `name`, as a word opens it: a flag
+     * toggles, a number or a text is typed over, a choice opens its list. It writes
+     * `script_values[name]`, as the script band's own control does. Null when the block
+     * has a setting of that name (the setting wins, as in R's script_title_args()), when
+     * the script declares no working control of that name, or when there is no script.
+     * @param {string} name @returns {VizSlotOpener | null}
+     */
+    scriptSlot(name) {
+      if (this.spec[name] || !this._script || !this.spec.script_values) return null;
+      const sp = /** @type {VizScriptControl | undefined} */ (
+        (this._script.inputs || []).find((x) => x && x.name === name && x.kind !== 'error'));
+      if (!sp) return null;
+      const held = /** @type {Record<string, unknown>} */ (this.values().script_values || {});
+      const sent = /** @type {Record<string, unknown>} */ (
+        Array.isArray(this._script.values) ? {} : this._script.values || {});
+      // A local edit R has not echoed yet, else the value R resolved for the control.
+      const value = Object.prototype.hasOwnProperty.call(held, name) ? held[name] : sent[sp.key];
+      const set = (/** @type {unknown} */ v) => this.set({
+        script_values: Object.assign({}, held, { [name]: v })
+      });
+      const label = sp.label;
+      const text = { toText: (/** @type {unknown} */ v) => (v == null ? '' : String(v)),
+                     fromText: (/** @type {string} */ s) => s };
+      switch (sp.kind) {
+        case 'segmented':
+          return { kind: 'flag', value: value === true || value === 'on', set, label };
+        case 'number': {
+          const num = (/** @type {unknown} */ x) => (typeof x === 'number' ? x : null);
+          const lo = num(sp.min), hi = num(sp.max);
+          return { kind: 'number', min: lo == null ? -Infinity : lo,
+                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label };
+        }
+        case 'select':
+        case 'multi': {
+          const options = /** @type {string[]} */ (sp.options || [])
+            .map((o) => ({ value: String(o), label: String(o) }));
+          if (!options.length) return null;
+          return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
+                   set, label };
+        }
+        default:
+          return { kind: 'entry', value, set, label, ...text };
+      }
+    }
+
+    /** The script controls a word in the titles opens, by variable name: the script band
+     * leaves them out, so one setting has one control on the face.
+     * @returns {Set<string>} */
+    scriptWords() {
+      /** @type {Set<string>} */
+      const out = new Set();
+      for (const arg of V.titles.namedArgs(this._titles)) {
+        if (this.scriptSlot(arg)) out.add(arg);
+      }
+      return out;
     }
 
     /** The values a sentence lists for a word (`{@func in mean, median}`).

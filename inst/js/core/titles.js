@@ -83,6 +83,20 @@
     return bad;
   }
 
+  /** Every argument the title, subtitle and caption name: their words, and the settings
+   * offered beside them because a clause dropped.
+   * @param {VizTitles | null | undefined} titles @returns {string[]} */
+  function namedArgs(titles) {
+    /** @type {Set<string>} */
+    const out = new Set();
+    for (const b of [titles && titles.title, titles && titles.subtitle, titles && titles.caption]) {
+      if (!b || typeof b !== 'object') continue;
+      for (const p of b.parts || []) if (p && p.arg) out.add(p.arg);
+      for (const o of b.offers || []) if (typeof o === 'string') out.add(o);
+    }
+    return Array.from(out);
+  }
+
   /** The resolved band as text, its slot words marked, and up to three offers.
    * @param {HTMLElement} el @param {VizTitleBand | null | undefined} band
    * @param {(k: string) => string} label */
@@ -374,19 +388,18 @@
   /** Type a value over its word: Enter or leaving commits, Escape puts the
    * word back. A number is held in its range and steps on the arrow keys
    * (by ten with Shift); an emptied number keeps its value.
-   * @param {VizGear} gear @param {VizScope} scope @param {string} key
-   * @param {HTMLElement} anchor @param {VizSlotOpener} how */
-  function edit(gear, scope, key, anchor, how) {
+   * @param {VizScope} scope @param {HTMLElement} anchor
+   * @param {VizSlotOpener & { kind: 'number' | 'entry' }} how */
+  function edit(scope, anchor, how) {
     const es = scope.own(new V.Scope());
-    const arg = /** @type {VizArg} */ (/** @type {any} */ (V.spec)[gear.block][key]);
     const num = how.kind === 'number' ? how : null;
-    const cur = gear.values()[key];
-    const before = num ? (cur == null ? '' : String(cur)) : V.gear.controls.toText(arg, cur);
+    const cur = how.value;
+    const before = how.kind === 'number' ? (cur == null ? '' : String(cur)) : how.toText(cur);
     const input = document.createElement('input');
     input.type = num ? 'number' : 'text';
     input.className = 'blockr-slot-input';
     input.value = before;
-    input.setAttribute('aria-label', gear.label(key));
+    input.setAttribute('aria-label', how.label);
     input.size = Math.max(3, before.length + 1);
     /** @param {number} v */
     const fix = (v) => (num ? Math.min(num.max, Math.max(num.min, v)) : v);
@@ -400,9 +413,9 @@
       if (!commit || text === before) { anchor.focus(); return; }
       if (num) {
         const v = parseFloat(text);
-        if (Number.isFinite(v)) gear.set({ [key]: fix(v) });
-      } else {
-        gear.set({ [key]: V.gear.controls.fromText(arg, text) });
+        if (Number.isFinite(v)) how.set(fix(v));
+      } else if (how.kind === 'entry') {
+        how.set(how.fromText(text));
       }
     };
     es.on(input, 'click', (e) => e.stopPropagation());
@@ -426,10 +439,10 @@
 
   /** Fill a menu under a word with its setting's choices; null when the
    * page's blockr.ui has no menu for it.
-   * @param {VizGear} gear @param {string} key @param {HTMLElement} anchor
+   * @param {HTMLElement} anchor
    * @param {VizSlotOpener & { kind: 'menu' }} how @param {string | undefined} by
    * @param {() => void} onClose */
-  function openMenu(gear, key, anchor, how, by, onClose) {
+  function openMenu(anchor, how, by, onClose) {
     const Sel = ui().Select;
     if (!Sel || !Sel.menu || (how.multi && !Sel.menuMulti)) return null;
     const C = V.gear.controls;
@@ -438,13 +451,13 @@
     const back = (/** @type {string} */ k) => how.options[keys.indexOf(k)];
     anchor.classList.add('blockr-slot--open');
     return Sel.menu(anchor, {
-      options, mode: how.multi ? 'multi' : 'single', title: gear.label(key),
+      options, mode: how.multi ? 'multi' : 'single', title: how.label,
       selected: how.multi ? (/** @type {unknown[]} */ (how.selected || [])).map(at) : at(how.selected),
       labelFirst: by === 'label', searchPlaceholder: 'Filter',
       onChange: (/** @type {string | string[]} */ v) => {
         const val = Array.isArray(v) ? v.map((k) => back(k)).filter(Boolean).map((c) => c.value)
           : (back(v) || { value: how.selected }).value;
-        gear.set({ [key]: val });
+        how.set(val);
       },
       onClose: () => {
         anchor.classList.remove('blockr-slot--open');
@@ -464,7 +477,8 @@
     for (const key of shown) {
       const c = document.createElement('span');
       c.className = 'blockr-slot-offer';
-      c.textContent = '+ ' + gear.label(key);
+      const how = gear.slot(key);
+      c.textContent = '+ ' + (how ? how.label : gear.label(key));
       wire(ps, c, () => openSlot(key, c));
       el.appendChild(c);
     }
@@ -508,9 +522,9 @@
       if (was === key) return;
       const how = gear.slot(key);
       if (!how) { openGear(); return; }
-      if (how.kind === 'flag') { gear.set({ [key]: !how.value }); return; }
-      if (how.kind === 'entry' || how.kind === 'number') { edit(gear, ps, key, anchor, how); return; }
-      const menu = openMenu(gear, key, anchor, how, by, () => {
+      if (how.kind === 'flag') { how.set(!how.value); return; }
+      if (how.kind === 'entry' || how.kind === 'number') { edit(ps, anchor, how); return; }
+      const menu = openMenu(anchor, how, by, () => {
         if (open && open.anchor === anchor) open = null;
       });
       if (!menu) { openGear(); return; }
@@ -548,5 +562,5 @@
     return { paint, close, dispose: () => own.dispose() };
   }
 
-  V.titles = { row, menuGroups, unknownTokens, paintPreview, slots };
+  V.titles = { row, menuGroups, unknownTokens, paintPreview, slots, namedArgs };
 })();

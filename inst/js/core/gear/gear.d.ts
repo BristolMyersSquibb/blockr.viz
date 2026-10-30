@@ -113,12 +113,14 @@ interface VizRowCtx {
   set(value: unknown): void;
 }
 
-/** What a click on a sentence word opens. */
-type VizSlotOpener =
+/** What a click on a sentence word opens: a block setting, or a prepare script's control.
+ * `set` writes the value where it lives (the setting, or `script_values[name]`). */
+interface VizSlotBase { label: string; set(value: unknown): void }
+type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
-  | { kind: 'entry' }
-  | { kind: 'number'; min: number; max: number; step: number }
-  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean };
+  | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
+  | { kind: 'number'; min: number; max: number; step: number; value: unknown }
+  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean });
 
 interface VizGear {
   readonly block: string;
@@ -126,6 +128,12 @@ interface VizGear {
   set(changes: VizValues): void;
   values(): VizValues;
   slot(key: string): VizSlotOpener | null;
+  /** The prepare script's control a word names, by variable; null for a block setting. */
+  scriptSlot(name: string): VizSlotOpener | null;
+  /** The script controls the titles' words open (the band leaves them out). */
+  scriptWords(): Set<string>;
+  /** The script's controls, for a view that paints titles before the gear's update. */
+  useScript(script: VizScript | null | undefined): void;
   label(key: string): string;
   render(): void;
   dispose(): void;
@@ -183,6 +191,8 @@ interface VizTitlesNamespace {
   menuGroups(titles: VizTitles, columns: VizColumn[], label: (k: string) => string):
     { head: string; note?: string; items: { label: string; tok: string; val: string; indent?: boolean }[] }[];
   slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
+  /** Every argument the titles name: their words and their offers. */
+  namedArgs(titles: VizTitles | null | undefined): string[];
 }
 
 interface VizSlots {

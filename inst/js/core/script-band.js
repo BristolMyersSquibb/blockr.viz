@@ -82,17 +82,23 @@
       el('span', 'vz-help', row).textContent = sp.error || 'no control';
     };
 
-    /** Redrawn only when the script's inputs, values or error changed.
+    /** Redrawn only when the script's inputs, values or error changed, or the words that
+     * stand in for its controls. A control a word in the titles opens is left out: the
+     * word is its control (`{@min_share}` in the subtitle), and two live copies of one
+     * value on one face would be one too many. Call it after the gear's update, which
+     * carries the titles the words come from.
      * @param {VizScript | null | undefined} script */
     const update = (script) => {
       const s = /** @type {Partial<VizScript>} */ (script || {});
-      const key = JSON.stringify(s);
+      const words = gear.scriptWords ? gear.scriptWords() : new Set();
+      const key = JSON.stringify([s, Array.from(words).sort()]);
       if (key === last) return;
       last = key;
       if (drawn) drawn.dispose();
       const own = drawn = scope.own(new V.Scope());
       band.textContent = '';
-      const inputs = Array.isArray(s.inputs) ? s.inputs : [];
+      const inputs = (Array.isArray(s.inputs) ? s.inputs : [])
+        .filter((sp) => sp.kind === 'error' || !words.has(sp.name));
       const values = /** @type {Record<string, unknown>} */ (s.values || {});
       for (const sp of inputs) {
         if (sp.kind === 'error') failed(sp);
