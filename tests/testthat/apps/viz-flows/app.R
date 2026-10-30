@@ -2,8 +2,10 @@
 # test-e2e-flows.R: a chart coloured by treatment arm whose click drills to a
 # drill filter block, charts to work the gear, the download menu and the
 # title word menu on, and a table and a chart whose subtitles name their
-# prepare scripts' values, next to such a table saved by blockr.viz 0.2.x
-# (legacy-script-block.json, written by make-legacy-script-block.R).
+# prepare scripts' values, next to such a table saved by blockr.viz 0.2.x, and
+# groups tables whose subtitles name their row column and first summary, one
+# of them saved by 0.2.x (legacy-*.json, written by
+# make-legacy-script-block.R).
 #
 # Loads blockr.viz from BLOCKR_VIZ_SRC (the source tree under test) when set.
 # With BLOCKR_FLOWS_RESTORE set to a saved board (JSON), serves that board
@@ -132,24 +134,39 @@ build_board <- function() {
         title = "Subjects by arm, by age", block_name = "Script chart"
       ),
       # The same table as a board saved by blockr.viz 0.2.x holds it.
-      legacy = blockr_deser(blockr.core:::read_json("legacy-script-block.json"))
+      legacy = blockr_deser(blockr.core:::read_json("legacy-script-block.json")),
+      # The groups layout's words: the row column and the first summary's.
+      groups_words = new_table_block(
+        layout = "groups", by = "ARM",
+        summaries = list(list(type = "simple", name = "Mean age", func = "mean",
+                              col = "AGE", show = "number")),
+        subtitle = "By {@by}, {@func} of {@value}",
+        title = "Mean age by arm", block_name = "Groups words"
+      ),
+      # A 0.2.x summarize table titled `By {@group}, top {@top_n}`.
+      legacy_words = blockr_deser(
+        blockr.core:::read_json("legacy-group-block.json")
+      )
     ),
     links = links(
       from = c("adsl", "adsl", "dfilt", "adsl", "adsl", "adsl", "adsl",
-               "adsl", "adsl", "adsl"),
+               "adsl", "adsl", "adsl", "adsl", "adsl"),
       to = c("arms", "dfilt", "ctrl_out", "dl", "gear", "words", "arms_bar",
-             "script_tbl", "script_chart", "legacy")
+             "script_tbl", "script_chart", "legacy", "groups_words",
+             "legacy_words")
     ),
     views = list(
       drill = dock_view(c("arms", "arms_bar", "ctrl_out"), name = "drill"),
       tools = dock_view(c("dl", "gear", "words"), name = "tools"),
       script = dock_view(c("script_tbl", "script_chart", "legacy"),
-                         name = "script")
+                         name = "script"),
+      groups = dock_view(c("groups_words", "legacy_words"), name = "groups")
     ),
     grids = list(
       drill = dock_grid(blk("arms"), blk("arms_bar"), blk("ctrl_out")),
       tools = dock_grid(blk("dl"), blk("gear"), blk("words")),
-      script = dock_grid(blk("script_tbl"), blk("script_chart"), blk("legacy"))
+      script = dock_grid(blk("script_tbl"), blk("script_chart"), blk("legacy")),
+      groups = dock_grid(blk("groups_words"), blk("legacy_words"))
     ),
     extensions = list(ctrl_bridge = new_ctrl_bridge_extension()),
     active = "drill",

@@ -1,8 +1,11 @@
-# Writes legacy-script-block.json: a summarize table saved by blockr.viz
-# 0.2.200, the version production boards ran, whose subtitle names its prepare
-# script's values (`{@min_share}`) across a line break. apps/viz-flows restores
-# it, so test-e2e-flows.R checks such a block on the rewrite: the words are the
-# controls and the gear's Titles row loads unedited ("not applied" hidden).
+# Writes two summarize tables saved by blockr.viz 0.2.200, the version
+# production boards ran, for apps/viz-flows and test-e2e-flows.R:
+#
+# - legacy-script-block.json: a subtitle that names its prepare script's
+#   values (`{@min_share}`) across a line break. The words are the controls,
+#   and the gear's Titles row loads unedited ("not applied" hidden).
+# - legacy-group-block.json: `By {@group}, top {@top_n}`, both words links on
+#   0.2.x. Restore names the first `{@by}`; both stay live.
 #
 #   R_LIBS=<library with blockr.viz 0.2.200 (3ea4c47) and its blockr.core>
 #     Rscript make-legacy-script-block.R
@@ -28,8 +31,23 @@ blk <- new_summarize_table_block(
   block_name = "Legacy script"
 )
 
-out <- file.path(dirname(normalizePath(sub("^--file=", "",
-  grep("^--file=", commandArgs(FALSE), value = TRUE)[1L]))),
-  "legacy-script-block.json")
-writeLines(typedjson::json_write_str(blockr_ser(blk)), out)
-message("blockr.viz ", packageVersion("blockr.viz"), ": wrote ", out)
+# A summarize table whose subtitle names its row column and its top n, the
+# words 0.2.x drew as links: legacy-group-block.json.
+grp <- new_summarize_table_block(
+  by = "SEX",
+  summaries = list(list(type = "simple", name = "n", func = "count_distinct",
+                        col = "USUBJID", show = "bar")),
+  top_n = 2,
+  subtitle = "By {@group}, top {@top_n}",
+  title = "Subjects by sex (0.2.x)",
+  block_name = "Legacy words"
+)
+
+here <- dirname(normalizePath(sub("^--file=", "",
+  grep("^--file=", commandArgs(FALSE), value = TRUE)[1L])))
+for (x in list(list(blk, "legacy-script-block.json"),
+               list(grp, "legacy-group-block.json"))) {
+  out <- file.path(here, x[[2L]])
+  writeLines(typedjson::json_write_str(blockr_ser(x[[1L]])), out)
+  message("blockr.viz ", packageVersion("blockr.viz"), ": wrote ", out)
+}

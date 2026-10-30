@@ -12,7 +12,10 @@
 # 6. a prepare script's value named in a subtitle is a word that sets it, with
 #    no second control in the script band, on a table, a chart and a table
 #    saved by blockr.viz 0.2.x, and a restored board's Titles row loads
-#    unedited ("not applied" hidden).
+#    unedited ("not applied" hidden),
+# 7. a groups table's row-column and summary words are links from the first
+#    payload, also on a summarize table saved by 0.2.x (`By {@group}, top
+#    {@top_n}`), and a pick in their menus changes that part.
 #
 # Clicks and key presses are real input events (DevTools protocol). The app
 # loads blockr.viz from this source tree (BLOCKR_VIZ_SRC). Skipped without a
@@ -464,4 +467,48 @@ test_that("flows: restored script subtitles keep their words; Titles loads unedi
     expect_false(r$dirty, label = paste(id, "subtitle row marked edited"))
     expect_identical(r$stale, "none", label = paste(id, "'not applied'"))
   }
+})
+
+# Pick `option` in the menu a subtitle word opened.
+flows_pick <- function(app, option) {
+  flows_click(app, NULL, ".blockr-select__option", option)
+  app$run_js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));")
+  app$wait_for_idle()
+  Sys.sleep(1)
+}
+
+test_that("flows: a groups table's row and summary words are links from the start", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "groups", "groups_words")
+  f <- flows_script_face(app, "groups_words")
+  expect_identical(f$words, c("ARM", "mean", "AGE"))
+
+  flows_view(app, "groups", "legacy_words")
+  old <- flows_script_face(app, "legacy_words")
+  expect_identical(old$words, c("SEX", "2"),
+                   label = "the 0.2.x subtitle `By {@group}, top {@top_n}`")
+})
+
+test_that("flows: a groups word's menu changes the row column or the summary", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "groups", "groups_words")
+  flows_click(app, "groups_words", ".vz-subtitle .blockr-slot", "ARM")
+  flows_pick(app, "SEX")
+  f <- flows_script_face(app, "groups_words")
+  expect_match(f$sub, "By SEX", fixed = TRUE)
+  expect_identical(unlist(flows_saved_block(app, "groups_words")$payload$by), "SEX")
+
+  flows_click(app, "groups_words", ".vz-subtitle .blockr-slot", "mean")
+  flows_pick(app, "Median")
+  f <- flows_script_face(app, "groups_words")
+  expect_match(f$sub, "median of AGE", fixed = TRUE)
+  s1 <- flows_saved_block(app, "groups_words")$payload$summaries[[1L]]
+  expect_identical(s1$func, "median")
+  expect_identical(s1$col, "AGE")
+
+  flows_view(app, "groups", "legacy_words")
+  flows_click(app, "legacy_words", ".vz-subtitle .blockr-slot", "SEX")
+  flows_pick(app, "ARM")
+  expect_identical(unlist(flows_saved_block(app, "legacy_words")$payload$by), "ARM")
+  expect_identical(flows_script_face(app, "legacy_words")$words, c("ARM", "2"))
 })
