@@ -208,3 +208,32 @@ test('slots with blockr.ui: a word opens Blockr.Select.menu and a pick sends', {
   assert.equal(t.doc.querySelector('.blockr-select-menu-host'), null, 'the menu is gone');
   slots.dispose();
 });
+
+// A template written in R code can hold a real line break ("By: {@x}\n[...]"). A one-line
+// field drops it, so the row loaded marked edited, "not applied" showing on a board just
+// restored. The field shows it as the `\n` R reads as a break.
+test('a template with a line break loads unedited, the break as \\n', () => {
+  const t = setup();
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count',
+                          title: 'Count of {@x}', subtitle: 'By: {@x}\n[ in {@func}]', value_labels: false },
+                        { derived: { titles: TITLES } }));
+  const inp = field(t, 'subtitle');
+  assert.equal(inp.value, 'By: {@x}\\n[ in {@func}]');
+  assert.equal(row(t.el, 'subtitle').classList.contains('vz-row--dirty'), false);
+  inp.focus();
+  inp.dispatchEvent(new t.win.Event('blur'));
+  assert.equal(t.sent.length, 0, 'leaving the field unchanged sends nothing');
+});
+
+test('an edit of such a template sends the \\n token, which R reads as a break', () => {
+  const t = setup();
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count',
+                          title: 'Count of {@x}', subtitle: 'By: {@x}\n[ in {@func}]', value_labels: false },
+                        { derived: { titles: TITLES } }));
+  const inp = field(t, 'subtitle');
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+  typeAt(t, inp, '!');
+  assert.equal(row(t.el, 'subtitle').classList.contains('vz-row--dirty'), true);
+  key(t, inp, 'Enter');
+  assert.deepEqual(lastSet(t).values, { subtitle: 'By: {@x}\\n[ in {@func}]!' });
+});
