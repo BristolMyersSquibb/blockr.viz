@@ -291,7 +291,9 @@
   function row(el, ctx) {
     const band = /** @type {VizTitleBand | null | undefined} */ (
       /** @type {any} */ (ctx.titles)[ctx.key]);
-    const before = ctx.value == null ? '' : String(ctx.value);
+    // A line break in the saved template (one written in R code) shows as the `\n` R reads
+    // as a break: a one-line field would drop it, and the row would load as edited.
+    const before = ctx.value == null ? '' : String(ctx.value).replace(/\r\n|\r|\n/g, '\\n');
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.className = 'blockr-text-input vz-text vz-template';
@@ -337,7 +339,9 @@
     };
     const commit = () => {
       const v = inp.value.trim() === '' ? null : inp.value;
-      if (v !== (ctx.value ?? null)) ctx.set(v);
+      // Unchanged against the field as it loaded, so a template with a line break is not
+      // sent back as an edit when the field is left.
+      if ((v ?? '') !== before) ctx.set(v);
     };
     ctx.scope.on(inp, 'input', (e) => {
       if (/** @type {InputEvent} */ (e).data === '@') menu.open();
