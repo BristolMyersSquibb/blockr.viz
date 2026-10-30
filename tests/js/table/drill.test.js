@@ -227,3 +227,15 @@ test('the drill helpers compare claims', () => {
   assert.equal(d.label(cat({ '.group1_level': ['Cardiac'], X: [null] }), { X: 'Ex' }),
                'Cardiac, Ex = (Missing)');
 });
+
+test('when R drops the selection the rows go dark and the receipt goes', () => {
+  const t = mount(payload({ data: flatModel(6), dataRev: 3, config: { selection: cat({ ARM: ['Low'] }) },
+                            derived: { receipt: 'Filtered: Arm = Low dose' } }));
+  assert.deepEqual(t.lit(), [1, 4]);
+  // Same rows (R sends them once per data revision), no selection.
+  t.render({ dataRev: 3, config: { selection: null }, derived: { receipt: null } });
+  assert.deepEqual(t.lit(), []);
+  const status = t.$('.vz-status-text');
+  assert.equal(status ? status.textContent : '', '');
+  assert.deepEqual(t.selects(), [], 'nothing goes back to R');
+});

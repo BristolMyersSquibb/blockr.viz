@@ -10,8 +10,10 @@
 #       pick; the other picks go to the gear the switch left open)
 #   (d) the block's state (`layout`) is the pick
 #   (e) from the click until it settles, the block always shows one open
-#       tray and a table: the gear does not vanish and the table does not
-#       jump up for a few frames while the engines swap; and a scrolled
+#       tray and a table, or the layout's empty message (Per variable on the
+#       Listing, which has no variables, asks for them): the gear does not
+#       vanish and the table does not jump up for a few frames while the
+#       engines swap; and a scrolled
 #       panel keeps its scroll (the first picks run scrolled down 200px,
 #       the first visit to each engine among them)
 #

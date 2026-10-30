@@ -206,3 +206,28 @@ test('a drill column lights every bar holding a selected row, not only the click
   assert.deepStrictEqual(lit, ['Fever', 'Rash']);
   c.close();
 });
+
+test('a histogram bin click sends its bin; R turns the bin into a range of x (feature 74)', () => {
+  const { F } = require('../cases');
+  const bins = F.data.ADY.map((v) => (v == null ? null : (v < 30 ? '0-30' : '30-90')));
+  const columns = F.columns.concat([{ name: 'ADY_bin', class: 'string', n_unique: 2,
+                                      levels: ['0-30', '30-90'] }]);
+  const r = run({ type: 'histogram', x: 'ADY', drill: 'auto' }, (c) => {
+    c.click(0, 0, 1);
+    assert.match(c.footer(), /^Filtered: /);
+    c.click(0, 0, 1);
+  }, { columns, data: { ...F.data, ADY_bin: bins } });
+  assert.deepStrictEqual(r.sent, [cat({ ADY_bin: ['30-90'] }), null]);
+});
+
+test('a click on a dated point sends its day in ms, at UTC midnight (feature 75)', () => {
+  const data = { DAY: ['2024-01-01', '2024-01-08', '2024-01-15'], VAL: [1, 2, 3] };
+  const columns = [{ name: 'DAY', class: 'date', n_unique: 3, label: 'Visit date' },
+                   { name: 'VAL', class: 'number', n_unique: 3, label: '' }];
+  const r = run({ type: 'scatter', x: 'DAY', y: 'VAL', drill: 'auto' },
+                (c) => c.click(0, 0, 1), { data, columns });
+  const day = Date.UTC(2024, 0, 8);
+  assert.deepStrictEqual(r.sent, [{ type: 'range', x: 'DAY', y: 'VAL', x_range: [day, day],
+                                    y_range: [2, 2] }]);
+  assert.match(r.footer, /^Filtered: Visit date /);
+});

@@ -12,7 +12,8 @@
 // section) and the input badge.
 // A pick adds {gaps, blanks, samples}: from the click until the block has
 // settled, sampled every 8 ms, how often the block showed no open tray, and
-// how often it showed no table; and `scrollLost`, whether a scrolled panel
+// how often it showed neither a table nor the layout's own empty message
+// (Per variable without variables asks for them); and `scrollLost`, whether a scrolled panel
 // lost its scroll although the new layout is tall enough to keep it.
 //   blockrLayout.scroll(id, px)  scroll the block's dock panel
 (function () {
@@ -40,7 +41,7 @@
   }
 
   const gears = (r) => [...r.querySelectorAll(".blockr-gear-btn")].filter(vis);
-  const tables = (r) => [...r.querySelectorAll("table")].filter(vis);
+  const tables = (r) => [...r.querySelectorAll("table, .vz-empty")].filter(vis);
   const trays = (r) => [...r.querySelectorAll(".blockr-settings--open")].filter(vis);
   const segs = (tray) => [...tray.querySelectorAll("[data-role=layout] [role=radio]")]
     .filter((s) => LAYOUTS.includes(val(s)));

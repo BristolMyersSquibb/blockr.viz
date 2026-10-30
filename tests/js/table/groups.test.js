@@ -508,3 +508,13 @@ test('a compact title cut by its cap carries its full text as the tooltip', asyn
   assert.equal(ths[0].getAttribute('data-blockr-tooltip'), null);
   assert.equal(ths[1].getAttribute('data-blockr-tooltip'), 'A title longer than its cap');
 });
+
+test('a click on the (Missing) row claims the missing level as null', () => {
+  const m = groups();
+  m.cols[0].disp = ['Placebo', 'Low', '(Missing)'];
+  m.rows.keys[2] = { ARM: [null] };
+  const t = mount(payload({ data: m, config: G, derived: { legend: null } }));
+  t.click(t.cell(2, 1));
+  assert.ok(t.$$('tbody tr')[2].classList.contains('vz-table-row-active'));
+  assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: [null] } }]);
+});

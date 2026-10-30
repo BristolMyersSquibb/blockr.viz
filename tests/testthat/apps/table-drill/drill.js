@@ -13,9 +13,10 @@
   };
   const txt = (e) => ((e && e.textContent) || "").replace(/\s+/g, " ").trim();
 
-  const root = (id) =>
-    [...document.querySelectorAll('.card[id$="-block_handle-' + id + '"]')]
-      .find(vis) || null;
+  // A block card is a .card in older blockr.dock, a .blockr-block-card on main.
+  const card = (id) => '.card[id$="-block_handle-' + id + '"], ' +
+    '.blockr-block-card[id$="-block_handle-' + id + '"]';
+  const root = (id) => [...document.querySelectorAll(card(id))].find(vis) || null;
 
   const busy = () => [...document.querySelectorAll(".recalculating")].some(vis);
   async function idle(max = 30000) {
@@ -33,7 +34,7 @@
     const t0 = Date.now();
     while (Date.now() - t0 < 30000) {
       await sleep(300);
-      const r = document.querySelector('.card[id$="-block_handle-' + name + '"]');
+      const r = document.querySelector(card(name));
       if (r && vis(r) && rows(r).length && !busy()) break;
     }
     await idle();
