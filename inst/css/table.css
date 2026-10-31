@@ -14,6 +14,13 @@
   width: 100%;
   font-size: var(--blockr-font-size-base, 0.875rem);
 }
+/* A table with R's column widths (a <colgroup>, table/dom.js) keeps them:
+   in a narrow card it scrolls sideways rather than squeezing the row labels
+   into a narrow first column. With width: 100% a wide card still spreads
+   the spare width over the columns. As in 0.2. */
+.blockr-table.vz-table-fixed {
+  table-layout: fixed;
+}
 :where(.vz-table, .vz-table-groups)
   .blockr-table thead {
   position: sticky;

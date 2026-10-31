@@ -263,9 +263,17 @@ test('a bold stub header keeps its class; leaves without sorting are not sortabl
 test('column widths make a fixed layout', () => {
   const m = flatModel(2);
   m.widths = [80, 120, 60];
-  const t = mount(payload({ data: m }));
+  const env = loadTable();
+  // The shipped sheet: without its table-layout rule an auto table squeezes
+  // the row labels into a narrow first column in a narrow card.
+  const style = env.win.document.createElement('style');
+  style.textContent = require('node:fs').readFileSync(require('node:path').join(
+    __dirname, '..', '..', '..', 'inst', 'css', 'table.css'), 'utf8');
+  env.win.document.head.appendChild(style);
+  const t = mount(payload({ data: m }), env);
   assert.deepEqual(t.$$('colgroup col').map((c) => c.getAttribute('style')),
                    ['width:80px', 'width:120px', 'width:60px']);
+  assert.equal(env.win.getComputedStyle(t.$('table.blockr-table')).tableLayout, 'fixed');
 });
 
 test('parseNum reads the first number of a display text', () => {
