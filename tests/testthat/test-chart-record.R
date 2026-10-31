@@ -18,7 +18,7 @@ for (nm in names(record_scenarios())) {
         skip(paste("open behaviour change,", record_rw_open[[nm]]))
       }
       got <- suppressWarnings(record_run(sc, target))
-      expect_equal(record_rw_got(got), record_rw_expected(readRDS(path)))
+      expect_equal(record_rw_got(got), record_rw_expected(readRDS(path), sc))
     })
   })
 }

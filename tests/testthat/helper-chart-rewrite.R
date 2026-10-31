@@ -170,8 +170,9 @@ record_computed <- function(x) {
 }
 
 # A recording as the rewrite is compared with it: the reference's browser
-# view in computed terms, its saved selections in the kit's shape.
-record_rw_expected <- function(rec) {
+# view in computed terms, its saved selections in the kit's shape, and the
+# accepted behaviour changes the scenario `sc` runs into.
+record_rw_expected <- function(rec, sc) {
   sel <- function(st) {
     if (!is.null(st$selection)) {
       st["selection"] <- list(legacy_chart_selection(st)$selection)
@@ -209,7 +210,7 @@ record_rw_expected <- function(rec) {
     s$browser <- views
     rec$steps[[i]] <- s
   }
-  rec
+  record_rw_empty_click_clear(rec, sc)
 }
 
 record_rw_got <- function(rec) {
@@ -283,13 +284,40 @@ record_rw_summary_sheet <- function(dl, data) {
   new
 }
 
+# An empty click on a chart with a drill target sends a clear to the target
+# (behaviour-changes.md row 33); the reference sent nothing. The clear goes
+# into the control log after that click, and the log is cumulative, so every
+# later step carries it too. Recorded step i + 1 is scenario step i.
+record_rw_empty_click_clear <- function(rec, sc) {
+  target <- sc$args$drill_target %||% ""
+  for (j in seq_along(sc$steps)) {
+    st <- sc$steps[[j]]
+    if (identical(st$kind, "set") && "drill_target" %in% names(st$args)) {
+      target <- trimws(st$args$drill_target %||% "")
+    }
+    if (!identical(st$kind, "click") || length(st$args) || !nzchar(target)) {
+      next
+    }
+    at <- length(rec$steps[[j + 1L]]$ctrl)
+    log <- rec$steps[[j + 1L]]$ctrl
+    clear <- list(
+      op = "clear", target = target,
+      args = list(state = list(columns = list())),
+      author = log[[at]]$author
+    )
+    for (i in seq(j + 1L, length(rec$steps))) {
+      ctrl <- rec$steps[[i]]$ctrl
+      rec$steps[[i]]$ctrl <- append(ctrl, list(clear), after = at)
+    }
+  }
+  rec
+}
+
 # Recordings that differ by a user-visible change still open in
 # behaviour-changes.md. They skip until Christoph decides; an accepted change
 # becomes a translation above, a rejected one a fix.
 record_rw_open <- c(
-  heal_missing_column = "row 1: clearing a column the data lacks clears it",
-  drill_transient = paste("a clear with a drill target releases the claim",
-                          "(test-chart-server.R)")
+  heal_missing_column = "row 1: clearing a column the data lacks clears it"
 )
 
 # Messages that changed with an open behaviour change (behaviour-changes.md),
