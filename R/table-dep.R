@@ -9,7 +9,8 @@ table_view_dep <- memoise0(function() {
     tooltip_card_dep(),
     htmltools::htmlDependency(
       name = "blockr-viz-table",
-      version = js_version(script),
+      version = js_version(c(file.path("js", script), file.path("css", css)),
+                           "."),
       src = system.file(package = "blockr.viz"),
       # SnapDOM takes the groups table's picture (table/groups.js picture()).
       script = c("js/vendor/snapdom.js", file.path("js", script)),

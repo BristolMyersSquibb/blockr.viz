@@ -31,3 +31,12 @@ test_that("a table-only page gets the core, not the chart's styles", {
   expect_true("js/core/busy.js" %in% core$script)
   expect_false("chart-css" %in% vapply(deps, `[[`, "", "name"))
 })
+
+test_that("the table's cache number covers its stylesheets", {
+  deps <- htmltools::findDependencies(table_view_dep())
+  tab <- deps[[match("blockr-viz-table", vapply(deps, `[[`, "", "name"))]]
+  own <- setdiff(tab$script, "js/vendor/snapdom.js")
+  expect_true("css/table.css" %in% tab$stylesheet)
+  expect_identical(tab$version, js_version(c(own, tab$stylesheet), "."))
+  expect_false(identical(tab$version, js_version(own, ".")))
+})
