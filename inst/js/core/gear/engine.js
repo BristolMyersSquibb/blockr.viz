@@ -108,6 +108,27 @@
       return out;
     }
 
+    /** The settings as the rows show them. An optional column the data
+     * lacks reads as unset, as the block draws it: a board's `Subgroup`
+     * before one is picked, a column renamed upstream. The state keeps the
+     * name, so it applies again once the column is back; a pick replaces it.
+     * A required column stays, and its picker names it "(missing)".
+     * @param {VizValues} values @returns {VizValues} */
+    _live(values) {
+      if (!this._cols.length) return values;
+      const has = new Set(this._cols.map((c) => c.name));
+      let out = values;
+      for (const [key, arg] of Object.entries(this.spec)) {
+        const v = values[key];
+        if (!arg.gear || arg.type.name !== 'column' || !arg.nullable) continue;
+        if (typeof v !== 'string' || has.has(v) || (arg.also || []).includes(v)) continue;
+        if (this.host.required && this.host.required(key, values)) continue;
+        if (out === values) out = Object.assign({}, values);
+        out[key] = null;
+      }
+      return out;
+    }
+
     /** Write settings and send the ones that changed.
      * @param {VizValues} changes */
     set(changes) {
@@ -225,7 +246,7 @@
       const focus = this._saveFocus();
       if (this._renderScope) this._renderScope.dispose();
       const rs = this._renderScope = new V.Scope();
-      const values = this.values();
+      const values = this._live(this.values());
       this._drawn = this._key();
       this.el.textContent = '';
       this.el.setAttribute('role', 'dialog');
@@ -351,7 +372,7 @@
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
       if (this.scriptInput(key)) return this.scriptSlot(key);
-      const values = this.values();
+      const values = this._live(this.values());
       // The host first: a word that names part of a setting (the groups layout's
       // `{@value}` is its first summary's column) or names a setting differently.
       const own = this.host.slot && this.host.slot(key, values);

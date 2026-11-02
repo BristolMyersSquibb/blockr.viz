@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9016
+# blockr.viz 0.3.0.9017
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -86,7 +86,13 @@ read.
   values again, and Category columns that are not numbers or have at most
   50, as before 0.3.0. Helper columns of a prepare script and measures such
   as `AVAL` no longer appear there. A saved value the menu does not offer is
-  listed as it is; only a column the data lacks reads "(missing)".
+  listed as it is.
+* An optional mapping saved with a column the data lacks (a board's
+  `Subgroup` before one is picked) shows as "(none)" in the gear and on the
+  block's face, as the chart draws it, and waits under "+ Add a mapping".
+  The saved name stays and applies again once the column is there; picking
+  another column replaces it. A required mapping still names the column it
+  lacks with "(missing)".
 * The chart gear calls `value_lines` and `x_lines` "Reference lines" again,
   as before 0.3.0, in its rows, the title offers and the `@` list. A bar,
   which takes them on both axes, reads "Reference lines (value axis)" and

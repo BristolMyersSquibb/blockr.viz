@@ -91,8 +91,9 @@ test('a change sends only the changed key, with the payload revision', () => {
   assert.deepEqual(lastSet(t).values, { func: 'sum', category: 'SEX' });
 });
 
-test('column: (none) unless required, a missing column kept, labels muted', () => {
-  const t = setup({ type: 'bar', category: 'GONE', orientation: 'vertical', color: 'ARM' });
+test('column: (none) unless required, a missing required column kept, labels muted', () => {
+  const t = setup({ type: 'bar', category: 'GONE', orientation: 'vertical', color: 'ARM' },
+                  { host: { required: (k) => k === 'category' } });
   const texts = Array.from(sel(t.el, 'color').options).map((o) => o.textContent);
   assert.equal(texts[0], '(none)');
   assert.ok(texts.includes('ARM (Arm)'));
@@ -146,6 +147,27 @@ test('optional mappings wait in the Add menu until set or added', () => {
   assert.equal(t.sent.length, 0, 'adding a row sends nothing');
   t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', facet: 'SEX' }));
   assert.ok(rows(t.el).includes('facet') && rows(t.el).includes('color'));
+});
+
+test('an optional column the data lacks reads as unset, its name kept', () => {
+  // A board's Subgroup column exists only once a subgroup is picked.
+  const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical', facet: 'Subgroup',
+                    drill: 'auto' });
+  assert.ok(!rows(t.el).includes('facet'), 'the facet waits in the Add menu');
+  const add = t.el.querySelector('.vz-add select');
+  choose(t.win, add, 'Facet');
+  const texts = Array.from(sel(t.el, 'facet').options).map((o) => o.textContent);
+  assert.ok(!texts.some((x) => x.includes('Subgroup')));
+  assert.deepEqual(picked(sel(t.el, 'facet')).map((o) => o.textContent), ['(none)']);
+  assert.equal(t.sent.length, 0, 'showing it unset sends nothing');
+  // The word on the block's face opens the same: (none), no Subgroup.
+  const menu = t.gear.slot('facet');
+  assert.equal(menu.selected, null);
+  assert.ok(!menu.options.some((o) => String(o.label).includes('Subgroup')));
+  // `auto` is a drill word, not a column.
+  assert.ok(rows(t.el).includes('drill'));
+  choose(t.win, sel(t.el, 'facet'), 'SEX');
+  assert.deepEqual(lastSet(t).values, { facet: 'SEX' });
 });
 
 test('columns: several picks, empty to null where the spec allows it', () => {
