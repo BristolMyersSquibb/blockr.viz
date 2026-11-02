@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9013
+# blockr.viz 0.3.0.9014
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -77,6 +77,11 @@ read.
 * In the chart block, a colour, facet or series column that is missing in
   every row counts as unset in the same way: one panel, no unnamed legend
   entry, and a `[, split by {label(@facet)}]` part of the text drops.
+* The chart gear's Facet menu offers columns with at most 10 distinct
+  values again, and Category columns that are not numbers or have at most
+  50, as before 0.3.0. Helper columns of a prepare script and measures such
+  as `AVAL` no longer appear there. A saved value the menu does not offer is
+  listed as it is; only a column the data lacks reads "(missing)".
 
 ## Removed
 

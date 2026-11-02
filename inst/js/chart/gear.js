@@ -20,6 +20,10 @@
   /** Distinct values offered in a picker of a column's values. */
   const MAX_LEVELS = 500;
   const FACET_COLS = [1, 2, 3, 4, 6];
+  /** Distinct values a column may have to be offered as a facet, or, when it
+   * holds numbers, as a category. */
+  const MAX_FACET_LEVELS = 10;
+  const MAX_CATEGORY_LEVELS = 50;
 
   /** @param {string} type */
   const autoLabel = (type) => {
@@ -78,7 +82,15 @@
         const num = ['ref_min', 'ref_max', 'ymin', 'ymax'].includes(key) ||
           (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram') ||
           (key === 'value' && !ANY_COLUMN.includes(String(v.func || 'count')));
-        return num ? cols.filter((c) => numeric(c.name)) : cols;
+        if (num) return cols.filter((c) => numeric(c.name));
+        // As 0.2: a facet offers columns with at most 10 distinct values, a
+        // category columns that are not numbers or have at most 50. That keeps
+        // a prepare script's helper columns and the measures out of them.
+        if (key === 'facet') return cols.filter((c) => c.n_unique <= MAX_FACET_LEVELS);
+        if (key === 'category') {
+          return cols.filter((c) => c.class !== 'number' || c.n_unique <= MAX_CATEGORY_LEVELS);
+        }
+        return cols;
       },
       choices(key, v) {
         const type = String(v.type || 'bar');

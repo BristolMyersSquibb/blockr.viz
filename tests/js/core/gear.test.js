@@ -109,6 +109,14 @@ test('column: (none) unless required, a missing column kept, labels muted', () =
   assert.ok(!xs.some((x) => x.startsWith('AVAL')));
 });
 
+test('a current column the host does not offer is listed without (missing)', () => {
+  const t = setup({ type: 'bar', category: 'AVAL' }, { host: {
+    columns: (k, v, cols) => (k === 'category' ? cols.filter((c) => c.name !== 'AVAL') : cols) } });
+  const xs = Array.from(sel(t.el, 'category').options).map((o) => o.textContent);
+  assert.ok(xs.includes('AVAL'));
+  assert.ok(!xs.some((x) => x.includes('(missing)')));
+});
+
 test('an empty required row is amber until it is picked', () => {
   const amber = (t, key) => row(t.el, key).classList.contains('blockr-field--required-empty');
   const host = { required: (k) => k === 'category' || k === 'value' };

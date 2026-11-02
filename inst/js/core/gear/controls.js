@@ -167,7 +167,10 @@
     const curs = Array.isArray(cur) ? cur : (isSet(cur) ? [cur] : []);
     for (const c of curs) {
       if (!out.some((o) => same(o.value, c))) {
-        const missing = name === 'column' || name === 'columns';
+        // A column the data lacks says so; one the host does not offer (a
+        // facet with too many values) shows as it is.
+        const missing = (name === 'column' || name === 'columns') &&
+          !(ctx.columns || []).some((col) => col.name === c);
         out.push({ value: c, label: String(c) + (missing ? ' (missing)' : '') });
       }
     }
