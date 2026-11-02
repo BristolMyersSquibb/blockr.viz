@@ -1044,20 +1044,20 @@ test_that("a count column carries its N and draws no row for a missing group", {
   expect_match(p2$plan[[1L]]$sub_label, "^Patients · N = ")
 })
 
-test_that("a table whose every row lacks a group says so instead of failing", {
+test_that("a table whose every row lacks a group draws the total row", {
+  # An all-NA `by` column counts as unset (test-table-empty-column.R).
   ae <- sum_fixture()
   ae$TERM <- NA
   S <- list(list(type = "simple", name = "n", func = "count_distinct",
                  col = "USUBJID", show = "bar"))
   p <- groups_prepare(ae, by = "TERM", summaries = S)
-  expect_identical(p$err, "No rows to display")
-  p2 <- groups_prepare(ae, by = c("ARM", "TERM"),
-                          summaries = S)
-  expect_false(is.null(p2$err) && anyNA(p2$rows$.label))
-  # the model the block builds carries the message, it does not throw
+  expect_null(p$err)
+  expect_identical(nrow(p$rows), 1L)
+  p2 <- groups_prepare(ae, by = c("ARM", "TERM"), summaries = S)
+  expect_setequal(p2$rows$.label, unique(ae$ARM))
+  # the model the block builds does not throw
   m <- expect_silent(sum_model(ae, by = "TERM", summaries = S))
-  expect_identical(m$prep$err, "No rows to display")
-  expect_null(table_groups_to_model(m))
+  expect_null(m$prep$err)
 })
 
 test_that("facet columns with nothing to draw are left out, as the chart does", {
