@@ -601,10 +601,15 @@ tg_rw_known <- list(
   # payloads.
   rec_download = list(why = "web page drawn by the table view",
                       skip = list(from = 3L, parts = "download")),
-  rec_download_by = list(why = "web page drawn by the table view",
-                         skip = list(from = 3L, parts = "download")),
-  rec_download_structured = list(why = "web page drawn by the table view",
-                                 skip = list(from = 3L, parts = "download")),
+  # The Excel download merges the section headers across the table
+  # (behaviour-changes.md row 38): the merges must be those rows, and the
+  # values and styles stay the reference's.
+  rec_download_by = list(why = "web page drawn by the table view; row 38",
+                         skip = list(from = 3L, parts = "download"),
+                         merged = 2L),
+  rec_download_structured = list(why = "web page drawn by the table view; row 38",
+                                 skip = list(from = 3L, parts = "download"),
+                                 merged = 2L),
   var_download = list(why = "web page drawn by the table view",
                       skip = list(from = 3L, parts = "download")),
   rec_download_cards = list(why = "web page drawn by the table view",
@@ -614,6 +619,30 @@ tg_rw_known <- list(
   grp_download_cards = list(why = "web page drawn by the table view",
                             skip = list(from = 3L, parts = "download"))
 )
+
+# The merges an Excel download makes now that a heading row runs across the
+# table: the reference's (title, subtitle), then one per row whose stub has
+# text and whose other cells are all empty, read from the reference's
+# values.
+tg_rw_heading_merges <- function(step) {
+  content <- step$download$content
+  sheets <- stats::setNames(nm = names(content$values))
+  lapply(sheets, function(sh) {
+    v <- content$values[[sh]]
+    had <- content$merged[[sh]]
+    v <- as.data.frame(v)
+    n <- ncol(v)
+    rest <- v[, -1L, drop = FALSE]
+    empty <- rowSums(!is.na(rest) & nzchar(trimws(as.matrix(rest)))) == 0L
+    rows <- which(!is.na(v[[1L]]) & empty)
+    # read.xlsx() drops nothing (skipEmptyRows = FALSE), so a data-frame row
+    # is a sheet row. The header and title rows hold text in the first
+    # column only when there is one column; they are not headings.
+    rows <- rows[rows > 1L]
+    new <- sprintf("<mergeCell ref=\"A%d:%s%d\"/>", rows, LETTERS[n], rows)
+    c(had, setdiff(new, had))
+  })
+}
 
 tg_rw_apply_known <- function(want, got, nm, sc) {
   k <- tg_rw_known[[nm]]
@@ -636,6 +665,9 @@ tg_rw_apply_known <- function(want, got, nm, sc) {
     for (i in seq_along(steps)) steps[[i]]$state[nm2] <- list(v)
     want$initial[nm2] <- list(v)
     want$saved[nm2] <- list(v)
+  }
+  for (i in k$merged) {
+    steps[[i]]$download$content$merged <- tg_rw_heading_merges(steps[[i]])
   }
   if (!is.null(k$skip)) {
     for (i in seq(k$skip$from, length(steps))) {

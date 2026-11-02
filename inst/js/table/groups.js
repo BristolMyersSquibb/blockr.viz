@@ -51,6 +51,7 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
+      grid.hooks.head = (i) => this.headKind(i);
       T.tooltip.wire(frame.box, scope, () => this.model);
       /** What the last picture was of. */
       this.pictured = '';
@@ -81,6 +82,22 @@
       if (next != null && next > ind[i]) return 'vz-table-groups-row is-parent';
       if (ind[i] > 0) return 'vz-table-groups-row is-child' + (next == null || next < ind[i] ? ' is-group-end' : '');
       return 'vz-table-groups-row';
+    }
+
+    /**
+     * A parent row is a heading across the row: one cell when it has no
+     * values of its own (the compact look's empty tiles), else its name on
+     * one line and its marks on the line under it.
+     * @param {number} i
+     * @returns {'' | 'span' | 'split'}
+     */
+    headKind(i) {
+      const m = /** @type {TableModel | null} */ (this.model);
+      const ind = m && m.rows && m.rows.indent;
+      if (!m || !ind || !(i + 1 < ind.length && ind[i + 1] > ind[i])) return '';
+      const empty = m.cols.every((c, j) => j === m.stub ||
+        ((c.disp[i] == null || c.disp[i] === '') && !(c.bg && c.bg[i])));
+      return empty ? 'span' : 'split';
     }
 
     /** @param {VizPayload} p */

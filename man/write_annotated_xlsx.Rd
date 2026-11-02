@@ -54,8 +54,11 @@ Input is the annotated-data-frame contract:
 \item \code{.label} is the row-stub (first) column; \code{.indent} is the Excel
 cell indent level; \code{.strong} rows are bold.
 \item \verb{.section_1, ..., .section_k} become bold section-header rows
-interleaved at each section restart, as in the HTML renderer. These
-and any other dot-prefixed columns are not exported as data columns.
+merged across the table, interleaved at each section restart, as in
+the HTML renderer. These and any other dot-prefixed columns are not
+exported as data columns.
+\item a \code{.strong} row, or a row above a deeper \code{.indent}, whose data
+cells are all empty is a heading: bold and merged across the table.
 \item data columns carry their pre-formatted strings. A name with a
 \code{"||"} (\code{"Placebo||CAT1"}) is a two-level spanner: the part before the
 \code{"||"} becomes a merged top header cell; \code{attr(col, "label")}

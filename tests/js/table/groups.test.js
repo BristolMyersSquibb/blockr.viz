@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const { loadTable, payload, tick } = require('./load');
 
 const G = { layout: 'groups', by: ['ARM'] };
+/** The rows that carry a label: a parent's values line has none. */
+const NAMED = 'tbody tr.vz-table-row:not(.vz-table-heading-values)';
 
 /** A groups table of three arms, one column per mark kind. */
 function groups() {
@@ -262,7 +264,7 @@ test('without by there is no search or header sorting', () => {
 test('nested groups: parents fold their terms; search keeps the parent', async () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   assert.equal(t.$('table').getAttribute('data-summarize-nested'), '1');
-  const rows = () => t.$$('tbody tr.vz-table-row');
+  const rows = () => t.$$(NAMED);
   assert.deepEqual(rows().map((r) => r.className.split(' ').filter((c) => c.startsWith('is-')).join(' ')),
                    ['is-parent', 'is-child', 'is-child is-group-end', 'is-parent', 'is-child is-group-end']);
   t.click(rows()[0].querySelector('.vz-table-indent-btn'));
@@ -281,26 +283,90 @@ test('a restored selection opens the parents of its rows, and nothing else', () 
   m.collapsed = true;
   const sel = { type: 'categorical', filters: { AESOC: ['Skin'], AEDECOD: ['Rash'] } };
   const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'], selection: sel }) }));
-  const rows = () => t.$$('tbody tr.vz-table-row');
+  const rows = () => t.$$(NAMED);
   assert.deepEqual(rows().map((r) => r.children[0].textContent), ['Cardiac', 'Skin', 'Rash']);
   assert.ok(rows()[2].classList.contains('vz-table-row-active'));
   // A selected parent stays folded: its own row is on screen.
   const parent = { type: 'categorical', filters: { AESOC: ['Cardiac'] } };
   const u = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'], selection: parent }) }));
-  assert.deepEqual(u.$$('tbody tr.vz-table-row').map((r) => r.children[0].textContent), ['Cardiac', 'Skin']);
+  assert.deepEqual(u.$$(NAMED).map((r) => r.children[0].textContent), ['Cardiac', 'Skin']);
+});
+
+test('a parent is its name across the row, then its marks on the line below', () => {
+  const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const parent = t.$$('tbody tr[data-i="0"]');
+  assert.equal(parent.length, 2);
+  const [line, vals] = parent;
+  assert.ok(line.classList.contains('vz-table-heading-line') && line.classList.contains('vz-table-heads'));
+  assert.equal(line.children.length, 1);
+  assert.equal(line.children[0].getAttribute('colspan'), '2');
+  assert.equal(line.children[0].textContent, 'Cardiac');
+  assert.ok(line.querySelector('.vz-table-indent-btn'));
+  assert.ok(vals.classList.contains('vz-table-heading-values'));
+  assert.equal(vals.children[0].textContent, '');
+  assert.ok(vals.children[1].querySelector('.vz-table-groups-track'));
+  // A child is a plain row; no row heads it.
+  const child = t.$$('tbody tr[data-i="1"]');
+  assert.equal(child.length, 1);
+  assert.ok(!child[0].classList.contains('vz-table-heads'));
+  // Either line lights both and claims the parent.
+  vals.children[0].dispatchEvent(new t.win.MouseEvent('mouseover', { bubbles: true }));
+  assert.ok(t.$$('tbody tr[data-i="0"]').every((r) => r.classList.contains('vz-table-hot-row')));
+  t.click(line.children[0]);
+  assert.ok(t.$$('tbody tr[data-i="0"]').every((r) => r.classList.contains('vz-table-row-active')));
+  const u = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  u.click(u.$('tbody tr.vz-table-heading-values[data-i="0"]').children[1]);
+  assert.deepEqual(t.selects().concat(u.selects()).map((s) => s.filters),
+                   [{ AESOC: ['Cardiac'] }, { AESOC: ['Cardiac'] }]);
+});
+
+test('a parent with no values is one cell across the row', () => {
+  const m = nested();
+  m.cols[1].disp = [null, '2', '3', null, '4'];
+  m.cols[1].mark = null;
+  const t = mount(payload({ data: m, config: Object.assign({ look: 'compact' }, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const parent = t.$$('tbody tr[data-i="0"]');
+  assert.equal(parent.length, 1);
+  assert.ok(parent[0].classList.contains('vz-table-heading'));
+  assert.equal(parent[0].children[0].getAttribute('colspan'), '2');
+  assert.equal(parent[0].querySelector('.vz-table-heading-text').textContent, 'Cardiac');
+});
+
+test('the row window counts a parent as two lines', () => {
+  // 30 parents of 20 terms each: 630 items, 660 lines.
+  const n = 30;
+  const disp = [];
+  const indent = [];
+  for (let p = 0; p < n; p++) {
+    disp.push('SOC ' + p);
+    indent.push(0);
+    for (let c = 0; c < 20; c++) { disp.push('Term ' + p + '.' + c); indent.push(1); }
+  }
+  const m = { n: disp.length, stub: 0,
+              cols: [{ name: 'T', disp }, { name: 'Rows', disp: disp.map(() => '1') }],
+              head: [[{ text: 'Term', stub: true, col: 0 }, { text: 'Rows', col: 1 }]],
+              rows: { indent }, collapsed: false };
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const grid = t.el._viz.view.view.grid;
+  assert.equal(grid._lines.at(-1), disp.length + n);
+  const sp = t.$$('tbody tr.vz-table-vspacer');
+  assert.equal(sp.length, 1);
+  const [, end] = grid.win;
+  const below = grid._lines.at(-1) - grid._lines[end];
+  assert.equal(parseFloat(sp[0].querySelector('td').style.height), Math.round(below * grid.rowH));
 });
 
 test('nested groups: a child label starts on its parent\'s label edge', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   // No indent step anywhere: the parents' chevrons hang left of the shared edge.
-  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.children[0].getAttribute('style')),
+  assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].getAttribute('style')),
                    [null, null, null, null, null]);
 });
 
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   t.click(t.$('th[data-col-index="1"]'));
-  assert.deepEqual(t.$$('tbody tr.vz-table-row').map((r) => r.children[0].textContent),
+  assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].textContent),
                    ['Skin', 'Rash', 'Cardiac', 'Angina', 'Arrhythmia']);
 });
 

@@ -204,3 +204,31 @@ test_that("write_annotated_xlsx() writes one stub header label per header row", 
   expect_equal(got[1:2, 1], c("Primary System Organ Class",
                               "Dictionary-Derived Term"))
 })
+
+test_that("write_annotated_xlsx() merges heading rows across the table", {
+  skip_if_not_installed("openxlsx")
+  # A section header and a heading row with no values run across the
+  # table, as in the table view; a bold row with values does not.
+  df <- data.frame(
+    .group1_level = c("Visit 1", "Visit 1", "Visit 1", "Visit 1"),
+    .label = c("AGE (years)", "Mean (SD)", "Total", "N"),
+    .indent = c(0L, 1L, 0L, 1L),
+    .strong = c(FALSE, FALSE, TRUE, FALSE),
+    Active = c(NA, "61.4", "120", "118"),
+    Placebo = c(NA, "60.9", "118", "117"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  f <- tempfile(fileext = ".xlsx")
+  on.exit(unlink(f), add = TRUE)
+  write_annotated_xlsx(df, f)
+  sheet <- xlsx_part(f, "xl/worksheets/sheet1.xml")
+  merges <- regmatches(sheet, gregexpr("<mergeCell ref=\"[^\"]+\"", sheet))[[1]]
+  refs <- sub("<mergeCell ref=\"([^\"]+)\"", "\\1", merges)
+  # Header on row 1; the section on row 2, AGE on row 3.
+  expect_setequal(refs, c("A2:C2", "A3:C3"))
+  wb <- openxlsx::loadWorkbook(f)
+  bold_stub_rows <- unlist(lapply(wb$styleObjects, function(s) {
+    if ("BOLD" %in% s$style$fontDecoration && 1L %in% s$cols) s$rows
+  }))
+  expect_true(3L %in% bold_stub_rows)
+})

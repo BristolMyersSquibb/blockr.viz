@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9018
+# blockr.viz 0.3.0.9019
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -58,6 +58,15 @@ read.
   followed the scroll of its own box, which no longer scrolls: after a
   recompose or a fold, the rows stopped and the rest of the table was
   blank.
+* A row that heads other rows is drawn the same way in every layout: its
+  label is bold in the body's ink, the rows under it are regular in the
+  body's ink, and the heading runs across the row on one line. A groups
+  parent puts its name on that line and its marks on the line below, where
+  it wrapped in the label column. A parent with no values (the compact
+  look) and a finished table's row over deeper rows with empty cells
+  (gtsummary's "Age (years)") are one cell across the row; they no longer
+  widen or wrap in the first column. The Excel, Word and PowerPoint
+  downloads merge these rows and the section headers across the table.
 * A table's header row stays at the top while its rows scroll, in every
   layout and in `interactive_table()`, with a spanner row above the row it
   spans. A table runs its full length in the panel, and in the records and

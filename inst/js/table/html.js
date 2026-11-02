@@ -147,7 +147,7 @@
    * @param {string} [cls] The layout's own classes for the stub.
    * @param {boolean} [flush] See indentSteps().
    */
-  function stub(m, st, i, shut, cls, flush) {
+  function stub(m, st, i, shut, cls, flush, span) {
     const c = m.cols[/** @type {number} */ (m.stub)];
     const steps = indentSteps(st, i, flush);
     /** @type {string[]} */
@@ -160,34 +160,84 @@
       ? '<button class="vz-table-indent-btn" type="button" tabindex="-1" aria-expanded="' +
         !shut + '">' + CHEV + '</button>'
       : '';
+    const text = d == null ? '&mdash;' : esc(d);
+    // A heading across the row: its text adds nothing to the table's width
+    // and ends in an ellipsis only where the table ends.
     return '<td class="vz-table-stub' + (cls ? ' ' + cls : '') + (st.toggle[i] ? ' blockr-has-toggle' : '') +
-      (tint ? ' blockr-row-bar' : '') + '"' +
+      (tint ? ' blockr-row-bar' : '') + (span ? ' vz-table-heading-cell' : '') + '"' +
+      (span ? ' colspan="' + span + '"' : '') +
       (style.length ? ' style="' + esc(style.join(';')) + '"' : '') + '>' + btn +
-      (d == null ? '&mdash;' : esc(d)) + '</td>';
+      (span ? '<span class="vz-table-heading-text"' + (d == null ? '' : ' title="' + esc(d) + '"') +
+        '>' + text + '</span>' : text) + '</td>';
   }
 
   /**
-   * One row.
+   * How row `i` is drawn as a heading: `span`, one cell across the row (a
+   * row that heads others and has no values, marked by R in `rows.span`);
+   * `split`, a line across the row for the name and a line under it for the
+   * values (the groups layout's parents); "" a plain row.
+   * @param {TableModel} m
+   * @param {number} i
+   * @param {string | undefined} head The layout's choice, if any.
+   * @returns {'' | 'span' | 'split'}
+   */
+  function headKind(m, i, head) {
+    if (m.stub !== 0 || m.cols.length < 2) return '';
+    if (head === 'span' || head === 'split') return head;
+    return m.rows && m.rows.span && m.rows.span[i] ? 'span' : '';
+  }
+
+  /**
+   * One row. A heading (headKind()) is one cell across the row, or that
+   * line and a line of values under it: two <tr>s with the same data-i, so
+   * a click on either claims the row.
    * @param {TableModel} m
    * @param {TableStructure} st
    * @param {number} i
    * @param {{ last: boolean, shut: boolean, extra: string, stubCls?: string, flush?: boolean,
-   *           cell?: (c: TableCol, i: number) => string | null }} o
+   *           head?: string, cell?: (c: TableCol, i: number) => string | null }} o
    */
   function row(m, st, i, o) {
     const r = m.rows || {};
+    const head = headKind(m, i, o.head);
     const cls = ['vz-table-row'];
     if (r.strong && r.strong[i]) cls.push('vz-table-bold');
     if (r.emph && r.emph[i]) cls.push('vz-table-italic');
-    if (o.last) cls.push('vz-table-group-last');
-    if (st.toggle[i]) cls.push('vz-table-indent-toggle');
-    if (st.toggle[i] && o.shut) cls.push('collapsed');
-    if (o.extra) cls.push(o.extra);
     const ind = st.indent ? st.indent[i] : 0;
-    let out = '<tr class="' + cls.join(' ') + '" data-i="' + i + '" data-indent="' + ind + '">';
+    // A row over deeper rows is a heading, 13px from the third level on.
+    if (head || (st.indent && i + 1 < st.indent.length && st.indent[i + 1] > ind)) {
+      cls.push('vz-table-heads');
+      if (indentSteps(st, i, o.flush) >= 2) cls.push('vz-table-heads-deep');
+    }
+    if (o.extra) cls.push(o.extra);
+    const open = (/** @type {string[]} */ c) =>
+      '<tr class="' + c.join(' ') + '" data-i="' + i + '" data-indent="' + ind + '">';
+    /** @type {string[]} */
+    const own = [];
+    if (st.toggle[i]) own.push('vz-table-indent-toggle');
+    if (st.toggle[i] && o.shut) own.push('collapsed');
+    const n = m.cols.length;
+    if (head === 'span') {
+      return open(cls.concat(own, 'vz-table-heading', o.last ? ['vz-table-group-last'] : [])) +
+        stub(m, st, i, o.shut, o.stubCls, o.flush, n) + '</tr>';
+    }
+    let out = '';
+    if (head === 'split') {
+      out = open(cls.concat(own, 'vz-table-heading', 'vz-table-heading-line')) +
+        stub(m, st, i, o.shut, o.stubCls, o.flush, n) + '</tr>';
+      cls.push('vz-table-heading-values');
+    } else {
+      cls.push(...own);
+    }
+    if (o.last) cls.push('vz-table-group-last');
+    out += open(cls);
     m.cols.forEach((c, j) => {
-      const own = j === m.stub || !o.cell ? null : o.cell(c, i);
-      out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls, o.flush) : own != null ? own : td(c, i);
+      if (j === m.stub && head === 'split') {
+        out += '<td class="vz-table-stub' + (o.stubCls ? ' ' + o.stubCls : '') + '"></td>';
+        return;
+      }
+      const mine = j === m.stub || !o.cell ? null : o.cell(c, i);
+      out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls, o.flush) : mine != null ? mine : td(c, i);
     });
     return out + '</tr>';
   }
@@ -207,5 +257,5 @@
   }
 
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, foot, indentSteps };
+  V.table.html = { th, td, section, row, foot, indentSteps, headKind };
 })();

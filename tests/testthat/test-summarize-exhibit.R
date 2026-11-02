@@ -262,3 +262,28 @@ test_that("a slide row grows to hold every colour level and its number", {
   pages <- summarize_paint_pages(on, prep, 9, budget)
   expect_length(pages, 3L)
 })
+
+test_that("the painted compact look runs an empty parent across the row", {
+  d <- data.frame(
+    ARM = rep(c("Nivolumab 240 mg + Ipilimumab 1 mg/kg", "Placebo"), each = 8L),
+    USUBJID = sprintf("S%02d", rep(1:4, 4L)),
+    AEDECOD = rep(c("Fatigue", "Rash"), 8L),
+    stringsAsFactors = FALSE
+  )
+  sm <- list(list(type = "simple", func = "count", show = "tile",
+                  name = "Events", facet = "AEDECOD"))
+  prep <- groups_prepare(d, by = c("ARM", "USUBJID"), summaries = sm)
+  m <- groups_cells(prep)
+  span <- paint_span_rows(m)
+  expect_identical(m$label[span], c("Nivolumab 240 mg + Ipilimumab 1 mg/kg",
+                                    "Placebo"))
+  # The stub holds the subject ids, not the arm names over them.
+  lay <- paint_layout(m, prep, 9)
+  expect_lt(lay$stub_w, paint_w("Nivolumab 240 mg + Ipilimumab 1 mg/kg", 9,
+                                "sans"))
+  # A parent with a bar of its own is not a span row.
+  sm_bar <- list(list(type = "simple", func = "count", show = "bar"))
+  m_bar <- groups_cells(groups_prepare(d, by = c("ARM", "USUBJID"),
+                                       summaries = sm_bar))
+  expect_false(any(paint_span_rows(m_bar)))
+})

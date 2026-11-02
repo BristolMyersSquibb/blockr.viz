@@ -52,7 +52,8 @@ table_structured_to_model <- function(data, drill = NULL, digits = "number",
     cols = cols,
     head = table_structured_head(data, p$data_cols, stub, col_keys),
     widths = table_structured_widths(data, p$data_cols, stub),
-    rows = table_structured_rows(data, p$section_cols, drill_on, drill),
+    rows = table_structured_rows(data, p$section_cols, drill_on, drill,
+                                 p$data_cols),
     sections = table_structured_sections(data, p$section_cols, drill_on)
   )
   table_model_arrays(out[!vapply(out, is.null, logical(1L))])
@@ -123,9 +124,11 @@ table_structured_widths <- function(data, data_cols, stub_col,
   ) + extra)
 }
 
-# Per-row extras: indent, strong and emph from the styling columns, and the
-# claim each row makes when the drill is on. `NULL` when the frame has none.
-table_structured_rows <- function(data, section_cols, drill_on, drill) {
+# Per-row extras: indent, strong and emph from the styling columns, the rows
+# drawn as one cell across the row (annotated_span_rows()), and the claim
+# each row makes when the drill is on. `NULL` when the frame has none.
+table_structured_rows <- function(data, section_cols, drill_on, drill,
+                                  data_cols = character()) {
   flag <- function(col) {
     if (!col %in% names(data)) return(NULL)
     b <- suppressWarnings(as.logical(data[[col]]))
@@ -139,8 +142,9 @@ table_structured_rows <- function(data, section_cols, drill_on, drill) {
   keys <- if (drill_on) {
     table_structured_row_keys(data, section_cols, drill_col = drill)
   }
+  span <- annotated_span_rows(data, data_cols)
   out <- list(indent = indent, strong = flag(".strong"), emph = flag(".emph"),
-              keys = keys)
+              span = if (any(span)) span, keys = keys)
   out <- out[!vapply(out, is.null, logical(1L))]
   if (length(out)) out
 }

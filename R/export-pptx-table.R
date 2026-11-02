@@ -167,18 +167,24 @@ st_structure <- function(data, title, subtitle, caption, na_rep, continued) {
   body <- st_body_grid(df, stub_col, data_cols, sec, na_rep)
   stub_hdr <- stub_header_rows(df[[stub_col]], 1L + has_spanner)
   n_line_rows <- st_has(title) + st_has(subtitle)
+  # Headings with no values run across the table, so the stub's width does
+  # not have to hold them.
+  span <- annotated_span_rows(df, data_cols)
+  stub_measure <- body[sec$data_pos, 1L]
+  stub_measure[span] <- ""
   list(
     df = df, stub_col = stub_col, data_cols = data_cols,
     top = labels$top, leaf = labels$leaf,
     indent = indent,
-    bold_row = st_dot_values(df, ".strong", as.logical, FALSE),
+    bold_row = st_dot_values(df, ".strong", as.logical, FALSE) | span,
+    span = span,
     emph_row = st_dot_values(df, ".emph", as.logical, FALSE),
     sec = sec, body = body, stub_hdr = stub_hdr,
     title = title, subtitle = subtitle, caption = caption,
     spanner_i = if (has_spanner) n_line_rows + 1L else integer(0),
     leaf_i = n_line_rows + has_spanner + 1L,
     measure = list(
-      stub = body[sec$data_pos, 1L],
+      stub = stub_measure,
       stub_indent = indent,
       stub_label = stub_hdr$label,
       cells = body[sec$data_pos, -1L, drop = FALSE],
@@ -438,7 +444,8 @@ st_style_lines <- function(ft, title, subtitle, caption, font_size) {
 
 # Section headers: bold, merged across the width, indented one step per
 # nesting level above 1. Data rows: `.indent` padding on the stub, `.strong` /
-# `.emph` across the row, and per-cell paint (`.bg:<col>` / `.fg:<col>`, see
+# `.emph` across the row, a heading with no values merged across the width
+# (annotated_span_rows()), and per-cell paint (`.bg:<col>` / `.fg:<col>`, see
 # annotation_cell_paint()).
 st_style_body <- function(ft, s, indent_width) {
   sec <- s$sec
@@ -454,6 +461,12 @@ st_style_body <- function(ft, s, indent_width) {
     for (lvl in unique(sec$lvl[sec$lvl > 1L])) {
       ft <- flextable::padding(ft, i = sec$pos[sec$lvl == lvl], j = 1L,
                                padding.left = (lvl - 1L) * indent_width)
+    }
+  }
+  if (length(data_cols)) {
+    for (i in data_pos[s$span]) {
+      ft <- flextable::merge_h_range(ft, i = i, j1 = 1L,
+                                     j2 = length(data_cols) + 1L)
     }
   }
   for (lvl in sort(unique(indent[indent > 0L]))) {
@@ -531,4 +544,38 @@ st_fit_widths <- function(measure_args, n_data, col_widths, fit_width,
     widths <- c(first_col_width, rep(other_cols_width, n_data))
   }
   list(widths = widths, cell_padding = cell_padding)
+}
+
+# The heading rows that have no values of their own: a `.strong` row, or a
+# row above a deeper `.indent`, whose data cells are all empty and
+# unpainted (a gtsummary "Age (years)" row). The browser draws each as one
+# cell across the row, and the Excel, Word and PowerPoint downloads merge it.
+# It lives with the PowerPoint table so that file keeps to its own functions
+# and blockr.viz's exports (test-export.R); the table model and the Excel
+# writer call it from here.
+annotated_span_rows <- function(data, data_cols) {
+  n <- nrow(data)
+  if (n == 0L || length(data_cols) == 0L) return(logical(n))
+  indent <- if (".indent" %in% names(data)) {
+    i <- suppressWarnings(as.integer(data[[".indent"]]))
+    i[is.na(i)] <- 0L
+    i
+  } else {
+    integer(n)
+  }
+  strong <- if (".strong" %in% names(data)) {
+    b <- suppressWarnings(as.logical(data[[".strong"]]))
+    !is.na(b) & b
+  } else {
+    logical(n)
+  }
+  heads <- c(indent[-1L] > indent[-n], FALSE)
+  empty <- rep(TRUE, n)
+  for (cn in data_cols) {
+    x <- as.character(data[[cn]])
+    bg <- annotation_cell_paint(data, cn)$bg
+    empty <- empty & (is.na(x) | !nzchar(trimws(x))) &
+      (if (is.null(bg)) TRUE else is.na(bg))
+  }
+  (strong | heads) & empty
 }

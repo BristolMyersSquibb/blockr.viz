@@ -184,6 +184,8 @@ interface TableRows {
   keys?: (TableClaim | null)[] | null;
   /** Row tint, drawn as a strip on the stub. */
   tint?: (string | null)[] | null;
+  /** Rows that head others and have no values: one cell across the row. */
+  span?: boolean[] | null;
 }
 
 /** One column of cards: a card per row. */
@@ -294,6 +296,9 @@ interface TableGridHooks {
   /** The rows and section headers the selection lights; a new model opens
    *  the folds that would hide them. */
   lit?(): { rows: Iterable<number>; sections: Iterable<number> };
+  /** How row `i` is drawn as a heading (html.js headKind()): the groups
+   *  layout's parents; without it, R's `rows.span`. */
+  head?(i: number): '' | 'span' | 'split';
   /** A body cell drawn by the layout instead (the groups marks); null for
    *  the plain cell. */
   cell?(c: TableCol, i: number): string | null;

@@ -113,6 +113,9 @@
       this.shutRows = new Set();
       /** @type {TableItem[]} */
       this._items = [];
+      /** Lines above each item, and in all (`_items.length`): a heading
+       *  drawn as two lines counts two. Only the row window reads it. */
+      this._lines = [0];
       /** Rows that pass the search. */
       this._shown = 0;
       /** @type {TableStructure | null} */
@@ -358,6 +361,7 @@
     draw() {
       if (!this.model || !this.table) return;
       this._items = this._list();
+      this._countLines();
       this._window();
       this._foldAllButton();
       const empty = !!this.query && this._shown === 0;
@@ -380,6 +384,37 @@
       return this.hooks.view ? this.hooks.view() : { top: b.scrollTop, height: b.clientHeight || 600 };
     }
 
+    /** The lines of each item, summed (`_lines`), above VIRT_MIN items. */
+    _countLines() {
+      const n = this._items.length;
+      this._lines = [0];
+      if (n <= VIRT_MIN) return;
+      const m = /** @type {TableModel} */ (this.model);
+      const head = this.hooks.head;
+      let at = 0;
+      for (let k = 0; k < n; k++) {
+        const i = this._items[k].i;
+        at += i != null && H.headKind(m, i, head ? head(i) : undefined) === 'split' ? 2 : 1;
+        this._lines.push(at);
+      }
+    }
+
+    /**
+     * The first item at or below line `y`.
+     * @param {number} y
+     */
+    _itemAt(y) {
+      const L = this._lines;
+      let lo = 0;
+      let hi = this._items.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (L[mid] < y) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    }
+
     /** Draw the items around the scroll position, between two spacers. */
     _window() {
       const tbody = /** @type {HTMLTableElement} */ (this.table).tBodies[0];
@@ -390,18 +425,21 @@
       if (n > VIRT_MIN && !this.flags.all) {
         const v = this._view();
         const vis = Math.max(1, Math.ceil(v.height / this.rowH));
-        start = Math.max(0, Math.floor(v.top / this.rowH) - OVERSCAN);
-        end = Math.min(n, start + vis + 2 * OVERSCAN);
+        const top = Math.max(0, Math.floor(v.top / this.rowH) - OVERSCAN);
+        start = this._itemAt(top);
+        end = Math.max(start, Math.min(n, this._itemAt(top + vis + 2 * OVERSCAN)));
       }
+      const L = this._lines;
+      const lines = (/** @type {number} */ k) => L.length > k ? L[k] : k;
       const ncol = /** @type {TableModel} */ (this.model).cols.length || 1;
       const spacer = (/** @type {number} */ k) => '<tr class="vz-table-vspacer" aria-hidden="true">' +
         '<td colspan="' + ncol + '" style="padding:0;border:0;height:' +
         Math.round(k * this.rowH) + 'px"></td></tr>';
       /** @type {string[]} */
       const parts = [];
-      if (start > 0) parts.push(spacer(start));
+      if (start > 0) parts.push(spacer(lines(start)));
       for (let k = start; k < end; k++) parts.push(this._itemHtml(k));
-      if (end < n) parts.push(spacer(n - end));
+      if (end < n) parts.push(spacer(lines(n) - lines(end)));
       tbody.innerHTML = parts.join('');
       this.win = [start, end];
       if (n > VIRT_MIN && !this._measured) {
@@ -419,8 +457,8 @@
       const n = this._items.length;
       if (!this.table || n <= VIRT_MIN) return;
       const v = this._view();
-      const first = Math.floor(v.top / this.rowH);
-      const last = first + Math.ceil(v.height / this.rowH);
+      const first = this._itemAt(Math.floor(v.top / this.rowH));
+      const last = this._itemAt(Math.floor(v.top / this.rowH) + Math.ceil(v.height / this.rowH));
       const [s, e] = this.win;
       if ((first - s < OVERSCAN / 2 && s > 0) || (e - last < OVERSCAN / 2 && e < n)) {
         this._window();
@@ -442,6 +480,7 @@
                              m.sections[next.s].level === 1);
       return H.row(m, /** @type {TableStructure} */ (this._st), i,
                    { last, shut: this.shutRows.has(i), extra: h.rowClass ? h.rowClass(i) : '',
+                     head: h.head ? h.head(i) : undefined,
                      stubCls: this.flags.stubCls, flush: this.flags.flush, cell: h.cell });
     }
 

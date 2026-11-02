@@ -309,3 +309,28 @@ test_that("the claims name their columns and keep single values as arrays", {
   expect_null(none$rows$keys)
   expect_null(none$head[[1L]][[2L]]$keys)
 })
+
+test_that("a heading with no values is marked to span the row", {
+  d <- data.frame(
+    .label = c("AGE (years)", "Mean (SD)", "Min, Max", "Total", "SEX", "F",
+               "Weight"),
+    .indent = c(0L, 1L, 1L, 0L, 0L, 1L, 0L),
+    .strong = c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE),
+    Active = c(NA, "61.4", "34, 82", "120", "", "58", NA),
+    Placebo = c("", "60.9", "29, 84", "118", " ", "61", NA),
+    stringsAsFactors = FALSE
+  )
+  # AGE and SEX head deeper rows with empty cells; Total is bold but has
+  # values; Weight has no values but heads nothing and is not bold.
+  expect_identical(annotated_span_rows(d, c("Active", "Placebo")),
+                   c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE))
+  m <- table_structured_to_model(d)
+  expect_identical(as.logical(m$rows$span),
+                   c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE))
+  # A painted cell is a value.
+  d[[".bg:Active"]] <- c("#ff0000", rep(NA, 6L))
+  expect_identical(annotated_span_rows(d, c("Active", "Placebo"))[[1L]], FALSE)
+  # No heading, no field.
+  flat <- data.frame(.label = c("A", "B"), x = c("1", "2"))
+  expect_null(table_structured_to_model(flat)$rows$span)
+})

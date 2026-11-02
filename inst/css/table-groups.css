@@ -831,10 +831,15 @@
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 7px;
 }
+/* A parent with values is two lines (html.js row()): its name across the
+   row, then its marks under it with an empty label, right below the name. */
+.vz-table-groups-table[data-summarize-nested='1'] tbody tr.vz-table-heading-values > td {
+  padding-top: 0;
+}
 /* A compact row is its 24px tile plus 1px above and below; the last row of
-   a group adds the same 4px. Its header and headings stay on one line: the
-   label column is as wide as the subject ids, and a heading row has no
-   tiles to make room for a wrapped name. */
+   a group adds the same 4px. Its header stays on one line. Its headings
+   span the row (html.js row()), so the label column is as wide as the
+   subject ids. */
 .vz-table-groups-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 5px;
 }
@@ -852,18 +857,14 @@
   font-size: 11px;
   font-weight: var(--blockr-font-weight-normal, 400);
 }
-.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-stub-header .blockr-col-name,
-.vz-table-groups-table[data-summarize-compact='1'] tr.is-parent td.vz-table-groups-label-col {
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-stub-header .blockr-col-name {
   white-space: nowrap;
 }
-.vz-table-groups-table tr.is-parent .vz-table-groups-label {
-  font-weight: 600;
-}
-.vz-table-groups-table tr.is-parent td.vz-table-groups-label-col {
+/* A heading across the row drops the label column's 260px cap and its
+   share of the column's width (table-structured.css). */
+.vz-table-groups-table td.vz-table-groups-label-col.vz-table-heading-cell {
+  width: auto;
   max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
 }
 
 /* A column whose custom function failed: dashes, grey. The error itself is

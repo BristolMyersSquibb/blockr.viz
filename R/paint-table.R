@@ -18,8 +18,12 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
 
   stub_lab <- groups_label_header(prep)
   indent <- ifelse(m$level > 0L, PAINT_INDENT, 0)
+  # A parent with no values (the compact look's) runs across the row, as in
+  # the table view, so the stub holds only the other labels.
+  lab <- paste0(m$label)
+  lab[paint_span_rows(m)] <- ""
   stub_w <- max(
-    paint_w(paste0(m$label), fs, family) + max(indent),
+    paint_w(lab, fs, family) + max(indent),
     paint_w(stub_lab, fs, family, bold = TRUE)
   ) + 2 * pad
 
@@ -560,4 +564,17 @@ paint_write_png <- function(p, file, res = 300) {
 paint_tile_title <- function(x, max = 28L) {
   x <- as.character(x)
   ifelse(nchar(x) > max, paste0(substr(x, 1L, max - 1L), "…"), x)
+}
+
+# The parent rows with no values of their own: every cell empty and
+# unpainted. Their label runs across the row.
+paint_span_rows <- function(m) {
+  par <- as.logical(m$parent_row %||% rep(FALSE, length(m$label)))
+  par[is.na(par)] <- FALSE
+  for (c in m$cols) {
+    d <- as.character(c$disp %||% rep(NA_character_, length(par)))
+    bg <- as.character(c$bg %||% rep(NA_character_, length(par)))
+    par <- par & (is.na(d) | !nzchar(d)) & is.na(bg)
+  }
+  par
 }

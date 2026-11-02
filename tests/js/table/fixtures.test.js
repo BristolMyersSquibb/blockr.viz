@@ -33,9 +33,15 @@ function check(el, p, where) {
   for (const c of m.cols) assert.equal(c.disp.length, m.n, where + ': ' + c.name + ' has one entry per row');
   const heads = m.head.reduce((k, r) => k + r.length, 0);
   assert.equal(table.querySelectorAll('thead th').length, heads, where + ': one th per head cell');
+  // A heading is one cell across the row, or that line and a values line
+  // with the same data-i (html.js row()).
   const rows = table.querySelectorAll('tbody tr.vz-table-row');
-  assert.ok(rows.length <= m.n && (m.n === 0 || rows.length > 0 || m.collapsed), where + ': rows drawn');
-  for (const r of rows) assert.equal(r.children.length, m.cols.length, where + ': one cell per column');
+  const drawn = new Set(Array.from(rows, (r) => r.getAttribute('data-i'))).size;
+  assert.ok(drawn <= m.n && (m.n === 0 || drawn > 0 || m.collapsed), where + ': rows drawn');
+  for (const r of rows) {
+    const span = Array.from(r.children).reduce((k, c) => k + (c.colSpan || 1), 0);
+    assert.equal(span, m.cols.length, where + ': the cells cover every column');
+  }
   assert.equal(el.innerHTML.includes('<script'), false, where + ': no markup from the data');
 }
 

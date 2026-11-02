@@ -273,6 +273,36 @@ input.vz-table-search:focus {
 .vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody tr.vz-table-bold td.vz-table-stub {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
+/* Headings. A row that heads other rows, at any level, has its label at
+   600 in the body ink, 13px from the third level on, as the section
+   headings below; the rows under it stay at 400 (html.js row()). Groups
+   tables carry the same classes. */
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads > td.vz-table-stub {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+}
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads-deep > td.vz-table-stub {
+  font-size: 13px;
+}
+/* A heading with no values of its own is one cell across the row; a
+   groups parent is that line and its values on the line under it. The
+   text adds nothing to the table's width (width 0, at least the cell's):
+   it runs across the empty cells on one line, and past the edge of a
+   table narrower than it (a compact matrix of a few columns) without
+   widening a column. The box scrolls only for a name wider than the panel.
+   The fold chevron hangs into the padding. */
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody td.vz-table-heading-cell {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+.blockr-table .vz-table-heading-text {
+  display: inline-block;
+  vertical-align: top;
+  width: 0;
+  min-width: 100%;
+  white-space: nowrap;
+}
 .vz-table-structured .blockr-table tbody tr.vz-table-italic td {
   font-style: italic;
 }
