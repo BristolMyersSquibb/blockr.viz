@@ -228,7 +228,7 @@ test_that("a heatmap's settings land on the table and its tile summary", {
   p <- list(row = "USUBJID", col = "AEDECOD", color = "AETOXGR",
             group = "TRT01A", top_n = 10, cell_numbers = FALSE,
             download = TRUE, ctrl_target = "f1", max_height = 400,
-            subtitle = "Top {@top_n} {label(@col)}, by {label(@color)}",
+            subtitle = "Top {@top_n} {label(@col)}, by {label(@color)}, in {@group}",
             script = "top_n <- 25\ndata", values = list())
   expect_warning(st <- legacy_restore_heatmap(p, "AEs"), "AEs restores")
   restored_ok("table", st)
@@ -241,7 +241,7 @@ test_that("a heatmap's settings land on the table and its tile summary", {
   expect_identical(st$drill_target, "f1")
   expect_equal(st$script_values, list(top_n = 10))
   expect_identical(st$subtitle,
-                   "Top {@top_n} {label(@facet)}, by {label(@fill)}")
+                   "Top {@top_n} {label(@facet)}, by {label(@fill)}, in {@parent}")
   expect_false("max_height" %in% names(st))
 })
 

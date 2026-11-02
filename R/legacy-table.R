@@ -445,6 +445,9 @@ legacy_restore_heatmap <- function(payload, label = "a heatmap") {
   fill <- chr_state(p[["color"]])
   group <- chr_state(p[["group"]])
   values <- if (is.list(p[["values"]])) p[["values"]] else list()
+  # The heatmap had no `top_n` setting: its `top_n` was the script's value,
+  # and `{@top_n}` printed that value. It still does (script_title_args()),
+  # although the table has a `top_n` of its own; that one stays unset.
   if (!is.null(p[["top_n"]]) && is.null(values$top_n)) {
     values$top_n <- as.integer(unlist(p[["top_n"]]))[[1L]]
   }
@@ -453,7 +456,10 @@ legacy_restore_heatmap <- function(payload, label = "a heatmap") {
     if (!is.null(col)) list(facet = col),
     if (!is.null(fill)) list(fill = fill)
   )
-  slots <- c(row = "by", col = "facet", color = "fill")
+  # The heatmap's `group` is the outer row column, the groups layout's
+  # `parent`. Renamed here, before the table's own rule reads `{@group}` as
+  # the inner column (legacy_slot_names()).
+  slots <- c(row = "by", col = "facet", color = "fill", group = "parent")
   sentence <- function(tpl) legacy_slots(tpl, slots)
   args <- list(
     layout = "groups", look = "compact", by = c(group, row),

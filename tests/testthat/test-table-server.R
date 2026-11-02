@@ -57,3 +57,34 @@ test_that("a script's top_n takes the word from the table's unset top_n", {
     expect_identical(vapply(words, `[[`, "", "text"), c("25", "AETERM"))
   })
 })
+
+# A heatmap saved by 0.2.200 (fixture written by that version's
+# new_heatmap_block()), its script declaring `top_n` and its subtitle naming
+# it. 0.2.200 printed "Top 25 Adverse Event AEDECOD, by TRT01A": the heatmap
+# had no `top_n` setting. Restored, it is a table, which has one.
+test_that("a saved 0.2 heatmap's {@top_n} prints the script's value", {
+  saved <- blockr.core:::read_json(
+    test_path("fixtures", "heatmap-script-0.2.200.json")
+  )
+  ae <- data.frame(
+    TRT01A = c("A", "A", "A", "B"), USUBJID = c("1", "1", "2", "3"),
+    AEDECOD = c("x", "y", "x", "x"), AETERM = "t", AESEV = "MILD"
+  )
+  sub <- function(saved) {
+    blk <- suppressWarnings(blockr.core::blockr_deser(saved))
+    expect_s3_class(blk, "table_block")
+    out <- NULL
+    tsrv_run(blk, ae, function(expr) {
+      out <<- tsrv_payload(expr)$derived$titles$subtitle
+    })
+    out
+  }
+  s <- sub(saved)
+  expect_identical(s$text, "Top 25 Adverse Event AEDECOD, by TRT01A")
+  words <- Filter(function(x) !is.null(x$arg), s$parts)
+  expect_identical(words[[1L]][c("text", "arg")],
+                   list(text = "25", arg = "top_n"))
+  # The heatmap's own top_n seeded the script's value.
+  saved$payload$top_n <- 10L
+  expect_identical(sub(saved)$text, "Top 10 Adverse Event AEDECOD, by TRT01A")
+})
