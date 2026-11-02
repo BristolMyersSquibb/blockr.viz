@@ -112,7 +112,11 @@ script_control_values <- function(specs, values = list()) {
 #' A block's arguments plus its script values, as a title template reads them
 #'
 #' A template names a declared value by its variable (`{@top_n}`), so the
-#' script's values join the block's own roles. A role wins a collision. An
+#' script's values join the block's own roles. A script value wins a
+#' collision: the declaration is written in the block's own script, while a
+#' setting of the same name (the table's `top_n`) is easy to clash with
+#' unknowingly. That setting stays in the gear; only the word goes to the
+#' script. A declaration that failed leaves the setting's word alone. An
 #' untouched value falls back to the declaration's default. A flag prints its
 #' control's label when on and nothing when off, so a `[ ... ]` clause can
 #' carry it.
@@ -124,7 +128,6 @@ script_control_values <- function(specs, values = list()) {
 #' @noRd
 script_title_args <- function(roles, specs, values = list()) {
   specs <- Filter(script_spec_ok, specs)
-  specs <- specs[!vapply(specs, `[[`, "", "name") %in% names(roles)]
   if (!length(specs)) {
     return(roles)
   }
@@ -136,5 +139,5 @@ script_title_args <- function(roles, specs, values = list()) {
     v
   })
   names(vals) <- vapply(specs, `[[`, "", "name")
-  c(roles, vals)
+  c(roles[setdiff(names(roles), names(vals))], vals)
 }

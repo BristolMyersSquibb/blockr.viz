@@ -103,13 +103,15 @@ test('outside the groups layout the words are the settings of those names', () =
   assert.equal(t.gear.slot('by').multi, true, 'the records layout nests by a list of columns');
 });
 
-test('a groups word wins over a prepare-script value of the same name, as in R', () => {
+test('a prepare-script value takes a groups word of the same name, as in R', () => {
   const t = mount({}, []);
   t.gear.prime(payload({
     columns: COLUMNS, config: { layout: 'groups', by: ['ARM'], summaries: [S1] },
     derived: { script: { inputs: [{ name: 'func', key: 'sv_func', label: 'Func', kind: 'text' }],
                          values: { sv_func: 'x' }, error: null } }
   }));
-  assert.equal(t.gear.scriptSlot('func'), null);
-  assert.equal(t.gear.slot('func').label, 'Aggregate');
+  assert.equal(t.gear.slot('func').label, 'Func');
+  assert.equal(t.gear.slot('func').kind, 'entry');
+  assert.deepEqual(JSON.parse(JSON.stringify(t.gear.wordOf('func'))),
+                   { label: 'Func', script: true, shadows: 'Aggregate' });
 });

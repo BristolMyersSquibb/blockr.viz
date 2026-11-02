@@ -21,20 +21,30 @@
   /** @typedef {{ el: HTMLElement, pos: number, query: string, idx: number,
    *              items: { tok: string, el: HTMLElement }[], scope: VizScope }} AtState */
 
-  /** What the `@` menu offers, in groups, under public names.
+  /** What the `@` menu offers, in groups, under public names. The prepare script's
+   * values get their own group: a script value takes the word of a block setting with the
+   * same name, and the group's note says which.
    * @param {VizTitles} titles @param {VizColumn[]} columns
-   * @param {(key: string) => string} label @returns {AtGroup[]} */
-  function menuGroups(titles, columns, label) {
+   * @param {(key: string) => string} label @param {(key: string) => VizWordOf} [wordOf]
+   * @returns {AtGroup[]} */
+  function menuGroups(titles, columns, label, wordOf) {
     const args = titles.args || {};
     /** @type {AtItem[]} */
     const settings = [];
+    /** @type {AtItem[]} */
+    const script = [];
+    /** @type {string[]} */
+    const shadowed = [];
     for (const name of Object.keys(args)) {
+      const w = wordOf ? wordOf(name) : null;
+      const into = w && w.script ? script : settings;
+      if (w && w.script && w.shadows) shadowed.push('{@' + name + '}');
       const printed = args[name] == null ? '' : String(args[name]);
-      settings.push({ label: label(name), tok: '{@' + name + '}', val: printed });
+      into.push({ label: w ? w.label : label(name), tok: '{@' + name + '}', val: printed });
       const col = columns.find((c) => c.name === printed);
       if (col) {
-        settings.push({ label: 'as its variable label', indent: true,
-                        tok: '{label(@' + name + ')}', val: col.label || col.name });
+        into.push({ label: 'as its variable label', indent: true,
+                    tok: '{label(@' + name + ')}', val: col.label || col.name });
       }
     }
     /** @type {AtItem[]} */
@@ -51,6 +61,13 @@
     if (settings.length) {
       groups.push({ head: "This block's settings", note: 'Printed as a word the reader can click.',
                     items: settings });
+    }
+    if (script.length) {
+      const note = shadowed.length
+        ? shadowed.join(', ') + " is the script's, not the block setting of that name, " +
+          'which stays in the gear.'
+        : 'Printed as a word the reader can click.';
+      groups.push({ head: "The prepare script's values", note, items: script });
     }
     groups.push({ head: 'Counts and filters', items: [
       { label: 'Row count', tok: '{n}', val: '' },
@@ -97,10 +114,11 @@
     return Array.from(out);
   }
 
-  /** The resolved band as text, its slot words marked, and up to three offers.
+  /** The resolved band as text, its slot words marked, and up to three offers. A word's
+   * tooltip names what it opens, and says so when that is the prepare script's control.
    * @param {HTMLElement} el @param {VizTitleBand | null | undefined} band
-   * @param {(k: string) => string} label */
-  function paintPreview(el, band, label) {
+   * @param {(k: string) => string} label @param {(k: string) => VizWordOf} [wordOf] */
+  function paintPreview(el, band, label, wordOf) {
     el.textContent = '';
     const parts = (band && band.parts) || [];
     if (!parts.length && band && band.text) el.textContent = band.text;
@@ -110,6 +128,8 @@
       const w = document.createElement('span');
       w.className = 'blockr-slot blockr-slot--preview';
       w.textContent = p.text;
+      const wo = wordOf ? wordOf(p.arg) : null;
+      w.title = wo && wo.script ? wo.label + ', from the prepare script' : label(p.arg);
       el.appendChild(w);
     }
     for (const arg of ((band && band.offers) || []).slice(0, 3)) {
@@ -237,7 +257,7 @@
     };
     const draw = () => {
       if (!st) return;
-      drawMenu(st, menuGroups(ctx.titles, ctx.columns, ctx.labelOf), pick, hl);
+      drawMenu(st, menuGroups(ctx.titles, ctx.columns, ctx.labelOf, ctx.wordOf), pick, hl);
       place(inp, st.el);
     };
     const open = () => {
@@ -311,7 +331,7 @@
     turn.textContent = '↳';
     const body = document.createElement('span');
     body.className = 'vz-template-preview';
-    paintPreview(body, band, ctx.labelOf);
+    paintPreview(body, band, ctx.labelOf, ctx.wordOf);
     // Plain text with no slots, clause or break: the line would repeat it.
     shows.classList.toggle('is-same', before !== '' && !/[{[]|\\n/.test(before));
     const stale = document.createElement('span');
@@ -320,13 +340,15 @@
     shows.append(turn, body, stale);
     const warn = document.createElement('div');
     warn.className = 'vz-template-warn';
+    const note = document.createElement('div');
+    note.className = 'vz-template-script';
     const help = document.createElement('div');
     help.className = 'vz-help';
     const at = document.createElement('code');
     at.className = 'vz-at-key';
     at.textContent = '@';
     help.append('Type ', at, ' for a setting or a value');
-    el.append(inp, shows, warn, help);
+    el.append(inp, shows, warn, note, help);
 
     const menu = atMenu(inp, ctx);
     const sync = () => {
@@ -336,6 +358,8 @@
       warn.textContent = bad.length
         ? 'Nothing is called ' + bad.join(', ') + '. It prints nothing, and takes its [ ] clause with it.'
         : '';
+      note.textContent = ctx.shadowNote ? ctx.shadowNote(inp.value) : '';
+      note.hidden = !note.textContent;
     };
     const commit = () => {
       const v = inp.value.trim() === '' ? null : inp.value;

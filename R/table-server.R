@@ -71,7 +71,8 @@ table_sources <- function(data, state, session) {
 }
 
 # The title bands, resolved against the frame the current layout builds its
-# table from; the spec's slots and the prepare script's values are `{@arg}`.
+# table from; the spec's slots and the prepare script's values are `{@arg}`,
+# a script value before a setting with the same name (script_title_args()).
 table_titles <- function(kit, src, part) {
   shiny::reactive({
     d <- tryCatch(part()$frame(), error = function(e) NULL)

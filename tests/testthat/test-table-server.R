@@ -33,3 +33,27 @@ test_that("the payload lists the input's columns for the gear", {
     })
   }
 })
+
+test_that("a script's top_n takes the word from the table's unset top_n", {
+  d <- data.frame(ARM = rep(c("A", "B"), 3), AETERM = letters[1:6])
+  script <- paste(
+    'top_n <- 25 #| number(min = 1, label = "Top adverse events")',
+    'ae <- factor("AETERM", levels = c("AETERM", "ARM"))',
+    "data", sep = "\n"
+  )
+  blk <- new_table_block(
+    layout = "groups", by = "ARM",
+    summaries = list(list(type = "simple", func = "count", show = "number",
+                          name = "Events")),
+    subtitle = "Top {@top_n} Adverse Event {@ae}", script = script
+  )
+  tsrv_run(blk, d, function(expr) {
+    p <- tsrv_payload(expr)
+    ti <- p$derived$titles
+    expect_identical(ti$subtitle$text, "Top 25 Adverse Event AETERM")
+    expect_identical(ti$args$top_n, "25")
+    words <- Filter(function(x) !is.null(x$arg), ti$subtitle$parts)
+    expect_identical(vapply(words, `[[`, "", "arg"), c("top_n", "ae"))
+    expect_identical(vapply(words, `[[`, "", "text"), c("25", "AETERM"))
+  })
+})

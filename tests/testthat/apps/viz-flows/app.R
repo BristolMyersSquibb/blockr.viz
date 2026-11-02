@@ -83,6 +83,14 @@ flows_script_chart <- paste(
   sep = "\n"
 )
 
+# A script that declares `top_n`, a name the table's own (unset) setting has
+# too: the subtitle's word is the script's.
+flows_script_top <- paste(
+  "top_n <- 5  #| number(min = 1, label = 'Oldest subjects')",
+  "utils::head(data[order(-data$AGE), , drop = FALSE], top_n)",
+  sep = "\n"
+)
+
 build_board <- function() {
   new_dock_board(
     blocks = c(
@@ -143,6 +151,13 @@ build_board <- function() {
         subtitle = "By {@by}, {@func} of {@value}",
         title = "Mean age by arm", block_name = "Groups words"
       ),
+      script_top = new_table_block(
+        layout = "groups", by = "ARM",
+        summaries = list(list(type = "simple", name = "n", func = "count",
+                              show = "number")),
+        script = flows_script_top, subtitle = "Top {@top_n} oldest subjects",
+        title = "Oldest subjects by arm", block_name = "Script top_n"
+      ),
       # A 0.2.x summarize table titled `By {@group}, top {@top_n}`.
       legacy_words = blockr_deser(
         blockr.core:::read_json("legacy-group-block.json")
@@ -150,23 +165,25 @@ build_board <- function() {
     ),
     links = links(
       from = c("adsl", "adsl", "dfilt", "adsl", "adsl", "adsl", "adsl",
-               "adsl", "adsl", "adsl", "adsl", "adsl"),
+               "adsl", "adsl", "adsl", "adsl", "adsl", "adsl"),
       to = c("arms", "dfilt", "ctrl_out", "dl", "gear", "words", "arms_bar",
              "script_tbl", "script_chart", "legacy", "groups_words",
-             "legacy_words")
+             "legacy_words", "script_top")
     ),
     views = list(
       drill = dock_view(c("arms", "arms_bar", "ctrl_out"), name = "drill"),
       tools = dock_view(c("dl", "gear", "words"), name = "tools"),
       script = dock_view(c("script_tbl", "script_chart", "legacy"),
                          name = "script"),
-      groups = dock_view(c("groups_words", "legacy_words"), name = "groups")
+      groups = dock_view(c("groups_words", "legacy_words"), name = "groups"),
+      shadow = dock_view("script_top", name = "shadow")
     ),
     grids = list(
       drill = dock_grid(blk("arms"), blk("arms_bar"), blk("ctrl_out")),
       tools = dock_grid(blk("dl"), blk("gear"), blk("words")),
       script = dock_grid(blk("script_tbl"), blk("script_chart"), blk("legacy")),
-      groups = dock_grid(blk("groups_words"), blk("legacy_words"))
+      groups = dock_grid(blk("groups_words"), blk("legacy_words")),
+      shadow = dock_grid(blk("script_top"))
     ),
     extensions = list(ctrl_bridge = new_ctrl_bridge_extension()),
     active = "drill",

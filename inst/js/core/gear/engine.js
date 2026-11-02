@@ -159,6 +159,39 @@
       return words.charAt(0).toUpperCase() + words.slice(1);
     }
 
+    /** What the title word `{@key}` names, for the gear's titles rows: the prepare
+     * script's control when the script declares `key` (see slot()), with the label of the
+     * block setting of that name it takes the word from, else the setting.
+     * @param {string} key @param {VizValues} [values] @returns {VizWordOf} */
+    wordOf(key, values) {
+      const vals = values || this.values();
+      const sp = this.scriptInput(key);
+      if (!sp) return { label: this.label(key, vals), script: false, shadows: null };
+      const own = this.host.slot && this.host.slot(key, vals);
+      const arg = this.spec[key];
+      // The setting as the gear shows it: its label, under its group's heading.
+      const g = arg && arg.gear;
+      const under = g && g.group && g.group !== g.label ? ' under ' + g.group : '';
+      const shadows = own ? own.label : g ? this.label(key, vals) + under : null;
+      return { label: sp.label, script: true, shadows };
+    }
+
+    /** The script values a template names that take the word of a block setting with the
+     * same name, as one line under the titles field ("" when there are none).
+     * @param {string} tpl @param {VizValues} [values] */
+    shadowNote(tpl, values) {
+      /** @type {string[]} */
+      const out = [];
+      for (const m of String(tpl).matchAll(/@([A-Za-z_.][A-Za-z0-9_.]*)/g)) {
+        const w = this.wordOf(m[1], values);
+        const tok = '{@' + m[1] + '}';
+        if (!w.script || !w.shadows || out.some((x) => x.startsWith(tok))) continue;
+        out.push(tok + " prints the prepare script's " + w.label + ', not the setting ' +
+                 w.shadows + ', which stays in the gear.');
+      }
+      return out.join(' ');
+    }
+
     /** Is the row for `key` drawn now?
      * @param {string} key @param {VizValues} values */
     _shown(key, values) {
@@ -180,7 +213,9 @@
         columns: this._cols, required, scope, host: this.host,
         // The latest payload's, as a payload may leave the row drawn.
         get titles() { return gear._titles; },
-        labelOf: (k) => this.label(k, values),
+        labelOf: (k) => this.wordOf(k, values).label,
+        wordOf: (k) => this.wordOf(k, values),
+        shadowNote: (tpl) => this.shadowNote(tpl, values),
         set: (v) => this.set({ [key]: v })
       };
     }
@@ -308,11 +343,14 @@
       this._script = d.script || null;
     }
 
-    /** What a click on the sentence's word for `key` opens: the block's setting of that
-     * name, else the prepare script's control of that name (a template names a script
-     * value by its variable, `{@min_share}`).
+    /** What a click on the sentence's word for `key` opens: the prepare script's control
+     * when the script declares `key` (a template names a script value by its variable,
+     * `{@min_share}`), else the block's setting of that name. The declaration wins, as in
+     * R's script_title_args(): the word prints the script's value, so it opens that
+     * control, and the setting of the same name stays in the gear.
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
+      if (this.scriptInput(key)) return this.scriptSlot(key);
       const values = this.values();
       // The host first: a word that names part of a setting (the groups layout's
       // `{@value}` is its first summary's column) or names a setting differently.
@@ -362,20 +400,27 @@
                multi: name === 'columns' || name === 'enums', set, label };
     }
 
+    /** The prepare script's working declaration of `name`, if the block has a script.
+     * A declaration that failed is none: its name stays the setting's, as in R.
+     * @param {string} name @returns {VizScriptControl | null} */
+    scriptInput(name) {
+      if (!this._script || !this.spec.script_values) return null;
+      const sp = /** @type {VizScriptControl | undefined} */ (
+        (this._script.inputs || []).find((x) => x && x.name === name && x.kind !== 'error'));
+      return sp || null;
+    }
+
     /**
      * The prepare script's control for the variable `name`, as a word opens it: a flag
      * toggles, a number or a text is typed over, a choice opens its list. It writes
-     * `script_values[name]`, as the script band's own control does. Null when the block
-     * has a setting of that name (the setting wins, as in R's script_title_args()), when
-     * the script declares no working control of that name, or when there is no script.
+     * `script_values[name]`, as the script band's own control does. A block setting of
+     * the same name does not stop it (see slot()). Null when the script declares no
+     * working control of that name, or when there is no script.
      * @param {string} name @returns {VizSlotOpener | null}
      */
     scriptSlot(name) {
-      if (this.spec[name] || !this._script || !this.spec.script_values) return null;
-      if (this.host.slot && this.host.slot(name, this.values())) return null;
-      const sp = /** @type {VizScriptControl | undefined} */ (
-        (this._script.inputs || []).find((x) => x && x.name === name && x.kind !== 'error'));
-      if (!sp) return null;
+      const sp = this.scriptInput(name);
+      if (!sp || !this._script) return null;
       const held = /** @type {Record<string, unknown>} */ (this.values().script_values || {});
       const sent = /** @type {Record<string, unknown>} */ (
         Array.isArray(this._script.values) ? {} : this._script.values || {});

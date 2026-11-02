@@ -15,7 +15,8 @@
 #    unedited ("not applied" hidden),
 # 7. a groups table's row-column and summary words are links from the first
 #    payload, also on a summarize table saved by 0.2.x (`By {@group}, top
-#    {@top_n}`), and a pick in their menus changes that part.
+#    {@top_n}`), and a pick in their menus changes that part,
+# 8. a script value named like a block setting (`top_n`) is the script's word.
 #
 # Clicks and key presses are real input events (DevTools protocol). The app
 # loads blockr.viz from this source tree (BLOCKR_VIZ_SRC). Skipped without a
@@ -467,6 +468,36 @@ test_that("flows: restored script subtitles keep their words; Titles loads unedi
     expect_false(r$dirty, label = paste(id, "subtitle row marked edited"))
     expect_identical(r$stale, "none", label = paste(id, "'not applied'"))
   }
+})
+
+test_that("flows: a script's top_n is the word, not the table's unset top_n", {
+  skip_if_not(run_flows, "no headless browser, or under R CMD check")
+  flows_view(app, "shadow", "script_top")
+  f <- flows_script_face(app, "script_top")
+  expect_match(f$sub, "Top 5 oldest subjects", fixed = TRUE)
+  expect_identical(f$words, "5")
+  expect_identical(f$band, character(), label = "no 'Oldest subjects' band row")
+
+  flows_set_word(app, "script_top", "5", "3")
+  f <- flows_script_face(app, "script_top")
+  expect_match(f$sub, "Top 3 oldest subjects", fixed = TRUE)
+  expect_identical(f$band, character())
+  saved <- flows_saved_block(app, "script_top")$payload
+  expect_identical(unlist(saved$script_values), c(top_n = 3))
+  expect_null(saved$top_n, label = "the table's own top_n")
+
+  # The gear's Titles row names the script control, and the setting keeps its row.
+  flows_click(app, "script_top", ".blockr-gear-btn")
+  flows_click(app, "script_top", NAV, "Titles")
+  note <- app$get_js("(function () {
+    const n = flows.frame('script_top').querySelector('.vz-template-script:not([hidden])');
+    return n ? n.textContent : null;
+  })()")
+  flows_click(app, "script_top", ".blockr-gear-btn")
+  expect_identical(note, paste0(
+    "{@top_n} prints the prepare script's Oldest subjects, not the setting ",
+    "Top under Rows shown, which stays in the gear."
+  ))
 })
 
 # Pick `option` in the menu a subtitle word opened.

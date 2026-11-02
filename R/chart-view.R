@@ -108,7 +108,8 @@ chart_needed_cols <- function(v, d) {
 }
 
 # The chart text (viz_titles()): slots name the spec's arguments, the
-# prepare script's declared values and the highlight.
+# prepare script's declared values and the highlight. A script value takes
+# the word of a setting with the same name (script_title_args()).
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)

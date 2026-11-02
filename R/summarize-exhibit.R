@@ -94,7 +94,8 @@ groups_exhibit <- function(m, data, state, title = NULL, subtitle = NULL,
 # The settings a groups title can name beyond the spec's slots: the first
 # summary's roles, for the single ranked bar's sentences. `by` is the
 # innermost grouping column (each row); an outer one is the parent. Unset
-# roles go, so a prepare script's value of the same name can stand in.
+# roles go. A prepare script's value of the same name takes the word either
+# way (script_title_args()).
 groups_title_roles <- function(v) {
   by <- as.character(unlist(v$by %||% character()))
   s1 <- if (length(v$summaries) && is.list(v$summaries[[1L]])) {

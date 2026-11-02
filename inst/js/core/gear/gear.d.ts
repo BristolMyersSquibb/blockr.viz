@@ -119,10 +119,19 @@ interface VizRowCtx {
   scope: VizScope;
   host: VizGearHost;
   titles: VizTitles;
-  /** The label the gear gives any argument (for the `@` menu). */
+  /** The label the gear gives any argument (for the `@` menu): a script control's label
+   * when the prepare script declares `key`. */
   labelOf(key: string): string;
+  /** What `{@key}` names (VizWordOf); absent on the script band's own rows. */
+  wordOf?(key: string): VizWordOf;
+  /** The line under a titles field naming the script values that take a setting's word. */
+  shadowNote?(tpl: string): string;
   set(value: unknown): void;
 }
+
+/** What a title word names: a prepare script's control (`script`), with the label of the
+ * block setting of the same name it takes the word from (`shadows`), or a setting. */
+interface VizWordOf { label: string; script: boolean; shadows: string | null }
 
 /** What a click on a sentence word opens: a block setting, or a prepare script's control.
  * `set` writes the value where it lives (the setting, or `script_values[name]`). */
@@ -139,8 +148,12 @@ interface VizGear {
   set(changes: VizValues): void;
   values(): VizValues;
   slot(key: string): VizSlotOpener | null;
-  /** The prepare script's control a word names, by variable; null for a block setting. */
+  /** The prepare script's working declaration of `name`; it takes the word `{@name}`. */
+  scriptInput(name: string): VizScriptControl | null;
+  /** The prepare script's control a word names, by variable; null when none is declared. */
   scriptSlot(name: string): VizSlotOpener | null;
+  wordOf(key: string, values?: VizValues): VizWordOf;
+  shadowNote(tpl: string, values?: VizValues): string;
   /** The script controls the titles' words open (the band leaves them out). */
   scriptWords(): Set<string>;
   /** Take a payload's settings, columns, titles and script without drawing, for a view
@@ -199,8 +212,10 @@ interface VizGearNamespace {
 interface VizTitlesNamespace {
   row(el: HTMLElement, ctx: VizRowCtx): void;
   unknownTokens(tpl: string, titles: VizTitles, columns: VizColumn[]): string[];
-  paintPreview(el: HTMLElement, band: VizTitleBand | null | undefined, label: (k: string) => string): void;
-  menuGroups(titles: VizTitles, columns: VizColumn[], label: (k: string) => string):
+  paintPreview(el: HTMLElement, band: VizTitleBand | null | undefined, label: (k: string) => string,
+               wordOf?: (k: string) => VizWordOf): void;
+  menuGroups(titles: VizTitles, columns: VizColumn[], label: (k: string) => string,
+             wordOf?: (k: string) => VizWordOf):
     { head: string; note?: string; items: { label: string; tok: string; val: string; indent?: boolean }[] }[];
   slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
   /** Every argument the titles name: their words and their offers. */

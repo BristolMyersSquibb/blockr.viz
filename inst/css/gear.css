@@ -102,6 +102,14 @@
   vertical-align: 1px;
 }
 .vz-template-offer { color: var(--blockr-color-text-muted, #6b7280); }
+/* A script value that takes the word of a block setting with the same name. */
+.vz-template-script {
+  margin-top: 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-template-script[hidden] { display: none; }
 /* A name the resolver has no answer for. It prints "" on the card and takes
    its bracketed clause with it, which is right there and wrong here. */
 .vz-template-warn {

@@ -396,9 +396,26 @@ test_that("a script's values are title slots, at the script's default until set"
     resolve_block_title("Top {@n} by {@by}", datasets::iris, args = args),
     "Top 3 by Species"
   )
-  # A value never shadows a block setting of the same name.
+  # A value the script does not declare is no word.
   expect_identical(script_title_args(roles, ps$specs, list(by = "x"))$by,
                    "Species")
+})
+
+test_that("a declared script value takes the word of a setting with its name", {
+  ps <- parsed_of(script_of("top_n <- 25", "color <- \"red\"", "data"))
+  # The table's own top_n is unset; a list keeps the NULL under its name.
+  roles <- list(top_n = NULL, color = "SEX", by = "Species")
+  args <- script_title_args(roles, ps$specs, list())
+  expect_equal(args$top_n, 25)
+  expect_identical(args$color, "red")
+  expect_identical(args$by, "Species")
+  expect_identical(
+    resolve_block_title("Top {@top_n} by {@by}", datasets::iris, args = args),
+    "Top 25 by Species"
+  )
+  # A declaration that failed leaves the setting's word alone.
+  bad <- parsed_of(script_of("color <- factor(\"a\", levels = nope)", "data"))
+  expect_identical(script_title_args(roles, bad$specs, list())$color, "SEX")
 })
 
 test_that("annotations bound a control, helpers feed a declaration lazily", {

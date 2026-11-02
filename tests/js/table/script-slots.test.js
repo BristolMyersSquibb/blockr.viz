@@ -67,3 +67,29 @@ test('a word sets its value; the echoed subtitle shows it', () => {
   assert.match(t.$('.vz-subtitle').textContent, /at least 3 Patients/);
   assert.equal(t.$$('.vz-script-band-row').length, 0);
 });
+
+// The table's own `top_n` ("Rows shown") is unset; the script declares `top_n` too. R
+// prints the script's 25, so the word opens the script's control and the band skips it.
+test("a script's top_n is the word, not the table's unset top_n", () => {
+  const script = {
+    inputs: [{ name: 'top_n', key: 'sv_top_n', label: 'Top adverse events', kind: 'number', min: 1 },
+             { name: 'ae_variable', key: 'sv_ae_variable', label: 'Adverse event', kind: 'select',
+               options: ['AEDECOD', 'AETERM'] }],
+    values: { sv_top_n: 25, sv_ae_variable: 'AEDECOD' }, error: null
+  };
+  const titles = {
+    subtitle: { parts: [{ text: 'Top ' }, { text: '25', arg: 'top_n' }, { text: ' Adverse Event ' },
+                        { text: 'AEDECOD', arg: 'ae_variable' }] }
+  };
+  const t = mount(payload({ data: flatModel(3), config: { layout: 'groups', by: ['ARM'] },
+                            derived: { titles, script } }));
+  assert.deepEqual(t.$$('.vz-subtitle .blockr-slot').map((w) => w.textContent), ['25', 'AEDECOD']);
+  assert.equal(t.$$('.vz-script-band-row').length, 0, 'no "Top adverse events" row');
+  t.$$('.vz-subtitle .blockr-slot')[0].click();
+  const input = t.$('.vz-subtitle input.blockr-slot-input');
+  assert.equal(input.getAttribute('aria-label'), 'Top adverse events');
+  assert.equal(input.value, '25');
+  input.value = '10';
+  input.dispatchEvent(new t.win.KeyboardEvent('keydown', { key: 'Enter' }));
+  assert.deepEqual(t.sets(), [{ script_values: { top_n: 10 } }], 'the script value, not the setting');
+});

@@ -359,6 +359,12 @@ goes.
   table drew no rows.
 * A prepare-script word offered beside the sentence ("+ system organ
   class") shows its label from the first paint, not the variable name.
+* A prepare-script value named like one of the block's settings takes that
+  name's title word: a script's `top_n` prints in `{@top_n}` and the word
+  opens the script's control, although the table has a `top_n` setting of
+  its own. The setting keeps its row in the gear, and the Titles tab names
+  the word's owner. Before, the setting won, and an AE heatmap restored as a
+  table printed nothing for `{@top_n}`.
 
 # blockr.viz 0.2.207
 

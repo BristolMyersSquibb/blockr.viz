@@ -8,7 +8,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { loadGear, mountGear, payload, lastSet, hasUi } = require('./gear-load');
+const { loadGear, mountGear, payload, lastSet, row, hasUi } = require('./gear-load');
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
 const tick = (win, ms = 5) => new Promise((r) => win.setTimeout(r, ms));
@@ -66,14 +66,69 @@ test('a word that names a script value opens that control, with its label and bo
   assert.equal(t.gear.slot('arms').multi, true);
 });
 
-test('a block setting of the same name wins; a failed or unknown declaration opens nothing', () => {
+test('a declared script value takes the word of a block setting with the same name', () => {
   const t = setup();
-  assert.equal(t.gear.slot('bins').label, 'Bins', "the chart's own bins, not the script's");
-  assert.equal(t.gear.scriptSlot('bins'), null);
+  const bins = t.gear.slot('bins');
+  assert.equal(bins.label, 'Bins (script)', "the script's bins, as R prints them, not the chart's");
+  assert.equal(bins.kind, 'number');
+  assert.equal(bins.value, 4);
+  bins.set(6);
+  assert.deepEqual(lastSet(t).values, { script_values: { keep: 3, bins: 6 } });
+  assert.equal(t.gear.label('bins'), 'Bins', 'the setting keeps its row in the gear');
+  assert.deepEqual(plain(t.gear.wordOf('bins')), { label: 'Bins (script)', script: true, shadows: 'Bins under Mapping' });
+  assert.deepEqual(plain(t.gear.wordOf('min_share')),
+                   { label: 'Minimum threshold', script: true, shadows: null });
+  assert.equal(t.gear.wordOf('func').script, false);
+});
+
+test('a failed or unknown declaration opens nothing; a failed one leaves the setting its word', () => {
+  const t = setup();
   assert.equal(t.gear.slot('bad'), null);
   assert.equal(t.gear.slot('nothing'), null);
+  const failed = Object.assign({}, SCRIPT, {
+    inputs: SCRIPT.inputs.concat([{ name: 'func', key: 'sv_func', label: 'Func', kind: 'error', error: 'x' }])
+  });
+  t.gear.update(payload(CONFIG, { derived: { titles: { subtitle: SUBTITLE }, script: failed } }));
+  assert.equal(t.gear.scriptSlot('func'), null);
+  assert.notEqual(t.gear.slot('func').label, 'Func', "the chart's own func");
   t.gear.update(payload(CONFIG, { derived: { titles: { subtitle: SUBTITLE } } }));
   assert.equal(t.gear.slot('min_share'), null, 'no script, no control');
+  assert.equal(t.gear.slot('bins').label, 'Bins', 'no script, the setting again');
+});
+
+test("a script word named like a setting: the band leaves its control out", () => {
+  const t = setup();
+  const sub = { parts: [{ text: 'Bins: ' }, { text: '4', arg: 'bins' }] };
+  t.gear.update(payload(CONFIG, { derived: { titles: { subtitle: sub }, script: SCRIPT } }));
+  assert.deepEqual(Array.from(t.gear.scriptWords()), ['bins']);
+  const f = face(t, sub);
+  assert.deepEqual(f.words().map((w) => w.textContent), ['4']);
+});
+
+test("the gear's titles say when a word is the script's and not the setting", () => {
+  const t = setup();
+  const sub = { parts: [{ text: 'Top ' }, { text: '4', arg: 'bins' }, { text: ' at ' },
+                        { text: '1', arg: 'min_share' }] };
+  const titles = { subtitle: sub, args: { bins: '4', min_share: '1', func: 'count' } };
+  t.gear.update(payload(Object.assign({}, CONFIG, { subtitle: 'Top {@bins} at {@min_share}' }),
+                        { derived: { titles, script: SCRIPT } }));
+  const groups = plain(t.V.titles.menuGroups(titles, [], (k) => t.gear.label(k),
+                                             (k) => t.gear.wordOf(k)));
+  const g = groups.find((x) => x.head === "The prepare script's values");
+  assert.deepEqual(g.items.map((i) => [i.label, i.tok]),
+                   [['Bins (script)', '{@bins}'], ['Minimum threshold', '{@min_share}']]);
+  assert.match(g.note, /\{@bins\} is the script's, not the block setting/);
+  const settings = groups.find((x) => x.head === "This block's settings");
+  assert.deepEqual(settings.items.map((i) => i.tok), ['{@func}']);
+  const r = row(t.el, 'subtitle');
+  const words = Array.from(r.querySelectorAll('.blockr-slot--preview')).map((w) => w.title);
+  assert.deepEqual(words, ['Bins (script), from the prepare script',
+                           'Minimum threshold, from the prepare script']);
+  const note = r.querySelector('.vz-template-script');
+  assert.equal(note.hidden, false);
+  assert.equal(note.textContent, "{@bins} prints the prepare script's Bins (script), not the " +
+                                 'setting Bins under Mapping, which stays in the gear.');
+  assert.equal(row(t.el, 'title').querySelector('.vz-template-script').hidden, true);
 });
 
 test("scriptWords: the script values the titles' words and offers open", () => {
