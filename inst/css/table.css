@@ -100,8 +100,9 @@ input.vz-table-search:focus {
    `.vz-table-groups`. One control row, one header cell, one set
    of body alignments. Written as `:is(...)` so there is ONE definition to
    keep.
-   `.vz-table-structured` rules stay table-only: a summarize table is never a
-   structured Table-1 frame. */
+   A nested groups table also carries `.vz-table-structured` (records.js
+   isStructured()), so a structured rule that must not reach it says
+   `:not(.vz-table-groups)`. */
 
 /* Type-based body alignment: numeric cells right (tabular figures), text
    cells left — matching the header, like the structured table and the
@@ -318,9 +319,12 @@ input.vz-table-search:focus {
   margin-top: 1px;
 }
 /* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
-   to the right edge, level with the numeric columns below. */
-.vz-table-structured .blockr-table thead th.vz-table-col-header .vz-table-th-namerow,
-.vz-table-structured .blockr-table thead th.vz-table-col-header .vz-table-th-subrow {
+   to the right edge, level with the numeric columns below. A nested groups
+   table is structured too, but its headers follow the column type like the
+   flat table's: a chart column's name, its sub line and its axis all start
+   on the left, as in 0.2.200. */
+.vz-table-structured:not(.vz-table-groups) .blockr-table thead th.vz-table-col-header .vz-table-th-namerow,
+.vz-table-structured:not(.vz-table-groups) .blockr-table thead th.vz-table-col-header .vz-table-th-subrow {
   justify-content: flex-end;
 }
 /* The structured arm sub-line carries its own top margin for the stacked
