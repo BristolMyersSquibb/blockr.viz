@@ -193,10 +193,10 @@
     out.crowd = isLine && !!seriesCol && out.seriesCount > 1;
     const colours = seriesColours(rows, ix, out);
     out.levelColors = levels.map((lv, i) => colours.of(lv, i));
-    legendOf(rows, ix, out, colours.legendColor);
+    legendOf(rows, ix, out, colours.legendColor, columns);
     setAxes(rows, columns, cfg, out);
     buildPanels(rows, ix, cfg, out, facets);
-    highlightSeries(out, rows, ix, cfg);
+    highlightSeries(out, rows, ix, cfg, columns);
     return out;
   };
 
@@ -205,8 +205,8 @@
    * the option) and comes first, so the highlighted marks draw over it: a scatter series splits
    * into its muted and its highlighted points. With a colour, the palette is counted over the
    * highlighted colour values only, and the legend lists only those. @param {IndividualModel} m
-   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg */
-  const highlightSeries = (m, rows, ix, cfg) => {
+   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg @param {any} columns */
+  const highlightSeries = (m, rows, ix, cfg, columns) => {
     const hl = NS.highlightOf(cfg);
     if (!hl || m.isBand) return;
     m.hl = hl;
@@ -228,7 +228,7 @@
           for (const r of lr) lit.add(String(r[color] ?? ''));
         }
       }
-      const order = m.splitCol === color ? m.levels : ix.levels(rows, color, 'nz').slice().sort();
+      const order = m.splitCol === color ? m.levels : colourOrder(rows, ix, m, columns);
       const cols = NS.litLevelColors(order, lit, m.colorScale, m.palette);
       /** @type {{ name: string, color: string }[]} */
       const items = [];
@@ -320,13 +320,21 @@
     return { of, legendColor };
   };
 
+  /** The colour column's values in legend order, the order every chart type lists them in: the
+   * board scale's, else factor levels, else alphabetical.
+   * @param {any[]} rows @param {any} ix @param {IndividualModel} m @param {any} columns
+   * @returns {string[]} */
+  const colourOrder = (rows, ix, m, columns) =>
+    NS.axes.orderLevels(ix.levels(rows, /** @type {string} */ (m.color), 'nz'), m.colorScale,
+                        columns, m.color);
+
   /** The legend band's chips (the band hides them past NS.legendFits). With a series column apart
-   * from the colour, the chips are the colour's values, sorted; the option adds an empty series per
-   * chip for the legend to bind to, and past NS.legendFits the tooltip names the colour value.
-   * Fills m.legend and m.byColor.
+   * from the colour, the chips are the colour's values in legend order (colourOrder); the option
+   * adds an empty series per chip for the legend to bind to, and past NS.legendFits the tooltip
+   * names the colour value. Fills m.legend and m.byColor.
    * @param {any[]} rows @param {any} ix @param {IndividualModel} m
-   * @param {(level: string, index: number) => string} legendColor */
-  const legendOf = (rows, ix, m, legendColor) => {
+   * @param {(level: string, index: number) => string} legendColor @param {any} columns */
+  const legendOf = (rows, ix, m, legendColor, columns) => {
     const { color, seriesCol } = m;
     if (!color) return;
     const colorLevels = ix.levels(rows, color, 'nz');
@@ -336,7 +344,7 @@
       m.ttFields.push(color);
     }
     const items = m.byColor
-      ? colorLevels.slice().sort().map((/** @type {string} */ lvl, /** @type {number} */ i) =>
+      ? colourOrder(rows, ix, m, columns).map((/** @type {string} */ lvl, /** @type {number} */ i) =>
         ({ name: lvl, color: legendColor(lvl, i) }))
       : m.levels.map((lv, i) => ({ name: lv, color: m.levelColors[i] }));
     m.legend = { col: color, items };

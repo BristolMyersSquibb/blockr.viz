@@ -2,6 +2,29 @@
    light, the legend band. The frame and the gear are styled by frame.css and
    gear.css, which the core dependency loads. */
 
+/* ===== Header =====
+   The icons sit on the title's line only. Under a title the sentence runs the
+   full width, below the icons, so an offer ("+ Facet") stays at the end of
+   its line, as in 0.2. The titles box gives its children to the header grid;
+   its padding moves to them. Without a title the sentence takes the title's
+   place beside the icons. */
+.vz-chart > .vz-head > .vz-head__titles { display: contents; }
+.vz-chart > .vz-head > .vz-head__titles > .vz-title {
+  grid-area: titles;
+  min-width: 0;
+  padding: 2px 8px 0 2px;
+}
+.vz-chart > .vz-head > .vz-head__titles > .vz-subtitle {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 0 2px;
+}
+.vz-chart > .vz-head > .vz-head__titles > .vz-title[hidden] + .vz-subtitle {
+  grid-column: auto;
+  grid-area: titles;
+  padding: 2px 8px 0 2px;
+}
+
 /* ===== Chart grid (faceting) and zoom ===== */
 .vz-chart-grid {
   display: grid;

@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9019
+# blockr.viz 0.3.0.9020
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -107,6 +107,13 @@ read.
   which takes them on both axes, reads "Reference lines (value axis)" and
   "Reference lines (category axis)". Scatter, line and area keep
   "Horizontal" and "Vertical".
+* A chart with one line per subject, coloured by another column, lists
+  the colours in the legend in the same order as every other chart: the
+  board scale's order, else the factor levels, else alphabetical. It
+  sorted them alphabetically.
+* Under a chart title, the sentence runs the full width of the block, below
+  the download and gear icons, so an offer such as "+ Facet" stays at the
+  end of its line, as before 0.3.0. It wrapped to a line of its own.
 
 ## Removed
 

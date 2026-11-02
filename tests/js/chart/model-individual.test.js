@@ -72,9 +72,23 @@ test('a series apart from the colour: a series takes its colour value\'s colour'
   const P = C.BLOCKR_PALETTE;
   assert.deepStrictEqual(plain(m.levelColors), [P[0], '#123456', P[0], P[1]]);
   assert.strictEqual(m.byColor, true);
-  // Chips: the colour's values, sorted; scale first, then the cycled colour.
+  // Chips: the colour's values in level order; scale first, then the cycled colour.
   assert.deepStrictEqual(plain(m.legend.items), [
     { name: '', color: P[1] }, { name: 'A', color: P[0] }, { name: 'B', color: '#123456' }]);
+});
+
+test('a series apart from the colour: the chips follow the scale order, as on a bar chart', () => {
+  // The board scale lists its pinned levels first (blockr.theme), so a pinned
+  // order reaches every chart type alike.
+  const m = model({ type: 'line', series: 'ID', color: 'ARM' }, ROWS,
+                  { scales: { var: 'ARM', order: ['B', 'A'], color: { A: '#111111', B: '#222222' } } });
+  assert.strictEqual(m.byColor, true);
+  assert.deepStrictEqual(plain(m.legend.items.map((it) => it.name)), ['B', 'A', '']);
+  // Factor levels without a scale.
+  const cols = COLUMNS.map((c) => (c.name === 'ARM' ? { ...c, levels: ['B', 'A'] } : c));
+  const f = C.model.individual({ rows: ROWS, ix: new C.RowIndex(), columns: cols, derived: {},
+    cfg: C.model.settings({ ...BASE, type: 'line', series: 'ID', color: 'ARM' }, cols) });
+  assert.deepStrictEqual(plain(f.legend.items.map((it) => it.name)), ['B', 'A', '']);
 });
 
 test('categorical x: factor levels order the axis, a line runs in that order', () => {
