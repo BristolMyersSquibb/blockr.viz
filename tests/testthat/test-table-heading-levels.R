@@ -1,11 +1,11 @@
 # Heading rows follow one rule in every layout (apps/table-heading-levels):
 # a row that heads other rows is 600 in the body ink and runs across the row
 # on one line; the rows under it are 400 in the body ink. A heading with no
-# values of its own is one cell (the compact look's parents, a finished
-# table's "AGE (years)"); a groups parent with values is its name across
-# the row and its marks on the line below. Before, the groups parents
-# wrapped in the label column (d5bf05fc), the compact look's parents widened
-# it, and a finished table's empty headings wrapped beside empty cells.
+# values of its own is one cell (a groups parent by default, the compact
+# look's parents, a finished table's "AGE (years)"); a groups parent with
+# its summaries (`group_rows = "summary"`) is one plain row, its name in the
+# label column. Before, the compact look's parents widened the label column,
+# and a finished table's empty headings wrapped beside empty cells.
 #
 # Skipped without a headless browser and under R CMD check. On the Mac,
 # Chrome cannot start in Claude's sandbox: start
@@ -55,8 +55,7 @@ window.headProbe = async (view) => {
       const cs = getComputedStyle(c);
       return {
         i: r.getAttribute('data-i'),
-        kind: r.classList.contains('vz-table-heading-values') ? 'values'
-          : r.classList.contains('vz-table-heading') ? 'heading'
+        kind: r.classList.contains('vz-table-heading') ? 'heading'
           : r.classList.contains('vz-table-heads') ? 'heads' : 'leaf',
         cells: r.cells.length,
         colspan: c.colSpan,
@@ -95,7 +94,7 @@ start_heading_app <- function() {
     load_timeout = 120 * 1000, timeout = 30 * 1000
   )
   withr::defer(app$stop(), envir = parent.frame())
-  app$wait_for_js("document.querySelectorAll('.blockr-view-item').length === 4")
+  app$wait_for_js("document.querySelectorAll('.blockr-view-item').length === 5")
   app$run_js(head_probe_js)
   app
 }
@@ -111,23 +110,32 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
     app$get_js(sprintf("window.headProbe('%s')", view), timeout = 60 * 1000)
   }
 
-  # Groups: the parent's name across the row, its bar on the next line.
-  g <- probe("grp")
+  # Groups by default: the parent's name and N across the row, one cell.
+  g <- probe("grh")
   kinds <- vapply(g$rows, `[[`, "", "kind")
-  expect_identical(kinds[1:4], c("heading", "values", "leaf", "leaf"))
+  expect_identical(kinds[1:3], c("heading", "leaf", "leaf"))
   h <- g$rows[[1]]
   expect_identical(h$colspan, g$ncol)
   expect_identical(h$cells, 1L)
+  expect_match(h$text, " \\(N = [0-9]+\\)$")
   expect_level(h, "600", "groups parent")
   expect_identical(h$size, "14px")
   expect_identical(h$lines, 1L)
-  v <- g$rows[[2]]
-  expect_identical(v$i, h$i)
-  expect_identical(v$text, "")
-  expect_identical(v$cells, g$ncol)
-  expect_level(g$rows[[3]], "400", "groups term")
-  # The name is wider than the label column it no longer wraps in.
+  expect_level(g$rows[[2]], "400", "groups term")
   expect_gt(g$headText, g$labelCol)
+
+  # With its summaries: one row, the name in the label column, its bar
+  # beside it.
+  g <- probe("grp")
+  kinds <- vapply(g$rows, `[[`, "", "kind")
+  expect_identical(kinds[1:3], c("heads", "leaf", "leaf"))
+  h <- g$rows[[1]]
+  expect_identical(h$colspan, 1L)
+  expect_identical(h$cells, g$ncol)
+  expect_level(h, "600", "groups parent with summaries")
+  expect_false(grepl("(N =", h$text, fixed = TRUE))
+  expect_identical(g$rows[[2]]$i, as.character(as.integer(h$i) + 1L))
+  expect_level(g$rows[[2]], "400", "groups term")
 
   # Compact look: one cell across the row; the label column holds the ids.
   k <- probe("cmp")
@@ -157,44 +165,38 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
   expect_identical(f$rows[[match("F", texts)]]$cells, f$ncol)
 })
 
-test_that("a heading row folds, unfolds and drills on either line", {
+test_that("a parent row with summaries folds, unfolds and drills", {
   app <- start_heading_app()
   app$get_js("window.headProbe('grp')", timeout = 60 * 1000)
   n_rows <- "document.querySelectorAll('.dockview-panel .vz-table-groups-table tbody tr.vz-table-row').length"
   all <- app$get_js(n_rows)
+  par <- "document.querySelectorAll('.dockview-panel .vz-table-groups-table tbody tr.is-parent')"
 
-  # Fold the first parent: its terms go, its two lines stay.
-  app$run_js("document.querySelector('.dockview-panel tr.vz-table-heading-line .vz-table-indent-btn').click()")
+  # Fold the first parent: its terms go, the next parent follows it.
+  app$run_js(paste0(par, "[0].querySelector('.vz-table-indent-btn').click()"))
   app$wait_for_js(paste(n_rows, "<", all))
-  first <- app$get_js("[...document.querySelectorAll('.dockview-panel tbody tr.vz-table-row')].slice(0, 3).map((r) => r.className.includes('heading-values') ? 'values' : r.className.includes('heading-line') ? 'heading' : 'leaf')")
-  expect_identical(unlist(first), c("heading", "values", "heading"))
-  app$run_js("document.querySelector('.dockview-panel tr.vz-table-heading-line .vz-table-indent-btn').click()")
+  first <- app$get_js("[...document.querySelectorAll('.dockview-panel .vz-table-groups-table tbody tr.vz-table-row')].slice(0, 2).map((r) => r.classList.contains('is-parent'))")
+  expect_identical(unlist(first), c(TRUE, TRUE))
+  app$run_js(paste0(par, "[0].querySelector('.vz-table-indent-btn').click()"))
   app$wait_for_js(paste(n_rows, "===", all))
 
-  # A click on a parent's name line claims it; R's echo lights both of its
-  # lines (and its terms). A click on the next parent's values line moves
-  # the claim there.
+  # A click on a parent's name claims it; R's echo lights its row. A click
+  # on the next parent's bar moves the claim there.
   lit <- function(k) {
-    sprintf("(() => {
-      const p = document.querySelectorAll('.dockview-panel tr.vz-table-heading-line')[%d];
-      const i = p.getAttribute('data-i');
-      const own = [...document.querySelectorAll('.dockview-panel tr.vz-table-row[data-i=\"' + i + '\"]')];
-      return own.length === 2 && own.every((r) => r.classList.contains('vz-table-row-active'));
-    })()", k)
+    sprintf("%s[%d].classList.contains('vz-table-row-active')", par, k)
   }
-  app$run_js("document.querySelectorAll('.dockview-panel tr.vz-table-heading-line')[0].cells[0].click()")
+  app$run_js(paste0(par, "[0].cells[0].click()"))
   app$wait_for_js(lit(0L))
   expect_false(app$get_js(lit(1L)))
-  app$run_js("document.querySelectorAll('.dockview-panel tr.vz-table-heading-values')[1].cells[1].click()")
+  app$run_js(paste0(par, "[1].cells[1].click()"))
   app$wait_for_js(lit(1L))
   expect_false(app$get_js(lit(0L)))
 })
 
-# Above 400 items the grid draws a window of rows and a spacer for the rest,
-# and a parent drawn as two lines counts two (dom.js _countLines()). At the
-# end of a 640-item groups table (40 parents), rows fill the view and no
-# spacer is left over.
-test_that("a long groups table with heading lines has rows to its end", {
+# Above 400 items the grid draws a window of rows and a spacer for the rest.
+# At the end of a 640-item groups table (40 parents, headings by default),
+# rows fill the view and no spacer is left over.
+test_that("a long groups table with heading rows has rows to its end", {
   app <- start_heading_app()
   app$get_js("window.headProbe('lng')", timeout = 60 * 1000)
   p <- app$get_js("(async () => {

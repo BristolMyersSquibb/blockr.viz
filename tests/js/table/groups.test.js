@@ -292,32 +292,21 @@ test('a restored selection opens the parents of its rows, and nothing else', () 
   assert.deepEqual(u.$$(NAMED).map((r) => r.children[0].textContent), ['Cardiac', 'Skin']);
 });
 
-test('a parent is its name across the row, then its marks on the line below', () => {
+test('a parent with values (group_rows = "summary") is one plain row', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   const parent = t.$$('tbody tr[data-i="0"]');
-  assert.equal(parent.length, 2);
-  const [line, vals] = parent;
-  assert.ok(line.classList.contains('vz-table-heading-line') && line.classList.contains('vz-table-heads'));
-  assert.equal(line.children.length, 1);
-  assert.equal(line.children[0].getAttribute('colspan'), '2');
-  assert.equal(line.children[0].textContent, 'Cardiac');
-  assert.ok(line.querySelector('.vz-table-indent-btn'));
-  assert.ok(vals.classList.contains('vz-table-heading-values'));
-  assert.equal(vals.children[0].textContent, '');
-  assert.ok(vals.children[1].querySelector('.vz-table-groups-track'));
-  // A child is a plain row; no row heads it.
-  const child = t.$$('tbody tr[data-i="1"]');
-  assert.equal(child.length, 1);
-  assert.ok(!child[0].classList.contains('vz-table-heads'));
-  // Either line lights both and claims the parent.
-  vals.children[0].dispatchEvent(new t.win.MouseEvent('mouseover', { bubbles: true }));
-  assert.ok(t.$$('tbody tr[data-i="0"]').every((r) => r.classList.contains('vz-table-hot-row')));
-  t.click(line.children[0]);
-  assert.ok(t.$$('tbody tr[data-i="0"]').every((r) => r.classList.contains('vz-table-row-active')));
-  const u = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
-  u.click(u.$('tbody tr.vz-table-heading-values[data-i="0"]').children[1]);
-  assert.deepEqual(t.selects().concat(u.selects()).map((s) => s.filters),
-                   [{ AESOC: ['Cardiac'] }, { AESOC: ['Cardiac'] }]);
+  assert.equal(parent.length, 1);
+  const [row] = parent;
+  assert.ok(row.classList.contains('vz-table-heads') && !row.classList.contains('vz-table-heading'));
+  assert.equal(row.children.length, 2);
+  assert.ok(row.children[0].textContent.endsWith('Cardiac'));
+  assert.equal(row.children[0].getAttribute('colspan'), null);
+  assert.ok(row.querySelector('.vz-table-indent-btn'));
+  assert.ok(row.children[1].querySelector('.vz-table-groups-track'));
+  assert.equal(t.$$('tbody tr.vz-table-heading-values').length, 0);
+  // A click on its mark claims the parent.
+  t.click(row.children[1]);
+  assert.deepEqual(t.selects().map((s) => s.filters), [{ AESOC: ['Cardiac'] }]);
 });
 
 test('a parent with no values is one cell across the row', () => {
@@ -332,8 +321,8 @@ test('a parent with no values is one cell across the row', () => {
   assert.equal(parent[0].querySelector('.vz-table-heading-text').textContent, 'Cardiac');
 });
 
-test('the row window counts a parent as two lines', () => {
-  // 30 parents of 20 terms each: 630 items, 660 lines.
+test('the row window counts every row as one line', () => {
+  // 30 parents of 20 terms each: 630 rows.
   const n = 30;
   const disp = [];
   const indent = [];
@@ -348,12 +337,11 @@ test('the row window counts a parent as two lines', () => {
               rows: { indent }, collapsed: false };
   const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   const grid = t.el._viz.view.view.grid;
-  assert.equal(grid._lines.at(-1), disp.length + n);
   const sp = t.$$('tbody tr.vz-table-vspacer');
   assert.equal(sp.length, 1);
   const [, end] = grid.win;
-  const below = grid._lines.at(-1) - grid._lines[end];
-  assert.equal(parseFloat(sp[0].querySelector('td').style.height), Math.round(below * grid.rowH));
+  assert.equal(parseFloat(sp[0].querySelector('td').style.height),
+               Math.round((disp.length - end) * grid.rowH));
 });
 
 test('nested groups: a child label starts on its parent\'s label edge', () => {

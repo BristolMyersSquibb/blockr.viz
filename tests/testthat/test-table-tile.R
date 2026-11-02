@@ -164,7 +164,7 @@ test_that("a matrix keeps its groups in level order; other looks sort them", {
   parents <- function(look) {
     st$look <- look
     r <- table_model_groups(st, d)$prep$rows
-    r$.label[r$.level == 0L]
+    r$.parent_key[r$.level == 0L]
   }
   expect_identical(parents("table"), c("B", "A"))
   expect_identical(parents("compact"), c("A", "B"))

@@ -20,6 +20,7 @@ new_table_block(
   unit = "",
   look = "table",
   facet_layout = "by_summary",
+  group_rows = "name",
   sort_by = "value",
   sort_dir = NULL,
   top_n = NULL,
@@ -76,6 +77,8 @@ new_table_block(
 \item{look}{"compact" rotates the column titles and draws \code{tile} summaries as square cells (a heatmap). "cards" draws one card per summary (groups) or per column (records). One of \code{"table"}, \code{"compact"}, \code{"cards"}. Default: \code{"table"}.}
 
 \item{facet_layout}{Column order of faceted summaries. "by_level" needs exactly one facet column in the table. One of \code{"by_summary"}, \code{"by_level"}. Default: \code{"by_summary"}.}
+
+\item{group_rows}{What the outer rows of a nested table (two \code{by} columns) show. "name": the group's name and its number of rows, across the row, with the groups open. "summary": every summary over the group's rows, on the group's line. A summary with \code{func = "identity"} stays empty on an outer row either way. One of \code{"name"}, \code{"summary"}. Default: \code{"name"}.}
 
 \item{sort_by}{Row order: "value", "data", "alpha", a summary's name, a facet level, or a numeric column (its per-row minimum). Default: \code{"value"}.}
 

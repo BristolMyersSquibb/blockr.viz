@@ -288,11 +288,11 @@ test_that("large swimlanes repeat the axis below the table", {
   expect_false(foot(list()))
 })
 
-test_that("swimlane parent rows can act as section headers", {
+test_that("swimlane parent rows are section headers by default", {
   ae <- sum_fixture()
   prep <- groups_prepare(
     ae, by = c("ARM", "USUBJID"), summaries = list(
-      list(type = "spans", x = "ASTDY", xend = "AENDY", parent = FALSE)
+      list(type = "spans", x = "ASTDY", xend = "AENDY")
     )
   )
   seg_col <- prep$plan[[1L]]$segs
@@ -752,7 +752,8 @@ test_that("spans event shapes: legend lists the drawn levels with shapes", {
 test_that("a parent row pools segments but draws no overlays", {
   d <- swim_fixture()
   d$arm <- "A"
-  m <- sum_model(d, by = c("arm", "id"), summaries = list(swim_spans(
+  m <- sum_model(d, by = c("arm", "id"), group_rows = "summary",
+                 summaries = list(swim_spans(
     ticks = "visit", event_x = "ev", open = "ongoing"
   )))
   c1 <- m$cells$cols[[1]]
@@ -896,7 +897,7 @@ test_that("sort_by data honors factor levels, else first appearance", {
   d$ARM <- rep(c("Placebo", "Active"), length.out = nrow(d))
   p <- groups_prepare_summaries(d, by = c("ARM", "AVISIT"), summaries = S,
                               sort_by = "data", sort_dir = "asc")
-  expect_identical(p$rows$.label[p$rows$.is_parent], c("Placebo", "Active"))
+  expect_identical(p$rows$.parent_key[p$rows$.is_parent], c("Placebo", "Active"))
   expect_identical(p$rows$.label[!p$rows$.is_parent], rep(rev(visits), 2L))
 })
 
@@ -1007,7 +1008,7 @@ test_that("a numeric grouping column orders numerically, not as text", {
   d$G <- rep(c("b", "a"), 4)
   p <- groups_prepare_summaries(d, by = c("ADY", "G"), summaries = S,
                               sort_by = "data", sort_dir = "asc")
-  expect_identical(p$rows$.label[p$rows$.is_parent], c("1", "2", "10", "100"))
+  expect_identical(p$rows$.parent_key[p$rows$.is_parent], c("1", "2", "10", "100"))
   expect_identical(groups_levels(c(2, 10, 1, 100)), c("1", "2", "10", "100"))
   expect_identical(groups_levels(as.Date(c("2024-01-10", "2024-01-02"))),
                    c("2024-01-02", "2024-01-10"))

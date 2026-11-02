@@ -85,11 +85,12 @@
     }
 
     /**
-     * A parent row is a heading across the row: one cell when it has no
-     * values of its own (the compact look's empty tiles), else its name on
-     * one line and its marks on the line under it.
+     * A parent row with no values of its own (group_rows = "name", the
+     * compact look's empty tiles) is one cell across the row. One with
+     * values (group_rows = "summary") is a plain row, its name in the label
+     * column like any other.
      * @param {number} i
-     * @returns {'' | 'span' | 'split'}
+     * @returns {'' | 'span'}
      */
     headKind(i) {
       const m = /** @type {TableModel | null} */ (this.model);
@@ -97,7 +98,7 @@
       if (!m || !ind || !(i + 1 < ind.length && ind[i + 1] > ind[i])) return '';
       const empty = m.cols.every((c, j) => j === m.stub ||
         ((c.disp[i] == null || c.disp[i] === '') && !(c.bg && c.bg[i])));
-      return empty ? 'span' : 'split';
+      return empty ? 'span' : '';
     }
 
     /** @param {VizPayload} p */

@@ -83,7 +83,9 @@ test_that("a nested table has levels, parent rows and parent labels", {
   expect_true(cells$nested)
   expect_true(any(as.integer(cells$level) > 0L))
   expect_true(any(as.logical(cells$parent_row)))
-  expect_true("SOC A" %in% as.character(cells$parent))
+  expect_true("SOC A" %in% as.character(cells$parent_key))
+  # A parent row is a heading by default: its name and its rows.
+  expect_true(any(grepl("^SOC A \\(N = [0-9]+\\)$", cells$label)))
   # The view indents the child rows and marks the parent rows strong.
   rows <- table_groups_to_model(m)$rows
   expect_identical(as.integer(rows$indent), as.integer(cells$level))
@@ -380,7 +382,7 @@ test_that("a nested pair's parent row is the mean of its rows' ends", {
   # the arm's single highest value.
   prep <- groups_prepare(ae, by = c("ARM", "USUBJID"), summaries = list(
     list(type = "pair", x = "AVAL", xend = "DUR", ref_min = "LO", ref_max = "HI")
-  ))
+  ), group_rows = "summary")
   expect_null(prep$err)
   p <- prep$plan[[1]]
   rows <- prep$rows
@@ -420,7 +422,7 @@ test_that("a colour-split nested pair averages each level's rows", {
   prep <- groups_prepare(ae, by = c("SOC", "TERM"), summaries = list(
     list(type = "pair", x = "SDY", x_func = "mean", xend = "EDY",
          xend_func = "max", color = "SEV")
-  ))
+  ), group_rows = "summary")
   expect_null(prep$err)
   p <- prep$plan[[1]]
   rows <- prep$rows

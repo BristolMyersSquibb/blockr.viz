@@ -51,7 +51,8 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL) {
     sort_dir = table_sort_dir(state), top_n = state$top_n,
     scale_map = scale_map, subject = subject, pct_of = state$percent_of,
     missing = state$missing, format = state$format, unit = state$unit,
-    levels_outer = identical(state$look, "compact")
+    levels_outer = identical(state$look, "compact"),
+    group_rows = state$group_rows
   )
   if (!is.null(prep$err)) {
     return(list(prep = prep, cells = NULL))

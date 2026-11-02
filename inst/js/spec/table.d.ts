@@ -16,6 +16,7 @@ interface TableConfig {
   unit: string;
   look: 'table' | 'compact' | 'cards';
   facet_layout: 'by_summary' | 'by_level';
+  group_rows: 'name' | 'summary';
   sort_by: string;
   sort_dir: 'asc' | 'desc' | null;
   top_n: number | null;

@@ -831,11 +831,6 @@
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 7px;
 }
-/* A parent with values is two lines (html.js row()): its name across the
-   row, then its marks under it with an empty label, right below the name. */
-.vz-table-groups-table[data-summarize-nested='1'] tbody tr.vz-table-heading-values > td {
-  padding-top: 0;
-}
 /* A compact row is its 24px tile plus 1px above and below; the last row of
    a group adds the same 4px. Its header stays on one line. Its headings
    span the row (html.js row()), so the label column is as wide as the

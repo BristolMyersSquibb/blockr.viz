@@ -164,6 +164,18 @@ test('the gear engine, when loaded, is mounted in a tray and updated after the l
   assert.equal(host.visible('drill_target', v), false);
   assert.equal(host.visible('drill_target', Object.assign({}, v, { drill: 'ARM' })), true);
   assert.equal(host.visible('missing', { layout: 'groups', by: [] }), true);
+  // "Group rows": a nested groups table that is not a matrix, with a
+  // summary that can draw on an outer row.
+  const g = { layout: 'groups', by: ['ARM', 'USUBJID'], look: 'table',
+              summaries: [{ type: 'simple', func: 'max', col: 'AVAL' }] };
+  const as = (o) => host.visible('group_rows', Object.assign({}, g, o));
+  assert.equal(as({}), true);
+  assert.equal(as({ by: ['USUBJID'] }), false);
+  assert.equal(as({ look: 'compact' }), false);
+  assert.equal(as({ layout: 'records' }), false);
+  assert.equal(as({ summaries: [] }), true);
+  assert.equal(as({ summaries: [{ func: 'identity', col: 'AGE' }] }), false);
+  assert.equal(as({ summaries: [{ func: 'identity', col: 'AGE' }, { type: 'dist', col: 'AGE' }] }), true);
 });
 
 test('the gear hides what a finished input cannot change', () => {

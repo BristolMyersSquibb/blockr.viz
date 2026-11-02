@@ -12,7 +12,7 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
                               scale_map = NULL, subject = NULL,
                               pct_of = "facet", missing = "drop",
                               format = NULL, unit = NULL,
-                              levels_outer = FALSE) {
+                              levels_outer = FALSE, group_rows = "name") {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
@@ -58,7 +58,7 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
     facet_layout = chr_state(facet_layout) %||% "by_summary",
     sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
     scale_map = scale_map, subject = subject, pct_of = pct_of,
-    levels_outer = levels_outer
+    levels_outer = levels_outer, group_rows = group_rows
   )
   groups_number_format(prep, format, unit)
 }
@@ -118,7 +118,7 @@ groups_prepare_summaries <- function(data, by, summaries,
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
                                    subject = NULL, pct_of = "facet",
-                                   levels_outer = FALSE) {
+                                   levels_outer = FALSE, group_rows = "name") {
   bad <- function(msg) list(err = msg)
   g <- groups_prep_groups(data, by)
   if (!is.null(g$err)) return(bad(g$err))
@@ -131,7 +131,13 @@ groups_prepare_summaries <- function(data, by, summaries,
   if (!is.null(summaries$err)) return(bad(summaries$err))
 
   fi <- groups_facet_info(summaries, data)
-  sk <- groups_prep_skeleton(data, keys, g$group, g$parent, summaries)
+  # The outer rows of a nested table are headings (name and N, no summaries)
+  # unless `group_rows = "summary"`. A matrix's outer rows are headings
+  # already (groups_tile_paint()) and keep their bare name.
+  heads <- !is.null(g$parent) &&
+    !identical(chr_state(group_rows) %||% "name", "summary")
+  sk <- groups_prep_skeleton(data, keys, g$group, g$parent,
+                             parent_n = heads && !isTRUE(levels_outer))
   if (!is.null(sk$err)) return(bad(sk$err))
 
   build <- list(
@@ -161,7 +167,9 @@ groups_prepare_summaries <- function(data, by, summaries,
   }
   asm <- groups_assemble_rows(srt$leaf, srt$par_rows, g$parent, srt$key,
                                  sort_dir, top_n)
-  rows <- asm$rows
+  # Blanked after the sort, which still ranks the groups by their values,
+  # and before the scales, which then fit the rows that draw.
+  rows <- groups_blank_parents(asm$rows, summaries, all = heads)
 
   plan <- groups_summary_domains(plan, rows)
   fl <- groups_facet_layout(plan, facet_levels, facet_layout, data, fi$shared,
@@ -187,7 +195,7 @@ groups_prepare_summaries <- function(data, by, summaries,
     folded = asm$folded, fold_max = asm$fold_max,
     facet_spans = fl$facet_spans,
     failed = unlist(lapply(fl$plan, function(p) p$failed)),
-    all = g$all
+    all = g$all, parent_heads = heads
   )
 }
 
@@ -410,7 +418,7 @@ groups_facet_info <- function(summaries, data) {
 #' sort order and keys.
 #' @return `list(leaf, par_rows)` or `list(err =)`.
 #' @noRd
-groups_prep_skeleton <- function(data, keys, group, parent, summaries) {
+groups_prep_skeleton <- function(data, keys, group, parent, parent_n = FALSE) {
   # A missing grouping value (a population join appends one for a subject with
   # no record) is not a group: it counts toward N and draws no row. A blank
   # string is a value.
@@ -429,18 +437,15 @@ groups_prep_skeleton <- function(data, keys, group, parent, summaries) {
   # The data's own order (factor levels, else first appearance), read only by
   # `sort_by = "data"`.
   leaf$.ord <- groups_data_ord(data[[group]], leaf$.label)
-  show_parent_n <- !is.null(parent) && any(vapply(summaries, function(s) {
-    identical(s$type, "spans") && identical(s$parent, FALSE)
-  }, logical(1L)))
   par_rows <- NULL
   if (!is.null(parent)) {
-    par_rows <- groups_parent_skeleton(data, skel, parent, show_parent_n)
+    par_rows <- groups_parent_skeleton(data, skel, parent, parent_n)
   }
   list(leaf = leaf, par_rows = par_rows)
 }
 
-# Parent rows: one per level of the outer column, with N in the label when a
-# section-style column asks for it.
+# Parent rows: one per level of the outer column, with N (its rows) in the
+# label when the row is a heading.
 groups_parent_skeleton <- function(data, skel, parent, show_parent_n) {
   pv <- groups_levels(data[[parent]])
   parent_n <- tabulate(match(as.character(skel[[parent]]), pv),
@@ -514,19 +519,48 @@ groups_failed_summary <- function(s, msg) {
   list(type = "field", name = s$name, .failed = msg)
 }
 
-#' Fill parent rows with empty marks for section-style summaries
+#' Empty the summaries of the parent rows: every summary when the outer rows
+#' are headings (`all`), else the identity ones, whose value on an outer row
+#' would be one inner row's. A summary's columns are "<sid>_*" with sid
+#' ".s<i>" or ".s<i>f<j>" (groups_copy_sid()).
 #' @noRd
-groups_blank_summary <- function(target, s, sid) {
-  n <- nrow(target)
-  if (identical(s$type, "spans")) {
-    if (groups_spans_has_overlay(s)) {
-      target[[groups_col(sid, "ovl")]] <- I(rep(list(list()), n))
-    }
-    target[[groups_col(sid, "segs")]] <- I(rep(list(list()), n))
-    target[[groups_col(sid, "start")]] <- rep(NA_real_, n)
-    target[[groups_col(sid, "nseg")]] <- rep(0L, n)
+groups_blank_parents <- function(rows, summaries, all = FALSE) {
+  par <- rows$.is_parent %in% TRUE
+  if (!any(par)) return(rows)
+  ids <- if (isTRUE(all)) {
+    seq_along(summaries)
+  } else {
+    which(vapply(summaries, groups_is_identity, logical(1L)))
   }
-  target
+  if (!length(ids)) return(rows)
+  pat <- paste0("^\\.s(", paste(ids, collapse = "|"), ")(f[0-9]+)?_")
+  for (nm in grep(pat, names(rows), value = TRUE)) {
+    rows[[nm]] <- groups_blank_col(rows[[nm]], par, nm)
+  }
+  rows
+}
+
+# One frame column with the rows `at` emptied: no value, no text, no
+# segments.
+groups_blank_col <- function(x, at, nm) {
+  if (is.list(x)) {
+    x[at] <- rep(list(list()), sum(at))
+  } else if (endsWith(nm, "_nseg")) {
+    x[at] <- 0L
+  } else if (is.character(x)) {
+    x[at] <- ""
+  } else {
+    x[at] <- NA
+  }
+  x
+}
+
+#' A summary drawn as is (`func = "identity"`).
+#' @noRd
+groups_is_identity <- function(s) {
+  is.list(s) && is.null(s$.custom) &&
+    identical(s$type %||% "simple", "simple") &&
+    identical(chr_state(s$func), "identity")
 }
 
 #' A summary copy's primary value per row: the column its sort and label

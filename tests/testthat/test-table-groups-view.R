@@ -231,7 +231,11 @@ test_that("table_groups_to_model() draws what the reference sent", {
     cs <- cases[[nm]]
     want <- tm_payload(cs$messages, "blockr-viz-summarize-data")
     if (!identical(want$kind, "flat")) next
-    m <- table_model_groups(cs$state, cs$data)
+    # The reference drew the summaries on a nested table's outer rows
+    # (behaviour-changes.md row 53).
+    st <- cs$state
+    st$group_rows <- "summary"
+    m <- table_model_groups(st, cs$data)
     v <- tm_json(table_groups_to_model(
       m, axis = isTRUE(cs$state$column_axis %||% TRUE)
     ))

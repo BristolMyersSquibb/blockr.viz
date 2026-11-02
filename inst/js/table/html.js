@@ -173,24 +173,21 @@
 
   /**
    * How row `i` is drawn as a heading: `span`, one cell across the row (a
-   * row that heads others and has no values, marked by R in `rows.span`);
-   * `split`, a line across the row for the name and a line under it for the
-   * values (the groups layout's parents); "" a plain row.
+   * row that heads others and has no values, marked by R in `rows.span`, or
+   * by the layout); "" a plain row.
    * @param {TableModel} m
    * @param {number} i
    * @param {string | undefined} head The layout's choice, if any.
-   * @returns {'' | 'span' | 'split'}
+   * @returns {'' | 'span'}
    */
   function headKind(m, i, head) {
     if (m.stub !== 0 || m.cols.length < 2) return '';
-    if (head === 'span' || head === 'split') return head;
+    if (head === 'span') return head;
     return m.rows && m.rows.span && m.rows.span[i] ? 'span' : '';
   }
 
   /**
-   * One row. A heading (headKind()) is one cell across the row, or that
-   * line and a line of values under it: two <tr>s with the same data-i, so
-   * a click on either claims the row.
+   * One row. A heading (headKind()) is one cell across the row.
    * @param {TableModel} m
    * @param {TableStructure} st
    * @param {number} i
@@ -221,21 +218,10 @@
       return open(cls.concat(own, 'vz-table-heading', o.last ? ['vz-table-group-last'] : [])) +
         stub(m, st, i, o.shut, o.stubCls, o.flush, n) + '</tr>';
     }
-    let out = '';
-    if (head === 'split') {
-      out = open(cls.concat(own, 'vz-table-heading', 'vz-table-heading-line')) +
-        stub(m, st, i, o.shut, o.stubCls, o.flush, n) + '</tr>';
-      cls.push('vz-table-heading-values');
-    } else {
-      cls.push(...own);
-    }
+    cls.push(...own);
     if (o.last) cls.push('vz-table-group-last');
-    out += open(cls);
+    let out = open(cls);
     m.cols.forEach((c, j) => {
-      if (j === m.stub && head === 'split') {
-        out += '<td class="vz-table-stub' + (o.stubCls ? ' ' + o.stubCls : '') + '"></td>';
-        return;
-      }
       const mine = j === m.stub || !o.cell ? null : o.cell(c, i);
       out += j === m.stub ? stub(m, st, i, o.shut, o.stubCls, o.flush) : mine != null ? mine : td(c, i);
     });

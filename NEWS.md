@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9023
+# blockr.viz 0.3.0.9024
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -60,13 +60,20 @@ read.
   blank.
 * A row that heads other rows is drawn the same way in every layout: its
   label is bold in the body's ink, the rows under it are regular in the
-  body's ink, and the heading runs across the row on one line. A groups
-  parent puts its name on that line and its marks on the line below, where
-  it wrapped in the label column. A parent with no values (the compact
-  look) and a finished table's row over deeper rows with empty cells
+  body's ink. A row with no values of its own (a groups parent, the compact
+  look's) and a finished table's row over deeper rows with empty cells
   (gtsummary's "Age (years)") are one cell across the row; they no longer
   widen or wrap in the first column. The Excel, Word and PowerPoint
   downloads merge these rows and the section headers across the table.
+* In the groups layout, the outer rows of a nested table (two `by`
+  columns) show the group's name and its number of rows ("Placebo
+  (N = 86)") across the row, with the groups open, and no summaries. The
+  new `group_rows` setting (gear: Look, "Group rows") draws them with
+  `"summary"`: every summary over the group's rows, on the group's own
+  line like any other row. A summary with `func = "identity"` never draws
+  on an outer row, where it showed the first inner row's value. Boards
+  saved before 0.3.0.9000 with a nested table keep `"summary"`. The
+  downloads follow the setting.
 * In the compact look (the heatmap) the groups keep their column's level
   order (factor levels, else sorted), as 0.2's heatmap block did; the rows
   inside still sort by their total. The AE heatmap had sorted its arms by

@@ -177,6 +177,12 @@ legacy_values <- function(block, x, version) {
         x[["color"]]
       })
     }
+    # A nested groups table before the rewrite drew its summaries on the
+    # outer rows; a restored one keeps them.
+    if (legacy_before_rewrite(version) && identical(x[["layout"]], "groups") &&
+          length(unlist(x[["by"]])) == 2L && is.null(x[["group_rows"]])) {
+      x$group_rows <- "summary"
+    }
     st <- x[["stats"]]
     if (legacy_before_rewrite(version) && (is.character(st) || is.list(st))) {
       st <- as.character(unlist(st))

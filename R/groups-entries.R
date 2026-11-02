@@ -170,7 +170,6 @@ groups_norm_dist <- function(s, show_given) {
 # `tooltip` adds columns.
 groups_norm_spans <- function(s) {
   s$tooltip <- as.character(s$tooltip %||% character())
-  s$parent <- if (is.null(s$parent)) TRUE else isTRUE(s$parent)
   for (nm in GROUPS_SPANS_OVERLAYS) s[[nm]] <- chr_state(s[[nm]])
   s
 }

@@ -196,27 +196,11 @@
     if (!tr || tr.classList.contains('vz-table-row-nodrill')) return;
     const j = /** @type {HTMLTableCellElement} */ (at).cellIndex;
     const keys = j !== m.stub && m.cols[j] && !tr.classList.contains('vz-table-heading') ? m.cols[j].keys : null;
-    const trs = lines(tr);
-    if (!keys) return trs.forEach((r) => hot(r, ['vz-table-hot-row']));
+    if (!keys) return hot(tr, ['vz-table-hot-row']);
     const ce = colEls(grid, keys);
-    trs.forEach((r) => hot(r, ['vz-table-hot-row', 'vz-table-hot-soft']));
+    hot(tr, ['vz-table-hot-row', 'vz-table-hot-soft']);
     ce.head.concat(ce.cells).forEach((c) => { if (c !== at) hot(c, ['vz-table-hot-col', 'vz-table-hot-soft']); });
     hot(at, ['vz-table-hot-cell']);
-  }
-
-  /**
-   * A row's lines: the row, or both lines of a heading drawn as a name line
-   * and a values line (html.js row()).
-   * @param {Element} tr
-   * @returns {Element[]}
-   */
-  function lines(tr) {
-    const c = tr.classList;
-    if (!c.contains('vz-table-heading-line') && !c.contains('vz-table-heading-values')) return [tr];
-    const i = tr.getAttribute('data-i');
-    return [tr.previousElementSibling, tr.nextElementSibling, tr]
-      .filter((r) => !!r && r.getAttribute('data-i') === i)
-      .map((r) => /** @type {Element} */ (r));
   }
 
   /**

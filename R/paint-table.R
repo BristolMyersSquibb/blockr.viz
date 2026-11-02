@@ -21,7 +21,8 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   # A parent with no values (the compact look's) runs across the row, as in
   # the table view, so the stub holds only the other labels.
   lab <- paste0(m$label)
-  lab[paint_span_rows(m)] <- ""
+  span <- paint_span_rows(m)
+  lab[span] <- ""
   stub_w <- max(
     paint_w(lab, fs, family) + max(indent),
     paint_w(stub_lab, fs, family, bold = TRUE)
@@ -63,7 +64,7 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
   list(
     stub_w = stub_w, stub_lab = stub_lab, widths = wid, slot = slot,
     is_glyph = is_glyph, kind = kind, hdr = hdr, sub = sub, pad = pad,
-    x = c(0, cumsum(c(stub_w, wid)))
+    x = c(0, cumsum(c(stub_w, wid))), span = span
   )
 }
 
@@ -301,6 +302,8 @@ paint_body_row <- function(m, lay, r, ytop, rh, gl) {
   ind <- if (m$level[[r]] > 0L) PAINT_INDENT else 0
   g <- list(paint_txt(gl, m$label[[r]], lay$pad + ind, ytop + rh / 2,
                    bold = isTRUE(m$parent_row[[r]])))
+  # A heading across the row: its name only, no empty lanes under it.
+  if (isTRUE(lay$span[[r]])) return(c(g, list(paint_rule(gl, ytop + rh))))
   for (i in seq_along(m$cols)) {
     c <- m$cols[[i]]
     w <- lay$widths[i]
@@ -566,8 +569,9 @@ paint_tile_title <- function(x, max = 28L) {
   ifelse(nchar(x) > max, paste0(substr(x, 1L, max - 1L), "…"), x)
 }
 
-# The parent rows with no values of their own: every cell empty and
-# unpainted. Their label runs across the row.
+# The parent rows with no values of their own (group_rows = "name", the
+# compact look's): every cell empty and unpainted. Their label runs across
+# the row.
 paint_span_rows <- function(m) {
   par <- as.logical(m$parent_row %||% rep(FALSE, length(m$label)))
   par[is.na(par)] <- FALSE

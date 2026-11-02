@@ -158,6 +158,21 @@ table_spec_look <- function() {
       )
     ),
 
+    group_rows = table_arg(
+      type = "enum", default = "name", values = c("name", "summary"),
+      applies = "groups",
+      gear = gear("Look", "segmented", "Group rows",
+                  labels = c("Name only", "With summary")),
+      example = "summary",
+      describe = paste(
+        "What the outer rows of a nested table (two `by` columns) show.",
+        "\"name\": the group's name and its number of rows, across the row,",
+        "with the groups open. \"summary\": every summary over the group's",
+        "rows, on the group's line. A summary with `func = \"identity\"`",
+        "stays empty on an outer row either way."
+      )
+    ),
+
     collapsible = table_arg(
       type = "bool", default = TRUE,
       applies = c("records", "variables"),

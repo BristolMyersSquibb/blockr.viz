@@ -31,7 +31,8 @@ test_that("a worst-grade count nests: the SOC row reduces its own rows", {
   prep <- groups_prepare(custom_fixture(), by = c("SOC", "TERM"),
                             summaries = list(list(type = "custom",
                                                   name = "Patients",
-                                                  fn = worst_fn)))
+                                                  fn = worst_fn)),
+                            group_rows = "summary")
   expect_null(prep$err)
   expect_identical(prep$plan[[1]]$kind, "barsplit")
   # The block cannot tell a count from a mean: custom levels sit side by side.

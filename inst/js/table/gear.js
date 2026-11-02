@@ -39,12 +39,25 @@
   }
 
   /**
+   * Whether "Group rows" applies: a nested table (two `by` columns) that is
+   * not a matrix, with a summary that can draw on its outer rows (one
+   * drawn as is never does).
+   * @param {Record<string, unknown>} v
+   */
+  function groupRows(v) {
+    if (!Array.isArray(v.by) || v.by.length !== 2 || v.look === 'compact') return false;
+    const s = Array.isArray(v.summaries) ? v.summaries : [];
+    return !s.length || s.some((x) => !x || (x.type || 'simple') !== 'simple' || x.func !== 'identity');
+  }
+
+  /**
    * @param {string} key
    * @param {Record<string, unknown>} v
    * @param {TableInfo} info
    */
   function visible(key, v, info) {
     if (key === 'drill_target' || key === 'drill_table') return v.drill != null && v.drill !== '';
+    if (key === 'group_rows') return v.layout === 'groups' && groupRows(v);
     if (v.layout === 'records') return recordsRow(key, v, info);
     return true;
   }

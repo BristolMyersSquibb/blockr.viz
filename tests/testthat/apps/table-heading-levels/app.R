@@ -1,6 +1,7 @@
 # Heading rows in each layout, for test-table-heading-levels.R: a nested
-# groups table (organ class over term, long class names), the same nesting
-# in the compact look (arm over subject, tiles per term), a finished table
+# groups table (organ class over term, long class names) with its summaries
+# on the outer rows and the same with the default name headings, the
+# nesting in the compact look (arm over subject, tiles per term), a finished table
 # with empty heading rows (gtsummary style), and a groups table of 600 rows
 # for the row window.
 #
@@ -59,7 +60,9 @@ serve(new_dock_board(
     long_data = new_static_block(long, block_name = "Long"),
     grp = new_table_block(layout = "groups", by = c("AEBODSYS", "AEDECOD"),
                           summaries = count, drill = "auto",
-                          block_name = "Groups"),
+                          group_rows = "summary", block_name = "Groups"),
+    grh = new_table_block(layout = "groups", by = c("AEBODSYS", "AEDECOD"),
+                          summaries = count, block_name = "Group headings"),
     cmp = new_table_block(
       layout = "groups", look = "compact", by = c("ARM", "USUBJID"),
       summaries = list(list(type = "simple", func = "count", show = "tile",
@@ -71,10 +74,11 @@ serve(new_dock_board(
     lng = new_table_block(layout = "groups", by = c("SOC", "PT"),
                           summaries = count, block_name = "Long groups")
   ),
-  links = links(from = c("ae", "ae", "fin_data", "long_data"),
-                to = c("grp", "cmp", "fin", "lng")),
+  links = links(from = c("ae", "ae", "ae", "fin_data", "long_data"),
+                to = c("grp", "grh", "cmp", "fin", "lng")),
   views = list(
     grp = dock_view("grp", name = "grp"),
+    grh = dock_view("grh", name = "grh"),
     cmp = dock_view("cmp", name = "cmp"),
     fin = dock_view("fin", name = "fin"),
     lng = dock_view("lng", name = "lng")

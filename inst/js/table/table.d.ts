@@ -298,7 +298,7 @@ interface TableGridHooks {
   lit?(): { rows: Iterable<number>; sections: Iterable<number> };
   /** How row `i` is drawn as a heading (html.js headKind()): the groups
    *  layout's parents; without it, R's `rows.span`. */
-  head?(i: number): '' | 'span' | 'split';
+  head?(i: number): '' | 'span';
   /** A body cell drawn by the layout instead (the groups marks); null for
    *  the plain cell. */
   cell?(c: TableCol, i: number): string | null;

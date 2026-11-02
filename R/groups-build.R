@@ -122,9 +122,6 @@ groups_series_ref <- function(cp, s) {
 #' summary's `<sid>_*` columns over a data slice.
 #' @noRd
 groups_fill <- function(target, tkeys, keys, slice, s, sid, parent_row = FALSE) {
-  if (isTRUE(parent_row) && identical(s$parent, FALSE)) {
-    return(groups_blank_summary(target, s, sid))
-  }
   if (!is.null(s$.failed)) {
     target[[groups_col(sid, "t")]] <- rep("\u2013", nrow(target))
     return(target)

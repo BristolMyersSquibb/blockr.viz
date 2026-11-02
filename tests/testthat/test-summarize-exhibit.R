@@ -272,7 +272,8 @@ test_that("the painted compact look runs an empty parent across the row", {
   )
   sm <- list(list(type = "simple", func = "count", show = "tile",
                   name = "Events", facet = "AEDECOD"))
-  prep <- groups_prepare(d, by = c("ARM", "USUBJID"), summaries = sm)
+  prep <- groups_prepare(d, by = c("ARM", "USUBJID"), summaries = sm,
+                         levels_outer = TRUE)
   m <- groups_cells(prep)
   span <- paint_span_rows(m)
   expect_identical(m$label[span], c("Nivolumab 240 mg + Ipilimumab 1 mg/kg",
@@ -281,9 +282,13 @@ test_that("the painted compact look runs an empty parent across the row", {
   lay <- paint_layout(m, prep, 9)
   expect_lt(lay$stub_w, paint_w("Nivolumab 240 mg + Ipilimumab 1 mg/kg", 9,
                                 "sans"))
-  # A parent with a bar of its own is not a span row.
+  # A parent with a bar of its own is not a span row; by default it has none.
   sm_bar <- list(list(type = "simple", func = "count", show = "bar"))
-  m_bar <- groups_cells(groups_prepare(d, by = c("ARM", "USUBJID"),
-                                       summaries = sm_bar))
-  expect_false(any(paint_span_rows(m_bar)))
+  bar <- function(gr) {
+    groups_cells(groups_prepare(d, by = c("ARM", "USUBJID"),
+                                summaries = sm_bar, group_rows = gr))
+  }
+  expect_false(any(paint_span_rows(bar("summary"))))
+  m_name <- bar("name")
+  expect_identical(paint_span_rows(m_name), as.logical(m_name$parent_row))
 })

@@ -1089,6 +1089,25 @@
       "slot": true,
       "ctrl": true
     },
+    "group_rows": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "name",
+      "values": ["name", "summary"],
+      "nullable": false,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "segmented",
+        "label": "Group rows",
+        "labels": ["Name only", "With summary"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "sort_by": {
       "type": {
         "name": "string"
