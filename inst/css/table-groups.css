@@ -846,6 +846,12 @@
   font-weight: var(--blockr-font-weight-normal, 400);
   color: var(--blockr-color-text-muted, #6b7280);
 }
+/* Their variable labels under them stay the quiet line of the flat table's
+   header, not the bold Big N of a Table 1 arm (.vz-table-arm-n). */
+.vz-table-groups-table[data-summarize-nested='1'] thead th.vz-table-stub-header .blockr-col-label {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+}
 .vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-stub-header .blockr-col-name,
 .vz-table-groups-table[data-summarize-compact='1'] tr.is-parent td.vz-table-groups-label-col {
   white-space: nowrap;

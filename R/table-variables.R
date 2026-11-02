@@ -196,6 +196,7 @@ MISSING_LEVEL <- "(Missing)"
 # Missing values of the given columns as a level of their own, "(Missing)":
 # `missing = "level"` in every layout. Factors get the level appended; other
 # columns turn character. Columns without a missing value stay as they are.
+# The variable label stays: as.character() drops it, and the headers read it.
 table_missing_levels <- function(data, cols) {
   cols <- intersect(unique(as.character(cols)), names(data))
   for (cl in cols) {
@@ -205,8 +206,10 @@ table_missing_levels <- function(data, cols) {
       levels(x) <- c(levels(x), MISSING_LEVEL)
       x[is.na(x)] <- MISSING_LEVEL
     } else {
+      lbl <- attr(x, "label", exact = TRUE)
       x <- as.character(x)
       x[is.na(x)] <- MISSING_LEVEL
+      attr(x, "label") <- lbl
     }
     data[[cl]] <- x
   }
