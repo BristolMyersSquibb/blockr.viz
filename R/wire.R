@@ -107,8 +107,9 @@ wire_record <- function(type, x) {
 #'
 #' @param df A data frame.
 #' @return `list(columns, data)`: `columns` a list of column meta (`name`,
-#'   `class`, `label`, `n_unique`, the entries above and `kind` for a column
-#'   mark_column_kinds() marked), `data` a `json` string.
+#'   `class`, `label`, `n_unique`, the entries above, `kind` for a column
+#'   mark_column_kinds() marked and `all_na = TRUE` for a column that is NA
+#'   in every row), `data` a `json` string.
 #' @noRd
 viz_wire_df <- function(df) {
   w <- wire_df_parts(df, warn = TRUE)
@@ -159,14 +160,17 @@ wire_df_parts <- function(df, warn) {
 # One column's description: its name, wire class, variable label, number
 # of distinct values, the class's meta (factor levels, time zone, unit) and,
 # in a frame that marks kinds, what the column is for. An unmarked column in
-# a marked frame has no `kind`.
+# a marked frame has no `kind`. A column that is NA in every row says so
+# (`all_na`): the chart then treats it as unset when it is a colour, facet or
+# series, the rule of cols_with_values().
 wire_column_meta <- function(x, nm, w, kinds) {
   c(
     list(name = nm, class = w$class,
          label = attr(x, "label", exact = TRUE) %||% "",
          n_unique = length(unique(x))),
     w$meta,
-    if (nm %in% names(kinds)) list(kind = unname(kinds[[nm]]))
+    if (nm %in% names(kinds)) list(kind = unname(kinds[[nm]])),
+    if (length(x) && all(is.na(x))) list(all_na = TRUE)
   )
 }
 

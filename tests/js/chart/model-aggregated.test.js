@@ -205,6 +205,19 @@ test('a box plot faceted by a column the data lacks has no empty slots', () => {
   assert.deepStrictEqual(plain(m.panels[0].slots.map((x) => x.cat)), ['a\u0000x', 'a\u0000y', 'b\u0000x']);
 });
 
+test('a bar chart coloured and faceted by an all-NA column draws one unsplit panel', () => {
+  // Upstream switches the split off by filling the column with NA.
+  const rows = [{ G: 'a', S: null }, { G: 'a', S: null }, { G: 'b', S: null }];
+  const cols = [cat('G'), cat('S', { all_na: true })];
+  for (const missing of ['level', 'drop']) {
+    const m = build({ type: 'bar', category: 'G', color: 'S', facet: 'S', missing }, rows, cols);
+    assert.strictEqual(m.facet, null);
+    // No colour level, so no unnamed swatch in the legend.
+    assert.deepStrictEqual(plain(m.colors), []);
+    assert.strictEqual(m.panels.length, 1);
+  }
+});
+
 test('a facet with one panel keeps no empty distribution slot', () => {
   // Every row in one facet value (or a facet column with nothing in it, or
   // one the column list has not caught up with): one panel, no grid to

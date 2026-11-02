@@ -114,6 +114,21 @@ test('a facet, colour or series column the data does not hold is left unset', ()
   assert.strictEqual(model({ facet: 'Subgroup' }).panels[0].series[0].pts.length, 5);
 });
 
+test('a facet, colour or series column that is NA in every row is left unset', () => {
+  // Upstream switches the split off by filling the column with NA.
+  const cols = COLUMNS.concat([cat('SUB', { all_na: true })]);
+  const rows = ROWS.map((r) => ({ ...r, SUB: null }));
+  const m = C.model.individual({ rows, ix: new C.RowIndex(), columns: cols, derived: {},
+    cfg: C.model.settings({ ...BASE, type: 'line', facet: 'SUB', color: 'SUB', series: 'SUB' }, cols) });
+  assert.strictEqual(m.facet, null);
+  assert.strictEqual(m.color, null);
+  assert.strictEqual(m.panels.length, 1);
+  assert.strictEqual(m.panels[0].series.length, 1);
+  assert.strictEqual(m.panels[0].series[0].pts.length, 5);
+  // A column with a value in some row still splits.
+  assert.strictEqual(settingsOf({ facet: 'ARM' }).facet, 'ARM');
+});
+
 test('a line with more than 1000 series draws the first 1000 and says so', () => {
   const rows = [];
   for (let i = 0; i < 1003; i++) rows.push({ ID: 'P' + String(i).padStart(4, '0'), DAY: 1, VAL: i });

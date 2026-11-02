@@ -74,9 +74,13 @@
     for (const [k, v] of Object.entries(config || {})) if (v != null) cfg[k] = v;
     // A colour, facet or series column the data does not hold (a board adds
     // its Subgroup column only once a subgroup is picked) is unset, as in 0.2:
-    // every row would land in one empty facet or level.
+    // every row would land in one empty facet or level. So is one that is NA
+    // in every row (`all_na`), which lets upstream switch the split off by
+    // filling the column with NA.
     for (const k of ['color', 'facet', 'series']) {
-      if (cfg[k] && columns.length && !columns.some((c) => c.name === cfg[k])) cfg[k] = null;
+      if (!cfg[k] || !columns.length) continue;
+      const col = columns.find((c) => c.name === cfg[k]);
+      if (!col || col.all_na) cfg[k] = null;
     }
     if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg));
     defaults(cfg, columns);

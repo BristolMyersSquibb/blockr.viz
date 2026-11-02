@@ -112,6 +112,11 @@ chart_needed_cols <- function(v, d) {
 # the word of a setting with the same name (script_title_args()).
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
+  # A split the chart does not draw (its column absent or NA in every row)
+  # leaves the text too: "[, split by {label(@facet)}]" drops.
+  for (k in intersect(c("color", "facet", "series"), names(a))) {
+    a[k] <- list(chart_split_in(d, a[[k]]))
+  }
   attr(d, "blockr_highlight") <- chart_highlight_text(v$highlight)
   viz_titles(v, d, auto, a)
 }
@@ -173,7 +178,8 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
         !length(intersect(group, names(data)))) {
     return(data)
   }
-  keys <- intersect(c(facet, group, color), names(data))
+  keys <- intersect(c(chart_split_in(data, facet), group,
+                      chart_split_in(data, color)), names(data))
   func <- func %||% "count"
   summary <- if (identical(func, "count") || !length(value) ||
                    !value %in% names(data)) {

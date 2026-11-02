@@ -16,6 +16,14 @@ chart_col_in <- function(data, col) {
   }
 }
 
+# A colour, facet or series column counts only when the data has it with a
+# value in some row: upstream switches a split off by leaving the column out
+# or by filling it with NA (cols_with_values()).
+chart_split_in <- function(data, col) {
+  col <- chart_col_in(data, col)
+  if (length(col) && length(cols_with_values(data, col))) col
+}
+
 # The columns named in `args`, the part of the data a computation reads.
 chart_args_cols <- function(args, data) {
   intersect(as.character(unlist(args[grepl("_col$|_by$", names(args))])),
@@ -29,8 +37,10 @@ chart_band_args <- function(state, data) {
     return(NULL)
   }
   list(
-    x_col = state$x, y_col = state$y, color_by = state$color,
-    series_by = state$series, facet_by = chart_col_in(data, state$facet),
+    x_col = state$x, y_col = state$y,
+    color_by = chart_split_in(data, state$color),
+    series_by = chart_split_in(data, state$series),
+    facet_by = chart_split_in(data, state$facet),
     summary = state$summary %||% "median_q1_q3",
     whiskers = state$whiskers %||% "p10_p90",
     window = state$band_window %||% "adaptive",
@@ -344,8 +354,10 @@ chart_smoother_args <- function(state, data) {
     return(NULL)
   }
   list(
-    smoother = sm, x_col = state$x, y_col = state$y, color_by = state$color,
-    series_by = state$series, facet_by = chart_col_in(data, state$facet),
+    smoother = sm, x_col = state$x, y_col = state$y,
+    color_by = chart_split_in(data, state$color),
+    series_by = chart_split_in(data, state$series),
+    facet_by = chart_split_in(data, state$facet),
     x_log = identical(state$x_transform, "log10"),
     y_log = identical(state$y_transform, "log10")
   )

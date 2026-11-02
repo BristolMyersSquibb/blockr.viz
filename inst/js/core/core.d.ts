@@ -23,8 +23,9 @@ interface VizScope {
  * One column of the block's input (R/wire.R, viz_wire_columns()). `class`
  * is the wire class: number, string, bool, date, datetime or duration.
  * `levels` comes with a factor, `tz` with a date-time, `unit` with a
- * duration, `kind` with a column mark_column_kinds() marked. `label` is the
- * variable label, "" when the column has none.
+ * duration, `kind` with a column mark_column_kinds() marked, `all_na` with
+ * a column that is NA in every row. `label` is the variable label, "" when
+ * the column has none.
  */
 interface VizColumn {
   name: string;
@@ -35,6 +36,7 @@ interface VizColumn {
   tz?: string;
   unit?: string;
   kind?: 'group' | 'time' | 'value' | 'id';
+  all_na?: boolean;
 }
 
 /** What R sends a block view (R/kit-output.R, viz_payload()). */
