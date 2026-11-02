@@ -380,7 +380,13 @@
       const sent = /** @type {Record<string, unknown>} */ (
         Array.isArray(this._script.values) ? {} : this._script.values || {});
       // A local edit R has not echoed yet, else the value R resolved for the control.
-      const value = Object.prototype.hasOwnProperty.call(held, name) ? held[name] : sent[sp.key];
+      // R's echo of `script_values` is no such edit: it sends a map's values as
+      // arrays (wire_map()), and a held `["Patients"]` matches no option of a
+      // single choice, so its menu would bold nothing.
+      const pend = this._pending.get('script_values');
+      const mine = /** @type {Record<string, unknown>} */ ((pend && pend.value) || {});
+      let value = Object.prototype.hasOwnProperty.call(mine, name) ? mine[name] : sent[sp.key];
+      if (sp.kind !== 'multi' && Array.isArray(value)) value = value[0];
       const set = (/** @type {unknown} */ v) => this.set({
         script_values: Object.assign({}, held, { [name]: v })
       });

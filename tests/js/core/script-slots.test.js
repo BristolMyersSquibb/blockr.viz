@@ -154,3 +154,45 @@ test('a choice word opens its list and a pick writes script_values', { skip: !ha
   await tick(t.win);
   f.slots.dispose();
 });
+
+/** R's echo of a pick: the setting's map with each value an array (wire_map()), and the
+ * control's resolved value as a plain one. */
+const echo = (t, picks, sv) => t.gear.update(payload(
+  Object.assign({}, CONFIG, { script_values: Object.assign({ keep: [3] }, picks) }),
+  { derived: { titles: { subtitle: SUBTITLE },
+               script: Object.assign({}, SCRIPT, { values: Object.assign({}, SCRIPT.values, sv) }) } }));
+
+test("after R's echo a word reads the control's value, not the echoed array", () => {
+  const t = setup();
+  echo(t, { share_unit: ['Percent'], serious: [true], min_share: [5] },
+       { sv_share_unit: 'Percent', sv_serious: 'on', sv_min_share: 5 });
+  assert.equal(t.gear.slot('share_unit').selected, 'Percent');
+  assert.equal(t.gear.slot('serious').value, true);
+  assert.equal(t.gear.slot('min_share').value, 5);
+  // A pick R has not echoed yet still wins over the value R last resolved.
+  t.gear.slot('share_unit').set('Patients');
+  assert.equal(t.gear.slot('share_unit').selected, 'Patients');
+  assert.equal(t.gear.slot('serious').value, true, 'the echoed flag kept in the pick reads as on');
+});
+
+test('a choice word bolds the pick when reopened after R echoed it', { skip: !hasUi() }, async () => {
+  const t = setup({ ui: true });
+  const f = face(t);
+  const bold = () => Array.from(t.doc.querySelectorAll('.blockr-select__option--selected'))
+    .map((o) => o.textContent);
+  const pick = (label) => Array.from(t.doc.querySelectorAll('.blockr-select__option'))
+    .find((o) => o.textContent === label).click();
+  f.words()[1].click();
+  assert.deepEqual(bold(), ['Patients']);
+  pick('Percent');
+  await tick(t.win);
+  echo(t, { share_unit: ['Percent'] }, { sv_share_unit: 'Percent' });
+  f.words()[1].click();
+  assert.deepEqual(bold(), ['Percent']);
+  pick('Patients');
+  await tick(t.win);
+  echo(t, { share_unit: ['Patients'] }, { sv_share_unit: 'Patients' });
+  f.words()[1].click();
+  assert.deepEqual(bold(), ['Patients']);
+  f.slots.dispose();
+});
