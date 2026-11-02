@@ -30,7 +30,7 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
     }
   }
-  # Helper line positions are echoed as given.
+  # Reference line positions are echoed as given.
   for (r in c("value_lines", "x_lines")) {
     v <- unlist(args[[r]])
     if (length(v)) parts <- c(parts, paste0(r, "=", paste(v, collapse = ",")))

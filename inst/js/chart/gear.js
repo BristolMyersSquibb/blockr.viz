@@ -64,9 +64,13 @@
         const type = String(v.type || 'bar');
         if (type === 'band' && key === 'x') return 'Timeline';
         if (type === 'band' && key === 'y') return 'Value';
-        if (key === 'value_lines' && NS.familyOf(type) === 'aggregated' &&
-            type !== 'histogram') return 'Value lines';
-        if (type === 'bar' && key === 'x_lines') return 'Category lines';
+        // As 0.2: an aggregated chart or a histogram has "Reference lines". A bar
+        // also takes them on its category axis, so its two rows name their axis.
+        // Scatter, line and area keep the spec's Horizontal and Vertical.
+        if ((key === 'value_lines' || key === 'x_lines') && NS.familyOf(type) === 'aggregated') {
+          if (type !== 'bar') return 'Reference lines';
+          return key === 'x_lines' ? 'Reference lines (category axis)' : 'Reference lines (value axis)';
+        }
         if (key === 'band_size' && v.band_window === 'fixed') return 'Half-width (x units)';
         return null;
       },

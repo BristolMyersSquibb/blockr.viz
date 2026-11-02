@@ -251,6 +251,30 @@ test('the spec hides what does nothing: stacking without a colour, value lines o
   c.close();
 });
 
+test('reference lines: gear rows and title offers read Reference lines, as 0.2', () => {
+  const label = (b, key) => row(b, key).querySelector('.vz-row-head .blockr-label').textContent;
+  const offer = (b) => b.frame.titleEl.querySelector('.blockr-slot-offer').textContent;
+  const titles = { title: { text: 'Chart', parts: [{ text: 'Chart' }], offers: ['value_lines'] },
+                   subtitle: null, caption: null, args: {} };
+  const c = D.open(BAR, { derived: { titles } });
+  assert.strictEqual(label(c.block, 'value_lines'), 'Reference lines (value axis)');
+  assert.strictEqual(label(c.block, 'x_lines'), 'Reference lines (category axis)');
+  assert.strictEqual(offer(c.block), '+ Reference lines (value axis)');
+  const one = { pointrange: { category: 'AETERM', func: 'mean', value: 'AVAL' },
+                boxplot: { category: 'AETERM', func: 'mean', value: 'AVAL' },
+                histogram: { x: 'AVAL' } };
+  for (const [type, map] of Object.entries(one)) {
+    c.send({ type, ...map }, { derived: { titles } });
+    assert.strictEqual(label(c.block, 'value_lines'), 'Reference lines', type);
+    assert.ok(!rows(c.block).includes('x_lines'), type);
+    assert.strictEqual(offer(c.block), '+ Reference lines', type);
+  }
+  c.send({ type: 'line', x: 'ADY', y: 'AVAL' }, { derived: { titles } });
+  assert.strictEqual(label(c.block, 'value_lines'), 'Horizontal');
+  assert.strictEqual(label(c.block, 'x_lines'), 'Vertical');
+  c.close();
+});
+
 test('with no category, a bar lies horizontal and asks for one', () => {
   const c = D.open({ type: 'bar', category: null, value: null });
   assert.match(c.block.chartGrid.textContent, /^Pick Category to plot/);

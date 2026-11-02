@@ -353,7 +353,7 @@ chart_spec_lines <- function() {
                   "area", "histogram"),
       gear = gear("Reference lines", "text", "Horizontal", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across the value axis: `value`'s",
+        "Positions of dashed reference lines across the value axis: `value`'s",
         "axis, y on a scatter, line, area or histogram. Names are labels.",
         "Text form: \"Target: 4; 6\"."
       )
@@ -364,7 +364,7 @@ chart_spec_lines <- function() {
       applies = c("bar", "scatter", "line", "area"),
       gear = gear("Reference lines", "text", "Vertical", parse = "lines"),
       describe = paste(
-        "Positions of dashed guide lines across x, or across a bar's",
+        "Positions of dashed reference lines across x, or across a bar's",
         "category axis: numbers, dates or category values. Names are labels."
       )
     ),

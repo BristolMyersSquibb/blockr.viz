@@ -243,7 +243,7 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{xend_func}: How \code{xend} is read per group. One of \code{"identity"}, \code{"mean"}, \code{"median"}, \code{"min"}, \code{"max"}. Default: \code{"max"}.
 \item \code{ref_min}: A number or a column: the low end of a shaded reference range. An \code{xend} outside the range is drawn open. Default \code{NULL}: no range.
 \item \code{ref_max}: A number or a column: the high end of the range. Default \code{NULL}: no range.
-\item \code{x_lines}: Dashed guide lines, as the chart's \code{x_lines}. Default \code{NULL}: no line.
+\item \code{x_lines}: Dashed reference lines, as the chart's \code{x_lines}. Default \code{NULL}: no line.
 \item \code{linetype}: Non-first levels of this column are drawn dashed. Default \code{NULL}: all solid.
 \item \code{color}: Color split, at most 15 levels. Default \code{NULL}: no color split.
 }

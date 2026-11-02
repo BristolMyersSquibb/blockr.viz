@@ -286,7 +286,7 @@ table_summary_specs <- function() {
       x_lines = viz_arg(
         type = "numbers", null = "no line",
         gear = gear("Columns", "text", "Reference line", parse = "lines"),
-        describe = "Dashed guide lines, as the chart's `x_lines`."
+        describe = "Dashed reference lines, as the chart's `x_lines`."
       ),
       linetype = viz_arg(
         type = "column", null = "all solid",

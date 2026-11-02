@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9014
+# blockr.viz 0.3.0.9015
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -82,6 +82,11 @@ read.
   50, as before 0.3.0. Helper columns of a prepare script and measures such
   as `AVAL` no longer appear there. A saved value the menu does not offer is
   listed as it is; only a column the data lacks reads "(missing)".
+* The chart gear calls `value_lines` and `x_lines` "Reference lines" again,
+  as before 0.3.0, in its rows, the title offers and the `@` list. A bar,
+  which takes them on both axes, reads "Reference lines (value axis)" and
+  "Reference lines (category axis)". Scatter, line and area keep
+  "Horizontal" and "Vertical".
 
 ## Removed
 
@@ -172,7 +177,7 @@ goes.
 
 * `y_scale = "log"` draws a base-10 y axis on a scatter, line or band, and
   `x_scale = "log"` the x axis of a scatter. Ticks run 1-2-5 up to three
-  decades and at powers of ten beyond. Values and guide lines at or below
+  decades and at powers of ten beyond. Values and reference lines at or below
   zero are not drawn, and the footer counts them; an interval's low end
   there is cut at the bottom of the axis. A smoother is fitted on the log
   scale. The gear offers "Y scale" and "X scale" next to Unit.

@@ -122,9 +122,9 @@ new_chart_block(
 
 \item{connect}{How a line connects its points. One of \code{"straight"}, \code{"monotone"}, \code{"step_start"}, \code{"step_middle"}, \code{"step_end"}. Default: \code{"straight"}.}
 
-\item{value_lines}{Positions of dashed guide lines across the value axis: \code{value}'s axis, y on a scatter, line, area or histogram. Names are labels. Text form: "Target: 4; 6". Default \code{NULL}: no lines.}
+\item{value_lines}{Positions of dashed reference lines across the value axis: \code{value}'s axis, y on a scatter, line, area or histogram. Names are labels. Text form: "Target: 4; 6". Default \code{NULL}: no lines.}
 
-\item{x_lines}{Positions of dashed guide lines across x, or across a bar's category axis: numbers, dates or category values. Names are labels. Default \code{NULL}: no lines.}
+\item{x_lines}{Positions of dashed reference lines across x, or across a bar's category axis: numbers, dates or category values. Names are labels. Default \code{NULL}: no lines.}
 
 \item{ymin}{Columns holding the lower end of an interval per row, the first the outermost. A line draws shaded bands, a scatter error bars. Default \code{NULL}: no interval.}
 
