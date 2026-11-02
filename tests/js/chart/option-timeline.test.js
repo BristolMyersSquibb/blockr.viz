@@ -74,9 +74,15 @@ test('panel height: 28 px a lane plus 80, at least 200, capped', () => {
   assert.strictEqual(o.panels[0].height, (Math.min(C.PANEL_H_CAP, 300 * 28) + 80) + 'px');
 });
 
+test('the time axis is on top, so a tall chart shows it without scrolling', () => {
+  const { opt } = build();
+  assert.strictEqual(opt.xAxis.position, 'top');
+  assert.strictEqual(opt.xAxis.nameLocation, 'middle');
+});
+
 test('the label gutter is measured, with lane counts in it', () => {
   // "Nausea" is 42 px at 7 px a character, plus 10 slack.
-  assert.deepStrictEqual(plain(build().opt.grid), { left: 67, right: 10, top: 20, bottom: 48 });
+  assert.deepStrictEqual(plain(build().opt.grid), { left: 67, right: 10, top: 48, bottom: 20 });
   const { opt } = build({ show_n: 'axis' });
   assert.strictEqual(opt.yAxis.axisLabel.formatter('Rash'), 'Rash (2)');
   assert.strictEqual(opt.grid.left, 7 * 'Nausea (1)'.length + 10 + 15);

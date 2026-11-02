@@ -351,3 +351,36 @@ test('a type switch leaves no listener on the reset button of a chart it took do
   assert.strictEqual(held.length, 0);
   c.close();
 });
+
+test('a gantt keeps its time axis in view: a sticky strip shown once the axis scrolled out', () => {
+  const c = D.open({ type: 'gantt', x: 'ASTDY', xend: 'AENDY', y: 'AETERM', drill: 'auto' });
+  const slot = c.block._slots[0];
+  const strip = slot.container.querySelector('.vz-chart-axis-strip');
+  assert.ok(strip, 'a strip');
+  assert.strictEqual(strip.nextElementSibling, slot.chartDiv, 'right above the panel');
+  assert.strictEqual(strip.style.height, '48px');
+  assert.strictEqual(strip.style.marginBottom, '-48px', 'lying over the axis band');
+  assert.strictEqual(strip.style.visibility, '', 'hidden while the axis shows');
+  // Scrolled: the strip sticks lower than the panel's top edge, and copies the axis band.
+  const drawn = [];
+  strip.getContext = () => ({ clearRect() {}, drawImage: (...a) => drawn.push(a.slice(1)) });
+  strip.getBoundingClientRect = () => ({ top: 100 });
+  slot.chartDiv.getBoundingClientRect = () => ({ top: -300 });
+  c.doc.dispatchEvent(new c.env.win.Event('scroll'));
+  c.advance(20);
+  assert.strictEqual(strip.style.visibility, 'visible');
+  // The harness canvas is 300 px wide in an 800 px panel: the 48 px band is 18 canvas px.
+  assert.deepStrictEqual(drawn, [[0, 0, 300, 18, 0, 0, 300, 18]], 'the axis band copied');
+  strip.getBoundingClientRect = () => ({ top: 20 });
+  slot.chartDiv.getBoundingClientRect = () => ({ top: 20 });
+  c.doc.dispatchEvent(new c.env.win.Event('scroll'));
+  c.advance(20);
+  assert.strictEqual(strip.style.visibility, 'hidden');
+  // A redraw keeps the one strip.
+  c.send({ ...c.config, sort_by: 'alpha' });
+  assert.strictEqual(slot.container.querySelectorAll('.vz-chart-axis-strip').length, 1);
+  c.close();
+  const bar = D.open(BAR);
+  assert.strictEqual(bar.doc.querySelector('.vz-chart-axis-strip'), null, 'other charts have none');
+  bar.close();
+});

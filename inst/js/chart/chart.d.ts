@@ -310,6 +310,8 @@ interface ChartSlot {
   bandFocus: string | null;
   /** Cancels a line click waiting for a second click. */
   lineClick: (() => void) | null;
+  /** The timeline's sticky copy of its time axis (family-timeline.js). */
+  axisStrip?: HTMLCanvasElement | null;
 }
 
 /** The chart view (view.js) as its parts see it: the selection, the legend,
@@ -322,6 +324,8 @@ interface ChartView extends VizView {
   readonly selection: ChartSelectionState;
   readonly legend: { el: HTMLElement; mark(sel: ChartSelection | null): void };
   readonly chartGrid: HTMLElement;
+  /** Drawn without animation, for a capture. */
+  readonly still: boolean;
   settings: ChartSettings;
   derived: ChartDerived;
   columns: VizColumn[];

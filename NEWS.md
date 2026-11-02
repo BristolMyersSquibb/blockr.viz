@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9022
+# blockr.viz 0.3.0.9023
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -76,6 +76,10 @@ read.
   layout and in `interactive_table()`, with a spanner row above the row it
   spans. A table runs its full length in the panel, and in the records and
   structured layouts the header scrolled away with the rows.
+* The timeline (gantt) draws its time axis above the lanes, and while a tall
+  timeline scrolls the axis stays at the top of the panel, as a table's
+  header does. It was at the bottom, in view only after scrolling past the
+  last lane. Downloads show the axis on top.
 * Title slots resolve in the records and variables layouts as well:
   `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
   there.

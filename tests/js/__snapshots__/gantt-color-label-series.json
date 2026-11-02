@@ -118,8 +118,8 @@
       "grid": {
        "left": 160,
        "right": 10,
-       "top": 20,
-       "bottom": 48
+       "top": 48,
+       "bottom": 20
       },
       "xAxis": {
        "type": "value",
@@ -145,6 +145,7 @@
          "type": "dashed"
         }
        },
+       "position": "top",
        "scale": true
       },
       "yAxis": {

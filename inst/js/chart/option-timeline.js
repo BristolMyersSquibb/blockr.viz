@@ -15,6 +15,8 @@
   const LANE_PX = 28;
   const PANEL_EXTRA_PX = 80;
   const PANEL_MIN_PX = 200;
+  // The band above the plot that holds the time axis, its labels and its title.
+  const GRID_TOP_PX = 48;
 
   /** Which marks each series of a panel draws, as mark positions in series order: one series per
    * colour level (marks of no level are not drawn), else one series of every mark. The option and
@@ -138,7 +140,8 @@
       textStyle: { fontFamily: ink.face },
       tooltip: { trigger: 'item', confine: true, formatter },
       legend: showLegend ? { show: false, data: colorLevels } : { show: false },
-      grid: { left: gut.gridLeft, right: 10, top: 20, bottom: 48 },
+      // The time axis is on top, like a table header: a tall chart shows it before any scrolling.
+      grid: { left: gut.gridLeft, right: 10, top: GRID_TOP_PX, bottom: 20 },
       xAxis,
       yAxis: { ...NS.axes.categoryAxis(panel.lanes, ink, { gut, display }),
                splitLine: { show: false } },
@@ -146,11 +149,11 @@
     };
     const height = Math.max(PANEL_MIN_PX,
       Math.min(NS.PANEL_H_CAP, panel.lanes.length * LANE_PX) + PANEL_EXTRA_PX) + 'px';
-    return { option: NS.cardTooltip(NS.quietHover(opt, cfg), ink), height };
+    return { option: NS.cardTooltip(NS.quietHover(opt, cfg), ink), height, axisBand: GRID_TOP_PX };
   };
 
   /** @param {any} m the timeline model @param {ChartLook} look
-   * @returns {{ panels: Array<{ option: any, height: string }> }} */
+   * @returns {{ panels: Array<{ option: any, height: string, axisBand: number }> }} */
   const timeline = (m, look) => {
     const k = timelineContext(m, look);
     const renderItem = timelineRenderItem(k);
@@ -158,6 +161,7 @@
     // The time axis, shared by every panel.
     const xAxis = {
       ...NS.axes.valueAxis(k.ink, k.xAxisType, k.title(k.x), 28, { grid: 'dashed' }),
+      position: 'top',
       scale: true,
       ...(k.xCats ? { data: k.xCats } : {})
     };

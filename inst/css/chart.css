@@ -70,6 +70,20 @@
 .vz-chart-zoom-reset:hover { text-decoration: underline; }
 .vz-chart-zoom-reset[hidden] { display: none; }
 
+/* The timeline's time axis, kept in view while a tall chart scrolls
+   (family-timeline.js). It lies over the panel's top band (its negative
+   margin, set with its height), hidden until the axis has scrolled out. */
+.vz-chart-axis-strip {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+  box-shadow: 0 1px 0 var(--blockr-color-border, #e5e7eb);
+}
+
 /* ===== Transient drill ===== */
 /* What a drill click leaves behind when the chart sends its claim to another
    block (ctrl_target set). The chart holds no selection, so nothing here may

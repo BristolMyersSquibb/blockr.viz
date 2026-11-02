@@ -85,8 +85,8 @@
       "grid": {
        "left": 46,
        "right": 10,
-       "top": 20,
-       "bottom": 48
+       "top": 48,
+       "bottom": 20
       },
       "xAxis": {
        "type": "category",
@@ -112,6 +112,7 @@
          "type": "dashed"
         }
        },
+       "position": "top",
        "scale": true,
        "data": [
         "Baseline",
