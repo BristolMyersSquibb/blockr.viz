@@ -101,8 +101,8 @@ na_sex <- is.na(adsl$SEX)
 # are the rows lit after each click when that is more than the clicked one:
 # a records click lights every row the filter keeps. `cell` / `cell_b`
 # say where in the row to click (a td index or a selector; NULL the label).
-# A click on a cell claims its row and its column. `expand` opens a
-# collapsed parent row first. `none` is the listing with no click.
+# A click on a cell claims its row and its column. `none` is the listing
+# with no click.
 drill_paths <- list(
   list(view = "rec", a = "S-003", b = "S-001",
        want_a = adsl[adsl$SEX %in% "M", ], foot_a = "SEX = M",
@@ -127,8 +127,8 @@ drill_paths <- list(
   list(view = "grpm", a = "(Missing)", b = "M",
        want_a = adsl[na_sex, ], foot_a = "SEX = (Missing)",
        want_b = adsl[adsl$SEX %in% "M", ], foot_b = "SEX = M"),
-  list(view = "ae", a = "Headache", b = "Headache", cell_b = 2L,
-       expand = "Nervous system", none = adae,
+  # The outer groups are open headings (0.3.0.9024).
+  list(view = "ae", a = "Headache", b = "Headache", cell_b = 2L, none = adae,
        want_a = adae[adae$AEDECOD == "Headache", ],
        foot_a = "AESOC = Nervous system, AEDECOD = Headache",
        want_b = adae[adae$AEDECOD == "Headache" & adae$ARM == "Low dose", ],
@@ -170,7 +170,6 @@ for (p in drill_paths) local({
     out <- paste0(id, "_out")
     none <- p$none %||% adsl
     drill_view(app, id, out)
-    if (!is.null(p$expand)) drill_click(app, id, p$expand, ".vz-table-indent-btn")
 
     expect_true(same_rows(drill_result(app, out), none), label = "no click")
 
@@ -250,4 +249,18 @@ test_that("drill: a saved board restores every selection and filter", {
   drill_view(app2, "grp", "grp_out")
   drill_click(app2, "grp", "Placebo")
   expect_true(same_rows(drill_result(app2, "grp_out"), adsl))
+})
+
+# Last, since it replaces the ae selection the restore test reads.
+test_that("drill: a click on an outer heading row claims its group", {
+  skip_if_not(run_drill, "no headless browser, or under R CMD check")
+  drill_view(app, "ae", "ae_out")
+  drill_click(app, "ae", "Nervous system")
+  s <- drill_state(app, "ae")
+  expect_identical(s$footer, "Filtered: AESOC = Nervous system")
+  expect_true(same_rows(drill_result(app, "ae_out"),
+                        adae[adae$AESOC == "Nervous system", ]))
+  drill_click(app, "ae", "Nervous system")
+  expect_identical(drill_state(app, "ae")$footer, "")
+  expect_true(same_rows(drill_result(app, "ae_out"), adae))
 })
