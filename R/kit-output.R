@@ -17,6 +17,20 @@ viz_output <- function(id, view, ...) {
                  `data-viz-view` = view, ...)
 }
 
+# TEMPORARY, for the production test: the installed build under each block,
+# "blockr.viz 0.3.0.9002 1cfcd18", so a page shows which build a deploy runs.
+# Remove before the release (release.md).
+viz_build_line <- function() {
+  d <- utils::packageDescription("blockr.viz")
+  sha <- d[["RemoteSha"]] %||% d[["GithubSHA1"]] %||% ""
+  htmltools::div(
+    class = "blockr-viz-build",
+    style = "font-size:10px;color:#999;margin-top:2px;",
+    paste0("blockr.viz ", d[["Version"]],
+           if (nzchar(sha)) paste0(" ", substr(sha, 1L, 7L)))
+  )
+}
+
 #' A render function whose value is the payload, as R built it
 #' @noRd
 viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
