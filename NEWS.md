@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9025
+# blockr.viz 0.3.0.9026
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -91,6 +91,11 @@ read.
   its header, as every other column does, so it stays in view with the
   header while the rows scroll, as in 0.2.200. It was in a row under the
   table, in view only after scrolling past the last row.
+* In the groups layout, a header title and the variable label under it
+  wrap at word breaks, as in the records layout: a column is as wide as its
+  rows need, and no narrower than its longest header word. A long label
+  line ("Actual Treatment (Abbr.) / Unique Subject Identifier") set the
+  width of a column of short ids.
 * Title slots resolve in the records and variables layouts as well:
   `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
   there.

@@ -76,6 +76,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Header titles and their variable-label line wrap at word breaks, as in
+   the records layout (column_widths_px(wrap_names = TRUE)): the body sets a
+   column's width, and the narrowest a column gets is its longest header
+   word. On one line, a long label line ("Actual Treatment (Abbr.) / Unique
+   Subject Identifier") set the width of a column of short ids. The compact
+   look's one-line header (further down) still wins. */
+.vz-table-groups .blockr-table.vz-table-groups-table thead th .blockr-col-name,
+.vz-table-groups .blockr-table.vz-table-groups-table thead th .blockr-col-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: balance;
+}
 /* The in-bar value label: track left, value right in a FIXED slot (one width
    per column, in ch) so every row's track spans the same range -- a varying
    label width would silently rescale the bars against each other. */
