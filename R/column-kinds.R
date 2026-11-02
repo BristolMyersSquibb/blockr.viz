@@ -110,3 +110,16 @@ column_kinds <- function(x) {
 
 # The vocabulary; see mark_column_kinds() for what each kind covers.
 COLUMN_KINDS <- c("group", "time", "value", "id")
+
+# `cols` less those that are NA in every row of `data`. Such a column counts
+# as unset, as if it were absent: upstream switches a grouping, colour or
+# facet off by filling its column with NA. Names not in `data` stay, for the
+# caller to report.
+cols_with_values <- function(data, cols) {
+  cols <- as.character(cols)
+  if (!nrow(data)) return(cols)
+  empty <- vapply(cols, function(cl) {
+    cl %in% names(data) && all(is.na(data[[cl]]))
+  }, logical(1L))
+  cols[!empty]
+}

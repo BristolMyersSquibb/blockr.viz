@@ -153,7 +153,7 @@ table_variables_call <- function(cfg) {
 table_nest <- function(data, by, rowname = NULL, missing = "drop",
                        columns = NULL) {
   data <- as.data.frame(data)
-  by <- intersect(as.character(unlist(by)), names(data))
+  by <- cols_with_values(data, intersect(as.character(unlist(by)), names(data)))
   if (!length(by)) return(data)
   if (identical(chr_state(missing), "level")) {
     data <- table_missing_levels(data, by)

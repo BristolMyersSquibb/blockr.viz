@@ -22,21 +22,24 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
   if (!is.list(summaries) || !length(summaries)) {
     summaries <- groups_seed()
   }
+  # A grouping, colour or facet column with no values is unset.
+  by <- cols_with_values(data, by)
+  summaries <- lapply(summaries, function(s) {
+    if (!is.list(s)) return(s)
+    for (k in c("color", "facet")) {
+      col <- chr_state(s[[k]])
+      if (!is.null(col) && !length(cols_with_values(data, col))) s[[k]] <- NULL
+    }
+    s
+  })
   split_cols <- unlist(lapply(summaries, function(s) {
     if (is.list(s)) c(chr_state(s[["color"]]), chr_state(s[["facet"]]))
   }))
 
   # Missing values of a grouping, colour or facet column: no group of their
   # own ("drop"; counted in N, not drawn) or a "(Missing)" level ("level").
-  # An outer `by` column with no values turns nesting off
-  # (groups_prep_groups()), so it gets no "(Missing)" level either.
   if (identical(chr_state(missing), "level")) {
-    lv_cols <- c(by, split_cols)
-    if (length(by) == 2L && by[[1L]] %in% names(data) &&
-          all(is.na(data[[by[[1L]]]]))) {
-      lv_cols <- setdiff(lv_cols, by[[1L]])
-    }
-    data <- table_missing_levels(data, lv_cols)
+    data <- table_missing_levels(data, c(by, split_cols))
   }
 
   # One copy of each group's rows for every split column that carries a group
@@ -215,9 +218,6 @@ groups_prep_groups <- function(data, by) {
   }
   group <- by[[length(by)]]
   parent <- if (length(by) == 2L) by[[1L]]
-  # An outer column with no values lists the inner flat. A prepare script turns
-  # nesting off this way, by blanking the outer column behind a flag.
-  if (!is.null(parent) && all(is.na(data[[parent]]))) parent <- NULL
   keys <- c(parent, group)
   # A missing group draws no row, so a colour level only such rows carry gets
   # no slot or legend key.

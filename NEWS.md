@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9009
+# blockr.viz 0.3.0.9010
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -64,8 +64,12 @@ read.
 * A summarize table restored from a board saved before 0.3.0, and one made
   by `new_summarize_table_block()`, draws no row for a missing group, as
   before: such rows count toward N. The table block's own `missing` still
-  defaults to `"level"`. A table whose outer `by` column has no values lists
-  the inner column flat under `missing = "level"` as well.
+  defaults to `"level"`.
+* In the table block, a `by`, colour or facet column that is missing in
+  every row counts as unset, as if the column were absent, under either
+  `missing`. Upstream switches a grouping off by filling its column with
+  NA. An all-NA facet column no longer crashes the groups layout under
+  `missing = "drop"`.
 
 ## Removed
 

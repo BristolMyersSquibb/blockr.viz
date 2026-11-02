@@ -344,6 +344,8 @@ summary_table <- function(data,
   # The table is computed from `input`; `data`, with its missing values,
   # stays the source a drill resolves against.
   input <- data
+  # A `by` column with no values is unset (cols_with_values()).
+  by <- cols_with_values(data, by)
   if (identical(chr_state(missing), "level")) {
     cats <- Filter(function(v) !is.numeric(data[[v]]),
                    intersect(as.character(vars), names(data)))
