@@ -1,0 +1,53 @@
+{
+  "object": ["summarize_table_block", "lane_chart_block", "rank_block", "transform_block", "block", "transform_block", "block", "vctrs_vctr", "list"],
+  "payload": {
+    "group": null,
+    "value": ".count",
+    "func": "count",
+    "id_var": null,
+    "summaries": [
+      {
+        "type": "simple",
+        "func": "count_distinct",
+        "col": "USUBJID",
+        "show": "number",
+        "name": "Patients"
+      }
+    ],
+    "by": ["AEBODSYS", "AEDECOD"],
+    "facet_layout": "by_summary",
+    "parent": null,
+    "color": null,
+    "bar_mode": "stacked",
+    "facet": null,
+    "cols": null,
+    "fields": null,
+    "sort_by": "value",
+    "sort_dir": "desc",
+    "top_n": null,
+    "max_height": null,
+    "search": true,
+    "sortable": true,
+    "axis": true,
+    "bar_width": "fit",
+    "download": false,
+    "title": null,
+    "subtitle": null,
+    "caption": null,
+    "drill": null,
+    "script": null,
+    "values": [],
+    "ctrl_target": "",
+    "ctrl_table": "",
+    "filter_type": "categorical",
+    "filter_column": null,
+    "filter_values": null,
+    "block_name": "AE onset"
+  },
+  "constructor": {
+    "object": "blockr_ctor",
+    "constructor": "new_summarize_table_block",
+    "package": "blockr.viz",
+    "version": "0.2.200"
+  }
+}

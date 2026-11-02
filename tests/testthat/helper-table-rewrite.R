@@ -411,6 +411,11 @@ tg_rw_restore_known <- list(
 )
 
 tg_rw_restore_apply <- function(want, got, nm) {
+  # Row 34: a restored summarize table draws no row for a missing group.
+  if (startsWith(nm, "old_summarize_")) {
+    want$saved$missing <- "drop"
+    want$steps[[1L]]$state$missing <- "drop"
+  }
   k <- tg_rw_restore_known[[nm]]
   for (a in k$saved) want$steps[[1L]]$state[a] <- list(want$saved[[a]])
   for (p in k$skip) want$steps[[1L]][p] <- got$steps[[1L]][p]

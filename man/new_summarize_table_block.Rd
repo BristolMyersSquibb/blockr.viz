@@ -9,7 +9,8 @@ new_summarize_table_block(...)
 \arguments{
 \item{...}{Arguments of the former summarize table block (\code{by},
 \code{summaries}, \code{id_var}, \code{group}, \code{value}, \code{func}, ...), translated to
-\code{\link[=new_table_block]{new_table_block()}}'s.}
+\code{\link[=new_table_block]{new_table_block()}}'s. \code{missing} defaults to \code{"drop"}: the old block
+drew no row for a missing group.}
 }
 \value{
 A blockr transform block of class \code{table_block}.

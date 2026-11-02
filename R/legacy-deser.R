@@ -75,6 +75,9 @@ blockr_deser.summarize_table_block <- function(x, data, ...) {
   is_attr <- !names(saved) %in% legacy_arg_names("summarize_table")
   payload <- legacy_table_args(saved[!is_attr], from = "summarize")
   payload$layout <- "groups"
+  # A missing group drew no row and counted in N; the table block's default
+  # shows it as "(Missing)".
+  payload$missing <- payload$missing %||% "drop"
   attrs <- saved[is_attr]
   args <- legacy_restore("table", payload,
                          version = data[["constructor"]][["version"]])

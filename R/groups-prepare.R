@@ -28,8 +28,15 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
 
   # Missing values of a grouping, colour or facet column: no group of their
   # own ("drop"; counted in N, not drawn) or a "(Missing)" level ("level").
+  # An outer `by` column with no values turns nesting off
+  # (groups_prep_groups()), so it gets no "(Missing)" level either.
   if (identical(chr_state(missing), "level")) {
-    data <- table_missing_levels(data, c(by, split_cols))
+    lv_cols <- c(by, split_cols)
+    if (length(by) == 2L && by[[1L]] %in% names(data) &&
+          all(is.na(data[[by[[1L]]]]))) {
+      lv_cols <- setdiff(lv_cols, by[[1L]])
+    }
+    data <- table_missing_levels(data, lv_cols)
   }
 
   # One copy of each group's rows for every split column that carries a group

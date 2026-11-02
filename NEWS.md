@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9005
+# blockr.viz 0.3.0.9006
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -61,6 +61,11 @@ read.
 * A board saved with a click on an aggregated old table keeps that click
   when it restores in the groups layout: the table shows it and the output
   is filtered. Before, the restored output was unfiltered.
+* A summarize table restored from a board saved before 0.3.0, and one made
+  by `new_summarize_table_block()`, draws no row for a missing group, as
+  before: such rows count toward N. The table block's own `missing` still
+  defaults to `"level"`. A table whose outer `by` column has no values lists
+  the inner column flat under `missing = "level"` as well.
 
 ## Removed
 

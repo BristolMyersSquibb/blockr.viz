@@ -30,3 +30,16 @@ test_that("an all-NA outer column lists the inner column flat", {
   expect_false(any(p$rows$.is_parent))
   expect_setequal(p$rows$.label, c("RASH", "ITCH", "NAUSEA"))
 })
+
+test_that("an all-NA outer column lists flat with missing = \"level\" too", {
+  d <- ep_data(FALSE)
+  d$AEDECOD[[4L]] <- NA
+  p <- groups_prepare(
+    d, by = c("AEBODSYS", "AEDECOD"), missing = "level",
+    summaries = list(list(type = "simple", name = "n",
+                          func = "count_distinct", col = "USUBJID",
+                          show = "number"))
+  )
+  expect_null(p$parent)
+  expect_setequal(p$rows$.label, c("RASH", "ITCH", "NAUSEA", "(Missing)"))
+})
