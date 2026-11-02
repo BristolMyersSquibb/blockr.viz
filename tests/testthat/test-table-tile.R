@@ -149,3 +149,48 @@ test_that("a compact matrix's stub header is the row column's label", {
   expect_identical(h$text, "ARM / SUBJ")
   expect_identical(h$sub, "Treatment arm / Subject")
 })
+
+test_that("a matrix keeps its groups in level order; other looks sort them", {
+  d <- tile_fixture()
+  # B has more events per group than A once three rows are added.
+  d <- rbind(d, data.frame(ARM = "B", SUBJ = "s4", TERM = "RASH",
+                           GRADE = factor("MILD", levels(d$GRADE))),
+             data.frame(ARM = "B", SUBJ = "s4", TERM = "COUGH",
+                        GRADE = factor("MILD", levels(d$GRADE))),
+             data.frame(ARM = "B", SUBJ = "s5", TERM = "RASH",
+                        GRADE = factor("MILD", levels(d$GRADE))))
+  st <- list(layout = "groups", by = c("ARM", "SUBJ"),
+             summaries = tile_summary(fill = "GRADE"))
+  parents <- function(look) {
+    st$look <- look
+    r <- table_model_groups(st, d)$prep$rows
+    r$.label[r$.level == 0L]
+  }
+  expect_identical(parents("table"), c("B", "A"))
+  expect_identical(parents("compact"), c("A", "B"))
+  d$ARM <- factor(d$ARM, levels = c("B", "A"))
+  expect_identical(parents("compact"), c("B", "A"))
+  # The rows inside still sort by their total.
+  st$look <- "compact"
+  r <- table_model_groups(st, d)$prep$rows
+  expect_identical(r$.label[r$.level == 1L][1:3], c("s3", "s4", "s5"))
+})
+
+test_that("a matrix's legend: the worst level and what the numbers count", {
+  st <- list(layout = "groups", look = "compact", by = c("ARM", "SUBJ"),
+             summaries = list(c(tile_summary(fill = "GRADE")[[1L]],
+                                list(name = "Events"))))
+  lg <- groups_legend_spec(table_model_groups(st, tile_fixture())$prep)
+  expect_identical(vapply(lg$groups, `[[`, "", "title"),
+                   c("Worst GRADE", "Numbers: events"))
+  expect_length(lg$groups[[2L]]$items, 0L)
+  st$value_labels <- FALSE
+  lg <- groups_legend_spec(table_model_groups(st, tile_fixture())$prep)
+  expect_identical(vapply(lg$groups, `[[`, "", "title"), "Worst GRADE")
+})
+
+test_that("a matrix painted by its value adds no legend", {
+  st <- list(layout = "groups", look = "compact", by = c("ARM", "SUBJ"),
+             summaries = tile_summary())
+  expect_null(groups_legend_spec(table_model_groups(st, tile_fixture())$prep))
+})

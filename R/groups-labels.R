@@ -43,20 +43,20 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
 
 # The legend as data: a list of titled groups, always present for two or more
 # series (colour alone must not carry identity). The table maps colour per
-# column, so it can carry several groups, each titled by its column.
+# column, so it can carry several groups, each titled by its column. A tile's
+# "Numbers:" note (groups_tile_legend()) follows while the cells print their
+# numbers.
 #' @noRd
 groups_legend_spec <- function(prep) {
   if (!is.null(prep$err)) return(NULL)
   # Colour identity lives in the colour mapping only: a plain facet carries no
   # legend.
   groups <- prep$color_groups
-  if (is.null(groups)) {
-    if (is.null(prep$color) || length(prep$series) < 2L) return(NULL)
+  if (is.null(groups) && !is.null(prep$color) && length(prep$series) >= 2L) {
     groups <- list(list(column = prep$color, title = prep$color_title,
                         levels = prep$series, palette = prep$palette))
   }
-  if (!length(groups)) return(NULL)
-  list(groups = lapply(groups, function(g) {
+  out <- lapply(groups, function(g) {
     # Positional, never by name: a colour column can carry a blank level, and
     # `pal[[""]]` is a subscript error. groups_level_colors() returns the
     # palette in `levels` order. Blank reads as "(Missing)".
@@ -73,7 +73,37 @@ groups_legend_spec <- function(prep) {
         )
       })
     )
-  }))
+  })
+  tiles <- prep$tile_legend
+  if (isFALSE(prep$value_labels)) {
+    tiles <- Filter(function(g) !isTRUE(g$numbers), tiles)
+  }
+  out <- c(out, lapply(tiles, function(g) g[c("title", "items")]))
+  if (!length(out)) return(NULL)
+  list(groups = out)
+}
+
+# A tile painted by a worst level adds a note to the legend saying what the
+# number in a cell counts ("Numbers: events"), as 0.2's heatmap block did;
+# flagged `numbers`, so it goes with the numbers. One per summary, not per
+# facet copy.
+#' @noRd
+groups_tile_legend <- function(plan) {
+  tiles <- Filter(function(p) identical(p$kind, "tile") && !is.null(p$wkey),
+                  plan)
+  stems <- vapply(tiles, function(p) groups_sid_stem(p$sid %||% ""), "")
+  lapply(tiles[!duplicated(stems)], function(p) {
+    name <- chr_state(p$sname) %||% "Count"
+    list(title = paste0("Numbers: ", groups_numbers_noun(name)),
+         items = list(), numbers = TRUE)
+  })
+}
+
+# "Events" reads "events" after "Numbers:"; a name in capitals stays.
+#' @noRd
+groups_numbers_noun <- function(name) {
+  if (!grepl("^[A-Z][a-z]", name)) return(name)
+  paste0(tolower(substr(name, 1L, 1L)), substring(name, 2L))
 }
 
 # A data-frame-level display attribute, or NULL when absent / not a string.

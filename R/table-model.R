@@ -50,11 +50,14 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL) {
     facet_layout = state$facet_layout, sort_by = state$sort_by,
     sort_dir = table_sort_dir(state), top_n = state$top_n,
     scale_map = scale_map, subject = subject, pct_of = state$percent_of,
-    missing = state$missing, format = state$format, unit = state$unit
+    missing = state$missing, format = state$format, unit = state$unit,
+    levels_outer = identical(state$look, "compact")
   )
   if (!is.null(prep$err)) {
     return(list(prep = prep, cells = NULL))
   }
+  # The legend's "Numbers:" note goes with the numbers.
+  prep$value_labels <- !isFALSE(state$value_labels)
   cfg <- list(value_labels = state$value_labels,
               compact = identical(state$look, "compact"))
   list(prep = prep,

@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9021
+# blockr.viz 0.3.0.9022
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -67,6 +67,11 @@ read.
   (gtsummary's "Age (years)") are one cell across the row; they no longer
   widen or wrap in the first column. The Excel, Word and PowerPoint
   downloads merge these rows and the section headers across the table.
+* In the compact look (the heatmap) the groups keep their column's level
+  order (factor levels, else sorted), as 0.2's heatmap block did; the rows
+  inside still sort by their total. The AE heatmap had sorted its arms by
+  size. A tile painted by a worst level adds "Numbers: events" to the
+  legend while the cells print their numbers.
 * A table's header row stays at the top while its rows scroll, in every
   layout and in `interactive_table()`, with a spanner row above the row it
   spans. A table runs its full length in the panel, and in the records and

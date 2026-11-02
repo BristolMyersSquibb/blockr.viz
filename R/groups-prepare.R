@@ -11,7 +11,8 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
                               sort_dir = "desc", top_n = NULL,
                               scale_map = NULL, subject = NULL,
                               pct_of = "facet", missing = "drop",
-                              format = NULL, unit = NULL) {
+                              format = NULL, unit = NULL,
+                              levels_outer = FALSE) {
   bad <- function(msg) list(err = msg)
 
   if (!is.data.frame(data)) return(bad("No data"))
@@ -56,7 +57,8 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
     data, by, summaries,
     facet_layout = chr_state(facet_layout) %||% "by_summary",
     sort_by = sort_by, sort_dir = sort_dir, top_n = top_n,
-    scale_map = scale_map, subject = subject, pct_of = pct_of
+    scale_map = scale_map, subject = subject, pct_of = pct_of,
+    levels_outer = levels_outer
   )
   groups_number_format(prep, format, unit)
 }
@@ -115,7 +117,8 @@ groups_prepare_summaries <- function(data, by, summaries,
                                    facet_layout = "by_summary",
                                    sort_by = "value", sort_dir = "desc",
                                    top_n = NULL, scale_map = NULL,
-                                   subject = NULL, pct_of = "facet") {
+                                   subject = NULL, pct_of = "facet",
+                                   levels_outer = FALSE) {
   bad <- function(msg) list(err = msg)
   g <- groups_prep_groups(data, by)
   if (!is.null(g$err)) return(bad(g$err))
@@ -150,6 +153,12 @@ groups_prepare_summaries <- function(data, by, summaries,
 
   srt <- groups_resolve_sort(sort_by, plan, data, leaf, par_rows, g$group,
                                 g$parent)
+  # A matrix (compact look) keeps its groups in the outer column's level
+  # order, as 0.2's heatmap block did; the rows inside follow `sort_by`.
+  if (isTRUE(levels_outer) && !is.null(srt$par_rows)) {
+    srt$par_rows$.lvl <- match(srt$par_rows$.parent_key,
+                               groups_ord_levels(data[[g$parent]]))
+  }
   asm <- groups_assemble_rows(srt$leaf, srt$par_rows, g$parent, srt$key,
                                  sort_dir, top_n)
   rows <- asm$rows
@@ -174,6 +183,7 @@ groups_prepare_summaries <- function(data, by, summaries,
     row_label = if (!isTRUE(g$all)) groups_col_name(data, g$group),
     series = series_lv, palette = pal, group = g$group, parent = g$parent,
     color = lead_group$column, color_groups = cg,
+    tile_legend = groups_tile_legend(fl$plan),
     folded = asm$folded, fold_max = asm$fold_max,
     facet_spans = fl$facet_spans,
     failed = unlist(lapply(fl$plan, function(p) p$failed)),
@@ -557,7 +567,12 @@ groups_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     rows$.level <- 0L
     rows$.is_parent <- FALSE
   } else {
-    top <- groups_top_n(ord(par_rows), top_n)
+    par_rows <- if (is.null(par_rows$.lvl)) {
+      ord(par_rows)
+    } else {
+      par_rows[order(par_rows$.lvl, na.last = TRUE), , drop = FALSE]
+    }
+    top <- groups_top_n(par_rows, top_n)
     par_rows <- top$rows
     par_rows$.level <- 0L
     par_rows$.is_parent <- TRUE
