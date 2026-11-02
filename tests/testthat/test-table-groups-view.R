@@ -169,11 +169,6 @@ tg_expect_head <- function(v, want, label, compact = FALSE) {
       }
     }
   }
-  # The bottom axis of the large swimlanes.
-  foot <- xml2::xml_find_all(xml2::read_html(want$head),
-                             "//tfoot//div[contains(@class, 'blockr-summarize-axis')]")
-  large <- Filter(function(cc) isTRUE(cc$axis$foot), v$cols)
-  expect_length(large, length(foot))
 }
 
 # Rows: nesting, claims, the fold note.
@@ -269,7 +264,7 @@ test_that("a column's axis has no empty fields on the wire", {
   cs <- tm_cases("groups")$grp_all_types
   v <- tm_json(table_groups_to_model(table_model_groups(cs$state, cs$data)))
   expect_named(v$cols[[2L]]$axis, c("at", "labels"))
-  expect_true(v$cols[[11L]]$axis$foot)
+  expect_named(v$cols[[11L]]$axis, c("at", "labels"))
 })
 
 test_that("a failed preparation has no view", {

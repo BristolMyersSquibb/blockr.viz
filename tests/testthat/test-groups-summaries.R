@@ -276,16 +276,16 @@ test_that("the column axis prints the domain once, on glyph columns only", {
   expect_false(is.null(ax(list(kind = "bar"), list(bar_max = 100))))
 })
 
-test_that("large swimlanes repeat the axis below the table", {
+test_that("a large swimlane has the same header axis as a small one", {
   ae <- sum_fixture()
-  foot <- function(size) {
+  axis <- function(size) {
     p <- groups_prepare(ae, by = "USUBJID", summaries = list(
       c(list(type = "spans", x = "ASTDY", xend = "AENDY"), size)
     ))
-    isTRUE(table_groups_axis(p$plan[[1L]], p)$foot)
+    table_groups_axis(p$plan[[1L]], p)
   }
-  expect_true(foot(list(size = "lg")))
-  expect_false(foot(list()))
+  expect_named(axis(list(size = "lg")), c("at", "labels"))
+  expect_identical(axis(list(size = "lg")), axis(list()))
 })
 
 test_that("swimlane parent rows are section headers by default", {

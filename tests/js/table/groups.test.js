@@ -39,7 +39,7 @@ function groups() {
       col('Course', { kind: 'interval', segs: [[[0, 20, 1, 'Mild'], [30, 10, 2]], [], [[50, 50, 1]]],
                       tips: [['day 1 to 5', 'day 8 to 10'], [], ['day 15 to 30']],
                       fills: ['#aaa', '#555'], domainStart: 0, domainEnd: 30, large: true },
-          { axis: { at: [0, 50, 100], labels: ['1', '15', '30'], foot: true } }),
+          { axis: { at: [0, 50, 100], labels: ['1', '15', '30'] } }),
       col('Trend', { kind: 'sparkline', line: ['0,30 50,10 100,20', '', '0,10 100,30'],
                      band: ['0,5 100,5 100,25 0,25', null, null], dotX: [100, null, 100],
                      dotY: [55, null, 83], xValues: ['1,2,3', '', '1,2'], yValues: ['3,1,2', '', '1,3'],
@@ -190,7 +190,7 @@ test('a colour split of lanes draws one lane per level that has rows', () => {
   assert.equal(t.cell(1, 5).querySelectorAll('.vz-table-groups-lv').length, 1);
 });
 
-test('a swimlane: its segments in their level colours, the axis in the foot', () => {
+test('a swimlane: its segments in their level colours, the axis in the header', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const c = t.cell(0, 7);
   assert.ok(c.classList.contains('vz-table-groups-wide'));
@@ -199,8 +199,10 @@ test('a swimlane: its segments in their level colours, the axis in the foot', ()
   assert.match(segs[1].getAttribute('style'), /background:#555/);
   assert.equal(segs[0].getAttribute('data-l'), 'Mild');
   assert.equal(segs[0].getAttribute('data-tip'), 'day 1 to 5');
-  assert.equal(t.$('tfoot .vz-table-groups-axis-cell').children.length, 1);
-  assert.equal(t.$$('thead .vz-table-groups-axis').length, 1);
+  assert.equal(t.$('tfoot'), null);
+  const ax = t.$$('thead .vz-table-groups-axis');
+  assert.equal(ax.length, 2);
+  assert.ok(t.$('thead th[data-col-index="7"] .vz-table-groups-axis'));
 });
 
 test('a sparkline: band, reference line, line and the last point', () => {

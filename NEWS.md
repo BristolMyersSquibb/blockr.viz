@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9024
+# blockr.viz 0.3.0.9025
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -87,6 +87,10 @@ read.
   timeline scrolls the axis stays at the top of the panel, as a table's
   header does. It was at the bottom, in view only after scrolling past the
   last lane. Downloads show the axis on top.
+* A large swimlane in the groups layout (`size = "lg"`) draws its axis in
+  its header, as every other column does, so it stays in view with the
+  header while the rows scroll, as in 0.2.200. It was in a row under the
+  table, in view only after scrolling past the last row.
 * Title slots resolve in the records and variables layouts as well:
   `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
   there.

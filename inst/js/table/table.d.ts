@@ -70,12 +70,10 @@ interface TableCol {
   failed?: boolean;
 }
 
-/** A column axis: tick positions (0 to 100) and their labels. `foot`: the
- *  strip goes under the table instead (a wide swimlane). */
+/** A column axis: tick positions (0 to 100) and their labels. */
 interface TableAxis {
   at: number[];
   labels: string[];
-  foot?: boolean;
 }
 
 type TableNums = (number | null)[];
@@ -302,7 +300,7 @@ interface TableGridHooks {
   /** A body cell drawn by the layout instead (the groups marks); null for
    *  the plain cell. */
   cell?(c: TableCol, i: number): string | null;
-  /** A column's axis strip (groups): under its header, or in the foot row. */
+  /** A column's axis strip (groups), under its header. */
   axis?(c: TableCol): string;
 }
 
@@ -479,7 +477,6 @@ interface VizTableNamespace {
     row(m: TableModel, st: TableStructure, i: number,
         o: { last: boolean; shut: boolean; extra: string; stubCls?: string; flush?: boolean;
              cell?(c: TableCol, i: number): string | null }): string;
-    foot(m: TableModel, axis: (c: TableCol) => string): string;
   };
   drill: {
     same(a: TableSelection | null, b: TableSelection | null): boolean;

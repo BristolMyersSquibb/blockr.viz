@@ -373,8 +373,7 @@
             "key": [19723, 19730, 19737, 19737],
             "axis": {
               "at": [0, 60.87],
-              "labels": ["01 Jan", "15 Jan"],
-              "foot": true
+              "labels": ["01 Jan", "15 Jan"]
             },
             "mark": {
               "kind": "interval",

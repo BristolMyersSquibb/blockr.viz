@@ -54,7 +54,7 @@
       col ? (col.num ? 'vz-table-col-num' : 'vz-table-col-txt') : '',
       sortable ? 'blockr-sortable' : '', h.keys ? 'vz-table-keyed' : '',
       h.stub && h.bold ? 'vz-table-stub-header-bold' : ''];
-    let inner = headText(h, sortable) + (col && f.axis && !(col.axis && col.axis.foot) ? f.axis(col) : '');
+    let inner = headText(h, sortable) + (col && f.axis ? f.axis(col) : '');
     if (h.stub && f.foldAll) {
       cls.push('vz-table-has-foldall');
       inner = '<div class="vz-table-foldall-wrap"><button type="button" class="vz-table-foldall" ' +
@@ -228,20 +228,6 @@
     return out + '</tr>';
   }
 
-  /**
-   * The foot row: the axes of the columns that print theirs under the
-   * table. "" when none does.
-   * @param {TableModel} m
-   * @param {(c: TableCol) => string} axis
-   */
-  function foot(m, axis) {
-    if (!m.cols.some((c) => c.axis && c.axis.foot)) return '';
-    return '<tfoot><tr>' + m.cols.map((c, j) => j === m.stub
-      ? '<td class="vz-table-groups-axis-stub"></td>'
-      : c.axis && c.axis.foot ? '<td class="vz-table-groups-axis-cell">' + axis(c) + '</td>'
-        : '<td></td>').join('') + '</tr></tfoot>';
-  }
-
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, foot, indentSteps, headKind };
+  V.table.html = { th, td, section, row, indentSteps, headKind };
 })();

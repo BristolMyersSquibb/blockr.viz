@@ -109,8 +109,8 @@ table_groups_pack <- function(g, kind, top) {
 }
 
 # The column axis the header draws: tick positions (percent of the cell) and
-# labels, with the "%" already on the last label. `foot` marks a large swimlane, which repeats the axis under the
-# table. `NULL` without a scale or with fewer than two ticks.
+# labels, with the "%" already on the last label. `NULL` without a scale or
+# with fewer than two ticks.
 table_groups_axis <- function(p, prep) {
   dom <- cells_axis_domain(p, prep)
   if (is.null(dom)) {
@@ -132,10 +132,7 @@ table_groups_axis <- function(p, prep) {
     t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
   pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
-  table_groups_compact(list(
-    at = groups_arr(pos), labels = groups_arr(t$labels),
-    foot = if (identical(p$kind, "interval") && identical(p$size, "lg")) TRUE
-  ))
+  table_groups_compact(list(at = groups_arr(pos), labels = groups_arr(t$labels)))
 }
 
 # A vector as a JSON array, also at length one.

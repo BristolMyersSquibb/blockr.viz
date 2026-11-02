@@ -271,7 +271,7 @@
         .map(([k, v]) => ' ' + k.replace(/[^a-z0-9-]/gi, '') + '="' + esc(v) + '"').join('');
       this.host.innerHTML = '<table class="blockr-table' + (widths ? ' vz-table-fixed' : '') +
         (fl.cls ? ' ' + esc(fl.cls) : '') + '"' + attrs + '>' + cols + '<thead>' + head +
-        '</thead><tbody></tbody>' + (axis ? H.foot(m, axis) : '') + '</table>';
+        '</thead><tbody></tbody></table>';
       this.table = /** @type {HTMLTableElement} */ (this.host.firstElementChild);
     }
 

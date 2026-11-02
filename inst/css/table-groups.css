@@ -183,13 +183,6 @@
 }
 .vz-table-groups-axis-in span.is-first { transform: none; }
 .vz-table-groups-axis-in span.is-last { transform: translateX(-100%); }
-.vz-table-groups-table tfoot td {
-  border-top: 1px solid var(--blockr-color-border-subtle, #eef2f7);
-  padding-top: 4px;
-}
-.vz-table-groups-table tfoot .vz-table-groups-axis {
-  margin-top: 0;
-}
 
 /* Sorting affordance: none of our own. The header cells are the records
    layout's (table/html.js), so the .blockr-sortable cursor and the
