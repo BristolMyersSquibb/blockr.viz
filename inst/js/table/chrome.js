@@ -120,6 +120,35 @@
       return null;
     }
 
+    /**
+     * Keeps the header in view while the rows scroll. A box with a height
+     * limit (interactive_table()'s `max_height`, the data table under a
+     * view) scrolls itself, and table.css makes the header sticky in it.
+     * Otherwise the table runs its full length and the panel around it
+     * scrolls; the box still scrolls sideways, so a sticky header would
+     * stick to the box and scroll away with the panel. Here the header moves
+     * down by as much of the table as has scrolled out of view, all its rows
+     * together, and stops at the last row.
+     */
+    followHeader() {
+      const box = this.box;
+      const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
+      const table = thead && thead.parentElement;
+      if (!thead || !table) return;
+      if (box.scrollHeight > box.clientHeight + 1) {
+        thead.style.transform = '';
+        box.classList.toggle('scrolled', box.scrollTop > 0);
+        return;
+      }
+      const sp = this.scroller();
+      const top = sp ? sp.getBoundingClientRect().top : 0;
+      // offsetHeight, not a rect: a rect would include the transform set here.
+      const max = table.offsetHeight - thead.offsetHeight;
+      const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
+      thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+      box.classList.toggle('scrolled', y > 0);
+    }
+
     /** @param {boolean} on A table with sections or keyed rows. */
     structured(on) {
       this.el.classList.toggle('vz-table-structured', on);

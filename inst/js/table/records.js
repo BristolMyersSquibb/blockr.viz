@@ -78,9 +78,29 @@
         sent: (s) => frame.flash('Drilled down to ' + T.drill.label(s, this.labels)),
         transient: () => this.transient()
       });
+      // The header follows the scroll (chrome.js followHeader()). A fresh
+      // table's header starts at the top, so a draw places it too, in the
+      // next frame: placing it reads the layout, which a draw must not.
+      // One capture listener on the document sees every scroller's scroll:
+      // the dock moves a card between containers after it is drawn.
+      let placing = false;
+      const place = () => {
+        if (placing) return;
+        placing = true;
+        scope.frame(() => {
+          placing = false;
+          frame.followHeader();
+        });
+      };
+      if (!this.still) {
+        const follow = () => frame.followHeader();
+        scope.on(document, 'scroll', follow, { capture: true, passive: true });
+        scope.on(window, 'resize', follow);
+      }
       this.grid.hooks.drawn = () => {
         this.drill.paint();
         this.footer();
+        if (!this.still) place();
       };
       scope.own({ dispose: frame.onSearch((q) => {
         if (this.cardsOn()) this.drawCards();

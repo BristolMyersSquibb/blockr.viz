@@ -420,13 +420,12 @@ input.vz-table-search:focus {
   font-weight: var(--blockr-font-weight-normal, 400);
   margin-right: 4px;
 }
-/* Sticky header + scroll shadow. The header stays put while the body
-   scrolls; a soft shadow fades in once the scroll container is scrolled
-   (the JS toggles `.scrolled` on .blockr-table-wrapper). background-color,
-   not the shorthand, so a leaf keeps its column rule. */
+/* The header stays in view while the rows scroll (table.css); a soft shadow
+   fades in once the table has scrolled (the JS toggles `.scrolled` on
+   .blockr-table-wrapper). background-color, not the shorthand, so a leaf
+   keeps its column rule. */
 .vz-table-structured .blockr-table thead th {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 3;
   background-color: var(--blockr-color-bg-surface, #ffffff);
 }

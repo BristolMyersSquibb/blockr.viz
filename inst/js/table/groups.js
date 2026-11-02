@@ -34,25 +34,6 @@
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
-  /**
-   * Keeps the header in view while the panel scrolls: moves it down by as
-   * much of the table as has scrolled out of view, and stops at the last row.
-   * @param {TableFrame} frame
-   */
-  function followHeader(frame) {
-    const box = frame.box;
-    const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
-    const table = thead && thead.parentElement;
-    if (!thead || !table) return;
-    const sp = frame.scroller();
-    const top = sp ? sp.getBoundingClientRect().top : 0;
-    // offsetHeight, not a rect: a rect would include the transform set here.
-    const max = table.offsetHeight - thead.offsetHeight;
-    const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
-    thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
-    box.classList.toggle('scrolled', y > 0);
-  }
-
   class Groups extends /** @type {any} */ (T.Records) {
     /**
      * @param {TableFrame} frame
@@ -71,13 +52,6 @@
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
       T.tooltip.wire(frame.box, scope, () => this.model);
-      // One capture listener on the document sees every scroller's scroll:
-      // the dock moves a card between containers after it is drawn.
-      const follow = () => followHeader(frame);
-      if (!this.still) {
-        scope.on(document, 'scroll', follow, { capture: true, passive: true });
-        scope.on(window, 'resize', follow);
-      }
       /** What the last picture was of. */
       this.pictured = '';
       /** The picture of `pictured` on its way to R. @type {Promise<unknown> | null} */

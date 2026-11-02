@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9011
+# blockr.viz 0.3.0.9012
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -53,6 +53,10 @@ read.
 * In the groups layout, a custom summary that fails only on the parent rows
   of a nested `by` shows as one failed column with its error; the table
   still draws.
+* A table's header row stays at the top while its rows scroll, in every
+  layout and in `interactive_table()`, with a spanner row above the row it
+  spans. A table runs its full length in the panel, and in the records and
+  structured layouts the header scrolled away with the rows.
 * Title slots resolve in the records and variables layouts as well:
   `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
   there.

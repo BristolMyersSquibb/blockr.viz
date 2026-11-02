@@ -234,8 +234,8 @@ input.vz-table-search:focus {
   position: relative;
   z-index: 0;
 }
-/* The header may be sticky, which is already a containing block -- do not
-   touch its position. */
+/* A header cell is already positioned (below) -- do not touch its
+   position. */
 :is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-flash-colhead {
   z-index: 0;
 }
@@ -294,13 +294,13 @@ input.vz-table-search:focus {
 :is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-txt .vz-table-th-subrow {
   justify-content: flex-start;
 }
-/* Sticky header for the scrollable table. The structured-Table-1 delta CSS
-   provides its own sticky + scroll-shadow, but that delta is injected only for
-   structured tables — so cover the flat path here (the flat table scrolls,
-   unlike the paginated preview, and benefits from a pinned header). */
+/* The header cells are opaque, so the rows pass under the header as it
+   stays in view: the thead is sticky in a box that scrolls (above), and
+   table/chrome.js followHeader() moves it in a table that scrolls with its
+   panel. The cells are not sticky themselves: each would stick at the top,
+   and a spanner row would cover the row under it. */
 :is(.vz-table, .vz-table-groups) .blockr-table thead th {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 2;
   background-color: var(--blockr-color-bg-surface, #ffffff);
 }
