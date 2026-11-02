@@ -119,7 +119,6 @@ chart_ui <- function(id) {
   shiny::tagList(
     viz_echarts_dep(),
     drilldown_chart_dep(),
-    viz_output(ns("chart"), "chart"),
-    viz_build_line()
+    viz_output(ns("chart"), "chart")
   )
 }

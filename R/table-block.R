@@ -127,7 +127,6 @@ table_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
     table_view_dep(),
-    viz_output(ns("table"), "table"),
-    viz_build_line()
+    viz_output(ns("table"), "table")
   )
 }
