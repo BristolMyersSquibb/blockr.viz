@@ -310,7 +310,7 @@
         continue;
       }
       if (what === "section") continue;
-      if (/remove|✕|delete/i.test(label + " " + c.className) || /add-link|vz-add-trigger/.test(c.className)) {
+      if (/remove|✕|delete/i.test(label + " " + c.className) || /add-link|vz-add-trigger|vz-table-shade-add/.test(c.className)) {
         push({ block: id, where: "gear", what, label, effect: "skipped" });
         continue;
       }
