@@ -94,6 +94,9 @@
   padding: 4px 2px 0;
 }
 .vz-foot .vz-status-note { margin-left: 0; }
+/* The clear button is blockr.ui's quiet xs button (core/frame.js). The
+   negative margin keeps the line as high as its text. */
+.vz-status-clear.blockr-btn { margin: -5px 0; }
 /* The resting line coming back after a receipt. Without this it snaps into the
    slot the receipt just dissolved out of, which moves the cut one step later
    and does not remove it. */

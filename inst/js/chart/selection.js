@@ -4,14 +4,15 @@
  *
  * A click always sends. Latched, the clicked mark's filter becomes the
  * selection and a second click on the same mark clears it; with a
- * drill_target the click is an event for another block, nothing latches,
- * and the footer shows a receipt of it for a moment. A latched selection
- * dims the marks it does not light; the view's highlight() draws that.
+ * drill_target a click, a point or a brush is an event for another block
+ * (drill()): nothing latches, the mark gets a trace that fades, and the
+ * footer shows a receipt of it for a moment. A latched selection dims the
+ * marks it does not light; the view's highlight() draws that.
  *
- * The selection is kept in the shape R reads (chart-keys.js). A brush on a
- * scatter latches a range or the brushed points' series; ECharts clears a
- * brush by itself on some redraws, so a clear that did not come from the
- * reader is told apart (`suppressBrushClear`, `byBrush`).
+ * The selection is kept in the shape R reads (chart-keys.js). A latched brush
+ * on a scatter is the range of the brushed points; ECharts clears a brush by
+ * itself on some redraws, so a clear that did not come from the reader is
+ * told apart (`suppressBrushClear`, `byBrush`).
  */
 (function () {
   'use strict';
@@ -70,9 +71,7 @@
     click(slot, params, filters) {
       const v = this.view;
       if (NS.transientDrill(v.settings)) {
-        this.flash(slot, params);
-        v.frame.flash('Drilled down to ' + NS.keys.describe(filters, v.columns));
-        this.send({ type: 'categorical', filters });
+        this.drill({ type: 'categorical', filters }, () => this.flash(slot, params));
         return;
       }
       const c = this.current;
@@ -87,8 +86,19 @@
     }
 
     /**
-     * A point click or a brush, latched, with a drill_target too. A second
-     * click on the same point clears it, as on a bar.
+     * A drill sent to another block: the mark's light, the footer's receipt,
+     * the selection once. Nothing latches.
+     * @param {ChartSelection} sel @param {() => void} light
+     */
+    drill(sel, light) {
+      light();
+      this.view.frame.flash('Drilled down to ' + this.describe(sel));
+      this.send(sel);
+    }
+
+    /**
+     * A point click or a brush, latched: a chart without a drill_target. A
+     * second click on the same point clears it, as on a bar.
      * @param {ChartSelection} sel @param {boolean} brush
      */
     latch(sel, brush) {
@@ -114,10 +124,12 @@
     }
 
     /** The brush was cleared: so is the selection, unless a click just made
-     * it or drill is off, where the brush sent nothing. */
+     * it, drill is off, where the brush sent nothing, or the brush was a drill,
+     * which the target owns from then on. */
     brushCleared() {
       if (this.suppressBrushClear) return;
       if (NS.drillState(this.view.settings) === 'off') return;
+      if (NS.transientDrill(this.view.settings)) return;
       this.current = null;
       this.byBrush = false;
       this.brushDrawn = false;
@@ -153,13 +165,16 @@
     /** The footer's words for the selection, in column labels; null for none:
      * the line shows only while something is selected. */
     words() {
-      const c = this.current;
+      return this.current ? 'Filtered: ' + this.describe(this.current) : null;
+    }
+
+    /** A selection in column labels. @param {ChartSelection} sel */
+    describe(sel) {
       const v = this.view;
-      if (!c) return null;
       const m = v._memo.model;
-      return 'Filtered: ' + (c.type === 'range'
-        ? NS.keys.describeRange(c, v.columns, m && m.x ? m.x.type : undefined)
-        : NS.keys.describe(c.filters, v.columns));
+      return sel.type === 'range'
+        ? NS.keys.describeRange(sel, v.columns, m && m.x ? m.x.type : undefined)
+        : NS.keys.describe(sel.filters, v.columns);
     }
 
     /**
@@ -171,32 +186,40 @@
       const host = slot && slot.chartDiv;
       const ev = params && params.event;
       if (!host || !ev) return;
-      if (this._signal) this._signal.remove();
-      this._signal = null;
       const t = ev.target;
       const boxy = t && t.shape &&
         typeof t.shape.width === 'number' && typeof t.shape.height === 'number';
       if (boxy && t.getBoundingRect) {
         const r = t.getBoundingRect().clone();
         if (t.transform) r.applyTransform(t.transform);
-        if (r.width > 0 && r.height > 0) {
-          const box = NS.mk('span', 'vz-chart-flash');
-          Object.assign(box.style, { left: r.x + 'px', top: r.y + 'px',
-                                     width: r.width + 'px', height: r.height + 'px' });
-          const rad = t.shape.r;
-          if (rad != null) {
-            box.style.borderRadius = (Array.isArray(rad) ? rad : [rad])
-              .map((/** @type {number} */ x) => x + 'px').join(' ');
-          }
-          this._light(host, box, 2000);
-          return;
-        }
+        if (this.trace(slot, r, t.shape.r)) return;
       }
       const x = ev.offsetX, y = ev.offsetY;
       if (typeof x !== 'number' || typeof y !== 'number') return;
       const ring = NS.mk('span', 'vz-chart-pulse');
       Object.assign(ring.style, { left: x + 'px', top: y + 'px' });
       this._light(host, ring, 1200);
+    }
+
+    /**
+     * The trace a clicked bar gets, on a box in the slot's pixels: a bar, or
+     * the rectangle a drill brush took. False when the box is empty.
+     * @param {ChartSlot | null} slot
+     * @param {{ x: number, y: number, width: number, height: number }} r
+     * @param {number | number[]} [rad] the mark's corner radius
+     */
+    trace(slot, r, rad) {
+      const host = slot && slot.chartDiv;
+      if (!host || !(r.width > 0 && r.height > 0)) return false;
+      const box = NS.mk('span', 'vz-chart-flash');
+      Object.assign(box.style, { left: r.x + 'px', top: r.y + 'px',
+                                 width: r.width + 'px', height: r.height + 'px' });
+      if (rad != null) {
+        box.style.borderRadius = (Array.isArray(rad) ? rad : [rad])
+          .map((/** @type {number} */ x) => x + 'px').join(' ');
+      }
+      this._light(host, box, 2000);
+      return true;
     }
 
     /** A light that removes itself; the timeout covers an off-screen block.
@@ -207,6 +230,7 @@
         el.remove();
         if (this._signal === el) this._signal = null;
       };
+      if (this._signal) this._signal.remove();
       scope.on(el, 'animationend', drop);
       this._signal = el;
       host.appendChild(el);

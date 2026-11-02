@@ -169,6 +169,17 @@ srv_channel <- function(session) {
   log
 }
 
+test_that("a saved selection on a chart with a drill target filters nothing", {
+  blk <- new_chart_block(
+    type = "scatter", x = "day", y = "val", drill = "id", drill_target = "vf1",
+    selection = list(type = "categorical", filters = list(id = list("S1")))
+  )
+  srv_run(blk, function(session, expr, visit) {
+    session$flushReact()
+    expect_equal(nrow(session$returned$result()), 200L)
+  })
+})
+
 test_that("a clear with a drill target releases the chart's claim", {
   blk <- new_chart_block(type = "bar", category = "arm", drill = "arm",
                          drill_target = "vf1")

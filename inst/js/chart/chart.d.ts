@@ -302,6 +302,8 @@ interface ChartSlot {
   brushAreas: any[] | null;
   /** The selection that brush made, as JSON. */
   brushSel: string | null;
+  /** What a drill brush has caught so far; sent when the drag ends. */
+  brushCaught: Array<{ seriesIndex: number, dataIndex: number }> | null;
   zoomArmed: boolean;
   zoom: Record<string, unknown> | null;
   focus: any;
@@ -353,7 +355,12 @@ interface ChartSelectionState {
   suppressBrushClear: boolean;
   restore(saved: unknown): void;
   click(slot: ChartSlot | null, params: any, filters: ChartSelectionFilters): void;
+  drill(sel: ChartSelection, light: () => void): void;
   latch(sel: ChartSelection, brush: boolean): void;
+  trace(slot: ChartSlot | null, r: { x: number, y: number, width: number, height: number },
+        rad?: number | number[]): boolean;
+  flash(slot: ChartSlot | null, params: any): void;
+  describe(sel: ChartSelection): string;
   redrawing(): void;
   brushCleared(): void;
   clear(): void;

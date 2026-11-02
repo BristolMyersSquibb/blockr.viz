@@ -30,8 +30,9 @@
 #' A click filters only when `drill` is set: to a column, or to `"auto"`,
 #' the clicked mark's own category, bin or lane. The block's output is then
 #' the rows behind the clicked mark until the reader clicks another mark or
-#' Reset. A brush on a scatter or a line filters to the brushed range. With
-#' `drill_target` set, a click is sent to that filter block instead, and the
+#' Clear. A brush on a scatter or a line filters to the points inside the
+#' rectangle. With `drill_target` set, a click, a point or a brush is sent
+#' to that filter block instead, once (a brush when the drag ends), and the
 #' chart keeps no selection of its own.
 #'
 #' @section Titles:

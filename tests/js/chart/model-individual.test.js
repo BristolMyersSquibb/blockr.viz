@@ -186,11 +186,16 @@ test('a missing series is a key too, sent as null; the facet joins it (D3)', () 
                          { type: 'categorical', filters: { ID: ['S02'], SEX: ['F'] } });
 });
 
-test('an explicit drill column: its values in the rows under the point', () => {
-  assert.deepStrictEqual(click({ color: 'ARM', drill: 'ID' }, { seriesName: 'A', value: [2, 7] }),
+test('an explicit drill column: to a drill target, its values in the rows under the point', () => {
+  const cfg = { color: 'ARM', drill: 'ID', drill_target: 'f1' };
+  assert.deepStrictEqual(click(cfg, { seriesName: 'A', value: [2, 7] }),
                          { type: 'categorical', filters: { ID: ['S02'] } });
   // No row there in that series: nothing is sent.
-  assert.strictEqual(click({ color: 'ARM', drill: 'ID' }, { seriesName: 'B', value: [2, 7] }), null);
+  assert.strictEqual(click(cfg, { seriesName: 'B', value: [2, 7] }), null);
+  // Without a target the chart filters itself to the point, not to every
+  // row of that subject.
+  assert.deepStrictEqual(click({ color: 'ARM', drill: 'ID' }, { seriesName: 'A', value: [2, 7] }),
+                         { type: 'range', x: 'DAY', y: 'VAL', x_range: [2, 2], y_range: [7, 7] });
 });
 
 test('a line: the hovered line before the hit test; drill off sends nothing', () => {
@@ -239,7 +244,7 @@ test('a brush: the points\' x and y; with a drill column their rows, each (x, y)
   assert.deepStrictEqual(plain(r.rows.map((x) => x.ID)), ['a', 'b', 'c']);
   assert.strictEqual(r.drill, 'ID');
   const none = C.model.individualBrush(m, { ...cfg, drill: 'auto' }, m.panels[0], series, sel([9999]));
-  assert.deepStrictEqual(plain(none), { xVals: [], yVals: [], rows: [], drill: null, levels: [] });
+  assert.deepStrictEqual(plain(none), { xVals: [], yVals: [], rows: [], drill: null });
 });
 
 // D9: a brush takes the brushed points, never their colour; D10: in a facet
@@ -261,13 +266,16 @@ test('D9: a brush in a coloured scatter is its range, not the colour levels', ()
   assert.deepStrictEqual(r.x, 'DAY');
 });
 
-test('D9: with a series, a brush takes the series of the brushed points', () => {
+test('D9: with a series, a brush is the range of the brushed points, not their series', () => {
   const r = brushOf({ series: 'ID', color: 'ARM' }, [[1, 0], [2, 0]]);
-  assert.deepStrictEqual(r, { type: 'categorical', filters: { ID: ['S01', 'S02'] } });
+  assert.strictEqual(r.type, 'range');
+  assert.strictEqual(r.filters, undefined);
 });
 
-test('D9: an explicit drill column still reads the rows at the brushed points', () => {
-  assert.deepStrictEqual(brushOf({ color: 'ARM', drill: 'ID' }, [[1, 0]]).filters, { ID: ['S02'] });
+test('D9: a drill column reads the rows at the brushed points for a drill target only', () => {
+  assert.deepStrictEqual(brushOf({ color: 'ARM', drill: 'ID', drill_target: 'f1' }, [[1, 0]]).filters,
+                         { ID: ['S02'] });
+  assert.strictEqual(brushOf({ color: 'ARM', drill: 'ID' }, [[1, 0]]).type, 'range');
 });
 
 test('D10: a brush and a point in a facet panel carry the panel', () => {

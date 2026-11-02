@@ -234,11 +234,16 @@
         // Drag-to-zoom on the data x axis only, not the veil's hidden one.
         : (isLine ? hiddenToolbox({
           dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' } }) : undefined),
+      // With a drill target, ECharts dims the points outside the rectangle
+      // while the reader drags, as a latched selection would, and reports
+      // every move: the drill is sent once, at the end of the drag.
       brush: brushable ? {
         toolbox: BRUSH_TOOLS, xAxisIndex: 0, yAxisIndex: 0,
         brushStyle: { color: 'rgba(0, 114, 178, 0.1)', borderColor: 'rgba(0, 114, 178, 0.5)',
                       borderWidth: 1 },
-        throttleDelay: 300
+        ...(NS.transientDrill(cfg)
+          ? { outOfBrush: { opacity: NS.SEL_DIM }, throttleDelay: 0 }
+          : { throttleDelay: 300 })
       } : undefined,
       series
     };

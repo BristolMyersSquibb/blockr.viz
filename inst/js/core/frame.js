@@ -94,11 +94,12 @@
       this.countEl = el('span', 'vz-count', this.foot);
       this.countEl.setAttribute('aria-live', 'polite');
       this.statusEl = el('div', 'vz-status', this.foot);
-      this.clearBtn = /** @type {HTMLButtonElement} */ (el('button', 'vz-status-clear'));
+      // blockr.ui's quiet button, smallest size.
+      this.clearBtn = /** @type {HTMLButtonElement} */ (el('button',
+        'vz-status-clear blockr-btn blockr-btn--quiet blockr-btn--xs'));
       this.clearBtn.type = 'button';
-      this.clearBtn.textContent = '×';
+      this.clearBtn.textContent = 'Clear';
       this.clearBtn.setAttribute('aria-label', 'Clear filter');
-      this.clearBtn.setAttribute('data-blockr-tooltip', 'Clear filter');
       scope.on(this.clearBtn, 'click', () => { if (this._line.onClear) this._line.onClear(); });
       /** The resting line. @type {{ text: string | null, onClear: (() => void) | null }} */
       this._line = { text: null, onClear: null };

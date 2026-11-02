@@ -356,7 +356,7 @@
         resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
         slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
-                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, zoomArmed: false, zoom: null,
+                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }

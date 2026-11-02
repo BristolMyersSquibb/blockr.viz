@@ -387,7 +387,9 @@
    *     a zero-width range at its x and y. An unsplit line's point too.
    *
    * Auto sends the mark's keys (the facet with them). A drill column sends
-   * its values in the rows under the mark, nothing when there are none.
+   * its values in the rows under the mark, nothing when there are none; for
+   * a point, only to a drill target: the chart's own filter is the point, not
+   * every row that shares its drill value.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any} params
    * @param {string} [focusName]
@@ -415,7 +417,9 @@
     }
     const v = params.value;
     if (!Array.isArray(v) || v.length < 2) return null;
-    if (explicit) return wrap(NS.keys.fromRows(cfg.drill, pointRows(m, panel, params.seriesName, v)));
+    if (explicit && NS.transientDrill(cfg)) {
+      return wrap(NS.keys.fromRows(cfg.drill, pointRows(m, panel, params.seriesName, v)));
+    }
     if (m.seriesCol && !m.isLine && params.seriesName != null) {
       return wrap(NS.keys.fromKeys(individualKeys(m, panel.facet, params.seriesName)));
     }
@@ -438,19 +442,15 @@
   /**
    * What a brush caught: the x and y of every brushed point (a dataIndex is
    * its own series' index; one outside the series is skipped); with a drill
-   * column, the panel's rows at those points, each (x, y) taken once; with a
-   * series column, the series of the brushed points.
+   * column, the panel's rows at those points, each (x, y) taken once.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel @param {any[]} allSeries chart.getOption().series
    * @param {Array<{ seriesIndex: number, dataIndex: number }>} selected
-   * @returns {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
-   *             levels: string[] }}
+   * @returns {{ xVals: any[], yVals: any[], rows: any[], drill: string | null }}
    */
   const individualBrush = (m, cfg, panel, allSeries, selected) => {
     // Colour never widens a brush: only a drill column reads the rows.
     const drill = cfg.drill && cfg.drill !== 'auto' ? String(cfg.drill) : null;
-    /** @type {Set<string>} */
-    const levels = new Set();
     const encX = m.x.encode || ((/** @type {any} */ x) => x);
     /** @param {any} x @param {any} y */
     const ptKey = (x, y) => String(x) + '|||' + String(y);
@@ -480,37 +480,29 @@
       const vy = Array.isArray(pt) ? pt[1] : pt.value && pt.value[1];
       if (vx != null) xVals.push(vx);
       if (vy != null) yVals.push(vy);
-      if (m.seriesCol) levels.add(String(drawn.name ?? ''));
       taken.add(ptKey(vx, vy));
     }
     // Each (x, y) once.
     /** @type {any[]} */
     const rows = [];
     for (const k of taken) for (const r of rowIndex.get(k) || []) rows.push(r);
-    return { xVals, yVals, rows, drill, levels: [...levels] };
+    return { xVals, yVals, rows, drill };
   };
 
   /**
-   * What a brush sends, from what it caught, or null: a drill column's
-   * values in the rows at the points; else the series of the brushed points;
-   * else the points' x (and, off a line, y) extent. In a facet panel the
-   * series and the range carry the panel's key.
+   * What a brush sends, from what it caught, or null: to a drill target, a
+   * drill column's values in the rows at the points; else the points' x
+   * (and, off a line, y) extent, which holds only the points inside the
+   * rectangle. In a facet panel the range carries the panel's key.
    * @param {IndividualModel} m @param {Record<string, any>} cfg
    * @param {IndividualPanel | null} panel
-   * @param {{ xVals: any[], yVals: any[], rows: any[], drill: string | null,
-   *           levels: string[] }} b
+   * @param {{ xVals: any[], yVals: any[], rows: any[], drill: string | null }} b
    * @returns {ChartSelection | null}
    */
   const brushSelection = (m, cfg, panel, b) => {
-    if (b.drill) {
+    if (b.drill && NS.transientDrill(cfg)) {
       const f = NS.keys.fromRows(b.drill, b.rows);
       if (f) return { type: 'categorical', filters: f };
-    }
-    const keys = panel ? individualKeys(m, panel.facet, null) : {};
-    if (!b.drill && m.seriesCol && b.levels.length) {
-      return { type: 'categorical',
-               filters: { [m.seriesCol]: b.levels.map((lv) => (NS.keys.isMissing(lv) ? null : lv)),
-                          ...NS.keys.fromKeys(keys) } };
     }
     if (!b.xVals.length) return null;
     return inPanel(m, panel, cfg.x, cfg.y, [NS.minOf(b.xVals), NS.maxOf(b.xVals)],

@@ -24,26 +24,35 @@ function cloud() {
   return { columns, data: { X, Y, ID } };
 }
 
-/** Draw the scatter, then brush every point of its one series. */
-function brushAll(drill) {
+/** A brush area as ECharts reports it: pixels in `range`. */
+const AREA = { brushType: 'rect', range: [[10, 60], [20, 80]], coordRange: [[0, 4], [0, 4]] };
+
+/** Draw the scatter, then brush every point of its one series; with a drill
+ * target the drag ends too. */
+function brushAll(drill, target) {
   const env = h.createEnv({ record: 'none' });
   const m = h.mount(env);
   const d = cloud();
   h.send(env, m.id, { columns: d.columns, data: d.data,
-                      config: { type: 'scatter', x: 'X', y: 'Y', drill } });
+                      config: { type: 'scatter', x: 'X', y: 'Y', drill,
+                                ...(target ? { drill_target: target } : {}) } });
   const chart = m.block._slots[0].chart;
   const pts = chart.getOption().series[0].data;
   assert.strictEqual(pts.length, N);
   chart.trigger('brushSelected', {
     batch: [{ selected: [{ seriesIndex: 0, dataIndex: Array.from({ length: N }, (_, i) => i) }] }]
   });
+  if (target) {
+    chart.trigger('brushEnd', { areas: [AREA] });
+    env.flushTimers();
+  }
   const actions = env.inputs().filter((i) => /_select:/.test(i.name)).map((i) => i.value.selection);
   env.close();
   return actions;
 }
 
-test('brush with a drill column: every row once in the drill payload', () => {
-  const actions = brushAll('ID');
+test('brush with a drill column and target: every row once in the drill payload', () => {
+  const actions = brushAll('ID', 'f1');
   assert.strictEqual(actions.length, 1);
   const a = actions[0];
   assert.strictEqual(a.type, 'categorical');
@@ -72,10 +81,48 @@ function line(n) {
   return { columns, data: { X, Y, ID } };
 }
 
-test('a redraw keeps a brushed selection; the reader can still clear it', () => {
+test('a drill brush sends once, at the end of the drag, and leaves only a trace', () => {
   const env = h.createEnv({ record: 'none' });
   const m = h.mount(env);
   const config = { type: 'scatter', x: 'X', y: 'Y', drill: 'ID', drill_target: 'f1' };
+  const d = line(10);
+  h.send(env, m.id, { columns: d.columns, data: d.data, config });
+  const slot = m.block._slots[0];
+  const chart = slot.chart;
+  const sent = () => env.inputs().filter((i) => /_select:/.test(i.name))
+    .map((i) => i.value.selection);
+  // ECharts brushes the outside points itself while the reader drags.
+  assert.strictEqual([].concat(chart.getOption().brush)[0].outOfBrush.opacity, 0.25);
+  // The drag grows: nothing is sent while it lasts.
+  chart.trigger('brush', { areas: [AREA] });
+  chart.trigger('brushSelected', { batch: [{ selected: [{ seriesIndex: 0, dataIndex: [0, 1] }] }] });
+  chart.trigger('brushSelected', {
+    batch: [{ selected: [{ seriesIndex: 0, dataIndex: [0, 1, 2, 3, 4] }] }]
+  });
+  assert.strictEqual(sent().length, 0);
+  chart.trigger('brushEnd', { areas: [AREA] });
+  env.flushTimers(1);
+  assert.strictEqual(sent().length, 1);
+  assert.deepStrictEqual(sent()[0].filters.ID, ['S0', 'S1', 'S2', 'S3', 'S4']);
+  // No latch: the footer shows the receipt, and a trace sits on the rectangle.
+  assert.strictEqual(m.block.selection.current, null);
+  assert.match(m.block.frame.statusEl.textContent, /^Drilled down to /);
+  const tr = slot.chartDiv.querySelector('.vz-chart-flash');
+  assert.ok(tr);
+  assert.deepStrictEqual([tr.style.left, tr.style.top, tr.style.width, tr.style.height],
+                         ['10px', '20px', '50px', '60px']);
+  // The rectangle's clear takes nothing back: the target owns the cohort.
+  chart.trigger('brush', { areas: [] });
+  chart.trigger('brushSelected', { batch: [{ selected: [] }] });
+  env.flushTimers();
+  assert.strictEqual(sent().length, 1);
+  env.close();
+});
+
+test('a redraw keeps a brushed selection; the reader can still clear it', () => {
+  const env = h.createEnv({ record: 'none' });
+  const m = h.mount(env);
+  const config = { type: 'scatter', x: 'X', y: 'Y', drill: 'ID' };
   const d = line(10);
   h.send(env, m.id, { columns: d.columns, data: d.data, config });
   const chart = m.block._slots[0].chart;
@@ -86,7 +133,9 @@ test('a redraw keeps a brushed selection; the reader can still clear it', () => 
     batch: [{ selected: [{ seriesIndex: 0, dataIndex: [0, 1, 2, 3, 4] }] }]
   });
   assert.strictEqual(sent().length, 1);
-  assert.deepStrictEqual(sent()[0].filters.ID, ['S0', 'S1', 'S2', 'S3', 'S4']);
+  // Without a target the chart filters itself to the points in the
+  // rectangle, not to every row of their IDs.
+  assert.deepStrictEqual(sent()[0], { type: 'range', x: 'X', y: 'Y', x_range: [0, 4], y_range: [0, 4] });
   // New rows upstream redraw the chart, and ECharts reports the redrawn
   // brush as empty before the rectangle is put back.
   const d2 = line(8);

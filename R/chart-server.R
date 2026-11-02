@@ -91,16 +91,24 @@ chart_split_cols <- function(v) {
 
 # The emitted filter. A click selects source rows; with a prepare script the
 # filter goes inside it, except a condition on a column only the script makes.
-# The same object comes back while the code is unchanged, so blockr.core skips
-# a re-evaluation.
+# With a drill target the chart filters nothing: a selection a saved board
+# still holds (a brush latched before 0.3.0.9027) is ignored. The same object
+# comes back while the code is unchanged, so blockr.core skips a
+# re-evaluation.
 chart_expr <- function(data, state, src) {
+  held <- function() {
+    target <- if (!is.null(state$drill_target)) state$drill_target()
+    if (nzchar(target %||% "")) NULL else state$selection()
+  }
   members <- dd_group_filters_members(
-    function() chart_selection_filters(state$selection()), src$raw
+    function() chart_selection_filters(held()), src$raw
   )
   last <- new.env(parent = emptyenv())
   shiny::reactive({
     d <- data()
-    parts <- chart_filter_parts(viz_values(state), src, members)
+    v <- viz_values(state)
+    v["selection"] <- list(held())
+    parts <- chart_filter_parts(v, src, members)
     sx <- src$prep$compiled()
     names_in <- if (!is.null(sx) && length(parts$conds)) {
       tryCatch(names(src$raw()), error = function(e) NULL)

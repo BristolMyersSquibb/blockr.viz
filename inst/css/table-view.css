@@ -26,24 +26,10 @@
   cursor: default;
 }
 
-/* The receipt's clear button, after the text. */
+/* The status line, its clear button right after the text. */
 .vz-table .vz-status {
   justify-content: flex-start;
   gap: 4px;
-}
-.vz-table .vz-status-clear {
-  font-size: var(--blockr-font-size-sm, 0.875rem);
-  line-height: 1;
-  color: var(--blockr-grey-400, #9ca3af);
-  background: none;
-  border: none;
-  border-radius: var(--blockr-radius-sm, 4px);
-  cursor: pointer;
-  padding: 0 4px;
-}
-.vz-table .vz-status-clear:hover {
-  color: var(--blockr-grey-700, #374151);
-  background: var(--blockr-color-bg-hover, #f3f4f6);
 }
 
 /* A narrow block: the search and download take a row of their own under

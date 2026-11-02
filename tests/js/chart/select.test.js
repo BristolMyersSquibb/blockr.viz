@@ -112,6 +112,17 @@ test('a scatter point is a zero-width range; a brush its extent', () => {
   assert.strictEqual(r.footer, 'Filtered: Analysis Relative Day 1 to 29, Analysis Value 27.4 to 31.1');
 });
 
+test('with a drill target a scatter point is an event too: sent, nothing latched', () => {
+  const r = run({ type: 'scatter', x: 'ADY', y: 'AVAL', drill: 'auto', drill_target: 'flt' }, (c) => {
+    c.click(0, 0, 3);
+    assert.strictEqual(c.block.selection.current, null);
+    assert.match(c.block.frame.statusEl.textContent, /^Drilled down to /);
+  });
+  assert.deepStrictEqual(r.sent, [
+    { type: 'range', x: 'ADY', y: 'AVAL', x_range: [57, 57], y_range: [34.48, 34.48] }
+  ]);
+});
+
 test('R\'s echo of a brush keeps the selection, and the redraw draws the rectangle again', () => {
   const SC = { type: 'scatter', x: 'ADY', y: 'AVAL', drill: 'auto' };
   const c = D.open(SC);

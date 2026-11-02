@@ -238,7 +238,9 @@
     const sel = NS.model.individualClick(m, view.settings, panel, params, focusName);
     if (!sel) return;
     if (sel.type === 'categorical') view.selection.click(slot, params, sel.filters);
-    else view.selection.latch(sel, false);
+    else if (NS.transientDrill(view.settings)) {
+      view.selection.drill(sel, () => view.selection.flash(slot, params));
+    } else view.selection.latch(sel, false);
   };
 
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
@@ -266,29 +268,84 @@
     });
   };
 
+  /** What the brush caught, as a selection, or null.
+   * @param {ChartView} view @param {ChartSlot} slot
+   * @param {Array<{ seriesIndex: number, dataIndex: number }>} selected */
+  const caughtSelection = (view, slot, selected) => {
+    const m = view._memo.model;
+    if (!m || m.family !== 'individual') return null;
+    const panel = NS.model.panelOf(m, slot.facetVal);
+    const opt = slot.chart.getOption();
+    const caught = NS.model.individualBrush(m, view.settings, panel, (opt && opt.series) || [], selected);
+    return NS.model.brushSelection(m, view.settings, panel, caught);
+  };
+
+  /** The other panels' brushes go; their clears are not the reader's.
+   * @param {ChartView} view @param {ChartSlot} slot */
+  const clearOthers = (view, slot) => {
+    const others = view.charts.filter((c) => c !== slot.chart);
+    if (!others.length) return;
+    view.selection.suppressBrushClear = true;
+    for (const other of others) other.dispatchAction({ type: 'brush', areas: [] });
+    view.scope.timeout(() => { view.selection.suppressBrushClear = false; }, GUARD_MS);
+  };
+
   /** What the brush caught, latched; the other panels' brushes cleared.
    * @param {ChartView} view @param {ChartSlot} slot
    * @param {Array<{ seriesIndex: number, dataIndex: number }>} selected */
   const brushed = (view, slot, selected) => {
     const m = view._memo.model;
     if (!m || m.family !== 'individual') return;
-    // The other panels' brushes go; their clears are not the reader's.
-    const others = view.charts.filter((c) => c !== slot.chart);
-    if (others.length) {
-      view.selection.suppressBrushClear = true;
-      for (const other of others) other.dispatchAction({ type: 'brush', areas: [] });
-      view.scope.timeout(() => { view.selection.suppressBrushClear = false; }, GUARD_MS);
-    }
-    const panel = NS.model.panelOf(m, slot.facetVal);
-    const opt = slot.chart.getOption();
-    const caught = NS.model.individualBrush(m, view.settings, panel, (opt && opt.series) || [], selected);
-    const sel = NS.model.brushSelection(m, view.settings, panel, caught);
+    clearOthers(view, slot);
+    const sel = caughtSelection(view, slot, selected);
     if (!sel) return;
     // The rectangle drawn again after a redraw catches what it caught.
     const key = JSON.stringify(sel);
     if (key === JSON.stringify(view.selection.current)) return;
     slot.brushSel = key;
     view.selection.latch(sel, true);
+  };
+
+  /**
+   * The rectangle a brush area covers, in the slot's pixels. A lineX brush
+   * spans the grid's height.
+   * @param {ChartSlot} slot @param {any} area
+   * @returns {{ x: number, y: number, width: number, height: number } | null}
+   */
+  const areaRect = (slot, area) => {
+    const rg = area && area.range;
+    if (!Array.isArray(rg) || !rg.length) return null;
+    if (Array.isArray(rg[0])) {
+      const [[x0, x1], [y0, y1]] = rg;
+      return { x: Math.min(x0, x1), y: Math.min(y0, y1),
+               width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) };
+    }
+    /** @type {any} */
+    let grid = null;
+    try {
+      grid = slot.chart.getModel().getComponent('grid').coordinateSystem.getRect();
+    } catch (e) { grid = null; }
+    const top = grid ? grid.y : 0;
+    const height = grid ? grid.height : slot.chartDiv.clientHeight;
+    return { x: Math.min(rg[0], rg[1]), y: top, width: Math.abs(rg[1] - rg[0]), height };
+  };
+
+  /**
+   * A brush on a chart with a drill_target, on release: what it caught goes
+   * to the target once, the rectangle goes, and a trace of it fades, as on a
+   * clicked bar. ECharts dimmed the other points while the reader dragged.
+   * @param {ChartView} view @param {ChartSlot} slot @param {any} area
+   */
+  const drillBrush = (view, slot, area) => {
+    const selected = slot.brushCaught;
+    slot.brushCaught = null;
+    clearOthers(view, slot);
+    const sel = selected && selected.length ? caughtSelection(view, slot, selected) : null;
+    const rect = areaRect(slot, area);
+    slot.brushAreas = null;
+    slot.chart.dispatchAction({ type: 'brush', areas: [] });
+    if (!sel) return;
+    view.selection.drill(sel, () => { if (rect) view.selection.trace(slot, rect); });
   };
 
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
@@ -300,6 +357,11 @@
       const selected = (batch.selected || []).flatMap((/** @type {any} */ s) =>
         (s.dataIndex || []).map((/** @type {number} */ di) =>
           ({ seriesIndex: s.seriesIndex, dataIndex: di })));
+      // With a drill target the brush is sent once, when the drag ends.
+      if (NS.transientDrill(view.settings)) {
+        slot.brushCaught = selected;
+        return;
+      }
       // An empty selection clears only a selection a brush made: ECharts
       // also sends one when the cursor is armed on every draw, which would
       // drop a restored range or a point click.
@@ -317,6 +379,15 @@
         ...(a.brushType === 'rect' ? { yAxisIndex: 0 } : {})
       })) : null;
       if (!areas.length) view.selection.brushCleared();
+    });
+    // ECharts reports the last selection before the end of the drag; the
+    // timeout leaves room for one that comes after it.
+    chart.on('brushEnd', (/** @type {any} */ params) => {
+      if (NS.drillState(view.settings) === 'off' || !NS.transientDrill(view.settings)) return;
+      const areas = (params && params.areas) || [];
+      if (!areas.length) return;
+      const area = areas[areas.length - 1];
+      view.scope.timeout(() => drillBrush(view, slot, area), 0);
     });
   };
 

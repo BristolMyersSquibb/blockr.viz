@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9026
+# blockr.viz 0.3.0.9027
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -99,6 +99,22 @@ read.
 * Title slots resolve in the records and variables layouts as well:
   `{@rowname}`, `{label(@rowname)}`, `{@look}` and `{@by}` were empty
   there.
+* A scatter brush or point click on a chart with a `drill_target` is a
+  drill, as a click on a bar is: sent once, when the drag ends, with a trace
+  of the rectangle that fades and a "Drilled down to ..." receipt. While the
+  reader drags, the points outside the rectangle are dimmed. The chart no
+  longer keeps the brush as a selection, and clearing the rectangle no
+  longer takes the cohort back from the target. Before, every move of the
+  drag sent, the brush stayed latched with a "Filtered: ..." line, and its
+  clear button retracted the drill. A board saved with a selection on a chart that has a
+  `drill_target` restores without it: the chart's output is unfiltered.
+* A brush takes only the points inside the rectangle. Without a
+  `drill_target`, a chart with a drill column filters its output to the
+  brushed (or clicked) points, not to every row that shares their drill
+  value; the subject's points at other visits are no longer selected. A
+  drill target still receives the drill column's values of those points.
+* The status line's clear button is blockr.ui's quiet button with the word
+  "Clear", on charts and tables. On a chart it was an unstyled "×".
 * Unsetting a table's `drill_target` clears the selection at the old target
   once; it was cleared twice.
 * A board saved with a click on an aggregated old table keeps that click
