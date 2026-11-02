@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9017
+# blockr.viz 0.3.0.9018
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the

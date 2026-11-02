@@ -267,7 +267,10 @@ input.vz-table-search:focus {
   border-bottom: 0;
   padding-bottom: 7px;
 }
-.vz-table-structured .blockr-table tbody tr.vz-table-bold td {
+/* The second selector matches the stub rule's `:not(.vz-table-groups-table)`,
+   so a bold row's stub is bold too. */
+.vz-table-structured .blockr-table tbody tr.vz-table-bold td,
+.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody tr.vz-table-bold td.vz-table-stub {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
 .vz-table-structured .blockr-table tbody tr.vz-table-italic td {
