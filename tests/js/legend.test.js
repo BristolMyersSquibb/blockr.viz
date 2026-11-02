@@ -69,13 +69,13 @@ test('legend = "none" draws no band', () => {
   r.env.close();
 });
 
-test('the title shows for a labelled colour column only', () => {
+test('the title names the colour column: its label, else its name', () => {
   // ARM has a label in the fixture, AESEV has none.
   const labelled = draw({ chart_type: 'bar', ...AE, color: 'ARM' });
   assert.strictEqual(band(labelled).querySelector('.vz-chart-legend-title').textContent, 'Planned Arm');
   labelled.env.close();
   const plainCol = draw({ chart_type: 'bar', ...AE, color: 'AESEV' });
-  assert.strictEqual(band(plainCol).querySelector('.vz-chart-legend-title'), null);
+  assert.strictEqual(band(plainCol).querySelector('.vz-chart-legend-title').textContent, 'AESEV');
   plainCol.env.close();
 });
 

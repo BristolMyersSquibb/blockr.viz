@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9020
+# blockr.viz 0.3.0.9021
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -114,6 +114,9 @@ read.
 * Under a chart title, the sentence runs the full width of the block, below
   the download and gear icons, so an offer such as "+ Facet" stays at the
   end of its line, as before 0.3.0. It wrapped to a line of its own.
+* The chart legend names its colour column before the chips again when the
+  column has no label, by the column's name ("AETOXGR"), as before 0.3.0.
+  It showed no title then.
 
 ## Removed
 
@@ -269,8 +272,8 @@ goes.
   Names of scatter groups whose centres sit close are moved apart a line at
   a time.
   The legend is left-aligned, its swatch has the mark's shape (a line, a
-  dot or a square), and it has a title only when the colour column has a
-  label. `direct_labels = TRUE`, from earlier builds of 0.3.0, is read as
+  dot or a square), and its title names the colour column: its label, else
+  its name. `direct_labels = TRUE`, from earlier builds of 0.3.0, is read as
   `legend = "marks"`.
 * `format` (`"number"`, `"compact"`, `"percent"`) and `unit` print the values
   as the table block does: the ticks in the format, the unit once in the axis

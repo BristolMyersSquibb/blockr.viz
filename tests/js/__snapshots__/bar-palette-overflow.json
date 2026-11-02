@@ -35,7 +35,7 @@
   "subtitle": null,
   "caption": null,
   "legend": {
-   "title": null,
+   "title": "USUBJID",
    "chips": [
     {
      "name": "",

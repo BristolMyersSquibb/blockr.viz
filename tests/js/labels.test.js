@@ -273,13 +273,14 @@ test('the filter line names columns by label, the histogram bin by x\'s label', 
 const DRAWN = { type: 'bar', category: 'AETERM', orientation: 'horizontal', func: 'count', drill: 'auto' };
 const draw = (config, derived) => D.open({ ...DRAWN, ...config }, { data: ROWS, columns: COLUMNS, derived });
 
-test('drawn: the legend title is the colour column\'s label, none without one', () => {
+test('drawn: the legend title is the colour column\'s label, its name without one', () => {
   const c = draw({ color: 'AESEV' });
   const t = c.block.legend.el.querySelector('.vz-chart-legend-title');
   assert.strictEqual(t && t.textContent, 'Severity');
   c.close();
   const p = draw({ color: 'PLAIN' });
-  assert.strictEqual(p.block.legend.el.querySelector('.vz-chart-legend-title'), null);
+  const pt = p.block.legend.el.querySelector('.vz-chart-legend-title');
+  assert.strictEqual(pt && pt.textContent, 'PLAIN');
   p.close();
 });
 

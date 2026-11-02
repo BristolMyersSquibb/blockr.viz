@@ -149,11 +149,11 @@
       el.textContent = '';
       if (this._scope) this._scope.dispose();
       const scope = this._scope = this.view.scope.own(new V.Scope());
-      // The colour column's label before the chips: only a label that
-      // differs from the name, and not when a level already carries it.
+      // Which column the chips are levels of, before them: its label, else
+      // its name. Not when a level already reads the same.
       const meta = NS.axes.colMeta(this.view.columns, spec.col);
-      const title = meta && meta.label && meta.label !== meta.name ? meta.label : null;
-      if (title && !spec.items.some((it) => String(it.name) === title)) {
+      const title = String((meta && meta.label) || spec.col);
+      if (!spec.items.some((it) => String(it.name) === title)) {
         mk('span', 'vz-chart-legend-title', el).textContent = title;
       }
       for (const it of spec.items) {
