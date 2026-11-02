@@ -4,6 +4,7 @@
 html.js
 marks.js
 tooltip.js
+sort.js
 dom.js
 drill.js
 chrome.js

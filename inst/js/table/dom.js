@@ -20,6 +20,7 @@
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
   const H = V.table.html;
   const esc = V.util.esc;
+  const { sortKeys, withParents, treeSort } = V.table.sort;
 
   /** Above this many items only a window of them is in the DOM. */
   const VIRT_MIN = 400;
@@ -27,17 +28,6 @@
   const OVERSCAN = 40;
   /** Row height until a drawn row is measured. */
   const ROW_H = 30;
-
-  /**
-   * The first number in a display text: "1,234.5 kg" is 1234.5.
-   * @param {unknown} s
-   * @returns {number | null}
-   */
-  function parseNum(s) {
-    if (s == null) return null;
-    const m = String(s).match(/-?\d[\d,]*(\.\d+)?/);
-    return m ? parseFloat(m[0].replace(/,/g, '')) : null;
-  }
 
   /**
    * A row's text as the search reads it: every cell, lower case.
@@ -93,66 +83,6 @@
     return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
-  /**
-   * Sort keys of one column: numbers where both sides parse, else text.
-   * @param {TableCol} col
-   * @param {number} n
-   */
-  function sortKeys(col, n) {
-    /** @type {(number | null)[]} */
-    const num = new Array(n);
-    /** @type {string[]} */
-    const str = new Array(n);
-    for (let i = 0; i < n; i++) {
-      const k = col.key ? col.key[i] : col.disp[i];
-      const s = k == null ? '' : String(k).trim();
-      str[i] = s;
-      num[i] = col.key && typeof k === 'number' ? k : parseNum(s);
-    }
-    return { num, str };
-  }
-
-  /**
-   * The matching rows and the rows they sit under: an indented row's
-   * parents stay with it, so a match keeps its context.
-   * @param {number[]} view Rows in data order.
-   * @param {number[]} indent
-   */
-  function withParents(view, indent) {
-    const keep = new Set(view);
-    for (const i of view) {
-      let cur = indent[i];
-      for (let j = i - 1; j >= 0 && cur > 0; j--) {
-        if (indent[j] < cur) {
-          keep.add(j);
-          cur = indent[j];
-        }
-      }
-    }
-    return Array.from(keep).sort((a, b) => a - b);
-  }
-
-  /**
-   * Sort an indented list as a tree: siblings by `cmp`, each row followed
-   * by its own children, sorted the same way.
-   * @param {number[]} rows Rows in data order.
-   * @param {number[]} indent
-   * @param {(a: number, b: number) => number} cmp
-   * @returns {number[]}
-   */
-  function treeSort(rows, indent, cmp) {
-    if (rows.length < 2) return rows.slice();
-    const top = Math.min(...rows.map((i) => indent[i]));
-    /** @type {number[][]} */
-    const units = [];
-    for (const i of rows) {
-      if (indent[i] === top || !units.length) units.push([i]);
-      else units[units.length - 1].push(i);
-    }
-    units.sort((u, v) => cmp(u[0], v[0]));
-    return units.flatMap((u) => [u[0]].concat(treeSort(u.slice(1), indent, cmp)));
-  }
-
   class Grid {
     /**
      * @param {HTMLElement} box The scroll box the table goes in.
@@ -197,14 +127,16 @@
       let pending = false;
       scope.on(box, 'click', (e) => this._click(/** @type {MouseEvent} */ (e)));
       scope.on(box, 'keydown', (e) => this._key(/** @type {KeyboardEvent} */ (e)));
-      scope.on(box, 'scroll', () => {
-        if (pending) return;
+      // The box scrolls a table with a height limit, else the panel does: a
+      // capture listener on the document sees both.
+      scope.on(document, 'scroll', () => {
+        if (pending || this._items.length <= VIRT_MIN) return;
         pending = true;
         scope.frame(() => {
           pending = false;
           this._scrolled();
         });
-      }, { passive: true });
+      }, { capture: true, passive: true });
     }
 
     /**
@@ -442,6 +374,12 @@
       if (this.hooks.drawn) this.hooks.drawn();
     }
 
+    /** The part of the box in view, in px from its top. @returns {{ top: number, height: number }} */
+    _view() {
+      const b = this.box;
+      return this.hooks.view ? this.hooks.view() : { top: b.scrollTop, height: b.clientHeight || 600 };
+    }
+
     /** Draw the items around the scroll position, between two spacers. */
     _window() {
       const tbody = /** @type {HTMLTableElement} */ (this.table).tBodies[0];
@@ -450,8 +388,9 @@
       let start = 0;
       let end = n;
       if (n > VIRT_MIN && !this.flags.all) {
-        const vis = Math.max(1, Math.ceil((this.box.clientHeight || 600) / this.rowH));
-        start = Math.max(0, Math.floor(this.box.scrollTop / this.rowH) - OVERSCAN);
+        const v = this._view();
+        const vis = Math.max(1, Math.ceil(v.height / this.rowH));
+        start = Math.max(0, Math.floor(v.top / this.rowH) - OVERSCAN);
         end = Math.min(n, start + vis + 2 * OVERSCAN);
       }
       const ncol = /** @type {TableModel} */ (this.model).cols.length || 1;
@@ -479,8 +418,9 @@
     _scrolled() {
       const n = this._items.length;
       if (!this.table || n <= VIRT_MIN) return;
-      const first = Math.floor(this.box.scrollTop / this.rowH);
-      const last = first + Math.ceil(this.box.clientHeight / this.rowH);
+      const v = this._view();
+      const first = Math.floor(v.top / this.rowH);
+      const last = first + Math.ceil(v.height / this.rowH);
       const [s, e] = this.win;
       if ((first - s < OVERSCAN / 2 && s > 0) || (e - last < OVERSCAN / 2 && e < n)) {
         this._window();
@@ -596,5 +536,5 @@
     }
   }
 
-  Object.assign(V.table, { Grid, parseNum, rowText });
+  Object.assign(V.table, { Grid, rowText });
 })();

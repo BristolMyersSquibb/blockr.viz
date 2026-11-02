@@ -107,6 +107,7 @@ JS: core,inst/js/drilldown-theme-register.js,1300
 JS: gear,inst/js/core/gear/**.js,1300
 JS: chart,inst/js/chart/**.js,7700
 JS: table shared,inst/js/table/dom.js,1800
+JS: table shared,inst/js/table/sort.js,1800
 JS: table shared,inst/js/table/gear.js,1800
 JS: table shared,inst/js/table/html.js,1800
 JS: table shared,inst/js/table/drill.js,1800

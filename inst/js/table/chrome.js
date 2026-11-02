@@ -135,7 +135,7 @@
       const thead = /** @type {HTMLElement | null} */ (box.querySelector('table.blockr-table > thead'));
       const table = thead && thead.parentElement;
       if (!thead || !table) return;
-      if (box.scrollHeight > box.clientHeight + 1) {
+      if (this.boxScrolls()) {
         thead.style.transform = '';
         box.classList.toggle('scrolled', box.scrollTop > 0);
         return;
@@ -147,6 +147,27 @@
       const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
       thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
       box.classList.toggle('scrolled', y > 0);
+    }
+
+    /** Does the box scroll up and down itself (a height limit)? */
+    boxScrolls() {
+      const b = this.box;
+      return b.scrollTop > 0 || b.scrollHeight > b.clientHeight + 1;
+    }
+
+    /**
+     * The part of the box in view, in px from its top, for the row window
+     * (dom.js): the box's own scroll, or the part of the panel around it
+     * (or of the page) that the box covers. 0.2 windowed rows only inside
+     * the table block's own box; here the panel scrolls most tables.
+     * @returns {{ top: number, height: number }}
+     */
+    inView() {
+      const b = this.box;
+      if (this.boxScrolls()) return { top: b.scrollTop, height: b.clientHeight || 600 };
+      const sc = this.scroller();
+      const r = sc ? sc.getBoundingClientRect() : { top: 0, height: root.innerHeight || 0 };
+      return { top: Math.max(0, r.top - b.getBoundingClientRect().top), height: r.height || 600 };
     }
 
     /** @param {boolean} on A table with sections or keyed rows. */

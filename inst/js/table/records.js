@@ -54,6 +54,7 @@
       this.frame = frame;
       this.scope = scope;
       this.grid = new T.Grid(frame.box, scope);
+      this.grid.hooks.view = () => frame.inView();
       this.cardsHost = scope.node(document.createElement('div'));
       this.cardsHost.className = 'vz-table-cards';
       this.cardsHost.hidden = true;

@@ -289,6 +289,8 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** The part of the box in view (TableFrame.inView); else the box's scroll. */
+  view?(): { top: number; height: number };
   /** The rows and section headers the selection lights; a new model opens
    *  the folds that would hide them. */
   lit?(): { rows: Iterable<number>; sections: Iterable<number> };
@@ -394,6 +396,8 @@ interface TableFrame extends VizFrame {
   scroller(): Element | null;
   /** Keeps the header in view while the rows scroll. */
   followHeader(): void;
+  /** The part of the scroll box in view, in px from its top. */
+  inView(): { top: number; height: number };
   /** The panel's scroll from its last scroll event, or null. */
   scrollPlace(): { sc: Element; top: number } | null;
   /** The frame's height, from its ResizeObserver. */
@@ -435,6 +439,12 @@ interface VizTableNamespace {
   layouts: Record<string, TableLayoutClass>;
   Grid: new (box: HTMLElement, scope: VizScope, hooks?: TableGridHooks) => TableGrid;
   parseNum(s: unknown): number | null;
+  /** Sorting and nesting helpers of the Grid (sort.js). */
+  sort: {
+    sortKeys(col: TableCol, n: number): { num: (number | null)[]; str: string[] };
+    withParents(view: number[], indent: number[]): number[];
+    treeSort(rows: number[], indent: number[], cmp: (a: number, b: number) => number): number[];
+  };
   rowText(model: TableModel, i: number): string;
   Frame: new (el: HTMLElement, scope: VizScope) => TableFrame;
   View: VizViewClass;

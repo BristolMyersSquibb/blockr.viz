@@ -118,3 +118,84 @@ test_that("a table's header stays at the top while its rows scroll", {
   expect_at_top(boxed, 2L, "structured in a 300px box")
   expect_false(boxed$moved)
 })
+
+# Above 400 items (dom.js VIRT_MIN) the table draws a window of rows around
+# what is in view and a spacer for the rest. With the panel scrolling the
+# table rather than the table's own box, the window followed the box's
+# scroll, which stays at 0: the rows stopped after the first window and the
+# rest of the table was blank. Here the table is scrolled to its end, on
+# first draw, after a recompose from a short table, and after folding and
+# unfolding every group: rows fill the view, nothing blank follows them and
+# the box is as tall as the table.
+window_probe_js <- "
+window.windowProbe = async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const panel = document.querySelector('.panel-box');
+  const t = panel.querySelector('table.blockr-table');
+  const box = t.closest('.blockr-table-wrapper');
+  const measure = () => {
+    const pr = panel.getBoundingClientRect();
+    const body = [...t.tBodies[0].rows];
+    const inView = body.filter((r) => {
+      if (r.classList.contains('vz-table-vspacer')) return false;
+      const b = r.getBoundingClientRect();
+      return b.bottom > pr.top && b.top < pr.bottom;
+    }).length;
+    const last = body[body.length - 1];
+    return {
+      inView: inView,
+      blank: last.classList.contains('vz-table-vspacer') ? last.offsetHeight : 0,
+      extra: box.scrollHeight - t.offsetHeight
+    };
+  };
+  // Scroll events can come a few frames late: wait for the rows, up to 3 s.
+  const toEnd = () => { panel.scrollTop = panel.scrollHeight; };
+  toEnd();
+  let m = measure();
+  for (let i = 0; i < 30 && (m.blank > 0 || m.inView < 10); i++) {
+    await wait(100);
+    toEnd();
+    m = measure();
+  }
+  return m;
+};
+"
+
+test_that("a long table has rows to its end in a scrolling panel", {
+  skip_without_browser()
+  skip_if_not_installed("pkgload")
+  Sys.setenv(NOT_CRAN = "true")
+  withr::local_envvar(BLOCKR_VIZ_SRC = normalizePath(test_path("..", "..")))
+  configure_chromote()
+  app <- shinytest2::AppDriver$new(
+    test_path("apps", "table-row-window"),
+    name = "table-row-window",
+    width = 1000, height = 800,
+    load_timeout = 120 * 1000, timeout = 30 * 1000
+  )
+  withr::defer(app$stop())
+  # The window draws part of the rows, so these count what it drew.
+  rows <- "document.querySelectorAll('.panel-box tr.vz-table-row').length"
+  sections <- "document.querySelectorAll('.panel-box tr.vz-table-section-header').length"
+  app$wait_for_js(paste(rows, "> 40"))
+  app$run_js(window_probe_js)
+  expect_full <- function(label) {
+    p <- app$get_js("window.windowProbe()")
+    expect_gte(p$inView, 10, label = label)
+    expect_equal(p$blank, 0, label = label)
+    expect_equal(p$extra, 0, label = label)
+  }
+
+  expect_full("first draw")
+
+  app$click("small")
+  app$wait_for_js(paste(rows, "=== 40"))
+  app$click("big")
+  app$wait_for_js(paste(rows, "> 40"))
+  expect_full("recompose")
+
+  app$run_js("document.querySelector('.panel-box .vz-table-foldall').click()")
+  app$wait_for_js(paste(sections, "=== 50 &&", rows, "=== 0"))
+  app$run_js("document.querySelector('.panel-box .vz-table-foldall').click()")
+  expect_full("folded and unfolded")
+})
