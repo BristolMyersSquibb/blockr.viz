@@ -66,6 +66,8 @@ interface TableCol {
   mark?: TableMark | null;
   /** Groups: the column's scale, printed once under its header. */
   axis?: TableAxis | null;
+  /** Groups: a count, whose zero label prints muted. */
+  zero?: boolean;
   /** Groups: a custom summary that failed; its cells hold the error. */
   failed?: boolean;
 }

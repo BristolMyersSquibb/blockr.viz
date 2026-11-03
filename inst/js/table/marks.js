@@ -265,17 +265,19 @@
    * @param {TableMarkLane | TableMarkPair} c
    * @param {number} i
    * @param {boolean} labels
+   * @param {boolean} [zero] The column mutes a zero (TableCol.zero).
    */
-  function multi(c, i, labels) {
+  function multi(c, i, labels, zero) {
     let s = '<div class="vz-table-groups-multi">';
     (c.lanes || []).forEach((g, j) => {
       if (!drawn(c, g, i)) return;
       const inner = c.kind === 'pair' ? pair(/** @type {TablePairGeom} */ (g), i, c.reference)
         : c.kind === 'box' ? box(g, i) : pointrange(g, i);
       const lab = labels && g.disp && c.valueWidth != null;
+      const d = lab ? at(g.disp, i) : null;
       s += '<div class="vz-table-groups-lv' + (lab ? ' vz-table-groups-barwrap' : '') +
         '" style="--vz-table-groups-fill:' + col((c.fills || [])[j]) + '">' + inner +
-        (lab ? barval(esc(at(g.disp, i)), c.valueWidth) : '') + '</div>';
+        (lab ? barval(esc(d), c.valueWidth, !!zero && d != null && Number(d) === 0) : '') + '</div>';
     });
     return s + '</div>';
   }
@@ -286,16 +288,17 @@
    * @param {TableMark | null | undefined} c
    * @param {number} i
    * @param {boolean} labels
+   * @param {boolean} [zero] The column mutes a zero (TableCol.zero).
    */
-  function glyph(c, i, labels) {
+  function glyph(c, i, labels, zero) {
     if (!c) return '';
     switch (c.kind) {
       case 'bar': return track(c.width[i], c.fill, !!(c.sub && c.sub[i]));
       case 'barsplit': return split(c, i, labels);
       case 'bardiv': return diverging(c.width[i], !!c.positive[i]);
-      case 'box': return c.multi ? multi(c, i, labels) : box(c, i);
-      case 'pointrange': return c.multi ? multi(c, i, labels) : pointrange(c, i);
-      case 'pair': return c.multi ? multi(c, i, labels) : pair(/** @type {TablePairGeom} */ (c), i, c.reference);
+      case 'box': return c.multi ? multi(c, i, labels, zero) : box(c, i);
+      case 'pointrange': return c.multi ? multi(c, i, labels, zero) : pointrange(c, i);
+      case 'pair': return c.multi ? multi(c, i, labels, zero) : pair(/** @type {TablePairGeom} */ (c), i, c.reference);
       case 'interval': return interval(c, i);
       case 'sparkline': return sparkline(c, i);
       default: return '';
@@ -335,18 +338,18 @@
       return '<td class="vz-table-groups-bar-col' + (m.large ? ' vz-table-groups-wide' : '') + '">' +
         glyph(m, i, o.labels) + '</td>';
     }
-    const g = glyph(m, i, o.labels);
+    const g = glyph(m, i, o.labels, !!c.zero);
     // A grouped split and a multi lane label each level; a stacked split
     // keeps its one total beside the bar.
     const own = (m.kind === 'barsplit' && m.mode === 'grouped') || (/** @type {any} */ (m).multi);
     // Every cell of a labelled column keeps the value slot, so all its tracks
-    // end at the same x. A missing value leaves the slot blank; a zero prints
-    // muted.
+    // end at the same x, whatever the mark. A missing value leaves the slot
+    // blank; a zero count prints muted.
     const slot = o.labels && !own && 'valueWidth' in m && m.valueWidth != null;
     const has = c.disp[i] != null;
     return '<td class="vz-table-groups-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (slot
       ? '<div class="vz-table-groups-barwrap">' + g + barval(has ? value(c, i) : '',
-        /** @type {any} */ (m).valueWidth, has && at(c.key, i) === 0) + '</div>'
+        /** @type {any} */ (m).valueWidth, has && !!c.zero && at(c.key, i) === 0) + '</div>'
       : g) + '</td>';
   }
 

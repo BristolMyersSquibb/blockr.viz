@@ -68,6 +68,9 @@ groups_plan_base <- function(s, cp, sid, label, sub_label, den) {
                # a zero count is an empty column (groups_drop_empty_facets)
                zero_empty = identical(s$type, "simple") &&
                  groups_has_pct(chr_state(s$func) %||% "count"),
+               # a zero count or sum prints its label muted
+               zero_muted = identical(s$type, "simple") &&
+                 groups_additive(chr_state(s$func) %||% "count"),
                # Values in the data's unit, not a count: `unit` heads it.
                unit_ok = identical(s$type, "simple") &&
                  !groups_has_pct(chr_state(s$func) %||% "count"))

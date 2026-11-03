@@ -36,6 +36,7 @@ table_groups_col <- function(c, text, p, prep, pick, axis) {
     num = identical(c$kind, "num") && !isTRUE(c$text),
     disp = table_groups_text(text),
     key = c$v,
+    zero = if (isTRUE(p$zero_muted)) TRUE,
     pct = if (!is.null(pct)) groups_arr(pct),
     bg = if (identical(c$kind, "tile")) c$bg,
     fg = if (identical(c$kind, "tile")) c$fg,

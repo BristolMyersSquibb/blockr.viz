@@ -108,7 +108,8 @@ test('a bar: the track, its fill and the value with its percentage', () => {
 
 test('a bar column keeps its value slot in every cell: blank for NA, muted for 0', () => {
   const m = groups();
-  Object.assign(m.cols[1], { disp: ['10', '0', null], key: [10, 0, null], pct: ['(17%)', '(0%)', null] });
+  Object.assign(m.cols[1], { disp: ['10', '0', null], key: [10, 0, null], pct: ['(17%)', '(0%)', null],
+                             zero: true });
   const t = mount(payload({ data: m, config: G }));
   const val = (r) => t.cell(r, 1).querySelector('.vz-table-groups-barwrap > .vz-table-groups-barval');
   assert.equal(val(1).textContent, '0 (0%)');
@@ -117,6 +118,43 @@ test('a bar column keeps its value slot in every cell: blank for NA, muted for 0
   assert.equal(val(2).textContent, '');
   assert.equal(val(2).getAttribute('style'), 'width:4ch');
   assert.ok(!val(2).classList.contains('is-zero'));
+});
+
+test('every labelled mark keeps its slot for NA; only a count column mutes its zero', () => {
+  const m = groups();
+  // Lollipop (a count's dot), box, pointrange, pair, diverging bar, stacked
+  // split and sparkline, each with a value, a zero and a missing value.
+  const kinds = { 2: 'barsplit', 3: 'bardiv', 4: 'box', 5: 'pointrange', 6: 'pair', 8: 'sparkline' };
+  for (const k of Object.keys(kinds)) {
+    Object.assign(m.cols[k], { disp: ['10', '0', null], key: [10, 0, null] });
+    m.cols[k].mark.valueWidth = 3;
+  }
+  const slot = (t, r, k) => t.cell(r, k).querySelector(':scope > .vz-table-groups-barwrap > .vz-table-groups-barval');
+  let t = mount(payload({ data: m, config: G }));
+  for (const k of Object.keys(kinds)) {
+    assert.equal(slot(t, 2, +k).textContent, '', kinds[k]);
+    assert.equal(slot(t, 2, +k).getAttribute('style'), 'width:3ch', kinds[k]);
+    assert.ok(!slot(t, 1, +k).classList.contains('is-zero'), kinds[k]);
+  }
+  for (const k of Object.keys(kinds)) m.cols[k].zero = true;
+  t.render({ data: m, config: G });
+  for (const k of Object.keys(kinds)) {
+    assert.ok(slot(t, 1, +k).classList.contains('is-zero'), kinds[k]);
+    assert.ok(!slot(t, 0, +k).classList.contains('is-zero'), kinds[k]);
+  }
+});
+
+test('a colour split of dots mutes a zero level in a count column', () => {
+  const m = groups();
+  const g = (center, disp) => ({ center, rangeLeft: [null, null, null], rangeWidth: [null, null, null],
+                                 tip: ['a', 'b', 'c'], disp });
+  m.cols[5].mark = { kind: 'pointrange', multi: true, levels: ['F', 'M'], fills: ['#f00', '#00f'],
+                     lanes: [g([40, 0, 30], ['4', '0', '3']), g([60, 50, 0], ['6', '5', '0'])], valueWidth: 2 };
+  m.cols[5].zero = true;
+  const t = mount(payload({ data: m, config: G }));
+  const vals = (r) => Array.from(t.cell(r, 5).querySelectorAll('.vz-table-groups-barval'));
+  assert.deepEqual(vals(1).map((v) => v.classList.contains('is-zero')), [true, false]);
+  assert.deepEqual(vals(0).map((v) => v.classList.contains('is-zero')), [false, false]);
 });
 
 test('values off: the marks draw without their numbers', () => {
