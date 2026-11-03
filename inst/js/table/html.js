@@ -161,6 +161,9 @@
         !shut + '">' + CHEV + '</button>'
       : '';
     const text = d == null ? '&mdash;' : esc(d);
+    // A folded groups heading is followed by the number of rows it hides.
+    const nk = span && shut && m.rows && m.rows.count ? m.rows.count[i] : null;
+    const count = nk == null ? '' : '<span class="vz-table-heading-count">' + esc(String(nk)) + '</span>';
     // A heading across the row: its text adds nothing to the table's width
     // and ends in an ellipsis only where the table ends.
     return '<td class="vz-table-stub' + (cls ? ' ' + cls : '') + (st.toggle[i] ? ' blockr-has-toggle' : '') +
@@ -168,7 +171,7 @@
       (span ? ' colspan="' + span + '"' : '') +
       (style.length ? ' style="' + esc(style.join(';')) + '"' : '') + '>' + btn +
       (span ? '<span class="vz-table-heading-text"' + (d == null ? '' : ' title="' + esc(d) + '"') +
-        '>' + text + '</span>' : text) + '</td>';
+        '>' + text + count + '</span>' : text) + '</td>';
   }
 
   /**

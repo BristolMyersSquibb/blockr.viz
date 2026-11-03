@@ -84,8 +84,10 @@ test_that("a nested table has levels, parent rows and parent labels", {
   expect_true(any(as.integer(cells$level) > 0L))
   expect_true(any(as.logical(cells$parent_row)))
   expect_true("SOC A" %in% as.character(cells$parent_key))
-  # A parent row is a heading by default: its name and its rows.
-  expect_true(any(grepl("^SOC A \\(N = [0-9]+\\)$", cells$label)))
+  # A parent row is a heading by default: its bare name, and the number of
+  # its rows beside it.
+  expect_true("SOC A" %in% cells$label)
+  expect_true(all(cells$head_count[cells$parent_row] > 0L))
   # The view indents the child rows and marks the parent rows strong.
   rows <- table_groups_to_model(m)$rows
   expect_identical(as.integer(rows$indent), as.integer(cells$level))

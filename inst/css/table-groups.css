@@ -873,6 +873,13 @@
   max-width: none;
 }
 
+/* The number of rows a heading holds, after its name. */
+.vz-table-groups-table .vz-table-heading-count {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--blockr-color-text-muted, #9ca3af);
+}
+
 /* A column whose custom function failed: dashes, grey. The error itself is
    the block's (blockr conditions). */
 .vz-table-groups-table td.vz-table-groups-txt.is-failed {

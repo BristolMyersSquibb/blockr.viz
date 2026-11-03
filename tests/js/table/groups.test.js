@@ -374,6 +374,23 @@ test('a parent with no values is one cell across the row', () => {
   assert.equal(parent[0].querySelector('.vz-table-heading-text').textContent, 'Cardiac');
 });
 
+test('a folded heading shows the number of rows it hides after its name', () => {
+  const m = nested();
+  m.cols[1].disp = [null, '2', '3', null, '4'];
+  m.cols[1].mark = null;
+  m.rows.count = [2, null, null, 1, null];
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const counts = () => t.$$('tbody .vz-table-heading-count').map((c) => c.textContent);
+  // Open groups list their rows; no count.
+  assert.deepEqual(counts(), []);
+  t.click(t.$('tbody tr[data-i="0"] .vz-table-indent-btn'));
+  assert.deepEqual(counts(), ['2']);
+  const head = t.$('tbody tr[data-i="0"]');
+  assert.equal(head.querySelector('.vz-table-heading-text').getAttribute('title'), 'Cardiac');
+  t.click(t.$('tbody tr[data-i="0"] .vz-table-indent-btn'));
+  assert.deepEqual(counts(), []);
+});
+
 test('the row window counts every row as one line', () => {
   // 30 parents of 20 terms each: 630 rows.
   const n = 30;

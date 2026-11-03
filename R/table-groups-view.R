@@ -119,13 +119,15 @@ table_groups_spanners <- function(prep, fs, pick) {
 }
 
 # Per-row extras: a nested table indents child rows and marks parents strong;
-# with the drill on every row claims its path.
+# a heading carries the number of rows under it, shown while it is folded; with the drill on every row
+# claims its path.
 table_groups_rows <- function(cells, pick) {
   nested <- isTRUE(cells$nested)
   parent <- !is.na(cells$parent_row) & cells$parent_row
   out <- table_groups_compact(list(
     indent = if (nested) as.integer(cells$level),
     strong = if (nested) parent,
+    count = cells$head_count,
     keys = if (pick) table_groups_row_keys(cells, parent)
   ))
   if (length(out)) out

@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9031
+# blockr.viz 0.3.0.9032
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -66,11 +66,11 @@ read.
   widen or wrap in the first column. The Excel, Word and PowerPoint
   downloads merge these rows and the section headers across the table.
 * In the groups layout, the outer rows of a nested table (two `by`
-  columns) show the group's name and its number of rows ("Placebo
-  (N = 86)") across the row, with the groups open, and no summaries. The
-  new `group_rows` setting (gear: Look, "Group rows") draws them with
-  `"summary"`: every summary over the group's rows, on the group's own
-  line like any other row. A summary with `func = "identity"` never draws
+  columns) show the group's name across the row, with the groups open,
+  and no summaries. A folded group adds the number of rows it hides in
+  grey ("Cardiac disorders 2"). The new `group_rows` setting (gear: Look,
+  "Group rows") draws them with `"summary"`: every summary over the
+  group's rows, on the group's own line like any other row. A summary with `func = "identity"` never draws
   on an outer row, where it showed the first inner row's value. Boards
   saved before 0.3.0.9000 with a nested table keep `"summary"`. The
   downloads follow the setting.

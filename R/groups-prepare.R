@@ -136,13 +136,12 @@ groups_prepare_summaries <- function(data, by, summaries,
   if (!is.null(summaries$err)) return(bad(summaries$err))
 
   fi <- groups_facet_info(summaries, data)
-  # The outer rows of a nested table are headings (name and N, no summaries)
-  # unless `group_rows = "summary"`. A matrix's outer rows are headings
-  # already (groups_tile_paint()) and keep their bare name.
+  # The outer rows of a nested table are headings (name and row count, no
+  # summaries) unless `group_rows = "summary"`. A matrix's outer rows are
+  # headings already (groups_tile_paint()) and keep their bare name.
   heads <- !is.null(g$parent) &&
     !identical(chr_state(group_rows) %||% "name", "summary")
-  sk <- groups_prep_skeleton(data, keys, g$group, g$parent,
-                             parent_n = heads && !isTRUE(levels_outer))
+  sk <- groups_prep_skeleton(data, keys, g$group, g$parent)
   if (!is.null(sk$err)) return(bad(sk$err))
 
   build <- list(
@@ -423,7 +422,7 @@ groups_facet_info <- function(summaries, data) {
 #' sort order and keys.
 #' @return `list(leaf, par_rows)` or `list(err =)`.
 #' @noRd
-groups_prep_skeleton <- function(data, keys, group, parent, parent_n = FALSE) {
+groups_prep_skeleton <- function(data, keys, group, parent) {
   # A missing grouping value (a population join appends one for a subject with
   # no record) is not a group: it counts toward N and draws no row. A blank
   # string is a value.
@@ -444,19 +443,16 @@ groups_prep_skeleton <- function(data, keys, group, parent, parent_n = FALSE) {
   leaf$.ord <- groups_data_ord(data[[group]], leaf$.label)
   par_rows <- NULL
   if (!is.null(parent)) {
-    par_rows <- groups_parent_skeleton(data, skel, parent, parent_n)
+    par_rows <- groups_parent_skeleton(data, skel, parent)
   }
   list(leaf = leaf, par_rows = par_rows)
 }
 
-# Parent rows: one per level of the outer column, with N (its rows) in the
-# label when the row is a heading.
-groups_parent_skeleton <- function(data, skel, parent, show_parent_n) {
+# Parent rows: one per level of the outer column, labelled by the bare level.
+# A heading shows the number of its rows after the name (cells_head_count()).
+groups_parent_skeleton <- function(data, skel, parent) {
   pv <- groups_levels(data[[parent]])
-  parent_n <- tabulate(match(as.character(skel[[parent]]), pv),
-                       nbins = length(pv))
-  pl <- if (show_parent_n) paste0(pv, " (N = ", parent_n, ")") else pv
-  par_rows <- data.frame(.label = pl, .parent = NA_character_,
+  par_rows <- data.frame(.label = pv, .parent = NA_character_,
                          .parent_key = as.character(pv),
                          stringsAsFactors = FALSE)
   par_rows[[parent]] <- pv

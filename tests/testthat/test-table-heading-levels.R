@@ -110,14 +110,15 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
     app$get_js(sprintf("window.headProbe('%s')", view), timeout = 60 * 1000)
   }
 
-  # Groups by default: the parent's name and N across the row, one cell.
+  # Groups by default: the parent's bare name across the row, one cell; the
+  # row count shows only while a group is folded.
   g <- probe("grh")
   kinds <- vapply(g$rows, `[[`, "", "kind")
   expect_identical(kinds[1:3], c("heading", "leaf", "leaf"))
   h <- g$rows[[1]]
   expect_identical(h$colspan, g$ncol)
   expect_identical(h$cells, 1L)
-  expect_match(h$text, " \\(N = [0-9]+\\)$")
+  expect_match(h$text, "[a-z]$")
   expect_level(h, "600", "groups parent")
   expect_identical(h$size, "14px")
   expect_identical(h$lines, 1L)

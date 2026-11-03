@@ -27,11 +27,11 @@ gr_summaries <- function() {
 
 gr_parents <- function(p) p$rows[p$rows$.is_parent %in% TRUE, , drop = FALSE]
 
-test_that("the outer rows are headings by default: name and N, no summaries", {
+test_that("the outer rows are headings by default: bare name, no summaries", {
   p <- groups_prepare(gr_data(), by = c("ARM", "USUBJID"),
                       summaries = gr_summaries())
   par <- gr_parents(p)
-  expect_setequal(par$.label, c("Placebo (N = 2)", "Active (N = 2)"))
+  expect_setequal(par$.label, c("Placebo", "Active"))
   expect_true(all(is.na(par$.s1_v)) && all(is.na(par$.s2_v)))
   expect_true(all(is.na(par$.s3_bc)))
   expect_identical(par$.s4_nseg, c(0L, 0L))
@@ -65,7 +65,7 @@ test_that("the groups still sort by their values when the rows are headings", {
   lab <- function(gr) {
     p <- groups_prepare(gr_data(), by = c("ARM", "USUBJID"), summaries = S,
                         group_rows = gr)
-    sub(" \\(N = .*", "", gr_parents(p)$.label)
+    gr_parents(p)$.label
   }
   expect_identical(lab("name"), lab("summary"))
   expect_identical(lab("name"), c("Active", "Placebo"))

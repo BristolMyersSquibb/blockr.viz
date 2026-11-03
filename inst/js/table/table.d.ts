@@ -186,6 +186,9 @@ interface TableRows {
   tint?: (string | null)[] | null;
   /** Rows that head others and have no values: one cell across the row. */
   span?: boolean[] | null;
+  /** Groups: how many rows a heading holds, shown while it is folded;
+   *  `null` on other rows. */
+  count?: (number | null)[] | null;
 }
 
 /** One column of cards: a card per row. */

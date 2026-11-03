@@ -37,6 +37,7 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     ),
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
+    head_count = cells_head_count(rows, prep, cfg),
     pick = !is.null(drill),
     # Columns a row click claims, outer to inner (R/table-drill.R).
     path = c(chr_state(prep$parent), chr_state(prep$group)),
@@ -44,6 +45,23 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     text = text,
     fold = cells_fold_text(prep)
   )
+}
+
+# How many rows each heading holds: the rows listed under it, after the top-N
+# cut and any filter upstream. The browser shows it while the heading is
+# folded. Only outer rows that are headings (no
+# summaries, not a compact matrix) carry one; every other row is NA. `NULL`
+# when no row is such a heading.
+cells_head_count <- function(rows, prep, cfg) {
+  if (!isTRUE(prep$parent_heads) || isTRUE(cfg$compact) || !nrow(rows)) {
+    return(NULL)
+  }
+  par <- rows$.is_parent %in% TRUE
+  grp <- cumsum(par)
+  kids <- tabulate(grp[!par & grp > 0L], nbins = sum(par))
+  out <- rep(NA_integer_, nrow(rows))
+  out[par] <- kids
+  out
 }
 
 # A column's text per row: a number or text is its own, a mark its value

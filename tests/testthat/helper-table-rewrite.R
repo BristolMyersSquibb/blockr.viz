@@ -651,26 +651,7 @@ tg_rw_heading_merges <- function(step) {
   })
 }
 
-# Row 53: the outer rows of a nested table are headings by default, their
-# name with its N, where the reference printed the name alone. Only that
-# suffix is accepted, and only while the state says "name".
-tg_rw_group_rows_n <- function(want, got) {
-  for (i in seq_along(want$steps)) {
-    w <- want$steps[[i]]$browser$labels
-    g <- got$steps[[i]]$browser$labels
-    if (is.null(w) || length(w) != length(g) ||
-          identical(got$steps[[i]]$state$group_rows, "summary")) {
-      next
-    }
-    if (identical(sub(" \\(N = [0-9]+\\)$", "", g), w)) {
-      want$steps[[i]]$browser$labels <- g
-    }
-  }
-  want
-}
-
 tg_rw_apply_known <- function(want, got, nm, sc) {
-  want <- tg_rw_group_rows_n(want, got)
   k <- tg_rw_known[[nm]]
   if (is.null(k)) {
     return(want)

@@ -298,7 +298,7 @@ test_that("swimlane parent rows are section headers by default", {
   seg_col <- prep$plan[[1L]]$segs
   parent <- prep$rows[prep$rows$.is_parent, , drop = FALSE]
   child <- prep$rows[!prep$rows$.is_parent, , drop = FALSE]
-  expect_identical(parent$.label, c("Active (N = 9)", "Placebo (N = 10)"))
+  expect_identical(parent$.label, c("Active", "Placebo"))
   expect_identical(parent$.parent_key, c("Active", "Placebo"))
   expect_equal(nrow(child), 19L)
   expect_true(all(lengths(parent[[seg_col]]) == 0L))
