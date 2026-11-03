@@ -12,6 +12,7 @@ new_chart_block <- function(
     y = NULL,
     color = NULL,
     facet = NULL,
+    facet_row = NULL,
     series = NULL,
     label = NULL,
     orientation = NULL,

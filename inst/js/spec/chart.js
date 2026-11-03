@@ -151,6 +151,19 @@
       "slot": true,
       "ctrl": true
     },
+    "facet_row": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "gear": {
+        "group": "Add mapping",
+        "control": "column",
+        "label": "Facet rows"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "series": {
       "type": {
         "name": "column"
@@ -922,8 +935,7 @@
         "group": "Look",
         "control": "select",
         "label": "Panel scales",
-        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"],
-        "when": "facet"
+        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"]
       },
       "slot": true,
       "ctrl": true

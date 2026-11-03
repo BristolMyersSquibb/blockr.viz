@@ -172,12 +172,17 @@ record_computed <- function(x) {
 # A recording as the rewrite is compared with it: the reference's browser
 # view in computed terms, its saved selections in the kit's shape, and the
 # accepted behaviour changes the scenario `sc` runs into.
+# Arguments added after the recordings were made, unset in every recorded
+# state.
+record_rw_new_args <- c("facet_row")
+
 record_rw_expected <- function(rec, sc) {
   sel <- function(st) {
     if (!is.null(st$selection)) {
       st["selection"] <- list(legacy_chart_selection(st)$selection)
     }
     st <- legacy_values("chart", st, NULL)
+    for (k in setdiff(record_rw_new_args, names(st))) st[k] <- list(NULL)
     st[sort(names(st))]
   }
   rec$warnings <- record_rw_warnings(rec$warnings)

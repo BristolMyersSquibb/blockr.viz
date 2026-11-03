@@ -43,7 +43,8 @@
    *                  period?: string | null },
    *             y: { col: string, type: string, cats: string[] | null },
    *             seriesCol: string | null, color: string | null, splitCol: string | null,
-   *             facet: string | null, levels: string[], levelColors: string[],
+   *             facet: string | null, grid: { row: string, col: string | null } | null,
+   *             levels: string[], levelColors: string[],
    *             palette: string[], colorScale: any, seriesCount: number,
    *             lineOpacity: number, symbol: string, capMessage: string | null,
    *             crowd: boolean, logX: boolean, logY: boolean, logDropped: number,
@@ -153,7 +154,7 @@
       isLine, isBand,
       x: { col: x, type: 'value', cats: null, order: null },
       y: { col: y, type: 'value', cats: null },
-      seriesCol, color, splitCol, facet, levels: [], levelColors: [],
+      seriesCol, color, splitCol, facet, grid: cfg.facet_grid || null, levels: [], levelColors: [],
       palette: NS.paletteOf(derived), colorScale: NS.scaleFor(derived, color),
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       logX: false, logY: false, logDropped: 0,
@@ -357,8 +358,7 @@
     /** @type {Record<string, any>} */
     const keys = {};
     if (m.splitCol && level != null) keys[m.splitCol] = String(level);
-    if (m.facet && facetVal != null && facetVal !== '__all__') keys[m.facet] = facetVal;
-    return keys;
+    return model.facetKeys(keys, m.facet, m.grid, facetVal);
   };
 
   /** The panel a facet value names. @param {IndividualModel} m @param {any} facetVal */

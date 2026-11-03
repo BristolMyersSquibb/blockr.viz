@@ -36,7 +36,8 @@ chart_normalize <- function(state, prev = NULL) {
   }
   state <- chart_pair_intervals(state)
   drop_selection(state, prev, c("type", "category", "value", "x", "y",
-                                "color", "facet", "series", "xend", "drill"))
+                                "color", "facet", "facet_row", "series", "xend",
+                                "drill"))
 }
 
 chart_pair_intervals <- function(state) {

@@ -422,7 +422,7 @@
     const keys = {};
     if (group != null) keys[cfg.category] = group;
     if (cfg.color && level != null) keys[cfg.color] = level;
-    if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
+    model.facetKeys(keys, cfg.facet, cfg.facet_grid, facetVal);
     return keys;
   };
 

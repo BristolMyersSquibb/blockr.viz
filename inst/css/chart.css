@@ -35,6 +35,24 @@
   margin-right: -10px;
 }
 .vz-chart-grid.vz-chart-grid--single { display: block; }
+/* A grid (facet_row): column levels on top, row levels on the right. */
+.vz-chart-grid.vz-chart-grid--matrix { gap: 8px 12px; }
+.vz-chart-strip {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-muted, #6b7280);
+  letter-spacing: 0.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vz-chart-strip--col { text-align: center; text-transform: uppercase; }
+.vz-chart-strip--row {
+  writing-mode: vertical-rl;
+  align-self: center;
+  max-height: 100%;
+  padding-right: 8px;
+}
 /* A facet strip is a section title centred over its panel: no card around the
    panel, no band behind the name. */
 .vz-chart-facet-label {

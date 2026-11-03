@@ -30,6 +30,45 @@ chart_args_cols <- function(args, data) {
             names(data))
 }
 
+# --- facet grid ------------------------------------------------------------
+
+# With `facet_row` set the panels form a grid: `facet_row` levels down,
+# `facet` levels across. Each panel is keyed by one column holding both
+# levels, joined as the browser joins them (gridKey() in
+# inst/js/chart/model-common.js), a missing level as "". The band and the
+# smoother split on that column, so their series line up with the panels.
+CHART_GRID_COL <- ".facet_grid"
+CHART_GRID_SEP <- "\u001f"
+
+# list(row, col) of the grid, `col` NULL for one column of panels; NULL when
+# `facet_row` is unset or has no values.
+chart_grid <- function(state, data) {
+  if (!is.data.frame(data)) return(NULL)
+  row <- chart_split_in(data, state[["facet_row"]])
+  if (is.null(row)) return(NULL)
+  list(row = row, col = chart_split_in(data, state[["facet"]]))
+}
+
+# The column the panels split on: the grid key, else `facet`.
+chart_facet_by <- function(state, data) {
+  if (!is.null(chart_grid(state, data))) CHART_GRID_COL
+  else chart_split_in(data, state$facet)
+}
+
+# `data` with the grid key column, when there is a grid.
+chart_grid_data <- function(state, data) {
+  g <- chart_grid(state, data)
+  if (is.null(g)) return(data)
+  lv <- function(col) {
+    if (is.null(col)) return("")
+    x <- as.character(data[[col]])
+    x[is.na(x)] <- ""
+    x
+  }
+  data[[CHART_GRID_COL]] <- paste0(lv(g$row), CHART_GRID_SEP, lv(g$col))
+  data
+}
+
 # --- band ------------------------------------------------------------------
 
 chart_band_args <- function(state, data) {
@@ -40,7 +79,7 @@ chart_band_args <- function(state, data) {
     x_col = state$x, y_col = state$y,
     color_by = chart_split_in(data, state$color),
     series_by = chart_split_in(data, state$series),
-    facet_by = chart_split_in(data, state$facet),
+    facet_by = chart_facet_by(state, data),
     summary = state$summary %||% "median_q1_q3",
     whiskers = state$whiskers %||% "p10_p90",
     window = state$band_window %||% "adaptive",
@@ -357,7 +396,7 @@ chart_smoother_args <- function(state, data) {
     smoother = sm, x_col = state$x, y_col = state$y,
     color_by = chart_split_in(data, state$color),
     series_by = chart_split_in(data, state$series),
-    facet_by = chart_split_in(data, state$facet),
+    facet_by = chart_facet_by(state, data),
     x_log = identical(state$x_transform, "log10"),
     y_log = identical(state$y_transform, "log10")
   )
