@@ -45,12 +45,28 @@ test_that("an all-NA inner column leaves the outer column alone", {
   }
 })
 
-test_that("an all-NA only column draws the total row", {
-  for (m in c("drop", "level")) {
-    p <- ec_prep(by = "SUB", missing = m)
+test_that("all-NA by columns draw no total row", {
+  d <- ec_data()
+  d$SUB2 <- NA_character_
+  for (by in list("SUB", c("SUB2", "SUB"))) {
+    expect_identical(ec_prep(d, by = by)$err, "No rows to display")
+    p <- ec_prep(d, by = by, missing = "level")
     expect_null(p$err)
-    expect_identical(nrow(p$rows), 1L)
+    expect_identical(p$rows$.label, "(Missing)")
   }
+})
+
+test_that("a custom summary over all-NA by draws the empty table", {
+  # A prepare script that keeps terms above a threshold blanks the others;
+  # with a threshold above every term, all are blank.
+  d <- ec_data()
+  d$AEDECOD <- NA_character_
+  fn <- "dplyr::summarise(d, from = mean(AGE), to = max(AGE))"
+  p <- groups_prepare(d, by = "AEDECOD", missing = "drop", summaries = list(
+    list(type = "custom", name = "Onset", fn = fn)
+  ))
+  expect_identical(p$err, "No rows to display")
+  expect_null(p$failed)
 })
 
 test_that("an all-NA facet or colour column splits nothing", {

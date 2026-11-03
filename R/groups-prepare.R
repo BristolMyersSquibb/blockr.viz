@@ -23,8 +23,13 @@ groups_prepare <- function(data, summaries = list(), by = NULL,
   if (!is.list(summaries) || !length(summaries)) {
     summaries <- groups_seed()
   }
-  # A grouping, colour or facet column with no values is unset.
+  # A grouping, colour or facet column with no values is unset. When every
+  # `by` column is empty, the inner one stays: its rows have no group, so the
+  # table is empty under missing = "drop" (a prepare script that filters by
+  # blanking the column filtered everything), not one total row.
+  by_set <- by
   by <- cols_with_values(data, by)
+  if (!length(by) && length(by_set)) by <- by_set[[length(by_set)]]
   summaries <- lapply(summaries, function(s) {
     if (!is.list(s)) return(s)
     for (k in c("color", "facet")) {

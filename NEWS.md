@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9027
+# blockr.viz 0.3.0.9028
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -128,7 +128,9 @@ read.
   every row counts as unset, as if the column were absent, under either
   `missing`. Upstream switches a grouping off by filling its column with
   NA. An all-NA facet column no longer crashes the groups layout under
-  `missing = "drop"`.
+  `missing = "drop"`. When every `by` column is missing in every row, the
+  inner one stays: the table is empty under `missing = "drop"`, as in 0.2,
+  and custom summaries no longer fail with "dropped the grouping by .all".
 * In the chart block, a colour, facet or series column that is missing in
   every row counts as unset in the same way: one panel, no unnamed legend
   entry, and a `[, split by {label(@facet)}]` part of the text drops.
