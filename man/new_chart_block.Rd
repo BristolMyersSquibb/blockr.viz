@@ -175,7 +175,7 @@ new_chart_block(
 
 \item{percent_of}{The role whose levels a \code{pct_distinct} denominator is taken within, or "total" for the whole chart. One of \code{"facet"}, \code{"category"}, \code{"color"}, \code{"total"}. Default: \code{"facet"}.}
 
-\item{facet_scales}{"fixed" shares one scale across panels, "free" lets each panel size itself, "free_y" frees y only (scatter, line and band). In a grid (\code{facet_row}) a free y is shared within a row, a free x within a column. One of \code{"fixed"}, \code{"free"}, \code{"free_y"}. Default: \code{"fixed"}.}
+\item{facet_scales}{"fixed" shares one scale across panels, "free" lets each panel size itself, "free_y" frees y only (scatter, line and band). In a grid (\code{facet_row}) "free_y" shares the value axis within a row (x on horizontal bars and a gantt) and the categories across all panels; "free" also shares the other axis within a column. One of \code{"fixed"}, \code{"free"}, \code{"free_y"}. Default: \code{"fixed"}.}
 
 \item{facet_cols}{Panels per row. NULL fits as many as the card is wide. Default: the option \code{blockr.viz.facet_cols}, else \code{NULL}.}
 

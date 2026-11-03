@@ -298,7 +298,7 @@
     return {
       xFit: cat.xFit || undefined,
       // Horizontal: a fixed band per row. Vertical: canvas plus label gutter.
-      panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
+      panelH: vertical ? NS.panelH(k.cfg, 350) + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, k.rowsH) + bottomBase,
       labelNote: k.hCapped
         ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, groups.length, P.title(k.cfg.category)) : null,
@@ -409,7 +409,7 @@
     }
     NS.axes.addValueLines(wfSeries, valAxis, false, false, cfg.value_lines, ink);
     return {
-      panelH: 350 + xlab.bottom,
+      panelH: NS.panelH(cfg, 350) + xlab.bottom,
       xFit,
       labelNote: null,
       option: {

@@ -79,8 +79,11 @@
         if (key === 'percent_of') return v.func === 'pct_distinct';
         if (key === 'value') return !counts(String(v.type || 'bar'), v);
         if (key === 'drill_target' || key === 'drill_table') return !!v.drill;
-        // Panel scales apply to a wrap and a grid; a grid has its own columns.
-        if (key === 'facet_scales') return !!(v.facet || v.facet_row);
+        // Panel scales apply to a wrap and a grid, not to pies and treemaps,
+        // which have no axes; a grid has its own columns.
+        if (key === 'facet_scales') {
+          return !!(v.facet || v.facet_row) && v.type !== 'pie' && v.type !== 'treemap';
+        }
         if (key === 'facet_cols') return !v.facet_row;
         return true;
       },

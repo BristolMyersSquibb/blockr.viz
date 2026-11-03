@@ -75,10 +75,11 @@
     const panels = m.panels.map((/** @type {any} */ panel, /** @type {number} */ i) => {
       const r = build(m, panel, look, (look.widths || [])[i] || 0);
       if (!r) {
-        return { option: null, height: DEFAULT_PANEL_H + 'px', panelH: DEFAULT_PANEL_H, xFit: null };
+        const h0 = NS.panelH(look.cfg, DEFAULT_PANEL_H);
+        return { option: null, height: h0 + 'px', panelH: h0, xFit: null };
       }
       if (r.labelNote) labelNote = r.labelNote;
-      const panelH = r.panelH != null ? r.panelH : DEFAULT_PANEL_H;
+      const panelH = r.panelH != null ? r.panelH : NS.panelH(look.cfg, DEFAULT_PANEL_H);
       return {
         option: NS.cardTooltip(NS.quietHover(r.option, look.cfg), look.ink),
         // 64 only catches a degenerate option; a one-row panel is 104.

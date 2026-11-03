@@ -36,6 +36,35 @@ test_that("an aggregated chart's Summary is one row per mark, keys first", {
   expect_identical(nrow(f), 4L)
 })
 
+test_that("in a panel grid the Summary and the download key on both facets", {
+  d <- dv_df()
+  v <- list(type = "bar", category = "visit", func = "mean", value = "val",
+            facet = "arm", facet_row = "sex")
+  s <- chart_summary(d, v)
+  # One row per panel and bar: the rows' facet outermost, then the columns'.
+  expect_identical(nrow(s), 12L)
+  expect_identical(unique(s$.group1), "sex")
+  expect_identical(unique(s$.group2), "arm")
+  expect_identical(unique(s$.variable), "visit")
+  x <- chart_xlsx_frame(d, "bar", group = "visit", facet = c("sex", "arm"),
+                        func = "mean", value = "val")
+  expect_identical(names(x)[1:3], c("sex", "arm", "visit"))
+  expect_identical(nrow(x), 12L)
+  # A histogram and a boxplot split the same way.
+  hv <- list(type = "histogram", x = "val", bins = 4L, facet = "arm",
+             facet_row = "sex")
+  h <- chart_summary(chart_hist_data(d, chart_hist(hv, d)), hv)
+  expect_identical(c(unique(h$.group1), unique(h$.group2)), c("sex", "arm"))
+  b <- chart_summary(d, list(type = "boxplot", category = "visit",
+                             value = "val", facet = "arm", facet_row = "sex"))
+  expect_identical(nrow(b), 12L)
+  # facet_row alone: one column of panels.
+  r <- chart_summary(d, list(type = "bar", category = "visit",
+                             facet_row = "sex"))
+  expect_identical(unique(r$.group1), "sex")
+  expect_identical(nrow(r), 6L)
+})
+
 test_that("a chart that draws rows has no Summary", {
   d <- dv_df()
   for (type in c("scatter", "line", "area")) {
