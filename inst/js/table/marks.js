@@ -51,9 +51,9 @@
         (fill ? ';background:' + col(fill) : '') + '"></div>' : '') + '</div>';
   }
 
-  /** @param {string} text @param {number | null | undefined} dw */
-  const barval = (text, dw) => '<span class="vz-table-groups-barval" style="width:' + n(dw) +
-    'ch">' + text + '</span>';
+  /** @param {string} text @param {number | null | undefined} dw @param {boolean} [zero] */
+  const barval = (text, dw, zero) => '<span class="vz-table-groups-barval' + (zero ? ' is-zero' : '') +
+    '" style="width:' + n(dw) + 'ch">' + text + '</span>';
 
   /**
    * One segment of a colour split.
@@ -339,10 +339,14 @@
     // A grouped split and a multi lane label each level; a stacked split
     // keeps its one total beside the bar.
     const own = (m.kind === 'barsplit' && m.mode === 'grouped') || (/** @type {any} */ (m).multi);
-    const lab = o.labels && !own && 'valueWidth' in m && m.valueWidth != null && c.disp[i] != null;
-    return '<td class="vz-table-groups-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (lab
-      ? '<div class="vz-table-groups-barwrap">' + g + barval(value(c, i), /** @type {any} */ (m).valueWidth) +
-        '</div>'
+    // Every cell of a labelled column keeps the value slot, so all its tracks
+    // end at the same x. A missing value leaves the slot blank; a zero prints
+    // muted.
+    const slot = o.labels && !own && 'valueWidth' in m && m.valueWidth != null;
+    const has = c.disp[i] != null;
+    return '<td class="vz-table-groups-bar-col' + (m.kind === 'sparkline' ? ' is-spark' : '') + '">' + (slot
+      ? '<div class="vz-table-groups-barwrap">' + g + barval(has ? value(c, i) : '',
+        /** @type {any} */ (m).valueWidth, has && at(c.key, i) === 0) + '</div>'
       : g) + '</td>';
   }
 

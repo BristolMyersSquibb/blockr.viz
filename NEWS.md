@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9028
+# blockr.viz 0.3.0.9029
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -131,6 +131,10 @@ read.
   `missing = "drop"`. When every `by` column is missing in every row, the
   inner one stays: the table is empty under `missing = "drop"`, as in 0.2,
   and custom summaries no longer fail with "dropped the grouping by .all".
+* In a summarize table, every bar cell of a column keeps the space for its
+  value label, so all tracks in the column end at the same point. A cell
+  without a value left the label out and its track ran past the others. A
+  zero prints in a lighter grey; a missing value leaves the label blank.
 * In the chart block, a colour, facet or series column that is missing in
   every row counts as unset in the same way: one panel, no unnamed legend
   entry, and a `[, split by {label(@facet)}]` part of the text drops.

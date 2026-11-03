@@ -157,6 +157,11 @@
 .vz-table-groups-table .vz-table-groups-pct {
   color: var(--blockr-color-text-muted, #6b7280);
 }
+/* A zero count: there, but quieter than the counts beside it. */
+.vz-table-groups-barval.is-zero,
+.vz-table-groups-barval.is-zero .vz-table-groups-pct {
+  color: var(--blockr-color-text-subtle, var(--blockr-color-text-disabled, #9ca3af));
+}
 /* The column axis, under the header label. Printing the domain ONCE is what
    pays for the empty lanes below it: with a scale named at the top of the
    column, a cell only has to hold its mark. Geometry mirrors

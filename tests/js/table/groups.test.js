@@ -106,6 +106,19 @@ test('a bar: the track, its fill and the value with its percentage', () => {
   assert.equal(t.cell(2, 1).querySelector('.vz-table-groups-fill'), null);
 });
 
+test('a bar column keeps its value slot in every cell: blank for NA, muted for 0', () => {
+  const m = groups();
+  Object.assign(m.cols[1], { disp: ['10', '0', null], key: [10, 0, null], pct: ['(17%)', '(0%)', null] });
+  const t = mount(payload({ data: m, config: G }));
+  const val = (r) => t.cell(r, 1).querySelector('.vz-table-groups-barwrap > .vz-table-groups-barval');
+  assert.equal(val(1).textContent, '0 (0%)');
+  assert.ok(val(1).classList.contains('is-zero'));
+  assert.ok(!val(0).classList.contains('is-zero'));
+  assert.equal(val(2).textContent, '');
+  assert.equal(val(2).getAttribute('style'), 'width:4ch');
+  assert.ok(!val(2).classList.contains('is-zero'));
+});
+
 test('values off: the marks draw without their numbers', () => {
   const t = mount(payload({ data: groups(), config: Object.assign({ value_labels: false }, G) }));
   assert.equal(t.$$('.vz-table-groups-barval').length, 0);
