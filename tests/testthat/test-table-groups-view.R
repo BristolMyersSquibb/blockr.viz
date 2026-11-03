@@ -187,7 +187,16 @@ tg_expect_rows <- function(v, w, label) {
   }
   expect_identical(isTRUE(v$collapsed), nested && !isTRUE(w$expanded))
   expect_identical(!is.null(v$rows$keys), isTRUE(w$pick), label = label)
-  expect_identical(v$note, w$fold)
+  # The fold line says the same count and largest value in other words:
+  # "2 more rows not shown, the largest with 19.5 total" for the reference's
+  # "Other — 2 rows below the cut, each with a value ≤ 19.5".
+  if (is.null(w$fold)) {
+    expect_null(v$note)
+  } else {
+    nums <- function(x) regmatches(x, gregexpr("[0-9.]+", x))[[1L]]
+    expect_identical(nums(v$note), nums(w$fold), label = label)
+    expect_match(v$note, " not shown", fixed = TRUE)
+  }
   if (!isTRUE(w$pick)) {
     return(invisible())
   }

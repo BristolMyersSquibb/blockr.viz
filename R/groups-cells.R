@@ -257,20 +257,29 @@ cells_parent_labels <- function(rows) {
   parent
 }
 
-#' The fold row's text, or NULL when nothing was capped.
+#' The fold row's text, or NULL when nothing was capped: how many rows or
+#' groups the top-N cut leaves out, and the largest value among them, named
+#' by the first column when its name is one word ("the largest with 73
+#' events").
 #' @noRd
 cells_fold_text <- function(prep) {
-  if (!isTRUE(prep$folded > 0L)) return(NULL)
-  paste0(
-    "Other \u2014 ", prep$folded, " ",
-    if (is.null(prep$parent)) "rows" else "groups", " below the cut",
-    if (is.finite(prep$fold_max)) {
-      paste0(", each with a value \u2264 ",
-             format(prep$fold_max, scientific = FALSE, trim = TRUE))
-    } else {
-      ""
-    }
-  )
+  n <- prep$folded
+  if (!isTRUE(n > 0L)) return(NULL)
+  what <- if (is.null(prep$parent)) "row" else "group"
+  out <- paste0(n, " more ", what, if (n != 1L) "s", " not shown")
+  mx <- prep$fold_max
+  if (!isTRUE(is.finite(mx))) return(out)
+  v <- format(mx, scientific = FALSE, trim = TRUE)
+  nm <- as.character(prep$plan[[1L]]$label %||% "")[1L]
+  if (identical(tolower(nm), "count")) {
+    paste0(out, ", the largest with a count of ", v)
+  } else if (grepl("^[[:alpha:]]+$", nm)) {
+    noun <- tolower(nm)
+    if (mx == 1) noun <- sub("s$", "", noun)
+    paste0(out, ", the largest with ", v, " ", noun)
+  } else {
+    paste0(out, ", the largest at ", v)
+  }
 }
 
 # Plan kinds drawn as a number or text cell, without a mark.

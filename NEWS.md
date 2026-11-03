@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9032
+# blockr.viz 0.3.0.9033
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -65,6 +65,12 @@ read.
   (gtsummary's "Age (years)") are one cell across the row; they no longer
   widen or wrap in the first column. The Excel, Word and PowerPoint
   downloads merge these rows and the section headers across the table.
+* The first column of a table is at least 200px wide, so its header no
+  longer wraps a word per line when every group is folded. A table with
+  set column widths keeps them.
+* The line under a groups table cut by `top_n` reads "18 more groups not
+  shown, the largest with 73 events" (was "Other — 18 groups below the
+  cut, each with a value ≤ 73").
 * In the groups layout, the outer rows of a nested table (two `by`
   columns) show the group's name across the row, with the groups open,
   and no summaries. A folded group adds the number of rows it hides in

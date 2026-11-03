@@ -21,6 +21,13 @@
 .blockr-table.vz-table-fixed {
   table-layout: fixed;
 }
+/* The first column is at least 200px wide, so its header keeps to two or
+   three lines when the rows give it no width (every group folded, short
+   ids). A table with R's column widths keeps them. */
+:where(.vz-table, .vz-table-groups)
+  .blockr-table:not(.vz-table-fixed) thead tr:first-child > th:first-child {
+  min-width: 200px;
+}
 :where(.vz-table, .vz-table-groups)
   .blockr-table thead {
   position: sticky;

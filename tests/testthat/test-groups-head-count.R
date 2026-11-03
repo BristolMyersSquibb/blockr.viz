@@ -16,7 +16,7 @@ hc_data <- function() {
 hc_model <- function(data, ...) {
   st <- list(layout = "groups", by = c("SOC", "PT"),
              summaries = list(list(type = "simple", func = "count",
-                                   show = "bar", name = "Count")), ...)
+                                   show = "bar", name = "Events")), ...)
   table_model_groups(st, data)
 }
 
@@ -69,4 +69,25 @@ test_that("the count reaches the browser as null on the other rows", {
   js <- jsonlite::fromJSON(jsonlite::toJSON(v$rows["count"], na = "null"),
                            simplifyVector = FALSE)
   expect_true(any(vapply(js$count, is.null, logical(1L))))
+})
+
+test_that("the top-N line says how many groups are not shown and the largest", {
+  m <- hc_model(hc_data(), top_n = 1L)
+  # Skin (6 events) stays; Cardiac (4) and Eye (1) are cut.
+  expect_identical(m$cells$fold,
+                   "2 more groups not shown, the largest with 4 events")
+  expect_identical(table_groups_to_model(m)$note, m$cells$fold)
+  # One cut row of an unnamed count ("Rows"), the noun in the singular.
+  st <- list(layout = "groups", by = "PT", top_n = 5L,
+             summaries = list(list(type = "simple", func = "count")))
+  expect_identical(table_model_groups(st, hc_data())$cells$fold,
+                   "1 more row not shown, the largest with 1 row")
+  st$summaries[[1L]]$name <- "Count"
+  expect_identical(table_model_groups(st, hc_data())$cells$fold,
+                   "1 more row not shown, the largest with a count of 1")
+  # A name of several words gives no noun.
+  st$summaries[[1L]]$name <- "AE count"
+  expect_identical(table_model_groups(st, hc_data())$cells$fold,
+                   "1 more row not shown, the largest at 1")
+  expect_null(hc_model(hc_data())$cells$fold)
 })
