@@ -17,7 +17,8 @@ chart_server <- function(id, data, init) {
       list(
         payload = view$payload,
         expr = expr,
-        exhibit = chart_exhibit(kit, src, view, dv),
+        exhibit = chart_exhibit(kit, src, view),
+        tables = dv$tables,
         data_view = dv$derived,
         normalize = function(v) {
           chart_normalize(v, viz_values(kit$state))

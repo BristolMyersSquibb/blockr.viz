@@ -317,7 +317,9 @@ record_rw_empty_click_clear <- function(rec, sc) {
 # behaviour-changes.md. They skip until Christoph decides; an accepted change
 # becomes a translation above, a rejected one a fix.
 record_rw_open <- c(
-  heal_missing_column = "row 1: clearing a column the data lacks clears it"
+  heal_missing_column = "row 1: clearing a column the data lacks clears it",
+  download_bar = "a chart's Excel item became the Data section's tables",
+  download_scatter = "a chart's Excel item became the Data section's tables"
 )
 
 # Messages that changed with an open behaviour change (behaviour-changes.md),

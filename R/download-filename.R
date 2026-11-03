@@ -4,13 +4,17 @@
 #   AQ-001_Ozone_by_month_2026-10-02_1432.xlsx
 #   Ozone_by_month_2026-10-02_1432.xlsx       (no dataset on the data)
 #   chart_2026-10-02_1432.xlsx                (no title either)
+#   AQ-001_Ozone_by_month_rows_2026-10-02_1432.csv  (a data download)
 #
 # `dataset` is `dl_dataset()` of the block's data, or NULL; `fallback` is the
-# word used when there is no title; `ext` has no dot.
-dl_filename <- function(dataset, title, fallback, ext, time = Sys.time()) {
+# word used when there is no title; `what` names the table of a data
+# download, or is NULL; `ext` has no dot.
+dl_filename <- function(dataset, title, fallback, ext, time = Sys.time(),
+                        what = NULL) {
   parts <- c(
     dl_name_part(dataset),
     dl_name_part(title, max = 60L) %||% fallback,
+    what,
     format(time, "%Y-%m-%d_%H%M")
   )
   paste0(paste(parts, collapse = "_"), ".", ext)

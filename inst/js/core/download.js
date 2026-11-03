@@ -3,6 +3,8 @@
  * A view's download control, built from the payload's `derived.downloads`
  * (R/export-registry.R, viz_downloads()): one format is a tool that
  * downloads, several are blockr.ui's action menu with one row per format.
+ * A chart's menu has two sections, Chart and Data; a Data row carries its
+ * table's count ("Rows 40 of 254").
  * The markup is blockr.ui's own (action_menu(), menu_item()), so its page
  * listeners open and close the menu. The links are Shiny download links,
  * bound here so their href arrives, and unbound when the view goes.
@@ -31,17 +33,36 @@
       '">' + ICON + '</a>';
   };
 
+  /** @param {VizDownload} d */
+  const item = (d) => '<a id="' + esc(d.id) + '" class="shiny-download-link ' +
+    'blockr-menu__item" role="menuitem" tabindex="-1" href="" download ' +
+    'target="_blank"><span class="blockr-menu__label">' + esc(d.label) +
+    (d.count ? '<span class="vz-download__count">' + esc(d.count) + '</span>' : '') +
+    '</span><span class="blockr-menu__meta">.' + esc(d.ext) + '</span></a>';
+
+  /** The rows, with a title over each section (Chart, Data) when R names them.
+   * @param {VizDownload[]} list */
+  const rows = (list) => {
+    let out = '';
+    /** @type {string | undefined} */
+    let section;
+    for (const d of list) {
+      if (d.section && d.section !== section) {
+        section = d.section;
+        out += '<div class="blockr-menu__title">' + esc(section) + '</div>';
+      }
+      out += item(d);
+    }
+    return out;
+  };
+
   /** @param {VizDownload[]} list */
   const menu = (list) => '<span class="blockr-action-menu" data-align="end">' +
     '<button type="button" class="blockr-tool blockr-action-menu__trigger" ' +
     'aria-haspopup="menu" aria-expanded="false" aria-label="Download" ' +
     'data-blockr-tooltip="Download">' + ICON + '</button>' +
     '<div class="blockr-menu" role="menu" tabindex="-1" hidden>' +
-    list.map((d) => '<a id="' + esc(d.id) + '" class="shiny-download-link ' +
-      'blockr-menu__item" role="menuitem" tabindex="-1" href="" download ' +
-      'target="_blank"><span class="blockr-menu__label">' + esc(d.label) +
-      '</span><span class="blockr-menu__meta">.' + esc(d.ext) + '</span></a>').join('') +
-    '</div></span>';
+    rows(list) + '</div></span>';
 
   /** @type {WeakMap<HTMLElement, { key: string, offs: (() => void)[] }>} */
   const drawn = new WeakMap();

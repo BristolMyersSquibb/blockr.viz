@@ -249,40 +249,87 @@ test_that("a scatter's data view is its rows alone", {
   })
 })
 
-test_that("the Excel download writes Summary and Rows, exhibit_data() stays", {
+dv_menu <- function(expr) {
+  tryCatch(expr$output$chart, error = function(e) NULL)
+  dv_seen$p$derived$downloads
+}
+
+test_that("the menu has a Chart and a Data section, without the old Excel", {
+  skip_if_not_installed("openxlsx")
+  blk <- new_chart_block(type = "bar", category = "visit", drill = "auto")
+  dv_run(blk, function(session, expr) {
+    chart_input_click(expr, visit = "V1")
+    session$flushReact()
+    menu <- dv_menu(expr)
+    secs <- vapply(menu, `[[`, "", "section")
+    expect_identical(unique(secs), c("Chart", "Data"))
+    expect_false("Excel" %in% vapply(menu[secs == "Chart"], `[[`, "", "label"))
+    data <- menu[secs == "Data"]
+    expect_identical(vapply(data, `[[`, "", "label"),
+                     c("Summary", "Summary", "Rows", "Rows"))
+    expect_identical(vapply(data, `[[`, "", "ext"),
+                     c("xlsx", "csv", "xlsx", "csv"))
+    expect_identical(vapply(data, `[[`, "", "count"),
+                     c("3 rows", "3 rows", "20 of 60", "20 of 60"))
+  })
+})
+
+test_that("the Summary downloads are flat: every key a column", {
+  skip_if_not_installed("openxlsx")
+  blk <- new_chart_block(type = "boxplot", category = "visit", value = "val",
+                         color = "arm", title = "Values")
+  dv_run(blk, function(session, expr) {
+    csv <- utils::read.csv(expr$output$dl_data_summary_csv,
+                           check.names = FALSE)
+    expect_identical(names(csv)[1:3], c("visit", "arm", "N"))
+    expect_identical(nrow(csv), 6L)
+    expect_true(all(c("Q1", "Median", "Q3") %in% names(csv)))
+    path <- expr$output$dl_data_summary_xlsx
+    expect_identical(openxlsx::getSheetNames(path), "Summary")
+    x <- openxlsx::read.xlsx(path, colNames = FALSE, skipEmptyRows = FALSE)
+    expect_identical(x[[1L]][[1L]], "Values")
+    expect_identical(unname(unlist(x[3L, 1:3])), c("visit", "arm", "N"))
+  })
+})
+
+test_that("the Rows downloads are the block's output", {
   skip_if_not_installed("openxlsx")
   blk <- new_chart_block(type = "boxplot", category = "visit", value = "val",
                          drill = "auto")
   dv_run(blk, function(session, expr) {
     chart_input_click(expr, visit = "V1")
     session$flushReact()
-    path <- expr$output$dl_xlsx
-    expect_identical(openxlsx::getSheetNames(path), c("Summary", "Rows"))
-    summ <- openxlsx::read.xlsx(path, "Summary", colNames = FALSE)
-    expect_true(all(c("N", "Q1", "Median", "Q3") %in% unlist(summ)))
-    rows <- openxlsx::read.xlsx(path, "Rows")
+    rows <- utils::read.csv(expr$output$dl_data_rows_csv)
     expect_identical(nrow(rows), 20L)
     expect_identical(unique(rows$visit), "V1")
-  })
-  # The exhibit's data is the frame it was: a box plot's input rows.
-  dv_run(blk, function(session, expr) {
-    ex <- NULL
-    real <- exhibit_footed
-    local_mocked_bindings(exhibit_footed = function(x, session) {
-      ex <<- x
-      real(x, session)
-    })
-    expr$output$dl_xlsx
-    expect_identical(exhibit_data(ex)[names(dv_df())], dv_df())
-    expect_identical(nrow(exhibit_meta(ex)$data_view$summary), 3L)
+    xl <- openxlsx::read.xlsx(expr$output$dl_data_rows_xlsx)
+    expect_identical(nrow(xl), 20L)
+    expect_identical(names(xl), names(dv_df()))
   })
 })
 
-test_that("a chart without a Summary downloads one sheet, as before", {
+test_that("a chart that draws rows offers Rows alone", {
   skip_if_not_installed("openxlsx")
   blk <- new_chart_block(type = "scatter", x = "day", y = "val")
   dv_run(blk, function(session, expr) {
-    path <- expr$output$dl_xlsx
-    expect_length(openxlsx::getSheetNames(path), 1L)
+    menu <- dv_menu(expr)
+    data <- Filter(function(d) identical(d$section, "Data"), menu)
+    expect_identical(vapply(data, `[[`, "", "label"), c("Rows", "Rows"))
+    expect_identical(data[[1L]]$count, "60 rows")
+    expect_identical(nrow(utils::read.csv(expr$output$dl_data_rows_csv)), 60L)
   })
+})
+
+test_that("chart_summary_flat() puts the keys back as columns", {
+  d <- dv_df()
+  s <- chart_summary(d, list(type = "bar", category = "visit", color = "arm",
+                             facet = "sex"))
+  f <- chart_summary_flat(s)
+  expect_identical(names(f), c("sex", "visit", "arm", "Count of rows"))
+  expect_identical(nrow(f), nrow(s))
+  expect_identical(sum(f[["Count of rows"]]), 60L)
+  one <- chart_summary_flat(chart_summary_annotate(
+    data.frame(row.names = 1L), data.frame(n = 3L)
+  ))
+  expect_identical(one, data.frame(n = 3L))
 })

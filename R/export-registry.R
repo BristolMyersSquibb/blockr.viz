@@ -63,15 +63,22 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #'   title.
 #' @param before A function of no arguments run when a format is clicked,
 #'   before the exhibit is read (the kit's capture sync).
-#' @return A reactive: a list of `list(id, label, ext)`, empty when
-#'   downloads are off.
+#' @param tables A function returning the block's data tables, or NULL
+#'   (viz_data_downloads()). With it the menu has two sections: Chart, the
+#'   registered formats, and Data, the tables.
+#' @return A reactive: a list of `list(id, label, ext)`, with `section` and
+#'   `count` when there are sections; empty when downloads are off.
 #' @noRd
 viz_downloads <- function(exhibit, enabled = function() TRUE,
                           session = shiny::getDefaultReactiveDomain(),
-                          filename = "table", before = function() NULL) {
+                          filename = "table", before = function() NULL,
+                          tables = NULL) {
   formats <- viz_exporters()
   for (f in formats) {
     viz_download_handler(f, exhibit, session, filename, before)
+  }
+  data <- if (is.function(tables)) {
+    viz_data_downloads(tables, exhibit, session, filename)
   }
   shiny::reactive({
     if (!isTRUE(enabled())) {
@@ -81,10 +88,13 @@ viz_downloads <- function(exhibit, enabled = function() TRUE,
     if (!inherits(x, "viz_exhibit")) {
       return(list())
     }
-    unname(lapply(viz_export_formats(x, formats), function(f) {
-      list(id = session$ns(paste0("dl_", f$format)), label = f$label,
-           ext = f$ext)
+    out <- unname(lapply(viz_export_formats(x, formats), function(f) {
+      c(list(id = session$ns(paste0("dl_", f$format)), label = f$label,
+             ext = f$ext),
+        if (!is.null(data)) list(section = "Chart"))
     }))
+    if (!is.null(data)) out <- c(out, data())
+    out
   })
 }
 
@@ -114,7 +124,11 @@ viz_download_handler <- function(f, exhibit, session, filename,
 
 # The formats blockr.viz writes itself. Called from .onLoad.
 viz_register_exporters <- function() {
+  # A chart's data goes out through the Data section (data-download.R).
   register_viz_exporter("xlsx", "Excel", export_xlsx, needs = "openxlsx",
+                        accepts = function(x) {
+                          !identical(exhibit_kind(x), "chart")
+                        },
                         order = 10)
   register_viz_exporter("html", "Web page", export_html, order = 20)
   register_viz_exporter("png", "Image", export_png, accepts = png_accepts,

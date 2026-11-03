@@ -77,6 +77,10 @@ interface VizDownload {
   id: string;
   label: string;
   ext: string;
+  /** The menu section the row goes under ("Chart", "Data"). */
+  section?: string;
+  /** A data row's count, "6 rows" or "40 of 254". */
+  count?: string;
 }
 
 /** Why a view has nothing to draw: R's `derived.empty`, or the view's own. */

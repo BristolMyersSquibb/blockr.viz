@@ -165,9 +165,11 @@ test_that("the chart block's footer reads the chart's input, not its numbers", {
       session$flushReact()
       expr <- session$makeScope("expr")
 
-      x <- openxlsx::read.xlsx(expr$output$dl_xlsx, colNames = FALSE,
-                               skipEmptyRows = FALSE)
-      expect_true("Exported from AQ-001; Sex = F" %in% x[[1L]])
+      for (id in c("dl_data_summary_xlsx", "dl_data_rows_xlsx")) {
+        x <- openxlsx::read.xlsx(expr$output[[id]], colNames = FALSE,
+                                 skipEmptyRows = FALSE)
+        expect_true("Exported from AQ-001; Sex = F" %in% x[[1L]])
+      }
     },
     args = list(x = blk, data = list(data = shiny::reactive(d)))
   )

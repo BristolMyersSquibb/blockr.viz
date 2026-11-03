@@ -197,6 +197,12 @@ read.
   format, and a block offers every registered format that can write it.
   blockr.viz registers Excel, a web page, an image and PowerPoint; a block
   hands its downloads an exhibit (`new_viz_exhibit()`).
+* The chart's download menu has two sections. Chart holds the image,
+  PowerPoint and web page. Data holds the data view's tables, Summary (one
+  row per mark, every key in its own column) and Rows (the block's output,
+  so narrowed by the selection), each as Excel and CSV, with the count the
+  data view's tab shows. A chart that draws rows offers Rows alone. The
+  chart's Excel item, which wrote both tables as two sheets, is gone.
 
 ## Security
 

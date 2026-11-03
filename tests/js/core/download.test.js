@@ -107,3 +107,25 @@ test('the control goes with its scope, unbound', () => {
   assert.equal(opened, 0);
   assert.ok(size <= 1 + 0, 'one cleanup per host, listeners only with onOpen');
 });
+
+test('sections get a title over their rows, data rows their count', () => {
+  const { V, host, scope } = setup();
+  V.downloads(host, [
+    { id: 'b-dl_png', label: 'Image', ext: 'png', section: 'Chart' },
+    { id: 'b-dl_pptx', label: 'PowerPoint', ext: 'pptx', section: 'Chart' },
+    { id: 'b-s', label: 'Summary', ext: 'csv', section: 'Data', count: '6 rows' },
+    { id: 'b-r', label: 'Rows', ext: 'csv', section: 'Data', count: '40 of 254' }
+  ], scope);
+  const menu = host.querySelector('.blockr-menu');
+  const kids = Array.from(menu.children).map((e) =>
+    e.classList.contains('blockr-menu__title') ? '# ' + e.textContent : e.id);
+  assert.deepEqual(kids, ['# Chart', 'b-dl_png', 'b-dl_pptx', '# Data', 'b-s', 'b-r']);
+  assert.equal(menu.querySelector('#b-r .vz-download__count').textContent, '40 of 254');
+  assert.equal(menu.querySelector('#b-dl_png .vz-download__count'), null);
+});
+
+test('a list without sections has no titles', () => {
+  const { V, host, scope } = setup();
+  V.downloads(host, FORMATS, scope);
+  assert.equal(host.querySelector('.blockr-menu__title'), null);
+});

@@ -7,11 +7,13 @@
 #            that draws rows (scatter, line, ...) has none.
 #   Rows     the input rows behind the selection: the block's output.
 #
+# The download menu's Data section writes the same two tables
+# (R/data-download.R).
+#
 # The view is the browser's: `<view>_data` says whether it is open and which
 # tab shows (viz_read_data_view()). While it is open the kit adds
 # `derived$data_view` to the payload (viz_with_shared()): the tab counts and
-# the table view's payload for the tab that shows. The Summary frame is the
-# one the Excel download writes (chart_exhibit()).
+# the table view's payload for the tab that shows.
 #
 # The Summary table is an annotated frame, so the table view draws it and a
 # row click claims the row's keys: the outer keys as row groups
@@ -253,8 +255,10 @@ chart_output_rows <- function(data, expr) {
 #' @param kit The chart's kit.
 #' @param src The chart's sources (chart_sources()).
 #' @param expr The block's expression, a reactive.
-#' @return A list: `summary()` and `rows()`, reactives; `derived(msg)`, the
-#'   payload's `data_view` entry for the reader's `<view>_data` message.
+#' @return A list: `summary()` and `rows()`, reactives; `tables()`, both
+#'   with the Rows total, for the data downloads (viz_data_downloads());
+#'   `derived(msg)`, the payload's `data_view` entry for the reader's
+#'   `<view>_data` message.
 #' @noRd
 chart_data_view <- function(kit, src, expr) {
   summary <- shiny::reactive({
@@ -302,7 +306,10 @@ chart_data_view <- function(kit, src, expr) {
                     }, req = msg$n)
     )
   }
-  list(summary = summary, rows = rows, derived = derived)
+  tables <- function() {
+    list(summary = summary(), rows = rows(), total = total())
+  }
+  list(summary = summary, rows = rows, tables = tables, derived = derived)
 }
 
 #' The table view's payload for a data view tab

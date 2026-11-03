@@ -98,16 +98,7 @@ xlsx_annotated_sheet <- function(wb, df, sheet, title, subtitle, caption,
     }
   }
 
-  if (!is.null(caption) && nzchar(caption)) {
-    cap_style <- openxlsx::createStyle(
-      textDecoration = "italic", halign = "left", fontSize = 9,
-      fontColour = "#6b7280")
-    # One row per line: a cell does not grow to fit a line break.
-    lines <- strsplit(caption, "\n", fixed = TRUE)[[1L]]
-    for (i in seq_along(lines)) {
-      xlsx_put_line(wb, sheet, lines[[i]], r + total_out + i, n_col, cap_style)
-    }
-  }
+  xlsx_write_caption(wb, sheet, caption, r + total_out + 1L, n_col)
 
   openxlsx::setColWidths(wb, sheet, cols = 1L, widths = 34)
   if (n_col > 1L) {
@@ -122,6 +113,21 @@ xlsx_put_line <- function(wb, sheet, text, row, n_col, style) {
   openxlsx::writeData(wb, sheet, text, startRow = row, startCol = 1L)
   openxlsx::mergeCells(wb, sheet, cols = seq_len(n_col), rows = row)
   openxlsx::addStyle(wb, sheet, style, rows = row, cols = 1L)
+}
+
+# The caption from row `row`, one row per line: a cell does not grow to fit
+# a line break.
+xlsx_write_caption <- function(wb, sheet, caption, row, n_col) {
+  if (is.null(caption) || !nzchar(caption)) {
+    return(invisible())
+  }
+  style <- openxlsx::createStyle(
+    textDecoration = "italic", halign = "left", fontSize = 9,
+    fontColour = "#6b7280")
+  lines <- strsplit(caption, "\n", fixed = TRUE)[[1L]]
+  for (i in seq_along(lines)) {
+    xlsx_put_line(wb, sheet, lines[[i]], row + i - 1L, n_col, style)
+  }
 }
 
 # Title and subtitle, then one spacer row. Returns the next free row.
@@ -342,27 +348,7 @@ xlsx_num_format <- function(digits) {
 # The Excel download: the exhibit's values under its titles.
 export_xlsx <- function(x, file) {
   t <- exhibit_titles(x)
-  dv <- exhibit_meta(x)$data_view
-  if (is.data.frame(dv$summary)) {
-    return(export_xlsx_data_view(dv, file, t))
-  }
   write_annotated_xlsx(exhibit_data(x), file, title = t$title,
                        subtitle = t$subtitle, caption = t$caption,
                        digits = exhibit_meta(x)$digits)
-}
-
-# A chart's data view as two sheets (R/chart-data-view.R): "Summary", one row
-# per mark under the titles, and "Rows", the rows behind the selection, with
-# a filter on the header.
-export_xlsx_data_view <- function(dv, file, titles) {
-  wb <- openxlsx::createWorkbook()
-  xlsx_annotated_sheet(wb, dv$summary, "Summary", titles$title,
-                       titles$subtitle, titles$caption, digits = "number")
-  if (is.data.frame(dv$rows)) {
-    openxlsx::addWorksheet(wb, "Rows")
-    openxlsx::writeData(wb, "Rows", dv$rows, withFilter = TRUE)
-    openxlsx::freezePane(wb, "Rows", firstActiveRow = 2L)
-  }
-  openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
-  invisible(file)
 }
