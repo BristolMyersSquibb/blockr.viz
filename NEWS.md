@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9033
+# blockr.viz 0.3.0.9034
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -172,6 +172,10 @@ read.
 * The chart legend names its colour column before the chips again when the
   column has no label, by the column's name ("AETOXGR"), as before 0.3.0.
   It showed no title then.
+* The gear's group index (Data, Sort, Format, Titles, Interaction, as tabs
+  in a narrow tray) works with blockr.ui main. blockr.viz carries
+  `Blockr.trayNav` until blockr.ui ships it, and uses blockr.ui's own once
+  it does.
 
 ## Removed
 

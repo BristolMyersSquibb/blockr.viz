@@ -2,14 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { loadGear, mountGear, payload, lastSet, row, hasUi, hasTrayNav } = require('./gear-load');
+const { loadGear, mountGear, payload, lastSet, row, hasUi } = require('./gear-load');
 
 const noUi = { skip: !hasUi() && 'blockr.ui not found (set BLOCKR_UI_JS)' };
-const noNav = { skip: !hasTrayNav() && 'blockr.ui without trayNav (set BLOCKR_UI_JS to main)' };
 const tick = (win, ms = 5) => new Promise((r) => win.setTimeout(r, ms));
 const TITLES = { title: { parts: [{ text: 'ARM', arg: 'x' }] }, args: { x: 'ARM' } };
 
-test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav, () => {
+test('with Blockr.trayNav the groups are tabs, and the open one is kept', noUi, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env, { title: 'Chart settings' });
   m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical' }));
@@ -27,7 +26,7 @@ test('with Blockr.trayNav the groups are tabs, and the open one is kept', noNav,
   assert.ok(!names.includes('Sort'));
 });
 
-test('the index lists the groups only, and the open group keeps its section headers', noNav, () => {
+test('the index lists the groups only, and the open group keeps its section headers', noUi, () => {
   const env = loadGear({ ui: true });
   const m = mountGear(env);
   m.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical' }));

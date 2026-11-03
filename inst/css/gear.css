@@ -670,3 +670,129 @@
   overflow-wrap: normal;
   overflow-x: auto;
 }
+
+/* --- Blockr.trayNav, until blockr.ui ships it ---------------------------
+   Copied from blockr.ui branch feat/tray-nav (708ef52), with the JS in
+   inst/js/core/gear/tray-nav.js. Delete both once a blockr.ui release has
+   trayNav. The tray is the named container the narrow rule below asks
+   for; blockr.ui main leaves it unnamed, and its own container-type keeps
+   the name in place. */
+.blockr-settings {
+  container: blockr-tray / inline-size;
+}
+
+/* --- Groups in a long tray (Blockr.trayNav) ------------------------------
+   One group shows at a time. From 560px the groups are an index on the
+   left, as the design-system article's sidebar: the groups, and under the
+   open one its sections, indented and muted. Narrower, the index gives way
+   to tabs above the sections. The current group, and the tab, take the
+   selected tint, as a current row does. The pane is a container of its own,
+   so the field grid counts its columns on the pane's width. */
+.blockr-tray-nav {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: 0 18px;
+}
+.blockr-tray-nav__index {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-right: 12px;
+  border-right: 1px solid var(--blockr-color-border-default);
+}
+.blockr-tray-nav__group,
+.blockr-tray-nav__section {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  line-height: 20px;
+  text-align: left;
+  padding: 4px 8px;
+  border-radius: var(--blockr-radius-md);
+  cursor: pointer;
+  color: var(--blockr-color-text-default);
+}
+.blockr-tray-nav__group { font-weight: var(--blockr-font-weight-medium); }
+.blockr-tray-nav__section {
+  padding-left: 18px;
+  color: var(--blockr-color-text-muted);
+}
+.blockr-tray-nav__group:hover,
+.blockr-tray-nav__section:hover,
+.blockr-tray-nav__tab:hover {
+  background: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+}
+.blockr-tray-nav__group.is-current,
+.blockr-tray-nav__tab.is-current {
+  background: var(--blockr-color-bg-selected);
+  color: var(--blockr-color-text-accent-strong);
+}
+.blockr-tray-nav__group:focus-visible,
+.blockr-tray-nav__section:focus-visible,
+.blockr-tray-nav__tab:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+.blockr-tray-nav__body { min-width: 0; }
+.blockr-tray-nav__tabs {
+  display: none;
+  gap: 2px;
+  margin: -2px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--blockr-color-border-default);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.blockr-tray-nav__tab {
+  flex: none;
+  height: var(--blockr-control-h-xs);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-md);
+  background: none;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.blockr-tray-nav__pane {
+  container-type: inline-size;
+  min-width: 0;
+}
+.blockr-tray-nav__pane > * + * { margin-top: 24px; }
+.blockr-tray-nav__pane > .blockr-tray-nav__off,
+.blockr-tray-nav__hidden-title { display: none !important; }
+.blockr-tray-nav__pane > .blockr-tray-nav__off + * { margin-top: 0; }
+/* A section picked in the index: it scrolls to the top with 12px to
+   spare, and its area takes the accent tint, 6px around it, then fades. */
+.blockr-tray-nav__pane > * { scroll-margin-top: 12px; }
+.blockr-tray-nav__flash {
+  animation: blockr-tray-nav-flash 1.4s ease-out;
+  border-radius: var(--blockr-radius-md);
+}
+@keyframes blockr-tray-nav-flash {
+  0%, 30% {
+    background: var(--blockr-color-bg-accent-subtle-hover);
+    box-shadow: 0 0 0 6px var(--blockr-color-bg-accent-subtle-hover);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blockr-tray-nav__flash { animation: none; }
+}
+@container blockr-tray (max-width: 559.98px) {
+  .blockr-tray-nav { grid-template-columns: minmax(0, 1fr); }
+  .blockr-tray-nav__index { display: none; }
+  .blockr-tray-nav__tabs { display: flex; }
+}
+

@@ -29,9 +29,6 @@ const hasUi = () => {
   const d = findUi();
   return !!d && fs.existsSync(path.join(d, 'blockr-ui.js'));
 };
-/** blockr.ui main, the one with the grouped tray. */
-const hasTrayNav = () => hasUi() &&
-  fs.readFileSync(path.join(findUi(), 'blockr-ui.js'), 'utf8').includes('function trayNav');
 
 const windows = [];
 after(async () => {
@@ -146,4 +143,4 @@ function type(win, inp, text) {
 }
 
 module.exports = { loadGear, mountGear, payload, lastSet, rows, row, choose, type, hasUi,
-                   hasTrayNav, COLUMNS };
+                   COLUMNS };

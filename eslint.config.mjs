@@ -73,5 +73,11 @@ export default [
   {
     files: ['inst/js/core/scope.js'],
     rules: { 'no-restricted-syntax': 'off' }
+  },
+  {
+    // blockr.ui's trayNav, kept here until blockr.ui ships it. Its listeners
+    // sit on elements it builds and go with them, as in blockr.ui.
+    files: ['inst/js/core/gear/tray-nav.js'],
+    rules: { 'no-restricted-syntax': 'off' }
   }
 ];
