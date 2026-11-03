@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9030
+# blockr.viz 0.3.0.9031
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -180,6 +180,10 @@ read.
 * `new_summary_table_block()` and `new_summarize_table_block()` are
   superseded: they translate their arguments and return a table block in
   the variables and the groups layout.
+* `new_picker_block()` is deprecated and warns. It stays so that boards
+  saved with it restore with the block and its links. Bind chart and table
+  mappings to the source columns and put a group switch in the board's
+  filter instead.
 
 ## Downloads
 

@@ -70,4 +70,5 @@ reference:
     contents:
       - new_summary_table_block
       - new_summarize_table_block
+      - new_picker_block
       - drilldown_table_color

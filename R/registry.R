@@ -10,6 +10,8 @@
 #' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
 #'   arg_string arg_number arg_integer arg_boolean arg_enum arg_array arg_object
 register_viz_blocks <- function() {
+  # Deprecated, registered so that saved boards restore it with metadata.
+  on.exit(register_picker_block())
   blockr.core::register_blocks(
     c(
       "new_chart_block",
