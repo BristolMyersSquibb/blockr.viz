@@ -105,6 +105,16 @@ chart_spec_mapping <- function() {
       describe = "Column to facet by, one small panel per level."
     ),
 
+    facet_row = chart_arg(
+      type = "column", null = "panels wrap",
+      gear = gear("Add mapping", "column", "Facet rows"),
+      describe = paste(
+        "Column whose levels make the rows of a panel grid, `facet` making",
+        "its columns. Each row gets its own y scale when `facet_scales` is",
+        "\"free_y\" or \"free\"."
+      )
+    ),
+
     series = chart_arg(
       type = "column", null = "no series",
       applies = c(SPEC_CHART_INDIVIDUAL, "gantt"),
@@ -403,12 +413,13 @@ chart_spec_facets <- function() {
       type = "enum", default = "fixed", values = c("fixed", "free", "free_y"),
       gear = gear("Look", "select", "Panel scales",
                   labels = c("Shared across panels", "Free x and y per panel",
-                             "Free y per panel"),
-                  when = "facet"),
+                             "Free y per panel")),
       example = "fixed",
       describe = paste(
         "\"fixed\" shares one scale across panels, \"free\" lets each panel",
-        "size itself, \"free_y\" frees y only (scatter, line and band)."
+        "size itself, \"free_y\" frees y only (scatter, line and band). In a",
+        "grid (`facet_row`) a free y is shared within a row, a free x within a",
+        "column."
       )
     ),
 
@@ -445,7 +456,7 @@ chart_spec <- function() {
   shared <- viz_shared_args()
   order <- c(
     "type", "category", "value", "func", "x", "xend", "y", "color", "facet",
-    "series", "label",
+    "facet_row", "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
     "format", "unit", "y_transform", "x_transform", "tooltip", "drill",
     "line_width", "point_size", "connect", "value_lines", "x_lines", "ymin",

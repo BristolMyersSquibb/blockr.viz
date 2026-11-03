@@ -76,16 +76,17 @@ chart_category <- function(v) {
 # The columns whose group definition splits the rows: the category and the
 # splitting roles; x and y themselves on a chart that draws rows.
 chart_split_cols <- function(v) {
+  facet <- c(v$facet, v$facet_row)
   if (identical(v$type, "histogram")) {
-    return(chart_split_roles(color = v$color, facet = v$facet,
+    return(chart_split_roles(color = v$color, facet = facet,
                              series = v$series, x = v$x))
   }
   cat <- chart_category(v)
   if (!is.null(cat) || (v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
-    return(chart_split_roles(group = cat, color = v$color, facet = v$facet,
+    return(chart_split_roles(group = cat, color = v$color, facet = facet,
                              series = v$series))
   }
-  chart_split_roles(color = v$color, facet = v$facet, series = v$series,
+  chart_split_roles(color = v$color, facet = facet, series = v$series,
                     x = v$x, y = v$y)
 }
 

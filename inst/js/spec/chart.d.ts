@@ -11,6 +11,7 @@ interface ChartConfig {
   y: string | null;
   color: string | null;
   facet: string | null;
+  facet_row: string | null;
   series: string | null;
   label: string | null;
   orientation: 'horizontal' | 'vertical' | null;

@@ -8,7 +8,8 @@
 # Column-valued roles of the chart block, in display order. value_lines and
 # x_lines hold line positions, not column names, and are reported separately.
 dd_chart_roles <- c("category", "value", "x", "y", "xend", "color", "facet",
-                    "series", "label", "drill", "ymin", "ymax", "id")
+                    "facet_row", "series", "label", "drill", "ymin", "ymax",
+                    "id")
 
 # The first element of `v` as a string; "" for NULL.
 first_chr <- function(v) as.character(v %||% "")[1]

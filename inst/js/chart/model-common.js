@@ -14,6 +14,42 @@
   const model = /** @type {any} */ (NS.model = {});
 
   const FIXED = ['waterfall', 'pie', 'treemap'];
+
+  // The grid key column and the separator between its row and column level,
+  // as R joins them (chart_grid_data() in R/chart-derived.R).
+  const GRID_COL = '.facet_grid';
+  const GRID_SEP = '\u001f';
+
+  /** A row's grid key: its row level, then its column level; missing is ''.
+   * @param {Record<string, any>} row @param {{ row: string, col: string | null }} g */
+  const gridKey = (row, g) => {
+    const lv = (/** @type {string | null} */ c) => (c == null || row[c] == null ? '' : String(row[c]));
+    return lv(g.row) + GRID_SEP + lv(g.col);
+  };
+
+  /** A grid key split into its row and column level. @param {string} key */
+  const gridLevels = (key) => {
+    const i = String(key).indexOf(GRID_SEP);
+    return i < 0 ? { row: String(key), col: '' } : { row: key.slice(0, i), col: key.slice(i + 1) };
+  };
+
+  /**
+   * `keys` with the facet panel's key: the facet column and its level, or in
+   * a grid the row and column columns and their levels. Mutates `keys`.
+   * @param {Record<string, any>} keys @param {string | null} facetCol
+   * @param {{ row: string, col: string | null } | null | undefined} grid @param {any} facetVal
+   */
+  const facetKeys = (keys, facetCol, grid, facetVal) => {
+    if (!facetCol || facetVal == null || facetVal === '__all__') return keys;
+    if (!grid || facetCol !== GRID_COL) {
+      keys[facetCol] = facetVal;
+      return keys;
+    }
+    const lv = gridLevels(facetVal);
+    keys[grid.row] = lv.row;
+    if (grid.col) keys[grid.col] = lv.col;
+    return keys;
+  };
   /** @param {unknown} v */
   const set = (v) => v != null && v !== '' && !(Array.isArray(v) && !v.length);
 
@@ -77,11 +113,15 @@
     // every row would land in one empty facet or level. So is one that is NA
     // in every row (`all_na`), which lets upstream switch the split off by
     // filling the column with NA.
-    for (const k of ['color', 'facet', 'series']) {
+    for (const k of ['color', 'facet', 'facet_row', 'series']) {
       if (!cfg[k] || !columns.length) continue;
       const col = columns.find((c) => c.name === cfg[k]);
       if (!col || col.all_na) cfg[k] = null;
     }
+    // A grid: the families facet by one column holding both levels (gridKey()),
+    // which the view adds to the rows. `facet_grid` keeps the two columns.
+    cfg.facet_grid = cfg.facet_row ? { row: cfg.facet_row, col: cfg.facet || null } : null;
+    if (cfg.facet_grid) cfg.facet = GRID_COL;
     if (NS.familyOf(cfg.type) === 'aggregated') Object.assign(cfg, axes(cfg));
     defaults(cfg, columns);
     return /** @type {ChartSettings} */ (cfg);
@@ -164,5 +204,5 @@
     .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
 
   Object.assign(model, { settings, defaultLie, FIXED, defaults, gate, emptyState, facetLabels,
-                         tooltipFields });
+                         tooltipFields, GRID_COL, gridKey, gridLevels, facetKeys });
 })();

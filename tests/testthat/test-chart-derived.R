@@ -132,3 +132,45 @@ test_that("chart_band turns a failed computation into a warning and a note", {
   expect_null(b$series)
   expect_type(b$note, "character")
 })
+
+# --- facet grid ------------------------------------------------------------
+
+test_that("without facet_row the panels split by facet, as before", {
+  d <- derived_df()
+  expect_null(chart_grid(band_state(facet = "arm"), d))
+  expect_identical(chart_grid_data(band_state(facet = "arm"), d), d)
+  expect_identical(chart_band_args(band_state(facet = "arm"), d)$facet_by,
+                   "arm")
+  expect_identical(
+    chart_band(band_state(facet = "arm"), chart_grid_data(band_state(), d)),
+    chart_band(band_state(facet = "arm"), d)
+  )
+})
+
+test_that("facet_row keys each row by its row and column level", {
+  d <- derived_df()
+  d$arm[1] <- NA
+  st <- band_state(facet = "arm", facet_row = "id")
+  expect_identical(chart_grid(st, d), list(row = "id", col = "arm"))
+  g <- chart_grid_data(st, d)
+  expect_identical(g[[CHART_GRID_COL]][1:2],
+                   c("S1\u001f", "S1\u001fA"))
+  expect_identical(chart_band_args(st, g)$facet_by, CHART_GRID_COL)
+  # A facet_row alone is one column of panels.
+  g1 <- chart_grid_data(band_state(facet_row = "id"), d)
+  expect_identical(unique(g1[[CHART_GRID_COL]]),
+                   paste0(sprintf("S%d", 1:4), "\u001f"))
+  # A facet_row the data lacks, or NA in every row, is no grid.
+  expect_null(chart_grid(band_state(facet_row = "nope"), d))
+  d$none <- NA
+  expect_null(chart_grid(band_state(facet_row = "none"), d))
+})
+
+test_that("the band of a grid comes per panel, keyed by the grid key", {
+  d <- derived_df()
+  d$visit <- rep(c("x", "y"), 60)
+  st <- band_state(facet = "arm", facet_row = "visit")
+  b <- chart_band(st, chart_grid_data(st, d))
+  expect_setequal(names(b$series),
+                  c("x\u001fA", "y\u001fA", "x\u001fB", "y\u001fB"))
+})

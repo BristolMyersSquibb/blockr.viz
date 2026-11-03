@@ -145,8 +145,7 @@
   const timelineKeys = (cfg, facetVal, mark) => {
     /** @type {Record<string, any>} */
     const keys = { [cfg.y]: mark[3] };
-    if (cfg.facet && facetVal != null && facetVal !== '__all__') keys[cfg.facet] = facetVal;
-    return keys;
+    return model.facetKeys(keys, cfg.facet, cfg.facet_grid, facetVal);
   };
 
   /**

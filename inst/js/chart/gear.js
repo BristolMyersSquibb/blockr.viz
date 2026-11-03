@@ -23,6 +23,7 @@
   /** Distinct values a column may have to be offered as a facet, or, when it
    * holds numbers, as a category. */
   const MAX_FACET_LEVELS = 10;
+  const MAX_FACET_ROW_LEVELS = 20;
   const MAX_CATEGORY_LEVELS = 50;
 
   /** @param {string} type */
@@ -78,6 +79,9 @@
         if (key === 'percent_of') return v.func === 'pct_distinct';
         if (key === 'value') return !counts(String(v.type || 'bar'), v);
         if (key === 'drill_target' || key === 'drill_table') return !!v.drill;
+        // Panel scales apply to a wrap and a grid; a grid has its own columns.
+        if (key === 'facet_scales') return !!(v.facet || v.facet_row);
+        if (key === 'facet_cols') return !v.facet_row;
         return true;
       },
       tiles: (key) => (key === 'type' ? TILES : null),
@@ -91,6 +95,8 @@
         // category columns that are not numbers or have at most 50. That keeps
         // a prepare script's helper columns and the measures out of them.
         if (key === 'facet') return cols.filter((c) => c.n_unique <= MAX_FACET_LEVELS);
+        // Grid rows stack down the card, so they take more levels.
+        if (key === 'facet_row') return cols.filter((c) => c.n_unique <= MAX_FACET_ROW_LEVELS);
         if (key === 'category') {
           return cols.filter((c) => c.class !== 'number' || c.n_unique <= MAX_CATEGORY_LEVELS);
         }

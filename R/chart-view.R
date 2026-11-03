@@ -20,7 +20,7 @@ chart_view <- function(kit, src) {
 
   band <- shiny::reactive({
     v <- viz_values(state)
-    d <- src$plain()
+    d <- chart_grid_data(v, src$plain())
     a <- chart_band_args(v, d)
     if (is.null(a)) {
       return(NULL)
@@ -30,7 +30,7 @@ chart_view <- function(kit, src) {
   })
   smoother <- shiny::reactive({
     v <- viz_values(state)
-    d <- src$plain()
+    d <- chart_grid_data(v, src$plain())
     a <- chart_smoother_args(v, d)
     if (is.null(a)) {
       return(NULL)
@@ -88,7 +88,7 @@ chart_needed_cols <- function(v, d) {
     c(v$x, v$y)
   }
   needed <- c(
-    axes, v$color, v$facet, v$series, v$xend, v$label, v$tooltip,
+    axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
     v$ref_min, v$ref_max,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",

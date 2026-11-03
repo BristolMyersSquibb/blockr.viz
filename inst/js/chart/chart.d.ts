@@ -285,6 +285,14 @@ interface ChartFamily {
   after?(slot: ChartSlot, po: any, view: ChartView): void;
 }
 
+/** A panel grid: row and column levels in order, and the grid row the
+ * panels start on. */
+interface ChartGridLayout {
+  rows: string[];
+  cols: string[];
+  top: number;
+}
+
 /** One facet panel: its boxes, its ECharts instance and its hover, brush
  * and zoom state. */
 interface ChartSlot {
@@ -295,6 +303,9 @@ interface ChartSlot {
   chart: any;
   scope: VizScope | null;
   facetVal: any;
+  /** The panel's row and column in a grid (facet_row), from 0; null outside one. */
+  gridRow: number | null;
+  gridCol: number | null;
   dimmed: boolean;
   hover: { si: number | null };
   brushable: boolean;
