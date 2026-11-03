@@ -247,7 +247,7 @@
       } : undefined,
       series
     };
-    const panelH = PANEL_H + (xlab ? xlab.bottom : 0);
+    const panelH = NS.panelH(cfg, PANEL_H) + (xlab ? xlab.bottom : 0);
     return {
       option: NS.cardTooltip(NS.quietHover(opt, cfg), ink),
       height: panelH + 'px',

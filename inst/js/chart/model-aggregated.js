@@ -24,6 +24,12 @@
   // boxes of one group into one slot.
   const BOX_CAT_SEP = '\u0000';
 
+  // Whether each panel picks its own categories. In a grid only "free" does:
+  // "free_y" frees the value axis per row and keeps the categories shared.
+  /** @param {any} cfg @returns {boolean} */
+  const freeCategories = (cfg) => (cfg.facet_grid ? cfg.facet_scales === 'free'
+    : NS.facetScales(cfg) === 'free');
+
   const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
     2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
     2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
@@ -221,7 +227,7 @@
     const facetRows = (facetCol && facet !== '__all__')
       ? ix.get(rows, facetCol, 'nz', String(facet)) : rows;
     const split = levels.length > 0;
-    const keepEmpty = !!facetCol && panels > 1 && NS.facetScales(cfg) !== 'free';
+    const keepEmpty = !!facetCol && panels > 1 && !freeCategories(cfg);
     const outliersOn = isBox && cfg.box_points === 'outliers';
     const idCol = cfg.id;
 
@@ -321,7 +327,7 @@
 
     // Fixed scales give every panel the same categories; pie and treemap
     // label their own slices.
-    const sharedGroups = (NS.facetScales(cfg) !== 'free' && ct !== 'pie' && ct !== 'treemap')
+    const sharedGroups = (!freeCategories(cfg) && ct !== 'pie' && ct !== 'treemap')
       ? orderGroups(agg, rows, columns, cfg, derived) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');

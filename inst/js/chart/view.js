@@ -391,8 +391,9 @@
     _measure(ink) { return this._measureFont(`${ink.fontSize}px ${ink.face}`); }
 
     // One numeric domain across the panels ("fixed"), read back off what each drew.
-    // In a grid, as in ggplot2's facet_grid(): "free_y" shares y within a row,
-    // "free" also shares x within a column.
+    // In a grid the rows carry the unit: "free_y" shares the value axis within a
+    // row (x on horizontal bars and on a gantt) and the other axis across all
+    // panels; "free" shares the other axis within a column instead.
     _harmoniseAxes() {
       const mode = NS.facetScales(this.settings);
       const grid = !!this.settings.facet_grid;
@@ -422,11 +423,20 @@
         return [...out.values()];
       };
       const all = () => [slots];
-      const xGroups = grid && mode === 'free' ? groups((s) => s.gridCol) : all();
-      const yGroups = grid && mode !== 'fixed' ? groups((s) => s.gridRow)
-        : mode === 'free_y' || mode === 'free' ? [] : all();
-      for (const g of xGroups) share('xAxis', g);
-      for (const g of yGroups) share('yAxis', g);
+      if (!grid) {
+        share('xAxis', slots);
+        if (mode === 'fixed') share('yAxis', slots);
+        return;
+      }
+      const cfg = this.settings;
+      const valueOnX = cfg.type === 'gantt' ||
+        (NS.familyOf(cfg.type) === 'aggregated' && cfg.orientation === 'horizontal');
+      const [valueKey, otherKey] = valueOnX ? ['xAxis', 'yAxis'] : ['yAxis', 'xAxis'];
+      const raw = cfg.facet_scales;
+      const valueGroups = raw === 'fixed' ? all() : groups((s) => s.gridRow);
+      const otherGroups = raw === 'free' ? groups((s) => s.gridCol) : all();
+      for (const g of valueGroups) share(valueKey, g);
+      for (const g of otherGroups) share(otherKey, g);
     }
 
     _teardownCharts() {

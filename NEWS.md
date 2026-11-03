@@ -15,6 +15,10 @@ read.
   matrix or `"cards"`. It replaces the tile, summarize, summary and gt
   table blocks.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
+* The chart's `facet_row` lays the panels out as a grid, `facet_row` levels
+  down and `facet` levels across, for every chart type. With
+  `facet_scales = "free_y"` each row has its own value axis. The data view
+  and the Excel download key each mark on both facets.
 
 ## Arguments
 

@@ -63,5 +63,11 @@
   // limit renders blank, so past it the lanes squeeze instead.
   const PANEL_H_CAP = 4000;
 
-  Object.assign(NS, { hasVal, labelled, rangesOf, maxOf, minOf, firstIndex, mk, PANEL_H_CAP });
+  // A fixed plot height, shorter in a panel grid (facet_row), where panels
+  // stack in rows. Heights that grow with the data (bar rows, gantt lanes)
+  // do not go through here.
+  /** @param {any} cfg @param {number} h @returns {number} */
+  const panelH = (cfg, h) => (cfg && cfg.facet_grid ? Math.round(h * 0.65) : h);
+
+  Object.assign(NS, { hasVal, labelled, rangesOf, maxOf, minOf, firstIndex, mk, PANEL_H_CAP, panelH });
 })();

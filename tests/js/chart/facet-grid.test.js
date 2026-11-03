@@ -119,3 +119,33 @@ test('fixed in a grid shares one y across every panel', () => {
     r.env.close();
   }
 });
+
+// The domain each panel was patched to share on `key`, as "min:max", or null.
+const shared = (r, key) => r.block._slots.map((s) => {
+  const patch = s.chart.log.filter((e) => e.op === 'setOption' && e.option && e.option[key] &&
+    e.option[key][0] && e.option[key][0].min != null && Object.keys(e.option).length === 1);
+  const last = patch[patch.length - 1];
+  return last ? last.option[key][0].min + ':' + last.option[key][0].max : null;
+});
+
+test('horizontal bars in a grid: free_y shares the value axis (x) within a row', () => {
+  const r = h.draw({ ...BASE, type: 'bar', category: 'AETERM', func: 'count', orientation: 'horizontal',
+                     facet: 'ARM', facet_row: 'SEX', facet_scales: 'free_y' }, DATA, F.columns,
+                   { width: 900, keepOpen: true });
+  try {
+    assert.strictEqual(r.error, null);
+    const x = shared(r, 'xAxis');
+    assert.ok(x.every((d) => d !== null));
+    const byRow = new Map();
+    r.block._slots.forEach((s, i) => {
+      if (!byRow.has(s.gridRow)) byRow.set(s.gridRow, new Set());
+      byRow.get(s.gridRow).add(x[i]);
+    });
+    for (const doms of byRow.values()) assert.strictEqual(doms.size, 1);
+    // The categories stay shared: every panel lists the same ones.
+    const cats = r.block._slots.map((s) => JSON.stringify(s.chart.getOption().yAxis[0].data));
+    assert.strictEqual(new Set(cats).size, 1);
+  } finally {
+    r.env.close();
+  }
+});

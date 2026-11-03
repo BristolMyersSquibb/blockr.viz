@@ -30,9 +30,10 @@ chart_summary <- function(data, v) {
   if (!is.data.frame(data) || !nrow(data)) {
     return(NULL)
   }
-  # Split by what the chart draws: an absent or all-NA colour or facet is unset.
+  # Split by what the chart draws: an absent or all-NA colour or facet is
+  # unset. In a panel grid the rows' facet comes first, then the columns'.
   v$color <- chart_split_in(data, v$color)
-  v$facet <- chart_split_in(data, v$facet)
+  v$facet <- chart_facets(v, data)
   type <- v$type %||% "bar"
   if (type %in% CHART_DISTRIBUTION_TYPES) {
     return(chart_summary_dist(data, v))

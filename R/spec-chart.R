@@ -418,8 +418,9 @@ chart_spec_facets <- function() {
       describe = paste(
         "\"fixed\" shares one scale across panels, \"free\" lets each panel",
         "size itself, \"free_y\" frees y only (scatter, line and band). In a",
-        "grid (`facet_row`) a free y is shared within a row, a free x within a",
-        "column."
+        "grid (`facet_row`) \"free_y\" shares the value axis within a row (x",
+        "on horizontal bars and a gantt) and the categories across all panels;",
+        "\"free\" also shares the other axis within a column."
       )
     ),
 

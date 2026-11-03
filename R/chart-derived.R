@@ -52,7 +52,14 @@ chart_grid <- function(state, data) {
 # The column the panels split on: the grid key, else `facet`.
 chart_facet_by <- function(state, data) {
   if (!is.null(chart_grid(state, data))) CHART_GRID_COL
-  else chart_split_in(data, state$facet)
+  else chart_split_in(data, state[["facet"]])
+}
+
+# The facet columns the chart draws, `facet_row` before `facet`: the keys of
+# a panel in the data view and the Excel download. `facet` may hold both.
+chart_facets <- function(state, data) {
+  cols <- c(state[["facet_row"]], state[["facet"]])
+  unique(unlist(lapply(cols, chart_split_in, data = data)))
 }
 
 # `data` with the grid key column, when there is a grid.

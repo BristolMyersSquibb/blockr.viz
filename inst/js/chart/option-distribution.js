@@ -312,7 +312,7 @@
     return {
       xFit: cat.xFit,
       // Horizontal: one 28 px row per drawn slot, capped.
-      panelH: vertical ? 350 + (xlab ? xlab.bottom : 0)
+      panelH: vertical ? NS.panelH(cfg, 350) + (xlab ? xlab.bottom : 0)
         : 30 + Math.min(NS.PANEL_H_CAP, cats.length * 28) + bottomBase,
       labelNote: (!vertical && cats.length * 28 > NS.PANEL_H_CAP)
         ? NS.axes.thinnedLabelNote(NS.PANEL_H_CAP, cats.length, P.title(cfg.category)) : null,
