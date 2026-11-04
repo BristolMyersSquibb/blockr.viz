@@ -114,7 +114,7 @@ new_chart_block(
 
 \item{x_transform}{As \code{y_transform}, for the x axis of a scatter. One of \code{"identity"}, \code{"log10"}. Default: \code{"identity"}.}
 
-\item{x_limits}{The x axis from and to, as \code{c(0, 100)}; \code{NA} at either end is auto. Dates as "2024-01-01". Marks outside are cut off, not dropped from the data. Drag zoom works inside the limits, and a reset returns to them. Default \code{NULL}: auto.}
+\item{x_limits}{The x axis from and to, as \code{c(0, 100)}; \code{NA} at either end is auto. Dates as "2024-01-01". Marks outside are cut off, not dropped from the data. Drag zoom works inside the limits, and a reset returns to them. Set limits show in the subtitle, where a reader can edit or clear them. Default \code{NULL}: auto.}
 
 \item{y_limits}{As \code{x_limits}, for the value axis: y on a scatter, line, area or band, \code{value}'s axis on the aggregated types, whichever way they lie. Default \code{NULL}: auto.}
 

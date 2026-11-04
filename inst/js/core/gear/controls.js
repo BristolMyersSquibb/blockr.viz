@@ -547,38 +547,10 @@
                                    set: ctx.set });
   }
 
-  /** A limit as typed: a number, else the text (a date); blank is null. @param {string} t */
-  const limitOf = (t) => (t.trim() === '' ? null : (Number.isFinite(Number(t)) ? Number(t) : t.trim()));
-
-  /** Two fields, from and to, each blank for auto: axis limits. Either
-   * field commits the pair; both blank is null.
-   * @param {HTMLElement} el @param {VizRowCtx} ctx */
-  function range(el, ctx) {
-    const cur = Array.isArray(ctx.value) ? ctx.value : [null, null];
-    const box = document.createElement('div');
-    box.className = 'vz-range';
-    el.appendChild(box);
-    /** @type {HTMLInputElement[]} */
-    const inputs = [];
-    const commit = () => {
-      const pair = inputs.map((inp) => limitOf(inp.value));
-      const v = pair.every((x) => x == null) ? null : pair;
-      if (!same(v, ctx.value)) ctx.set(v);
-    };
-    ['from', 'to'].forEach((end, i) => {
-      if (i) box.appendChild(Object.assign(document.createElement('span'), { className: 'vz-range-sep', textContent: 'to' }));
-      const arg = { ...ctx.arg, type: { name: 'string' }, gear: { ...ctx.arg.gear, parse: undefined } };
-      const inp = field(box, { ...ctx, arg, key: ctx.key + '_' + end, label: ctx.label + ' ' + end,
-                               value: cur[i] == null ? '' : String(cur[i]) }, { commit });
-      inp.placeholder = 'auto';
-      inputs.push(inp);
-    });
-  }
-
   /** @type {Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>} */
   const BUILD = { column, columns, values: valuesCtl, select, segmented, toggle, number,
                   text: textCtl, code, script: scriptCtl, slider,
-                  tiles, template, custom, range };
+                  tiles, template, custom };
 
   /** Draw a row's controls. A template row draws its own field, preview and
    * help.

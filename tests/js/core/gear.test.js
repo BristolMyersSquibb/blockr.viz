@@ -643,22 +643,3 @@ test('the variables layout: Group by, Section by, Individual id, Label and Nest 
   box.dispatchEvent(new env.win.Event('change'));
   assert.deepEqual(env.sent.at(-1).value.values, { nest: true });
 });
-
-test('range: a from and a to field, blank for auto, both blank is null', () => {
-  const t = setup({ type: 'line', x: 'ADY', y: 'AVAL', y_limits: [null, 120] });
-  const from = byKey(t.el, 'y_limits_from'), to = byKey(t.el, 'y_limits_to');
-  assert.equal(from.value, '');
-  assert.equal(from.placeholder, 'auto');
-  assert.equal(to.value, '120');
-  type(t.win, from, '0');
-  assert.deepEqual(plain(lastSet(t).values), { y_limits: [0, 120] });
-  // A change draws the row again: its fields are new.
-  type(t.win, byKey(t.el, 'y_limits_from'), '');
-  type(t.win, byKey(t.el, 'y_limits_to'), '');
-  assert.deepEqual(plain(lastSet(t).values), { y_limits: null });
-  const d = setup({ type: 'line', x: 'ADY', y: 'AVAL' });
-  type(d.win, byKey(d.el, 'x_limits_from'), '2020-01-01');
-  assert.deepEqual(plain(lastSet(d).values), { x_limits: ['2020-01-01', null] });
-  const bar = setup({ type: 'bar', category: 'ARM' });
-  assert.ok(rows(bar.el).includes('y_limits') && !rows(bar.el).includes('x_limits'));
-});

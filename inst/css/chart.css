@@ -25,6 +25,22 @@
   padding: 2px 8px 0 2px;
 }
 
+/* The axis limits at the end of the subtitle (limits-phrase.js). */
+.vz-limits--after::before { content: " \00b7  "; color: var(--blockr-color-text-muted, #6b7280); }
+.vz-limits__auto { font-weight: 400; }
+.vz-limits__clear {
+  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
+}
+.vz-limits__clear:hover,
+.vz-limits__clear:focus-visible {
+  color: var(--blockr-color-text, #1f2937);
+  background: var(--blockr-color-surface-hover, #f3f4f6);
+}
+
 /* ===== Chart grid (faceting) and zoom ===== */
 .vz-chart-grid {
   display: grid;

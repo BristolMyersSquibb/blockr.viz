@@ -245,14 +245,14 @@ chart_spec_look <- function() {
     x_limits = chart_arg(
       type = "limits", null = "auto",
       applies = c("scatter", "line", "area", "band", "gantt"),
-      gear = gear("Look", "range", "X limits"),
       slot = FALSE,
       example = c(NA, 100),
       describe = paste(
         "The x axis from and to, as `c(0, 100)`; `NA` at either end is",
         "auto. Dates as \"2024-01-01\". Marks outside are cut off, not",
         "dropped from the data. Drag zoom works inside the limits, and",
-        "a reset returns to them."
+        "a reset returns to them. Set limits show in the subtitle, where",
+        "a reader can edit or clear them."
       )
     ),
 
@@ -260,7 +260,6 @@ chart_spec_look <- function() {
       type = "limits", null = "auto",
       applies = c("scatter", "line", "area", "band", "bar", "histogram",
                   "waterfall", "boxplot", "pointrange"),
-      gear = gear("Look", "range", "Y limits"),
       slot = FALSE,
       example = c(0, NA),
       describe = paste(

@@ -181,21 +181,63 @@ test('Keep as limits writes the window into the limits and spends the zoom', () 
   c.close();
 });
 
-test('Clear limits shows while limits are set, on the first panel, and empties them', () => {
+// limits-phrase.js needs a DOM, so these take its namespace from a mounted block.
+const withPhrase = (fn) => {
+  const c = D.open(LINE);
+  try { fn(c.env.win.Blockr.viz.chart.limitsPhrase); } finally { c.close(); }
+};
+
+test('set limits read as a phrase at the end of the subtitle, x first', () => withPhrase((LP) => {
+  assert.deepStrictEqual(plain(LP.parts({ ...LINE, x_limits: ['2024-01-01', null], y_limits: [0, 50] })),
+                         [{ role: 'x', name: 'x', ends: ['2024-01-01', null] },
+                          { role: 'y', name: 'y', ends: [0, 50] }]);
+  assert.deepStrictEqual(plain(LP.parts({ ...BOX, y_limits: [20, null] })),
+                         [{ role: 'y', name: 'values', ends: [20, null] }]);
+  assert.deepStrictEqual(plain(LP.parts({ ...BOX, x_limits: [1, 2] })), [], 'a box plot takes no x limits');
+  assert.deepStrictEqual(plain(LP.parts(LINE)), []);
+}));
+
+test('a typed end becomes the pair R takes, or nothing when R would refuse it', () => withPhrase((LP) => {
+  const y = { role: 'y', name: 'y', ends: [20, null] };
+  assert.deepStrictEqual(plain(LP.next(y, 1, '80')), [20, 80]);
+  assert.deepStrictEqual(plain(LP.next(y, 0, '')), null, 'both ends auto is no limits');
+  assert.strictEqual(LP.next(y, 1, '10'), undefined, 'to below from');
+  assert.strictEqual(LP.next(y, 1, 'abc'), undefined);
+  const x = { role: 'x', name: 'x', ends: ['2024-01-01', null] };
+  assert.deepStrictEqual(plain(LP.next(x, 1, '2024-06-30')), ['2024-01-01', '2024-06-30']);
+  assert.strictEqual(LP.next(x, 1, '2023-12-01'), undefined);
+}));
+
+test('the phrase edits an end in place and its × clears the axis', () => {
   const c = open({ ...BOX, y_limits: [20, null] });
-  assert.strictEqual(c.slot().clearBtn.hidden, false);
-  assert.strictEqual(c.slot().resetBtn.hidden, true, 'no zoom, no Reset zoom');
-  c.slot().clearBtn.click();
+  const sub = c.block.frame.subEl;
+  const phrase = () => sub.querySelector('.vz-limits');
+  assert.ok(phrase(), 'the phrase shows while a limit is set');
+  assert.strictEqual(sub.hidden, false, 'an empty subtitle shows for it');
+  assert.strictEqual(phrase().textContent, 'values from 20 to auto×');
+  const [, to] = phrase().querySelectorAll('.blockr-slot');
+  to.click();
+  const input = sub.querySelector('input');
+  input.value = '80';
+  input.dispatchEvent(new c.env.win.KeyboardEvent('keydown', { key: 'Enter' }));
+  assert.deepStrictEqual(plain(c.sets().pop()), { y_limits: [20, 80] });
+  c.send({ ...BOX, y_limits: [20, 80] }, { data: null });
+  assert.strictEqual(phrase().textContent, 'values from 20 to 80×');
+  phrase().querySelector('.vz-limits__clear').click();
   assert.deepStrictEqual(plain(c.sets().pop()), { y_limits: null });
   c.send({ ...BOX, y_limits: null }, { data: null });
-  assert.strictEqual(c.slot().clearBtn.hidden, true);
-  c.send({ ...BOX, x_limits: [1, 2] }, { data: null });
-  assert.strictEqual(c.slot().clearBtn.hidden, true, 'a box plot takes no x limits');
+  assert.strictEqual(phrase(), null, 'gone with the limits');
   c.close();
-  const f = open({ ...LINE, facet: 'ARM', x_limits: [0, null], y_limits: [null, 50] });
-  assert.strictEqual(f.block._slots[0].clearBtn.hidden, false);
-  assert.ok(f.block._slots.slice(1).every((s) => s.clearBtn.hidden), 'one link, on the first panel');
-  f.block._slots[0].clearBtn.click();
-  assert.deepStrictEqual(plain(f.sets().pop()), { x_limits: null, y_limits: null });
-  f.close();
+});
+
+test('Keep as limits shows the phrase once R echoes it', () => {
+  const c = open(LINE);
+  assert.strictEqual(c.block.frame.subEl.querySelector('.vz-limits'), null);
+  c.drag([10, 20], [110, 120]);
+  c.slot().keepBtn.click();
+  const set = c.sets().pop();
+  c.send({ ...LINE, ...set }, { data: null });
+  const phrase = c.block.frame.subEl.querySelector('.vz-limits');
+  assert.ok(phrase && /^x from .+ to .+×, y from .+ to .+×$/.test(phrase.textContent));
+  c.close();
 });

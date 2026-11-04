@@ -49,7 +49,7 @@ test_that("the chart block takes x_limits and y_limits", {
                "from below to")
   spec <- viz_block_spec("chart")
   expect_identical(spec$args$x_limits$type$name, "limits")
-  expect_identical(spec$args$y_limits$gear$control, "range")
+  expect_null(spec$args$y_limits$gear)
   expect_true("boxplot" %in% spec$args$y_limits$applies)
   expect_false("boxplot" %in% spec$args$x_limits$applies)
 })
