@@ -6,7 +6,8 @@
  * selection and a second click on the same mark clears it; with a
  * drill_target a click, a point or a brush is an event for another block
  * (drill()): nothing latches, the mark gets a trace that fades, and the
- * footer shows a receipt of it for a moment. A latched selection dims the
+ * footer shows a receipt of it for a moment. A second click on the mark
+ * just sent clears it. A latched selection dims the
  * marks it does not light; the view's highlight() draws that.
  *
  * The selection is kept in the shape R reads (chart-keys.js). A latched brush
@@ -48,6 +49,11 @@
       this._saved = null;
       /** The clicked mark's light. @type {HTMLElement | null} */
       this._signal = null;
+      /** The last drill sent to a target, for a second click to take back.
+       * @type {ChartSelection | null} */
+      this.sent = null;
+      /** The last peek sent, as JSON (peek()). */
+      this._peeked = 'null';
     }
 
     /**
@@ -71,6 +77,15 @@
     click(slot, params, filters) {
       const v = this.view;
       if (NS.transientDrill(v.settings)) {
+        // A second click on the mark just sent takes it back: the data view
+        // lets go and the target is cleared.
+        const s = this.sent;
+        if (s && s.type === 'categorical' && sameFilters(s.filters, filters)) {
+          this.sent = null;
+          v.frame.flash('Drill cleared');
+          this.send(null);
+          return;
+        }
         this.drill({ type: 'categorical', filters }, () => this.flash(slot, params));
         return;
       }
@@ -91,6 +106,7 @@
      * @param {ChartSelection} sel @param {() => void} light
      */
     drill(sel, light) {
+      this.sent = sel;
       light();
       this.view.frame.flash('Drilled down to ' + this.describe(sel));
       this.send(sel);
@@ -124,11 +140,14 @@
     }
 
     /** The brush was cleared: so is the selection, unless a click just made
-     * it, drill is off, where the brush sent nothing, or the brush was a drill,
-     * which the target owns from then on. */
+     * it, drill is off, where the brush only peeked (the peek goes), or the
+     * brush was a drill, which the target owns from then on. */
     brushCleared() {
       if (this.suppressBrushClear) return;
-      if (NS.drillState(this.view.settings) === 'off') return;
+      if (NS.drillState(this.view.settings) === 'off') {
+        this.peek(null);
+        return;
+      }
       if (NS.transientDrill(this.view.settings)) return;
       this.current = null;
       this.byBrush = false;
@@ -141,6 +160,7 @@
     clear() {
       const v = this.view;
       this.current = null;
+      this.sent = null;
       this.byBrush = false;
       this.brushDrawn = false;
       for (const chart of v.charts) chart.dispatchAction({ type: 'brush', areas: [] });
@@ -153,6 +173,19 @@
       const v = this.view;
       if (this.current || v._slots.some((s) => s && s.dimmed)) v.highlight();
       else v.status();
+    }
+
+    /**
+     * A brush on a chart with drill off: it filters nothing, but the data
+     * view shows what it caught. Sent as `<id>_peek`, once per change.
+     * @param {ChartSelection | null} sel
+     */
+    peek(sel) {
+      const key = JSON.stringify(sel);
+      if (key === this._peeked) return;
+      this._peeked = key;
+      const id = this.view.el.id;
+      if (id) V.util.send(id, 'peek', { selection: sel, nonce: Date.now() });
     }
 
     /** What R gets: `{selection, nonce}`, `selection` null for a clear.

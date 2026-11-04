@@ -150,3 +150,26 @@ test('a redraw keeps a brushed selection; the reader can still clear it', () => 
   assert.strictEqual(sent()[1], null);
   env.close();
 });
+
+test('with drill off a brush peeks: the data view gets it, the selection does not', () => {
+  const env = h.createEnv({ record: 'none' });
+  const m = h.mount(env);
+  const d = line(5);
+  h.send(env, m.id, { columns: d.columns, data: d.data,
+                      config: { type: 'scatter', x: 'X', y: 'Y' } });
+  const chart = m.block._slots[0].chart;
+  const brush = (idx) => chart.trigger('brushSelected', {
+    batch: [{ selected: [{ seriesIndex: 0, dataIndex: idx }] }]
+  });
+  brush([1, 2]);
+  brush([1, 2]);
+  const peeks = () => env.inputs().filter((i) => /_peek:/.test(i.name)).map((i) => i.value.selection);
+  assert.strictEqual(env.inputs().filter((i) => /_select:/.test(i.name)).length, 0);
+  assert.deepStrictEqual(peeks(), [
+    { type: 'range', x: 'X', y: 'Y', x_range: [1, 2], y_range: [1, 2] }
+  ]);
+  chart.trigger('brush', { areas: [] });
+  env.flushTimers();
+  assert.deepStrictEqual(peeks().slice(-1), [null]);
+  env.close();
+});

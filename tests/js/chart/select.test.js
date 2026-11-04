@@ -73,16 +73,26 @@ test('a drill column sends its values in the rows under the mark; drill off send
   assert.deepStrictEqual(run({ ...BAR, drill: null }, (c) => c.clickWhere(0, D.at('Nausea'))).sent, []);
 });
 
-test('with a drill target a click is an event: sent every time, nothing latched', () => {
+test('with a drill target a click is an event: sent, nothing latched', () => {
   const r = run({ ...BAR, drill_target: 'flt_ae' }, (c) => {
-    c.clickWhere(0, D.at('Nausea'));
     c.clickWhere(0, D.at('Nausea'));
     assert.strictEqual(c.block.selection.current, null);
     assert.match(c.block.frame.statusEl.textContent, /^Drilled down to Reported Term = Nausea/);
     c.advance(4000);
     assert.strictEqual(c.block.frame.statusEl.textContent, '');
   });
-  assert.deepStrictEqual(r.sent, [cat({ AETERM: ['Nausea'] }), cat({ AETERM: ['Nausea'] })]);
+  assert.deepStrictEqual(r.sent, [cat({ AETERM: ['Nausea'] })]);
+});
+
+test('with a drill target a second click on the same mark clears it', () => {
+  const r = run({ ...BAR, drill_target: 'flt_ae' }, (c) => {
+    c.clickWhere(0, D.at('Nausea'));
+    c.clickWhere(0, D.at('Nausea'));
+    assert.match(c.block.frame.statusEl.textContent, /^Drill cleared/);
+    c.clickWhere(0, D.at('Nausea'));
+  });
+  assert.deepStrictEqual(r.sent, [cat({ AETERM: ['Nausea'] }), null,
+                                  cat({ AETERM: ['Nausea'] })]);
 });
 
 test('a legend chip selects its level', () => {

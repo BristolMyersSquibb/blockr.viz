@@ -13,7 +13,15 @@ chart_server <- function(id, data, init) {
       view <- chart_view(kit, src)
       chart_capture_service(kit$session, kit$el, view$payload)
       expr <- chart_expr(data, kit$state, src)
-      dv <- chart_data_view(kit, src, expr)
+      shown <- chart_view_selection(kit)
+      own <- chart_expr(data, kit$state, src, shown)
+      # Drill on and no target: the view's selection is the chart's own, so
+      # its filter is the block's.
+      rows_expr <- shiny::reactive({
+        latched <- !kit$transient() && nzchar(kit$state$drill() %||% "")
+        if (latched) expr() else own()
+      })
+      dv <- chart_data_view(kit, src, rows_expr, shown)
       list(
         payload = view$payload,
         expr = expr,
@@ -97,10 +105,16 @@ chart_split_cols <- function(v) {
 # still holds (a brush latched before 0.3.0.9027) is ignored. The same object
 # comes back while the code is unchanged, so blockr.core skips a
 # re-evaluation.
-chart_expr <- function(data, state, src) {
-  held <- function() {
-    target <- if (!is.null(state$drill_target)) state$drill_target()
-    if (nzchar(target %||% "")) NULL else state$selection()
+#
+# `held`, a function returning a selection, replaces the chart's own: the
+# data view filters its Rows by what the chart shows as selected
+# (chart_view_selection()).
+chart_expr <- function(data, state, src, held = NULL) {
+  if (is.null(held)) {
+    held <- function() {
+      target <- if (!is.null(state$drill_target)) state$drill_target()
+      if (nzchar(target %||% "")) NULL else state$selection()
+    }
   }
   members <- dd_group_filters_members(
     function() chart_selection_filters(held()), src$raw
@@ -124,6 +138,29 @@ chart_expr <- function(data, state, src) {
     }
     if (!identical(out, last$expr)) last$expr <- out
     last$expr
+  })
+}
+
+# What the chart shows as selected, for its data view. Without a drill
+# target, the chart's selection. With one, the last click or brush it sent,
+# until the reader clicks it again or clicks empty plot space; what other
+# blocks do to the target does not change it. With drill off, a brush only
+# highlights: the browser sends it as `<view>_peek`, which nothing but the
+# data view reads.
+chart_view_selection <- function(kit) {
+  peek <- shiny::reactiveVal(NULL)
+  shiny::observeEvent(kit$input[[paste0(kit$view, "_peek")]], {
+    peek(kit$input[[paste0(kit$view, "_peek")]]$selection)
+  })
+  shiny::observeEvent(kit$state$drill(), peek(NULL), ignoreInit = TRUE)
+  shiny::reactive({
+    if (!nzchar(kit$state$drill() %||% "")) {
+      return(peek())
+    }
+    if (!kit$transient()) {
+      return(kit$state$selection())
+    }
+    kit$claim()$selection
   })
 }
 

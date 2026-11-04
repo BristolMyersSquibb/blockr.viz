@@ -33,7 +33,8 @@
 #' Clear. A brush on a scatter or a line filters to the points inside the
 #' rectangle. With `drill_target` set, a click, a point or a brush is sent
 #' to that filter block instead, once (a brush when the drag ends), and the
-#' chart keeps no selection of its own.
+#' chart keeps no selection of its own. A second click on the same mark
+#' clears the target. The data view shows the last drill until then.
 #'
 #' @section Titles:
 #' `title`, `subtitle` and `caption` are templates. `NULL` takes the input's

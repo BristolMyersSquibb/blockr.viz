@@ -222,19 +222,30 @@ chart_selection_to_claim <- function(sel, summ, v) {
     names(f)[names(f) == chart_bin_col(v$x)] <- v$x
   }
   gcols <- grep("^\\.group[0-9]+$", names(summ), value = TRUE)
+  gcols <- gcols[order(as.integer(sub("^\\.group", "", gcols)))]
   keys <- c(stats::setNames(vapply(gcols, function(g) summ[[g]][[1L]], ""),
                             paste0(gcols, "_level")),
             .variable_level = summ$.variable[[1L]])
-  if (!setequal(unname(keys), names(f))) {
-    return(NULL)
+  if (setequal(unname(keys), names(f))) {
+    claim <- lapply(keys, function(col) as.list(f[[col]]))
+    claim$.variable <- list(summ$.variable[[1L]])
+    return(list(type = "categorical", filters = claim))
   }
-  claim <- lapply(keys, function(col) as.list(f[[col]]))
-  claim$.variable <- list(summ$.variable[[1L]])
-  list(type = "categorical", filters = claim)
+  # The outer keys alone (drill = "ARM" on a bar coloured by SEX): the
+  # section headers of those groups light.
+  outer <- keys[seq_len(max(0L, length(keys) - 1L))]
+  for (k in rev(seq_along(outer))) {
+    if (setequal(unname(outer[seq_len(k)]), names(f))) {
+      claim <- lapply(outer[seq_len(k)], function(col) as.list(f[[col]]))
+      return(list(type = "categorical", filters = claim))
+    }
+  }
+  NULL
 }
 
-# The rows behind the selection: the block's expression evaluated on its
-# input, as blockr.core evaluates it, with the `.(data)` slot bound.
+# The rows behind the selection: an expression of the block's kind (its own,
+# or the data view's, chart_view_selection()) evaluated on its input, as
+# blockr.core evaluates it, with the `.(data)` slot bound.
 chart_output_rows <- function(data, expr) {
   if (is.null(data) || is.null(expr)) {
     return(if (is.data.frame(data)) data)
@@ -253,15 +264,22 @@ chart_output_rows <- function(data, expr) {
 #' a download asks. Registers the observer that takes a row click on
 #' Summary into the chart's selection.
 #'
+#' The view follows what the chart shows as selected (`shown`), with or
+#' without a drill target: Rows narrows to it, Summary keeps every mark and
+#' lights the selected ones.
+#'
 #' @param kit The chart's kit.
 #' @param src The chart's sources (chart_sources()).
-#' @param expr The block's expression, a reactive.
+#' @param expr The filter of the shown selection, a reactive
+#'   (chart_expr() with `held = shown`).
+#' @param shown What the chart shows as selected, a reactive
+#'   (chart_view_selection()).
 #' @return A list: `summary()` and `rows()`, reactives; `tables()`, both
-#'   with the Rows total, for the data downloads (viz_data_downloads());
-#'   `derived(msg)`, the payload's `data_view` entry for the reader's
-#'   `<view>_data` message.
+#'   with the Rows total and, under a selection, all rows, for the data
+#'   downloads (viz_data_downloads()); `derived(msg)`, the payload's
+#'   `data_view` entry for the reader's `<view>_data` message.
 #' @noRd
-chart_data_view <- function(kit, src, expr) {
+chart_data_view <- function(kit, src, expr, shown) {
   summary <- shiny::reactive({
     d <- tryCatch(src$plain(), error = function(e) NULL)
     chart_summary(d, viz_values(kit$state))
@@ -303,12 +321,14 @@ chart_data_view <- function(kit, src, expr) {
       total = total(),
       table = table(x, drill = clicks,
                     selection = if (on_summary) {
-                      chart_selection_to_claim(v$selection, s, v)
+                      chart_selection_to_claim(shown(), s, v)
                     }, req = msg$n)
     )
   }
   tables <- function() {
-    list(summary = summary(), rows = rows(), total = total())
+    sel <- !is.null(shown())
+    list(summary = summary(), rows = rows(), total = total(),
+         all = if (sel) tryCatch(src$prep$prepared(), error = function(e) NULL))
   }
   list(summary = summary, rows = rows, tables = tables, derived = derived)
 }

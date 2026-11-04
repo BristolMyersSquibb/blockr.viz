@@ -187,7 +187,7 @@ interface VizNamespace {
   spec: Record<string, unknown>;
   util: {
     esc(x: unknown): string;
-    send(id: string, kind: 'set' | 'select' | 'capture' | 'data' | 'need', value: unknown,
+    send(id: string, kind: 'set' | 'select' | 'peek' | 'capture' | 'data' | 'need', value: unknown,
          block?: string): boolean;
     select(id: string, selection: Record<string, unknown> | null): boolean;
     isNumeric(c: VizColumn | null | undefined): boolean;

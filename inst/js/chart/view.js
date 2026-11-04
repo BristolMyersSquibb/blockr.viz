@@ -253,7 +253,9 @@
         if (fam.prepare) fam.prepare(slot, po);
         // When an action follows, ECharts runs it with the option in one update.
         const actionFollows = !!fam.actions && fam.actions(slot, po);
-        if (slot.brushAreas && this.selection.byBrush) this.selection.redrawing();
+        if (slot.brushAreas && (this.selection.byBrush || this.selection._peeked !== 'null')) {
+          this.selection.redrawing();
+        }
         chart.setOption(this.still ? { ...po.option, animation: false } : po.option,
                         actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;

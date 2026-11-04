@@ -351,12 +351,22 @@
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
   const brushEvents = (view, slot, chart) => {
     chart.on('brushSelected', (/** @type {any} */ params) => {
-      if (NS.drillState(view.settings) === 'off') return;
       const batch = params.batch && params.batch[0];
       if (!batch) return;
       const selected = (batch.selected || []).flatMap((/** @type {any} */ s) =>
         (s.dataIndex || []).map((/** @type {number} */ di) =>
           ({ seriesIndex: s.seriesIndex, dataIndex: di })));
+      // Drill off: the brush filters nothing; the data view shows what it
+      // caught. An empty batch is a redraw or a clear: the brush event drops
+      // the peek when the rectangle goes.
+      if (NS.drillState(view.settings) === 'off') {
+        const sel = selected.length ? caughtSelection(view, slot, selected) : null;
+        if (sel) {
+          slot.brushSel = JSON.stringify(sel);
+          view.selection.peek(sel);
+        }
+        return;
+      }
       // With a drill target the brush is sent once, when the drag ends.
       if (NS.transientDrill(view.settings)) {
         slot.brushCaught = selected;
@@ -439,8 +449,11 @@
       const cursor = (key, opt) => chart.dispatchAction({ type: 'takeGlobalCursor', key, ...opt });
       if (po.brushable) {
         cursor('brush', { brushOption: { brushType: 'rect', brushMode: 'single' } });
-        // The redraw dropped the rectangle; it stays while its selection does.
-        if (slot.brushAreas && slot.brushSel === JSON.stringify(view.selection.current)) {
+        // The redraw dropped the rectangle; it stays while its selection or
+        // its peek (drill off) does.
+        const sel = view.selection;
+        if (slot.brushAreas && (slot.brushSel === JSON.stringify(sel.current) ||
+                                slot.brushSel === sel._peeked)) {
           chart.dispatchAction({ type: 'brush', areas: slot.brushAreas });
         }
       } else if (slot.brushable) {

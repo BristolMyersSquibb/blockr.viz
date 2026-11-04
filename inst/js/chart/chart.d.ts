@@ -374,6 +374,10 @@ interface ChartSelectionState {
   byBrush: boolean;
   brushDrawn: boolean;
   suppressBrushClear: boolean;
+  /** The last drill sent to a target, or null. */
+  sent: ChartSelection | null;
+  /** The last peek sent, as JSON; 'null' for none. */
+  _peeked: string;
   restore(saved: unknown): void;
   click(slot: ChartSlot | null, params: any, filters: ChartSelectionFilters): void;
   drill(sel: ChartSelection, light: () => void): void;
@@ -384,6 +388,7 @@ interface ChartSelectionState {
   describe(sel: ChartSelection): string;
   redrawing(): void;
   brushCleared(): void;
+  peek(sel: ChartSelection | null): void;
   clear(): void;
   words(): string | null;
 }

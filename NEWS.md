@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9037
+# blockr.viz 0.3.0.9038
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -215,10 +215,20 @@ read.
   hands its downloads an exhibit (`new_viz_exhibit()`).
 * The chart's download menu has two sections. Chart holds the image,
   PowerPoint and web page. Data holds the data view's tables, Summary (one
-  row per mark, every key in its own column) and Rows (the block's output,
-  so narrowed by the selection), each as Excel and CSV, with the count the
-  data view's tab shows. A chart that draws rows offers Rows alone. The
-  chart's Excel item, which wrote both tables as two sheets, is gone.
+  row per mark, every key in its own column) and Rows (narrowed by the
+  selection), each as Excel and CSV, with the count the data view's tab
+  shows. Under a selection Rows reads "Selected rows" and "All rows" joins
+  it. A chart that draws rows offers Rows alone. The chart's Excel item,
+  which wrote both tables as two sheets, is gone.
+* The chart's data view follows what the chart shows as selected. Rows
+  narrows to it ("Rows 48 of 254") and Summary keeps every mark, lighting
+  the selected ones. With a `drill_target` the view follows the click or
+  brush the chart sent, until the reader clicks the same mark again, which
+  also clears the target; what other blocks send to the target leaves it in
+  place. Before, a second click sent the same drill again. With `drill` unset a scatter
+  brush filters nothing downstream, but the data view shows the points it
+  caught. A selection on the outer key alone (`drill = "ARM"` on a bar
+  coloured by SEX) lights its group in Summary.
 
 ## Security
 

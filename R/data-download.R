@@ -1,8 +1,9 @@
 # The download menu's Data section: the data view's tables as files. A chart
-# gives its Summary (one row per mark) and its Rows (the block's output, so
-# narrowed by the selection), each as Excel and CSV; a chart that draws rows
-# has no Summary. The menu names each table with its count, as the data view's
-# tabs do, so what a file holds does not depend on the open tab.
+# gives its Summary (one row per mark) and its Rows (narrowed by what the chart
+# shows as selected), each as Excel and CSV; a chart that draws rows has no
+# Summary. Under a selection the Rows entry reads "Selected rows" and an "All
+# rows" entry joins it. The menu names each table with its count, as the data
+# view's tabs do, so what a file holds does not depend on the open tab.
 
 # The formats a table is written in: an Excel sheet under the exhibit's titles
 # with its footer below, or a CSV of the header row and the values.
@@ -16,7 +17,7 @@ VIZ_DATA_FORMATS <- list(
   })
 )
 
-VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows")
+VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows", all = "All rows")
 
 #' A block's data downloads
 #'
@@ -24,8 +25,9 @@ VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows")
 #' returns the menu entries for the tables `tables()` holds.
 #'
 #' @param tables A function of no arguments returning `list(summary, rows,
-#'   total)`: the two frames, either NULL, and the row count with nothing
-#'   selected (chart_data_view()).
+#'   total, all)`: the two frames, either NULL, the row count with nothing
+#'   selected, and under a selection the rows with nothing selected, else
+#'   NULL (chart_data_view()).
 #' @param exhibit The block's exhibit function, for the titles, the footer and
 #'   the file name.
 #' @param session,filename As viz_downloads().
@@ -45,15 +47,20 @@ viz_data_downloads <- function(tables, exhibit, session, filename) {
   function() {
     tb <- tryCatch(tables(), error = function(e) NULL)
     out <- list()
+    selected <- is.data.frame(tb$all)
     for (tbl in names(VIZ_DATA_TABLES)) {
       df <- tb[[tbl]]
       if (!is.data.frame(df)) next
       count <- data_download_count(nrow(df), if (tbl == "rows") tb$total)
+      label <- if (selected && tbl == "rows") {
+        "Selected rows"
+      } else {
+        VIZ_DATA_TABLES[[tbl]]
+      }
       for (ext in names(formats)) {
         out[[length(out) + 1L]] <- list(
           id = session$ns(paste0("dl_data_", tbl, "_", ext)),
-          label = VIZ_DATA_TABLES[[tbl]], ext = ext, section = "Data",
-          count = count
+          label = label, ext = ext, section = "Data", count = count
         )
       }
     }

@@ -131,9 +131,13 @@ test_that("a selection lights its Summary row, and a row click selects it", {
                         .variable_level = "B")), s, v
   )
   expect_identical(sel$filters, list(visit = "V2"))
-  # A partial selection lights nothing.
+  # The outer key alone lights its section header; the inner key alone
+  # lights nothing.
   part <- list(type = "categorical", filters = list(visit = "V2"))
-  expect_null(chart_selection_to_claim(part, s, v))
+  expect_identical(chart_selection_to_claim(part, s, v)$filters,
+                   list(.group1_level = list("V2")))
+  inner <- list(type = "categorical", filters = list(arm = "B"))
+  expect_null(chart_selection_to_claim(inner, s, v))
   # A histogram's bin goes back to the bin column.
   h <- list(type = "histogram", x = "val", bins = 4L)
   hs <- chart_summary(chart_hist_data(d, chart_hist(h, d)), h)
@@ -295,11 +299,12 @@ test_that("the menu has a Chart and a Data section, without the old Excel", {
     expect_false("Excel" %in% vapply(menu[secs == "Chart"], `[[`, "", "label"))
     data <- menu[secs == "Data"]
     expect_identical(vapply(data, `[[`, "", "label"),
-                     c("Summary", "Summary", "Rows", "Rows"))
+                     rep(c("Summary", "Selected rows", "All rows"), each = 2L))
     expect_identical(vapply(data, `[[`, "", "ext"),
-                     c("xlsx", "csv", "xlsx", "csv"))
+                     rep(c("xlsx", "csv"), 3L))
     expect_identical(vapply(data, `[[`, "", "count"),
-                     c("3 rows", "3 rows", "20 of 60", "20 of 60"))
+                     rep(c("3 rows", "20 of 60", "60 rows"), each = 2L))
+    expect_identical(nrow(utils::read.csv(expr$output$dl_data_all_csv)), 60L)
   })
 })
 
@@ -361,4 +366,64 @@ test_that("chart_summary_flat() puts the keys back as columns", {
     data.frame(row.names = 1L), data.frame(n = 3L)
   ))
   expect_identical(one, data.frame(n = 3L))
+})
+
+test_that("with a drill target, the view keeps the chart's last click", {
+  blk <- new_chart_block(type = "bar", category = "visit", color = "arm",
+                         drill = "auto", drill_target = "vf1")
+  dv_run(blk, function(session, expr) {
+    install_ctrl_send(function(x) NULL, session = session)
+    dv_open(expr, session, "rows")
+    expect_identical(dv_derived(expr)$rows, 60L)
+    chart_input_click(expr, visit = "V2", arm = "B", nonce = 1L)
+    session$flushReact()
+    # The output stays whole; the view narrows to what went to the target.
+    expect_identical(nrow(session$returned$result()), 60L)
+    expect_identical(dv_derived(expr)$rows, 10L)
+    menu <- Filter(function(d) identical(d$section, "Data"), dv_menu(expr))
+    expect_true("All rows" %in% vapply(menu, `[[`, "", "label"))
+    dv_open(expr, session, "summary", n = 2L)
+    expect_match(dv_derived(expr)$table$config,
+                 "\".variable_level\":[\"B\"]", fixed = TRUE)
+    # Another block sending to the target leaves the click in place.
+    session$userData$blockr_ctrl_send("vf1", list(state = list()),
+                                      author = "other")
+    session$flushReact()
+    dv_open(expr, session, "rows", n = 3L)
+    expect_identical(dv_derived(expr)$rows, 10L)
+  })
+})
+
+test_that("a clear with a drill target drops the view's selection", {
+  blk <- new_chart_block(type = "bar", category = "visit", drill = "auto",
+                         drill_target = "vf1")
+  dv_run(blk, function(session, expr) {
+    install_ctrl_send(function(x) NULL, session = session)
+    dv_open(expr, session, "rows")
+    chart_input_click(expr, visit = "V1", nonce = 1L)
+    session$flushReact()
+    expect_identical(dv_derived(expr)$rows, 20L)
+    chart_input_click(expr, nonce = 2L)
+    session$flushReact()
+    expect_identical(dv_derived(expr)$rows, 60L)
+  })
+})
+
+test_that("with drill off, a brush narrows the view and filters nothing", {
+  blk <- new_chart_block(type = "scatter", x = "day", y = "val")
+  dv_run(blk, function(session, expr) {
+    dv_open(expr, session, "rows")
+    expr$setInputs(chart_peek = viz_read_selection(list(
+      selection = list(type = "range", x = "day", y = "val",
+                       x_range = list(1, 5), y_range = list(0, 200)),
+      nonce = 1
+    )))
+    session$flushReact()
+    expect_identical(nrow(session$returned$result()), 60L)
+    expect_identical(dv_derived(expr)$rows, 15L)
+    expr$setInputs(chart_peek = viz_read_selection(list(selection = NULL,
+                                                        nonce = 2)))
+    session$flushReact()
+    expect_identical(dv_derived(expr)$rows, 60L)
+  })
 })
