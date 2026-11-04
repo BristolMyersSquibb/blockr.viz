@@ -187,20 +187,6 @@
         }
        }
       ],
-      "toolbox": {
-       "show": true,
-       "itemSize": 0,
-       "itemGap": 0,
-       "right": -40,
-       "top": -40,
-       "feature": {
-        "dataZoom": {
-         "xAxisIndex": 0,
-         "yAxisIndex": false,
-         "filterMode": "filter"
-        }
-       }
-      },
       "series": [
        {
         "type": "line",
@@ -927,7 +913,8 @@
          "disabled": true,
          "scale": false
         },
-        "cursor": "pointer"
+        "cursor": "pointer",
+        "clip": true
        },
        {
         "id": "__focus__",
@@ -960,6 +947,28 @@
         },
         "cursor": "pointer"
        }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "filter",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       },
+       {
+        "type": "inside",
+        "id": "vz-zoom-y",
+        "yAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       }
       ]
      },
      "probes": {
@@ -970,14 +979,6 @@
        "",
        ""
       ]
-     }
-    },
-    {
-     "op": "dispatchAction",
-     "action": {
-      "type": "takeGlobalCursor",
-      "key": "dataZoomSelect",
-      "dataZoomSelectActive": true
      }
     }
    ]

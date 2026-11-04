@@ -4,9 +4,9 @@
  * option per panel. The series come from option-points.js or option-band.js;
  * this file adds the helper lines, the identity line and the band's limits
  * on one markLine, the legend's empty series, the axes, the tooltip and the
- * brush or zoom toolbox. A panel result also carries the state its slot
- * gets: the hover tracker, the line picker's registry (`focus`), the band
- * picker's ribbons (`band`) and whether it is brushed or zoomed. Beside it:
+ * brush toolbox. A panel result also carries the state its slot gets: the
+ * hover tracker, the line picker's registry (`focus`), the band picker's
+ * ribbons (`band`) and whether it is brushed. Beside it:
  * the legend chips and the highlight patch.
  */
 (function () {
@@ -21,7 +21,7 @@
   // The grid's left and right margins, which the x labels do not get.
   const X_INSET = 71;
 
-  // ECharts builds the brush and zoom drag controllers only for a rendered
+  // ECharts builds the brush drag controller only for a rendered
   // toolbox, so one is rendered with no size, outside the canvas.
   /** @param {any} feature */
   const hiddenToolbox = (feature) =>
@@ -230,10 +230,8 @@
               bottom: 52 + (xlab ? xlab.bottom : 0) },
       xAxis: crowd ? [xAxis, scrimAxis] : xAxis,
       yAxis: crowd ? [yAxis, scrimAxis] : yAxis,
-      toolbox: brushable ? hiddenToolbox({ brush: { type: BRUSH_TOOLS } })
-        // Drag-to-zoom on the data x axis only, not the veil's hidden one.
-        : (isLine ? hiddenToolbox({
-          dataZoom: { xAxisIndex: 0, yAxisIndex: false, filterMode: 'filter' } }) : undefined),
+      // The drag zoom is zoom.js's, on every continuous axis (zoom-option.js).
+      toolbox: brushable ? hiddenToolbox({ brush: { type: BRUSH_TOOLS } }) : undefined,
       // With a drill target, ECharts dims the points outside the rectangle
       // while the reader drags, as a latched selection would, and reports
       // every move: the drill is sent once, at the end of the drag.
@@ -254,7 +252,7 @@
       panelH,
       xFit: xlab ? { labels: xCats, inset: X_INSET, decimate: true, nameGap: true,
                      gutter: xlab.bottom, key: xlab.key } : null,
-      hover, focus, band, brushable, zoomable: isLine
+      hover, focus, band, brushable
     };
   };
 

@@ -84,6 +84,7 @@
 
     attach(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
+        if (NS.zoom.justDragged(slot)) return;
         if (NS.drillState(view.settings) === 'off') return;
         if (params.componentType !== 'series' || !params.value) return;
         const filters = NS.model.timelineClick(view.settings, slot.facetVal, params.value);

@@ -796,3 +796,11 @@
   .blockr-tray-nav__tabs { display: flex; }
 }
 
+
+/* Axis limits: a from and a to field on one line. */
+.vz-range { display: flex; align-items: center; gap: 6px; }
+.vz-range .vz-text { flex: 1 1 0; min-width: 0; }
+.vz-range-sep {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+}

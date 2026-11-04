@@ -279,6 +279,28 @@
         },
         "cursor": "pointer"
        }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "filter",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       },
+       {
+        "type": "inside",
+        "id": "vz-zoom-y",
+        "yAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       }
       ]
      },
      "probes": {
@@ -581,6 +603,28 @@
          "scale": false
         },
         "cursor": "pointer"
+       }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "filter",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       },
+       {
+        "type": "inside",
+        "id": "vz-zoom-y",
+        "yAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
        }
       ]
      },
@@ -917,6 +961,28 @@
          "scale": false
         },
         "cursor": "pointer"
+       }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "filter",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       },
+       {
+        "type": "inside",
+        "id": "vz-zoom-y",
+        "yAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
        }
       ]
      },
@@ -1255,6 +1321,28 @@
          "scale": false
         },
         "cursor": "pointer"
+       }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "filter",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
+       },
+       {
+        "type": "inside",
+        "id": "vz-zoom-y",
+        "yAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
        }
       ]
      },

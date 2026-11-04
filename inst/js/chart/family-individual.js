@@ -1,12 +1,13 @@
 // @ts-check
 /**
  * Chart block: the individual family (scatter, line, area, band) as the
- * view uses it: clicks, the brush, the zoom and the hover pickers. Its model
+ * view uses it: clicks, the brush and the hover pickers. Its model
  * and option are in model-individual.js and option-individual.js.
  *
  *   - A click selects what the model says the mark is: a level as a
  *     categorical selection, or a scatter point as a zero-width range. A
- *     line click waits 275 ms, so a double-click (the zoom reset) cancels it.
+ *     line click waits 275 ms, so a double-click (the zoom reset, zoom.js)
+ *     cancels it.
  *   - The scatter brush selects the brushed points' extent, their series, or
  *     an explicit drill column's values in their rows. Points outside the
  *     data select nothing. A range taken in a facet panel carries the panel's
@@ -201,34 +202,6 @@
     });
   };
 
-  /** The zoom: a double-click or the reset button clears it; the window is
-   * kept for a redraw.
-   * @param {ChartView} view @param {ChartSlot} slot @param {any} chart @param {any} zr */
-  const zoomEvents = (view, slot, chart, zr) => {
-    // A double-click resets the zoom and cancels the line click it queued.
-    zr.on('dblclick', () => {
-      if (!NS.isLineType(view.settings.type)) return;
-      if (slot.lineClick) {
-        slot.lineClick();
-        slot.lineClick = null;
-      }
-      chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
-    });
-    // A reset arrives without values and at the full range.
-    chart.on('datazoom', (/** @type {any} */ e) => {
-      const p = (e && e.batch && e.batch[0]) || e || {};
-      const reset = p.startValue == null && p.endValue == null &&
-        (p.start == null || p.start === 0) && (p.end == null || p.end === 100);
-      slot.zoom = reset ? null
-        : { start: p.start, end: p.end, startValue: p.startValue, endValue: p.endValue };
-      slot.resetBtn.hidden = !slot.zoom;
-    });
-    // The slot's scope goes with this chart; the next chart registers again.
-    /** @type {VizScope} */ (slot.scope).on(slot.resetBtn, 'click', () => {
-      if (slot.chart) slot.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
-    });
-  };
-
   /** A click on a mark: what the model says it is, latched or sent.
    * @param {ChartView} view @param {ChartSlot} slot @param {any} params @param {string} [focusName] */
   const clickMark = (view, slot, params, focusName) => {
@@ -246,7 +219,7 @@
   /** @param {ChartView} view @param {ChartSlot} slot @param {any} chart */
   const clickEvents = (view, slot, chart) => {
     chart.on('click', (/** @type {any} */ params) => {
-      if (NS.drillState(view.settings) === 'off') return;
+      if (NS.drillState(view.settings) === 'off' || NS.zoom.justDragged(slot)) return;
       if (params.componentType !== 'series') return;
       const isLine = NS.isLineType(view.settings.type);
       const sel = view.selection;
@@ -404,7 +377,6 @@
       const chart = slot.chart;
       const zr = chart.getZr();
       hoverEvents(view, slot, chart, zr);
-      zoomEvents(view, slot, chart, zr);
       clickEvents(view, slot, chart);
       brushEvents(view, slot, chart);
     },
@@ -428,16 +400,16 @@
       if (po.focus) po.focus.veil = undefined;
     },
 
-    actions: (slot, po) => !!(po.brushable || slot.brushable || po.zoomable || slot.zoomArmed),
+    actions: (slot, po) => !!(po.brushable || slot.brushable),
 
-    // The brush cursor on a brushable scatter, the zoom drag on a line, each
-    // released when the panel stops being one; the zoom window back; a
-    // hovered band level's ribbon.
+    // The brush cursor on a brushable scatter, unless its drag zooms
+    // (zoom.js), released when the panel stops being one; a hovered band
+    // level's ribbon.
     after(slot, po, view) {
       const chart = slot.chart;
       /** @param {string} key @param {Record<string, any>} opt */
       const cursor = (key, opt) => chart.dispatchAction({ type: 'takeGlobalCursor', key, ...opt });
-      if (po.brushable) {
+      if (po.brushable && !view.zoomOn) {
         cursor('brush', { brushOption: { brushType: 'rect', brushMode: 'single' } });
         // The redraw dropped the rectangle; it stays while its selection does.
         if (slot.brushAreas && slot.brushSel === JSON.stringify(view.selection.current)) {
@@ -447,12 +419,6 @@
         cursor('brush', { brushOption: { brushType: false } });
       }
       slot.brushable = po.brushable;
-      if (po.zoomable) cursor('dataZoomSelect', { dataZoomSelectActive: true });
-      else if (slot.zoomArmed) cursor('dataZoomSelect', { dataZoomSelectActive: false });
-      slot.zoomArmed = po.zoomable;
-      if (po.zoomable && slot.zoom) chart.dispatchAction({ type: 'dataZoom', ...slot.zoom });
-      else if (!po.zoomable) slot.zoom = null;
-      slot.resetBtn.hidden = !slot.zoom;
       if (slot.band && slot.bandFocus != null) applyBandFocus(slot, chart);
     }
   };

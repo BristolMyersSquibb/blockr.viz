@@ -178,6 +178,8 @@ record_rw_expected <- function(rec, sc) {
       st["selection"] <- list(legacy_chart_selection(st)$selection)
     }
     st <- legacy_values("chart", st, NULL)
+    # Arguments added after the reference: unset in its recordings.
+    for (nm in setdiff(c("x_limits", "y_limits"), names(st))) st[nm] <- list(NULL)
     st[sort(names(st))]
   }
   rec$warnings <- record_rw_warnings(rec$warnings)

@@ -350,6 +350,38 @@
       "slot": true,
       "ctrl": true
     },
+    "x_limits": {
+      "type": {
+        "name": "limits"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area", "band", "gantt"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "range",
+        "label": "X limits"
+      },
+      "slot": false,
+      "ctrl": true
+    },
+    "y_limits": {
+      "type": {
+        "name": "limits"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area", "band", "bar", "histogram", "waterfall", "boxplot", "pointrange"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "range",
+        "label": "Y limits"
+      },
+      "slot": false,
+      "ctrl": true
+    },
     "tooltip": {
       "type": {
         "name": "columns"

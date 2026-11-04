@@ -51,14 +51,43 @@
   /* Anchors the transient drill pulse, which is positioned at the click. */
   position: relative;
 }
-/* The panel's Reset zoom link: the chart draws no toolbox icons, so this is
-   the visible way back from a drag-zoom (a double-click is the other). */
+/* Over the panel's top right: the scatter's Select / Zoom switch, then the
+   Keep as limits and Reset zoom links. The chart draws no toolbox icons, so
+   the links are the visible way back from a drag-zoom (a double-click is the
+   other). */
 .vz-chart-zoom-host { position: relative; }
-.vz-chart-zoom-reset {
+.vz-chart-zoom-bar {
   position: absolute;
   top: 4px;
   right: 8px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Under a facet panel's title. */
+.vz-chart-facet > .vz-chart-zoom-bar { top: 24px; }
+.vz-chart-zoom-mode {
+  display: inline-flex;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.vz-chart-zoom-mode[hidden] { display: none; }
+.vz-chart-zoom-mode button {
+  border: 0;
+  background: none;
+  padding: 1px 8px;
+  font: inherit;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
+}
+.vz-chart-zoom-mode button.is-on {
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+.vz-chart-zoom-reset {
   border: 0;
   background: none;
   padding: 0;

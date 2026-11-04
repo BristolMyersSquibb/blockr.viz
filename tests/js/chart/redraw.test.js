@@ -1,4 +1,4 @@
-/* What survives a redraw from a new payload: a line's zoom window, a brush
+/* What survives a redraw from a new payload (the zoom window: zoom.test.js): a brush
  * filter, a drill receipt at its own age; and the pointer: the line under
  * the cursor takes the focus, and the brush cursor being armed does not
  * clear what a click or a restored range selected. */
@@ -11,20 +11,6 @@ const D = require('./drive');
 const LINE = { type: 'line', x: 'ADY', y: 'AVAL', series: 'USUBJID', drill: 'auto' };
 const SCATTER = { type: 'scatter', x: 'ADY', y: 'AVAL', drill: 'auto' };
 const armed = (c) => c.trigger('brushSelected', { batch: [{ areas: [], selected: [] }] });
-
-test('a line zoom window survives a new payload; a reset forgets it', () => {
-  const c = D.open(LINE);
-  const slot = () => c.block._slots[0];
-  c.trigger('datazoom', { batch: [{ startValue: 10, endValue: 60, start: 10, end: 70 }] });
-  assert.strictEqual(slot().zoom.startValue, 10);
-  assert.strictEqual(slot().resetBtn.hidden, false);
-  c.send({ ...LINE, color: 'ARM' }, { data: null });
-  assert.strictEqual(slot().zoom.endValue, 60, 'kept across the redraw');
-  c.trigger('datazoom', { start: 0, end: 100 });
-  assert.strictEqual(slot().zoom, null);
-  assert.strictEqual(slot().resetBtn.hidden, true);
-  c.close();
-});
 
 test('a brush filter and a drill receipt survive a new payload', () => {
   const c = D.open(SCATTER);

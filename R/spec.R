@@ -15,7 +15,8 @@
 
 # Types whose value is a vector or a list of single values, sent and
 # described to the assistant as an array whatever its length.
-VIZ_ARRAY_TYPES <- c("columns", "enums", "strings", "numbers", "values")
+VIZ_ARRAY_TYPES <- c("columns", "enums", "strings", "numbers", "values",
+                     "limits")
 
 # The keywords a `format` takes besides a number of decimals (0 to 6).
 VIZ_FORMATS <- c("number", "compact", "percent")

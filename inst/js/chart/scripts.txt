@@ -28,10 +28,12 @@ option-points.js
 option-band.js
 option-domains.js
 option-individual.js
+zoom-option.js
 gear.js
 selection.js
 family-aggregated.js
 family-timeline.js
 family-individual.js
+zoom.js
 export.js
 view.js

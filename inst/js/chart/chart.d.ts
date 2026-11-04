@@ -304,8 +304,16 @@ interface ChartSlot {
   brushSel: string | null;
   /** What a drill brush has caught so far; sent when the drag ends. */
   brushCaught: Array<{ seriesIndex: number, dataIndex: number }> | null;
-  zoomArmed: boolean;
-  zoom: Record<string, unknown> | null;
+  /** The zoom window per axis key, in data values (zoom.js). */
+  zoom: Record<string, number[] | null> | null;
+  /** Which limits each axis takes; null without continuous axes (zoom-option.js). */
+  zoomRoles: { xAxis: 'x' | 'y' | null, yAxis: 'x' | 'y' | null } | null;
+  /** When the last zoom drag ended (ms), so its click is ignored. */
+  zoomDragAt: number;
+  keepBtn: HTMLButtonElement;
+  zoomBar: HTMLElement;
+  /** The Select / Zoom switch over a scatter, on the first panel. */
+  modeEl: HTMLElement | null;
   focus: any;
   focusSi: number | null;
   band: any;
@@ -339,6 +347,8 @@ interface ChartView extends VizView {
   theme: string | null;
   _ink: Ink;
   drawn: boolean;
+  /** A scatter's drag zooms instead of brushing. */
+  zoomOn: boolean;
   family(): ChartFamily;
   highlight(lazy?: boolean): void;
   status(): void;

@@ -406,7 +406,7 @@
         return { kind: 'entry', value, set, label,
                  toText: (v) => C.toText(arg, v), fromText: (s) => C.fromText(arg, s) };
       }
-      if (['map', 'records', 'records_by', 'named'].includes(name)) return null;
+      if (['map', 'records', 'records_by', 'named', 'limits'].includes(name)) return null;
       // Free text stays in the gear; a string picked from a list is a menu.
       if ((name === 'string' || name === 'template') && arg.gear.control !== 'select') return null;
       const ctx = Object.assign(this._ctx(key, values, this.scope), { arg, value, label, set });

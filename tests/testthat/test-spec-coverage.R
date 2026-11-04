@@ -50,7 +50,8 @@ DROPPED_ARGS <- list(chart = character(), table = "max_height")
 # The aggregated types map `category` and `value`, as before 0.3.0, and the
 # value-axis lines are `value_lines` again (behaviour-changes.md row 31).
 # The reference's names were never released, so LEGACY_NAMES has no row.
-ADDED_ARGS <- list(chart = c("category", "value"), table = "group_rows")
+ADDED_ARGS <- list(chart = c("category", "value", "x_limits", "y_limits"),
+                   table = "group_rows")
 REFERENCE_RENAMES <- list(chart = c(y_lines = "value_lines"),
                           table = character())
 

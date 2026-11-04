@@ -63,6 +63,8 @@
       this._memo = { models: new NS.ReadMemo(), options: new NS.ReadMemo(), modelGen: 0,
                      model: null, option: null };
       /** @type {(() => void) | null} */ this._settle = null;
+      /** A scatter's drag zooms instead of brushing (zoom.js). */
+      this.zoomOn = false;
       this.selection = new NS.Selection(this);
       this.frame = new V.Frame(el, scope, { cls: 'vz-chart' });
       this.gear = this.frame.mountGear({ block: 'chart', typeKey: 'type',
@@ -242,7 +244,10 @@
         // When an action follows, ECharts runs it with the option in one update.
         const actionFollows = !!fam.actions && fam.actions(slot, po);
         if (slot.brushAreas && this.selection.byBrush) this.selection.redrawing();
-        chart.setOption(this.still ? { ...po.option, animation: false } : po.option,
+        const dec = NS.zoomOption.decorate(po.option, this.settings);
+        chart.__vzRoles = dec.roles;
+        chart.__vzFilterX = dec.filterX;
+        chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
                         actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         if (existed && hChanged) chart.resize();
@@ -251,6 +256,10 @@
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
       this._harmoniseAxes();
+      // The zoom windows last: the shared axes are the full view they zoom in.
+      this._slots.forEach((slot, i) => {
+        if (slot && slot.chart && i < m.panels.length) NS.zoom.after(this, slot, i, slot.chart.__vzRoles || null);
+      });
       const plan = NS.legendPlan(m, this.settings);
       this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
       this.frame.note(o.labelNote || null);
@@ -318,7 +327,12 @@
         });
         const d = NS.axes.sharedDomain(extents);
         if (!d) continue;
-        for (const c of charts) c.setOption({ [key]: [{ min: d[0], max: d[1] }] }, { lazyUpdate: true });
+        // A set limit wins over the shared domain (the extents can be a draw late).
+        const role = charts[0].__vzRoles ? charts[0].__vzRoles[key] : null;
+        const comp = charts[0].getModel().getComponent(key, 0);
+        const [lo, hi] = NS.zoomOption.ends(this.settings, role, String(comp ? comp.get('type') : 'value'));
+        const dom = [lo ?? d[0], hi ?? d[1]];
+        for (const c of charts) c.setOption({ [key]: [{ min: dom[0], max: dom[1] }] }, { lazyUpdate: true });
       }
     }
 
@@ -350,13 +364,20 @@
         const container = singleFacet ? this.chartGrid : mk('div', 'vz-chart-facet', this.chartGrid);
         const labelEl = singleFacet ? null : mk('div', 'vz-chart-facet-label', container);
         const chartDiv = mk('div', 'vz-chart-panel', container);
-        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-zoom-reset', container));
-        resetBtn.type = 'button';
-        resetBtn.textContent = 'Reset zoom';
-        resetBtn.hidden = true;
+        const zoomBar = mk('div', 'vz-chart-zoom-bar', container);
+        const link = (/** @type {string} */ text) => {
+          const b = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-zoom-reset', zoomBar));
+          b.type = 'button';
+          b.textContent = text;
+          b.hidden = true;
+          return b;
+        };
+        const keepBtn = link('Keep as limits');
+        const resetBtn = link('Reset zoom');
         container.classList.add('vz-chart-zoom-host');
-        slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
-                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null, zoomArmed: false, zoom: null,
+        slot = { container, labelEl, chartDiv, resetBtn, keepBtn, zoomBar, modeEl: null, chart: null, scope: null, facetVal: null,
+                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
+                 zoom: null, zoomRoles: null, zoomDragAt: 0,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }
@@ -378,8 +399,9 @@
         const scope = slot.scope = shape.own(new V.Scope());
         slot.chart = scope.own(root.echarts.init(slot.chartDiv, this.theme || undefined));
         fam.attach(this, slot);
+        NS.zoom.attach(this, slot);
         slot.chart.getZr().on('click', (/** @type {any} */ e) => {
-          if (e && e.target) return;
+          if ((e && e.target) || NS.zoom.justDragged(slot)) return;
           if (slot.focus && slot.focusSi != null) return;
           const sel = this.selection;
           if (sel.current || sel.brushDrawn) sel.clear();
