@@ -674,5 +674,6 @@ test('limits as the sentence word types them: "20 to auto"', () => {
   assert.deepEqual(plain(C.fromText(arg, '2024-01-01 to auto')), ['2024-01-01', null]);
   assert.strictEqual(C.fromText(arg, ''), null, 'empty is auto at both ends');
   const how = t.gear.slot('y_limits');
-  assert.equal(how.kind, 'entry', 'the word is typed over');
+  assert.equal(how.kind, 'pair', 'one word per end');
+  assert.deepEqual(plain(how.ends.map((e) => e.value)), [20, null]);
 });

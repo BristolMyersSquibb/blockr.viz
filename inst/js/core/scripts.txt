@@ -9,6 +9,7 @@ binding.js
 download.js
 capture.js
 titles.js
+slot-pair.js
 gear/tray-nav.js
 gear/sections.js
 gear/tiles.js

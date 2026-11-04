@@ -140,7 +140,13 @@ type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
   | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
   | { kind: 'number'; min: number; max: number; step: number; value: unknown }
-  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean });
+  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean }
+  /** Axis limits: two words, from and to, each typed over on its own. */
+  | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] });
+
+/** One end of a pair: typed over like a value list. */
+type VizEndOpener = VizSlotBase & { kind: 'entry'; value: unknown;
+  toText(value: unknown): string; fromText(text: string): unknown };
 
 interface VizGear {
   readonly block: string;
@@ -220,6 +226,10 @@ interface VizTitlesNamespace {
   slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
   /** Every argument the titles name: their words and their offers. */
   namedArgs(titles: VizTitles | null | undefined): string[];
+  /** Type a value over its word. */
+  edit(scope: VizScope, anchor: HTMLElement, how: VizSlotOpener & { kind: 'number' | 'entry' }): void;
+  /** A word that acts on click and on Enter or Space. */
+  wire(scope: VizScope, el: HTMLElement, fn: () => void): void;
 }
 
 interface VizSlots {
@@ -231,6 +241,8 @@ interface VizSlots {
 interface VizNamespace {
   gear: VizGearNamespace;
   titles: VizTitlesNamespace;
+  /** A pair setting's two words on the face (slot-pair.js). */
+  slotPair(el: HTMLElement, scope: VizScope, ends: VizEndOpener[]): void;
 }
 
 /** A row of blockr.ui's Blockr.menu, or a rule between groups. */
