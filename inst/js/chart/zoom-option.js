@@ -56,6 +56,13 @@
     return Array.isArray(v) && v.length === 2 ? v : null;
   };
 
+  /** Whether a role has a limit set, either end.
+   * @param {Record<string, any>} cfg @param {'x' | 'y' | null} role */
+  const hasLimits = (cfg, role) => {
+    const lim = role ? limitsOf(cfg, role) : null;
+    return !!lim && lim.some((v) => v != null && v !== '');
+  };
+
   /** A limit as the axis reads it: a date as UTC milliseconds on a time
    * axis; nothing at or below zero on a log axis.
    * @param {unknown} v @param {string} type @returns {number | null} */
@@ -122,5 +129,5 @@
     return { option: out, roles: r, filterX };
   };
 
-  NS.zoomOption = { decorate, roles, ends, axisValue, ZOOM_ID };
+  NS.zoomOption = { decorate, roles, ends, axisValue, hasLimits, ZOOM_ID };
 })();

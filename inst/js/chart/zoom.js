@@ -12,7 +12,8 @@
  *   - A double-click or the Reset zoom link goes back to the full view: the
  *     axis limits when set (zoom-option.js), else the data.
  *   - Keep as limits writes the zoomed window into `x_limits` and
- *     `y_limits`, through the gear.
+ *     `y_limits`, through the gear. Clear limits, shown on the first panel
+ *     while either is set, empties them again.
  * The window lives on the slot and is drawn again after a redraw; it is not
  * part of the block state.
  */
@@ -96,10 +97,29 @@
     if (batch.length) chart.dispatchAction({ type: 'dataZoom', batch });
   };
 
+  /** The limits roles of the slot's axes that have a limit set.
+   * @param {ChartView} view @param {ChartSlot} slot */
+  const limited = (view, slot) => KEYS.map((k) => slot.zoomRoles && slot.zoomRoles[k])
+    .filter((role) => ZO.hasLimits(view.settings, role));
+
   /** @param {ChartView} view @param {ChartSlot} slot */
   const showLinks = (view, slot) => {
     slot.resetBtn.hidden = !slot.zoom;
     if (slot.keepBtn) slot.keepBtn.hidden = !slot.zoom || !view.gear;
+    if (slot.clearBtn) {
+      slot.clearBtn.hidden = !view.gear || view._slots.indexOf(slot) !== 0 ||
+        !limited(view, slot).length;
+    }
+  };
+
+  /** Both limits of the slot's axes back to auto, through the gear.
+   * @param {ChartView} view @param {ChartSlot} slot */
+  const clear = (view, slot) => {
+    const roles = limited(view, slot);
+    if (!view.gear || !roles.length) return;
+    slot.zoom = null;
+    apply(slot);
+    view.gear.set(Object.fromEntries(roles.map((role) => [role + '_limits', null])));
   };
 
   /** @param {ChartView} view @param {ChartSlot} slot */
@@ -269,6 +289,7 @@
     const scope = /** @type {VizScope} */ (slot.scope);
     scope.on(slot.resetBtn, 'click', () => reset(view, slot));
     if (slot.keepBtn) scope.on(slot.keepBtn, 'click', () => keep(view, slot));
+    if (slot.clearBtn) scope.on(slot.clearBtn, 'click', () => clear(view, slot));
   };
 
   /**
@@ -287,5 +308,5 @@
     modeSwitch(view, slot, i);
   };
 
-  NS.zoom = { attach, after, reset, keep, setMode, justDragged, spans, limitValue, tidy };
+  NS.zoom = { attach, after, reset, keep, clear, setMode, justDragged, spans, limitValue, tidy };
 })();

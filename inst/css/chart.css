@@ -52,7 +52,7 @@
   position: relative;
 }
 /* Over the panel's top right: the scatter's Select / Zoom switch, then the
-   Keep as limits and Reset zoom links. The chart draws no toolbox icons, so
+   Keep as limits, Reset zoom and Clear limits links. The chart draws no toolbox icons, so
    the links are the visible way back from a drag-zoom (a double-click is the
    other). */
 .vz-chart-zoom-host { position: relative; }

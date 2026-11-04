@@ -374,8 +374,9 @@
         };
         const keepBtn = link('Keep as limits');
         const resetBtn = link('Reset zoom');
+        const clearBtn = link('Clear limits');
         container.classList.add('vz-chart-zoom-host');
-        slot = { container, labelEl, chartDiv, resetBtn, keepBtn, zoomBar, modeEl: null, chart: null, scope: null, facetVal: null,
+        slot = { container, labelEl, chartDiv, resetBtn, keepBtn, clearBtn, zoomBar, modeEl: null, chart: null, scope: null, facetVal: null,
                  dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
                  zoom: null, zoomRoles: null, zoomDragAt: 0,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };

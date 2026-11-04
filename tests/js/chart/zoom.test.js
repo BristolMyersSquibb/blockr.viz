@@ -180,3 +180,22 @@ test('Keep as limits writes the window into the limits and spends the zoom', () 
   assert.strictEqual(c.slot().zoom, null);
   c.close();
 });
+
+test('Clear limits shows while limits are set, on the first panel, and empties them', () => {
+  const c = open({ ...BOX, y_limits: [20, null] });
+  assert.strictEqual(c.slot().clearBtn.hidden, false);
+  assert.strictEqual(c.slot().resetBtn.hidden, true, 'no zoom, no Reset zoom');
+  c.slot().clearBtn.click();
+  assert.deepStrictEqual(plain(c.sets().pop()), { y_limits: null });
+  c.send({ ...BOX, y_limits: null }, { data: null });
+  assert.strictEqual(c.slot().clearBtn.hidden, true);
+  c.send({ ...BOX, x_limits: [1, 2] }, { data: null });
+  assert.strictEqual(c.slot().clearBtn.hidden, true, 'a box plot takes no x limits');
+  c.close();
+  const f = open({ ...LINE, facet: 'ARM', x_limits: [0, null], y_limits: [null, 50] });
+  assert.strictEqual(f.block._slots[0].clearBtn.hidden, false);
+  assert.ok(f.block._slots.slice(1).every((s) => s.clearBtn.hidden), 'one link, on the first panel');
+  f.block._slots[0].clearBtn.click();
+  assert.deepStrictEqual(plain(f.sets().pop()), { x_limits: null, y_limits: null });
+  f.close();
+});
