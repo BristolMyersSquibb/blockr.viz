@@ -112,6 +112,8 @@ function recordingCanvas(env) {
       fillText: (t, x, y) => ops.push(['fillText', t, x, y, st.font, st.fillStyle,
                                        st.textAlign, st.textBaseline, st.globalAlpha]),
       drawImage: (im, x, y, w, h2) => ops.push(['drawImage', im && im.src, x, y, w, h2]),
+      translate: (x, y) => ops.push(['translate', x, y]),
+      rotate: (a) => ops.push(['rotate', a]),
       save() {}, restore() {}
     };
     for (const k of Object.keys(st)) {
@@ -263,5 +265,25 @@ test('capture: two requests in flight get their own replies', async () => {
   await c.clock.advanceAsync(1500);
   assert.deepStrictEqual(replies(c).map((x) => x.value.req).sort(), ['a', 'b']);
   assert.strictEqual(hosts(c), 0);
+  c.close();
+});
+
+test('compose: a panel grid paints its strips, the row strips turned', async () => {
+  const { c, canvases } = prepare({ type: 'bar', category: 'AETERM', func: 'count', facet: 'ARM',
+                                    facet_row: 'SEX' }, { width: 900 });
+  let done = false;
+  c.env.win.Blockr.viz.chart.picture(c.block).then(() => { done = true; });
+  await c.clock.advanceAsync(0);
+  const cv = composed(canvases);
+  assert.ok(done);
+  const strips = Array.from(c.block.chartGrid.querySelectorAll('.vz-chart-strip'));
+  assert.ok(strips.length > 2);
+  const t = texts(cv);
+  for (const el of strips) {
+    const want = el.classList.contains('vz-chart-strip--col') ? el.textContent.toUpperCase() : el.textContent;
+    assert.ok(t.some((x) => x === want || want.startsWith(x.replace(/\u2026$/, ''))), want);
+  }
+  const nRow = strips.filter((el) => el.classList.contains('vz-chart-strip--row')).length;
+  assert.strictEqual(cv.ops.filter((o) => o[0] === 'rotate').length, nRow);
   c.close();
 });

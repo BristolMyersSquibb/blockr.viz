@@ -82,7 +82,10 @@ With `facet_row` the panels form a grid, as with ggplot2's `facet_grid()`:
 `facet_row` levels down, `facet` levels across, strips on top and on the
 right. A combination without rows is an empty cell. `facet_scales =
 "free_y"` gives each row its own value axis, shared by the panels in that
-row; `"free"` also frees the other axis per column.
+row; `"free"` also frees the other axis per column. Only the outer panels
+label their axes. A row missing a `facet` or `facet_row` level is left out of
+a line, scatter or timeline and shows as a "(missing)" row or column of bars,
+as in a wrap.
 
 ```{r}
 new_chart_block(type = "line", x = "AVISITN", y = "AVAL", series = "USUBJID",

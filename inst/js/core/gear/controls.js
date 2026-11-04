@@ -157,8 +157,10 @@
     } else if (name === 'format') {
       out = FORMATS.slice();
     } else if (arg.values) {
+      // The host may word the values for the current settings.
+      const named = host.choices && host.choices(ctx.key, ctx.values, ctx.columns);
       const labels = (arg.gear && arg.gear.labels) || [];
-      out = arg.values.map((v, i) => ({ value: v, label: labels[i] || String(v) }));
+      out = named || arg.values.map((v, i) => ({ value: v, label: labels[i] || String(v) }));
     } else {
       out = (host.choices && host.choices(ctx.key, ctx.values, ctx.columns)) || [];
     }

@@ -920,7 +920,8 @@
       "yAxis": [
        {
         "min": 20,
-        "max": 42
+        "max": 45,
+        "interval": 5
        }
       ]
      }
@@ -2534,7 +2535,8 @@
       "yAxis": [
        {
         "min": 20,
-        "max": 42
+        "max": 45,
+        "interval": 5
        }
       ]
      }

@@ -931,6 +931,9 @@
       "default": "fixed",
       "values": ["fixed", "free", "free_y"],
       "nullable": false,
+      "applies": {
+        "except": ["pie", "treemap"]
+      },
       "gear": {
         "group": "Look",
         "control": "select",

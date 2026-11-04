@@ -291,6 +291,9 @@ interface ChartGridLayout {
   rows: string[];
   cols: string[];
   top: number;
+  /** The strips' text: "(missing)" for a missing level, with counts under show_n. */
+  rowLabels: string[];
+  colLabels: string[];
 }
 
 /** One facet panel: its boxes, its ECharts instance and its hover, brush
@@ -306,6 +309,8 @@ interface ChartSlot {
   /** The panel's row and column in a grid (facet_row), from 0; null outside one. */
   gridRow: number | null;
   gridCol: number | null;
+  /** Axes an inner grid panel leaves unlabelled (_outerAxes()). */
+  outerHidden: { x: boolean, y: boolean } | null;
   dimmed: boolean;
   hover: { si: number | null };
   brushable: boolean;
@@ -346,6 +351,11 @@ interface ChartView extends VizView {
   _ix: any;
   _memo: { models: any; options: any; modelGen: number; model: any; option: any };
   _slots: ChartSlot[];
+  /** The grid the rows' keys are for, and the grid's strips (panels.js). */
+  _gridKeyOf: string;
+  _stripEls: HTMLElement[];
+  _rowsGen: number;
+  _setSlotHeight(slot: ChartSlot, h: string): boolean;
   charts: any[];
   theme: string | null;
   _ink: Ink;

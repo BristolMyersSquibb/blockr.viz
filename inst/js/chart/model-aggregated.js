@@ -30,6 +30,20 @@
   const freeCategories = (cfg) => (cfg.facet_grid ? cfg.facet_scales === 'free'
     : NS.facetScales(cfg) === 'free');
 
+  /** In a grid, each column's categories over the panels of that column.
+   * @param {any[]} agg @param {any[]} rows @param {VizColumn[]} columns
+   * @param {any} cfg @param {any} derived @returns {Map<string, string[]>} */
+  const columnGroups = (agg, rows, columns, cfg, derived) => {
+    const colOf = (/** @type {any} */ key) => (key == null ? null : model.gridLevels(key).col);
+    /** @type {Map<string, string[]>} */ const out = new Map();
+    for (const c of new Set(agg.map((/** @type {any} */ a) => colOf(a.facet)))) {
+      const cells = agg.filter((/** @type {any} */ a) => colOf(a.facet) === c);
+      const crows = rows.filter((r) => colOf(r[model.GRID_COL]) === c);
+      out.set(/** @type {string} */ (c), orderGroups(cells, crows, columns, cfg, derived));
+    }
+    return out;
+  };
+
   const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
     2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
     2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
@@ -329,6 +343,10 @@
     // label their own slices.
     const sharedGroups = (!freeCategories(cfg) && ct !== 'pie' && ct !== 'treemap')
       ? orderGroups(agg, rows, columns, cfg, derived) : null;
+    // A free grid shares the categories down a column, as the panels of a
+    // column share the category axis.
+    const colGroups = (!sharedGroups && cfg.facet_grid && ct !== 'pie' && ct !== 'treemap')
+      ? columnGroups(agg, rows, columns, cfg, derived) : null;
 
     const isBar = (ct === 'bar' || ct === 'waterfall');
     out.ttFields = (isBar && !out.cumulative) ? model.tooltipFields(cfg) : [];
@@ -343,7 +361,8 @@
 
     for (const fv of facets) {
       const cells = ix.get(agg, 'facet', 'raw', fv);
-      const groups = sharedGroups || orderGroups(cells, rows, columns, cfg, derived);
+      const groups = sharedGroups || (colGroups && colGroups.get(model.gridLevels(fv).col)) ||
+        orderGroups(cells, rows, columns, cfg, derived);
       const restrict = !!facet && fv !== '__all__';
       let axisCounts = null;
       if (countAxis) {

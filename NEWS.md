@@ -17,8 +17,11 @@ read.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
 * The chart's `facet_row` lays the panels out as a grid, `facet_row` levels
   down and `facet` levels across, for every chart type. With
-  `facet_scales = "free_y"` each row has its own value axis. The data view
-  and the Excel download key each mark on both facets.
+  `facet_scales = "free_y"` each row has its own value axis. Only the outer
+  panels label their axes. The data view, the Excel download and the PNG,
+  PowerPoint and web page exports know the grid.
+* Panels that share a value axis share it on a nice step: two panels ending
+  at 50 and 51 no longer get an axis labelled 0, 10, ..., 50, 51.
 
 ## Arguments
 

@@ -49,7 +49,7 @@
       /** @type {any[]} */ this.charts = [];
       /** @type {ChartSlot[]} */ this._slots = [];
       /** @type {string | null} */ this._renderShape = null;
-      /** The grid the rows' keys are for (_gridRows()). */
+      /** The grid the rows' keys are for (NS.panels.gridRows()). */
       this._gridKeyOf = '';
       /** The grid's strip labels. @type {HTMLElement[]} */
       this._stripEls = [];
@@ -113,7 +113,7 @@
         this.data = NS.rowsFromPayload(p.data);
       }
       this.settings = NS.model.settings(p.config, this.columns);
-      this._gridRows(rowsChanged);
+      NS.panels.gridRows(this, rowsChanged);
       this.selection.restore(p.config && p.config.selection);
       this._setTheme(d.theme);
       // The gear first: the title sentences open what it offers.
@@ -125,22 +125,6 @@
       this._downloads();
       this.dataView.update(d.data_view);
       this.frame.busyDone();
-    }
-
-    /** In a grid, every row gets its grid key (NS.model.gridKey()). New keys
-     * are new rows to the model and the index. @param {boolean} rowsChanged */
-    _gridRows(rowsChanged) {
-      const g = this.settings.facet_grid;
-      const key = g ? g.row + '\u0000' + (g.col || '') : '';
-      if (!rowsChanged && key === this._gridKeyOf) return;
-      this._gridKeyOf = key;
-      if (!g) return;
-      const col = NS.model.GRID_COL;
-      for (const r of this.data) r[col] = NS.model.gridKey(r, g);
-      if (!rowsChanged) {
-        this._ix = new NS.RowIndex();
-        this._rowsGen++;
-      }
     }
 
     /** An error R sent: said where the chart would be. @param {string} message */
@@ -220,7 +204,7 @@
       const m = this._model(fam);
       if (m.empty) { this._showEmpty(m.empty); return; }
       const grid = this.chartGrid;
-      const layout = this._gridLayout(m);
+      const layout = NS.panels.layout(this, m);
       grid.classList.toggle('vz-chart-grid--single', !layout && m.nFacets <= 1);
       grid.classList.toggle('vz-chart-grid--matrix', !!layout);
       // The row width when facet_cols pins it.
@@ -241,9 +225,9 @@
       m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
         const slot = this._ensureSlot(i, layout ? null : panel.label, !layout && m.single);
         slot.facetVal = panel.facet;
-        this._placeSlot(slot, layout, panel.facet);
+        NS.panels.place(slot, layout, panel.facet);
       });
-      this._strips(layout);
+      NS.panels.strips(this, layout);
       const widths = m.panels.map((/** @type {any} */ _, /** @type {number} */ i) =>
         this._slots[i].chartDiv.clientWidth);
       const o = this._option(fam, m, fam.widths ? widths : null);
@@ -278,7 +262,9 @@
       });
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
-      this._harmoniseAxes();
+      NS.panels.harmonise(this);
+      NS.panels.outerAxes(this);
+      NS.panels.fitStrips(this);
       const plan = NS.legendPlan(m, this.settings);
       this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
       this.frame.note(o.labelNote || null);
@@ -289,64 +275,6 @@
         if (this.selection.current) this._applyHighlight(true);
       }
       this.drawn = true;
-    }
-
-    /** The grid's rows and columns, in level order, and the grid row the
-     * panels start on (2 below a strip of column labels), or null without a
-     * grid. A combination without rows has no panel and leaves its cell empty.
-     * @param {any} m @returns {ChartGridLayout | null} */
-    _gridLayout(m) {
-      const g = this.settings.facet_grid;
-      if (!g || !m.panels.length) return null;
-      const rows = new Set(), cols = new Set();
-      for (const p of m.panels) {
-        if (p.facet == null || p.facet === '__all__') return null;
-        const lv = NS.model.gridLevels(p.facet);
-        rows.add(lv.row);
-        cols.add(lv.col);
-      }
-      const order = (/** @type {Set<string>} */ s) => [...s].sort();
-      return { rows: order(rows), cols: order(cols), top: g.col ? 2 : 1 };
-    }
-
-    /** A panel's cell: its grid row and column, after the strip of column
-     * labels when there is one. @param {ChartSlot} slot
-     * @param {ChartGridLayout | null} layout @param {any} facet */
-    _placeSlot(slot, layout, facet) {
-      const st = slot.container.style;
-      if (!layout) {
-        st.gridRow = st.gridColumn = '';
-        slot.gridRow = slot.gridCol = null;
-        return;
-      }
-      const lv = NS.model.gridLevels(facet);
-      slot.gridRow = layout.rows.indexOf(lv.row);
-      slot.gridCol = layout.cols.indexOf(lv.col);
-      st.gridRow = String(slot.gridRow + layout.top);
-      st.gridColumn = String(slot.gridCol + 1);
-    }
-
-    /** The grid's strips: column levels on top, row levels on the right, as in
-     * ggplot2's facet_grid(). Rebuilt on every draw.
-     * @param {ChartGridLayout | null} layout */
-    _strips(layout) {
-      for (const el of this._stripEls) el.remove();
-      this._stripEls = [];
-      if (!layout) return;
-      const top = layout.top;
-      const add = (/** @type {string} */ cls, /** @type {string} */ text,
-                   /** @type {number} */ row, /** @type {number} */ col) => {
-        const el = mk('div', 'vz-chart-strip ' + cls, this.chartGrid);
-        el.textContent = text === '' ? '(missing)' : text;
-        el.title = el.textContent;
-        el.style.gridRow = String(row);
-        el.style.gridColumn = String(col);
-        this._stripEls.push(el);
-      };
-      if (top === 2) {
-        layout.cols.forEach((c, j) => add('vz-chart-strip--col', c, 1, j + 1));
-      }
-      layout.rows.forEach((r, i) => add('vz-chart-strip--row', r, i + top, layout.cols.length + 1));
     }
 
     /** The family's model of the rows, recomputed when the rows, the
@@ -390,55 +318,6 @@
     /** The axis font. @param {Ink} ink */
     _measure(ink) { return this._measureFont(`${ink.fontSize}px ${ink.face}`); }
 
-    // One numeric domain across the panels ("fixed"), read back off what each drew.
-    // In a grid the rows carry the unit: "free_y" shares the value axis within a
-    // row (x on horizontal bars and on a gantt) and the other axis across all
-    // panels; "free" shares the other axis within a column instead.
-    _harmoniseAxes() {
-      const mode = NS.facetScales(this.settings);
-      const grid = !!this.settings.facet_grid;
-      if (mode === 'free' && !grid) return;
-      const slots = this._slots.filter((s) => s && s.chart);
-      if (slots.length < 2) return;
-      /** @param {string} key @param {ChartSlot[]} group */
-      const share = (key, group) => {
-        if (group.length < 2) return;
-        const extents = group.map((s) => {
-          const comp = s.chart.getModel().getComponent(key, 0);
-          if (!comp || comp.get('type') === 'category') return null;
-          return comp.axis.scale.getExtent();
-        });
-        const d = NS.axes.sharedDomain(extents);
-        if (!d) return;
-        for (const s of group) s.chart.setOption({ [key]: [{ min: d[0], max: d[1] }] }, { lazyUpdate: true });
-      };
-      /** @param {(s: ChartSlot) => any} by */
-      const groups = (by) => {
-        /** @type {Map<any, ChartSlot[]>} */ const out = new Map();
-        for (const s of slots) {
-          const k = by(s);
-          if (!out.has(k)) out.set(k, []);
-          /** @type {ChartSlot[]} */ (out.get(k)).push(s);
-        }
-        return [...out.values()];
-      };
-      const all = () => [slots];
-      if (!grid) {
-        share('xAxis', slots);
-        if (mode === 'fixed') share('yAxis', slots);
-        return;
-      }
-      const cfg = this.settings;
-      const valueOnX = cfg.type === 'gantt' ||
-        (NS.familyOf(cfg.type) === 'aggregated' && cfg.orientation === 'horizontal');
-      const [valueKey, otherKey] = valueOnX ? ['xAxis', 'yAxis'] : ['yAxis', 'xAxis'];
-      const raw = cfg.facet_scales;
-      const valueGroups = raw === 'fixed' ? all() : groups((s) => s.gridRow);
-      const otherGroups = raw === 'free' ? groups((s) => s.gridCol) : all();
-      for (const g of valueGroups) share(valueKey, g);
-      for (const g of otherGroups) share(otherKey, g);
-    }
-
     _teardownCharts() {
       if (this._shapeScope) this._shapeScope.dispose();
       this._shapeScope = null;
@@ -474,7 +353,7 @@
         resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
         slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
-                 gridRow: null, gridCol: null,
+                 gridRow: null, gridCol: null, outerHidden: null,
                  dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null, zoomArmed: false, zoom: null,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
@@ -530,7 +409,8 @@
     /** @param {any} chart */
     _refitXLabels(chart) {
       const fit = chart.__xFit;
-      if (!fit) return;
+      // A grid panel without x labels has no gutter to fit (panels.js).
+      if (!fit || (fit.slot && fit.slot.outerHidden && fit.slot.outerHidden.x)) return;
       const lab = NS.axes.xAxisLabels(fit.labels, chart.getWidth() - fit.inset, fit.decimate,
                                       this._measure(this._ink), this._ink);
       if (fit.key === lab.key) return;

@@ -34,4 +34,5 @@ family-aggregated.js
 family-timeline.js
 family-individual.js
 export.js
+panels.js
 view.js

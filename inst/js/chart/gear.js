@@ -25,6 +25,10 @@
   const MAX_FACET_LEVELS = 10;
   const MAX_FACET_ROW_LEVELS = 20;
   const MAX_CATEGORY_LEVELS = 50;
+  /** The panel scale choices in a grid (facet_row). */
+  const GRID_SCALES = [{ value: 'fixed', label: 'Shared across panels' },
+                       { value: 'free', label: 'Free per row and column' },
+                       { value: 'free_y', label: 'Free per row' }];
 
   /** @param {string} type */
   const autoLabel = (type) => {
@@ -79,11 +83,8 @@
         if (key === 'percent_of') return v.func === 'pct_distinct';
         if (key === 'value') return !counts(String(v.type || 'bar'), v);
         if (key === 'drill_target' || key === 'drill_table') return !!v.drill;
-        // Panel scales apply to a wrap and a grid, not to pies and treemaps,
-        // which have no axes; a grid has its own columns.
-        if (key === 'facet_scales') {
-          return !!(v.facet || v.facet_row) && v.type !== 'pie' && v.type !== 'treemap';
-        }
+        // Panel scales apply to a wrap and a grid; a grid has its own columns.
+        if (key === 'facet_scales') return !!(v.facet || v.facet_row);
         if (key === 'facet_cols') return !v.facet_row;
         return true;
       },
@@ -113,6 +114,8 @@
           return [{ value: '', label: 'None' }].concat(list);
         }
         if (key === 'facet_cols') return FACET_COLS.map((n) => ({ value: n, label: n + ' per row' }));
+        // A grid frees its scales by row and by column, not by panel.
+        if (key === 'facet_scales' && v.facet_row) return GRID_SCALES;
         if (key === 'sort_by') return sortChoices(type, meta());
         if (key === 'waterfall_totals') return levels(String(v.category ?? ''));
         if (key === 'highlight') {

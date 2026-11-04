@@ -60,7 +60,7 @@
     const xCats = xAxisType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
     out.x = { col: x, type: xAxisType, cats: xCats };
 
-    const facets = facet ? ix.levels(rows, facet, 'nz').slice().sort() : ['__all__'];
+    const facets = model.facetLevels(rows, ix, cfg);
     out.nFacets = facets.length;
     out.single = facets.length === 1;
 

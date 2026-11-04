@@ -204,7 +204,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 6
+        "max": 6,
+        "interval": 1
        }
       ]
      }
@@ -433,7 +434,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 6
+        "max": 6,
+        "interval": 1
        }
       ]
      }

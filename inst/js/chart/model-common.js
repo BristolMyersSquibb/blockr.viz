@@ -20,11 +20,30 @@
   const GRID_COL = '.facet_grid';
   const GRID_SEP = '\u001f';
 
-  /** A row's grid key: its row level, then its column level; missing is ''.
-   * @param {Record<string, any>} row @param {{ row: string, col: string | null }} g */
-  const gridKey = (row, g) => {
+  /** A row's grid key: its row level, then its column level. A missing level
+   * is '' when `keepMissing`, as a bar keeps a missing facet as its own panel;
+   * else the row has no key and no panel, as a line drops it.
+   * @param {Record<string, any>} row @param {{ row: string, col: string | null }} g
+   * @param {boolean} [keepMissing] @returns {string | null} */
+  const gridKey = (row, g, keepMissing = true) => {
+    const miss = (/** @type {string | null} */ c) => c != null && (row[c] == null || row[c] === '');
+    if (!keepMissing && (miss(g.row) || miss(g.col))) return null;
     const lv = (/** @type {string | null} */ c) => (c == null || row[c] == null ? '' : String(row[c]));
     return lv(g.row) + GRID_SEP + lv(g.col);
+  };
+
+  /** Does the grid keep a row with a missing level? A bar, unless `missing`
+   * drops it; a line, scatter or timeline never draws such a row in a wrap
+   * either. @param {Record<string, any>} cfg */
+  const gridKeepsMissing = (cfg) => NS.familyOf(cfg.type) === 'aggregated' && cfg.missing !== 'drop';
+
+  /** The facet levels of an individual or timeline chart, sorted. In a grid a
+   * row without a key ('') has no panel.
+   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg @returns {string[]} */
+  const facetLevels = (rows, ix, cfg) => {
+    if (!cfg.facet) return ['__all__'];
+    const lv = ix.levels(rows, cfg.facet, 'nz').slice().sort();
+    return cfg.facet_grid ? lv.filter((/** @type {string} */ f) => f !== '') : lv;
   };
 
   /** A grid key split into its row and column level. @param {string} key */
@@ -204,5 +223,6 @@
     .filter((c) => c && c !== 'null' && c !== '(none)' && !drop.includes(c));
 
   Object.assign(model, { settings, defaultLie, FIXED, defaults, gate, emptyState, facetLabels,
-                         tooltipFields, GRID_COL, gridKey, gridLevels, facetKeys });
+                         tooltipFields, GRID_COL, gridKey, gridKeepsMissing, gridLevels, facetKeys,
+                         facetLevels });
 })();

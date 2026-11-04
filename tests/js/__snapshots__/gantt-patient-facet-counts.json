@@ -414,7 +414,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 50
+        "max": 50,
+        "interval": 10
        }
       ]
      }
@@ -845,7 +846,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 50
+        "max": 50,
+        "interval": 10
        }
       ]
      }
@@ -1276,7 +1278,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 50
+        "max": 50,
+        "interval": 10
        }
       ]
      }

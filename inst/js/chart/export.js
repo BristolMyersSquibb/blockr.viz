@@ -136,6 +136,45 @@
     }
   };
 
+  /** A panel grid's strips where they are on screen: a column strip on one
+   * line, cut to its width; a row strip turned a quarter, its lines wrapped
+   * at the strip's height as the page wraps them.
+   * @param {CanvasRenderingContext2D} ctx @param {any} k @param {ChartView} view */
+  const paintStrips = (ctx, k, view) => {
+    const { gridR, fontOf, colorOf, topH, legH, legTop } = k;
+    const y = topH + (legTop ? legH : 0);
+    for (const el of view._stripEls || []) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const font = fontOf(el, '600 12px');
+      const color = colorOf(el, '#6b7280');
+      let text = el.textContent || '';
+      if (getComputedStyle(el).textTransform === 'uppercase') text = text.toUpperCase();
+      const cx = r.left - gridR.left + r.width / 2, cy = y + (r.top - gridR.top) + r.height / 2;
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (el.classList.contains('vz-chart-strip--row')) {
+        const wrap = lineWrapper(r.height, 0, (f) => view._measureFont(f))({ text, font, color });
+        const n = wrap.lines.length;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.PI / 2);
+        // Turned clockwise, the first line is the rightmost, as vertical-rl.
+        wrap.lines.forEach((ln, i) => ctx.fillText(ln, 0, (i - (n - 1) / 2) * wrap.lineH));
+        ctx.restore();
+      } else {
+        const width = view._measureFont(font);
+        let t = text;
+        while (t.length > 1 && width(t) > r.width) t = t.slice(0, -2) + '\u2026';
+        ctx.fillText(t, cx, cy);
+      }
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+  };
+
   /** Legend chips where they are on screen; a dimmed chip keeps its opacity.
    * @param {CanvasRenderingContext2D} ctx @param {any} k */
   const paintLegend = (ctx, k) => {
@@ -178,8 +217,9 @@
   };
 
   /** The bands and the panels on one canvas, or null without a 2d context.
-   * @param {any} k @param {any[]} panels @returns {HTMLCanvasElement | null} */
-  const composeCanvas = (k, panels) => {
+   * @param {any} k @param {any[]} panels @param {ChartView} view
+   * @returns {HTMLCanvasElement | null} */
+  const composeCanvas = (k, panels, view) => {
     const { W, H, pr, bg, legR, cap } = k;
     const canvas = document.createElement('canvas');
     canvas.width = W * pr;
@@ -192,6 +232,7 @@
     let y = k.pad;
     for (const b of k.top) y = paintBlock(ctx, b, k.pad, y);
     paintPanels(ctx, k, panels);
+    paintStrips(ctx, k, view);
     if (legR) paintLegend(ctx, k);
     if (cap) paintBlock(ctx, cap, k.pad, k.topH + k.gridR.height + k.legH + 6);
     return canvas;
@@ -211,7 +252,7 @@
     const pr = opts.pixelRatio || view.derived.capture_ratio || 2;
     const k = exportContext(view, gridR, pr);
     return panelBitmaps(slots, pr).then((panels) => {
-      const canvas = composeCanvas(k, panels);
+      const canvas = composeCanvas(k, panels, view);
       if (!canvas) throw new Error('the browser cannot draw the picture');
       return { png: canvas.toDataURL('image/png'), width: k.W, height: k.H };
     });

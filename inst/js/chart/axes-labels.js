@@ -122,6 +122,26 @@
     return (n >= 2 && lo < hi) ? [lo, hi] : null;
   };
 
+  /**
+   * A shared value domain on a nice step, and the step: the finest 1-2-5 step
+   * that spans it in at most seven intervals. Each panel's own extent is already
+   * nice, but on its own step: [0, 50] by 10 and [0, 51] by 3 give [0, 51],
+   * which ECharts labels 0, 10, ..., 50, 51.
+   * @param {number} lo @param {number} hi @returns {number[]}
+   */
+  const niceShared = (lo, hi) => {
+    const tidy = (/** @type {number} */ v) => Number(v.toPrecision(12));
+    let mag = Math.pow(10, Math.floor(Math.log10((hi - lo) / 10)));
+    for (;;) {
+      for (const m of [1, 2, 5]) {
+        const step = tidy(m * mag);
+        const a = Math.floor(tidy(lo / step)), b = Math.ceil(tidy(hi / step));
+        if (b - a <= 7) return [tidy(a * step), tidy(b * step), step];
+      }
+      mag *= 10;
+    }
+  };
+
   // ECharts labels a log axis at powers of ten only, which leaves two or
   // three labels. Up to three decades the ticks are 1-2-5 (1-1.5-2-3-5-7
   // within one decade); the axis ends on the ticks either side of the data.
@@ -476,7 +496,7 @@
 
   Object.assign(NS.axes, {
     colMeta, axisTitle, axisTypeFor, orderedCategories, orderLevels, yGutter,
-    sharedDomain, logTicks, logAxis, wrapLabel, axisLabelWithDisplay, valueAxis, categoryAxis,
+    sharedDomain, niceShared, logTicks, logAxis, wrapLabel, axisLabelWithDisplay, valueAxis, categoryAxis,
     xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
     LABEL_LINE_H
   });

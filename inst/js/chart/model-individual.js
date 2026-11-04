@@ -169,7 +169,7 @@
     // Tooltip fields, less x (the header), y (the value) and the split column.
     out.ttFields = model.tooltipFields(cfg, [x, y, splitCol].filter(Boolean).map(String));
 
-    const facets = facet ? ix.levels(rows, facet, 'nz').slice().sort() : ['__all__'];
+    const facets = model.facetLevels(rows, ix, cfg);
     out.nFacets = facets.length;
     out.single = facets.length === 1;
 

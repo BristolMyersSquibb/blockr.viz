@@ -411,6 +411,7 @@ chart_spec_facets <- function() {
   list(
     facet_scales = chart_arg(
       type = "enum", default = "fixed", values = c("fixed", "free", "free_y"),
+      applies = except("pie", "treemap"),
       gear = gear("Look", "select", "Panel scales",
                   labels = c("Shared across panels", "Free x and y per panel",
                              "Free y per panel")),

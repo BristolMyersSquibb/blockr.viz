@@ -657,7 +657,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 90
+        "max": 100,
+        "interval": 20
        }
       ]
      }
@@ -669,7 +670,8 @@
       "yAxis": [
        {
         "min": 20,
-        "max": 42
+        "max": 45,
+        "interval": 5
        }
       ]
      }
@@ -1038,7 +1040,8 @@
       "xAxis": [
        {
         "min": 0,
-        "max": 90
+        "max": 100,
+        "interval": 20
        }
       ]
      }
@@ -1050,7 +1053,8 @@
       "yAxis": [
        {
         "min": 20,
-        "max": 42
+        "max": 45,
+        "interval": 5
        }
       ]
      }

@@ -71,3 +71,20 @@ test_that("a split by an all-NA column leaves the chart text", {
   tt <- chart_titles(viz_block_spec("chart"), v, d, list(), list())
   expect_identical(tt$subtitle$text, "By arm, split by sub")
 })
+
+test_that("a title names the grid's rows, and drops them when unset", {
+  d <- data.frame(arm = c("A", "B"), sex = c("F", "M"), x = 1:2)
+  v <- list(type = "bar", category = "x", facet = "arm", facet_row = "sex",
+            subtitle = "By x[, {@facet_row} by {@facet}]")
+  tt <- chart_titles(viz_block_spec("chart"), v, d, list(), list())
+  expect_identical(tt$subtitle$text, "By x, sex by arm")
+  v$facet_row <- NULL
+  tt <- chart_titles(viz_block_spec("chart"), v, d, list(), list())
+  expect_identical(tt$subtitle$text, "By x")
+})
+
+test_that("the assistant's guidance and mapping cover facet_row", {
+  expect_match(paste(chart_guidance(), collapse = " "), "facet_row", fixed = TRUE)
+  expect_true("facet_row" %in% chart_mapping_args("line"))
+  expect_true("facet_row" %in% dd_chart_roles)
+})

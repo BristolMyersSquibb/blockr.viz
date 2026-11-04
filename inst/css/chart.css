@@ -47,11 +47,16 @@
   white-space: nowrap;
 }
 .vz-chart-strip--col { text-align: center; text-transform: uppercase; }
+/* A long row label wraps into a second line rather than being cut; its
+   height is capped to the row's panels (fitStrips() in panels.js). */
 .vz-chart-strip--row {
   writing-mode: vertical-rl;
   align-self: center;
-  max-height: 100%;
   padding-right: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  line-height: 1.25;
 }
 /* A facet strip is a section title centred over its panel: no card around the
    panel, no band behind the name. */
