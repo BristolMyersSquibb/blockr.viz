@@ -749,6 +749,25 @@ test_that("spans event shapes: legend lists the drawn levels with shapes", {
   expect_match(unlist(c2$et)[[1]], "^Event ")
 })
 
+test_that("spans event shapes: a fifth level draws the vertical bar", {
+  d <- swim_fixture()
+  d$kind <- factor(as.character(d$kind),
+                   levels = c("CR", "PR", "PD", "Death", "End"))
+  d$ev[[5]] <- 90
+  d$kind[[5]] <- "End"
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind"
+  )))
+  leg <- groups_legend_spec(m$prep)
+  sh <- Filter(function(g) identical(g$title, "kind"), leg$groups)[[1]]
+  shapes <- vapply(sh$items, function(x) x$shape, 1L)
+  names(shapes) <- vapply(sh$items, function(x) x$label, "")
+  expect_identical(shapes[["End"]], 5L)
+  expect_identical(shapes[["Death"]], 4L)
+  # The slide painter draws it too.
+  expect_s3_class(paint_shape(5L, 1, 1, 1 / 96), "gList")
+})
+
 test_that("a parent row pools segments but draws no overlays", {
   d <- swim_fixture()
   d$arm <- "A"

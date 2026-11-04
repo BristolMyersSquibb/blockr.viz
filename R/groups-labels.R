@@ -23,7 +23,7 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
     color_groups[[length(color_groups) + 1L]] <- list(
       column = s$event_shape, title = groups_col_name(data, s$event_shape),
       levels = lv,
-      shapes = (match(lv, s$.shape_levels) - 1L) %% 4L + 1L
+      shapes = (match(lv, s$.shape_levels) - 1L) %% 5L + 1L
     )
   }
   # A tile painted by a worst level gets its own legend group.

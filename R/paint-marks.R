@@ -323,7 +323,8 @@ paint_at <- function(v, i) if (!is.null(v) && length(v) >= i) v[[i]]
 
 # An event shape centred on (x, y), y measured up from the bottom, in CSS px
 # units of `px` inches, over a 2px white ring: 1 filled triangle, 2 open
-# triangle, 3 cross, 4 square. marks.js shape() draws the same.
+# triangle, 3 cross, 4 square, 5 vertical bar. marks.js shape() draws the
+# same.
 paint_shape <- function(k, x, y, px) {
   lw <- function(n) n * px * 96
   ring <- function(n = 4) {
@@ -357,6 +358,15 @@ paint_shape <- function(k, x, y, px) {
                        paint_in(8 * px), gp = gp)
       }
       grid::gList(sq(ring()), sq(grid::gpar(fill = PAINT_TEXT, col = NA)))
+    },
+    "5" = {
+      bar <- function(gp) {
+        grid::segmentsGrob(paint_in(x), paint_in(y - 6 * px), paint_in(x),
+                           paint_in(y + 6 * px), gp = gp)
+      }
+      grid::gList(bar(ring(6.2)),
+                  bar(grid::gpar(col = PAINT_TEXT, lwd = lw(2.6),
+                                 lineend = "round")))
     },
     grid::gList(tri(ring()), tri(grid::gpar(fill = PAINT_TEXT, col = NA)))
   )

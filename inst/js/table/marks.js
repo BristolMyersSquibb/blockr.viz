@@ -196,14 +196,16 @@
 
   /**
    * An event shape, centred on 0 in a 14-unit box, over a 2px ring in the
-   * surface colour: 1 filled triangle, 2 open triangle, 3 cross, 4 square.
-   * The static painter (R/paint-marks.R, paint_shape) draws the same four.
+   * surface colour: 1 filled triangle, 2 open triangle, 3 cross, 4 square,
+   * 5 vertical bar. The static painter (R/paint-marks.R, paint_shape) draws
+   * the same five.
    * @param {number} k
    */
   function shape(k) {
     const tri = 'M0,-5L5,4L-5,4Z';
     const x = 'M-4,-4L4,4M4,-4L-4,4';
     const sq = 'M-4,-4H4V4H-4Z';
+    const bar = 'M0,-6V6';
     const two = (/** @type {string} */ d, /** @type {string} */ cls) =>
       '<path class="vz-ev-ring' + (cls === 'vz-ev-line' ? ' is-line' : '') + '" d="' + d +
       '"></path><path class="' + cls + '" d="' + d + '"></path>';
@@ -211,6 +213,7 @@
       case 2: return two(tri, 'vz-ev-open');
       case 3: return two(x, 'vz-ev-line');
       case 4: return two(sq, 'vz-ev-fill');
+      case 5: return two(bar, 'vz-ev-line');
       default: return two(tri, 'vz-ev-fill');
     }
   }

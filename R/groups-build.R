@@ -335,7 +335,7 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
         l <- if (!is.null(shp)) as.character(slice[[shp]][[j]])
         kk <- if (!is.null(l) && !is.na(l) && length(lv)) match(l, lv) else NA
         list(x = ex[[j]],
-             k = if (is.na(kk)) 1L else (kk - 1L) %% 4L + 1L,
+             k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
              lv = if (!is.null(l) && !is.na(l)) l)
       })
     }

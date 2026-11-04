@@ -228,7 +228,8 @@ table_summary_specs <- function() {
         gear = gear("Columns", "column", "Event shape", when = "event_x"),
         describe = paste(
           "Event kind. Its levels take, in order, a filled triangle, an open",
-          "triangle, a cross and a square; further levels repeat them. Names",
+          "triangle, a cross, a square and a vertical bar; further levels",
+          "repeat them. Names",
           "the event in the tooltip and the legend."
         )
       ),
