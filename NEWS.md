@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9035
+# blockr.viz 0.3.0.9036
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -93,6 +93,9 @@ read.
   timeline scrolls the axis stays at the top of the panel, as a table's
   header does. It was at the bottom, in view only after scrolling past the
   last lane. Downloads show the axis on top.
+* A column added in the table's Columns editor waits there until its
+  required fields are set (a distribution's value, a span's start and
+  end). It used to be sent at once, refused by the spec and dropped.
 * The swimlane's event shapes gain a fifth, a vertical bar, for a fifth
   `event_shape` level (an end of treatment beside CR, PR, PD and death).
 * A large swimlane in the groups layout (`size = "lg"`) draws its axis in

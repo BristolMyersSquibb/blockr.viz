@@ -134,3 +134,48 @@ test_that("the lock follows the blockr.locked option", {
   withr::local_options(blockr.locked = FALSE)
   expect_false(viz_locked())
 })
+
+test_that("every summary the Columns editor can send passes the spec", {
+  # The editor sends an entry once its type's required fields are set
+  # (inst/js/table/summaries.js), each field a value its control offers.
+  spec <- table_spec()
+  sa <- spec$args$summaries
+  send <- function(rec) {
+    msg <- jsonlite::fromJSON(wire_json(list(
+      rev = 1L, values = list(summaries = wire_value(sa$type, list(rec)))
+    )), simplifyVector = FALSE)
+    viz_read_set(spec, msg)$rejected
+  }
+  for (t in names(sa$type$variants)) {
+    fields <- sa$type$variants[[t]]$fields
+    base <- list(type = t)
+    for (f in names(fields)) {
+      if (isTRUE(fields[[f]]$required)) {
+        base[[f]] <- if (fields[[f]]$type$name == "string") "n()" else "AGE"
+      }
+    }
+    expect_identical(send(base), character(), label = t)
+    for (f in setdiff(names(fields), "type")) {
+      arg <- fields[[f]]
+      if (is.null(arg$gear)) next
+      offered <- switch(
+        arg$type$name,
+        enum = as.list(arg$values), column = list("SEX"),
+        columns = list("SEX"), string = list("x", ""),
+        numbers = list(c(1, 2)), list()
+      )
+      if (!isTRUE(arg$required)) offered <- c(offered, list(NULL))
+      for (v in offered) {
+        rec <- base
+        rec[f] <- list(v)
+        expect_identical(send(rec), character(), label = paste(t, f))
+      }
+    }
+    # Without a required field the entry is refused: the editor holds it.
+    for (f in names(fields)[vapply(fields, function(a) isTRUE(a$required),
+                                   logical(1L))]) {
+      expect_identical(send(base[setdiff(names(base), f)]), "summaries",
+                       label = paste(t, "without", f))
+    }
+  }
+})

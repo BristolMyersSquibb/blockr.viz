@@ -6,6 +6,10 @@
  * An entry folds to its title; it moves up or down, or goes; the Add menu
  * appends an entry of any type. Every edit sends the whole list.
  *
+ * A new entry whose type has required fields (a distribution's column, a
+ * span's start and end) stays in the editor until they are set, then goes
+ * with the list: the spec refuses an entry without them.
+ *
  * Rules the spec's notes give and its fields cannot: an aggregate's column
  * only when it aggregates one, the stacking only for a bar split by
  * colour, the paint only for a tile, the outer range only for a mark.
@@ -155,6 +159,16 @@
   }
 
   /**
+   * Whether an entry has every field its type requires.
+   * @param {Entry} s
+   * @param {Record<string, any>} variants
+   */
+  function complete(s, variants) {
+    const variant = variants[/** @type {string} */ (s.type)] || {};
+    return Object.keys(variant).every((f) => !variant[f].required || (s[f] != null && s[f] !== ''));
+  }
+
+  /**
    * One entry: its head, which opens it, and its fields with move and
    * remove.
    * @param {Entry[]} list
@@ -162,10 +176,10 @@
    * @param {Record<string, any>} variants
    * @param {VizCustomCtx} ctx
    * @param {Set<number>} open
+   * @param {(next: Entry[]) => void} send
    */
-  function entry(list, k, variants, ctx, open) {
+  function entry(list, k, variants, ctx, open, send) {
     const s = list[k];
-    const send = (/** @type {Entry[]} */ next) => ctx.set(next);
     const el = document.createElement('div');
     el.className = 'vz-table-sum-row' + (open.has(k) ? ' is-open' : '');
     const head = document.createElement('div');
@@ -208,6 +222,8 @@
 
   /** Entries open in the tray, per element, across re-renders. */
   const opened = new WeakMap();
+  /** A new entry still missing a required field, per element. */
+  const drafts = new WeakMap();
 
   /**
    * The Columns row.
@@ -228,13 +244,28 @@
     }
     el.textContent = '';
     el.classList.add('vz-table-summaries');
-    list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open)));
+    list.forEach((_, k) => el.appendChild(entry(list, k, variants, ctx, open, ctx.set)));
+    // The draft: sent with the list once complete, dropped by its Remove.
+    const draft = (/** @type {Entry | null} */ s) => {
+      if (s && complete(s, variants)) {
+        drafts.delete(box);
+        open.add(list.length);
+        ctx.set(list.concat([s]));
+        return;
+      }
+      if (s) drafts.set(box, s);
+      else drafts.delete(box);
+      editor(el, ctx);
+    };
+    const pending = drafts.get(box);
+    if (pending) {
+      const row = entry([pending], 0, variants, ctx, new Set([0]), (next) => draft(next[0] || null));
+      row.classList.add('is-draft');
+      el.appendChild(row);
+    }
     const add = el.appendChild(document.createElement('div'));
     add.className = 'vz-table-sum-addcol';
-    addMenu(add, Object.keys(variants), (t) => {
-      open.add(list.length);
-      ctx.set(list.concat([{ type: t }]));
-    }, ctx.scope);
+    addMenu(add, Object.keys(variants), (t) => draft({ type: t }), ctx.scope);
   }
 
   /**

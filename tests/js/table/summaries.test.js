@@ -80,16 +80,20 @@ test('move, remove, add and fold', () => {
   add.dispatchEvent(new e.env.win.Event('change'));
   // The first entry moves only down, the last only up.
   assert.equal(e.el.querySelectorAll('.vz-table-sum-up').length, 1);
+  // A pair needs its two columns: it waits in the editor, unsent.
   assert.deepEqual(e.sets, [
     [{ type: 'expr', expr: 'n()' }, { type: 'simple' }],
     [{ type: 'expr', expr: 'n()' }, { type: 'simple' }],
-    [{ type: 'simple' }],
-    [{ type: 'simple' }, { type: 'expr', expr: 'n()' }, { type: 'pair' }]
+    [{ type: 'simple' }]
   ]);
+  assert.equal(e.el.querySelectorAll('.vz-table-sum-row.is-draft').length, 1);
+  e.draw(list);
   const toggle = e.el.querySelector('.vz-table-sum-toggle');
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   e.click(toggle);
   assert.equal(e.el.querySelector('.vz-table-sum-body').hidden, false);
+  e.el.querySelector('.is-draft .vz-table-sum-rm').dispatchEvent(new e.env.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(e.el.querySelectorAll('.is-draft').length, 0);
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   e.draw(list);
   assert.equal(e.el.querySelector('.vz-table-sum-body').hidden, false);
@@ -150,6 +154,25 @@ test('"+ Add a column" opens blockr.ui\'s menu: a row per type, its drawing and 
   assert.equal(m.closed, 1);
   assert.equal(opened.length, 1);
   btn.click();
-  opened[1].el.querySelectorAll('.blockr-menu__item')[5].click();
-  assert.deepEqual(sets, [[{ type: 'simple' }, { type: 'pair' }]]);
+  opened[1].el.querySelectorAll('.blockr-menu__item')[0].click();
+  assert.deepEqual(sets, [[{ type: 'simple' }, { type: 'simple' }]]);
+});
+
+test('a new entry is sent once its type\'s required fields are set', () => {
+  const e = editor([{ type: 'simple' }]);
+  const add = e.el.querySelector('.vz-table-sum-addcol select');
+  add.value = 'Spans';
+  add.dispatchEvent(new e.env.win.Event('change'));
+  assert.deepEqual(e.sets, []);
+  const draft = e.el.querySelector('.vz-table-sum-row.is-draft');
+  assert.equal(draft.querySelector('.vz-table-sum-body').hidden, false);
+  e.built.find((c) => c.key === 'x').set('AGE');
+  assert.deepEqual(e.sets, []);
+  // A redraw from R keeps the draft with what was set.
+  e.draw([{ type: 'simple' }]);
+  assert.equal(e.built.find((c) => c.key === 'x' && c.values.type === 'spans').value, 'AGE');
+  e.built.find((c) => c.key === 'xend' && c.values.type === 'spans').set('AGE');
+  assert.deepEqual(e.sets, [[{ type: 'simple' }, { type: 'spans', x: 'AGE', xend: 'AGE' }]]);
+  e.draw(e.sets[0]);
+  assert.equal(e.el.querySelectorAll('.is-draft').length, 0);
 });
