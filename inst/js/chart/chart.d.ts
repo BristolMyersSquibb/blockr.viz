@@ -310,12 +310,7 @@ interface ChartSlot {
   zoomRoles: { xAxis: 'x' | 'y' | null, yAxis: 'x' | 'y' | null } | null;
   /** When the last zoom drag ended (ms), so its click is ignored. */
   zoomDragAt: number;
-  keepBtn: HTMLButtonElement;
-  /** Clear limits: on the first panel while x_limits or y_limits is set. */
-  clearBtn: HTMLButtonElement;
   zoomBar: HTMLElement;
-  /** The Select / Zoom switch over a scatter, on the first panel. */
-  modeEl: HTMLElement | null;
   focus: any;
   focusSi: number | null;
   band: any;
@@ -351,6 +346,8 @@ interface ChartView extends VizView {
   drawn: boolean;
   /** A scatter's drag zooms instead of brushing. */
   zoomOn: boolean;
+  /** The Select / Zoom switch in the header row (zoom.js). */
+  _modeEl?: HTMLElement;
   family(): ChartFamily;
   highlight(lazy?: boolean): void;
   status(): void;

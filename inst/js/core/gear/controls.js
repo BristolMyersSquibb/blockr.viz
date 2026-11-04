@@ -106,8 +106,17 @@
     if (parse === 'lines') {
       return labelled(value).map((l) => (l.label ? l.label + ': ' : '') + String(l.value)).join('; ');
     }
+    if (arg.type.name === 'limits' && Array.isArray(value)) return value.map((v) => (v ?? 'auto')).join(' to ');
     return Array.isArray(value) ? value.join(', ') : String(value);
   }
+
+  /** Limits as typed, "20 to 80" or "auto to 80": an end is a number, else text (a
+   * date); blank or "auto" is auto, both auto null. @param {string} t */
+  const parseLimits = (t) => {
+    const pair = t.split(/\s+to\s+/).slice(0, 2).concat(['']).slice(0, 2).map((x) => x.trim())
+      .map((e) => (e === '' || e === 'auto' ? null : (Number.isFinite(Number(e)) ? Number(e) : e)));
+    return pair.every((x) => x == null) ? null : pair;
+  };
 
   /** Text back to the wire form; `null` for an emptied nullable field.
    * @param {VizArg} arg @param {string} text @returns {unknown} */
@@ -117,6 +126,7 @@
     const name = arg.type.name;
     let v;
     if (parse === 'ranges') v = parseRanges(t);
+    else if (name === 'limits') v = parseLimits(t);
     else if (parse === 'lines') v = parseLines(t, name === 'numbers');
     else if (name === 'number' || name === 'integer') {
       const n = Number(t);
@@ -548,8 +558,6 @@
   }
 
   /** A limit as typed: a number, else the text (a date); blank is null. @param {string} t */
-  const limitOf = (t) => (t.trim() === '' ? null : (Number.isFinite(Number(t)) ? Number(t) : t.trim()));
-
   /** Two fields, from and to, each blank for auto: axis limits. Either
    * field commits the pair; both blank is null.
    * @param {HTMLElement} el @param {VizRowCtx} ctx */
@@ -561,8 +569,7 @@
     /** @type {HTMLInputElement[]} */
     const inputs = [];
     const commit = () => {
-      const pair = inputs.map((inp) => limitOf(inp.value));
-      const v = pair.every((x) => x == null) ? null : pair;
+      const v = parseLimits(inputs.map((inp) => inp.value.trim() || 'auto').join(' to '));
       if (!same(v, ctx.value)) ctx.set(v);
     };
     ['from', 'to'].forEach((end, i) => {

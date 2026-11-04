@@ -7,13 +7,12 @@
  *     zooms y only. On the aggregated types only the value axis zooms, so
  *     the box spans the categories.
  *   - On a scatter the drag is the brush, a selection or a drill. A
- *     Select / Zoom switch over the plot gives the drag to the zoom instead;
- *     Select is the default.
+ *     Select / Zoom switch in the header row gives the drag to the zoom
+ *     instead; Select is the default.
  *   - A double-click or the Reset zoom link goes back to the full view: the
  *     axis limits when set (zoom-option.js), else the data.
- *   - Keep as limits writes the zoomed window into `x_limits` and
- *     `y_limits`, through the gear. Clear limits, shown on the first panel
- *     while either is set, empties them again.
+ *   - The zoom is a view: it is not saved and sets no limits. Limits are
+ *     the `x_limits` and `y_limits` settings (zoom-option.js).
  * The window lives on the slot and is drawn again after a redraw; it is not
  * part of the block state.
  */
@@ -97,36 +96,14 @@
     if (batch.length) chart.dispatchAction({ type: 'dataZoom', batch });
   };
 
-  /** The limits roles of the slot's axes that have a limit set.
-   * @param {ChartView} view @param {ChartSlot} slot */
-  const limited = (view, slot) => KEYS.map((k) => slot.zoomRoles && slot.zoomRoles[k])
-    .filter((role) => ZO.hasLimits(view.settings, role));
-
-  /** @param {ChartView} view @param {ChartSlot} slot */
-  const showLinks = (view, slot) => {
-    slot.resetBtn.hidden = !slot.zoom;
-    if (slot.keepBtn) slot.keepBtn.hidden = !slot.zoom || !view.gear;
-    if (slot.clearBtn) {
-      slot.clearBtn.hidden = !view.gear || view._slots.indexOf(slot) !== 0 ||
-        !limited(view, slot).length;
-    }
-  };
-
-  /** Both limits of the slot's axes back to auto, through the gear.
-   * @param {ChartView} view @param {ChartSlot} slot */
-  const clear = (view, slot) => {
-    const roles = limited(view, slot);
-    if (!view.gear || !roles.length) return;
-    slot.zoom = null;
-    apply(slot);
-    view.gear.set(Object.fromEntries(roles.map((role) => [role + '_limits', null])));
-  };
+  /** @param {ChartSlot} slot */
+  const showLinks = (slot) => { slot.resetBtn.hidden = !slot.zoom; };
 
   /** @param {ChartView} view @param {ChartSlot} slot */
   const reset = (view, slot) => {
     slot.zoom = null;
     apply(slot);
-    showLinks(view, slot);
+    showLinks(slot);
   };
 
   const DAY_MS = 864e5;
@@ -163,59 +140,48 @@
     if (s.xAxis && !s.yAxis && slot.zoomRoles && slot.zoomRoles.yAxis) next.yAxis = null;
     slot.zoom = next.xAxis || next.yAxis ? next : null;
     apply(slot);
-    showLinks(view, slot);
+    showLinks(slot);
   };
 
-  /** A value as the limits field takes it: a date on a time axis, else four
-   * significant digits.
-   * @param {number} v @param {string} type */
-  const limitValue = (v, type) => (type === 'time'
-    ? new Date(v).toISOString().slice(0, 10) : Number(v.toPrecision(4)));
-
-  /** The zoomed window into `x_limits` / `y_limits`; the zoom is then spent.
-   * @param {ChartView} view @param {ChartSlot} slot */
-  const keep = (view, slot) => {
-    const chart = slot.chart;
-    if (!chart || !slot.zoom || !slot.zoomRoles || !view.gear) return;
-    /** @type {Record<string, unknown>} */
-    const changes = {};
-    for (const k of KEYS) {
-      const role = slot.zoomRoles[k];
-      if (!role || !slot.zoom[k]) continue;
-      const comp = chart.getModel().getComponent(k, 0);
-      const type = String(comp ? comp.get('type') : 'value');
-      const ext = comp ? comp.axis.scale.getExtent() : slot.zoom[k];
-      changes[role + '_limits'] = [limitValue(ext[0], type), limitValue(ext[1], type)];
-    }
-    slot.zoom = null;
-    showLinks(view, slot);
-    view.gear.set(changes);
+  const ICONS = {
+    select: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" ' +
+      'width="11" height="11" rx="1" fill="none" stroke="currentColor" stroke-dasharray="2 1.6"/></svg>',
+    zoom: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.8" cy="6.8" r="4.3"/>' +
+      '<path d="M10 10l3.8 3.8M4.8 6.8h4M6.8 4.8v4"/></svg>'
   };
 
-  /** The Select / Zoom switch over a brushable scatter: one per view, on
-   * its first panel.
-   * @param {ChartView} view @param {ChartSlot} slot @param {number} i */
-  const modeSwitch = (view, slot, i) => {
-    const show = i === 0 && slot.brushable;
-    if (!slot.modeEl) {
+  /** The Select / Zoom switch in the header row, while the view draws a
+   * brushable scatter: blockr.ui's segmented control at row size, icons
+   * with their names as tooltips.
+   * @param {ChartView} view */
+  const modeSwitch = (view) => {
+    const show = view._slots.some((s) => s && s.brushable);
+    let el = view._modeEl;
+    if (!el) {
       if (!show) return;
-      const el = slot.modeEl = document.createElement('span');
-      el.className = 'vz-chart-zoom-mode';
+      el = view._modeEl = document.createElement('span');
+      el.className = 'blockr-segmented blockr-segmented--xs vz-chart-zoom-mode';
       el.setAttribute('role', 'group');
       el.setAttribute('aria-label', 'Drag selects or zooms');
-      for (const [on, label] of /** @type {[boolean, string][]} */ ([[false, 'Select'], [true, 'Zoom']])) {
+      for (const [on, name] of /** @type {[boolean, 'select' | 'zoom'][]} */ ([[false, 'select'], [true, 'zoom']])) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.textContent = label;
+        b.className = 'blockr-segmented__seg';
+        b.innerHTML = ICONS[name];
+        b.title = name === 'zoom' ? 'Drag to zoom' : 'Drag to select';
+        b.setAttribute('aria-label', b.title);
         b.dataset.zoom = String(on);
-        /** @type {VizScope} */ (slot.scope).on(b, 'click', () => setMode(view, on));
+        view.scope.on(b, 'click', () => setMode(view, on));
         el.appendChild(b);
       }
-      slot.zoomBar.prepend(el);
+      view.frame.tools.prepend(el);
     }
-    slot.modeEl.hidden = !show;
-    for (const b of Array.from(slot.modeEl.children)) {
-      b.classList.toggle('is-on', /** @type {HTMLElement} */ (b).dataset.zoom === String(view.zoomOn === true));
+    el.hidden = !show;
+    for (const b of Array.from(el.children)) {
+      const on = /** @type {HTMLElement} */ (b).dataset.zoom === String(view.zoomOn === true);
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', String(on));
     }
   };
 
@@ -223,14 +189,13 @@
    * @param {ChartView} view @param {boolean} on */
   const setMode = (view, on) => {
     view.zoomOn = on;
-    view._slots.forEach((slot, i) => {
-      if (!slot || !slot.chart) return;
-      if (slot.brushable) {
+    for (const slot of view._slots) {
+      if (slot && slot.chart && slot.brushable) {
         slot.chart.dispatchAction({ type: 'takeGlobalCursor', key: 'brush',
                                     brushOption: { brushType: on ? false : 'rect', brushMode: 'single' } });
       }
-      modeSwitch(view, slot, i);
-    });
+    }
+    modeSwitch(view);
   };
 
   /** Whether a click on the slot is the end of a drag.
@@ -288,8 +253,6 @@
     // The slot's scope goes with this chart; the next chart registers again.
     const scope = /** @type {VizScope} */ (slot.scope);
     scope.on(slot.resetBtn, 'click', () => reset(view, slot));
-    if (slot.keepBtn) scope.on(slot.keepBtn, 'click', () => keep(view, slot));
-    if (slot.clearBtn) scope.on(slot.clearBtn, 'click', () => clear(view, slot));
   };
 
   /**
@@ -304,9 +267,9 @@
     slot.zoomRoles = roles;
     if (!same) slot.zoom = null;
     if (slot.zoom) apply(slot);
-    showLinks(view, slot);
-    modeSwitch(view, slot, i);
+    showLinks(slot);
+    if (i === 0) modeSwitch(view);
   };
 
-  NS.zoom = { attach, after, reset, keep, clear, setMode, justDragged, spans, limitValue, tidy };
+  NS.zoom = { attach, after, reset, setMode, justDragged, spans, tidy };
 })();

@@ -53,3 +53,14 @@ test_that("the chart block takes x_limits and y_limits", {
   expect_true("boxplot" %in% spec$args$y_limits$applies)
   expect_false("boxplot" %in% spec$args$x_limits$applies)
 })
+
+test_that("the sentence prints limits as from to, auto for NA", {
+  expect_identical(slot_limits_text(c(20, NA)), "20 to auto")
+  expect_identical(slot_limits_text(c("2024-01-01", "2024-06-30")),
+                   "2024-01-01 to 2024-06-30")
+  expect_null(slot_limits_text(NULL))
+  spec <- viz_block_spec("chart")
+  v <- viz_slot_values(spec, list(y_limits = c(0, 120), x_limits = NULL))
+  expect_identical(v$y_limits, "0 to 120")
+  expect_null(v$x_limits)
+})

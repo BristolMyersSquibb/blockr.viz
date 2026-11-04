@@ -662,3 +662,17 @@ test('range: a from and a to field, blank for auto, both blank is null', () => {
   const bar = setup({ type: 'bar', category: 'ARM' });
   assert.ok(rows(bar.el).includes('y_limits') && !rows(bar.el).includes('x_limits'));
 });
+
+test('limits as the sentence word types them: "20 to auto"', () => {
+  const t = setup({ type: 'line', x: 'ADY', y: 'AVAL', y_limits: [20, null] });
+  const C = t.V.gear.controls;
+  const arg = t.V.spec.chart.y_limits;
+  assert.equal(C.toText(arg, [20, null]), '20 to auto');
+  assert.deepEqual(plain(C.fromText(arg, '20 to 80')), [20, 80]);
+  assert.deepEqual(plain(C.fromText(arg, 'auto to 80')), [null, 80]);
+  assert.deepEqual(plain(C.fromText(arg, '20')), [20, null]);
+  assert.deepEqual(plain(C.fromText(arg, '2024-01-01 to auto')), ['2024-01-01', null]);
+  assert.strictEqual(C.fromText(arg, ''), null, 'empty is auto at both ends');
+  const how = t.gear.slot('y_limits');
+  assert.equal(how.kind, 'entry', 'the word is typed over');
+});

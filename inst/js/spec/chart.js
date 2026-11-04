@@ -363,7 +363,7 @@
         "control": "range",
         "label": "X limits"
       },
-      "slot": false,
+      "slot": true,
       "ctrl": true
     },
     "y_limits": {
@@ -379,7 +379,7 @@
         "control": "range",
         "label": "Y limits"
       },
-      "slot": false,
+      "slot": true,
       "ctrl": true
     },
     "tooltip": {

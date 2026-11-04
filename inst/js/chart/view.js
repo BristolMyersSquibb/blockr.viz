@@ -365,18 +365,14 @@
         const labelEl = singleFacet ? null : mk('div', 'vz-chart-facet-label', container);
         const chartDiv = mk('div', 'vz-chart-panel', container);
         const zoomBar = mk('div', 'vz-chart-zoom-bar', container);
-        const link = (/** @type {string} */ text) => {
-          const b = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-zoom-reset', zoomBar));
-          b.type = 'button';
-          b.textContent = text;
-          b.hidden = true;
-          return b;
-        };
-        const keepBtn = link('Keep as limits');
-        const resetBtn = link('Reset zoom');
-        const clearBtn = link('Clear limits');
+        // blockr.ui's quiet button, smallest size.
+        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button',
+          'vz-chart-zoom-reset blockr-btn blockr-btn--quiet blockr-btn--xs', zoomBar));
+        resetBtn.type = 'button';
+        resetBtn.textContent = 'Reset zoom';
+        resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
-        slot = { container, labelEl, chartDiv, resetBtn, keepBtn, clearBtn, zoomBar, modeEl: null, chart: null, scope: null, facetVal: null,
+        slot = { container, labelEl, chartDiv, resetBtn, zoomBar, chart: null, scope: null, facetVal: null,
                  dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
                  zoom: null, zoomRoles: null, zoomDragAt: 0,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };

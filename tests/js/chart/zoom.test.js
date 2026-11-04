@@ -100,7 +100,6 @@ test('a drag box zooms x and y; a flat drag x only, refitting y', () => {
     { dataZoomId: 'vz-zoom-x', startValue: 10, endValue: 110 },
     { dataZoomId: 'vz-zoom-y', startValue: 20, endValue: 120 }]);
   assert.strictEqual(c.slot().resetBtn.hidden, false);
-  assert.strictEqual(c.slot().keepBtn.hidden, false);
   c.drag([30, 50], [80, 53]);
   assert.deepStrictEqual(plain(c.slot().zoom), { xAxis: [30, 80], yAxis: null });
   const n = c.zooms().length;
@@ -148,14 +147,16 @@ test('a click that ends a drag is no click', () => {
 
 test('a scatter drag brushes until the switch gives it to the zoom', () => {
   const c = open(SCATTER);
-  const mode = c.slot().modeEl;
+  const mode = c.block._modeEl;
   assert.ok(mode && !mode.hidden, 'the switch shows over a brushable scatter');
+  assert.strictEqual(mode.parentElement, c.block.frame.tools, 'in the header row');
   const [sel, zoom] = mode.querySelectorAll('button');
-  assert.ok(sel.classList.contains('is-on'));
+  assert.strictEqual(zoom.title, 'Drag to zoom', 'icons, named by their tooltips');
+  assert.ok(sel.classList.contains('is-selected'));
   c.drag([10, 20], [110, 120]);
   assert.strictEqual(c.slot().zoom, null, 'Select: the drag is the brush');
   zoom.click();
-  assert.ok(zoom.classList.contains('is-on'));
+  assert.ok(zoom.classList.contains('is-selected'));
   const cursor = c.chart().log.filter((x) => x.op === 'dispatchAction' && x.action.key === 'brush').pop();
   assert.strictEqual(cursor.action.brushOption.brushType, false, 'the brush is released');
   c.drag([10, 20], [110, 120]);
@@ -166,36 +167,15 @@ test('a scatter drag brushes until the switch gives it to the zoom', () => {
   assert.strictEqual(c.block.zoomOn, false);
   c.close();
   const line = open(LINE);
-  assert.ok(!line.slot().modeEl, 'a line has no switch');
+  assert.ok(!line.block._modeEl, 'a line has no switch');
   line.close();
 });
 
-test('Keep as limits writes the window into the limits and spends the zoom', () => {
+test('a zoom is a view: it sets no limits and leaves no link but Reset zoom', () => {
   const c = open(LINE);
   c.drag([10, 20], [110, 120]);
-  c.slot().keepBtn.click();
-  const set = c.sets().pop();
-  assert.deepStrictEqual(Object.keys(set).sort(), ['x_limits', 'y_limits']);
-  assert.ok(set.x_limits.every(Number.isFinite));
-  assert.strictEqual(c.slot().zoom, null);
+  assert.strictEqual(c.slot().zoomBar.querySelectorAll('button').length, 1);
+  assert.strictEqual(c.slot().resetBtn.hidden, false);
+  assert.strictEqual(c.sets().length, 0, 'nothing goes to R');
   c.close();
-});
-
-test('Clear limits shows while limits are set, on the first panel, and empties them', () => {
-  const c = open({ ...BOX, y_limits: [20, null] });
-  assert.strictEqual(c.slot().clearBtn.hidden, false);
-  assert.strictEqual(c.slot().resetBtn.hidden, true, 'no zoom, no Reset zoom');
-  c.slot().clearBtn.click();
-  assert.deepStrictEqual(plain(c.sets().pop()), { y_limits: null });
-  c.send({ ...BOX, y_limits: null }, { data: null });
-  assert.strictEqual(c.slot().clearBtn.hidden, true);
-  c.send({ ...BOX, x_limits: [1, 2] }, { data: null });
-  assert.strictEqual(c.slot().clearBtn.hidden, true, 'a box plot takes no x limits');
-  c.close();
-  const f = open({ ...LINE, facet: 'ARM', x_limits: [0, null], y_limits: [null, 50] });
-  assert.strictEqual(f.block._slots[0].clearBtn.hidden, false);
-  assert.ok(f.block._slots.slice(1).every((s) => s.clearBtn.hidden), 'one link, on the first panel');
-  f.block._slots[0].clearBtn.click();
-  assert.deepStrictEqual(plain(f.sets().pop()), { x_limits: null, y_limits: null });
-  f.close();
 });
