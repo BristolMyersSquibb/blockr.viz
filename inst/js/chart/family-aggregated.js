@@ -26,6 +26,7 @@
     // The handler reads the view's live state: an instance outlives many draws.
     attach(view, slot) {
       slot.chart.on('click', (/** @type {any} */ params) => {
+        if (NS.zoom.justDragged(slot)) return;
         const cfg = view.settings;
         if (NS.drillState(cfg) === 'off') return;
         const m = view._memo.model;

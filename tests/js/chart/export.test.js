@@ -244,6 +244,17 @@ test('capture: a picture once the panels finished rendering, one reply, the host
   c.close();
 });
 
+test('capture: the axis limits go into the picture R asks for', async () => {
+  const cfg = { type: 'bar', category: 'AETERM', orientation: 'vertical', y_limits: [2, null] };
+  const { c } = prepare(cfg, { width: 800 });
+  c.env.handlers['blockr-viz:capture'](captureMsg(c.env, cfg));
+  const inst = c.env.fake.instances.at(-1);
+  const y = [].concat(inst.getOption().yAxis)[0];
+  assert.strictEqual(y.min, 2, 'the capture view draws the limits');
+  await c.clock.advanceAsync(20);
+  c.close();
+});
+
 test('capture: a chart that cannot draw answers at once with why', async () => {
   const { c } = prepare(BAR, { width: 800 });
   c.env.handlers['blockr-viz:capture'](captureMsg(c.env, { ...BAR, category: 'NOPE' }, { req: 'tok-2' }));

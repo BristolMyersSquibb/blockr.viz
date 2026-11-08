@@ -252,6 +252,33 @@ chart_spec_look <- function() {
       describe = "As `y_transform`, for the x axis of a scatter."
     ),
 
+    x_limits = chart_arg(
+      type = "limits", null = "auto",
+      applies = c("scatter", "line", "area", "band", "gantt"),
+      gear = gear("Look", "range", "X limits"),
+      example = c(NA, 100),
+      describe = paste(
+        "The x axis from and to, as `c(0, 100)`; `NA` at either end is",
+        "auto. Dates as \"2024-01-01\". Marks outside are cut off, not",
+        "dropped from the data. Drag zoom works inside the limits, and",
+        "a reset returns to them. A subtitle template names them as",
+        "`{@x_limits}`, printed as \"2024-01-01 to auto\"."
+      )
+    ),
+
+    y_limits = chart_arg(
+      type = "limits", null = "auto",
+      applies = c("scatter", "line", "area", "band", "bar", "histogram",
+                  "waterfall", "boxplot", "pointrange"),
+      gear = gear("Look", "range", "Y limits"),
+      example = c(0, NA),
+      describe = paste(
+        "As `x_limits`, for the value axis: y on a scatter, line, area or",
+        "band, `value`'s axis on the aggregated types, whichever way they",
+        "lie."
+      )
+    ),
+
     x_ranges = chart_arg(
       type = type_named(type_values()), null = "no ranges",
       applies = c("bar", "scatter", "line", "area"),
@@ -460,7 +487,8 @@ chart_spec <- function() {
     "type", "category", "value", "func", "x", "xend", "y", "color", "facet",
     "facet_row", "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
-    "format", "unit", "y_transform", "x_transform", "tooltip", "drill",
+    "format", "unit", "y_transform", "x_transform", "x_limits", "y_limits",
+    "tooltip", "drill",
     "line_width", "point_size", "connect", "value_lines", "x_lines", "ymin",
     "ymax", "linetype", "x_ranges", "legend", "highlight", "smoother",
     "identity_line", "box_points", "summary", "whiskers", "connect_centers",

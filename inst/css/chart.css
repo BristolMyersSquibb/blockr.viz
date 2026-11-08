@@ -74,23 +74,24 @@
   /* Anchors the transient drill pulse, which is positioned at the click. */
   position: relative;
 }
-/* The panel's Reset zoom link: the chart draws no toolbox icons, so this is
-   the visible way back from a drag-zoom (a double-click is the other). */
+/* Over the panel's top right while zoomed: Reset zoom. The chart draws no
+   toolbox icons, so it is the visible way back from a drag-zoom (a
+   double-click is the other). */
 .vz-chart-zoom-host { position: relative; }
-.vz-chart-zoom-reset {
+.vz-chart-zoom-bar {
   position: absolute;
-  top: 4px;
-  right: 8px;
+  top: 0;
+  right: 4px;
   z-index: 2;
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  color: var(--blockr-color-text-accent, #2563eb);
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.vz-chart-zoom-reset:hover { text-decoration: underline; }
+/* Under a facet panel's title. */
+.vz-chart-facet > .vz-chart-zoom-bar { top: 24px; }
+/* The Select / Zoom switch: blockr.ui's segmented control, icons only. */
+.vz-chart-zoom-mode[hidden] { display: none; }
+.vz-chart-zoom-mode .blockr-segmented__seg { display: inline-flex; align-items: center; padding: 0 6px; }
 .vz-chart-zoom-reset[hidden] { display: none; }
 
 /* The timeline's time axis, kept in view while a tall chart scrolls

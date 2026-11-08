@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9038
+# blockr.viz 0.3.0.9039
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -38,6 +38,14 @@ read.
   `y` and no `category` is an error. 0.3.0's screen-axis `x`/`y` for these
   types and its orientation inference are gone, and `y_lines` is
   `value_lines` again.
+* The chart takes axis limits, `x_limits` and `y_limits`: from and to, `NA`
+  at either end for auto, dates as "2024-01-01". `y_limits` is the value
+  axis on the aggregated types. Marks outside are cut off, not dropped. The
+  gear has a row of two fields for each; a log axis refuses an end at or
+  below 0 and says why. A subtitle template names them as `{@y_limits}`,
+  printed "20 to auto", and on the face each end is a word typed over on
+  its own. In a panel grid the limits apply to every panel, over the shared
+  scales. Exports draw them.
 * In code, a value an argument does not take is an error. Old names still
   work, with a warning. Any other name is kept as a block attribute, so
   another package's attribute (blockr.dock's `visible`) survives a
@@ -409,9 +417,14 @@ goes.
   work, with a warning, and saved boards load unchanged.
 * `{@arg}` slots in titles take the new names (`{@type}`, `{label(@y)}`). A
   saved template with an old name still resolves.
-* The chart draws no toolbox icons. Drag in a line chart to zoom; a "Reset
-  zoom" link appears while zoomed, and a double-click also resets. A scatter
-  brushes on drag as before.
+* The chart draws no toolbox icons. A drag on the plot zooms every chart
+  with a continuous axis: a box zooms both axes, a flat drag x only (y
+  refits), a narrow one y only; box plots, bars and the other aggregated
+  types zoom their value axis. In a panel grid the zoom follows the shared
+  axis along its row. "Reset zoom" appears while zoomed, and a double-click
+  also resets. A scatter brushes on drag by default; the Select / Zoom
+  switch in the header gives the drag to the zoom. The zoom is a view: it
+  is not saved with the board and sets no limits.
 * The fallback palette, used without blockr.theme, is blockr.theme's
   "Blockr" palette. The old fallback's yellow was unreadable on white.
 * The filter line under the chart's caption shows only while a filter is

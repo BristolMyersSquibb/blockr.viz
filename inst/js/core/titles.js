@@ -552,6 +552,7 @@
       if (!how) { openGear(); return; }
       if (how.kind === 'flag') { how.set(!how.value); return; }
       if (how.kind === 'entry' || how.kind === 'number') { edit(ps, anchor, how); return; }
+      if (how.kind === 'pair') { edit(ps, anchor, how.ends[0]); return; }
       const menu = openMenu(anchor, how, by, () => {
         if (open && open.anchor === anchor) open = null;
       });
@@ -571,7 +572,9 @@
       if (!parts.length && band.text) el.textContent = band.text;
       for (const p of parts) {
         if (!p || !p.text) continue;
-        if (!p.arg || !gear.slot(p.arg)) { el.appendChild(document.createTextNode(p.text)); continue; }
+        const how = p.arg ? gear.slot(p.arg) : null;
+        if (!how) { el.appendChild(document.createTextNode(p.text)); continue; }
+        if (how.kind === 'pair') { V.slotPair(el, ps, how.ends); continue; }
         const w = document.createElement('span');
         w.className = 'blockr-slot';
         w.textContent = p.text;
@@ -590,5 +593,5 @@
     return { paint, close, dispose: () => own.dispose() };
   }
 
-  V.titles = { row, menuGroups, unknownTokens, paintPreview, slots, namedArgs };
+  V.titles = { row, menuGroups, unknownTokens, paintPreview, slots, namedArgs, edit, wire };
 })();

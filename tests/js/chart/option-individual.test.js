@@ -40,7 +40,6 @@ test('a scatter: a series per level, titled axes, the brush armed', () => {
   assert.deepStrictEqual(plain(opt.toolbox.feature), { brush: { type: ['rect', 'lineX', 'clear'] } });
   assert.strictEqual(opt.brush.yAxisIndex, 0);
   assert.strictEqual(po.brushable, true);
-  assert.strictEqual(po.zoomable, false);
   assert.strictEqual(po.focus, null);
   assert.strictEqual(po.height, '400px');
 });
@@ -61,8 +60,8 @@ test('a crowd of lines: the veil\'s axes and the hover overlay; one line has nei
   assert.strictEqual(opt.xAxis.length, 2);
   assert.strictEqual(opt.xAxis[1].show, false);
   assert.strictEqual(opt.tooltip.axisPointer.type, 'none');
-  assert.ok(opt.toolbox.feature.dataZoom);
-  assert.strictEqual(po.zoomable, true);
+  // The drag zoom is zoom.js's: no toolbox.
+  assert.strictEqual(opt.toolbox, undefined);
   assert.strictEqual(po.focus.series, opt.series);
   assert.strictEqual(po.focus.stepMode, 'end');
   // A colour split, or one line: no overlay, hover draws nothing.

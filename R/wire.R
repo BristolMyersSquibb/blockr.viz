@@ -37,6 +37,7 @@ wire_value <- function(type, x) {
     type$name,
     columns = , enums = , strings = I(unname(x)),
     numbers = , values = wire_labelled(x),
+    limits = lapply(unname(x), function(v) if (is.na(v)) NULL else v),
     record = wire_record(type, x),
     records = lapply(unname(x), wire_record, type = type),
     records_by = lapply(unname(x), function(r) {

@@ -167,6 +167,10 @@
         const [min, max, interval] = NS.axes.niceShared(d[0], d[1]);
         patch = { min, max, interval };
       }
+      // A set limit wins over the shared domain; the axis then picks its own steps.
+      const roles = group[0].chart.__vzRoles;
+      const [lo, hi] = NS.zoomOption.ends(view.settings, roles ? roles[key] : null, String(type));
+      if (lo != null || hi != null) patch = { min: lo ?? patch.min, max: hi ?? patch.max };
       for (const s of group) s.chart.setOption({ [key]: [patch] }, { lazyUpdate: true });
     };
     if (!gs) {

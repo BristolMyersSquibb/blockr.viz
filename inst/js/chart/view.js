@@ -67,6 +67,8 @@
       this._memo = { models: new NS.ReadMemo(), options: new NS.ReadMemo(), modelGen: 0,
                      model: null, option: null };
       /** @type {(() => void) | null} */ this._settle = null;
+      /** A scatter's drag zooms instead of brushing (zoom.js). */
+      this.zoomOn = false;
       this.selection = new NS.Selection(this);
       this.frame = new V.Frame(el, scope, { cls: 'vz-chart' });
       this.gear = this.frame.mountGear({ block: 'chart', typeKey: 'type',
@@ -256,7 +258,11 @@
         if (slot.brushAreas && (this.selection.byBrush || this.selection._peeked !== 'null')) {
           this.selection.redrawing();
         }
-        chart.setOption(this.still ? { ...po.option, animation: false } : po.option,
+        const dec = NS.zoomOption.decorate(po.option, this.settings);
+        chart.__vzRoles = dec.roles;
+        chart.__vzFilterX = dec.filterX;
+        chart.__vzLogEnds = dec.logEnds;
+        chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
                         actionFollows ? { notMerge: true, lazyUpdate: true } : true);
         slot.dimmed = false;
         if (existed && hChanged) chart.resize();
@@ -267,6 +273,10 @@
       NS.panels.harmonise(this);
       NS.panels.outerAxes(this);
       NS.panels.fitStrips(this);
+      // The zoom windows last: the shared axes are the full view they zoom in.
+      this._slots.forEach((slot, i) => {
+        if (slot && slot.chart && i < m.panels.length) NS.zoom.after(this, slot, i, slot.chart.__vzRoles || null);
+      });
       const plan = NS.legendPlan(m, this.settings);
       this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
       this.frame.note(o.labelNote || null);
@@ -349,14 +359,18 @@
         const container = singleFacet ? this.chartGrid : mk('div', 'vz-chart-facet', this.chartGrid);
         const labelEl = singleFacet ? null : mk('div', 'vz-chart-facet-label', container);
         const chartDiv = mk('div', 'vz-chart-panel', container);
-        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button', 'vz-chart-zoom-reset', container));
+        const zoomBar = mk('div', 'vz-chart-zoom-bar', container);
+        // blockr.ui's quiet button, smallest size.
+        const resetBtn = /** @type {HTMLButtonElement} */ (mk('button',
+          'vz-chart-zoom-reset blockr-btn blockr-btn--quiet blockr-btn--xs', zoomBar));
         resetBtn.type = 'button';
         resetBtn.textContent = 'Reset zoom';
         resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
-        slot = { container, labelEl, chartDiv, resetBtn, chart: null, scope: null, facetVal: null,
+        slot = { container, labelEl, chartDiv, resetBtn, zoomBar, chart: null, scope: null, facetVal: null,
                  gridRow: null, gridCol: null, outerHidden: null,
-                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null, zoomArmed: false, zoom: null,
+                 dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
+                 zoom: null, zoomRoles: null, zoomDragAt: 0,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }
@@ -378,8 +392,9 @@
         const scope = slot.scope = shape.own(new V.Scope());
         slot.chart = scope.own(root.echarts.init(slot.chartDiv, this.theme || undefined));
         fam.attach(this, slot);
+        NS.zoom.attach(this, slot);
         slot.chart.getZr().on('click', (/** @type {any} */ e) => {
-          if (e && e.target) return;
+          if ((e && e.target) || NS.zoom.justDragged(slot)) return;
           if (slot.focus && slot.focusSi != null) return;
           const sel = this.selection;
           if (sel.current || sel.brushDrawn) sel.clear();

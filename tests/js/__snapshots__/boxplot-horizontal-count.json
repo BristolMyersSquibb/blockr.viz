@@ -232,7 +232,20 @@
          "disabled": true,
          "scale": false
         },
-        "cursor": "pointer"
+        "cursor": "pointer",
+        "clip": true
+       }
+      ],
+      "dataZoom": [
+       {
+        "type": "inside",
+        "id": "vz-zoom-x",
+        "xAxisIndex": 0,
+        "filterMode": "none",
+        "zoomOnMouseWheel": false,
+        "moveOnMouseMove": false,
+        "moveOnMouseWheel": false,
+        "preventDefaultMouseMove": false
        }
       ]
      },

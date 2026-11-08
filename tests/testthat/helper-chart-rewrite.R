@@ -174,7 +174,7 @@ record_computed <- function(x) {
 # accepted behaviour changes the scenario `sc` runs into.
 # Arguments added after the recordings were made, unset in every recorded
 # state.
-record_rw_new_args <- c("facet_row")
+record_rw_new_args <- c("facet_row", "x_limits", "y_limits")
 
 record_rw_expected <- function(rec, sc) {
   sel <- function(st) {

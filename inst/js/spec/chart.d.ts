@@ -23,6 +23,8 @@ interface ChartConfig {
   unit: string;
   y_transform: 'identity' | 'log10';
   x_transform: 'identity' | 'log10';
+  x_limits: (number | string | null)[] | null;
+  y_limits: (number | string | null)[] | null;
   tooltip: string[] | null;
   drill: string | null;
   line_width: number;

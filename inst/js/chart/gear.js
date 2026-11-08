@@ -77,6 +77,8 @@
           return key === 'x_lines' ? 'Reference lines (category axis)' : 'Reference lines (value axis)';
         }
         if (key === 'band_size' && v.band_window === 'fixed') return 'Half-width (x units)';
+        // The aggregated types take y_limits on their value axis, whichever way it lies.
+        if (key === 'y_limits' && NS.familyOf(type) === 'aggregated') return 'Value limits';
         return null;
       },
       visible(key, v) {

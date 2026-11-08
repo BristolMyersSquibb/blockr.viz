@@ -181,6 +181,47 @@ test('slots: words open their setting; plain words stay text', () => {
   assert.ok(head.contains(num), 'the word is back');
 });
 
+test('limits on the face: one word per end, each typed over on its own', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env));
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count',
+                          y_limits: [20, null] }, { derived: { titles: TITLES } }));
+  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope });
+  const head = t.doc.body.appendChild(t.doc.createElement('div'));
+  slots.paint(head, { parts: [{ text: 'Count, from ' }, { text: '20 to auto', arg: 'y_limits' }],
+                      offers: [] });
+  assert.equal(head.textContent, 'Count, from 20 to auto', 'prints as R does');
+  const words = () => Array.from(head.querySelectorAll('.blockr-slot'));
+  assert.deepEqual(words().map((w) => w.textContent), ['20', 'auto']);
+  words()[1].click();
+  let input = head.querySelector('input.blockr-slot-input');
+  assert.equal(input.value, '', 'auto is an empty field');
+  input.value = '55';
+  key(t, input, 'Enter');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: [20, 55] }, 'the from end stays');
+  const sets = t.sent.length;
+  words()[0].click();
+  input = head.querySelector('input.blockr-slot-input');
+  input.value = '80';
+  key(t, input, 'Enter');
+  assert.equal(t.sent.length, sets, 'from above to is not sent');
+  words()[0].click();
+  input = head.querySelector('input.blockr-slot-input');
+  input.value = '';
+  key(t, input, 'Enter');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: [null, 55] }, 'an empty end is auto');
+  // R echoes the change and the sentence is drawn again.
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count',
+                          y_limits: [null, 55] }, { derived: { titles: TITLES } }));
+  slots.paint(head, { parts: [{ text: 'Count, from ' }, { text: 'auto to 55', arg: 'y_limits' }] });
+  assert.deepEqual(words().map((w) => w.textContent), ['auto', '55']);
+  words()[1].click();
+  input = head.querySelector('input.blockr-slot-input');
+  input.value = '';
+  key(t, input, 'Enter');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: null }, 'both ends auto is no limits');
+});
+
 test('slots without blockr.ui open the gear for a list', () => {
   const t = setup();
   const opened = [];

@@ -402,6 +402,7 @@
                  max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1,
                  value, set, label };
       }
+      if (name === 'limits') return this._pairSlot(key, arg, value, label, set);
       if ((name === 'numbers' || name === 'values') && !listed) {
         return { kind: 'entry', value, set, label,
                  toText: (v) => C.toText(arg, v), fromText: (s) => C.fromText(arg, s) };
@@ -419,6 +420,30 @@
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,
                multi: name === 'columns' || name === 'enums', set, label };
+    }
+
+    /** Axis limits on the face: one word per end. An end typed over keeps the
+     * other as the gear holds it now; a pair whose from is not below its to is
+     * not sent (R refuses it).
+     * @param {string} key @param {VizArg} arg @param {unknown} value @param {string} label
+     * @param {(v: unknown) => void} set @returns {VizSlotOpener} */
+    _pairSlot(key, arg, value, label, set) {
+      const now = (/** @type {unknown} */ v) => (Array.isArray(v) ? v : [null, null]);
+      const pair = now(value);
+      const num = (/** @type {unknown} */ v) => (typeof v === 'number' ? v : Date.parse(String(v)));
+      const end = (/** @type {number} */ i) => /** @type {VizEndOpener} */ ({
+        kind: 'entry', value: pair[i], label: label + (i ? ' to' : ' from'),
+        toText: (v) => (v == null ? '' : String(v)),
+        fromText: (t) => { const p = /** @type {unknown[] | null} */ (C.fromText(arg, t)); return p ? p[0] : null; },
+        set: (v) => {
+          const next = now(this.values()[key]).slice();
+          next[i] = v;
+          if (next[0] != null && next[1] != null && !(num(next[0]) < num(next[1]))) return;
+          if (V.gear.limitsNote(this.values(), key, next)) return;
+          set(next.every((x) => x == null) ? null : next);
+        }
+      });
+      return { kind: 'pair', value, ends: [end(0), end(1)], set, label };
     }
 
     /** The prepare script's working declaration of `name`, if the block has a script.

@@ -643,3 +643,56 @@ test('the variables layout: Group by, Section by, Individual id, Label and Nest 
   box.dispatchEvent(new env.win.Event('change'));
   assert.deepEqual(env.sent.at(-1).value.values, { nest: true });
 });
+
+test('range: a from and a to field, blank for auto, both blank is null', () => {
+  const t = setup({ type: 'line', x: 'ADY', y: 'AVAL', y_limits: [null, 120] });
+  const from = byKey(t.el, 'y_limits_from'), to = byKey(t.el, 'y_limits_to');
+  assert.equal(from.value, '');
+  assert.equal(from.placeholder, 'auto');
+  assert.equal(to.value, '120');
+  type(t.win, from, '0');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: [0, 120] });
+  // A change draws the row again: its fields are new.
+  type(t.win, byKey(t.el, 'y_limits_from'), '');
+  type(t.win, byKey(t.el, 'y_limits_to'), '');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: null });
+  const d = setup({ type: 'line', x: 'ADY', y: 'AVAL' });
+  type(d.win, byKey(d.el, 'x_limits_from'), '2020-01-01');
+  assert.deepEqual(plain(lastSet(d).values), { x_limits: ['2020-01-01', null] });
+  const bar = setup({ type: 'bar', category: 'ARM' });
+  assert.ok(rows(bar.el).includes('y_limits') && !rows(bar.el).includes('x_limits'));
+});
+
+test('range: a log axis refuses an end at or below 0 and says why', () => {
+  const t = setup({ type: 'scatter', x: 'ADY', y: 'AVAL', y_transform: 'log10' });
+  const before = t.sent.length;
+  type(t.win, byKey(t.el, 'y_limits_from'), '0');
+  const note = row(t.el, 'y_limits').querySelector('.vz-range-note');
+  assert.equal(t.sent.length, before, 'not sent');
+  assert.ok(note && !note.hidden);
+  assert.match(note.textContent, /log axis starts above 0/);
+  type(t.win, byKey(t.el, 'y_limits_from'), '1');
+  assert.deepEqual(plain(lastSet(t).values), { y_limits: [1, null] });
+  const lin = setup({ type: 'scatter', x: 'ADY', y: 'AVAL' });
+  type(lin.win, byKey(lin.el, 'y_limits_from'), '0');
+  assert.deepEqual(plain(lastSet(lin).values), { y_limits: [0, null] }, 'a linear axis takes 0');
+  const how = t.gear.slot('y_limits');
+  const n = t.sent.length;
+  how.ends[0].set(-5);
+  assert.equal(t.sent.length, n, 'the sentence word refuses it too');
+});
+
+test('limits as the sentence word types them: "20 to auto"', () => {
+  const t = setup({ type: 'line', x: 'ADY', y: 'AVAL', y_limits: [20, null] });
+  const C = t.V.gear.controls;
+  const arg = t.V.spec.chart.y_limits;
+  assert.equal(C.toText(arg, [20, null]), '20 to auto');
+  assert.deepEqual(plain(C.fromText(arg, '20 to 80')), [20, 80]);
+  assert.deepEqual(plain(C.fromText(arg, 'auto to 80')), [null, 80]);
+  assert.deepEqual(plain(C.fromText(arg, '20')), [20, null]);
+  assert.deepEqual(plain(C.fromText(arg, '2024-01-01 to auto')), ['2024-01-01', null]);
+  assert.strictEqual(C.fromText(arg, ''), null, 'empty is auto at both ends');
+  const how = t.gear.slot('y_limits');
+  assert.equal(how.kind, 'pair', 'one word per end');
+  assert.deepEqual(plain(how.ends.map((e) => e.value)), [20, null]);
+});

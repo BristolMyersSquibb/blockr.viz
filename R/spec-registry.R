@@ -90,12 +90,26 @@ viz_slot_values <- function(spec, values) {
       next
     }
     v <- values[[nm]]
-    if (length(v) > 1L || spec$args[[nm]]$type$name %in% VIZ_ARRAY_TYPES) {
+    if (identical(spec$args[[nm]]$type$name, "limits")) {
+      v <- slot_limits_text(v)
+    } else if (length(v) > 1L || spec$args[[nm]]$type$name %in% VIZ_ARRAY_TYPES) {
       v <- slot_list_text(v)
     }
     out[nm] <- list(v)
   }
   out
+}
+
+# Axis limits as the sentence prints them: "20 to auto"; NULL when unset, so
+# a clause naming them drops.
+slot_limits_text <- function(v) {
+  if (!length(v) || all(is.na(v))) {
+    return(NULL)
+  }
+  ends <- vapply(as.list(v), function(x) {
+    if (is.na(x)) "auto" else format(x, scientific = FALSE, trim = TRUE)
+  }, character(1L))
+  paste(ends, collapse = " to ")
 }
 
 slot_list_text <- function(v) {

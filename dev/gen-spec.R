@@ -113,6 +113,7 @@ gen_ts_type <- function(type, values = NULL, nullable = FALSE) {
     bool = "boolean",
     numbers = "{ value: number; label: string | null }[]",
     values = "{ value: number | string; label: string | null }[]",
+    limits = "(number | string | null)[]",
     format = "'number' | 'compact' | 'percent' | number",
     record = gen_ts_record(type$fields),
     records = paste0(gen_ts_record(type$fields), "[]"),

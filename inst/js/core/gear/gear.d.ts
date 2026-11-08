@@ -140,7 +140,13 @@ type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
   | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
   | { kind: 'number'; min: number; max: number; step: number; value: unknown }
-  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean });
+  | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean }
+  /** Axis limits: two words, from and to, each typed over on its own. */
+  | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] });
+
+/** One end of a pair: typed over like a value list. */
+type VizEndOpener = VizSlotBase & { kind: 'entry'; value: unknown;
+  toText(value: unknown): string; fromText(text: string): unknown };
 
 interface VizGear {
   readonly block: string;
@@ -167,6 +173,8 @@ interface VizGear {
 interface VizControlKit {
   /** Build the controls of one row into `el`. */
   build(el: HTMLElement, ctx: VizRowCtx): void;
+  /** A text or number field that commits on Enter or blur. */
+  field(el: HTMLElement, ctx: VizRowCtx, opts?: { multiline?: boolean; type?: string; commit?: () => void }): HTMLInputElement;
   /** The options a select-like control offers. */
   options(ctx: VizRowCtx): VizChoice[];
   /** The spec value as one line of text, and back. */
@@ -199,6 +207,10 @@ interface VizTileKit {
 
 interface VizGearNamespace {
   mount(el: HTMLElement, opts: VizGearOptions): VizGear;
+  /** Controls defined outside controls.js, by name (range.js). */
+  more?: Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>;
+  /** Why a limits pair cannot be set on its axis, or null (range.js). */
+  limitsNote(values: VizValues, key: string, pair: unknown): string | null;
   tray(head: HTMLElement, scope: VizScope, label: string): { band: HTMLElement;
     button: HTMLButtonElement; set(on: boolean): void; isOpen(): boolean };
   sections: VizSectionKit;
@@ -220,6 +232,10 @@ interface VizTitlesNamespace {
   slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
   /** Every argument the titles name: their words and their offers. */
   namedArgs(titles: VizTitles | null | undefined): string[];
+  /** Type a value over its word. */
+  edit(scope: VizScope, anchor: HTMLElement, how: VizSlotOpener & { kind: 'number' | 'entry' }): void;
+  /** A word that acts on click and on Enter or Space. */
+  wire(scope: VizScope, el: HTMLElement, fn: () => void): void;
 }
 
 interface VizSlots {
@@ -231,6 +247,8 @@ interface VizSlots {
 interface VizNamespace {
   gear: VizGearNamespace;
   titles: VizTitlesNamespace;
+  /** A pair setting's two words on the face (slot-pair.js). */
+  slotPair(el: HTMLElement, scope: VizScope, ends: VizEndOpener[]): void;
 }
 
 /** A row of blockr.ui's Blockr.menu, or a rule between groups. */

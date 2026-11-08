@@ -236,6 +236,35 @@ check_values <- function(x, arg) {
   empty_or_null(with_labels(out, nms), arg)
 }
 
+# Axis limits: a from and a to, either missing (NA) for auto. Numbers, or
+# dates as ISO text. Both missing is NULL; from above to is an error.
+check_limits <- function(x, arg) {
+  if (inherits(x, c("Date", "POSIXt"))) {
+    x <- ifelse(is.na(x), NA_character_, format(x))
+  }
+  x <- json_atomic(x)
+  if (is.null(x) || all(is.na(x))) {
+    return(NULL)
+  }
+  if (!is.atomic(x) || length(x) != 2L ||
+        !(is.numeric(x) || is.character(x) || is.logical(x))) {
+    value_fail("must be two values, from and to (NA for auto), not ",
+               value_text(x))
+  }
+  x <- if (is.numeric(x)) as.numeric(x) else as.character(x)
+  if (is.numeric(x) && any(is.infinite(x))) {
+    value_fail("must be finite or NA, not ", value_text(x))
+  }
+  if (is.character(x)) {
+    d <- suppressWarnings(as.numeric(x))
+    if (all(is.na(x) | !is.na(d))) x <- d
+  }
+  if (!anyNA(x) && x[[1L]] >= x[[2L]]) {
+    value_fail("must have from below to, not ", x[[1L]], " to ", x[[2L]])
+  }
+  unname(x)
+}
+
 check_format <- function(x, arg) {
   x <- json_atomic(x)
   if (length(x) == 1L && is.character(x) && x %in% VIZ_FORMATS) {
@@ -373,6 +402,7 @@ SPEC_CHECKERS <- list(
   numbers = check_numbers,
   strings = check_columns,
   values = check_values,
+  limits = check_limits,
   format = check_format,
   record = check_record,
   records = check_records,

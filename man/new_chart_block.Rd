@@ -27,6 +27,8 @@ new_chart_block(
   unit = "",
   y_transform = "identity",
   x_transform = "identity",
+  x_limits = NULL,
+  y_limits = NULL,
   tooltip = NULL,
   drill = NULL,
   line_width = 1,
@@ -114,6 +116,10 @@ new_chart_block(
 \item{y_transform}{"log10" draws a base-10 y axis. Values at or below zero are not drawn; a note under the chart counts them. One of \code{"identity"}, \code{"log10"}. Default: \code{"identity"}.}
 
 \item{x_transform}{As \code{y_transform}, for the x axis of a scatter. One of \code{"identity"}, \code{"log10"}. Default: \code{"identity"}.}
+
+\item{x_limits}{The x axis from and to, as \code{c(0, 100)}; \code{NA} at either end is auto. Dates as "2024-01-01". Marks outside are cut off, not dropped from the data. Drag zoom works inside the limits, and a reset returns to them. A subtitle template names them as \verb{\{@x_limits\}}, printed as "2024-01-01 to auto". Default \code{NULL}: auto.}
+
+\item{y_limits}{As \code{x_limits}, for the value axis: y on a scatter, line, area or band, \code{value}'s axis on the aggregated types, whichever way they lie. Default \code{NULL}: auto.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip. Default \code{NULL}: no extra columns.}
 
