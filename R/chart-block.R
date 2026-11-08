@@ -26,6 +26,8 @@ new_chart_block <- function(
     x_transform = "identity",
     x_limits = NULL,
     y_limits = NULL,
+    x_ticks = NULL,
+    y_ticks = NULL,
     tooltip = NULL,
     drill = NULL,
     line_width = 1,

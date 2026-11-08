@@ -79,6 +79,7 @@
         if (key === 'band_size' && v.band_window === 'fixed') return 'Half-width (x units)';
         // The aggregated types take y_limits on their value axis, whichever way it lies.
         if (key === 'y_limits' && NS.familyOf(type) === 'aggregated') return 'Value limits';
+        if (key === 'y_ticks' && NS.familyOf(type) === 'aggregated') return 'Value ticks';
         return null;
       },
       visible(key, v) {
@@ -126,6 +127,8 @@
         }
         return null;
       },
+      // The axis a ticks setting is on and the ticks it draws now (ticks.js).
+      ticks: (key, v) => NS.ticks.axisFor(view, key, v),
       placeholder(key) {
         if (key === 'unit') return 'e.g. CHF';
         if (key === 'title') return 'e.g. AEs by {ARM}';

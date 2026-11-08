@@ -3,8 +3,8 @@
 #' The registry's argument specs
 #'
 #' The arguments with `ai = TRUE`, as blockr.core's `new_arg_specs()`, typed
-#' with its JSON Schema subset. `values` and `format` take numbers or text,
-#' which the subset cannot say; they carry their description only.
+#' with its JSON Schema subset. `values`, `format` and `ticks` take numbers
+#' or text, which the subset cannot say; they carry their description only.
 #'
 #' @param spec A `viz_spec`.
 #' @return An `arg_specs` object.
@@ -92,6 +92,8 @@ viz_slot_values <- function(spec, values) {
     v <- values[[nm]]
     if (identical(spec$args[[nm]]$type$name, "limits")) {
       v <- slot_limits_text(v)
+    } else if (identical(spec$args[[nm]]$type$name, "ticks")) {
+      v <- slot_ticks_text(v)
     } else if (length(v) > 1L || spec$args[[nm]]$type$name %in% VIZ_ARRAY_TYPES) {
       v <- slot_list_text(v)
     }
@@ -110,6 +112,23 @@ slot_limits_text <- function(v) {
     if (is.na(x)) "auto" else format(x, scientific = FALSE, trim = TRUE)
   }, character(1L))
   paste(ends, collapse = " to ")
+}
+
+# Axis ticks as the sentence prints them: "every 25", "every 7 days", "every
+# month", "at 0, 25, 50"; NULL when unset, so a clause naming them drops.
+slot_ticks_text <- function(v) {
+  if (!length(v)) {
+    return(NULL)
+  }
+  if (length(v) > 1L) {
+    return(paste("at", slot_list_text(v)))
+  }
+  if (is.character(v)) {
+    v <- sub("^1 ", "", v)
+  } else {
+    v <- format(v, scientific = FALSE, trim = TRUE)
+  }
+  paste("every", v)
 }
 
 slot_list_text <- function(v) {

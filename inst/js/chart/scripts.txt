@@ -28,6 +28,7 @@ option-points.js
 option-band.js
 option-domains.js
 option-individual.js
+ticks.js
 zoom-option.js
 gear.js
 selection.js

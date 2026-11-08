@@ -25,6 +25,8 @@ interface ChartConfig {
   x_transform: 'identity' | 'log10';
   x_limits: (number | string | null)[] | null;
   y_limits: (number | string | null)[] | null;
+  x_ticks: number | string | (number | string)[] | null;
+  y_ticks: number | string | (number | string)[] | null;
   tooltip: string[] | null;
   drill: string | null;
   line_width: number;

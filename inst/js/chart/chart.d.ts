@@ -326,6 +326,8 @@ interface ChartSlot {
   zoomRoles: { xAxis: 'x' | 'y' | null, yAxis: 'x' | 'y' | null } | null;
   /** When the last zoom drag ended (ms), so its click is ignored. */
   zoomDragAt: number;
+  /** The tick values each axis with a ticks setting draws, for the zoom (ticks.js). */
+  ticks: Record<string, { vals: number[], own: number[] | null } | null> | null;
   zoomBar: HTMLElement;
   focus: any;
   focusSi: number | null;

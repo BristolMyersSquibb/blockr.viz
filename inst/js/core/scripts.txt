@@ -9,6 +9,7 @@ binding.js
 download.js
 capture.js
 titles.js
+ticks.js
 slot-pair.js
 gear/tray-nav.js
 gear/sections.js
@@ -16,6 +17,7 @@ gear/tiles.js
 gear/icons.js
 gear/controls.js
 gear/range.js
+gear/ticks.js
 gear/engine.js
 frame.js
 data-view.js

@@ -395,6 +395,38 @@
       "slot": true,
       "ctrl": true
     },
+    "x_ticks": {
+      "type": {
+        "name": "ticks"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area", "band", "gantt"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "ticks",
+        "label": "X ticks"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "y_ticks": {
+      "type": {
+        "name": "ticks"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area", "band", "bar", "histogram", "waterfall", "boxplot", "pointrange"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "ticks",
+        "label": "Y ticks"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "tooltip": {
       "type": {
         "name": "columns"

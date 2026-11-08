@@ -265,6 +265,68 @@ check_limits <- function(x, arg) {
   unname(x)
 }
 
+# Axis ticks: one value is a step (a number above 0, or a count and a date
+# unit, "7 days"), two or more are the ticks themselves, numbers or dates as
+# ISO text. A step comes back as a number or as "<n> <unit>s"; a list sorted.
+check_ticks <- function(x, arg) {
+  if (inherits(x, c("Date", "POSIXt"))) {
+    x <- format(x)
+  }
+  x <- json_atomic(x)
+  if (is.null(x) || !length(x) || all(is.na(x))) {
+    return(NULL)
+  }
+  if (!is.atomic(x) || anyNA(x) || !(is.numeric(x) || is.character(x))) {
+    value_fail("must be a step (10, \"7 days\") or two values or more, not ",
+               value_text(x))
+  }
+  if (is.character(x)) {
+    x <- trimws(sub("^(every|at)\\s+", "", trimws(x)))
+    d <- suppressWarnings(as.numeric(x))
+    if (!anyNA(d)) x <- d
+  }
+  if (is.integer(x)) x <- as.numeric(x)
+  if (length(x) == 1L) {
+    return(ticks_step(x))
+  }
+  if (is.numeric(x) && any(!is.finite(x))) {
+    value_fail("must be finite, not ", value_text(x))
+  }
+  if (is.character(x) && anyNA(as.Date(x, optional = TRUE))) {
+    value_fail("must be numbers or dates as \"2024-01-01\", not ",
+               paste0("\"", x, "\"", collapse = ", "))
+  }
+  x <- sort(unique(x))
+  if (length(x) < 2L) {
+    value_fail("as a list must have two values or more")
+  }
+  unname(x)
+}
+
+TICK_UNITS <- c("day", "week", "month", "quarter", "year")
+
+ticks_step <- function(x) {
+  if (is.numeric(x)) {
+    if (!is.finite(x) || x <= 0) {
+      value_fail("as a step must be above 0, not ", format(x))
+    }
+    return(unname(x))
+  }
+  x <- tolower(x)
+  m <- regmatches(x, regexec(
+    "^([0-9]*\\.?[0-9]+)?\\s*(day|week|month|quarter|year)s?$", x
+  ))[[1L]]
+  if (!length(m)) {
+    value_fail("must be a step such as 10, \"7 days\" or \"month\", not \"",
+               x, "\"")
+  }
+  n <- if (nzchar(m[[2L]])) as.numeric(m[[2L]]) else 1
+  if (n <= 0 || n != round(n)) {
+    value_fail("must count whole ", m[[3L]], "s, not \"", x, "\"")
+  }
+  paste0(n, " ", m[[3L]], if (n != 1) "s")
+}
+
 check_format <- function(x, arg) {
   x <- json_atomic(x)
   if (length(x) == 1L && is.character(x) && x %in% VIZ_FORMATS) {
@@ -403,6 +465,7 @@ SPEC_CHECKERS <- list(
   strings = check_columns,
   values = check_values,
   limits = check_limits,
+  ticks = check_ticks,
   format = check_format,
   record = check_record,
   records = check_records,

@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9042
+# blockr.viz 0.3.0.9043
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -47,6 +47,19 @@ read.
   printed "20 to auto", and on the face each end is a word typed over on
   its own. In a panel grid the limits apply to every panel, over the shared
   scales. Exports draw them.
+* The chart takes axis ticks, `x_ticks` and `y_ticks`, on the same axes as
+  the limits. One value is a step: `10` ticks at the multiples of 10, and a
+  date axis takes a unit, "7 days", "2 weeks", "month", "quarter", "year".
+  Days and weeks count from the axis start, months from the first. Two
+  values or more are the ticks, `c(0, 25, 50, 100)`. A step rounds an auto
+  end out to the next tick; a list keeps the range. A log axis takes a list
+  only. The gear has a row per axis, Auto, Every or At, and a form picked
+  starts from the ticks drawn now. A subtitle template names them as
+  `{@y_ticks}`, printed "every 25" or "at 0, 25, 50", and on the face each
+  part is a word: the form and the unit pick from a menu, the step and the
+  list are typed over. Zoomed in past the ticks, the axis draws its own
+  until the reset. In a panel grid with free scales each panel keeps the
+  step over its own range. Exports draw them.
 * In code, a value an argument does not take is an error. Old names still
   work, with a warning. Any other name is kept as a block attribute, so
   another package's attribute (blockr.dock's `visible`) survives a

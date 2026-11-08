@@ -542,17 +542,19 @@
       o.menu.close();
     };
 
-    /** @param {string} key @param {HTMLElement} anchor @param {VizScope} ps
-     * @param {string} [by] */
-    const openSlot = (key, anchor, ps, by) => {
+    /** `given` opens one word of a setting drawn as several (axis ticks).
+     * @param {string} key @param {HTMLElement} anchor @param {VizScope} ps
+     * @param {string} [by] @param {VizSlotOpener} [given] */
+    const openSlot = (key, anchor, ps, by, given) => {
       const was = open && open.key;
       close();
       if (was === key) return;
-      const how = gear.slot(key);
+      const how = given || gear.slot(key);
       if (!how) { openGear(); return; }
       if (how.kind === 'flag') { how.set(!how.value); return; }
       if (how.kind === 'entry' || how.kind === 'number') { edit(ps, anchor, how); return; }
       if (how.kind === 'pair') { edit(ps, anchor, how.ends[0]); return; }
+      if (how.kind === 'words') { openSlot(key + '#0', anchor, ps, by, how.words[0].how); return; }
       const menu = openMenu(anchor, how, by, () => {
         if (open && open.anchor === anchor) open = null;
       });
@@ -575,10 +577,11 @@
         const how = p.arg ? gear.slot(p.arg) : null;
         if (!how) { el.appendChild(document.createTextNode(p.text)); continue; }
         if (how.kind === 'pair') { V.slotPair(el, ps, how.ends); continue; }
+        const arg = p.arg;
+        if (how.kind === 'words') { V.slotWords(el, ps, how.words, (i, w) => openSlot(arg + '#' + i, w, ps, p.by, how.words[i].how)); continue; }
         const w = document.createElement('span');
         w.className = 'blockr-slot';
         w.textContent = p.text;
-        const arg = p.arg;
         wire(ps, w, () => openSlot(arg, w, ps, p.by));
         el.appendChild(w);
       }

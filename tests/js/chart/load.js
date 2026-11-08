@@ -24,7 +24,7 @@ function loadViz() {
   ctx.window = ctx;
   const run = (f) => vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), ctx,
                                      { filename: path.join(JS_DIR, f) });
-  for (const f of ['namespace.js', 'util.js', 'tooltip.js']) run(path.join('core', f));
+  for (const f of ['namespace.js', 'util.js', 'tooltip.js', 'ticks.js']) run(path.join('core', f));
   for (const f of PURE) run(path.join('chart', f));
   run(path.join('spec', 'chart.js'));
   return ctx.Blockr.viz;

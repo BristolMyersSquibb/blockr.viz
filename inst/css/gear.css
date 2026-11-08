@@ -810,3 +810,9 @@
   font-size: var(--blockr-font-size-xs, 0.75rem);
   color: var(--blockr-color-text-muted, #6b7280);
 }
+
+/* The ticks control (gear/ticks.js): the form, then its fields on one line. */
+.vz-ticks { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.vz-ticks .vz-ticks-step { flex: 0 0 64px; width: 64px; min-width: 0; }
+.vz-ticks .vz-ticks-list { flex: 1 1 120px; min-width: 0; }
+.vz-ticks .vz-ticks-unit { flex: 0 0 104px; min-width: 0; }

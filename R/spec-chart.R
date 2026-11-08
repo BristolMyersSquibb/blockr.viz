@@ -279,6 +279,36 @@ chart_spec_look <- function() {
       )
     ),
 
+    x_ticks = chart_arg(
+      type = "ticks", null = "auto",
+      applies = c("scatter", "line", "area", "band", "gantt"),
+      gear = gear("Look", "ticks", "X ticks"),
+      example = "7 days",
+      describe = paste(
+        "Where the x axis puts its ticks. One number is a step: `10` ticks",
+        "every 10, at its multiples. On a date axis the step takes a unit,",
+        "\"7 days\", \"2 weeks\", \"month\", \"quarter\" or \"year\"; days and",
+        "weeks count from the axis start. Two values or more are the ticks",
+        "themselves, `c(0, 25, 50, 100)`, dates as \"2024-01-01\". A log axis",
+        "takes a list only. A list keeps the axis range; a step rounds an auto",
+        "end out to the next tick. A subtitle template names it as",
+        "`{@x_ticks}`, printed \"every 7 days\" or \"at 0, 25, 50, 100\"."
+      )
+    ),
+
+    y_ticks = chart_arg(
+      type = "ticks", null = "auto",
+      applies = c("scatter", "line", "area", "band", "bar", "histogram",
+                  "waterfall", "boxplot", "pointrange"),
+      gear = gear("Look", "ticks", "Y ticks"),
+      example = 25,
+      describe = paste(
+        "As `x_ticks`, for the value axis: y on a scatter, line, area or",
+        "band, `value`'s axis on the aggregated types, whichever way they",
+        "lie."
+      )
+    ),
+
     x_ranges = chart_arg(
       type = type_named(type_values()), null = "no ranges",
       applies = c("bar", "scatter", "line", "area"),
@@ -487,7 +517,7 @@ chart_spec <- function() {
     "type", "category", "value", "func", "x", "xend", "y", "color", "facet",
     "facet_row", "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
-    "format", "unit", "y_transform", "x_transform", "x_limits", "y_limits",
+    "format", "unit", "y_transform", "x_transform", "x_limits", "y_limits", "x_ticks", "y_ticks",
     "tooltip", "drill",
     "line_width", "point_size", "connect", "value_lines", "x_lines", "ymin",
     "ymax", "linetype", "x_ranges", "legend", "highlight", "smoother",

@@ -69,7 +69,12 @@ interface VizGearHost {
    * naming part of a setting (the groups layout's `{@value}`, its first summary's column).
    * `write` turns the picked value into the settings to send. Null leaves it to the spec. */
   slot?(key: string, values: VizValues): VizHostSlot | null | undefined;
+  /** The axis a ticks setting (`x_ticks`, `y_ticks`) is on: 'time', 'log' or
+   * 'value', and the tick values it draws now, for a form picked to start from. */
+  ticks?(key: string, values: VizValues): VizTicksAxis;
 }
+
+interface VizTicksAxis { type: string; drawn: number[] }
 
 interface VizHostSlot {
   arg: VizArg;
@@ -142,7 +147,12 @@ type VizSlotOpener = VizSlotBase & (
   | { kind: 'number'; min: number; max: number; step: number; value: unknown }
   | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean }
   /** Axis limits: two words, from and to, each typed over on its own. */
-  | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] });
+  | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] }
+  /** Axis ticks: a word per part ("every", "7", "days"), each its own opener. */
+  | { kind: 'words'; value: unknown; words: VizWordPart[] });
+
+/** One word of a `words` opener: typed over, or a menu. */
+type VizWordPart = { text: string; how: VizSlotOpener & { kind: 'entry' | 'menu' } };
 
 /** One end of a pair: typed over like a value list. */
 type VizEndOpener = VizSlotBase & { kind: 'entry'; value: unknown;
@@ -174,7 +184,7 @@ interface VizControlKit {
   /** Build the controls of one row into `el`. */
   build(el: HTMLElement, ctx: VizRowCtx): void;
   /** A text or number field that commits on Enter or blur. */
-  field(el: HTMLElement, ctx: VizRowCtx, opts?: { multiline?: boolean; type?: string; commit?: () => void }): HTMLInputElement;
+  field(el: HTMLElement, ctx: VizRowCtx, opts?: { multiline?: boolean; type?: string; commit?: (text: string) => void }): HTMLInputElement;
   /** The options a select-like control offers. */
   options(ctx: VizRowCtx): VizChoice[];
   /** The spec value as one line of text, and back. */
@@ -209,6 +219,9 @@ interface VizGearNamespace {
   mount(el: HTMLElement, opts: VizGearOptions): VizGear;
   /** Controls defined outside controls.js, by name (range.js). */
   more?: Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>;
+  /** A ticks setting's words on the face (gear/ticks.js). */
+  ticksSlot(host: VizGearHost, key: string, value: unknown, label: string,
+            set: (v: unknown) => void, values: VizValues): VizSlotOpener;
   /** Why a limits pair cannot be set on its axis, or null (range.js). */
   limitsNote(values: VizValues, key: string, pair: unknown): string | null;
   tray(head: HTMLElement, scope: VizScope, label: string): { band: HTMLElement;
@@ -249,6 +262,32 @@ interface VizNamespace {
   titles: VizTitlesNamespace;
   /** A pair setting's two words on the face (slot-pair.js). */
   slotPair(el: HTMLElement, scope: VizScope, ends: VizEndOpener[]): void;
+  /** A setting's words, one per part, each opened by `open` (slot-pair.js). */
+  slotWords(el: HTMLElement, scope: VizScope, words: VizWordPart[],
+            open: (i: number, w: HTMLElement) => void): void;
+  /** Axis ticks, read and written (core/ticks.js). */
+  ticks: VizTicks;
+}
+
+type VizTicksValue = { form: 'every'; n: number; unit: string | null } |
+  { form: 'at'; list: (number | string)[] };
+
+interface VizTicks {
+  UNITS: string[];
+  MAX_TICKS: number;
+  LOG_NOTE: string;
+  LIST_NOTE: string;
+  parse(v: unknown): VizTicksValue | null;
+  step(n: number, unit: string | null): number | string;
+  unitWord(unit: string, n: number): string;
+  text(v: unknown): string;
+  fromText(t: string): unknown;
+  parseList(t: string): (number | string)[];
+  note(v: unknown, log: boolean): string | null;
+  values(v: unknown, lo: number, hi: number, type: string): number[] | null;
+  roundOut(v: unknown, lo: number, hi: number): [number, number] | null;
+  start(form: 'every' | 'at', drawn: number[], type: string): unknown;
+  axisValue(v: number | string, type: string): number | null;
 }
 
 /** A row of blockr.ui's Blockr.menu, or a rule between groups. */

@@ -102,6 +102,7 @@
       ? { dataZoomId: ZO.ZOOM_ID[k], startValue: z[k][0], endValue: z[k][1] }
       : { dataZoomId: ZO.ZOOM_ID[k], start: 0, end: 100 }));
     if (batch.length) chart.dispatchAction({ type: 'dataZoom', batch });
+    NS.ticks.zoomed(slot, slot.zoom);
   };
 
   /** @param {ChartSlot} slot */

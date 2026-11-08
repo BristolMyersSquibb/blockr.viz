@@ -166,12 +166,17 @@
       const d = NS.axes.sharedDomain(extents);
       if (!d) return;
       /** @type {Record<string, number>} */ let patch = { min: d[0], max: d[1] };
-      if (type === 'value') {
+      const roles = group[0].chart.__vzRoles;
+      // A tick step sets the shared ends on its multiples (ticks.js).
+      const tickStep = type === 'value' && roles
+        ? V.ticks.roundOut(NS.ticks.settingOf(view.settings, roles[key]), d[0], d[1]) : null;
+      if (tickStep) {
+        patch = { min: tickStep[0], max: tickStep[1] };
+      } else if (type === 'value') {
         const [min, max, interval] = NS.axes.niceShared(d[0], d[1]);
         patch = { min, max, interval };
       }
       // A set limit wins over the shared domain; the axis then picks its own steps.
-      const roles = group[0].chart.__vzRoles;
       const [lo, hi] = NS.zoomOption.ends(view.settings, roles ? roles[key] : null, String(type));
       if (lo != null || hi != null) patch = { min: lo ?? patch.min, max: hi ?? patch.max };
       for (const s of group) s.chart.setOption({ [key]: [patch] }, { lazyUpdate: true });

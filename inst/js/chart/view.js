@@ -273,9 +273,12 @@
       NS.panels.harmonise(this);
       NS.panels.axisTitles(this);
       NS.panels.fitStrips(this);
-      // The zoom windows last: the shared axes are the full view they zoom in.
+      // The ticks over the shared axes, then the zoom windows: the shared
+      // axes are the full view they zoom in.
       this._slots.forEach((slot, i) => {
-        if (slot && slot.chart && i < m.panels.length) NS.zoom.after(this, slot, i, slot.chart.__vzRoles || null);
+        if (!slot || !slot.chart || i >= m.panels.length) return;
+        NS.ticks.after(this, slot);
+        NS.zoom.after(this, slot, i, slot.chart.__vzRoles || null);
       });
       const plan = NS.legendPlan(m, this.settings);
       this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
@@ -370,7 +373,7 @@
         slot = { container, labelEl, chartDiv, resetBtn, zoomBar, chart: null, scope: null, facetVal: null,
                  gridRow: null, gridCol: null, innerTitles: null,
                  dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
-                 zoom: null, zoomRoles: null, zoomDragAt: 0,
+                 zoom: null, zoomRoles: null, zoomDragAt: 0, ticks: null,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
         this._slots[i] = slot;
       }

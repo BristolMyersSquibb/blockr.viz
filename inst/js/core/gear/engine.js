@@ -403,6 +403,7 @@
                  value, set, label };
       }
       if (name === 'limits') return this._pairSlot(key, arg, value, label, set);
+      if (name === 'ticks') return V.gear.ticksSlot(this.host, key, value, label, set, values);
       if ((name === 'numbers' || name === 'values') && !listed) {
         return { kind: 'entry', value, set, label,
                  toText: (v) => C.toText(arg, v), fromText: (s) => C.fromText(arg, s) };

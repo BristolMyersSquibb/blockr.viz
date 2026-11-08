@@ -29,6 +29,8 @@ new_chart_block(
   x_transform = "identity",
   x_limits = NULL,
   y_limits = NULL,
+  x_ticks = NULL,
+  y_ticks = NULL,
   tooltip = NULL,
   drill = NULL,
   line_width = 1,
@@ -120,6 +122,10 @@ new_chart_block(
 \item{x_limits}{The x axis from and to, as \code{c(0, 100)}; \code{NA} at either end is auto. Dates as "2024-01-01". Marks outside are cut off, not dropped from the data. Drag zoom works inside the limits, and a reset returns to them. A subtitle template names them as \verb{\{@x_limits\}}, printed as "2024-01-01 to auto". Default \code{NULL}: auto.}
 
 \item{y_limits}{As \code{x_limits}, for the value axis: y on a scatter, line, area or band, \code{value}'s axis on the aggregated types, whichever way they lie. Default \code{NULL}: auto.}
+
+\item{x_ticks}{Where the x axis puts its ticks. One number is a step: \code{10} ticks every 10, at its multiples. On a date axis the step takes a unit, "7 days", "2 weeks", "month", "quarter" or "year"; days and weeks count from the axis start. Two values or more are the ticks themselves, \code{c(0, 25, 50, 100)}, dates as "2024-01-01". A log axis takes a list only. A list keeps the axis range; a step rounds an auto end out to the next tick. A subtitle template names it as \verb{\{@x_ticks\}}, printed "every 7 days" or "at 0, 25, 50, 100". Default \code{NULL}: auto.}
+
+\item{y_ticks}{As \code{x_ticks}, for the value axis: y on a scatter, line, area or band, \code{value}'s axis on the aggregated types, whichever way they lie. Default \code{NULL}: auto.}
 
 \item{tooltip}{Extra columns shown in each mark's tooltip. Default \code{NULL}: no extra columns.}
 

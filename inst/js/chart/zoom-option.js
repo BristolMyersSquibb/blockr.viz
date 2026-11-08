@@ -3,6 +3,7 @@
  * Chart block: axis limits and the zoom window in the option. Every family's
  * option passes through decorate() before it is drawn:
  *
+ *   - `x_ticks` and `y_ticks` round an auto end to their step (ticks.js).
  *   - `x_limits` and `y_limits` become the axis min and max. `y_limits` is
  *     the value axis: y on the individual types, whichever axis is not a
  *     category on the aggregated ones. Marks outside are clipped.
@@ -110,6 +111,7 @@
       if (axisType(ax, key) === 'log') logEnds[key] = [lo, hi];
       if (lo != null) ax.min = lo;
       if (hi != null) ax.max = hi;
+      NS.ticks.decorateAxis(ax, cfg, role, axisType(ax, key), [lo, hi]);
       axes[0] = ax;
       out[key] = many ? axes : ax;
       // x filters what it leaves out, so a flat drag refits y; y only moves.
