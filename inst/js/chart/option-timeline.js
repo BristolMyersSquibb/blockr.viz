@@ -85,6 +85,9 @@
    * the interval and its length, the colour and the tooltip fields. @param {any} k */
   const timelineTooltip = (k) => {
     const { m, title, xAxisType, xCats, x, y } = k;
+    // An interval starts and ends on a day: a date-time prints its hour, a
+    // date its day, whatever the gap between starts.
+    const period = m.x.period === 'time' ? 'time' : null;
     return (/** @type {any} */ p) => {
       const v = p.value;
       const term = String(v[3] ?? '');
@@ -96,9 +99,9 @@
       const pairs = [];
       if (term && term !== headline) pairs.push([title(y) || 'Y', term]);
       if (detail && detail !== headline) pairs.push([title(m.series) || 'Series', detail]);
-      const fromTxt = NS.axes.fmtXVal(v[0], xAxisType, xCats);
+      const fromTxt = NS.axes.fmtXVal(v[0], xAxisType, xCats, period);
       if (v[1] != null && v[1] !== v[0]) {
-        const toTxt = NS.axes.fmtXVal(v[1], xAxisType, xCats);
+        const toTxt = NS.axes.fmtXVal(v[1], xAxisType, xCats, period);
         const dur = NS.axes.durationStr(v[0], v[1], xAxisType);
         pairs.push([title(x) || 'From', fromTxt]);
         pairs.push([(m.xend ? title(m.xend) : '') || 'To', toTxt + (dur ? ' (' + dur + ')' : '')]);

@@ -64,3 +64,15 @@ test_that("the sentence prints limits as from to, auto for NA", {
   expect_identical(v$y_limits, "0 to 120")
   expect_null(v$x_limits)
 })
+
+test_that("a gantt takes date limits; its Date and POSIXct columns go as dates", {
+  b <- new_chart_block(type = "gantt", x = "start", xend = "end", y = "task",
+                       x_limits = as.Date(c("2024-01-01", NA)))
+  expect_s3_class(b, "chart_block")
+  df <- data.frame(task = c("a", "b"),
+                   start = as.Date(c("2024-01-05", "2024-02-01")),
+                   at = as.POSIXct(c("2024-01-05 08:00", "2024-02-01 09:30"),
+                                   tz = "UTC"))
+  cls <- vapply(viz_wire_columns(df), `[[`, "", "class")
+  expect_identical(unname(cls), c("string", "date", "datetime"))
+})

@@ -156,3 +156,24 @@ test('D5: no filter is an empty patch, unless bars were dimmed before', () => {
   assert.deepStrictEqual(barOpacity(timelinePatch({}, null, true)),
                          [[['Rash', 1], ['Nausea', 1], ['Rash', 1]]]);
 });
+
+test('a Date x: a time axis, dates and days in the tooltip, limits and zoom on it', () => {
+  const columns = [{ name: 'T', class: 'string' }, { name: 'S', class: 'date', label: 'Start' },
+                   { name: 'E', class: 'date', label: 'End' }];
+  const rows = [{ T: 'Rash', S: '2024-01-05', E: '2024-01-10' },
+                { T: 'Fever', S: '2024-03-01', E: '2024-03-02' }];
+  const cfg = C.model.settings({ ...BASE, x_limits: ['2024-01-01', '2024-02-01'] }, columns);
+  const m = C.model.timeline({ rows, ix: new C.RowIndex(), columns, cfg, derived: {} });
+  const opt = C.option.timeline(m, { cfg, derived: {}, columns, ink: C.INK_DEFAULT, theme: null,
+                                     measure }).panels[0].option;
+  assert.strictEqual(opt.xAxis.type, 'time');
+  assert.strictEqual(opt.xAxis.data, undefined);
+  const tip = opt.tooltip.formatter({ value: m.panels[0].marks[0] });
+  assert.match(tip, /Start<\/span><span class="vz-tt-value">2024-01-05</);
+  assert.match(tip, /End<\/span><span class="vz-tt-value">2024-01-10 \(5 days\)</);
+  const d = C.zoomOption.decorate(opt, cfg);
+  assert.deepStrictEqual(plain(d.roles), { xAxis: 'x', yAxis: null });
+  assert.deepStrictEqual([d.option.xAxis.min, d.option.xAxis.max],
+                         [Date.UTC(2024, 0, 1), Date.UTC(2024, 1, 1)]);
+  assert.strictEqual(d.option.dataZoom[0].id, 'vz-zoom-x');
+});

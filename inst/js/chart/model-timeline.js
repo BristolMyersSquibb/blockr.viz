@@ -10,8 +10,8 @@
  *
  *   [start, end, lane, term, colour, label, series, drill, tooltip]
  *
- * start and end are x coordinates (a category index on a category x; end is
- * start for an event without one), lane is the lane's position in the
+ * start and end are x coordinates (a category index on a category x, ms on
+ * a time x; end is start for an event without one), lane is the lane's position in the
  * panel, term the lane value as a string, colour/label/series/drill the
  * columns' values or '', tooltip the tooltip fields' values or 0.
  */
@@ -27,12 +27,31 @@
    *             laneCounts: Map<string, any> | null, marks: any[][],
    *             rows: any[] }} TimelinePanel
    * @typedef {{ family: 'timeline', empty: VizEmpty | null,
-   *             x: { col: string, type: string, cats: string[] | null },
+   *             x: { col: string, type: string, cats: string[] | null,
+   *                  period: string | null },
    *             y: { col: string }, xend: string | null, series: string | null,
    *             label: string | null, color: { col: string, levels: any[], scale: any } | null,
    *             facet: string | null, nFacets: number, single: boolean,
    *             ttFields: string[], panels: TimelinePanel[] }} TimelineModel
    */
+
+  /** The x axis: its type (a Date or date-time is a time axis), its categories, and the period
+   * a time axis is sampled at. @param {VizColumn[]} columns @param {any[]} rows @param {string} x */
+  const xAxisOf = (columns, rows, x) => {
+    const type = NS.axes.axisTypeFor(columns, rows, x, { temporal: true });
+    return { col: x, type,
+             cats: type === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null,
+             period: type === 'time' ? NS.axes.timePeriod(rows, x) : null };
+  };
+
+  /** An x value as a coordinate: a category's first position, a date in ms (it arrives as an ISO
+   * string), or the number. @param {string} type @param {string[] | null} cats
+   * @returns {(v: any) => number} */
+  const xCoordOf = (type, cats) => {
+    const xPos = cats ? NS.firstIndex(cats) : null;
+    if (xPos) return (v) => xPos.get(String(v ?? '')) ?? 0;
+    return type === 'time' ? NS.axes.timeValue : Number;
+  };
 
   /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {TimelineModel} */
@@ -47,7 +66,7 @@
     /** @type {TimelineModel} */
     const out = {
       family: 'timeline', empty: null,
-      x: { col: x, type: 'value', cats: null }, y: { col: y },
+      x: { col: x, type: 'value', cats: null, period: null }, y: { col: y },
       xend: xend || null, series: series || null, label: label ?? null,
       color: null, facet: facet || null, nFacets: 1, single: true, ttFields, panels: []
     };
@@ -56,9 +75,8 @@
       return out;
     }
 
-    const xAxisType = NS.axes.axisTypeFor(columns, rows, x);
-    const xCats = xAxisType === 'category' ? NS.axes.orderedCategories(columns, rows, x) : null;
-    out.x = { col: x, type: xAxisType, cats: xCats };
+    out.x = xAxisOf(columns, rows, x);
+    const { type: xAxisType, cats: xCats } = out.x;
 
     const facets = model.facetLevels(rows, ix, cfg);
     out.nFacets = facets.length;
@@ -70,10 +88,7 @@
       if (levels.length) out.color = { col: color, levels, scale: colorScale };
     }
 
-    // An x value as a coordinate: a category's first position, or the number.
-    const xPos = xCats ? NS.firstIndex(xCats) : null;
-    /** @param {any} v */
-    const xCoord = (v) => (xPos ? (xPos.get(String(v ?? '')) ?? 0) : Number(v));
+    const xCoord = xCoordOf(xAxisType, xCats);
 
     // Lanes in sort order: by name for 'alpha', else by the smallest value
     // per lane of x ('onset') or of a column; a lane without one is left out.
@@ -85,13 +100,16 @@
           .sort((a, b) => a.localeCompare(b) * sortDir);
       }
       const sortCol = (sb === 'onset') ? x : sb;
+      // Another column sorts on its number, a date or date-time in ms.
+      const sv = sortCol === x ? xCoord
+        : (V.util.isTemporal(NS.axes.colMeta(columns, sortCol)) ? NS.axes.timeValue : Number);
       // A plain object on purpose: its key order (integer-like keys first)
       // is the tie order.
       /** @type {Record<string, number>} */
       const mins = {};
       for (const r of rs) {
         const k = String(r[y] ?? '');
-        const v = (xPos && sortCol === x) ? xCoord(r[sortCol]) : Number(r[sortCol]);
+        const v = sv(r[sortCol]);
         if (!isNaN(v) && (mins[k] == null || v < mins[k])) mins[k] = v;
       }
       return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
@@ -120,7 +138,10 @@
         const lane = laneOf.get(term);
         if (lane === undefined) continue;
         const s = xCoord(r[x]);
-        const hasEnd = xend && r[xend] != null && !Number.isNaN(Number(r[xend]));
+        // A date that does not parse has no place on a time axis.
+        if (xAxisType === 'time' && Number.isNaN(s)) continue;
+        const hasEnd = xend && r[xend] != null &&
+          !Number.isNaN(xAxisType === 'time' ? xCoord(r[xend]) : Number(r[xend]));
         marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, (color != null ? r[color] ?? '' : ''),
                     (label != null ? (r[label] ?? '') : ''),
                     (series != null ? r[series] ?? '' : ''),

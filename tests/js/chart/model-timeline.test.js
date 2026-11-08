@@ -150,3 +150,35 @@ test('the keys of a mark are its lane and facet, whatever the drill column', () 
                                                                     facet: 'ARM' }), 'A', mark)),
                          { T: 'Rash', ARM: 'A' });
 });
+
+test('a Date x is a time axis: starts and ends in ms, sorted by date', () => {
+  const columns = [cat('T'), { name: 'S', class: 'date' }, { name: 'E', class: 'date' },
+                   { name: 'L', class: 'date' }];
+  const rows = [
+    { T: 'Rash', S: '2024-01-05', E: '2024-01-10', L: '2024-02-01' },
+    { T: 'Nausea', S: '2024-01-02', E: null, L: '2024-01-01' },
+    { T: 'Fever', S: 'not a date', E: '2024-01-03', L: null }
+  ];
+  const day = (d) => Date.UTC(2024, 0, d);
+  const m = build({}, rows, columns);
+  assert.strictEqual(m.x.type, 'time');
+  assert.strictEqual(m.x.cats, null);
+  assert.deepStrictEqual(plain(m.panels[0].lanes), ['Nausea', 'Rash']);
+  // Fever's start does not parse: no lane, no mark.
+  assert.deepStrictEqual(plain(m.panels[0].marks.map((t) => [t[0], t[1], t[3]])),
+                         [[day(5), day(10), 'Rash'], [day(2), day(2), 'Nausea']]);
+  // Sort by another date column: Nausea's L comes first.
+  assert.deepStrictEqual(plain(build({ sort_by: 'L', sort_dir: 'desc' }, rows, columns)
+    .panels[0].lanes), ['Rash', 'Nausea']);
+});
+
+test('a date-time x arrives in ms and is a time axis sampled at times', () => {
+  const columns = [cat('T'), { name: 'S', class: 'datetime' }, { name: 'E', class: 'datetime' }];
+  const t0 = Date.UTC(2024, 0, 1, 8);
+  const rows = [{ T: 'A', S: t0, E: t0 + 3600e3 }, { T: 'B', S: t0 + 1800e3, E: t0 + 7200e3 }];
+  const m = build({}, rows, columns);
+  assert.strictEqual(m.x.type, 'time');
+  assert.strictEqual(m.x.period, 'time');
+  assert.deepStrictEqual(plain(m.panels[0].marks.map((t) => [t[0], t[1]])),
+                         [[t0, t0 + 3600e3], [t0 + 1800e3, t0 + 7200e3]]);
+});
