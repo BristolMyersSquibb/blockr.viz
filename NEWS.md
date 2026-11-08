@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9040
+# blockr.viz 0.3.0.9041
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -17,8 +17,10 @@ read.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
 * The chart's `facet_row` lays the panels out as a grid, `facet_row` levels
   down and `facet` levels across, for every chart type. With
-  `facet_scales = "free_y"` each row has its own value axis. Only the outer
-  panels label their axes. The data view, the Excel download and the PNG,
+  `facet_scales = "free_y"` each row has its own value axis. Every panel
+  draws its tick labels and each axis title shows once per row or column;
+  `facet_axes = "outer"` (Look > Panel axes) labels only the outer panels,
+  as `ggplot2::facet_grid()`. The data view, the Excel download and the PNG,
   PowerPoint and web page exports know the grid.
 * Panels that share a value axis share it on a nice step: two panels ending
   at 50 and 51 no longer get an axis labelled 0, 10, ..., 50, 51.

@@ -172,9 +172,10 @@ record_computed <- function(x) {
 # A recording as the rewrite is compared with it: the reference's browser
 # view in computed terms, its saved selections in the kit's shape, and the
 # accepted behaviour changes the scenario `sc` runs into.
-# Arguments added after the recordings were made, unset in every recorded
-# state.
-record_rw_new_args <- c("facet_row", "x_limits", "y_limits")
+# Arguments added after the recordings were made, at their defaults in
+# every recorded state.
+record_rw_new_args <- list(facet_row = NULL, x_limits = NULL, y_limits = NULL,
+                           facet_axes = "all")
 
 record_rw_expected <- function(rec, sc) {
   sel <- function(st) {
@@ -182,7 +183,9 @@ record_rw_expected <- function(rec, sc) {
       st["selection"] <- list(legacy_chart_selection(st)$selection)
     }
     st <- legacy_values("chart", st, NULL)
-    for (k in setdiff(record_rw_new_args, names(st))) st[k] <- list(NULL)
+    for (k in setdiff(names(record_rw_new_args), names(st))) {
+      st[k] <- list(record_rw_new_args[[k]])
+    }
     st[sort(names(st))]
   }
   rec$warnings <- record_rw_warnings(rec$warnings)

@@ -46,7 +46,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.vz-chart-strip--col { text-align: center; text-transform: uppercase; }
+.vz-chart-strip--col {
+  text-align: center;
+  text-transform: uppercase;
+  /* The strip clips its overflow, which makes its minimum height 0, and the
+     strips' row holds nothing else. A grid with less height than its content
+     (a short dock panel) took it all from that row, so the column titles
+     vanished and only their hover text was left. */
+  min-height: max-content;
+}
 /* A long row label wraps into a second line rather than being cut; its
    height is capped to the row's panels (fitStrips() in panels.js). */
 .vz-chart-strip--row {

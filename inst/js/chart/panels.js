@@ -3,7 +3,8 @@
  * Chart block: the facet panels' layout. A panel grid (facet_row) puts each
  * panel at its row and column with strips on top and on the right; the
  * panels' numeric axes are shared across a wrap or along a grid's rows and
- * columns, and a grid labels only its outer axes.
+ * columns. A grid titles each axis once per row or column and, with
+ * facet_axes "outer", labels only its outer axes.
  */
 (function () {
   'use strict';
@@ -13,6 +14,10 @@
   const mk = NS.mk;
   // The bottom margin of a grid panel whose x labels are hidden.
   const X_HIDDEN_BOTTOM = 10;
+  // What an x axis title takes below the labels, and the least bottom margin
+  // that keeps the labels when the title is dropped.
+  const X_NAME_ROOM = 16;
+  const X_LABELS_BOTTOM = 30;
 
   /** In a grid, every row gets its grid key (NS.model.gridKey()). New keys
    * are new rows to the model and the index.
@@ -195,15 +200,18 @@
     return [...out.values()];
   };
 
-  /** In a grid, as in ggplot2: y labels and title on the first panel of a
-   * row, x labels and title on the lowest panel of a column, when that axis
-   * is shared along the row or column. The margins stay, so the panels line up.
+  /** In a grid each axis title appears once: y on the first panel of a
+   * row, x on the lowest panel of a column, when that axis is shared along
+   * the row or column. With facet_axes "outer" the tick labels go the same
+   * way, as in ggplot2. The left margins stay, so the panels line up; a
+   * panel without its x title or x labels gives that gutter back.
    * @param {ChartView} view */
   const outerAxes = (view) => {
     const gs = share(view.settings);
     const slots = view._slots.filter((s) => s && s.chart);
-    for (const s of slots) s.outerHidden = null;
+    for (const s of slots) s.outerHidden = s.innerTitles = null;
     if (!gs) return;
+    const outer = view.settings.facet_axes === 'outer';
     const yAlongRow = gs.valueKey === 'yAxis' || gs.otherBy === 'all';
     const xAlongCol = gs.otherKey === 'xAxis' || gs.valueBy === 'all';
     /** @type {Map<any, number>} */ const firstCol = new Map();
@@ -213,27 +221,37 @@
       if (!firstCol.has(s.gridRow) || c < /** @type {number} */ (firstCol.get(s.gridRow))) firstCol.set(s.gridRow, c);
       if (!lastRow.has(s.gridCol) || r > /** @type {number} */ (lastRow.get(s.gridCol))) lastRow.set(s.gridCol, r);
     }
-    const off = { axisLabel: { show: false }, name: '' };
+    const off = outer ? { axisLabel: { show: false }, name: '' } : { name: '' };
     for (const s of slots) {
-      const hide = {
+      const inner = {
         x: xAlongCol && s.gridRow !== lastRow.get(s.gridCol),
         y: yAlongRow && s.gridCol !== firstCol.get(s.gridRow)
       };
       /** @type {Record<string, any>} */ const patch = {};
-      const has = (/** @type {string} */ key) => !!s.chart.getModel().getComponent(key, 0);
-      if (hide.x && has('xAxis')) patch.xAxis = [off];
-      if (hide.y && has('yAxis')) patch.yAxis = [off];
+      const axis = (/** @type {string} */ key) => s.chart.getModel().getComponent(key, 0);
+      if (inner.x && axis('xAxis')) patch.xAxis = [off];
+      if (inner.y && axis('yAxis')) patch.yAxis = [off];
       if (!patch.xAxis && !patch.yAxis) continue;
-      s.outerHidden = hide;
-      // Hidden x labels give their gutter back: the grid's bottom margin and
-      // the panel shrink alike, so the plot keeps its height and lines up.
+      if (outer) s.outerHidden = inner;
+      else s.innerTitles = inner;
+      // The x gutter goes back: all of it without labels, the title's room
+      // without the title. The grid's bottom margin and the panel shrink
+      // alike, so the plot keeps its height and lines up.
       const px = parseFloat(s.chartDiv.style.height);
       const grid = (s.chart.getOption().grid || [])[0] || {};
-      const cut = Number(grid.bottom) - X_HIDDEN_BOTTOM;
-      const shrink = patch.xAxis && cut > 0 && Number.isFinite(px);
-      if (shrink) patch.grid = { bottom: X_HIDDEN_BOTTOM };
+      const bottom = Number(grid.bottom);
+      const titled = patch.xAxis && !!axis('xAxis').get('name');
+      const cut = !patch.xAxis ? 0
+        : outer ? bottom - X_HIDDEN_BOTTOM
+          : titled ? Math.min(X_NAME_ROOM, bottom - X_LABELS_BOTTOM) : 0;
+      const shrink = cut > 0 && Number.isFinite(px);
+      if (shrink) patch.grid = { bottom: bottom - cut };
       s.chart.setOption(patch, { lazyUpdate: true });
-      if (shrink && view._setSlotHeight(s, Math.round(px - cut) + 'px')) s.chart.resize();
+      if (!shrink) continue;
+      // A later re-fit of the labels sizes the panel from this base.
+      const fit = s.chart.__xFit;
+      if (fit && fit.baseH != null) fit.baseH -= cut;
+      if (view._setSlotHeight(s, Math.round(px - cut) + 'px')) s.chart.resize();
     }
   };
 

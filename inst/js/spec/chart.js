@@ -975,6 +975,26 @@
       "slot": true,
       "ctrl": true
     },
+    "facet_axes": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "all",
+      "values": ["all", "outer"],
+      "nullable": false,
+      "applies": {
+        "except": ["pie", "treemap"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "select",
+        "label": "Panel axes",
+        "labels": ["Every panel", "Outer panels only"],
+        "when": "facet_row"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "facet_cols": {
       "type": {
         "name": "integer"

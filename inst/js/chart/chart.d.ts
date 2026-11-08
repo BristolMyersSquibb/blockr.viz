@@ -309,8 +309,10 @@ interface ChartSlot {
   /** The panel's row and column in a grid (facet_row), from 0; null outside one. */
   gridRow: number | null;
   gridCol: number | null;
-  /** Axes an inner grid panel leaves unlabelled (_outerAxes()). */
+  /** Axes an inner grid panel leaves unlabelled, facet_axes "outer" (panels.outerAxes()). */
   outerHidden: { x: boolean, y: boolean } | null;
+  /** Axes an inner grid panel draws without their title, facet_axes "all". */
+  innerTitles: { x: boolean, y: boolean } | null;
   dimmed: boolean;
   hover: { si: number | null };
   brushable: boolean;
