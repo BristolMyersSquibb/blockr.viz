@@ -56,7 +56,6 @@ interface ChartConfig {
   missing: 'level' | 'drop';
   percent_of: 'facet' | 'category' | 'color' | 'total';
   facet_scales: 'fixed' | 'free' | 'free_y';
-  facet_axes: 'all' | 'outer';
   facet_cols: number | null;
   download: boolean;
   title: string | null;

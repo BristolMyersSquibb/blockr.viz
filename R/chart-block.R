@@ -57,7 +57,6 @@ new_chart_block <- function(
     missing = "level",
     percent_of = "facet",
     facet_scales = "fixed",
-    facet_axes = "all",
     facet_cols = getOption("blockr.viz.facet_cols"),
     download = TRUE,
     title = NULL,

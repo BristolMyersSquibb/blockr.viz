@@ -271,7 +271,7 @@
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
       NS.panels.harmonise(this);
-      NS.panels.outerAxes(this);
+      NS.panels.axisTitles(this);
       NS.panels.fitStrips(this);
       // The zoom windows last: the shared axes are the full view they zoom in.
       this._slots.forEach((slot, i) => {
@@ -368,7 +368,7 @@
         resetBtn.hidden = true;
         container.classList.add('vz-chart-zoom-host');
         slot = { container, labelEl, chartDiv, resetBtn, zoomBar, chart: null, scope: null, facetVal: null,
-                 gridRow: null, gridCol: null, outerHidden: null, innerTitles: null,
+                 gridRow: null, gridCol: null, innerTitles: null,
                  dimmed: false, hover: { si: null }, brushable: false, brushAreas: null, brushSel: null, brushCaught: null,
                  zoom: null, zoomRoles: null, zoomDragAt: 0,
                  focus: null, focusSi: null, band: null, bandFocus: null, lineClick: null };
@@ -426,8 +426,7 @@
     /** @param {any} chart */
     _refitXLabels(chart) {
       const fit = chart.__xFit;
-      // A grid panel without x labels has no gutter to fit (panels.js).
-      if (!fit || (fit.slot && fit.slot.outerHidden && fit.slot.outerHidden.x)) return;
+      if (!fit) return;
       const lab = NS.axes.xAxisLabels(fit.labels, chart.getWidth() - fit.inset, fit.decimate,
                                       this._measure(this._ink), this._ink);
       if (fit.key === lab.key) return;

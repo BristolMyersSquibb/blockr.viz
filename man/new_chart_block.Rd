@@ -60,7 +60,6 @@ new_chart_block(
   missing = "level",
   percent_of = "facet",
   facet_scales = "fixed",
-  facet_axes = "all",
   facet_cols = getOption("blockr.viz.facet_cols"),
   download = TRUE,
   title = NULL,
@@ -183,8 +182,6 @@ new_chart_block(
 \item{percent_of}{The role whose levels a \code{pct_distinct} denominator is taken within, or "total" for the whole chart. One of \code{"facet"}, \code{"category"}, \code{"color"}, \code{"total"}. Default: \code{"facet"}.}
 
 \item{facet_scales}{"fixed" shares one scale across panels, "free" lets each panel size itself, "free_y" frees y only (scatter, line and band). In a grid (\code{facet_row}) "free_y" shares the value axis within a row (x on horizontal bars and a gantt) and the categories across all panels; "free" also shares the other axis within a column. One of \code{"fixed"}, \code{"free"}, \code{"free_y"}. Default: \code{"fixed"}.}
-
-\item{facet_axes}{In a grid (\code{facet_row}), "all" draws the tick labels on every panel and each axis title once per row or column; "outer" labels only the left column's y and the bottom row's x, as ggplot2's facet_grid(). An axis that is not shared along its row or column (categories with \code{facet_scales = "free"}) keeps its labels. One of \code{"all"}, \code{"outer"}. Default: \code{"all"}.}
 
 \item{facet_cols}{Panels per row. NULL fits as many as the card is wide. Default: the option \code{blockr.viz.facet_cols}, else \code{NULL}.}
 

@@ -452,22 +452,6 @@ chart_spec_facets <- function() {
       )
     ),
 
-    facet_axes = chart_arg(
-      type = "enum", default = "all", values = c("all", "outer"),
-      applies = except("pie", "treemap"),
-      gear = gear("Look", "select", "Panel axes",
-                  labels = c("Every panel", "Outer panels only"),
-                  when = "facet_row"),
-      example = "outer",
-      describe = paste(
-        "In a grid (`facet_row`), \"all\" draws the tick labels on every",
-        "panel and each axis title once per row or column; \"outer\" labels",
-        "only the left column's y and the bottom row's x, as ggplot2's",
-        "facet_grid(). An axis that is not shared along its row or column",
-        "(categories with `facet_scales = \"free\"`) keeps its labels."
-      )
-    ),
-
     facet_cols = chart_arg(
       type = "integer", default = opt("blockr.viz.facet_cols"),
       bounds = bounds(1), null = "fit the width",
@@ -510,7 +494,7 @@ chart_spec <- function() {
     "identity_line", "box_points", "summary", "whiskers", "connect_centers",
     "band_window", "band_size", "band_min_n", "id", "ref_min", "ref_max",
     "waterfall_totals", "bins", "show_n", "missing", "percent_of",
-    "facet_scales", "facet_axes", "facet_cols", "download", names(shared)
+    "facet_scales", "facet_cols", "download", names(shared)
   )
   args <- c(chart_spec_mapping(), chart_spec_look(), chart_spec_sorting(),
             chart_spec_numbers(), chart_spec_lines(), chart_spec_marks(),

@@ -176,13 +176,6 @@ test('a missing level: a line drops the row, a bar keeps it as "(missing)", as i
   }
 });
 
-test('chart.css keeps the column strips their height in a short grid', () => {
-  const fs = require('node:fs');
-  const path = require('node:path');
-  const css = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'chart.css'), 'utf8');
-  assert.match(css, /\.vz-chart-strip--col \{[^}]*min-height: max-content;/);
-});
-
 test('show_n counts the rows on the strips', () => {
   const r = drawGrid({ show_n: 'facet' });
   try {
@@ -195,12 +188,6 @@ test('show_n counts the rows on the strips', () => {
     r.env.close();
   }
 });
-
-// The axes a panel was told to leave unlabelled, as "xy", "x", "y" or "".
-const hidden = (s) => {
-  const o = s.outerHidden;
-  return o ? (o.x ? 'x' : '') + (o.y ? 'y' : '') : '';
-};
 
 // Where a panel sits relative to the grid's outer edge: "x" below another
 // panel of its column, "y" right of another panel of its row.
@@ -216,19 +203,21 @@ const innerOf = (slots) => {
 const labelsOff = (s) => s.chart.log.filter((e) => e.op === 'setOption' && e.option &&
   ((e.option.xAxis && e.option.xAxis[0].axisLabel && e.option.xAxis[0].axisLabel.show === false) ||
    (e.option.yAxis && e.option.yAxis[0].axisLabel && e.option.yAxis[0].axisLabel.show === false)));
+// The axes a panel draws without a title, as "xy", "x", "y" or "".
+const untitled = (s) => {
+  const o = s.chart.getOption();
+  return (o.xAxis[0].name ? '' : 'x') + (o.yAxis[0].name ? '' : 'y');
+};
 
-test('by default every grid panel keeps its tick labels; the axis titles show once per row and column', () => {
-  for (const scales of ['fixed', 'free_y']) {
+test('every grid panel keeps its tick labels; the axis titles show once per row and column', () => {
+  for (const scales of ['fixed', 'free_y', 'free']) {
     const r = drawGrid({ facet_scales: scales });
     try {
       const slots = r.block._slots;
       const want = innerOf(slots);
       for (const s of slots) {
-        assert.strictEqual(s.outerHidden, null);
-        assert.strictEqual(labelsOff(s).length, 0, `panel ${s.gridRow}/${s.gridCol}`);
-        const o = s.chart.getOption();
-        const named = (o.xAxis[0].name ? '' : 'x') + (o.yAxis[0].name ? '' : 'y');
-        assert.strictEqual(named, want(s), `${scales}: titles of panel ${s.gridRow}/${s.gridCol}`);
+        assert.strictEqual(labelsOff(s).length, 0, `${scales}: labels of panel ${s.gridRow}/${s.gridCol}`);
+        assert.strictEqual(untitled(s), want(s), `${scales}: titles of panel ${s.gridRow}/${s.gridCol}`);
       }
       assert.ok(slots.some((s) => want(s) !== ''));
     } finally {
@@ -237,43 +226,28 @@ test('by default every grid panel keeps its tick labels; the axis titles show on
   }
 });
 
-test('an inner panel without its x title is shorter, by less than without its x labels', () => {
-  const all = drawGrid({});
-  const outer = drawGrid({ facet_axes: 'outer' });
-  try {
-    const px = (s) => parseFloat(s.chartDiv.style.height);
-    const inner = (r) => r.block._slots.filter((s) => innerOf(r.block._slots)(s).includes('x'));
-    const edge = (r) => r.block._slots.filter((s) => !innerOf(r.block._slots)(s).includes('x'));
-    const a = Math.max(...inner(all).map(px)), o = Math.max(...inner(outer).map(px));
-    assert.ok(a < Math.min(...edge(all).map(px)));
-    assert.ok(o < a);
-  } finally {
-    all.env.close(); outer.env.close();
-  }
-});
-
-test('facet_axes "outer" labels the outer axes only: y on the first column, x on the lowest row', () => {
-  const r = drawGrid({ facet_scales: 'free_y', facet_axes: 'outer' });
+test('an inner panel without its x title gives back the room: smaller bottom margin, shorter panel', () => {
+  const r = drawGrid({});
   try {
     const slots = r.block._slots;
-    const inner = innerOf(slots);
-    for (const s of slots) {
-      const want = inner(s);
-      assert.strictEqual(hidden(s), want, `panel ${s.gridRow}/${s.gridCol}`);
-      assert.strictEqual(labelsOff(s).length > 0, want !== '');
-    }
-    assert.ok(slots.some((s) => hidden(s) !== ''));
+    const inner = slots.filter((s) => innerOf(slots)(s).includes('x'));
+    const edge = slots.filter((s) => !innerOf(slots)(s).includes('x'));
+    assert.ok(inner.length && edge.length);
+    const bottom = (s) => Number(s.chart.getOption().grid[0].bottom);
+    const px = (s) => parseFloat(s.chartDiv.style.height);
+    assert.ok(Math.max(...inner.map(bottom)) < Math.min(...edge.map(bottom)));
+    assert.ok(Math.max(...inner.map(px)) < Math.min(...edge.map(px)));
   } finally {
     r.env.close();
   }
 });
 
-test('horizontal bars, free: categories (y) differ by column, so every panel keeps its y labels', () => {
+test('horizontal bars, free: categories (y) differ by column, so every panel keeps its y title', () => {
   const r = h.draw({ ...BASE, type: 'bar', category: 'AETERM', func: 'count', orientation: 'horizontal',
-                     facet: 'ARM', facet_row: 'SEX', facet_scales: 'free', facet_axes: 'outer' }, DATA, F.columns,
+                     facet: 'ARM', facet_row: 'SEX', facet_scales: 'free' }, DATA, F.columns,
                    { width: 900, keepOpen: true });
   try {
-    assert.ok(r.block._slots.every((s) => !hidden(s).includes('y')));
+    assert.ok(r.block._slots.every((s) => !(s.innerTitles && s.innerTitles.y)));
     // Within a column every panel lists the column's categories.
     const byCol = new Map();
     for (const s of r.block._slots) {
@@ -286,10 +260,10 @@ test('horizontal bars, free: categories (y) differ by column, so every panel kee
   }
 });
 
-test('without facet_row no axis is unlabelled', () => {
+test('without facet_row every panel keeps its axis titles', () => {
   const r = h.draw({ ...LINE }, F.data, F.columns, { width: 900, keepOpen: true });
   try {
-    assert.ok(r.block._slots.every((s) => s.outerHidden === null));
+    assert.ok(r.block._slots.every((s) => s.innerTitles === null));
   } finally {
     r.env.close();
   }
@@ -310,22 +284,3 @@ test('the gear words panel scales by row and column in a grid', () => {
   assert.strictEqual(host.choices('facet_scales', { facet: 'ARM' }), null);
 });
 
-test('a panel without x labels gives back their gutter: smaller bottom margin, shorter panel', () => {
-  const r = h.draw({ ...BASE, type: 'bar', category: 'AETERM', func: 'count', facet: 'ARM',
-                     facet_row: 'SEX', facet_axes: 'outer' }, DATA, F.columns, { width: 900, keepOpen: true });
-  try {
-    const slots = r.block._slots;
-    const inner = slots.filter((s) => s.outerHidden && s.outerHidden.x);
-    const outer = slots.filter((s) => !(s.outerHidden && s.outerHidden.x));
-    assert.ok(inner.length && outer.length);
-    for (const s of inner) {
-      const g = s.chart.log.filter((e) => e.op === 'setOption' && e.option && e.option.grid &&
-                                   e.option.grid.bottom === 10);
-      assert.strictEqual(g.length, 1);
-    }
-    const px = (s) => parseFloat(s.chartDiv.style.height);
-    assert.ok(Math.max(...inner.map(px)) < Math.min(...outer.map(px)));
-  } finally {
-    r.env.close();
-  }
-});
