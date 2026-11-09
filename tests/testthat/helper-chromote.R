@@ -32,13 +32,21 @@ chromote_works <- function() {
     return(FALSE)
   }
   configure_chromote()
-  ok <- tryCatch({
-    sess <- chromote::ChromoteSession$new()
-    on.exit(try(sess$close(), silent = TRUE), add = TRUE)
-    sess$Page$navigate("about:blank")
-    TRUE
-  }, error = function(e) FALSE)
-  isTRUE(ok)
+  # A busy runner can be slow to start Chrome the first time; the answer
+  # holds for the whole run (run_browser_tests()), so try more than once.
+  for (i in 1:3) {
+    ok <- tryCatch({
+      sess <- chromote::ChromoteSession$new()
+      on.exit(try(sess$close(), silent = TRUE), add = TRUE)
+      sess$Page$navigate("about:blank")
+      TRUE
+    }, error = function(e) {
+      message("chromote_works(): ", conditionMessage(e))
+      FALSE
+    })
+    if (isTRUE(ok)) return(TRUE)
+  }
+  FALSE
 }
 
 # Whether the browser tests run here. Never under R CMD check (Chrome leaves
