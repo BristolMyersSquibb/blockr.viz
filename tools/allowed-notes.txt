@@ -10,6 +10,7 @@
 ^\s+(blockr\.(ai|assistant|dm|theme))(, blockr\.(ai|assistant|dm|theme))*$
 # Remotes stays on the development branch; the submitted tarball drops it:
 ^Unknown, possibly misspelled, fields in DESCRIPTION:$
-^\s+'Remotes'$
+# R prints the name in curly quotes in a UTF-8 locale:
+^\s+\W*Remotes\W*$
 # A development version on main (x.y.z.9000 and up); a release has none:
 ^Version contains large components \(
