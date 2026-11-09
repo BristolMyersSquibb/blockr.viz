@@ -145,6 +145,13 @@ test_that("a selection lights its Summary row, and a row click selects it", {
     list(filters = list(.variable_level = hs$.label[[1L]])), hs, h
   )
   expect_identical(names(hsel$filters), "val_bin")
+  # One key, no row groups.
+  v1 <- list(type = "bar", category = "visit", func = "count",
+             selection = list(type = "categorical",
+                              filters = list(visit = "V2")))
+  s1 <- chart_summary(d, v1)
+  expect_identical(chart_selection_to_claim(v1$selection, s1, v1)$filters,
+                   list(.variable_level = list("V2"), .variable = list("visit")))
 })
 
 test_that("Rows are the block's output: the input behind the selection", {
@@ -221,9 +228,36 @@ test_that("the payload carries the data view only while it is open", {
     dv_open(expr, session, "rows")
     dv <- dv_derived(expr)
     expect_identical(dv$tab, "rows")
-    expect_null(dv$table$data$rows$keys)
+    expect_null(dv$table)
     dv_open(expr, session, on = FALSE)
     expect_null(dv_derived(expr))
+  })
+})
+
+dv_rows_html <- function(expr) {
+  out <- tryCatch(expr$output$`chart-data_rows`, error = function(e) NULL)
+  out$html
+}
+
+test_that("Rows is blockr.ui's table preview, following the selection", {
+  blk <- new_chart_block(type = "bar", category = "visit", color = "arm",
+                         drill = "auto")
+  dv_run(blk, function(session, expr) {
+    dv_open(expr, session)
+    expect_null(dv_rows_html(expr))
+    dv_open(expr, session, "rows")
+    html <- as.character(dv_rows_html(expr))
+    expect_match(html, "blockr-table-container", fixed = TRUE)
+    expect_match(html, "data-blockr-tooltip-overflow", fixed = TRUE)
+    expect_match(html, "of 60", fixed = TRUE)
+    chart_input_click(expr, visit = "V2", arm = "B")
+    session$flushReact()
+    expect_match(as.character(dv_rows_html(expr)), "of 10", fixed = TRUE)
+    # Back to Summary: its table again, the selected mark lit.
+    dv_open(expr, session, n = 2L)
+    dv <- dv_derived(expr)
+    expect_identical(dv$tab, "summary")
+    expect_identical(dv$table$data$n, 6L)
   })
 })
 

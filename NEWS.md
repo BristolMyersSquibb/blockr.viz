@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9043
+# blockr.viz 0.3.0.9044
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -255,6 +255,13 @@ read.
   brush filters nothing downstream, but the data view shows the points it
   caught. A selection on the outer key alone (`drill = "ARM"` on a bar
   coloured by SEX) lights its group in Summary.
+* The data view's Rows tab is blockr.ui's table preview, the one behind a
+  block's eye icon: columns sized to their content, labels and types in the
+  header, a tooltip on a cut-off value, paged by the board's `page_size`
+  and sorted on the server. Summary stays the table view, for its row
+  clicks and row groups.
+* A selection on a chart with one key (a bar without colour) no longer
+  breaks the data view's Summary.
 
 ## Security
 

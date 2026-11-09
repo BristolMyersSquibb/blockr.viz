@@ -18,6 +18,10 @@
  *
  * A row click on Summary goes to R as `<id>-data_select` and selects that
  * mark; a selected mark lights its row.
+ *
+ * Rows is blockr.ui's table preview, the one behind a block's eye icon: the
+ * Shiny output `<id>-data_rows`, bound when the tab first shows. Shiny
+ * leaves it alone while the tab is hidden.
  */
 (function () {
   'use strict';
@@ -84,6 +88,8 @@
       this.bar = el('div', 'vz-data__bar', this.panel);
       this.host = el('div', 'vz-data__table', this.panel);
       this.host.id = frame.id + '-data';
+      /** The Rows tab's output, bound on first show. @type {HTMLElement | null} */
+      this.out = null;
       /** The table view, built when a table first arrives.
        * @type {VizView | null} */
       this.table = null;
@@ -146,7 +152,28 @@
       this.state = dv;
       this.tab = dv.tab;
       this._bar();
-      if (dv.table) this._draw(dv.table);
+      const rows = dv.tab === 'rows';
+      this.host.hidden = rows;
+      if (rows) this._rows();
+      else if (this.out) this.out.hidden = true;
+      if (!rows && dv.table) this._draw(dv.table);
+    }
+
+    /** Show the Rows tab's output; bind it the first time. */
+    _rows() {
+      const shiny = /** @type {any} */ (root).Shiny;
+      if (!this.out) {
+        const out = el('div', 'vz-data__rows shiny-html-output', this.panel);
+        out.id = this.frame.id + '-data_rows';
+        this.out = out;
+        if (shiny && shiny.bindAll) {
+          shiny.bindAll(this.panel);
+          this.scope.own({ dispose: () => shiny.unbindAll(out) });
+        }
+      }
+      this.out.hidden = false;
+      // Shiny resumes an output that becomes visible on its next check.
+      if (shiny && shiny.bindAll) root.jQuery(this.out).trigger('shown');
     }
 
     /** The table, with the rows of its data revision; without them, ask R.

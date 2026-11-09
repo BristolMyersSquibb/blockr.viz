@@ -461,12 +461,22 @@ const PRELUDE = `
     InputBinding: function () {},
     inputBindings: { register: function (b) { window.__binding = b; } },
     addCustomMessageHandler: function (n, f) { window.__handlers[n] = f; },
-    setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); }
+    setInputValue: function (n, v, o) { window.__inputs.push({ name: n, value: v, opts: o }); },
+    // Outputs a view binds itself (the data view's Rows): the ids bound now.
+    bindAll: function (el) {
+      el.querySelectorAll('.shiny-html-output').forEach(function (o) { window.__bound.add(o.id); });
+    },
+    unbindAll: function (el) {
+      var all = el.classList.contains('shiny-html-output') ? [el] : el.querySelectorAll('.shiny-html-output');
+      Array.prototype.forEach.call(all, function (o) { window.__bound.delete(o.id); });
+    }
   };
+  window.__bound = new Set();
   window.$ = window.jQuery = function (x) {
     var q = { find: function (sel) { return x && x.querySelectorAll ? x.querySelectorAll(sel) : []; },
               on: function (t, f) { (x.__jq = x.__jq || {})[t] = f; return q; },
-              off: function (t) { if (x.__jq) delete x.__jq[t]; return q; } };
+              off: function (t) { if (x.__jq) delete x.__jq[t]; return q; },
+              trigger: function () { return q; } };
     return q;
   };
 

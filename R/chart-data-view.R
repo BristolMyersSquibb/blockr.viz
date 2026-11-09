@@ -15,6 +15,11 @@
 # `derived$data_view` to the payload (viz_with_shared()): the tab counts and
 # the table view's payload for the tab that shows.
 #
+# Rows is blockr.ui's table preview, the one behind a block's eye icon
+# (blockr.ui::html_table_render()): a Shiny output in the view
+# (`<view>-data_rows`), paged and sorted on the server, with columns sized to
+# their content and a tooltip on a cut-off cell.
+#
 # The Summary table is an annotated frame, so the table view draws it and a
 # row click claims the row's keys: the outer keys as row groups
 # (`.group<k>`), the innermost as the row (`.variable`). A row click selects
@@ -224,7 +229,7 @@ chart_selection_to_claim <- function(sel, summ, v) {
   gcols <- grep("^\\.group[0-9]+$", names(summ), value = TRUE)
   gcols <- gcols[order(as.integer(sub("^\\.group", "", gcols)))]
   keys <- c(stats::setNames(vapply(gcols, function(g) summ[[g]][[1L]], ""),
-                            paste0(gcols, "_level")),
+                            sprintf("%s_level", gcols)),
             .variable_level = summ$.variable[[1L]])
   if (setequal(unname(keys), names(f))) {
     claim <- lapply(keys, function(col) as.list(f[[col]]))
@@ -305,24 +310,31 @@ chart_data_view <- function(kit, src, expr, shown) {
     viz_apply(kit$state, list(selection = sel), kit$revs)
   })
 
+  data_tab <- function(msg, s) {
+    if (is.null(s)) "rows" else msg$tab %||% "summary"
+  }
+  chart_data_rows_output(kit, rows, function() {
+    msg <- kit$input[[paste0(kit$view, "_data")]]
+    isTRUE(msg$on) && identical(data_tab(msg, summary()), "rows")
+  })
+
   derived <- function(msg) {
     s <- summary()
     r <- rows()
-    tab <- if (is.null(s)) "rows" else msg$tab %||% "summary"
-    x <- if (identical(tab, "rows")) r else s
-    on_summary <- identical(tab, "summary")
+    tab <- data_tab(msg, s)
     v <- viz_values(kit$state)
-    # Rows click as the marks do: not at all without a drill.
-    clicks <- on_summary && nzchar(v$drill %||% "")
     list(
       tab = tab,
       summary = if (is.data.frame(s)) nrow(s),
       rows = if (is.data.frame(r)) nrow(r),
       total = total(),
-      table = table(x, drill = clicks,
-                    selection = if (on_summary) {
-                      chart_selection_to_claim(shown(), s, v)
-                    }, req = msg$n)
+      # Rows draws through its own output (chart_data_rows_output()).
+      # Summary rows click as the marks do: not at all without a drill.
+      table = if (identical(tab, "summary")) {
+        table(s, drill = nzchar(v$drill %||% ""),
+              selection = chart_selection_to_claim(shown(), s, v),
+              req = msg$n)
+      }
     )
   }
   tables <- function() {
@@ -331,6 +343,41 @@ chart_data_view <- function(kit, src, expr, shown) {
          all = if (sel) tryCatch(src$prep$prepared(), error = function(e) NULL))
   }
   list(summary = summary, rows = rows, tables = tables, derived = derived)
+}
+
+#' The Rows tab: blockr.ui's table preview of the rows
+#'
+#' Assigns `<view>-data_rows` blockr.ui::html_table_render() of the rows,
+#' anew whenever they change, as blockr.core does for a block's own preview:
+#' each assignment pages and sorts its own rows. Nothing runs while the tab
+#' is not showing (`showing()`), and the browser binds the output only on
+#' the tab. Page size is the board's `page_size` option.
+#'
+#' @param kit The chart's kit.
+#' @param rows The rows behind the selection, a reactive.
+#' @param showing A function: whether the reader has the Rows tab open.
+#' @noRd
+chart_data_rows_output <- function(kit, rows, showing) {
+  id <- paste0(kit$view, "-data_rows")
+  last <- new.env(parent = emptyenv())
+  shiny::observe({
+    if (!showing()) {
+      return()
+    }
+    r <- rows()
+    page_size <- tryCatch(
+      blockr.core::get_board_option_or_default("page_size",
+                                               session = kit$session),
+      error = function(e) 5L
+    )
+    now <- list(r, page_size)
+    if (identical(now, last$now)) {
+      return()
+    }
+    last$now <- now
+    kit$output[[id]] <- blockr.ui::html_table_render(r, kit$session,
+                                                     page_size = page_size)
+  })
 }
 
 #' The table view's payload for a data view tab

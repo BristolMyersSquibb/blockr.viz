@@ -218,6 +218,7 @@
 /* Above table-structured.css's `max-height: none`, which loads later. */
 .vz-data__table .vz-table .blockr-table-wrapper { max-height: 320px; }
 .vz-data__table .vz-foot { display: none; }
+.vz-data__table[hidden], .vz-data__rows[hidden] { display: none; }
 
 /* A data download's count after its table's name, as the data view's tab
    shows it: "Rows 40 of 254". The open menu sits on <body>, so this is not

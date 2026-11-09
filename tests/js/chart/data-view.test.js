@@ -2,8 +2,8 @@
  * table under the chart and tells R, the tabs and their counts from R's
  * `derived.data_view`, a tab pick that waits for R's answer, the view
  * opened again from the payload after a re-mount, a row click on Summary
- * that goes to R, and teardown: 50 mounts with the table open leave
- * nothing behind. */
+ * that goes to R, Rows as the Shiny output blockr.ui's table preview fills,
+ * and teardown: 50 mounts with the table open leave nothing behind. */
 'use strict';
 
 const test = require('node:test');
@@ -34,16 +34,6 @@ function summaryTable(selection = null) {
   });
 }
 
-/** Rows: the input rows behind the selection. */
-function rowsTable(n) {
-  const id = Array.from({ length: n }, (_, i) => 'S' + (i + 1));
-  return tablePayload({
-    config: { search: false, download: false },
-    dataRev: 2,
-    data: { n, stub: 0, cols: [{ name: 'USUBJID', disp: id, raw: id }],
-            head: [[{ text: 'USUBJID', stub: true, col: 0 }]] }
-  });
-}
 
 const dv = (o = {}) => Object.assign({ tab: 'summary', summary: 3, rows: 25, total: 25,
                                        table: summaryTable() }, o);
@@ -53,6 +43,11 @@ const isOpen = (c) => c.el.querySelector('.vz-frame').classList.contains('vz-dat
 const segs = (c) => Array.from(c.el.querySelectorAll('.vz-data__bar .blockr-segmented__seg'));
 const tabs = (c) => segs(c).map((b) => b.textContent);
 const bodyRows = (c) => c.el.querySelectorAll('.vz-data__table tbody tr.vz-table-row').length;
+/** The Rows output, when it shows. R fills it (chart_data_rows_output()). */
+const rowsOut = (c) => {
+  const o = c.el.querySelector('.vz-data__rows');
+  return o && !o.hidden ? o : null;
+};
 const sent = (c, name) => c.inputs().filter((x) => x.name === name).map((x) => D.plain(x.value));
 /** The data view's requests without their count. */
 const asks = (c) => sent(c, INPUT).map(({ on, tab }) => ({ on, tab }));
@@ -103,10 +98,21 @@ test('a tab pick goes to R, and a payload that does not answer it is skipped', (
   c.send(c.config, { derived: { data_view: dv({ rows: 24 }) } });
   assert.strictEqual(bodyRows(c), 3, 'still Summary');
   assert.ok(segs(c)[1].classList.contains('is-selected'), 'the pick shows');
-  c.send(c.config, { derived: { data_view: dv({ tab: 'rows', rows: 7, table: rowsTable(7) }) } });
-  assert.strictEqual(bodyRows(c), 7);
+  c.send(c.config, { derived: { data_view: dv({ tab: 'rows', rows: 7, table: null }) } });
+  const out = rowsOut(c);
+  assert.ok(out, 'Rows shows its output');
+  assert.strictEqual(c.el.querySelector('.vz-data__table').hidden, true, 'Summary hides');
+  assert.strictEqual(out.id, D.ID + '-data_rows');
+  assert.ok(c.env.win.__bound.has(out.id), 'bound');
   assert.deepStrictEqual(tabs(c), ['Summary3', 'Rows7 of 25']);
+  // Back to Summary: the output hides, the table view shows again.
+  segs(c)[0].click();
+  c.send(c.config, { derived: { data_view: dv() } });
+  assert.strictEqual(rowsOut(c), null);
+  assert.strictEqual(c.el.querySelector('.vz-data__table').hidden, false);
+  assert.strictEqual(bodyRows(c), 3);
   c.close();
+  assert.ok(!c.env.win.__bound.has(out.id), 'unbound with the view');
 });
 
 test('the table\'s rows come once per data revision; without them the view asks again', () => {
@@ -141,10 +147,10 @@ test('a chart without a Summary shows its rows and their count alone', () => {
   const c = D.open({ type: 'scatter', x: 'ADY', y: 'AVAL' });
   tool(c).click();
   c.send(c.config, { derived: { data_view: dv({ tab: 'rows', summary: null, rows: 9,
-                                                total: 9, table: rowsTable(9) }) } });
+                                                total: 9, table: null }) } });
   assert.deepStrictEqual(tabs(c), []);
   assert.strictEqual(c.el.querySelector('.vz-data__meta').textContent, '9 rows');
-  assert.strictEqual(bodyRows(c), 9);
+  assert.ok(rowsOut(c));
   c.close();
 });
 
@@ -210,7 +216,7 @@ test('50 mounts with the table open leave no listener, timer, scope, node or cha
     m.el.querySelector('.vz-data-tool').click();
     h.send(c.env, m.id, { ...p, derived: { data_view: dv() } });
     m.el.querySelectorAll('.vz-data__bar .blockr-segmented__seg')[1].click();
-    h.send(c.env, m.id, { ...p, derived: { data_view: dv({ tab: 'rows', table: rowsTable(25) }) } });
+    h.send(c.env, m.id, { ...p, derived: { data_view: dv({ tab: 'rows', table: null }) } });
     m.el.parentElement.remove();
     m.el.__jq['shiny:unbound']();
     c.advance(10000);
