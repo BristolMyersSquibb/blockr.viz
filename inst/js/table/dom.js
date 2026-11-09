@@ -28,6 +28,8 @@
   const OVERSCAN = 40;
   /** Row height until a drawn row is measured. */
   const ROW_H = 30;
+  /** The class a lit row or section carries (drill.js). */
+  const ACTIVE = 'vz-table-row-active';
 
   /**
    * A row's text as the search reads it: every cell, lower case.
@@ -372,6 +374,21 @@
         msg.remove();
       }
       if (this.hooks.drawn) this.hooks.drawn();
+    }
+
+    /** A new selection: the drawn rows and sections take or drop the lit
+     * class, and nothing is drawn again. */
+    relight() {
+      if (!this.model || !this.table) return;
+      const h = this.hooks;
+      /** @param {Element} tr @param {string} cls */
+      const lit = (tr, cls) => tr.classList.toggle(ACTIVE, cls.split(' ').includes(ACTIVE));
+      const tbody = this.table.tBodies[0];
+      tbody.querySelectorAll('tr[data-i]').forEach((tr) =>
+        lit(tr, h.rowClass ? h.rowClass(Number(tr.getAttribute('data-i'))) : ''));
+      tbody.querySelectorAll('tr[data-s]').forEach((tr) =>
+        lit(tr, h.secClass ? h.secClass(Number(tr.getAttribute('data-s'))) : ''));
+      if (h.drawn) h.drawn();
     }
 
     /** The part of the box in view, in px from its top. @returns {{ top: number, height: number }} */

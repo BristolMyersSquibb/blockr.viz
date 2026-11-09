@@ -24,6 +24,24 @@ function mount(p) {
 const cat = (filters, columns) => Object.assign({ type: 'categorical', filters },
                                                 columns ? { columns } : {});
 
+// A click lights rows by their class and R's echo changes only the footer:
+// the row elements stay the ones drawn.
+test("a click and R's echo keep the drawn rows", () => {
+  const t = mount(payload({ data: flatModel(6), columns: COLUMNS, dataRev: 7 }));
+  const rows = t.$$('tbody tr');
+  const kept = () => t.$$('tbody tr').every((tr, k) => tr === rows[k]);
+  t.click(t.row(3).children[2]);
+  assert.deepEqual(t.lit(), [0, 3]);
+  assert.ok(kept(), 'the click replaced no row');
+  t.render({ dataRev: 7, columns: COLUMNS, config: { selection: cat({ ARM: ['Placebo'] }) },
+             derived: { receipt: 'Filtered: Arm = Placebo' } });
+  assert.deepEqual(t.lit(), [0, 3]);
+  assert.ok(kept(), 'the echo replaced no row');
+  t.render({ dataRev: 7, columns: COLUMNS, config: { selection: null } });
+  assert.deepEqual(t.lit(), []);
+  assert.ok(kept(), 'the clear replaced no row');
+});
+
 test('a row click claims the drill value and lights every row with it', () => {
   const t = mount(payload({ data: flatModel(6), columns: COLUMNS }));
   t.click(t.row(3).children[2]);

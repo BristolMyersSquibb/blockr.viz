@@ -131,6 +131,7 @@
 
     /** @param {VizPayload} p */
     render(p) {
+      const before = this.payload ? asSelection(this.config().selection) : null;
       this.payload = p;
       const cfg = this.config();
       const d = /** @type {TableDerived} */ (p.derived || {});
@@ -138,6 +139,7 @@
       const data = /** @type {any} */ (p.data);
       const m = /** @type {TableModel | null} */ (data && Array.isArray(data.cols) ? data : null);
       this.labels = Object.fromEntries((p.columns || []).map((c) => [c.name, c.label || c.name]));
+      const shown = this.sel;
       this.sel = asSelection(cfg.selection);
       const f = this.frame;
       f.titles(d.titles);
@@ -155,7 +157,8 @@
       }
       f.structured(isStructured(m));
       f.el.classList.toggle('vz-table-clickable', T.drill.clickable(m));
-      this.draw(m, cfg);
+      const moved = !T.drill.same(before, this.sel);
+      this.draw(m, cfg, moved ? (T.drill.same(shown, this.sel) ? 'shown' : 'moved') : null);
     }
 
     /**
@@ -200,16 +203,22 @@
     }
 
     /**
-     * Draw the model afresh when it or how it is drawn changed, else repaint
-     * the drill only.
+     * Draw the model afresh when it or how it is drawn changed. Else a
+     * payload that moved R's selection only lights it, and R's answer to a
+     * click the rows already show only updates the footer; any other
+     * payload redraws the rows.
      * @param {TableModel} m
      * @param {TableConfig} cfg
+     * @param {'shown' | 'moved' | null} [sel] How R's selection changed.
      */
-    draw(m, cfg) {
+    draw(m, cfg, sel = null) {
       const flags = this.flags(cfg, m);
       const how = cfg.look + JSON.stringify(flags);
       if (m === this.model && how === this.drawnWith) {
-        this.repaint();
+        if (sel === 'shown') this.footer();
+        else if (sel === 'moved') this.repaint();
+        else if (this.cardsOn()) this.drawCards();
+        else this.grid.draw();
         return;
       }
       this.model = m;
@@ -247,8 +256,16 @@
     /** Show the selection: lit rows and columns, and the footer. */
     repaint() {
       if (!this.model) return;
-      if (this.cardsOn()) this.drawCards();
-      else this.grid.draw();
+      if (!this.cardsOn()) {
+        this.grid.relight();
+        return;
+      }
+      this.cardsHost.querySelectorAll('.vz-table-card-row[data-i]').forEach((row) => {
+        const cls = this.drill.rowClass(Number(row.getAttribute('data-i')));
+        row.classList.toggle('vz-table-row-active', cls.split(' ').includes('vz-table-row-active'));
+      });
+      this.drill.paint();
+      this.footer();
     }
 
     /** The row count and the status line: what the selection holds, in R's

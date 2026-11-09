@@ -345,6 +345,7 @@ interface TableGrid {
   reveal(rows: Iterable<number>, sections?: Iterable<number>): void;
   folds(): boolean;
   draw(): void;
+  relight(): void;
   counts(): { shown: number; total: number };
   items(): TableItem[];
   headAt(el: Element | null): { th: Element; h: TableHeadCell } | null;
