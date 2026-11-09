@@ -26,6 +26,16 @@
 
   /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
+  // What a payload draws: all of it but the selection, the download menu
+  // and the data view, which follow the selection. The rows are keyed by
+  // the binding's `rowsChanged`.
+  /** @param {VizPayload} p @returns {string} */
+  const drawKey = (p) => {
+    const config = Object.assign({}, p.config, { selection: null });
+    const derived = Object.assign({}, p.derived, { downloads: null, data_view: null });
+    return JSON.stringify([p.columns, config, derived]);
+  };
+
   class ChartView {
     /**
      * @param {HTMLElement} el @param {VizScope} scope
@@ -67,6 +77,10 @@
       this._memo = { models: new NS.ReadMemo(), options: new NS.ReadMemo(), modelGen: 0,
                      model: null, option: null };
       /** @type {(() => void) | null} */ this._settle = null;
+      /** The last payload and its drawKey(): a payload that draws the same
+       * chart updates in place. @type {VizPayload | null} */
+      this._payload = null;
+      /** @type {string | null} */ this._drawKey = null;
       /** A scatter's drag zooms instead of brushing (zoom.js). */
       this.zoomOn = false;
       this.selection = new NS.Selection(this);
@@ -106,6 +120,18 @@
      * @param {VizPayload} p @param {boolean} [rowsChanged] */
     render(p, rowsChanged = true) {
       const d = /** @type {ChartDerived} */ (p.derived || {});
+      // A click changes the selection, and with it the download counts and
+      // the data view, but nothing the chart draws: those payloads update in
+      // place. The same payload again is a theme change, which redraws.
+      const key = drawKey(p);
+      const same = !rowsChanged && p !== this._payload && key === this._drawKey &&
+        this.drawn && !this._blank;
+      this._payload = p;
+      this._drawKey = key;
+      if (same) {
+        this._update(p);
+        return;
+      }
       this.derived = d;
       this.columns = p.columns || [];
       this._columnsKey = JSON.stringify(this.columns);
@@ -129,8 +155,25 @@
       this.frame.busyDone();
     }
 
+    /** A payload that draws the same chart: the selection is lit by
+     * opacity patches, the gear, menu and data view take theirs.
+     * @param {VizPayload} p */
+    _update(p) {
+      const d = /** @type {ChartDerived} */ (p.derived || {});
+      this.derived = d;
+      this.settings = NS.model.settings(p.config, this.columns);
+      const before = JSON.stringify(this.selection.current ?? null);
+      this.selection.restore(p.config && p.config.selection);
+      this.gear.update(p);
+      if (JSON.stringify(this.selection.current ?? null) !== before) this.highlight();
+      this._downloads();
+      this.dataView.update(d.data_view);
+      this.frame.busyDone();
+    }
+
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
+      this._drawKey = null;
       this._showEmpty({ kind: 'error', message });
       this._downloads();
       this.frame.busyDone();

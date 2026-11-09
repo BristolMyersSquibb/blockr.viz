@@ -87,3 +87,29 @@ test('an empty selection still clears a brush; a brush clear clears any filter',
   assert.strictEqual(c.selections().length, 2);
   c.close();
 });
+
+// A click's payload changes the selection, the download counts and the data
+// view, none of which the chart draws: no setOption with notMerge.
+test('a payload that only moves the selection updates in place', () => {
+  const c = D.open(LINE);
+  const redraws = () => c.chart().log.filter((e) => e.op === 'setOption' && e.notMerge).length;
+  const base = c.config;
+  const before = redraws();
+  c.clickWhere(0, () => true);
+  c.advance(300);
+  const sel = c.selections()[0];
+  assert.ok(sel, 'the click sent a selection');
+  const dl = (count) => ({ downloads: [{ id: 'dl', label: 'Rows', ext: 'csv', section: 'Data', count }] });
+  c.send({ ...base, selection: sel }, { data: null, derived: dl('5 of 40') });
+  assert.strictEqual(redraws(), before, 'not redrawn');
+  assert.strictEqual(JSON.stringify(c.block.selection.current.filters), JSON.stringify(sel.filters));
+  assert.strictEqual(c.block.derived.downloads[0].count, '5 of 40');
+  // R clears it: the marks are lit again, still without a redraw.
+  c.send({ ...base, selection: null }, { data: null, derived: dl('40 rows') });
+  assert.strictEqual(redraws(), before);
+  assert.strictEqual(c.block.selection.current, null);
+  // A setting the chart draws still redraws.
+  c.send({ ...base, title: 'ALT' }, { data: null, derived: dl('40 rows') });
+  assert.ok(redraws() > before, 'a drawn setting redraws');
+  c.close();
+});
