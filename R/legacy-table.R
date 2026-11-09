@@ -100,6 +100,7 @@ legacy_ranked_to_summaries <- function(value, func, color, facet, cols, fields,
 # says which block the names come from; NULL guesses from the names (a saved
 # new_table_block payload carries `layout`, an old one does not). Names that
 # are already new pass through; old ones are removed.
+# viz: long one rename per old argument
 legacy_table_args <- function(args, from = NULL) {
   if (!length(args)) return(args)
   nm <- names(args)

@@ -48,4 +48,3 @@ chart_selection <- function(type = "categorical", filters = NULL,
   }
   list(type = type, filters = filters, range = range, point = point)
 }
-

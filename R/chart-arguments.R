@@ -1,6 +1,7 @@
 
 #' Construction guidance for the chart block
 #' @noRd
+# viz: long prose for the assistant
 chart_guidance <- function() {
   paste(
     "This block renders an interactive chart that can also act as a",

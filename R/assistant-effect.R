@@ -70,17 +70,18 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
 #' @noRd
 config_effect.table_block <- function(block, args, data = NULL, ...) {
   cols <- if (is.data.frame(data)) names(data) else NULL
-  parts <- paste0("layout=", as.character(args$layout %||% "records")[1])
-  bad <- character()
+  acc <- new.env(parent = emptyenv())
+  acc$parts <- paste0("layout=", as.character(args$layout %||% "records")[1])
+  acc$bad <- character()
   check <- function(r, v) {
     v <- as.character(unlist(v))
     v <- v[nzchar(v)]
     if (!length(v)) return()
-    parts <<- c(parts, paste0(r, "=", paste(v, collapse = "/")))
+    acc$parts <- c(acc$parts, paste0(r, "=", paste(v, collapse = "/")))
     miss <- setdiff(v, cols %||% v)
     if (length(miss)) {
-      bad <<- c(bad, paste0(r, " references '", paste(miss, collapse = "', '"),
-                            "'"))
+      acc$bad <- c(acc$bad, paste0(r, " references '",
+                                   paste(miss, collapse = "', '"), "'"))
     }
   }
   check("rowname", args$rowname)
@@ -89,14 +90,15 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
   # `drill` is a mode ("auto", "source") or a column.
   dr <- first_chr(args$drill)
   if (dr %in% c("auto", "source")) {
-    parts <- c(parts, paste0("drill=", dr))
+    acc$parts <- c(acc$parts, paste0("drill=", dr))
   } else {
     check("drill", dr)
   }
   if (length(args$summaries)) {
-    parts <- c(parts, paste0(length(args$summaries), " summaries"))
+    acc$parts <- c(acc$parts, paste0(length(args$summaries), " summaries"))
   }
-  desc <- paste0("table configured: ", paste(parts, collapse = ", "))
+  desc <- paste0("table configured: ", paste(acc$parts, collapse = ", "))
+  bad <- acc$bad
   if (length(bad)) {
     desc <- paste0(desc, " -- INVALID: ", paste(bad, collapse = "; "),
                    ". Available columns: ", paste(cols, collapse = ", "))

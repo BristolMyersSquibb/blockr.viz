@@ -49,7 +49,7 @@
    * @param {Record<string, any>} cfg @param {'x' | 'y'} role */
   const limitsOf = (cfg, role) => {
     const key = role + '_limits';
-    const spec = V.spec && V.spec.chart && V.spec.chart[key];
+    const spec = /** @type {any} */ (V.spec && V.spec.chart)?.[key];
     const a = spec && spec.applies;
     if (a && a.only && !a.only.includes(cfg.type)) return null;
     if (a && a.except && a.except.includes(cfg.type)) return null;

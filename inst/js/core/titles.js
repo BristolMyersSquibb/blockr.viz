@@ -577,7 +577,7 @@
         const how = p.arg ? gear.slot(p.arg) : null;
         if (!how) { el.appendChild(document.createTextNode(p.text)); continue; }
         if (how.kind === 'pair') { V.slotPair(el, ps, how.ends); continue; }
-        const arg = p.arg;
+        const arg = /** @type {string} */ (p.arg);
         if (how.kind === 'words') { V.slotWords(el, ps, how.words, (i, w) => openSlot(arg + '#' + i, w, ps, p.by, how.words[i].how)); continue; }
         const w = document.createElement('span');
         w.className = 'blockr-slot';

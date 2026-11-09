@@ -9,9 +9,6 @@ GROUPS_STATS <- c(
   "p5_p95", "p10_p90", "min_max"
 )
 
-# Whisker rules: the same vocabulary plus Tukey fences.
-GROUPS_WHISKERS <- c("tukey", GROUPS_STATS)
-
 # Display metadata per statistic: the select label and the tooltip's words for
 # the center and the interval. Glyphs are \u-escaped because R CMD check forbids
 # non-ASCII in string literals (\u00b7 middle dot, \u2013 en dash, \u00b1
@@ -102,7 +99,7 @@ groups_q <- function(b, p) {
 }
 
 #' One statistic off a prepared basis `b` ([groups_stat_basis()]); `stat` is one
-#' of `GROUPS_WHISKERS`. Matches `summarizeStat()` (chart/model-aggregated.js).
+#' of `c("tukey", GROUPS_STATS)`. Matches `summarizeStat()` (chart/model-aggregated.js).
 #' `mean_ci95` uses `qt(0.975, n - 1)` and has NA bounds below n = 2, so the
 #' cell shows the center alone instead of a zero-width interval.
 #' @return `list(center =, lo =, hi =, n =)`, all NA at n = 0.

@@ -19,12 +19,20 @@ window.stickyProbe = async (view, box) => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const item = [...document.querySelectorAll('.blockr-view-item')].find((e) =>
     e.querySelector('.blockr-view-item-name').textContent.trim() === view);
+  // The view's own table: the one inside its block (ids `...block_<id>-...`),
+  // not the previous view's, which stays visible while the dock switches.
+  const mine = (x) => {
+    for (let e = x; e; e = e.parentElement) {
+      if (e.id && e.id.includes('block_' + view + '-')) return true;
+    }
+    return false;
+  };
   item.click();
   let t = null;
   for (let i = 0; i < 100 && !t; i++) {
     await wait(100);
     t = [...document.querySelectorAll('.dockview-panel table.blockr-table')]
-      .find((x) => x.offsetParent && x.tBodies[0].rows.length > 20);
+      .find((x) => x.offsetParent && x.tBodies[0].rows.length > 20 && mine(x));
   }
   if (!t) return null;
   await wait(500);

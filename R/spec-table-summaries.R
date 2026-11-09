@@ -35,6 +35,7 @@ summary_facet_arg <- function() {
   )
 }
 
+# viz: long the spec declares one argument per entry
 table_summary_specs <- function() {
   list(
 

@@ -115,4 +115,5 @@ importFrom(blockr.core,
   new_arg_specs,
   register_blocks
 )
+importFrom(echarts4r,e_charts)
 importFrom(rlang,"%||%")

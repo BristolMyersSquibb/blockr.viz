@@ -26,11 +26,11 @@ legacy_chart_roles <- function(args, old) {
   if (!old) {
     return(args)
   }
-  take <- function(nm) {
-    v <- args[[nm]]
-    args[[nm]] <<- NULL
-    v
-  }
+  # The old names are read here and dropped at the end.
+  gone <- c("direct_labels", "baseline", "band_id", "count_col",
+            "filter_type", "filters", "filter_range", "filter_point",
+            "filter_column", "filter_values", "func_toggle")
+  take <- function(nm) args[[nm]]
   # `direct_labels = TRUE` (0.3.0 before `legend`): the names on the marks.
   if ("direct_labels" %in% names(args)) {
     v <- take("direct_labels")
@@ -75,7 +75,7 @@ legacy_chart_roles <- function(args, old) {
     ))
   }
 
-  take("func_toggle")
+  args[gone] <- NULL
   args
 }
 

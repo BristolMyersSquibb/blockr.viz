@@ -7,6 +7,7 @@
 #' for the shaper / renderer architecture.
 #'
 #' @importFrom rlang %||%
+#' @importFrom echarts4r e_charts
 #' @keywords internal
 "_PACKAGE"
 

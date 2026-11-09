@@ -40,7 +40,7 @@
     };
     ['from', 'to'].forEach((end, i) => {
       if (i) box.appendChild(Object.assign(document.createElement('span'), { className: 'vz-range-sep', textContent: 'to' }));
-      const arg = { ...ctx.arg, type: { name: 'string' }, gear: { ...ctx.arg.gear, parse: undefined } };
+      const arg = /** @type {VizArg} */ ({ ...ctx.arg, type: { name: 'string' }, gear: { ...ctx.arg.gear, parse: undefined } });
       const inp = C.field(box, { ...ctx, arg, key: ctx.key + '_' + end, label: ctx.label + ' ' + end,
                                  value: cur[i] == null ? '' : String(cur[i]) }, { commit });
       inp.placeholder = 'auto';

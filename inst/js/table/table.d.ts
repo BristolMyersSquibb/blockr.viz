@@ -481,7 +481,8 @@ interface VizTableNamespace {
             o: { shut: boolean; fold: boolean; extra: string }): string;
     row(m: TableModel, st: TableStructure, i: number,
         o: { last: boolean; shut: boolean; extra: string; stubCls?: string; flush?: boolean;
-             cell?(c: TableCol, i: number): string | null }): string;
+             head?: string; cell?(c: TableCol, i: number): string | null }): string;
+    headKind(m: TableModel, i: number, head: string | undefined): string;
   };
   drill: {
     same(a: TableSelection | null, b: TableSelection | null): boolean;

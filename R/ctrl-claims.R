@@ -267,7 +267,6 @@ single_value <- function(x) {
 #' @keywords internal
 #' @export
 ctrl_claims <- function(data, table, filters, subject = NULL) {
-
   if (!is.data.frame(data)) {
     return(NULL)
   }
@@ -281,22 +280,7 @@ ctrl_claims <- function(data, table, filters, subject = NULL) {
   }
 
   table <- table %||% ""
-
-  # A click on a group of an overlap definition names the group, while an
-  # unexpanded group column holds raw levels, so match the group's members.
-  # An NA filter value takes the rows where the column is missing or empty.
-  keep <- rep(TRUE, nrow(data))
-  for (col in names(filters)) {
-    x <- as.character(data[[col]])
-    vals <- as.character(unlist(filters[[col]]))
-    vals[vals %in% MISSING_LEVEL] <- NA_character_
-    hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
-    if (anyNA(vals)) {
-      hit <- hit | is.na(x) | x == ""
-    }
-    keep <- keep & hit
-  }
-
+  keep <- claim_rows(data, filters)
   cols <- names(filters)[!startsWith(names(filters), ".")]
 
   # A picker-made copy (`Color` <- `RACE`) carries its origin in
@@ -334,14 +318,7 @@ ctrl_claims <- function(data, table, filters, subject = NULL) {
     out <- out[order(ord)]
   }
 
-  # A structured table's "(Missing)" level names the missing value.
-  out <- lapply(out, function(cl) {
-    v <- as.character(unlist(cl$values))
-    if (MISSING_LEVEL %in% v) {
-      cl$values <- unique(replace(v, v == MISSING_LEVEL, CTRL_NA))
-    }
-    cl
-  })
+  out <- lapply(out, claim_missing)
 
   # Subjects resolve even where no column claim does.
   if (length(subject)) {
@@ -359,6 +336,34 @@ ctrl_claims <- function(data, table, filters, subject = NULL) {
   }
 
   out
+}
+
+# The rows a click covers. A click on a group of an overlap definition names
+# the group, while an unexpanded group column holds raw levels, so match the
+# group's members. An NA filter value takes the rows where the column is
+# missing or empty.
+claim_rows <- function(data, filters) {
+  keep <- rep(TRUE, nrow(data))
+  for (col in names(filters)) {
+    x <- as.character(data[[col]])
+    vals <- as.character(unlist(filters[[col]]))
+    vals[vals %in% MISSING_LEVEL] <- NA_character_
+    hit <- x %in% group_column_values(data[[col]], vals[!is.na(vals)])
+    if (anyNA(vals)) {
+      hit <- hit | is.na(x) | x == ""
+    }
+    keep <- keep & hit
+  }
+  keep
+}
+
+# A structured table's "(Missing)" level names the missing value.
+claim_missing <- function(cl) {
+  v <- as.character(unlist(cl$values))
+  if (MISSING_LEVEL %in% v) {
+    cl$values <- unique(replace(v, v == MISSING_LEVEL, CTRL_NA))
+  }
+  cl
 }
 
 # Claims for the drilled columns that carry a group definition, as a list
@@ -423,7 +428,7 @@ claim_label <- function(claims) {
     vals[vals == CTRL_NA] <- "(missing)"
     vals[vals == CTRL_EMPTY] <- "(empty)"
     if (length(vals) > 6L) {
-      vals <- c(vals[1:6], "…")
+      vals <- c(vals[1:6], "\u2026")
     }
     paste0(cl$name, " = ", paste(vals, collapse = ", "))
   }, character(1L))

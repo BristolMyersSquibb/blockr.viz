@@ -548,16 +548,16 @@ test_that("chart: a real pie-slice click drills the group", {
   expect_equal(nrow(res), 2L)
 })
 
-test_that("chart: a real scatter-point click drills the point's region", {
+test_that("chart: a real scatter-point click filters to the point", {
   skip_if_no_app()
 
-  # Click North's (revenue=100, profit=10) point; the series is split by
-  # region, so the click filters to that region.
+  # Click North's (revenue=100, profit=10) point. Without a drill target the
+  # click takes the point, not every row of its region.
   echarts_canvas_click("chart_scatter", at = list(100, 10))
 
   res <- get_block_result("chart_scatter")
   expect_setequal(unique(res$region), "North")
-  expect_equal(nrow(res), 2L)
+  expect_equal(nrow(res), 1L)
 })
 
 test_that("chart: a rectangular brush filters to the selected x/y range", {

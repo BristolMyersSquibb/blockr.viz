@@ -512,7 +512,7 @@ summarize_paint_pages <- function(m, prep, width_in = 12.5, max_height = 5.4,
     if (k < n_pg) mk$fold <- NULL
     ttl <- if (paint_has(title)) paste0(title, "  (", k, " of ", n_pg, ")") else title
     sub <- if (isTRUE(attr(idx, "carried")) && !is.null(subtitle)) {
-      paste0(subtitle, " · continued")
+      paste0(subtitle, " \u00b7 continued")
     } else {
       subtitle
     }
@@ -566,7 +566,7 @@ paint_write_png <- function(p, file, res = 300) {
 # A tile column's title as printed on its side: long terms end in an ellipsis.
 paint_tile_title <- function(x, max = 28L) {
   x <- as.character(x)
-  ifelse(nchar(x) > max, paste0(substr(x, 1L, max - 1L), "…"), x)
+  ifelse(nchar(x) > max, paste0(substr(x, 1L, max - 1L), "\u2026"), x)
 }
 
 # The parent rows with no values of their own (group_rows = "name", the

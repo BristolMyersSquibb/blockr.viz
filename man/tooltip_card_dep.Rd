@@ -12,8 +12,8 @@ An \code{\link[htmltools:htmlDependency]{htmltools::htmlDependency()}}.
 \description{
 The stylesheet behind every blockr.viz data tooltip: a headline with a
 colour swatch, then rows with the name on the left and the value on the
-right (\code{dd-tt-head}, \code{dd-tt-sw}, \code{dd-tt-row}, \code{dd-tt-label},
-\code{dd-tt-value}, \code{dd-tt-meta}, \code{dd-tt-sep}). Another package's tooltips can
+right (\code{vz-tt-head}, \code{vz-tt-sw}, \code{vz-tt-row}, \code{vz-tt-label},
+\code{vz-tt-value}, \code{vz-tt-meta}, \code{vz-tt-sep}). Another package's tooltips can
 attach it and use the same classes.
 }
 \keyword{internal}

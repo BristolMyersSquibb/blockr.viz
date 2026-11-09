@@ -12,6 +12,7 @@ SPEC_STAT_LABELS <- c("Median \u00b7 Q1\u2013Q3", "Mean \u00b1 SD",
                       "Mean \u00b7 95% CI", "5th\u201395th percentile",
                       "10th\u201390th percentile", "Min\u2013Max")
 
+# viz: long the spec declares one argument per entry
 viz_shared_args <- function() {
   list(
     title = viz_arg(

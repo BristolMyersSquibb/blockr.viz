@@ -18,7 +18,7 @@ GROUPS_ONE_MARK <- c(field = "text", sparkline = "sparkline",
 #   "box"  outer as a capped whisker, inner as a rectangle, centre as a tick.
 # Both ranges take "none": an IQR bar is a box with no outer, a plain
 # pointrange a dot with no outer, a bare dot a centre alone. The statistics are
-# GROUPS_STATS / GROUPS_WHISKERS.
+# GROUPS_STATS, plus "tukey" for the outer range.
 GROUPS_DIST_STYLES <- c("dot", "box")
 
 # Ceiling on a mapped dimension's levels. In a facet a level is a COLUMN, so a

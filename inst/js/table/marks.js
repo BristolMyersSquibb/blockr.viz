@@ -36,7 +36,7 @@
   const span = (/** @type {unknown} */ l, /** @type {unknown} */ w) =>
     'left:' + n(l) + '%;width:' + n(w) + '%';
   const tipAttr = (/** @type {unknown} */ t) => t ? ' data-summarize-tip="' + esc(t) + '"' : '';
-  /** @param {(string | null)[] | null | undefined} a @param {number} i */
+  /** @param {(string | number | null)[] | null | undefined} a @param {number} i */
   const at = (a, i) => (a ? a[i] : null);
 
   /**

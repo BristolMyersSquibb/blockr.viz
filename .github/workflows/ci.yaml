@@ -30,7 +30,7 @@ jobs:
           token: ${{ secrets.BLOCKR_PAT || github.token }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: npm ci
       - run: npm run lint:core
         if: always()
@@ -116,7 +116,7 @@ jobs:
             any::chromote
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: npm ci
       - name: Exit criteria
         run: tools/run-checks.sh

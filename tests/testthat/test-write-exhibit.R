@@ -410,7 +410,9 @@ test_that("row heights are measured, not counted", {
   x <- demo_df()
   x$.label[[1L]] <- paste(rep("A very long label indeed", 4L), collapse = " ")
 
-  wide <- static_table(x, title = "", fit_width = 12)
+  # Set widths: a fitted table is only as wide as its text, which wraps the
+  # label the same way in a face without Inter (a macOS runner).
+  wide <- static_table(x, title = "", col_widths = c(10, 1, 1))
   narrow <- static_table(x, title = "", col_widths = c(1, 1, 1))
 
   # The same row is taller when its column cannot hold it on one line.

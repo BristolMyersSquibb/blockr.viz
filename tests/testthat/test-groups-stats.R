@@ -140,7 +140,7 @@ test_that("the table's summary and whiskers specs are the chart's enums", {
   props <- table_summary_specs()$dist$args
   expect_identical(as.character(props$summary$values), c(GROUPS_STATS, "none"))
   expect_identical(as.character(props$whiskers$values),
-                   c(GROUPS_WHISKERS, "none"))
+                   c("tukey", GROUPS_STATS, "none"))
   # The chart's values are all there; the table adds mean_ci95 and "none".
   chart <- c("median_q1_q3", "mean_sd", "mean_2sd", "mean_se", "p5_p95",
              "p10_p90", "min_max")

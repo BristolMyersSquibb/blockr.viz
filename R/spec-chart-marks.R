@@ -2,6 +2,7 @@
 # distribution statistics, the band and the histogram bins. Split out of
 # spec-chart.R for length; chart_spec() assembles it.
 
+# viz: long the spec declares one argument per entry
 chart_spec_marks <- function() {
   list(
     smoother = chart_arg(

@@ -414,4 +414,3 @@ cb_coerce <- function(value, spec) {
     value
   )
 }
-

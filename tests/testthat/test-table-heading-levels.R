@@ -20,12 +20,20 @@ window.headProbe = async (view) => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const item = [...document.querySelectorAll('.blockr-view-item')].find((e) =>
     e.querySelector('.blockr-view-item-name').textContent.trim() === view);
+  // The view's own table: the one inside its block (ids `...block_<id>-...`),
+  // not the previous view's, which stays visible while the dock switches.
+  const mine = (x) => {
+    for (let e = x; e; e = e.parentElement) {
+      if (e.id && e.id.includes('block_' + view + '-')) return true;
+    }
+    return false;
+  };
   item.click();
   let t = null;
   for (let i = 0; i < 150 && !t; i++) {
     await wait(100);
     t = [...document.querySelectorAll('.dockview-panel table.blockr-table')]
-      .find((x) => x.offsetParent && x.tBodies[0].rows.length > 0);
+      .find((x) => x.offsetParent && x.tBodies[0].rows.length > 0 && mine(x));
   }
   if (!t) return null;
   await wait(300);
@@ -148,7 +156,8 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
   expect_identical(h$lines, 1L)
   expect_identical(k$rows[[2]]$kind, "leaf")
   expect_level(k$rows[[2]], "400", "compact subject")
-  expect_lt(k$labelCol, 120)
+  # The short ids keep the label column at the first column's 200px floor.
+  expect_lte(k$labelCol, 201)
   expect_gt(k$headText, k$labelCol)
 
   # A finished table: a heading with empty values spans the row.

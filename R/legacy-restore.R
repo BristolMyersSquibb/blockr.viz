@@ -329,4 +329,3 @@ legacy_arg_names <- function(block) {
     character()
   ))
 }
-

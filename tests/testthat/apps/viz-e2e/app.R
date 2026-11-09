@@ -66,7 +66,7 @@ serve(
         func     = "sum",
         drill      = "region"
       ),
-      # Individual scatter split by region: clicking a point drills its region.
+      # Individual scatter split by region: clicking a point filters to it.
       chart_scatter = new_chart_block(
         chart_type = "scatter",
         x          = "revenue",

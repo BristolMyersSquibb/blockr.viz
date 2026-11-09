@@ -146,6 +146,7 @@
    * @param {boolean} shut
    * @param {string} [cls] The layout's own classes for the stub.
    * @param {boolean} [flush] See indentSteps().
+   * @param {number} [span] The stub spans this many columns (a heading row).
    */
   function stub(m, st, i, shut, cls, flush, span) {
     const c = m.cols[/** @type {number} */ (m.stub)];

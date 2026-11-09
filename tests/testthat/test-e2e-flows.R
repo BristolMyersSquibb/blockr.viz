@@ -292,14 +292,18 @@ test_that("flows: a title and the download switch set in the gear survive a rest
 test_that("flows: every download format arrives named after the title", {
   skip_if_not(run_flows, "no headless browser, or under R CMD check")
   flows_view(app, "tools", "dl")
-  # The menu's links, read while it is closed (an open menu leaves the frame).
-  ids <- unlist(app$get_js(
-    "[...flows.frame('dl').querySelectorAll('.vz-download a.shiny-download-link')].map((a) => a.id)"
-  ))
-  exts <- unlist(app$get_js(
-    "[...flows.frame('dl').querySelectorAll('.vz-download .blockr-menu__meta')].map((a) => a.textContent.trim())"
-  ))
-  expect_setequal(exts, c(".xlsx", ".html", ".pptx", ".png"))
+  # The Chart section's links, read while the menu is closed (an open menu
+  # leaves the frame). A Data row carries its table's row count.
+  chart_links <- paste0(
+    "[...flows.frame('dl').querySelectorAll('.vz-download a.shiny-download-link')]",
+    ".filter((a) => !a.querySelector('.vz-download__count'))"
+  )
+  ids <- unlist(app$get_js(paste0(chart_links, ".map((a) => a.id)")))
+  exts <- unlist(app$get_js(paste0(
+    chart_links,
+    ".map((a) => a.querySelector('.blockr-menu__meta').textContent.trim())"
+  )))
+  expect_setequal(exts, c(".html", ".pptx", ".png"))
   # Reaching for the menu takes the picture the downloads write.
   p <- app$get_js("flows.at('dl', '.vz-download .blockr-action-menu__trigger')")
   flows_mouse(app, p, "move")

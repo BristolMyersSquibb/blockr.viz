@@ -19,6 +19,7 @@ SPEC_CHART_INDIVIDUAL <- c("scatter", "line", "area", "band")
 SPEC_CHART_NUMBER_TYPES <- c(SPEC_CHART_AGGREGATED, "scatter", "line",
                              "area", "histogram")
 
+# viz: long the spec declares one argument per entry
 chart_spec_mapping <- function() {
   list(
     type = chart_arg(
@@ -194,6 +195,7 @@ chart_spec_mapping <- function() {
   )
 }
 
+# viz: long the spec declares one argument per entry
 chart_spec_look <- function() {
   list(
     orientation = chart_arg(
