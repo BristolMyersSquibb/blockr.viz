@@ -294,6 +294,9 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** After scrolling drew another window of rows (the classes that
+   *  `drawn` puts on the rows are gone with the old ones). */
+  windowed?(): void;
   /** The part of the box in view (TableFrame.inView); else the box's scroll. */
   view?(): { top: number; height: number };
   /** The rows and section headers the selection lights; a new model opens
