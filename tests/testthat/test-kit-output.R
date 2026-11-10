@@ -55,6 +55,25 @@ test_that("a settings change goes out without the rows", {
     expect_identical(p$config$color, "g")
     expect_null(p[["data"]])
     expect_identical(p$data_rev, 1L)
+    # The columns did not change either: the browser keeps them.
+    expect_false("columns" %in% names(p))
+  })
+})
+
+test_that("columns go out again when they change or the browser asks", {
+  shiny::testServer(out_server, args = out_args(), {
+    payload(output)
+    df(data.frame(g = c("a", "b"), v = 3:4))
+    session$flushReact()
+    expect_identical(payload(output)$columns[[1L]]$name, "g")
+    session$returned$state$color("g")
+    session$flushReact()
+    expect_false("columns" %in% names(payload(output)))
+    session$setInputs(chart_need = 2L)
+    session$flushReact()
+    p <- payload(output)
+    expect_identical(p$columns[[1L]]$name, "g")
+    expect_false(is.null(p[["data"]]))
   })
 })
 

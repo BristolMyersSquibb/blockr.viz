@@ -12,7 +12,8 @@
  *   parses and indexes them only then;
  * - rows are kept per id, because R leaves them out of a payload whose data
  *   revision the client holds; a payload without rows the client does not
- *   hold asks R for them once (`<id>_need`);
+ *   hold asks R for them once (`<id>_need`). The column description is kept
+ *   with them: such a payload carries `columns` only when they changed;
  * - an error without a message (a silent req()) keeps the picture;
  * - a light/dark switch (data-bs-theme anywhere on the page) renders the
  *   last value again, so a view reads the new colours;
@@ -28,7 +29,7 @@
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
 
-  /** @type {Map<string, { rev: number, data: unknown }>} */
+  /** @type {Map<string, { rev: number, data: unknown, columns: any }>} */
   const rows = new Map();
   /** @type {Map<string, VizMount>} */
   const live = new Map();
@@ -100,7 +101,7 @@
     m.last = payload;
     let p = payload;
     if (p.data != null) {
-      rows.set(el.id, { rev: p.data_rev, data: p.data });
+      rows.set(el.id, { rev: p.data_rev, data: p.data, columns: p.columns });
     } else {
       const held = rows.get(el.id);
       if (!held || held.rev !== p.data_rev) {
@@ -110,7 +111,13 @@
         }
         return;
       }
-      p = Object.assign({}, p, { data: held.data });
+      // `columns` absent: the ones held. Present, null included: the new ones.
+      if (p.columns === undefined) {
+        p = Object.assign({}, p, { data: held.data, columns: held.columns });
+      } else {
+        held.columns = p.columns;
+        p = Object.assign({}, p, { data: held.data });
+      }
     }
     m.needRev = null;
     // The view parses its rows only when they are new to it.

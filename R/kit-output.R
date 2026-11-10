@@ -34,9 +34,12 @@ viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' `build()` returns the payload from viz_payload(). Nothing goes out when it
 #' is identical to the last one, or when it stops on a silent `req()` (a
 #' block the dock has parked): the render cancels and the client keeps its
-#' value and picture. The rows go out only when their revision changed. A
-#' client that holds no rows for a payload's revision asks through
-#' `<id>_need`, and the next render sends everything.
+#' value and picture. The rows go out only when their revision changed, and
+#' with rows the client holds the column description goes out only when it
+#' changed: the client keeps both (inst/js/core/binding.js). A click or a
+#' setting then sends the settings and `derived` alone. A client that holds
+#' no rows for a payload's revision asks through `<id>_need`, and the next
+#' render sends everything.
 #'
 #' The busy cue goes out before `build()` reads the input. A render that draws
 #' nothing (cancelled, or an error) ends the cue here; otherwise the view ends
@@ -68,15 +71,23 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
       shiny::req(FALSE, cancelOutput = TRUE)
     }
     sent$msg <- msg
+    columns <- msg$columns
     if (identical(msg$data_rev, sent$data_rev)) {
       msg$data <- NULL
+      # Left out, the key is absent; a block without columns sends `null`.
+      if (isTRUE(sent$has_columns) && identical(columns, sent$columns)) {
+        msg$columns <- NULL
+      }
     }
-    sent$data_rev <- msg$data_rev
+    sent$data_rev <- sent$msg$data_rev
+    sent$columns <- columns
+    sent$has_columns <- TRUE
     msg
   })
   shiny::observeEvent(input[[paste0(id, "_need")]], {
     sent$msg <- NULL
     sent$data_rev <- NULL
+    sent$has_columns <- FALSE
     full(shiny::isolate(full()) + 1L)
   })
   invisible(NULL)

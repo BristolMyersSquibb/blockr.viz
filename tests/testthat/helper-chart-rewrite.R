@@ -91,9 +91,12 @@ record_rw_payload <- function(msgs, expr, cx) {
   }
   cx$last_payload <- p
   d <- p$derived
+  # A payload without rows leaves out columns that did not change: the
+  # browser keeps them with the rows (inst/js/core/binding.js).
+  if ("columns" %in% names(p)) cx$columns <- p$columns
   view <- record_computed(list(
     rows = if (!is.null(p[["data"]])) record_ref_rows(p[["data"]]),
-    columns = record_ref_columns(p$columns),
+    columns = record_ref_columns(cx$columns),
     titles = lapply(d$titles[c("title", "subtitle", "caption")],
                     function(b) b$text),
     band = d$band,

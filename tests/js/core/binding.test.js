@@ -73,6 +73,38 @@ test('a value without rows uses the rows held for its revision', () => {
   assert.equal(sent.length, 0);
 });
 
+test('a value without columns uses the columns held with the rows', () => {
+  const env = loadCore();
+  const seen = [];
+  env.V.binding('blockr.viz.cols', 'cols', class {
+    render(p) { seen.push(p.columns); }
+    dispose() {}
+  });
+  const b = env.outputs['blockr.viz.cols'];
+  const el = env.win.document.createElement('div');
+  el.id = 'c';
+  el.className = 'blockr-viz-output';
+  el.setAttribute('data-viz-view', 'cols');
+  env.win.document.body.appendChild(el);
+  const first = [{ name: 'g' }];
+  b.renderValue(el, { state_rev: 0, data_rev: 1, columns: first, config: {},
+                      derived: {}, data: { g: ['x'] } });
+  // A click: neither rows nor columns.
+  b.renderValue(el, { state_rev: 1, data_rev: 1, config: {}, derived: {}, data: null });
+  assert.equal(seen.at(-1), first);
+  // New columns over the same rows replace the held ones.
+  const second = [{ name: 'g' }, { name: 'h' }];
+  b.renderValue(el, { state_rev: 2, data_rev: 1, columns: second, config: {},
+                      derived: {}, data: null });
+  assert.equal(seen.at(-1), second);
+  b.renderValue(el, { state_rev: 3, data_rev: 1, config: {}, derived: {}, data: null });
+  assert.equal(seen.at(-1), second);
+  // `null` is a block without columns, not an omission.
+  b.renderValue(el, { state_rev: 4, data_rev: 1, columns: null, config: {},
+                      derived: {}, data: null });
+  assert.equal(seen.at(-1), null);
+});
+
 test('the view is told when the rows are new to it', async () => {
   const { b, add, rows, win } = setup();
   const el = add('a');
