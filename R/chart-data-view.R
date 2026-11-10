@@ -119,15 +119,21 @@ chart_summary_dist <- function(data, v) {
     out
   }
 
-  groups <- chart_summary_groups(data, keys)
+  groups <- chart_summary_groups(data[unique(c(keys, val))], keys)
   rows <- lapply(groups, function(g) {
     k <- lapply(stats::setNames(keys, keys), function(k) {
       as.character(g[[k]][[1L]])
     })
-    as.data.frame(c(k, one(g[[val]])), stringsAsFactors = FALSE,
-                  check.names = FALSE)
+    c(k, one(g[[val]]))
   })
-  wide <- do.call(rbind, rows)
+  # Column by column: binding one-row frames is quadratic in the groups.
+  ids <- names(rows[[1L]])
+  wide <- as.data.frame(
+    lapply(stats::setNames(ids, ids), function(nm) {
+      unlist(lapply(rows, `[[`, nm), use.names = FALSE)
+    }),
+    stringsAsFactors = FALSE, check.names = FALSE
+  )
   header <- c(n = "N", wlo = "Whisker low", lo = words[[2L]],
               center = words[[1L]], hi = words[[3L]], whi = "Whisker high")
   ids <- intersect(names(header), names(wide))
@@ -161,7 +167,9 @@ chart_summary_groups <- function(data, keys) {
   id <- do.call(paste, c(codes, sep = "\r"))
   first <- !duplicated(id)
   ord <- do.call(order, lapply(codes, `[`, first))
-  lapply(id[first][ord], function(g) data[id == g, , drop = FALSE])
+  # One pass over the rows, whatever the number of groups.
+  rows <- split(seq_len(nrow(data)), match(id, id[first][ord]))
+  lapply(unname(rows), function(i) data[i, , drop = FALSE])
 }
 
 # The table view's format: the outer keys as row groups, the innermost as
