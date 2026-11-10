@@ -17,11 +17,12 @@
 #'
 #' @param state The block's state from viz_state().
 #' @param revs Its counter from new_viz_revs().
+#' @param values Every value of the state as one reactive (viz_values_but()).
 #' @return The observer, invisibly.
 #' @noRd
-viz_rev_tracker <- function(state, revs) {
+viz_rev_tracker <- function(state, revs, values = viz_values_but(state)) {
   obs <- shiny::observe({
-    revs$track(lapply(state, function(rv) rv()))
+    revs$track(values())
   }, priority = 100)
   invisible(obs)
 }
@@ -234,12 +235,13 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
 viz_kit <- function(input, output, session, spec, data, init, view) {
   state <- viz_state(init)
   revs <- new_viz_revs(init)
-  viz_rev_tracker(state, revs)
+  # Every value, as one reactive: a reader depends on it alone.
+  values <- viz_values_but(state)
+  viz_rev_tracker(state, revs, values)
   list(
     input = input, output = output, session = session, spec = spec,
     state = state, revs = revs, view = view, el = session$ns(view),
-    # Every value, as one reactive: a reader depends on it alone.
-    values = viz_values_but(state),
+    values = values,
     data = data,
     # With a drill target set a click is an event, kept here instead of in
     # the selection. A block without the argument holds every click.

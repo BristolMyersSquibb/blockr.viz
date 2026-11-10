@@ -148,12 +148,20 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
 
 # Whether a download format's packages are installed: system.file(), since
 # requireNamespace() would load officer and flextable (0.5 s, 53 MB) just to
-# grey out a menu entry. A seam, so tests can mock it.
+# grey out a menu entry. A package that was found is not looked up again:
+# the menu asks with every payload. A seam, so tests can mock it.
 dt_pkg_installed <- function(...) {
   all(vapply(as.character(c(...)), function(p) {
-    nzchar(system.file(package = p))
+    if (isTRUE(dt_pkg_found[[p]])) {
+      return(TRUE)
+    }
+    found <- nzchar(system.file(package = p))
+    if (found) dt_pkg_found[[p]] <- TRUE
+    found
   }, logical(1L)))
 }
+
+dt_pkg_found <- new.env(parent = emptyenv())
 
 dt_has_openxlsx <- function() {
   dt_pkg_installed("openxlsx")

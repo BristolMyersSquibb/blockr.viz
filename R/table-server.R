@@ -78,10 +78,12 @@ table_sources <- function(data, state, session) {
 # table from; the spec's slots and the prepare script's values are `{@arg}`,
 # a script value before a setting with the same name (script_title_args()).
 table_titles <- function(kit, src, part) {
+  # A click changes no title.
+  values <- viz_values_but(kit$state, "selection")
   shiny::reactive({
     d <- tryCatch(part()$frame(), error = function(e) NULL)
     shiny::req(is.data.frame(d))
-    v <- viz_values(kit$state)
+    v <- values()
     args <- script_title_args(part()$title_args(v), src$prep$specs(),
                               v$script_values)
     viz_titles(v, d, input_display_attrs(d), args)
@@ -93,7 +95,7 @@ table_titles <- function(kit, src, part) {
 table_payload <- function(kit, src, part, titles) {
   rows <- viz_rows()
   function() {
-    v <- viz_values(kit$state)
+    v <- kit$values()
     built <- part()$drawn()
     derived <- c(
       list(
