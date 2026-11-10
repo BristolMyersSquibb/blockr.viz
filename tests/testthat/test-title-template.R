@@ -177,6 +177,27 @@ test_that("label() and n_distinct() compose with an @arg", {
   )
 })
 
+test_that("label(@arg) resolves a picked column whose name has parentheses", {
+  # The lab waterfall's Subject picker offers "<label> <var>" values; the
+  # block copies each into a column of that name. Picking TRT used to blank
+  # the slot because "label(Actual Treatment (Abbr.) TRT)" did not re-parse.
+  pick <- "Actual Treatment (Abbr.) TRT"
+  d <- data.frame(x = c("A", "B", "B"), check.names = FALSE)
+  names(d) <- pick
+  attr(d[[pick]], "label") <- "Actual Treatment (Abbr.)"
+  a <- list(subject = pick)
+
+  expect_equal(
+    resolve_title_template("per {label(@subject)}", d, a),
+    "per Actual Treatment (Abbr.)"
+  )
+  expect_equal(resolve_title_template("{n_distinct(@subject)}", d, a), "2")
+  p <- block_title_parts("per {label(@subject)}", d, args = a)
+  slot <- Filter(function(x) identical(x$arg, "subject"), p)
+  expect_length(slot, 1L)
+  expect_equal(slot[[1L]]$text, "Actual Treatment (Abbr.)")
+})
+
 test_that("an empty argument empties its token", {
   d <- data.frame(x = 1)
   expect_equal(resolve_title_template("[{@facet}]", d, list(facet = NULL)), "")
