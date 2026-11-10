@@ -29,7 +29,7 @@ chart_server <- function(id, data, init) {
         tables = dv$tables,
         data_view = dv$derived,
         normalize = function(v) {
-          chart_normalize(v, viz_values(kit$state))
+          chart_normalize(v, kit$values())
         },
         claims = chart_claims(kit, src),
         script = src$prep
@@ -38,11 +38,17 @@ chart_server <- function(id, data, init) {
   )
 }
 
+# The arguments the chart's data side does not read: a click and where it
+# goes. Changing one recomputes nothing the chart draws from.
+CHART_FACE_ARGS <- c("selection", "drill_target", "drill_table")
+
 # The data the chart draws: the input, coerced; the prepare script and its
 # output (`prep`, viz_script_sources()); and the frame expanded by group
-# definitions, with a histogram's bin column.
+# definitions, with a histogram's bin column. `values` are the settings all
+# of that reads (viz_values_but()).
 chart_sources <- function(data, state) {
   src <- list()
+  src$values <- viz_values_but(state, CHART_FACE_ARGS)
   src$input <- shiny::reactive({
     d <- data()
     if (is.data.frame(d)) {
@@ -65,11 +71,11 @@ chart_sources <- function(data, state) {
   })
   src$prep <- viz_script_sources(src$raw, state)
   src$hist <- shiny::reactive(
-    chart_hist(viz_values(state),
+    chart_hist(src$values(),
                tryCatch(src$prep$prepared(), error = function(e) NULL))
   )
   src$plain <- shiny::reactive({
-    v <- viz_values(state)
+    v <- src$values()
     d <- expand_role_groups(src$prep$prepared(),
                             chart_split_cols(v))
     chart_hist_data(d, chart_hist(v, d))
@@ -122,7 +128,7 @@ chart_expr <- function(data, state, src, held = NULL) {
   last <- new.env(parent = emptyenv())
   shiny::reactive({
     d <- data()
-    v <- viz_values(state)
+    v <- src$values()
     v["selection"] <- list(held())
     parts <- chart_filter_parts(v, src, members)
     sx <- src$prep$compiled()

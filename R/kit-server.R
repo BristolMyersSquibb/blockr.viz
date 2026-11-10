@@ -234,6 +234,8 @@ viz_kit <- function(input, output, session, spec, data, init, view) {
   list(
     input = input, output = output, session = session, spec = spec,
     state = state, revs = revs, view = view, el = session$ns(view),
+    # Every value, as one reactive: a reader depends on it alone.
+    values = viz_values_but(state),
     data = data,
     # With a drill target set a click is an event, kept here instead of in
     # the selection. A block without the argument holds every click.

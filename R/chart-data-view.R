@@ -295,7 +295,7 @@ chart_output_rows <- function(data, expr) {
 chart_data_view <- function(kit, src, expr, shown) {
   summary <- shiny::reactive({
     d <- tryCatch(src$plain(), error = function(e) NULL)
-    chart_summary(d, viz_values(kit$state))
+    chart_summary(d, src$values())
   })
   rows <- shiny::reactive({
     chart_output_rows(tryCatch(kit$data(), error = function(e) NULL),
@@ -311,7 +311,7 @@ chart_data_view <- function(kit, src, expr, shown) {
   select <- paste0(kit$view, "-data_select")
   shiny::observeEvent(kit$input[[select]], {
     msg <- kit$input[[select]]
-    v <- viz_values(kit$state)
+    v <- shiny::isolate(src$values())
     sel <- chart_claim_to_selection(
       msg$selection, shiny::isolate(summary()), v
     )
@@ -330,7 +330,7 @@ chart_data_view <- function(kit, src, expr, shown) {
     s <- summary()
     r <- rows()
     tab <- data_tab(msg, s)
-    v <- viz_values(kit$state)
+    v <- src$values()
     list(
       tab = tab,
       summary = if (is.data.frame(s)) nrow(s),

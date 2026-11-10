@@ -7,9 +7,7 @@
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
-  state <- kit$state
   revs <- kit$revs
-  session <- kit$session
   rows <- viz_rows()
   wire_cache <- last_value_cache()
   band_cache <- last_value_cache()
@@ -19,7 +17,7 @@ chart_view <- function(kit, src) {
   scale_map <- dd_board_scale_map()
 
   band <- shiny::reactive({
-    v <- viz_values(state)
+    v <- src$values()
     d <- chart_grid_data(v, src$plain())
     a <- chart_band_args(v, d)
     if (is.null(a)) {
@@ -29,7 +27,7 @@ chart_view <- function(kit, src) {
                function() chart_band(v, d, a))
   })
   smoother <- shiny::reactive({
-    v <- viz_values(state)
+    v <- src$values()
     d <- chart_grid_data(v, src$plain())
     a <- chart_smoother_args(v, d)
     if (is.null(a)) {
@@ -42,21 +40,28 @@ chart_view <- function(kit, src) {
     d <- src$plain()
     shiny::req(is.data.frame(d))
     inp <- tryCatch(src$input(), error = function(e) NULL)
-    chart_titles(spec, viz_values(state), d,
+    chart_titles(spec, src$values(), d,
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
                  src$prep$specs())
   })
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(viz_values(state), d)
+    cols <- chart_needed_cols(src$values(), d)
     d[, cols, drop = FALSE]
+  })
+  scales <- shiny::reactive({
+    v <- src$values()
+    shiny_json(dd_scales_config(
+      scale_map(), v$type, color = v$color,
+      group = chart_category(v), data = src$plain()
+    ))
   })
 
   payload <- function() {
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    v <- viz_values(state)
+    v <- kit$values()
     df <- shipped()
     w <- wire_cache(df, function() viz_wire_df(df))
     viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
@@ -64,10 +69,7 @@ chart_view <- function(kit, src) {
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
-      scales = shiny_json(dd_scales_config(
-        scale_map(), v$type, color = v$color,
-        group = chart_category(v), data = d
-      )),
+      scales = scales(),
       palette = as.list(dd_palette()),
       theme = board_theme()
     ), columns = meta_cache(d, function() viz_wire_columns(d)))
@@ -129,7 +131,7 @@ chart_titles <- function(spec, v, d, auto, specs) {
 # (chart-data-view.R, data-download.R), not this.
 chart_exhibit <- function(kit, src, view) {
   function() {
-    v <- viz_values(kit$state)
+    v <- src$values()
     data <- chart_xlsx_frame(
       src$plain(), chart_type = v$type, group = chart_category(v),
       color = v$color, facet = c(v[["facet_row"]], v[["facet"]]),
