@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9049
+# blockr.viz 0.3.0.9050
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -122,6 +122,9 @@ read.
   timeline scrolls the axis stays at the top of the panel, as a table's
   header does. It was at the bottom, in view only after scrolling past the
   last lane. Downloads show the axis on top.
+* The timeline (gantt) takes an `open` column, "Open end" in the gear, as the
+  table's swimlane does. A TRUE row draws an arrowhead after its bar and reads
+  "ongoing" in the tooltip; one without an end runs to the last x drawn.
 * A timeline whose start and end are `Date` or `POSIXct` columns draws its
   bars on a time axis. The dates were lanes of categories, the bars shrank
   to ticks and `x_limits` and the zoom did nothing. The tooltip prints the

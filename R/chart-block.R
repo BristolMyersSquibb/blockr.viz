@@ -9,6 +9,7 @@ new_chart_block <- function(
     func = "count",
     x = NULL,
     xend = NULL,
+    open = NULL,
     y = NULL,
     color = NULL,
     facet = NULL,

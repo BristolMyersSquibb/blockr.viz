@@ -106,6 +106,22 @@
       "slot": true,
       "ctrl": true
     },
+    "open": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["gantt"]
+      },
+      "gear": {
+        "group": "Add mapping",
+        "control": "column",
+        "label": "Open end"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "y": {
       "type": {
         "name": "column"

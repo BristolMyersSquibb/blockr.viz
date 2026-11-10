@@ -8,12 +8,14 @@
  * swim-lane chart has a mark per event; ECharts hands it back as
  * `params.value` on a click:
  *
- *   [start, end, lane, term, colour, label, series, drill, tooltip]
+ *   [start, end, lane, term, colour, label, series, drill, tooltip, open]
  *
  * start and end are x coordinates (a category index on a category x, ms on
  * a time x; end is start for an event without one), lane is the lane's position in the
  * panel, term the lane value as a string, colour/label/series/drill the
- * columns' values or '', tooltip the tooltip fields' values or 0.
+ * columns' values or '', tooltip the tooltip fields' values or 0. With an
+ * `open` column, open is 1 where it is TRUE (an ongoing event) and 0 elsewhere;
+ * an open event without an end runs to the last x or end in the data.
  */
 (function () {
   'use strict';
@@ -57,6 +59,7 @@
    * @returns {TimelineModel} */
   const timeline = ({ rows, ix, columns, cfg, derived }) => {
     const { xend, color, facet, sort_by, series, label } = cfg;
+    const open = cfg.open || null;
     // gate() let only a chart with x and y through.
     const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const ttFields = model.tooltipFields(cfg);
@@ -89,6 +92,19 @@
     }
 
     const xCoord = xCoordOf(xAxisType, xCats);
+    /** @param {any} v */
+    const isOpen = (v) => v === true || v === 'TRUE' || v === 'true';
+    /** @param {any} r @returns {number} */
+    const endOf = (r) => (xend && r[xend] != null ? xCoord(r[xend]) : NaN);
+    // Where an open event without an end stops: the last x or end in the data.
+    let lastX = -Infinity;
+    if (open) {
+      for (const r of rows) {
+        for (const v of [r[x] != null ? xCoord(r[x]) : NaN, endOf(r)]) {
+          if (!Number.isNaN(v) && v > lastX) lastX = v;
+        }
+      }
+    }
 
     // Lanes in sort order: by name for 'alpha', else by the smallest value
     // per lane of x ('onset') or of a column; a lane without one is left out.
@@ -142,11 +158,14 @@
         if (xAxisType === 'time' && Number.isNaN(s)) continue;
         const hasEnd = xend && r[xend] != null &&
           !Number.isNaN(xAxisType === 'time' ? xCoord(r[xend]) : Number(r[xend]));
-        marks.push([s, hasEnd ? xCoord(r[xend]) : s, lane, term, (color != null ? r[color] ?? '' : ''),
+        const op = open && isOpen(r[open]) ? 1 : 0;
+        const e = hasEnd ? xCoord(r[xend]) : (op ? Math.max(lastX, s) : s);
+        marks.push([s, e, lane, term, (color != null ? r[color] ?? '' : ''),
                     (label != null ? (r[label] ?? '') : ''),
                     (series != null ? r[series] ?? '' : ''),
                     (drill != null ? (r[drill] ?? '') : ''),
-                    ttFields.length ? ttFields.map((/** @type {string} */ c) => r[c] ?? '') : 0]);
+                    ttFields.length ? ttFields.map((/** @type {string} */ c) => r[c] ?? '') : 0,
+                    ...(open ? [op] : [])]);
         markRows.push(r);
       }
       out.panels.push({

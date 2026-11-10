@@ -47,7 +47,8 @@
   };
 
   /** A bar from start to end on its lane, at least 4px wide, clipped to the plot,
-   * with the label column's value on it when it has room. @param {any} k */
+   * with the label column's value on it when it has room. An open (ongoing) bar
+   * gets a stroked caret 2px past its end, in the bar's colour. @param {any} k */
   const timelineRenderItem = (k) => {
     const { ink, onBarLabel } = k;
     return (/** @type {any} */ params, /** @type {any} */ api) => {
@@ -66,6 +67,17 @@
       const st = api.style();
       /** @type {any[]} */
       const children = [{ type: 'rect', shape: Object.assign({}, rect, { r: 3 }), style: st }];
+      if (api.value(9)) {
+        const cy = rect.y + rect.height / 2;
+        const a = Math.max(rect.height * 0.42, 3);
+        const ax = rect.x + rect.width + 2;
+        children.push({
+          type: 'polyline',
+          shape: { points: [[ax, cy - a], [ax + a, cy], [ax, cy + a]] },
+          style: { fill: 'none', stroke: st && st.fill, lineWidth: 1.6, lineCap: 'round',
+                   lineJoin: 'round', opacity: st && st.opacity != null ? st.opacity : 1 }
+        });
+      }
       if (barW > 50 && barLabel) {
         children.push({
           type: 'text',
@@ -100,7 +112,10 @@
       if (term && term !== headline) pairs.push([title(y) || 'Y', term]);
       if (detail && detail !== headline) pairs.push([title(m.series) || 'Series', detail]);
       const fromTxt = NS.axes.fmtXVal(v[0], xAxisType, xCats, period);
-      if (v[1] != null && v[1] !== v[0]) {
+      if (v[9]) {
+        pairs.push([title(x) || 'From', fromTxt]);
+        pairs.push([(m.xend ? title(m.xend) : '') || 'To', 'ongoing']);
+      } else if (v[1] != null && v[1] !== v[0]) {
         const toTxt = NS.axes.fmtXVal(v[1], xAxisType, xCats, period);
         const dur = NS.axes.durationStr(v[0], v[1], xAxisType);
         pairs.push([title(x) || 'From', fromTxt]);

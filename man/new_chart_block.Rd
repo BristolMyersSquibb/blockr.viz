@@ -12,6 +12,7 @@ new_chart_block(
   func = "count",
   x = NULL,
   xend = NULL,
+  open = NULL,
   y = NULL,
   color = NULL,
   facet = NULL,
@@ -88,6 +89,8 @@ new_chart_block(
 \item{x}{Column on the horizontal axis of a scatter, line, area or band. Histogram: the column that is binned. Gantt: the interval start. Default \code{NULL}: unset.}
 
 \item{xend}{Interval end. A row without an end is drawn as a dot at \code{x}. Default \code{NULL}: dots at x.}
+
+\item{open}{Logical column. TRUE draws an arrowhead after the bar's end (still ongoing); a TRUE row without an end runs to the last x drawn. Default \code{NULL}: no arrow.}
 
 \item{y}{Column on the vertical axis. Gantt: the lane. Default \code{NULL}: unset.}
 
