@@ -106,18 +106,26 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
   desc
 }
 
-# Registers the methods on blockr.ai's generic.
+# Registers the methods on blockr.ai's generic: now when blockr.ai is loaded,
+# else when it loads. Loading it here would cost every session that never
+# opens the assistant about half a second.
 register_assistant_effect <- function() {
-  if (!requireNamespace("blockr.ai", quietly = TRUE)) {
-    return(invisible(FALSE))
+  if (isNamespaceLoaded("blockr.ai")) {
+    return(invisible(assistant_effect_methods()))
   }
+  setHook(packageEvent("blockr.ai", "onLoad"),
+          function(...) assistant_effect_methods())
+  invisible(FALSE)
+}
+
+assistant_effect_methods <- function() {
   ns <- asNamespace("blockr.ai")
   if (!exists("config_effect", envir = ns, inherits = FALSE)) {
-    return(invisible(FALSE))
+    return(FALSE)
   }
   registerS3method("config_effect", "chart_block",
                    config_effect.chart_block, envir = ns)
   registerS3method("config_effect", "table_block",
                    config_effect.table_block, envir = ns)
-  invisible(TRUE)
+  TRUE
 }

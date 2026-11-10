@@ -35,9 +35,7 @@ VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows", all = "All rows")
 #'   ext, section, count)`.
 #' @noRd
 viz_data_downloads <- function(tables, exhibit, session, filename) {
-  formats <- Filter(function(f) {
-    all(vapply(f$needs, requireNamespace, logical(1L), quietly = TRUE))
-  }, VIZ_DATA_FORMATS)
+  formats <- Filter(function(f) dt_pkg_installed(f$needs), VIZ_DATA_FORMATS)
   for (tbl in names(VIZ_DATA_TABLES)) {
     for (ext in names(formats)) {
       viz_data_download_handler(tbl, ext, formats[[ext]], tables, exhibit,

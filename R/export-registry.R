@@ -40,10 +40,12 @@ viz_exporters <- function() {
   all[order(vapply(all, `[[`, numeric(1L), "order"), names(all))]
 }
 
-# The formats that can write `x` on this machine.
+# The formats that can write `x` on this machine. The packages are looked up,
+# not loaded: the menu is built with every payload, and loading officer and
+# openxlsx for it costs the first chart half a second.
 viz_export_formats <- function(x, exporters = viz_exporters()) {
   Filter(function(f) {
-    all(vapply(f$needs, requireNamespace, logical(1L), quietly = TRUE)) &&
+    dt_pkg_installed(f$needs) &&
       isTRUE(tryCatch(f$accepts(x), error = function(e) FALSE))
   }, exporters)
 }

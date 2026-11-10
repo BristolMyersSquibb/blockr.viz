@@ -150,7 +150,9 @@ dt_download_control <- function(session, exhibit, enabled = NULL,
 # requireNamespace() would load officer and flextable (0.5 s, 53 MB) just to
 # grey out a menu entry. A seam, so tests can mock it.
 dt_pkg_installed <- function(...) {
-  all(vapply(c(...), function(p) nzchar(system.file(package = p)), logical(1L)))
+  all(vapply(as.character(c(...)), function(p) {
+    nzchar(system.file(package = p))
+  }, logical(1L)))
 }
 
 dt_has_openxlsx <- function() {
