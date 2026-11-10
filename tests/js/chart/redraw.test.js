@@ -109,7 +109,50 @@ test('a payload that only moves the selection updates in place', () => {
   assert.strictEqual(redraws(), before);
   assert.strictEqual(c.block.selection.current, null);
   // A setting the chart draws still redraws.
-  c.send({ ...base, title: 'ALT' }, { data: null, derived: dl('40 rows') });
+  c.send({ ...base, line_width: 3 }, { data: null, derived: dl('40 rows') });
   assert.ok(redraws() > before, 'a drawn setting redraws');
+  c.close();
+});
+
+// A payload whose changed field the option does not read finds the memoised
+// option: the chart is not set again.
+test('a setting the option does not read leaves the chart alone', () => {
+  const c = D.open(LINE);
+  const sets = () => c.chart().log.filter((e) => e.op === 'setOption').length;
+  c.advance(300);
+  const before = sets();
+  c.send({ ...c.config, title: 'ALT' }, { data: null });
+  assert.strictEqual(sets(), before, 'no setOption');
+  c.send({ ...c.config, line_width: 3 }, { data: null });
+  assert.ok(sets() > before, 'a drawn setting still sets the option');
+  c.close();
+});
+
+// The settle resize 300 ms after a draw: once per chart, then only when the
+// canvas differs from its box.
+test('the settle resize runs on the first draw and when the size differs', () => {
+  const c = D.open(LINE);
+  const resizes = () => c.chart().log.filter((e) => e.op === 'resize').length;
+  c.advance(300);
+  assert.strictEqual(resizes(), 1, 'first draw');
+  c.send({ ...c.config, line_width: 3 }, { data: null });
+  c.advance(300);
+  assert.strictEqual(resizes(), 1, 'same size: no resize');
+  const chart = c.chart();
+  const w = chart.getWidth;
+  chart.getWidth = () => w() - 10;
+  c.send({ ...c.config, line_width: 4 }, { data: null });
+  c.advance(300);
+  assert.strictEqual(resizes(), 2, 'size differs: resize');
+  c.close();
+});
+
+// An aggregated draw ends in a highlight patch; with nothing selected it is
+// empty and is not sent.
+test('no empty highlight patch after a draw with no selection', () => {
+  const c = D.open({ type: 'bar', category: 'AETERM', orientation: 'horizontal', drill: 'auto' });
+  const empty = c.chart().log.filter((e) => e.op === 'setOption' && !e.notMerge &&
+    e.option && Array.isArray(e.option.series) && e.option.series.every((s) => !Object.keys(s).length));
+  assert.strictEqual(empty.length, 0);
   c.close();
 });

@@ -228,7 +228,11 @@
                         drawn: drawn && drawn.option, ink: this._ink,
                         lit, filters, range, dimmed: !!slot.dimmed })
           : { series: current.series.map(() => ({})), dimmed: false };
+        const wasDimmed = slot.dimmed;
         slot.dimmed = patch.dimmed;
+        // An empty patch on a chart that is not dimmed changes nothing.
+        if (!wasDimmed && !patch.dimmed && patch.series.every((/** @type {any} */ s) =>
+          !s || Object.keys(s).length === 0)) return;
         slot.chart.setOption({ series: patch.series }, lazy ? { lazyUpdate: true } : false);
       });
     }
@@ -241,7 +245,25 @@
       this._draw(this.family());
       // Once more after layout settles.
       if (this._settle) this._settle();
-      this._settle = this.scope.timeout(() => { this._resizeCharts(); }, 300);
+      this._settle = this.scope.timeout(() => { this._settleCharts(); }, 300);
+    }
+
+    // Once more after layout settles, for a panel that gets its size late:
+    // a chart's first settle, and a chart whose canvas differs from its box.
+    _settleCharts() {
+      if (this.chartGrid.offsetParent === null) return;
+      if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
+      for (const slot of this._slots) {
+        const c = slot && slot.chart;
+        if (!c) continue;
+        const div = slot.chartDiv;
+        if (c.__vzSettled && c.getWidth() === div.clientWidth && c.getHeight() === div.clientHeight) {
+          continue;
+        }
+        c.__vzSettled = true;
+        c.resize();
+        this._refitXLabels(c);
+      }
     }
 
     /** @param {ChartFamily} fam */
@@ -305,9 +327,20 @@
         chart.__vzRoles = dec.roles;
         chart.__vzFilterX = dec.filterX;
         chart.__vzLogEnds = dec.logEnds;
-        chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
-                        actionFollows ? { notMerge: true, lazyUpdate: true } : true);
-        slot.dimmed = false;
+        // The same option object on the same chart, with the same limits and ticks (which
+        // decorate() reads outside the memo), and no brush rectangle to redraw: nothing to set.
+        const decKey = JSON.stringify([this.settings.type, this.settings.x_limits,
+          this.settings.y_limits, this.settings.x_ticks, this.settings.y_ticks]);
+        const unchanged = existed && !hChanged && !actionFollows && !slot.brushAreas &&
+          slot.drawnPo === po && slot.drawnDec === decKey && slot.drawnChart === chart;
+        if (!unchanged) {
+          chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
+                          actionFollows ? { notMerge: true, lazyUpdate: true } : true);
+          slot.dimmed = false;
+        }
+        slot.drawnPo = po;
+        slot.drawnDec = decKey;
+        slot.drawnChart = chart;
         if (existed && hChanged) chart.resize();
         if (fam.after) fam.after(slot, po, this);
       });

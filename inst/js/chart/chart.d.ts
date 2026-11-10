@@ -316,6 +316,10 @@ interface ChartSlot {
   brushable: boolean;
   /** The last brush's rectangle, to draw again after a redraw. */
   brushAreas: any[] | null;
+  /** What the last draw set on the chart: the panel option, its limits/ticks key and the chart. */
+  drawnPo?: any;
+  drawnDec?: string;
+  drawnChart?: any;
   /** The selection that brush made, as JSON. */
   brushSel: string | null;
   /** What a drill brush has caught so far; sent when the drag ends. */
