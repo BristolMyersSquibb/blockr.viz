@@ -186,17 +186,31 @@ resolve_arg_token <- function(token, data, args) {
   fn <- m[[2L]]
   nm <- slot_arg_name(m[[3L]])
   col <- arg_token_value(nm, args)
-  text <- if (nzchar(col)) {
-    resolve_title_token(paste0(fn, "(", col, ")"), data, args)$text
-  } else {
-    ""
-  }
+  # Look the column up directly: re-parsing "fn(col)" would fail for column
+  # names or picker values with parentheses, e.g. "Actual Treatment (Abbr.) TRT".
+  text <- if (nzchar(col)) title_column_fn(fn, data, col) else ""
   # A count is not a slot. An empty slot keeps its `arg`, so a dropped clause
   # can still offer it.
   if (identical(fn, "n_distinct")) {
     return(list(text = text, arg = NULL))
   }
   list(text = text, arg = nm, by = if (identical(fn, "label")) "label" else "name")
+}
+
+# `label()` / `n_distinct()` of one column; "" for a column the data does not
+# carry or an unknown function.
+title_column_fn <- function(fn, data, col) {
+  if (!col %in% names(data)) {
+    return("")
+  }
+  if (identical(fn, "label")) {
+    return(title_column_label(data, col))
+  }
+  if (identical(fn, "n_distinct")) {
+    v <- data[[col]]
+    return(format(length(unique(v[!is.na(v)])), big.mark = ""))
+  }
+  ""
 }
 
 # Returns `list(text=, arg=)`: the resolved string, and the argument whose
@@ -225,12 +239,7 @@ resolve_title_token <- function(token, data, args = list()) {
     token, regexec("^(label|n_distinct)\\(\\s*([^()]+?)\\s*\\)$", token)
   )[[1L]]
   if (length(m) == 3L) {
-    if (!m[[3L]] %in% names(data)) return(plain(""))
-    if (identical(m[[2L]], "label")) {
-      return(plain(title_column_label(data, m[[3L]])))
-    }
-    v <- data[[m[[3L]]]]
-    return(plain(format(length(unique(v[!is.na(v)])), big.mark = "")))
+    return(plain(title_column_fn(m[[2L]], data, m[[3L]])))
   }
 
   # Bare column token: the distinct values, collapsed.
