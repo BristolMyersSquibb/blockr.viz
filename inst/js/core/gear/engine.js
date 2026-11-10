@@ -165,7 +165,10 @@
         /** @type {VizGearField} */ (this.spec[k].gear).control === 'template'
           ? V.titles.unknownTokens(String(values[k] ?? ''), t, this._cols) : null
       ]);
-      return JSON.stringify([values, this._cols, [t.title, t.subtitle, t.caption],
+      // The selection is no row: a click moves it and must not rebuild the tray.
+      const rest = Object.assign({}, values);
+      delete rest.selection;
+      return JSON.stringify([rest, this._cols, [t.title, t.subtitle, t.caption],
                              Array.from(this._added), shown]);
     }
 

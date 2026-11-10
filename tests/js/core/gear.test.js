@@ -696,3 +696,14 @@ test('limits as the sentence word types them: "20 to auto"', () => {
   assert.equal(how.kind, 'pair', 'one word per end');
   assert.deepEqual(plain(how.ends.map((e) => e.value)), [20, null]);
 });
+
+test('a selection moving does not rebuild the tray', () => {
+  const t = setup({ type: 'bar', category: 'ARM', orientation: 'vertical' });
+  const first = t.el.firstElementChild;
+  assert.ok(first);
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical',
+                          selection: { type: 'filter', filters: { ARM: ['A'] } } }));
+  assert.equal(t.el.firstElementChild, first, 'same nodes');
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', line_width: 3 }));
+  assert.notEqual(t.el.firstElementChild, first, 'a setting still rebuilds');
+});
