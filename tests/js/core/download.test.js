@@ -124,6 +124,32 @@ test('sections get a title over their rows, data rows their count', () => {
   assert.equal(menu.querySelector('#b-dl_png .vz-download__count'), null);
 });
 
+test('reaching for the menu asks R for the counts, and the answer fills them', () => {
+  const { V, host, scope, sent, win } = setup();
+  V.downloads(host, [
+    { id: 'b-dl_png', label: 'Image', ext: 'png', section: 'Chart' },
+    { id: 'b-s', label: 'Summary', ext: 'csv', section: 'Data', ask: 'b-dl_counts' },
+    { id: 'b-r', label: 'Rows', ext: 'csv', section: 'Data', ask: 'b-dl_counts' }
+  ], scope);
+  const count = (id) => host.querySelector('#' + id + ' .vz-download__count');
+  assert.equal(count('b-r').textContent, '');
+  assert.equal(count('b-dl_png'), null);
+  assert.equal(sent.length, 0);
+  const trigger = host.querySelector('.blockr-action-menu__trigger');
+  trigger.dispatchEvent(new win.Event('pointerenter'));
+  trigger.dispatchEvent(new win.Event('pointerdown'));
+  assert.deepEqual(sent.map((s) => s.name), ['b-dl_counts', 'b-dl_counts']);
+  assert.notEqual(sent[0].value, sent[1].value);
+  assert.equal(sent[0].opts.priority, 'event');
+  const first = host.firstElementChild;
+  V.downloads.counts({ counts: { 'b-s': '6 rows', 'b-r': '40 of 254', 'b-gone': '1 row' } });
+  assert.equal(count('b-s').textContent, '6 rows');
+  assert.equal(count('b-r').textContent, '40 of 254');
+  assert.equal(host.firstElementChild, first, 'the menu is not redrawn');
+  V.downloads.counts({ counts: [] });
+  assert.equal(count('b-r').textContent, '40 of 254');
+});
+
 test('a list without sections has no titles', () => {
   const { V, host, scope } = setup();
   V.downloads(host, FORMATS, scope);

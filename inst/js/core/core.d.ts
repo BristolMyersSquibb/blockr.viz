@@ -81,6 +81,8 @@ interface VizDownload {
   section?: string;
   /** A data row's count, "6 rows" or "40 of 254". */
   count?: string;
+  /** A data row: the input that asks R for the counts (core/download.js). */
+  ask?: string;
 }
 
 /** Why a view has nothing to draw: R's `derived.empty`, or the view's own. */
@@ -211,8 +213,12 @@ interface VizNamespace {
   DataView: { new (frame: VizFrame, scope: VizScope, opts?: { onToggle?: () => void }): VizDataView };
   binding(name: string, view: string, View: VizViewClass,
           opts?: { grace?: number; busy?: string }): boolean;
-  downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
-            scope: VizScope, opts?: { onOpen?: () => unknown }): void;
+  downloads: {
+    (host: HTMLElement, list: VizDownload[] | null | undefined,
+     scope: VizScope, opts?: { onOpen?: () => unknown }): void;
+    /** R's `blockr-viz:counts`: the data rows' counts, by element id. */
+    counts(msg: { counts?: Record<string, string> }): void;
+  };
   capture(opts: { width: number; height: number;
                   draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
                   timeout?: number }): Promise<VizPicture>;

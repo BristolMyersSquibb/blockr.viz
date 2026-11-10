@@ -39,6 +39,13 @@ table_groups_part <- function(kit, src) {
       table_groups_exhibit(model(), src$values(), frame(), tt, src,
                            kit$capture())
     },
+    # table_groups_exhibit() without its work: a groups table always draws.
+    probe = function() {
+      d <- frame()
+      shiny::req(is.data.frame(d), !is.null(model()))
+      new_viz_exhibit(d, picture = kit$capture(),
+                      render = exhibit_probe_render())
+    },
     title_args = function(v) table_groups_title_args(kit$spec, v)
   )
 }

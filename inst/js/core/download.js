@@ -4,7 +4,10 @@
  * (R/export-registry.R, viz_downloads()): one format is a tool that
  * downloads, several are blockr.ui's action menu with one row per format.
  * A chart's menu has two sections, Chart and Data; a Data row carries its
- * table's count ("Rows 40 of 254").
+ * table's count ("Rows 40 of 254"). R builds the tables behind the counts
+ * only when asked: reaching for the control sets the entries' `ask` input,
+ * and R answers with a `blockr-viz:counts` message, which fills the counts
+ * in place.
  * The markup is blockr.ui's own (action_menu(), menu_item()), so its page
  * listeners open and close the menu. The links are Shiny download links,
  * bound here so their href arrives, and unbound when the view goes.
@@ -37,7 +40,8 @@
   const item = (d) => '<a id="' + esc(d.id) + '" class="shiny-download-link ' +
     'blockr-menu__item" role="menuitem" tabindex="-1" href="" download ' +
     'target="_blank"><span class="blockr-menu__label">' + esc(d.label) +
-    (d.count ? '<span class="vz-download__count">' + esc(d.count) + '</span>' : '') +
+    (d.count || d.ask
+      ? '<span class="vz-download__count">' + esc(d.count || '') + '</span>' : '') +
     '</span><span class="blockr-menu__meta">.' + esc(d.ext) + '</span></a>';
 
   /** The rows, with a title over each section (Chart, Data) when R names them.
@@ -66,6 +70,23 @@
 
   /** @type {WeakMap<HTMLElement, { key: string, offs: (() => void)[] }>} */
   const drawn = new WeakMap();
+
+  // One number for the page: an `ask` input set twice arrives twice.
+  let asked = 0;
+
+  /**
+   * R's answer to an `ask`: the count of each data entry, by the entry's
+   * element id. By id, since an open menu sits outside its host.
+   * @param {{ counts?: Record<string, string> }} msg
+   */
+  const counts = (msg) => {
+    const list = (msg && msg.counts) || {};
+    for (const id of Object.keys(list)) {
+      const link = root.document.getElementById(id);
+      const span = link && link.querySelector('.vz-download__count');
+      if (span) span.textContent = list[id];
+    }
+  };
 
   // After the picture is sent, Shiny posts the input on its next turn; the
   // download request must come after it.
@@ -107,6 +128,21 @@
     const first = /** @type {HTMLElement} */ (host.firstElementChild);
     const reach = /** @type {HTMLElement} */ (
       first.querySelector('.blockr-action-menu__trigger') || first);
+    // The counts of the data entries, asked for when the reader reaches for
+    // the control.
+    const asks = Array.from(new Set(items.map((d) => d.ask).filter(Boolean)));
+    if (asks.length) {
+      const ask = () => {
+        const shiny = root.Shiny;
+        if (!shiny || typeof shiny.setInputValue !== 'function') return;
+        for (const name of asks) {
+          shiny.setInputValue(/** @type {string} */ (name), ++asked, { priority: 'event' });
+        }
+      };
+      for (const type of ['pointerenter', 'pointerdown', 'focus']) {
+        offs.push(scope.on(reach, type, ask));
+      }
+    }
     const onOpen = opts.onOpen;
     if (onOpen) {
       /** The picture on its way, or null. @type {Promise<unknown> | null} */
@@ -146,5 +182,10 @@
     if (shiny && typeof shiny.bindAll === 'function') shiny.bindAll(host);
   }
 
+  downloads.counts = counts;
   V.downloads = downloads;
+  const shiny0 = root.Shiny;
+  if (shiny0 && typeof shiny0.addCustomMessageHandler === 'function') {
+    shiny0.addCustomMessageHandler('blockr-viz:counts', counts);
+  }
 })();

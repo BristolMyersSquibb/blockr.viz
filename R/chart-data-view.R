@@ -64,6 +64,25 @@ chart_summary <- function(data, v) {
   chart_summary_annotate(d[keys], stats)
 }
 
+# Whether chart_summary() gives a table, without building it: the download
+# menu lists a Summary entry from this (chart_data_view()'s `shape`).
+chart_has_summary <- function(data, v) {
+  if (!is.data.frame(data) || !nrow(data)) {
+    return(FALSE)
+  }
+  type <- v$type %||% "bar"
+  if (type %in% CHART_DISTRIBUTION_TYPES) {
+    val <- chart_value_col(v)
+    return(length(val) > 0L && val %in% names(data))
+  }
+  if (identical(type, "histogram")) {
+    bin <- chart_bin_col(v$x)
+    return(length(bin) > 0L && bin %in% names(data))
+  }
+  isTRUE(type %in% c("bar", "waterfall", "pie", "treemap")) &&
+    length(intersect(chart_category(v), names(data))) > 0L
+}
+
 # "Count of rows", "Mean of AVAL": the aggregate named as the gear names it.
 chart_summary_value_name <- function(col, func, value) {
   if (identical(func, "count") || !length(value)) {
@@ -289,7 +308,8 @@ chart_output_rows <- function(data, expr) {
 #'   (chart_view_selection()).
 #' @return A list: `summary()` and `rows()`, reactives; `tables()`, both
 #'   with the Rows total and, under a selection, all rows, for the data
-#'   downloads (viz_data_downloads()); `derived(msg)`, the payload's
+#'   downloads (viz_data_downloads()); `shape()`, which of those tables
+#'   there are, without building one; `derived(msg)`, the payload's
 #'   `data_view` entry for the reader's `<view>_data` message.
 #' @noRd
 chart_data_view <- function(kit, src, expr, shown) {
@@ -350,7 +370,19 @@ chart_data_view <- function(kit, src, expr, shown) {
     list(summary = summary(), rows = rows(), total = total(),
          all = if (sel) tryCatch(src$prep$prepared(), error = function(e) NULL))
   }
-  list(summary = summary, rows = rows, tables = tables, derived = derived)
+  shape <- function() {
+    d <- tryCatch(src$plain(), error = function(e) NULL)
+    input <- tryCatch(kit$data(), error = function(e) NULL)
+    all <- !is.null(shown()) &&
+      is.data.frame(tryCatch(src$prep$prepared(), error = function(e) NULL))
+    list(
+      tables = c(if (chart_has_summary(d, src$values())) "summary",
+                 if (!is.null(input)) "rows", if (all) "all"),
+      selected = all
+    )
+  }
+  list(summary = summary, rows = rows, tables = tables, shape = shape,
+       derived = derived)
 }
 
 #' The Rows tab: blockr.ui's table preview of the rows

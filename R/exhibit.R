@@ -84,6 +84,13 @@ exhibit_kind <- function(x) exhibit_field(x, "kind")
 #' @export
 exhibit_meta <- function(x) exhibit_field(x, "meta")
 
+# A stand-in for a render object, in the exhibit a block's download menu
+# probes its formats with (viz_downloads()): it says the real exhibit will
+# have one, without building it.
+exhibit_probe_render <- function() {
+  structure(list(), class = "viz_exhibit_probe")
+}
+
 exhibit_field <- function(x, name) {
   stopifnot(inherits(x, "viz_exhibit"))
   x[[name]]

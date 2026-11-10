@@ -176,9 +176,13 @@ viz_capture_observer <- function(input, id, capture) {
 #'   new_viz_exhibit(); optional. The kit registers the download handlers
 #'   (viz_downloads()) and puts the menu into the payload's
 #'   `derived$downloads`;
+#' - `probe`: a function of no arguments returning the exhibit the menu
+#'   asks its formats about, cheap to build (exhibit_probe_render());
+#'   optional, the menu builds the exhibit without it;
 #' - `tables`: a function of no arguments returning the data view's tables
 #'   (chart_data_view()); optional. With it the menu gets a Data section
-#'   (viz_data_downloads());
+#'   (viz_data_downloads()), listed from `tables_shape`, a function that
+#'   names the tables without building them;
 #' - `normalize`: a function of the full value list, the block's rules
 #'   between arguments (chart_normalize(), table_normalize()); optional;
 #' - `claims`: a reactive of the conditions a drill target receives
@@ -266,7 +270,8 @@ viz_with_shared <- function(kit, parts, view) {
     }
     viz_downloads(parts$exhibit, enabled = enabled, session = kit$session,
                   filename = view, before = kit$capture_sync,
-                  tables = parts$tables)
+                  tables = parts$tables, shape = parts$tables_shape,
+                  probe = parts$probe %||% parts$exhibit)
   }
   choices <- ctrl_choices(kit$session)
   drawn <- new.env(parent = emptyenv())

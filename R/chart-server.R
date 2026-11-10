@@ -26,7 +26,9 @@ chart_server <- function(id, data, init) {
         payload = view$payload,
         expr = expr,
         exhibit = chart_exhibit(kit, src, view),
+        probe = chart_exhibit_probe(kit, src),
         tables = dv$tables,
+        tables_shape = dv$shape,
         data_view = dv$derived,
         normalize = function(v) {
           chart_normalize(v, kit$values())

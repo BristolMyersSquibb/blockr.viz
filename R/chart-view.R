@@ -153,6 +153,15 @@ chart_exhibit <- function(kit, src, view) {
   }
 }
 
+# What the download menu asks its formats about (viz_downloads()): a chart
+# with the picture it has, and none of its numbers.
+chart_exhibit_probe <- function(kit, src) {
+  function() {
+    shiny::req(is.data.frame(src$plain()))
+    new_viz_exhibit(data.frame(), picture = kit$capture(), kind = "chart")
+  }
+}
+
 # The aggregated column of an aggregated chart: `value`, NULL for a count.
 # A boxplot or point range always reads it.
 chart_value_col <- function(v) {

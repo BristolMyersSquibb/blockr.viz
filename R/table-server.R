@@ -19,6 +19,9 @@
 #   claims(sel)    the conditions a drill target receives, NULL to hold
 #   receipt(sel)   the "Filtered: ..." line, or NULL
 #   exhibit(tt)    the downloads' viz_exhibit, with the title texts
+#   probe()        the exhibit the download menu asks its formats about: the
+#                  frame and whether there is a picture or a render object,
+#                  nothing built (exhibit_probe_render())
 #   title_args(v)  the settings a title can name, beyond the spec's slots
 
 table_server <- function(id, data, init) {
@@ -42,6 +45,7 @@ table_server <- function(id, data, init) {
           part()$exhibit(lapply(tt[c("title", "subtitle", "caption")],
                                 function(b) b$text))
         },
+        probe = function() part()$probe(),
         claims = table_claims(kit, part),
         cond = table_cond(kit, parts),
         script = src$prep
