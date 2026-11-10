@@ -45,7 +45,9 @@ viz_script_sources <- function(raw, state) {
     if (is.null(d) && length(last$specs)) {
       return(last$specs)
     }
-    out <- cb_specs(p, d)
+    # The current values feed the declarations, so a choice list can depend
+    # on another control.
+    out <- cb_specs(p, d, state$script_values() %||% list())
     if (!identical(out, last$specs)) last$specs <- out
     last$specs
   })

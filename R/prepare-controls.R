@@ -98,9 +98,16 @@ script_control_values <- function(specs, values = list()) {
     out[[script_key(s$name)]] <- switch(
       s$kind,
       flag = if (isTRUE(as.logical(v))) "on" else "off",
-      # as.list() keeps a single pick a JSON array instead of a string.
-      select = if (isTRUE(s$multiple)) as.list(as.character(v)) else
-        as.character(v)[[1L]],
+      # as.list() keeps a single pick a JSON array instead of a string. A
+      # multi-select shows only picks its pool still offers (the pool can
+      # follow another control), so "N selected" counts what is offered.
+      select = if (isTRUE(s$multiple)) {
+        v <- as.character(v)
+        if (length(s$choices)) v <- v[v %in% as.character(s$choices)]
+        as.list(v)
+      } else {
+        as.character(v)[[1L]]
+      },
       date = format(as.Date(v)),
       number = as.numeric(v)[[1L]],
       as.character(v)[[1L]]
@@ -136,8 +143,32 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) script_label(s) else ""
     }
+    if (identical(s$kind, "select") && isTRUE(s$multiple)) {
+      v <- script_multi_word(v, s)
+    }
     v
   })
   names(vals) <- vapply(specs, `[[`, "", "name")
   c(roles[setdiff(names(roles), names(vals))], vals)
+}
+
+# The word a multi-select prints in a title: its picks when there are a few,
+# else a count ("12 of 83 selected"). A template slot prints one string, so the
+# picks would otherwise read as only the first. An empty pick runs the
+# declared default (cb_expr()), so the word says that too.
+script_multi_word <- function(v, s) {
+  pool <- as.character(s$choices)
+  v <- as.character(v)
+  if (length(pool)) v <- v[v %in% pool]
+  if (!length(v)) {
+    v <- as.character(s$default)
+    if (length(pool)) v <- v[v %in% pool]
+  }
+  if (!length(v)) {
+    return("")
+  }
+  if (length(v) <= 3L) {
+    return(paste(v, collapse = ", "))
+  }
+  paste(length(v), "of", length(pool), "selected")
 }
