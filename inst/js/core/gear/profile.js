@@ -133,6 +133,12 @@
             rows[k] = { kind: 'columns' };
             put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
               gear: { label: 'Listing columns', control: 'profile' } }), title);
+          } else if (k === 'group' && (wire.groups?.values || []).length) {
+            const g = /** @type {{ values: string[], labels: string[] }} */ (wire.groups);
+            rows[k] = { kind: 'group' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'enum' }, values: [''].concat(g.values),
+              gear: { label: 'Group by', control: 'select', labels: ['None'].concat(g.labels) } }),
+              title);
           } else if (k === 'words' && clauses.length) {
             rows[k] = { kind: 'words' };
             put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
@@ -166,6 +172,9 @@
       else if (r.kind === 'columns') {
         out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
           .map((s) => s && s.name).filter((n) => names.has(n));
+      } else if (r.kind === 'group') {
+        const by = Array.isArray(cfg.by) ? cfg.by : [];
+        out[key] = by.length > 1 ? by[0] : '';
       } else if (r.kind === 'words') {
         const tpl = String(cfg.subtitle ?? '');
         out[key] = prof.clauses.filter(([, c]) => has(tpl, c)).map(([k]) => k);
@@ -197,6 +206,11 @@
         const other = (Array.isArray(now.summaries) ? now.summaries : [])
           .filter((s) => !s || !names.has(s.name));
         out.summaries = cols.filter((c) => pick.has(c.name)).map((c) => c.summary).concat(other);
+      } else if (r.kind === 'group') {
+        // The outer column of a nested `by`: picked, replaced or dropped.
+        const by = /** @type {string[]} */ (Array.isArray(now.by) ? now.by : []);
+        const inner = by.length > 1 ? by.slice(1) : by;
+        out.by = v ? [String(v)].concat(inner) : inner;
       } else if (r.kind === 'words') {
         out.subtitle = setWords(String(now.subtitle ?? ''), prof.clauses,
                                 new Set(/** @type {string[]} */ (v || [])));

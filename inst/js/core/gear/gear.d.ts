@@ -142,12 +142,13 @@ interface VizRowCtx {
 interface VizGearWire {
   tabs: { title: string; sections: { title: string; keys: string[] }[] }[];
   columns?: { name: string; label?: string; summary: Record<string, unknown> }[];
+  groups?: { values: string[]; labels: string[] };
   clauses?: Record<string, string>;
 }
 
 /** A row of a block's own gear that the spec does not have. */
 interface VizProfileRow {
-  kind: 'script' | 'columns' | 'words' | 'editor';
+  kind: 'script' | 'columns' | 'group' | 'words' | 'editor';
   name?: string;
   sp?: VizScriptControl;
 }

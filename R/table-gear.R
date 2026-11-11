@@ -14,6 +14,8 @@
 #' * a value the prepare script declares (`doses <- factor(...)  #| select()`),
 #'   drawn as an ordinary row that writes `script_values`;
 #' * `"columns"`: a checklist of `columns`;
+#' * `"group"`: a pick among `groups` (or none) for the outer column of a
+#'   nested `by`, which groups the rows;
 #' * a key with an editor registered in the browser
 #'   (`Blockr.viz.gear.editors[key]`), for a package's own row.
 #'
@@ -27,6 +29,8 @@
 #'   (the list name) and with an optional `on` (default `TRUE`), whether a new
 #'   block shows it. The block shows the ticked ones, first, then its other
 #'   summaries.
+#' @param groups The columns the rows may be grouped by, for the `"group"`
+#'   row: a character vector, named by the labels the pick shows.
 #' @param clauses A named character vector: per setting, the clause it adds to
 #'   the subtitle when ticked "In the subtitle" (`c(doses = "doses shown as
 #'   {@doses}")`), in sentence order.
@@ -43,10 +47,12 @@
 #'   )
 #' )
 #' @export
-table_gear <- function(tabs, columns = list(), clauses = character()) {
+table_gear <- function(tabs, columns = list(), groups = character(),
+                       clauses = character()) {
   stopifnot(
     is.list(tabs), length(tabs) > 0L, is_named(tabs),
     is.list(columns), !length(columns) || is_named(columns),
+    is.character(groups),
     is.character(clauses), !length(clauses) || is_named(clauses)
   )
   tabs <- lapply(names(tabs), function(tab) {
@@ -66,7 +72,11 @@ table_gear <- function(tabs, columns = list(), clauses = character()) {
     s$name <- nm
     list(name = nm, on = on, summary = s)
   })
-  structure(list(tabs = tabs, columns = columns, clauses = as.list(clauses)),
+  labels <- names(groups) %||% groups
+  labels[!nzchar(labels)] <- groups[!nzchar(labels)]
+  structure(list(tabs = tabs, columns = columns,
+                 groups = list(values = unname(groups), labels = unname(labels)),
+                 clauses = as.list(clauses)),
             class = "viz_table_gear")
 }
 
@@ -127,6 +137,7 @@ table_gear_wire <- function(gear) {
       list(name = cl$name, label = cl$summary$label %||% cl$name,
            summary = cl$summary)
     }),
+    groups = gear$groups,
     clauses = gear$clauses
   )
 }

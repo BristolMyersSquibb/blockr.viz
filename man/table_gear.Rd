@@ -4,7 +4,7 @@
 \alias{table_gear}
 \title{A table block's own gear}
 \usage{
-table_gear(tabs, columns = list(), clauses = character())
+table_gear(tabs, columns = list(), groups = character(), clauses = character())
 }
 \arguments{
 \item{tabs}{A named list, one element per tab in tray order. An element is
@@ -16,6 +16,9 @@ each a summary as in \code{summaries} of \code{\link[=new_table_block]{new_table
 (the list name) and with an optional \code{on} (default \code{TRUE}), whether a new
 block shows it. The block shows the ticked ones, first, then its other
 summaries.}
+
+\item{groups}{The columns the rows may be grouped by, for the \code{"group"}
+row: a character vector, named by the labels the pick shows.}
 
 \item{clauses}{A named character vector: per setting, the clause it adds to
 the subtitle when ticked "In the subtitle" (\code{c(doses = "doses shown as {@doses}")}), in sentence order.}
@@ -40,6 +43,8 @@ caption, and the "In the subtitle" ticks when \code{clauses} is given) or
 \item a value the prepare script declares (\code{doses <- factor(...)  #| select()}),
 drawn as an ordinary row that writes \code{script_values};
 \item \code{"columns"}: a checklist of \code{columns};
+\item \code{"group"}: a pick among \code{groups} (or none) for the outer column of a
+nested \code{by}, which groups the rows;
 \item a key with an editor registered in the browser
 (\code{Blockr.viz.gear.editors[key]}), for a package's own row.
 }

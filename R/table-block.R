@@ -118,6 +118,7 @@ new_table_block <- function(layout = "records",
   list2env(values, environment())
 
   core <- dots[intersect(names(dots), VIZ_CORE_BLOCK_ARGS)]
+  ctrl <- table_ctrl_args(spec, core$ctor, core$ctor_pkg)
   # blockr.core takes the constructor from the call stack; through do.call()
   # it has to be told which frame is this one.
   if (is.null(core$ctor)) core$ctor <- sys.nframe()
@@ -126,13 +127,29 @@ new_table_block <- function(layout = "records",
     ui = table_ui,
     dat_valid = validate_table_input,
     allow_empty_state = viz_empty_ok(spec),
-    external_ctrl = viz_ctrl_args(spec),
+    external_ctrl = ctrl,
     expr_type = "bquoted",
     class = c(setdiff(cls, "table_block"), "table_block")
   ), core, dots[old]))
   # Old names must not be saved back as attributes.
   for (nm in old) attr(res, nm) <- NULL
   res
+}
+
+# The settings other blocks and the assistant may set. A block built on the
+# table with its own constructor (a swimmer) saves and takes only that
+# constructor's arguments, so only those.
+table_ctrl_args <- function(spec, ctor, pkg) {
+  ctrl <- viz_ctrl_args(spec)
+  if (!is.character(ctor) || identical(ctor, "new_table_block") ||
+        !is.character(pkg)) {
+    return(ctrl)
+  }
+  fun <- get0(ctor, envir = asNamespace(pkg), mode = "function")
+  if (is.null(fun)) {
+    return(ctrl)
+  }
+  intersect(ctrl, names(formals(fun)))
 }
 
 table_ui <- function(id) {

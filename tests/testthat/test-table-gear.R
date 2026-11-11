@@ -13,6 +13,7 @@ tgear <- function() {
       Weeks = list(type = "simple", func = "max", col = "AGE"),
       Sex = list(type = "field", col = "SEX", on = FALSE)
     ),
+    groups = c(Arm = "ARM", "SEX"),
     clauses = c(unit = "by study {@unit}", cutoff = "cutoff {@cutoff}")
   )
 }
@@ -57,6 +58,7 @@ test_that("table_gear() spells out tabs, sections and shorthands", {
     c("title", "subtitle", "caption")
   )
   expect_output(print(g), "Sex \\(off\\)")
+  expect_identical(g$groups, list(values = c("ARM", "SEX"), labels = c("Arm", "SEX")))
   expect_error(table_gear(list("by")))
   expect_error(table_gear(list(A = "by"), columns = list(list(type = "field"))))
 })
@@ -85,6 +87,7 @@ test_that("the gear and class are not settings, and the gear reaches the payload
     expect_identical(vapply(wire$columns, `[[`, "", "name"), c("Weeks", "Sex"))
     expect_identical(wire$columns[[2L]]$summary$col, "SEX")
     expect_identical(wire$clauses$cutoff, "cutoff {@cutoff}")
+    expect_identical(unlist(wire$groups$labels), c("Arm", "SEX"))
   })
   # A plain table sends no gear.
   tgear_run(new_table_block(layout = "groups", by = "ARM"), d, function(p) {
@@ -110,4 +113,15 @@ test_that("a subclass saved with its own constructor is rebuilt by it", {
   back <- blockr.core::blockr_deser(plain)
   expect_s3_class(back, "table_block")
   expect_identical(attr(attr(back, "ctor"), "fun"), "new_table_block")
+})
+
+test_that("a block with its own constructor lets others set only its arguments", {
+  spec <- viz_block_spec("table")
+  expect_identical(table_ctrl_args(spec, NULL, NULL), viz_ctrl_args(spec))
+  # new_chart_block() shares title, subtitle, caption, ... with the table.
+  own <- table_ctrl_args(spec, "new_chart_block", "blockr.viz")
+  expect_true(all(own %in% names(formals(new_chart_block))))
+  expect_true("title" %in% own)
+  expect_false("layout" %in% own)
+  expect_identical(table_ctrl_args(spec, "nope", "blockr.viz"), viz_ctrl_args(spec))
 })

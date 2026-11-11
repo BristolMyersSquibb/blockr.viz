@@ -30,12 +30,13 @@ const SPANS = { type: 'spans', name: 'Study week', x: 'start', xend: 'end' };
 const GEAR = {
   tabs: [
     { title: 'Data', sections: [{ title: 'Time', keys: ['unit'] }] },
-    { title: 'Patients', sections: [{ title: 'Rows', keys: ['by', 'sort_by', 'sort_dir'] },
+    { title: 'Patients', sections: [{ title: 'Rows', keys: ['group', 'sort_by', 'sort_dir'] },
                                     { title: 'Columns', keys: ['columns'] }] },
     { title: 'Lanes', sections: [{ title: 'Drug lines', keys: ['drugs', 'doses', 'con_meds'] }] },
     { title: 'Titles', sections: [{ title: 'Titles', keys: ['title', 'subtitle', 'words'] }] },
     { title: 'Interaction', sections: [{ title: 'Reader tools', keys: ['search', 'nope'] }] }
   ],
+  groups: { values: ['ARM', 'BOR'], labels: ['Arm', 'Best response'] },
   columns: [{ name: 'Weeks', label: 'Weeks', summary: WEEKS },
             { name: 'Sex', label: 'Sex', summary: SEX }],
   clauses: { doses: 'doses shown as {@doses}', con_meds: 'con meds {@con_meds}',
@@ -55,10 +56,25 @@ const setup = (opts = {}) => {
 
 test('the gear shows its own rows, in its order, and no other setting', () => {
   const t = setup();
-  assert.deepEqual(rows(t.el), ['sv.unit', 'by', 'sort_by', 'sort_dir', 'columns',
+  assert.deepEqual(rows(t.el), ['sv.unit', 'group', 'sort_by', 'sort_dir', 'columns',
     'sv.drugs', 'sv.doses', 'sv.con_meds', 'title', 'subtitle', 'words', 'search']);
   // A key nothing answers to ('nope') has no row; layout, summaries, script are hidden.
-  for (const k of ['layout', 'summaries', 'script', 'look', 'nope']) assert.equal(row(t.el, k), null);
+  for (const k of ['layout', 'by', 'summaries', 'script', 'look', 'nope']) {
+    assert.equal(row(t.el, k), null);
+  }
+});
+
+test('the group row picks, replaces or drops the outer column of by', () => {
+  const t = setup();
+  assert.equal(t.gear.values().group, 'ARM');
+  t.gear.set({ group: 'BOR' });
+  assert.deepEqual(plain(lastSet(t).values), { by: ['BOR', 'USUBJID'] });
+  t.gear.set({ group: '' });
+  assert.deepEqual(plain(lastSet(t).values), { by: ['USUBJID'] });
+  t.gear.set({ group: 'ARM' });
+  assert.deepEqual(plain(lastSet(t).values), { by: ['ARM', 'USUBJID'] });
+  const labels = Array.from(row(t.el, 'group').querySelectorAll('option')).map((o) => o.textContent);
+  assert.deepEqual(labels, ['None', 'Arm', 'Best response']);
 });
 
 test('the gear has its own tabs, in its order', noUi, () => {
