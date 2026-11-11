@@ -123,7 +123,7 @@
         // is told apart by its tab.
         const title = sections[sec.title] ? sec.title + ' (' + tab.title + ')' : sec.title;
         sections[title] = [gk, ord++];
-        for (const k of sec.keys || []) {
+        for (const k of /** @type {string[]} */ ([]).concat(sec.keys || [])) {
           const sp = inputs.find((x) => x.name === k);
           const ed = V.gear.editors[k];
           if (sp) {

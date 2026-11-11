@@ -88,6 +88,11 @@ test_that("the gear and class are not settings, and the gear reaches the payload
     expect_identical(wire$columns[[2L]]$summary$col, "SEX")
     expect_identical(wire$clauses$cutoff, "cutoff {@cutoff}")
     expect_identical(unlist(wire$groups$labels), c("Arm", "SEX"))
+    # A section with one key is still a list of keys.
+    expect_identical(wire$tabs[[3L]]$sections[[1L]]$keys[[1L]], "title")
+    one <- table_gear_wire(table_gear(list(A = "by")))
+    expect_true(grepl('"keys":["by"]', jsonlite::toJSON(one, auto_unbox = TRUE),
+                      fixed = TRUE))
   })
   # A plain table sends no gear.
   tgear_run(new_table_block(layout = "groups", by = "ARM"), d, function(p) {

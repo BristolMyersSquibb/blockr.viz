@@ -144,15 +144,23 @@ table_gear_wire <- function(gear, info = NULL) {
   if (is.null(gear)) {
     return(NULL)
   }
+  # Lists, not vectors: a section with one key, unboxed, would be a string.
+  tabs <- lapply(gear$tabs, function(t) {
+    t$sections <- lapply(t$sections, function(x) {
+      x$keys <- as.list(x$keys)
+      x
+    })
+    t
+  })
   out <- list(
     open = gear$open,
     info = info,
-    tabs = gear$tabs,
+    tabs = tabs,
     columns = lapply(gear$columns, function(cl) {
       list(name = cl$name, label = cl$summary$label %||% cl$name,
            summary = cl$summary)
     }),
-    groups = gear$groups,
+    groups = lapply(gear$groups, as.list),
     clauses = gear$clauses
   )
   # A NULL would go out as `{}`.
