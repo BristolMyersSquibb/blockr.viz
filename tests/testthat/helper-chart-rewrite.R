@@ -91,9 +91,12 @@ record_rw_payload <- function(msgs, expr, cx) {
   }
   cx$last_payload <- p
   d <- p$derived
+  # A payload without rows leaves out columns that did not change: the
+  # browser keeps them with the rows (inst/js/core/binding.js).
+  if ("columns" %in% names(p)) cx$columns <- p$columns
   view <- record_computed(list(
     rows = if (!is.null(p[["data"]])) record_ref_rows(p[["data"]]),
-    columns = record_ref_columns(p$columns),
+    columns = record_ref_columns(cx$columns, record_rw_counts(expr, cx$session)),
     titles = lapply(d$titles[c("title", "subtitle", "caption")],
                     function(b) b$text),
     band = d$band,
@@ -109,15 +112,32 @@ record_rw_payload <- function(msgs, expr, cx) {
   if (same && is.null(view$rows)) list() else list(view)
 }
 
+# The distinct counts of the payload's columns, asked for as the browser's
+# gear asks (`chart_counts`) and read from R's answer.
+record_rw_counts <- function(expr, session) {
+  got <- NULL
+  root <- session$rootScope()
+  old <- root$sendCustomMessage
+  root$sendCustomMessage <- function(type, message) {
+    if (identical(type, "blockr-viz:column-counts")) got <<- message$counts
+    invisible(NULL)
+  }
+  on.exit(root$sendCustomMessage <- old)
+  expr$setInputs(chart_counts = as.numeric(Sys.time()))
+  session$flushReact()
+  got
+}
+
 # The payload's column description in the reference's shape: `type`
 # numeric or categorical, `temporal` for a date or date-time, `label` only
-# when set.
-record_ref_columns <- function(cols) {
+# when set. `counts` are the distinct counts, which the payload no longer
+# carries.
+record_ref_columns <- function(cols, counts) {
   lapply(cols, function(c) {
     temporal <- switch(c$class, date = "date", datetime = "datetime", NULL)
     out <- list(name = c$name,
                 type = if (identical(c$class, "number")) "numeric" else "categorical",
-                n_unique = c$n_unique)
+                n_unique = counts[[c$name]])
     if (nzchar(c$label)) out$label <- c$label
     out$temporal <- temporal
     out$kind <- c$kind
@@ -216,7 +236,32 @@ record_rw_expected <- function(rec, sc) {
     s$browser <- views
     rec$steps[[i]] <- s
   }
+  rec$steps <- record_rw_cell_views(rec$steps)
   record_rw_empty_click_clear(rec, sc)
+}
+
+# A bar, waterfall, pie or treemap sends one row per mark where the
+# reference sent the rows (R/chart-cells.R), and sends them anew when a
+# setting changes the marks. So for those types the views compare without
+# their rows, a view that brings nothing else new left out.
+# test-chart-cells.R checks the cells.
+record_rw_cell_views <- function(steps) {
+  last <- NULL
+  for (i in seq_along(steps)) {
+    cells <- (steps[[i]]$state$type %||% "bar") %in% CHART_CELL_TYPES
+    views <- list()
+    for (b in steps[[i]]$browser) {
+      core <- b[names(b) != "rows"]
+      if (cells) {
+        b["rows"] <- list(NULL)
+        if (identical(core, last)) next
+      }
+      views <- c(views, list(b))
+      last <- core
+    }
+    steps[[i]]$browser <- views
+  }
+  steps
 }
 
 record_rw_got <- function(rec) {
@@ -230,6 +275,7 @@ record_rw_got <- function(rec) {
     s$state <- s$state[sort(names(s$state))]
     s
   })
+  rec$steps <- record_rw_cell_views(rec$steps)
   rec
 }
 

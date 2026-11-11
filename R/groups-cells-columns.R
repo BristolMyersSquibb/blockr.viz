@@ -21,6 +21,77 @@ cells_tile <- function(ctx, p) {
        disp = ifelse(paint$has, groups_fmt(v), ""))
 }
 
+# cells_tile() for the copies of one tile summary at once: a matrix has one
+# copy per column, and they share their paint. A list as long as the plan,
+# NULL where cells_column() builds the column.
+cells_tiles <- function(ctx, plan) {
+  out <- vector("list", length(plan))
+  rows <- unclass(ctx$rows)
+  tile <- vapply(plan, function(p) {
+    identical(p$kind, "tile") && is.numeric(rows[[p$key]]) &&
+      (is.null(p$wkey) || !is.null(rows[[p$wkey]]))
+  }, logical(1L))
+  if (sum(tile) < 2L || !ctx$n) {
+    return(out)
+  }
+  stem <- vapply(plan[tile], function(p) groups_sid_stem(p$sid),
+                 character(1L))
+  for (idx in split(which(tile), stem)) {
+    ps <- plan[idx]
+    # One paint for the lot: the same fills, ramp and empty rule.
+    paint <- lapply(ps, function(p) {
+      list(isTRUE(p$zero_empty), is.null(p$wkey), p$fills, p$dmax)
+    })
+    if (length(unique(paint)) != 1L) next
+    out[idx] <- cells_tile_matrix(ctx, ps, rows)
+  }
+  out
+}
+
+# The cell model columns of tile entries that share their paint
+# (groups_tile_paint() and cells_tile() on a matrix, one column per entry).
+cells_tile_matrix <- function(ctx, ps, rows) {
+  p <- ps[[1L]]
+  n <- ctx$n
+  k <- length(ps)
+  col <- function(nm) vapply(ps, function(q) q[[nm]], character(1L))
+  v <- matrix(as.numeric(unlist(rows[col("key")], use.names = FALSE)), n, k)
+  has <- is.finite(v) & !(isTRUE(p$zero_empty) & v %in% 0)
+  lvl <- rows$.level
+  if (!is.null(lvl) && any(lvl > 0L)) has <- has & lvl > 0L
+  bg <- matrix(NA_character_, n, k)
+  if (!is.null(p$wkey)) {
+    w <- matrix(unlist(rows[col("wkey")], use.names = FALSE), n, k)
+    fills <- as.character(p$fills)
+    ok <- has & !is.na(w)
+    bg[ok] <- fills[w[ok]]
+    bg[has & is.na(w)] <- fills[[1L]]
+  } else {
+    mxv <- p$dmax %||% 0
+    step <- if (is.finite(mxv) && mxv > 0) {
+      round(pmin(1, pmax(0, v / mxv)) * 100) + 1
+    } else {
+      matrix(1, n, k)
+    }
+    bg[has] <- groups_tile_ramp(101L)[step[has]]
+  }
+  fg <- matrix(NA_character_, n, k)
+  disp <- matrix("", n, k)
+  if (any(has)) {
+    fills <- unique(bg[has])
+    ink <- vapply(fills, dt_fg_for_hex, character(1L), USE.NAMES = FALSE)
+    fg[has] <- ink[match(bg[has], fills)]
+    # A matrix holds few distinct values: each is formatted once.
+    vals <- unique(v[has])
+    disp[has] <- groups_fmt(vals)[match(v[has], vals)]
+  }
+  sortv <- cells_sortv(v)
+  lapply(seq_len(k), function(j) {
+    list(kind = "tile", v = sortv[, j], bg = bg[, j], fg = fg[, j],
+         disp = disp[, j])
+  })
+}
+
 cells_barsplit <- function(ctx, p) {
   # Per-entry scale, like the plain bar (bar_max is 0 on the summaries path).
   emx <- p$dmax %||% ctx$mx

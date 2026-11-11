@@ -1,0 +1,2410 @@
+/* blockr.viz bundle 0e7115eedda93b197628ba5569c5fa19, built by tools/bundle.js. Do not edit. */
+/* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
+/* --- table.css */
+/* The base table rules, scoped to blockr.viz's own containers: unscoped,
+   this page-global sheet would restyle blockr.ui's preview for every table
+   on the board. :where() keeps each rule's specificity what it was, so
+   nothing changes inside the containers. */
+:where(.vz-table, .vz-table-groups)
+  .blockr-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+}
+/* A table with R's column widths (a <colgroup>, table/dom.js) keeps them:
+   in a narrow card it scrolls sideways rather than squeezing the row labels
+   into a narrow first column. With width: 100% a wide card still spreads
+   the spare width over the columns. As in 0.2. */
+.blockr-table.vz-table-fixed {
+  table-layout: fixed;
+}
+/* The first column is at least 200px wide, so its header keeps to two or
+   three lines when the rows give it no width (every group folded, short
+   ids). A table with R's column widths keeps them. */
+:where(.vz-table, .vz-table-groups)
+  .blockr-table:not(.vz-table-fixed) thead tr:first-child > th:first-child {
+  min-width: 200px;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  z-index: 1;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table thead tr {
+  border-bottom: 1px solid var(--blockr-color-border-default, #e5e7eb);
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-color-text-default, #111827);
+  vertical-align: bottom;
+  overflow: hidden;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb,
+    var(--blockr-color-border-default, #e5e7eb) 50%, transparent);
+  transition: background-color 0.15s ease;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table tbody tr:hover {
+  background-color: var(--blockr-color-bg-subtle, #f9fafb);
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table td {
+  padding: 10px 16px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-default, #111827);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table th.blockr-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-table th.blockr-sortable:hover {
+  background-color: var(--blockr-color-bg-subtle, #f9fafb);
+}
+/* The sort cue is the design system's sort bars: short to long for
+   ascending, long to short for descending, in the accent (as in the
+   blockr.ui preview). */
+:where(.vz-table, .vz-table-groups)
+  .blockr-sort-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  color: var(--blockr-color-text-accent, #2563eb);
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E") no-repeat center / 12px 12px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E") no-repeat center / 12px 12px;
+}
+:where(.vz-table, .vz-table-groups)
+  .blockr-sort-icon-desc {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E");
+}
+input.vz-table-search:focus {
+  outline: none;
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+/* The table view's base rules (inst/js/table/), for every layout: the
+   frame is `.vz-table`, a groups table adds
+   `.vz-table-groups`. One control row, one header cell, one set
+   of body alignments. Written as `:is(...)` so there is ONE definition to
+   keep.
+   A nested groups table also carries `.vz-table-structured` (records.js
+   isStructured()), so a structured rule that must not reach it says
+   `:not(.vz-table-groups)`. */
+
+/* Type-based body alignment: numeric cells right (tabular figures), text
+   cells left — matching the header, like the structured table and the
+   canonical html preview. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-data {
+  font-variant-numeric: tabular-nums;
+}
+/* Type-based body alignment for the flat table: numeric cells right, text
+   cells left. The structured table's cell rules are scoped to
+   `.vz-table-structured` (table-structured.css), so these stand on
+   their own as the flat table's alignment. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-data.vz-table-num {
+  text-align: right;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-data.vz-table-txt {
+  text-align: left;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-stub {
+  text-align: left;
+}
+/* Table-block rows at 26px, with no rules in the body, like the preview:
+   3px above and below a 20px line. The header cells take 7px. Structured
+   tables set their own cell padding (table-structured.css); these are the
+   flat table's. The groups table keeps its own rows. */
+.vz-table .blockr-table tbody td {
+  padding: 3px 12px;
+  line-height: 20px;
+}
+.vz-table .blockr-table thead th {
+  padding: 7px 12px;
+}
+.vz-table .blockr-table tbody tr {
+  border-bottom: 0;
+}
+/* Hover: a wash across the row, the whole row being what a flat click
+   claims (or, on a table without a drill, just a reading aid). The shared
+   sheet's hover sits on the <tr>; it moves to the cells so every table-block
+   hover is the one colour. Structured tables with a drill replace this with
+   the claim preview (vz-table-hot-*, table/drill.js). */
+.vz-table .blockr-table tbody tr:hover {
+  background-color: transparent;
+}
+.vz-table .blockr-table tbody tr.vz-table-row:hover > td {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+:is(.vz-table, .vz-table-groups).vz-table-clickable .blockr-table tbody tr.vz-table-row {
+  cursor: pointer;
+}
+/* A drill row with an NA drill value emits nothing (no data-raw -> the click
+   is a no-op), so it must not look clickable: default cursor, and the plain
+   row wash every row gets. */
+:is(.vz-table, .vz-table-groups).vz-table-clickable .blockr-table tbody tr.vz-table-row.vz-table-row-nodrill {
+  cursor: default;
+}
+/* Section headers: only those that ARE an identity claim (row-group headers,
+   e.g. a SOC over its PTs -- they carry data-dd-keys) read as clickable.
+   Variable-block headers ("Sex", "Age") are labels, not claims: no keys, no
+   pointer, click is a no-op. */
+:is(.vz-table, .vz-table-groups).vz-table-clickable .blockr-table tbody tr.vz-table-section-header[data-dd-keys] .vz-table-section-value {
+  cursor: pointer;
+}
+/* No drill: the row is inert. The summarize table keeps its own reading-aid
+   tint; the table block's plain row wash is set above. */
+.vz-table-groups:not(.vz-table-clickable) .blockr-table tbody tr.vz-table-row:hover td {
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
+/* Drill selection: the selected tint and the accent ink across the row, no
+   bar. Structured tables restate this in table-structured.css, after their
+   hover rules. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-row-active td {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+/* The claimed column, painted the same tint the claimed row gets. */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-active,
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-col-active {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+/* The cell where the two claims cross: one step stronger of the same accent
+   tint, and bold, so it is plainly the darkest of the three without breaking
+   the column. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-row-active td.vz-table-col-active {
+  background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* ===== Transient drill =====
+   With a ctrl_target set the click is an EVENT sent to another block, so the
+   table lights what was clicked and lets it go -- there is nothing to un-set,
+   and a paint that stayed would show a cohort anyone else can reset. The
+   values are the design system's selected tints (row and column, one step
+   stronger at the cross), with 3px accent bars on the row and the header.
+
+   HOLD is an animation-delay with `both`, so the first frame shows for the
+   whole delay and only then starts to leave.
+
+   The fade is LINEAR and long (1400ms). These tints are 9% alpha -- a range so
+   small that under an ease-in curve the whole perceptible part of the ramp
+   landed in the last ~300ms, and the paint read as held-then-cut rather than
+   as fading. A straight ramp over a longer window spends its time where the
+   eye can follow it. The chart's mark keeps ease-in: a white wash plus a solid
+   ring has room to be decisive, 9% of a tint does not. */
+/* The flash is a pseudo-element LAYER whose OPACITY fades. Two constraints
+   have to hold at once and only this satisfies both:
+
+   1. It must sit above the cell's own background, not replace it. A cell
+      already has one -- the accent-blue hover on a clickable row, zebra
+      striping, a shading fill -- and an animation beats every normal
+      declaration, so animating background-color would drive the cell past
+      those to white and snap back the moment the class comes off.
+   2. It must actually interpolate. `background-image` does NOT: measured in
+      Chrome, a gradient-to-gradient animation holds the FROM value and flips
+      to the TO value at exactly 50%, which is the "stays, then it's gone" the
+      first attempt produced. background-color and opacity both interpolate;
+      opacity on a layer is the one that also satisfies (1).
+
+   z-index -1 against a z-index 0 cell keeps the wash above the cell's
+   background and below its text, so the digits stay crisp under the 20% cross.
+
+   LINEAR: these tints are 9% alpha, a range so small that any ease-in curve
+   spends its visible part in the last few hundred ms and reads as a cut.
+
+   SHORTER than the chart's mark (1200ms total against 1800ms) even though the
+   two are one gesture. A row plus a column is a large area of the screen, and
+   the same duration over a large area reads as longer than over one small mark
+   -- matching the clocks made the table feel like it was waiting for you. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-flash-row > td,
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-flash-col {
+  position: relative;
+  z-index: 0;
+}
+/* A header cell is already positioned (below) -- do not touch its
+   position. */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-flash-colhead {
+  z-index: 0;
+}
+
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-flash-row > td::after,
+:is(.vz-table, .vz-table-groups) .blockr-table tbody td.vz-table-flash-col::after,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-flash-colhead::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  animation: vz-table-flash-out 900ms linear 300ms both;
+}
+
+/* The accent bars ride the same layer, so they fade with it rather than
+   needing an animation of their own. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-flash-row > td:first-child::after {
+  box-shadow: inset 3px 0 0 0 var(--blockr-color-border-accent, #2563eb);
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-flash-colhead::after {
+  box-shadow: inset 0 3px 0 0 var(--blockr-color-border-accent, #2563eb);
+}
+
+/* The cell where the two claims cross: one step darker, same layer. */
+:is(.vz-table, .vz-table-groups) .blockr-table tbody tr.vz-table-flash-row > td.vz-table-flash-cross::after {
+  background: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+}
+
+@keyframes vz-table-flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes vz-table-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Flat-table header alignment, driven by the column's data type so the name,
+   sub-label and sort arrow all agree with the body cells: numeric right, text
+   left (the structured table does the same for its arm columns). The type
+   class beats the inherited html-table delta, which right-aligns every header. */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-header.vz-table-col-num {
+  text-align: right;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-header.vz-table-col-txt {
+  text-align: left;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-num .vz-table-th-namerow,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-num .vz-table-th-subrow {
+  justify-content: flex-end;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-txt .vz-table-th-namerow,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th.vz-table-col-txt .vz-table-th-subrow {
+  justify-content: flex-start;
+}
+/* The header cells are opaque, so the rows pass under the header as it
+   stays in view: the thead is sticky in a box that scrolls (above), and
+   table/chrome.js followHeader() moves it in a table that scrolls with its
+   panel. The cells are not sticky themselves: each would stick at the top,
+   and a spanner row would cover the row under it. */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th {
+  position: relative;
+  z-index: 2;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+/* Sort indicator placement, matching the html preview: the arrow flows on
+   the lower row immediately to the right of the subtext (small gap, like the
+   preview's type-row) rather than on its own line.
+   - labelled column:   name on top, [label arrow] below
+   - unlabelled column: [name arrow] on the single row */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-namerow,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-subrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-subrow {
+  margin-top: 1px;
+}
+/* Right-aligned (structured Table-1) arm headers anchor the subtext + arrow
+   to the right edge, level with the numeric columns below. A nested groups
+   table is structured too, but its headers follow the column type like the
+   flat table's: a chart column's name, its sub line and its axis all start
+   on the left, as in 0.2.200. */
+.vz-table-structured:not(.vz-table-groups) .blockr-table thead th.vz-table-col-header .vz-table-th-namerow,
+.vz-table-structured:not(.vz-table-groups) .blockr-table thead th.vz-table-col-header .vz-table-th-subrow {
+  justify-content: flex-end;
+}
+/* The structured arm sub-line carries its own top margin for the stacked
+   layout; inside the flex subrow the subrow owns the spacing. */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-subrow .vz-table-arm-n {
+  margin-top: 0;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-namerow .blockr-sort-icon,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-th-subrow .blockr-sort-icon {
+  flex: 0 0 auto;
+}
+/* The unsorted arrow reserves no space, so a right-aligned header stays
+   flush-right; the arrow only appears — and nudges the subtext left — once a
+   sort direction is set. (The shared base rule gives it a fixed 12px box,
+   which would otherwise push the subtext off the right edge.) */
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .blockr-sort-icon {
+  display: none;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .blockr-sort-icon-asc,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .blockr-sort-icon-desc {
+  display: inline-block;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .blockr-col-name,
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .vz-table-arm-name {
+  display: block;
+}
+:is(.vz-table, .vz-table-groups) .blockr-table thead th .blockr-col-label {
+  font-weight: var(--blockr-font-weight-normal, 400);
+  font-size: 11px;   /* match the canonical html preview's column sub-label */
+  color: var(--blockr-color-text-muted, #6b7280);
+  /* Shrink (ellipsis) rather than reflow when the sort arrow appears under a
+     pinned column width — the arrow nudges the sub-label, never the column. */
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:is(.vz-table, .vz-table-groups) {
+  position: relative;
+}
+
+/* Zero-match search feedback (table/dom.js): shown under the
+   header when an active query hides every data row, removed with matches. */
+:is(.vz-table, .vz-table-groups) .vz-table-search-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+/* ===== Control row (search · download · gear) ===== */
+/* The chrome's toolbar moves INTO the gear row (table/gear.js), so
+   search and download sit left of the gear — the chart's cluster — while
+   the gear keeps its canonical top-right position. Scoped to the block
+   container: the shared .blockr-html-table-* chrome is also the plain
+   preview's, which has no gear and keeps its own layout. */
+:is(.vz-table, .vz-table-groups) .blockr-gear-header {
+  gap: 6px;
+}
+
+:is(.vz-table, .vz-table-groups) .vz-head {
+  margin-bottom: 6px;
+}
+
+/* Wrapping column titles. The width estimator measures a header by its
+   longest WORD when wrapping is on (column_widths_px(wrap_names = TRUE)), so
+   the column takes the narrowest width that never breaks a word and the title
+   has to be free to wrap into it. The base preview CSS pins .blockr-col-name
+   to nowrap + ellipsis for the one-line estimate, which would clip instead;
+   lift that here, gated on the toggle so the off-state keeps one line.
+   `balance` evens the line lengths rather than leaving a trailing orphan. */
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .blockr-col-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: balance;
+}
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-wrap-titles="on"] thead th .vz-table-arm-name {
+  text-wrap: balance;
+}
+
+/* ===== Footer row: row count + filter status ===== */
+/* The frame's footer (frame.css .vz-foot): the count left, the status line
+   ("Filtered: ...", with its clear button) taking the rest. Both halves
+   collapse when empty. */
+.vz-table > .vz-foot {
+  padding: 0 var(--blockr-card-inset, 0px);
+}
+
+/* The status half (there only while a filter is set) takes the rest of the
+   row. */
+.vz-table > .vz-foot > .vz-status {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vz-table .vz-count {
+  padding: 6px 0;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Rotated column titles (matrix display mode, data-dt-rotate-titles="on").
+   The value-column headers stand upright so the column width is set by the
+   CELL content, not the title -- the subject x term AE heatmap fits several
+   times more terms per viewport this way. writing-mode vertical-rl +
+   rotate(180deg) reads bottom-up (the spreadsheet convention); the stub
+   header (.vz-table-stub-header) stays horizontal -- it is the row identity.
+   Gated on the table attribute exactly like wrap-titles above. */
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.vz-table-col-header {
+  vertical-align: bottom;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.vz-table-col-header .vz-table-th-namerow,
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.vz-table-col-header .vz-table-th-subrow {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.vz-table-col-header .blockr-col-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 148px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+/* The table keeps the widths its columns ask for instead of stretching
+   them over the panel: a compact matrix is as wide as its cells. */
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] {
+  width: auto;
+}
+/* The column sub-label (variable label) has no room in a 30px column;
+   the title carries the identity in matrix mode. */
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] thead th.vz-table-col-header .blockr-col-label {
+  display: none;
+}
+/* Dense cells: the standard cell padding would eat a 28px column whole,
+   and centred counts read better than right-aligned ones in a matrix. */
+:is(.vz-table, .vz-table-groups)
+  .blockr-table[data-dt-rotate-titles="on"] tbody td.vz-table-data {
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+
+/* In a block card the table runs to the card edges: its scroll box, its
+   search bar and its footer pull themselves out by the card's inset
+   (--blockr-card-inset, set by blockr.dock), and the first and last columns,
+   the search bar and the footer pad their text back in by as much (the
+   structured table's row labels and last column do so in
+   table-structured.css). The rules, the hover and drill washes and the
+   scroll area reach the edges; every text keeps its place. Whatever else a
+   caller puts in the container stays on the card's inset. Outside a card
+   the inset is 0. */
+.vz-table > .vz-body > .blockr-table-wrapper,
+.vz-table > .vz-foot {
+  margin-left: calc(-1 * var(--blockr-card-inset, 0px));
+  margin-right: calc(-1 * var(--blockr-card-inset, 0px));
+}
+.vz-table .blockr-table tr > :first-child {
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+}
+.vz-table .blockr-table tr > :last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
+}
+
+/* The export picture (table/groups.js picture()): the block without its
+   tools, white, with the title band as the header row shows it. */
+.vz-table-groups-capture {
+  background: #fff;
+  padding: 8px 10px;
+}
+.vz-table-groups-capture .vz-head__titles {
+  border-bottom: none;
+  margin-bottom: 4px;
+}
+/* --- table-structured.css */
+/* The structured table (sections, spanners, stub indent, fold chevrons),
+   scoped to `.vz-table-structured`, which the view sets on a table
+   with sections or keyed rows. */
+.vz-table-structured {
+  background: var(--blockr-color-bg-surface, #ffffff);
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-structured .blockr-table-wrapper {
+  max-height: none;
+}
+input.vz-table-search {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  height: var(--blockr-control-h-sm, 30px);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: 4px;
+  padding: 4px 8px 4px 26px;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-default, #111827);
+  background-color: var(--blockr-color-bg-field, #f9fafb);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  width: 180px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+input.vz-table-search::placeholder { color: var(--blockr-color-text-muted, #6b7280); }
+input.vz-table-search:focus {
+  outline: none;
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+/* Column headers. Every cell carries a 1px bottom border so the header keeps
+   its height, but only a leaf column header paints a rule, and that rule is a
+   background line 12px short of the cell: a gap between columns instead of
+   one full-width line. It sits flush right, over the right-aligned numbers.
+   The border is transparent and still wins the collapsed-border conflict
+   against the row's own rule (cell beats row at equal width), which is what
+   keeps the shared sheet's full-width header line off. */
+.vz-table-structured .blockr-table thead th {
+  vertical-align: bottom;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 7px 12px;
+  border-bottom: 1px solid transparent;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header {
+  text-align: right;
+}
+/* One unbroken rule under the whole header, in the grey of the card's rule
+   above the table: under every cell of the last header row and under the
+   cells that span down to it (the row-label title, a column without a
+   spanner). A spanner's tile sits above it. Drawn on the cells rather than
+   as a border, which would not travel with the sticky header. */
+.vz-table-structured .blockr-table thead th {
+  background-image: none;
+}
+.vz-table-structured .blockr-table thead tr:last-child > th,
+.vz-table-structured .blockr-table thead th[rowspan] {
+  background-image: linear-gradient(var(--blockr-color-border-default, #e5e7eb), var(--blockr-color-border-default, #e5e7eb));
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: left bottom;
+}
+/* In a block card the table runs to the card edges: the last column pads its text back in by the card's inset,
+   as the row labels do on the left. */
+.vz-table-structured .blockr-table thead th.vz-table-col-header:last-child,
+.vz-table-structured .blockr-table tbody td.vz-table-data:last-child {
+  padding-right: calc(12px + var(--blockr-card-inset, 0px));
+}
+/* A group header sits ABOVE the columns it names, so it cannot read smaller
+   than them: without the size here it falls through to the 11px meta size the
+   header band uses and the parent ends up smaller than its children.
+   The tile is what says how far the group reaches -- four groups side by side
+   have nothing else to separate them, and a fill that runs edge to edge just
+   makes one grey band with words in it. The inset gutters cut that band into
+   tiles; the wash is translucent so a drill-active column still shows through.
+   The last spanner keeps its gutter clear of the card's inset too. */
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+  background: color-mix(in srgb, var(--blockr-color-text-default, #111827) 5%, var(--blockr-color-bg-surface, #ffffff));
+  border-radius: 7px 7px 0 0;
+  box-shadow:
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group:last-child {
+  box-shadow:
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset calc(-5px - var(--blockr-card-inset, 0px)) 0 0 0 var(--blockr-color-bg-surface, #ffffff);
+}
+/* A spanner's Big N sub-line follows its own row's centring, not the
+   flush-right the leaf headers use to sit over their numbers. */
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group .vz-table-th-subrow {
+  justify-content: center;
+}
+/* The claimed-column paint has to be restated for a group cell, because the
+   tile above sets both of the properties it uses. The gutters stay so the
+   tile keeps its shape. */
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.vz-table-col-active {
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+  box-shadow:
+    inset 5px 0 0 0 var(--blockr-color-bg-surface, #ffffff),
+    inset -5px 0 0 0 var(--blockr-color-bg-surface, #ffffff);
+}
+/* A group below the top row is already inside a tile, so it drops its own and
+   reads like a leaf: a tile in a tile is only more grey. Over a single column
+   it sits flush right, above the number, like the leaf under it. */
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner[colspan="1"] {
+  text-align: right;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner[colspan="1"] .vz-table-th-subrow {
+  justify-content: flex-end;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.group.group-inner.vz-table-col-active {
+  background: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  box-shadow: none;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.leaf {
+  font-size: 13.5px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+  letter-spacing: -0.01em;
+}
+.vz-table-structured .blockr-table thead th .vz-table-arm-name {
+  display: block;
+}
+/* The Big N: bold like the arm name above it, but smaller and in the muted
+   ink, so it reads as the name's footnote. */
+.vz-table-structured .blockr-table thead th .vz-table-arm-n {
+  display: block;
+  font-size: 12px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-muted, #6b7280);
+  letter-spacing: 0.01em;
+  margin-top: 0;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-header.leaf strong {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: 13.5px;
+}
+/* The first-column title is the producer's text (attr(.label, "label")), in
+   the body's size and ink, padded in by the card's inset like the row
+   labels under it. */
+.vz-table-structured .blockr-table thead th.vz-table-stub-header {
+  text-align: left;
+  padding-left: calc(12px + var(--blockr-card-inset, 0px));
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: normal;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-structured .blockr-table thead th.vz-table-stub-header.vz-table-stub-header-bold {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* Fold all (table/html.js adds it when the table folds and has groups): the
+   chevron hangs to the left, so the title starts on the rows' 24px text edge
+   (3px padding + 12px chevron + 9px gap), as the group headings do. Only
+   the chevron is the button; without a title it carries "All". */
+.vz-table-structured thead th.vz-table-stub-header.vz-table-has-foldall {
+  padding-left: calc(3px + var(--blockr-card-inset, 0px));
+}
+.vz-table-structured .vz-table-foldall-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.vz-table-structured .vz-table-foldall {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
+  flex: none;
+}
+.vz-table-structured .vz-table-foldall:hover,
+.vz-table-structured .vz-table-foldall:hover .vz-table-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-structured .vz-table-foldall[aria-expanded="false"] .vz-table-chev {
+  transform: rotate(-90deg);
+}
+.vz-table-structured .vz-table-foldall:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+  border-radius: 2px;
+}
+/* Stat-label (row-stub) cells - wrap to 2 lines (never truncate), aligned
+   to the top so a wrapped label stays level with its numbers, in the body
+   ink. The 24px left padding is the indent-0 BASE: nested rows add
+   `row_indent * 16px` on top (table/html.js), so level 1 sits at 40px,
+   level 2 at 56px, etc. Keeping this base BELOW the first indent step is what
+   makes the indentation visible. 3px above and below the 20px line is a
+   26px row, as in the preview. A groups table keeps its row labels on one
+   line (table-groups.css). */
+.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody td.vz-table-stub {
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  /* --vz-indent: the row's indent steps (table/html.js indentSteps()). */
+  padding: 3px 18px 3px calc(24px + var(--vz-indent, 0) * 16px + var(--blockr-card-inset, 0px));
+  line-height: 20px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-default, #111827);
+}
+/* Value cells - right-aligned, tabular figures, top-aligned to match the
+   wrapping stub. Normal weight like the preview; emphasis (totals, key rows)
+   comes from the data via `.bold` rows, not a blanket medium weight. */
+.vz-table-structured .blockr-table tbody td.vz-table-data {
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  padding: 3px 12px;
+  line-height: 20px;
+  font-size: var(--blockr-font-size-base, 0.875rem);
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-default, #111827);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+/* Em-dash for missing values reads as 'no data', not as a real figure. */
+.vz-table-structured .blockr-table tbody td.vz-table-data.vz-table-dash {
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* No rules in the body. 26px rows: 3px above and below a 20px line, set
+   here rather than inherited, so the height does not depend on the base
+   sheet's line height. Groups are set apart by space (the group's last row
+   and the next heading's top padding). */
+.vz-table-structured .blockr-table tbody tr {
+  border-bottom: 0;
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-group-last td {
+  border-bottom: 0;
+  padding-bottom: 7px;
+}
+/* The second selector matches the stub rule's `:not(.vz-table-groups-table)`,
+   so a bold row's stub is bold too. */
+.vz-table-structured .blockr-table tbody tr.vz-table-bold td,
+.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody tr.vz-table-bold td.vz-table-stub {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* Headings. A row that heads other rows, at any level, has its label at
+   600 in the body ink, 13px from the third level on, as the section
+   headings below; the rows under it stay at 400 (html.js row()). Groups
+   tables carry the same classes. */
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads > td.vz-table-stub {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+}
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads-deep > td.vz-table-stub {
+  font-size: 13px;
+}
+/* A heading with no values of its own is one cell across the row; a
+   groups parent is that line and its values on the line under it. The
+   text adds nothing to the table's width (width 0, at least the cell's):
+   it runs across the empty cells on one line, and past the edge of a
+   table narrower than it (a compact matrix of a few columns) without
+   widening a column. The box scrolls only for a name wider than the panel.
+   The fold chevron hangs into the padding. */
+:is(.vz-table-structured, .vz-table-groups) .blockr-table tbody td.vz-table-heading-cell {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+.blockr-table .vz-table-heading-text {
+  display: inline-block;
+  vertical-align: top;
+  width: 0;
+  min-width: 100%;
+  white-space: nowrap;
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-italic td {
+  font-style: italic;
+}
+/* Hover. A table nothing can be clicked in keeps a plain row wash. A table
+   whose rows drill (`.vz-table-clickable`) shows what a click would claim instead:
+   table/drill.js sets vz-table-hot-row / vz-table-hot-col / vz-table-hot-cell from the click
+   model, so the plain :hover wash is off there. The shared sheet's
+   own hover sits on the <tr>; it goes, or it would show under both. */
+.vz-table-structured .blockr-table tbody tr:hover {
+  background-color: transparent;
+}
+.vz-table-structured .blockr-table thead th.blockr-sortable:hover {
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+.vz-table-structured:not(.vz-table-clickable) .blockr-table tbody tr.vz-table-row:hover > td {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row > td,
+.vz-table-structured .blockr-table tbody td.vz-table-hot-col,
+.vz-table-structured .blockr-table thead th.vz-table-hot-col {
+  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row.vz-table-hot-soft > td,
+.vz-table-structured .blockr-table tbody td.vz-table-hot-col.vz-table-hot-soft {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, transparent);
+}
+/* The sticky header stays opaque, or the rows scroll through it. */
+.vz-table-structured .blockr-table thead th.vz-table-hot-col.vz-table-hot-soft {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 3%, var(--blockr-color-bg-surface, #ffffff));
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-hot-row > td.vz-table-hot-cell {
+  background-color: color-mix(in srgb, var(--blockr-color-text-default, #111827) 9%, transparent);
+}
+/* Drill state: the claimed row and column take the selected tint and the
+   accent ink, with no bars; the cell where the two cross is one step stronger
+   and bold. After the hover rules, so a claim shows through the hover. */
+.vz-table-structured .blockr-table tbody tr.vz-table-row-active > td,
+.vz-table-structured .blockr-table tbody td.vz-table-col-active,
+.vz-table-structured .blockr-table thead th.vz-table-col-header.vz-table-col-active {
+  background-color: var(--blockr-color-bg-selected, rgba(37, 99, 235, 0.07));
+  color: var(--blockr-color-text-accent, #2563eb);
+  box-shadow: none;
+}
+.vz-table-structured .blockr-table thead th.vz-table-col-active .vz-table-arm-n {
+  color: var(--blockr-color-text-accent, #2563eb);
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-row-active > td.vz-table-col-active {
+  background-color: var(--blockr-color-bg-accent-subtle-hover, rgba(37, 99, 235, 0.13));
+  font-weight: var(--blockr-font-weight-semibold, 600);
+}
+/* Group header row + full-width clickable button. The td carries no
+   padding (so the bigger hit target reaches the row edges); the button
+   carries it. */
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header {
+  cursor: pointer;
+}
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header td.vz-table-section-cell {
+  padding: 0 0 0 var(--blockr-card-inset, 0px);
+  text-align: left;
+  border-top: none;
+}
+.vz-table-structured .vz-table-section-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--blockr-color-text-default, #111827);
+  padding: 11px 12px 3px;
+}
+/* The first heading sits right under the column header. */
+.vz-table-structured .blockr-table tbody tr.vz-table-section-header:first-child .vz-table-section-btn {
+  padding-top: 10px;
+}
+/* Collapsing disabled: the section label is a static span, not a control. */
+.vz-table-structured .vz-table-section-btn-static { cursor: default; }
+/* Section headers (html_is_nest()): each heading's name starts where its
+   rows start (24px, one 16px step per level), the 12px chevron and 9px gap
+   hanging to the left of it. */
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest .vz-table-section-btn {
+  padding-left: 3px;
+}
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-2 .vz-table-section-btn {
+  padding-left: 19px;
+}
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-3 .vz-table-section-btn {
+  padding-left: 35px;
+}
+.vz-table-structured .vz-table-section-cell.vz-table-section-nest.level-4 .vz-table-section-btn {
+  padding-left: 51px;
+}
+.vz-table-structured .vz-table-section-value {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  letter-spacing: -0.005em;
+  font-size: 14px;
+}
+.vz-table-structured .vz-table-section-cell.level-3 .vz-table-section-value,
+.vz-table-structured .vz-table-section-cell.level-4 .vz-table-section-value {
+  font-size: 13px;
+}
+/* The design system's chevron: 12px, a 1.4px stroke at any size, muted,
+   darker on hover of its heading. Down while open, right when folded (the
+   ROW carries `collapsed`). The svg keeps its 24-unit path; the stroke is
+   pinned by the `.vz-table .vz-table-chev path` rule at the
+   end of this sheet. */
+.vz-table-structured .vz-table-chev {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--blockr-color-text-muted, #6b7280);
+  transition: transform var(--blockr-transition, 0.15s ease), color var(--blockr-transition, 0.15s ease);
+}
+.vz-table-structured .vz-table-section-btn:hover .vz-table-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-structured tr.vz-table-section-header.collapsed .vz-table-chev {
+  transform: rotate(-90deg);
+}/* Indent-derived collapse: a chevron button sits before the label of any row
+   that heads a deeper-indented group. Reuses the section chevron, rotating when
+   the row is collapsed. The button is a bare affordance so clicking the label /
+   cells still drills. */
+.vz-table-structured .vz-table-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-right: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+  margin-left: -17px;
+}
+.vz-table-structured .vz-table-indent-btn:hover .vz-table-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-structured tr.vz-table-indent-toggle.collapsed .vz-table-chev {
+  transform: rotate(-90deg);
+}
+.vz-table-structured .blockr-table tbody tr:last-child td {
+  border-bottom-color: transparent;
+}
+.vz-table-structured .vz-table-section-label {
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-weight: var(--blockr-font-weight-normal, 400);
+  margin-right: 4px;
+}
+/* The header stays in view while the rows scroll (table.css); a soft shadow
+   fades in once the table has scrolled (the JS toggles `.scrolled` on
+   .blockr-table-wrapper). background-color, not the shorthand, so a leaf
+   keeps its column rule. */
+.vz-table-structured .blockr-table thead th {
+  position: relative;
+  z-index: 3;
+  background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+.vz-table-structured .blockr-table-wrapper.scrolled thead th {
+  box-shadow: 0 10px 16px -14px rgba(16, 24, 40, 0.4);
+}
+.vz-table .vz-table-chev path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.4px;
+}
+
+/* --- table-groups.css */
+/* The groups layout of the table block (inst/js/table/groups.js, marks.js,
+   tooltip.js, summaries.js): marks, column axes, legend, nesting, the
+   compact matrix and the Columns editor, on top of table-structured.css.
+   The last row of a nested group carries `is-group-end` and a sparkline's
+   cell `is-spark`, set where the markup is written. */
+.vz-table-groups {
+  --vz-table-groups-fill: var(--blockr-color-bg-accent, #2563eb);
+  --vz-table-groups-sub: color-mix(in srgb, var(--vz-table-groups-fill) 45%,
+                                    transparent);
+  /* The lane track. The design token alone is so close to the surface
+     that an empty lane reads as nothing at all -- and on a box or a dot
+     range the track IS the axis the glyph is read against, so it has to be
+     visible. Mixed toward the strong border: still recessive, no longer
+     invisible. */
+  --vz-table-groups-track: color-mix(in srgb,
+                                 var(--blockr-color-bg-subtle, #f9fafb) 55%,
+                                 var(--blockr-color-border-strong, #d1d5db));
+  --vz-table-groups-bar: var(--blockr-color-bg-accent, #2563eb);
+  --vz-table-groups-tick: var(--blockr-color-border-default, #e5e7eb);
+  /* The floor under a GLYPH -- see .vz-table-groups-barwrap below. A board
+     that wants shorter marks and less scrolling overrides it on the
+     container. */
+  --vz-table-groups-lane-min: 80px;
+  /* The ceiling over it, in the default `bar_width = 'fit'`: past it a wide
+     panel's slack stays blank instead of stretching the marks. */
+  --vz-table-groups-lane-max: 320px;
+}
+.vz-table-groups-table { width: 100%; }
+/* A groups table runs its full length and the panel around it scrolls up
+   and down; the box scrolls sideways only. blockr.ui's preview stylesheet
+   makes every .blockr-table-wrapper a 400px scroll box, hence max-height.
+   The header cannot stick to the panel from inside a box that scrolls
+   sideways, so groups.js moves it down instead. Separate borders, because
+   with collapsed ones the table paints the line under the moved header in
+   place, and a strip of rows shows through. */
+.vz-table-groups > .vz-body > .blockr-table-wrapper {
+  max-height: none;
+  overflow-y: hidden;
+}
+.vz-table-groups .blockr-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.vz-table-groups .blockr-table thead {
+  position: relative;
+  z-index: 3;
+}
+/* Column widths ride on the CELLS: the header cells come from the table
+   block's (table/html.js), so they carry its classes, not ours. */
+.vz-table-groups-table td.vz-table-groups-bar-col {
+  width: 26%;
+  min-width: 110px;
+}
+.vz-table-groups-table td.vz-table-groups-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Raw field columns (the as-is measure's extra row columns): plain text,
+   left-aligned like the label column, never numeric-formatted. */
+.vz-table-groups-table td.vz-table-groups-txt { white-space: nowrap; }
+.vz-table-groups-table td.vz-table-groups-label-col { white-space: nowrap; }
+/* The GLYPH columns own the slack. Auto table layout hands leftover width to
+   the unconstrained cells, which meant a wide panel only stretched the label
+   column while the bars and boxes stayed at their 26%. width:1% is the
+   shrink-to-fit idiom (with nowrap, the cell takes its content width and no
+   more), so widening the block lengthens the visuals instead. Label and text
+   cells still cap out and ellipsis rather than pushing the glyphs off. */
+.vz-table-groups-table th.vz-table-stub-header,
+.vz-table-groups-table td.vz-table-groups-label-col,
+.vz-table-groups-table td.vz-table-groups-txt,
+.vz-table-groups-table td.vz-table-groups-num { width: 1%; }
+.vz-table-groups-table td.vz-table-groups-label-col,
+.vz-table-groups-table td.vz-table-groups-txt {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Header titles and their variable-label line wrap at word breaks, as in
+   the records layout (column_widths_px(wrap_names = TRUE)): the body sets a
+   column's width, and the narrowest a column gets is its longest header
+   word. On one line, a long label line ("Actual Treatment (Abbr.) / Unique
+   Subject Identifier") set the width of a column of short ids. The compact
+   look's one-line header (further down) still wins. */
+.vz-table-groups .blockr-table.vz-table-groups-table thead th .blockr-col-name,
+.vz-table-groups .blockr-table.vz-table-groups-table thead th .blockr-col-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-wrap: balance;
+}
+/* The in-bar value label: track left, value right in a FIXED slot (one width
+   per column, in ch) so every row's track spans the same range -- a varying
+   label width would silently rescale the bars against each other. */
+.vz-table-groups-barwrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* The mark has a FLOOR, and it is the mark that carries it, not the cell.
+   A cell minimum (the 110px on .vz-table-groups-bar-col) is spent on the value
+   label first, so a faceted table with a dozen level columns squeezed every
+   lane down to the few pixels the label left over -- glyphs too small to
+   compare, which is the whole point of the column. Putting the minimum on
+   the lane makes the column's minimum label-plus-a-readable-mark instead, and
+   a table that no longer fits scrolls sideways in its wrapper (the cheap
+   direction: rows stay put, and the reader keeps the labels in view). */
+.vz-table-groups-barwrap .vz-table-groups-track,
+.vz-table-groups-barwrap .vz-table-groups-dv,
+.vz-table-groups-barwrap .vz-table-groups-lane {
+  flex: 1 1 auto;
+  min-width: var(--vz-table-groups-lane-min, 80px);
+  max-width: var(--vz-table-groups-lane-max, 320px);
+}
+/* Bar width (`bar_width`). Fit, the default, is the rule above: the lanes
+   take the panel's slack, between the floor and the ceiling. A preset fixes
+   the lane instead, and the table drops to its natural width: every cell's
+   width goes back to auto, because one percentage cell (the 1% shrink-to-fit
+   idiom, the 26% glyph column) stretches an auto-width table to the panel
+   again. The slack stays blank on the right; a panel narrower than the table
+   scrolls. Only the labelled marks follow it: a swimlane spans its cell. */
+.vz-table-groups-table[data-summarize-width='narrow'] {
+  --vz-table-groups-lane-w: 90px;
+}
+.vz-table-groups-table[data-summarize-width='medium'] {
+  --vz-table-groups-lane-w: 150px;
+}
+.vz-table-groups-table[data-summarize-width='wide'] {
+  --vz-table-groups-lane-w: 240px;
+}
+.vz-table-groups-table[data-summarize-width] { width: auto; }
+.vz-table-groups-table[data-summarize-width] th,
+.vz-table-groups-table[data-summarize-width] td {
+  width: auto;
+  min-width: 0;
+}
+.vz-table-groups-table[data-summarize-width]
+  .vz-table-groups-barwrap > :not(.vz-table-groups-barval),
+.vz-table-groups-table[data-summarize-width]
+  .vz-table-groups-axis.has-val .vz-table-groups-axis-in {
+  flex: 0 0 var(--vz-table-groups-lane-w);
+  min-width: 0;
+  max-width: none;
+}
+/* Grey: the number belongs to the mark beside it and should not outshout
+   the label column. */
+.vz-table-groups-barval {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--blockr-color-text-muted, #6b7280);
+  /* Smaller than the cells, larger than the axis ticks. The slot is sized
+     in ch of THIS type, so the axis pad above it takes the same size. */
+  font-size: 11px;
+}
+.vz-table-groups-table .vz-table-groups-pct {
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* A zero count: there, but quieter than the counts beside it. */
+.vz-table-groups-barval.is-zero,
+.vz-table-groups-barval.is-zero .vz-table-groups-pct {
+  color: var(--blockr-color-text-subtle, var(--blockr-color-text-disabled, #9ca3af));
+}
+/* The column axis, under the header label. Printing the domain ONCE is what
+   pays for the empty lanes below it: with a scale named at the top of the
+   column, a cell only has to hold its mark. Geometry mirrors
+   .vz-table-groups-barwrap exactly (flexed strip + the same value slot), so a
+   tick and the mark under it are percentages of one box. */
+.vz-table-groups-axis {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 5px;
+  height: 12px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  letter-spacing: 0;
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+/* The small type sits on the ticks, not on the strip: the pad is sized in
+   ch, and a ch at 9.5px is two thirds of the cell's, so a strip-wide font
+   size left the ticked span ~20px longer than the lane under it. The pad
+   takes the value labels' size (11px), so it and the slot are one width. */
+.vz-table-groups-axis-in {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  font-size: 9.5px;
+}
+.vz-table-groups-axis.has-val .vz-table-groups-axis-in {
+  max-width: var(--vz-table-groups-lane-max, 320px);
+}
+.vz-table-groups-axis-pad { flex: 0 0 auto; font-size: 11px; }
+.vz-table-groups-axis-in span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.vz-table-groups-axis-in span.is-first { transform: none; }
+.vz-table-groups-axis-in span.is-last { transform: translateX(-100%); }
+
+/* Sorting affordance: none of our own. The header cells are the records
+   layout's (table/html.js), so the .blockr-sortable cursor and the
+   .blockr-sort-icon arrow come from table.css and read the same. */
+
+/* Bars: segments TOUCH, and only the VALUE end is rounded. The end a bar grows
+   to is a measurement and gets the cosmetic --blockr-mark-radius; the end at
+   zero is the axis, shared by every row, and stays square because rounding it
+   lifts the bar off its baseline. In a stack only the outermost segment has a
+   value end, so `:last-child` carries the radius and the inner joins stay
+   square -- which is also why segments still touch with no separating border,
+   matching the chart block's `stack:'stack'` and `barGap: 0`.
+
+   The radius is cosmetic and means NOTHING. It must stay well under half the
+   lane height, where a capsule becomes the SEMANTIC mark for a soft boundary
+   (see .vz-table-groups-prcell below).
+
+   The grey track stays: it is a table-cell affordance (it says what the row's
+   share is against the column max) with no echarts equivalent, and the
+   crossfilter block in blockr.dm draws the same track + fill pair. */
+.vz-table-groups-track {
+  display: flex;
+  gap: 0;
+  /* 12px = the shared lane height: bars, boxes, dot ranges and swimlanes
+     line up across columns. */
+  height: 12px;
+  background: var(--vz-table-groups-track);
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.vz-table-groups-track.is-tall {
+  height: auto;
+  flex-direction: column;
+  /* 4px: the same white between levels as the labelled split, whose 12px
+     value line plus the 2px gap puts its 10px lanes 14px apart. */
+  gap: 4px;
+  background: none;
+  border-radius: 0;
+}
+/* One level of a grouped split, with its value beside it (.is-lv) or
+   without (.row3): 10px, a little under the plain bar's 12px so the levels
+   keep 4px of white between them. A row grows to hold its levels. */
+.vz-table-groups-track.is-lv { height: 10px; }
+.vz-table-groups-track.is-tall .vz-table-groups-row3 {
+  height: 10px;
+  background: var(--vz-table-groups-track);
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.vz-table-groups-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0;
+  background: var(--vz-table-groups-fill);
+}
+/* A stacked segment's own number, inside it. The segment is a size
+   container, so a number it is too narrow for is hidden rather than cut:
+   wN is the number's length in characters, about 6px each at 10px type,
+   plus a little air. A longer number than w7 never shows inside. */
+.vz-table-groups-fill.has-lab {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.vz-table-groups-seglab {
+  display: none;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vz-table-groups-seglab.vz-table-lw-1, .vz-table-groups-seglab.vz-table-lw-2,
+.vz-table-groups-seglab.vz-table-lw-3, .vz-table-groups-seglab.vz-table-lw-4,
+.vz-table-groups-seglab.vz-table-lw-5, .vz-table-groups-seglab.vz-table-lw-6,
+.vz-table-groups-seglab.vz-table-lw-7 { display: inline; }
+@container (max-width: 11px) { .vz-table-groups-seglab.vz-table-lw-1 { display: none; } }
+@container (max-width: 17px) { .vz-table-groups-seglab.vz-table-lw-2 { display: none; } }
+@container (max-width: 23px) { .vz-table-groups-seglab.vz-table-lw-3 { display: none; } }
+@container (max-width: 29px) { .vz-table-groups-seglab.vz-table-lw-4 { display: none; } }
+@container (max-width: 35px) { .vz-table-groups-seglab.vz-table-lw-5 { display: none; } }
+@container (max-width: 41px) { .vz-table-groups-seglab.vz-table-lw-6 { display: none; } }
+@container (max-width: 47px) { .vz-table-groups-seglab.vz-table-lw-7 { display: none; } }
+
+/* The value end. In a plain bar the fill is the only child; in a stack it is
+   the outermost segment; in a grouped bar each row3 holds one. Zero-width
+   segments are never emitted, so :last-child is always a segment that shows. */
+.vz-table-groups-track > .vz-table-groups-fill:last-child,
+.vz-table-groups-row3 > .vz-table-groups-fill:last-child {
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.vz-table-groups-track.is-sub .vz-table-groups-fill {
+  background: var(--vz-table-groups-sub);
+}
+
+/* Lane marks (box / point range / interval / sparkline): absolutely
+   positioned glyphs inside a track-coloured lane, percentage geometry
+   computed in R. Same fill/track/sub tokens as the bars, so a themed board
+   restyles every mark together. ONE height (matching the bar track) so a
+   bar column, a box column and a swimlane read as one system; only the
+   sparkline is taller (amplitude needs room). */
+.vz-table-groups-lane {
+  position: relative;
+  height: 12px;
+}
+/* The ground, decided by the MARK and not by taste: a glyph that draws an
+   outer range (a whisker, or the dot style's fence band) already spans the
+   cell, so that band IS the rail the row is read against and a track behind
+   it would be a second line saying the same thing. Only a mark with no outer
+   range -- an IQR bar, a plain point range, a bare dot -- has nothing
+   spanning the cell, and those keep a hairline so they do not float as chips.
+   The column axis in the header carries the domain either way
+   (_blockr.design/open/summarize-table/mock-box/, card D00). */
+.vz-table-groups-lane.is-bare::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--blockr-color-border-default, #e5e7eb);
+}
+.vz-table-groups-lane i { position: absolute; }
+/* Colour-split distribution cell: the levels stack INSIDE the cell, so the
+   column stays one column. Every level keeps the full 12px lane and its
+   marks; a row with more levels grows to hold them. (Thinning the third
+   level on to fit a fixed row drew one row in two dot sizes.) */
+.vz-table-groups-multi {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.vz-table-groups-multi .vz-table-groups-lv {
+  min-width: 0;
+  /* The level's colour arrives as --vz-table-groups-fill on this element. The
+     TRANSLUCENT token is derived from the fill, so it has to be re-derived
+     here as well -- otherwise a level's translucent marks keep the column
+     default. */
+  --vz-table-groups-sub: color-mix(in srgb, var(--vz-table-groups-fill) 45%,
+                               transparent);
+}
+/* A colour-split cell with value labels: one number per level, beside its
+   lane. A tight line, so a level is barely taller than its lane and a row of
+   five levels grows by what the numbers need. */
+.vz-table-groups-multi .vz-table-groups-lv.vz-table-groups-barwrap
+  .vz-table-groups-barval {
+  line-height: 13px;
+}
+/* A grouped bar's 10px level: a 12px line, so the levels sit 14px apart. */
+.vz-table-groups-multi .vz-table-groups-track.is-lv
+  + .vz-table-groups-barval {
+  line-height: 12px;
+}
+/* Box: whiskers OUTSIDE the body only (two segments), a solid body in the
+   fill, and the median cut out of it in the surface colour, as the chart's
+   box (option-distribution.js). */
+.vz-table-groups-boxcell .vz-table-lane-wh {
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--vz-table-groups-fill);
+}
+/* The IQR body is free-standing: neither end sits on an axis and neither abuts
+   a sibling, so the cosmetic radius applies to BOTH ends. It is not the pill --
+   the box is 10px tall and the radius is 2px, nowhere near the half-height that
+   would make it read as a soft boundary. The whiskers and the median cut stay
+   square: at 1-2px a radius would turn them into dots. */
+.vz-table-groups-boxcell .vz-table-lane-box {
+  top: 1px;
+  bottom: 1px;
+  background: var(--vz-table-groups-fill);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-boxcell .vz-table-lane-med {
+  top: 2px;
+  bottom: 2px;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--blockr-color-bg-surface, #ffffff);
+}
+/* The dot style: three nested weights over one x. The fence band (outer
+   range) recedes to a tint, the inner range is a rounded bar, the centre is a
+   ringed dot -- so the eye reads centre first, spread second, extent third,
+   which is the order the numbers matter in. Both ends rounded because the
+   band is a soft boundary, unlike the box's hard fence caps. */
+/* 999px, not half the height as a literal. These are CAPSULES: the radius is
+   the signal, so it has to stay half the height whatever the height becomes.
+   Written as 4px and 2px it only happened to be a capsule at 8px and 4px, and
+   a later height change would have quietly demoted it to a rounded rectangle,
+   i.e. to the cosmetic --blockr-mark-radius, which means nothing. */
+.vz-table-groups-prcell .vz-table-lane-fence {
+  top: 50%;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 999px;
+  background: var(--vz-table-groups-fill);
+  opacity: 0.16;
+}
+.vz-table-groups-prcell .vz-table-lane-rng {
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 999px;
+  background: var(--vz-table-groups-fill);
+}
+.vz-table-groups-prcell .vz-table-lane-ctr {
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vz-table-groups-fill);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
+}
+/* Pair (dumbbell): two values of one group joined by a segment. The band is
+   the range the values are read against, at lane height like every other
+   ground; the reference line runs past the lane so rows read as one line. The
+   `from` mark is a hollow diamond, the `to` mark a dot, hollow when it falls
+   outside the band. A dashed link is the row's `dash` level. */
+.vz-table-groups-pacell .vz-table-lane-band {
+  top: 0;
+  bottom: 0;
+  background: var(--vz-table-groups-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-pacell .vz-table-lane-ref {
+  top: -6px;
+  bottom: -6px;
+  width: 0;
+  border-left: 1px dashed var(--blockr-color-border-strong, #d1d5db);
+}
+.vz-table-groups-pacell .vz-table-lane-link {
+  top: 50%;
+  height: 0;
+  border-top: 2px solid var(--vz-table-groups-fill);
+  margin-top: -1px;
+}
+.vz-table-groups-pacell.is-dash .vz-table-lane-link { border-top-style: dashed; }
+.vz-table-groups-pacell .vz-table-lane-from {
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1.5px solid var(--vz-table-groups-fill);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-sizing: border-box;
+}
+.vz-table-groups-pacell .vz-table-lane-to {
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--vz-table-groups-fill);
+  border: 1.5px solid var(--vz-table-groups-fill);
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+}
+.vz-table-groups-pacell .vz-table-lane-to.is-open {
+  background: var(--blockr-color-bg-surface, #ffffff);
+}
+/* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
+   A timeline is not a stack. A stack tiles by construction -- its segments
+   always share edges, they compose one quantity, and a seam between them
+   would read as a gap in that quantity, which is why a stack's inner joins
+   stay square. A swimlane's segments are per-event [left, width] pairs that
+   overlap, leave gaps, or only incidentally touch. When two of them DO touch,
+   the seam is true: it says these are two events and not one long one. So the
+   abutment exception belongs to stacking, not to interval marks.
+
+   Narrow segments need no guard: min-width is 2px and CSS scales border-radius
+   down proportionally when the corners would not fit the box. */
+.vz-table-groups-ivcell .vz-table-lane-seg {
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+/* Swimlane overlays. Ticks are surface-coloured cuts across the segments
+   (check-ins, inspections), so they vanish where there is no segment. The line is
+   dark and thin through the middle (a phase within the span). The arrow says the
+   lane is still open at its last segment's end. Events sit on top, each shape
+   over a 2px surface ring so it reads on any fill; they may lie past the last
+   segment. Ticks, line and arrow let the pointer through to the segment. */
+.vz-table-groups-ivcell .vz-table-lane-tk {
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-dor {
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--blockr-color-text-default, #111827);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-open {
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-left: 1px;
+  border-left: 7px solid var(--blockr-color-text-default, #111827);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-ev {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.vz-ev-ring {
+  fill: var(--blockr-color-bg-surface, #ffffff);
+  stroke: var(--blockr-color-bg-surface, #ffffff);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.vz-ev-ring.is-line {
+  stroke-width: 6.2px;
+  fill: none;
+}
+.vz-ev-fill {
+  fill: var(--blockr-color-text-default, #111827);
+}
+.vz-ev-open {
+  fill: var(--blockr-color-bg-surface, #ffffff);
+  stroke: var(--blockr-color-text-default, #111827);
+  stroke-width: 1.6px;
+  stroke-linejoin: round;
+}
+.vz-ev-line {
+  fill: none;
+  stroke: var(--blockr-color-text-default, #111827);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+}
+/* Lanes: a row's thin lanes stack above its main lane, one 5px lane per
+   level with a 3px line in it, so the row grows with its lanes and the main
+   lane keeps its full height at the bottom. */
+.vz-table-groups-ivstack {
+  display: flex;
+  flex-direction: column;
+}
+.vz-table-groups-ivstack > .vz-table-groups-ivcell:not(.is-thin) {
+  margin-top: 2px;
+}
+.vz-table-groups-ivcell.is-thin {
+  height: 5px;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-seg {
+  top: 1px;
+  bottom: 1px;
+  border-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-open {
+  border-left-width: 5px;
+  border-top-width: 3.5px;
+  border-bottom-width: 3.5px;
+}
+/* Even lanes (no record on the main lane): every lane is a 10px lane with
+   an 8px bar, and the main lane turns into a layer over the whole stack that
+   carries the overlays. */
+.vz-table-groups-ivstack.is-even {
+  position: relative;
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell.is-thin {
+  height: 10px;
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell.is-thin .vz-table-lane-seg {
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell:not(.is-thin) {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  margin-top: 0;
+  pointer-events: none;
+}
+.vz-table-groups-ivstack.is-even .vz-table-lane-ev {
+  pointer-events: auto;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-ev {
+  width: 10px;
+  height: 10px;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-outline {
+  box-shadow: inset 0 0 0 1px var(--blockr-color-text-default, #111827);
+}
+/* Bar labels (a spans row's bar_label): dark text on the bar when it fits,
+   after it when the lane has room, hidden otherwise (marks.js fitLabels()).
+   Until placed they show nothing. Shown by opacity, never by visibility:
+   a visible child shows through a hidden parent, and the dock hides its
+   inactive panels with visibility. The label never runs past its room. */
+.vz-table-groups-ivcell .vz-table-lane-lab {
+  position: absolute;
+  top: 50%;
+  transform: translateY(calc(-50% - 1px));
+  font-size: 10.5px;
+  line-height: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--blockr-color-text-default, #111827);
+  pointer-events: none;
+  opacity: 0;
+}
+.vz-table-groups-ivcell .vz-table-lane-lab.is-on {
+  opacity: 1;
+  padding-left: 3px;
+}
+.vz-table-groups-ivcell .vz-table-lane-lab.is-after {
+  opacity: 1;
+}
+/* Segment styles. Dashed (a skipped stretch) and hollow (a delay) paint the
+   surface first, so they cut through a period drawn under them. A dot is one
+   administration, a step a dose cut, both at the record's start. */
+.vz-table-groups-ivcell .vz-table-lane-seg.is-dashed {
+  background: repeating-linear-gradient(90deg, var(--vz-seg) 0 2px,
+                                        transparent 2px 4px)
+    center / 100% 2px no-repeat,
+    var(--blockr-color-bg-surface, #ffffff);
+  border-radius: 0;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-hollow {
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid;
+  box-sizing: border-box;
+  border-radius: 1px;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-seg.is-hollow {
+  top: -0.5px;
+  bottom: -0.5px;
+}
+.vz-table-groups-ivcell .vz-table-lane-adm {
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border: 1.2px solid;
+  border-radius: 50%;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+.vz-table-groups-ivcell .vz-table-lane-step {
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid var(--blockr-color-text-muted, #5b6372);
+  transform: translate(-50%, -85%);
+}
+/* The hover strip: one box per record of the lane, in time order. */
+.vz-table-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 440px;
+  white-space: normal;
+  margin-top: 4px;
+}
+.vz-table-strip-box {
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-top: 3px solid;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.25;
+  padding: 2px 4px;
+  min-width: 34px;
+  text-align: center;
+}
+.vz-table-strip-box.is-late {
+  background: color-mix(in srgb, #d98a1e 12%, transparent);
+}
+.vz-table-strip-box.is-skip {
+  border: 1px dashed var(--blockr-color-text-muted, #9aa3b2);
+  color: var(--blockr-color-text-muted, #8a92a1);
+}
+.vz-table-groups-legend-shape {
+  width: 12px;
+  height: 12px;
+  overflow: visible;
+}
+.vz-table-groups-legend-shape .vz-ev-ring { display: none; }
+/* The exhibit form (a spans row's size = lg): a WIDER column for boards
+   where the swimlane is the centerpiece -- more horizontal resolution for
+   the spans, not more height. Its floor is two lane floors: with 320px a
+   swimmer with a few listing columns ran past the edge of a half-width
+   panel. Below the floor the table scrolls sideways in its wrapper. */
+.vz-table-groups-table td.vz-table-groups-wide {
+  width: 55%;
+  min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
+}
+/* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
+   multiplicatively, so a subject with many overlapping events re-darkens
+   however low the alpha. Instead the non-matches are repainted with ONE
+   flat opaque near-track shade (!important beats the inline fill) --
+   identical opaque rectangles overlap invisibly, so only the matched
+   event carries colour no matter how dense the timeline is. */
+.vz-table-groups.seg-hover .vz-table-lane-seg:not(.is-same):not(.is-dashed):not(.is-hollow) {
+  background: color-mix(in srgb, var(--vz-table-groups-track) 88%,
+                        var(--vz-table-groups-tick)) !important;
+  transition: background 0.1s ease;
+}
+/* Rows: 26px, a 20px line with 3px above and below, no rules in the body,
+   as the records and variables layouts draw them. The 12px lanes sit inside
+   the line, and the gaps between them separate the rows. The sparkline row
+   below keeps its own taller cell. */
+.vz-table-groups-table tbody td {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  line-height: 20px;
+}
+/* The first column starts on the records layout's text edge (12px); a
+   nested table moves it to the headings' edge below. The header keeps the
+   records layout's space under its titles (7px and a 1px rule there). */
+.vz-table-groups-table tr > :first-child {
+  padding-left: 12px;
+}
+.vz-table-groups-table thead th {
+  padding-bottom: 8px;
+}
+.vz-table-groups-table tbody tr {
+  border-bottom: 0;
+}
+
+/* Sparkline: one inline SVG per cell, band under line, last-value dot.
+   Taller than the other lanes -- and the trajectory USES the row: the
+   cell keeps a token 1px of vertical padding (a line rarely touches the
+   extremes), so a sparkline row stays close to a text row's height
+   instead of paying 36px plus full text padding. */
+.vz-table-groups-table td.is-spark {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.vz-table-groups-spcell {
+  /* Row height minus the two 1px paddings: the trajectory occupies the
+     WHOLE row (the svg stretches freely; viewBox geometry is
+     percentage-based and the stroke is non-scaling). */
+  height: 40px;
+  background: none;
+}
+.vz-table-groups-spcell svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.vz-table-groups-spcell .vz-table-lane-band { fill: var(--vz-table-groups-track); }
+/* The computed reference (a series row's `ref` option): a dashed pooled
+   center line, optionally a dispersion band under everything. */
+.vz-table-groups-spcell .vz-table-lane-refband {
+  fill: color-mix(in srgb, var(--vz-table-groups-fill) 10%, transparent);
+}
+.vz-table-groups-spcell .vz-table-lane-refline {
+  stroke: var(--vz-table-groups-tick);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+.vz-table-groups-spcell .vz-table-lane-ln {
+  fill: none;
+  stroke: var(--vz-table-groups-fill);
+  stroke-width: 1.6;
+}
+.vz-table-groups-spcell .vz-table-lane-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vz-table-groups-fill);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--blockr-color-bg-surface, #ffffff);
+}
+/* The gear's Columns row (summaries.js): one entry per column of the
+   table, on the design system's rows (1px border, radius 8, 6px apart). An
+   entry is its title with move and remove buttons; open, its fields sit
+   below on a grid of their own. The row spans its section. */
+.vz-table-summaries { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.vz-table-sum-row {
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 8px);
+  background: var(--blockr-color-bg-surface, #ffffff);
+}
+.vz-table-sum-row:hover { border-color: var(--blockr-color-border-strong, #d1d5db); }
+.vz-table-sum-row.is-open { border-color: var(--blockr-color-border-accent-subtle, #bfdbfe); }
+.vz-table-sum-head { display: flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 6px; }
+/* The buttons are blockr.ui's (blockr-btn--quiet): here only their size. */
+.vz-table-sum-ctl { flex: none; min-width: 26px; }
+.vz-table-sum-ctl.vz-table-sum-toggle {
+  flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
+  justify-content: flex-start; text-align: left; overflow: hidden; white-space: nowrap;
+}
+.vz-table-sum-icon { flex: none; display: inline-flex; color: var(--blockr-color-text-muted, #6b7280); }
+.vz-table-sum-icon svg { width: 20px; height: 20px; }
+.vz-table-sum-name { flex: none; font-weight: var(--blockr-font-weight-semibold, 600);
+                 color: var(--blockr-color-text-default, #111827); }
+.vz-table-sum-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 font-size: var(--blockr-font-size-xs, 12px); color: var(--blockr-color-text-muted, #6b7280); }
+.vz-table-sum-chev { flex: none; color: var(--blockr-color-text-muted, #6b7280); transition: transform 120ms; }
+.vz-table-sum-row.is-open .vz-table-sum-chev { transform: rotate(90deg); }
+.vz-table-sum-actions { grid-column: 1 / -1; display: flex; gap: 6px; }
+.vz-table-sum-ctl.vz-table-sum-rm { margin-left: auto; }
+.vz-table-sum-ctl.vz-table-sum-rm:hover { color: var(--blockr-color-text-danger, #b91c1c); }
+.vz-table-sum-body {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px;
+  padding: 4px 12px 12px;
+}
+.vz-table-sum-body[hidden] { display: none; }
+.vz-table-sum-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vz-table-sum-field--wide { grid-column: 1 / -1; }
+.vz-table-sum-field .blockr-label { font-size: var(--blockr-font-size-xs, 12px); font-weight: 400;
+                                color: var(--blockr-color-text-muted, #6b7280); }
+.vz-table-sum-addcol { align-self: flex-start; min-width: 200px; }
+/* The Add menu (summaries.js, on blockr.ui's menu): a type's drawing in a
+   chip, its name over its line. */
+.blockr-menu.vz-table-sum-menu { max-height: 440px; }
+.vz-table-sum-menu .blockr-menu__icon {
+  width: 32px; height: 32px; box-sizing: border-box; align-items: center;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb); border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-subtle, #f9fafb);
+}
+.vz-table-sum-menu .blockr-menu__icon svg { width: 20px; height: 20px; }
+.vz-table-sum-menu .blockr-menu__item:hover .blockr-menu__icon,
+.vz-table-sum-menu .blockr-menu__item--active .blockr-menu__icon {
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent-subtle, #bfdbfe);
+}
+.vz-table-sum-menu .blockr-menu__label { display: flex; flex-direction: column; font-weight: 500; line-height: 1.3; }
+.vz-table-sum-about { overflow: hidden; text-overflow: ellipsis; font-size: var(--blockr-font-size-xs, 12px);
+                      font-weight: 400; color: var(--blockr-color-text-muted, #6b7280); }
+
+/* The cursor readout (interval track / sparkline points): one fixed element
+   per page, positioned by table/tooltip.js. It follows the pointer, so it is
+   not a Blockr.tooltip, but it wears the same light card. */
+.vz-table-lane-tip {
+  position: fixed;
+  z-index: 1070;
+  pointer-events: none;
+  background: var(--blockr-color-bg-raised, #ffffff);
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  color: var(--blockr-color-text-default, #111827);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  padding: 5px 9px;
+  border-radius: var(--blockr-radius-lg, 8px);
+  white-space: nowrap;
+}
+/* The hover card over a bar, box, dot range or dumbbell: the chart tooltip
+   card (tooltip.css .vz-tt-*), at its padding and width. */
+.vz-table-lane-tip.is-card {
+  padding: 6px 10px;
+  min-width: 160px;
+}
+
+/* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
+   the rail is an axis and both round; the fill rounds on whichever end points
+   away from the zero tick. */
+.vz-table-groups-dv {
+  position: relative;
+  height: 12px;
+  background: var(--vz-table-groups-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-dv::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--vz-table-groups-tick);
+}
+.vz-table-groups-dv .vz-table-groups-fill { position: absolute; top: 0; }
+/* One colour both ways. The side of the zero line already says which
+   direction; colouring the two apart would only add an opinion about which
+   one is good, and nothing tells the block that. */
+.vz-table-groups-dv .vz-table-groups-fill.is-pos {
+  left: 50%;
+  border-radius: 0 var(--blockr-mark-radius, 2px) var(--blockr-mark-radius, 2px) 0;
+}
+.vz-table-groups-dv .vz-table-groups-fill.is-neg {
+  right: 50%;
+  border-radius: var(--blockr-mark-radius, 2px) 0 0 var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-dv .vz-table-groups-fill {
+  background: var(--vz-table-groups-bar);
+}
+
+/* Hierarchy. The chevron itself is the structured table's -- same button,
+   same svg, same rotation contract (the ROW carries `collapsed`). These four
+   rules are the only part of table-structured.css a groups table needs; the
+   rest is the structured Table-1 typography, which would restyle every cell,
+   so it stays scoped to `.vz-table-structured`. Keep in sync with
+   the .vz-table-indent-btn / .vz-table-chev rules there. */
+.vz-table-groups .vz-table-indent-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-right: 9px;
+  margin-left: -21px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+}
+.vz-table-groups .vz-table-chev {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--blockr-color-text-muted, #6b7280);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.vz-table-groups .vz-table-indent-btn:hover .vz-table-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-groups tr.vz-table-indent-toggle.collapsed .vz-table-chev {
+  transform: rotate(-90deg);
+}
+
+/* Fold all: the table block's corner chevron (table/html.js), hung into
+   the stub header's padding exactly as the parent rows hang theirs, so the
+   title keeps the labels' left edge. */
+.vz-table-groups .vz-table-foldall-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-left: -21px;
+}
+.vz-table-groups .vz-table-foldall {
+  display: inline-flex;
+  align-items: center;
+  height: 1lh;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  flex: none;
+}
+.vz-table-groups .vz-table-foldall:hover .vz-table-chev {
+  color: var(--blockr-color-text-default, #111827);
+}
+.vz-table-groups .vz-table-foldall[aria-expanded='false'] .vz-table-chev {
+  transform: rotate(-90deg);
+}
+.vz-table-groups .vz-table-foldall:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+  border-radius: 2px;
+}
+
+/* Hierarchy, drawn as the records and variables layouts draw their section
+   headings (table-structured.css). Every label starts on one edge, the 12px
+   chevron and 9px gap hanging to the left of it (margin-left: -21px). The
+   edge is 35px in, so the chevrons sit 14px in from the table's edge. In a
+   block card the table runs to the card's edges (table.css), and 14px is
+   where 0.2 drew them there. A child starts on its parent's label edge; a
+   deeper parent is one 21px step in (--vz-indent, table/html.js
+   indentSteps()), so its chevron sits where its parent's label starts.
+   A heading has 11px above it and 3px below; the last row of a group has
+   7px below it.
+   The header's fold-all chevron hangs from the same edge. The table also
+   carries .vz-table-structured, whose fold-all header rule would otherwise
+   win, hence the longer selector. */
+.vz-table-groups-table[data-summarize-nested='1'] td.vz-table-groups-label-col {
+  padding-left: calc(35px + var(--vz-indent, 0) * 21px);
+}
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'] thead th.vz-table-stub-header {
+  padding-left: 35px;
+}
+.vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent > td {
+  padding-top: 11px;
+  padding-bottom: 3px;
+}
+.vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
+  padding-bottom: 7px;
+}
+/* A compact row is its 24px tile plus 1px above and below; the last row of
+   a group adds the same 4px. Its header stays on one line. Its headings
+   span the row (html.js row()), so the label column is as wide as the
+   subject ids. */
+.vz-table-groups-table[data-summarize-compact='1'][data-summarize-nested='1'] tbody tr.is-group-end > td {
+  padding-bottom: 5px;
+}
+/* The header's grouping names read as the records layout's "All" next to the
+   fold-all chevron: small, normal weight, muted (.vz-table-foldall). */
+.vz-table-groups-table[data-summarize-nested='1'] thead th.vz-table-stub-header .blockr-col-name {
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* Their variable labels under them stay the quiet line of the flat table's
+   header, not the bold Big N of a Table 1 arm (.vz-table-arm-n). */
+.vz-table-groups-table[data-summarize-nested='1'] thead th.vz-table-stub-header .blockr-col-label {
+  font-size: 11px;
+  font-weight: var(--blockr-font-weight-normal, 400);
+}
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-stub-header .blockr-col-name {
+  white-space: nowrap;
+}
+/* A heading across the row drops the label column's 260px cap and its
+   share of the column's width (table-structured.css). */
+.vz-table-groups-table td.vz-table-groups-label-col.vz-table-heading-cell {
+  width: auto;
+  max-width: none;
+}
+
+/* The number of rows a heading holds, after its name. */
+.vz-table-groups-table .vz-table-heading-count {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--blockr-color-text-muted, #9ca3af);
+}
+
+/* A column whose custom function failed: dashes, grey. The error itself is
+   the block's (blockr conditions). */
+.vz-table-groups-table td.vz-table-groups-txt.is-failed {
+  color: var(--blockr-color-text-muted, #9ca3af);
+}
+/* The legend is its own row under the control row (search + gear), so a long
+   legend can never push the search box around. */
+.vz-table-groups-legend {
+  padding: 0.35rem 0.25rem 0.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+/* One group per colour column (a summarize table maps colour per column, so
+   it can carry several). The wider gap BETWEEN groups keeps a title bound to
+   the items it decodes. */
+.vz-table-groups-legend-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+.vz-table-groups-legend-title {
+  font-size: 0.7rem;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-table-groups-legend-item {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.vz-table-groups-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+/* The tile: a square mark with its value, painted by the cell's level. An
+   empty cell is truly empty. The selector outranks the table's body-cell
+   padding (table.css, `.vz-table .blockr-table tbody td`), which would push
+   the tile 12px into its column and clip it. */
+.vz-table-groups-table.blockr-table tbody td.vz-table-groups-tile-col {
+  width: 28px;
+  min-width: 28px;
+  padding: 1px;
+  text-align: center;
+}
+.vz-table-groups-tile {
+  display: block;
+  min-width: 24px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: var(--blockr-mark-radius, 3px);
+  text-align: center;
+  font-size: var(--blockr-mark-font-size, 0.7rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+/* Compact: a column is as wide as its cells, so the titles turn on their
+   side, read bottom-up, and a long term ends in an ellipsis. */
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header {
+  vertical-align: bottom;
+  height: 150px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0 2px 6px;
+}
+.vz-table-groups-table[data-summarize-compact='1'] tbody td {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header .vz-table-th-namerow {
+  display: block;
+}
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header .blockr-col-name {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 144px;
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--blockr-font-size-xs, 0.7rem);
+}
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header .vz-table-th-subrow,
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header .blockr-sort-icon,
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header .blockr-col-label {
+  display: none;
+}
+/* A compact matrix is as wide as its cells and starts at the left. The
+   table drops the panel width, and every cell its percentage width (the 1%
+   on the label cells stretches an auto-width table to the panel too), as
+   for a bar_width preset. A tile column is then as wide as its header, and
+   the tile is a square in it. */
+.vz-table-groups-table[data-summarize-compact='1'] { width: auto; }
+.vz-table-groups-table[data-summarize-compact='1'] th,
+.vz-table-groups-table[data-summarize-compact='1'] td { width: auto; }
+.vz-table-groups-table[data-summarize-compact='1'] thead th.vz-table-col-header,
+.vz-table-groups-table[data-summarize-compact='1'] td.vz-table-groups-tile-col {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+}
+.vz-table-groups-table[data-summarize-compact='1'] .vz-table-groups-tile {
+  width: 24px;
+  min-width: 0;
+  height: 24px;
+  line-height: 24px;
+  margin: 0 auto;
+}
+
+/* --- table-view.css */
+/* The table block's view (inst/js/table/): what its frame and markup add to
+   table-structured.css. Keyed headers and section values carry `vz-table-keyed`, set where
+   the markup is written. */
+
+/* A layout switch swaps what the body holds and what the gear tray offers.
+   Chrome's scroll anchoring would then move a scrolled panel to keep some
+   node in place; view.js keeps the panel's scroll instead. */
+.vz-table { overflow-anchor: none; }
+
+/* The view sizes its header by its own width, so a narrow block reflows
+   whatever panel or card it sits in. */
+.vz-table {
+  container-type: inline-size;
+}
+.vz-table [hidden] {
+  display: none !important;
+}
+
+/* What a click claims reads as clickable. */
+.vz-table.vz-table-clickable .blockr-table thead th.vz-table-keyed,
+.vz-table.vz-table-clickable .blockr-table tbody tr.vz-table-section-header.vz-table-keyed .vz-table-section-value,
+.vz-table.vz-table-clickable .vz-table-card-row {
+  cursor: pointer;
+}
+.vz-table.vz-table-clickable .vz-table-card-row.vz-table-row-nodrill {
+  cursor: default;
+}
+
+/* The status line, its clear button right after the text. */
+.vz-table .vz-status {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+/* A narrow block: the search and download take a row of their own under
+   the title, which keeps the width of the block. */
+@container (max-width: 420px) {
+  .vz-table > .vz-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "titles gear" "tools tools";
+    row-gap: 6px;
+  }
+  .vz-table > .vz-head.vz-head--open {
+    grid-template-areas: ". gear" "tray tray" "titles titles" "tools tools";
+  }
+  .vz-table > .vz-head > .vz-head__tools {
+    justify-self: stretch;
+  }
+  .vz-table > .vz-head > .vz-head__tools > .vz-table-search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* The shading rules in the gear: a mode, the columns it paints, remove. */
+.vz-table-shadings { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.vz-table-shade-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.vz-table-shade-mode { flex: 1 1 100%; min-width: 0; }
+.vz-table-shade-cols { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* --- table-cards.css */
+/* The cards look of the table block (R/table-cards.R, js/table/cards.js).
+   The glyphs inside a card are the summarize table's own markup and keep
+   its stylesheet; this file lays out the cards around them. The grid's
+   data-cards-mode is set by table/cards.js from the host's width. */
+
+.vz-table-cards {
+  padding: 2px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+/* The records table's rows run to the panel edge and inset their cells;
+   the cards take the same inset. */
+.vz-table .vz-table-cards {
+  padding-left: var(--blockr-card-inset, 0px);
+  padding-right: var(--blockr-card-inset, 0px);
+}
+
+.vz-table-card-grid { display: grid; gap: 8px; align-items: stretch; }
+.vz-table-card-grid .vz-table-card-row { display: contents; }
+
+/* wide: a row head column, one column per card */
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] {
+  grid-template-columns: minmax(72px, max-content) repeat(var(--vz-table-card-k), minmax(0, 1fr));
+}
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] .vz-table-card-lab,
+.vz-table-card-grid.is-multi[data-cards-mode="wide"] .vz-table-card-word { display: none; }
+/* one row: the cards wrap */
+.vz-table-card-grid:not(.is-multi) {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.vz-table-card-colhead {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--blockr-color-text-muted, #6b7280);
+  padding: 0 2px;
+  align-self: end;
+  min-width: 0;
+}
+.vz-table-card-colhead b {
+  display: block;
+  color: var(--blockr-color-text-default, #374151);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vz-table-card-colhead .vz-table-card-legend { margin-top: 3px; }
+
+.vz-table-card-rowhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0 8px 0 2px;
+  border-radius: 8px;
+  min-width: 0;
+}
+.vz-table-card-rowhead .vz-table-card-rowlab {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vz-table-card-strip {
+  flex: none;
+  width: 4px;
+  align-self: stretch;
+  margin: 8px 0;
+  border-radius: 2px;
+}
+.vz-table-card-row.is-child .vz-table-card-rowhead { padding-left: 22px; font-weight: 500; }
+.vz-table-card-row.is-parent .vz-table-indent-btn { margin-left: 0; margin-right: 0; }
+.vz-table-card-row.is-parent.collapsed .vz-table-chev { transform: rotate(-90deg); }
+
+/* the card */
+.vz-table-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: 8px;
+  background: var(--blockr-color-bg-surface, #ffffff);
+}
+.vz-table-card-lab {
+  font-size: 12px;
+  color: var(--blockr-color-text-muted, #4b5563);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vz-table-card-val {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--blockr-color-text-default, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vz-table-card.is-text .vz-table-card-val {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: normal;
+}
+.vz-table-card-na { color: var(--blockr-color-text-muted, #9ca3af); font-weight: 400; }
+.vz-table-card-sub {
+  font-size: 11.5px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  min-height: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vz-table-card-glyph {
+  margin-top: auto;
+  padding-top: 8px;
+  min-width: 0;
+}
+.vz-table-card-glyph .vz-table-groups-spcell { height: 30px; }
+.vz-table-card-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 11px;
+  color: var(--blockr-color-text-muted, #6b7280);
+  margin-top: 6px;
+}
+.vz-table-card-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -0.5px;
+}
+.vz-table-card-fold, .vz-table-card-empty {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+/* medium: each row its own line, the row head above its cards */
+.vz-table-card-grid[data-cards-mode="medium"] { display: flex; flex-direction: column; gap: 12px; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-corner,
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-colhead { display: none; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-rowhead { grid-column: 1 / -1; padding: 2px; }
+.vz-table-card-grid[data-cards-mode="medium"] .vz-table-card-strip,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-strip {
+  width: 16px;
+  height: 4px;
+  align-self: center;
+  margin: 0;
+}
+
+/* narrow: one card per line, the glyph to the right of the number */
+.vz-table-card-grid[data-cards-mode="narrow"] { display: flex; flex-direction: column; gap: 8px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-corner,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-colhead,
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-legend { display: none; }
+.vz-table-card-grid.is-multi[data-cards-mode="narrow"] .vz-table-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vz-table-card-grid.is-multi[data-cards-mode="narrow"] .vz-table-card-row + .vz-table-card-row { margin-top: 6px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-rowhead { padding: 2px; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+}
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card > * { grid-column: 1; }
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-glyph {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  margin: 0;
+  padding: 0;
+}
+.vz-table-card-grid[data-cards-mode="narrow"] .vz-table-card-val { font-size: 20px; }
+
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill) > .vz-table-card,
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill) > .vz-table-card-rowhead { cursor: pointer; }
+.vz-table-clickable .vz-table-card-row:not(.vz-table-row-nodrill):hover > .vz-table-card {
+  border-color: var(--blockr-color-border-strong, #d1d5db);
+}
+.vz-table-card-row.vz-table-row-active > .vz-table-card {
+  outline: 2px solid var(--blockr-color-border-accent, #1d4ed8);
+  outline-offset: -1px;
+}
+.vz-table-card-row.vz-table-row-active > .vz-table-card-rowhead {
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  color: var(--blockr-color-text-accent, #1d4ed8);
+}
+.vz-table-card-row.vz-table-flash-row > .vz-table-card {
+  animation: vz-table-card-flash 1200ms ease-out both;
+}
+@keyframes vz-table-card-flash {
+  from { box-shadow: 0 0 0 2px var(--blockr-color-border-accent, #1d4ed8); }
+  to { box-shadow: 0 0 0 2px transparent; }
+}

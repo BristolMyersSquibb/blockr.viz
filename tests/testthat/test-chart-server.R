@@ -102,6 +102,72 @@ test_that("a panel visit or a setting does not refit the band or the smoother", 
   })
 })
 
+test_that("a click builds the payload once", {
+  built <- 0L
+  real <- viz_payload
+  local_mocked_bindings(viz_payload = function(...) {
+    built <<- built + 1L
+    real(...)
+  })
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm")
+  srv_run(blk, function(session, expr, visit) {
+    before <- built
+    chart_input_click(expr, arm = "A")
+    session$flushReact()
+    expect_equal(built, before + 1L)
+    expect_false(is.null(srv_payload(expr)))
+  })
+})
+
+test_that("a click recomputes nothing the chart draws from", {
+  calls <- new.env(parent = emptyenv())
+  count <- function(name, real) {
+    force(real)
+    calls[[name]] <- 0L
+    function(...) {
+      calls[[name]] <- calls[[name]] + 1L
+      real(...)
+    }
+  }
+  local_mocked_bindings(
+    chart_titles = count("titles", chart_titles),
+    chart_cells = count("cells", chart_cells),
+    dd_scales_config = count("scales", dd_scales_config),
+    expand_role_groups = count("plain", expand_role_groups)
+  )
+  blk <- new_chart_block(type = "bar", category = "arm", drill = "arm")
+  srv_run(blk, function(session, expr, visit) {
+    before <- as.list(calls)
+    expect_true(all(unlist(before) >= 1L))
+    chart_input_click(expr, arm = "A")
+    session$flushReact()
+    clicked <- srv_payload(expr)
+    expect_match(clicked$config, "\"filters\":{\"arm\":[\"A\"]}", fixed = TRUE)
+    expect_null(clicked[["data"]])
+    expect_identical(as.list(calls)[names(before)], before)
+    chart_input_set(expr, position = "dodge")
+    session$flushReact()
+    expect_gt(calls$titles, before$titles)
+  })
+})
+
+test_that("a histogram bins its rows once per change", {
+  binned <- 0L
+  real <- chart_bins
+  local_mocked_bindings(chart_bins = function(...) {
+    binned <<- binned + 1L
+    real(...)
+  })
+  srv_run(new_chart_block(type = "histogram", x = "val"),
+          function(session, expr, visit) {
+    expect_equal(binned, 1L)
+    expect_false(is.null(srv_payload(expr)$derived$hist))
+    chart_input_set(expr, bins = 12)
+    session$flushReact()
+    expect_equal(binned, 2L)
+  })
+})
+
 test_that("a highlight is one column and its values", {
   blk <- new_chart_block(highlight = list())
   expect_null(blockr.core:::initial_block_state(blk)$highlight)
@@ -329,6 +395,7 @@ test_that("the board's ECharts theme option reaches the chart", {
   blk <- new_chart_block(type = "bar", category = "arm")
   srv_run(blk, function(session, expr, visit) {
     expect_identical(srv_payload(expr)$derived$theme, "default")
+    expect_null(srv_payload(expr)$derived$theme_src)
   })
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -339,6 +406,11 @@ test_that("the board's ECharts theme option reaches the chart", {
       session$flushReact()
       expect_identical(srv_payload(session$makeScope("expr"))$derived$theme,
                        "dark")
+      # The chart fetches the theme's script before it draws.
+      expect_identical(
+        srv_payload(session$makeScope("expr"))$derived$theme_src,
+        echart_theme_src("dark")
+      )
     },
     args = list(x = blk, data = list(data = shiny::reactive(srv_df())))
   )

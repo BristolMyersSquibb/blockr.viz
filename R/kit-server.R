@@ -17,11 +17,12 @@
 #'
 #' @param state The block's state from viz_state().
 #' @param revs Its counter from new_viz_revs().
+#' @param values Every value of the state as one reactive (viz_values_but()).
 #' @return The observer, invisibly.
 #' @noRd
-viz_rev_tracker <- function(state, revs) {
+viz_rev_tracker <- function(state, revs, values = viz_values_but(state)) {
   obs <- shiny::observe({
-    revs$track(lapply(state, function(rv) rv()))
+    revs$track(values())
   }, priority = 100)
   invisible(obs)
 }
@@ -176,9 +177,16 @@ viz_capture_observer <- function(input, id, capture) {
 #'   new_viz_exhibit(); optional. The kit registers the download handlers
 #'   (viz_downloads()) and puts the menu into the payload's
 #'   `derived$downloads`;
+#' - `frame`: a function of no arguments returning the frame the payload's
+#'   `columns` describe; optional. With it the browser can ask for the
+#'   distinct counts of its columns (viz_counts_observer());
+#' - `probe`: a function of no arguments returning the exhibit the menu
+#'   asks its formats about, cheap to build (exhibit_probe_render());
+#'   optional, the menu builds the exhibit without it;
 #' - `tables`: a function of no arguments returning the data view's tables
 #'   (chart_data_view()); optional. With it the menu gets a Data section
-#'   (viz_data_downloads());
+#'   (viz_data_downloads()), listed from `tables_shape`, a function that
+#'   names the tables without building them;
 #' - `normalize`: a function of the full value list, the block's rules
 #'   between arguments (chart_normalize(), table_normalize()); optional;
 #' - `claims`: a reactive of the conditions a drill target receives
@@ -218,6 +226,9 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
     viz_payload_output(output, input, view,
                        viz_with_shared(kit, parts, view),
                        session = session, el = kit$el)
+    if (is.function(parts$frame)) {
+      viz_counts_observer(input, session, view, kit$el, parts$frame)
+    }
     if (!is.null(parts$claims)) {
       viz_drill_sender(kit, parts$claims, init$selection)
     }
@@ -230,10 +241,13 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
 viz_kit <- function(input, output, session, spec, data, init, view) {
   state <- viz_state(init)
   revs <- new_viz_revs(init)
-  viz_rev_tracker(state, revs)
+  # Every value, as one reactive: a reader depends on it alone.
+  values <- viz_values_but(state)
+  viz_rev_tracker(state, revs, values)
   list(
     input = input, output = output, session = session, spec = spec,
     state = state, revs = revs, view = view, el = session$ns(view),
+    values = values,
     data = data,
     # With a drill target set a click is an event, kept here instead of in
     # the selection. A block without the argument holds every click.
@@ -264,7 +278,8 @@ viz_with_shared <- function(kit, parts, view) {
     }
     viz_downloads(parts$exhibit, enabled = enabled, session = kit$session,
                   filename = view, before = kit$capture_sync,
-                  tables = parts$tables)
+                  tables = parts$tables, shape = parts$tables_shape,
+                  probe = parts$probe %||% parts$exhibit)
   }
   choices <- ctrl_choices(kit$session)
   drawn <- new.env(parent = emptyenv())
@@ -287,6 +302,22 @@ viz_with_shared <- function(kit, parts, view) {
     p$derived$capture_ratio <- canvas_capture_ratio()
     p
   }
+}
+
+# Answers the gear's ask for the distinct counts of the columns the payload
+# describes (`<view>_counts`, inst/js/core/gear/engine.js) with a
+# `blockr-viz:column-counts` message naming the view's element and giving
+# `{column: n}`. The answer is kept per frame: a second ask over the same
+# frame counts nothing. The payload leaves the counts out because they cost
+# most of the column description (viz_column_counts()).
+viz_counts_observer <- function(input, session, view, el, frame) {
+  kept <- last_value_cache()
+  shiny::observeEvent(input[[paste0(view, "_counts")]], {
+    d <- tryCatch(frame(), error = function(e) NULL)
+    counts <- kept(d, function() viz_column_counts(d))
+    session$sendCustomMessage("blockr-viz:column-counts",
+                              list(id = el, counts = counts))
+  })
 }
 
 # Sends the claims to a drill target over the control channel. With a target

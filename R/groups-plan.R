@@ -193,12 +193,13 @@ groups_plan_tile <- function(s, sid, base, data, scale_map) {
   groups_plan_entry(base, list(
     kind = "tile", key = groups_col(sid, "v"),
     wkey = if (!is.null(fill)) groups_col(sid, "w"),
+    # groups_build_matrix() works both out once for all its copies.
     fills = if (!is.null(fill)) {
-      unname(groups_tile_colors(scale_map, fill, s$.fill_levels,
-                                data[[fill]]))
+      s$.fills %||% unname(groups_tile_colors(scale_map, fill, s$.fill_levels,
+                                              data[[fill]]))
     },
     flevels_fill = s$.fill_levels,
-    fvar = if (!is.null(fill)) groups_col_name(data, fill)
+    fvar = if (!is.null(fill)) s$.fvar %||% groups_col_name(data, fill)
   ))
 }
 

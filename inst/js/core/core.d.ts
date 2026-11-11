@@ -31,7 +31,8 @@ interface VizColumn {
   name: string;
   class: 'number' | 'string' | 'bool' | 'date' | 'datetime' | 'duration';
   label: string;
-  n_unique: number;
+  /** The distinct count: not in the payload, merged in when the gear asks R for it. */
+  n_unique?: number;
   levels?: string[];
   tz?: string;
   unit?: string;
@@ -81,6 +82,8 @@ interface VizDownload {
   section?: string;
   /** A data row's count, "6 rows" or "40 of 254". */
   count?: string;
+  /** A data row: the input that asks R for the counts (core/download.js). */
+  ask?: string;
 }
 
 /** Why a view has nothing to draw: R's `derived.empty`, or the view's own. */
@@ -195,6 +198,13 @@ interface VizNamespace {
     num(v: unknown): unknown;
     num3(v: unknown): unknown;
   };
+  /** Scripts fetched when first needed (core/lazy.js). */
+  lazy: {
+    /** The package's served folder, '' when unknown. */
+    base: string;
+    script(url: string): Promise<void>;
+    asset(path: string): string | null;
+  };
   tooltip: {
     swatch(color: unknown): string;
     head(html: string, color?: unknown): string;
@@ -209,10 +219,18 @@ interface VizNamespace {
     message(parent: HTMLElement, e: VizEmpty | null | undefined): boolean;
   };
   DataView: { new (frame: VizFrame, scope: VizScope, opts?: { onToggle?: () => void }): VizDataView };
-  binding(name: string, view: string, View: VizViewClass,
-          opts?: { grace?: number; busy?: string }): boolean;
-  downloads(host: HTMLElement, list: VizDownload[] | null | undefined,
-            scope: VizScope, opts?: { onOpen?: () => unknown }): void;
+  binding: {
+    (name: string, view: string, View: VizViewClass,
+     opts?: { grace?: number; busy?: string }): boolean;
+    /** R's `blockr-viz:payload`: a view's payload, sent as it is built. */
+    post(msg: { id?: string; payload?: VizPayload | null }): void;
+  };
+  downloads: {
+    (host: HTMLElement, list: VizDownload[] | null | undefined,
+     scope: VizScope, opts?: { onOpen?: () => unknown }): void;
+    /** R's `blockr-viz:counts`: the data rows' counts, by element id. */
+    counts(msg: { counts?: Record<string, string> }): void;
+  };
   capture(opts: { width: number; height: number;
                   draw: (host: HTMLElement) => VizPicture | Promise<VizPicture>;
                   timeout?: number }): Promise<VizPicture>;

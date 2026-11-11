@@ -15,7 +15,7 @@ const acorn = require('acorn');
 const walk = require('acorn-walk');
 
 const pkg = process.argv[2] || '.';
-const skip = (p) => /snapdom\.js$|[\\/]spec[\\/]|[\\/]vendor[\\/]/.test(p);
+const skip = (p) => /snapdom\.js$|[\\/]spec[\\/]|[\\/]vendor[\\/]|[\\/]dist[\\/]/.test(p);
 const list = (dir, ext) => fs.readdirSync(dir, { recursive: true })
   .map((f) => path.join(dir, f))
   .filter((p) => p.endsWith(ext) && !skip(p));
@@ -24,7 +24,7 @@ const hooks = new Set([
   // Shiny input and output bindings
   'find', 'getId', 'getValue', 'setValue', 'subscribe', 'unsubscribe',
   'initialize', 'receiveMessage', 'getState', 'getRatePolicy', 'renderValue',
-  'renderError', 'clearError', 'resize',
+  'renderError', 'clearError', 'showProgress', 'resize',
   // blockr.ui: a Blockr.menu row's pick
   'onSelect',
   // a package's own gear editor (Blockr.viz.gear.editors) writes through it

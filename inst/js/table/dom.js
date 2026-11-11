@@ -22,6 +22,8 @@
   const esc = V.util.esc;
   const { sortKeys, withParents, treeSort } = V.table.sort;
 
+  /** One collator for the sort: `localeCompare` makes a new one per call. */
+  const collator = new Intl.Collator();
   /** Above this many items only a window of them is in the DOM. */
   const VIRT_MIN = 400;
   /** Items drawn beyond each edge of the visible part. */
@@ -80,8 +82,13 @@
     if (indent && collapsible && model.stub != null) {
       for (let i = 0; i + 1 < n; i++) toggle[i] = indent[i + 1] > indent[i];
     }
-    const base = indent && n ? Math.min(...indent) : 0;
-    const levels = secs.length ? Math.max(...secs.map((x) => x.level)) : 0;
+    let base = 0;
+    if (indent && n) {
+      base = indent[0];
+      for (let i = 1; i < n; i++) if (indent[i] < base) base = indent[i];
+    }
+    let levels = 0;
+    for (const x of secs) if (x.level > levels) levels = x.level;
     return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
@@ -314,7 +321,7 @@
         if (st.blk[a] !== st.blk[b]) return st.blk[a] - st.blk[b];
         const na = num[a];
         const nb = num[b];
-        return dir * (na !== null && nb !== null ? na - nb : str[a].localeCompare(str[b]));
+        return dir * (na !== null && nb !== null ? na - nb : collator.compare(str[a], str[b]));
       };
       return st.indent ? treeSort(view, st.indent, cmp) : view.slice().sort(cmp);
     }
@@ -442,6 +449,7 @@
       const [s, e] = this.win;
       if ((first - s < OVERSCAN / 2 && s > 0) || (e - last < OVERSCAN / 2 && e < n)) {
         this._window();
+        if (this.hooks.windowed) this.hooks.windowed();
       }
     }
 

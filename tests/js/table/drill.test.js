@@ -257,3 +257,19 @@ test('when R drops the selection the rows go dark and the receipt goes', () => {
   assert.equal(status ? status.textContent : '', '');
   assert.deepEqual(t.selects(), [], 'nothing goes back to R');
 });
+
+test('a column claim lights the rows a scroll draws', async () => {
+  const m = flatModel(1000);
+  m.head[0][2].keys = { ARM: ['Placebo'] };
+  m.cols[2].keys = { ARM: ['Placebo'] };
+  const t = mount(payload({ data: m, config: { selection: cat({}, { ARM: ['Placebo'] }) } }));
+  const box = t.$('.blockr-table-wrapper');
+  const cells = () => t.$$('tbody tr.vz-table-row').map((r) => r.children[2]);
+  assert.ok(cells().length > 0 && cells().every((c) => c.classList.contains('vz-table-col-active')));
+  Object.defineProperty(box, 'clientHeight', { value: 600, configurable: true });
+  box.scrollTop = 30 * 500;
+  box.dispatchEvent(new t.win.Event('scroll'));
+  await new Promise((r) => t.win.setTimeout(r, 40));
+  assert.ok(Number(t.row(0).getAttribute('data-i')) > 300, 'the window moved');
+  assert.ok(cells().every((c) => c.classList.contains('vz-table-col-active')), 'scrolled rows lit');
+});

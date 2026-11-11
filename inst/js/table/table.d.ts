@@ -55,6 +55,11 @@ interface TableCol {
   /** Cell fill and ink. */
   bg?: (string | null)[] | null;
   fg?: (string | null)[] | null;
+  /** On the wire only (a tile column, R/table-groups-view.R): the text colour
+   * of each fill, and the rows the per-row arrays hold when most are empty.
+   * The groups view puts both back before anything reads the column. */
+  ink?: Record<string, string | null> | null;
+  at?: number[] | null;
   /** Data bar: width as a share of the cell, 0 to 1. */
   bar?: (number | null)[] | null;
   bar_fill?: string | null;
@@ -305,6 +310,9 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** After scrolling drew another window of rows (the classes that
+   *  `drawn` puts on the rows are gone with the old ones). */
+  windowed?(): void;
   /** After a window of rows is inserted into `body`. */
   rows?(body: HTMLElement): void;
   /** The part of the box in view (TableFrame.inView); else the box's scroll. */

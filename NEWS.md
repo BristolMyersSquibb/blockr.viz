@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9062
+# blockr.viz 0.3.0.9063
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -75,6 +75,28 @@ read.
   restore.
 * A saved board is healed instead: a value the block does not take is reset
   to its default, with one warning naming it.
+
+## Speed
+
+* A block draws as soon as its own result is ready. On a board, a chart or
+  table used to wait until every other block had finished.
+* A click on a mark, a title edit or a gear setting sends the changed
+  settings alone. The rows and the column description go to the browser
+  once and again only when they change.
+* Charts that summarise (bar, histogram, box, point range, pie, treemap,
+  waterfall, and line, area and band with a summary) are summarised in R,
+  and the browser receives one row per mark. A bar chart over 80,000 rows
+  sends a few dozen rows where it sent all of them.
+* The compact groups layout summarises a faceted table in one pass and
+  sends only the cells that hold a value.
+* The download menu asks for its formats and row counts when it opens, and
+  the gear asks for the distinct values of a column when it opens. Neither
+  is computed for a block whose menu stays closed.
+* The page loads one script for the chart, one for the table and one they
+  share, built by `node tools/bundle.js`. With
+  `options(blockr.viz.dev_js = TRUE)` it loads the single source files.
+  Chart themes and the image export are loaded when first used.
+* A redraw no longer restyles the whole view while R computes.
 
 ## Changes in behaviour
 

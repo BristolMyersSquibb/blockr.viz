@@ -20,6 +20,21 @@ viz_values <- function(state) {
   lapply(state, function(rv) rv())
 }
 
+#' Some of a state's values, as one reactive
+#'
+#' What reads it depends on this one reactive instead of on every value, and
+#' is not re-run when a left-out value changes: a block's data side leaves
+#' out the selection, so a click recomputes nothing there.
+#'
+#' @param state A state from viz_state().
+#' @param drop Names to leave out.
+#' @return A reactive: the named list of the kept values.
+#' @noRd
+viz_values_but <- function(state, drop = character()) {
+  keep <- state[setdiff(names(state), drop)]
+  shiny::reactive(viz_values(keep))
+}
+
 #' Write values into a state
 #'
 #' A value identical to the current one is not written, so an echo does not

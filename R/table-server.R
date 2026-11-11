@@ -19,6 +19,9 @@
 #   claims(sel)    the conditions a drill target receives, NULL to hold
 #   receipt(sel)   the "Filtered: ..." line, or NULL
 #   exhibit(tt)    the downloads' viz_exhibit, with the title texts
+#   probe()        the exhibit the download menu asks its formats about: the
+#                  frame and whether there is a picture or a render object,
+#                  nothing built (exhibit_probe_render())
 #   title_args(v)  the settings a title can name, beyond the spec's slots
 
 table_server <- function(id, data, init, gear = NULL) {
@@ -36,12 +39,14 @@ table_server <- function(id, data, init, gear = NULL) {
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles, table_gear_info(gear, data)),
+        frame = src$rows,
         expr = table_expr(kit, part),
         exhibit = function() {
           tt <- tryCatch(titles(), error = function(e) list())
           part()$exhibit(lapply(tt[c("title", "subtitle", "caption")],
                                 function(b) b$text))
         },
+        probe = function() part()$probe(),
         claims = table_claims(kit, part),
         cond = table_cond(kit, parts),
         script = src$prep
@@ -78,10 +83,12 @@ table_sources <- function(data, state, session) {
 # table from; the spec's slots and the prepare script's values are `{@arg}`,
 # a script value before a setting with the same name (script_title_args()).
 table_titles <- function(kit, src, part) {
+  # A click changes no title.
+  values <- viz_values_but(kit$state, "selection")
   shiny::reactive({
     d <- tryCatch(part()$frame(), error = function(e) NULL)
     shiny::req(is.data.frame(d))
-    v <- viz_values(kit$state)
+    v <- values()
     args <- script_title_args(part()$title_args(v), src$prep$specs(),
                               v$script_values)
     viz_titles(v, d, input_display_attrs(d), args)
@@ -107,8 +114,9 @@ table_gear_info <- function(gear, data) {
 # block with its own gear sends it too (table_gear()).
 table_payload <- function(kit, src, part, titles, gear = function() NULL) {
   rows <- viz_rows()
+  written <- last_value_cache()
   function() {
-    v <- viz_values(kit$state)
+    v <- kit$values()
     built <- part()$drawn()
     derived <- c(
       list(
@@ -120,7 +128,14 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
       built$derived
     )
     # No table is `{}`; `columns` are the input's, for the gear.
-    data <- built$model %||% structure(list(), names = character())
+    # A matrix's tile columns go out as JSON written here
+    # (R/table-tile-json.R), once per model: a click or a title builds
+    # the payload again over the same one.
+    data <- if (is.null(built$model)) {
+      structure(list(), names = character())
+    } else {
+      written(built$model, function() table_tile_json(built$model))
+    }
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }

@@ -14,7 +14,7 @@ test('the core defines Blockr.viz and nothing else', () => {
   assert.deepEqual(added.sort(), ['Blockr']);
   assert.deepEqual(Object.keys(V).sort(),
                    ['DataView', 'Frame', 'Scope', 'binding', 'busy', 'capture', 'captureReply',
-                    'downloads', 'gear', 'scriptBand', 'slotPair', 'slotWords', 'spec', 'ticks', 'titles',
+                    'downloads', 'gear', 'lazy', 'scriptBand', 'slotPair', 'slotWords', 'spec', 'ticks', 'titles',
                     'tooltip',
                     'util']);
   // The views and other packages reach the busy cue as Blockr.busy.

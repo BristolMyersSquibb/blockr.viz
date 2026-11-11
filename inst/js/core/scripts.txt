@@ -2,6 +2,7 @@
 # tests/js/core/load.js.
 namespace.js
 util.js
+lazy.js
 tooltip.js
 scope.js
 busy.js
@@ -20,6 +21,8 @@ gear/range.js
 gear/ticks.js
 gear/profile.js
 gear/tray.js
+gear/counts.js
+gear/focus.js
 gear/engine.js
 frame.js
 data-view.js

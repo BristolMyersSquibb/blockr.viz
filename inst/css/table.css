@@ -1,9 +1,3 @@
-/* No fade on the table while Shiny recalculates its output: it redraws in
-   a few ms, so the dim would only flicker. */
-.blockr-viz-output[data-viz-view="table"].recalculating {
-  --_shiny-fade-opacity: 1;
-  opacity: 1 !important;
-}
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
    this page-global sheet would restyle blockr.ui's preview for every table
    on the board. :where() keeps each rule's specificity what it was, so

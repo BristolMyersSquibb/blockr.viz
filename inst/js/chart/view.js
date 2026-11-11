@@ -26,6 +26,23 @@
 
   /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
+  /** Theme scripts that have run, or failed to: a chart waits once. */
+  const themesTried = new Set();
+
+  /**
+   * The load of the ECharts theme script R names (`derived.theme_src`,
+   * R/chart-dep.R), or null when there is nothing to wait for. A theme that
+   * fails to load draws as ECharts' own.
+   * @param {ChartDerived | undefined} d
+   * @returns {Promise<void> | null}
+   */
+  const themeReady = (d) => {
+    const src = d && d.theme_src;
+    if (!src || themesTried.has(src)) return null;
+    const done = () => { themesTried.add(src); };
+    return V.lazy.script(src).then(done, done);
+  };
+
   // What a payload draws: all of it but the selection, the download menu
   // and the data view, which follow the selection. The rows are keyed by
   // the binding's `rowsChanged`.
@@ -69,6 +86,9 @@
       this.drawn = false;
       /** An empty state is drawn. */
       this._blank = false;
+      /** A payload held for its theme's script (themeReady()), with whether
+       * a held one had new rows. @type {{ p: VizPayload, rows: boolean } | null} */
+      this._held = null;
       /** @type {string | null} */ this.theme = null;
       /** @type {Ink} */ this._ink = NS.INK_DEFAULT;
       /** The family's model and option, memoised on the config fields each
@@ -109,8 +129,9 @@
     /** The family that draws the current type. @returns {ChartFamily} */
     family() { return NS.families[NS.familyOf(this.settings.type)]; }
 
-    /** The ECharts theme R named (drilldown-theme-register.js registered
-     * it); "default" is ECharts' own. @param {ChartTheme | null | undefined} theme */
+    /** The ECharts theme R named (drilldown-theme-register.js registers
+     * "blockr", a theme's own script the others, themeReady()); "default" is
+     * ECharts' own. @param {ChartTheme | null | undefined} theme */
     _setTheme(theme) {
       this.theme = theme && theme !== 'default' ? theme : null;
     }
@@ -120,6 +141,21 @@
      * @param {VizPayload} p @param {boolean} [rowsChanged] */
     render(p, rowsChanged = true) {
       const d = /** @type {ChartDerived} */ (p.derived || {});
+      // A theme still on its way holds the drawing; the last payload held
+      // draws when it is there, with new rows if any held payload had them.
+      const wait = themeReady(d);
+      if (wait) {
+        const held = this._held;
+        this._held = { p, rows: rowsChanged || !!(held && held.rows) };
+        if (!held) {
+          wait.then(() => {
+            const h = this._held;
+            this._held = null;
+            if (h && !this.scope.disposed) this.render(h.p, h.rows);
+          });
+        }
+        return;
+      }
       // A click changes the selection, and with it the download counts and
       // the data view, but nothing the chart draws: those payloads update in
       // place. The same payload again is a theme change, which redraws.
@@ -173,6 +209,9 @@
 
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
+      // An error after a payload held for its theme stands; the held one
+      // does not draw over it.
+      this._held = null;
       this._drawKey = null;
       this._showEmpty({ kind: 'error', message });
       this._downloads();
@@ -228,7 +267,11 @@
                         drawn: drawn && drawn.option, ink: this._ink,
                         lit, filters, range, dimmed: !!slot.dimmed })
           : { series: current.series.map(() => ({})), dimmed: false };
+        const wasDimmed = slot.dimmed;
         slot.dimmed = patch.dimmed;
+        // An empty patch on a chart that is not dimmed changes nothing.
+        if (!wasDimmed && !patch.dimmed && patch.series.every((/** @type {any} */ s) =>
+          !s || Object.keys(s).length === 0)) return;
         slot.chart.setOption({ series: patch.series }, lazy ? { lazyUpdate: true } : false);
       });
     }
@@ -241,7 +284,72 @@
       this._draw(this.family());
       // Once more after layout settles.
       if (this._settle) this._settle();
-      this._settle = this.scope.timeout(() => { this._resizeCharts(); }, 300);
+      this._settle = this.scope.timeout(() => { this._settleCharts(); }, 300);
+    }
+
+    // Once more after layout settles, for a panel that gets its size late:
+    // a chart's first settle, and a chart whose canvas differs from its box.
+    _settleCharts() {
+      if (this.chartGrid.offsetParent === null) return;
+      if (!this.chartGrid.clientWidth || !this.chartGrid.clientHeight) return;
+      for (const slot of this._slots) {
+        const c = slot && slot.chart;
+        if (!c) continue;
+        const div = slot.chartDiv;
+        if (c.__vzSettled && c.getWidth() === div.clientWidth && c.getHeight() === div.clientHeight) {
+          continue;
+        }
+        c.__vzSettled = true;
+        c.resize();
+        this._refitXLabels(c);
+      }
+    }
+
+    /** Draw one panel: its option onto its chart, or the no-value message.
+     * @param {ChartFamily} fam @param {any} slot @param {any} po */
+    _drawPanel(fam, slot, po) {
+      if (!po.option) {
+        if (slot.scope) slot.scope.dispose();
+        slot.scope = null;
+        slot.chart = null;
+        this._setSlotHeight(slot, po.height);
+        slot.chartDiv.textContent = '';
+        V.Frame.message(slot.chartDiv, NO_VALUE);
+        return;
+      }
+      const hChanged = this._setSlotHeight(slot, po.height);
+      const existed = !!slot.chart;
+      const chart = this._ensureSlotChart(slot, fam);
+      // What a resize needs to re-fit turned x labels (copied: the re-fit
+      // updates it), plus the slot and its height without the gutter.
+      chart.__xFit = po.xFit
+        ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
+      if (fam.prepare) fam.prepare(slot, po);
+      // When an action follows, ECharts runs it with the option in one update.
+      const actionFollows = !!fam.actions && fam.actions(slot, po);
+      if (slot.brushAreas && (this.selection.byBrush || this.selection._peeked !== 'null')) {
+        this.selection.redrawing();
+      }
+      const dec = NS.zoomOption.decorate(po.option, this.settings);
+      chart.__vzRoles = dec.roles;
+      chart.__vzFilterX = dec.filterX;
+      chart.__vzLogEnds = dec.logEnds;
+      // The same option object on the same chart, with the same limits and ticks (which
+      // decorate() reads outside the memo), and no brush rectangle to redraw: nothing to set.
+      const decKey = JSON.stringify([this.settings.type, this.settings.x_limits,
+        this.settings.y_limits, this.settings.x_ticks, this.settings.y_ticks]);
+      const unchanged = existed && !hChanged && !actionFollows && !slot.brushAreas &&
+        slot.drawnPo === po && slot.drawnDec === decKey && slot.drawnChart === chart;
+      if (!unchanged) {
+        chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
+                        actionFollows ? { notMerge: true, lazyUpdate: true } : true);
+        slot.dimmed = false;
+      }
+      slot.drawnPo = po;
+      slot.drawnDec = decKey;
+      slot.drawnChart = chart;
+      if (existed && hChanged) chart.resize();
+      if (fam.after) fam.after(slot, po, this);
     }
 
     /** @param {ChartFamily} fam */
@@ -276,41 +384,8 @@
       const widths = m.panels.map((/** @type {any} */ _, /** @type {number} */ i) =>
         this._slots[i].chartDiv.clientWidth);
       const o = this._option(fam, m, fam.widths ? widths : null);
-      m.panels.forEach((/** @type {any} */ panel, /** @type {number} */ i) => {
-        const slot = this._slots[i];
-        const po = o.panels[i];
-        if (!po.option) {
-          if (slot.scope) slot.scope.dispose();
-          slot.scope = null;
-          slot.chart = null;
-          this._setSlotHeight(slot, po.height);
-          slot.chartDiv.textContent = '';
-          V.Frame.message(slot.chartDiv, NO_VALUE);
-          return;
-        }
-        const hChanged = this._setSlotHeight(slot, po.height);
-        const existed = !!slot.chart;
-        const chart = this._ensureSlotChart(slot, fam);
-        // What a resize needs to re-fit turned x labels (copied: the re-fit
-        // updates it), plus the slot and its height without the gutter.
-        chart.__xFit = po.xFit
-          ? { ...po.xFit, slot, baseH: po.panelH - po.xFit.gutter } : undefined;
-        if (fam.prepare) fam.prepare(slot, po);
-        // When an action follows, ECharts runs it with the option in one update.
-        const actionFollows = !!fam.actions && fam.actions(slot, po);
-        if (slot.brushAreas && (this.selection.byBrush || this.selection._peeked !== 'null')) {
-          this.selection.redrawing();
-        }
-        const dec = NS.zoomOption.decorate(po.option, this.settings);
-        chart.__vzRoles = dec.roles;
-        chart.__vzFilterX = dec.filterX;
-        chart.__vzLogEnds = dec.logEnds;
-        chart.setOption(this.still ? { ...dec.option, animation: false } : dec.option,
-                        actionFollows ? { notMerge: true, lazyUpdate: true } : true);
-        slot.dimmed = false;
-        if (existed && hChanged) chart.resize();
-        if (fam.after) fam.after(slot, po, this);
-      });
+      m.panels.forEach((/** @type {any} */ _, /** @type {number} */ i) =>
+        this._drawPanel(fam, this._slots[i], o.panels[i]));
       this.charts = this._slots.map((s) => s.chart).filter(Boolean);
       // Lazy patches: ECharts applies them in one update on the next frame.
       NS.panels.harmonise(this);
@@ -498,5 +573,6 @@
   }
 
   V.binding('blockr.viz.chart', 'chart', ChartView, { busy: 'drawing' });
+  NS.themeReady = themeReady;
   NS.registerCapture(ChartView);
 })();

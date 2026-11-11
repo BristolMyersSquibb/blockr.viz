@@ -1,18 +1,19 @@
 # The chart-only "identity" aggregation ("None (as is)"): it plots the value
 # column directly, so a bar whose height is precomputed upstream needs no
-# fabricated Sum/Mean. It lives ONLY in the JS engine (the chart aggregates
-# client-side); it is deliberately absent from the JS AGG_FNS, so it has no
-# R twin and cannot join the golden cross-test. This JS-only test guards its
-# behaviour instead, driven through the same shipped engine + node runner.
+# fabricated Sum/Mean. The table's engine has none; chart_cells() computes
+# it for the chart (test-chart-cells.R compares that with the reference).
+# This test pins the reference's behaviour (tests/js/agg-reference.js),
+# driven through the node runner.
 
 skip_if_no_node <- function() {
   skip_on_cran()
   skip_if(Sys.which("node") == "", "node not available")
+  skip_if_not(file.exists(agg_reference()), "no JS tests here")
 }
 
 js_aggregate <- function(rows, config) {
   runner <- testthat::test_path("fixtures", "agg-golden-runner.js")
-  engine <- system.file("js", "chart", "agg.js", package = "blockr.viz")
+  engine <- normalizePath(agg_reference())
   payload <- jsonlite::toJSON(
     list(rows = rows, config = config),
     dataframe = "rows", na = "null", auto_unbox = TRUE

@@ -1,27 +1,15 @@
-// Standalone node runner for the golden aggregation cross-test
-// (tests/testthat/test-agg-golden.R). Loads the chart's aggregation engine,
-// inst/js/chart/agg.js (path = argv[2]), exactly as shipped, feeds it
-// {rows, config} JSON from stdin and writes aggregate(rows, config) as JSON
-// to stdout, so testthat can compare the JS engine's numbers against the R
-// engine's.
-//
-// The file attaches to `window` (browser convention); alias it to globalThis
-// so it loads untouched outside a browser. The core namespace and the
-// chart's (common.js) load first, as on the page.
+// Standalone node runner for the golden aggregation cross-tests
+// (tests/testthat/test-agg-golden.R, test-agg-identity.R). Loads the tests'
+// JavaScript aggregation (tests/js/agg-reference.js, path = argv[2]), feeds
+// it {rows, config} JSON from stdin and writes aggregate(rows, config) as
+// JSON to stdout, so testthat can compare its numbers against R's.
 'use strict';
 
-const path = require('node:path');
-
-globalThis.window = globalThis;
-const js = path.join(path.dirname(process.argv[2]), '..');
-require(path.join(js, 'core', 'namespace.js'));
-require(path.join(js, 'chart', 'common.js'));
-require(process.argv[2]);
+const { aggregate } = require(process.argv[2]);
 
 const chunks = [];
 process.stdin.on('data', (c) => chunks.push(c));
 process.stdin.on('end', () => {
   const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  const out = globalThis.window.Blockr.viz.chart.agg.aggregate(input.rows, input.config);
-  process.stdout.write(JSON.stringify(out));
+  process.stdout.write(JSON.stringify(aggregate(input.rows, input.config)));
 });

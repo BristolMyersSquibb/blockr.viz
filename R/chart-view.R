@@ -7,19 +7,19 @@
 
 chart_view <- function(kit, src) {
   spec <- kit$spec
-  state <- kit$state
   revs <- kit$revs
-  session <- kit$session
   rows <- viz_rows()
   wire_cache <- last_value_cache()
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
+  cells_cache <- last_value_cache()
+  levels_cache <- last_value_cache()
   board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
 
   band <- shiny::reactive({
-    v <- viz_values(state)
+    v <- src$values()
     d <- chart_grid_data(v, src$plain())
     a <- chart_band_args(v, d)
     if (is.null(a)) {
@@ -29,7 +29,7 @@ chart_view <- function(kit, src) {
                function() chart_band(v, d, a))
   })
   smoother <- shiny::reactive({
-    v <- viz_values(state)
+    v <- src$values()
     d <- chart_grid_data(v, src$plain())
     a <- chart_smoother_args(v, d)
     if (is.null(a)) {
@@ -42,58 +42,97 @@ chart_view <- function(kit, src) {
     d <- src$plain()
     shiny::req(is.data.frame(d))
     inp <- tryCatch(src$input(), error = function(e) NULL)
-    chart_titles(spec, viz_values(state), d,
+    chart_titles(spec, src$values(), d,
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
                  src$prep$specs())
   })
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(viz_values(state), d)
-    d[, cols, drop = FALSE]
+    chart_shipped(src$values(), d, cells_cache)
+  })
+  hl_levels <- shiny::reactive({
+    chart_hl_levels(src$values(), src$plain(), levels_cache)
+  })
+  scales <- shiny::reactive({
+    v <- src$values()
+    shiny_json(dd_scales_config(
+      scale_map(), v$type, color = v$color,
+      group = chart_category(v), data = src$plain()
+    ))
   })
 
   payload <- function() {
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    v <- viz_values(state)
+    v <- kit$values()
     df <- shipped()
-    w <- wire_cache(df, function() viz_wire_df(df))
+    # The columns the payload describes are the whole input's, below.
+    w <- wire_cache(df, function() chart_wire(df))
     viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
-      scales = shiny_json(dd_scales_config(
-        scale_map(), v$type, color = v$color,
-        group = chart_category(v), data = d
-      )),
+      levels = hl_levels(),
+      scales = scales(),
       palette = as.list(dd_palette()),
-      theme = board_theme()
+      theme = board_theme(),
+      theme_src = echart_theme_src(board_theme())
     ), columns = meta_cache(d, function() viz_wire_columns(d)))
   }
   list(payload = payload, titles = titles)
 }
 
-# The columns the payload carries: the mapped ones, and those a reader can
-# switch a role to from the sentence, so the switch needs no new payload.
-chart_needed_cols <- function(v, d) {
-  # An aggregated chart draws its category and the column it aggregates; a
-  # count aggregates none.
-  axes <- if ((v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
-    c(chart_category(v), chart_value_col(v))
-  } else if (identical(v$type, "histogram")) {
-    c(v$x, if (length(v$x)) chart_bin_col(v$x))
-  } else {
-    c(v$x, v$y)
+# The rows a chart draws from: one row per mark for the types chart_cells()
+# serves, the mapped columns' rows for the rest.
+chart_shipped <- function(v, d, cache) {
+  a <- chart_cells_args(v, d)
+  if (!is.null(a)) {
+    return(cache(list(d[chart_cells_cols(a)], a),
+                 function() chart_cells(d, a)))
   }
+  # No category yet, or no rows: nothing to draw from.
+  if ((v$type %||% "bar") %in% CHART_CELL_TYPES) {
+    return(d[0L, 0L, drop = FALSE])
+  }
+  d[, chart_needed_cols(v, d), drop = FALSE]
+}
+
+# The values the gear offers for a highlight column the cells do not hold.
+chart_hl_levels <- function(v, d, cache) {
+  a <- chart_cells_args(v, d)
+  col <- a$hl_col
+  if (!length(col) || col %in% c(a$facets, a$category, a$color)) {
+    return(NULL)
+  }
+  cache(d[[col]], function() {
+    stats::setNames(list(I(chart_levels(d[[col]]))), col)
+  })
+}
+
+# The shipped rows as the payload carries them.
+chart_wire <- function(df) {
+  if (is_chart_cells(df)) {
+    list(data = chart_cells_json(df))
+  } else {
+    viz_wire_df(df, meta = FALSE)
+  }
+}
+
+# The columns the payload of a chart that draws rows carries (scatter, line,
+# area, band, gantt): the mapped ones, and those a reader can switch a role
+# to from the sentence, so the switch needs no new payload. An aggregated
+# chart sends its cells (chart_cells()).
+chart_needed_cols <- function(v, d) {
+  axes <- c(v$x, v$y)
   needed <- c(
     axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$open, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
     v$ref_min, v$ref_max, v$ref_lines, v$shape,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",
                                                "onset")) v$sort_by,
-    if ("AVISIT" %in% c(v$x, chart_category(v))) "AVISITN"
+    if ("AVISIT" %in% v$x) "AVISITN"
   )
   if (length(v$subtitle) && grepl("@", v$subtitle, fixed = TRUE)) {
     needed <- c(needed, names(column_kinds(d)))
@@ -129,7 +168,7 @@ chart_titles <- function(spec, v, d, auto, specs) {
 # (chart-data-view.R, data-download.R), not this.
 chart_exhibit <- function(kit, src, view) {
   function() {
-    v <- viz_values(kit$state)
+    v <- src$values()
     data <- chart_xlsx_frame(
       src$plain(), chart_type = v$type, group = chart_category(v),
       color = v$color, facet = c(v[["facet_row"]], v[["facet"]]),
@@ -148,6 +187,15 @@ chart_exhibit <- function(kit, src, view) {
       meta = list(dataset = if (is.data.frame(input)) dl_dataset(input),
                   source = input)
     )
+  }
+}
+
+# What the download menu asks its formats about (viz_downloads()): a chart
+# with the picture it has, and none of its numbers.
+chart_exhibit_probe <- function(kit, src) {
+  function() {
+    shiny::req(is.data.frame(src$plain()))
+    new_viz_exhibit(data.frame(), picture = kit$capture(), kind = "chart")
   }
 }
 
@@ -177,13 +225,6 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
   }
   keys <- intersect(c(chart_facets(list(facet = facet), data), group,
                       chart_split_in(data, color)), names(data))
-  func <- func %||% "count"
-  summary <- if (identical(func, "count") || !length(value) ||
-                   !value %in% names(data)) {
-    list(func = "count", cols = character())
-  } else {
-    list(func = func, cols = value)
-  }
-  table_aggregate(data, unique(keys), list(summary),
-                     na_group = na_group %||% "level")$data
+  table_aggregate(data, unique(keys), chart_summaries(func, value, data),
+                  na_group = na_group %||% "level")$data
 }

@@ -1,9 +1,9 @@
 # The chart-only "pct_distinct" aggregation ("% of panel"): the share of the
 # PANEL's distinct values, not of the bar (bar_mode "percent" already does
-# that) and not of the grid. Like `identity` it lives only in the JS engine and
-# is deliberately absent from the shared JS AGG_FNS, so it has no R twin and
-# cannot join the golden cross-test; this JS-only test guards it instead,
-# through the same shipped engine and node runner.
+# that) and not of the grid. The table's engine has none; chart_cells()
+# computes it for the chart (test-chart-cells.R compares that with the
+# reference). This test pins the reference's behaviour
+# (tests/js/agg-reference.js), through the node runner.
 #
 # What makes it worth having rather than a precomputed percentage column: the
 # denominator is counted from the rows the panel actually holds, AFTER
@@ -15,11 +15,12 @@
 skip_if_no_node <- function() {
   skip_on_cran()
   skip_if(Sys.which("node") == "", "node not available")
+  skip_if_not(file.exists(agg_reference()), "no JS tests here")
 }
 
 js_aggregate <- function(rows, config) {
   runner <- testthat::test_path("fixtures", "agg-golden-runner.js")
-  engine <- system.file("js", "chart", "agg.js", package = "blockr.viz")
+  engine <- normalizePath(agg_reference())
   payload <- jsonlite::toJSON(
     list(rows = rows, config = config),
     dataframe = "rows", na = "null", auto_unbox = TRUE

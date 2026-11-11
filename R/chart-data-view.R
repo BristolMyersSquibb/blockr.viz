@@ -64,6 +64,25 @@ chart_summary <- function(data, v) {
   chart_summary_annotate(d[keys], stats)
 }
 
+# Whether chart_summary() gives a table, without building it: the download
+# menu lists a Summary entry from this (chart_data_view()'s `shape`).
+chart_has_summary <- function(data, v) {
+  if (!is.data.frame(data) || !nrow(data)) {
+    return(FALSE)
+  }
+  type <- v$type %||% "bar"
+  if (type %in% CHART_DISTRIBUTION_TYPES) {
+    val <- chart_value_col(v)
+    return(length(val) > 0L && val %in% names(data))
+  }
+  if (identical(type, "histogram")) {
+    bin <- chart_bin_col(v$x)
+    return(length(bin) > 0L && bin %in% names(data))
+  }
+  isTRUE(type %in% c("bar", "waterfall", "pie", "treemap")) &&
+    length(intersect(chart_category(v), names(data))) > 0L
+}
+
 # "Count of rows", "Mean of AVAL": the aggregate named as the gear names it.
 chart_summary_value_name <- function(col, func, value) {
   if (identical(func, "count") || !length(value)) {
@@ -105,29 +124,21 @@ chart_summary_dist <- function(data, v) {
   outer <- if (box) v$whiskers %||% "tukey"
   words <- CHART_SUMMARY_STAT_WORDS[[inner]] %||% c("Centre", "Low", "High")
 
-  one <- function(x) {
-    x <- suppressWarnings(as.numeric(x))
-    x <- x[is.finite(x)]
-    s <- summarize_stat(x, inner)
-    w <- if (!is.null(outer)) summarize_stat(x, outer)
-    out <- list(n = length(x))
-    if (!is.null(outer)) out$wlo <- w$lo %||% NA_real_
-    out$lo <- s$lo %||% NA_real_
-    out$center <- s$center %||% NA_real_
-    out$hi <- s$hi %||% NA_real_
-    if (!is.null(outer)) out$whi <- w$hi %||% NA_real_
-    out
-  }
-
-  groups <- chart_summary_groups(data, keys)
+  groups <- chart_summary_groups(data[unique(c(keys, val))], keys)
   rows <- lapply(groups, function(g) {
     k <- lapply(stats::setNames(keys, keys), function(k) {
       as.character(g[[k]][[1L]])
     })
-    as.data.frame(c(k, one(g[[val]])), stringsAsFactors = FALSE,
-                  check.names = FALSE)
+    c(k, chart_dist_stats(g[[val]], inner, outer))
   })
-  wide <- do.call(rbind, rows)
+  # Column by column: binding one-row frames is quadratic in the groups.
+  ids <- names(rows[[1L]])
+  wide <- as.data.frame(
+    lapply(stats::setNames(ids, ids), function(nm) {
+      unlist(lapply(rows, `[[`, nm), use.names = FALSE)
+    }),
+    stringsAsFactors = FALSE, check.names = FALSE
+  )
   header <- c(n = "N", wlo = "Whisker low", lo = words[[2L]],
               center = words[[1L]], hi = words[[3L]], whi = "Whisker high")
   ids <- intersect(names(header), names(wide))
@@ -161,7 +172,9 @@ chart_summary_groups <- function(data, keys) {
   id <- do.call(paste, c(codes, sep = "\r"))
   first <- !duplicated(id)
   ord <- do.call(order, lapply(codes, `[`, first))
-  lapply(id[first][ord], function(g) data[id == g, , drop = FALSE])
+  # One pass over the rows, whatever the number of groups.
+  rows <- split(seq_len(nrow(data)), match(id, id[first][ord]))
+  lapply(unname(rows), function(i) data[i, , drop = FALSE])
 }
 
 # The table view's format: the outer keys as row groups, the innermost as
@@ -281,13 +294,14 @@ chart_output_rows <- function(data, expr) {
 #'   (chart_view_selection()).
 #' @return A list: `summary()` and `rows()`, reactives; `tables()`, both
 #'   with the Rows total and, under a selection, all rows, for the data
-#'   downloads (viz_data_downloads()); `derived(msg)`, the payload's
+#'   downloads (viz_data_downloads()); `shape()`, which of those tables
+#'   there are, without building one; `derived(msg)`, the payload's
 #'   `data_view` entry for the reader's `<view>_data` message.
 #' @noRd
 chart_data_view <- function(kit, src, expr, shown) {
   summary <- shiny::reactive({
     d <- tryCatch(src$plain(), error = function(e) NULL)
-    chart_summary(d, viz_values(kit$state))
+    chart_summary(d, src$values())
   })
   rows <- shiny::reactive({
     chart_output_rows(tryCatch(kit$data(), error = function(e) NULL),
@@ -303,7 +317,7 @@ chart_data_view <- function(kit, src, expr, shown) {
   select <- paste0(kit$view, "-data_select")
   shiny::observeEvent(kit$input[[select]], {
     msg <- kit$input[[select]]
-    v <- viz_values(kit$state)
+    v <- shiny::isolate(src$values())
     sel <- chart_claim_to_selection(
       msg$selection, shiny::isolate(summary()), v
     )
@@ -322,7 +336,7 @@ chart_data_view <- function(kit, src, expr, shown) {
     s <- summary()
     r <- rows()
     tab <- data_tab(msg, s)
-    v <- viz_values(kit$state)
+    v <- src$values()
     list(
       tab = tab,
       summary = if (is.data.frame(s)) nrow(s),
@@ -342,7 +356,19 @@ chart_data_view <- function(kit, src, expr, shown) {
     list(summary = summary(), rows = rows(), total = total(),
          all = if (sel) tryCatch(src$prep$prepared(), error = function(e) NULL))
   }
-  list(summary = summary, rows = rows, tables = tables, derived = derived)
+  shape <- function() {
+    d <- tryCatch(src$plain(), error = function(e) NULL)
+    input <- tryCatch(kit$data(), error = function(e) NULL)
+    all <- !is.null(shown()) &&
+      is.data.frame(tryCatch(src$prep$prepared(), error = function(e) NULL))
+    list(
+      tables = c(if (chart_has_summary(d, src$values())) "summary",
+                 if (!is.null(input)) "rows", if (all) "all"),
+      selected = all
+    )
+  }
+  list(summary = summary, rows = rows, tables = tables, shape = shape,
+       derived = derived)
 }
 
 #' The Rows tab: blockr.ui's table preview of the rows

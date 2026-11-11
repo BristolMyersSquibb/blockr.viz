@@ -30,10 +30,11 @@
    * `<id>_peek` (a selection only the data view reads), `<id>_capture` or
    * `<id>_data` (core/data-view.js), typed so R's input
    * handler checks it on arrival, or
-   * `<id>_need` (the data revision the view holds no rows for). Priority
+   * `<id>_need` (the data revision the view holds no rows for) or
+   * `<id>_counts` (the gear asks for the columns' distinct counts). Priority
    * "event", so the same value sent twice arrives twice.
    * @param {string} id The view's element id.
-   * @param {'set' | 'select' | 'peek' | 'capture' | 'data' | 'need'} kind
+   * @param {'set' | 'select' | 'peek' | 'capture' | 'data' | 'need' | 'counts'} kind
    * @param {unknown} value
    * @param {string} [block] For `set`: the block whose spec reads it.
    * @returns {boolean} Whether Shiny took it.
@@ -42,7 +43,7 @@
     const shiny = root.Shiny;
     if (!id || !shiny || typeof shiny.setInputValue !== 'function') return false;
     const type = kind === 'set' ? 'blockr.viz.' + block
-      : kind === 'need' ? null : TYPES[kind];
+      : kind === 'need' || kind === 'counts' ? null : TYPES[kind];
     const name = id + '_' + kind + (type ? ':' + type : '');
     shiny.setInputValue(name, value, { priority: 'event' });
     return true;

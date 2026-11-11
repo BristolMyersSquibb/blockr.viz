@@ -4,6 +4,11 @@
 # Summary. Under a selection the Rows entry reads "Selected rows" and an "All
 # rows" entry joins it. The menu names each table with its count, as the data
 # view's tabs do, so what a file holds does not depend on the open tab.
+#
+# The tables are built when a file or the counts are asked for, not for the
+# menu: the payload lists the entries from `shape()`, and the browser asks
+# for the counts when the reader reaches for the menu (`dl_counts`; the
+# answer is the `blockr-viz:counts` message, inst/js/core/download.js).
 
 # The formats a table is written in: an Excel sheet under the exhibit's titles
 # with its footer below, or a CSV of the header row and the values.
@@ -22,45 +27,58 @@ VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows", all = "All rows")
 #' A block's data downloads
 #'
 #' Registers `dl_data_<table>_<format>` for every table and format, and
-#' returns the menu entries for the tables `tables()` holds.
+#' returns the menu entries for the tables `shape()` names.
 #'
 #' @param tables A function of no arguments returning `list(summary, rows,
 #'   total, all)`: the two frames, either NULL, the row count with nothing
 #'   selected, and under a selection the rows with nothing selected, else
 #'   NULL (chart_data_view()).
+#' @param shape A function of no arguments returning `list(tables,
+#'   selected)`: the names of the tables `tables()` would hold, and whether a
+#'   selection narrows the rows. It builds none of them.
 #' @param exhibit The block's exhibit function, for the titles, the footer and
 #'   the file name.
 #' @param session,filename As viz_downloads().
 #' @return A function of no arguments returning the entries, `list(id, label,
-#'   ext, section, count)`.
+#'   ext, section, ask)`.
 #' @noRd
-viz_data_downloads <- function(tables, exhibit, session, filename) {
-  formats <- Filter(function(f) {
-    all(vapply(f$needs, requireNamespace, logical(1L), quietly = TRUE))
-  }, VIZ_DATA_FORMATS)
+viz_data_downloads <- function(tables, shape, exhibit, session, filename) {
+  stopifnot(is.function(shape))
+  formats <- Filter(function(f) dt_pkg_installed(f$needs), VIZ_DATA_FORMATS)
   for (tbl in names(VIZ_DATA_TABLES)) {
     for (ext in names(formats)) {
       viz_data_download_handler(tbl, ext, formats[[ext]], tables, exhibit,
                                 session, filename)
     }
   }
-  function() {
+  entry_id <- function(tbl, ext) {
+    session$ns(paste0("dl_data_", tbl, "_", ext))
+  }
+  shiny::observeEvent(session$input$dl_counts, {
     tb <- tryCatch(tables(), error = function(e) NULL)
-    out <- list()
-    selected <- is.data.frame(tb$all)
+    counts <- list()
     for (tbl in names(VIZ_DATA_TABLES)) {
       df <- tb[[tbl]]
       if (!is.data.frame(df)) next
       count <- data_download_count(nrow(df), if (tbl == "rows") tb$total)
-      label <- if (selected && tbl == "rows") {
+      for (ext in names(formats)) counts[[entry_id(tbl, ext)]] <- count
+    }
+    session$sendCustomMessage("blockr-viz:counts", list(counts = counts))
+  })
+  ask <- session$ns("dl_counts")
+  function() {
+    sh <- tryCatch(shape(), error = function(e) NULL)
+    out <- list()
+    for (tbl in intersect(names(VIZ_DATA_TABLES), sh$tables)) {
+      label <- if (isTRUE(sh$selected) && tbl == "rows") {
         "Selected rows"
       } else {
         VIZ_DATA_TABLES[[tbl]]
       }
       for (ext in names(formats)) {
         out[[length(out) + 1L]] <- list(
-          id = session$ns(paste0("dl_data_", tbl, "_", ext)),
-          label = label, ext = ext, section = "Data", count = count
+          id = entry_id(tbl, ext), label = label, ext = ext,
+          section = "Data", ask = ask
         )
       }
     }

@@ -1,14 +1,22 @@
 # The JS core (inst/js/core/: the Blockr.viz namespace, Scope, the shared
 # output binding, the frame, the gear engine, titles, downloads and capture),
 # the generated specs and the frame's and the gear's styles, as one
-# dependency. Block views load after it.
-viz_core_dep <- memoise0(function() {
-  script <- file.path("js", c(file.path("core", js_script_list("core")),
-                              "spec/chart.js", "spec/table.js"))
-  css <- file.path("css", c("frame.css", "gear.css"))
+# dependency. Block views load after it. The page gets the bundles
+# tools/bundle.js writes (js/dist/core.js, css/dist/core.css);
+# `options(blockr.viz.dev_js = TRUE)` lists the sources instead.
+viz_core_dep <- memoise_js(function(dev) {
+  script <- if (dev) {
+    file.path("js", c(file.path("core", js_script_list("core")),
+                      "spec/chart.js", "spec/table.js"))
+  } else {
+    "js/dist/core.js"
+  }
+  css <- if (dev) file.path("css", css_list("core")) else "css/dist/core.css"
   htmltools::htmlDependency(
     name = "blockr-viz-core",
     version = js_version(c(script, css), "."),
+    # The whole package directory is served, so the core can fetch
+    # js/vendor/snapdom.js when a picture is first taken (core/lazy.js).
     src = system.file(package = "blockr.viz"),
     script = script,
     stylesheet = css
@@ -34,6 +42,19 @@ js_script_list <- function(dir) {
     warn = FALSE
   ))
   lines[nzchar(lines) & !startsWith(lines, "#")]
+}
+
+# The stylesheets inst/css/styles.txt lists for one bundle, in load order.
+# tools/bundle.js reads the same file.
+css_list <- function(bundle) {
+  lines <- trimws(readLines(
+    system.file("css", "styles.txt", package = "blockr.viz"),
+    warn = FALSE
+  ))
+  rows <- strsplit(lines[nzchar(lines) & !startsWith(lines, "#")], "[[:space:]]+")
+  row <- Filter(function(r) identical(r[[1L]], bundle), rows)
+  stopifnot(length(row) == 1L)
+  row[[1L]][-1L]
 }
 
 # ECharts, from echarts4r's dependency.
