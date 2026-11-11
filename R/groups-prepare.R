@@ -360,7 +360,11 @@ groups_map_facet <- function(s, data, drawn) {
         if (tile) ", or keep the top ones in the prepare script", "."
       )))
     }
-    if (tile && identical(s$facet_order, "count")) {
+    # An ordered factor, number or date has an order of its own and keeps it:
+    # a visit or sequence number reads 1, 2, 3 whatever its row counts.
+    ordered <- is.ordered(data[[fc]]) || is.numeric(data[[fc]]) ||
+      inherits(data[[fc]], c("Date", "POSIXct"))
+    if (tile && !ordered && identical(s$facet_order, "count")) {
       # Most rows first; ties keep the level order.
       n <- tabulate(match(as.character(data[[fc]][drawn]), lv),
                     nbins = length(lv))
