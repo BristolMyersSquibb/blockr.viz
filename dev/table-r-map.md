@@ -66,18 +66,28 @@ with its own name prefix:
    protocol is listed at the top of R/groups-build.R). Enum values and
    defaults of a summary entry come from the spec. A custom summary's
    function runs once per copy before the build (`groups_custom_runs()`);
-   a failure there makes it the failed column. A plan entry's `kind` and a
+   a failure there makes it the failed column. A faceted plain value
+   without a colour split (a matrix's tile count) is not built copy by
+   copy: R/groups-matrix.R aggregates once by row key and facet level and
+   reads every copy off that table. A plan entry's `kind` and a
    split bar's `mode` are provisional until `groups_summary_domains()`.
    The legend is R/groups-labels.R.
 2. `groups_cells()` (R/groups-cells*.R, prefix `cells_`): the drawing
    geometry of each column from those rows: bar widths, box and range
    positions, swimlane segments, sparkline paths, tooltips, value labels,
    and each column's text (`cells$text`). The labels are always built; the
-   Values switch off drops them from the marks, not from the text.
+   Values switch off drops them from the marks, not from the text. The
+   tile columns of one summary are painted together (`cells_tiles()`).
 3. `table_groups_to_model()` (R/table-groups-view.R,
    R/table-groups-cols.R): the TableModel. Each cell model column becomes a TableCol: its text,
    its mark (the cell model's fields as JSON arrays) and its axis; the head
    rows, row claims and nesting come from the prepared model.
+
+A matrix has hundreds of tile columns, and Shiny's JSON writer costs per
+list, not per byte. `table_tile_json()` (R/table-tile-json.R, called by
+`table_payload()`) writes the tile columns, header rows and row claims as
+`json` strings with the bytes Shiny would write; the TableModel that
+`table_groups_to_model()` returns stays a list.
 
 The prepared rows and the cell model are two steps on purpose: the rows
 are the numbers, which the downloads (`summarize_export_df()`) and the
