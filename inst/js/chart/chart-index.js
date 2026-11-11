@@ -127,11 +127,6 @@
     return rows;
   };
 
-  /** Are these rows R's cells, one per mark (R/chart-cells.R), and not the
-   * input's rows? A cell says how many rows it stands for.
-   * @param {any[]} rows */
-  const isCells = (rows) => rows.length > 0 && rows[0]['.n'] !== undefined;
-
   /** The values a row holds in a column: one, or in a cell the distinct
    * values of its rows. @param {any} v @returns {any[]} */
   const valuesOf = (v) => (Array.isArray(v) ? v : [v]);
@@ -192,5 +187,5 @@
     return v === surface || v === 'both';
   };
 
-  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, isCells, valuesOf, labelCounts, withCount, countOn });
+  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, countOn });
 })();

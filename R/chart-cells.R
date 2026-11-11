@@ -1,7 +1,7 @@
-# What a bar, waterfall, pie or treemap sends in place of its rows: one row
-# per mark. The browser (inst/js/chart/model-aggregated.js) draws from it and
-# aggregates nothing, so the payload grows with the marks, not with the
-# input's rows.
+# What an aggregated chart (bar, histogram, waterfall, pie, treemap, boxplot,
+# point range) sends in place of its rows: one row per mark. The browser
+# (inst/js/chart/model-aggregated.js) draws from it and aggregates nothing,
+# so the payload grows with the marks, not with the input's rows.
 #
 # A cell is a combination of the facet columns, the category and the colour.
 # It travels under those column names, as a row does, so what the browser
@@ -21,26 +21,46 @@
 #   <id>        `id` under show_n: the distinct ids in the cell (a list)
 #   <drill>     a drill column that is no key: its distinct values (a list)
 #
-# The numbers are table_aggregate()'s, the engine of the chart's Summary
-# table and its Excel download (chart_xlsx_frame()).
+# A histogram's category is the bin column chart_hist_data() adds, and its
+# value a count. A boxplot or point range has `.value`, the mean, for a sort
+# by value, and what its mark draws (chart_dist_stats()):
+#
+#   .vn                 the values in the cell
+#   .count              `id`: the distinct ids among them
+#   .lo .center .hi     the `summary` statistic: the box or the interval
+#   .wlo .whi           a boxplot's whiskers
+#   .out                box_points = "outliers": the values beyond the
+#                       whiskers (a list). The one column that can grow with
+#                       the rows: every outlier is sent, as every one is drawn.
+#
+# The numbers are table_aggregate()'s and chart_dist_stats()'s, the engines
+# of the chart's Summary table and its Excel download.
 
-CHART_CELL_TYPES <- c("bar", "waterfall", "pie", "treemap")
+CHART_CELL_TYPES <- c(CHART_AGGREGATED_TYPES, "histogram")
 
 # The arguments chart_cells() reads, or NULL for a chart that sends rows.
 # The server keys its cache on these and on the columns they name.
 chart_cells_args <- function(v, data) {
   type <- v$type %||% "bar"
-  cat <- chart_col_in(data, chart_category(v))
-  if (!type %in% CHART_CELL_TYPES || !length(cat) || !is.data.frame(data) ||
-        !nrow(data)) {
+  if (!type %in% CHART_CELL_TYPES || !is.data.frame(data) || !nrow(data)) {
     return(NULL)
   }
+  hist <- identical(type, "histogram")
+  cat <- chart_col_in(data, if (hist) chart_bin_col(v$x) else chart_category(v))
+  if (!length(cat)) {
+    return(NULL)
+  }
+  dist <- type %in% CHART_DISTRIBUTION_TYPES
   col <- function(x) {
     x <- as.character(unlist(x))
     x[nzchar(x) & x %in% names(data)]
   }
-  value <- col(chart_value_col(v))
-  func <- if (length(value)) v$func %||% "count" else "count"
+  value <- if (!hist) col(chart_value_col(v))
+  if (dist && length(value) && !is.numeric(data[[value]])) {
+    value <- character()
+  }
+  func <- if (!length(value)) "count" else if (dist) "mean" else v$func %||% "count"
+  box <- identical(type, "boxplot")
   sort <- col(v$sort_by)
   counted <- isTRUE(v$show_n %in% c("axis", "facet", "both"))
   drill <- if (!identical(v$drill, "auto")) col(v$drill)
@@ -56,6 +76,12 @@ chart_cells_args <- function(v, data) {
     tooltip = col(v$tooltip),
     label = col(v$label),
     id = if (counted) col(v$id),
+    dist = if (dist && length(value)) {
+      list(summary = v$summary %||% if (box) "median_q1_q3" else "mean_se",
+           whiskers = if (box) v$whiskers %||% "tukey",
+           points = box && identical(v$box_points, "outliers"),
+           id = col(v$id))
+    },
     drill = drill,
     hl_col = hl_col,
     hl_values = if (length(hl_col)) chart_labelled_values(hl[[1L]])
@@ -64,8 +90,9 @@ chart_cells_args <- function(v, data) {
 
 # The columns of `data` the cells are computed from.
 chart_cells_cols <- function(a) {
-  unique(unlist(a[c("facets", "category", "color", "value", "sort", "tooltip",
-                    "label", "id", "drill", "hl_col")], use.names = FALSE))
+  unique(c(unlist(a[c("facets", "category", "color", "value", "sort",
+                      "tooltip", "label", "id", "drill", "hl_col")],
+                  use.names = FALSE), a$dist$id))
 }
 
 # The values of a highlight: plain, or list(value, label) entries.
@@ -75,7 +102,7 @@ chart_labelled_values <- function(x) {
   vals[!is.na(vals) & nzchar(vals)]
 }
 
-#' One row per mark of a bar, waterfall, pie or treemap
+#' One row per mark of an aggregated chart
 #'
 #' @param data The rows the chart draws (`src$plain()`).
 #' @param a The arguments, from chart_cells_args().
@@ -97,6 +124,9 @@ chart_cells <- function(data, a) {
   out$.n <- tabulate(g, cells)
   if (!identical(a$func, "count")) {
     out$.value <- cell_values(data, g, cells, codes, a)
+  }
+  if (!is.null(a$dist)) {
+    out <- cbind(out, cell_dist(data, g, cells, a))
   }
   if (a$drop) {
     missing <- Reduce(`|`, lapply(codes, function(k) attr(k, "missing")[k]))
@@ -165,6 +195,34 @@ cell_values <- function(data, g, cells, codes, a) {
   val <- as.numeric(val)
   val[is.nan(val)] <- NA_real_
   val
+}
+
+# What a boxplot or point range draws per cell, as columns.
+cell_dist <- function(data, g, cells, a) {
+  x <- cell_number(data[[a$value]], missing = NA_real_)
+  ok <- !is.na(x)
+  rows <- split(which(ok), factor(g[ok], levels = seq_len(cells)))
+  stats <- lapply(rows, function(i) {
+    chart_dist_stats(x[i], a$dist$summary, a$dist$whiskers,
+                     points = a$dist$points)
+  })
+  num <- function(nm) {
+    vapply(stats, function(s) s[[nm]] %||% NA_real_, numeric(1L),
+           USE.NAMES = FALSE)
+  }
+  out <- data.frame(.vn = as.integer(num("n")))
+  if (length(a$dist$id)) {
+    id <- data[[a$dist$id]]
+    id[!ok] <- NA
+    out$.count <- cell_n_distinct(id, g, cells)
+  }
+  for (nm in c("lo", "center", "hi", if (!is.null(a$dist$whiskers)) c("wlo", "whi"))) {
+    out[[paste0(".", nm)]] <- num(nm)
+  }
+  if (a$dist$points) {
+    out$.out <- unname(lapply(stats, function(s) s$out %||% numeric()))
+  }
+  out
 }
 
 # The `summaries` table_aggregate() takes for a chart's func and value.
@@ -263,4 +321,24 @@ chart_cells_json <- function(cells) {
   }
   jsonlite::toJSON(cols[intersect(names(cells), names(cols))], na = "null",
                    null = "null", digits = NA)
+}
+
+# The numbers of one box or point range: N, the `inner` statistic (the box or
+# the interval), with `outer` a boxplot's whiskers, and with `points` the
+# values beyond them, in the order given. One implementation for what the
+# chart draws (chart_cells()) and what its Summary table lists
+# (chart_summary_dist()).
+chart_dist_stats <- function(x, inner, outer = NULL, points = FALSE) {
+  x <- suppressWarnings(as.numeric(x))
+  x <- x[is.finite(x)]
+  s <- summarize_stat(x, inner)
+  w <- if (!is.null(outer)) summarize_stat(x, outer)
+  out <- list(n = length(x))
+  if (!is.null(outer)) out$wlo <- w$lo %||% NA_real_
+  out$lo <- s$lo %||% NA_real_
+  out$center <- s$center %||% NA_real_
+  out$hi <- s$hi %||% NA_real_
+  if (!is.null(outer)) out$whi <- w$hi %||% NA_real_
+  if (points && !is.null(w)) out$out <- x[x < w$lo | x > w$hi]
+  out
 }

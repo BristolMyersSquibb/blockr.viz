@@ -1,8 +1,7 @@
-# chart_cells() (R/chart-cells.R) is what a bar, waterfall, pie or treemap
-# draws from. The JS snapshot tests feed the chart through its twin,
-# tests/js/cells.js, whose numbers are the engine's in inst/js/chart/agg.js.
-# Here both get the same rows and settings and must give the same cells, in
-# the same order.
+# chart_cells() (R/chart-cells.R) is what an aggregated chart draws from.
+# The JS snapshot tests feed the chart through its twin, tests/js/cells.js,
+# whose numbers are those of tests/js/agg-reference.js. Here both get the
+# same rows and settings and must give the same cells, in the same order.
 
 cells_df <- function() {
   i <- seq_len(240L)
@@ -96,7 +95,19 @@ cells_cases <- list(
              show_n = "both"),
   drill = list(type = "bar", category = "term", color = "sev", drill = "id"),
   highlight = list(type = "bar", category = "term",
-                   highlight = list(id = list("P01", "P05")))
+                   highlight = list(id = list("P01", "P05"))),
+  histogram = list(type = "histogram", x = "val", bins = 8, color = "sev"),
+  histogram_facet = list(type = "histogram", x = "val", facet = "arm"),
+  pointrange = list(type = "pointrange", category = "term", value = "val"),
+  pointrange_ci = list(type = "pointrange", category = "term", color = "sev",
+                       value = "val", summary = "mean_ci95", id = "id"),
+  boxplot = list(type = "boxplot", category = "term", value = "val"),
+  boxplot_split = list(type = "boxplot", category = "term", color = "sev",
+                       facet = "arm", value = "val", id = "id"),
+  boxplot_outliers = list(type = "boxplot", category = "term", color = "sev",
+                          value = "val", whiskers = "p10_p90",
+                          box_points = "outliers"),
+  boxplot_no_value = list(type = "boxplot", category = "term")
 )
 
 for (nm in names(cells_cases)) {
@@ -107,9 +118,11 @@ for (nm in names(cells_cases)) {
       skip_if(Sys.which("node") == "", "node not available")
       skip_if_not(file.exists(testthat::test_path("..", "js", "cells.js")),
                   "no JS tests here")
-      d <- cells_df()
       v <- cells_cases[[nm]]
-      expect_equal(r_cells(d, v), js_cells(d, v), tolerance = 1e-9)
+      d <- chart_hist_data(cells_df(), chart_hist(v, cells_df()))
+      # The reference reads Student's t off a table of four decimals.
+      tol <- if (identical(v$summary, "mean_ci95")) 1e-5 else 1e-9
+      expect_equal(r_cells(d, v), js_cells(d, v), tolerance = tol)
     })
   })
 }
@@ -117,9 +130,6 @@ for (nm in names(cells_cases)) {
 test_that("a chart that draws rows, or has no category, has no cells", {
   d <- cells_df()
   expect_null(chart_cells_args(list(type = "scatter", x = "val", y = "val"), d))
-  expect_null(chart_cells_args(list(type = "boxplot", category = "term",
-                                    value = "val"), d))
-  expect_null(chart_cells_args(list(type = "histogram", x = "val"), d))
   expect_null(chart_cells_args(list(type = "bar"), d))
   expect_null(chart_cells_args(list(type = "bar", category = "gone"), d))
 })

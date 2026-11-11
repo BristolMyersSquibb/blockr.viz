@@ -1,10 +1,10 @@
-# Golden cross-test: the JS aggregation engine (aggregate() in
-# inst/js/chart/agg.js -- the chart's client-side path) and the R engine
-# (table_aggregate / table_metric_plan, R/table-block.R -- the table + tile
-# server-side path) MUST produce the same numbers for the same data. The
-# name-drift tests (test-agg-fns-drift.R) only tie the vocabulary; this test
-# ties the SEMANTICS by executing inst/js/chart/agg.js as shipped in plain
-# node (fixtures/agg-golden-runner.js) and comparing cell by cell.
+# Golden cross-test: the tests' JavaScript aggregation (aggregate() in
+# tests/js/agg-reference.js, what the browser ran until R took the chart's
+# aggregation over) and the R engine (table_aggregate / table_metric_plan,
+# the table, the tile and the chart's cells) MUST produce the same numbers
+# for the same data. The JS snapshot tests draw from the reference's numbers
+# (tests/js/cells.js), so this ties them to R's. It runs the reference in
+# plain node (fixtures/agg-golden-runner.js) and compares cell by cell.
 #
 # Alignment contract (R is the source of truth):
 #   * mean/median/min/max of a cell with no usable numeric value: null (JS) /
@@ -25,11 +25,12 @@
 skip_if_no_node <- function() {
   skip_on_cran()
   skip_if(Sys.which("node") == "", "node not available")
+  skip_if_not(file.exists(agg_reference()), "no JS tests here")
 }
 
 js_aggregate <- function(rows, config) {
   runner <- testthat::test_path("fixtures", "agg-golden-runner.js")
-  engine <- system.file("js", "chart", "agg.js", package = "blockr.viz")
+  engine <- normalizePath(agg_reference())
   payload <- jsonlite::toJSON(
     list(rows = rows, config = config),
     dataframe = "rows", na = "null", auto_unbox = TRUE

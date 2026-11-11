@@ -142,6 +142,10 @@ The one bounded exception worth naming: a chart self-aggregates because the visu
 encoding *is* the aggregation (a bar = sum-of-group). That asymmetry is correct —
 charts take raw data + an aesthetic mapping; tables take an already-shaped table.
 
+Since 0.3.0 that aggregation runs in R, not in the browser: `chart_cells()`
+(`R/chart-cells.R`) sends an aggregated chart one row per mark, from the engine
+behind the chart's Summary table. The block still takes raw data and a mapping.
+
 The pharma `"13 (18.8%)"` cell (n + pct) is the lone thing on the compute/draw
 boundary; it is resolved by the **`.fmt` convention** below — the renderer formats,
 the shaper stays tidy numbers.

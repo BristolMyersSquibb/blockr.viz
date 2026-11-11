@@ -57,6 +57,10 @@ chart_view <- function(kit, src) {
       return(cells_cache(list(d[chart_cells_cols(a)], a),
                          function() chart_cells(d, a)))
     }
+    # No category yet, or no rows: nothing to draw from.
+    if ((v$type %||% "bar") %in% CHART_CELL_TYPES) {
+      return(d[0L, 0L, drop = FALSE])
+    }
     cols <- chart_needed_cols(v, d)
     d[, cols, drop = FALSE]
   })
@@ -107,25 +111,19 @@ chart_view <- function(kit, src) {
   list(payload = payload, titles = titles)
 }
 
-# The columns the payload carries: the mapped ones, and those a reader can
-# switch a role to from the sentence, so the switch needs no new payload.
+# The columns the payload of a chart that draws rows carries (scatter, line,
+# area, band, gantt): the mapped ones, and those a reader can switch a role
+# to from the sentence, so the switch needs no new payload. An aggregated
+# chart sends its cells (chart_cells()).
 chart_needed_cols <- function(v, d) {
-  # An aggregated chart draws its category and the column it aggregates; a
-  # count aggregates none.
-  axes <- if ((v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
-    c(chart_category(v), chart_value_col(v))
-  } else if (identical(v$type, "histogram")) {
-    c(v$x, if (length(v$x)) chart_bin_col(v$x))
-  } else {
-    c(v$x, v$y)
-  }
+  axes <- c(v$x, v$y)
   needed <- c(
     axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$open, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
     v$ref_min, v$ref_max,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",
                                                "onset")) v$sort_by,
-    if ("AVISIT" %in% c(v$x, chart_category(v))) "AVISITN"
+    if ("AVISIT" %in% v$x) "AVISITN"
   )
   if (length(v$subtitle) && grepl("@", v$subtitle, fixed = TRUE)) {
     needed <- c(needed, names(column_kinds(d)))

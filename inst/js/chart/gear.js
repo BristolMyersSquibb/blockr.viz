@@ -46,18 +46,22 @@
    * @param {string} type @param {Record<string, any>} v */
   const counts = (type, v) => !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
 
+  /** The values of a column a picker offers. A column the chart's cells do not hold comes listed
+   * by R (derived.levels). @param {any} view @param {string} col */
+  const levelsOf = (view, col) => {
+    if (!col) return [];
+    const sent = view.derived.levels && view.derived.levels[col];
+    const all = sent ? sent.map(String)
+      : view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '');
+    return all.slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }));
+  };
+
   /** @param {any} view The chart view: its rows, column meta and derived. @returns {VizGearHost} */
   function host(view) {
     const meta = () => view.columns;
     /** @param {string} col */
-    // A column the chart's cells do not hold comes listed by R (derived.levels).
-    const levels = (col) => {
-      if (!col) return [];
-      const sent = view.derived.levels && view.derived.levels[col];
-      const all = sent ? sent.map(String)
-        : view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '');
-      return all.slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }));
-    };
+    /** @param {string} col */
+    const levels = (col) => levelsOf(view, col);
     /** @param {string} name */
     const numeric = (name) => {
       return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));

@@ -641,8 +641,8 @@ function message(env, id, { columns, data, config, derived, dataRev, stateRev })
 const fedByEnv = new WeakMap();
 
 /**
- * The data R would send for a test's rows: the rows, or for a bar,
- * waterfall, pie or treemap its cells (cells.js), under the revision R
+ * The data R would send for a test's rows: the rows, or for an
+ * aggregated chart its cells (cells.js), under the revision R
  * would give them. A payload without data that changes the cells brings the
  * new cells, as R re-aggregates on a setting that changes them; the first
  * cells keep the test's revision.

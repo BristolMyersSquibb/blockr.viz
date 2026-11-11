@@ -10,6 +10,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { cellRows } = require('../cells');
 
 const JS_DIR = path.join(__dirname, '..', '..', '..', 'inst', 'js');
 // The chart's scripts in scripts.txt order, up to the gear host; the rest
@@ -27,7 +28,17 @@ function loadViz() {
   for (const f of ['namespace.js', 'util.js', 'tooltip.js', 'ticks.js']) run(path.join('core', f));
   for (const f of PURE) run(path.join('chart', f));
   run(path.join('spec', 'chart.js'));
-  return ctx.Blockr.viz;
+  const V = ctx.Blockr.viz;
+  // A model test writes rows; the aggregated model takes R's cells, one row
+  // per mark, so the rows go through the tests' twin of chart_cells().
+  const model = V.chart.model.aggregated;
+  V.chart.model.aggregated = (input) => {
+    const rows = input.rows || [];
+    const cells = rows.length && rows[0]['.n'] !== undefined;
+    return model(cells ? input
+      : { ...input, rows: cellRows(V.chart, rows, input.cfg, input.columns) });
+  };
+  return V;
 }
 
 function loadPure() {
