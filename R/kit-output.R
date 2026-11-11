@@ -101,6 +101,9 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
     sent$n <- sent$n + 1L
     list(posted = sent$n, state_rev = msg$state_rev, data_rev = msg$data_rev)
   })
+  # Ahead of the block's other outputs (its preview), behind the observers
+  # that settle what the payload reads (priority 50 and up).
+  shiny::outputOptions(output, id, priority = 40)
   shiny::observeEvent(input[[paste0(id, "_need")]], {
     sent$msg <- NULL
     sent$data_rev <- NULL
