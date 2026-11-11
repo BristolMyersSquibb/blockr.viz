@@ -121,6 +121,8 @@ type ChartDerived = {
   band: ChartBand | null;
   smoother: ChartSmoother | null;
   hist: ChartHist | null;
+  /** The values of a column the gear lists and the chart's cells do not hold. */
+  levels?: Record<string, string[]> | null;
   scales: ChartScale | null;
   palette: string[];
   theme: ChartTheme;

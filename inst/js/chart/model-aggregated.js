@@ -3,10 +3,16 @@
  * Chart block: the aggregated model (bar, waterfall, pie, treemap, and the
  * distribution marks boxplot and point range).
  *
- * Rows and config in, what to draw out: the cells of the aggregation engine
- * (agg.js), the panels (one per facet level), each panel's groups in sort
- * order, the colour levels, the "(n)" counts, and for the distribution marks
- * the category slots with their summaries.
+ * Rows and config in, what to draw out: the cells, the panels (one per facet
+ * level), each panel's groups in sort order, the colour levels, the "(n)"
+ * counts, and for the distribution marks the category slots with their
+ * summaries.
+ *
+ * A bar, waterfall, pie or treemap gets its cells from R, one row per mark
+ * (R/chart-cells.R): the keys under their column names, `.n`, `.value` and
+ * what else the model used to read off the rows (cellsFromRows()). The
+ * histogram and the distribution marks get the input's rows and aggregate
+ * them here (agg.js).
  *
  * A mark is addressed by (group, colour level) inside a panel; its keys are
  * the group, the colour where it splits the mark (bar segments, boxes, point
@@ -40,6 +46,28 @@
       const cells = agg.filter((/** @type {any} */ a) => colOf(a.facet) === c);
       const crows = rows.filter((r) => colOf(r[model.GRID_COL]) === c);
       out.set(/** @type {string} */ (c), orderGroups(cells, crows, columns, cfg, derived));
+    }
+    return out;
+  };
+
+  /**
+   * R's cells as the aggregation engine gives them: {facet, group, color,
+   * value, n}. A cell R marks `.drop` (a missing key under missing = "drop")
+   * is not drawn.
+   * @param {any[]} rows @param {Record<string, any>} cfg
+   */
+  const cellsFromRows = (rows, cfg) => {
+    const { category, color, facet, func } = cfg;
+    const out = [];
+    for (const r of rows) {
+      if (r['.drop']) continue;
+      out.push({
+        facet: facet ? String(r[facet] ?? '') : '__all__',
+        group: category ? String(r[category] ?? '') : 'Total',
+        color: color ? String(r[color] ?? '') : '__all__',
+        value: func === 'count' ? r['.n'] : (r['.value'] ?? null),
+        n: r['.n']
+      });
     }
     return out;
   };
@@ -161,9 +189,11 @@
     if (!groupCol) return groups.sort((a, b) => a.localeCompare(b) * sortDir);
     /** @type {Record<string, number>} */
     const mins = {};
+    // A cell brings the column's smallest value in its rows.
+    const sortCol = NS.isCells(rows) ? '.sort' : sortBy;
     for (const r of rows) {
       const g = String(r[groupCol] ?? '');
-      const v = Number(r[sortBy]);
+      const v = Number(r[sortCol]);
       if (!isNaN(v) && (mins[g] == null || v < mins[g])) mins[g] = v;
     }
     return groups.sort((a, b) => {
@@ -182,6 +212,9 @@
     const groupCol = cfg.category, facetCol = cfg.facet;
     /** @type {Map<string, Record<string, any[]>>} */
     const byFacet = new Map([['__all__', {}]]);
+    // A cell brings the fields of its first row, and the cells come in the
+    // order of their first rows.
+    const pre = NS.isCells(rows) ? '.tt.' : '';
     for (const r of rows) {
       const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
       const recs = [byFacet.get('__all__')];
@@ -190,7 +223,7 @@
         if (!byFacet.has(fv)) byFacet.set(fv, {});
         recs.push(byFacet.get(fv));
       }
-      for (const rec of recs) if (rec && !(g in rec)) rec[g] = ttFields.map((c) => r[c] ?? '');
+      for (const rec of recs) if (rec && !(g in rec)) rec[g] = ttFields.map((c) => r[pre + c] ?? '');
     }
     return byFacet;
   };
@@ -208,16 +241,19 @@
     const colorCol = byColor ? cfg.color : null;
     /** @type {Map<string, string | null>} */
     const out = new Map();
+    // A cell brings the distinct values of its rows, two at most.
+    const src = NS.isCells(rows) ? '.label' : col;
     for (const r of rows) {
-      const v = r[col];
-      if (v == null || v === '' || v === 'NA') continue;
       const key = (facetCol ? String(r[facetCol] ?? '') : '__all__') + '|||' +
         (groupCol ? String(r[groupCol] ?? '') : 'Total') + '|||' +
         (colorCol ? String(r[colorCol] ?? '') : '__all__');
-      const t = String(v);
-      const cur = out.get(key);
-      if (cur === undefined) out.set(key, t);
-      else if (cur !== null && cur !== t) out.set(key, null);
+      for (const v of NS.valuesOf(r[src])) {
+        if (v == null || v === '' || v === 'NA') continue;
+        const t = String(v);
+        const cur = out.get(key);
+        if (cur === undefined) out.set(key, t);
+        else if (cur !== null && cur !== t) out.set(key, null);
+      }
     }
     return out;
   };
@@ -317,7 +353,7 @@
       ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
-    const agg = NS.agg.aggregate(rows, {
+    const agg = NS.isCells(rows) ? cellsFromRows(rows, cfg) : NS.agg.aggregate(rows, {
       group: category, color, facet, value: measure, func, na_group: cfg.missing,
       pct_of: cfg.percent_of === 'category' ? 'group' : cfg.percent_of
     });
@@ -389,6 +425,7 @@
   const highlightMarks = (out, rows, ix, cfg) => {
     const hl = NS.highlightOf(cfg);
     if (!hl || out.cumulative || out.histogram || out.type !== 'bar') return;
+    const cells = NS.isCells(rows);
     /** @type {Map<string, boolean>} */
     const memo = new Map();
     /** @param {string} fv @param {string} g @param {string | null} lv @returns {boolean} */
@@ -397,7 +434,11 @@
       const seen = memo.get(k);
       if (seen !== undefined) return seen;
       const keys = aggregatedKeys(cfg, fv, g, lv);
-      const lit = !!NS.keys.markLit(keys, () => rowsUnder(rows, ix, keys), hl);
+      // A highlight on a column the cells do not hold: R marked the cells
+      // with a matching row (`.hl`).
+      const lit = (cells && !Object.keys(hl).every((c) => c in keys))
+        ? rowsUnder(rows, ix, keys).some((r) => r['.hl'] === true)
+        : !!NS.keys.markLit(keys, () => rowsUnder(rows, ix, keys), hl);
       memo.set(k, lit);
       return lit;
     };

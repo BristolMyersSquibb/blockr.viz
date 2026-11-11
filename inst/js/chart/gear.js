@@ -50,10 +50,14 @@
   function host(view) {
     const meta = () => view.columns;
     /** @param {string} col */
-    const levels = (col) => (col
-      ? view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '')
-        .slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }))
-      : []);
+    // A column the chart's cells do not hold comes listed by R (derived.levels).
+    const levels = (col) => {
+      if (!col) return [];
+      const sent = view.derived.levels && view.derived.levels[col];
+      const all = sent ? sent.map(String)
+        : view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '');
+      return all.slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }));
+    };
     /** @param {string} name */
     const numeric = (name) => {
       return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));

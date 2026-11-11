@@ -31,6 +31,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const { Window } = require('happy-dom');
+const { chartCells } = require('./cells');
 
 const JS_DIR = path.join(__dirname, '..', '..', 'inst', 'js');
 
@@ -622,15 +623,51 @@ let revSeq = 0;
  *           dataRev?: any, stateRev?: number }} p
  */
 function message(env, id, { columns, data, config, derived, dataRev, stateRev }) {
+  const fed = feed(env, id, data, config, columns, dataRev == null ? 1 : dataRev);
+  data = fed.data;
   const msg = env.win.JSON.parse(JSON.stringify({
     state_rev: stateRev == null ? ++revSeq : stateRev,
-    data_rev: dataRev == null ? 1 : dataRev,
+    data_rev: fed.rev,
     columns: columns || [], config,
     derived: Object.assign({}, derived || {}),
     data: typeof data === 'string' ? null : (data == null ? null : data)
   }));
   if (typeof data === 'string') msg.data = data;
   return msg;
+}
+
+/** What each chart element was last given: the rows a test wrote and the
+ * cells made of them. @type {WeakMap<object, Map<string, any>>} */
+const fedByEnv = new WeakMap();
+
+/**
+ * The data R would send for a test's rows: the rows, or for a bar,
+ * waterfall, pie or treemap its cells (cells.js), under the revision R
+ * would give them. A payload without data that changes the cells brings the
+ * new cells, as R re-aggregates on a setting that changes them; the first
+ * cells keep the test's revision.
+ */
+function feed(env, id, data, config, columns, rev) {
+  if (!fedByEnv.has(env)) fedByEnv.set(env, new Map());
+  const all = fedByEnv.get(env);
+  if (!all.has(id)) all.set(id, { raw: null, json: null, n: 0, cells: false });
+  const st = all.get(id);
+  if (data != null) st.raw = data;
+  const cells = st.raw == null ? null : chartCells(st.raw, config, columns);
+  if (!cells) {
+    // Back from cells to a chart that draws rows: R sends the rows again.
+    const back = st.cells && data == null;
+    st.cells = false;
+    st.json = null;
+    if (back) st.n++;
+    return { data: back ? st.raw : data, rev: rev + 1000 * Math.max(0, st.n - 1) };
+  }
+  const json = JSON.stringify(cells);
+  const changed = json !== st.json;
+  if (changed) { st.json = json; st.n++; }
+  st.cells = true;
+  return { data: data != null || changed ? (typeof st.raw === 'string' ? json : cells) : null,
+           rev: rev + 1000 * Math.max(0, st.n - 1) };
 }
 
 /** Hand a payload to the output binding, as Shiny does. */
