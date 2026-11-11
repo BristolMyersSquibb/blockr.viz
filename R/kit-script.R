@@ -106,7 +106,7 @@ viz_script_values <- function(incoming, specs, current = list()) {
     return(out)
   }
   for (s in specs) {
-    if (!script_spec_ok(s) || !s$name %in% names(incoming)) {
+    if (!script_spec_ok(s) || isTRUE(s$off) || !s$name %in% names(incoming)) {
       next
     }
     v <- script_value_read(incoming[[s$name]], s)
