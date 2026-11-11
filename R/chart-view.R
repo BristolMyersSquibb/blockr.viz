@@ -90,7 +90,7 @@ chart_needed_cols <- function(v, d) {
   needed <- c(
     axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$open, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
-    v$ref_min, v$ref_max,
+    v$ref_min, v$ref_max, v$ref_lines, v$shape,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",
                                                "onset")) v$sort_by,
     if ("AVISIT" %in% c(v$x, chart_category(v))) "AVISITN"

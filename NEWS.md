@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9061
+# blockr.viz 0.3.0.9062
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -389,6 +389,17 @@ goes.
   draws a band instead of error bars.
 * `linetype` names a column whose values set a line's dash: the first value
   is solid, the others dashed, from the last point of the solid part on.
+* `shape` on a scatter or line names a column whose values set each point's
+  marker: circle, triangle, diamond, square, rounded square, pin, arrow,
+  then again, in factor level order, else sorted; a missing value is a
+  circle. A line shows its points when `shape` is set, however many lines
+  there are. The legend band lists the markers after the colour chips.
+* `ref_lines` on a scatter, line or area names columns holding reference
+  limits (a normal range, grade thresholds): in each panel, a column with a
+  value in the panel's rows draws a dashed line at the mean of those values,
+  labelled with the column's label, else its name, and the panel's y axis
+  takes it in. `ref_line_colors` colours them by column
+  (`list(LLN = "#4DAF4A")`); the others take the reference red.
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
   "2009-06-30"))`). The gear edits them as one line, "Shaded":
   `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.

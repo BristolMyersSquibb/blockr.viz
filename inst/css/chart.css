@@ -237,6 +237,16 @@
   height: 8px;
   border-radius: 50%;
 }
+/* A `shape` column's markers: a group after the colour chips, its swatch
+   the marker in the chip's ink. They select nothing. */
+.vz-chart-legend-title--shape:not(:first-child) { margin-left: 10px; }
+.vz-chart-legend-chip--shape { cursor: default; }
+.vz-chart-legend-shape {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  fill: currentColor;
+}
 /* The level a chip filter selects: a ring round the chip. */
 .vz-chart-legend-chip--on {
   box-shadow: 0 0 0 1px var(--blockr-color-border-strong, #9ca3af);

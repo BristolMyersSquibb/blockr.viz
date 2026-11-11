@@ -621,6 +621,22 @@
       "slot": true,
       "ctrl": true
     },
+    "shape": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line"]
+      },
+      "gear": {
+        "group": "Add mapping",
+        "control": "column",
+        "label": "Shape by"
+      },
+      "slot": true,
+      "ctrl": true
+    },
     "x_ranges": {
       "type": {
         "name": "named",
@@ -909,6 +925,42 @@
         "label": "Reference high"
       },
       "slot": true,
+      "ctrl": true
+    },
+    "ref_lines": {
+      "type": {
+        "name": "columns"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area"]
+      },
+      "gear": {
+        "group": "Reference lines",
+        "control": "columns",
+        "label": "From columns"
+      },
+      "slot": false,
+      "ctrl": true
+    },
+    "ref_line_colors": {
+      "type": {
+        "name": "named",
+        "value": {
+          "type": {
+            "name": "string"
+          },
+          "nullable": false,
+          "required": true,
+          "slot": false,
+          "ctrl": true
+        }
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["scatter", "line", "area"]
+      },
+      "slot": false,
       "ctrl": true
     },
     "waterfall_totals": {

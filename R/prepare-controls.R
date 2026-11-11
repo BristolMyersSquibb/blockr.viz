@@ -16,6 +16,8 @@
 #' @return A list of records, JSON-ready.
 #' @noRd
 script_control_records <- function(specs) {
+  # A control its `when` flag switched off is not drawn.
+  specs <- Filter(function(s) !isTRUE(s$off), specs)
   lapply(specs, function(s) {
     label <- script_label(s)
     if (!script_spec_ok(s)) {
@@ -88,7 +90,7 @@ script_key <- function(name) {
 script_control_values <- function(specs, values = list()) {
   out <- list()
   for (s in specs) {
-    if (!script_spec_ok(s)) {
+    if (!script_spec_ok(s) || isTRUE(s$off)) {
       next
     }
     v <- values[[s$name]]
@@ -141,8 +143,14 @@ script_title_args <- function(roles, specs, values = list()) {
   }
   vals <- lapply(specs, function(s) {
     v <- values[[s$name]] %||% s$default
+    # A control its `when` flag switched off prints nothing (and is not
+    # offered, see viz_titles()).
+    if (isTRUE(s$off)) {
+      return("")
+    }
+    # A flag prints its `on` word while on, else its label; nothing when off.
     if (is.logical(v) && length(v) == 1L) {
-      v <- if (isTRUE(v)) script_label(s) else ""
+      v <- if (isTRUE(v)) as.character(s$on %||% script_label(s)) else ""
     }
     # A date without a value prints its placeholder ("automatic"), or
     # nothing, so a `[ ... ]` clause can carry it.
@@ -161,7 +169,10 @@ script_title_args <- function(roles, specs, values = list()) {
     v
   })
   names(vals) <- vapply(specs, `[[`, "", "name")
-  c(roles[setdiff(names(roles), names(vals))], vals)
+  out <- c(roles[setdiff(names(roles), names(vals))], vals)
+  # The switched-off controls, so the title does not offer them.
+  attr(out, "script_off") <- names(vals)[vapply(specs, function(s) isTRUE(s$off), NA)]
+  out
 }
 
 # The word for a multi-select's picks.

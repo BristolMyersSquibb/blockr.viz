@@ -24,7 +24,8 @@ viz_titles <- function(v, d, auto, args) {
                                 args = args)
     parts <- block_title_parts(v[[b]], d, auto = auto[[tier[[b]]]],
                                args = args)
-    offers <- as.list(attr(parts, "offers"))
+    # A script control its `when` flag switched off is not offered.
+    offers <- as.list(setdiff(attr(parts, "offers"), attr(args, "script_off")))
     attr(parts, "offers") <- NULL
     empty <- !is.character(text) || !length(text) || is.na(text[[1L]]) ||
       !nzchar(text[[1L]])

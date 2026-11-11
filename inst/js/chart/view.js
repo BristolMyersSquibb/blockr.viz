@@ -324,7 +324,10 @@
         NS.zoom.after(this, slot, i, slot.chart.__vzRoles || null);
       });
       const plan = NS.legendPlan(m, this.settings);
-      this.legend.update(plan.band ? fam.legend(m, this.settings, this.derived) : null, plan);
+      // Names on the marks leave the band to a `shape` column's markers.
+      const spec = plan.setting !== 'none' ? fam.legend(m, this.settings, this.derived) : null;
+      this.legend.update(plan.band ? spec
+        : (spec && spec.shapes ? { col: null, items: [], shapes: spec.shapes } : null), plan);
       this.frame.note(o.labelNote || null);
       if (fam.alwaysHighlight) {
         this.highlight(true);

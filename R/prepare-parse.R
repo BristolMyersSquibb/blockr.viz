@@ -32,7 +32,10 @@ CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
 
 #' Annotation keys accepted after `#|`
 #' @noRd
-CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder")
+# `on`: the word a flag prints while on (its label otherwise). `when`: the name
+# of a flag declared above; while that flag is off the control is off (not
+# drawn, an empty word, not offered).
+CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "on", "when")
 
 #' Call names accepted as an annotation wrapper (`#| number(min = 1)`)
 #' @noRd
@@ -325,11 +328,23 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
         error = NULL
       ),
       ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
-                                "default", "error"))]
+                                "default", "error", "off"))],
+      list(off = cb_switched_off(ann$when, env))
     )
   }
 
   specs
+}
+
+# Is a control switched off by its `when` flag? Only a flag declared above,
+# read at its current value; any other `when` leaves the control on.
+cb_switched_off <- function(when, env) {
+  if (!is.character(when) || length(when) != 1L || !nzchar(when) ||
+      !exists(when, envir = env, inherits = FALSE)) {
+    return(FALSE)
+  }
+  v <- get(when, envir = env, inherits = FALSE)
+  is.logical(v) && length(v) == 1L && !isTRUE(v)
 }
 
 # A control's current value as later declarations should see it: the stored
