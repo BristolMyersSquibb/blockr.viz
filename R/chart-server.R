@@ -78,9 +78,12 @@ chart_sources <- function(data, state) {
   )
   src$plain <- shiny::reactive({
     v <- src$values()
-    d <- expand_role_groups(src$prep$prepared(),
-                            chart_split_cols(v))
-    chart_hist_data(d, chart_hist(v, d))
+    prepared <- src$prep$prepared()
+    d <- expand_role_groups(prepared, chart_split_cols(v))
+    # Without a group definition the rows are the prepared ones, and their
+    # bins are the ones `hist` already holds.
+    hist <- if (identical(d, prepared)) src$hist() else chart_hist(v, d)
+    chart_hist_data(d, hist)
   })
   src
 }

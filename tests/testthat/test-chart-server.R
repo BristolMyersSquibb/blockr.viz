@@ -151,6 +151,23 @@ test_that("a click recomputes nothing the chart draws from", {
   })
 })
 
+test_that("a histogram bins its rows once per change", {
+  binned <- 0L
+  real <- chart_bins
+  local_mocked_bindings(chart_bins = function(...) {
+    binned <<- binned + 1L
+    real(...)
+  })
+  srv_run(new_chart_block(type = "histogram", x = "val"),
+          function(session, expr, visit) {
+    expect_equal(binned, 1L)
+    expect_false(is.null(srv_payload(expr)$derived$hist))
+    chart_input_set(expr, bins = 12)
+    session$flushReact()
+    expect_equal(binned, 2L)
+  })
+})
+
 test_that("a highlight is one column and its values", {
   blk <- new_chart_block(highlight = list())
   expect_null(blockr.core:::initial_block_state(blk)$highlight)
