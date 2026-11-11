@@ -13,6 +13,8 @@ chart_view <- function(kit, src) {
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
+  cells_cache <- last_value_cache()
+  levels_cache <- last_value_cache()
   board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
 
@@ -44,11 +46,31 @@ chart_view <- function(kit, src) {
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
                  src$prep$specs())
   })
+  # One row per mark for the types chart_cells() serves, the mapped columns'
+  # rows for the rest.
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(src$values(), d)
+    v <- src$values()
+    a <- chart_cells_args(v, d)
+    if (!is.null(a)) {
+      return(cells_cache(list(d[chart_cells_cols(a)], a),
+                         function() chart_cells(d, a)))
+    }
+    cols <- chart_needed_cols(v, d)
     d[, cols, drop = FALSE]
+  })
+  # The values the gear offers for a highlight column the cells do not hold.
+  hl_levels <- shiny::reactive({
+    d <- src$plain()
+    a <- chart_cells_args(src$values(), d)
+    col <- a$hl_col
+    if (!length(col) || col %in% c(a$facets, a$category, a$color)) {
+      return(NULL)
+    }
+    levels_cache(d[[col]], function() {
+      stats::setNames(list(I(chart_levels(d[[col]]))), col)
+    })
   })
   scales <- shiny::reactive({
     v <- src$values()
@@ -64,12 +86,19 @@ chart_view <- function(kit, src) {
     v <- kit$values()
     df <- shipped()
     # The columns the payload describes are the whole input's, below.
-    w <- wire_cache(df, function() viz_wire_df(df, meta = FALSE))
+    w <- wire_cache(df, function() {
+      if (is_chart_cells(df)) {
+        list(data = chart_cells_json(df))
+      } else {
+        viz_wire_df(df, meta = FALSE)
+      }
+    })
     viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
+      levels = hl_levels(),
       scales = scales(),
       palette = as.list(dd_palette()),
       theme = board_theme()
@@ -189,13 +218,6 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
   }
   keys <- intersect(c(chart_facets(list(facet = facet), data), group,
                       chart_split_in(data, color)), names(data))
-  func <- func %||% "count"
-  summary <- if (identical(func, "count") || !length(value) ||
-                   !value %in% names(data)) {
-    list(func = "count", cols = character())
-  } else {
-    list(func = func, cols = value)
-  }
-  table_aggregate(data, unique(keys), list(summary),
-                     na_group = na_group %||% "level")$data
+  table_aggregate(data, unique(keys), chart_summaries(func, value, data),
+                  na_group = na_group %||% "level")$data
 }

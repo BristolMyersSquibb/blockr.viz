@@ -131,7 +131,7 @@ test_that("a click recomputes nothing the chart draws from", {
   }
   local_mocked_bindings(
     chart_titles = count("titles", chart_titles),
-    chart_needed_cols = count("cols", chart_needed_cols),
+    chart_cells = count("cells", chart_cells),
     dd_scales_config = count("scales", dd_scales_config),
     expand_role_groups = count("plain", expand_role_groups)
   )
