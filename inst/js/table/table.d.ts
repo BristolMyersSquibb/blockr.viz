@@ -266,6 +266,8 @@ interface TableDerived {
   ctrl_choices?: VizChoice[] | null;
   /** The prepare script's inputs, values and error (core/script-band.js). */
   script?: VizScript | null;
+  /** A block's own gear (R's table_gear(), core/gear/profile.js). */
+  gear?: VizGearWire | null;
   /** The pixel ratio of the Image and PowerPoint picture. */
   capture_ratio?: number | null;
 }

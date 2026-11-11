@@ -64,6 +64,16 @@ legacy_build <- function(ctor, name, args, attrs) {
 #' @export
 blockr_deser.table_block <- function(x, data, ...) {
   stopifnot(all(c("constructor", "payload") %in% names(data)))
+  # A block built on the table with its own class and constructor (a
+  # swimmer) is rebuilt by that constructor, as blockr.core does it. A plain
+  # table block saved under another name stays on the legacy path.
+  ctor <- data[["constructor"]]
+  obj <- as.character(data[["object"]])
+  own <- obj[seq_len(max(0L, match("table_block", obj, 0L) - 1L))]
+  if (length(own) && is.list(ctor) && !is.null(ctor$constructor) &&
+        !identical(ctor$constructor, "new_table_block")) {
+    return(NextMethod())
+  }
   legacy_new_table(legacy_deser("table_block", data))
 }
 

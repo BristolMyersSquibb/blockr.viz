@@ -40,6 +40,8 @@
        * click, and the layout picked. */
       /** @type {{ sc: Element, top: number, to: string, release: () => void } | null} */
       this.held = null;
+      /** The script error the tray last opened for. @type {string | null} */
+      this.failed = null;
       this.gear = opts.gear === false ? null
         : T.gear.mount(this.frame, scope, (layout) => this.info(layout), (to) => this.hold(to));
       // The prepare script's controls, under the header.
@@ -76,7 +78,23 @@
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
       if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
+      this.openOnError(/** @type {TableDerived} */ (p.derived || {}));
       this.frame.busyDone();
+    }
+
+    /**
+     * A block's own gear opens at its `open` tab when the prepare script fails
+     * (a table or column it needs is missing), once per failure.
+     * @param {TableDerived} d
+     */
+    openOnError(d) {
+      const tab = d.gear && d.gear.open;
+      const err = (d.script && d.script.error) || null;
+      if (!tab || !this.gear || err === this.failed) return;
+      this.failed = err;
+      if (!err) return;
+      this.gear.engine.showTab(tab);
+      this.gear.open();
     }
 
     /**

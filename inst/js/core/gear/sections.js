@@ -56,16 +56,19 @@
    * @param {(key: string) => boolean} shown Whether a row is visible now.
    * @param {(key: string) => boolean} isSet Whether an optional mapping is
    *   shown as a row (set, or added in this tray) rather than in the menu.
+   * @param {VizProfile | null} [own] A block's own gear: its sections and
+   *   tabs in place of the table's.
    * @returns {VizSectionPlan[]}
    */
-  function plan(spec, shown, isSet) {
+  function plan(spec, shown, isSet, own) {
     /** @type {Map<string, VizSectionPlan>} */
     const out = new Map();
     let extra = 100;
+    const where = own ? own.sections : SECTIONS;
     const section = (/** @type {string} */ title) => {
       let s = out.get(title);
       if (!s) {
-        const [group, ord] = SECTIONS[title] || ['format', extra++];
+        const [group, ord] = where[title] || ['format', extra++];
         s = { title, group, ord, keys: [], adds: [] };
         out.set(title, s);
       }
@@ -88,7 +91,7 @@
     for (const s of out.values()) {
       s.keys = s.keys.filter((k) => !late(k)).concat(s.keys.filter(late));
     }
-    const order = GROUPS.map((x) => x[0]);
+    const order = (own ? own.groups : GROUPS).map((x) => x[0]);
     return Array.from(out.values())
       .filter((s) => s.keys.length || s.adds.length)
       .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.ord - b.ord);
@@ -121,10 +124,11 @@
    * @param {string | null} current The group to show.
    * @param {(g: string) => void} onPick
    * @param {string} label
+   * @param {[string, string][]} [tabs] A block's own tabs, in place of GROUPS.
    */
-  function assemble(pop, built, current, onPick, label) {
+  function assemble(pop, built, current, onPick, label, tabs) {
     const ui = /** @type {VizUi} */ (root.Blockr);
-    const groups = GROUPS.map(([key, title]) => ({
+    const groups = (tabs || GROUPS).map(([key, title]) => ({
       key, title,
       sections: built.filter((b) => b.plan.group === key)
         .map((b) => ({ el: b.el, title: '', titleEl: b.titleEl }))

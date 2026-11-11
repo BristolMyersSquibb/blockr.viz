@@ -36,9 +36,11 @@
 #' attribute, for blockr.core and other packages (blockr.dock's `visible`).
 #'
 #' @eval viz_spec_params("table", dots = paste(
-#'   "Arguments for [blockr.core::new_block()] (`block_name`, ...), and",
-#'   "argument names of blockr.viz before 0.3.0, which are translated with a",
-#'   "warning."
+#'   "Arguments for [blockr.core::new_block()] (`block_name`, ...);",
+#'   "`gear`, a [table_gear()] for a block built on the table, and `class`,",
+#'   "classes put before `table_block` (neither is saved, the block's own",
+#'   "constructor sets them); and argument names of blockr.viz before 0.3.0,",
+#'   "which are translated with a warning."
 #' ))
 #' @eval viz_spec_section("Summaries", paste(
 #'   "Each entry of `summaries` is a list with a `type` and the keys of that",

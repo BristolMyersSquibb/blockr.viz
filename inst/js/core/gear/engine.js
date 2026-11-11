@@ -20,6 +20,7 @@
   V.gear = V.gear || /** @type {VizGearNamespace} */ ({});
   const S = V.gear.sections;
   const C = V.gear.controls;
+  const P = V.gear.profile;
 
   /** Controls taller than the control line: they take the whole row and
    * grow with their content. @param {string} control */
@@ -38,6 +39,7 @@
     if (control === 'code' || control === 'script') return ' vz-row--code vz-row--tall';
     if (isTall(control)) return ' vz-row--wide vz-row--tall';
     if (g && g.icons && (ctx.arg.values || []).length >= 4) return ' vz-row--wide';
+    if (control === 'profile') return ' vz-row--wide'; // a block's own checklist or editor
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' vz-row--paired';
     }
@@ -55,6 +57,9 @@
       if (!spec) throw new Error('blockr.viz: no spec for block "' + opts.block + '"');
       this.el = el;
       this.spec = spec;
+      /** The block's spec; `spec` is it, or its own gear's (profile.js, `derived.gear`). */
+      this._base = spec;
+      /** @type {VizProfile | null} */ this._prof = null;
       this.block = opts.block;
       this.id = opts.id;
       this.scope = opts.scope;
@@ -87,7 +92,7 @@
     /** @param {VizPayload} p */
     update(p) {
       if (this.disposed) return;
-      const cfg = p.config || {};
+      const cfg = this._config(p);
       for (const [key, pend] of this._pending) {
         const now = cfg[key];
         pend.left -= 1;
@@ -142,10 +147,20 @@
         this._pending.set(key, { value: v, before: this._cfg[key], left: 2 });
       }
       if (!Object.keys(changed).length) return;
-      const msg = { rev: this._rev, values: changed };
+      // A block's own rows write the settings they stand for; those are held too,
+      // for the words and the script band that read them.
+      const send = this._prof ? P.translate(this._prof, changed, now) : changed;
+      for (const [key, v] of Object.entries(send)) {
+        if (!(key in changed)) this._pending.set(key, { value: v, before: this._cfg[key], left: 2 });
+      }
+      if (!Object.keys(send).length) {
+        this.render();
+        return;
+      }
+      const msg = { rev: this._rev, values: send };
       if (this.host.send) this.host.send(msg);
       else V.util.send(this.id, 'set', msg, this.block);
-      if (this.host.onChange) this.host.onChange(changed, this.values());
+      if (this.host.onChange) this.host.onChange(send, this.values());
       this.render();
     }
 
@@ -166,11 +181,12 @@
           ? V.titles.unknownTokens(String(values[k] ?? ''), t, this._cols) : null
       ]);
       return JSON.stringify([values, this._cols, [t.title, t.subtitle, t.caption],
-                             Array.from(this._added), shown]);
+                             Array.from(this._added), shown, this._prof ? this._prof.sig : null]);
     }
 
     /** @param {string} key @param {VizValues} [values] */
     label(key, values) {
+      key = P.alias(this._prof, key);
       const vals = values || this.values();
       const own = this.host.label && this.host.label(key, vals);
       if (own) return own;
@@ -193,7 +209,9 @@
       // The setting as the gear shows it: its label, under its group's heading.
       const g = arg && arg.gear;
       const under = g && g.group && g.group !== g.label ? ' under ' + g.group : '';
-      const shadows = own ? own.label : g ? this.label(key, vals) + under : null;
+      // A setting a block's own gear has no row for is no place to look.
+      const hidden = this._prof && !this._prof.keys.has(key);
+      const shadows = own ? own.label : g && !hidden ? this.label(key, vals) + under : null;
       return { label: sp.label, script: true, shadows };
     }
 
@@ -218,6 +236,7 @@
     _shown(key, values) {
       const arg = this.spec[key];
       if (!arg || !arg.gear) return false;
+      if (this._prof && !this._prof.keys.has(key)) return false;
       if (arg.gear.control === 'custom' && !this.host.custom) return false;
       if (this.typeKey && !S.applies(arg, values[this.typeKey])) return false;
       if (arg.gear.when && !C.isSet(values[arg.gear.when])) return false;
@@ -237,8 +256,19 @@
         labelOf: (k) => this.wordOf(k, values).label,
         wordOf: (k) => this.wordOf(k, values),
         shadowNote: (tpl) => this.shadowNote(tpl, values),
+        profile: this._prof,
+        script: this._script,
+        setValues: (changes) => this.set(changes),
         set: (v) => this.set({ [key]: v })
       };
+    }
+
+    /** Show a block's own gear at its tab titled `title`. @param {string} title */
+    showTab(title) {
+      const g = this._prof && this._prof.groups.find(([, t]) => t === title);
+      if (!g || this._group === g[0]) return;
+      this._group = g[0];
+      this.render();
     }
 
     render() {
@@ -252,7 +282,7 @@
       this.el.setAttribute('role', 'dialog');
       this.el.setAttribute('aria-label', this.title);
       const plan = S.plan(this.spec, (k) => this._shown(k, values),
-        (k) => C.isSet(values[k]) || this._added.has(k));
+        (k) => C.isSet(values[k]) || this._added.has(k), this._prof);
       const built = plan.map((p) => {
         const sec = S.sectionEl(p.title);
         const alone = p.keys.length === 1 && !p.adds.length;
@@ -260,7 +290,8 @@
         if (p.adds.length) this._addMenu(sec.body, p.adds, values, rs);
         return { plan: p, el: sec.el, titleEl: sec.titleEl };
       });
-      S.assemble(this.el, built, this._group, (g) => { this._group = g; }, this.title);
+      S.assemble(this.el, built, this._group, (g) => { this._group = g; }, this.title,
+                 this._prof ? this._prof.groups : undefined);
       this._restoreFocus(focus);
     }
 
@@ -357,11 +388,28 @@
      * @param {VizPayload} p */
     prime(p) {
       if (this.disposed) return;
-      this._cfg = p.config || {};
-      this._cols = p.columns || [];
+      this._config(p);
+    }
+
+    /** Read a payload: the settings (with a block's own rows' values), the columns,
+     * the titles, the prepare script's controls and the block's own gear.
+     * @param {VizPayload} p @returns {VizValues} The settings. */
+    _config(p) {
       const d = /** @type {any} */ (p.derived || {});
+      this._cols = p.columns || [];
       this._titles = /** @type {VizTitles} */ (d.titles || {});
       this._script = d.script || null;
+      const cfg = p.config || {};
+      if (d.gear) {
+        this._prof = P.build(this._base, d.gear, this._script);
+        this.spec = this._prof.spec;
+        this._cfg = Object.assign({}, cfg, P.values(this._prof, cfg, this._script));
+      } else {
+        this._prof = null;
+        this.spec = this._base;
+        this._cfg = cfg;
+      }
+      return this._cfg;
     }
 
     /** What a click on the sentence's word for `key` opens: the prepare script's control
@@ -371,6 +419,7 @@
      * control, and the setting of the same name stays in the gear.
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
+      key = P.alias(this._prof, key);
       if (this.scriptInput(key)) return this.scriptSlot(key);
       const values = this._live(this.values());
       // The host first: a word that names part of a setting (the groups layout's
@@ -516,6 +565,10 @@
       for (const arg of V.titles.namedArgs(this._titles)) {
         if (this.scriptSlot(arg)) out.add(arg);
       }
+      // A block's own gear holds its script's values, as rows or in its own editors.
+      if (this._prof && this._script) {
+        for (const sp of this._script.inputs || []) if (sp && sp.name) out.add(sp.name);
+      }
       return out;
     }
 
@@ -538,32 +591,6 @@
       this.el.textContent = '';
     }
   }
-
-  /**
-   * A gear button and its tray, appended to a view's header `head`, opened
-   * and closed by blockr.ui's Blockr.gearTray. The header gets
-   * `vz-head--open` while the tray is open; a tray left open is closed when
-   * `scope` goes, which takes it off blockr.ui's dismiss stack.
-   * @param {HTMLElement} head @param {VizScope} scope @param {string} label
-   * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
-   *             isOpen(): boolean }}
-   */
-  V.gear.tray = (head, scope, label) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'blockr-gear-btn';
-    btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
-    const band = document.createElement('div');
-    band.className = 'blockr-settings blockr-settings--beak vz-tray';
-    head.append(btn, band);
-    const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
-    const set = (/** @type {boolean} */ on) => tray.set(on);
-    const sync = () => head.classList.toggle('vz-head--open',
-                                             btn.getAttribute('aria-expanded') === 'true');
-    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
-    scope.own({ dispose: () => set(false) });
-    return { band, button: btn, set, isOpen: () => tray.isOpen() };
-  };
 
   /**
    * Mount a gear into the tray element `el`.

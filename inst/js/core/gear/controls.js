@@ -219,7 +219,8 @@
   /** What an empty pick shows: the host's words for the key ("All
    * columns"), else nothing. @param {VizRowCtx} ctx */
   const placeholderOf = (ctx) =>
-    (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) || undefined;
+    (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) ||
+    (ctx.arg.gear && ctx.arg.gear.placeholder) || undefined;
 
   /** A single pick among `choices`; `onPick` gets the chosen value.
    * @param {HTMLElement} el @param {VizChoice[]} choices @param {unknown} value
