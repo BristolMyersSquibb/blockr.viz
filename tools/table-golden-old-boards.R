@@ -8,7 +8,7 @@
 #   git -C blockr.viz worktree add --detach $TMPDIR/vizold c79f5fb
 #   R CMD INSTALL -l $TMPDIR/oldlib $TMPDIR/vizold
 #   Rscript -e '.libPaths(c("$TMPDIR/oldlib", .libPaths()))' \
-#     dev/table-golden-old-boards.R
+#     tools/table-golden-old-boards.R
 #
 # Run from the package root. The tile board is fixtures/tile-board-main.json,
 # saved by the same version.

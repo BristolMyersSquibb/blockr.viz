@@ -93,3 +93,19 @@ blockr_deser.summarize_table_block <- function(x, data, ...) {
                          version = data[["constructor"]][["version"]])
   legacy_build(new_table_block, "new_table_block", args, attrs)
 }
+
+# Boards saved before the summarize table got its name (July 2026) lead with
+# these classes and name new_lane_chart_block() or new_rank_block() as the
+# constructor. Both are gone; the arguments are the summarize table's.
+
+#' @rdname blockr_deser.chart_block
+#' @export
+blockr_deser.lane_chart_block <- function(x, data, ...) {
+  blockr_deser.summarize_table_block(x, data, ...)
+}
+
+#' @rdname blockr_deser.chart_block
+#' @export
+blockr_deser.rank_block <- function(x, data, ...) {
+  blockr_deser.summarize_table_block(x, data, ...)
+}
