@@ -74,8 +74,10 @@ groups_tile_paint <- function(p, rows) {
   }
   fg <- rep(NA_character_, n)
   if (any(has)) {
-    fg[has] <- vapply(bg[has], dt_fg_for_hex, character(1L),
-                      USE.NAMES = FALSE)
+    # A few fills over many cells: the text colour once per fill.
+    fills <- unique(bg[has])
+    ink <- vapply(fills, dt_fg_for_hex, character(1L), USE.NAMES = FALSE)
+    fg[has] <- ink[match(bg[has], fills)]
   }
   list(bg = bg, fg = fg, has = has)
 }
