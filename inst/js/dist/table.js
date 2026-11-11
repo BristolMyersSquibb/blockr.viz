@@ -1,4 +1,4 @@
-// blockr.viz bundle 4cb01e8b9cfe8b376dc762e3973c9f30, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 6721386ffdd450f09f12700a6916bc41, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -3497,13 +3497,14 @@
   /**
    * SnapDOM, fetched from the package's js/vendor/snapdom.js the first time
    * a picture is taken; every picture after that, and one asked for while
-   * it is on its way, waits for the same load.
+   * it is on its way, waits for the same load. A page with no package folder
+   * to fetch from fails at once.
    * @returns {Promise<any>}
    */
   const snapdom = () => {
     const ready = () => root.snapdom && typeof root.snapdom.toCanvas === 'function';
-    const loaded = ready() ? Promise.resolve() :
-      V.lazy.script(V.lazy.asset('js/vendor/snapdom.js'));
+    const url = V.lazy.asset('js/vendor/snapdom.js');
+    const loaded = ready() || !url ? Promise.resolve() : V.lazy.script(url);
     return loaded.then(() => {
       if (!ready()) throw new Error('snapdom is not loaded');
       return root.snapdom;

@@ -199,8 +199,10 @@ interface VizNamespace {
   };
   /** Scripts fetched when first needed (core/lazy.js). */
   lazy: {
+    /** The package's served folder, '' when unknown. */
+    base: string;
     script(url: string): Promise<void>;
-    asset(path: string): string;
+    asset(path: string): string | null;
   };
   tooltip: {
     swatch(color: unknown): string;

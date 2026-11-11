@@ -52,10 +52,13 @@
   };
 
   /**
-   * A file of the installed package (`path` under inst/), as a URL.
+   * A file of the installed package (`path` under inst/), as a URL; null
+   * when the page did not load the core from the package's folder (a node
+   * test, a Web page download with the scripts inlined).
    * @param {string} path
    */
-  const asset = (path) => base + path;
+  const asset = (path) => (lazy.base ? lazy.base + path : null);
 
-  V.lazy = { script, asset };
+  const lazy = { base, script, asset };
+  V.lazy = lazy;
 })();

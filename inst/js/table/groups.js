@@ -297,13 +297,14 @@
   /**
    * SnapDOM, fetched from the package's js/vendor/snapdom.js the first time
    * a picture is taken; every picture after that, and one asked for while
-   * it is on its way, waits for the same load.
+   * it is on its way, waits for the same load. A page with no package folder
+   * to fetch from fails at once.
    * @returns {Promise<any>}
    */
   const snapdom = () => {
     const ready = () => root.snapdom && typeof root.snapdom.toCanvas === 'function';
-    const loaded = ready() ? Promise.resolve() :
-      V.lazy.script(V.lazy.asset('js/vendor/snapdom.js'));
+    const url = V.lazy.asset('js/vendor/snapdom.js');
+    const loaded = ready() || !url ? Promise.resolve() : V.lazy.script(url);
     return loaded.then(() => {
       if (!ready()) throw new Error('snapdom is not loaded');
       return root.snapdom;

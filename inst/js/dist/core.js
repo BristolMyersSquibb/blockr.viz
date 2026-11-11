@@ -1,4 +1,4 @@
-// blockr.viz bundle 63753c8e0daf84d19a783da5ff7f3361, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle aaad53875d012890fd9daa25bfc74710, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -166,12 +166,15 @@
   };
 
   /**
-   * A file of the installed package (`path` under inst/), as a URL.
+   * A file of the installed package (`path` under inst/), as a URL; null
+   * when the page did not load the core from the package's folder (a node
+   * test, a Web page download with the scripts inlined).
    * @param {string} path
    */
-  const asset = (path) => base + path;
+  const asset = (path) => (lazy.base ? lazy.base + path : null);
 
-  V.lazy = { script, asset };
+  const lazy = { base, script, asset };
+  V.lazy = lazy;
 })();
 // --- core/tooltip.js
 // @ts-check
