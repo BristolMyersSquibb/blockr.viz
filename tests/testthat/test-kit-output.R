@@ -61,7 +61,9 @@ test_that("a settings change goes out without the rows", {
 })
 
 test_that("in a browser session the payload is a message, the output a token", {
-  local_mocked_bindings(viz_posts = function(session) TRUE)
+  shown <- shiny::reactiveVal(FALSE)
+  local_mocked_bindings(viz_posts = function(session) TRUE,
+                        viz_output_hidden = function(session, el) shown())
   post_server <- function(id, df) {
     shiny::moduleServer(id, function(input, output, session) {
       spec <- out_spec()
@@ -97,6 +99,58 @@ test_that("in a browser session the payload is a message, the output a token", {
     expect_null(posts[[2L]]$payload[["data"]])
     expect_match(posts[[2L]]$payload$config, "\"color\":[\"g\"]|\"color\":\"g\"")
     expect_identical(token$posted, 2L)
+  })
+})
+
+test_that("the first payload does not wait for the browser, later ones do", {
+  hidden <- shiny::reactiveVal(NULL)
+  local_mocked_bindings(viz_posts = function(session) TRUE,
+                        viz_output_hidden = function(session, el) hidden())
+  srv <- function(id, df) {
+    shiny::moduleServer(id, function(input, output, session) {
+      spec <- out_spec()
+      state <- viz_state(viz_check(spec, list()))
+      revs <- new_viz_revs(viz_values(state))
+      rows <- viz_rows()
+      viz_payload_output(output, input, "chart", function() {
+        w <- viz_wire_df(df())
+        viz_payload(spec, viz_values(state), rows(w$data, w$columns), revs)
+      }, session = session, el = session$ns("chart"))
+      list(state = state)
+    })
+  }
+  shiny::testServer(srv, args = list(
+    df = shiny::reactiveVal(data.frame(g = c("a", "b"), v = 1:2))
+  ), {
+    posts <- 0L
+    root <- session$rootScope()
+    root$sendCustomMessage <- function(type, message) {
+      if (identical(type, "blockr-viz:payload")) posts <<- posts + 1L
+    }
+    read <- function() tryCatch(output$chart, error = function(e) NULL)
+    # The browser has said nothing yet: the first payload goes out.
+    read()
+    expect_identical(posts, 1L)
+    # Still silent: a change waits.
+    session$returned$state$color("g")
+    session$flushReact()
+    read()
+    expect_identical(posts, 1L)
+    # It shows: the waiting change goes out.
+    hidden(FALSE)
+    session$flushReact()
+    read()
+    expect_identical(posts, 2L)
+    # Hidden: nothing is built; shown again: the change goes out.
+    hidden(TRUE)
+    session$returned$state$type("line")
+    session$flushReact()
+    read()
+    expect_identical(posts, 2L)
+    hidden(FALSE)
+    session$flushReact()
+    read()
+    expect_identical(posts, 3L)
   })
 })
 
