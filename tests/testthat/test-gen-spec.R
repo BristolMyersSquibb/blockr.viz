@@ -1,6 +1,6 @@
 gen_env <- function() {
-  path <- test_path("..", "..", "dev", "gen-spec.R")
-  skip_if_not(file.exists(path), "dev/ is not in the built package")
+  path <- test_path("..", "..", "tools", "gen-spec.R")
+  skip_if_not(file.exists(path), "tools/ is not in the built package")
   env <- new.env(parent = asNamespace("blockr.viz"))
   sys.source(path, envir = env)
   env

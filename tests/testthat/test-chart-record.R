@@ -1,5 +1,5 @@
 # The chart block replayed against its recordings (helper-chart-record.R,
-# written by dev/chart-record.R on the reference). The rewritten chart is
+# written by tools/chart-record.R on the reference). The rewritten chart is
 # fed the same steps through the kit's inputs (helper-chart-rewrite.R). A
 # difference is a change in what the block holds, emits, sends downstream or
 # computes for the drawing.

@@ -1,5 +1,5 @@
 # The table block replayed against its recordings (helper-table-golden.R,
-# written by dev/table-golden-record.R on the reference). The rewritten
+# written by tools/table-golden-record.R on the reference). The rewritten
 # table is fed the same steps through the kit's inputs
 # (helper-table-rewrite.R). A difference is a change in what the block
 # holds, emits, sends downstream or shows the reader. Each part of a step is

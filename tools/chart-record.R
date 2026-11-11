@@ -2,11 +2,11 @@
 # replays. Run from the package root, with the blockr.core the reference
 # needs (origin/main, for core#379):
 #
-#   Rscript dev/chart-record.R            # every scenario
-#   Rscript dev/chart-record.R bar_count  # some
+#   Rscript tools/chart-record.R            # every scenario
+#   Rscript tools/chart-record.R bar_count  # some
 #
 # Re-record only for a change Christoph accepted, and note it in
-# _scratch/viz-cran-review/features-chart.md.
+# tools/features/features-chart.md.
 
 pkgload::load_all(".", quiet = TRUE)
 source("tests/testthat/helper-chart-reference.R")

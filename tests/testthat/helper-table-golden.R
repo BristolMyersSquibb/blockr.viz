@@ -10,7 +10,7 @@
 # server sent (JSON payloads parsed), the rendered HTML outputs, every
 # control-channel send, and a downloaded file where the step is a download.
 # The recordings live in fixtures/table-golden/ and are written by
-# dev/table-golden-record.R; test-table-golden.R replays each scenario.
+# tools/table-golden-record.R; test-table-golden.R replays each scenario.
 #
 # State is keyed by the constructor's argument names and sorted by name.
 # The steps are the reference's browser messages: their keys are the
