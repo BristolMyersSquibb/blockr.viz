@@ -131,7 +131,53 @@ interface VizRowCtx {
   wordOf?(key: string): VizWordOf;
   /** The line under a titles field naming the script values that take a setting's word. */
   shadowNote?(tpl: string): string;
+  /** A block's own gear, when it has one. */
+  profile?: VizProfile | null;
+  /** Write several settings at once (a package's own row writes `script_values`). */
+  setValues?(changes: VizValues): void;
   set(value: unknown): void;
+}
+
+/** A block's own gear as R sends it (`derived.gear`, R's table_gear()). */
+interface VizGearWire {
+  tabs: { title: string; sections: { title: string; keys: string[] }[] }[];
+  columns?: { name: string; label?: string; summary: Record<string, unknown> }[];
+  clauses?: Record<string, string>;
+}
+
+/** A row of a block's own gear that the spec does not have. */
+interface VizProfileRow {
+  kind: 'script' | 'columns' | 'words' | 'editor';
+  name?: string;
+  sp?: VizScriptControl;
+}
+
+/** A block's own gear, built: its spec (rows first), sections, tabs and rows. */
+interface VizProfile {
+  spec: VizSpec;
+  sections: Record<string, [string, number]>;
+  groups: [string, string][];
+  keys: Set<string>;
+  rows: Record<string, VizProfileRow>;
+  wire: VizGearWire;
+  clauses: [string, string][];
+  sig: string;
+}
+
+interface VizProfileKit {
+  build(base: VizSpec, wire: VizGearWire, script: VizScript | null): VizProfile;
+  values(prof: VizProfile, cfg: VizValues, script: VizScript | null): VizValues;
+  translate(prof: VizProfile, changed: VizValues, now: VizValues): VizValues;
+  setWords(tpl: string, clauses: [string, string][], on: Set<string>): string;
+  scriptArg(sp: VizScriptControl): VizArg;
+  scriptValue(sp: VizScriptControl, v: unknown): unknown;
+  SV: string;
+}
+
+/** A package's row in a block's own gear: its label and its editor. */
+interface VizGearEditor {
+  label?: string;
+  draw(el: HTMLElement, ctx: VizRowCtx): void;
 }
 
 /** What a title word names: a prepare script's control (`script`), with the label of the
@@ -201,10 +247,11 @@ interface VizSectionPlan { title: string; group: string; ord: number; keys: stri
 interface VizSectionKit {
   GROUPS: [string, string][];
   plan(spec: VizSpec, shown: (key: string) => boolean,
-       isSet: (key: string) => boolean): VizSectionPlan[];
+       isSet: (key: string) => boolean, own?: VizProfile | null): VizSectionPlan[];
   sectionEl(title: string): { el: HTMLElement; titleEl: HTMLElement; body: HTMLElement };
   assemble(pop: HTMLElement, built: { plan: VizSectionPlan; el: HTMLElement; titleEl: HTMLElement }[],
-           current: string | null, onPick: (g: string) => void, label: string): void;
+           current: string | null, onPick: (g: string) => void, label: string,
+           tabs?: [string, string][]): void;
   applies(arg: VizArg, type: unknown): boolean;
 }
 
@@ -217,8 +264,12 @@ interface VizTileKit {
 
 interface VizGearNamespace {
   mount(el: HTMLElement, opts: VizGearOptions): VizGear;
-  /** Controls defined outside controls.js, by name (range.js). */
+  /** Controls defined outside controls.js, by name (range.js, profile.js). */
   more?: Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>;
+  /** Rows a package adds to a block's own gear, by key (profile.js). */
+  editors: Record<string, VizGearEditor>;
+  /** A block's own gear (profile.js). */
+  profile: VizProfileKit;
   /** A ticks setting's words on the face (gear/ticks.js). */
   ticksSlot(host: VizGearHost, key: string, value: unknown, label: string,
             set: (v: unknown) => void, values: VizValues): VizSlotOpener;
