@@ -31,6 +31,7 @@ step() {
   fi
 }
 
+step "bundles current"      node tools/bundle.js --check .
 step "dead R"               Rscript tools/dead-r.R .
 step "dead JS"              node tools/dead-js.js .
 step "dead CSS"             node tools/dead-css.js .

@@ -1,0 +1,3 @@
+# Written by tools/bundle.js: rebuild instead of reading or merging them.
+inst/js/dist/** linguist-generated=true -diff
+inst/css/dist/** linguist-generated=true -diff

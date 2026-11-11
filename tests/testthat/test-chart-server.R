@@ -395,6 +395,7 @@ test_that("the board's ECharts theme option reaches the chart", {
   blk <- new_chart_block(type = "bar", category = "arm")
   srv_run(blk, function(session, expr, visit) {
     expect_identical(srv_payload(expr)$derived$theme, "default")
+    expect_null(srv_payload(expr)$derived$theme_src)
   })
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
@@ -405,6 +406,11 @@ test_that("the board's ECharts theme option reaches the chart", {
       session$flushReact()
       expect_identical(srv_payload(session$makeScope("expr"))$derived$theme,
                        "dark")
+      # The chart fetches the theme's script before it draws.
+      expect_identical(
+        srv_payload(session$makeScope("expr"))$derived$theme_src,
+        echart_theme_src("dark")
+      )
     },
     args = list(x = blk, data = list(data = shiny::reactive(srv_df())))
   )

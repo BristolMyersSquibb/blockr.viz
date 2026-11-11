@@ -26,6 +26,23 @@
 
   /** @type {CanvasRenderingContext2D | null} */ let measureCtx = null;
 
+  /** Theme scripts that have run, or failed to: a chart waits once. */
+  const themesTried = new Set();
+
+  /**
+   * The load of the ECharts theme script R names (`derived.theme_src`,
+   * R/chart-dep.R), or null when there is nothing to wait for. A theme that
+   * fails to load draws as ECharts' own.
+   * @param {ChartDerived | undefined} d
+   * @returns {Promise<void> | null}
+   */
+  const themeReady = (d) => {
+    const src = d && d.theme_src;
+    if (!src || themesTried.has(src)) return null;
+    const done = () => { themesTried.add(src); };
+    return V.lazy.script(src).then(done, done);
+  };
+
   // What a payload draws: all of it but the selection, the download menu
   // and the data view, which follow the selection. The rows are keyed by
   // the binding's `rowsChanged`.
@@ -69,6 +86,9 @@
       this.drawn = false;
       /** An empty state is drawn. */
       this._blank = false;
+      /** A payload held for its theme's script (themeReady()), with whether
+       * a held one had new rows. @type {{ p: VizPayload, rows: boolean } | null} */
+      this._held = null;
       /** @type {string | null} */ this.theme = null;
       /** @type {Ink} */ this._ink = NS.INK_DEFAULT;
       /** The family's model and option, memoised on the config fields each
@@ -109,8 +129,9 @@
     /** The family that draws the current type. @returns {ChartFamily} */
     family() { return NS.families[NS.familyOf(this.settings.type)]; }
 
-    /** The ECharts theme R named (drilldown-theme-register.js registered
-     * it); "default" is ECharts' own. @param {ChartTheme | null | undefined} theme */
+    /** The ECharts theme R named (drilldown-theme-register.js registers
+     * "blockr", a theme's own script the others, themeReady()); "default" is
+     * ECharts' own. @param {ChartTheme | null | undefined} theme */
     _setTheme(theme) {
       this.theme = theme && theme !== 'default' ? theme : null;
     }
@@ -120,6 +141,21 @@
      * @param {VizPayload} p @param {boolean} [rowsChanged] */
     render(p, rowsChanged = true) {
       const d = /** @type {ChartDerived} */ (p.derived || {});
+      // A theme still on its way holds the drawing; the last payload held
+      // draws when it is there, with new rows if any held payload had them.
+      const wait = themeReady(d);
+      if (wait) {
+        const held = this._held;
+        this._held = { p, rows: rowsChanged || !!(held && held.rows) };
+        if (!held) {
+          wait.then(() => {
+            const h = this._held;
+            this._held = null;
+            if (h && !this.scope.disposed) this.render(h.p, h.rows);
+          });
+        }
+        return;
+      }
       // A click changes the selection, and with it the download counts and
       // the data view, but nothing the chart draws: those payloads update in
       // place. The same payload again is a theme change, which redraws.
@@ -173,6 +209,9 @@
 
     /** An error R sent: said where the chart would be. @param {string} message */
     error(message) {
+      // An error after a payload held for its theme stands; the held one
+      // does not draw over it.
+      this._held = null;
       this._drawKey = null;
       this._showEmpty({ kind: 'error', message });
       this._downloads();
@@ -528,5 +567,6 @@
   }
 
   V.binding('blockr.viz.chart', 'chart', ChartView, { busy: 'drawing' });
+  NS.themeReady = themeReady;
   NS.registerCapture(ChartView);
 })();

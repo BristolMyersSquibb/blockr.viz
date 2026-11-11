@@ -16,3 +16,16 @@ memoise0 <- function(build) {
     cache$v
   }
 }
+
+# TRUE when the dependencies list the single source files instead of the
+# bundles: `options(blockr.viz.dev_js = TRUE)`, for working on the JS without
+# rebuilding.
+viz_dev_js <- function() isTRUE(getOption("blockr.viz.dev_js"))
+
+# memoise0() for a dependency builder `build(dev)` with a bundled and a
+# source variant, each built once; the option picks one on every call.
+memoise_js <- function(build) {
+  bundled <- memoise0(function() build(FALSE))
+  sources <- memoise0(function() build(TRUE))
+  function() if (viz_dev_js()) sources() else bundled()
+}

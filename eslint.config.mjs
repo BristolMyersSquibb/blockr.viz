@@ -28,7 +28,7 @@ const outsideScope = [
 ];
 
 export default [
-  { ignores: ['inst/js/vendor/**', 'inst/js/spec/**'] },
+  { ignores: ['inst/js/vendor/**', 'inst/js/spec/**', 'inst/js/dist/**'] },
   {
     files: ['inst/js/**/*.js'],
     languageOptions: {
