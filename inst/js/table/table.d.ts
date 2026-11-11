@@ -514,6 +514,7 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
+    fitLabels(host: ParentNode, again?: boolean): void;
   };
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;

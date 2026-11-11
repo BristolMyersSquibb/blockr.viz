@@ -55,6 +55,7 @@ Suggests:
     callr,
     chromote,
     codetools,
+    dm,
     flextable,
     ggplot2,
     grid,

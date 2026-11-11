@@ -171,7 +171,7 @@
    * edge).
    * @param {(number | string)[]} g
    * @param {string} fill
-   * @param {string | null} tip
+   * @param {string | number | null} tip
    */
   function seg(g, fill, tip) {
     const lab = g.length > 3 && g[3] !== '' ? ' data-l="' + esc(g[3]) + '"' : '';

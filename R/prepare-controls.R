@@ -98,16 +98,9 @@ script_control_values <- function(specs, values = list()) {
     out[[script_key(s$name)]] <- switch(
       s$kind,
       flag = if (isTRUE(as.logical(v))) "on" else "off",
-      # as.list() keeps a single pick a JSON array instead of a string. A
-      # multi-select shows only picks its pool still offers (the pool can
-      # follow another control), so "N selected" counts what is offered.
-      select = if (isTRUE(s$multiple)) {
-        v <- as.character(v)
-        if (length(s$choices)) v <- v[v %in% as.character(s$choices)]
-        as.list(v)
-      } else {
-        as.character(v)[[1L]]
-      },
+      # as.list() keeps a single pick a JSON array instead of a string.
+      select = if (isTRUE(s$multiple)) as.list(as.character(v)) else
+        as.character(v)[[1L]],
       date = format(as.Date(v)),
       number = as.numeric(v)[[1L]],
       as.character(v)[[1L]]
@@ -150,13 +143,9 @@ script_title_args <- function(roles, specs, values = list()) {
       v <- as.character(s$placeholder %||% "")
     }
     # A multi-select prints its picks: "all" when every choice is picked,
-    # "none" when none is, the picks in a list otherwise. Picks its pool no
-    # longer offers (the pool can follow another control) do not count.
+    # "none" when none is, the picks in a list otherwise.
     if (identical(s$kind, "select") && isTRUE(s$multiple)) {
-      picks <- as.character(v)
-      pool <- as.character(s$choices)
-      if (length(pool)) picks <- picks[picks %in% pool]
-      v <- script_picks_word(picks, pool)
+      v <- script_picks_word(as.character(v), as.character(s$choices))
     }
     v
   })
