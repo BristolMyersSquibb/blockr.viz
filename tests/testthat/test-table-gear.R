@@ -125,3 +125,26 @@ test_that("a block with its own constructor lets others set only its arguments",
   expect_false("layout" %in% own)
   expect_identical(table_ctrl_args(spec, "nope", "blockr.viz"), viz_ctrl_args(spec))
 })
+
+test_that("a gear's info reads the input, and its deps and open tab reach the page", {
+  dep <- htmltools::htmlDependency("my-rows", "1.0", src = c(href = "x"),
+                                   script = "rows.js")
+  g <- table_gear(list(Data = "mapping"), open = "Data", deps = list(dep),
+                  info = function(data) list(n = nrow(data), cols = names(data)))
+  blk <- tgear_block(layout = "groups", by = "ARM", gear = g, class = "my_table_block")
+  d <- data.frame(ARM = c("A", "B"), AGE = c(30, 40))
+  tgear_run(blk, d, function(p) {
+    expect_identical(p$derived$gear$info$n, 2L)
+    expect_identical(unlist(p$derived$gear$info$cols), c("ARM", "AGE"))
+    expect_identical(p$derived$gear$open, "Data")
+  })
+  ui <- htmltools::renderTags(blk$expr_ui("x"))
+  expect_true(any(vapply(htmltools::findDependencies(blk$expr_ui("x")),
+                         function(x) x$name == "my-rows", logical(1L))))
+  # An info that fails sends nothing, and the block still draws.
+  g2 <- table_gear(list(Data = "mapping"), info = function(data) stop("no"))
+  tgear_run(tgear_block(layout = "groups", by = "ARM", gear = g2), d, function(p) {
+    expect_null(p$derived$gear$info)
+    expect_identical(p$derived$gear$tabs[[1L]]$title, "Data")
+  })
+})

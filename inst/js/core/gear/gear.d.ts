@@ -133,6 +133,8 @@ interface VizRowCtx {
   shadowNote?(tpl: string): string;
   /** A block's own gear, when it has one. */
   profile?: VizProfile | null;
+  /** The prepare script's controls, values and error. */
+  script?: VizScript | null;
   /** Write several settings at once (a package's own row writes `script_values`). */
   setValues?(changes: VizValues): void;
   set(value: unknown): void;
@@ -143,6 +145,10 @@ interface VizGearWire {
   tabs: { title: string; sections: { title: string; keys: string[] }[] }[];
   columns?: { name: string; label?: string; summary: Record<string, unknown> }[];
   groups?: { values: string[]; labels: string[] };
+  /** The tab the tray opens at when the prepare script fails. */
+  open?: string | null;
+  /** What the block's `info` found in its input (R's table_gear()). */
+  info?: unknown;
   clauses?: Record<string, string>;
 }
 
@@ -208,6 +214,8 @@ type VizEndOpener = VizSlotBase & { kind: 'entry'; value: unknown;
 interface VizGear {
   readonly block: string;
   update(payload: VizPayload): void;
+  /** Show a block's own gear at its tab of that title. */
+  showTab(title: string): void;
   set(changes: VizValues): void;
   values(): VizValues;
   slot(key: string): VizSlotOpener | null;

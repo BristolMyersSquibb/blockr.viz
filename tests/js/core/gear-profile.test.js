@@ -168,3 +168,13 @@ test('without a gear the table shows its own tabs and rows', () => {
   assert.ok(rows(m.el).includes('layout'));
   assert.ok(!rows(m.el).includes('sv.doses'));
 });
+
+test('showTab opens the gear at a tab of its own', noUi, () => {
+  const t = setup({ ui: true });
+  t.gear.showTab('Lanes');
+  const cur = t.el.querySelector('.blockr-tray-nav__tab.is-current');
+  assert.equal(cur && cur.textContent, 'Lanes');
+  // A title the gear does not have changes nothing.
+  t.gear.showTab('Nope');
+  assert.equal(t.el.querySelector('.blockr-tray-nav__tab.is-current').textContent, 'Lanes');
+});

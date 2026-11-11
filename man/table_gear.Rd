@@ -4,7 +4,15 @@
 \alias{table_gear}
 \title{A table block's own gear}
 \usage{
-table_gear(tabs, columns = list(), groups = character(), clauses = character())
+table_gear(
+  tabs,
+  columns = list(),
+  groups = character(),
+  clauses = character(),
+  info = NULL,
+  open = NULL,
+  deps = list()
+)
 }
 \arguments{
 \item{tabs}{A named list, one element per tab in tray order. An element is
@@ -22,6 +30,17 @@ row: a character vector, named by the labels the pick shows.}
 
 \item{clauses}{A named character vector: per setting, the clause it adds to
 the subtitle when ticked "In the subtitle" (\code{c(doses = "doses shown as {@doses}")}), in sentence order.}
+
+\item{info}{A function of the block's input (a data frame or a dm),
+called again when it changes. What it returns goes to the browser as
+\code{derived.gear.info}, for a package's own rows (which tables and columns
+a block found). An error gives \code{NULL}.}
+
+\item{open}{The tab the tray opens at when the prepare script fails (a
+table or column missing), or \code{NULL}.}
+
+\item{deps}{HTML dependencies the block's page needs, the script of a
+package's own rows among them.}
 }
 \value{
 A \code{viz_table_gear} object.

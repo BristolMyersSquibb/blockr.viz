@@ -31,6 +31,14 @@
 #'   summaries.
 #' @param groups The columns the rows may be grouped by, for the `"group"`
 #'   row: a character vector, named by the labels the pick shows.
+#' @param info A function of the block's input (a data frame or a dm),
+#'   called again when it changes. What it returns goes to the browser as
+#'   `derived.gear.info`, for a package's own rows (which tables and columns
+#'   a block found). An error gives `NULL`.
+#' @param open The tab the tray opens at when the prepare script fails (a
+#'   table or column missing), or `NULL`.
+#' @param deps HTML dependencies the block's page needs, the script of a
+#'   package's own rows among them.
 #' @param clauses A named character vector: per setting, the clause it adds to
 #'   the subtitle when ticked "In the subtitle" (`c(doses = "doses shown as
 #'   {@doses}")`), in sentence order.
@@ -48,9 +56,12 @@
 #' )
 #' @export
 table_gear <- function(tabs, columns = list(), groups = character(),
-                       clauses = character()) {
+                       clauses = character(), info = NULL, open = NULL,
+                       deps = list()) {
   stopifnot(
     is.list(tabs), length(tabs) > 0L, is_named(tabs),
+    is.null(info) || is.function(info),
+    is.null(open) || (is.character(open) && length(open) == 1L),
     is.list(columns), !length(columns) || is_named(columns),
     is.character(groups),
     is.character(clauses), !length(clauses) || is_named(clauses)
@@ -76,7 +87,8 @@ table_gear <- function(tabs, columns = list(), groups = character(),
   labels[!nzchar(labels)] <- groups[!nzchar(labels)]
   structure(list(tabs = tabs, columns = columns,
                  groups = list(values = unname(groups), labels = unname(labels)),
-                 clauses = as.list(clauses)),
+                 clauses = as.list(clauses), info = info, open = open,
+                 deps = deps),
             class = "viz_table_gear")
 }
 
@@ -126,12 +138,15 @@ table_gear_summaries <- function(gear, other = list()) {
   c(lapply(on, `[[`, "summary"), other)
 }
 
-# What the browser gets: the gear as built, under derived$gear.
-table_gear_wire <- function(gear) {
+# What the browser gets: the gear as built, under derived$gear, with what
+# its `info` found in the input.
+table_gear_wire <- function(gear, info = NULL) {
   if (is.null(gear)) {
     return(NULL)
   }
-  list(
+  out <- list(
+    open = gear$open,
+    info = info,
     tabs = gear$tabs,
     columns = lapply(gear$columns, function(cl) {
       list(name = cl$name, label = cl$summary$label %||% cl$name,
@@ -140,6 +155,8 @@ table_gear_wire <- function(gear) {
     groups = gear$groups,
     clauses = gear$clauses
   )
+  # A NULL would go out as `{}`.
+  out[!vapply(out, is.null, logical(1L))]
 }
 
 is_named <- function(x) {

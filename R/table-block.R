@@ -124,7 +124,11 @@ new_table_block <- function(layout = "records",
   if (is.null(core$ctor)) core$ctor <- sys.nframe()
   res <- do.call(blockr.core::new_transform_block, c(list(
     server = function(id, data) table_server(id, data, values, gear),
-    ui = table_ui,
+    ui = if (length(gear$deps)) {
+      function(id) shiny::tagList(table_ui(id), gear$deps)
+    } else {
+      table_ui
+    },
     dat_valid = validate_table_input,
     allow_empty_state = viz_empty_ok(spec),
     external_ctrl = ctrl,

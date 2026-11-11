@@ -255,9 +255,18 @@
         wordOf: (k) => this.wordOf(k, values),
         shadowNote: (tpl) => this.shadowNote(tpl, values),
         profile: this._prof,
+        script: this._script,
         setValues: (changes) => this.set(changes),
         set: (v) => this.set({ [key]: v })
       };
+    }
+
+    /** Show a block's own gear at its tab titled `title`. @param {string} title */
+    showTab(title) {
+      const g = this._prof && this._prof.groups.find(([, t]) => t === title);
+      if (!g || this._group === g[0]) return;
+      this._group = g[0];
+      this.render();
     }
 
     render() {
