@@ -134,6 +134,10 @@
         block: o.block, id: this.id, scope: this.scope, typeKey: o.typeKey,
         title: o.title, host: o.host
       }));
+      // The gear asks R for what it needs of the columns once its tray is open.
+      this.scope.mutate(t.button, () => {
+        if (this.gear) this.gear.setOpen(t.button.getAttribute('aria-expanded') === 'true');
+      }, { attributes: true, attributeFilter: ['aria-expanded'] });
       this.slots = this.scope.own(V.titles.slots({
         gear: this.gear, scope: this.scope, openGear: this.openGear
       }));

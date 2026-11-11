@@ -96,7 +96,7 @@ record_rw_payload <- function(msgs, expr, cx) {
   if ("columns" %in% names(p)) cx$columns <- p$columns
   view <- record_computed(list(
     rows = if (!is.null(p[["data"]])) record_ref_rows(p[["data"]]),
-    columns = record_ref_columns(cx$columns),
+    columns = record_ref_columns(cx$columns, record_rw_counts(expr, cx$session)),
     titles = lapply(d$titles[c("title", "subtitle", "caption")],
                     function(b) b$text),
     band = d$band,
@@ -112,15 +112,32 @@ record_rw_payload <- function(msgs, expr, cx) {
   if (same && is.null(view$rows)) list() else list(view)
 }
 
+# The distinct counts of the payload's columns, asked for as the browser's
+# gear asks (`chart_counts`) and read from R's answer.
+record_rw_counts <- function(expr, session) {
+  got <- NULL
+  root <- session$rootScope()
+  old <- root$sendCustomMessage
+  root$sendCustomMessage <- function(type, message) {
+    if (identical(type, "blockr-viz:column-counts")) got <<- message$counts
+    invisible(NULL)
+  }
+  on.exit(root$sendCustomMessage <- old)
+  expr$setInputs(chart_counts = as.numeric(Sys.time()))
+  session$flushReact()
+  got
+}
+
 # The payload's column description in the reference's shape: `type`
 # numeric or categorical, `temporal` for a date or date-time, `label` only
-# when set.
-record_ref_columns <- function(cols) {
+# when set. `counts` are the distinct counts, which the payload no longer
+# carries.
+record_ref_columns <- function(cols, counts) {
   lapply(cols, function(c) {
     temporal <- switch(c$class, date = "date", datetime = "datetime", NULL)
     out <- list(name = c$name,
                 type = if (identical(c$class, "number")) "numeric" else "categorical",
-                n_unique = c$n_unique)
+                n_unique = counts[[c$name]])
     if (nzchar(c$label)) out$label <- c$label
     out$temporal <- temporal
     out$kind <- c$kind

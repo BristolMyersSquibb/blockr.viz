@@ -707,3 +707,56 @@ test('a selection moving does not rebuild the tray', () => {
   t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', line_width: 3 }));
   assert.notEqual(t.el.firstElementChild, first, 'a setting still rebuilds');
 });
+
+// The distinct counts come from R when the tray opens (R/kit-server.R,
+// viz_counts_observer()); a host that filters by them says so (needsCounts).
+const countHost = {
+  needsCounts: (cols) => cols.some((c) => c.n_unique == null),
+  columns: (key, v, cols) => (key === 'facet'
+    ? cols.filter((c) => c.n_unique != null && c.n_unique <= 10) : cols)
+};
+const bare = () => payload({ type: 'bar', category: 'ARM', orientation: 'vertical', facet: 'SEX' },
+  { columns: ['USUBJID', 'ARM', 'SEX', 'AVAL'].map((name) => ({ name, class: 'character', label: '' })) });
+const asks = (t) => t.sent.filter((s) => s.name === 'blk-chart_counts');
+const facetNames = (t) => Array.from(sel(t.el, 'facet').options).map((o) => o.textContent);
+
+test('the gear asks for the counts once, when its tray opens', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  t.gear.update(bare());
+  assert.equal(asks(t).length, 0, 'nothing is asked while the tray is closed');
+  t.gear.setOpen(true);
+  assert.equal(asks(t).length, 1);
+  assert.equal(asks(t)[0].opts.priority, 'event');
+  t.gear.setOpen(false);
+  t.gear.setOpen(true);
+  assert.equal(asks(t).length, 1, 'opening again asks nothing new');
+});
+
+test('a picker that filters by the counts offers no column until they are in', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  t.gear.update(bare());
+  t.gear.setOpen(true);
+  assert.deepEqual(facetNames(t).filter((x) => x !== '(none)'), ['SEX'],
+    'the picked value is all it offers');
+  env.V.gear.counts({ id: 'blk-chart', counts: { USUBJID: 40, ARM: 3, SEX: 2, AVAL: 200 } });
+  assert.deepEqual(facetNames(t).filter((x) => x !== '(none)'), ['ARM', 'SEX']);
+});
+
+test('a payload with the same columns asks again for nothing', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  const p = bare();
+  t.gear.update(p);
+  t.gear.setOpen(true);
+  env.V.gear.counts({ id: 'blk-chart', counts: { USUBJID: 40, ARM: 3, SEX: 2, AVAL: 200 } });
+  t.gear.update(Object.assign({}, p, { state_rev: 4 }));
+  assert.equal(asks(t).length, 1);
+  assert.deepEqual(facetNames(t).filter((x) => x !== '(none)'), ['ARM', 'SEX'], 'the counts stay');
+  assert.equal(JSON.stringify(p.columns).includes('n_unique'), false,
+    'the counts do not change what the columns stringify to');
+  // New columns while the tray is open: asked for again.
+  t.gear.update(Object.assign({}, p, { columns: p.columns.map((c) => Object.assign({}, c)) }));
+  assert.equal(asks(t).length, 2);
+});

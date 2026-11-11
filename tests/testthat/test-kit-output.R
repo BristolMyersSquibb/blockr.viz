@@ -233,3 +233,43 @@ test_that("the rows' revision moves only when the rows do", {
   expect_identical(viz_rows()(structure(list(), names = character()))$rev,
                    1L)
 })
+
+test_that("an ask for the column counts is answered, and kept per frame", {
+  n_counted <- 0L
+  local_mocked_bindings(viz_column_counts = function(df) {
+    n_counted <<- n_counted + 1L
+    list(g = length(unique(df$g)), v = length(unique(df$v)))
+  })
+  srv <- function(id, df) {
+    shiny::moduleServer(id, function(input, output, session) {
+      viz_counts_observer(input, session, "chart", session$ns("chart"),
+                          shiny::reactive(df()))
+    })
+  }
+  df <- shiny::reactiveVal(data.frame(g = c("a", "b", "a"), v = 1:3))
+  shiny::testServer(srv, args = list(df = df), {
+    answers <- list()
+    root <- session$rootScope()
+    root$sendCustomMessage <- function(type, message) {
+      if (identical(type, "blockr-viz:column-counts")) {
+        answers[[length(answers) + 1L]] <<- message
+      }
+    }
+    session$setInputs(chart_counts = 1)
+    expect_length(answers, 1L)
+    expect_identical(answers[[1L]]$id, session$ns("chart"))
+    expect_identical(answers[[1L]]$counts, list(g = 2L, v = 3L))
+    expect_identical(n_counted, 1L)
+
+    # The same frame again: answered, not counted.
+    session$setInputs(chart_counts = 2)
+    expect_length(answers, 2L)
+    expect_identical(answers[[2L]]$counts, list(g = 2L, v = 3L))
+    expect_identical(n_counted, 1L)
+
+    df(data.frame(g = c("a", "b", "c"), v = c(1L, 1L, 1L)))
+    session$setInputs(chart_counts = 3)
+    expect_identical(answers[[3L]]$counts, list(g = 3L, v = 1L))
+    expect_identical(n_counted, 2L)
+  })
+})

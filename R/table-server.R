@@ -39,6 +39,7 @@ table_server <- function(id, data, init) {
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles),
+        frame = src$rows,
         expr = table_expr(kit, part),
         exhibit = function() {
           tt <- tryCatch(titles(), error = function(e) list())

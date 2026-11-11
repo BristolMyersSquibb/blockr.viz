@@ -51,6 +51,9 @@ interface VizGearHost {
   /** The options of a pick the spec leaves open (values from the data or the
    * board), and the labels of a column pick's `also` words. */
   choices?(key: string, values: VizValues, columns: VizColumn[]): VizChoice[] | null | undefined;
+  /** Whether the columns lack a count the host's `columns` filters by; the engine
+   * then asks R for the counts when the tray opens. */
+  needsCounts?(columns: VizColumn[]): boolean;
   /** The columns a column pick offers, of all the input's columns. */
   columns?(key: string, values: VizValues, columns: VizColumn[]): VizColumn[];
   /** The groups of a tiles control (the chart's type tiles). */
@@ -177,6 +180,10 @@ interface VizGear {
   prime(payload: VizPayload): void;
   label(key: string): string;
   render(): void;
+  /** The tray opened or closed; open, the engine asks R for the columns' counts. */
+  setOpen(on: boolean): void;
+  /** R's answer to that ask: counts by column name. */
+  counts(counts: Record<string, number>): void;
   dispose(): void;
 }
 
@@ -217,6 +224,8 @@ interface VizTileKit {
 
 interface VizGearNamespace {
   mount(el: HTMLElement, opts: VizGearOptions): VizGear;
+  /** R's `blockr-viz:column-counts`: hands the counts to the gear of the element `id`. */
+  counts(msg: { id?: string; counts?: Record<string, number> | null }): void;
   /** Controls defined outside controls.js, by name (range.js). */
   more?: Record<string, (el: HTMLElement, ctx: VizRowCtx) => void>;
   /** A ticks setting's words on the face (gear/ticks.js). */

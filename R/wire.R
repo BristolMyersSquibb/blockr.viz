@@ -112,7 +112,7 @@ wire_record <- function(type, x) {
 #'   another frame's (the chart sends its whole input's, viz_wire_columns())
 #'   passes `FALSE`.
 #' @return `list(columns, data)`: `columns` a list of column meta (`name`,
-#'   `class`, `label`, `n_unique`, the entries above, `kind` for a column
+#'   `class`, `label`, the entries above, `kind` for a column
 #'   mark_column_kinds() marked and `all_na = TRUE` for a column that is NA
 #'   in every row), or `NULL` without `meta`; `data` a `json` string.
 #' @noRd
@@ -165,21 +165,37 @@ wire_df_parts <- function(df, warn, meta = TRUE) {
   list(cols = cols, meta = described)
 }
 
-# One column's description: its name, wire class, variable label, number
-# of distinct values, the class's meta (factor levels, time zone, unit) and,
-# in a frame that marks kinds, what the column is for. An unmarked column in
-# a marked frame has no `kind`. A column that is NA in every row says so
-# (`all_na`): the chart then treats it as unset when it is a colour, facet or
-# series, the rule of cols_with_values().
+# One column's description: its name, wire class, variable label, the
+# class's meta (factor levels, time zone, unit) and, in a frame that marks
+# kinds, what the column is for. An unmarked column in a marked frame has no
+# `kind`. A column that is NA in every row says so (`all_na`): the chart then
+# treats it as unset when it is a colour, facet or series, the rule of
+# cols_with_values(). The number of distinct values is no part of it, since
+# counting them costs most of the description; viz_column_counts() gives
+# them when the gear asks.
 wire_column_meta <- function(x, nm, w, kinds) {
   c(
     list(name = nm, class = w$class,
-         label = attr(x, "label", exact = TRUE) %||% "",
-         n_unique = length(unique(x))),
+         label = attr(x, "label", exact = TRUE) %||% ""),
     w$meta,
     if (nm %in% names(kinds)) list(kind = unname(kinds[[nm]])),
-    if (length(x) && all(is.na(x))) list(all_na = TRUE)
+    # The first value settles most columns before the whole one is read.
+    if (length(x) && is.na(x[[1L]]) && all(is.na(x))) list(all_na = TRUE)
   )
+}
+
+#' The number of distinct values of each column viz_wire_columns() describes
+#'
+#' What the chart's gear filters its role pickers by (a facet takes at most
+#' 10 values). Asked for by the browser, not sent with the description.
+#' @param df A data frame, or `NULL`.
+#' @return A named list of counts, in the order of the described columns;
+#'   `NULL` for no frame.
+#' @noRd
+viz_column_counts <- function(df) {
+  if (!is.data.frame(df)) return(NULL)
+  nms <- names(df)[vapply(df, function(x) !is.null(wire_class(x)), logical(1L))]
+  stats::setNames(lapply(nms, function(nm) length(unique(df[[nm]]))), nms)
 }
 
 # One column as wire values, its class and its meta; NULL when it cannot

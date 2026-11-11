@@ -24,6 +24,7 @@ chart_server <- function(id, data, init) {
       dv <- chart_data_view(kit, src, rows_expr, shown)
       list(
         payload = view$payload,
+        frame = src$plain,
         expr = expr,
         exhibit = chart_exhibit(kit, src, view),
         probe = chart_exhibit_probe(kit, src),

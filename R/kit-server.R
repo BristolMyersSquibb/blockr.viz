@@ -177,6 +177,9 @@ viz_capture_observer <- function(input, id, capture) {
 #'   new_viz_exhibit(); optional. The kit registers the download handlers
 #'   (viz_downloads()) and puts the menu into the payload's
 #'   `derived$downloads`;
+#' - `frame`: a function of no arguments returning the frame the payload's
+#'   `columns` describe; optional. With it the browser can ask for the
+#'   distinct counts of its columns (viz_counts_observer());
 #' - `probe`: a function of no arguments returning the exhibit the menu
 #'   asks its formats about, cheap to build (exhibit_probe_render());
 #'   optional, the menu builds the exhibit without it;
@@ -223,6 +226,9 @@ viz_block_server <- function(id, spec, data, init, view, setup) {
     viz_payload_output(output, input, view,
                        viz_with_shared(kit, parts, view),
                        session = session, el = kit$el)
+    if (is.function(parts$frame)) {
+      viz_counts_observer(input, session, view, kit$el, parts$frame)
+    }
     if (!is.null(parts$claims)) {
       viz_drill_sender(kit, parts$claims, init$selection)
     }
@@ -296,6 +302,22 @@ viz_with_shared <- function(kit, parts, view) {
     p$derived$capture_ratio <- canvas_capture_ratio()
     p
   }
+}
+
+# Answers the gear's ask for the distinct counts of the columns the payload
+# describes (`<view>_counts`, inst/js/core/gear/engine.js) with a
+# `blockr-viz:column-counts` message naming the view's element and giving
+# `{column: n}`. The answer is kept per frame: a second ask over the same
+# frame counts nothing. The payload leaves the counts out because they cost
+# most of the column description (viz_column_counts()).
+viz_counts_observer <- function(input, session, view, el, frame) {
+  kept <- last_value_cache()
+  shiny::observeEvent(input[[paste0(view, "_counts")]], {
+    d <- tryCatch(frame(), error = function(e) NULL)
+    counts <- kept(d, function() viz_column_counts(d))
+    session$sendCustomMessage("blockr-viz:column-counts",
+                              list(id = el, counts = counts))
+  })
 }
 
 # Sends the claims to a drill target over the control channel. With a target

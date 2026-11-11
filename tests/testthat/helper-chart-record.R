@@ -603,6 +603,7 @@ record_run <- function(sc, target = record_target()) {
       st <- session$returned$state
       cx <- new.env(parent = emptyenv())
       cx$nonce <- 0L
+      cx$session <- session
 
       cx$from <- 1L
       record <- function(dl = NULL) {

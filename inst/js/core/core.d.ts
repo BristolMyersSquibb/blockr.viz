@@ -31,7 +31,8 @@ interface VizColumn {
   name: string;
   class: 'number' | 'string' | 'bool' | 'date' | 'datetime' | 'duration';
   label: string;
-  n_unique: number;
+  /** The distinct count: not in the payload, merged in when the gear asks R for it. */
+  n_unique?: number;
   levels?: string[];
   tz?: string;
   unit?: string;

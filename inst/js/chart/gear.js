@@ -67,6 +67,7 @@
       return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));
     };
     return {
+      needsCounts: (cols) => cols.some((c) => c.n_unique == null),
       required(key, v) {
         const type = String(v.type || 'bar');
         if (type === 'histogram') return key === 'x';
@@ -109,11 +110,16 @@
         // As 0.2: a facet offers columns with at most 10 distinct values, a
         // category columns that are not numbers or have at most 50. That keeps
         // a prepare script's helper columns and the measures out of them.
-        if (key === 'facet') return cols.filter((c) => c.n_unique <= MAX_FACET_LEVELS);
+        // The counts come from R once the tray is open; a column without one is
+        // left out until they are in, and the tray is drawn again then.
+        if (key === 'facet') return cols.filter((c) => c.n_unique != null && c.n_unique <= MAX_FACET_LEVELS);
         // Grid rows stack down the card, so they take more levels.
-        if (key === 'facet_row') return cols.filter((c) => c.n_unique <= MAX_FACET_ROW_LEVELS);
+        if (key === 'facet_row') {
+          return cols.filter((c) => c.n_unique != null && c.n_unique <= MAX_FACET_ROW_LEVELS);
+        }
         if (key === 'category') {
-          return cols.filter((c) => c.class !== 'number' || c.n_unique <= MAX_CATEGORY_LEVELS);
+          return cols.filter((c) => c.class !== 'number' ||
+            (c.n_unique != null && c.n_unique <= MAX_CATEGORY_LEVELS));
         }
         return cols;
       },

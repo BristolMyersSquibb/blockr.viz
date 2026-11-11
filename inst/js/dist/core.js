@@ -1,4 +1,4 @@
-// blockr.viz bundle aaad53875d012890fd9daa25bfc74710, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 280e2da565166336364b79efc319d5d2, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -46,10 +46,11 @@
    * `<id>_peek` (a selection only the data view reads), `<id>_capture` or
    * `<id>_data` (core/data-view.js), typed so R's input
    * handler checks it on arrival, or
-   * `<id>_need` (the data revision the view holds no rows for). Priority
+   * `<id>_need` (the data revision the view holds no rows for) or
+   * `<id>_counts` (the gear asks for the columns' distinct counts). Priority
    * "event", so the same value sent twice arrives twice.
    * @param {string} id The view's element id.
-   * @param {'set' | 'select' | 'peek' | 'capture' | 'data' | 'need'} kind
+   * @param {'set' | 'select' | 'peek' | 'capture' | 'data' | 'need' | 'counts'} kind
    * @param {unknown} value
    * @param {string} [block] For `set`: the block whose spec reads it.
    * @returns {boolean} Whether Shiny took it.
@@ -58,7 +59,7 @@
     const shiny = root.Shiny;
     if (!id || !shiny || typeof shiny.setInputValue !== 'function') return false;
     const type = kind === 'set' ? 'blockr.viz.' + block
-      : kind === 'need' ? null : TYPES[kind];
+      : kind === 'need' || kind === 'counts' ? null : TYPES[kind];
     const name = id + '_' + kind + (type ? ':' + type : '');
     shiny.setInputValue(name, value, { priority: 'event' });
     return true;
@@ -3394,6 +3395,12 @@
     return boxed ? ' vz-row--check' : '';
   };
 
+  /** The gears by view element id, for R's `blockr-viz:column-counts`.
+   * @type {Map<string, any>} */
+  const gears = new Map();
+  /** One number for the page: an `<id>_counts` set twice arrives twice. */
+  let asked = 0;
+
   /** A local edit not yet echoed by R: its value, the value R had, and how
    * many more payloads may still predate it. */
   /** @typedef {{ value: unknown, before: unknown, left: number }} Pending */
@@ -3431,7 +3438,47 @@
       /** @type {VizScope | null} */
       this._renderScope = null;
       this._drawn = '';
+      /** Whether the tray is open, the columns the counts were asked for, and a number
+       * that moves when counts arrive (they are not in the columns' JSON). */
+      this._open = false;
+      this._askedFor = /** @type {VizColumn[] | null} */ (null);
+      this._countsRev = 0;
       this.disposed = false;
+      gears.set(this.id, this);
+    }
+
+    /** The tray opens or closes. The columns' distinct counts, which a picker of
+     * the host may filter by, are asked for from R once the tray is open (R/kit-server.R,
+     * viz_counts_observer()), not with every payload.
+     * @param {boolean} on */
+    setOpen(on) {
+      this._open = on;
+      this._ask();
+    }
+
+    /** Ask R for the counts of the current columns, once per set of columns. */
+    _ask() {
+      const need = this.host.needsCounts;
+      if (this.disposed || !this._open || !need || this._askedFor === this._cols) return;
+      if (!need(this._cols)) return;
+      this._askedFor = this._cols;
+      V.util.send(this.id, 'counts', ++asked);
+    }
+
+    /** R's answer: the counts, by column name, go onto the columns held (the view's
+     * columns are these objects) and the tray is drawn again with them. The property
+     * does not enumerate, so the payloads' keys that stringify the columns stay as they
+     * were.
+     * @param {Record<string, number>} counts */
+    counts(counts) {
+      if (this.disposed) return;
+      for (const c of this._cols) {
+        if (counts && Object.prototype.hasOwnProperty.call(counts, c.name)) {
+          Object.defineProperty(c, 'n_unique', { value: counts[c.name], writable: true, configurable: true });
+        }
+      }
+      this._countsRev += 1;
+      if (this._key() !== this._drawn) this.render();
     }
 
     /** @param {VizPayload} p */
@@ -3447,6 +3494,7 @@
       }
       this.prime(p);
       this._rev = p.state_rev || 0;
+      this._ask();
       if (this._key() !== this._drawn) this.render();
     }
 
@@ -3518,7 +3566,7 @@
       // The selection is no row: a click moves it and must not rebuild the tray.
       const rest = Object.assign({}, values);
       delete rest.selection;
-      return JSON.stringify([rest, this._cols, [t.title, t.subtitle, t.caption],
+      return JSON.stringify([rest, this._cols, this._countsRev, [t.title, t.subtitle, t.caption],
                              Array.from(this._added), shown]);
     }
 
@@ -3885,6 +3933,7 @@
     dispose() {
       if (this.disposed) return;
       this.disposed = true;
+      if (gears.get(this.id) === this) gears.delete(this.id);
       if (this._renderScope) this._renderScope.dispose();
       this._renderScope = null;
       this._pending.clear();
@@ -3923,6 +3972,17 @@
    * @param {HTMLElement} el @param {VizGearOptions} opts @returns {VizGear}
    */
   V.gear.mount = (el, opts) => new Gear(el, opts);
+
+  /** R's `blockr-viz:column-counts`: the answer to a gear's ask.
+   * @param {{ id?: string, counts?: Record<string, number> | null }} msg */
+  V.gear.counts = (msg) => {
+    const g = msg && msg.id ? gears.get(msg.id) : null;
+    if (g && msg.counts) g.counts(msg.counts);
+  };
+  const shiny0 = root.Shiny;
+  if (shiny0 && typeof shiny0.addCustomMessageHandler === 'function') {
+    shiny0.addCustomMessageHandler('blockr-viz:column-counts', V.gear.counts);
+  }
 })();
 // --- core/frame.js
 // @ts-check
@@ -4061,6 +4121,10 @@
         block: o.block, id: this.id, scope: this.scope, typeKey: o.typeKey,
         title: o.title, host: o.host
       }));
+      // The gear asks R for what it needs of the columns once its tray is open.
+      this.scope.mutate(t.button, () => {
+        if (this.gear) this.gear.setOpen(t.button.getAttribute('aria-expanded') === 'true');
+      }, { attributes: true, attributeFilter: ['aria-expanded'] });
       this.slots = this.scope.own(V.titles.slots({
         gear: this.gear, scope: this.scope, openGear: this.openGear
       }));
