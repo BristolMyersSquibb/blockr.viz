@@ -66,9 +66,11 @@ table_groups_tile_wire <- function(col) {
       if (length(fills)) col$ink <- as.list(stats::setNames(ink, fills))
     }
   }
-  per_row <- intersect(c("disp", "key", "bg", "fg"), names(col))
+  per_row <- c("disp", "key", "bg", "fg")
+  per_row <- per_row[per_row %in% names(col)]
   n <- length(col$disp)
-  filled <- Reduce(`|`, lapply(col[per_row], function(x) !is.na(x)))
+  filled <- logical(n)
+  for (nm in per_row) filled <- filled | !is.na(col[[nm]])
   if (n >= 8L && sum(filled) < n / 2) {
     col$at <- which(filled) - 1L
     col[per_row] <- lapply(col[per_row], function(x) x[filled])
