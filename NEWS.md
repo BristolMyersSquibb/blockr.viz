@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9057
+# blockr.viz 0.3.0.9058
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -15,6 +15,15 @@ read.
   matrix or `"cards"`. It replaces the tile, summarize, summary and gt
   table blocks.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
+* A block built on the table can have its own gear: `table_gear()` names
+  its tabs, sections and rows, and `new_table_block(gear = , class = )`
+  takes it with a class of the block's own. A row is a table setting, a
+  value the prepare script declares, a checklist of listing columns, a
+  pick of the column that groups the rows, "In the subtitle" ticks that
+  write the subtitle's clauses, or an editor a package registers in the
+  browser. Settings the gear does not name have no row and still work
+  from code and through their words. Such a block saves and restores
+  under its own constructor.
 * The chart's `facet_row` lays the panels out as a grid, `facet_row` levels
   down and `facet` levels across, for every chart type. With
   `facet_scales = "free_y"` each row has its own value axis. Every panel
