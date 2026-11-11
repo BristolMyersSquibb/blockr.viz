@@ -219,7 +219,32 @@ record_rw_expected <- function(rec, sc) {
     s$browser <- views
     rec$steps[[i]] <- s
   }
+  rec$steps <- record_rw_cell_views(rec$steps)
   record_rw_empty_click_clear(rec, sc)
+}
+
+# A bar, waterfall, pie or treemap sends one row per mark where the
+# reference sent the rows (R/chart-cells.R), and sends them anew when a
+# setting changes the marks. So for those types the views compare without
+# their rows, a view that brings nothing else new left out.
+# test-chart-cells.R checks the cells.
+record_rw_cell_views <- function(steps) {
+  last <- NULL
+  for (i in seq_along(steps)) {
+    cells <- (steps[[i]]$state$type %||% "bar") %in% CHART_CELL_TYPES
+    views <- list()
+    for (b in steps[[i]]$browser) {
+      core <- b[names(b) != "rows"]
+      if (cells) {
+        b["rows"] <- list(NULL)
+        if (identical(core, last)) next
+      }
+      views <- c(views, list(b))
+      last <- core
+    }
+    steps[[i]]$browser <- views
+  }
+  steps
 }
 
 record_rw_got <- function(rec) {
@@ -233,6 +258,7 @@ record_rw_got <- function(rec) {
     s$state <- s$state[sort(names(s$state))]
     s
   })
+  rec$steps <- record_rw_cell_views(rec$steps)
   rec
 }
 

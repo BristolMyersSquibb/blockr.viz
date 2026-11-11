@@ -124,26 +124,12 @@ chart_summary_dist <- function(data, v) {
   outer <- if (box) v$whiskers %||% "tukey"
   words <- CHART_SUMMARY_STAT_WORDS[[inner]] %||% c("Centre", "Low", "High")
 
-  one <- function(x) {
-    x <- suppressWarnings(as.numeric(x))
-    x <- x[is.finite(x)]
-    s <- summarize_stat(x, inner)
-    w <- if (!is.null(outer)) summarize_stat(x, outer)
-    out <- list(n = length(x))
-    if (!is.null(outer)) out$wlo <- w$lo %||% NA_real_
-    out$lo <- s$lo %||% NA_real_
-    out$center <- s$center %||% NA_real_
-    out$hi <- s$hi %||% NA_real_
-    if (!is.null(outer)) out$whi <- w$hi %||% NA_real_
-    out
-  }
-
   groups <- chart_summary_groups(data[unique(c(keys, val))], keys)
   rows <- lapply(groups, function(g) {
     k <- lapply(stats::setNames(keys, keys), function(k) {
       as.character(g[[k]][[1L]])
     })
-    c(k, one(g[[val]]))
+    c(k, chart_dist_stats(g[[val]], inner, outer))
   })
   # Column by column: binding one-row frames is quadratic in the groups.
   ids <- names(rows[[1L]])

@@ -5,6 +5,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { loadPure, plain } = require('./load');
+const { summarizeStat } = require('../agg-reference');
 
 const C = loadPure({ roles: true });
 
@@ -144,20 +145,20 @@ test('tooltip fields: the first row of each group in the panel', () => {
 
 test('summarizeStat: quartiles, Tukey fences clipped to the data, sd and se', () => {
   const v = [1, 2, 3, 4, 100];
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'median_q1_q3')), { center: 3, lo: 2, hi: 4 });
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'tukey')), { center: 3, lo: 1, hi: 7 });
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'min_max')), { center: 3, lo: 1, hi: 100 });
-  const sd = C.model.summarizeStat([2, 4], 'mean_sd');
+  assert.deepStrictEqual(plain(summarizeStat(v, 'median_q1_q3')), { center: 3, lo: 2, hi: 4 });
+  assert.deepStrictEqual(plain(summarizeStat(v, 'tukey')), { center: 3, lo: 1, hi: 7 });
+  assert.deepStrictEqual(plain(summarizeStat(v, 'min_max')), { center: 3, lo: 1, hi: 100 });
+  const sd = summarizeStat([2, 4], 'mean_sd');
   assert.strictEqual(sd.center, 3);
   assert.ok(Math.abs(sd.hi - (3 + Math.SQRT2)) < 1e-12);
-  assert.deepStrictEqual(plain(C.model.summarizeStat([5], 'mean_se')), { center: 5, lo: 5, hi: 5 });
-  assert.strictEqual(C.model.summarizeStat([], 'tukey'), null);
+  assert.deepStrictEqual(plain(summarizeStat([5], 'mean_se')), { center: 5, lo: 5, hi: 5 });
+  assert.strictEqual(summarizeStat([], 'tukey'), null);
 });
 
 test('B8: the 10th-90th percentile draws that range around the median, not Q1-Q3', () => {
   const v = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'p10_p90')), { center: 5, lo: 1, hi: 9 });
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'median_q1_q3')),
+  assert.deepStrictEqual(plain(summarizeStat(v, 'p10_p90')), { center: 5, lo: 1, hi: 9 });
+  assert.deepStrictEqual(plain(summarizeStat(v, 'median_q1_q3')),
                          { center: 5, lo: 2.5, hi: 7.5 });
 });
 
@@ -179,8 +180,8 @@ test('boxplot slots: one per group, the five numbers, the outliers past the whis
   const m = build(cfg, rows, cols);
   const s = m.panels[0].slots;
   assert.deepStrictEqual(plain(s.map((x) => [x.cat, x.n, x.body, x.whisker, x.outliers])), [
-    ['a', 5, { center: 3, lo: 2, hi: 4 }, { center: 3, lo: 1, hi: 7 }, [100]],
-    ['b', 1, { center: 5, lo: 5, hi: 5 }, { center: 5, lo: 5, hi: 5 }, []]
+    ['a', 5, { center: 3, lo: 2, hi: 4 }, { lo: 1, hi: 7 }, [100]],
+    ['b', 1, { center: 5, lo: 5, hi: 5 }, { lo: 5, hi: 5 }, []]
   ]);
   // A colour split: a slot per (group, level) with rows, group-major.
   const split = build({ ...cfg, color: 'C' }, rows, cols);
@@ -294,11 +295,11 @@ test('a click sends the keys, a missing one as null; a drill column its values',
 });
 
 test('summarizeStat: mean_2sd is two sd around the mean, p5_p95 the 5th to 95th percentile', () => {
-  const s = C.model.summarizeStat([2, 4], 'mean_2sd');
+  const s = summarizeStat([2, 4], 'mean_2sd');
   assert.strictEqual(s.center, 3);
   assert.ok(Math.abs(s.lo - (3 - 2 * Math.SQRT2)) < 1e-12);
   assert.ok(Math.abs(s.hi - (3 + 2 * Math.SQRT2)) < 1e-12);
   const v = [];
   for (let i = 0; i <= 100; i++) v.push(i);
-  assert.deepStrictEqual(plain(C.model.summarizeStat(v, 'p5_p95')), { center: 50, lo: 5, hi: 95 });
+  assert.deepStrictEqual(plain(summarizeStat(v, 'p5_p95')), { center: 50, lo: 5, hi: 95 });
 });

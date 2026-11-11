@@ -39,6 +39,16 @@ UPDATE_SNAPSHOTS=1 npm test
 
 and review the diff of `__snapshots__/` before committing it.
 
+An aggregated chart (bar, histogram, waterfall, pie, treemap, boxplot,
+point range) is not sent its rows: R sends one row per mark
+(`chart_cells()` in `R/chart-cells.R`). The cases are still written as
+rows. The harness turns them into those cells with `cells.js`, a twin of
+`chart_cells()` whose numbers come from `agg-reference.js`, the aggregation
+the browser ran before R took it over. `tests/testthat/test-chart-cells.R`
+compares the twin with R, so a snapshot is drawn from what R would send
+without R having made the numbers. The model tests in `tests/js/chart/` get
+the same conversion from `chart/load.js`.
+
 The fixture is built by `fixtures/make-fixtures.R` with the package's own
 payload builders (`viz_wire_columns()`, `chart_data_json()`,
 `compute_band_series()`, `compute_smoother_series()`). Rebuild it with

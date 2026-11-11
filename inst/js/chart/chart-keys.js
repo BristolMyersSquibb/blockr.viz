@@ -39,11 +39,12 @@
 
   /**
    * A filter on `col` with the distinct non-missing values of `rows`, or null.
+   * A cell holds the distinct values of its rows.
    * @param {string} col @param {any[]} rows @returns {Filters | null}
    */
   const fromRows = (col, rows) => {
     const vals = [...new Set(
-      (rows || []).map((r) => (r ? r[col] : null)).filter((v) => v != null)
+      (rows || []).flatMap((r) => (r ? r[col] : null)).filter((v) => v != null)
     )].map(String);
     return vals.length ? { [col]: vals } : null;
   };
@@ -172,11 +173,15 @@
   };
 
   /** Does a row satisfy every column of the filter? A null in the filter takes the rows where the
-   * column is missing. @param {any} row @param {Filters} filters */
+   * column is missing. A cell that holds a column's distinct values satisfies it with any of them.
+   * @param {any} row @param {Filters} filters */
   const rowMatches = (row, filters) => {
     const sets = setsOf(filters);
     for (const col of Object.keys(sets)) {
-      if (!sets[col].has(keyOf(row[col]))) return false;
+      const v = row[col];
+      if (Array.isArray(v) && v.length) {
+        if (!v.some((x) => sets[col].has(keyOf(x)))) return false;
+      } else if (!sets[col].has(keyOf(Array.isArray(v) ? null : v))) return false;
     }
     return true;
   };

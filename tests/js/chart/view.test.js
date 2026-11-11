@@ -118,16 +118,27 @@ test('the theme R names is the ECharts theme; a new one draws new instances', ()
 });
 
 test('a payload without rows draws from the rows of its data revision', () => {
-  const c = D.open(BAR);
+  const c = D.open({ ...BAR, color: 'AESEV' });
   const first = c.block.data;
   const ix = c.block._ix;
-  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
+  c.send({ ...BAR, color: 'AESEV', position: 'dodge' }, { data: null, dataRev: 1 });
   assert.strictEqual(c.block.data, first);
   assert.strictEqual(c.block._ix, ix, 'held rows are not parsed or indexed again');
   assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
-  c.send(BAR, { data: null, dataRev: 2 });
+  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 2 });
   assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),
             'rows it does not hold are asked for');
+  c.close();
+});
+
+test('a bar holds one row per mark, and a new mapping brings new ones', () => {
+  const c = D.open(BAR);
+  const first = c.block.data;
+  assert.ok(first.length < require('../cases').F.data.AETERM.length);
+  assert.ok(first.every((r) => typeof r['.n'] === 'number'));
+  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
+  assert.notStrictEqual(c.block.data, first);
+  assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
   c.close();
 });
 

@@ -5,6 +5,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { loadViz, measure } = require('./chart/load');
+const { aggregate } = require('./agg-reference');
 
 const viz = loadViz();
 const C = viz.chart;
@@ -67,7 +68,7 @@ test('pct_of "total": one denominator for every panel', () => {
   for (let i = 0; i < 10; i++) {
     rows.push({ F: i < 4 ? 'X' : 'Y', ID: 's' + i, E: (i < 2 || (i >= 4 && i < 7)) ? 'yes' : '' });
   }
-  const agg = (pct_of) => C.agg.aggregate(rows, {
+  const agg = (pct_of) => aggregate(rows, {
     group: 'E', facet: 'F', value: 'ID', func: 'pct_distinct', na_group: 'drop', pct_of });
   const byFacet = (cells) => Object.fromEntries(cells.map((a) => [a.facet, a.value]));
   assert.deepStrictEqual(byFacet(agg('facet')), { X: 0.5, Y: 0.5 });

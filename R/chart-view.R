@@ -13,6 +13,8 @@ chart_view <- function(kit, src) {
   band_cache <- last_value_cache()
   smoother_cache <- last_value_cache()
   meta_cache <- last_value_cache()
+  cells_cache <- last_value_cache()
+  levels_cache <- last_value_cache()
   board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
 
@@ -44,11 +46,35 @@ chart_view <- function(kit, src) {
                  input_display_attrs(if (is.list(inp)) inp$df else NULL),
                  src$prep$specs())
   })
+  # One row per mark for the types chart_cells() serves, the mapped columns'
+  # rows for the rest.
   shipped <- shiny::reactive({
     d <- src$plain()
     shiny::req(is.data.frame(d))
-    cols <- chart_needed_cols(src$values(), d)
+    v <- src$values()
+    a <- chart_cells_args(v, d)
+    if (!is.null(a)) {
+      return(cells_cache(list(d[chart_cells_cols(a)], a),
+                         function() chart_cells(d, a)))
+    }
+    # No category yet, or no rows: nothing to draw from.
+    if ((v$type %||% "bar") %in% CHART_CELL_TYPES) {
+      return(d[0L, 0L, drop = FALSE])
+    }
+    cols <- chart_needed_cols(v, d)
     d[, cols, drop = FALSE]
+  })
+  # The values the gear offers for a highlight column the cells do not hold.
+  hl_levels <- shiny::reactive({
+    d <- src$plain()
+    a <- chart_cells_args(src$values(), d)
+    col <- a$hl_col
+    if (!length(col) || col %in% c(a$facets, a$category, a$color)) {
+      return(NULL)
+    }
+    levels_cache(d[[col]], function() {
+      stats::setNames(list(I(chart_levels(d[[col]]))), col)
+    })
   })
   scales <- shiny::reactive({
     v <- src$values()
@@ -64,12 +90,19 @@ chart_view <- function(kit, src) {
     v <- kit$values()
     df <- shipped()
     # The columns the payload describes are the whole input's, below.
-    w <- wire_cache(df, function() viz_wire_df(df, meta = FALSE))
+    w <- wire_cache(df, function() {
+      if (is_chart_cells(df)) {
+        list(data = chart_cells_json(df))
+      } else {
+        viz_wire_df(df, meta = FALSE)
+      }
+    })
     viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),
       smoother = smoother(),
       hist = src$hist()$edges,
+      levels = hl_levels(),
       scales = scales(),
       palette = as.list(dd_palette()),
       theme = board_theme()
@@ -78,25 +111,19 @@ chart_view <- function(kit, src) {
   list(payload = payload, titles = titles)
 }
 
-# The columns the payload carries: the mapped ones, and those a reader can
-# switch a role to from the sentence, so the switch needs no new payload.
+# The columns the payload of a chart that draws rows carries (scatter, line,
+# area, band, gantt): the mapped ones, and those a reader can switch a role
+# to from the sentence, so the switch needs no new payload. An aggregated
+# chart sends its cells (chart_cells()).
 chart_needed_cols <- function(v, d) {
-  # An aggregated chart draws its category and the column it aggregates; a
-  # count aggregates none.
-  axes <- if ((v$type %||% "bar") %in% CHART_AGGREGATED_TYPES) {
-    c(chart_category(v), chart_value_col(v))
-  } else if (identical(v$type, "histogram")) {
-    c(v$x, if (length(v$x)) chart_bin_col(v$x))
-  } else {
-    c(v$x, v$y)
-  }
+  axes <- c(v$x, v$y)
   needed <- c(
     axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$open, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
     v$ref_min, v$ref_max,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",
                                                "onset")) v$sort_by,
-    if ("AVISIT" %in% c(v$x, chart_category(v))) "AVISITN"
+    if ("AVISIT" %in% v$x) "AVISITN"
   )
   if (length(v$subtitle) && grepl("@", v$subtitle, fixed = TRUE)) {
     needed <- c(needed, names(column_kinds(d)))
@@ -189,13 +216,6 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
   }
   keys <- intersect(c(chart_facets(list(facet = facet), data), group,
                       chart_split_in(data, color)), names(data))
-  func <- func %||% "count"
-  summary <- if (identical(func, "count") || !length(value) ||
-                   !value %in% names(data)) {
-    list(func = "count", cols = character())
-  } else {
-    list(func = func, cols = value)
-  }
-  table_aggregate(data, unique(keys), list(summary),
-                     na_group = na_group %||% "level")$data
+  table_aggregate(data, unique(keys), chart_summaries(func, value, data),
+                  na_group = na_group %||% "level")$data
 }
