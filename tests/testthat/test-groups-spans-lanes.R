@@ -367,6 +367,11 @@ test_that("full lanes draw as bars below the main one, each named", {
   g <- paint_interval(c1, i, 0, 3, 0.2, gl)
   txt <- unlist(lapply(g, function(x) if (inherits(x, "text")) x$label))
   expect_true(all(c("INV", "BICR") %in% txt))
+  # The names end left of the bars, which start after the gutter.
+  nx <- unlist(lapply(g, function(x) {
+    if (inherits(x, "text")) grid::convertX(x$x, "in", valueOnly = TRUE)
+  }))
+  expect_true(all(nx < paint_iv_gutter(c1$lw, gl)))
   expect_gt(paint_iv_stack(1, 1, FALSE, 1), paint_iv_stack(1, 1, FALSE, 0))
   png <- tempfile(fileext = ".png")
   on.exit(unlink(png))

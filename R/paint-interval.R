@@ -16,8 +16,9 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
   # Named bars: the names in a gutter at the left, the lanes after it.
   if (!is.null(c$mn)) {
     g <- paint_iv_gutter(c$lw, gl)
+    at <- x + g - 6 * px
     name <- function(t, yy, main) {
-      paint_txt(gl, t, x + g - 6 * px, yy, just = "right",
+      paint_txt(gl, t, at, yy, just = "right",
                 size = 10 * 0.75 * gl$fs / 9, bold = main,
                 col = if (main) PAINT_TEXT else PAINT_MUTED)
     }
