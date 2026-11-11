@@ -217,7 +217,14 @@
           m.view.error(err.message);
         }
       },
-      clearError: () => {}
+      clearError: () => {},
+      // Shiny marks a recalculating output with a class on its element, and
+      // takes it off when the value arrives. The element holds the whole
+      // view, so each change restyles every node under it: a table of
+      // 57,000 nodes twice more than it needs. The view has its own busy
+      // cue (core/busy.js), and its payload arrives before the output's
+      // value, so the class would dim a picture that is already new.
+      showProgress: () => {}
     });
     shiny.outputBindings.register(b, name);
     return true;

@@ -189,6 +189,13 @@ test('rows missing for a revision are asked for once', () => {
   assert.deepEqual(log.at(-1), ['render', 2, ['y']]);
 });
 
+test('the binding leaves Shiny\'s recalculating class off its element', () => {
+  const { b, add } = setup();
+  const el = add('a');
+  b.showProgress(el, true);
+  assert.equal(el.classList.contains('recalculating'), false);
+});
+
 test('a silent error keeps the picture; a real one reaches the view', () => {
   const { b, add, log } = setup();
   const el = add('a');
