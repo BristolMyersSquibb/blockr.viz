@@ -56,6 +56,10 @@ table_sources <- function(data, state, session) {
   prep <- table_prepare(data, state)
   rows <- shiny::reactive({
     d <- prep$prepared()
+    if (inherits(d, "dm")) {
+      stop("A dm input needs a prepare script that returns one data frame.",
+           call. = FALSE)
+    }
     if (is.null(d) || is.data.frame(d)) d else as_annotated_df(d)
   })
   list(

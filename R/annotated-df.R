@@ -72,6 +72,12 @@ validate_annotated_df_input <- function(data) {
   }
 }
 
+# The table block also takes a dm (several tables, such as a study's ADaM),
+# for a prepare script to turn into the one frame it draws.
+validate_table_input <- function(data) {
+  if (!inherits(data, "dm")) validate_annotated_df_input(data)
+}
+
 # The reserved annotation columns (see as_annotated_df()). `.filter` is the
 # predicate identity of a row that is not a level of anything (see
 # drill_source()). The `.group<k>` pairs are matched by ANNOTATION_GROUP_RE.

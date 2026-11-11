@@ -572,6 +572,125 @@ test('hover: a swimlane segment says its text and lights its label everywhere', 
   assert.equal(seg.classList.contains('is-same'), false);
 });
 
+/** The Course column with thin lanes over row 0: a drug with a period, a
+ *  delay, a skip, a dose and a cut, and a closed second lane. */
+function lanes() {
+  const m = groups();
+  Object.assign(m.cols[7].mark, {
+    fills: ['#aaa', '#555', '#2a9686', '#d98a1e'],
+    subLanes: [[
+      { n: 'Drug B', s: [[0, 80, 3], [20, 5, 4, '', 3], [40, 8, 3, '', 2], [60, 0, 3, '', 4], [70, 0, 3, '', 5]],
+        t: ['Drug B 75 mg', 'late', 'skipped', 'C4', 'dose down'],
+        b: [['C1\n75 mg', 1], ['C2\n+5 d', 3], ['skip', 2]], o: 80 },
+      { n: 'Drug A', s: [[0, 30, 3]], t: ['Drug A'] }
+    ], [], []],
+    mainStrip: [[], [['V1', 1]], []]
+  });
+  return m;
+}
+
+test('lanes: thin lanes stack above the main lane, each segment in its style', () => {
+  const t = mount(payload({ data: lanes(), config: G }));
+  const c = t.cell(0, 7);
+  const stack = c.querySelector('.vz-table-groups-ivstack');
+  assert.ok(stack);
+  const kids = Array.from(stack.children);
+  assert.deepEqual(kids.map((k) => k.classList.contains('is-thin')), [true, true, false]);
+  assert.equal(kids[0].getAttribute('data-n'), 'Drug B');
+  assert.match(kids[0].querySelector('.vz-table-lane-seg.is-hollow').getAttribute('style'),
+               /border-color:#d98a1e/);
+  assert.match(kids[0].querySelector('.vz-table-lane-seg.is-dashed').getAttribute('style'),
+               /--vz-seg:#2a9686/);
+  assert.ok(kids[0].querySelector('.vz-table-lane-adm'));
+  assert.ok(kids[0].querySelector('.vz-table-lane-step'));
+  // The open end in the lane's colour; the closed lane has none.
+  assert.match(kids[0].querySelector('.vz-table-lane-open').getAttribute('style'),
+               /left:80%;border-left-color:#2a9686/);
+  assert.equal(kids[1].querySelector('.vz-table-lane-open'), null);
+  // The main lane keeps its segments; a row without lanes has no stack.
+  assert.equal(kids[2].querySelectorAll('.vz-table-lane-seg').length, 2);
+  assert.equal(t.cell(2, 7).querySelector('.vz-table-groups-ivstack'), null);
+});
+
+test('lanes: a lane with a strip opens it, a thin lane without one names its segment', () => {
+  const t = mount(payload({ data: lanes(), config: G }));
+  const [b, a] = Array.from(t.cell(0, 7).querySelectorAll('.is-thin'));
+  const c = hover(t, b.querySelector('.vz-table-lane-seg'));
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'Drug B');
+  assert.match(c.text, /1 late · 1 skipped/);
+  const boxes = c.tip.querySelectorAll('.vz-table-strip-box');
+  assert.equal(boxes.length, 3);
+  assert.equal(boxes[0].innerHTML, 'C1<br>75 mg');
+  assert.ok(boxes[1].classList.contains('is-late'));
+  assert.ok(boxes[2].classList.contains('is-skip'));
+  assert.match(boxes[0].getAttribute('style'), /border-top-color:#2a9686/);
+  // Drug A has no strip: its segment's own tip, also from the lane itself.
+  assert.equal(hover(t, a.querySelector('.vz-table-lane-seg')).tip.querySelector('.vz-tt-head').textContent,
+               'Drug A');
+  // The main lane's strip on row 1, without a lane name.
+  const m = hover(t, t.cell(1, 7).querySelector('.vz-table-groups-ivcell'));
+  assert.equal(m.tip.querySelectorAll('.vz-table-strip-box').length, 1);
+});
+
+test('lanes: even lanes drop the main lane height; outline and lane events draw', () => {
+  const m = lanes();
+  Object.assign(m.cols[7].mark, { evenLanes: true });
+  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 30, 3, '', 6]], t: ['serious'],
+                                    e: [[25, 3]], et: ['Death · day: 40'] };
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(0, 7).querySelector('.vz-table-groups-ivstack');
+  assert.ok(stack.classList.contains('is-even'));
+  const a = stack.querySelectorAll('.is-thin')[1];
+  assert.match(a.querySelector('.vz-table-lane-seg.is-outline').getAttribute('style'), /background:#2a9686/);
+  const ev = a.querySelector('.vz-table-lane-ev');
+  assert.match(ev.getAttribute('style'), /left:25%/);
+  assert.equal(hover(t, ev).tip.querySelector('.vz-tt-head').textContent, 'Death');
+});
+
+test('bar labels: on the bar when they fit, after it when the gap holds them, else hidden', () => {
+  const m = lanes();
+  Object.assign(m.cols[7].mark, { evenLanes: true });
+  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 50, 3], [52, 10, 3], [70, 5, 3]], t: ['a', 'b', 'c'],
+                                    l: ['Wide bar', 'Squeezed', 'Tail'] };
+  const t = mount(payload({ data: m, config: G }));
+  const lane = t.cell(0, 7).querySelectorAll('.is-thin')[1];
+  const labs = Array.from(lane.querySelectorAll('.vz-table-lane-lab'));
+  assert.equal(labs.length, 3);
+  assert.equal(labs[1].getAttribute('data-nx'), '70');
+  // happy-dom has no layout: give the lane and the labels a width, then place them.
+  Object.defineProperty(lane, 'clientWidth', { value: 200 });
+  labs.forEach((l) => Object.defineProperty(l, 'offsetWidth', { value: 40 }));
+  labs.forEach((l) => l.classList.remove('is-fit'));
+  t.V.table.marks.fitLabels(lane);
+  assert.ok(labs[0].classList.contains('is-on'));
+  assert.ok(labs[1].hidden);
+  assert.ok(labs[2].classList.contains('is-after'));
+  assert.match(labs[2].style.left, /calc\(75% \+ 3px\)/);
+  // A placed label stays in its room: its bar, or the gap to the next bar.
+  assert.equal(labs[0].style.maxWidth, '100px');
+  assert.equal(labs[2].style.maxWidth, '47px');
+  // A thin lane (not even) draws no labels.
+  m.cols[7].mark.evenLanes = false;
+  const t2 = mount(payload({ data: m, config: G }));
+  assert.equal(t2.cell(0, 7).querySelectorAll('.is-thin .vz-table-lane-lab').length, 0);
+});
+
+test('bar labels never set visibility: a visible child shows through a hidden dock panel', () => {
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = css.split('}').filter((r) => r.includes('vz-table-lane-lab'));
+  assert.ok(rules.length >= 3);
+  for (const r of rules) assert.doesNotMatch(r, /visibility\s*:/);
+  assert.match(rules.join('}'), /overflow:\s*hidden/);
+});
+
+test('a wide spans column fits a half-width panel: its floor is two lane floors', () => {
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => r.includes('td.vz-table-groups-wide'));
+  assert.match(rule, /min-width:\s*calc\(2 \* var\(--vz-table-groups-lane-min/);
+});
+
 test('hover: a sparkline names its point; the card goes with the view', () => {
   const t = mount(payload({ data: groups(), config: G }));
   const c = hover(t, t.cell(0, 8).querySelector('.vz-table-groups-spcell'));

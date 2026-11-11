@@ -196,8 +196,14 @@
    */
   function laneText(lane, t, x) {
     if (lane.classList.contains('vz-table-groups-ivcell')) {
-      const seg = t.closest('.vz-table-lane-seg, .vz-table-lane-ev');
-      if (seg) return { text: seg.getAttribute('data-tip') || '', color: /** @type {HTMLElement} */ (seg).style.background || undefined };
+      const seg = t.closest('.vz-table-lane-seg, .vz-table-lane-ev, .vz-table-lane-adm, .vz-table-lane-step');
+      const strip = lane.getAttribute('data-strip');
+      if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
+        return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
+      }
+      // A thin lane is a few pixels high: the segment at the pointer's time.
+      const hit = seg || (lane.classList.contains('is-thin') ? segAt(lane, x) : null);
+      if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
@@ -212,8 +218,51 @@
     return { text: xs[k] + ' · ' + (ys[k] || '') };
   }
 
-  /** @param {{ text: string, color?: string }} l */
+  /** @param {HTMLElement} el A segment, dot or step. */
+  const segColor = (el) => el.style.background || el.style.borderColor ||
+    el.style.getPropertyValue('--vz-seg') || undefined;
+
+  /** @param {Element} lane The first segment's colour. */
+  function laneColor(lane) {
+    const el = /** @type {HTMLElement | null} */ (lane.querySelector('.vz-table-lane-seg, .vz-table-lane-adm'));
+    return el ? segColor(el) : undefined;
+  }
+
+  /**
+   * The segment of a lane under time `x` (0 to 1), or null.
+   * @param {Element} lane
+   * @param {number} x
+   */
+  function segAt(lane, x) {
+    const p = x * 100;
+    return Array.from(lane.querySelectorAll('.vz-table-lane-seg')).find((el) => {
+      const st = /** @type {HTMLElement} */ (el).style;
+      const l = parseFloat(st.left);
+      return p >= l - 0.5 && p <= l + parseFloat(st.width) + 0.5;
+    }) || null;
+  }
+
+  /**
+   * A lane's hover strip: one box per record, a hollow one marked late and a
+   * dashed one as skipped (marks.js seg()).
+   * @param {{ text: string, color?: string, strip: (string | number)[][] }} l
+   */
+  function stripCard(l) {
+    const late = l.strip.filter((b) => Number(b[1]) === 3).length;
+    const skip = l.strip.filter((b) => Number(b[1]) === 2).length;
+    const sub = [late ? late + ' late' : '', skip ? skip + ' skipped' : ''].filter(Boolean);
+    return head(l.text, l.color) + (sub.length ? note(sub.join(' · ')) : '') +
+      '<div class="vz-table-strip">' + l.strip.map((b) => {
+        const k = Number(b[1]);
+        return '<div class="vz-table-strip-box' + (k === 3 ? ' is-late' : k === 2 ? ' is-skip' : '') + '"' +
+          (l.color && k !== 2 ? ' style="border-top-color:' + esc(l.color) + '"' : '') + '>' +
+          String(b[0]).split('\n').map((line) => esc(line)).join('<br>') + '</div>';
+      }).join('') + '</div>';
+  }
+
+  /** @param {{ text: string, color?: string, strip?: (string | number)[][] }} l */
   function laneCard(l) {
+    if (l.strip) return stripCard(/** @type {any} */ (l));
     const parts = l.text.split(' · ');
     return head(parts[0], l.color) + parts.slice(1).map((p) => {
       const k = p.indexOf(': ');
@@ -237,7 +286,7 @@
       light(seg ? seg.getAttribute('data-l') : null);
       const r = lane.getBoundingClientRect();
       const l = laneText(lane, t, r.width ? Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) : 0);
-      return l && l.text ? laneCard(l) : '';
+      return l && (l.text || l.strip) ? laneCard(l) : '';
     }
     light(null);
     const cell = t.closest('td.vz-table-groups-bar-col, .vz-table-card-glyph');

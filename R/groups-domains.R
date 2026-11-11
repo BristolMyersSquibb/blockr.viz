@@ -226,6 +226,16 @@ groups_dom_interval <- function(plan, idx, rows) {
                  unlist(lapply(o$ev, function(e) e$x)))
       }
     }
+    # So do the thin or even lanes' bars and events.
+    lanes <- plan[[i]]$lanes
+    if (!is.null(lanes)) {
+      for (r in rows[[lanes]]) {
+        for (l in r$sub) {
+          ext <- c(ext, unlist(lapply(l$segs, function(sg) c(sg$s, sg$e))),
+                   unlist(lapply(l$ev, function(e) e$x)))
+        }
+      }
+    }
   }
   ext <- ext[is.finite(ext)]
   is_date <- any(vapply(plan[idx], function(p) {

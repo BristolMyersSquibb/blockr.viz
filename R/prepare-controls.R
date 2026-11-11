@@ -119,7 +119,8 @@ script_control_values <- function(specs, values = list()) {
 #' script. A declaration that failed leaves the setting's word alone. An
 #' untouched value falls back to the declaration's default. A flag prints its
 #' control's label when on and nothing when off, so a `[ ... ]` clause can
-#' carry it.
+#' carry it; a date without a value prints its placeholder; a multi-select
+#' prints its picks.
 #'
 #' @param roles Named list of the block's own arguments.
 #' @param specs Input specs from [cb_specs()].
@@ -136,8 +137,28 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) script_label(s) else ""
     }
+    # A date without a value prints its placeholder ("automatic"), or
+    # nothing, so a `[ ... ]` clause can carry it.
+    if (identical(s$kind, "date") && (!length(v) || is.na(v[[1L]]))) {
+      v <- as.character(s$placeholder %||% "")
+    }
+    # A multi-select prints its picks: "all" when every choice is picked,
+    # "none" when none is, the picks in a list otherwise.
+    if (identical(s$kind, "select") && isTRUE(s$multiple)) {
+      v <- script_picks_word(as.character(v), as.character(s$choices))
+    }
     v
   })
   names(vals) <- vapply(specs, `[[`, "", "name")
   c(roles[setdiff(names(roles), names(vals))], vals)
+}
+
+# The word for a multi-select's picks.
+script_picks_word <- function(v, choices) {
+  if (!length(v)) return("none")
+  if (length(choices) > 1L && setequal(v, choices)) return("all")
+  if (length(v) > TITLE_MAX_VALUES) {
+    v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
+  }
+  paste(v, collapse = ", ")
 }

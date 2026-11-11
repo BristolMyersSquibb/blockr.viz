@@ -13,7 +13,7 @@
  *   pointrange a range and its centre, with an outer fence
  *   pair       a dumbbell: band, reference, link, from and to
  *   interval   swimlane segments on a time axis, with ticks, a line,
- *              point events and an open end
+ *              point events and an open end, and thin lanes above
  *   sparkline  a line, its band and reference, the last point
  *   tile       a painted square with the value in it
  *
@@ -165,17 +165,148 @@
   }
 
   /**
-   * Swimlane segments: [left, width, level (from 1), label?] each.
+   * One swimlane segment, [left, width, level (from 1), label?, style?], in
+   * its style: 1 solid, 2 dashed, 3 hollow (outlined), 4 dot (a ring at its
+   * start), 5 step (a down step at its start), 6 outline (filled, with a dark
+   * edge).
+   * @param {(number | string)[]} g
+   * @param {string} fill
+   * @param {string | null} tip
+   */
+  function seg(g, fill, tip) {
+    const lab = g.length > 3 && g[3] !== '' ? ' data-l="' + esc(g[3]) + '"' : '';
+    const t = ' data-tip="' + esc(tip) + '"';
+    switch (Number(g[4]) || 1) {
+      case 2: return '<i class="vz-table-lane-seg is-dashed" style="' + span(g[0], g[1]) +
+        ';--vz-seg:' + col(fill) + '"' + lab + t + '></i>';
+      case 3: return '<i class="vz-table-lane-seg is-hollow" style="' + span(g[0], g[1]) +
+        ';border-color:' + col(fill) + '"' + lab + t + '></i>';
+      case 4: return '<i class="vz-table-lane-adm" style="left:' + n(g[0]) + '%;border-color:' +
+        col(fill) + '"' + t + '></i>';
+      case 5: return '<i class="vz-table-lane-step" style="left:' + n(g[0]) + '%"' + t + '></i>';
+      case 6: return '<i class="vz-table-lane-seg is-outline" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
+      default: return '<i class="vz-table-lane-seg" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
+    }
+  }
+
+  /**
+   * Bar labels of one lane, placed by fitLabels() once the lane has a width:
+   * on the bar, after it, or hidden. Each knows its bar's ends and where the
+   * lane's next bar starts (percent), and whether an arrow follows it.
+   * @param {(number | string)[][]} segs
+   * @param {(string | null)[] | null | undefined} labels
+   * @param {number | null | undefined} open Where the lane's arrow sits.
+   */
+  function barLabels(segs, labels, open) {
+    if (!labels) return '';
+    let s = '';
+    segs.forEach((g, j) => {
+      const t = labels[j];
+      if (!t) return;
+      const x0 = Number(g[0]), x1 = x0 + Number(g[1]);
+      const next = segs.reduce((m, h) => (Number(h[0]) >= x1 - 0.01 && Number(h[0]) < m ? Number(h[0]) : m), 100);
+      const arrow = open != null && Math.abs(Number(open) - x1) < 0.5;
+      s += '<span class="vz-table-lane-lab" style="left:' + n(x0) + '%" data-x0="' + n(x0) + '" data-x1="' +
+        n(x1) + '" data-nx="' + n(next) + '"' + (arrow ? ' data-arrow="1"' : '') + '>' + esc(t) + '</span>';
+    });
+    return s;
+  }
+
+  /**
+   * Place the bar labels under `host` that are not placed yet: on the bar when
+   * it fits, else after it when the gap to the lane's next bar holds it, else
+   * hidden (the tooltip still names the bar).
+   * @param {ParentNode} host
+   * @param {boolean} [again] Place every label anew (the width changed).
+   */
+  function fitLabels(host, again) {
+    host.querySelectorAll(again ? '.vz-table-lane-lab' : '.vz-table-lane-lab:not(.is-fit)').forEach((node) => {
+      const lab = /** @type {HTMLElement} */ (node);
+      if (again) {
+        lab.classList.remove('is-fit', 'is-on', 'is-after');
+        lab.hidden = false;
+        lab.style.left = n(lab.getAttribute('data-x0')) + '%';
+        lab.style.maxWidth = '';
+      }
+      const own = /** @type {HTMLElement | null} */ (lab.parentElement);
+      const w = own ? own.clientWidth : 0;
+      if (!w) return;
+      lab.classList.add('is-fit');
+      const px = (/** @type {string} */ k) => Number(lab.getAttribute(k)) / 100 * w;
+      const tw = lab.offsetWidth;
+      if (tw + 6 <= px('data-x1') - px('data-x0')) {
+        lab.classList.add('is-on');
+        lab.style.maxWidth = n(Math.floor(px('data-x1') - px('data-x0'))) + 'px';
+        return;
+      }
+      const gap = lab.hasAttribute('data-arrow') ? 10 : 3;
+      if (px('data-x1') + gap + tw + 3 <= px('data-nx')) {
+        lab.classList.add('is-after');
+        lab.style.left = 'calc(' + n(lab.getAttribute('data-x1')) + '% + ' + gap + 'px)';
+        lab.style.maxWidth = n(Math.floor(px('data-nx') - px('data-x1') - gap)) + 'px';
+        return;
+      }
+      lab.hidden = true;
+    });
+  }
+
+  /**
+   * A lane's opening tag: its domain for the hover's time, and its strip.
+   * @param {TableMarkInterval} c
+   * @param {string} cls
+   * @param {any[] | null | undefined} strip [text, style] boxes.
+   * @param {string} [name]
+   */
+  function laneOpen(c, cls, strip, name) {
+    return '<div class="vz-table-groups-lane vz-table-groups-ivcell' + cls + '" data-d0="' +
+      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') +
+      (name != null ? ' data-n="' + esc(name) + '"' : '') +
+      (strip && strip.length ? ' data-strip="' + esc(JSON.stringify(strip)) + '"' : '') + '>';
+  }
+
+  /**
+   * A thin lane above the main one: its segments, and its arrow in its own
+   * colour when it is still open.
+   * @param {TableMarkInterval} c
+   * @param {TableSubLane} l
+   */
+  function thin(c, l) {
+    let s = laneOpen(c, ' is-thin', l.b, l.n);
+    let last = '';
+    (l.s || []).forEach((g, j) => {
+      last = c.fills[Number(g[2]) - 1];
+      s += seg(g, last, at(l.t, j));
+    });
+    if (l.o != null) {
+      s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
+    }
+    // A thin lane is too low for text; an even lane has room.
+    if (c.evenLanes) s += barLabels(l.s || [], l.l, l.o);
+    return s + events(l.e, l.et) + '</div>';
+  }
+
+  /**
+   * Point events [x, shape] with their tips.
+   * @param {number[][] | undefined} ev
+   * @param {string[] | undefined} tips
+   */
+  function events(ev, tips) {
+    return (ev || []).map((e, j) => '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) +
+      '%" data-tip="' + esc(tips ? tips[j] : '') + '">' + shape(Number(e[1])) + '</svg>').join('');
+  }
+
+  /**
+   * Swimlane: the main lane's segments and overlays, under the thin lanes
+   * when the row has any.
    * @param {TableMarkInterval} c
    * @param {number} i
    */
   function interval(c, i) {
-    let s = '<div class="vz-table-groups-lane vz-table-groups-ivcell" data-d0="' + n(c.domainStart) +
-      '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') + '>';
+    let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null);
     (c.segs[i] || []).forEach((g, j) => {
-      s += '<i class="vz-table-lane-seg" style="' + span(g[0], g[1]) + ';background:' +
-        col(c.fills[Number(g[2]) - 1]) + '"' + (g.length > 3 ? ' data-l="' + esc(g[3]) + '"' : '') +
-        ' data-tip="' + esc(at(c.tips[i], j)) + '"></i>';
+      s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j));
     });
     // Overlays, under the pointer only where they carry a tooltip: ticks
     // across the segments, the line through them, the open end, the events.
@@ -187,11 +318,13 @@
     });
     const op = c.openAt ? c.openAt[i] : null;
     if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
-    ((c.events && c.events[i]) || []).forEach((e, j) => {
-      s += '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%"' +
-        ' data-tip="' + esc(c.eventTips ? at(c.eventTips[i], j) : '') + '">' + shape(Number(e[1])) + '</svg>';
-    });
-    return s + '</div>';
+    s += barLabels(c.segs[i] || [], c.barLabels ? c.barLabels[i] : null, op);
+    s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
+    const sub = c.subLanes ? c.subLanes[i] || [] : [];
+    if (!sub.length) return s;
+    // Even lanes: no main lane, every lane full, the overlays across the row.
+    return '<div class="vz-table-groups-ivstack' + (c.evenLanes ? ' is-even' : '') + '">' +
+      sub.map((l) => thin(c, l)).join('') + s + '</div>';
   }
 
   /**
@@ -374,5 +507,5 @@
       '</div>';
   }
 
-  V.table.marks = { glyph, cell, axis, shape };
+  V.table.marks = { glyph, cell, axis, shape, fitLabels };
 })();

@@ -401,6 +401,11 @@ groups_map_levels <- function(s, data) {
     used <- unique(as.character(v[ok]))
     s$.shape_used <- s$.shape_levels[s$.shape_levels %in% used]
   }
+  # Lane order from the full data too, so every row stacks its lanes alike.
+  if (identical(s$type, "spans") && !is.null(groups_present(s$lane, data))) {
+    lv <- groups_levels(data[[s$lane]])
+    s$.lane_levels <- lv[!is.na(lv) & nzchar(lv)]
+  }
   s
 }
 
