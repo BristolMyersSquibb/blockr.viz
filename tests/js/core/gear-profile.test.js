@@ -156,7 +156,7 @@ test('a setting without a row still takes its word', () => {
   assert.deepEqual(plain(lastSet(t).values), { look: 'compact' });
 });
 
-test('the script band leaves out what the gear draws', () => {
+test('with its own gear the script band shows none of the script values', () => {
   const t = setup();
   assert.deepEqual(Array.from(t.gear.scriptWords()).sort(), ['con_meds', 'doses', 'drugs', 'unit']);
 });

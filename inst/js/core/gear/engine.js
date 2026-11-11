@@ -562,9 +562,10 @@
       for (const arg of V.titles.namedArgs(this._titles)) {
         if (this.scriptSlot(arg)) out.add(arg);
       }
-      // A block's own gear draws its script values as rows.
-      for (const r of Object.values(this._prof ? this._prof.rows : {})) {
-        if (r.kind === 'script' && r.name) out.add(r.name);
+      // A block's own gear holds its script's values: as rows, or in a package's
+      // own row (a swimmer's mapping sets its response parameter).
+      if (this._prof && this._script) {
+        for (const sp of this._script.inputs || []) if (sp && sp.name) out.add(sp.name);
       }
       return out;
     }
