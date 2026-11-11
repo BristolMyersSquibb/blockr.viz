@@ -1,4 +1,4 @@
-// blockr.viz bundle 058075b863926c79518bd98888894d71, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle b3c39f642417fa189a30762e77676f6e, built by tools/bundle.js. Do not edit.
 // sources: drilldown-theme-register.js chart/common.js chart/memo.js chart/chart-types.js chart/colors.js chart/drill.js chart/tooltip.js chart/legend.js chart/format.js chart/agg.js chart/chart-index.js chart/chart-keys.js chart/axes-time.js chart/axes-labels.js chart/model-common.js chart/model-timeline.js chart/model-aggregated.js chart/model-individual.js chart/option-timeline.js chart/option-bar-marks.js chart/option-bar.js chart/option-radial.js chart/option-distribution.js chart/option-aggregated.js chart/option-points.js chart/option-band.js chart/option-domains.js chart/option-individual.js chart/ticks.js chart/zoom-option.js chart/gear.js chart/selection.js chart/family-aggregated.js chart/family-timeline.js chart/family-individual.js chart/zoom.js chart/export.js chart/panels.js chart/view.js
 // --- drilldown-theme-register.js
 // @ts-check
@@ -742,12 +742,8 @@
 // --- chart/agg.js
 // @ts-check
 /**
- * Chart block: the aggregation engine and the names of the statistics.
- *
- * aggregate() groups rows by facet, category and colour and aggregates the
- * value column per cell. It is the browser's twin of the table model's
- * aggregation in R; tests/testthat/test-agg-golden.R runs this file in node
- * and compares the numbers. Pure: no DOM, no Shiny.
+ * Chart block: the names of the aggregations and statistics. R aggregates
+ * (R/chart-cells.R); the browser only words what it draws.
  */
 (function () {
   'use strict';
@@ -779,127 +775,7 @@
   /** @param {string} stat */
   const statMeta = (stat) => STAT_META.find((s) => s.value === stat) || STAT_META[0];
 
-  // Math.max (dir 1) or Math.min (dir -1) of a non-empty array without NaN,
-  // as a loop because Math.max.apply throws past about 100k arguments. A tie
-  // between 0 and -0 resolves the way Math.max / Math.min resolve it.
-  /** @param {number[]} vals @param {number} dir */
-  function extreme(vals, dir) {
-    let m = vals[0];
-    for (let i = 1; i < vals.length; i++) {
-      const v = vals[i];
-      if (dir > 0 ? (v > m || (v === 0 && m === 0 && Object.is(m, -0)))
-                  : (v < m || (v === 0 && m === 0 && Object.is(v, -0)))) m = v;
-    }
-    return m;
-  }
-
-  /** A value an aggregation can use: not null, not NaN. @param {any} v */
-  const usable = (v) => v != null && !(typeof v === 'number' && Number.isNaN(v));
-
-  /**
-   * Group and aggregate rows into {facet, group, color, value, n} cells (raw
-   * numbers; rounding belongs to the formatters). Aligned to R's
-   * dd_table_aggregate in R/table-block.R, which the golden test guards.
-   *
-   *   count           rows in the cell.
-   *   count_distinct  distinct usable values of `value`.
-   *   sum             sum of the numeric values; 0 for an empty cell.
-   *   mean, median,   over the numeric values; null (a gap, R's NA) when the
-   *   min, max        cell has none. A value that is not a number is skipped.
-   *   identity        the cell's first numeric value, for precomputed values.
-   *   pct_distinct    distinct values in the cell over distinct values in
-   *                   the population, 0..1. Chart-only, no R twin.
-   *
-   * A missing group, facet or colour key is its own cell (''), unless
-   * `na_group` is 'drop': then a row missing any of the three is left out
-   * of the cells but still counted in the pct_distinct population.
-   *
-   * `pct_of` names the roles ('facet', 'group', 'color'; default ['facet'])
-   * the pct_distinct denominator is taken within. A name that is no role
-   * puts every row in one population.
-   * @param {any[]} rows
-   * @param {{group?: string, color?: string, facet?: string,
-   *          value?: string, func?: string, na_group?: string,
-   *          pct_of?: string | string[]}} cfg
-   */
-  function aggregate(rows, cfg) {
-    const { group, color, facet, value, func, na_group, pct_of } = cfg || {};
-    if (!rows || rows.length === 0) return [];
-
-    const cellCols = /** @type {string[]} */ ([group, facet, color].filter(Boolean));
-    const incomplete = (/** @type {any} */ row) =>
-      cellCols.some((c) => String(row[c] ?? '') === '');
-    // The placeholder of an unmapped role has to be the same in the cells and
-    // in the denominators, or a cell never finds its denominator.
-    const coords = (/** @type {any} */ row) => ({
-      facet: facet ? String(row[facet] ?? '') : '__all__',
-      group: group ? String(row[group] ?? '') : 'Total',
-      color: color ? String(row[color] ?? '') : '__all__'
-    });
-    const pctRoles = (Array.isArray(pct_of) ? pct_of
-      : (pct_of ? [pct_of] : ['facet'])).map(String);
-    const denomKey = (/** @type {any} */ c) =>
-      pctRoles.map((r) => (c[r] !== undefined ? c[r] : '__all__')).join('|||');
-    /** @param {any[]} rs */
-    const distinct = (rs) => {
-      const s = new Set();
-      for (const r of rs) { const v = value != null ? r[value] : null; if (usable(v)) s.add(v); }
-      return s;
-    };
-
-    // Counted over every row, the dropped ones too.
-    /** @type {Record<string, Set<any>>} */
-    const denomPop = {};
-    if (func === 'pct_distinct') {
-      for (const row of rows) {
-        const v = value != null ? row[value] : null;
-        if (!usable(v)) continue;
-        const k = denomKey(coords(row));
-        (denomPop[k] || (denomPop[k] = new Set())).add(v);
-      }
-    }
-
-    /** @type {Record<string, any>} */
-    const groups = {};
-    for (const row of rows) {
-      if (na_group === 'drop' && incomplete(row)) continue;
-      const c = coords(row);
-      const key = c.facet + '|||' + c.group + '|||' + c.color;
-      if (!groups[key]) groups[key] = { ...c, values: [], rows: [] };
-      groups[key].rows.push(row);
-      if (value !== '.count' && value != null && row[value] != null) {
-        const n = Number(row[value]);
-        if (!Number.isNaN(n)) groups[key].values.push(n);
-      }
-    }
-
-    const sum = (/** @type {number[]} */ vs) => vs.reduce((a, b) => a + b, 0);
-    const result = [];
-    for (const g of Object.values(groups)) {
-      const vs = g.values;
-      let out;
-      if (func === 'count') out = g.rows.length;
-      else if (func === 'count_distinct') out = distinct(g.rows).size;
-      else if (func === 'pct_distinct') {
-        const pop = denomPop[denomKey(g)];
-        out = pop && pop.size ? distinct(g.rows).size / pop.size : null;
-      }
-      else if (func === 'mean') out = vs.length ? sum(vs) / vs.length : null;
-      else if (func === 'median') {
-        const s = vs.slice().sort((/** @type {number} */ a, /** @type {number} */ b) => a - b);
-        const m = Math.floor(s.length / 2);
-        out = s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null;
-      }
-      else if (func === 'sum') out = sum(vs);
-      else if (func === 'min') out = vs.length ? extreme(vs, -1) : null;
-      else if (func === 'max') out = vs.length ? extreme(vs, 1) : null;
-      else if (func === 'identity') out = vs.length ? vs[0] : null;
-      result.push({ facet: g.facet, group: g.group, color: g.color, value: out, n: g.rows.length });
-    }
-    return result;
-  }
-
-  NS.agg = { AGG_WORDS, statMeta, aggregate };
+  NS.agg = { AGG_WORDS, statMeta };
 })();
 // --- chart/chart-index.js
 // @ts-check
@@ -1031,9 +907,14 @@
     return rows;
   };
 
+  /** The values a row holds in a column: one, or in a cell the distinct
+   * values of its rows. @param {any} v @returns {any[]} */
+  const valuesOf = (v) => (Array.isArray(v) ? v : [v]);
+
   /**
    * Count per value of `dimCol`: distinct `id` when set, else rows. With
    * func 'identity' it is the id column's first value per group as it is.
+   * A cell counts the rows it stands for and brings its distinct ids.
    * @param {any[]} rows @param {Record<string, any>} cfg
    * @param {string | null | undefined} dimCol
    * @returns {Map<string, any>}
@@ -1048,15 +929,18 @@
     for (const r of rows) {
       const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
       if (asIs) {
-        if (!out.has(dv) && r[idCol] != null) out.set(dv, r[idCol]);
+        const id = valuesOf(r[idCol])[0];
+        if (!out.has(dv) && id != null) out.set(dv, id);
       } else if (idCol) {
-        if (r[idCol] == null) continue;
-        let s = ids.get(dv);
-        if (!s) { s = new Set(); ids.set(dv, s); }
-        s.add(r[idCol]);
-        out.set(dv, s.size);
+        for (const id of valuesOf(r[idCol])) {
+          if (id == null) continue;
+          let s = ids.get(dv);
+          if (!s) { s = new Set(); ids.set(dv, s); }
+          s.add(id);
+          out.set(dv, s.size);
+        }
       } else {
-        out.set(dv, (out.get(dv) || 0) + 1);
+        out.set(dv, (out.get(dv) || 0) + (r['.n'] ?? 1));
       }
     }
     return out;
@@ -1083,7 +967,7 @@
     return v === surface || v === 'both';
   };
 
-  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, labelCounts, withCount, countOn });
+  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, countOn });
 })();
 // --- chart/chart-keys.js
 // @ts-check
@@ -1127,11 +1011,12 @@
 
   /**
    * A filter on `col` with the distinct non-missing values of `rows`, or null.
+   * A cell holds the distinct values of its rows.
    * @param {string} col @param {any[]} rows @returns {Filters | null}
    */
   const fromRows = (col, rows) => {
     const vals = [...new Set(
-      (rows || []).map((r) => (r ? r[col] : null)).filter((v) => v != null)
+      (rows || []).flatMap((r) => (r ? r[col] : null)).filter((v) => v != null)
     )].map(String);
     return vals.length ? { [col]: vals } : null;
   };
@@ -1260,11 +1145,15 @@
   };
 
   /** Does a row satisfy every column of the filter? A null in the filter takes the rows where the
-   * column is missing. @param {any} row @param {Filters} filters */
+   * column is missing. A cell that holds a column's distinct values satisfies it with any of them.
+   * @param {any} row @param {Filters} filters */
   const rowMatches = (row, filters) => {
     const sets = setsOf(filters);
     for (const col of Object.keys(sets)) {
-      if (!sets[col].has(keyOf(row[col]))) return false;
+      const v = row[col];
+      if (Array.isArray(v) && v.length) {
+        if (!v.some((x) => sets[col].has(keyOf(x)))) return false;
+      } else if (!sets[col].has(keyOf(Array.isArray(v) ? null : v))) return false;
     }
     return true;
   };
@@ -2348,10 +2237,14 @@
  * Chart block: the aggregated model (bar, waterfall, pie, treemap, and the
  * distribution marks boxplot and point range).
  *
- * Rows and config in, what to draw out: the cells of the aggregation engine
- * (agg.js), the panels (one per facet level), each panel's groups in sort
- * order, the colour levels, the "(n)" counts, and for the distribution marks
- * the category slots with their summaries.
+ * Rows and config in, what to draw out: the cells, the panels (one per facet
+ * level), each panel's groups in sort order, the colour levels, the "(n)"
+ * counts, and for the distribution marks the category slots with their
+ * summaries.
+ *
+ * The rows are R's cells, one per mark (R/chart-cells.R): the keys under
+ * their column names, the rows each stands for (`.n`), its aggregate
+ * (`.value`) and what else its mark draws. Nothing is aggregated here.
  *
  * A mark is addressed by (group, colour level) inside a panel; its keys are
  * the group, the colour where it splits the mark (bar segments, boxes, point
@@ -2389,59 +2282,26 @@
     return out;
   };
 
-  const T975 = [12.7062, 4.3027, 3.1824, 2.7764, 2.5706, 2.4469, 2.3646, 2.3060, 2.2622,
-    2.2281, 2.2010, 2.1788, 2.1604, 2.1448, 2.1314, 2.1199, 2.1098, 2.1009, 2.0930,
-    2.0860, 2.0796, 2.0739, 2.0687, 2.0639, 2.0595, 2.0555, 2.0518, 2.0484, 2.0452, 2.0423];
-  /** The 97.5% quantile of Student's t, as R's qt(0.975, df): a table to 30
-   * degrees of freedom, the Cornish-Fisher series past it.
-   * @param {number} df */
-  const t975 = (df) => {
-    if (df <= T975.length) return T975[Math.max(1, Math.round(df)) - 1];
-    const z = 1.959964;
-    const z3 = z * z * z, z5 = z3 * z * z, z7 = z5 * z * z;
-    return z + (z3 + z) / (4 * df) + (5 * z5 + 16 * z3 + 3 * z) / (96 * df * df) +
-      (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
-  };
-
   /**
-   * {center, lo, hi} of a statistic over ascending values, or null for none.
-   * One implementation for the box body, its whiskers and the point range.
-   * sd is the sample sd, 0 for one value.
-   * @param {number[]} vals @param {string} stat
-   * @returns {{center: number, lo: number, hi: number} | null}
+   * R's cells as the aggregation engine gives them: {facet, group, color,
+   * value, n}. A cell R marks `.drop` (a missing key under missing = "drop")
+   * is not drawn.
+   * @param {any[]} rows @param {Record<string, any>} cfg
    */
-  const summarizeStat = (vals, stat) => {
-    const n = vals.length;
-    if (n === 0) return null;
-    const q = (/** @type {number} */ p) => {
-      const i = p * (n - 1); const lo = Math.floor(i);
-      return lo === i ? vals[lo] : vals[lo] + (vals[lo + 1] - vals[lo]) * (i - lo);
-    };
-    const mean = vals.reduce((a, b) => a + b, 0) / n;
-    const sd = n > 1
-      ? Math.sqrt(vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1))
-      : 0;
-    const se = sd / Math.sqrt(n);
-    switch (stat) {
-      case 'mean_sd': return { center: mean, lo: mean - sd, hi: mean + sd };
-      case 'mean_2sd': return { center: mean, lo: mean - 2 * sd, hi: mean + 2 * sd };
-      case 'mean_se': return { center: mean, lo: mean - se, hi: mean + se };
-      case 'mean_ci95': {
-        const h = n > 1 ? t975(n - 1) * se : 0;
-        return { center: mean, lo: mean - h, hi: mean + h };
-      }
-      case 'p5_p95': return { center: q(0.5), lo: q(0.05), hi: q(0.95) };
-      case 'p10_p90': return { center: q(0.5), lo: q(0.1), hi: q(0.9) };
-      case 'min_max': return { center: q(0.5), lo: vals[0], hi: vals[n - 1] };
-      case 'tukey': {
-        // Tukey fences clipped to the data.
-        const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
-        return { center: q(0.5), lo: Math.max(vals[0], q1 - 1.5 * iqr),
-                 hi: Math.min(vals[n - 1], q3 + 1.5 * iqr) };
-      }
-      case 'median_q1_q3':
-      default: return { center: q(0.5), lo: q(0.25), hi: q(0.75) };
+  const cellsFromRows = (rows, cfg) => {
+    const { category, color, facet, func } = cfg;
+    const out = [];
+    for (const r of rows) {
+      if (r['.drop']) continue;
+      out.push({
+        facet: facet ? String(r[facet] ?? '') : '__all__',
+        group: category ? String(r[category] ?? '') : 'Total',
+        color: color ? String(r[color] ?? '') : '__all__',
+        value: func === 'count' ? r['.n'] : (r['.value'] ?? null),
+        n: r['.n']
+      });
     }
+    return out;
   };
 
   /** The order of a panel's groups on the category axis. A bridge always keeps the data order (a
@@ -2506,9 +2366,10 @@
     if (!groupCol) return groups.sort((a, b) => a.localeCompare(b) * sortDir);
     /** @type {Record<string, number>} */
     const mins = {};
+    // A cell brings the column's smallest value in its rows (`.sort`).
     for (const r of rows) {
       const g = String(r[groupCol] ?? '');
-      const v = Number(r[sortBy]);
+      const v = Number(r['.sort']);
       if (!isNaN(v) && (mins[g] == null || v < mins[g])) mins[g] = v;
     }
     return groups.sort((a, b) => {
@@ -2527,6 +2388,8 @@
     const groupCol = cfg.category, facetCol = cfg.facet;
     /** @type {Map<string, Record<string, any[]>>} */
     const byFacet = new Map([['__all__', {}]]);
+    // A cell brings the fields of its first row, and the cells come in the
+    // order of their first rows.
     for (const r of rows) {
       const g = groupCol ? String(r[groupCol] ?? '') : 'Total';
       const recs = [byFacet.get('__all__')];
@@ -2535,7 +2398,7 @@
         if (!byFacet.has(fv)) byFacet.set(fv, {});
         recs.push(byFacet.get(fv));
       }
-      for (const rec of recs) if (rec && !(g in rec)) rec[g] = ttFields.map((c) => r[c] ?? '');
+      for (const rec of recs) if (rec && !(g in rec)) rec[g] = ttFields.map((c) => r['.tt.' + c] ?? '');
     }
     return byFacet;
   };
@@ -2549,20 +2412,22 @@
    * @returns {Map<string, string | null>} keyed facet|||group|||color
    */
   const markLabels = (rows, cfg, byColor) => {
-    const col = cfg.label, groupCol = cfg.category, facetCol = cfg.facet;
+    const groupCol = cfg.category, facetCol = cfg.facet;
     const colorCol = byColor ? cfg.color : null;
     /** @type {Map<string, string | null>} */
     const out = new Map();
+    // A cell brings the distinct values of its rows, two at most.
     for (const r of rows) {
-      const v = r[col];
-      if (v == null || v === '' || v === 'NA') continue;
       const key = (facetCol ? String(r[facetCol] ?? '') : '__all__') + '|||' +
         (groupCol ? String(r[groupCol] ?? '') : 'Total') + '|||' +
         (colorCol ? String(r[colorCol] ?? '') : '__all__');
-      const t = String(v);
-      const cur = out.get(key);
-      if (cur === undefined) out.set(key, t);
-      else if (cur !== null && cur !== t) out.set(key, null);
+      for (const v of NS.valuesOf(r['.label'])) {
+        if (v == null || v === '' || v === 'NA') continue;
+        const t = String(v);
+        const cur = out.get(key);
+        if (cur === undefined) out.set(key, t);
+        else if (cur !== null && cur !== t) out.set(key, null);
+      }
     }
     return out;
   };
@@ -2578,10 +2443,8 @@
    *           levels: string[], facet: string, panels: number }} p
    */
   const distributionSlots = ({ rows, ix, cfg, groups, levels, facet, panels }) => {
-    const groupBy = cfg.category, colorCol = cfg.color, facetCol = cfg.facet, value = cfg.measure;
+    const groupBy = cfg.category, colorCol = cfg.color, facetCol = cfg.facet;
     const isBox = cfg.type === 'boxplot';
-    const bodyStat = cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se');
-    const whiskerStat = cfg.whiskers || 'tukey';
     // Keyed 'nz', so the panel of a missing facet value holds its rows.
     const facetRows = (facetCol && facet !== '__all__')
       ? ix.get(rows, facetCol, 'nz', String(facet)) : rows;
@@ -2590,41 +2453,21 @@
     const outliersOn = isBox && cfg.box_points === 'outliers';
     const idCol = cfg.id;
 
-    /** @param {any[]} rs */
-    const valsOf = (rs) => rs.map((r) => Number(r[value])).filter((v) => !Number.isNaN(v))
-      .sort((a, b) => a - b);
-    /** @param {any[]} rs */
-    const count = (rs) => {
-      if (!idCol) return rs.length;
-      const s = new Set();
-      for (const r of rs) { const id = r[idCol]; if (id != null) s.add(id); }
-      return s.size;
-    };
-
     const slots = [];
     for (const g of groups) {
       for (const lv of (split ? levels : ['__all__'])) {
-        const cell = lv === '__all__'
+        const c = (lv === '__all__'
           ? ix.get(facetRows, groupBy, 'raw', g)
-          : ix.get2(facetRows, groupBy, 'raw', colorCol, 'nz', g, lv);
-        const rs = cell.filter((/** @type {any} */ r) => r[value] != null);
-        if (split && !keepEmpty && rs.length === 0) continue;
-        const vals = valsOf(rs);
-        const body = summarizeStat(vals, bodyStat);
-        /** @type {any} */
-        const slot = { cat: split ? g + BOX_CAT_SEP + lv : g, group: g, level: lv,
-                       n: vals.length, count: count(rs), body, whisker: null, outliers: [] };
-        if (isBox && body) {
-          slot.whisker = summarizeStat(vals, whiskerStat);
-          if (outliersOn) {
-            const wlo = slot.whisker.lo, whi = slot.whisker.hi;
-            for (const r of rs) {
-              const v = Number(r[value]);
-              if (!Number.isNaN(v) && (v < wlo || v > whi)) slot.outliers.push(v);
-            }
-          }
-        }
-        slots.push(slot);
+          : ix.get2(facetRows, groupBy, 'raw', colorCol, 'nz', g, lv))[0];
+        const n = (c && c['.vn']) || 0;
+        if (split && !keepEmpty && n === 0) continue;
+        const body = n ? { center: c['.center'], lo: c['.lo'], hi: c['.hi'] } : null;
+        slots.push({
+          cat: split ? g + BOX_CAT_SEP + lv : g, group: g, level: lv,
+          n, count: idCol ? ((c && c['.count']) || 0) : n, body,
+          whisker: isBox && body ? { lo: c['.wlo'], hi: c['.whi'] } : null,
+          outliers: outliersOn && body ? NS.valuesOf(c['.out'] ?? []) : []
+        });
       }
     }
     return slots;
@@ -2651,7 +2494,7 @@
   const aggregated = ({ rows, ix, columns, cfg, derived }) => {
     // A histogram is a bar over the bins R adds to the rows.
     const ct = cfg.type === 'histogram' ? 'bar' : cfg.type;
-    const { category, color, facet, measure, func } = cfg;
+    const { category, color, facet, measure } = cfg;
     const distribution = NS.DISTRIBUTION_TYPES.includes(ct);
     /** @type {AggregatedModel} */
     const out = {
@@ -2662,10 +2505,7 @@
       ix, panels: [], histogram: cfg.type === 'histogram', markLabels: null,
       hl: null, hlLit: null, hlColors: null
     };
-    const agg = NS.agg.aggregate(rows, {
-      group: category, color, facet, value: measure, func, na_group: cfg.missing,
-      pct_of: cfg.percent_of === 'category' ? 'group' : cfg.percent_of
-    });
+    const agg = cellsFromRows(rows, cfg);
     if (agg.length === 0) {
       out.empty = model.emptyState('No data to chart');
       return out;
@@ -2742,7 +2582,11 @@
       const seen = memo.get(k);
       if (seen !== undefined) return seen;
       const keys = aggregatedKeys(cfg, fv, g, lv);
-      const lit = !!NS.keys.markLit(keys, () => rowsUnder(rows, ix, keys), hl);
+      // A highlight on a column the cells do not hold: R marked the cells
+      // with a matching row (`.hl`).
+      const lit = !Object.keys(hl).every((c) => c in keys)
+        ? rowsUnder(rows, ix, keys).some((r) => r['.hl'] === true)
+        : !!NS.keys.markLit(keys, () => rowsUnder(rows, ix, keys), hl);
       memo.set(k, lit);
       return lit;
     };
@@ -2840,7 +2684,7 @@
     return NS.keys.fromKeys(keys);
   };
 
-  Object.assign(model, { aggregated, summarizeStat, cellOf, cellsOf, labelOf, aggregatedKeys,
+  Object.assign(model, { aggregated, cellOf, cellsOf, labelOf, aggregatedKeys,
                          aggregatedMarkAt, aggregatedClick, rowsUnder, BOX_CAT_SEP });
 })();
 // --- chart/model-individual.js
@@ -6623,14 +6467,22 @@
    * @param {string} type @param {Record<string, any>} v */
   const counts = (type, v) => !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
 
+  /** The values of a column a picker offers. A column the chart's cells do not hold comes listed
+   * by R (derived.levels). @param {any} view @param {string} col */
+  const levelsOf = (view, col) => {
+    if (!col) return [];
+    const sent = view.derived.levels && view.derived.levels[col];
+    const all = sent ? sent.map(String)
+      : view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '');
+    return all.slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }));
+  };
+
   /** @param {any} view The chart view: its rows, column meta and derived. @returns {VizGearHost} */
   function host(view) {
     const meta = () => view.columns;
     /** @param {string} col */
-    const levels = (col) => (col
-      ? view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '')
-        .slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }))
-      : []);
+    /** @param {string} col */
+    const levels = (col) => levelsOf(view, col);
     /** @param {string} name */
     const numeric = (name) => {
       return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));
