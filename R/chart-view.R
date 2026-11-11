@@ -63,7 +63,8 @@ chart_view <- function(kit, src) {
     shiny::req(is.data.frame(d))
     v <- kit$values()
     df <- shipped()
-    w <- wire_cache(df, function() viz_wire_df(df))
+    # The columns the payload describes are the whole input's, below.
+    w <- wire_cache(df, function() viz_wire_df(df, meta = FALSE))
     viz_payload(spec, v, rows(w$data, w$columns), revs, derived = list(
       titles = titles(),
       band = band(),

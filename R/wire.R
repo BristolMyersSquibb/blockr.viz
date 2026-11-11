@@ -108,13 +108,16 @@ wire_record <- function(type, x) {
 #' Any other column (a list, complex, raw) is left out, with a warning.
 #'
 #' @param df A data frame.
+#' @param meta Whether to describe the columns. A view that describes
+#'   another frame's (the chart sends its whole input's, viz_wire_columns())
+#'   passes `FALSE`.
 #' @return `list(columns, data)`: `columns` a list of column meta (`name`,
 #'   `class`, `label`, `n_unique`, the entries above, `kind` for a column
 #'   mark_column_kinds() marked and `all_na = TRUE` for a column that is NA
-#'   in every row), `data` a `json` string.
+#'   in every row), or `NULL` without `meta`; `data` a `json` string.
 #' @noRd
-viz_wire_df <- function(df) {
-  w <- wire_df_parts(df, warn = TRUE)
+viz_wire_df <- function(df, meta = TRUE) {
+  w <- wire_df_parts(df, warn = TRUE, meta = meta)
   list(columns = w$meta,
        data = jsonlite::toJSON(w$cols, na = "null", null = "null",
                                digits = NA))
@@ -138,11 +141,11 @@ viz_wire_columns <- function(df) {
   meta[!vapply(meta, is.null, logical(1L))]
 }
 
-wire_df_parts <- function(df, warn) {
+wire_df_parts <- function(df, warn, meta = TRUE) {
   cols <- list()
-  meta <- list()
+  described <- if (meta) list()
   skipped <- character()
-  kinds <- column_kinds(df)
+  kinds <- if (meta) column_kinds(df)
   for (nm in names(df)) {
     w <- wire_column(df[[nm]])
     if (is.null(w)) {
@@ -150,13 +153,16 @@ wire_df_parts <- function(df, warn) {
       next
     }
     cols[[nm]] <- w$values
-    meta[[length(meta) + 1L]] <- wire_column_meta(df[[nm]], nm, w, kinds)
+    if (meta) {
+      described[[length(described) + 1L]] <-
+        wire_column_meta(df[[nm]], nm, w, kinds)
+    }
   }
   if (warn && length(skipped)) {
     warning("Left out of the chart data, their class cannot be drawn: ",
             paste0("`", skipped, "`", collapse = ", "), ".", call. = FALSE)
   }
-  list(cols = cols, meta = meta)
+  list(cols = cols, meta = described)
 }
 
 # One column's description: its name, wire class, variable label, number
@@ -231,9 +237,14 @@ wire_values <- function(x, class) {
   wire_plain(v)
 }
 
-wire_plain <- function(v) {
-  if (dict_worth_it(v)) {
-    v <- wire_dict(v, sort(unique(v[!is.na(v)])))
+wire_plain <- function(v, min_rows = 500L) {
+  if (length(v) < min_rows) {
+    return(v)
+  }
+  # The distinct values once, for the test and for the levels.
+  u <- unique(v)
+  if (dict_worth_it(v, min_rows = min_rows, k = length(u))) {
+    v <- wire_dict(v, sort(u[!is.na(u)]))
   }
   v
 }
@@ -247,12 +258,11 @@ wire_dict <- function(v, levels) {
 # A dictionary pays when the column is long and its values repeat: a code is
 # shorter than the value it stands for, and the levels go out once.
 dict_worth_it <- function(v, min_rows = 500L, max_ratio = 0.25,
-                          max_levels = 4096L) {
+                          max_levels = 4096L, k = length(unique(v))) {
   n <- length(v)
   if (n < min_rows) {
     return(FALSE)
   }
-  k <- length(unique(v))
   k <= max_ratio * n && k <= max_levels
 }
 
