@@ -7,6 +7,8 @@
 \alias{blockr_deser.heatmap_block}
 \alias{blockr_deser.table_block}
 \alias{blockr_deser.summarize_table_block}
+\alias{blockr_deser.lane_chart_block}
+\alias{blockr_deser.rank_block}
 \title{Restore boards saved by an earlier blockr.viz}
 \usage{
 \method{blockr_deser}{chart_block}(x, data, ...)
@@ -20,6 +22,10 @@
 \method{blockr_deser}{table_block}(x, data, ...)
 
 \method{blockr_deser}{summarize_table_block}(x, data, ...)
+
+\method{blockr_deser}{lane_chart_block}(x, data, ...)
+
+\method{blockr_deser}{rank_block}(x, data, ...)
 }
 \arguments{
 \item{x, data, ...}{Passed through from \code{\link[blockr.core:blockr_deser]{blockr.core::blockr_deser()}}.}

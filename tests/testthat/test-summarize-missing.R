@@ -60,3 +60,19 @@ test_that("dropped missing groups stay in the denominator", {
   expect_identical(as.character(v$cols[[2L]]$pct),
                    c("(33%)", "(33%)", "(17%)", "(17%)"))
 })
+
+test_that("a board saved under the lane chart or rank names restores", {
+  for (cls in list(c("lane_chart_block", "rank_block"), "rank_block")) {
+    saved <- sm_saved()
+    saved$object <- c(cls, saved$object[-(1:3)])
+    saved$constructor$constructor <- paste0("new_", cls[[1L]])
+    b <- suppressWarnings(blockr.core::blockr_deser(saved))
+    expect_s3_class(b, "table_block")
+    expect_false(inherits(b, "rank_block"))
+    expect_identical(blockr.core::blockr_ser(b)$constructor$constructor,
+                     "new_table_block")
+    v <- sm_view(b)
+    expect_identical(as.character(v$cols[[1L]]$disp),
+                     c("GI", "NAUSEA", "SKIN", "RASH"))
+  }
+})
