@@ -1,5 +1,4 @@
-# The tile summary and the compact look: the table block's heatmap
-# (dev/table-block-rewrite.md, phase 4).
+# The tile summary and the compact look: the table block's heatmap.
 
 tile_fixture <- function() {
   data.frame(
@@ -28,6 +27,23 @@ test_that("tile columns order by count and carry the worst level", {
   s1 <- p$rows[p$rows$.label == "s1", ]
   expect_identical(s1[[rash$key]], 2)
   expect_identical(s1[[rash$wkey]], 3L)  # SEVERE
+})
+
+test_that("tile columns over a number or ordered factor keep their order", {
+  # Level 3 has the most rows, 1 the fewest: count order would put 3 first.
+  d <- data.frame(SUBJ = c("s1", "s1", "s2", "s2", "s3", "s3", "s1"),
+                  SEQ = c(1, 2, 2, 3, 3, 3, 10))
+  flevels <- function(d) {
+    p <- groups_prepare_summaries(d, by = "SUBJ", summaries = list(list(
+      type = "simple", func = "count", show = "tile", facet = "SEQ")))
+    vapply(p$plan, function(x) x$flevel, "")
+  }
+  expect_identical(flevels(d), c("1", "2", "3", "10"))
+  d$SEQ <- factor(d$SEQ, levels = c(10, 1, 2, 3), ordered = TRUE)
+  expect_identical(flevels(d), c("10", "1", "2", "3"))
+  # Text still orders by count.
+  d$SEQ <- as.character(d$SEQ)
+  expect_identical(flevels(d)[[1L]], "3")
 })
 
 test_that("without a paint column the tile is painted by its value", {

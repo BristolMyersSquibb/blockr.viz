@@ -1,5 +1,5 @@
-# Phase 5 of the table rewrite (dev/table-block-rewrite.md): the public
-# argument and summary-key vocabulary, shared with the chart block.
+# The public argument and summary-key vocabulary, shared with the chart
+# block.
 
 vocab_df <- function() {
   data.frame(

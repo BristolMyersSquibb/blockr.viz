@@ -10,7 +10,7 @@
 #
 # Interpreters of a spec: spec-check.R (values), spec-state.R (state),
 # spec-registry.R (assistant registry, title slots), wire.R (to the browser),
-# kit-input.R (from the browser). dev/gen-spec.R writes the JS spec and its
+# kit-input.R (from the browser). tools/gen-spec.R writes the JS spec and its
 # TypeScript types.
 
 # Types whose value is a vector or a list of single values, sent and

@@ -1,12 +1,12 @@
 # Writes the table block recordings that tests/testthat/test-table-golden.R
 # replays. Run from the package root:
 #
-#   Rscript dev/table-golden-record.R              # everything
-#   Rscript dev/table-golden-record.R rec_drill    # some scenarios
+#   Rscript tools/table-golden-record.R              # everything
+#   Rscript tools/table-golden-record.R rec_drill    # some scenarios
 #
 # Re-record only when a change in behaviour is accepted, and read the diff
 # the test printed first. The saved boards the restore cases read are
-# written by dev/table-golden-old-boards.R, with blockr.viz 0.2.223.
+# written by tools/table-golden-old-boards.R, with blockr.viz 0.2.223.
 
 pkgload::load_all(".", quiet = TRUE)
 source("tests/testthat/helper-table-golden.R")

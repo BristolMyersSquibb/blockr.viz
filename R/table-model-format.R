@@ -1,6 +1,5 @@
 # Number formats of the table model: the `format` setting, the unit in the
-# column headers, and the `.fmt` cell engine (dev/table-and-chart-architecture.md,
-# "The `.fmt` convention").
+# column headers, and the `.fmt` cell engine.
 #
 # `.fmt` engine: a hidden per-row `.fmt` template column such as
 # "{n} ({pct}%)" is interpolated into display strings from the numeric columns

@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9060
+# blockr.viz 0.3.0.9062
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -123,6 +123,9 @@ read.
   inside still sort by their total. The AE heatmap had sorted its arms by
   size. A tile painted by a worst level adds "Numbers: events" to the
   legend while the cells print their numbers.
+  The matrix columns come commonest first when the column is text, and in
+  their own order when it is a number, a date or an ordered factor, so a
+  visit or sequence number reads 1, 2, 3.
 * A table's header row stays at the top while its rows scroll, in every
   layout and in `interactive_table()`, with a spanner row above the row it
   spans. A table runs its full length in the panel, and in the records and
