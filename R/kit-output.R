@@ -9,12 +9,11 @@
 # its preview, and on a board every other block. So each block draws as soon
 # as its own payload is ready. The output's value is a small token.
 #
-# A hidden view is not built for, with one exception: the first payload is
-# built before the browser has said whether the element shows. Shiny itself
-# waits for that word, which costs a new block a round trip, and a board that
-# is loading the time until every block has evaluated, before the first chart
-# can draw. A block that never shows costs one payload and none after it
-# (viz_output_hidden()).
+# Nothing is built for a view that does not show: the output is suspended
+# while its element is hidden, as any Shiny output is, and that includes a
+# block whose element the browser has not reported yet. A block in a tab
+# that is never opened costs no payload. The price is one round trip before
+# a new block's first payload: R waits for the browser to say it shows.
 #
 # The binding (inst/js/core/binding.js) keeps the last payload and the rows per
 # id: R leaves the rows out of a payload whose data revision the client holds,
@@ -78,15 +77,6 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
   done <- function() if (busy) busy_cue_done(session, el)
   output[[id]] <- viz_render({
     full()
-    if (post) {
-      # Not for an element known to be hidden, nor, once the first payload
-      # is out, for one the browser has not spoken about. This reads the
-      # browser's word, so the render runs again when it changes.
-      hidden <- viz_output_hidden(session, el)
-      if (isTRUE(hidden) || (is.null(hidden) && sent$n > 0L)) {
-        shiny::req(FALSE, cancelOutput = TRUE)
-      }
-    }
     if (busy) busy_cue_start(session, el, "drawing")
     msg <- tryCatch(build(), shiny.silent.error = function(e) NULL,
                     error = function(e) {
@@ -120,8 +110,6 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
   # Ahead of the block's other outputs (its preview), behind the observers
   # that settle what the payload reads (priority 50 and up).
   shiny::outputOptions(output, id, priority = 40)
-  # The render decides about a hidden element itself (above).
-  if (post) shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
   shiny::observeEvent(input[[paste0(id, "_need")]], {
     sent$msg <- NULL
     sent$data_rev <- NULL
@@ -143,16 +131,6 @@ viz_posts <- function(session) {
   }
   root <- if (is.function(session$rootScope)) session$rootScope() else session
   !inherits(root, "MockShinySession")
-}
-
-#' Whether the browser shows a view's element
-#'
-#' What Shiny's client reports for a bound output: `TRUE` hidden, `FALSE`
-#' showing, `NULL` when it has not said yet (the element is not on the page,
-#' or its first report is on its way). Read reactively.
-#' @noRd
-viz_output_hidden <- function(session, el) {
-  session$clientData[[paste0("output_", el, "_hidden")]]
 }
 
 #' The payload of a block view
