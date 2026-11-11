@@ -234,6 +234,12 @@ chart_split_roles <- function(group = NULL, color = NULL, facet = NULL,
 # NULL when none does. The answer is keyed by the filter it was computed for,
 # so it holds while the input is unavailable and never applies to another
 # filter.
+#
+# The observer runs ahead of what reads the answer, and writes nothing for a
+# click that needs no translating (the usual one). Otherwise every click
+# would change the answer after the block's filter was built from the old
+# one, and the filter, the block's evaluation and the payload would all run
+# a second time.
 dd_group_filters_members <- function(r_filters, r_data,
                                      r_active = function() TRUE) {
   rv <- shiny::reactiveVal(NULL)
@@ -258,8 +264,8 @@ dd_group_filters_members <- function(r_filters, r_data,
         members[[col]] <- group_column_values(x, vals)
       }
     }
-    set(list(filters = f, members = members))
-  })
+    set(if (length(members)) list(filters = f, members = members))
+  }, priority = 50)
   function(filters) {
     cur <- rv()
     if (is.null(cur) || !identical(cur$filters, filters) ||

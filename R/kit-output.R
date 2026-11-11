@@ -1,9 +1,23 @@
-# What a block view sends the browser: one payload through a Shiny output.
+# What a block view sends the browser: one payload, computed by a Shiny
+# output and sent as a message.
 #
-# Shiny keeps an output's last value on the client and hands it to the binding
-# whenever an element under that id binds, so a re-mounted panel draws without
-# asking R. The binding (inst/js/core/binding.js) keeps rows per id, because R
-# leaves them out of a payload whose data revision the client holds.
+# The output decides when the payload is built: Shiny runs it when something
+# it read changed. The payload itself goes out as a custom message the
+# moment it is built.
+# Shiny writes a message at once and an output's value only after every
+# observer of the flush has run, which includes the block's evaluation and
+# its preview, and on a board every other block. So each block draws as soon
+# as its own payload is ready. The output's value is a small token.
+#
+# Nothing is built for a view that does not show: the output is suspended
+# while its element is hidden, as any Shiny output is, and that includes a
+# block whose element the browser has not reported yet. A block in a tab
+# that is never opened costs no payload. The price is one round trip before
+# a new block's first payload: R waits for the browser to say it shows.
+#
+# The binding (inst/js/core/binding.js) keeps the last payload and the rows per
+# id: R leaves the rows out of a payload whose data revision the client holds,
+# and a re-mounted panel draws from what the binding kept, without asking R.
 
 #' The element a block view draws into
 #'
@@ -34,9 +48,12 @@ viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' `build()` returns the payload from viz_payload(). Nothing goes out when it
 #' is identical to the last one, or when it stops on a silent `req()` (a
 #' block the dock has parked): the render cancels and the client keeps its
-#' value and picture. The rows go out only when their revision changed. A
-#' client that holds no rows for a payload's revision asks through
-#' `<id>_need`, and the next render sends everything.
+#' value and picture. The rows go out only when their revision changed, and
+#' with rows the client holds the column description goes out only when it
+#' changed: the client keeps both (inst/js/core/binding.js). A click or a
+#' setting then sends the settings and `derived` alone. A client that holds
+#' no rows for a payload's revision asks through `<id>_need`, and the next
+#' render sends everything.
 #'
 #' The busy cue goes out before `build()` reads the input. A render that draws
 #' nothing (cancelled, or an error) ends the cue here; otherwise the view ends
@@ -46,14 +63,17 @@ viz_render <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' @param id The output id.
 #' @param build A function of no arguments returning the payload.
 #' @param session,el The block's session and the element id the view draws
-#'   into, for the busy cue; without them no cue is sent.
+#'   into, for the busy cue and the message; without them no cue is sent and
+#'   the payload is the output's value.
 #' @return Invisibly, `NULL`.
 #' @noRd
 viz_payload_output <- function(output, input, id, build, session = NULL,
                                el = NULL) {
   sent <- new.env(parent = emptyenv())
+  sent$n <- 0L
   full <- shiny::reactiveVal(0L)
   busy <- !is.null(session) && !is.null(el)
+  post <- busy && viz_posts(session)
   done <- function() if (busy) busy_cue_done(session, el)
   output[[id]] <- viz_render({
     full()
@@ -68,18 +88,49 @@ viz_payload_output <- function(output, input, id, build, session = NULL,
       shiny::req(FALSE, cancelOutput = TRUE)
     }
     sent$msg <- msg
+    columns <- msg$columns
     if (identical(msg$data_rev, sent$data_rev)) {
       msg$data <- NULL
+      # Left out, the key is absent; a block without columns sends `null`.
+      if (isTRUE(sent$has_columns) && identical(columns, sent$columns)) {
+        msg$columns <- NULL
+      }
     }
-    sent$data_rev <- msg$data_rev
-    msg
+    sent$data_rev <- sent$msg$data_rev
+    sent$columns <- columns
+    sent$has_columns <- TRUE
+    if (!post) {
+      return(msg)
+    }
+    session$sendCustomMessage("blockr-viz:payload",
+                              list(id = el, payload = msg))
+    sent$n <- sent$n + 1L
+    list(posted = sent$n, state_rev = msg$state_rev, data_rev = msg$data_rev)
   })
+  # Ahead of the block's other outputs (its preview), behind the observers
+  # that settle what the payload reads (priority 50 and up).
+  shiny::outputOptions(output, id, priority = 40)
   shiny::observeEvent(input[[paste0(id, "_need")]], {
     sent$msg <- NULL
     sent$data_rev <- NULL
+    sent$has_columns <- FALSE
     full(shiny::isolate(full()) + 1L)
   })
   invisible(NULL)
+}
+
+#' Whether a session's payloads go out as messages
+#'
+#' They do in a browser session. A test session has no browser to take a
+#' message, so there the output's value is the payload, which is also what
+#' the option `blockr.viz.post_payload = FALSE` gives.
+#' @noRd
+viz_posts <- function(session) {
+  if (!isTRUE(getOption("blockr.viz.post_payload", TRUE))) {
+    return(FALSE)
+  }
+  root <- if (is.function(session$rootScope)) session$rootScope() else session
+  !inherits(root, "MockShinySession")
 }
 
 #' The payload of a block view

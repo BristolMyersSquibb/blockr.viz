@@ -13,5 +13,7 @@
   },
   "include": ["inst/js/**/*.js", "inst/js/types.d.ts"],
   // The rewritten JS has its own strict config, tsconfig.core.json.
-  "exclude": ["inst/js/core", "inst/js/spec", "inst/js/table", "inst/js/chart"]
+  "exclude": ["inst/js/core", "inst/js/spec", "inst/js/table", "inst/js/chart",
+              // The bundles tools/bundle.js writes from those.
+              "inst/js/dist"]
 }

@@ -1,0 +1,5 @@
+# The stylesheets bundled per view, in load order: `<bundle> <file> ...`.
+# Read by tools/bundle.js (inst/css/dist/<bundle>.css) and by the R
+# dependencies (css_list()). chart.css and tooltip.css stay single files.
+core frame.css gear.css
+table table.css table-structured.css table-groups.css table-view.css table-cards.css

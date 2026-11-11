@@ -163,6 +163,18 @@ chart_spec_mapping <- function() {
       )
     ),
 
+    shape = chart_arg(
+      type = "column", null = "all circles",
+      applies = c("scatter", "line"),
+      gear = gear("Add mapping", "column", "Shape by"),
+      describe = paste(
+        "Column whose values set each point's marker: circle, triangle,",
+        "diamond, square, rounded square, pin, arrow, then again. Levels in",
+        "factor order, else sorted; a missing value is a circle. A line",
+        "chart shows its points when it is set."
+      )
+    ),
+
     highlight = chart_arg(
       type = type_named(type_values(), max = 1L),
       null = "no highlight",
@@ -472,6 +484,31 @@ chart_spec_lines <- function() {
       applies = "band",
       gear = gear("Reference lines", "column", "Reference high"),
       describe = "Column holding an upper reference limit per row, as `ref_min`."
+    ),
+
+    ref_lines = chart_arg(
+      type = "columns", null = "no lines",
+      applies = c("scatter", "line", "area"),
+      gear = gear("Reference lines", "columns", "From columns"),
+      slot = FALSE,
+      describe = paste(
+        "Columns holding reference limits (a normal range, grade",
+        "thresholds). Per panel, each column with a value in the panel's rows",
+        "draws a dashed horizontal line at the mean of those values,",
+        "labelled with the column's label, else its name."
+      )
+    ),
+
+    ref_line_colors = chart_arg(
+      type = type_named("string"), null = "the reference line color",
+      applies = c("scatter", "line", "area"),
+      slot = FALSE,
+      describe = paste(
+        "Colors of the `ref_lines`, by column, as",
+        "`list(LLN = \"#4DAF4A\", ULN = \"#4DAF4A\")`. A column without one",
+        "takes the reference line color."
+      ),
+      example = list(LLN = "#4DAF4A", ULN = "#4DAF4A")
     )
   )
 }
@@ -532,9 +569,10 @@ chart_spec <- function() {
     "format", "unit", "y_transform", "x_transform", "x_limits", "y_limits", "x_ticks", "y_ticks",
     "tooltip", "drill",
     "line_width", "point_size", "connect", "value_lines", "x_lines", "ymin",
-    "ymax", "linetype", "x_ranges", "legend", "highlight", "smoother",
+    "ymax", "linetype", "shape", "x_ranges", "legend", "highlight", "smoother",
     "identity_line", "box_points", "summary", "whiskers", "connect_centers",
     "band_window", "band_size", "band_min_n", "id", "ref_min", "ref_max",
+    "ref_lines", "ref_line_colors",
     "waterfall_totals", "bins", "show_n", "missing", "percent_of",
     "facet_scales", "facet_cols", "download", names(shared)
   )

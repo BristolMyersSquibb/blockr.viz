@@ -38,6 +38,7 @@ interface ChartConfig {
   ymin: string[] | null;
   ymax: string[] | null;
   linetype: string | null;
+  shape: string | null;
   x_ranges: Record<string, { value: number | string; label: string | null }[]> | null;
   legend: 'bottom' | 'top' | 'marks' | 'none';
   highlight: Record<string, { value: number | string; label: string | null }[]> | null;
@@ -53,6 +54,8 @@ interface ChartConfig {
   id: string | null;
   ref_min: string | null;
   ref_max: string | null;
+  ref_lines: string[] | null;
+  ref_line_colors: Record<string, string> | null;
   waterfall_totals: { value: number | string; label: string | null }[] | null;
   bins: number;
   show_n: 'none' | 'axis' | 'facet' | 'both';

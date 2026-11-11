@@ -12,7 +12,10 @@ viz_exporter_env <- new.env(parent = emptyenv())
 #'   exhibit with the [exhibit-accessors] only.
 #' @param ext The file extension.
 #' @param accepts A function of an exhibit: whether this format can write
-#'   it (Image needs a picture).
+#'   it (Image needs a picture). A block's menu asks it about a probe of the
+#'   exhibit: the kind and the picture are the exhibit's, and so is whether
+#'   it has a render object, but the data and the render object themselves
+#'   are stand-ins, since building them is the download's work.
 #' @param needs Packages the format needs; it is left out of the menu when
 #'   one is not installed.
 #' @param order The position in the menu, smallest first.
@@ -40,10 +43,12 @@ viz_exporters <- function() {
   all[order(vapply(all, `[[`, numeric(1L), "order"), names(all))]
 }
 
-# The formats that can write `x` on this machine.
+# The formats that can write `x` on this machine. The packages are looked up,
+# not loaded: the menu is built with every payload, and loading officer and
+# openxlsx for it costs the first chart half a second.
 viz_export_formats <- function(x, exporters = viz_exporters()) {
   Filter(function(f) {
-    all(vapply(f$needs, requireNamespace, logical(1L), quietly = TRUE)) &&
+    dt_pkg_installed(f$needs) &&
       isTRUE(tryCatch(f$accepts(x), error = function(e) FALSE))
   }, exporters)
 }
@@ -54,7 +59,8 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' the block's namespace, and returns the menu entries for the view's
 #' payload (`derived$downloads`). The exhibit is read when a format is
 #' clicked, and the board's download footer is put on it before the exporter
-#' writes it.
+#' writes it. The menu itself is built with every payload, so it reads only
+#' `probe()` and `shape()`, which compute nothing.
 #'
 #' @param exhibit A function of no arguments returning a `viz_exhibit`.
 #' @param enabled A function returning whether downloads are on.
@@ -66,25 +72,31 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' @param tables A function returning the block's data tables, or NULL
 #'   (viz_data_downloads()). With it the menu has two sections: Chart, the
 #'   registered formats, and Data, the tables.
-#' @return A reactive: a list of `list(id, label, ext)`, with `section` and
-#'   `count` when there are sections; empty when downloads are off.
+#' @param shape With `tables`: a function returning which of them there
+#'   are, without building them (viz_data_downloads()).
+#' @param probe A function of no arguments returning the exhibit the
+#'   formats are asked about (exhibit_probe_render()); by default the
+#'   exhibit itself.
+#' @return A reactive: a list of `list(id, label, ext)`, with `section` when
+#'   there are sections and `ask` on a data entry (the input that asks for
+#'   its count); empty when downloads are off.
 #' @noRd
 viz_downloads <- function(exhibit, enabled = function() TRUE,
                           session = shiny::getDefaultReactiveDomain(),
                           filename = "table", before = function() NULL,
-                          tables = NULL) {
+                          tables = NULL, shape = NULL, probe = exhibit) {
   formats <- viz_exporters()
   for (f in formats) {
     viz_download_handler(f, exhibit, session, filename, before)
   }
   data <- if (is.function(tables)) {
-    viz_data_downloads(tables, exhibit, session, filename)
+    viz_data_downloads(tables, shape, exhibit, session, filename)
   }
   shiny::reactive({
     if (!isTRUE(enabled())) {
       return(list())
     }
-    x <- tryCatch(exhibit(), error = function(e) NULL)
+    x <- tryCatch(probe(), error = function(e) NULL)
     if (!inherits(x, "viz_exhibit")) {
       return(list())
     }

@@ -366,28 +366,13 @@
     }
   });
 
-  /** `value_lines` on the value axis: a markLine on the first series, and axis bounds that take in the
-   * lines and the data. Mutates `series[0]` and `valAxis`. @param {any[]} series
-   * @param {any} valAxis @param {boolean} onX @param {boolean} fraction the axis runs 0..1 while
-   * the reader types percent @param {any} lines `[{value, label}]`
-   * @param {{ text: string, muted: string }} ink */
-  const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
-    const keep = /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(lines)).filter((x) => Number.isFinite(Number(x.value)));
-    const nm = keep.map((x) => x.label);
-    const typed = keep.map((x) => Number(x.value));
-    const vals = typed.map((/** @type {number} */ v) => (fraction ? v / 100 : v));
-    if (!vals.length || !series.length) return;
-    series[0].markLine = {
-      silent: true, symbol: 'none',
-      // onX: a horizontal chart, whose category axis is inverse.
-      data: vals.map((/** @type {number} */ v, /** @type {number} */ i) => guideLine(v, onX, 1,
-        nm[i] ? String(nm[i])
-          : typed[i] === 0 ? null
-            : (fraction ? V.util.num(typed[i]) + '%' : undefined), onX, ink))
-    };
-    // A bar axis keeps 0 in range; a `scale` axis fits the data. A line on
-    // the rounded edge would read as the frame, so the edge moves a step out.
-    const zero = !valAxis.scale;
+  /** Axis ends that take in reference lines at `vals` and the data: ECharts min and max callbacks
+   * (each gets the data extent), a rounded step past the lines and data. `zero` keeps 0 in range
+   * (a bar axis). A line on the rounded edge would read as the frame, so the edge moves a step out.
+   * @param {number[]} vals @param {boolean} zero
+   * @returns {{ min: (e: { min: number, max: number }) => number | undefined,
+   *             max: (e: { min: number, max: number }) => number | undefined }} */
+  const lineEdges = (vals, zero) => {
     const lo = NS.minOf(vals), hi = NS.maxOf(vals);
     /** @param {{min: number, max: number}} e */
     const ext = (e) => ({
@@ -413,8 +398,32 @@
       if (dir < 0 && zero && at === 0) return undefined;
       return onLine(at, st) ? at + dir * st : at;
     };
-    if (valAxis.max == null) valAxis.max = edge(1);
-    if (valAxis.min == null) valAxis.min = edge(-1);
+    return { min: edge(-1), max: edge(1) };
+  };
+
+  /** `value_lines` on the value axis: a markLine on the first series, and axis bounds that take in the
+   * lines and the data. Mutates `series[0]` and `valAxis`. @param {any[]} series
+   * @param {any} valAxis @param {boolean} onX @param {boolean} fraction the axis runs 0..1 while
+   * the reader types percent @param {any} lines `[{value, label}]`
+   * @param {{ text: string, muted: string }} ink */
+  const addValueLines = (series, valAxis, onX, fraction, lines, ink) => {
+    const keep = /** @type {{ value: any, label: string | null }[]} */ (NS.labelled(lines)).filter((x) => Number.isFinite(Number(x.value)));
+    const nm = keep.map((x) => x.label);
+    const typed = keep.map((x) => Number(x.value));
+    const vals = typed.map((/** @type {number} */ v) => (fraction ? v / 100 : v));
+    if (!vals.length || !series.length) return;
+    series[0].markLine = {
+      silent: true, symbol: 'none',
+      // onX: a horizontal chart, whose category axis is inverse.
+      data: vals.map((/** @type {number} */ v, /** @type {number} */ i) => guideLine(v, onX, 1,
+        nm[i] ? String(nm[i])
+          : typed[i] === 0 ? null
+            : (fraction ? V.util.num(typed[i]) + '%' : undefined), onX, ink))
+    };
+    // A bar axis keeps 0 in range; a `scale` axis fits the data.
+    const edges = lineEdges(vals, !valAxis.scale);
+    if (valAxis.max == null) valAxis.max = edges.max;
+    if (valAxis.min == null) valAxis.min = edges.min;
   };
 
   const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
@@ -497,7 +506,7 @@
   Object.assign(NS.axes, {
     colMeta, axisTitle, axisTypeFor, orderedCategories, orderLevels, yGutter,
     sharedDomain, niceShared, logTicks, logAxis, wrapLabel, axisLabelWithDisplay, valueAxis, categoryAxis,
-    xAxisLabels, thinnedLabelNote, guideLine, addValueLines, catOf, addCategoryMarks,
+    xAxisLabels, thinnedLabelNote, guideLine, lineEdges, addValueLines, catOf, addCategoryMarks,
     LABEL_LINE_H
   });
 })();

@@ -52,3 +52,27 @@ sum_model <- function(data, ...) {
   for (nm in names(args)) st[nm] <- list(args[[nm]])
   table_model_groups(st, data)
 }
+
+# A tile column as the view reads it: one entry per row again, the text
+# colour per row (inst/js/table/groups.js, dense(); the wire form is
+# table_groups_tile_wire()'s).
+tm_dense_col <- function(col, n) {
+  at <- col[["at"]]
+  if (!is.null(at)) {
+    for (k in intersect(c("disp", "key", "bg", "fg"), names(col))) {
+      full <- rep(NA, n)
+      full[unlist(at) + 1L] <- unlist(lapply(col[[k]], function(e) {
+        if (is.null(e)) NA else e
+      }))
+      col[[k]] <- full
+    }
+    col[["at"]] <- NULL
+  }
+  ink <- col[["ink"]]
+  if (!is.null(ink) && !is.null(col[["bg"]]) && is.null(col[["fg"]])) {
+    bg <- unlist(lapply(col[["bg"]], function(e) if (is.null(e)) NA else e))
+    col[["fg"]] <- unname(unlist(ink)[as.character(bg)])
+    col[["ink"]] <- NULL
+  }
+  col
+}

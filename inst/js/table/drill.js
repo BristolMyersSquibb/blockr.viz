@@ -293,6 +293,7 @@
         rowClass: (/** @type {number} */ i) => this.rowClass(i),
         secClass: (/** @type {number} */ s) => this.secClass(s),
         click: (/** @type {MouseEvent} */ e) => this.click(e),
+        windowed: () => this.paint(),
         lit: () => ({ rows: this.rows(), sections: this.sections() }),
         drills: () => clickable(grid.model)
       });

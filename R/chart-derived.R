@@ -132,7 +132,13 @@ summarize_stat <- function(vals, stat = "median_q1_q3") {
   vals <- sort(vals[is.finite(vals)])
   n <- length(vals)
   if (n == 0L) return(NULL)
-  q <- function(p) unname(stats::quantile(vals, p, type = 7L, names = FALSE))
+  # quantile(type = 7) on the sorted values, written out: a boxplot calls
+  # this for every box, and stats::quantile() costs more than the sort.
+  q <- function(p) {
+    h <- (n - 1) * p
+    lo <- floor(h)
+    vals[lo + 1L] + (h - lo) * (vals[min(lo + 2L, n)] - vals[lo + 1L])
+  }
   m  <- mean(vals)
   sd <- if (n > 1L) stats::sd(vals) else 0
   se <- sd / sqrt(n)

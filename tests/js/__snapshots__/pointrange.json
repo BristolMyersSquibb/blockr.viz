@@ -278,16 +278,6 @@
        "<div class=\"vz-tt-head\"><span>Week 8</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">n</span><span class=\"vz-tt-value\">12</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">Mean</span><span class=\"vz-tt-value\">33.98</span></div><div class=\"vz-tt-row\"><span class=\"vz-tt-label\">±1 SE</span><span class=\"vz-tt-value\">32.94 – 35.02</span></div>"
       ]
      }
-    },
-    {
-     "op": "setOption",
-     "notMerge": false,
-     "option": {
-      "series": [
-       {},
-       {}
-      ]
-     }
     }
    ]
   }

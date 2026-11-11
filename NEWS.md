@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9060
+# blockr.viz 0.3.0.9063
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -76,6 +76,28 @@ read.
 * A saved board is healed instead: a value the block does not take is reset
   to its default, with one warning naming it.
 
+## Speed
+
+* A block draws as soon as its own result is ready. On a board, a chart or
+  table used to wait until every other block had finished.
+* A click on a mark, a title edit or a gear setting sends the changed
+  settings alone. The rows and the column description go to the browser
+  once and again only when they change.
+* Charts that summarise (bar, histogram, box, point range, pie, treemap,
+  waterfall, and line, area and band with a summary) are summarised in R,
+  and the browser receives one row per mark. A bar chart over 80,000 rows
+  sends a few dozen rows where it sent all of them.
+* The compact groups layout summarises a faceted table in one pass and
+  sends only the cells that hold a value.
+* The download menu asks for its formats and row counts when it opens, and
+  the gear asks for the distinct values of a column when it opens. Neither
+  is computed for a block whose menu stays closed.
+* The page loads one script for the chart, one for the table and one they
+  share, built by `node tools/bundle.js`. With
+  `options(blockr.viz.dev_js = TRUE)` it loads the single source files.
+  Chart themes and the image export are loaded when first used.
+* A redraw no longer restyles the whole view while R computes.
+
 ## Changes in behaviour
 
 * The chart keeps `category`, `value`, `x`, `y` and `color` when its type
@@ -123,6 +145,9 @@ read.
   inside still sort by their total. The AE heatmap had sorted its arms by
   size. A tile painted by a worst level adds "Numbers: events" to the
   legend while the cells print their numbers.
+  The matrix columns come commonest first when the column is text, and in
+  their own order when it is a number, a date or an ordered factor, so a
+  visit or sequence number reads 1, 2, 3.
 * A table's header row stays at the top while its rows scroll, in every
   layout and in `interactive_table()`, with a spanner row above the row it
   spans. A table runs its full length in the panel, and in the records and
@@ -386,6 +411,17 @@ goes.
   draws a band instead of error bars.
 * `linetype` names a column whose values set a line's dash: the first value
   is solid, the others dashed, from the last point of the solid part on.
+* `shape` on a scatter or line names a column whose values set each point's
+  marker: circle, triangle, diamond, square, rounded square, pin, arrow,
+  then again, in factor level order, else sorted; a missing value is a
+  circle. A line shows its points when `shape` is set, however many lines
+  there are. The legend band lists the markers after the colour chips.
+* `ref_lines` on a scatter, line or area names columns holding reference
+  limits (a normal range, grade thresholds): in each panel, a column with a
+  value in the panel's rows draws a dashed line at the mean of those values,
+  labelled with the column's label, else its name, and the panel's y axis
+  takes it in. `ref_line_colors` colours them by column
+  (`list(LLN = "#4DAF4A")`); the others take the reference red.
 * `x_ranges` shades named stretches of x (`list(Recession = c("2008-01-01",
   "2009-06-30"))`). The gear edits them as one line, "Shaded":
   `Recession: 2008-01-01 to 2009-06-30; Covid: 2020-03-01 to 2021-06-30`.

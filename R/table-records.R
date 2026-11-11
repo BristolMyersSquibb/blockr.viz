@@ -79,6 +79,14 @@ table_frame_part <- function(kit, src, frame, layout, filter = identity) {
     exhibit = function(tt) {
       table_frame_exhibit(viz_values(st), frame(), tt, src, layout)
     },
+    # table_frame_exhibit() without its work: only the cards look draws.
+    probe = function() {
+      d <- frame()
+      shiny::req(is.data.frame(d))
+      cards <- identical(st$look(), "cards") &&
+        identical(layout, "records") && !table_is_structured(d)
+      new_viz_exhibit(d, render = if (cards) exhibit_probe_render())
+    },
     title_args = function(v) viz_slot_values(kit$spec, v)
   )
 }

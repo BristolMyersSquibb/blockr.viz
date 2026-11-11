@@ -37,10 +37,17 @@ DT_DIVERGING_FALLBACK <- c("#99000d", "#ffffff", "#08306b")
 # theme_palette(), resolve_scales_col()). The minimum version is compared by
 # hand because requireNamespace(versionCheck =) enforces the bound only while
 # loading the namespace. Keep it in step with DESCRIPTION's Suggests.
+# Asked once per session: every payload resolves a palette, and reading the
+# installed version from disk each time adds up.
 has_blockr_theme <- function() {
-  requireNamespace("blockr.theme", quietly = TRUE) &&
-    utils::packageVersion("blockr.theme") >= "0.0.0.9002"
+  if (is.null(viz_theme_env$ok)) {
+    viz_theme_env$ok <- requireNamespace("blockr.theme", quietly = TRUE) &&
+      utils::packageVersion("blockr.theme") >= "0.0.0.9002"
+  }
+  viz_theme_env$ok
 }
+
+viz_theme_env <- new.env(parent = emptyenv())
 
 #' Resolve a colour role through the board theme
 #'

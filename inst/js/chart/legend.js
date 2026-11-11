@@ -20,6 +20,36 @@
   // marks. The tooltip names the level instead.
   const LEGEND_MAX = 15;
 
+  // `shape`: the markers its levels take, in order, cycling past the last (ECharts built-ins).
+  const SHAPE_SYMBOLS = ['circle', 'triangle', 'diamond', 'rect', 'roundRect', 'pin', 'arrow'];
+  // Each marker as an SVG path in a 10 x 10 box: the legend's swatch, and the picture's (export.js).
+  /** @type {Record<string, string>} */
+  const SHAPE_PATHS = {
+    circle: 'M5 0.5 A4.5 4.5 0 1 1 5 9.5 A4.5 4.5 0 1 1 5 0.5 Z',
+    triangle: 'M5 0.5 L9.5 9.5 L0.5 9.5 Z',
+    diamond: 'M5 0 L10 5 L5 10 L0 5 Z',
+    rect: 'M1 1 H9 V9 H1 Z',
+    roundRect: 'M3.5 1 H6.5 A2.5 2.5 0 0 1 9 3.5 V6.5 A2.5 2.5 0 0 1 6.5 9 H3.5 ' +
+      'A2.5 2.5 0 0 1 1 6.5 V3.5 A2.5 2.5 0 0 1 3.5 1 Z',
+    pin: 'M5 10 L1.6 5.6 A4 4 0 1 1 8.4 5.6 Z',
+    arrow: 'M5 0 L9.5 10 L5 7.5 L0.5 10 Z'
+  };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  /** A marker's swatch: a small inline SVG in the chip's ink. @param {string} symbol
+   * @param {HTMLElement} parent */
+  const shapeSwatch = (symbol, parent) => {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 10 10');
+    svg.setAttribute('class', 'vz-chart-legend-shape');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', SHAPE_PATHS[symbol] || SHAPE_PATHS.circle);
+    svg.appendChild(path);
+    parent.appendChild(svg);
+    return svg;
+  };
+
   /** Can a legend of n levels be read? @param {number} n */
   const legendFits = (n) => n <= LEGEND_MAX;
 
@@ -132,23 +162,39 @@
     }
 
     /**
-     * Draw the chips, or hide the band with no spec or more chips than can be read.
-     * @param {{ col: string, items: Array<{ name: string, color: string }> } | null} spec
+     * Draw the chips, or hide the band with no spec or more chips than can be read. `shapes`, the
+     * markers of a `shape` column, follow the colour chips as a group of their own.
+     * @param {{ col: string | null, items: Array<{ name: string, color: string }>,
+     *           shapes?: { col: string, items: Array<{ name: string, symbol: string }> } | null } | null} spec
      * @param {{ position: 'top' | 'bottom', swatch: string }} [plan]
      */
     update(spec, plan) {
       const el = this.el;
-      if (!spec || !spec.items.length || !legendFits(spec.items.length) || !plan) {
+      const colours = !!spec && !!spec.col && spec.items.length > 0 && legendFits(spec.items.length);
+      const shapes = spec && spec.shapes && spec.shapes.items.length && legendFits(spec.shapes.items.length)
+        ? spec.shapes : null;
+      if (!spec || !plan || (!colours && !shapes)) {
         el.hidden = true;
         el.textContent = '';
         this.col = null;
         return;
       }
-      this.col = spec.col;
+      this.col = colours ? spec.col : null;
       this._place(plan.position === 'top');
       el.textContent = '';
       if (this._scope) this._scope.dispose();
       const scope = this._scope = this.view.scope.own(new V.Scope());
+      if (colours) this._colourChips(/** @type {any} */ (spec), plan, scope);
+      if (shapes) this._shapeChips(shapes);
+      el.hidden = false;
+      this.mark(this.view.selection.current);
+    }
+
+    /** The colour chips, after the colour column's title.
+     * @param {{ col: string, items: Array<{ name: string, color: string }> }} spec
+     * @param {{ swatch: string }} plan @param {VizScope} scope */
+    _colourChips(spec, plan, scope) {
+      const el = this.el;
       // Which column the chips are levels of, before them: its label, else
       // its name. Not when a level already reads the same.
       const meta = NS.axes.colMeta(this.view.columns, spec.col);
@@ -165,8 +211,21 @@
         mk('span', '', chip).textContent = it.name;
         scope.on(chip, 'click', () => this._click(spec.col, it.name));
       }
-      el.hidden = false;
-      this.mark(this.view.selection.current);
+    }
+
+    /** The shape chips: the column's label, else its name, then a marker and a name per level.
+     * They select nothing. @param {{ col: string, items: Array<{ name: string, symbol: string }> }} shapes */
+    _shapeChips(shapes) {
+      const el = this.el;
+      const meta = NS.axes.colMeta(this.view.columns, shapes.col);
+      mk('span', 'vz-chart-legend-title vz-chart-legend-title--shape', el).textContent =
+        String((meta && meta.label) || shapes.col);
+      for (const it of shapes.items) {
+        const chip = mk('span', 'vz-chart-legend-chip vz-chart-legend-chip--shape', el);
+        chip.dataset.shape = it.symbol;
+        shapeSwatch(it.symbol, chip);
+        mk('span', '', chip).textContent = it.name;
+      }
     }
 
     /** Above or below the panel grid. @param {boolean} top */
@@ -197,12 +256,12 @@
       const f = sel && sel.filters;
       const vals = f && f[this.col];
       const on = vals ? new Set(vals.map((v) => (NS.keys.isMissing(v) ? '' : String(v)))) : null;
-      for (const chip of this.el.querySelectorAll('.vz-chart-legend-chip')) {
+      for (const chip of this.el.querySelectorAll('button.vz-chart-legend-chip')) {
         const c = /** @type {HTMLElement} */ (chip);
         c.classList.toggle('vz-chart-legend-chip--on', !!on && on.has(c.dataset.level || ''));
       }
     }
   }
 
-  Object.assign(NS, { legendPlan, legendFits, cloudCentre, nameMark, Legend });
+  Object.assign(NS, { legendPlan, legendFits, cloudCentre, nameMark, Legend, SHAPE_SYMBOLS, SHAPE_PATHS });
 })();

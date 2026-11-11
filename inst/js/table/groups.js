@@ -34,6 +34,35 @@
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
+  /**
+   * A tile column as R sends it, back to one entry per row (R/table-groups-view.R,
+   * table_groups_tile_wire()): the filled rows spread over the column, the text
+   * colour looked up by fill. In place and once: the binding hands the same
+   * model to every render.
+   * @param {TableModel | null | undefined} m
+   */
+  function dense(m) {
+    if (!m || !Array.isArray(m.cols)) return;
+    for (const c of m.cols) {
+      const at = c.at;
+      if (Array.isArray(at)) {
+        for (const k of /** @type {const} */ (['disp', 'key', 'bg', 'fg'])) {
+          const held = /** @type {any[] | null | undefined} */ (c[k]);
+          if (!Array.isArray(held)) continue;
+          const full = new Array(m.n).fill(null);
+          for (let j = 0; j < at.length; j++) full[at[j]] = held[j];
+          /** @type {any} */ (c)[k] = full;
+        }
+        c.at = null;
+      }
+      const of = c.ink;
+      if (of && Array.isArray(c.bg) && !c.fg) {
+        c.fg = c.bg.map((b) => (b != null && of[b]) || null);
+        c.ink = null;
+      }
+    }
+  }
+
   class Groups extends /** @type {any} */ (T.Records) {
     /**
      * @param {TableFrame} frame
@@ -115,6 +144,7 @@
 
     /** @param {VizPayload} p */
     render(p) {
+      dense(/** @type {TableModel | null} */ (p.data));
       super.render(p);
       const d = /** @type {TableDerived} */ (p.derived || {});
       paintLegend(this.legend, this.model && !this.cardsOn() ? d.legend : null);
@@ -257,11 +287,7 @@
    * @returns {Promise<VizPicture>}
    */
   function picture(payload, width, ratio) {
-    const snap = root.snapdom;
-    if (!snap || typeof snap.toCanvas !== 'function') {
-      return Promise.reject(new Error('snapdom is not loaded'));
-    }
-    return V.capture({ width, height: 20000, draw: (host) => {
+    return snapdom().then((snap) => V.capture({ width, height: 20000, draw: (host) => {
       const scope = new V.Scope();
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
@@ -277,8 +303,25 @@
           width: Math.ceil(frame.el.offsetWidth), height: Math.ceil(frame.el.offsetHeight)
         }))
         .finally(() => scope.dispose());
-    } });
+    } }));
   }
+
+  /**
+   * SnapDOM, fetched from the package's js/vendor/snapdom.js the first time
+   * a picture is taken; every picture after that, and one asked for while
+   * it is on its way, waits for the same load. A page with no package folder
+   * to fetch from fails at once.
+   * @returns {Promise<any>}
+   */
+  const snapdom = () => {
+    const ready = () => root.snapdom && typeof root.snapdom.toCanvas === 'function';
+    const url = V.lazy.asset('js/vendor/snapdom.js');
+    const loaded = ready() || !url ? Promise.resolve() : V.lazy.script(url);
+    return loaded.then(() => {
+      if (!ready()) throw new Error('snapdom is not loaded');
+      return root.snapdom;
+    });
+  };
 
   T.layouts.groups = /** @type {TableLayoutClass} */ (/** @type {unknown} */ (Groups));
   T.picture = picture;

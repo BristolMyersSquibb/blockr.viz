@@ -1,18 +1,23 @@
 // @ts-check
 /**
- * The Shiny output binding every block view shares. R sends a view's payload
- * as the value of an output (R/kit-output.R); Shiny keeps the last value per
- * output id and hands it to the binding again whenever an element under that
- * id binds, so a re-mounted panel draws without asking R.
+ * The Shiny output binding every block view shares. A Shiny output decides
+ * when R builds a view's payload; the payload itself arrives as a
+ * `blockr-viz:payload` message, sent the moment it is built, and the
+ * output's value, which Shiny sends once the whole flush is done, is a token
+ * that says so (R/kit-output.R). A session without messages (a test) sends
+ * the payload as the output's value, and the binding draws that as well.
  *
  * What the binding adds to Shiny's:
+ * - the last payload posted for an id is kept: an element that binds after
+ *   the message came, or again after a move, draws from it without asking R;
  * - one view per element, built on the first value, with its own Scope;
  * - a value already drawn (Shiny replays it on every re-bind) is skipped;
  * - the view is told whether the rows are new to it (`rowsChanged`), so it
  *   parses and indexes them only then;
  * - rows are kept per id, because R leaves them out of a payload whose data
  *   revision the client holds; a payload without rows the client does not
- *   hold asks R for them once (`<id>_need`);
+ *   hold asks R for them once (`<id>_need`). The column description is kept
+ *   with them: such a payload carries `columns` only when they changed;
  * - an error without a message (a silent req()) keeps the picture;
  * - a light/dark switch (data-bs-theme anywhere on the page) renders the
  *   last value again, so a view reads the new colours;
@@ -28,8 +33,10 @@
   const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
   const V = /** @type {VizNamespace} */ (root.Blockr.viz);
 
-  /** @type {Map<string, { rev: number, data: unknown }>} */
+  /** @type {Map<string, { rev: number, data: unknown, columns: any }>} */
   const rows = new Map();
+  /** The last payload R posted for each id. @type {Map<string, VizPayload>} */
+  const posted = new Map();
   /** @type {Map<string, VizMount>} */
   const live = new Map();
   /** @type {Map<string, () => void>} */
@@ -69,6 +76,9 @@
     $el.on('shiny:unbound', onUnbound);
     scope.own({ dispose: () => $el.off('shiny:unbound', onUnbound) });
     /** @type {any} */ (el)._viz = m;
+    // A payload posted before this element bound, or to the one before it.
+    const waiting = posted.get(el.id);
+    if (waiting) draw(m, waiting);
     return m;
   }
 
@@ -84,7 +94,10 @@
     live.delete(id);
     dropping.set(id, pageScope.timeout(() => {
       dropping.delete(id);
-      if (!live.has(id)) rows.delete(id);
+      if (!live.has(id)) {
+        rows.delete(id);
+        posted.delete(id);
+      }
     }, grace));
   }
 
@@ -95,12 +108,44 @@
    * @param {number} grace
    */
   function render(el, payload, View, grace) {
-    const m = /** @type {any} */ (el)._viz || mount(el, View, grace);
+    const m = /** @type {VizMount} */ (/** @type {any} */ (el)._viz || mount(el, View, grace));
+    // The output's token: the payload came, or comes, as a message.
+    if (payload && /** @type {any} */ (payload).posted != null) {
+      const p = posted.get(el.id);
+      if (p) {
+        draw(m, p);
+      } else if (m.needRev !== payload.data_rev) {
+        // A token without its message: the page was not there to take it.
+        m.needRev = payload.data_rev;
+        V.util.send(el.id, 'need', payload.data_rev);
+      }
+      return;
+    }
+    draw(m, payload);
+  }
+
+  /**
+   * R's `blockr-viz:payload`: keep it, and draw it if its element has a view.
+   * @param {{ id?: string, payload?: VizPayload | null }} msg
+   */
+  function post(msg) {
+    if (!msg || !msg.id || !msg.payload) return;
+    posted.set(msg.id, msg.payload);
+    const m = live.get(msg.id);
+    if (m) draw(m, msg.payload);
+  }
+
+  /**
+   * @param {VizMount} m
+   * @param {VizPayload | null} payload
+   */
+  function draw(m, payload) {
+    const el = m.el;
     if (payload == null || m.last === payload) return;
     m.last = payload;
     let p = payload;
     if (p.data != null) {
-      rows.set(el.id, { rev: p.data_rev, data: p.data });
+      rows.set(el.id, { rev: p.data_rev, data: p.data, columns: p.columns });
     } else {
       const held = rows.get(el.id);
       if (!held || held.rev !== p.data_rev) {
@@ -110,7 +155,13 @@
         }
         return;
       }
-      p = Object.assign({}, p, { data: held.data });
+      // `columns` absent: the ones held. Present, null included: the new ones.
+      if (p.columns === undefined) {
+        p = Object.assign({}, p, { data: held.data, columns: held.columns });
+      } else {
+        held.columns = p.columns;
+        p = Object.assign({}, p, { data: held.data });
+      }
     }
     m.needRev = null;
     // The view parses its rows only when they are new to it.
@@ -166,11 +217,23 @@
           m.view.error(err.message);
         }
       },
-      clearError: () => {}
+      clearError: () => {},
+      // Shiny marks a recalculating output with a class on its element, and
+      // takes it off when the value arrives. The element holds the whole
+      // view, so each change restyles every node under it: a table of
+      // 57,000 nodes twice more than it needs. The view has its own busy
+      // cue (core/busy.js), and its payload arrives before the output's
+      // value, so the class would dim a picture that is already new.
+      showProgress: () => {}
     });
     shiny.outputBindings.register(b, name);
     return true;
   }
 
+  binding.post = post;
   V.binding = binding;
+  const shiny0 = root.Shiny;
+  if (shiny0 && typeof shiny0.addCustomMessageHandler === 'function') {
+    shiny0.addCustomMessageHandler('blockr-viz:payload', post);
+  }
 })();

@@ -108,7 +108,27 @@ test_that("rows: classes, NA and meta", {
   expect_identical(meta$d$class, "date")
   expect_identical(meta$t$tz, "Europe/Zurich")
   expect_identical(meta$u$unit, "days")
-  expect_identical(meta$f$n_unique, 3L)
+  # Counting distinct values waits for the gear's ask (viz_column_counts()).
+  expect_false(any(vapply(w$columns, function(c) "n_unique" %in% names(c),
+                          logical(1L))))
+})
+
+test_that("columns: no distinct counts, all_na kept", {
+  df <- data.frame(a = c(1, 1, 2), n = NA_real_, s = c(NA, "x", NA))
+  cols <- viz_wire_columns(df)
+  expect_false(any(vapply(cols, function(c) "n_unique" %in% names(c),
+                          logical(1L))))
+  expect_identical(vapply(cols, function(c) isTRUE(c$all_na), logical(1L)),
+                   c(FALSE, TRUE, FALSE))
+  expect_false(isTRUE(viz_wire_columns(df[0L, ])[[1L]]$all_na))
+})
+
+test_that("column counts: distinct values of the described columns", {
+  df <- data.frame(a = c(1, 1, 2), f = factor(c("x", "y", "x")),
+                   s = c(NA, "x", NA))
+  df$l <- list(1, 2, 3)
+  expect_identical(viz_column_counts(df), list(a = 2L, f = 2L, s = 2L))
+  expect_null(viz_column_counts(NULL))
 })
 
 test_that("rows: unknown classes are left out with a warning", {

@@ -13,10 +13,10 @@
 #' @noRd
 table_model_arrays <- function(m) {
   arr <- function(x) if (is.null(x) || is.list(x)) x else I(unname(x))
-  per_col <- c("disp", "raw", "key", "bg", "fg", "bar")
+  per_col <- c("disp", "raw", "key", "bg", "fg", "bar", "at")
   m$cols <- lapply(m$cols, function(cc) {
-    cc[intersect(per_col, names(cc))] <- lapply(cc[intersect(per_col,
-                                                             names(cc))], arr)
+    nm <- per_col[per_col %in% names(cc)]
+    cc[nm] <- lapply(cc[nm], arr)
     cc
   })
   if (!is.null(m$rows)) {

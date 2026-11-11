@@ -46,19 +46,26 @@
    * @param {string} type @param {Record<string, any>} v */
   const counts = (type, v) => !NS.DISTRIBUTION_TYPES.includes(type) && (v.func || 'count') === 'count';
 
+  /** The values of a column a picker offers. A column the chart's cells do not hold comes listed
+   * by R (derived.levels). @param {any} view @param {string} col */
+  const levelsOf = (view, col) => {
+    if (!col) return [];
+    const sent = view.derived.levels && view.derived.levels[col];
+    const all = sent ? sent.map(String)
+      : view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '');
+    return all.slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }));
+  };
+
   /** @param {any} view The chart view: its rows, column meta and derived. @returns {VizGearHost} */
   function host(view) {
     const meta = () => view.columns;
     /** @param {string} col */
-    const levels = (col) => (col
-      ? view._ix.levels(view.data, col, 'nz').filter((/** @type {string} */ x) => x !== '')
-        .slice(0, MAX_LEVELS).map((/** @type {string} */ x) => ({ value: x, label: x }))
-      : []);
+    const levels = (col) => levelsOf(view, col);
     /** @param {string} name */
-    const numeric = (name) => {
-      return V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));
-    };
+    const numeric = (name) =>
+      V.util.isNumeric(meta().find((/** @type {VizColumn} */ c) => c.name === name));
     return {
+      needsCounts: (cols) => cols.some((c) => c.n_unique == null),
       required(key, v) {
         const type = String(v.type || 'bar');
         if (type === 'histogram') return key === 'x';
@@ -96,18 +103,23 @@
       tiles: (key) => (key === 'type' ? TILES : null),
       columns(key, v, cols) {
         const type = String(v.type || 'bar');
-        const num = ['ref_min', 'ref_max', 'ymin', 'ymax'].includes(key) ||
+        const num = ['ref_min', 'ref_max', 'ref_lines', 'ymin', 'ymax'].includes(key) ||
           (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram') ||
           (key === 'value' && !ANY_COLUMN.includes(String(v.func || 'count')));
         if (num) return cols.filter((c) => numeric(c.name));
         // As 0.2: a facet offers columns with at most 10 distinct values, a
         // category columns that are not numbers or have at most 50. That keeps
         // a prepare script's helper columns and the measures out of them.
-        if (key === 'facet') return cols.filter((c) => c.n_unique <= MAX_FACET_LEVELS);
+        // The counts come from R once the tray is open; a column without one is
+        // left out until they are in, and the tray is drawn again then.
+        if (key === 'facet') return cols.filter((c) => c.n_unique != null && c.n_unique <= MAX_FACET_LEVELS);
         // Grid rows stack down the card, so they take more levels.
-        if (key === 'facet_row') return cols.filter((c) => c.n_unique <= MAX_FACET_ROW_LEVELS);
+        if (key === 'facet_row') {
+          return cols.filter((c) => c.n_unique != null && c.n_unique <= MAX_FACET_ROW_LEVELS);
+        }
         if (key === 'category') {
-          return cols.filter((c) => c.class !== 'number' || c.n_unique <= MAX_CATEGORY_LEVELS);
+          return cols.filter((c) => c.class !== 'number' ||
+            (c.n_unique != null && c.n_unique <= MAX_CATEGORY_LEVELS));
         }
         return cols;
       },

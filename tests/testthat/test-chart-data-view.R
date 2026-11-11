@@ -174,8 +174,8 @@ test_that("the data view message is checked on arrival", {
 })
 
 # The block server; `code(session, expr)` runs inside it. The payloads the
-# kit builds are recorded: after a click the kit renders twice, and the test
-# session reports the second, identical render as cancelled.
+# kit builds are recorded, since the test session reports a render the kit
+# does not send again as cancelled.
 dv_seen <- new.env(parent = emptyenv())
 
 dv_run <- function(blk, code) {
@@ -321,6 +321,21 @@ dv_menu <- function(expr) {
   dv_seen$p$derived$downloads
 }
 
+# The counts R answers with when the browser reaches for the menu, in the
+# order of the menu's entries `data`.
+dv_counts <- function(session, expr, data) {
+  sent <- NULL
+  root <- session$rootScope()
+  old <- root$sendCustomMessage
+  root$sendCustomMessage <- function(type, message) {
+    if (identical(type, "blockr-viz:counts")) sent <<- message$counts
+  }
+  on.exit(root$sendCustomMessage <- old)
+  expr$setInputs(dl_counts = as.numeric(Sys.time()))
+  session$flushReact()
+  unname(unlist(sent[vapply(data, `[[`, "", "id")]))
+}
+
 test_that("the menu has a Chart and a Data section, without the old Excel", {
   skip_if_not_installed("openxlsx")
   blk <- new_chart_block(type = "bar", category = "visit", drill = "auto")
@@ -336,7 +351,11 @@ test_that("the menu has a Chart and a Data section, without the old Excel", {
                      rep(c("Summary", "Selected rows", "All rows"), each = 2L))
     expect_identical(vapply(data, `[[`, "", "ext"),
                      rep(c("xlsx", "csv"), 3L))
-    expect_identical(vapply(data, `[[`, "", "count"),
+    # The entries carry no count: building the tables waits for the reader.
+    expect_null(data[[1L]]$count)
+    expect_identical(unique(vapply(data, `[[`, "", "ask")),
+                     expr$ns("dl_counts"))
+    expect_identical(dv_counts(session, expr, data),
                      rep(c("3 rows", "20 of 60", "60 rows"), each = 2L))
     expect_identical(nrow(utils::read.csv(expr$output$dl_data_all_csv)), 60L)
   })
@@ -383,9 +402,60 @@ test_that("a chart that draws rows offers Rows alone", {
     menu <- dv_menu(expr)
     data <- Filter(function(d) identical(d$section, "Data"), menu)
     expect_identical(vapply(data, `[[`, "", "label"), c("Rows", "Rows"))
-    expect_identical(data[[1L]]$count, "60 rows")
+    expect_identical(dv_counts(session, expr, data), rep("60 rows", 2L))
     expect_identical(nrow(utils::read.csv(expr$output$dl_data_rows_csv)), 60L)
   })
+})
+
+test_that("the menu is listed without building a table", {
+  built <- 0L
+  real <- chart_summary
+  local_mocked_bindings(chart_summary = function(...) {
+    built <<- built + 1L
+    real(...)
+  })
+  blk <- new_chart_block(type = "boxplot", category = "visit", value = "val")
+  dv_run(blk, function(session, expr) {
+    data <- Filter(function(d) identical(d$section, "Data"), dv_menu(expr))
+    expect_identical(unique(vapply(data, `[[`, "", "label")),
+                     c("Summary", "Rows"))
+    expect_identical(built, 0L)
+    expect_identical(dv_counts(session, expr, data),
+                     rep(c("3 rows", "60 rows"), each = 2L))
+    expect_identical(built, 1L)
+  })
+})
+
+test_that("chart_has_summary() agrees with chart_summary()", {
+  d <- dv_df()
+  cases <- list(
+    list(type = "bar", category = "visit"),
+    list(type = "bar", category = "nope"),
+    list(type = "bar"),
+    list(type = "pie", category = "arm"),
+    list(type = "treemap", category = "arm", color = "sex"),
+    list(type = "waterfall", category = "visit", value = "val", func = "sum"),
+    list(type = "boxplot", category = "visit", value = "val"),
+    list(type = "boxplot", category = "visit"),
+    list(type = "pointrange", category = "visit", value = "val"),
+    list(type = "pointrange", category = "visit", value = "nope"),
+    list(type = "histogram", x = "val"),
+    list(type = "scatter", x = "day", y = "val"),
+    list(type = "line", x = "day", y = "val"),
+    list(type = "gantt", category = "visit", x = "day", xend = "day")
+  )
+  for (v in cases) {
+    data <- if (identical(v$type, "histogram")) {
+      chart_hist_data(d, chart_hist(v, d))
+    } else {
+      d
+    }
+    expect_identical(chart_has_summary(data, v),
+                     !is.null(chart_summary(data, v)),
+                     info = paste(names(v), unlist(v), collapse = " "))
+  }
+  expect_false(chart_has_summary(d[0, ], cases[[1L]]))
+  expect_false(chart_has_summary(NULL, cases[[1L]]))
 })
 
 test_that("chart_summary_flat() puts the keys back as columns", {

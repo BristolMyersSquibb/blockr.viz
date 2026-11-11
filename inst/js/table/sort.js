@@ -69,7 +69,8 @@
    */
   function treeSort(rows, indent, cmp) {
     if (rows.length < 2) return rows.slice();
-    const top = Math.min(...rows.map((i) => indent[i]));
+    let top = indent[rows[0]];
+    for (const i of rows) if (indent[i] < top) top = indent[i];
     /** @type {number[][]} */
     const units = [];
     for (const i of rows) {

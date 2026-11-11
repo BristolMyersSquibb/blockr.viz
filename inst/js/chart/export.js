@@ -175,6 +175,21 @@
     ctx.textBaseline = 'top';
   };
 
+  /** A `shape` chip's marker, its 10 x 10 path scaled to where its swatch is on screen.
+   * @param {CanvasRenderingContext2D} ctx @param {any} k @param {HTMLElement} chip @param {number} bandY */
+  const paintShape = (ctx, k, chip, bandY) => {
+    const sw = chip.querySelector('.vz-chart-legend-shape');
+    const d = NS.SHAPE_PATHS[chip.dataset.shape || ''];
+    if (!sw || !d || typeof Path2D !== 'function') return;
+    const sr = sw.getBoundingClientRect();
+    ctx.save();
+    ctx.translate(sr.left - k.gridR.left, bandY + (sr.top - k.legR.top));
+    ctx.scale(sr.width / 10, sr.height / 10);
+    ctx.fillStyle = k.colorOf(chip, '#333');
+    ctx.fill(new Path2D(d));
+    ctx.restore();
+  };
+
   /** Legend chips where they are on screen; a dimmed chip keeps its opacity.
    * @param {CanvasRenderingContext2D} ctx @param {any} k */
   const paintLegend = (ctx, k) => {
@@ -208,6 +223,10 @@
           ctx.fillRect(sx, sy, sr.width, sr.height);
         }
         if (sw.nextElementSibling) drawLabel(sw.nextElementSibling);
+      } else if (/** @type {HTMLElement} */ (child).dataset.shape) {
+        paintShape(ctx, k, /** @type {HTMLElement} */ (child), bandY);
+        const label = /** @type {Element} */ (child).lastElementChild;
+        if (label) drawLabel(label);
       } else {
         drawLabel(/** @type {Element} */ (child));
       }
@@ -288,8 +307,12 @@
         el.id = 'vz-capture-chart-' + (++captureSeq);
         el.style.cssText = 'width:' + msg.width + 'px;height:' + msg.height + 'px;';
         const view = scope.own(new View(el, scope, { still: true }));
-        view.render(msg);
-        whenDrawn(view, scope)
+        // The board's theme first, so the view draws at once (view.js).
+        Promise.resolve(NS.themeReady(msg.derived))
+          .then(() => {
+            view.render(msg);
+            return whenDrawn(view, scope);
+          })
           .then(() => picture(view, { pixelRatio: msg.ratio }))
           .then(resolve, reject);
       })

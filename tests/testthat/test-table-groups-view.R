@@ -61,6 +61,7 @@ tg_col_keys <- function(w) {
 
 # One column against the reference payload's column.
 tg_expect_col <- function(g, w, n, pick, label) {
+  g <- tm_dense_col(g, n)
   expect_identical(g$num, identical(w$kind, "num") && !isTRUE(w$text),
                    label = paste(label, "num"))
   expect_length(g$disp, n)

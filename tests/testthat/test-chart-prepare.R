@@ -551,3 +551,43 @@ test_that("#| select(multiple = TRUE) makes a one-value factor a multi-select", 
   expect_identical(pick("a")$default, "OVR")
   expect_identical(script_control_records(sp)[[1L]]$kind, "multi")
 })
+
+test_that("a flag's `on` word, and a `when` control off with its flag", {
+  d <- data.frame(x = 1:3)
+  txt <- script_of(
+    "thr <- TRUE #| label = \"Add thresholds\", on = \"Remove thresholds\"",
+    ".pool <- c(\"LLN\", \"ULN\")",
+    "pick <- factor(.pool, levels = .pool) #| label = \"Pick\", when = \"thr\"",
+    "data"
+  )
+  p <- cb_parse(txt)
+  tpl <- "[Thresholds: {@pick}; ][{@thr}]"
+  band <- function(values) {
+    specs <- cb_specs(p, d, values)
+    args <- script_title_args(list(), specs, values)
+    list(
+      controls = vapply(script_control_records(specs), `[[`, "", "name"),
+      sv = names(script_control_values(specs, values)),
+      sub = viz_titles(list(subtitle = tpl), d, list(), args)$subtitle
+    )
+  }
+
+  on <- band(list())
+  expect_identical(on$controls, c("thr", "pick"))
+  expect_identical(on$sub$text, "Thresholds: all; Remove thresholds")
+  expect_length(on$sub$offers, 0L)
+
+  off <- band(list(thr = FALSE))
+  # The flag is offered under its label; the switched-off control is not.
+  expect_identical(off$controls, "thr")
+  expect_false("sv_pick" %in% off$sv)
+  expect_identical(off$sub$offers, list("thr"))
+  expect_false(grepl("Thresholds", off$sub$text %||% ""))
+
+  # A value sent for a switched-off control is not taken.
+  specs_off <- cb_specs(p, d, list(thr = FALSE))
+  expect_identical(
+    viz_script_values(list(pick = "ULN"), specs_off, list(thr = FALSE)),
+    list(thr = FALSE)
+  )
+})

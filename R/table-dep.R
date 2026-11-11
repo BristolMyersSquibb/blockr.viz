@@ -1,21 +1,29 @@
-# The table view's scripts (inst/js/table/scripts.txt) and stylesheets.
-table_view_dep <- memoise0(function() {
-  script <- file.path("table", js_script_list("table"))
-  css <- c("table.css", "table-structured.css", "table-groups.css",
-           "table-view.css", "table-cards.css")
+# The table view's scripts (inst/js/table/scripts.txt, bundled in
+# js/dist/table.js) and stylesheets (css/dist/table.css). SnapDOM, which takes
+# the groups table's picture (table/groups.js picture()), is fetched from
+# js/vendor/snapdom.js the first time a picture is taken.
+table_view_dep <- memoise_js(function(dev) {
   htmltools::tagList(
     blockr.ui::controls_dep(),
     viz_core_dep(),
     tooltip_card_dep(),
-    htmltools::htmlDependency(
-      name = "blockr-viz-table",
-      version = js_version(c(file.path("js", script), file.path("css", css)),
-                           "."),
-      src = system.file(package = "blockr.viz"),
-      # SnapDOM takes the groups table's picture (table/groups.js picture()).
-      script = c("js/vendor/snapdom.js", file.path("js", script)),
-      stylesheet = file.path("css", css)
-    )
+    table_js_dep()
+  )
+})
+
+table_js_dep <- memoise_js(function(dev) {
+  script <- if (dev) {
+    file.path("js", "table", js_script_list("table"))
+  } else {
+    "js/dist/table.js"
+  }
+  css <- if (dev) file.path("css", css_list("table")) else "css/dist/table.css"
+  htmltools::htmlDependency(
+    name = "blockr-viz-table",
+    version = js_version(c(script, css), "."),
+    src = system.file(package = "blockr.viz"),
+    script = script,
+    stylesheet = css
   )
 })
 

@@ -64,10 +64,34 @@
              labelPad: pts.labelPad };
   };
 
+  /** `ref_lines` in one panel as markLine data: a dashed line at each column's mean in the panel,
+   * in its `ref_line_colors` colour (else the reference red), labelled with the column's label, else
+   * its name. On a log axis a line at or below zero is left out. With their values, which the y
+   * axis takes in. @param {any} k @param {any} panel */
+  const panelRefColumns = (k, panel) => {
+    const { cfg, ink, ly, lm, look } = k;
+    const colours = cfg.ref_line_colors && typeof cfg.ref_line_colors === 'object' ? cfg.ref_line_colors : {};
+    const refs = option.domainParts.panelRefLines(cfg, panel)
+      .filter((/** @type {{ value: number }} */ r) => !ly || pos(r.value));
+    const data = refs.map((/** @type {{ col: string, value: number }} */ r) => {
+      const own = typeof colours[r.col] === 'string' && colours[r.col] ? colours[r.col] : null;
+      const text = NS.axes.axisTitle(look.columns, r.col);
+      return {
+        yAxis: r.value,
+        lineStyle: { color: own || ink.danger, type: 'dashed', width: 1.5 * lm, opacity: 0.8 },
+        // A function: a name with braces is not an ECharts template.
+        label: { show: true, position: 'insideEndTop', color: own || ink.muted,
+                 fontSize: ink.fontSize, fontWeight: 400, formatter: () => text }
+      };
+    });
+    return { data, values: refs.map((/** @type {{ value: number }} */ r) => r.value) };
+  };
+
   /** The helper lines, the band's limits and the identity line for the shared
    * markLine, with the domain both axes then share (`idDom`, null without
-   * the identity line). @param {any} k @param {any} ext @param {any[]} series */
-  const panelRefData = (k, ext, series) => {
+   * the identity line) and the `ref_lines` values (`refYs`).
+   * @param {any} k @param {any} ext @param {any[]} series @param {any} panel */
+  const panelRefData = (k, ext, series, panel) => {
     const { m, look, cfg, ink, lx, ly, lm, isBand, isLine } = k;
     const refData = [];
     // An unnamed line at 0 needs no label: the axis prints its value.
@@ -93,6 +117,8 @@
       if (ly && !pos(v)) return;
       refData.push(NS.axes.guideLine(Number(v), false, lm, refText(v, nm), false, ink));
     });
+    const cols = panelRefColumns(k, panel);
+    for (const d of cols.data) refData.push(d);
     if (isBand) for (const r of option.bandParts.bandRefLines(cfg, look.derived, ext, ink, look.columns)) refData.push(r);
     // y = x is a diagonal only when both axes use the same scale.
     const identityOn = cfg.identity_line === true && !isLine &&
@@ -114,11 +140,23 @@
         { coord: [idDom[1], idDom[1]] }
       ]);
     }
-    return { refData, idDom, idLog };
+    return { refData, idDom, idLog, refYs: cols.values };
   };
 
-  /** @param {any} k @param {any} ext @param {any} idDom @param {any} idLog */
-  const panelAxes = (k, ext, idDom, idLog) => {
+  /** The y axis takes in the panel's `ref_lines`: an end a line lies beyond moves a rounded step
+   * past it (as `value_lines` on a bar); an area keeps 0. A shared scale reads the panels back.
+   * @param {any} yAxis @param {number[]} refYs @param {boolean} area */
+  const refLineEnds = (yAxis, refYs, area) => {
+    if (!refYs.length) return;
+    const e = NS.axes.lineEdges(refYs, area);
+    const lo = NS.minOf(refYs), hi = NS.maxOf(refYs);
+    yAxis.min = (/** @type {any} */ d) => (lo < d.min ? e.min(d) : (area ? Math.min(0, d.min) : undefined));
+    yAxis.max = (/** @type {any} */ d) => (hi > d.max ? e.max(d) : undefined);
+    if (area) yAxis.scale = false;
+  };
+
+  /** @param {any} k @param {any} ext @param {any} idDom @param {any} idLog @param {number[]} refYs */
+  const panelAxes = (k, ext, idDom, idLog, refYs) => {
     const { m, cfg, ink, lx, ly, xCats, xlab, isLine, isTime } = k;
     // A line chart reads values off the y grid and dates off the crosshair,
     // so it has no x grid and no y axis line.
@@ -153,6 +191,7 @@
     if (m.y.cats) yAxis.data = m.y.cats;
     if (idDom && m.y.type === 'value') { yAxis.min = idDom[0]; yAxis.max = idDom[1]; }
     if (ext) { yAxis.min = ext.lo; yAxis.max = ext.hi; }
+    if (!ext && !idDom && !ly && m.y.type === 'value') refLineEnds(yAxis, refYs, cfg.type === 'area');
     if (cfg.type === 'area' && m.y.type === 'value' && yAxis.min == null) {
       yAxis.scale = false;
       yAxis.min = (/** @type {any} */ v) => Math.min(0, v.min);
@@ -174,7 +213,7 @@
       ? (ly ? { lo: ly.min, hi: ly.max } : option.bandParts.bandExtent(cfg, look.derived, panel, bandMany)) : null;
 
     // One markLine per series is all ECharts allows, so they share one.
-    const { refData, idDom, idLog } = panelRefData(k, ext, series);
+    const { refData, idDom, idLog, refYs } = panelRefData(k, ext, series, panel);
     if (series.length > 0 && refData.length) {
       series[series[mlTarget] ? mlTarget : 0].markLine = {
         silent: true, symbol: 'none',
@@ -195,7 +234,7 @@
       }
     }
 
-    const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog);
+    const { xAxis, yAxis, scrimAxis } = panelAxes(k, ext, idDom, idLog, refYs);
 
     // A line, a band and a scatter with series are clicked, not brushed (a
     // brush would race the click on a point).
@@ -273,12 +312,27 @@
     };
   };
 
-  /** The legend band's chips. @param {any} m */
-  const individualLegend = (m) => (m.legend && m.legend.items.length ? m.legend : null);
+  /** The legend band's chips: the colour's, and a `shape` column's markers as a group after them.
+   * @param {any} m */
+  const individualLegend = (m) => {
+    const colour = m.legend && m.legend.items.length ? m.legend : null;
+    if (!m.shape) return colour;
+    const syms = NS.SHAPE_SYMBOLS;
+    const shapes = { col: m.shape.col, items: m.shape.levels.map((/** @type {string} */ name, /** @type {number} */ i) =>
+      ({ name, symbol: syms[i % syms.length] })) };
+    return { ...(colour || { col: null, items: [] }), shapes };
+  };
 
   /** Is a series one of the panel's marks, not an overlay? @param {any} s */
   const isMark = (s) => s && s.id == null && !s.silent &&
     (s.type === 'scatter' || s.type === 'line');
+
+  /** A `shape` overlay's patch: each marker faded with its line.
+   * @param {any} s @param {boolean} filtered @param {(name: any) => boolean} onLevel */
+  const shapePatch = (s, filtered, onLevel) => ({
+    data: (s.data || []).map((/** @type {any} */ d) => (filtered && !onLevel(d.lv)
+      ? { ...d, itemStyle: { ...d.itemStyle, opacity: NS.SEL_DIM } } : d))
+  });
 
   /**
    * The highlight patch for one panel, from the series the panel was drawn
@@ -343,6 +397,8 @@
     const filtered = !!lit || !!inRange;
     const DIM = NS.SEL_DIM;
     const series = drawn.map((/** @type {any} */ s) => {
+      // The shape markers of a line follow their line.
+      if (s && s.blockrShape) return shapePatch(s, filtered, onLevel);
       if (!s || s.id != null) return {};
       /** @param {boolean} on */
       const look = (on) => NS.selStyle(on, filtered, ink, s.itemStyle);

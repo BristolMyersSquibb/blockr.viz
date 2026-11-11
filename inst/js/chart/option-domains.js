@@ -47,6 +47,31 @@
     return lo.map((l, i) => [l, hi[i]]).filter((p) => p[1]);
   };
 
+  // The types `ref_lines` draws on.
+  const REF_LINE_TYPES = ['scatter', 'line', 'area'];
+
+  /** `ref_lines` in one panel: each listed column with a finite value among the panel's rows, at
+   * the mean of those values (a limit is constant within a parameter, so the mean is that limit).
+   * A column the rows lack, or hold only missing values of, draws nothing here.
+   * @param {Record<string, any>} cfg @param {any} panel @returns {{ col: string, value: number }[]} */
+  const panelRefLines = (cfg, panel) => {
+    if (!REF_LINE_TYPES.includes(cfg.type)) return [];
+    const cols = /** @type {any[]} */ ([]).concat(cfg.ref_lines || []).filter(Boolean).map(String);
+    /** @type {{ col: string, value: number }[]} */
+    const out = [];
+    for (const col of cols) {
+      let sum = 0, n = 0;
+      for (const r of (panel && panel.rows) || []) {
+        const v = r[col];
+        if (v == null || v === '' || typeof v === 'boolean') continue;
+        const x = Number(v);
+        if (Number.isFinite(x)) { sum += x; n++; }
+      }
+      if (n) out.push({ col, value: sum / n });
+    }
+    return out;
+  };
+
   /** A panel's band levels, keyed by level. @param {ChartDerived} derived @param {any} panel */
   const bandBucket = (derived, panel) => {
     const bs = derived.band && derived.band.series;
@@ -80,6 +105,7 @@
       for (const s of panel.series) {
         for (const r of s.rows) for (const [a, b] of pairs) { scan(r[a]); scan(r[b]); }
       }
+      for (const r of panelRefLines(cfg, panel)) scan(r.value);
       if (m.isBand) {
         for (const v of bandValues(derived, panel, ['center', 'lo', 'hi', 'olo', 'ohi', 'out_y'])) scan(v);
       }
@@ -109,6 +135,7 @@
     let dropped = 0;
     if (m.logY) {
       dropped += NS.labelled(cfg.value_lines).filter((/** @type {{ value: any }} */ x) => !pos(x.value)).length;
+      for (const p of m.panels) dropped += panelRefLines(cfg, p).filter((r) => !pos(r.value)).length;
       if (m.isBand && cfg.box_points === 'outliers') {
         for (const p of m.panels) dropped += bandValues(derived, p, ['out_y']).filter((v) => !pos(v)).length;
       }
@@ -154,5 +181,5 @@
     return out;
   };
 
-  option.domainParts = { niceDomain, identityDomain, pos, intervalPairs, bandBucket, bandValues, logDomains, clampBand };
+  option.domainParts = { niceDomain, identityDomain, pos, intervalPairs, panelRefLines, bandBucket, bandValues, logDomains, clampBand };
 })();

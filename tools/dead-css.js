@@ -12,7 +12,7 @@ const postcss = require('postcss');
 const sp = require('postcss-selector-parser');
 
 const pkg = process.argv[2] || '.';
-const skip = (p) => /snapdom\.js$|[\\/]vendor[\\/]/.test(p);
+const skip = (p) => /snapdom\.js$|[\\/]vendor[\\/]|[\\/]dist[\\/]/.test(p);
 const list = (dir, ext) => fs.readdirSync(dir, { recursive: true })
   .map((f) => path.join(dir, f))
   .filter((p) => p.endsWith(ext) && !skip(p));

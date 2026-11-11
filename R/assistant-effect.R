@@ -6,10 +6,11 @@
 # config_effect, registration is a no-op.
 
 # Column-valued roles of the chart block, in display order. value_lines and
-# x_lines hold line positions, not column names, and are reported separately.
+# x_lines hold line positions, not column names, and are reported separately;
+# ref_lines names several columns and is checked column by column.
 dd_chart_roles <- c("category", "value", "x", "y", "xend", "color", "facet",
-                    "facet_row", "series", "label", "drill", "ymin", "ymax",
-                    "id")
+                    "facet_row", "series", "label", "shape", "drill", "ymin",
+                    "ymax", "id")
 
 # The first element of `v` as a string; "" for NULL.
 first_chr <- function(v) as.character(v %||% "")[1]
@@ -29,6 +30,16 @@ config_effect.chart_block <- function(block, args, data = NULL, ...) {
     # ".count" and "auto" are sentinels; every other value must be a column.
     if (!is.null(cols) && !(v %in% c(".count", "auto")) && !(v %in% cols)) {
       bad <- c(bad, paste0(r, " references '", v, "'"))
+    }
+  }
+  refs <- as.character(unlist(args$ref_lines))
+  refs <- refs[nzchar(refs)]
+  if (length(refs)) {
+    parts <- c(parts, paste0("ref_lines=", paste(refs, collapse = ",")))
+    if (!is.null(cols)) {
+      for (r in setdiff(refs, cols)) {
+        bad <- c(bad, paste0("ref_lines references '", r, "'"))
+      }
     }
   }
   # Reference line positions are echoed as given.
@@ -106,18 +117,26 @@ config_effect.table_block <- function(block, args, data = NULL, ...) {
   desc
 }
 
-# Registers the methods on blockr.ai's generic.
+# Registers the methods on blockr.ai's generic: now when blockr.ai is loaded,
+# else when it loads. Loading it here would cost every session that never
+# opens the assistant about half a second.
 register_assistant_effect <- function() {
-  if (!requireNamespace("blockr.ai", quietly = TRUE)) {
-    return(invisible(FALSE))
+  if (isNamespaceLoaded("blockr.ai")) {
+    return(invisible(assistant_effect_methods()))
   }
+  setHook(packageEvent("blockr.ai", "onLoad"),
+          function(...) assistant_effect_methods())
+  invisible(FALSE)
+}
+
+assistant_effect_methods <- function() {
   ns <- asNamespace("blockr.ai")
   if (!exists("config_effect", envir = ns, inherits = FALSE)) {
-    return(invisible(FALSE))
+    return(FALSE)
   }
   registerS3method("config_effect", "chart_block",
                    config_effect.chart_block, envir = ns)
   registerS3method("config_effect", "table_block",
                    config_effect.table_block, envir = ns)
-  invisible(TRUE)
+  TRUE
 }

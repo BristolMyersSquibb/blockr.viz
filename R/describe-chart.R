@@ -19,8 +19,8 @@ chart_mapping_args <- function(type = NULL) {
   } else {
     c("x", "y", "xend")
   }
-  c(roles, "series", "color", "facet", "facet_row", "label", "ymin", "ymax",
-    "id", "tooltip")
+  c(roles, "series", "color", "facet", "facet_row", "label", "shape", "ymin",
+    "ymax", "ref_lines", "id", "tooltip")
 }
 
 chart_ctor_defaults <- function() {

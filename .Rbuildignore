@@ -19,3 +19,5 @@
 ^docs$
 ^pkgdown$
 ^_blockr\.ui$
+^AGENTS\.md$
+^\.gitattributes$

@@ -127,9 +127,14 @@
     return rows;
   };
 
+  /** The values a row holds in a column: one, or in a cell the distinct
+   * values of its rows. @param {any} v @returns {any[]} */
+  const valuesOf = (v) => (Array.isArray(v) ? v : [v]);
+
   /**
    * Count per value of `dimCol`: distinct `id` when set, else rows. With
    * func 'identity' it is the id column's first value per group as it is.
+   * A cell counts the rows it stands for and brings its distinct ids.
    * @param {any[]} rows @param {Record<string, any>} cfg
    * @param {string | null | undefined} dimCol
    * @returns {Map<string, any>}
@@ -144,15 +149,18 @@
     for (const r of rows) {
       const dv = dimCol ? String(r[dimCol] ?? '') : 'Total';
       if (asIs) {
-        if (!out.has(dv) && r[idCol] != null) out.set(dv, r[idCol]);
+        const id = valuesOf(r[idCol])[0];
+        if (!out.has(dv) && id != null) out.set(dv, id);
       } else if (idCol) {
-        if (r[idCol] == null) continue;
-        let s = ids.get(dv);
-        if (!s) { s = new Set(); ids.set(dv, s); }
-        s.add(r[idCol]);
-        out.set(dv, s.size);
+        for (const id of valuesOf(r[idCol])) {
+          if (id == null) continue;
+          let s = ids.get(dv);
+          if (!s) { s = new Set(); ids.set(dv, s); }
+          s.add(id);
+          out.set(dv, s.size);
+        }
       } else {
-        out.set(dv, (out.get(dv) || 0) + 1);
+        out.set(dv, (out.get(dv) || 0) + (r['.n'] ?? 1));
       }
     }
     return out;
@@ -179,5 +187,5 @@
     return v === surface || v === 'both';
   };
 
-  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, labelCounts, withCount, countOn });
+  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, countOn });
 })();

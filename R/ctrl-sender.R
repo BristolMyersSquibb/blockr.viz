@@ -84,7 +84,6 @@ ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
 
   shiny::observe({
     tgt <- ctrl_resolve_target(r_target(), session)
-    claims <- r_claims()
 
     if (nzchar(last_target) && !identical(last_target, tgt)) {
       ctrl_clear(last_target, state = list(columns = list()),
@@ -93,9 +92,12 @@ ctrl_sender <- function(r_target, r_claims, r_pristine = NULL,
     }
     last_target <<- tgt
 
+    # Without a target nothing is sent, so the claims are not built and a
+    # click does not run this observer.
     if (!nzchar(tgt)) {
       return()
     }
+    claims <- r_claims()
 
     # Read the latch on every pass: it carries this observer's dependency on
     # the drill selection.

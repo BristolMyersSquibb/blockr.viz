@@ -121,9 +121,14 @@ type ChartDerived = {
   band: ChartBand | null;
   smoother: ChartSmoother | null;
   hist: ChartHist | null;
+  /** The values of a column the gear lists and the chart's cells do not hold. */
+  levels?: Record<string, string[]> | null;
   scales: ChartScale | null;
   palette: string[];
   theme: ChartTheme;
+  /** The theme's script, relative to the page, when it comes as a file
+   * (R/chart-dep.R echart_theme_src()); absent for "default" and "blockr". */
+  theme_src?: string | null;
   ctrl_choices: VizChoice[];
   script: VizScript;
   /** Device pixels per CSS pixel the picture is composed with, 1 to 6. */
@@ -221,6 +226,14 @@ interface ChartAxes {
   measure: string;
 }
 
+/** The legend band's chips (legend.js Legend.update()): the colour column's, and a `shape`
+ * column's markers as a group after them. */
+interface ChartLegendSpec {
+  col: string | null;
+  items: Array<{ name: string; color: string }>;
+  shapes?: { col: string; items: Array<{ name: string; symbol: string }> } | null;
+}
+
 /** What the models and options read (model-common.js settings()): the
  * payload's config with the spec's defaults, the chart's own defaults, and
  * an aggregated chart's axes. R's `derived` travels beside it. */
@@ -275,7 +288,7 @@ interface ChartFamily {
   name: 'aggregated' | 'timeline' | 'individual';
   model(input: { rows: any[]; ix: any; columns: VizColumn[]; cfg: ChartSettings; derived: ChartDerived }): any;
   option(m: any, look: ChartLook): any;
-  legend(m: any, cfg: ChartSettings, derived: ChartDerived): { col: string; items: Array<{ name: string; color: string }> } | null;
+  legend(m: any, cfg: ChartSettings, derived: ChartDerived): ChartLegendSpec | null;
   widths: boolean;
   alwaysHighlight: boolean;
   attach(view: ChartView, slot: ChartSlot): void;
@@ -316,6 +329,10 @@ interface ChartSlot {
   brushable: boolean;
   /** The last brush's rectangle, to draw again after a redraw. */
   brushAreas: any[] | null;
+  /** What the last draw set on the chart: the panel option, its limits/ticks key and the chart. */
+  drawnPo?: any;
+  drawnDec?: string;
+  drawnChart?: any;
   /** The selection that brush made, as JSON. */
   brushSel: string | null;
   /** What a drill brush has caught so far; sent when the drag ends. */

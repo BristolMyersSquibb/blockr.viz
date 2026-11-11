@@ -42,6 +42,7 @@ new_chart_block(
   ymin = NULL,
   ymax = NULL,
   linetype = NULL,
+  shape = NULL,
   x_ranges = NULL,
   legend = "bottom",
   highlight = NULL,
@@ -57,6 +58,8 @@ new_chart_block(
   id = NULL,
   ref_min = NULL,
   ref_max = NULL,
+  ref_lines = NULL,
+  ref_line_colors = NULL,
   waterfall_totals = NULL,
   bins = 30L,
   show_n = "none",
@@ -150,6 +153,8 @@ new_chart_block(
 
 \item{linetype}{Column whose values set a line's dash: the first value is solid, the others dashed. Default \code{NULL}: all solid.}
 
+\item{shape}{Column whose values set each point's marker: circle, triangle, diamond, square, rounded square, pin, arrow, then again. Levels in factor order, else sorted; a missing value is a circle. A line chart shows its points when it is set. Default \code{NULL}: all circles.}
+
 \item{x_ranges}{Named stretches of x shaded behind the marks, as \code{list(Recession = c("2008-01-01", "2009-06-30"))}. Text form: "Recession: 2008-01-01 to 2009-06-30; ...". Default \code{NULL}: no ranges.}
 
 \item{legend}{Where the color legend goes. "marks" writes the names on the marks where the type has room, and keeps the legend elsewhere. One of \code{"bottom"}, \code{"top"}, \code{"marks"}, \code{"none"}. Default: \code{"bottom"}.}
@@ -179,6 +184,10 @@ new_chart_block(
 \item{ref_min}{Column holding a lower reference limit per row, drawn as a dashed line at its median and labelled with its spread. Default \code{NULL}: no lower limit.}
 
 \item{ref_max}{Column holding an upper reference limit per row, as \code{ref_min}. Default \code{NULL}: no upper limit.}
+
+\item{ref_lines}{Columns holding reference limits (a normal range, grade thresholds). Per panel, each column with a value in the panel's rows draws a dashed horizontal line at the mean of those values, labelled with the column's label, else its name. Default \code{NULL}: no lines.}
+
+\item{ref_line_colors}{Colors of the \code{ref_lines}, by column, as \code{list(LLN = "#4DAF4A", ULN = "#4DAF4A")}. A column without one takes the reference line color. Default \code{NULL}: the reference line color.}
 
 \item{waterfall_totals}{Steps of a waterfall drawn as totals, from zero. Default \code{NULL}: no totals.}
 

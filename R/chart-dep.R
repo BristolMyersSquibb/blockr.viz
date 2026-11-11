@@ -1,6 +1,7 @@
-# The chart block's dependencies: blockr.ui's controls, the ECharts themes,
-# the JS core and specs, then the scripts in `inst/js/chart/scripts.txt`.
-drilldown_chart_dep <- memoise0(function() {
+# The chart block's dependencies: blockr.ui's controls, the folder of
+# ECharts themes, the JS core and specs, then the scripts in
+# `inst/js/chart/scripts.txt` (bundled in js/dist/chart.js).
+drilldown_chart_dep <- memoise_js(function(dev) {
   htmltools::tagList(
     blockr.ui::controls_dep(),
     drilldown_echarts_themes_dep(),
@@ -12,9 +13,12 @@ drilldown_chart_dep <- memoise0(function() {
   )
 })
 
-chart_js_dep <- memoise0(function() {
-  script <- c("drilldown-theme-register.js",
-              file.path("chart", js_script_list("chart")))
+chart_js_dep <- memoise_js(function(dev) {
+  script <- if (dev) {
+    c("drilldown-theme-register.js", file.path("chart", js_script_list("chart")))
+  } else {
+    "dist/chart.js"
+  }
   htmltools::htmlDependency(
     name = "chart-js",
     version = js_version(script),
@@ -56,24 +60,45 @@ tooltip_card_dep <- memoise0(function() {
   )
 })
 
-# The echarts themes bundled in echarts4r, loaded so that
+# The echarts themes bundled in echarts4r, as a served folder with no
+# script: the chart view loads the one the board names
+# (`derived$theme_src`, echart_theme_src()) before it draws, so that
 # `echarts.init(el, name)` resolves the name.
 drilldown_echarts_themes_dep <- memoise0(function() {
-  theme_dir <- system.file(
-    "htmlwidgets/lib/echarts-6.0.0/themes", package = "echarts4r"
-  )
-  scripts <- c(
-    "dark.js", "vintage.js", "westeros.js", "essos.js", "wonderland.js",
-    "walden.js", "chalk.js", "infographic.js", "macarons.js", "roma.js",
-    "shine.js", "purple-passion.js"
-  )
-  scripts <- scripts[file.exists(file.path(theme_dir, scripts))]
-  if (!length(scripts)) return(NULL)
-
+  theme_dir <- echart_theme_dir()
+  if (!nzchar(theme_dir)) return(NULL)
   htmltools::htmlDependency(
     name = "echarts4r-themes",
     version = "6.0.0",
     src = theme_dir,
-    script = scripts
+    script = NULL,
+    all_files = TRUE
   )
 })
+
+echart_theme_dir <- function() {
+  system.file("htmlwidgets/lib/echarts-6.0.0/themes", package = "echarts4r")
+}
+
+# The themes the board option offers that come as files
+# (new_drilldown_theme_option()); "default" is ECharts' own and the JS
+# registers "blockr" itself.
+ECHART_THEME_FILES <- c(
+  "dark", "vintage", "westeros", "essos", "wonderland", "walden", "chalk",
+  "infographic", "macarons", "roma", "shine", "purple-passion"
+)
+
+# Where the page finds a theme's script, relative to the page, as Shiny
+# serves the theme dependency; NULL for a theme with no file.
+echart_theme_src <- function(theme) {
+  if (!is.character(theme) || length(theme) != 1L ||
+        !theme %in% ECHART_THEME_FILES) {
+    return(NULL)
+  }
+  dep <- drilldown_echarts_themes_dep()
+  file <- paste0(theme, ".js")
+  if (is.null(dep) || !file.exists(file.path(dep$src$file, file))) {
+    return(NULL)
+  }
+  paste0(dep$name, "-", dep$version, "/", file)
+}

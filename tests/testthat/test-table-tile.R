@@ -29,6 +29,23 @@ test_that("tile columns order by count and carry the worst level", {
   expect_identical(s1[[rash$wkey]], 3L)  # SEVERE
 })
 
+test_that("tile columns over a number or ordered factor keep their order", {
+  # Level 3 has the most rows, 1 the fewest: count order would put 3 first.
+  d <- data.frame(SUBJ = c("s1", "s1", "s2", "s2", "s3", "s3", "s1"),
+                  SEQ = c(1, 2, 2, 3, 3, 3, 10))
+  flevels <- function(d) {
+    p <- groups_prepare_summaries(d, by = "SUBJ", summaries = list(list(
+      type = "simple", func = "count", show = "tile", facet = "SEQ")))
+    vapply(p$plan, function(x) x$flevel, "")
+  }
+  expect_identical(flevels(d), c("1", "2", "3", "10"))
+  d$SEQ <- factor(d$SEQ, levels = c(10, 1, 2, 3), ordered = TRUE)
+  expect_identical(flevels(d), c("10", "1", "2", "3"))
+  # Text still orders by count.
+  d$SEQ <- as.character(d$SEQ)
+  expect_identical(flevels(d)[[1L]], "3")
+})
+
 test_that("without a paint column the tile is painted by its value", {
   p <- groups_prepare_summaries(tile_fixture(), by = c("ARM", "SUBJ"),
                               summaries = tile_summary())
@@ -192,4 +209,42 @@ test_that("a matrix painted by its value adds no legend", {
   st <- list(layout = "groups", look = "compact", by = c("ARM", "SUBJ"),
              summaries = tile_summary())
   expect_null(groups_legend_spec(table_model_groups(st, tile_fixture())$prep))
+})
+
+test_that("a tile column travels sparse, the text colour once per fill", {
+  col <- list(
+    name = "RASH",
+    disp = c(NA, NA, "3", NA, NA, NA, NA, "1", NA, NA),
+    key = c(NA, NA, 3, NA, NA, NA, NA, 1, NA, NA),
+    bg = c(NA, NA, "#c00", NA, NA, NA, NA, "#fee", NA, NA),
+    fg = c(NA, NA, "#fff", NA, NA, NA, NA, "#000", NA, NA)
+  )
+  w <- table_groups_tile_wire(col)
+  expect_identical(w$at, c(2L, 7L))
+  expect_identical(w$disp, c("3", "1"))
+  expect_identical(w$key, c(3, 1))
+  expect_identical(w$bg, c("#c00", "#fee"))
+  expect_null(w[["fg"]])
+  expect_identical(w$ink, list("#c00" = "#fff", "#fee" = "#000"))
+
+  # Mostly filled: every row stays, the colours still go once per fill.
+  full <- list(name = "x", disp = as.character(1:10), key = as.numeric(1:10),
+               bg = rep(c("#c00", "#fee"), 5), fg = rep(c("#fff", "#000"), 5))
+  w <- table_groups_tile_wire(full)
+  expect_null(w$at)
+  expect_length(w$disp, 10L)
+  expect_identical(w$ink, list("#c00" = "#fff", "#fee" = "#000"))
+
+  # A text colour that does not follow from the fill stays per row.
+  odd <- full
+  odd$fg[[3L]] <- "#123"
+  w <- table_groups_tile_wire(odd)
+  expect_identical(w[["fg"]], odd$fg)
+  expect_null(w$ink)
+
+  # A painted cell without a value keeps its row.
+  blank <- col
+  blank$bg[[1L]] <- "#fee"
+  blank$fg[[1L]] <- "#000"
+  expect_identical(table_groups_tile_wire(blank)$at, c(0L, 2L, 7L))
 })

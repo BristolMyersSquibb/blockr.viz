@@ -117,17 +117,66 @@ test('the theme R names is the ECharts theme; a new one draws new instances', ()
   c.close();
 });
 
+// The chart's window fails a script tag at once, so the tags the view adds
+// are kept off the page and driven by hand.
+const holdScripts = (env) => {
+  const tags = [];
+  const head = env.win.document.head;
+  const add = head.appendChild.bind(head);
+  head.appendChild = (el) => (el.tagName === 'SCRIPT' ? (tags.push(el), el) : add(el));
+  env.scripts = tags;
+};
+const flush = async () => { for (let i = 0; i < 4; i++) await Promise.resolve(); };
+
+test('a theme with a script draws once the script has run; the last payload held draws', async () => {
+  const src = 'echarts4r-themes-6.0.0/dark.js';
+  const c = D.open(BAR, { before: holdScripts, derived: { theme: 'dark', theme_src: src } });
+  const tags = () => c.env.scripts.filter((el) => el.getAttribute('src') === src);
+  assert.strictEqual(tags().length, 1);
+  assert.strictEqual(c.block._slots.filter((sl) => sl.chart).length, 0, 'nothing drawn yet');
+  c.send({ ...c.config, orientation: 'vertical' }, { derived: { theme: 'dark', theme_src: src } });
+  assert.strictEqual(tags().length, 1, 'one script for both payloads');
+  tags()[0].onload();
+  await flush();
+  assert.strictEqual(c.chart().theme, 'dark');
+  assert.strictEqual(c.block.settings.orientation, 'vertical', 'the last payload is drawn');
+  // Loaded once: a later payload draws at once.
+  c.send(BAR, { derived: { theme: 'dark', theme_src: src } });
+  assert.strictEqual(c.block.settings.orientation, 'horizontal');
+  c.close();
+});
+
+test('a theme script that fails to load draws the chart anyway', async () => {
+  const src = 'echarts4r-themes-6.0.0/roma.js';
+  const c = D.open(BAR, { before: holdScripts, derived: { theme: 'roma', theme_src: src } });
+  c.env.scripts[0].onerror();
+  await flush();
+  assert.ok(c.chart(), 'drawn');
+  c.close();
+});
+
 test('a payload without rows draws from the rows of its data revision', () => {
-  const c = D.open(BAR);
+  const c = D.open({ ...BAR, color: 'AESEV' });
   const first = c.block.data;
   const ix = c.block._ix;
-  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
+  c.send({ ...BAR, color: 'AESEV', position: 'dodge' }, { data: null, dataRev: 1 });
   assert.strictEqual(c.block.data, first);
   assert.strictEqual(c.block._ix, ix, 'held rows are not parsed or indexed again');
   assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
-  c.send(BAR, { data: null, dataRev: 2 });
+  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 2 });
   assert.ok(c.inputs().some((x) => x.name === D.ID + '_need' && x.value === 2),
             'rows it does not hold are asked for');
+  c.close();
+});
+
+test('a bar holds one row per mark, and a new mapping brings new ones', () => {
+  const c = D.open(BAR);
+  const first = c.block.data;
+  assert.ok(first.length < require('../cases').F.data.AETERM.length);
+  assert.ok(first.every((r) => typeof r['.n'] === 'number'));
+  c.send({ ...BAR, color: 'AESEV' }, { data: null, dataRev: 1 });
+  assert.notStrictEqual(c.block.data, first);
+  assert.ok(c.block.legend.el.querySelector('.vz-chart-legend-chip'));
   c.close();
 });
 

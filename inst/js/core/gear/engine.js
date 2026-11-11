@@ -20,6 +20,7 @@
   V.gear = V.gear || /** @type {VizGearNamespace} */ ({});
   const S = V.gear.sections;
   const C = V.gear.controls;
+  const K = V.gear.columnCounts;
   const P = V.gear.profile;
 
   /** Controls taller than the control line: they take the whole row and
@@ -86,7 +87,29 @@
       /** @type {VizScope | null} */
       this._renderScope = null;
       this._drawn = '';
+      /** The tray is open; the columns whose counts were asked for; counts arrived. */
+      this._open = false;
+      this._askedFor = /** @type {VizColumn[] | null} */ (null);
+      this._countsRev = 0;
       this.disposed = false;
+      K.add(this);
+    }
+
+    /** Open, the gear asks R for the columns' distinct counts (counts.js).
+     * @param {boolean} on */
+    setOpen(on) {
+      this._open = on;
+      K.ask(this);
+    }
+
+    /** R's answer: the counts go onto the columns held (the view's columns are these
+     * objects) and the tray is drawn again with them.
+     * @param {Record<string, number>} counts */
+    counts(counts) {
+      if (this.disposed) return;
+      K.put(this._cols, counts);
+      this._countsRev += 1;
+      if (this._key() !== this._drawn) this.render();
     }
 
     /** @param {VizPayload} p */
@@ -102,6 +125,7 @@
       }
       this.prime(p);
       this._rev = p.state_rev || 0;
+      K.ask(this);
       if (this._key() !== this._drawn) this.render();
     }
 
@@ -180,7 +204,10 @@
         /** @type {VizGearField} */ (this.spec[k].gear).control === 'template'
           ? V.titles.unknownTokens(String(values[k] ?? ''), t, this._cols) : null
       ]);
-      return JSON.stringify([values, this._cols, [t.title, t.subtitle, t.caption],
+      // The selection is no row: a click moves it and must not rebuild the tray.
+      const rest = Object.assign({}, values);
+      delete rest.selection;
+      return JSON.stringify([rest, this._cols, this._countsRev, [t.title, t.subtitle, t.caption],
                              Array.from(this._added), shown, this._prof ? this._prof.sig : null]);
     }
 
@@ -273,7 +300,7 @@
 
     render() {
       if (this.disposed) return;
-      const focus = this._saveFocus();
+      const focus = V.gear.focus.save(this.el);
       if (this._renderScope) this._renderScope.dispose();
       const rs = this._renderScope = new V.Scope();
       const values = this._live(this.values());
@@ -292,7 +319,7 @@
       });
       S.assemble(this.el, built, this._group, (g) => { this._group = g; }, this.title,
                  this._prof ? this._prof.groups : undefined);
-      this._restoreFocus(focus);
+      V.gear.focus.restore(this.el, focus);
     }
 
     /** One row: its label over its controls. A checkbox has a label too,
@@ -349,34 +376,6 @@
         label: 'Add a mapping', onChange: (/** @type {string} */ v) => add(keys[labels.indexOf(v)])
       });
       scope.own({ dispose: () => inst.destroy() });
-    }
-
-    /** A field being typed in, so a re-render can put it back. */
-    _saveFocus() {
-      const a = /** @type {HTMLInputElement | null} */ (document.activeElement);
-      if (!a || !this.el.contains(a)) return null;
-      const key = a.getAttribute('data-gear-input');
-      if (!key) return null;
-      const typed = a.tagName === 'INPUT' || a.tagName === 'TEXTAREA';
-      return { key, text: typed ? a.value : null,
-               start: typed ? a.selectionStart : null, end: typed ? a.selectionEnd : null };
-    }
-
-    /** @param {{ key: string, text: string | null, start: number | null,
-     *            end: number | null } | null} f */
-    _restoreFocus(f) {
-      if (!f) return;
-      const el = /** @type {HTMLInputElement | null} */ (
-        this.el.querySelector('[data-gear-input="' + f.key + '"]'));
-      if (!el) return;
-      if (f.text != null && el.value !== f.text) {
-        el.value = f.text;
-        el.dispatchEvent(new Event('input'));
-      }
-      el.focus();
-      if (f.start != null && typeof el.setSelectionRange === 'function') {
-        try { el.setSelectionRange(f.start, f.end); } catch (e) { /* not a text field */ }
-      }
     }
 
     /** Take what the words in the titles read from a payload (the settings, the columns,
@@ -585,6 +584,7 @@
     dispose() {
       if (this.disposed) return;
       this.disposed = true;
+      K.remove(this);
       if (this._renderScope) this._renderScope.dispose();
       this._renderScope = null;
       this._pending.clear();
