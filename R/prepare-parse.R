@@ -242,11 +242,17 @@ cb_widget_for <- function(v) {
 #' A statement above the last declaration that is not an assignment cannot be
 #' bound lazily and is run. Nothing below the last declaration is run.
 #'
+#' Later declarations see each control's *current* value (`values`), not
+#' just its declared default, so a choice list can follow another control:
+#' a visit picker whose pool drops unscheduled visits while an "Include
+#' unscheduled" flag is off. A spec's `default` stays the declared value.
+#'
 #' @param parsed The result of [cb_parse()].
 #' @param data The upstream data frame (may be `NULL` before it arrives).
+#' @param values Named list of current control values (`script_values`).
 #' @return A list of spec records.
 #' @noRd
-cb_specs <- function(parsed, data = NULL) {
+cb_specs <- function(parsed, data = NULL, values = list()) {
   if (!parsed$ok || !length(parsed$stmts)) {
     return(list())
   }
@@ -300,6 +306,9 @@ cb_specs <- function(parsed, data = NULL) {
       next
     }
 
+    # From here on, declarations below read the control's current value.
+    assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
+
     ann <- cb_annotation(
       if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
       else parsed$lines[[st$line]]
@@ -321,6 +330,31 @@ cb_specs <- function(parsed, data = NULL) {
   }
 
   specs
+}
+
+# A control's current value as later declarations should see it: the stored
+# value coerced like the body would get it, in the declared value's shape (a
+# factor keeps its levels, dropping picks no longer offered). Falls back to
+# the declared value when nothing usable is stored.
+cb_current_value <- function(stored, declared, widget) {
+  if (is.null(stored)) {
+    return(declared)
+  }
+  spec <- list(kind = widget$kind, multiple = isTRUE(widget$multiple),
+               default = declared)
+  v <- tryCatch(cb_coerce(stored, spec), error = function(e) NULL)
+  if (is.null(v) || !length(v)) {
+    return(declared)
+  }
+  if (is.factor(declared)) {
+    v <- as.character(v)
+    v <- v[v %in% levels(declared)]
+    if (!length(v)) {
+      return(declared)
+    }
+    return(factor(v, levels = levels(declared)))
+  }
+  v
 }
 
 #' Bind a name to an expression that is only evaluated if something reads it
