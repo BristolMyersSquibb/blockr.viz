@@ -112,7 +112,7 @@ new_table_block <- function(layout = "records",
   res <- blockr.core::new_transform_block(
     server = function(id, data) table_server(id, data, values),
     ui = table_ui,
-    dat_valid = validate_annotated_df_input,
+    dat_valid = validate_table_input,
     allow_empty_state = viz_empty_ok(spec),
     external_ctrl = viz_ctrl_args(spec),
     expr_type = "bquoted",

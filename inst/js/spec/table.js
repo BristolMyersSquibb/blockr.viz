@@ -609,6 +609,58 @@
               },
               "slot": false,
               "ctrl": true
+            },
+            "lane": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Lane"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "seg_style": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Segment style"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "bar_label": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Bar label"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "strip": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Hover strip"
+              },
+              "slot": false,
+              "ctrl": true
             }
           },
           "pair": {

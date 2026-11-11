@@ -507,7 +507,7 @@ test_that("a multi-select shows only picks its pool still offers", {
   expect_equal(cfg$sv_visits, list("CYCLE 1"))
 })
 
-test_that("a multi-select reads as its picks or a count in a title", {
+test_that("a multi-select's title word ignores picks its pool dropped", {
   d <- data.frame(AVISIT = c("SCREENING", "C1", "C2", "C3", "C4"))
   ps <- parsed_of(
     script_of(
@@ -520,15 +520,18 @@ test_that("a multi-select reads as its picks or a count in a title", {
   word <- function(values) {
     script_title_args(list(), ps$specs, values)$visits
   }
-  expect_equal(word(list()), "5 of 5 selected")
+  expect_equal(word(list()), "all")
   expect_equal(word(list(visits = c("C1", "C2"))), "C1, C2")
-  # Picks no longer offered are not counted; nothing left means the default.
+  # A pick the pool no longer offers is not counted.
   expect_equal(word(list(visits = c("C1", "GONE"))), "C1")
-  expect_equal(word(list(visits = character())), "5 of 5 selected")
+  expect_equal(
+    word(list(visits = c("SCREENING", "C1", "C2", "C3", "C4", "GONE"))),
+    "all"
+  )
   expect_equal(
     resolve_title_template(
       "[Visits: {@visits}]", d, script_title_args(list(), ps$specs, list())
     ),
-    "Visits: 5 of 5 selected"
+    "Visits: all"
   )
 })

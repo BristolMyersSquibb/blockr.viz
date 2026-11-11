@@ -546,6 +546,147 @@
   stroke-width: 2.2px;
   stroke-linecap: round;
 }
+/* Lanes: a row's thin lanes stack above its main lane, one 5px lane per
+   level with a 3px line in it, so the row grows with its lanes and the main
+   lane keeps its full height at the bottom. */
+.vz-table-groups-ivstack {
+  display: flex;
+  flex-direction: column;
+}
+.vz-table-groups-ivstack > .vz-table-groups-ivcell:not(.is-thin) {
+  margin-top: 2px;
+}
+.vz-table-groups-ivcell.is-thin {
+  height: 5px;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-seg {
+  top: 1px;
+  bottom: 1px;
+  border-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-open {
+  border-left-width: 5px;
+  border-top-width: 3.5px;
+  border-bottom-width: 3.5px;
+}
+/* Even lanes (no record on the main lane): every lane is a 10px lane with
+   an 8px bar, and the main lane turns into a layer over the whole stack that
+   carries the overlays. */
+.vz-table-groups-ivstack.is-even {
+  position: relative;
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell.is-thin {
+  height: 10px;
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell.is-thin .vz-table-lane-seg {
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-ivstack.is-even > .vz-table-groups-ivcell:not(.is-thin) {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  margin-top: 0;
+  pointer-events: none;
+}
+.vz-table-groups-ivstack.is-even .vz-table-lane-ev {
+  pointer-events: auto;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-ev {
+  width: 10px;
+  height: 10px;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-outline {
+  box-shadow: inset 0 0 0 1px var(--blockr-color-text-default, #111827);
+}
+/* Bar labels (a spans row's bar_label): dark text on the bar when it fits,
+   after it when the lane has room, hidden otherwise (marks.js fitLabels()).
+   Until placed they show nothing. Shown by opacity, never by visibility:
+   a visible child shows through a hidden parent, and the dock hides its
+   inactive panels with visibility. The label never runs past its room. */
+.vz-table-groups-ivcell .vz-table-lane-lab {
+  position: absolute;
+  top: 50%;
+  transform: translateY(calc(-50% - 1px));
+  font-size: 10.5px;
+  line-height: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--blockr-color-text-default, #111827);
+  pointer-events: none;
+  opacity: 0;
+}
+.vz-table-groups-ivcell .vz-table-lane-lab.is-on {
+  opacity: 1;
+  padding-left: 3px;
+}
+.vz-table-groups-ivcell .vz-table-lane-lab.is-after {
+  opacity: 1;
+}
+/* Segment styles. Dashed (a skipped stretch) and hollow (a delay) paint the
+   surface first, so they cut through a period drawn under them. A dot is one
+   administration, a step a dose cut, both at the record's start. */
+.vz-table-groups-ivcell .vz-table-lane-seg.is-dashed {
+  background: repeating-linear-gradient(90deg, var(--vz-seg) 0 2px,
+                                        transparent 2px 4px)
+    center / 100% 2px no-repeat,
+    var(--blockr-color-bg-surface, #ffffff);
+  border-radius: 0;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-hollow {
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid;
+  box-sizing: border-box;
+  border-radius: 1px;
+}
+.vz-table-groups-ivcell.is-thin .vz-table-lane-seg.is-hollow {
+  top: -0.5px;
+  bottom: -0.5px;
+}
+.vz-table-groups-ivcell .vz-table-lane-adm {
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border: 1.2px solid;
+  border-radius: 50%;
+  background: var(--blockr-color-bg-surface, #ffffff);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+.vz-table-groups-ivcell .vz-table-lane-step {
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid var(--blockr-color-text-muted, #5b6372);
+  transform: translate(-50%, -85%);
+}
+/* The hover strip: one box per record of the lane, in time order. */
+.vz-table-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 440px;
+  white-space: normal;
+  margin-top: 4px;
+}
+.vz-table-strip-box {
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-top: 3px solid;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.25;
+  padding: 2px 4px;
+  min-width: 34px;
+  text-align: center;
+}
+.vz-table-strip-box.is-late {
+  background: color-mix(in srgb, #d98a1e 12%, transparent);
+}
+.vz-table-strip-box.is-skip {
+  border: 1px dashed var(--blockr-color-text-muted, #9aa3b2);
+  color: var(--blockr-color-text-muted, #8a92a1);
+}
 .vz-table-groups-legend-shape {
   width: 12px;
   height: 12px;
@@ -554,10 +695,12 @@
 .vz-table-groups-legend-shape .vz-ev-ring { display: none; }
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
-   the spans, not more height. */
+   the spans, not more height. Its floor is two lane floors: with 320px a
+   swimmer with a few listing columns ran past the edge of a half-width
+   panel. Below the floor the table scrolls sideways in its wrapper. */
 .vz-table-groups-table td.vz-table-groups-wide {
   width: 55%;
-  min-width: 320px;
+  min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
 }
 /* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
    multiplicatively, so a subject with many overlapping events re-darkens
@@ -565,7 +708,7 @@
    flat opaque near-track shade (!important beats the inline fill) --
    identical opaque rectangles overlap invisibly, so only the matched
    event carries colour no matter how dense the timeline is. */
-.vz-table-groups.seg-hover .vz-table-lane-seg:not(.is-same) {
+.vz-table-groups.seg-hover .vz-table-lane-seg:not(.is-same):not(.is-dashed):not(.is-hollow) {
   background: color-mix(in srgb, var(--vz-table-groups-track) 88%,
                         var(--vz-table-groups-tick)) !important;
   transition: background 0.1s ease;

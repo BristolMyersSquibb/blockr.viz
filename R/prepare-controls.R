@@ -126,7 +126,8 @@ script_control_values <- function(specs, values = list()) {
 #' script. A declaration that failed leaves the setting's word alone. An
 #' untouched value falls back to the declaration's default. A flag prints its
 #' control's label when on and nothing when off, so a `[ ... ]` clause can
-#' carry it.
+#' carry it; a date without a value prints its placeholder; a multi-select
+#' prints its picks.
 #'
 #' @param roles Named list of the block's own arguments.
 #' @param specs Input specs from [cb_specs()].
@@ -143,8 +144,19 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) script_label(s) else ""
     }
+    # A date without a value prints its placeholder ("automatic"), or
+    # nothing, so a `[ ... ]` clause can carry it.
+    if (identical(s$kind, "date") && (!length(v) || is.na(v[[1L]]))) {
+      v <- as.character(s$placeholder %||% "")
+    }
+    # A multi-select prints its picks: "all" when every choice is picked,
+    # "none" when none is, the picks in a list otherwise. Picks its pool no
+    # longer offers (the pool can follow another control) do not count.
     if (identical(s$kind, "select") && isTRUE(s$multiple)) {
-      v <- script_multi_word(v, s)
+      picks <- as.character(v)
+      pool <- as.character(s$choices)
+      if (length(pool)) picks <- picks[picks %in% pool]
+      v <- script_picks_word(picks, pool)
     }
     v
   })
@@ -152,23 +164,12 @@ script_title_args <- function(roles, specs, values = list()) {
   c(roles[setdiff(names(roles), names(vals))], vals)
 }
 
-# The word a multi-select prints in a title: its picks when there are a few,
-# else a count ("12 of 83 selected"). A template slot prints one string, so the
-# picks would otherwise read as only the first. An empty pick runs the
-# declared default (cb_expr()), so the word says that too.
-script_multi_word <- function(v, s) {
-  pool <- as.character(s$choices)
-  v <- as.character(v)
-  if (length(pool)) v <- v[v %in% pool]
-  if (!length(v)) {
-    v <- as.character(s$default)
-    if (length(pool)) v <- v[v %in% pool]
+# The word for a multi-select's picks.
+script_picks_word <- function(v, choices) {
+  if (!length(v)) return("none")
+  if (length(choices) > 1L && setequal(v, choices)) return("all")
+  if (length(v) > TITLE_MAX_VALUES) {
+    v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
-  if (!length(v)) {
-    return("")
-  }
-  if (length(v) <= 3L) {
-    return(paste(v, collapse = ", "))
-  }
-  paste(length(v), "of", length(pool), "selected")
+  paste(v, collapse = ", ")
 }

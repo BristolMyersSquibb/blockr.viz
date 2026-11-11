@@ -8,6 +8,7 @@ interface ChartConfig {
   func: 'count' | 'count_distinct' | 'pct_distinct' | 'mean' | 'median' | 'sum' | 'min' | 'max' | 'identity';
   x: string | null;
   xend: string | null;
+  open: string | null;
   y: string | null;
   color: string | null;
   facet: string | null;

@@ -54,7 +54,8 @@ TABLE_GROUPS_KEYS <- list(
                 rby = "refBandY", rbh = "refBandHeight"),
   interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
                lg = "large", tk = "ticks", bd = "band", ev = "events",
-               et = "eventTips", op = "openAt")
+               et = "eventTips", op = "openAt", sl = "subLanes",
+               ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
 )
 # The raw statistics a hover card prints (`r`).
 TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",
@@ -84,7 +85,7 @@ table_groups_fence <- function(g) {
 # one per row); everything else is per row, an array also at one row.
 TABLE_GROUPS_SCALARS <- c("kind", "mode", "rf", "d0", "d1", "dw", "rc", "rby",
                           "rbh", "tt")
-TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg")
+TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "eq")
 
 table_groups_pack <- function(g, kind, top) {
   out <- list()

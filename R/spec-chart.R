@@ -133,6 +133,16 @@ chart_spec_mapping <- function() {
       describe = "Interval end. A row without an end is drawn as a dot at `x`."
     ),
 
+    open = chart_arg(
+      type = "column", null = "no arrow",
+      applies = "gantt",
+      gear = gear("Add mapping", "column", "Open end"),
+      describe = paste(
+        "Logical column. TRUE draws an arrowhead after the bar's end (still",
+        "ongoing); a TRUE row without an end runs to the last x drawn."
+      )
+    ),
+
     label = chart_arg(
       type = "column", null = "no labels",
       applies = c("bar", "pie", "treemap", "scatter", "line", "area", "gantt"),
@@ -516,7 +526,7 @@ chart_spec_interact <- function() {
 chart_spec <- function() {
   shared <- viz_shared_args()
   order <- c(
-    "type", "category", "value", "func", "x", "xend", "y", "color", "facet",
+    "type", "category", "value", "func", "x", "xend", "open", "y", "color", "facet",
     "facet_row", "series", "label",
     "orientation", "position", "sort_by", "sort_dir", "value_labels",
     "format", "unit", "y_transform", "x_transform", "x_limits", "y_limits", "x_ticks", "y_ticks",

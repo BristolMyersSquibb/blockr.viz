@@ -146,7 +146,16 @@ interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
   domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
   ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
-  openAt?: TableNums;
+  openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
+  evenLanes?: boolean; barLabels?: string[][];
+}
+
+/** A thin lane above a swimlane's main one: its name `n`, segments `s` with
+ *  tips `t`, strip boxes `b` [text, style], `o` where its open end sits, and
+ *  events `e` [x, shape] with tips `et`. */
+interface TableSubLane {
+  n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
+  e?: number[][]; et?: string[]; l?: string[];
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last
@@ -294,6 +303,8 @@ interface TableGridHooks {
   click?(e: MouseEvent): void;
   /** After every draw of the body. */
   drawn?(): void;
+  /** After a window of rows is inserted into `body`. */
+  rows?(body: HTMLElement): void;
   /** The part of the box in view (TableFrame.inView); else the box's scroll. */
   view?(): { top: number; height: number };
   /** The rows and section headers the selection lights; a new model opens

@@ -179,7 +179,8 @@ groups_norm_spans <- function(s) {
 # rows where its own columns are set, so they share one long frame with the
 # segment rows.
 GROUPS_SPANS_OVERLAYS <- c("ticks", "band_x", "band_xend", "event_x",
-                           "event_shape", "open")
+                           "event_shape", "open", "lane", "seg_style", "strip",
+                           "bar_label")
 
 # The pair row: two summaries of one group drawn as a segment, a hollow
 # diamond at `x` and a dot at `xend`, each read by its function (`x_func`,

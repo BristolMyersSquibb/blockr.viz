@@ -149,6 +149,8 @@ script_value_read <- function(x, s) {
       if (!is.character(x) || length(x) != 1L) {
         return(NULL)
       }
+      # Cleared: no date, which a script may read as "automatic".
+      if (!nzchar(trimws(x))) return(as.Date(NA))
       d <- tryCatch(as.Date(x), error = function(e) NA)
       if (is.na(d)) NULL else d
     },

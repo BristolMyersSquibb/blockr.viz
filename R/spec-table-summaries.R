@@ -238,8 +238,54 @@ table_summary_specs <- function() {
         type = "column", null = "no arrow",
         gear = gear("Columns", "column", "Open end"),
         describe = paste(
-          "Logical. TRUE on any of a row's records draws an arrowhead at the",
-          "end of its last segment (still ongoing)."
+          "Logical, per record. A record with a start, no end and TRUE is",
+          "ongoing: it runs to the axis end with an arrowhead. TRUE on a",
+          "record with an end draws the arrowhead at the end of its lane's",
+          "last segment (still ongoing)."
+        )
+      ),
+      lane = viz_arg(
+        type = "column", null = "one lane",
+        gear = gear("Columns", "column", "Lane"),
+        describe = paste(
+          "Splits a row into lanes. Records where it is empty draw on the",
+          "main lane at full height, with the ticks, the line and the events;",
+          "each other level draws a thin lane above it, in level order, so a",
+          "row grows with its lanes (a drug per lane above the response).",
+          "Without any main-lane record the lanes are even and the overlays",
+          "run across the row; an event with a lane draws on its lane."
+        )
+      ),
+      seg_style = viz_arg(
+        type = "column", null = "all solid",
+        gear = gear("Columns", "column", "Segment style"),
+        describe = paste(
+          "How a record draws, by value: \"dashed\" a dashed line (a skipped",
+          "period), \"hollow\" an outlined box (a delay), \"dot\" a ring at its",
+          "start (one administration), \"step\" a small down step at its",
+          "start (a dose cut), \"outline\" filled with a dark edge (a",
+          "serious event). Anything else draws solid. A dot or a step needs",
+          "no end."
+        )
+      ),
+      bar_label = viz_arg(
+        type = "column", null = "no bar labels",
+        gear = gear("Columns", "column", "Bar label"),
+        describe = paste(
+          "Text written on each record's bar when it fits, else just after",
+          "it when the lane has room before its next bar, else nowhere (the",
+          "tooltip keeps the label). An empty value labels nothing. Drawn on",
+          "the main lane and on even lanes, not on thin ones."
+        )
+      ),
+      strip = viz_arg(
+        type = "column", null = "no strip",
+        gear = gear("Columns", "column", "Hover strip"),
+        describe = paste(
+          "Text of one box in its lane's hover strip; lines split at a",
+          "newline. Pointing at a lane shows its boxes in time order, a",
+          "hollow record's box marked late and a dashed one's as skipped.",
+          "A strip record needs only a start."
         )
       )
     ),

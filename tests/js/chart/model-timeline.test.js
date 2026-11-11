@@ -182,3 +182,21 @@ test('a date-time x arrives in ms and is a time axis sampled at times', () => {
   assert.deepStrictEqual(plain(m.panels[0].marks.map((t) => [t[0], t[1]])),
                          [[t0, t0 + 3600e3], [t0 + 1800e3, t0 + 7200e3]]);
 });
+
+test('open: a TRUE row gets the flag, and without an end runs to the last x', () => {
+  const rows = [
+    { T: 'Rash', S: 4, E: 9, O: false },
+    { T: 'Nausea', S: 2, E: null, O: true },
+    { T: 'Cough', S: 6, E: 7, O: 'TRUE' },
+    { T: 'Fever', S: 3, E: null, O: null }
+  ];
+  const cols = [cat('T'), num('S'), num('E'), { name: 'O', class: 'logical' }];
+  const marks = plain(build({ open: 'O' }, rows, cols).panels[0].marks);
+  const byTerm = Object.fromEntries(marks.map((mk) => [mk[3], mk]));
+  assert.deepStrictEqual([byTerm.Rash[1], byTerm.Rash[9]], [9, 0]);
+  assert.deepStrictEqual([byTerm.Nausea[1], byTerm.Nausea[9]], [9, 1]);
+  assert.deepStrictEqual([byTerm.Cough[1], byTerm.Cough[9]], [7, 1]);
+  assert.deepStrictEqual([byTerm.Fever[1], byTerm.Fever[9]], [3, 0]);
+  // Without the column a mark keeps its nine fields.
+  assert.strictEqual(plain(build({}, rows, cols).panels[0].marks)[0].length, 9);
+});

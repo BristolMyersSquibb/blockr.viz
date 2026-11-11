@@ -88,7 +88,7 @@ chart_needed_cols <- function(v, d) {
     c(v$x, v$y)
   }
   needed <- c(
-    axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$label, v$tooltip,
+    axes, v$color, v$facet, v$facet_row, v$series, v$xend, v$open, v$label, v$tooltip,
     v$drill, v$ymin, v$ymax, v$linetype, names(v$highlight), v$id,
     v$ref_min, v$ref_max,
     if (length(v$sort_by) && !v$sort_by %in% c("value", "data", "alpha",

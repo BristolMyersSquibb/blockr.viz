@@ -4,12 +4,20 @@
 # Level colours, shared with the chart (dd_palette()). `column` is the data
 # column behind `col`, resolved through dd_resolve_scales so a copied column
 # keeps its source's binding. A caller holding only the levels passes none and
-# the levels stand in for it.
+# the levels stand in for it. A column that names its own colours (attribute
+# `blockr_colors`, a named vector) keeps them for the levels it names: a block
+# that builds the frame (a swimmer's response and drug colours) decides them.
 #' @noRd
 groups_level_colors <- function(map, col, levels, column = NULL) {
   levels <- as.character(levels)
   if (!length(levels)) {
     return(character())
+  }
+  # `column` is often `data[[col]]`, an error without a colour column: read
+  # it only when there is one.
+  own <- if (length(col)) attr(column, "blockr_colors", exact = TRUE)
+  if (length(own) && all(levels %in% names(own))) {
+    return(stats::setNames(unname(own[levels]), levels))
   }
   if (!is.null(map) && !is.null(col) &&
         has_blockr_theme()) {

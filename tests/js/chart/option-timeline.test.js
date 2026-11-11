@@ -177,3 +177,10 @@ test('a Date x: a time axis, dates and days in the tooltip, limits and zoom on i
                          [Date.UTC(2024, 0, 1), Date.UTC(2024, 1, 1)]);
   assert.strictEqual(d.option.dataZoom[0].id, 'vz-zoom-x');
 });
+
+test('an open bar reads "ongoing" in the tooltip', () => {
+  const { opt } = build();
+  const tip = opt.tooltip.formatter({ value: [2, 9, 1, 'Nausea', '', '', '', 'Nausea', 0, 1] });
+  assert.match(tip, /Start<\/span><span class="vz-tt-value">2</);
+  assert.match(tip, /E<\/span><span class="vz-tt-value">ongoing</);
+});

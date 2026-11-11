@@ -8,10 +8,11 @@
 # groups click filter around the script).
 table_prepare <- function(data, state) {
   # The script reads a data frame; a finished table is converted first and
-  # keeps its annotation columns, which the records layout draws.
+  # keeps its annotation columns, which the records layout draws. A dm goes
+  # to the script as it is.
   raw <- shiny::reactive({
     d <- data()
-    if (is.data.frame(d)) d else as_annotated_df(d)
+    if (is.data.frame(d) || inherits(d, "dm")) d else as_annotated_df(d)
   })
   prep <- viz_script_sources(raw, state)
   prep$wrap_after <- function(ex) {
