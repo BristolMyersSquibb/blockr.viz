@@ -22,7 +22,9 @@ list of character vectors (sections and their keys).}
 \item{columns}{A named list of the columns the checklist offers, in order:
 each a summary as in \code{summaries} of \code{\link[=new_table_block]{new_table_block()}}, without \code{name}
 (the list name) and with an optional \code{on} (default \code{TRUE}), whether a new
-block shows it. The block shows the ticked ones, first, then its other
+block shows it, and \code{title}, its label in the checklist (default the
+name). \code{name = NA} leaves the column unnamed, so its header is the data
+column's label (a header the data decides). The block shows the ticked ones, first, then its other
 summaries.}
 
 \item{groups}{The columns the rows may be grouped by, for the \code{"group"}

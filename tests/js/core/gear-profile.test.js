@@ -181,3 +181,16 @@ test('showTab opens the gear at a tab of its own', noUi, () => {
   t.gear.showTab('Nope');
   assert.equal(t.el.querySelector('.blockr-tray-nav__tab.is-current').textContent, 'Lanes');
 });
+
+test('an unnamed checklist column is told by its data column', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'blk-table', typeKey: 'layout' });
+  const BOR2 = { type: 'field', col: 'BOR_2' };
+  const gear = Object.assign({}, GEAR, { columns: GEAR.columns.concat([
+    { name: 'BOR2', label: 'BOR, 2nd', summary: BOR2 }]) });
+  m.gear.update(payload(Object.assign({}, CONFIG, { summaries: [WEEKS, BOR2, SPANS] }),
+                        { derived: { script: SCRIPT, gear } }));
+  assert.deepEqual(plain(m.gear.values().columns), ['Weeks', 'BOR2']);
+  m.gear.set({ columns: ['Weeks'] });
+  assert.deepEqual(plain(lastSet(env).values.summaries), [WEEKS, SPANS]);
+});

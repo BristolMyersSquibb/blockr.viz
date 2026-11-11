@@ -51,6 +51,15 @@
     return v;
   };
 
+  /** The checklist column a summary is: by its name, or an unnamed one by its
+   * data column. @param {VizProfile} prof @param {any} s @returns {string | null} */
+  const columnOf = (prof, s) => {
+    if (!s) return null;
+    const hit = (prof.wire.columns || []).find((c) => (s.name != null
+      ? c.summary.name === s.name : c.summary.name == null && c.summary.col === s.col));
+    return hit ? hit.name : null;
+  };
+
   /** Is a clause in the template? @param {string} tpl @param {string} c */
   const has = (tpl, c) => tpl.includes(c);
 
@@ -166,12 +175,11 @@
     const out = {};
     const sent = /** @type {Record<string, unknown>} */ (
       script && !Array.isArray(script.values) ? script.values || {} : {});
-    const names = new Set((prof.wire.columns || []).map((c) => c.name));
     for (const [key, r] of Object.entries(prof.rows)) {
       if (r.kind === 'script' && r.sp) out[key] = scriptValue(r.sp, sent[r.sp.key]);
       else if (r.kind === 'columns') {
         out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
-          .map((s) => s && s.name).filter((n) => names.has(n));
+          .map((s) => columnOf(prof, s)).filter((n) => n != null);
       } else if (r.kind === 'group') {
         const by = Array.isArray(cfg.by) ? cfg.by : [];
         out[key] = by.length > 1 ? by[0] : '';
@@ -202,9 +210,8 @@
       } else if (r.kind === 'columns') {
         const pick = new Set(/** @type {string[]} */ (v || []));
         const cols = prof.wire.columns || [];
-        const names = new Set(cols.map((c) => c.name));
         const other = (Array.isArray(now.summaries) ? now.summaries : [])
-          .filter((s) => !s || !names.has(s.name));
+          .filter((s) => columnOf(prof, s) == null);
         out.summaries = cols.filter((c) => pick.has(c.name)).map((c) => c.summary).concat(other);
       } else if (r.kind === 'group') {
         // The outer column of a nested `by`: picked, replaced or dropped.

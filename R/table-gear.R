@@ -27,7 +27,9 @@
 #' @param columns A named list of the columns the checklist offers, in order:
 #'   each a summary as in `summaries` of [new_table_block()], without `name`
 #'   (the list name) and with an optional `on` (default `TRUE`), whether a new
-#'   block shows it. The block shows the ticked ones, first, then its other
+#'   block shows it, and `title`, its label in the checklist (default the
+#'   name). `name = NA` leaves the column unnamed, so its header is the data
+#'   column's label (a header the data decides). The block shows the ticked ones, first, then its other
 #'   summaries.
 #' @param groups The columns the rows may be grouped by, for the `"group"`
 #'   row: a character vector, named by the labels the pick shows.
@@ -79,9 +81,11 @@ table_gear <- function(tabs, columns = list(), groups = character(),
     s <- columns[[nm]]
     stopifnot(is.list(s), is.character(s$type))
     on <- if (is.null(s$on)) TRUE else isTRUE(s$on)
+    title <- s$title %||% nm
     s$on <- NULL
-    s$name <- nm
-    list(name = nm, on = on, summary = s)
+    s$title <- NULL
+    s$name <- if (identical(s$name, NA)) NULL else nm
+    list(name = nm, on = on, title = title, summary = s)
   })
   labels <- names(groups) %||% groups
   labels[!nzchar(labels)] <- groups[!nzchar(labels)]
@@ -157,8 +161,7 @@ table_gear_wire <- function(gear, info = NULL) {
     info = info,
     tabs = tabs,
     columns = lapply(gear$columns, function(cl) {
-      list(name = cl$name, label = cl$summary$label %||% cl$name,
-           summary = cl$summary)
+      list(name = cl$name, label = cl$title, summary = cl$summary)
     }),
     groups = lapply(gear$groups, as.list),
     clauses = gear$clauses

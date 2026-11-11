@@ -153,3 +153,13 @@ test_that("a gear's info reads the input, and its deps and open tab reach the pa
     expect_identical(p$derived$gear$tabs[[1L]]$title, "Data")
   })
 })
+
+test_that("an unnamed column keeps the data's header; title labels the checklist", {
+  g <- table_gear(list(A = "columns"), columns = list(
+    BOR2 = list(type = "field", col = "BOR_2", name = NA, title = "BOR, 2nd",
+                on = FALSE)
+  ))
+  expect_null(g$columns[[1L]]$summary$name)
+  expect_null(g$columns[[1L]]$summary$title)
+  expect_identical(table_gear_wire(g)$columns[[1L]]$label, "BOR, 2nd")
+})
