@@ -13,7 +13,11 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
   ctx <- list(rows = rows, n = n, prep = prep, mx = prep$bar_max,
               mn = prep$bar_min %||% 0)
 
-  cols <- lapply(seq_along(plan), function(i) cells_column(ctx, plan[[i]]))
+  # The copies of a tile summary are painted together (cells_tiles()).
+  tiles <- cells_tiles(ctx, plan)
+  cols <- lapply(seq_along(plan), function(i) {
+    tiles[[i]] %||% cells_column(ctx, plan[[i]])
+  })
   # Each column's text per row, which the view prints and sorts by; built
   # from the value labels before the Values switch drops them.
   text <- lapply(cols, cells_text)
