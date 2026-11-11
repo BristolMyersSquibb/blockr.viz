@@ -190,8 +190,8 @@ interface VizNamespace {
   spec: Record<string, unknown>;
   util: {
     esc(x: unknown): string;
-    send(id: string, kind: 'set' | 'select' | 'peek' | 'capture' | 'data' | 'need', value: unknown,
-         block?: string): boolean;
+    send(id: string, kind: 'set' | 'select' | 'peek' | 'capture' | 'data' | 'need' | 'counts',
+         value: unknown, block?: string): boolean;
     select(id: string, selection: Record<string, unknown> | null): boolean;
     isNumeric(c: VizColumn | null | undefined): boolean;
     isTemporal(c: VizColumn | null | undefined): boolean;
