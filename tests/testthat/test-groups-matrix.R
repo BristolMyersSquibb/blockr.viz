@@ -134,3 +134,17 @@ test_that("a facet column with missing values is built per copy", {
   expect_true(groups_matrix_ok(s, build))
   expect_false(groups_matrix_ok(c(s, list(.color = "ARM")), build))
 })
+
+test_that("tile columns painted together equal tile columns painted alone", {
+  cases <- matrix_cases()[c("tile", "tile_value", "tile_blank", "factor")]
+  for (nm in names(cases)) {
+    cs <- cases[[nm]]
+    prep <- groups_prepare(cs[[1L]], by = cs[[2L]], summaries = cs[[3L]])
+    ctx <- list(rows = prep$rows, n = nrow(prep$rows), prep = prep,
+                mx = prep$bar_max, mn = prep$bar_min %||% 0)
+    together <- cells_tiles(ctx, prep$plan)
+    expect_false(any(vapply(together, is.null, logical(1L))), info = nm)
+    alone <- lapply(prep$plan, function(p) cells_tile(ctx, p))
+    expect_identical(together, alone, info = nm)
+  }
+})
