@@ -21,7 +21,7 @@ socs <- c("General disorders and administration site conditions",
           "Respiratory, thoracic and mediastinal disorders")
 terms <- list(c("Fatigue", "Pyrexia"), c("Diarrhoea", "Nausea"),
               c("Cough", "Dyspnoea"))
-arms <- c("Nivolumab 240 mg + Ipilimumab 1 mg/kg", "Placebo")
+arms <- c("Drug A 240 mg + Drug B 1 mg/kg", "Placebo")
 i <- sample(seq_along(socs), 200, TRUE)
 ae <- data.frame(
   USUBJID = sprintf("S%03d", sample(1:12, 200, TRUE)),
