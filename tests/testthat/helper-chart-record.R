@@ -9,7 +9,7 @@
 # while the target speaks the reference's messages.
 #
 # helper-chart-reference.R translates between the public names and the
-# reference. dev/chart-record.R writes the recordings to
+# reference. tools/chart-record.R writes the recordings to
 # fixtures/chart-record/; test-chart-record.R replays them.
 
 record_df <- function() {

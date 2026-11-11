@@ -36,3 +36,15 @@ take either side and run `node tools/bundle.js`. With
 `options(blockr.viz.dev_js = TRUE)` the dependencies list the single sources
 instead, so a JS edit shows on reload without a rebuild. The node tests,
 `dead-js.js` and coverage read the sources and never the bundles.
+
+## Generators
+
+Run from the package root.
+
+| script | writes |
+|---|---|
+| `gen-spec.R` | `inst/js/spec/*.js` and `*.d.ts` from the R specs; `test-gen-spec.R` fails when they are stale |
+| `chart-record.R` | `tests/testthat/fixtures/chart-record/`, replayed by `test-chart-record.R` |
+| `table-golden-record.R` | `tests/testthat/fixtures/table-golden/`, replayed by `test-table-golden.R` |
+| `table-golden-old-boards.R` | `fixtures/table-golden/old-boards.json`, a board saved by 0.2.223 |
+| `board-0.2.200.R` | `fixtures/board-0.2.200.json`, a board saved by 0.2.200, restored by `test-e2e-restore.R` |

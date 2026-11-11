@@ -7,7 +7,7 @@
 # Needs 0.2.200 (3ea4c47) in a library of its own, with the blockr.core it
 # was deployed with:
 #
-#   R_LIBS=<that library> Rscript dev/board-0.2.200.R
+#   R_LIBS=<that library> Rscript tools/board-0.2.200.R
 #
 # Run from the package root.
 

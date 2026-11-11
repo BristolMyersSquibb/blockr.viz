@@ -223,7 +223,7 @@ the key, the value) and record the state that results.
 
 Saved by blockr.viz 0.2.223 (`c79f5fb`, main before the table rewrite):
 `fixtures/tile-board-main.json` and `fixtures/table-golden/old-boards.json`
-(written by `dev/table-golden-old-boards.R`).
+(written by `tools/table-golden-old-boards.R`).
 
 | Board | Covered by |
 |---|---|

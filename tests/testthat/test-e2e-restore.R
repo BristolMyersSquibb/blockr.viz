@@ -1,5 +1,5 @@
 # A board saved by production (blockr.viz 0.2.200), restored in a browser:
-# fixtures/board-0.2.200.json, written by dev/board-0.2.200.R. It holds a
+# fixtures/board-0.2.200.json, written by tools/board-0.2.200.R. It holds a
 # click on a bar chart, a summarize table and a table, a scatter on dates,
 # and a prepare script set away from its default. Every block has to draw
 # and every click has to come back marked, named and filtering.

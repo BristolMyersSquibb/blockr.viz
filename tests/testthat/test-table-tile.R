@@ -1,5 +1,4 @@
-# The tile summary and the compact look: the table block's heatmap
-# (dev/table-block-rewrite.md, phase 4).
+# The tile summary and the compact look: the table block's heatmap.
 
 tile_fixture <- function() {
   data.frame(
