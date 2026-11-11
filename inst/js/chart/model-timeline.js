@@ -55,17 +55,44 @@
     return type === 'time' ? NS.axes.timeValue : Number;
   };
 
+  // Lanes in sort order: by name for 'alpha', else by the smallest value
+  // per lane of x ('onset') or of a column; a lane without one is left out.
+  /** @param {VizColumn[]} columns @param {ChartSettings} cfg @param {string} x
+   * @param {string} y @param {(v: any) => number} xCoord
+   * @returns {(rs: any[]) => string[]} */
+  const termSorter = (columns, cfg, x, y, xCoord) => (rs) => {
+    const sb = cfg.sort_by || 'onset';
+    const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
+    if (sb === 'alpha') {
+      return [...new Set(rs.map((r) => String(r[y] ?? '')))]
+        .sort((a, b) => a.localeCompare(b) * sortDir);
+    }
+    const sortCol = (sb === 'onset') ? x : sb;
+    // Another column sorts on its number, a date or date-time in ms.
+    const sv = sortCol === x ? xCoord
+      : (V.util.isTemporal(NS.axes.colMeta(columns, sortCol)) ? NS.axes.timeValue : Number);
+    // A plain object on purpose: its key order (integer-like keys first)
+    // is the tie order.
+    /** @type {Record<string, number>} */
+    const mins = {};
+    for (const r of rs) {
+      const k = String(r[y] ?? '');
+      const v = sv(r[sortCol]);
+      if (!isNaN(v) && (mins[k] == null || v < mins[k])) mins[k] = v;
+    }
+    return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
+  };
+
   /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {TimelineModel} */
   const timeline = ({ rows, ix, columns, cfg, derived }) => {
-    const { xend, color, facet, sort_by, series, label } = cfg;
+    const { xend, color, facet, series, label } = cfg;
     const open = cfg.open || null;
     // gate() let only a chart with x and y through.
     const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const ttFields = model.tooltipFields(cfg);
     // The drill column's value rides on every mark.
     const drill = NS.drillColumn(cfg);
-    const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
     /** @type {TimelineModel} */
     const out = {
       family: 'timeline', empty: null,
@@ -106,30 +133,7 @@
       }
     }
 
-    // Lanes in sort order: by name for 'alpha', else by the smallest value
-    // per lane of x ('onset') or of a column; a lane without one is left out.
-    /** @param {any[]} rs @returns {string[]} */
-    const sortTerms = (rs) => {
-      const sb = sort_by || 'onset';
-      if (sb === 'alpha') {
-        return [...new Set(rs.map((r) => String(r[y] ?? '')))]
-          .sort((a, b) => a.localeCompare(b) * sortDir);
-      }
-      const sortCol = (sb === 'onset') ? x : sb;
-      // Another column sorts on its number, a date or date-time in ms.
-      const sv = sortCol === x ? xCoord
-        : (V.util.isTemporal(NS.axes.colMeta(columns, sortCol)) ? NS.axes.timeValue : Number);
-      // A plain object on purpose: its key order (integer-like keys first)
-      // is the tie order.
-      /** @type {Record<string, number>} */
-      const mins = {};
-      for (const r of rs) {
-        const k = String(r[y] ?? '');
-        const v = sv(r[sortCol]);
-        if (!isNaN(v) && (mins[k] == null || v < mins[k])) mins[k] = v;
-      }
-      return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
-    };
+    const sortTerms = termSorter(columns, cfg, x, y, xCoord);
 
     const facetLabel = model.facetLabels(rows, cfg, out.nFacets);
     // Fixed scales give every panel the same lanes; free scales keep each its own.
