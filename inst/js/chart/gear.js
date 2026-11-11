@@ -71,8 +71,10 @@
         if (type === 'band' && key === 'y') return 'Value';
         // As 0.2: an aggregated chart or a histogram has "Reference lines". A bar
         // also takes them on its category axis, so its two rows name their axis.
-        // Scatter, line and area keep the spec's Horizontal and Vertical.
-        if ((key === 'value_lines' || key === 'x_lines') && NS.familyOf(type) === 'aggregated') {
+        // Scatter, line and area name the direction (a bare "Horizontal" chip is unclear).
+        if (key === 'value_lines' || key === 'x_lines') {
+          const individual = key === 'x_lines' ? 'Reference lines (vertical)' : 'Reference lines (horizontal)';
+          if (NS.familyOf(type) !== 'aggregated') return individual;
           if (type !== 'bar') return 'Reference lines';
           return key === 'x_lines' ? 'Reference lines (category axis)' : 'Reference lines (value axis)';
         }

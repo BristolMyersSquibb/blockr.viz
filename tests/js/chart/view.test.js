@@ -251,7 +251,7 @@ test('the spec hides what does nothing: stacking without a colour, value lines o
   c.close();
 });
 
-test('reference lines: gear rows and title offers read Reference lines, as 0.2', () => {
+test('reference lines: gear rows and title offers read Reference lines', () => {
   const label = (b, key) => row(b, key).querySelector('.vz-row-head .blockr-label').textContent;
   const offer = (b) => b.frame.titleEl.querySelector('.blockr-slot-offer').textContent;
   const titles = { title: { text: 'Chart', parts: [{ text: 'Chart' }], offers: ['value_lines'] },
@@ -269,9 +269,14 @@ test('reference lines: gear rows and title offers read Reference lines, as 0.2',
     assert.ok(!rows(c.block).includes('x_lines'), type);
     assert.strictEqual(offer(c.block), '+ Reference lines', type);
   }
-  c.send({ type: 'line', x: 'ADY', y: 'AVAL' }, { derived: { titles } });
-  assert.strictEqual(label(c.block, 'value_lines'), 'Horizontal');
-  assert.strictEqual(label(c.block, 'x_lines'), 'Vertical');
+  // Scatter, line and area name the direction, so the offer chip reads as a
+  // reference line too.
+  for (const type of ['line', 'scatter']) {
+    c.send({ type, x: 'ADY', y: 'AVAL' }, { derived: { titles } });
+    assert.strictEqual(label(c.block, 'value_lines'), 'Reference lines (horizontal)', type);
+    assert.strictEqual(label(c.block, 'x_lines'), 'Reference lines (vertical)', type);
+    assert.strictEqual(offer(c.block), '+ Reference lines (horizontal)', type);
+  }
   c.close();
 });
 
