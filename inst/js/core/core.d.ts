@@ -211,8 +211,12 @@ interface VizNamespace {
     message(parent: HTMLElement, e: VizEmpty | null | undefined): boolean;
   };
   DataView: { new (frame: VizFrame, scope: VizScope, opts?: { onToggle?: () => void }): VizDataView };
-  binding(name: string, view: string, View: VizViewClass,
-          opts?: { grace?: number; busy?: string }): boolean;
+  binding: {
+    (name: string, view: string, View: VizViewClass,
+     opts?: { grace?: number; busy?: string }): boolean;
+    /** R's `blockr-viz:payload`: a view's payload, sent as it is built. */
+    post(msg: { id?: string; payload?: VizPayload | null }): void;
+  };
   downloads: {
     (host: HTMLElement, list: VizDownload[] | null | undefined,
      scope: VizScope, opts?: { onOpen?: () => unknown }): void;
