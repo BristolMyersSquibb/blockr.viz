@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9058
+# blockr.viz 0.3.0.9059
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -252,6 +252,11 @@ read.
 * `new_summary_table_block()` and `new_summarize_table_block()` are
   superseded: they translate their arguments and return a table block in
   the variables and the groups layout.
+* The classes `lane_chart_block` and `rank_block`. blockr.core 0.1.4
+  restores a block whose classes differ from the saved ones, so a saved
+  summarize table loads as a table block. Boards saved under the older
+  names `new_lane_chart_block()` and `new_rank_block()` restore the same
+  way.
 * `new_picker_block()` is deprecated and warns. It stays so that boards
   saved with it restore with the block and its links. Bind chart and table
   mappings to the source columns and put a group switch in the board's
