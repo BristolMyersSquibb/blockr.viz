@@ -13,6 +13,8 @@ interface VizGearField {
   when?: string;
   /** A segmented control draws each option's icon (icons.js) beside its word. */
   icons?: boolean;
+  /** What an empty field says (a prepare script's `placeholder`). */
+  placeholder?: string;
 }
 
 /** One argument of a generated spec (inst/js/spec/*.js). */

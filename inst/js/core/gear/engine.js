@@ -39,6 +39,7 @@
     if (control === 'code' || control === 'script') return ' vz-row--code vz-row--tall';
     if (isTall(control)) return ' vz-row--wide vz-row--tall';
     if (g && g.icons && (ctx.arg.values || []).length >= 4) return ' vz-row--wide';
+    if (control === 'profile') return ' vz-row--wide'; // a block's own checklist or editor
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' vz-row--paired';
     }
@@ -209,7 +210,9 @@
       // The setting as the gear shows it: its label, under its group's heading.
       const g = arg && arg.gear;
       const under = g && g.group && g.group !== g.label ? ' under ' + g.group : '';
-      const shadows = own ? own.label : g ? this.label(key, vals) + under : null;
+      // A setting a block's own gear has no row for is no place to look.
+      const hidden = this._prof && !this._prof.keys.has(key);
+      const shadows = own ? own.label : g && !hidden ? this.label(key, vals) + under : null;
       return { label: sp.label, script: true, shadows };
     }
 
@@ -562,8 +565,7 @@
       for (const arg of V.titles.namedArgs(this._titles)) {
         if (this.scriptSlot(arg)) out.add(arg);
       }
-      // A block's own gear holds its script's values: as rows, or in a package's
-      // own row (a swimmer's mapping sets its response parameter).
+      // A block's own gear holds its script's values, as rows or in its own editors.
       if (this._prof && this._script) {
         for (const sp of this._script.inputs || []) if (sp && sp.name) out.add(sp.name);
       }

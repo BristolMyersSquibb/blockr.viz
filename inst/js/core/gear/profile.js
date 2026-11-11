@@ -26,7 +26,7 @@
    * script_control_records(): kind select, multi, segmented, number, date,
    * text). @param {VizScriptControl} sp @returns {VizArg} */
   const scriptArg = (sp) => {
-    const gear = { label: sp.label, group: '' };
+    const gear = { label: sp.label, group: '', placeholder: sp.placeholder || undefined };
     const bounds = { min: sp.min ?? null, max: sp.max ?? null, minOpen: false };
     switch (sp.kind) {
       case 'select': return /** @type {VizArg} */ ({ type: { name: 'enum' }, values: sp.options || [],
@@ -252,7 +252,8 @@
     if (r.kind === 'columns') {
       checklist(el, ctx, (prof.wire.columns || []).map((c) => [c.name, c.label || c.name]));
     } else if (r.kind === 'words') {
-      checklist(el, ctx, prof.clauses.map(([k, c]) => [k, c]));
+      // A setting by its label; its clause in the template says where it goes.
+      checklist(el, ctx, prof.clauses.map(([k]) => [k, ctx.labelOf(k)]));
     } else if (r.kind === 'editor') {
       const ed = V.gear.editors[ctx.key];
       if (ed) ed.draw(el, ctx);
