@@ -3,9 +3,9 @@ t0 <- as.POSIXct("2026-10-09 14:32:07")
 footer_data <- function() {
   d <- data.frame(x = 1:3)
   attr(d, "blockr_provenance") <- list(
-    dataset = "CA-244-0001", path = "/data/ca-244-0001",
+    dataset = "STUDY-0001", path = "/data/study-0001",
     extraction = "2026-09-01",
-    note = "CA-244-0001 · extract 2026-09-01"
+    note = "STUDY-0001 · extract 2026-09-01"
   )
   attr(d, "blockr_filters") <- c(a = "SEX = F", b = "TRTEMFL")
   d
@@ -18,11 +18,11 @@ test_that("the footer fills in user, time, filters and provenance fields", {
       footer_data(), user = "jdoe", time = t0
     ),
     paste("Exported by jdoe on 2026-10-09 14:32 ·",
-          "CA-244-0001 · extract 2026-09-01 · SEX = F; TRTEMFL")
+          "STUDY-0001 · extract 2026-09-01 · SEX = F; TRTEMFL")
   )
   expect_identical(
     download_footer_text("{dataset} from {path}", footer_data()),
-    "CA-244-0001 from /data/ca-244-0001"
+    "STUDY-0001 from /data/study-0001"
   )
 })
 
