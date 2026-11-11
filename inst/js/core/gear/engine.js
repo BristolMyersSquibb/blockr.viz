@@ -57,11 +57,9 @@
       if (!spec) throw new Error('blockr.viz: no spec for block "' + opts.block + '"');
       this.el = el;
       this.spec = spec;
-      /** The spec as the block defines it; `spec` is it, or a block's own gear's. */
+      /** The block's spec; `spec` is it, or its own gear's (profile.js, `derived.gear`). */
       this._base = spec;
-      /** A block's own gear (profile.js), from `derived.gear`. */
-      /** @type {VizProfile | null} */
-      this._prof = null;
+      /** @type {VizProfile | null} */ this._prof = null;
       this.block = opts.block;
       this.id = opts.id;
       this.scope = opts.scope;
@@ -188,6 +186,7 @@
 
     /** @param {string} key @param {VizValues} [values] */
     label(key, values) {
+      key = P.alias(this._prof, key);
       const vals = values || this.values();
       const own = this.host.label && this.host.label(key, vals);
       if (own) return own;
@@ -420,6 +419,7 @@
      * control, and the setting of the same name stays in the gear.
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
+      key = P.alias(this._prof, key);
       if (this.scriptInput(key)) return this.scriptSlot(key);
       const values = this._live(this.values());
       // The host first: a word that names part of a setting (the groups layout's

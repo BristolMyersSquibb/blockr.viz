@@ -73,6 +73,9 @@ test('the group row picks, replaces or drops the outer column of by', () => {
   assert.deepEqual(plain(lastSet(t).values), { by: ['USUBJID'] });
   t.gear.set({ group: 'ARM' });
   assert.deepEqual(plain(lastSet(t).values), { by: ['ARM', 'USUBJID'] });
+  // The word for the rows' grouping opens the same row.
+  assert.equal(t.gear.label('parent'), 'Group by');
+  assert.equal(t.gear.slot('parent').kind, 'menu');
   const labels = Array.from(row(t.el, 'group').querySelectorAll('option')).map((o) => o.textContent);
   assert.deepEqual(labels, ['None', 'Arm', 'Best response']);
 });

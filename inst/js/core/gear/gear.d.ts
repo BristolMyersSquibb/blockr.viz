@@ -180,6 +180,7 @@ interface VizProfileKit {
   setWords(tpl: string, clauses: [string, string][], on: Set<string>): string;
   scriptArg(sp: VizScriptControl): VizArg;
   scriptValue(sp: VizScriptControl, v: unknown): unknown;
+  alias(prof: VizProfile | null, key: string): string;
   SV: string;
 }
 

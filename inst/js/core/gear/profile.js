@@ -260,6 +260,11 @@
     }
   }
 
+  /** The row a title word opens in a block's own gear: `{@parent}`, the rows'
+   * grouping, is the group row when there is one. @param {VizProfile | null} prof
+   * @param {string} key */
+  const alias = (prof, key) => (prof && key === 'parent' && prof.rows.group ? 'group' : key);
+
   V.gear.more = Object.assign(V.gear.more || {}, { profile: draw });
-  V.gear.profile = { build, values, translate, setWords, scriptArg, scriptValue, SV };
+  V.gear.profile = { build, values, translate, setWords, scriptArg, scriptValue, alias, SV };
 })();
