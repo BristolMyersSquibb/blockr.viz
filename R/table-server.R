@@ -21,7 +21,7 @@
 #   exhibit(tt)    the downloads' viz_exhibit, with the title texts
 #   title_args(v)  the settings a title can name, beyond the spec's slots
 
-table_server <- function(id, data, init) {
+table_server <- function(id, data, init, gear = NULL) {
   viz_block_server(
     id, viz_block_spec("table"), data, init, "table",
     function(kit) {
@@ -35,7 +35,7 @@ table_server <- function(id, data, init) {
       titles <- table_titles(kit, src, part)
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
-        payload = table_payload(kit, src, part, titles),
+        payload = table_payload(kit, src, part, titles, table_gear_wire(gear)),
         expr = table_expr(kit, part),
         exhibit = function() {
           tt <- tryCatch(titles(), error = function(e) list())
@@ -89,8 +89,9 @@ table_titles <- function(kit, src, part) {
 }
 
 # The payload: the state, the current layout's table model as the rows
-# (sent again only when it changes), and what R resolves for the face.
-table_payload <- function(kit, src, part, titles) {
+# (sent again only when it changes), and what R resolves for the face. A
+# block with its own gear sends it too (table_gear()).
+table_payload <- function(kit, src, part, titles, gear = NULL) {
   rows <- viz_rows()
   function() {
     v <- viz_values(kit$state)
@@ -99,7 +100,8 @@ table_payload <- function(kit, src, part, titles) {
       list(
         titles = tryCatch(titles(), error = function(e) NULL),
         empty = built$empty,
-        receipt = if (!kit$transient()) part()$receipt(v$selection)
+        receipt = if (!kit$transient()) part()$receipt(v$selection),
+        gear = gear
       ),
       built$derived
     )
