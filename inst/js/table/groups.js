@@ -34,6 +34,35 @@
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
+  /**
+   * A tile column as R sends it, back to one entry per row (R/table-groups-view.R,
+   * table_groups_tile_wire()): the filled rows spread over the column, the text
+   * colour looked up by fill. In place and once: the binding hands the same
+   * model to every render.
+   * @param {TableModel | null | undefined} m
+   */
+  function dense(m) {
+    if (!m || !Array.isArray(m.cols)) return;
+    for (const c of m.cols) {
+      const at = c.at;
+      if (Array.isArray(at)) {
+        for (const k of /** @type {const} */ (['disp', 'key', 'bg', 'fg'])) {
+          const held = /** @type {any[] | null | undefined} */ (c[k]);
+          if (!Array.isArray(held)) continue;
+          const full = new Array(m.n).fill(null);
+          for (let j = 0; j < at.length; j++) full[at[j]] = held[j];
+          /** @type {any} */ (c)[k] = full;
+        }
+        c.at = null;
+      }
+      const of = c.ink;
+      if (of && Array.isArray(c.bg) && !c.fg) {
+        c.fg = c.bg.map((b) => (b != null && of[b]) || null);
+        c.ink = null;
+      }
+    }
+  }
+
   class Groups extends /** @type {any} */ (T.Records) {
     /**
      * @param {TableFrame} frame
@@ -103,6 +132,7 @@
 
     /** @param {VizPayload} p */
     render(p) {
+      dense(/** @type {TableModel | null} */ (p.data));
       super.render(p);
       const d = /** @type {TableDerived} */ (p.derived || {});
       paintLegend(this.legend, this.model && !this.cardsOn() ? d.legend : null);

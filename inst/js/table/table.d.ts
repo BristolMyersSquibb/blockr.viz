@@ -55,6 +55,11 @@ interface TableCol {
   /** Cell fill and ink. */
   bg?: (string | null)[] | null;
   fg?: (string | null)[] | null;
+  /** On the wire only (a tile column, R/table-groups-view.R): the text colour
+   * of each fill, and the rows the per-row arrays hold when most are empty.
+   * The groups view puts both back before anything reads the column. */
+  ink?: Record<string, string | null> | null;
+  at?: number[] | null;
   /** Data bar: width as a share of the cell, 0 to 1. */
   bar?: (number | null)[] | null;
   bar_fill?: string | null;

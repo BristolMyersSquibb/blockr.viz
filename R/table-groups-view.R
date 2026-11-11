@@ -31,7 +31,7 @@ table_groups_to_model <- function(m, axis = TRUE) {
 # to the row's claim, `pct` the "(43%)" tail.
 table_groups_col <- function(c, text, p, prep, pick, axis) {
   pct <- if (!is.null(c$pct)) table_groups_text(c$pct)
-  table_groups_compact(list(
+  out <- table_groups_compact(list(
     name = as.character(p$label %||% "")[[1L]],
     num = identical(c$kind, "num") && !isTRUE(c$text),
     disp = table_groups_text(text),
@@ -44,6 +44,36 @@ table_groups_col <- function(c, text, p, prep, pick, axis) {
     axis = if (axis) table_groups_axis(p, prep),
     mark = table_groups_mark(c)
   ))
+  if (identical(c$kind, "tile")) table_groups_tile_wire(out) else out
+}
+
+# A tile column as it travels. A matrix is mostly empty cells, and four
+# arrays with a `null` per empty cell made a matrix of 243 columns and 228
+# rows 1.2 MB. Two things are left out, and the view puts both back before
+# anything reads the column (inst/js/table/groups.js, dense()):
+# - the text colour, a function of the fill, goes once per fill (`ink`);
+# - a column with fewer than half its cells filled sends the filled rows
+#   (`at`, 0-based) and their values only.
+table_groups_tile_wire <- function(col) {
+  bg <- col$bg
+  fg <- col$fg
+  if (!is.null(bg) && !is.null(fg)) {
+    has <- !is.na(bg)
+    fills <- unique(bg[has])
+    ink <- fg[has][match(fills, bg[has])]
+    if (identical(ink[match(bg, fills)], as.character(fg))) {
+      col$fg <- NULL
+      if (length(fills)) col$ink <- as.list(stats::setNames(ink, fills))
+    }
+  }
+  per_row <- intersect(c("disp", "key", "bg", "fg"), names(col))
+  n <- length(col$disp)
+  filled <- Reduce(`|`, lapply(col[per_row], function(x) !is.na(x)))
+  if (n >= 8L && sum(filled) < n / 2) {
+    col$at <- which(filled) - 1L
+    col[per_row] <- lapply(col[per_row], function(x) x[filled])
+  }
+  col
 }
 
 # The claim of a click on a cell: the facet level, and for a colour split the
