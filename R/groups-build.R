@@ -62,6 +62,10 @@ groups_summary_copies <- function(s, i, build) {
 # One summary's copies: fill the frames, add the plan entries.
 groups_build_summary <- function(st, i, build) {
   s <- st$summaries[[i]]
+  # A faceted plain value: every copy from one pass (R/groups-matrix.R).
+  if (groups_matrix_ok(s, build)) {
+    return(groups_build_matrix(st, i, build))
+  }
   copies <- groups_summary_copies(s, i, build)
   for (cp in copies) {
     cp <- groups_copy_denom(cp, s, build)
