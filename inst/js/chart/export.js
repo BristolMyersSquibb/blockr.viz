@@ -288,8 +288,12 @@
         el.id = 'vz-capture-chart-' + (++captureSeq);
         el.style.cssText = 'width:' + msg.width + 'px;height:' + msg.height + 'px;';
         const view = scope.own(new View(el, scope, { still: true }));
-        view.render(msg);
-        whenDrawn(view, scope)
+        // The board's theme first, so the view draws at once (view.js).
+        Promise.resolve(NS.themeReady(msg.derived))
+          .then(() => {
+            view.render(msg);
+            return whenDrawn(view, scope);
+          })
           .then(() => picture(view, { pixelRatio: msg.ratio }))
           .then(resolve, reject);
       })

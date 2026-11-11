@@ -197,6 +197,11 @@ interface VizNamespace {
     num(v: unknown): unknown;
     num3(v: unknown): unknown;
   };
+  /** Scripts fetched when first needed (core/lazy.js). */
+  lazy: {
+    script(url: string): Promise<void>;
+    asset(path: string): string;
+  };
   tooltip: {
     swatch(color: unknown): string;
     head(html: string, color?: unknown): string;

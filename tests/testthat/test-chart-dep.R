@@ -1,7 +1,9 @@
 # The chart block's UI loads the JS core and the specs, then the chart
 # scripts in the order inst/js/chart/scripts.txt lists them, view.js last.
+# These tests read the single sources (dev_js); test-bundle.R the bundles.
 
 test_that("the chart dependency lists the core, then every chart script", {
+  withr::local_options(blockr.viz.dev_js = TRUE)
   ui <- new_chart_block()$expr_ui("blk")
   deps <- htmltools::findDependencies(ui)
   names <- vapply(deps, `[[`, character(1), "name")
@@ -26,6 +28,7 @@ test_that("the chart dependency lists the core, then every chart script", {
 })
 
 test_that("a table-only page gets the core, not the chart's styles", {
+  withr::local_options(blockr.viz.dev_js = TRUE)
   deps <- htmltools::findDependencies(table_view_dep())
   core <- deps[[match("blockr-viz-core", vapply(deps, `[[`, "", "name"))]]
   expect_true("js/core/busy.js" %in% core$script)
@@ -33,9 +36,10 @@ test_that("a table-only page gets the core, not the chart's styles", {
 })
 
 test_that("the table's cache number covers its stylesheets", {
+  withr::local_options(blockr.viz.dev_js = TRUE)
   deps <- htmltools::findDependencies(table_view_dep())
   tab <- deps[[match("blockr-viz-table", vapply(deps, `[[`, "", "name"))]]
-  own <- setdiff(tab$script, "js/vendor/snapdom.js")
+  own <- tab$script
   expect_true("css/table.css" %in% tab$stylesheet)
   expect_identical(tab$version, js_version(c(own, tab$stylesheet), "."))
   expect_false(identical(tab$version, js_version(own, ".")))

@@ -2,6 +2,7 @@
 # tests/js/core/load.js.
 namespace.js
 util.js
+lazy.js
 tooltip.js
 scope.js
 busy.js

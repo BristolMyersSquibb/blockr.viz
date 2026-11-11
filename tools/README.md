@@ -9,6 +9,7 @@ of the built package (`.Rbuildignore`). CI runs them all in the
 
 | check | script | fails when |
 |---|---|---|
+| bundles | `bundle.js --check`, `tests/testthat/test-bundle.R` | a bundle in `inst/js/dist` or `inst/css/dist` was not rebuilt after a source edit |
 | dead R | `dead-r.R` | a namespace object no root reaches; second list: those tests still use |
 | dead JS | `dead-js.js` | a function nothing references (locals: eslint `no-unused-vars`) |
 | dead CSS | `dead-css.js` | a class no R or JS source emits |
@@ -22,3 +23,16 @@ of the built package (`.Rbuildignore`). CI runs them all in the
 | comments | `check-comments.R` | never; lists history comments for the final audit |
 
 Results land in `results/` (JUnit from testthat and node) and `coverage/`.
+
+## Bundles
+
+The page loads one script per view (`inst/js/dist/core.js`, `chart.js`,
+`table.js`) and one stylesheet each for the core and the table
+(`inst/css/dist/`). `node tools/bundle.js` writes them from the lists in
+`inst/js/<view>/scripts.txt` and `inst/css/styles.txt`; they are committed,
+since R cannot run node at install time. After a merge that touches
+`inst/js` or `inst/css`, rebuild rather than resolve conflicts in `dist/`:
+take either side and run `node tools/bundle.js`. With
+`options(blockr.viz.dev_js = TRUE)` the dependencies list the single sources
+instead, so a JS edit shows on reload without a rebuild. The node tests,
+`dead-js.js` and coverage read the sources and never the bundles.

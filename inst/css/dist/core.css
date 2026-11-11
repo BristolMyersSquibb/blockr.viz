@@ -1,0 +1,1052 @@
+/* blockr.viz bundle 51b68c48bb80ba6b82bd6908cfd5c85c, built by tools/bundle.js. Do not edit. */
+/* sources: frame.css gear.css */
+/* --- frame.css */
+/* The frame every block view draws in (core/frame.js): header, titles,
+   footer and status line, the busy cue and the empty state. Part of the core
+   dependency, so the chart and the table both load it. */
+
+/* ===== Frame =====
+   Positions the gear tray. */
+.vz-frame { position: relative; }
+/* The frame hides a part with `hidden`; a part's own display rule must not
+   show it again. */
+.vz-frame [hidden] { display: none !important; }
+
+/* ===== Title, subtitle, caption =====
+   Painted by core/frame.js titles() from the resolved title text. A band
+   hides while empty, so a block without titles has no gap. */
+.vz-title {
+  font-size: var(--blockr-font-size-lg, 1rem);
+  font-weight: 600;
+  color: var(--blockr-color-text-default, #111827);
+  white-space: pre-line;
+}
+.vz-subtitle {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  margin-top: 1px;
+  white-space: pre-line;
+}
+/* `pre-line`, like the title and subtitle: a newline in the text is a line
+   break, which is how a caption carries a second note (a pooling rule, a
+   denominator) on its own line. `\n` in the template is that newline
+   (R/title-template.R, tt_line_breaks). Runs of spaces still collapse, and the
+   text stays a text node: bands are data-derived, never HTML. */
+.vz-caption {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  padding: 6px 2px 0;
+  white-space: pre-line;
+}
+
+/* ===== Status footer ===== */
+.vz-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.vz-status-text {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+/* The receipt for a transient drill: past tense, this block's own act, and it
+   fades. One step darker than the muted status line it replaces, and not the
+   primary blue: the blue read as a link and outlived the flash, leaving a
+   coloured sentence with nothing coloured left on screen. The change of words
+   is the signal; the mark carries the colour.
+   It leaves the way the mark does, hold then fade, rather than being cut. It
+   is held longer than the mark (1400ms against 400ms) because a sentence takes
+   longer to read than a lit bar takes to notice.
+   The fade is linear, not the mark's ease-in. Grey text is invisible around
+   opacity 0.3, so only the top two thirds of the ramp are seen; under ease-in
+   that stretch was squeezed into the last ~350ms and the line read as cut.
+   The `animation` shorthand is set inline by core/frame.js, not here: the
+   frame repaints this element on every change of the line, and a fresh
+   element would restart the animation. The delay is computed from the age of
+   the receipt, so a rebuild resumes the fade instead of replaying it. Only
+   the keyframes and the colour belong in CSS. */
+.vz-status-receipt { color: var(--blockr-color-text-secondary, #374151); }
+/* Named by core/frame.js, which sets the animation inline. */
+@keyframes vz-receipt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+/* The frame's footer sits under the caption: a count and the status line,
+   each there only while it has words (core/frame.js): nothing filtered, no
+   line and no gap. A second click on the selected mark also clears. */
+.vz-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* A tall chart or table (a waterfall of 250 subjects is 4,000 px) would
+     put the count, the status line and a drill's receipt below the visible
+     part of the panel. The footer sticks to the bottom of whatever scrolls
+     while the block is in view. Empty, it has no height. */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--blockr-color-bg-surface, #fff);
+}
+.vz-foot > .vz-count:empty,
+.vz-foot > .vz-status:empty { display: none; }
+.vz-foot > .vz-status {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+.vz-foot .vz-status-note { margin-left: 0; }
+/* The clear button is blockr.ui's quiet xs button (core/frame.js). The
+   negative margin keeps the line as high as its text. */
+.vz-status-clear.blockr-btn { margin: -5px 0; }
+/* The resting line coming back after a receipt. Without this it snaps into the
+   slot the receipt just dissolved out of, which moves the cut one step later
+   and does not remove it. */
+.vz-status-returning { animation: vz-status-in 320ms ease-out both; }
+@keyframes vz-status-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.vz-status-note {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-warning-text, #b45309);
+  font-style: italic;
+  margin-left: 12px;
+}
+.vz-slider {
+  width: 100%;
+  accent-color: var(--blockr-color-primary, #2563eb);
+  cursor: pointer;
+}
+.vz-slider-value {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-grey-600, #4b5563);
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ===== Header =====
+   Titles, tools (the download), gear and settings tray, placed by state.
+   Closed: one row, title and subtitle on the left, download and gear on the
+   right. Open: the gear alone on top, the tray under it (blockr.ui draws its
+   beak 8px in from the right end, under the gear), then the titles and the
+   download. The table block uses the same classes and rules. */
+.vz-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "titles tools gear";
+  column-gap: 6px;
+  /* Top-aligned, so a sentence that wraps grows downward and the icons stay
+     at the top right. */
+  align-items: start;
+}
+.vz-head > .vz-head__titles {
+  grid-area: titles;
+  min-width: 0;
+}
+.vz-head > .vz-head__tools {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vz-head > .vz-head__tools:empty { display: none; }
+.vz-head > .blockr-gear-btn { grid-area: gear; }
+.vz-head > .blockr-settings { grid-area: tray; }
+.vz-head.vz-head--open { grid-template-areas: ". . gear" "tray tray tray" "titles tools tools"; }
+.vz-head.vz-head--open > .vz-head__tools { justify-self: end; }
+.vz-head.vz-head--open > .blockr-settings { margin: 8px 0 10px; }
+.vz-frame > .vz-head > .vz-head__titles { padding: 2px 8px 0 2px; }
+
+/* ===== Busy cue (core/busy.js) =====
+   An output being recomputed keeps its old picture, dimmed, and the line under
+   its sentence counts the wait. The class lands 300 ms after R's
+   "blockr-busy" and leaves once the new picture is drawn. The sentence keeps
+   full contrast: it names what is being computed. */
+.vz-busy-line {
+  height: 0;
+  overflow: hidden;
+  padding: 0 2px;
+  line-height: 18px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+  transition: height 0.15s ease;
+}
+/* The line opens rather than appears, so the output slides down under it. */
+.vz-busy .vz-busy-line { height: 24px; }
+/* On the elements themselves, so the output fades back in as well as out. */
+.vz-chart-grid,
+.vz-chart-legend,
+[data-dt-elem-id] .blockr-table-wrapper { transition: opacity 0.15s ease; }
+.vz-busy .vz-chart-grid,
+.vz-busy .vz-chart-legend,
+.vz-busy .blockr-table-wrapper { opacity: 0.45; }
+
+/* ===== Empty state ===== */
+.vz-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 24px;
+}
+.vz-empty-text {
+  font-size: 13px;
+  color: var(--blockr-color-text-muted, #9ca3af);
+  text-align: center;
+}
+
+/* The data table under a view (core/data-view.js): hidden until the header's
+   tool opens it. A pressed tool takes the accent tint. The table's own
+   footer is hidden: the view's footer already says what is selected. */
+.vz-data { display: none; }
+.vz-data-open .vz-data {
+  display: block;
+  border-top: 1px solid var(--blockr-color-border-default);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.vz-data-tool[aria-pressed="true"],
+.vz-data-tool[aria-pressed="true"]:hover {
+  color: var(--blockr-color-text-accent-strong);
+  background: var(--blockr-color-bg-accent-subtle);
+  border-color: var(--blockr-color-border-accent-subtle);
+}
+.vz-data__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+.vz-data__meta { font-size: var(--blockr-font-size-xs); color: var(--blockr-color-text-muted); }
+.vz-data__n { margin-left: 5px; opacity: .7; font-variant-numeric: tabular-nums; }
+/* Above table-structured.css's `max-height: none`, which loads later. */
+.vz-data__table .vz-table .blockr-table-wrapper { max-height: 320px; }
+.vz-data__table .vz-foot { display: none; }
+.vz-data__table[hidden], .vz-data__rows[hidden] { display: none; }
+
+/* A data download's count after its table's name, as the data view's tab
+   shows it: "Rows 40 of 254". The open menu sits on <body>, so this is not
+   scoped to the frame. */
+.vz-download__count {
+  margin-left: 6px;
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
+}
+/* --- gear.css */
+/* The gear (core/gear/) and what it puts on a block's face: the tray's
+   sections and rows, the type tiles, the title template rows with their `@`
+   menu, the title slots (core/titles.js) and the prepare script's band
+   (core/script-band.js). Part of the core dependency. */
+
+/* ===== Gear tray: form rows =====
+   Each field is a vertical unit: the label on top, a full-width control,
+   muted help below. */
+.vz-row {
+  flex: 1 1 190px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.vz-row > .blockr-label { margin-bottom: 0; }
+.vz-help {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-grey-400, #9ca3af);
+  line-height: 1.3;
+}
+
+/* ===== Titles section =====
+   The one section in the gear that is typed rather than picked, so it needs
+   the whole popover: a template ("{@func} of {label(@value)}[, by {@color}]")
+   is three times the length of a column name, and a form cell is 180px. */
+.vz-at-key {
+  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
+  background: var(--blockr-grey-100, #f3f4f6);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  padding: 0 4px;
+  color: var(--blockr-color-text-secondary, #374151);
+}
+/* What the card shows, from the parts R resolved for the card itself. Dimmed
+   while the field is dirty: the template in the field has not been resolved
+   by anything yet, and the editor must not guess. */
+.vz-template-shows {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+.vz-row--dirty .vz-template-shows { opacity: 0.45; }
+/* No line where it would only repeat the field: plain text, no slots. */
+.vz-template-shows.is-same { display: none; }
+/* A template row stacks: the field, what the card shows, a warning. Side by
+   side they wrapped in narrow columns and stretched the field to their
+   height. */
+.vz-section--titles .vz-row-controls {
+  flex-direction: column;
+  gap: 0;
+}
+/* The help is the same for every row, so the section shows it once, under
+   its last row. */
+.vz-section--titles > .vz-row:not(:last-child) .vz-help { display: none; }
+.vz-section--titles > .vz-row:last-child .vz-help { margin-top: 10px; }
+/* The only chrome: a turn, saying that the line above becomes this one. */
+.vz-template-turn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--blockr-color-border-strong, #d1d5db);
+}
+/* Named in the line rather than beside it, so a wrapped sentence keeps it. */
+.vz-template-stale {
+  display: none;
+  margin-left: 6px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-style: italic;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-row--dirty .vz-template-stale { display: inline; }
+.vz-template-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.6;
+  color: var(--blockr-color-text-muted, #6b7280);
+  white-space: pre-line;
+}
+.vz-template-preview--empty::after {
+  content: 'nothing';
+  font-style: italic;
+}
+/* The slot is a word here, not a control: the live copy belongs to the reader,
+   on the block. Same mark, no pointer. */
+.blockr-slot--preview { cursor: default; }
+.vz-template-offer,
+.blockr-slot-offer {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 6px;
+  border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
+  border-radius: var(--blockr-radius-sm, 4px);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.vz-template-offer { color: var(--blockr-color-text-muted, #6b7280); }
+/* A script value that takes the word of a block setting with the same name. */
+.vz-template-script {
+  margin-top: 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-template-script[hidden] { display: none; }
+/* A name the resolver has no answer for. It prints "" on the card and takes
+   its bracketed clause with it, which is right there and wrong here. */
+.vz-template-warn {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 1px solid #fde68a;
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-warning-bg, #fffbeb);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: #b45309;
+}
+
+/* ===== The `@` menu =====
+   Mention-style: typing `@` in a title field opens the list of everything the
+   block can print, at the caret, filtering on what follows. Portaled to
+   <body> like every other dropdown. */
+.vz-at-menu {
+  position: fixed;
+  z-index: 10000;
+  width: 410px;
+  max-width: 92vw;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-radius: var(--blockr-radius-lg, 8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.vz-at-head {
+  padding: 7px 9px 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.vz-at-note {
+  padding: 0 9px 6px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 1.4;
+}
+.vz-at-head,
+.vz-at-note,
+.vz-at-val,
+.vz-at-tok { color: var(--blockr-color-text-muted, #6b7280); }
+.vz-at-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 9px;
+  border: none;
+  background: none;
+  border-radius: var(--blockr-radius-sm, 4px);
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  text-align: left;
+  cursor: pointer;
+}
+.vz-at-item--sub { padding-left: 22px; }
+.vz-at-item--hl { background: var(--blockr-color-bg-hover, #f3f4f6); }
+.vz-at-item > b {
+  flex: 0 0 auto;
+  font-weight: var(--blockr-font-weight-medium, 500);
+  color: var(--blockr-color-text-primary, #111827);
+}
+.vz-at-item--sub > b {
+  font-weight: var(--blockr-font-weight-normal, 400);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-at-val {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* An unset setting says so: that is how you find out the block has a facet. */
+.vz-at-val--unset { font-style: italic; }
+.vz-at-tok {
+  flex: 0 0 auto;
+  font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', Consolas, Monaco, monospace);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+}
+.vz-at-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--blockr-grey-100, #f3f4f6);
+}
+
+/* ===== Sections (Mapping / Encoding / Presentation) =====
+   Each section owns a full popover row and holds its own wrapping grid of
+   form rows. Rows are generated per active role. */
+.vz-section-title {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  text-transform: uppercase;
+}
+/* The groups as a plain list, when blockr.ui has no trayNav
+   (sections.js, plainList()): a group's name over its sections. */
+.vz-tray-group-title {
+  font-size: var(--blockr-font-size-sm, 0.875rem);
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  margin: 16px 0 8px;
+}
+.vz-tray-group-title:first-child { margin-top: 0; }
+/* Add-mapping menu. The trigger reuses blockr.dplyr's .blockr-add-link (a
+   subtle grey text link with a plus icon, blue on hover) from the shared
+   blockr-blocks.css; .vz-add-trigger only resets the <button> chrome. */
+.vz-add {
+  grid-column: 1 / -1;
+  position: relative;
+}
+.blockr-settings.vz-tray > * + .vz-section { margin-top: 24px; }
+/* The notch over the open gear takes the tray's colour, as blockr.ui's rule
+   says. blockr.stats and blockr.io ship an older copy of that rule that
+   paints it white, and win when their stylesheets load later: in dark mode
+   a white diamond sat on the dark tray. */
+.blockr-settings.vz-tray.blockr-settings--beak.blockr-settings--open::before {
+  background: inherit;
+  border: 0;
+}
+/* --vz-cols is the number of tracks, stepped up with the tray's width. A row
+   spans --vz-s2 of them; a paired row (metric+agg, sort+dir, two controls)
+   spans --vz-s4. */
+.blockr-settings.vz-tray .vz-section {
+  --vz-cols: 1;
+  --vz-s2: 1;
+  --vz-s4: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--vz-cols), minmax(0, 1fr));
+  gap: 16px 12px;
+  align-items: start;
+}
+@container (min-width: 290px) {
+  .blockr-settings.vz-tray .vz-section {
+    --vz-cols: 2;
+    --vz-s2: 2;
+    --vz-s4: 2;
+  }
+}
+@container (min-width: 560px) {
+  .blockr-settings.vz-tray .vz-section {
+    --vz-cols: 4;
+    --vz-s4: 4;
+  }
+}
+@container (min-width: 840px) {
+  .blockr-settings.vz-tray .vz-section { --vz-cols: 6; }
+}
+@container (min-width: 1110px) {
+  .blockr-settings.vz-tray .vz-section { --vz-cols: 8; }
+}
+.blockr-settings.vz-tray .vz-section > * { grid-column: span var(--vz-s2); }
+.blockr-settings.vz-tray .vz-section > .vz-row--paired { grid-column: span var(--vz-s4); }
+.blockr-settings.vz-tray .vz-section > .vz-section-title,
+.blockr-settings.vz-tray .vz-section > .vz-add,
+.blockr-settings.vz-tray .vz-section > .vz-row--code,
+.blockr-settings.vz-tray .vz-section > .vz-tiles,
+.blockr-settings.vz-tray .vz-section > .vz-row.vz-row--wide,
+.blockr-settings.vz-tray .vz-section--titles > .vz-row { grid-column: 1 / -1; }
+.blockr-settings.vz-tray .vz-section-title {
+  margin: 0 0 -6px; /* 16px row gap - 6 = the 10px under a title */
+  padding: 0;
+  border: 0;
+  letter-spacing: 0.05em;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.blockr-settings.vz-tray .vz-section-title:last-child { margin-bottom: 0; }
+.blockr-settings.vz-tray .vz-row,
+.blockr-settings.vz-tray .vz-add { margin: 0; }
+/* One cell shape: an 18px label line, 4px, then the 42px control line, so
+   the labels and the controls of a grid row line up whatever the widget. A
+   control fills the line; a checkbox and a slider sit in its middle. A
+   control that wraps (narrow) or grows (tiles, editors, templates, the
+   script) makes its own row taller and moves nothing else. */
+.blockr-settings.vz-tray .vz-section > .vz-row:where(:not(.vz-add)) {
+  display: grid;
+  grid-template-rows: 18px minmax(var(--blockr-control-h, 42px), auto);
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 4px;
+  align-content: start;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row.vz-row--tall { grid-template-rows: 18px auto; }
+.blockr-settings.vz-tray .vz-section > .vz-row.vz-row--nolabel { grid-template-rows: auto; }
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-head {
+  height: 18px;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-head > .blockr-label {
+  margin: 0;
+  line-height: 18px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row:not(.vz-row--tall) > .vz-row-controls {
+  align-items: center;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-segmented,
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-text-input,
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .vz-slider {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .blockr-text-input {
+  height: var(--blockr-control-h, 42px);
+  box-sizing: border-box;
+}
+/* The column picker beside a drill or highlight checkbox takes the rest. */
+.blockr-settings.vz-tray .vz-section > .vz-row > .vz-row-controls > .vz-row-sub {
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* An option that exists but does not apply here (the table's Cards look in
+   the variables layout): drawn, greyed, inert. */
+.blockr-settings.vz-tray .blockr-segmented__seg.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Row head: label and remove button on one line above the control. */
+.vz-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+/* Control area: one picker, or a paired primary and secondary (metric+agg,
+   sort+dir) side by side. */
+.vz-row-controls {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.vz-row-controls > .vz-tiles {
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Tiles in groups (the chart type): each group its heading over its tiles,
+   the groups side by side while they fit. */
+.vz-row-controls:has(> .vz-tile-group) {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.vz-row-controls > .vz-tile-group {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+/* A narrow tray, under two tracks of the section grid: one column, a
+   paired row no longer spans two, and a row's controls wrap. blockr.ui makes
+   the tray (.blockr-settings) the container. */
+@container (max-width: 404px) {
+  .blockr-settings .vz-section { grid-template-columns: 1fr; }
+  .blockr-settings .vz-section > .vz-row--paired { grid-column: auto; }
+  .blockr-settings .vz-row-controls { flex-wrap: wrap; }
+}
+
+/* ===== Segments with icons (core/gear/icons.js) =====
+   The icon before its word. Where the words would not fit the row
+   (controls.js, withIcons), they go and each icon is named by its tooltip. */
+.vz-seg--icons .blockr-segmented__seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.vz-seg-icon { display: inline-flex; flex: none; }
+.vz-seg-icon svg { display: block; width: 16px; height: 16px; }
+.vz-seg--bare .vz-seg-word { display: none; }
+.vz-seg--bare .blockr-segmented__seg { padding: 0 9px; }
+
+/* ===== Type tiles ===== */
+.vz-tiles {
+  display: grid;
+  /* Five a row in a 560px gear, three in a 360px panel. */
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+.vz-tile-group-head {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: var(--blockr-font-weight-medium, 500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blockr-color-text-muted, #6b7280);
+  margin: 8px 0 4px;
+}
+.vz-tile-group-head:first-child { margin-top: 0; }
+.vz-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+  cursor: pointer;
+}
+.vz-tile-face {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-md, 6px);
+  background: var(--blockr-color-bg-surface, #fff);
+  overflow: hidden;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.vz-tile-face svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.vz-tile-face svg * { vector-effect: non-scaling-stroke; }
+.vz-tile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  text-align: center;
+}
+.vz-tile:hover { color: var(--blockr-color-text-default, #111827); }
+.vz-tile:hover .vz-tile-face {
+  background: var(--blockr-color-bg-hover, #f3f4f6);
+  border-color: var(--blockr-color-border-strong, #d1d5db);
+}
+.vz-tile--on,
+.vz-tile--on:hover {
+  color: var(--blockr-color-text-accent-strong, #1d4ed8);
+  font-weight: var(--blockr-font-weight-medium, 500);
+}
+/* Under the pointer too: the hover rule above outranks a plain `.vz-tile--on`,
+   and a tile redrawn under the pointer would fade from blue to grey. */
+.vz-tile--on .vz-tile-face,
+.vz-tile--on:hover .vz-tile-face {
+  background: var(--blockr-color-bg-accent-subtle, #eff6ff);
+  border-color: var(--blockr-color-border-accent, #2563eb);
+  box-shadow: inset 0 0 0 1px var(--blockr-color-border-accent, #2563eb);
+}
+.vz-tile.is-disabled,
+.vz-tile.is-disabled:hover {
+  color: var(--blockr-color-text-disabled, #9ca3af);
+  cursor: not-allowed;
+}
+.vz-tile.is-disabled .vz-tile-face,
+.vz-tile.is-disabled:hover .vz-tile-face {
+  background: var(--blockr-color-bg-surface, #fff);
+  border-color: var(--blockr-color-border-default, #e5e7eb);
+}
+.vz-tile:focus-visible {
+  outline: var(--blockr-focus-outline, 2px solid #2563eb);
+  outline-offset: var(--blockr-focus-offset, 2px);
+  border-radius: var(--blockr-radius-md, 6px);
+}
+
+/* ===== Title slots =====
+   A word in the block's own sentence that is one of its arguments: clicking it
+   opens that argument's control. The mark is the colour plus a dashed
+   underline and nothing else, with no padding and no tint, so a unit can touch
+   the word ("25+ patients") and a caption reads as a caption. Grey plus an
+   underline reads as emphasis and nobody clicks an emphasised word; a tinted
+   tag reads as a control but pushes the punctuation after it away. On hover
+   the dash firms up: dashed says you can change this, solid says you are about
+   to. `blockr-` is the reserved prefix on purpose: the table and code blocks
+   render the same word. What the word opens is Blockr.Select.menu(), whose
+   chrome lives in blockr-select.css. */
+.blockr-slot {
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: 500;
+  border-bottom: 1px dashed var(--blockr-color-primary, #2563eb);
+  padding-bottom: 1px;
+  cursor: pointer;
+}
+.blockr-slot:hover,
+.blockr-slot:focus-visible,
+.blockr-slot--open {
+  color: var(--blockr-blue-700, #1d4ed8);
+  border-bottom: 1px solid var(--blockr-blue-700, #1d4ed8);
+  outline: none;
+}
+/* A setting the sentence would name if it were set. The clause left with its
+   value and took the word with it, so the offer stands in for the word: same
+   menu, dashed rather than underlined, because it is an invitation and not a
+   statement about the picture. Muted, and gone once the setting is filled. */
+.blockr-slot-offer {
+  color: var(--blockr-color-text-secondary, #6b7280);
+  cursor: pointer;
+}
+/* The dashed box is nearly as tall as a line of the sentence, so on a wrapped
+   line it would sit on the underlined words above it. A subtitle or caption
+   carrying offers gets taller lines throughout, which keeps its spacing even
+   whether a line holds words, offers or both. */
+.vz-subtitle:has(.blockr-slot-offer) { line-height: 2.25; }
+/* The caption's text is a pixel smaller, so it needs more line height for the
+   same gap. */
+.vz-caption:has(.blockr-slot-offer) { line-height: 2.35; }
+.blockr-slot-offer:hover,
+.blockr-slot-offer:focus-visible {
+  border-color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-primary, #2563eb);
+  outline: none;
+}
+/* A slot being typed over: it sits in the line where the
+   word was, in the word's colour and weight, a box instead of the underline. */
+.blockr-slot-input {
+  font: inherit;
+  font-weight: 500;
+  color: var(--blockr-blue-700, #1d4ed8);
+  padding: 0 4px;
+  margin: 0 1px;
+  border: 1px solid var(--blockr-color-border-accent, #2563eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-bg-surface, #fff);
+  line-height: inherit;
+  outline: none;
+  /* A field being typed in: the accent edge and the focus ring. */
+  box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
+  font-variant-numeric: tabular-nums;
+}
+/* A number keeps type=number for the keyboard, without the spinner. */
+.blockr-slot-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.blockr-slot-input[type=number]::-webkit-outer-spin-button,
+.blockr-slot-input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ===== Exposed mapping band =====
+   Mapping roles promoted out of the gear onto the block's face (the chart
+   block's `expose` argument). The rows are the gear's own role rows, rendered
+   into this container instead of the popover, so the two surfaces cannot
+   drift apart; everything below is layout.
+   Geometry follows the code / function block's params grid (blockr.extra
+   .fb-params-grid): a 13px medium label 5px above a 42px control shell, a
+   12px gap, and a column ladder that steps on the panel's width, not the
+   viewport's. A band of selects wants a wide track, since four narrow columns
+   of truncated column names say nothing, so a third and fourth column are
+   added only once every column still clears ~330px. */
+.vz-script-band {
+  container-type: inline-size;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* No padding on top: the gear header above already carries its own space,
+     and the code block's params sit 6px under the icon row. Measured: 12px here
+     put the first label 18px down. */
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: var(--blockr-color-bg-surface, #fff);
+}
+@container (max-width: 1356px) {
+  .vz-script-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (max-width: 1014px) {
+  .vz-script-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 452px) {
+  .vz-script-band { grid-template-columns: 1fr; }
+}
+/* The popover rows are laid out for a narrow column; on the face they sit in
+   the grid, so they drop the popover's own spacing and take the 42px shell. */
+.vz-script-band .vz-script-band-row {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+/* 5px under the label, as .fb-field-label sets it. The head is a flex box
+   whose own height can exceed the label's line box, so it is zeroed and the
+   gap is put on the head itself. */
+.vz-script-band .vz-script-band-row .vz-row-head {
+  margin: 0 0 5px;
+  padding: 0;
+  min-height: 0;
+  line-height: inherit;
+}
+/* The popover label carries its own 4px bottom margin, which stacks with the
+   head's 5px and made the gap 9px against the code block's 5px. */
+.vz-script-band .vz-script-band-row .blockr-label {
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  font-weight: 500;
+  color: var(--blockr-color-text-secondary, #6b7280);
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 19.5px;
+  margin-bottom: 0;
+}
+.vz-script-band .vz-script-band-row .vz-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vz-script-band .vz-script-band-row .vz-row-controls > * {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* The help line under a picker is gear voice (it explains a choice while you
+   configure). On the face it would double the band's height on every block, so
+   it is dropped: the label and the value carry the reading. */
+.vz-script-band .vz-script-band-row .vz-help { display: none; }
+/* A script that threw, and a declaration that could not become a control.
+   Both read as errors rather than as help text, because both mean a knob the
+   user expected is not there. */
+.vz-script-failed { color: var(--blockr-color-danger, #b91c1c); }
+.vz-script-band .vz-script-input-error .vz-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--blockr-color-danger, #b91c1c);
+}
+.vz-script-band .vz-script-failed {
+  grid-column: 1 / -1;
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+}
+.vz-script-band .blockr-text-input {
+  padding: 10px 14px;
+  min-height: 42px;
+}
+
+/* ===== Prepare script (the `script` argument of both blocks) =====
+   The gear's textarea and the two failure surfaces above. Nothing here styles
+   the script's controls: those are ordinary band rows drawn by the renderer a
+   mapping row uses, so they inherit the shell, the label track and the column
+   ladder. */
+/* A gear section is a grid of narrow tracks for pickers. A script wants the
+   whole width, so its row spans every track. (`flex` does nothing on a grid
+   item.) */
+.vz-row--code {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.vz-row--code .vz-help {
+  display: block;
+  margin-top: 6px;
+}
+.vz-row--code .vz-row-controls { flex-direction: column; }
+.vz-script-wrap {
+  display: block;
+  width: 100%;
+}
+.vz-script-editor {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--blockr-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+/* --- Blockr.trayNav, until blockr.ui ships it ---------------------------
+   Copied from blockr.ui branch feat/tray-nav (708ef52), with the JS in
+   inst/js/core/gear/tray-nav.js. Delete both once a blockr.ui release has
+   trayNav. The tray is the named container the narrow rule below asks
+   for; blockr.ui main leaves it unnamed, and its own container-type keeps
+   the name in place. */
+.blockr-settings {
+  container: blockr-tray / inline-size;
+}
+
+/* --- Groups in a long tray (Blockr.trayNav) ------------------------------
+   One group shows at a time. From 560px the groups are an index on the
+   left, as the design-system article's sidebar: the groups, and under the
+   open one its sections, indented and muted. Narrower, the index gives way
+   to tabs above the sections. The current group, and the tab, take the
+   selected tint, as a current row does. The pane is a container of its own,
+   so the field grid counts its columns on the pane's width. */
+.blockr-tray-nav {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: 0 18px;
+}
+.blockr-tray-nav__index {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-right: 12px;
+  border-right: 1px solid var(--blockr-color-border-default);
+}
+.blockr-tray-nav__group,
+.blockr-tray-nav__section {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  line-height: 20px;
+  text-align: left;
+  padding: 4px 8px;
+  border-radius: var(--blockr-radius-md);
+  cursor: pointer;
+  color: var(--blockr-color-text-default);
+}
+.blockr-tray-nav__group { font-weight: var(--blockr-font-weight-medium); }
+.blockr-tray-nav__section {
+  padding-left: 18px;
+  color: var(--blockr-color-text-muted);
+}
+.blockr-tray-nav__group:hover,
+.blockr-tray-nav__section:hover,
+.blockr-tray-nav__tab:hover {
+  background: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+}
+.blockr-tray-nav__group.is-current,
+.blockr-tray-nav__tab.is-current {
+  background: var(--blockr-color-bg-selected);
+  color: var(--blockr-color-text-accent-strong);
+}
+.blockr-tray-nav__group:focus-visible,
+.blockr-tray-nav__section:focus-visible,
+.blockr-tray-nav__tab:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
+}
+.blockr-tray-nav__body { min-width: 0; }
+.blockr-tray-nav__tabs {
+  display: none;
+  gap: 2px;
+  margin: -2px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--blockr-color-border-default);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.blockr-tray-nav__tab {
+  flex: none;
+  height: var(--blockr-control-h-xs);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--blockr-radius-md);
+  background: none;
+  font: inherit;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  color: var(--blockr-color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.blockr-tray-nav__pane {
+  container-type: inline-size;
+  min-width: 0;
+}
+.blockr-tray-nav__pane > * + * { margin-top: 24px; }
+.blockr-tray-nav__pane > .blockr-tray-nav__off,
+.blockr-tray-nav__hidden-title { display: none !important; }
+.blockr-tray-nav__pane > .blockr-tray-nav__off + * { margin-top: 0; }
+/* A section picked in the index: it scrolls to the top with 12px to
+   spare, and its area takes the accent tint, 6px around it, then fades. */
+.blockr-tray-nav__pane > * { scroll-margin-top: 12px; }
+.blockr-tray-nav__flash {
+  animation: blockr-tray-nav-flash 1.4s ease-out;
+  border-radius: var(--blockr-radius-md);
+}
+@keyframes blockr-tray-nav-flash {
+  0%, 30% {
+    background: var(--blockr-color-bg-accent-subtle-hover);
+    box-shadow: 0 0 0 6px var(--blockr-color-bg-accent-subtle-hover);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blockr-tray-nav__flash { animation: none; }
+}
+@container blockr-tray (max-width: 559.98px) {
+  .blockr-tray-nav { grid-template-columns: minmax(0, 1fr); }
+  .blockr-tray-nav__index { display: none; }
+  .blockr-tray-nav__tabs { display: flex; }
+}
+
+
+/* Axis limits: a from and a to field on one line. */
+.vz-range { display: flex; align-items: center; gap: 6px; }
+.vz-range .vz-text { flex: 1 1 0; min-width: 0; }
+.vz-range-note {
+  margin-top: 4px;
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-danger, #b42318);
+}
+.vz-range-note[hidden] { display: none; }
+.vz-range-sep {
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
+/* The ticks control (gear/ticks.js): the form, then its fields on one line. */
+.vz-ticks { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.vz-ticks .vz-ticks-step { flex: 0 0 64px; width: 64px; min-width: 0; }
+.vz-ticks .vz-ticks-list { flex: 1 1 120px; min-width: 0; }
+.vz-ticks .vz-ticks-unit { flex: 0 0 104px; min-width: 0; }

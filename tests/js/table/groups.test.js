@@ -492,9 +492,42 @@ test('opening the download menu sends R the picture, once per payload', async ()
   assert.equal(caps[0].value.png, 'data:image/png;base64,BBB');
 });
 
-test('without snapdom the picture fails and nothing is sent', async () => {
+// SnapDOM is not on the page until the first picture asks for it. The
+// script tags are driven by hand: happy-dom fires neither load nor error.
+const snapTags = (win) => Array.from(win.document.head.querySelectorAll('script'))
+  .filter((el) => /js\/vendor\/snapdom\.js$/.test(el.src));
+
+test('the first picture fetches snapdom once and waits for it', async () => {
   const env = loadTable();
-  await assert.rejects(env.V.table.picture(payload({ data: groups(), config: G }), 500), /snapdom/);
+  const p = payload({ data: groups(), config: G });
+  const first = env.V.table.picture(p, 500);
+  const second = env.V.table.picture(p, 500);
+  await tick(env.win, 0);
+  const tags = snapTags(env.win);
+  assert.equal(tags.length, 1, 'both pictures wait for the same script');
+  env.win.snapdom = { toCanvas: () => Promise.resolve({ toDataURL: () => 'data:image/png;base64,CCC' }) };
+  tags[0].onload();
+  assert.equal((await first).png, 'data:image/png;base64,CCC');
+  assert.equal((await second).png, 'data:image/png;base64,CCC');
+  await env.V.table.picture(p, 500);
+  assert.equal(snapTags(env.win).length, 1, 'a loaded snapdom is not fetched again');
+});
+
+test('a snapdom that fails to load fails the picture; the next one tries again', async () => {
+  const env = loadTable();
+  const p = payload({ data: groups(), config: G });
+  const first = env.V.table.picture(p, 500);
+  await tick(env.win, 0);
+  snapTags(env.win)[0].onerror();
+  await assert.rejects(first, /snapdom/);
+  assert.equal(snapTags(env.win).length, 0);
+  const again = env.V.table.picture(p, 500);
+  await tick(env.win, 0);
+  const tags = snapTags(env.win);
+  assert.equal(tags.length, 1);
+  // A script that runs but defines no snapdom fails the picture too.
+  tags[0].onload();
+  await assert.rejects(again, /snapdom is not loaded/);
 });
 
 test('50 groups mounts and unmounts leave no scope open', async () => {

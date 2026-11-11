@@ -275,11 +275,7 @@
    * @returns {Promise<VizPicture>}
    */
   function picture(payload, width, ratio) {
-    const snap = root.snapdom;
-    if (!snap || typeof snap.toCanvas !== 'function') {
-      return Promise.reject(new Error('snapdom is not loaded'));
-    }
-    return V.capture({ width, height: 20000, draw: (host) => {
+    return snapdom().then((snap) => V.capture({ width, height: 20000, draw: (host) => {
       const scope = new V.Scope();
       const el = host.appendChild(root.document.createElement('div'));
       const frame = new T.Frame(el, scope);
@@ -295,8 +291,24 @@
           width: Math.ceil(frame.el.offsetWidth), height: Math.ceil(frame.el.offsetHeight)
         }))
         .finally(() => scope.dispose());
-    } });
+    } }));
   }
+
+  /**
+   * SnapDOM, fetched from the package's js/vendor/snapdom.js the first time
+   * a picture is taken; every picture after that, and one asked for while
+   * it is on its way, waits for the same load.
+   * @returns {Promise<any>}
+   */
+  const snapdom = () => {
+    const ready = () => root.snapdom && typeof root.snapdom.toCanvas === 'function';
+    const loaded = ready() ? Promise.resolve() :
+      V.lazy.script(V.lazy.asset('js/vendor/snapdom.js'));
+    return loaded.then(() => {
+      if (!ready()) throw new Error('snapdom is not loaded');
+      return root.snapdom;
+    });
+  };
 
   T.layouts.groups = /** @type {TableLayoutClass} */ (/** @type {unknown} */ (Groups));
   T.picture = picture;

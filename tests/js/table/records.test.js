@@ -355,8 +355,9 @@ test('table.css rotates the titles the compact look marks', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'table.css'), 'utf8');
   assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.vz-table-col-header \{/);
   assert.match(css, /\.blockr-table\[data-dt-rotate-titles="on"\] thead th\.vz-table-col-header \.blockr-col-name \{[^}]*rotate\(180deg\)/);
-  const dep = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'R', 'table-dep.R'), 'utf8');
-  assert.match(dep, /"table\.css"/);
+  // The table's stylesheets are the table line of inst/css/styles.txt.
+  const list = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'inst', 'css', 'styles.txt'), 'utf8');
+  assert.match(list, /^table table\.css /m);
 });
 
 test('the gear offers the blocks a drill can be sent to', () => {

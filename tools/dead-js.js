@@ -15,7 +15,7 @@ const acorn = require('acorn');
 const walk = require('acorn-walk');
 
 const pkg = process.argv[2] || '.';
-const skip = (p) => /snapdom\.js$|[\\/]spec[\\/]|[\\/]vendor[\\/]/.test(p);
+const skip = (p) => /snapdom\.js$|[\\/]spec[\\/]|[\\/]vendor[\\/]|[\\/]dist[\\/]/.test(p);
 const list = (dir, ext) => fs.readdirSync(dir, { recursive: true })
   .map((f) => path.join(dir, f))
   .filter((p) => p.endsWith(ext) && !skip(p));

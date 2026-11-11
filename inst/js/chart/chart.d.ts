@@ -124,6 +124,9 @@ type ChartDerived = {
   scales: ChartScale | null;
   palette: string[];
   theme: ChartTheme;
+  /** The theme's script, relative to the page, when it comes as a file
+   * (R/chart-dep.R echart_theme_src()); absent for "default" and "blockr". */
+  theme_src?: string | null;
   ctrl_choices: VizChoice[];
   script: VizScript;
   /** Device pixels per CSS pixel the picture is composed with, 1 to 6. */

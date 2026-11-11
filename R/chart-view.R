@@ -72,7 +72,8 @@ chart_view <- function(kit, src) {
       hist = src$hist()$edges,
       scales = scales(),
       palette = as.list(dd_palette()),
-      theme = board_theme()
+      theme = board_theme(),
+      theme_src = echart_theme_src(board_theme())
     ), columns = meta_cache(d, function() viz_wire_columns(d)))
   }
   list(payload = payload, titles = titles)
