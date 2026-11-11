@@ -374,3 +374,16 @@ test_that("full lanes draw as bars below the main one, each named", {
   paint_write_png(p, png, res = 72)
   expect_true(file.exists(png))
 })
+
+test_that("a colour column with its own colours may have more than 15 levels", {
+  lv <- paste0("L", 1:18)
+  d <- data.frame(id = rep("a", 18), s = 0:17, e = 1:18,
+                  col = factor(lv, levels = lv))
+  m <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "col")))
+  expect_match(m$prep$err %||% "", "18 levels")
+  attr(d$col, "blockr_colors") <- stats::setNames(rep("#123456", 18), lv)
+  m2 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "col")))
+  expect_null(m2$prep$err)
+})

@@ -327,7 +327,9 @@ groups_map_color <- function(s, data, drawn) {
   cc <- groups_present(s$color, data)
   if (!is.null(cc) && groups_color_capable(s)) {
     lv <- groups_color_levels(data[[cc]], drawn)
-    if (length(lv) > GROUPS_MAX_LEVELS) {
+    # A column with its own colour for every level needs no palette.
+    own <- attr(data[[cc]], "blockr_colors", exact = TRUE)
+    if (length(lv) > GROUPS_MAX_LEVELS && !all(lv %in% names(own))) {
       return(list(err = paste0(
         "Summary \"", s$name, "\": colour column \"", cc, "\" has ",
         length(lv), " levels. Pick one with at most ", GROUPS_MAX_LEVELS,
