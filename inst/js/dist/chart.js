@@ -1,4 +1,4 @@
-// blockr.viz bundle d931557785b0dab2ffead1ccdcb30d85, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle e404f6f0a3f7243b2485f925ebf093f7, built by tools/bundle.js. Do not edit.
 // sources: drilldown-theme-register.js chart/common.js chart/memo.js chart/chart-types.js chart/colors.js chart/drill.js chart/tooltip.js chart/legend.js chart/format.js chart/agg.js chart/chart-index.js chart/chart-keys.js chart/axes-time.js chart/axes-labels.js chart/model-common.js chart/model-timeline.js chart/model-aggregated.js chart/model-individual.js chart/option-timeline.js chart/option-bar-marks.js chart/option-bar.js chart/option-radial.js chart/option-distribution.js chart/option-aggregated.js chart/option-points.js chart/option-band.js chart/option-domains.js chart/option-individual.js chart/ticks.js chart/zoom-option.js chart/gear.js chart/selection.js chart/family-aggregated.js chart/family-timeline.js chart/family-individual.js chart/zoom.js chart/export.js chart/panels.js chart/view.js
 // --- drilldown-theme-register.js
 // @ts-check
@@ -2081,17 +2081,44 @@
     return type === 'time' ? NS.axes.timeValue : Number;
   };
 
+  // Lanes in sort order: by name for 'alpha', else by the smallest value
+  // per lane of x ('onset') or of a column; a lane without one is left out.
+  /** @param {VizColumn[]} columns @param {ChartSettings} cfg @param {string} x
+   * @param {string} y @param {(v: any) => number} xCoord
+   * @returns {(rs: any[]) => string[]} */
+  const termSorter = (columns, cfg, x, y, xCoord) => (rs) => {
+    const sb = cfg.sort_by || 'onset';
+    const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
+    if (sb === 'alpha') {
+      return [...new Set(rs.map((r) => String(r[y] ?? '')))]
+        .sort((a, b) => a.localeCompare(b) * sortDir);
+    }
+    const sortCol = (sb === 'onset') ? x : sb;
+    // Another column sorts on its number, a date or date-time in ms.
+    const sv = sortCol === x ? xCoord
+      : (V.util.isTemporal(NS.axes.colMeta(columns, sortCol)) ? NS.axes.timeValue : Number);
+    // A plain object on purpose: its key order (integer-like keys first)
+    // is the tie order.
+    /** @type {Record<string, number>} */
+    const mins = {};
+    for (const r of rs) {
+      const k = String(r[y] ?? '');
+      const v = sv(r[sortCol]);
+      if (!isNaN(v) && (mins[k] == null || v < mins[k])) mins[k] = v;
+    }
+    return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
+  };
+
   /** @param {{ rows: any[], ix: any, columns: VizColumn[], cfg: ChartSettings, derived: ChartDerived }} input
    * @returns {TimelineModel} */
   const timeline = ({ rows, ix, columns, cfg, derived }) => {
-    const { xend, color, facet, sort_by, series, label } = cfg;
+    const { xend, color, facet, series, label } = cfg;
     const open = cfg.open || null;
     // gate() let only a chart with x and y through.
     const x = /** @type {string} */ (cfg.x), y = /** @type {string} */ (cfg.y);
     const ttFields = model.tooltipFields(cfg);
     // The drill column's value rides on every mark.
     const drill = NS.drillColumn(cfg);
-    const sortDir = cfg.sort_dir === 'desc' ? -1 : 1;
     /** @type {TimelineModel} */
     const out = {
       family: 'timeline', empty: null,
@@ -2132,30 +2159,7 @@
       }
     }
 
-    // Lanes in sort order: by name for 'alpha', else by the smallest value
-    // per lane of x ('onset') or of a column; a lane without one is left out.
-    /** @param {any[]} rs @returns {string[]} */
-    const sortTerms = (rs) => {
-      const sb = sort_by || 'onset';
-      if (sb === 'alpha') {
-        return [...new Set(rs.map((r) => String(r[y] ?? '')))]
-          .sort((a, b) => a.localeCompare(b) * sortDir);
-      }
-      const sortCol = (sb === 'onset') ? x : sb;
-      // Another column sorts on its number, a date or date-time in ms.
-      const sv = sortCol === x ? xCoord
-        : (V.util.isTemporal(NS.axes.colMeta(columns, sortCol)) ? NS.axes.timeValue : Number);
-      // A plain object on purpose: its key order (integer-like keys first)
-      // is the tie order.
-      /** @type {Record<string, number>} */
-      const mins = {};
-      for (const r of rs) {
-        const k = String(r[y] ?? '');
-        const v = sv(r[sortCol]);
-        if (!isNaN(v) && (mins[k] == null || v < mins[k])) mins[k] = v;
-      }
-      return Object.keys(mins).sort((a, b) => (mins[a] - mins[b]) * sortDir);
-    };
+    const sortTerms = termSorter(columns, cfg, x, y, xCoord);
 
     const facetLabel = model.facetLabels(rows, cfg, out.nFacets);
     // Fixed scales give every panel the same lanes; free scales keep each its own.
@@ -6501,8 +6505,10 @@
         if (type === 'band' && key === 'y') return 'Value';
         // As 0.2: an aggregated chart or a histogram has "Reference lines". A bar
         // also takes them on its category axis, so its two rows name their axis.
-        // Scatter, line and area keep the spec's Horizontal and Vertical.
-        if ((key === 'value_lines' || key === 'x_lines') && NS.familyOf(type) === 'aggregated') {
+        // Scatter, line and area name the direction (a bare "Horizontal" chip is unclear).
+        if (key === 'value_lines' || key === 'x_lines') {
+          const individual = key === 'x_lines' ? 'Reference lines (vertical)' : 'Reference lines (horizontal)';
+          if (NS.familyOf(type) !== 'aggregated') return individual;
           if (type !== 'bar') return 'Reference lines';
           return key === 'x_lines' ? 'Reference lines (category axis)' : 'Reference lines (value axis)';
         }

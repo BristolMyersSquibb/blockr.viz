@@ -10,6 +10,7 @@
 #   bc bl bh wl wh n   a distribution's centre, inner and outer range, size
 #   pts last           a sparkline's points and last value
 #   segs start nseg    a swimlane's segments, first start and count
+#   ovl lanes          its overlays, and its thin lanes and hover strips
 #   from to lo hi f d n   a pair's ends, band, colour and dash level, leaf count
 # A colour split repeats a mark's parts per level j under the id
 # "<sid>_L<j>"; a split bar's level `lv` is "<sid>_S_<lv>".
@@ -283,6 +284,13 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
       groups_spans_overlays(slice, target, tkeys, s)
     })
   }
+  if (groups_spans_has_lanes(s)) {
+    target[[groups_col(sid, "lanes")]] <- I(if (isTRUE(parent_row)) {
+      rep(list(list(sub = list(), ms = list())), nrow(target))
+    } else {
+      groups_spans_lanes(slice, target, tkeys, s)
+    })
+  }
   target
 }
 
@@ -312,9 +320,20 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
   b0 <- num("band_x")
   b1 <- num("band_xend")
   ex <- num("event_x")
+  # An event on a lane draws on that lane (groups_spans_lanes()).
+  if (!is.null(ex) && !is.null(col("lane"))) {
+    el <- as.character(slice[[col("lane")]])
+    ex[!is.na(el) & nzchar(el)] <- NA_real_
+  }
   shp <- col("event_shape")
   opc <- col("open")
   op <- if (!is.null(opc)) as.logical(slice[[opc]])
+  # With lanes the main lane's arrow reads only its own records.
+  lnc <- col("lane")
+  if (!is.null(op) && !is.null(lnc)) {
+    ln <- as.character(slice[[lnc]])
+    op[!is.na(ln) & nzchar(ln)] <- FALSE
+  }
   lv <- s$.shape_levels
   sk <- groups_key_string(slice, tkeys)
   tkk <- groups_key_string(target, tkeys)
@@ -336,16 +355,23 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
       r <- rows[is.finite(ex[rows])]
       r <- r[order(ex[r])]
       out$ev <- lapply(r, function(j) {
-        l <- if (!is.null(shp)) as.character(slice[[shp]][[j]])
-        kk <- if (!is.null(l) && !is.na(l) && length(lv)) match(l, lv) else NA
-        list(x = ex[[j]],
-             k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
-             lv = if (!is.null(l) && !is.na(l)) l)
+        groups_spans_event(ex[[j]], slice, shp, j, s)
       })
     }
     if (!is.null(op)) out$op <- isTRUE(any(op[rows], na.rm = TRUE))
     out
   })
+}
+
+#' One event at `x` from record `j`: its shape index `k` by the level of
+#' the shape column, and that level `lv`.
+#' @noRd
+groups_spans_event <- function(x, slice, shp, j, s) {
+  lv <- s$.shape_levels
+  l <- if (!is.null(shp)) as.character(slice[[shp]][[j]])
+  kk <- if (!is.null(l) && !is.na(l) && length(lv)) match(l, lv) else NA
+  list(x = x, k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
+       lv = if (!is.null(l) && !is.na(l)) l)
 }
 
 #' @noRd
@@ -380,55 +406,6 @@ groups_series_split <- function(slice, target, tkeys, s) {
       lo = if (has_band) as.numeric(slice[[band[[1L]]]])[idx],
       hi = if (has_band) as.numeric(slice[[band[[2L]]]])[idx]
     )
-  })
-}
-
-#' @noRd
-groups_spans_split <- function(slice, target, tkeys, s) {
-  xs <- groups_as_num(slice[[chr_state(s$x)]])
-  xe <- groups_as_num(slice[[chr_state(s$xend)]])
-  color <- chr_state(s$color)
-  color <- if (!is.null(color) && color %in% names(slice)) color
-  # Full-data level order (s$.levels), so a facet slice missing a level cannot
-  # renumber the fills.
-  lv <- s$.levels
-  # The label column headlines the segment tooltip and keys the same-event
-  # hover highlight; fields add columns.
-  lbcol <- chr_state(s$label)
-  lbcol <- if (!is.null(lbcol) && lbcol %in% names(slice)) lbcol
-  fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
-  ok <- if (is.null(xs) || is.null(xe)) {
-    rep(FALSE, nrow(slice))
-  } else {
-    is.finite(xs) & is.finite(xe)
-  }
-  sk <- groups_key_string(slice, tkeys)
-  tk <- groups_key_string(target, tkeys)
-  lapply(tk, function(k) {
-    idx <- which(sk == k & ok)
-    idx <- idx[order(xs[idx])]
-    out <- list()
-    for (r in idx) {
-      f <- if (!is.null(lv) && !is.null(color)) {
-        match(as.character(slice[[color]][[r]]), lv)
-      } else {
-        1L
-      }
-      if (is.na(f)) next
-      sg <- list(s = xs[[r]], e = max(xe[[r]], xs[[r]]), f = f)
-      if (!is.null(lbcol)) {
-        lb <- as.character(slice[[lbcol]][[r]])
-        if (!is.na(lb) && nzchar(lb)) sg$lb <- lb
-      }
-      if (length(fcols)) {
-        sg$fv <- vapply(fcols, function(fc) {
-          v <- as.character(slice[[fc]][[r]])
-          if (is.na(v)) "" else v
-        }, character(1L))
-      }
-      out[[length(out) + 1L]] <- sg
-    }
-    out
   })
 }
 

@@ -19,6 +19,8 @@ gear/icons.js
 gear/controls.js
 gear/range.js
 gear/ticks.js
+gear/profile.js
+gear/tray.js
 gear/engine.js
 frame.js
 data-view.js

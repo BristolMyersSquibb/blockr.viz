@@ -151,7 +151,16 @@ interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
   domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
   ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
-  openAt?: TableNums;
+  openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
+  evenLanes?: boolean; barLabels?: string[][];
+}
+
+/** A thin lane above a swimlane's main one: its name `n`, segments `s` with
+ *  tips `t`, strip boxes `b` [text, style], `o` where its open end sits, and
+ *  events `e` [x, shape] with tips `et`. */
+interface TableSubLane {
+  n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
+  e?: number[][]; et?: string[]; l?: string[];
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last
@@ -262,6 +271,8 @@ interface TableDerived {
   ctrl_choices?: VizChoice[] | null;
   /** The prepare script's inputs, values and error (core/script-band.js). */
   script?: VizScript | null;
+  /** A block's own gear (R's table_gear(), core/gear/profile.js). */
+  gear?: VizGearWire | null;
   /** The pixel ratio of the Image and PowerPoint picture. */
   capture_ratio?: number | null;
 }
@@ -302,6 +313,8 @@ interface TableGridHooks {
   /** After scrolling drew another window of rows (the classes that
    *  `drawn` puts on the rows are gone with the old ones). */
   windowed?(): void;
+  /** After a window of rows is inserted into `body`. */
+  rows?(body: HTMLElement): void;
   /** The part of the box in view (TableFrame.inView); else the box's scroll. */
   view?(): { top: number; height: number };
   /** The rows and section headers the selection lights; a new model opens
@@ -511,6 +524,7 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
+    fitLabels(host: ParentNode, again?: boolean): void;
   };
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;

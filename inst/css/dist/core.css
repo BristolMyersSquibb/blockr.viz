@@ -1,4 +1,4 @@
-/* blockr.viz bundle 51b68c48bb80ba6b82bd6908cfd5c85c, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 0aac13b76447bc9e5e14712c546d345a, built by tools/bundle.js. Do not edit. */
 /* sources: frame.css gear.css */
 /* --- frame.css */
 /* The frame every block view draws in (core/frame.js): header, titles,
@@ -1050,3 +1050,11 @@
 .vz-ticks .vz-ticks-step { flex: 0 0 64px; width: 64px; min-width: 0; }
 .vz-ticks .vz-ticks-list { flex: 1 1 120px; min-width: 0; }
 .vz-ticks .vz-ticks-unit { flex: 0 0 104px; min-width: 0; }
+
+/* A block's own checklists (core/gear/profile.js): the listing columns, the
+   settings in the subtitle. Boxes in a wrapping row. */
+.vz-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}

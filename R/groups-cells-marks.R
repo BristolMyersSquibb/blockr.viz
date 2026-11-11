@@ -9,16 +9,63 @@ cells_interval <- function(ctx, p) {
   lv <- p$levels %||% prep$series
   tf <- as.character(p$tlabels %||% p$tfields %||% character())
   cvar <- chr_state(p$cvar)
-  out_segs <- cells_interval_segs(segs, bb)
+  out_segs <- cells_interval_segs(segs, bb, dom[[2L]])
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
+  out_bl <- cells_interval_bar_labels(segs)
   out <- list(kind = "interval", segs = out_segs, tips = out_tips,
        fills = as.character(p$fills %||% prep$fills),
        d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
        dd = dd, lg = identical(p$size, "lg"),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
+  if (!is.null(out_bl)) out$bl <- out_bl
   if (!is.null(p$ovl)) {
-    out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb, p, dd))
+    out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb,
+                                          c(p, list(d1_ = dom[[2L]])), dd))
   }
+  if (!is.null(p$lanes)) {
+    out <- c(out, cells_interval_lanes(ctx$rows[[p$lanes]], bb, lv, tf, cvar,
+                                       dd, dom[[2L]], p$ename %||% "x"))
+    # Without a record on the main lane anywhere, every lane is a full lane
+    # and the overlays span the row.
+    if (!any(lengths(segs) > 0L)) out$eq <- TRUE
+  }
+  out
+}
+
+# The thin lanes and strips in lane percent: `sl` per row a list of lanes,
+# each its name `n`, segments `s` and their tips `t`, `o` where its open end's
+# arrow sits (absent: closed), its strip boxes `b` and its events `e`
+# [x, shape] with their tips `et`; `ms` per row the main lane's boxes. A box
+# is [text, style].
+cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
+  box <- function(bx) lapply(bx, function(b) list(b$t, b$st))
+  sl <- lapply(lanes, function(r) {
+    lapply(r$sub, function(l) {
+      out <- list(n = l$nm, s = cells_interval_segs(list(l$segs), bb,
+                                                    d1)[[1L]],
+                  t = as.list(cells_interval_tips(list(l$segs), lv, tf, cvar,
+                                                  dd)[[1L]]),
+                  b = box(l$bx))
+      bl <- cells_interval_bar_labels(list(l$segs))
+      if (!is.null(bl)) out$l <- bl[[1L]]
+      if (length(l$ev)) {
+        out$e <- lapply(l$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
+        out$et <- as.list(vapply(l$ev, function(e) {
+          paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
+                 cells_fmt_x(e$x, dd))
+        }, ""))
+      }
+      if (isTRUE(l$op) && length(l$segs)) {
+        out$o <- bb$pos(min(max(vapply(l$segs, function(sg) sg$e, 0)),
+                               d1))[[1L]]
+      }
+      out
+    })
+  })
+  out <- list()
+  if (any(lengths(sl) > 0L)) out$sl <- sl
+  ms <- lapply(lanes, function(r) box(r$ms))
+  if (any(lengths(ms) > 0L)) out$ms <- ms
   out
 }
 
@@ -54,10 +101,23 @@ cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
     out$op <- vapply(seq_along(ovl), function(i) {
       ss <- segs[[i]]
       if (!isTRUE(ovl[[i]]$op) || !length(ss)) return(NA_real_)
-      bb$pos(max(vapply(ss, function(sg) sg$e, numeric(1L))))[[1L]]
+      bb$pos(min(max(vapply(ss, function(sg) sg$e, numeric(1L))),
+                 p$d1_ %||% Inf))[[1L]]
     }, numeric(1L))
   }
   out
+}
+
+# Per row, each segment's bar label ("" for none), or NULL when no segment
+# has one.
+cells_interval_bar_labels <- function(segs) {
+  has <- any(vapply(segs, function(ss) {
+    any(vapply(ss, function(sg) !is.null(sg$bl), NA))
+  }, NA))
+  if (!has) return(NULL)
+  lapply(segs, function(ss) {
+    as.list(vapply(ss, function(sg) sg$bl %||% "", ""))
+  })
 }
 
 # An x value as the card prints it: a date for a date domain.
@@ -65,12 +125,17 @@ cells_fmt_x <- function(v, dd) {
   if (dd) format(as.Date(v, origin = "1970-01-01")) else groups_fmt(v)
 }
 
-# Segment tuples [left, width, fill-index (, escaped label)]; the optional 4th
-# slot keys the same-event hover highlight (data-l).
-cells_interval_segs <- function(segs, bb) {
+# Segment tuples [left, width, fill-index (, label (, style))] up to `d1`, the
+# axis end an ongoing segment runs to; the optional
+# 4th slot keys the same-event hover highlight (data-l), "" for none when a
+# style follows.
+cells_interval_segs <- function(segs, bb, d1) {
   lapply(segs, function(ss) {
     lapply(ss, function(sg) {
-      base <- list(bb$pos(sg$s)[[1L]], bb$span(sg$s, sg$e)[[1L]], sg$f)
+      # An ongoing record (no end, open) runs to the axis end.
+      e <- if (is.finite(sg$e)) sg$e else d1
+      base <- list(bb$pos(sg$s)[[1L]], bb$span(sg$s, e)[[1L]], sg$f)
+      if (!is.null(sg$st)) return(c(base, list(sg$lb %||% "", sg$st)))
       if (!is.null(sg$lb)) c(base, list(sg$lb)) else base
     })
   })
@@ -86,9 +151,13 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
         if (!is.null(lv) && !identical(sg$lb, lv[[sg$f]])) {
           paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
         },
-        cells_fmt_x(sg$s, dd), "\u2013", cells_fmt_x(sg$e, dd),
-        if (length(tf) && !is.null(sg$fv)) {
-          paste0(" \u00b7 ", paste0(tf, ": ", sg$fv, collapse = " \u00b7 "))
+        cells_fmt_x(sg$s, dd), "\u2013",
+        if (is.finite(sg$e)) cells_fmt_x(sg$e, dd) else "ongoing",
+        # A record without a value in a field leaves the field out.
+        if (length(tf) && !is.null(sg$fv) && any(nzchar(sg$fv))) {
+          k <- nzchar(sg$fv)
+          paste0(" \u00b7 ", paste0(tf[k], ": ", sg$fv[k],
+                                     collapse = " \u00b7 "))
         } else {
           ""
         }

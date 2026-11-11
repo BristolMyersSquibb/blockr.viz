@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Chart and Table Blocks for 'blockr'
-Version: 0.3.0.9050.1
+Version: 0.3.0.9058.1
 Authors@R: c(
     person(given = "Christoph",
            family = "Sax",
@@ -55,6 +55,7 @@ Suggests:
     callr,
     chromote,
     codetools,
+    dm,
     flextable,
     ggplot2,
     grid,

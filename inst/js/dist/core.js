@@ -1,5 +1,5 @@
-// blockr.viz bundle 280e2da565166336364b79efc319d5d2, built by tools/bundle.js. Do not edit.
-// sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
+// blockr.viz bundle 3bada27485778f2d7893d4a97fc566e2, built by tools/bundle.js. Do not edit.
+// sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
 /**
@@ -2108,16 +2108,19 @@
    * @param {(key: string) => boolean} shown Whether a row is visible now.
    * @param {(key: string) => boolean} isSet Whether an optional mapping is
    *   shown as a row (set, or added in this tray) rather than in the menu.
+   * @param {VizProfile | null} [own] A block's own gear: its sections and
+   *   tabs in place of the table's.
    * @returns {VizSectionPlan[]}
    */
-  function plan(spec, shown, isSet) {
+  function plan(spec, shown, isSet, own) {
     /** @type {Map<string, VizSectionPlan>} */
     const out = new Map();
     let extra = 100;
+    const where = own ? own.sections : SECTIONS;
     const section = (/** @type {string} */ title) => {
       let s = out.get(title);
       if (!s) {
-        const [group, ord] = SECTIONS[title] || ['format', extra++];
+        const [group, ord] = where[title] || ['format', extra++];
         s = { title, group, ord, keys: [], adds: [] };
         out.set(title, s);
       }
@@ -2140,7 +2143,7 @@
     for (const s of out.values()) {
       s.keys = s.keys.filter((k) => !late(k)).concat(s.keys.filter(late));
     }
-    const order = GROUPS.map((x) => x[0]);
+    const order = (own ? own.groups : GROUPS).map((x) => x[0]);
     return Array.from(out.values())
       .filter((s) => s.keys.length || s.adds.length)
       .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.ord - b.ord);
@@ -2173,10 +2176,11 @@
    * @param {string | null} current The group to show.
    * @param {(g: string) => void} onPick
    * @param {string} label
+   * @param {[string, string][]} [tabs] A block's own tabs, in place of GROUPS.
    */
-  function assemble(pop, built, current, onPick, label) {
+  function assemble(pop, built, current, onPick, label, tabs) {
     const ui = /** @type {VizUi} */ (root.Blockr);
-    const groups = GROUPS.map(([key, title]) => ({
+    const groups = (tabs || GROUPS).map(([key, title]) => ({
       key, title,
       sections: built.filter((b) => b.plan.group === key)
         .map((b) => ({ el: b.el, title: '', titleEl: b.titleEl }))
@@ -2792,7 +2796,8 @@
   /** What an empty pick shows: the host's words for the key ("All
    * columns"), else nothing. @param {VizRowCtx} ctx */
   const placeholderOf = (ctx) =>
-    (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) || undefined;
+    (ctx.host.placeholder && ctx.host.placeholder(ctx.key, ctx.values)) ||
+    (ctx.arg.gear && ctx.arg.gear.placeholder) || undefined;
 
   /** A single pick among `choices`; `onPick` gets the chosen value.
    * @param {HTMLElement} el @param {VizChoice[]} choices @param {unknown} value
@@ -3348,6 +3353,314 @@
   V.gear.more = { ...(V.gear.more || {}), ticks };
   V.gear.ticksSlot = ticksSlot;
 })();
+// --- core/gear/profile.js
+// @ts-check
+/**
+ * A block's own gear (R's table_gear(), sent as `derived.gear`): its tabs and
+ * sections in place of the table's, and the rows they name. A row is a
+ * setting of the spec, moved into the gear's section; a value the prepare
+ * script declares; the column checklist; the "In the subtitle" ticks; or an
+ * editor a package registers (`V.gear.editors[key]`). Settings the gear does
+ * not name keep their spec entry, so a word in the titles still opens them,
+ * but have no row.
+ *
+ * The rows the spec does not have write settings it does have: a script
+ * row `script_values`, the checklist `summaries`, the ticks `subtitle`
+ * (translate()). An editor writes what it likes through `ctx.setValues`.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  V.gear = V.gear || /** @type {VizGearNamespace} */ ({});
+  V.gear.editors = V.gear.editors || {};
+
+  /** A script row's key: its variable's name behind a prefix no setting has. */
+  const SV = 'sv.';
+
+  /** A declared control as a spec argument the gear can draw (R's
+   * script_control_records(): kind select, multi, segmented, number, date,
+   * text). @param {VizScriptControl} sp @returns {VizArg} */
+  const scriptArg = (sp) => {
+    const gear = { label: sp.label, group: '', placeholder: sp.placeholder || undefined };
+    const bounds = { min: sp.min ?? null, max: sp.max ?? null, minOpen: false };
+    switch (sp.kind) {
+      case 'select': return /** @type {VizArg} */ ({ type: { name: 'enum' }, values: sp.options || [],
+                                                     gear: { ...gear, control: 'select' } });
+      case 'multi': return /** @type {VizArg} */ ({ type: { name: 'enums' }, values: sp.options || [],
+                                                    gear: { ...gear, control: 'select' } });
+      case 'segmented': return /** @type {VizArg} */ ({ type: { name: 'bool' },
+                                                        gear: { ...gear, control: 'toggle' } });
+      case 'number': return /** @type {VizArg} */ ({ type: { name: 'number' }, bounds,
+                                                     gear: { ...gear, control: 'number' } });
+      default: return /** @type {VizArg} */ ({ type: { name: 'string' }, nullable: true,
+                                               gear: { ...gear, control: 'text' } });
+    }
+  };
+
+  /** The control's value as the row holds it: R sends a flag as "on"/"off"
+   * and a single choice as a one-element array (a map's values).
+   * @param {VizScriptControl} sp @param {unknown} v */
+  const scriptValue = (sp, v) => {
+    if (sp.kind === 'segmented') return v === 'on' || v === true;
+    if (sp.kind !== 'multi' && Array.isArray(v)) return v[0] ?? null;
+    return v;
+  };
+
+  /** Is a clause in the template? @param {string} tpl @param {string} c */
+  const has = (tpl, c) => tpl.includes(c);
+
+  /**
+   * The subtitle with exactly the ticked clauses: an unticked one taken out
+   * with its comma, a ticked one put in after the nearest earlier clause the
+   * subtitle has (in the gear's sentence order), else before the nearest
+   * later one, else at the end. Text the builder typed stays.
+   * @param {string} tpl @param {[string, string][]} clauses In sentence order.
+   * @param {Set<string>} on
+   */
+  function setWords(tpl, clauses, on) {
+    let t = tpl;
+    for (const [k, c] of clauses) {
+      if (on.has(k) || !has(t, c)) continue;
+      if (has(t, ', ' + c)) t = t.replace(', ' + c, '');
+      else if (has(t, c + ', ')) t = t.replace(c + ', ', '');
+      else t = t.replace(c, '');
+    }
+    clauses.forEach(([k, c], i) => {
+      if (!on.has(k) || has(t, c)) return;
+      const before = clauses.slice(0, i).reverse().find(([, p]) => has(t, p));
+      const after = clauses.slice(i + 1).find(([, p]) => has(t, p));
+      if (before) {
+        const at = t.indexOf(before[1]) + before[1].length;
+        t = t.slice(0, at) + ', ' + c + t.slice(at);
+      } else if (after) {
+        const at = t.indexOf(after[1]);
+        t = t.slice(0, at) + c + ', ' + t.slice(at);
+      } else {
+        t = t ? t + ', ' + c : c;
+      }
+    });
+    return t.trim();
+  }
+
+  /**
+   * The gear's spec, sections and tabs. Rows come first, in the gear's order,
+   * then the rest of the spec, which has no row.
+   * @param {VizSpec} base @param {VizGearWire} wire @param {VizScript | null} script
+   * @returns {VizProfile}
+   */
+  function build(base, wire, script) {
+    /** @type {VizSpec} */
+    const spec = {};
+    /** @type {Record<string, [string, number]>} */
+    const sections = {};
+    /** @type {[string, string][]} */
+    const groups = [];
+    /** @type {Set<string>} */
+    const keys = new Set();
+    /** @type {Record<string, VizProfileRow>} */
+    const rows = {};
+    const inputs = /** @type {VizScriptControl[]} */ (
+      /** @type {VizScriptInput[]} */ ((script && script.inputs) || [])
+        .filter((sp) => sp && sp.kind !== 'error'));
+    const columns = wire.columns || [];
+    const clauses = Object.entries(wire.clauses || {});
+    let ord = 0;
+    /** @param {string} key @param {VizArg} arg @param {string} group */
+    const put = (key, arg, group) => {
+      spec[key] = Object.assign({}, arg, { gear: Object.assign({}, arg.gear, { group }) });
+      keys.add(key);
+    };
+    (wire.tabs || []).forEach((tab, ti) => {
+      const gk = 'tab' + ti;
+      groups.push([gk, tab.title]);
+      for (const sec of tab.sections || []) {
+        // A section title is its key in the plan: one used by an earlier tab
+        // is told apart by its tab.
+        const title = sections[sec.title] ? sec.title + ' (' + tab.title + ')' : sec.title;
+        sections[title] = [gk, ord++];
+        for (const k of /** @type {string[]} */ ([]).concat(sec.keys || [])) {
+          const sp = inputs.find((x) => x.name === k);
+          const ed = V.gear.editors[k];
+          if (sp) {
+            rows[SV + k] = { kind: 'script', name: k, sp };
+            put(SV + k, scriptArg(sp), title);
+          } else if (k === 'columns' && columns.length) {
+            rows[k] = { kind: 'columns' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
+              gear: { label: 'Listing columns', control: 'profile' } }), title);
+          } else if (k === 'group' && (wire.groups?.values || []).length) {
+            const g = /** @type {{ values: string[], labels: string[] }} */ (wire.groups);
+            rows[k] = { kind: 'group' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'enum' }, values: [''].concat(g.values),
+              gear: { label: 'Group by', control: 'select', labels: ['None'].concat(g.labels) } }),
+              title);
+          } else if (k === 'words' && clauses.length) {
+            rows[k] = { kind: 'words' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
+              gear: { label: 'In the subtitle', control: 'profile' } }), title);
+          } else if (base[k] && base[k].gear) {
+            put(k, base[k], title);
+          } else if (ed) {
+            rows[k] = { kind: 'editor' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'any' },
+              gear: { label: ed.label || k, control: 'profile' } }), title);
+          }
+        }
+      }
+    });
+    for (const [k, arg] of Object.entries(base)) if (!spec[k]) spec[k] = arg;
+    return { spec, sections, groups, keys, rows, wire, clauses,
+             sig: JSON.stringify([wire, inputs.map((sp) => [sp.name, sp.kind, sp.options])]) };
+  }
+
+  /** The values of the rows the spec does not have, read off the settings
+   * and the script's values. @param {VizProfile} prof @param {VizValues} cfg
+   * @param {VizScript | null} script @returns {VizValues} */
+  function values(prof, cfg, script) {
+    /** @type {VizValues} */
+    const out = {};
+    const sent = /** @type {Record<string, unknown>} */ (
+      script && !Array.isArray(script.values) ? script.values || {} : {});
+    const names = new Set((prof.wire.columns || []).map((c) => c.name));
+    for (const [key, r] of Object.entries(prof.rows)) {
+      if (r.kind === 'script' && r.sp) out[key] = scriptValue(r.sp, sent[r.sp.key]);
+      else if (r.kind === 'columns') {
+        out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
+          .map((s) => s && s.name).filter((n) => names.has(n));
+      } else if (r.kind === 'group') {
+        const by = Array.isArray(cfg.by) ? cfg.by : [];
+        out[key] = by.length > 1 ? by[0] : '';
+      } else if (r.kind === 'words') {
+        const tpl = String(cfg.subtitle ?? '');
+        out[key] = prof.clauses.filter(([, c]) => has(tpl, c)).map(([k]) => k);
+      }
+    }
+    return out;
+  }
+
+  /** The settings a change of the gear's rows writes: script rows into
+   * `script_values`, the checklist into `summaries`, the ticks into
+   * `subtitle`; an editor's own key into nothing (it writes through
+   * `setValues`). @param {VizProfile} prof @param {VizValues} changed
+   * @param {VizValues} now @returns {VizValues} */
+  function translate(prof, changed, now) {
+    /** @type {VizValues} */
+    const out = {};
+    for (const [key, v] of Object.entries(changed)) {
+      const r = prof.rows[key];
+      if (!r) {
+        out[key] = v;
+      } else if (r.kind === 'script') {
+        const held = /** @type {Record<string, unknown>} */ (
+          out.script_values || now.script_values || {});
+        out.script_values = Object.assign({}, held, { [/** @type {string} */ (r.name)]: v });
+      } else if (r.kind === 'columns') {
+        const pick = new Set(/** @type {string[]} */ (v || []));
+        const cols = prof.wire.columns || [];
+        const names = new Set(cols.map((c) => c.name));
+        const other = (Array.isArray(now.summaries) ? now.summaries : [])
+          .filter((s) => !s || !names.has(s.name));
+        out.summaries = cols.filter((c) => pick.has(c.name)).map((c) => c.summary).concat(other);
+      } else if (r.kind === 'group') {
+        // The outer column of a nested `by`: picked, replaced or dropped.
+        const by = /** @type {string[]} */ (Array.isArray(now.by) ? now.by : []);
+        const inner = by.length > 1 ? by.slice(1) : by;
+        out.by = v ? [String(v)].concat(inner) : inner;
+      } else if (r.kind === 'words') {
+        out.subtitle = setWords(String(now.subtitle ?? ''), prof.clauses,
+                                new Set(/** @type {string[]} */ (v || [])));
+      }
+    }
+    return out;
+  }
+
+  /** @param {HTMLElement} el @param {string} label @param {boolean} on
+   * @param {(on: boolean) => void} onToggle @param {string} key */
+  const box = (el, label, on, onToggle, key) => {
+    const h = root.Blockr.checkbox(label, on, onToggle);
+    h.input.setAttribute('data-gear-input', key);
+    el.appendChild(h.el);
+  };
+
+  /** A list of checkboxes, one per [key, label], writing the ticked keys.
+   * @param {HTMLElement} el @param {VizRowCtx} ctx @param {[string, string][]} items */
+  function checklist(el, ctx, items) {
+    const now = new Set(/** @type {string[]} */ (Array.isArray(ctx.value) ? ctx.value : []));
+    const list = document.createElement('div');
+    list.className = 'vz-checklist';
+    el.appendChild(list);
+    for (const [k, label] of items) {
+      box(list, label, now.has(k), (on) => {
+        const next = new Set(now);
+        if (on) next.add(k); else next.delete(k);
+        ctx.set(items.map(([x]) => x).filter((x) => next.has(x)));
+      }, ctx.key + ':' + k);
+    }
+  }
+
+  /** The control of a row the spec does not have (`gear.control: "profile"`).
+   * @param {HTMLElement} el @param {VizRowCtx} ctx */
+  function draw(el, ctx) {
+    const prof = ctx.profile;
+    const r = prof && prof.rows[ctx.key];
+    if (!prof || !r) return;
+    if (r.kind === 'columns') {
+      checklist(el, ctx, (prof.wire.columns || []).map((c) => [c.name, c.label || c.name]));
+    } else if (r.kind === 'words') {
+      // A setting by its label; its clause in the template says where it goes.
+      checklist(el, ctx, prof.clauses.map(([k]) => [k, ctx.labelOf(k)]));
+    } else if (r.kind === 'editor') {
+      const ed = V.gear.editors[ctx.key];
+      if (ed) ed.draw(el, ctx);
+    }
+  }
+
+  /** The row a title word opens in a block's own gear: `{@parent}`, the rows'
+   * grouping, is the group row when there is one. @param {VizProfile | null} prof
+   * @param {string} key */
+  const alias = (prof, key) => (prof && key === 'parent' && prof.rows.group ? 'group' : key);
+
+  V.gear.more = Object.assign(V.gear.more || {}, { profile: draw });
+  V.gear.profile = { build, values, translate, setWords, scriptArg, scriptValue, alias, SV };
+})();
+// --- core/gear/tray.js
+// @ts-check
+/**
+ * The gear's button and the tray it opens, in a view's header.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  V.gear = V.gear || /** @type {VizGearNamespace} */ ({});
+
+  /**
+   * A gear button and its tray, appended to a view's header `head`, opened
+   * and closed by blockr.ui's Blockr.gearTray. The header gets
+   * `vz-head--open` while the tray is open; a tray left open is closed when
+   * `scope` goes, which takes it off blockr.ui's dismiss stack.
+   * @param {HTMLElement} head @param {VizScope} scope @param {string} label
+   * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
+   *             isOpen(): boolean }}
+   */
+  V.gear.tray = (head, scope, label) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blockr-gear-btn';
+    btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
+    const band = document.createElement('div');
+    band.className = 'blockr-settings blockr-settings--beak vz-tray';
+    head.append(btn, band);
+    const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
+    const set = (/** @type {boolean} */ on) => tray.set(on);
+    const sync = () => head.classList.toggle('vz-head--open',
+                                             btn.getAttribute('aria-expanded') === 'true');
+    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
+    scope.own({ dispose: () => set(false) });
+    return { band, button: btn, set, isOpen: () => tray.isOpen() };
+  };
+})();
 // --- core/gear/engine.js
 // @ts-check
 /**
@@ -3371,6 +3684,7 @@
   V.gear = V.gear || /** @type {VizGearNamespace} */ ({});
   const S = V.gear.sections;
   const C = V.gear.controls;
+  const P = V.gear.profile;
 
   /** Controls taller than the control line: they take the whole row and
    * grow with their content. @param {string} control */
@@ -3389,6 +3703,7 @@
     if (control === 'code' || control === 'script') return ' vz-row--code vz-row--tall';
     if (isTall(control)) return ' vz-row--wide vz-row--tall';
     if (g && g.icons && (ctx.arg.values || []).length >= 4) return ' vz-row--wide';
+    if (control === 'profile') return ' vz-row--wide'; // a block's own checklist or editor
     if ((control === 'toggle' && ctx.arg.type.name !== 'bool') || ctx.arg.type.name === 'named') {
       return ' vz-row--paired';
     }
@@ -3412,6 +3727,9 @@
       if (!spec) throw new Error('blockr.viz: no spec for block "' + opts.block + '"');
       this.el = el;
       this.spec = spec;
+      /** The block's spec; `spec` is it, or its own gear's (profile.js, `derived.gear`). */
+      this._base = spec;
+      /** @type {VizProfile | null} */ this._prof = null;
       this.block = opts.block;
       this.id = opts.id;
       this.scope = opts.scope;
@@ -3484,7 +3802,7 @@
     /** @param {VizPayload} p */
     update(p) {
       if (this.disposed) return;
-      const cfg = p.config || {};
+      const cfg = this._config(p);
       for (const [key, pend] of this._pending) {
         const now = cfg[key];
         pend.left -= 1;
@@ -3540,10 +3858,20 @@
         this._pending.set(key, { value: v, before: this._cfg[key], left: 2 });
       }
       if (!Object.keys(changed).length) return;
-      const msg = { rev: this._rev, values: changed };
+      // A block's own rows write the settings they stand for; those are held too,
+      // for the words and the script band that read them.
+      const send = this._prof ? P.translate(this._prof, changed, now) : changed;
+      for (const [key, v] of Object.entries(send)) {
+        if (!(key in changed)) this._pending.set(key, { value: v, before: this._cfg[key], left: 2 });
+      }
+      if (!Object.keys(send).length) {
+        this.render();
+        return;
+      }
+      const msg = { rev: this._rev, values: send };
       if (this.host.send) this.host.send(msg);
       else V.util.send(this.id, 'set', msg, this.block);
-      if (this.host.onChange) this.host.onChange(changed, this.values());
+      if (this.host.onChange) this.host.onChange(send, this.values());
       this.render();
     }
 
@@ -3567,11 +3895,12 @@
       const rest = Object.assign({}, values);
       delete rest.selection;
       return JSON.stringify([rest, this._cols, this._countsRev, [t.title, t.subtitle, t.caption],
-                             Array.from(this._added), shown]);
+                             Array.from(this._added), shown, this._prof ? this._prof.sig : null]);
     }
 
     /** @param {string} key @param {VizValues} [values] */
     label(key, values) {
+      key = P.alias(this._prof, key);
       const vals = values || this.values();
       const own = this.host.label && this.host.label(key, vals);
       if (own) return own;
@@ -3594,7 +3923,9 @@
       // The setting as the gear shows it: its label, under its group's heading.
       const g = arg && arg.gear;
       const under = g && g.group && g.group !== g.label ? ' under ' + g.group : '';
-      const shadows = own ? own.label : g ? this.label(key, vals) + under : null;
+      // A setting a block's own gear has no row for is no place to look.
+      const hidden = this._prof && !this._prof.keys.has(key);
+      const shadows = own ? own.label : g && !hidden ? this.label(key, vals) + under : null;
       return { label: sp.label, script: true, shadows };
     }
 
@@ -3619,6 +3950,7 @@
     _shown(key, values) {
       const arg = this.spec[key];
       if (!arg || !arg.gear) return false;
+      if (this._prof && !this._prof.keys.has(key)) return false;
       if (arg.gear.control === 'custom' && !this.host.custom) return false;
       if (this.typeKey && !S.applies(arg, values[this.typeKey])) return false;
       if (arg.gear.when && !C.isSet(values[arg.gear.when])) return false;
@@ -3638,8 +3970,19 @@
         labelOf: (k) => this.wordOf(k, values).label,
         wordOf: (k) => this.wordOf(k, values),
         shadowNote: (tpl) => this.shadowNote(tpl, values),
+        profile: this._prof,
+        script: this._script,
+        setValues: (changes) => this.set(changes),
         set: (v) => this.set({ [key]: v })
       };
+    }
+
+    /** Show a block's own gear at its tab titled `title`. @param {string} title */
+    showTab(title) {
+      const g = this._prof && this._prof.groups.find(([, t]) => t === title);
+      if (!g || this._group === g[0]) return;
+      this._group = g[0];
+      this.render();
     }
 
     render() {
@@ -3653,7 +3996,7 @@
       this.el.setAttribute('role', 'dialog');
       this.el.setAttribute('aria-label', this.title);
       const plan = S.plan(this.spec, (k) => this._shown(k, values),
-        (k) => C.isSet(values[k]) || this._added.has(k));
+        (k) => C.isSet(values[k]) || this._added.has(k), this._prof);
       const built = plan.map((p) => {
         const sec = S.sectionEl(p.title);
         const alone = p.keys.length === 1 && !p.adds.length;
@@ -3661,7 +4004,8 @@
         if (p.adds.length) this._addMenu(sec.body, p.adds, values, rs);
         return { plan: p, el: sec.el, titleEl: sec.titleEl };
       });
-      S.assemble(this.el, built, this._group, (g) => { this._group = g; }, this.title);
+      S.assemble(this.el, built, this._group, (g) => { this._group = g; }, this.title,
+                 this._prof ? this._prof.groups : undefined);
       this._restoreFocus(focus);
     }
 
@@ -3758,11 +4102,28 @@
      * @param {VizPayload} p */
     prime(p) {
       if (this.disposed) return;
-      this._cfg = p.config || {};
-      this._cols = p.columns || [];
+      this._config(p);
+    }
+
+    /** Read a payload: the settings (with a block's own rows' values), the columns,
+     * the titles, the prepare script's controls and the block's own gear.
+     * @param {VizPayload} p @returns {VizValues} The settings. */
+    _config(p) {
       const d = /** @type {any} */ (p.derived || {});
+      this._cols = p.columns || [];
       this._titles = /** @type {VizTitles} */ (d.titles || {});
       this._script = d.script || null;
+      const cfg = p.config || {};
+      if (d.gear) {
+        this._prof = P.build(this._base, d.gear, this._script);
+        this.spec = this._prof.spec;
+        this._cfg = Object.assign({}, cfg, P.values(this._prof, cfg, this._script));
+      } else {
+        this._prof = null;
+        this.spec = this._base;
+        this._cfg = cfg;
+      }
+      return this._cfg;
     }
 
     /** What a click on the sentence's word for `key` opens: the prepare script's control
@@ -3772,6 +4133,7 @@
      * control, and the setting of the same name stays in the gear.
      * @param {string} key @returns {VizSlotOpener | null} */
     slot(key) {
+      key = P.alias(this._prof, key);
       if (this.scriptInput(key)) return this.scriptSlot(key);
       const values = this._live(this.values());
       // The host first: a word that names part of a setting (the groups layout's
@@ -3917,6 +4279,10 @@
       for (const arg of V.titles.namedArgs(this._titles)) {
         if (this.scriptSlot(arg)) out.add(arg);
       }
+      // A block's own gear holds its script's values, as rows or in its own editors.
+      if (this._prof && this._script) {
+        for (const sp of this._script.inputs || []) if (sp && sp.name) out.add(sp.name);
+      }
       return out;
     }
 
@@ -3940,32 +4306,6 @@
       this.el.textContent = '';
     }
   }
-
-  /**
-   * A gear button and its tray, appended to a view's header `head`, opened
-   * and closed by blockr.ui's Blockr.gearTray. The header gets
-   * `vz-head--open` while the tray is open; a tray left open is closed when
-   * `scope` goes, which takes it off blockr.ui's dismiss stack.
-   * @param {HTMLElement} head @param {VizScope} scope @param {string} label
-   * @returns {{ band: HTMLElement, button: HTMLButtonElement, set(on: boolean): void,
-   *             isOpen(): boolean }}
-   */
-  V.gear.tray = (head, scope, label) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'blockr-gear-btn';
-    btn.innerHTML = root.Blockr.icons && root.Blockr.icons.gear ? root.Blockr.icons.gear : '⚙';
-    const band = document.createElement('div');
-    band.className = 'blockr-settings blockr-settings--beak vz-tray';
-    head.append(btn, band);
-    const tray = /** @type {VizUi} */ (root.Blockr).gearTray(band, btn, { label });
-    const set = (/** @type {boolean} */ on) => tray.set(on);
-    const sync = () => head.classList.toggle('vz-head--open',
-                                             btn.getAttribute('aria-expanded') === 'true');
-    scope.mutate(btn, sync, { attributes: true, attributeFilter: ['aria-expanded'] });
-    scope.own({ dispose: () => set(false) });
-    return { band, button: btn, set, isOpen: () => tray.isOpen() };
-  };
 
   /**
    * Mount a gear into the tray element `el`.
@@ -6378,6 +6718,58 @@
                 "group": "Columns",
                 "control": "column",
                 "label": "Open end"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "lane": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Lane"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "seg_style": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Segment style"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "bar_label": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Bar label"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "strip": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Hover strip"
               },
               "slot": false,
               "ctrl": true

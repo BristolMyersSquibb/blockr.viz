@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9050
+# blockr.viz 0.3.0.9058
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -15,6 +15,15 @@ read.
   matrix or `"cards"`. It replaces the tile, summarize, summary and gt
   table blocks.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
+* A block built on the table can have its own gear: `table_gear()` names
+  its tabs, sections and rows, and `new_table_block(gear = , class = )`
+  takes it with a class of the block's own. A row is a table setting, a
+  value the prepare script declares, a checklist of listing columns, a
+  pick of the column that groups the rows, "In the subtitle" ticks that
+  write the subtitle's clauses, or an editor a package registers in the
+  browser. Settings the gear does not name have no row and still work
+  from code and through their words. Such a block saves and restores
+  under its own constructor.
 * The chart's `facet_row` lays the panels out as a grid, `facet_row` levels
   down and `facet` levels across, for every chart type. With
   `facet_scales = "free_y"` each row has its own value axis. Every panel
@@ -134,6 +143,18 @@ read.
   end). It used to be sent at once, refused by the spec and dropped.
 * The swimlane's event shapes gain a fifth, a vertical bar, for a fifth
   `event_shape` level (an end of treatment beside CR, PR, PD and death).
+* The swimlane (`type = "spans"`) takes lanes. A `lane` column puts a
+  record on a thin line of its own above the main bar, so a row grows with
+  its lanes (one per drug in a swimmer); records without a lane stay on the
+  main bar, and a table without a main bar draws equal lanes. `seg_style`
+  draws a record dashed, hollow, as dots, as a step or outlined, `bar_label`
+  writes text on or after a bar, and `strip` adds a strip of boxes to the
+  hover card. `open` now works per record: a TRUE record without an end
+  runs to the axis end with an arrow, and its tooltip reads "ongoing".
+* A large swimlane column fits a half-width panel. Its minimum width was
+  320px, and a swimmer with a few listing columns ran past the right edge.
+* A table block's input can be a dm when its prepare script turns it into
+  a data frame. A date control left empty reads as `NA` ("automatic").
 * A large swimlane in the groups layout (`size = "lg"`) draws its axis in
   its header, as every other column does, so it stays in view with the
   header while the rows scroll, as in 0.2.200. It was in a row under the

@@ -100,7 +100,10 @@ new_table_block <- function(layout = "records",
   spec <- viz_block_spec("table")
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
-  dots <- list(...)
+  own <- table_block_own(list(...))
+  gear <- own$gear
+  cls <- own$class
+  dots <- own$dots
   # blockr.core's block arguments pass through; any other name is an old
   # argument name, or unknown, which viz_check() refuses.
   old <- setdiff(names(dots), VIZ_CORE_BLOCK_ARGS)
@@ -109,19 +112,55 @@ new_table_block <- function(layout = "records",
   # blockr.core reads the starting state from this frame.
   list2env(values, environment())
 
-  res <- blockr.core::new_transform_block(
-    server = function(id, data) table_server(id, data, values),
-    ui = table_ui,
-    dat_valid = validate_annotated_df_input,
+  core <- dots[intersect(names(dots), VIZ_CORE_BLOCK_ARGS)]
+  ctrl <- table_ctrl_args(spec, core$ctor, core$ctor_pkg)
+  # blockr.core takes the constructor from the call stack; through do.call()
+  # it has to be told which frame is this one.
+  if (is.null(core$ctor)) core$ctor <- sys.nframe()
+  res <- do.call(blockr.core::new_transform_block, c(list(
+    server = function(id, data) table_server(id, data, values, gear),
+    ui = if (length(gear$deps)) {
+      function(id) shiny::tagList(table_ui(id), gear$deps)
+    } else {
+      table_ui
+    },
+    dat_valid = validate_table_input,
     allow_empty_state = viz_empty_ok(spec),
-    external_ctrl = viz_ctrl_args(spec),
+    external_ctrl = ctrl,
     expr_type = "bquoted",
-    class = "table_block",
-    ...
-  )
+    class = c(setdiff(cls, "table_block"), "table_block")
+  ), core, dots[old]))
   # Old names must not be saved back as attributes.
   for (nm in old) attr(res, nm) <- NULL
   res
+}
+
+# A block built on the table names its own gear and class in `...`. Neither
+# is a setting: the block's constructor sets them on every build, and only
+# the settings are saved.
+table_block_own <- function(dots) {
+  gear <- dots$gear
+  stopifnot(is.null(gear) || inherits(gear, "viz_table_gear"))
+  cls <- dots$class
+  stopifnot(is.null(cls) || is.character(cls))
+  dots[c("gear", "class")] <- NULL
+  list(gear = gear, class = cls, dots = dots)
+}
+
+# The settings other blocks and the assistant may set. A block built on the
+# table with its own constructor (a swimmer) saves and takes only that
+# constructor's arguments, so only those.
+table_ctrl_args <- function(spec, ctor, pkg) {
+  ctrl <- viz_ctrl_args(spec)
+  if (!is.character(ctor) || identical(ctor, "new_table_block") ||
+        !is.character(pkg)) {
+    return(ctrl)
+  }
+  fun <- get0(ctor, envir = asNamespace(pkg), mode = "function")
+  if (is.null(fun)) {
+    return(ctrl)
+  }
+  intersect(ctrl, names(formals(fun)))
 }
 
 table_ui <- function(id) {

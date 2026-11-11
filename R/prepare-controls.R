@@ -98,9 +98,16 @@ script_control_values <- function(specs, values = list()) {
     out[[script_key(s$name)]] <- switch(
       s$kind,
       flag = if (isTRUE(as.logical(v))) "on" else "off",
-      # as.list() keeps a single pick a JSON array instead of a string.
-      select = if (isTRUE(s$multiple)) as.list(as.character(v)) else
-        as.character(v)[[1L]],
+      # as.list() keeps a single pick a JSON array instead of a string. A
+      # multi-select shows only picks its pool still offers (the pool can
+      # follow another control), so "N selected" counts what is offered.
+      select = if (isTRUE(s$multiple)) {
+        v <- as.character(v)
+        if (length(s$choices)) v <- v[v %in% as.character(s$choices)]
+        as.list(v)
+      } else {
+        as.character(v)[[1L]]
+      },
       date = format(as.Date(v)),
       number = as.numeric(v)[[1L]],
       as.character(v)[[1L]]
@@ -119,7 +126,8 @@ script_control_values <- function(specs, values = list()) {
 #' script. A declaration that failed leaves the setting's word alone. An
 #' untouched value falls back to the declaration's default. A flag prints its
 #' control's label when on and nothing when off, so a `[ ... ]` clause can
-#' carry it.
+#' carry it; a date without a value prints its placeholder; a multi-select
+#' prints its picks.
 #'
 #' @param roles Named list of the block's own arguments.
 #' @param specs Input specs from [cb_specs()].
@@ -136,8 +144,32 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) script_label(s) else ""
     }
+    # A date without a value prints its placeholder ("automatic"), or
+    # nothing, so a `[ ... ]` clause can carry it.
+    if (identical(s$kind, "date") && (!length(v) || is.na(v[[1L]]))) {
+      v <- as.character(s$placeholder %||% "")
+    }
+    # A multi-select prints its picks: "all" when every choice is picked,
+    # "none" when none is, the picks in a list otherwise. Picks its pool no
+    # longer offers (the pool can follow another control) do not count.
+    if (identical(s$kind, "select") && isTRUE(s$multiple)) {
+      picks <- as.character(v)
+      pool <- as.character(s$choices)
+      if (length(pool)) picks <- picks[picks %in% pool]
+      v <- script_picks_word(picks, pool)
+    }
     v
   })
   names(vals) <- vapply(specs, `[[`, "", "name")
   c(roles[setdiff(names(roles), names(vals))], vals)
+}
+
+# The word for a multi-select's picks.
+script_picks_word <- function(v, choices) {
+  if (!length(v)) return("none")
+  if (length(choices) > 1L && setequal(v, choices)) return("all")
+  if (length(v) > TITLE_MAX_VALUES) {
+    v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
+  }
+  paste(v, collapse = ", ")
 }

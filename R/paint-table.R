@@ -70,7 +70,7 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
 
 
 # Every row's height: the table's row height, grown where a colour-split
-# column has more levels than that holds.
+# column has more levels than that holds, or a swimlane row has thin lanes.
 paint_row_heights <- function(m, row_h, px, fs) {
   out <- rep(row_h, m$n)
   rows <- seq_len(m$n)
@@ -81,6 +81,11 @@ paint_row_heights <- function(m, row_h, px, fs) {
       }, numeric(1L))
       need <- (k - 1) * paint_pitch(px, fs, !is.null(c$ldisp), px * 14) +
         px * 10 + px * 8
+    } else if (identical(c$kind, "interval") && !is.null(c$sl)) {
+      k <- vapply(rows, function(r) length(c$sl[[r]]), numeric(1L))
+      need <- paint_iv_stack(k, px, isTRUE(c$eq)) + px * 8
+      out <- ifelse(k >= 1L, pmax(out, need), out)
+      next
     } else if (isTRUE(c$multi)) {
       k <- vapply(rows, function(r) length(paint_multi_drawn(c, r)), numeric(1L))
       need <- (k - 1) *

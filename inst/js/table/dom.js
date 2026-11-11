@@ -428,6 +428,7 @@
       if (end < n) parts.push(spacer(n - end));
       tbody.innerHTML = parts.join('');
       this.win = [start, end];
+      if (this.hooks.rows) this.hooks.rows(tbody);
       if (n > VIRT_MIN && !this._measured) {
         this._measured = true;
         const r0 = /** @type {HTMLElement | null} */ (tbody.querySelector('tr.vz-table-row'));

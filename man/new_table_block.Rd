@@ -50,7 +50,7 @@ new_table_block(
 \arguments{
 \item{layout}{What a row is: "records" (the input rows), "groups" (one row per level of \code{by}, one column per summary) or "variables" (a Table 1: one row per statistic or level, one column per level of \code{by}). One of \code{"records"}, \code{"groups"}, \code{"variables"}. Default: \code{"records"}.}
 
-\item{...}{Arguments for \code{\link[blockr.core:new_block]{blockr.core::new_block()}} (\code{block_name}, ...), and argument names of blockr.viz before 0.3.0, which are translated with a warning.}
+\item{...}{Arguments for \code{\link[blockr.core:new_block]{blockr.core::new_block()}} (\code{block_name}, ...); \code{gear}, a \code{\link[=table_gear]{table_gear()}} for a block built on the table, and \code{class}, classes put before \code{table_block} (neither is saved, the block's own constructor sets them); and argument names of blockr.viz before 0.3.0, which are translated with a warning.}
 
 \item{by}{Grouping columns, outer first, at most two. Records: rows under one collapsible header per level. Groups: one row per level. Variables: one column per level. Default: \code{character(0)}.}
 
@@ -233,7 +233,11 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{band_xend}: End of the line. Default \code{NULL}: no band.
 \item \code{event_x}: Positions of point events, which may lie past the last segment (a churn date after the contract ended). Default \code{NULL}: no events.
 \item \code{event_shape}: Event kind. Its levels take, in order, a filled triangle, an open triangle, a cross, a square and a vertical bar; further levels repeat them. Names the event in the tooltip and the legend. Default \code{NULL}: one shape.
-\item \code{open}: Logical. TRUE on any of a row's records draws an arrowhead at the end of its last segment (still ongoing). Default \code{NULL}: no arrow.
+\item \code{open}: Logical, per record. A record with a start, no end and TRUE is ongoing: it runs to the axis end with an arrowhead. TRUE on a record with an end draws the arrowhead at the end of its lane's last segment (still ongoing). Default \code{NULL}: no arrow.
+\item \code{lane}: Splits a row into lanes. Records where it is empty draw on the main lane at full height, with the ticks, the line and the events; each other level draws a thin lane above it, in level order, so a row grows with its lanes (a drug per lane above the response). Without any main-lane record the lanes are even and the overlays run across the row; an event with a lane draws on its lane. Default \code{NULL}: one lane.
+\item \code{seg_style}: How a record draws, by value: "dashed" a dashed line (a skipped period), "hollow" an outlined box (a delay), "dot" a ring at its start (one administration), "step" a small down step at its start (a dose cut), "outline" filled with a dark edge (a serious event). Anything else draws solid. A dot or a step needs no end. Default \code{NULL}: all solid.
+\item \code{bar_label}: Text written on each record's bar when it fits, else just after it when the lane has room before its next bar, else nowhere (the tooltip keeps the label). An empty value labels nothing. Drawn on the main lane and on even lanes, not on thin ones. Default \code{NULL}: no bar labels.
+\item \code{strip}: Text of one box in its lane's hover strip; lines split at a newline. Pointing at a lane shows its boxes in time order, a hollow record's box marked late and a dashed one's as skipped. A strip record needs only a start. Default \code{NULL}: no strip.
 }
 
 \strong{\code{type = "pair"}}

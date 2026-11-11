@@ -19,6 +19,8 @@ reference:
     contents:
       - new_chart_block
       - new_table_block
+      - table_gear
+      - table_gear_summaries
       - register_viz_blocks
   - title: Data for the table
     desc: >
