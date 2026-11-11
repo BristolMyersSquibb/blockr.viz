@@ -27,6 +27,8 @@ const hooks = new Set([
   'renderError', 'clearError', 'resize',
   // blockr.ui: a Blockr.menu row's pick
   'onSelect',
+  // a package's own gear editor (Blockr.viz.gear.editors) writes through it
+  'setValues',
   // the language and the browser
   'constructor', 'toJSON', 'handleEvent', 'onload', 'onerror'
 ]);

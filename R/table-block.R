@@ -100,15 +100,10 @@ new_table_block <- function(layout = "records",
   spec <- viz_block_spec("table")
   given <- mget(intersect(as.character(names(match.call())[-1L]),
                           names(spec$args)))
-  dots <- list(...)
-  # A block built on the table names its own gear and class. Neither is a
-  # setting: the block's constructor sets them on every build, and only the
-  # settings are saved.
-  gear <- dots$gear
-  stopifnot(is.null(gear) || inherits(gear, "viz_table_gear"))
-  cls <- dots$class
-  stopifnot(is.null(cls) || is.character(cls))
-  dots[c("gear", "class")] <- NULL
+  own <- table_block_own(list(...))
+  gear <- own$gear
+  cls <- own$class
+  dots <- own$dots
   # blockr.core's block arguments pass through; any other name is an old
   # argument name, or unknown, which viz_check() refuses.
   old <- setdiff(names(dots), VIZ_CORE_BLOCK_ARGS)
@@ -138,6 +133,18 @@ new_table_block <- function(layout = "records",
   # Old names must not be saved back as attributes.
   for (nm in old) attr(res, nm) <- NULL
   res
+}
+
+# A block built on the table names its own gear and class in `...`. Neither
+# is a setting: the block's constructor sets them on every build, and only
+# the settings are saved.
+table_block_own <- function(dots) {
+  gear <- dots$gear
+  stopifnot(is.null(gear) || inherits(gear, "viz_table_gear"))
+  cls <- dots$class
+  stopifnot(is.null(cls) || is.character(cls))
+  dots[c("gear", "class")] <- NULL
+  list(gear = gear, class = cls, dots = dots)
 }
 
 # The settings other blocks and the assistant may set. A block built on the
