@@ -257,7 +257,13 @@
     const r = prof && prof.rows[ctx.key];
     if (!prof || !r) return;
     if (r.kind === 'columns') {
-      checklist(el, ctx, (prof.wire.columns || []).map((c) => [c.name, c.label || c.name]));
+      // A column with nothing in it (a second assessment's best response while
+      // one is drawn) is not offered; once ticked it stays, to untick.
+      const empty = new Set((ctx.columns || []).filter((c) => c.all_na).map((c) => c.name));
+      const on = new Set(/** @type {string[]} */ (Array.isArray(ctx.value) ? ctx.value : []));
+      checklist(el, ctx, (prof.wire.columns || [])
+        .filter((c) => on.has(c.name) || !empty.has(String(c.summary.col)))
+        .map((c) => [c.name, c.label || c.name]));
     } else if (r.kind === 'words') {
       // A setting by its label; its clause in the template says where it goes.
       checklist(el, ctx, prof.clauses.map(([k]) => [k, ctx.labelOf(k)]));

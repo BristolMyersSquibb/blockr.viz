@@ -194,3 +194,20 @@ test('an unnamed checklist column is told by its data column', () => {
   m.gear.set({ columns: ['Weeks'] });
   assert.deepEqual(plain(lastSet(env).values.summaries), [WEEKS, SPANS]);
 });
+
+test('the checklist leaves out a column with nothing in it, unless ticked', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'blk-table', typeKey: 'layout' });
+  const BOR2 = { type: 'field', col: 'BOR_2' };
+  const gear = Object.assign({}, GEAR, { columns: GEAR.columns.concat([
+    { name: 'BOR2', label: 'BOR, 2nd', summary: BOR2 }]) });
+  const cols = [{ name: 'BOR_2', class: 'character', label: '', n_unique: 1, all_na: true },
+                { name: 'SEX', class: 'character', label: '', n_unique: 2 }];
+  const boxes = () => Array.from(row(m.el, 'columns').querySelectorAll('[data-gear-input]'))
+    .map((x) => x.getAttribute('data-gear-input'));
+  m.gear.update(payload(CONFIG, { columns: cols, derived: { script: SCRIPT, gear } }));
+  assert.deepEqual(boxes(), ['columns:Weeks', 'columns:Sex']);
+  m.gear.update(payload(Object.assign({}, CONFIG, { summaries: [WEEKS, BOR2, SPANS] }),
+                        { columns: cols, derived: { script: SCRIPT, gear } }));
+  assert.deepEqual(boxes(), ['columns:Weeks', 'columns:Sex', 'columns:BOR2']);
+});
