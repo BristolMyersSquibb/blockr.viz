@@ -81,6 +81,23 @@
     };
   };
 
+  /** `shape`: the marker of a row, by its level's place in the model's levels, cycling through
+   * NS.SHAPE_SYMBOLS; a missing or unknown value is the first (a circle). Null without a shape.
+   * @param {any} m @returns {((r: any) => string) | null} */
+  const shapeAtOf = (m) => {
+    if (!m.shape) return null;
+    const syms = NS.SHAPE_SYMBOLS;
+    /** @type {Map<string, number>} */
+    const at = new Map(m.shape.levels.map((/** @type {string} */ l, /** @type {number} */ i) =>
+      /** @type {[string, number]} */ ([l, i])));
+    const col = m.shape.col;
+    return (r) => {
+      const v = r ? r[col] : null;
+      const i = v == null ? 0 : (at.get(String(v)) ?? 0);
+      return syms[i % syms.length];
+    };
+  };
+
   /** What every part of a panel's points reads. @param {any} m the individual model
    * @param {any} panel @param {any} look @param {number} plotW the plot's width in px */
   const pointsContext = (m, panel, look, plotW) => {
@@ -126,6 +143,7 @@
         ((/** @type {any} */ v) => m.x.type === 'category' ? String(v ?? '') : Number(v)),
       // `highlight`: the muted series in grey; the highlighted lines named at their end.
       clrOf: (/** @type {any} */ s) => (s.muted ? muted : s.color),
+      shapeAt: shapeAtOf(m),
       hlNames: isLine && !!m.hl && !!m.splitCol
     };
   };
@@ -148,9 +166,9 @@
       triggerLineEvent: isLine ? true : undefined,
       // A line without dots has no symbol at all: ECharts would show one at
       // the hovered x.
-      symbol: isLine && (crowd || !dots) ? 'none' : 'circle',
+      symbol: isLine && (crowd || !dots || k.shapeAt) ? 'none' : 'circle',
       symbolSize: isLine ? lineMarkerPx : BASE_SCATTER_SIZE * dm,
-      showSymbol: isLine ? dots : undefined,
+      showSymbol: isLine ? dots && !k.shapeAt : undefined,
       itemStyle: isLine
         ? { color: clr, cursor: 'pointer', borderColor: surface, borderWidth: 1.5 }
         : { color: clr, cursor: 'pointer' },
@@ -239,7 +257,13 @@
       if (ltCol && ltLevels.length > 1) {
         series.push(...lineSegments(k, ltLevels, s, si));
       } else {
-        series.push(mkSeries(k, s.level, s.pts, clrOf(s), !!s.muted));
+        const sr = mkSeries(k, s.level, s.pts, clrOf(s), !!s.muted);
+        // A scatter point's own marker; a line's markers are the shape overlay.
+        if (k.shapeAt && !isLine) {
+          const at = k.shapeAt;
+          sr.symbol = (/** @type {any} */ _v, /** @type {any} */ p) => at(s.rows[p.dataIndex]);
+        }
+        series.push(sr);
       }
       // With a highlight the level's smoother goes with its highlighted points.
       const fitHere = !s.muted || !panel.series.some((/** @type {any} */ o) =>
@@ -335,6 +359,34 @@
     });
   };
 
+  /** `shape` on a line: per symbol one silent scatter over the line's points, each marker in its
+   * line's colour. Its id keeps the brush and the click off it; the patch fades a marker with its
+   * line (`lv`). Shown however many lines there are. @param {any} k @param {any[]} series */
+  const shapeOverlay = (k, series) => {
+    const { isLine, shapeAt, panel, clrOf, crowd, lineMarkerPx, dm, surface } = k;
+    if (!isLine || !shapeAt) return;
+    /** @type {Map<string, any[]>} */
+    const bySym = new Map(NS.SHAPE_SYMBOLS.map((/** @type {string} */ sym) => [sym, []]));
+    for (const s of panel.series) {
+      const clr = clrOf(s);
+      s.pts.forEach((/** @type {any} */ p, /** @type {number} */ i) => {
+        if (!p || p[0] == null || p[1] == null) return;
+        /** @type {any[]} */ (bySym.get(shapeAt(s.rows[i]))).push(
+          { value: [p[0], p[1]], lv: s.level, itemStyle: { color: clr } });
+      });
+    }
+    let j = 0;
+    for (const [sym, data] of bySym) {
+      if (!data.length) continue;
+      series.push({
+        id: '__shape_' + j++, type: 'scatter', data, symbol: sym,
+        symbolSize: crowd ? 6 * dm : lineMarkerPx, silent: true, blockrShape: true,
+        itemStyle: { borderColor: surface, borderWidth: crowd ? 0.5 : 1 },
+        z: 3, legendHoverLink: false, tooltip: { show: false }, emphasis: { disabled: true }
+      });
+    }
+  };
+
   /** Each colour group's name at the centre of its points, one spacer shared.
    * @param {any} k @param {any[]} series @param {any} room */
   const cloudNames = (k, series, room) => {
@@ -356,6 +408,7 @@
     const k = pointsContext(m, panel, look, plotW);
     const { directLabels, hlNames, stepMode, smoothOn, lineMarkerPx, lm } = k;
     const series = panelSeries(k);
+    shapeOverlay(k, series);
     addRanges(k, series);
     const room = { placed: [], lastS: -1, lastD: -1 };
     pointLabels(k, series, room);

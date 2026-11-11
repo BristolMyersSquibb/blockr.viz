@@ -96,7 +96,7 @@
       tiles: (key) => (key === 'type' ? TILES : null),
       columns(key, v, cols) {
         const type = String(v.type || 'bar');
-        const num = ['ref_min', 'ref_max', 'ymin', 'ymax'].includes(key) ||
+        const num = ['ref_min', 'ref_max', 'ref_lines', 'ymin', 'ymax'].includes(key) ||
           (key === 'y' && NUMERIC_Y.includes(type)) || (key === 'x' && type === 'histogram') ||
           (key === 'value' && !ANY_COLUMN.includes(String(v.func || 'count')));
         if (num) return cols.filter((c) => numeric(c.name));

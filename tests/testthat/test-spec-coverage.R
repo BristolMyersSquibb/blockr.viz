@@ -51,7 +51,8 @@ DROPPED_ARGS <- list(chart = character(), table = "max_height")
 # value-axis lines are `value_lines` again (behaviour-changes.md row 31).
 # The reference's names were never released, so LEGACY_NAMES has no row.
 ADDED_ARGS <- list(chart = c("category", "value", "open", "facet_row", "x_limits", "y_limits",
-                               "x_ticks", "y_ticks"),
+                               "x_ticks", "y_ticks", "shape", "ref_lines",
+                               "ref_line_colors"),
                    table = "group_rows")
 REFERENCE_RENAMES <- list(chart = c(y_lines = "value_lines"),
                           table = character())

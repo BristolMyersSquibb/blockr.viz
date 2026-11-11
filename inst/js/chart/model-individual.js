@@ -50,7 +50,8 @@
    *             crowd: boolean, logX: boolean, logY: boolean, logDropped: number,
    *             ttFields: string[], legend: any, byColor: boolean,
    *             nFacets: number, single: boolean, ix: any,
-   *             panels: IndividualPanel[], hl: Record<string, string[]> | null }} IndividualModel
+   *             panels: IndividualPanel[], hl: Record<string, string[]> | null,
+   *             shape: { col: string, levels: string[] } | null }} IndividualModel
    */
 
   /** The x and y axes (type, categories, how a value is placed) and whether each is logarithmic,
@@ -159,7 +160,7 @@
       seriesCount: 1, lineOpacity: 1, symbol: 'circle', capMessage: null, crowd: false,
       logX: false, logY: false, logDropped: 0,
       ttFields: [], legend: null, byColor: false,
-      nFacets: 1, single: true, ix, panels: [], hl: null
+      nFacets: 1, single: true, ix, panels: [], hl: null, shape: null
     };
     if (!x || !y) {
       out.empty = model.emptyState('Select X and Y columns');
@@ -196,9 +197,22 @@
     out.levelColors = levels.map((lv, i) => colours.of(lv, i));
     legendOf(rows, ix, out, colours.legendColor, columns);
     setAxes(rows, columns, cfg, out);
+    out.shape = shapeOf(rows, ix, cfg, columns);
     buildPanels(rows, ix, cfg, out, facets);
     highlightSeries(out, rows, ix, cfg, columns);
     return out;
+  };
+
+  /** `shape` on a scatter or line: its column and its levels across the whole chart, so a level
+   * keeps its marker in every panel. Factor levels in their order, else sorted; missing values are
+   * no level. Null when unset, on another type, or with no value.
+   * @param {any[]} rows @param {any} ix @param {Record<string, any>} cfg @param {any} columns */
+  const shapeOf = (rows, ix, cfg, columns) => {
+    const col = cfg.shape;
+    if (!col || (cfg.type !== 'scatter' && cfg.type !== 'line')) return null;
+    const present = ix.levels(rows, col, 'nz').filter((/** @type {string} */ l) => l !== '');
+    if (!present.length) return null;
+    return { col: String(col), levels: NS.axes.orderLevels(present, null, columns, col).map(String) };
   };
 
   /** The highlight on a scatter or line. A line is highlighted when one of its rows holds a
@@ -471,7 +485,7 @@
     for (const sel of selected) {
       const drawn = allSeries[sel.seriesIndex];
       // A legend chip or a label series is no point of the data.
-      if (drawn && typeof drawn.id === 'string' && /^__(legend|label)_/.test(drawn.id)) continue;
+      if (drawn && typeof drawn.id === 'string' && /^__(legend|label|shape)_/.test(drawn.id)) continue;
       const sData = drawn && drawn.data;
       if (!sData || sel.dataIndex < 0 || sel.dataIndex >= sData.length) continue;
       const pt = sData[sel.dataIndex];

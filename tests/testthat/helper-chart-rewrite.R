@@ -175,7 +175,7 @@ record_computed <- function(x) {
 # Arguments added after the recordings were made, unset in every recorded
 # state.
 record_rw_new_args <- c("open", "facet_row", "x_limits", "y_limits", "x_ticks",
-                        "y_ticks")
+                        "y_ticks", "shape", "ref_lines", "ref_line_colors")
 
 record_rw_expected <- function(rec, sc) {
   sel <- function(st) {
