@@ -55,7 +55,8 @@ TABLE_GROUPS_KEYS <- list(
   interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
                lg = "large", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
-               ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
+               ms = "mainStrip", eq = "evenLanes", bl = "barLabels",
+               mn = "mainName", lw = "laneNameWidth")
 )
 # The raw statistics a hover card prints (`r`).
 TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",

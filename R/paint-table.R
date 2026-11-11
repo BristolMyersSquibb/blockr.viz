@@ -83,7 +83,10 @@ paint_row_heights <- function(m, row_h, px, fs) {
         px * 10 + px * 8
     } else if (identical(c$kind, "interval") && !is.null(c$sl)) {
       k <- vapply(rows, function(r) length(c$sl[[r]]), numeric(1L))
-      need <- paint_iv_stack(k, px, isTRUE(c$eq)) + px * 8
+      f <- vapply(rows, function(r) {
+        sum(vapply(c$sl[[r]], function(l) isTRUE(l$f), NA))
+      }, numeric(1L))
+      need <- paint_iv_stack(k - f, px, isTRUE(c$eq), f) + px * 8
       out <- ifelse(k >= 1L, pmax(out, need), out)
       next
     } else if (isTRUE(c$multi)) {
@@ -103,6 +106,12 @@ paint_row_heights <- function(m, row_h, px, fs) {
 paint_axis <- function(p, prep, x, w, ytop, gl) {
   dom <- cells_axis_domain(p, prep)
   if (is.null(dom)) return(list())
+  # A swimlane with named bars leaves their gutter blank.
+  if (identical(p$kind, "interval") && length(p$full) > 1L) {
+    g <- paint_iv_gutter(max(nchar(p$full)), gl)
+    x <- x + g
+    w <- w - g
+  }
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
   } else {

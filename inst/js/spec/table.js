@@ -623,6 +623,19 @@
               "slot": false,
               "ctrl": true
             },
+            "lane_full": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Full lanes"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "seg_style": {
               "type": {
                 "name": "column"

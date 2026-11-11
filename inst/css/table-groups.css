@@ -1138,3 +1138,37 @@
   margin: 0 auto;
 }
 
+
+/* Full bars (`lane_full`): a second response assessment draws below the main
+   lane at its height. With more than one bar each is named in a gutter at the
+   left of the cell, the main one bold; the axis leaves the same gutter blank,
+   so the bars line up with its ticks. The gutter is in ch of the names' 10px
+   type. */
+.vz-table-groups-ivnamed,
+.vz-table-groups-axis-lpad {
+  --vz-lane-gutter: calc(var(--vz-lane-lw, 4ch) + 8px);
+  font-size: 10px;
+}
+.vz-table-groups-ivnamed {
+  padding-left: var(--vz-lane-gutter);
+}
+.vz-table-groups-axis-lpad {
+  flex: 0 0 var(--vz-lane-gutter);
+  margin-right: -8px;
+}
+.vz-table-groups-ivcell .vz-table-lane-name {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  margin-right: 6px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--blockr-color-text-muted, #6b7280);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-name.is-main {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+}

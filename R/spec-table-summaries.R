@@ -256,6 +256,17 @@ table_summary_specs <- function() {
           "run across the row; an event with a lane draws on its lane."
         )
       ),
+      lane_full = viz_arg(
+        type = "column", null = "thin lanes only",
+        gear = gear("Columns", "column", "Full lanes"),
+        describe = paste(
+          "Logical. A lane whose records have it TRUE is a full bar: the",
+          "first such lane is the main lane, the others draw below it at full",
+          "height, with their own events and open end (a second response",
+          "assessment). With more than one bar each is named at its left, the",
+          "main one in bold."
+        )
+      ),
       seg_style = viz_arg(
         type = "column", null = "all solid",
         gear = gear("Columns", "column", "Segment style"),

@@ -647,6 +647,32 @@ test('lanes: even lanes drop the main lane height; outline and lane events draw'
   assert.equal(hover(t, ev).tip.querySelector('.vz-tt-head').textContent, 'Death');
 });
 
+test('lanes: full bars draw below the main lane, each named in a gutter the axis keeps', () => {
+  const m = lanes();
+  Object.assign(m.cols[7].mark, { mainName: 'INV', laneNameWidth: 4 });
+  m.cols[7].mark.subLanes[0].push({ n: 'BICR', f: true, s: [[0, 60, 3]], t: ['PR'],
+                                    e: [[40, 1]], et: ['Progression'] });
+  const t = mount(payload({ data: m, config: G }));
+  const c = t.cell(0, 7);
+  const named = c.querySelector('.vz-table-groups-ivnamed');
+  assert.match(named.getAttribute('style'), /--vz-lane-lw:4ch/);
+  const kids = Array.from(c.querySelector('.vz-table-groups-ivstack').children);
+  // Thin lanes, then the main lane, then the full bar.
+  assert.deepEqual(kids.map((k) => k.classList.contains('is-thin') ? 'thin'
+    : k.classList.contains('is-full') ? 'full' : 'main'), ['thin', 'thin', 'main', 'full']);
+  assert.equal(kids[2].querySelector('.vz-table-lane-name.is-main').textContent, 'INV');
+  assert.equal(kids[3].querySelector('.vz-table-lane-name').textContent, 'BICR');
+  assert.ok(kids[3].querySelector('.vz-table-lane-ev'));
+  // A row without lanes keeps the gutter, so its bar lines up too.
+  assert.ok(t.cell(2, 7).querySelector('.vz-table-groups-ivnamed .vz-table-lane-name.is-main'));
+  // The axis leaves the gutter blank.
+  assert.ok(t.$('.vz-table-groups-axis-lpad'));
+  // Without names there is no gutter.
+  const t2 = mount(payload({ data: lanes(), config: G }));
+  assert.equal(t2.cell(0, 7).querySelector('.vz-table-groups-ivnamed'), null);
+  assert.equal(t2.$('.vz-table-groups-axis-lpad'), null);
+});
+
 test('bar labels: on the bar when they fit, after it when the gap holds them, else hidden', () => {
   const m = lanes();
   Object.assign(m.cols[7].mark, { evenLanes: true });

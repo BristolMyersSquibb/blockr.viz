@@ -148,6 +148,8 @@ interface TableMarkInterval extends TableMarkBase {
   ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
   evenLanes?: boolean; barLabels?: string[][];
+  /** With more than one full bar: the main one's name, and the names' widest, in ch. */
+  mainName?: string; laneNameWidth?: number;
 }
 
 /** A thin lane above a swimlane's main one: its name `n`, segments `s` with
@@ -156,6 +158,8 @@ interface TableMarkInterval extends TableMarkBase {
 interface TableSubLane {
   n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
   e?: number[][]; et?: string[]; l?: string[];
+  /** A full bar under the main one (a second response assessment). */
+  f?: boolean;
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last

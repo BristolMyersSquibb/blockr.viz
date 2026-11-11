@@ -319,7 +319,7 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
   # An event on a lane draws on that lane (groups_spans_lanes()).
   if (!is.null(ex) && !is.null(col("lane"))) {
     el <- as.character(slice[[col("lane")]])
-    ex[!is.na(el) & nzchar(el)] <- NA_real_
+    ex[!groups_spans_on_main(el, s)] <- NA_real_
   }
   shp <- col("event_shape")
   opc <- col("open")
@@ -328,7 +328,7 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
   lnc <- col("lane")
   if (!is.null(op) && !is.null(lnc)) {
     ln <- as.character(slice[[lnc]])
-    op[!is.na(ln) & nzchar(ln)] <- FALSE
+    op[!groups_spans_on_main(ln, s)] <- FALSE
   }
   lv <- s$.shape_levels
   sk <- groups_key_string(slice, tkeys)

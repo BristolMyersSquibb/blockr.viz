@@ -32,7 +32,7 @@ CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
 
 #' Annotation keys accepted after `#|`
 #' @noRd
-CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder")
+CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "multiple")
 
 #' Call names accepted as an annotation wrapper (`#| number(min = 1)`)
 #' @noRd
@@ -306,13 +306,14 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
       next
     }
 
-    # From here on, declarations below read the control's current value.
-    assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
-
     ann <- cb_annotation(
       if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
       else parsed$lines[[st$line]]
     )
+    # `#| select(multiple = TRUE)`: several picks, though one by default.
+    if (identical(w$kind, "select") && isTRUE(ann$multiple)) w$multiple <- TRUE
+    # From here on, declarations below read the control's current value.
+    assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
 
     specs[[length(specs) + 1L]] <- c(
       list(
