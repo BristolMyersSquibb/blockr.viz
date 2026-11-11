@@ -94,6 +94,7 @@ table_titles <- function(kit, src, part) {
 # (sent again only when it changes), and what R resolves for the face.
 table_payload <- function(kit, src, part, titles) {
   rows <- viz_rows()
+  written <- last_value_cache()
   function() {
     v <- kit$values()
     built <- part()$drawn()
@@ -107,11 +108,12 @@ table_payload <- function(kit, src, part, titles) {
     )
     # No table is `{}`; `columns` are the input's, for the gear.
     # A matrix's tile columns go out as JSON written here
-    # (R/table-tile-json.R).
+    # (R/table-tile-json.R), once per model: a click or a title builds
+    # the payload again over the same one.
     data <- if (is.null(built$model)) {
       structure(list(), names = character())
     } else {
-      table_tile_json(built$model)
+      written(built$model, function() table_tile_json(built$model))
     }
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
