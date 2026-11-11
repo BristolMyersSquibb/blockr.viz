@@ -106,7 +106,13 @@ table_payload <- function(kit, src, part, titles) {
       built$derived
     )
     # No table is `{}`; `columns` are the input's, for the gear.
-    data <- built$model %||% structure(list(), names = character())
+    # A matrix's tile columns go out as JSON written here
+    # (R/table-tile-json.R).
+    data <- if (is.null(built$model)) {
+      structure(list(), names = character())
+    } else {
+      table_tile_json(built$model)
+    }
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }
