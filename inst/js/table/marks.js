@@ -35,7 +35,6 @@
   /** `left:x%;width:y%` */
   const span = (/** @type {unknown} */ l, /** @type {unknown} */ w) =>
     'left:' + n(l) + '%;width:' + n(w) + '%';
-  const tipAttr = (/** @type {unknown} */ t) => t ? ' data-summarize-tip="' + esc(t) + '"' : '';
   /** @param {(string | number | null)[] | null | undefined} a @param {number} i */
   const at = (a, i) => (a ? a[i] : null);
 
@@ -64,8 +63,7 @@
   function segment(c, j, i) {
     const lab = c.mode !== 'grouped' && c.segLabels ? at(c.segLabels[j], i) : null;
     return '<div class="vz-table-groups-fill' + (lab ? ' has-lab' : '') + '" data-seg="' + j +
-      '" style="width:' + n(c.segWidths[j][i]) + '%;background:' + col(c.fills[j]) + '"' +
-      tipAttr(c.names[j] + ': ' + (c.segValues[j][i] == null ? '' : c.segValues[j][i])) + '>' +
+      '" style="width:' + n(c.segWidths[j][i]) + '%;background:' + col(c.fills[j]) + '">' +
       (lab ? '<span class="vz-table-groups-seglab vz-table-lw-' + String(lab).length + '" style="color:' +
         col(c.segInk ? c.segInk[j] : '') + '">' + esc(lab) + '</span>' : '') + '</div>';
   }
@@ -102,9 +100,9 @@
       (pos ? 'is-pos' : 'is-neg') + '" style="width:' + n(w) + '%"></div></div>';
   }
 
-  /** @param {string} name @param {TableLaneGeom} g @param {number} i @param {boolean} has */
-  const lane = (name, g, i, has) => '<div class="vz-table-groups-lane vz-table-groups-' + name +
-    (g.bare ? ' is-bare' : '') + '"' + (has ? tipAttr(at(g.tip, i)) : '') + '>';
+  /** @param {string} name @param {TableLaneGeom} g */
+  const lane = (name, g) => '<div class="vz-table-groups-lane vz-table-groups-' + name +
+    (g.bare ? ' is-bare' : '') + '">';
 
   /**
    * Box: whiskers, the box and the median cut out of it.
@@ -114,8 +112,8 @@
   function box(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('median') == null) return lane('boxcell', g, i, false) + '</div>';
-    let s = lane('boxcell', g, i, true);
+    if (v('median') == null) return lane('boxcell', g) + '</div>';
+    let s = lane('boxcell', g);
     if (v('whiskerLowWidth') != null) {
       s += '<i class="vz-table-lane-wh" style="' + span(v('whiskerLow'), v('whiskerLowWidth')) + '"></i>';
     }
@@ -134,8 +132,8 @@
   function pointrange(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('center') == null) return lane('prcell', g, i, false) + '</div>';
-    let s = lane('prcell', g, i, true);
+    if (v('center') == null) return lane('prcell', g) + '</div>';
+    let s = lane('prcell', g);
     if (v('fenceWidth') != null) s += '<i class="vz-table-lane-fence" style="' + span(v('fenceLeft'), v('fenceWidth')) + '"></i>';
     if (v('rangeWidth') != null) s += '<i class="vz-table-lane-rng" style="' + span(v('rangeLeft'), v('rangeWidth')) + '"></i>';
     return s + '<i class="vz-table-lane-ctr" style="left:' + n(v('center')) + '%"></i></div>';
@@ -151,8 +149,7 @@
     const fill = at(g.fill, i);
     let s = '<div class="vz-table-groups-lane vz-table-groups-pacell' +
       (g.dash && g.dash[i] ? ' is-dash' : '') + '"' +
-      (fill != null ? ' style="--vz-table-groups-fill:' + col(fill) + '"' : '') +
-      tipAttr(at(g.tip, i)) + '>';
+      (fill != null ? ' style="--vz-table-groups-fill:' + col(fill) + '"' : '') + '>';
     if (g.bandWidth[i] != null) s += '<i class="vz-table-lane-band" style="' + span(g.bandLeft[i], g.bandWidth[i]) + '"></i>';
     if (ref != null) s += '<i class="vz-table-lane-ref" style="left:' + n(ref) + '%"></i>';
     if (g.linkWidth[i] != null) s += '<i class="vz-table-lane-link" style="' + span(g.linkLeft[i], g.linkWidth[i]) + '"></i>';
@@ -222,20 +219,29 @@
    * @param {boolean} [again] Place every label anew (the width changed).
    */
   function fitLabels(host, again) {
-    host.querySelectorAll(again ? '.vz-table-lane-lab' : '.vz-table-lane-lab:not(.is-fit)').forEach((node) => {
-      const lab = /** @type {HTMLElement} */ (node);
-      if (again) {
+    const labs = /** @type {HTMLElement[]} */ (Array.from(
+      host.querySelectorAll(again ? '.vz-table-lane-lab' : '.vz-table-lane-lab:not(.is-fit)')));
+    if (!labs.length) return;
+    // Every read in one pass and every write in another: a write between two
+    // reads makes the browser lay the table out again, once per label.
+    if (again) {
+      labs.forEach((lab) => {
         lab.classList.remove('is-fit', 'is-on', 'is-after');
         lab.hidden = false;
         lab.style.left = n(lab.getAttribute('data-x0')) + '%';
         lab.style.maxWidth = '';
-      }
-      const own = /** @type {HTMLElement | null} */ (lab.parentElement);
-      const w = own ? own.clientWidth : 0;
+      });
+    }
+    const room = labs.map((lab) => (lab.parentElement ? lab.parentElement.clientWidth : 0));
+    labs.forEach((lab, j) => {
+      if (room[j]) lab.classList.add('is-fit');
+    });
+    const text = labs.map((lab, j) => (room[j] ? lab.offsetWidth : 0));
+    labs.forEach((lab, j) => {
+      const w = room[j];
       if (!w) return;
-      lab.classList.add('is-fit');
       const px = (/** @type {string} */ k) => Number(lab.getAttribute(k)) / 100 * w;
-      const tw = lab.offsetWidth;
+      const tw = text[j];
       if (tw + 6 <= px('data-x1') - px('data-x0')) {
         lab.classList.add('is-on');
         lab.style.maxWidth = n(Math.floor(px('data-x1') - px('data-x0'))) + 'px';

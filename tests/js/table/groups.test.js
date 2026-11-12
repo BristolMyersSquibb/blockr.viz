@@ -169,7 +169,6 @@ test('a colour split: one segment per level with a value, its label inside', () 
   assert.equal(segs.length, 2);
   assert.match(segs[0].getAttribute('style'), /width:30%;background:#f00/);
   assert.equal(segs[1].querySelector('.vz-table-groups-seglab').textContent, '4');
-  assert.equal(segs[0].getAttribute('data-summarize-tip'), 'F: 3');
   assert.equal(t.cell(2, 2).querySelectorAll('.vz-table-groups-fill').length, 1);
 });
 
@@ -205,7 +204,6 @@ test('a box: whiskers, box, median; nothing without a median', () => {
   const box = t.cell(0, 4).querySelector('.vz-table-groups-boxcell');
   assert.deepEqual(Array.from(box.children).map((i) => i.className),
                    ['vz-table-lane-wh', 'vz-table-lane-wh', 'vz-table-lane-box', 'vz-table-lane-med']);
-  assert.equal(box.getAttribute('data-summarize-tip'), 'n = 4');
   assert.equal(t.cell(1, 4).querySelector('.vz-table-groups-boxcell').children.length, 0);
 });
 
