@@ -213,9 +213,10 @@ groups_dom_pair <- function(plan, idx, rows) {
 groups_dom_interval <- function(plan, idx, rows) {
   ext <- numeric()
   for (i in idx) {
-    for (ss in rows[[plan[[i]]$segs]]) {
-      for (sg in ss) ext <- c(ext, sg$s, sg$e)
-    }
+    segs <- unlist(rows[[plan[[i]]$segs]], recursive = FALSE,
+                   use.names = FALSE)
+    ext <- c(ext, vapply(segs, function(sg) sg$s, numeric(1L)),
+             vapply(segs, function(sg) sg$e, numeric(1L)))
     # Ticks, the line and events widen the axis too: an event after the last
     # segment still lands inside the cell.
     ovl <- plan[[i]]$ovl
