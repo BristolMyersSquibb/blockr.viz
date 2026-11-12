@@ -128,13 +128,16 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
       built$derived
     )
     # No table is `{}`; `columns` are the input's, for the gear.
-    # A matrix's tile columns go out as JSON written here
-    # (R/table-tile-json.R), once per model: a click or a title builds
-    # the payload again over the same one.
+    # A matrix's tile columns and a swimlane column's segments and lanes go
+    # out as JSON written here (R/table-tile-json.R, R/table-lane-json.R),
+    # once per model: a click or a title builds the payload again over the
+    # same one.
     data <- if (is.null(built$model)) {
       structure(list(), names = character())
     } else {
-      written(built$model, function() table_tile_json(built$model))
+      written(built$model, function() {
+        table_lane_json(table_tile_json(built$model))
+      })
     }
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
