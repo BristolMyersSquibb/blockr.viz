@@ -39,34 +39,45 @@ cells_interval <- function(ctx, p) {
 # is [text, style].
 cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
   box <- function(bx) lapply(bx, function(b) list(b$t, b$st))
-  sl <- lapply(lanes, function(r) {
-    lapply(r$sub, function(l) {
-      out <- list(n = l$nm, s = cells_interval_segs(list(l$segs), bb,
-                                                    d1)[[1L]],
-                  t = as.list(cells_interval_tips(list(l$segs), lv, tf, cvar,
-                                                  dd)[[1L]]),
-                  b = box(l$bx))
-      bl <- cells_interval_bar_labels(list(l$segs))
-      if (!is.null(bl)) out$l <- bl[[1L]]
-      if (length(l$ev)) {
-        out$e <- lapply(l$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
-        out$et <- as.list(vapply(l$ev, function(e) {
-          paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
-                 cells_fmt_x(e$x, dd))
-        }, ""))
-      }
-      if (isTRUE(l$op) && length(l$segs)) {
-        out$o <- bb$pos(min(max(vapply(l$segs, function(sg) sg$e, 0)),
-                               d1))[[1L]]
-      }
-      out
-    })
+  # Every lane of every row in one list, so their segments and tips are
+  # computed together.
+  subs <- lapply(lanes, function(r) r$sub)
+  all <- unlist(subs, recursive = FALSE, use.names = FALSE)
+  lsegs <- lapply(all, function(l) l$segs)
+  s <- cells_interval_segs(lsegs, bb, d1)
+  t <- cells_interval_tips(lsegs, lv, tf, cvar, dd)
+  one <- lapply(seq_along(all), function(k) {
+    l <- all[[k]]
+    out <- list(n = l$nm, s = s[[k]], t = as.list(t[[k]]), b = box(l$bx))
+    bl <- cells_interval_bar_labels(list(l$segs))
+    if (!is.null(bl)) out$l <- bl[[1L]]
+    if (length(l$ev)) {
+      out$e <- lapply(l$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
+      out$et <- as.list(vapply(l$ev, function(e) {
+        paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
+               cells_fmt_x(e$x, dd))
+      }, ""))
+    }
+    if (isTRUE(l$op) && length(l$segs)) {
+      out$o <- bb$pos(min(max(vapply(l$segs, function(sg) sg$e, 0)),
+                             d1))[[1L]]
+    }
+    out
   })
+  sl <- cells_regroup(one, lengths(subs))
   out <- list()
   if (any(lengths(sl) > 0L)) out$sl <- sl
   ms <- lapply(lanes, function(r) box(r$ms))
   if (any(lengths(ms) > 0L)) out$ms <- ms
   out
+}
+
+# A flat vector or list cut back into consecutive groups of `n` elements.
+cells_regroup <- function(x, n) {
+  end <- cumsum(n)
+  lapply(seq_along(n), function(i) {
+    x[seq.int(end[[i]] - n[[i]] + 1L, length.out = n[[i]])]
+  })
 }
 
 # The overlays in lane percent, only the parts the row asked for: `tk` tick
@@ -128,42 +139,67 @@ cells_fmt_x <- function(v, dd) {
 # Segment tuples [left, width, fill-index (, label (, style))] up to `d1`, the
 # axis end an ongoing segment runs to; the optional
 # 4th slot keys the same-event hover highlight (data-l), "" for none when a
-# style follows.
+# style follows. `segs` is one list of segments per row (or lane); the
+# positions of all of them are computed in one pass.
 cells_interval_segs <- function(segs, bb, d1) {
-  lapply(segs, function(ss) {
-    lapply(ss, function(sg) {
-      # An ongoing record (no end, open) runs to the axis end.
-      e <- if (is.finite(sg$e)) sg$e else d1
-      base <- list(bb$pos(sg$s)[[1L]], bb$span(sg$s, e)[[1L]], sg$f)
-      if (!is.null(sg$st)) return(c(base, list(sg$lb %||% "", sg$st)))
-      if (!is.null(sg$lb)) c(base, list(sg$lb)) else base
-    })
+  all <- unlist(segs, recursive = FALSE, use.names = FALSE)
+  start <- vapply(all, function(sg) sg$s, numeric(1L))
+  end <- vapply(all, function(sg) sg$e, numeric(1L))
+  # An ongoing record (no end, open) runs to the axis end.
+  end[!is.finite(end)] <- d1
+  left <- bb$pos(start)
+  width <- bb$span(start, end)
+  tuples <- lapply(seq_along(all), function(j) {
+    sg <- all[[j]]
+    base <- list(left[[j]], width[[j]], sg$f)
+    if (!is.null(sg$st)) return(c(base, list(sg$lb %||% "", sg$st)))
+    if (!is.null(sg$lb)) c(base, list(sg$lb)) else base
   })
+  cells_regroup(tuples, lengths(segs))
 }
 
-# Tooltip: event label, colour level, span, then extra field pairs.
+# Tooltip: event label, colour level, span, then extra field pairs. One
+# character vector per row (or lane) of `segs`, all built in one pass: the
+# number formatting is the slow part, and it is vectorised.
 cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
-  lapply(segs, function(ss) {
-    vapply(ss, function(sg) {
-      paste0(
-        if (!is.null(sg$lb)) paste0(sg$lb, " \u00b7 "),
-        # The colour level is left out when the label already says it.
-        if (!is.null(lv) && !identical(sg$lb, lv[[sg$f]])) {
-          paste0(if (!is.null(cvar)) paste0(cvar, " "), lv[[sg$f]], " \u00b7 ")
-        },
-        cells_fmt_x(sg$s, dd), "\u2013",
-        if (is.finite(sg$e)) cells_fmt_x(sg$e, dd) else "ongoing",
-        # A record without a value in a field leaves the field out.
-        if (length(tf) && !is.null(sg$fv) && any(nzchar(sg$fv))) {
-          k <- nzchar(sg$fv)
-          paste0(" \u00b7 ", paste0(tf[k], ": ", sg$fv[k],
-                                     collapse = " \u00b7 "))
-        } else {
-          ""
-        }
-      )
-    }, character(1L))
-  })
+  all <- unlist(segs, recursive = FALSE, use.names = FALSE)
+  n <- lengths(segs)
+  if (!length(all)) {
+    return(lapply(n, function(i) character()))
+  }
+  start <- vapply(all, function(sg) sg$s, numeric(1L))
+  end <- vapply(all, function(sg) sg$e, numeric(1L))
+  label <- vapply(all, function(sg) sg$lb %||% NA_character_, character(1L))
+  tip <- ifelse(is.na(label), "", paste0(label, " \u00b7 "))
+  if (!is.null(lv)) {
+    level <- lv[as.integer(vapply(all, function(sg) sg$f, numeric(1L)))]
+    # The colour level is left out when the label already says it.
+    said <- !is.na(label) & label == level
+    tip <- paste0(tip, ifelse(said, "", paste0(
+      if (!is.null(cvar)) paste0(cvar, " "), level, " \u00b7 "
+    )))
+  }
+  tip <- paste0(
+    tip, cells_fmt_x(start, dd), "\u2013",
+    ifelse(is.finite(end), cells_fmt_x(end, dd), "ongoing")
+  )
+  cells_regroup(paste0(tip, cells_interval_fields(all, tf)), n)
+}
+
+# The extra field pairs of each segment's tooltip, " \u00b7 name: value" per
+# field. A record without a value in a field leaves the field out.
+cells_interval_fields <- function(all, tf) {
+  out <- character(length(all))
+  has <- !vapply(all, function(sg) is.null(sg$fv), logical(1L))
+  if (!length(tf) || !any(has)) {
+    return(out)
+  }
+  fv <- matrix(unlist(lapply(all[has], function(sg) sg$fv), use.names = FALSE),
+               ncol = length(tf), byrow = TRUE)
+  out[has] <- do.call(paste0, lapply(seq_along(tf), function(j) {
+    ifelse(nzchar(fv[, j]), paste0(" \u00b7 ", tf[[j]], ": ", fv[, j]), "")
+  }))
+  out
 }
 
 # One inline SVG per cell, geometry pre-printed as point strings. viewBox

@@ -25,18 +25,26 @@ groups_spans_levels <- function(s, data) {
   s
 }
 
-#' The main lane's segments of a spans row, one list per target row: `s`, `e`,
-#' fill index `f`, and when set the label `lb`, tooltip values `fv` and style
-#' `st`. With a lane column only the records whose lane is empty.
+#' The rows of `slice` under each row of `target`, in slice order: one list
+#' entry per target row. One pass over the keys; a scan of the slice per
+#' target row took the rows times the groups.
 #' @noRd
-groups_spans_split <- function(slice, target, tkeys, s) {
-  g <- groups_spans_reader(slice, s)
+groups_rows_by_key <- function(slice, target, tkeys) {
   sk <- groups_key_string(slice, tkeys)
   tk <- groups_key_string(target, tkeys)
-  lapply(tk, function(k) {
-    idx <- which(sk == k & g$ok & g$main)
-    groups_spans_segs(g, idx)
-  })
+  first <- match(tk, tk)
+  by <- split(seq_along(sk), factor(match(sk, tk), levels = seq_along(tk)))
+  unname(by[first])
+}
+
+#' The main lane's segments of a spans row, one list per target row: `s`, `e`,
+#' fill index `f`, and when set the label `lb`, tooltip values `fv` and style
+#' `st`. With a lane column only the records whose lane is empty. `g` is the
+#' slice's reader, `by` its rows per target row (groups_rows_by_key()).
+#' @noRd
+groups_spans_split <- function(g, by) {
+  draws <- g$ok & g$main
+  lapply(by, function(rows) groups_spans_segs(g, rows[draws[rows]]))
 }
 
 #' What every part of a spans row reads off the slice: numeric start and end,
@@ -77,33 +85,64 @@ groups_spans_reader <- function(slice, s) {
     xe[ongo] <- Inf
   }
   ok <- is.finite(xs) & !is.na(xe) & xe > -Inf
+  # Every record's parts as vectors, read off the slice once: seg() is called
+  # per record, and a column lookup in a data frame per record is slow.
+  fill <- if (!is.null(lv) && !is.null(color)) {
+    match(as.character(slice[[color]]), lv)
+  } else {
+    rep(1L, n)
+  }
+  end <- pmax(xe, xs)
+  text <- function(col) {
+    if (is.null(col)) return(NULL)
+    v <- as.character(slice[[col]])
+    v[is.na(v)] <- ""
+    v
+  }
+  lb <- text(lbcol)
+  bl <- text(blcol)
+  # One column per tooltip field, named by it; a missing value is "".
+  fv <- if (length(fcols) && n) {
+    matrix(unlist(lapply(fcols, text), use.names = FALSE), nrow = n,
+           dimnames = list(NULL, fcols))
+  }
   seg <- function(r) {
-    f <- if (!is.null(lv) && !is.null(color)) {
-      match(as.character(slice[[color]][[r]]), lv)
-    } else {
-      1L
-    }
+    f <- fill[[r]]
     if (is.na(f)) return(NULL)
-    sg <- list(s = xs[[r]], e = max(xe[[r]], xs[[r]]), f = f)
-    if (!is.null(lbcol)) {
-      lb <- as.character(slice[[lbcol]][[r]])
-      if (!is.na(lb) && nzchar(lb)) sg$lb <- lb
-    }
-    if (length(fcols)) {
-      sg$fv <- vapply(fcols, function(fc) {
-        v <- as.character(slice[[fc]][[r]])
-        if (is.na(v)) "" else v
-      }, character(1L))
-    }
+    sg <- list(s = xs[[r]], e = end[[r]], f = f)
+    if (!is.null(lb) && nzchar(lb[[r]])) sg$lb <- lb[[r]]
+    if (!is.null(fv)) sg$fv <- fv[r, ]
     if (st[[r]] > 1L) sg$st <- st[[r]]
-    if (!is.null(blcol)) {
-      bl <- as.character(slice[[blcol]][[r]])
-      if (!is.na(bl) && nzchar(bl)) sg$bl <- bl
-    }
+    if (!is.null(bl) && nzchar(bl[[r]])) sg$bl <- bl[[r]]
     sg
   }
   list(xs = xs, ok = ok, main = main, ln = ln, st = st, seg = seg,
-       strip = present("strip"), slice = slice)
+       strip = present("strip"), slice = slice,
+       event = groups_spans_events(slice, s))
+}
+
+#' The events of a spans row, read off the slice once: `x` their positions
+#' (NULL without an event column) and `at(j)`, record `j` as an event: its
+#' position, its shape index `k` by the level of the shape column, and that
+#' level `lv`.
+#' @noRd
+groups_spans_events <- function(slice, s) {
+  col <- function(nm) {
+    v <- chr_state(s[[nm]])
+    if (!is.null(v) && v %in% names(slice)) v
+  }
+  x <- if (!is.null(col("event_x"))) groups_as_num(slice[[col("event_x")]])
+  shp <- col("event_shape")
+  level <- if (!is.null(shp)) as.character(slice[[shp]])
+  lv <- s$.shape_levels
+  k <- if (!is.null(level) && length(lv)) match(level, lv)
+  at <- function(j) {
+    l <- if (!is.null(level)) level[[j]]
+    kk <- if (!is.null(k) && !is.na(l)) k[[j]] else NA
+    list(x = x[[j]], k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
+         lv = if (!is.null(l) && !is.na(l)) l)
+  }
+  list(x = x, at = at)
 }
 
 #' The segments of records `idx`, solid ones first and each kind in start
@@ -133,10 +172,11 @@ groups_spans_styles <- function(slice, col) {
 #' `sub`, a list of lanes in level order (`nm`, `segs`, `op` whether the lane
 #' ends open, `bx` its strip boxes), and `ms`, the main lane's strip boxes. A
 #' box is `x`, its text `t` and its record's style `st`. A parent row pools
-#' nothing: its lanes are one subject's facts.
+#' nothing: its lanes are one subject's facts. `g` is the slice's reader, `by`
+#' its rows per target row (groups_rows_by_key()).
 #' @noRd
-groups_spans_lanes <- function(slice, target, tkeys, s) {
-  g <- groups_spans_reader(slice, s)
+groups_spans_lanes <- function(g, by, s) {
+  slice <- g$slice
   opc <- chr_state(s$open)
   op <- if (!is.null(opc) && opc %in% names(slice)) {
     as.logical(slice[[opc]])
@@ -152,28 +192,23 @@ groups_spans_lanes <- function(slice, target, tkeys, s) {
     rows <- rows[order(g$xs[rows])]
     lapply(rows, function(r) list(x = g$xs[[r]], t = tx[[r]], st = g$st[[r]]))
   }
-  exc <- chr_state(s$event_x)
-  ex <- if (!is.null(exc) && exc %in% names(slice)) {
-    groups_as_num(slice[[exc]])
-  }
-  shp <- chr_state(s$event_shape)
-  shp <- if (!is.null(shp) && shp %in% names(slice)) shp
+  ex <- g$event$x
   events <- function(rows) {
     if (is.null(ex)) return(list())
     rows <- rows[is.finite(ex[rows])]
     rows <- rows[order(ex[rows])]
-    lapply(rows, function(j) groups_spans_event(ex[[j]], slice, shp, j, s))
+    lapply(rows, g$event$at)
   }
   lv <- s$.lane_levels %||% character()
-  sk <- groups_key_string(slice, tkeys)
-  tk <- groups_key_string(target, tkeys)
-  lapply(tk, function(k) {
-    rows <- which(sk == k)
+  lapply(by, function(rows) {
     sub <- list()
     if (!is.null(g$ln)) {
-      for (l in lv) {
-        lr <- rows[!g$main[rows] & g$ln[rows] == l]
-        if (!length(lr)) next
+      # The row's records per lane, once: a lane level no record of the row
+      # carries draws nothing.
+      on <- rows[!g$main[rows]]
+      per <- split(on, g$ln[on])
+      for (l in lv[lv %in% names(per)]) {
+        lr <- per[[l]]
         segs <- groups_spans_segs(g, lr[g$ok[lr]])
         bx <- boxes(lr)
         evs <- events(lr)
