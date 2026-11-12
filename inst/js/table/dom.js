@@ -240,11 +240,6 @@
       return { shown: this._shown, total: this.model ? this.model.n : 0 };
     }
 
-    /** The drawn item list. */
-    items() {
-      return this._items;
-    }
-
     /** Whether the model has anything to fold. */
     folds() {
       const st = this._st;

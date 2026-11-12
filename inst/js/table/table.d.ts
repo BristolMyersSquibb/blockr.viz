@@ -121,7 +121,7 @@ interface TableLaneGeom {
   whiskerHighWidth?: TableNums; whiskerHigh?: TableNums;
   center?: TableNums; rangeLeft?: TableNums; rangeWidth?: TableNums;
   fenceLeft?: TableNums; fenceWidth?: TableNums; count?: TableNums;
-  tip?: TableTexts; raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
+  raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
 }
 
 interface TableMarkLane extends TableMarkBase, TableLaneGeom {
@@ -368,7 +368,6 @@ interface TableGrid {
   draw(): void;
   relight(): void;
   counts(): { shown: number; total: number };
-  items(): TableItem[];
   headAt(el: Element | null): { th: Element; h: TableHeadCell } | null;
 }
 

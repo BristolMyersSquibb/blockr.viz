@@ -1,7 +1,6 @@
 # The box and point-range lanes. `b` is the per-entry scale from cells_bounds().
 cells_lane <- function(ctx, p, b) {
   rows <- ctx$rows
-  wd <- p$words %||% list(center = "Center", range = "Range")
   # Column-level: TRUE when the mark draws no outer range, so the lane keeps a
   # hairline. Other lanes are bare because the whisker or fence band is the
   # rail (GROUPS_DIST_STYLES). Derived from the leaf columns when the plan is silent.
@@ -15,7 +14,7 @@ cells_lane <- function(ctx, p, b) {
     if (!is.na(cn["bc"])) rows[[cn[["bc"]]]]
   }))
   dig <- cells_val_digits(centres, p$dmin, p$dmax)
-  lane <- list(wd = wd, bare = bare, dig = dig)
+  lane <- list(bare = bare, dig = dig)
   base <- cells_lane_glyph(ctx, p, b, lane, p$cols)
   if (is.null(p$lcols)) {
     base
@@ -24,7 +23,7 @@ cells_lane <- function(ctx, p, b) {
     # supplies the sort value; each level has its own label, the column one
     # slot width.
     lv <- lapply(seq_along(p$lcols), function(j) {
-      g <- cells_lane_glyph(ctx, p, b, lane, p$lcols[[j]], p$levels[[j]])
+      g <- cells_lane_glyph(ctx, p, b, lane, p$lcols[[j]])
       g$dw <- NULL
       g$kind <- NULL
       g$v <- NULL
@@ -46,7 +45,7 @@ cells_col_or_na <- function(rows, cn, nm) {
 }
 
 # One glyph from one set of stat columns; once per level for a colour split.
-cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
+cells_lane_glyph <- function(ctx, p, b, lane, cn) {
   rows <- ctx$rows
   bc <- cells_col_or_na(rows, cn, "bc")
   bl <- cells_col_or_na(rows, cn, "bl")
@@ -54,11 +53,8 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
   nn <- cells_col_or_na(rows, cn, "n")
   disp <- cells_val_str(bc, lane$dig)
   lab <- list(disp = disp, dw = max(c(1L, nchar(disp))))
-  # A split glyph's tooltip names its level first.
-  pre <- if (is.null(lvl)) "" else paste0(lvl, " \u00b7 ")
   wl <- cells_col_or_na(rows, cn, "wl")
   wh <- cells_col_or_na(rows, cn, "wh")
-  tip <- cells_lane_tip(pre, lane$wd, nn, bc, bl, bh, wl, wh)
   r <- cells_lane_stats(list(bc = bc, bl = bl, bh = bh, wl = wl, wh = wh))
   pos_w <- b$pos
   span_w <- b$span
@@ -68,7 +64,7 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
          wl = pos_w(wl), w1 = span_w(wl, bl),
          bl = pos_w(bl), bw = span_w(bl, bh), bc = pos_w(bc),
          b2 = pos_w(bh), w2 = span_w(bh, wh), wh = pos_w(wh),
-         nn = nn, tip = tip, v = cells_sortv(bc),
+         nn = nn, v = cells_sortv(bc),
          r = r) |> c(lab)
   } else {
     # Dot style: the outer range as a fence band behind the inner bar (ol/ow),
@@ -76,26 +72,9 @@ cells_lane_glyph <- function(ctx, p, b, lane, cn, lvl = NULL) {
     list(kind = "pointrange", bare = lane$bare,
          ol = pos_w(wl), ow = span_w(wl, wh),
          c = pos_w(bc), l = pos_w(bl), rw = span_w(bl, bh),
-         nn = nn, tip = tip, v = cells_sortv(bc),
+         nn = nn, v = cells_sortv(bc),
          r = r) |> c(lab)
   }
-}
-
-# One tooltip for both styles. NA bounds (n < 2) read "undefined" instead of
-# a zero-width interval.
-cells_lane_clause <- function(word, lo, hi) {
-  if (is.null(word)) return("")
-  paste0(" \u00b7 ", word, " ",
-         ifelse(is.na(lo) | is.na(hi), "undefined (n < 2)",
-                paste0(groups_fmt(lo), "\u2013", groups_fmt(hi))))
-}
-
-cells_lane_tip <- function(pre, wd, nn, bc, bl, bh, wl, wh) {
-  ifelse(is.na(bc), "", paste0(
-    pre, ifelse(is.na(nn), "", paste0("n=", nn, " \u00b7 ")),
-    wd$center, " ", groups_fmt(bc),
-    cells_lane_clause(wd$range, bl, bh), cells_lane_clause(wd$whisk, wl, wh)
-  ))
 }
 
 # The statistics for the hover card; the geometry is percent of the lane and
