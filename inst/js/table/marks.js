@@ -509,7 +509,8 @@
           esc(c.disp[i]) + '</td>';
     }
     if (m.kind === 'interval') {
-      return '<td class="vz-table-groups-bar-col' + (m.large ? ' vz-table-groups-wide' : '') + '">' +
+      const wide = m.full ? ' vz-table-groups-full' : m.large ? ' vz-table-groups-wide' : '';
+      return '<td class="vz-table-groups-bar-col' + wide + '">' +
         glyph(m, i, o.labels) + '</td>';
     }
     const g = glyph(m, i, o.labels, !!c.zero);

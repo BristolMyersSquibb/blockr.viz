@@ -189,10 +189,12 @@ table_summary_specs <- function() {
         describe = "Extra columns in the tooltip."
       ),
       size = viz_arg(
-        type = "enum", default = "md", values = c("md", "lg"),
+        type = "enum", default = "md", values = c("md", "lg", "xl"),
         gear = gear("Columns", "segmented", "Width",
-                    labels = c("Regular", "Wide")),
-        describe = "Segment thickness."
+                    labels = c("Regular", "Wide", "Widest")),
+        describe = paste("The swimlane's share of the table: regular, wide",
+                         "(about half) or widest (all the room the other",
+                         "columns leave).")
       ),
       color = summary_color_arg(),
       ticks = viz_arg(

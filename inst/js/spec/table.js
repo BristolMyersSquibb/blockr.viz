@@ -507,13 +507,13 @@
                 "name": "enum"
               },
               "default": "md",
-              "values": ["md", "lg"],
+              "values": ["md", "lg", "xl"],
               "nullable": false,
               "gear": {
                 "group": "Columns",
                 "control": "segmented",
                 "label": "Width",
-                "labels": ["Regular", "Wide"]
+                "labels": ["Regular", "Wide", "Widest"]
               },
               "slot": false,
               "ctrl": true

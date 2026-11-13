@@ -667,6 +667,12 @@ test_that("spans label/fields enrich tips and key the highlight", {
   ))$cells$cols[[1]]
   expect_length(c2$segs[[1]][[1]], 3L)
   expect_false(isTRUE(c2$lg))
+  c3 <- sum_model(ae, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
+         size = "xl")
+  ))$cells$cols[[1]]
+  expect_true(isTRUE(c3$xl))
+  expect_false(isTRUE(c3$lg))
 })
 
 # A swimmer frame: segment rows, tick rows, a band row and an event row

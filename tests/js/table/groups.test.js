@@ -693,6 +693,20 @@ test('bar labels never set visibility: a visible child shows through a hidden do
   assert.match(rules.join('}'), /overflow:\s*hidden/);
 });
 
+test('a widest spans column takes the room the other columns leave', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, { large: false, full: true });
+  const t = mount(payload({ data, config: G }));
+  const c = t.cell(0, 7);
+  assert.ok(c.classList.contains('vz-table-groups-full'));
+  assert.ok(!c.classList.contains('vz-table-groups-wide'));
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => r.includes('td.vz-table-groups-full'));
+  assert.match(rule, /width:\s*100%/);
+});
+
 test('a wide spans column fits a half-width panel: its floor is two lane floors', () => {
   const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
     'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

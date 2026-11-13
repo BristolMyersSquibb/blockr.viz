@@ -53,7 +53,7 @@ TABLE_GROUPS_KEYS <- list(
                 xs = "xValues", ys = "yValues", rc = "refY",
                 rby = "refBandY", rbh = "refBandHeight"),
   interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
-               lg = "large", tk = "ticks", bd = "band", ev = "events",
+               lg = "large", xl = "full", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
                ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
 )
@@ -85,7 +85,7 @@ table_groups_fence <- function(g) {
 # one per row); everything else is per row, an array also at one row.
 TABLE_GROUPS_SCALARS <- c("kind", "mode", "rf", "d0", "d1", "dw", "rc", "rby",
                           "rbh", "tt")
-TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "eq")
+TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "xl", "eq")
 
 table_groups_pack <- function(g, kind, top) {
   out <- list()

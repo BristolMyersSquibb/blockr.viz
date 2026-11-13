@@ -1,4 +1,4 @@
-/* blockr.viz bundle a10a2950ceb6eae6354de69aeeab870f, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 783c3bd5b830f117d964338294fcea88, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1740,6 +1740,12 @@ input.vz-table-search:focus {
    panel. Below the floor the table scrolls sideways in its wrapper. */
 .vz-table-groups-table td.vz-table-groups-wide {
   width: 55%;
+  min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
+}
+/* Widest (size = xl): the swimlane takes all the room the other columns
+   leave them at their content width; same floor as the wide form. */
+.vz-table-groups-table td.vz-table-groups-full {
+  width: 100%;
   min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
 }
 /* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks

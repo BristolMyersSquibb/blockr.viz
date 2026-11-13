@@ -50,9 +50,11 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
     c$dw * paint_ch(fs * PAINT_VAL_SIZE, family) + pad
   }, numeric(1L))
 
-  # A swimlane with `size = "lg"` takes 2.2 shares (CSS: 55% against 26%).
+  # A swimlane with `size = "lg"` takes 2.2 shares (CSS: 55% against 26%),
+  # with `size = "xl"` four.
   wt <- ifelse(is_glyph, 1, 0)
   wt[vapply(m$cols, function(c) isTRUE(c$lg), logical(1L))] <- 2.2
+  wt[vapply(m$cols, function(c) isTRUE(c$xl), logical(1L))] <- 4
 
   rest <- width_in - stub_w - sum(fixed, na.rm = TRUE)
   share <- if (sum(wt)) rest * wt / sum(wt) else rep(0, length(wt))

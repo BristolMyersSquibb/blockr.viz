@@ -718,6 +718,12 @@
   width: 55%;
   min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
 }
+/* Widest (size = xl): the swimlane takes all the room the other columns
+   leave them at their content width; same floor as the wide form. */
+.vz-table-groups-table td.vz-table-groups-full {
+  width: 100%;
+  min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
+}
 /* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
    multiplicatively, so a subject with many overlapping events re-darkens
    however low the alpha. Instead the non-matches are repainted with ONE

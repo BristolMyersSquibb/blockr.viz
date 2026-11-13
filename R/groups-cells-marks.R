@@ -15,7 +15,7 @@ cells_interval <- function(ctx, p) {
   out <- list(kind = "interval", segs = out_segs, tips = out_tips,
        fills = as.character(p$fills %||% prep$fills),
        d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
-       dd = dd, lg = identical(p$size, "lg"),
+       dd = dd, lg = identical(p$size, "lg"), xl = identical(p$size, "xl"),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
   if (!is.null(out_bl)) out$bl <- out_bl
   if (!is.null(p$ovl)) {

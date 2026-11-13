@@ -143,13 +143,14 @@ interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
 }
 
 /** Swimlane: per row, segments [left, width, level from 1, label?]. `dates`:
- *  the domain is in days; `large`: the column takes the width it needs.
+ *  the domain is in days; `large`: the column takes about half the table; `full`: all the room the
+ *  other columns leave.
  *  Overlays, each only when the row asks for it: `ticks` positions, `band`
  *  line pieces [left, width], `events` [x, shape 1-4] with `eventTips`, and
  *  `openAt` where an open lane's arrow sits (null: closed). */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
-  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
+  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean; full?: boolean;
   ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
   evenLanes?: boolean; barLabels?: string[][];
