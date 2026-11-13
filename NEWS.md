@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9064
+# blockr.viz 0.3.0.9065
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -97,6 +97,13 @@ read.
   `options(blockr.viz.dev_js = TRUE)` it loads the single source files.
   Chart themes and the image export are loaded when first used.
 * A redraw no longer restyles the whole view while R computes.
+* A block's prepare script runs once per input. It ran a second time for
+  the block's result, on every board load and setting change.
+* A swimlane column (the swimmer, the AE timeline) builds its segments,
+  lanes and tooltips per column and writes them as JSON in one piece. At
+  1000 patients the swimmer's table took 1 s where it took 6 s.
+* A swimlane column no longer sends its row text, which repeated every
+  tooltip. The browser joins it from the tooltips for the search.
 
 ## Changes in behaviour
 
