@@ -237,7 +237,41 @@ record_rw_expected <- function(rec, sc) {
     rec$steps[[i]] <- s
   }
   rec$steps <- record_rw_cell_views(rec$steps)
+  rec$steps <- record_rw_slot_labels(rec$steps)
   record_rw_empty_click_clear(rec, sc)
+}
+
+# A `{@arg}` word for a choice prints the choice's gear label, as its menu
+# does ("Mean", where the reference printed "mean"; slot_enum_text()). So
+# the titles the reference sent expect the labels of the step's choices.
+record_rw_slot_labels <- function(steps) {
+  args <- chart_spec()$args
+  for (i in seq_along(steps)) {
+    st <- steps[[i]]$state
+    templates <- paste(unlist(st[c("title", "subtitle", "caption")]), collapse = " ")
+    swap <- list()
+    for (nm in intersect(names(st), names(args))) {
+      if (!args[[nm]]$slot || !identical(args[[nm]]$type$name, "enum")) next
+      if (!grepl(paste0("{@", nm), templates, fixed = TRUE)) next
+      v <- st[[nm]]
+      if (length(v) != 1L || is.na(v)) next
+      lab <- slot_enum_text(args[[nm]], v)
+      if (!identical(lab, v)) swap[[as.character(v)]] <- lab
+    }
+    if (!length(swap)) next
+    relabel <- function(x) {
+      if (!is.character(x)) return(x)
+      for (v in names(swap)) {
+        x <- gsub(paste0("\\b", v, "\\b"), swap[[v]], x, perl = TRUE)
+      }
+      x
+    }
+    for (j in seq_along(steps[[i]]$browser)) {
+      tt <- steps[[i]]$browser[[j]]$titles
+      if (is.list(tt)) steps[[i]]$browser[[j]]$titles <- lapply(tt, relabel)
+    }
+  }
+  steps
 }
 
 # A bar, waterfall, pie or treemap sends one row per mark where the
