@@ -15,6 +15,7 @@ PAINT_TICK  <- "#c3c2b7"                      # --vz-table-groups-tick
 PAINT_RULE  <- "#e1e0d9"                      # --blockr-color-border, hairlines
 PAINT_TEXT  <- "#1c1b18"
 PAINT_MUTED <- "#6f6d66"
+PAINT_EV_INK <- "#4b5563"                     # --vz-ev-ink, events and arrow
 
 # Type size of the value labels and of a number inside a stacked segment, as a
 # share of the table's (11px and 10px against 13px cells).
@@ -323,7 +324,7 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
   })
   op <- paint_at(c$op, i)
   op <- if (length(op) && !is.na(op)) {
-    paint_iv_arrow(paint_lane_x(op, x, w), mid, 7, 5, PAINT_TEXT, px)
+    paint_iv_arrow(paint_lane_x(op, x, w), mid, 7, 5, PAINT_EV_INK, px)
   }
   ev <- lapply(paint_at(c$ev, i), function(e) {
     paint_shape(e[[2L]], paint_lane_x(e[[1L]], x, w), mid, px)
@@ -447,53 +448,47 @@ paint_iv_arrow <- function(x0, mid, len, half, fill, px) {
 paint_at <- function(v, i) if (!is.null(v) && length(v) >= i) v[[i]]
 
 # An event shape centred on (x, y), y measured up from the bottom, in CSS px
-# units of `px` inches, over a 2px white ring: 1 filled triangle, 2 open
-# triangle, 3 cross, 4 square, 5 vertical bar. marks.js shape() draws the
-# same.
+# units of `px` inches, about 9px across over a 1.5px white ring: 1 filled
+# triangle, 2 open triangle, 3 cross, 4 square, 5 vertical bar. Filled shapes
+# carry a round-joined stroke in their ink, which rounds their corners.
+# marks.js shape() draws the same.
 paint_shape <- function(k, x, y, px) {
   lw <- function(n) n * px * 96
-  ring <- function(n = 4) {
-    grid::gpar(fill = "#ffffff", col = "#ffffff", lwd = lw(n),
+  ink <- function(n, fill = PAINT_EV_INK) {
+    grid::gpar(fill = fill, col = PAINT_EV_INK, lwd = lw(n),
                linejoin = "round", lineend = "round")
   }
-  tri <- function(gp) {
-    grid::polygonGrob(x = paint_in(x + c(0, 5, -5) * px),
-                      y = paint_in(y + c(5, -4, -4) * px), gp = gp)
+  ring <- function(n, fill = "#ffffff") {
+    grid::gpar(fill = fill, col = "#ffffff", lwd = lw(n),
+               linejoin = "round", lineend = "round")
+  }
+  tri <- function(h, b, top, gp) {
+    grid::polygonGrob(x = paint_in(x + c(0, h, -h) * px),
+                      y = paint_in(y + c(top, -b, -b) * px), gp = gp)
+  }
+  line <- function(x0, y0, x1, y1, gp) {
+    grid::segmentsGrob(paint_in(x + x0 * px), paint_in(y + y0 * px),
+                       paint_in(x + x1 * px), paint_in(y + y1 * px), gp = gp)
   }
   switch(as.character(k),
-    "2" = grid::gList(
-      tri(ring()),
-      tri(grid::gpar(fill = "#ffffff", col = PAINT_TEXT, lwd = lw(1.6),
-                     linejoin = "round"))
-    ),
+    "2" = grid::gList(tri(4.1, 3.1, 3.9, ring(4.4)),
+                      tri(4.1, 3.1, 3.9, ink(1.4, "#ffffff"))),
     "3" = {
       cross <- function(gp) {
-        grid::segmentsGrob(paint_in(x + c(-4, 4) * px),
-                           paint_in(y + c(4, 4) * px),
-                           paint_in(x + c(4, -4) * px),
-                           paint_in(y + c(-4, -4) * px), gp = gp)
+        line(c(-3.2, 3.2), c(3.2, 3.2), c(3.2, -3.2), c(-3.2, -3.2), gp)
       }
-      grid::gList(cross(ring(6.2)),
-                  cross(grid::gpar(col = PAINT_TEXT, lwd = lw(2.2),
-                                   lineend = "round")))
+      grid::gList(cross(ring(4.8, NA)), cross(ink(1.8, NA)))
     },
     "4" = {
       sq <- function(gp) {
-        grid::rectGrob(paint_in(x), paint_in(y), paint_in(8 * px),
-                       paint_in(8 * px), gp = gp)
+        grid::rectGrob(paint_in(x), paint_in(y), paint_in(6.4 * px),
+                       paint_in(6.4 * px), gp = gp)
       }
-      grid::gList(sq(ring()), sq(grid::gpar(fill = PAINT_TEXT, col = NA)))
+      grid::gList(sq(ring(4.8)), sq(ink(1.8)))
     },
-    "5" = {
-      bar <- function(gp) {
-        grid::segmentsGrob(paint_in(x), paint_in(y - 6 * px), paint_in(x),
-                           paint_in(y + 6 * px), gp = gp)
-      }
-      grid::gList(bar(ring(6.2)),
-                  bar(grid::gpar(col = PAINT_TEXT, lwd = lw(2.6),
-                                 lineend = "round")))
-    },
-    grid::gList(tri(ring()), tri(grid::gpar(fill = PAINT_TEXT, col = NA)))
+    "5" = grid::gList(line(0, -4.5, 0, 4.5, ring(4.8, NA)),
+                      line(0, -4.5, 0, 4.5, ink(1.8, NA))),
+    grid::gList(tri(3.6, 2.8, 3.4, ring(4.8)), tri(3.6, 2.8, 3.4, ink(1.8)))
   )
 }
 

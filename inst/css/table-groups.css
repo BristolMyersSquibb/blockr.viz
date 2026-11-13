@@ -17,6 +17,8 @@
                                  var(--blockr-color-border-strong, #d1d5db));
   --vz-table-groups-bar: var(--blockr-color-bg-accent, #2563eb);
   --vz-table-groups-tick: var(--blockr-color-border-default, #e5e7eb);
+  /* The event layer's ink: swimlane events, their legend and the open arrow. */
+  --vz-ev-ink: #4b5563;
   /* The floor under a GLYPH -- see .vz-table-groups-barwrap below. A board
      that wants shorter marks and less scrolling overrides it on the
      container. */
@@ -463,14 +465,12 @@
 .vz-table-groups-pacell .vz-table-lane-to.is-open {
   background: var(--blockr-color-bg-surface, #ffffff);
 }
-/* Interval: the swimlane. Colour = the mapped level, and BOTH ends round.
-   A timeline is not a stack. A stack tiles by construction -- its segments
-   always share edges, they compose one quantity, and a seam between them
-   would read as a gap in that quantity, which is why a stack's inner joins
-   stay square. A swimlane's segments are per-event [left, width] pairs that
-   overlap, leave gaps, or only incidentally touch. When two of them DO touch,
-   the seam is true: it says these are two events and not one long one. So the
-   abutment exception belongs to stacking, not to interval marks.
+/* Interval: the swimlane. Colour = the mapped level. Corners follow the bar
+   rule: where two segments touch (marks.js joins() sets is-jl / is-jr) the
+   join is square, and only the free ends of a run get the cosmetic radius.
+   Repeated records with the same level then draw as one course, and a gap
+   breaks the run, so each run rounds its own ends. A visit count, where it
+   matters, is what ticks are for.
 
    Narrow segments need no guard: min-width is 2px and CSS scales border-radius
    down proportionally when the corners would not fit the box. */
@@ -480,12 +480,22 @@
   min-width: 2px;
   border-radius: var(--blockr-mark-radius, 2px);
 }
+.vz-table-groups-ivcell .vz-table-lane-seg.is-jl {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-jr {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
 /* Swimlane overlays. Ticks are surface-coloured cuts across the segments
    (check-ins, inspections), so they vanish where there is no segment. The line is
    dark and thin through the middle (a phase within the span). The arrow says the
    lane is still open at its last segment's end. Events sit on top, each shape
-   over a 2px surface ring so it reads on any fill; they may lie past the last
-   segment. Ticks, line and arrow let the pointer through to the segment. */
+   over a 1.5px surface ring so it reads on any fill; they may lie past the last
+   segment. Arrow and events share one ink (--vz-ev-ink), a dark slate that
+   stays above every level colour without outweighing it. Ticks, line and arrow let the pointer
+   through to the segment. */
 .vz-table-groups-ivcell .vz-table-lane-tk {
   top: 0;
   bottom: 0;
@@ -506,7 +516,7 @@
   width: 0;
   height: 0;
   margin-left: 1px;
-  border-left: 7px solid var(--blockr-color-text-default, #111827);
+  border-left: 7px solid var(--vz-ev-ink, #4b5563);
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
   transform: translateY(-50%);
@@ -523,27 +533,33 @@
 .vz-ev-ring {
   fill: var(--blockr-color-bg-surface, #ffffff);
   stroke: var(--blockr-color-bg-surface, #ffffff);
-  stroke-width: 4px;
+  stroke-width: 4.8px;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
+.vz-ev-ring.is-open {
+  stroke-width: 4.4px;
+}
 .vz-ev-ring.is-line {
-  stroke-width: 6.2px;
+  stroke-width: 4.8px;
   fill: none;
 }
 .vz-ev-fill {
-  fill: var(--blockr-color-text-default, #111827);
+  fill: var(--vz-ev-ink, #4b5563);
+  stroke: var(--vz-ev-ink, #4b5563);
+  stroke-width: 1.8px;
+  stroke-linejoin: round;
 }
 .vz-ev-open {
   fill: var(--blockr-color-bg-surface, #ffffff);
-  stroke: var(--blockr-color-text-default, #111827);
-  stroke-width: 1.6px;
+  stroke: var(--vz-ev-ink, #4b5563);
+  stroke-width: 1.4px;
   stroke-linejoin: round;
 }
 .vz-ev-line {
   fill: none;
-  stroke: var(--blockr-color-text-default, #111827);
-  stroke-width: 2.2px;
+  stroke: var(--vz-ev-ink, #4b5563);
+  stroke-width: 1.8px;
   stroke-linecap: round;
 }
 /* Lanes: a row's thin lanes stack above its main lane, one 5px lane per

@@ -1,4 +1,4 @@
-// blockr.viz bundle 310b6858c27d8d176a60ffd3ee701b76, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 96ea3ead00f1ed5051ab31446fb39949, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -413,23 +413,51 @@
    * @param {(number | string)[]} g
    * @param {string} fill
    * @param {string | number | null} tip
+   * @param {string} [jn] Join classes from joins().
    */
-  function seg(g, fill, tip) {
+  function seg(g, fill, tip, jn) {
     const lab = g.length > 3 && g[3] !== '' ? ' data-l="' + esc(g[3]) + '"' : '';
+    jn = jn || '';
     const t = ' data-tip="' + esc(tip) + '"';
     switch (Number(g[4]) || 1) {
-      case 2: return '<i class="vz-table-lane-seg is-dashed" style="' + span(g[0], g[1]) +
+      case 2: return '<i class="vz-table-lane-seg is-dashed' + jn + '" style="' + span(g[0], g[1]) +
         ';--vz-seg:' + col(fill) + '"' + lab + t + '></i>';
-      case 3: return '<i class="vz-table-lane-seg is-hollow" style="' + span(g[0], g[1]) +
+      case 3: return '<i class="vz-table-lane-seg is-hollow' + jn + '" style="' + span(g[0], g[1]) +
         ';border-color:' + col(fill) + '"' + lab + t + '></i>';
       case 4: return '<i class="vz-table-lane-adm" style="left:' + n(g[0]) + '%;border-color:' +
         col(fill) + '"' + t + '></i>';
       case 5: return '<i class="vz-table-lane-step" style="left:' + n(g[0]) + '%"' + t + '></i>';
-      case 6: return '<i class="vz-table-lane-seg is-outline" style="' + span(g[0], g[1]) + ';background:' +
+      case 6: return '<i class="vz-table-lane-seg is-outline' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
-      default: return '<i class="vz-table-lane-seg" style="' + span(g[0], g[1]) + ';background:' +
+      default: return '<i class="vz-table-lane-seg' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
     }
+  }
+
+  /**
+   * Where a lane's segments touch: ' is-jl' when another segment ends at this
+   * one's start, ' is-jr' when another starts at its end. A run of touching
+   * segments then rounds only its free ends, as a bar does. Rings (4) and
+   * steps (5) are no segments and neither join nor are joined.
+   * @param {(number | string)[][]} segs
+   */
+  function joins(segs) {
+    const solid = (/** @type {(number | string)[]} */ g) => {
+      const k = Number(g[4]) || 1;
+      return k !== 4 && k !== 5;
+    };
+    const x0 = segs.map((g) => Number(g[0]));
+    const x1 = segs.map((g) => Number(g[0]) + Number(g[1]));
+    return segs.map((g, j) => {
+      if (!solid(g)) return '';
+      let l = false, r = false;
+      segs.forEach((h, k) => {
+        if (k === j || !solid(h)) return;
+        if (Math.abs(x1[k] - x0[j]) < 0.01) l = true;
+        if (Math.abs(x0[k] - x1[j]) < 0.01) r = true;
+      });
+      return (l ? ' is-jl' : '') + (r ? ' is-jr' : '');
+    });
   }
 
   /**
@@ -516,9 +544,10 @@
   function thin(c, l) {
     let s = laneOpen(c, ' is-thin', l.b, l.n);
     let last = '';
+    const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
       last = c.fills[Number(g[2]) - 1];
-      s += seg(g, last, at(l.t, j));
+      s += seg(g, last, at(l.t, j), jn[j]);
     });
     if (l.o != null) {
       s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
@@ -546,8 +575,9 @@
    */
   function interval(c, i) {
     let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null);
+    const jn = joins(c.segs[i] || []);
     (c.segs[i] || []).forEach((g, j) => {
-      s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j));
+      s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j), jn[j]);
     });
     // Overlays, under the pointer only where they carry a tooltip: ticks
     // across the segments, the line through them, the open end, the events.
@@ -569,22 +599,24 @@
   }
 
   /**
-   * An event shape, centred on 0 in a 14-unit box, over a 2px ring in the
-   * surface colour: 1 filled triangle, 2 open triangle, 3 cross, 4 square,
-   * 5 vertical bar. The static painter (R/paint-marks.R, paint_shape) draws
-   * the same five.
+   * An event shape, centred on 0 in a 14-unit box, about 9px across, over a
+   * 1.5px ring in the surface colour: 1 filled triangle, 2 open triangle,
+   * 3 cross, 4 square, 5 vertical bar. Filled shapes carry a round-joined
+   * stroke in their ink, which rounds their corners. The static painter
+   * (R/paint-marks.R, paint_shape) draws the same five.
    * @param {number} k
    */
   function shape(k) {
-    const tri = 'M0,-5L5,4L-5,4Z';
-    const x = 'M-4,-4L4,4M4,-4L-4,4';
-    const sq = 'M-4,-4H4V4H-4Z';
-    const bar = 'M0,-6V6';
+    const tri = 'M0,-3.4L3.6,2.8L-3.6,2.8Z';
+    const open = 'M0,-3.9L4.1,3.1L-4.1,3.1Z';
+    const x = 'M-3.2,-3.2L3.2,3.2M3.2,-3.2L-3.2,3.2';
+    const sq = 'M-3.2,-3.2H3.2V3.2H-3.2Z';
+    const bar = 'M0,-4.5V4.5';
     const two = (/** @type {string} */ d, /** @type {string} */ cls) =>
-      '<path class="vz-ev-ring' + (cls === 'vz-ev-line' ? ' is-line' : '') + '" d="' + d +
+      '<path class="vz-ev-ring' + (cls === 'vz-ev-fill' ? '' : ' is-' + cls.slice(6)) + '" d="' + d +
       '"></path><path class="' + cls + '" d="' + d + '"></path>';
     switch (k) {
-      case 2: return two(tri, 'vz-ev-open');
+      case 2: return two(open, 'vz-ev-open');
       case 3: return two(x, 'vz-ev-line');
       case 4: return two(sq, 'vz-ev-fill');
       case 5: return two(bar, 'vz-ev-line');

@@ -612,6 +612,17 @@ test('lanes: thin lanes stack above the main lane, each segment in its style', (
   assert.equal(t.cell(2, 7).querySelector('.vz-table-groups-ivstack'), null);
 });
 
+test('interval: a run of touching segments rounds only its free ends', () => {
+  const m = groups();
+  // A run of three, a gap, a lone segment, and a ring that joins nothing.
+  m.cols[7].mark.segs[0] = [[0, 10, 1], [10, 0.4, 2], [10.4, 9.6, 1], [30, 10, 2], [40, 0, 1, '', 4]];
+  m.cols[7].mark.tips[0] = ['a', 'b', 'c', 'd', 'e'];
+  const t = mount(payload({ data: m, config: G }));
+  const cls = Array.from(t.cell(0, 7).querySelectorAll('.vz-table-lane-seg'))
+    .map((s) => ['is-jl', 'is-jr'].filter((k) => s.classList.contains(k)).join(' '));
+  assert.deepEqual(cls, ['is-jr', 'is-jl is-jr', 'is-jl', '']);
+});
+
 test('lanes: a lane with a strip opens it, a thin lane without one names its segment', () => {
   const t = mount(payload({ data: lanes(), config: G }));
   const [b, a] = Array.from(t.cell(0, 7).querySelectorAll('.is-thin'));
