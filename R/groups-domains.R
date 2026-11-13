@@ -211,33 +211,23 @@ groups_dom_pair <- function(plan, idx, rows) {
 }
 
 groups_dom_interval <- function(plan, idx, rows) {
-  ext <- numeric()
-  for (i in idx) {
+  # Each row's extents are built on their own and joined once: appending to
+  # one vector (or list) per row and lane copied it each time, 1.5 s of a
+  # 3000-patient swimmer load.
+  ext <- lapply(idx, function(i) {
     segs <- unlist(rows[[plan[[i]]$segs]], recursive = FALSE,
                    use.names = FALSE)
-    ext <- c(ext, vapply(segs, function(sg) sg$s, numeric(1L)),
-             vapply(segs, function(sg) sg$e, numeric(1L)))
     # Ticks, the line and events widen the axis too: an event after the last
-    # segment still lands inside the cell.
+    # segment still lands inside the cell. So do the thin or even lanes'
+    # bars and events.
     ovl <- plan[[i]]$ovl
-    if (!is.null(ovl)) {
-      for (o in rows[[ovl]]) {
-        ext <- c(ext, o$tk,
-                 unlist(lapply(o$bd, function(b) c(b$s, b$e))),
-                 unlist(lapply(o$ev, function(e) e$x)))
-      }
-    }
-    # So do the thin or even lanes' bars and events.
     lanes <- plan[[i]]$lanes
-    if (!is.null(lanes)) {
-      for (r in rows[[lanes]]) {
-        for (l in r$sub) {
-          ext <- c(ext, unlist(lapply(l$segs, function(sg) c(sg$s, sg$e))),
-                   unlist(lapply(l$ev, function(e) e$x)))
-        }
-      }
-    }
-  }
+    c(vapply(segs, function(sg) sg$s, numeric(1L)),
+      vapply(segs, function(sg) sg$e, numeric(1L)),
+      if (!is.null(ovl)) unlist(lapply(rows[[ovl]], groups_dom_overlay)),
+      if (!is.null(lanes)) unlist(lapply(rows[[lanes]], groups_dom_lanes)))
+  })
+  ext <- as.numeric(unlist(ext, use.names = FALSE))
   ext <- ext[is.finite(ext)]
   is_date <- any(vapply(plan[idx], function(p) {
     isTRUE(p$dom_date)
@@ -265,4 +255,18 @@ groups_dom_interval <- function(plan, idx, rows) {
   }
   for (i in idx) plan[[i]]$dom <- xd
   plan
+}
+
+# One row's overlay extents: ticks, line pieces and events.
+groups_dom_overlay <- function(o) {
+  c(o$tk, unlist(lapply(o$bd, function(b) c(b$s, b$e))),
+    unlist(lapply(o$ev, function(e) e$x)))
+}
+
+# One row's lane extents: every lane's bars and events.
+groups_dom_lanes <- function(r) {
+  unlist(lapply(r$sub, function(l) {
+    c(unlist(lapply(l$segs, function(sg) c(sg$s, sg$e))),
+      unlist(lapply(l$ev, function(e) e$x)))
+  }))
 }
