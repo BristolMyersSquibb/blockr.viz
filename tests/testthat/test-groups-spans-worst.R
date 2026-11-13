@@ -72,3 +72,15 @@ test_that("open = all starts the outer rows open", {
                                list(open = "all")))
   expect_null(table_groups_to_model(open)$collapsed)
 })
+
+test_that("nested inner rows keep their own data order under their outer row", {
+  d <- data.frame(id = c("a", "a", "b", "b"), term = c("x", "y", "y", "x"),
+                  s = c(0, 1, 0, 1), e = c(1, 2, 1, 2),
+                  lvl = factor("low", levels = c("low", "mid", "high")),
+                  stringsAsFactors = FALSE)
+  m <- sum_model(d, by = c("id", "term"), group_rows = "summary",
+                 sort_by = "data", sort_dir = "asc",
+                 summaries = list(worst_spans()))
+  r <- m$prep$rows
+  expect_identical(r$.label, c("a", "x", "y", "b", "y", "x"))
+})

@@ -437,8 +437,15 @@ groups_prep_skeleton <- function(data, keys, group, parent) {
                      stringsAsFactors = FALSE)
   for (k in keys) leaf[[k]] <- skel[[k]]
   # The data's own order (factor levels, else first appearance), read only by
-  # `sort_by = "data"`.
-  leaf$.ord <- groups_data_ord(data[[group]], leaf$.label)
+  # `sort_by = "data"`. Nested, an inner row's first appearance is its own
+  # under its outer row: a name first seen under another outer row does not
+  # move it.
+  leaf$.ord <- if (!is.null(parent) && !is.factor(data[[group]])) {
+    seen <- unique(paste(data[[parent]], data[[group]], sep = "\r"))
+    as.numeric(match(paste(leaf$.parent, leaf$.label, sep = "\r"), seen))
+  } else {
+    groups_data_ord(data[[group]], leaf$.label)
+  }
   par_rows <- NULL
   if (!is.null(parent)) {
     par_rows <- groups_parent_skeleton(data, skel, parent)
