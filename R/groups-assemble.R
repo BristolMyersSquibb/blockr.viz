@@ -36,20 +36,18 @@ groups_assemble_rows <- function(leaf, par_rows, parent, sort_key, sort_dir,
     # Renderer-internal columns are dot-prefixed; the key columns are not, and
     # rbind() must not demand them from both frames.
     keep <- grep("^\\.", names(leaf), value = TRUE)
-    pieces <- list()
-    for (i in seq_len(nrow(par_rows))) {
-      p <- par_rows[i, , drop = FALSE]
-      pkey <- p$.parent_key[[1L]]
-      kids <- ord(leaf[!is.na(leaf$.parent) & leaf$.parent == pkey, ,
-                       drop = FALSE])
-      pieces[[length(pieces) + 1L]] <-
-        p[, intersect(keep, names(p)), drop = FALSE]
-      if (nrow(kids)) {
-        pieces[[length(pieces) + 1L]] <- kids[, intersect(keep, names(kids)),
-                                              drop = FALSE]
-      }
-    }
-    rows <- do.call(rbind, pieces)
+    # Each parent, then its rows in sort order. order() keeps ties in input
+    # order, so sorting all inner rows once and grouping them by parent is
+    # the per-parent sort; one rbind() instead of one per parent, which took
+    # the time of a table with many groups.
+    at <- match(leaf$.parent, par_rows$.parent_key)
+    kids <- ord(leaf[!is.na(at), , drop = FALSE])
+    at <- match(kids$.parent, par_rows$.parent_key)
+    np <- nrow(par_rows)
+    rows <- rbind(par_rows[, intersect(keep, names(par_rows)), drop = FALSE],
+                  kids[, intersect(keep, names(kids)), drop = FALSE])
+    o <- order(c(seq_len(np), at), c(integer(np), seq_along(at)))
+    rows <- rows[o, , drop = FALSE]
   }
   list(rows = rows, folded = top$folded, fold_max = top$fold_max)
 }
