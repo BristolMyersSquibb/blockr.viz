@@ -17,7 +17,8 @@ groups_level_colors <- function(map, col, levels, column = NULL) {
   # it only when there is one.
   own <- if (length(col)) attr(column, "blockr_colors", exact = TRUE)
   if (length(own) && all(levels %in% names(own))) {
-    return(stats::setNames(unname(own[levels]), levels))
+    out <- stats::setNames(unname(own[levels]), levels)
+    return(groups_theme_keyed(out, map, column))
   }
   if (!is.null(map) && !is.null(col) &&
         has_blockr_theme()) {
@@ -242,4 +243,40 @@ groups_group_label <- function(data, group, parent) {
   p <- dt_col_label(data[[parent]], parent)
   if (is.null(p) && is.null(g)) return(NULL)
   paste0(p %||% parent, " / ", g %||% group)
+}
+
+# A column with its own colours can say, per level, which data variable and
+# value the level stands for (attribute `blockr_scale_keys`, a data frame of
+# `level`, `var` and `key`): a timeline's "Grade 3" is `ATOXGR` "3". A colour
+# the board's scale map sets for that variable and value wins over the
+# column's own: a pinned value, or any value of a binding with its own pool.
+# The board palette alone does not count, so an unpinned level keeps the
+# block's colour. A level with several keys takes the first that resolves.
+#' @noRd
+groups_theme_keyed <- function(out, map, column) {
+  keys <- attr(column, "blockr_scale_keys", exact = TRUE)
+  if (is.null(map) || !is.data.frame(keys) || !nrow(keys) ||
+        !has_blockr_theme()) {
+    return(out)
+  }
+  m <- blockr.theme::as_scale_map(map)
+  keys <- keys[keys$level %in% names(out) & keys$var %in% names(m), ,
+               drop = FALSE]
+  done <- character()
+  for (i in seq_len(nrow(keys))) {
+    lv <- keys$level[[i]]
+    if (lv %in% done) next
+    spec <- m[[keys$var[[i]]]]$color
+    key <- as.character(keys$key[[i]])
+    nm <- names(spec)
+    pinned <- !is.null(nm) && key %in% nm[nzchar(nm)]
+    pool <- length(spec) && (is.null(nm) || any(!nzchar(nm)))
+    if (!pinned && !pool) next
+    hit <- blockr.theme::resolve_scales(m, keys$var[[i]], key)$color
+    if (length(hit) && !is.na(hit[[1L]])) {
+      out[[lv]] <- unname(hit[[1L]])
+      done <- c(done, lv)
+    }
+  }
+  out
 }

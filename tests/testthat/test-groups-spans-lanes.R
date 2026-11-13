@@ -373,3 +373,30 @@ test_that("full lanes draw as bars below the main one, each named", {
   paint_write_png(p, png, res = 72)
   expect_true(file.exists(png))
 })
+
+test_that("a scale-map colour for a level's key beats the column's own", {
+  skip_if_not(has_blockr_theme())
+  col <- structure(c("Grade 3", "Mild", "Drug B"),
+                   blockr_colors = c("Grade 3" = "#b8322a", Mild = "#f0c35a",
+                                     "Drug B" = "#2a9686"),
+                   blockr_scale_keys = data.frame(
+                     level = c("Grade 3", "Mild", "Mild", "Drug B"),
+                     var = c("ATOXGR", "ASEV", "AESEV", "EXTRT"),
+                     key = c("3", "MILD", "MILD", "DRUG B")
+                   ))
+  map <- blockr.theme::new_scale_map(
+    blockr.theme::scale_binding("ATOXGR", color = c("3" = "#000000")),
+    blockr.theme::scale_binding("AESEV", color = c(SEVERE = "#111111")),
+    blockr.theme::scale_binding("EXTRT", color = c("#222222")),
+    palette = c("#333333")
+  )
+  lv <- c("Grade 3", "Mild", "Drug B")
+  got <- groups_level_colors(map, "Colour", lv, col)
+  # Pinned value; a binding without this value keeps the column's colour;
+  # a binding's own pool colours any value.
+  expect_identical(got, c("Grade 3" = "#000000", Mild = "#f0c35a",
+                          "Drug B" = "#222222"))
+  expect_identical(groups_level_colors(NULL, "Colour", lv, col),
+                   c("Grade 3" = "#b8322a", Mild = "#f0c35a",
+                     "Drug B" = "#2a9686"))
+})
