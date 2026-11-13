@@ -1,4 +1,4 @@
-// blockr.viz bundle a840f82572531799a7aa3c5177b6d830, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 310b6858c27d8d176a60ffd3ee701b76, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -2167,6 +2167,10 @@
   /** Wait this long after the last key before searching. */
   const SEARCH_MS = 150;
 
+  /** Can table.css move the header with a scroll timeline? */
+  const FOLLOW = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' &&
+    CSS.supports('animation-timeline', '--a');
+
   /**
    * @param {string} tag
    * @param {string} cls
@@ -2281,7 +2285,11 @@
      * scrolls; the box still scrolls sideways, so a sticky header would
      * stick to the box and scroll away with the panel. Here the header moves
      * down by as much of the table as has scrolled out of view, all its rows
-     * together, and stops at the last row.
+     * together, and stops at the last row. A scroll-driven animation in
+     * table.css moves it in step with the scroll; this gives it the
+     * table's measures, which change on a draw or a resize, not on a scroll.
+     * A browser without scroll timelines gets the move from here, a frame
+     * or more behind the scroll.
      */
     followHeader() {
       const box = this.box;
@@ -2289,17 +2297,28 @@
       const table = thead && thead.parentElement;
       if (!thead || !table) return;
       if (this.boxScrolls()) {
+        box.classList.remove('vz-follow');
         thead.style.transform = '';
         box.classList.toggle('scrolled', box.scrollTop > 0);
         return;
       }
       const sp = this.scroller();
       const top = sp ? sp.getBoundingClientRect().top : 0;
-      // offsetHeight, not a rect: a rect would include the transform set here.
+      // offsetHeight, not a rect: a rect would include the transform.
       const max = table.offsetHeight - thead.offsetHeight;
-      const y = Math.max(0, Math.min(top - table.getBoundingClientRect().top, max));
-      thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+      const tableTop = table.getBoundingClientRect().top;
+      const y = Math.max(0, Math.min(top - tableTop, max));
       box.classList.toggle('scrolled', y > 0);
+      if (FOLLOW) {
+        const at = Math.round(tableTop - box.getBoundingClientRect().top) + 'px';
+        const mx = Math.max(0, max) + 'px';
+        const st = box.style;
+        if (st.getPropertyValue('--vz-follow-at') !== at) st.setProperty('--vz-follow-at', at);
+        if (st.getPropertyValue('--vz-follow-max') !== mx) st.setProperty('--vz-follow-max', mx);
+        box.classList.add('vz-follow');
+        return;
+      }
+      thead.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
     }
 
     /** Does the box scroll up and down itself (a height limit)? */

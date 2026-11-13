@@ -297,13 +297,41 @@ input.vz-table-search:focus {
 }
 /* The header cells are opaque, so the rows pass under the header as it
    stays in view: the thead is sticky in a box that scrolls (above), and
-   table/chrome.js followHeader() moves it in a table that scrolls with its
-   panel. The cells are not sticky themselves: each would stick at the top,
-   and a spanner row would cover the row under it. */
+   moves down in a table that scrolls with its panel (below). The cells are
+   not sticky themselves: each would stick at the top, and a spanner row
+   would cover the row under it. */
 :is(.vz-table, .vz-table-groups) .blockr-table thead th {
   position: relative;
   z-index: 2;
   background-color: var(--blockr-color-bg-surface, #ffffff);
+}
+/* A table that runs its full length scrolls with the panel around it. Its
+   box still scrolls sideways, so a sticky header would stick to the box and
+   leave with the rows. The header moves down instead, by as much of the
+   table as has scrolled past the top of the panel, and stops at the last
+   row. A scroll-driven animation moves it: the view timeline is the box's
+   place in the panel, and the browser plays it in step with the scroll. A
+   scroll listener sees the scroll a frame or more after it is painted, so
+   on a fast flick its header rode up with the rows and jumped back.
+   exit-crossing runs from the box's top at the panel's top to its bottom
+   there. table/chrome.js followHeader() sets --vz-follow-at (the table's
+   top in the box) and --vz-follow-max (the table less its header), and
+   moves the header itself where the browser has no scroll timelines. */
+@supports (animation-timeline: --a) {
+  :where(.vz-table, .vz-table-groups) .blockr-table-wrapper.vz-follow {
+    view-timeline: --vz-follow block;
+  }
+  :where(.vz-table, .vz-table-groups) .blockr-table-wrapper.vz-follow table.blockr-table > thead {
+    animation: vz-table-follow linear both;
+    animation-timeline: --vz-follow;
+    animation-range:
+      exit-crossing var(--vz-follow-at, 0px)
+      exit-crossing calc(var(--vz-follow-at, 0px) + var(--vz-follow-max, 0px));
+  }
+}
+@keyframes vz-table-follow {
+  from { transform: none; }
+  to { transform: translateY(var(--vz-follow-max, 0px)); }
 }
 /* Sort indicator placement, matching the html preview: the arrow flows on
    the lower row immediately to the right of the subtext (small gap, like the

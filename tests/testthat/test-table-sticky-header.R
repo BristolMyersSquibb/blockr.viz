@@ -2,7 +2,8 @@
 # layout, and a spanner row stays above the row it spans. The table runs its
 # full length in its dock panel and the panel scrolls; the table's own box
 # scrolls only sideways, so a sticky header would stick to the box and leave
-# with the rows. table/chrome.js followHeader() moves the header instead. A
+# with the rows. A scroll-driven animation (table.css, measures from
+# table/chrome.js followHeader()) moves the header instead. A
 # box with a height limit (interactive_table()'s `max_height`) scrolls
 # itself, and the header is sticky in it.
 #
@@ -53,7 +54,9 @@ window.stickyProbe = async (view, box) => {
         const b = r.getBoundingClientRect();
         return { top: b.top - s, bottom: b.bottom - s };
       }),
-      moved: t.tHead.style.transform !== ''
+      // The move is an animation (or, without scroll timelines, an inline
+      // transform): read the computed transform.
+      moved: getComputedStyle(t.tHead).transform !== 'none'
     };
   };
   // Scroll events can come a few frames late: wait for the header to
