@@ -1,4 +1,4 @@
-// blockr.viz bundle 15c333b1837630f1312104c310f2c358, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle b1916743cb30106d37cbebe0994f12cc, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -426,6 +426,10 @@
       case 5: return '<i class="vz-table-lane-step" style="left:' + n(g[0]) + '%"' + t + '></i>';
       case 6: return '<i class="vz-table-lane-seg is-outline' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
+      case 7: return '<i class="vz-table-lane-seg is-thinner' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
+      case 8: return '<i class="vz-table-lane-seg is-hairline' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
       default: return '<i class="vz-table-lane-seg' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
     }
@@ -548,7 +552,7 @@
    * @param {TableSubLane} l
    */
   function thin(c, l) {
-    let s = laneOpen(c, ' is-thin', l.b, l.n);
+    let s = laneOpen(c, c.calmLanes ? ' is-thin is-md' : ' is-thin', l.b, l.n);
     let last = '';
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
@@ -564,13 +568,20 @@
   }
 
   /**
-   * Point events [x, shape] with their tips.
-   * @param {number[][] | undefined} ev
+   * Point events [x, shape (, tag)] with their tips. An event with a tag
+   * draws its text in a small box just after its position.
+   * @param {(number | string)[][] | undefined} ev
    * @param {string[] | undefined} tips
    */
   function events(ev, tips) {
-    return (ev || []).map((e, j) => '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) +
-      '%" data-tip="' + esc(tips ? tips[j] : '') + '">' + shape(Number(e[1])) + '</svg>').join('');
+    return (ev || []).map((e, j) => {
+      const tip = '" data-tip="' + esc(tips ? tips[j] : '') + '">';
+      if (e.length > 2 && e[2] != null && e[2] !== '') {
+        return '<span class="vz-table-lane-ev is-tag" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
+      }
+      return '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%' + tip +
+        shape(Number(e[1])) + '</svg>';
+    }).join('');
   }
 
   /**
@@ -607,9 +618,10 @@
   /**
    * An event shape, centred on 0 in a 14-unit box, about 9px across, over a
    * 1.5px ring in the surface colour: 1 filled triangle, 2 open triangle,
-   * 3 cross, 4 square, 5 vertical bar. Filled shapes carry a round-joined
+   * 3 cross, 4 square, 5 vertical bar, 6 the empty box a tag sits in (the
+   * legend's sign for tagged events). Filled shapes carry a round-joined
    * stroke in their ink, which rounds their corners. The static painter
-   * (R/paint-marks.R, paint_shape) draws the same five.
+   * (R/paint-marks.R, paint_shape) draws the same.
    * @param {number} k
    */
   function shape(k) {
@@ -622,6 +634,7 @@
       '<path class="vz-ev-ring' + (cls === 'vz-ev-fill' ? '' : ' is-' + cls.slice(6)) + '" d="' + d +
       '"></path><path class="' + cls + '" d="' + d + '"></path>';
     switch (k) {
+      case 6: return two('M-5.5,-3.5H5.5V3.5H-5.5Z', 'vz-ev-open');
       case 2: return two(open, 'vz-ev-open');
       case 3: return two(x, 'vz-ev-line');
       case 4: return two(sq, 'vz-ev-fill');

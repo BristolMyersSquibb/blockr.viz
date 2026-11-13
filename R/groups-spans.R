@@ -16,6 +16,16 @@ groups_spans_levels <- function(s, data) {
     s$.shape_levels <- groups_levels(v)
     used <- unique(as.character(v[ok]))
     s$.shape_used <- s$.shape_levels[s$.shape_levels %in% used]
+    # Levels whose events all draw as tags show a box in the legend.
+    tg <- groups_present(s$event_tag, data)
+    if (!is.null(tg)) {
+      tv <- as.character(data[[tg]])
+      has <- ok & !is.na(tv) & nzchar(tv)
+      lv_ok <- as.character(v[ok])
+      s$.shape_tags <- s$.shape_used[vapply(s$.shape_used, function(l) {
+        all(has[ok][lv_ok %in% l])
+      }, NA)]
+    }
   }
   # Lane order from the full data too, so every row stacks its lanes alike.
   if (!is.null(groups_present(s$lane, data))) {
@@ -67,6 +77,7 @@ groups_spans_reader <- function(slice, s) {
   lbcol <- present("label")
   fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
   blcol <- present("bar_label")
+  tpcol <- present("tip")
   n <- nrow(slice)
   st <- groups_spans_styles(slice, present("seg_style"))
   ln <- if (!is.null(present("lane"))) as.character(slice[[present("lane")]])
@@ -101,6 +112,7 @@ groups_spans_reader <- function(slice, s) {
   }
   lb <- text(lbcol)
   bl <- text(blcol)
+  tp <- text(tpcol)
   # One column per tooltip field, named by it; a missing value is "".
   fv <- if (length(fcols) && n) {
     matrix(unlist(lapply(fcols, text), use.names = FALSE), nrow = n,
@@ -114,6 +126,7 @@ groups_spans_reader <- function(slice, s) {
     if (!is.null(fv)) sg$fv <- fv[r, ]
     if (st[[r]] > 1L) sg$st <- st[[r]]
     if (!is.null(bl) && nzchar(bl[[r]])) sg$bl <- bl[[r]]
+    if (!is.null(tp) && nzchar(tp[[r]])) sg$tp <- tp[[r]]
     sg
   }
   list(xs = xs, ok = ok, main = main, ln = ln, st = st, seg = seg,
@@ -125,8 +138,8 @@ groups_spans_reader <- function(slice, s) {
 
 #' The events of a spans row, read off the slice once: `x` their positions
 #' (NULL without an event column) and `at(j)`, record `j` as an event: its
-#' position, its shape index `k` by the level of the shape column, and that
-#' level `lv`.
+#' position, its shape index `k` by the level of the shape column, that
+#' level `lv`, and when set its tag `tg` and its own tooltip `tp`.
 #' @noRd
 groups_spans_events <- function(slice, s) {
   col <- function(nm) {
@@ -138,11 +151,22 @@ groups_spans_events <- function(slice, s) {
   level <- if (!is.null(shp)) as.character(slice[[shp]])
   lv <- s$.shape_levels
   k <- if (!is.null(level) && length(lv)) match(level, lv)
+  txt <- function(nm) {
+    if (is.null(col(nm))) return(NULL)
+    v <- as.character(slice[[col(nm)]])
+    v[is.na(v)] <- ""
+    v
+  }
+  tg <- txt("event_tag")
+  tp <- txt("tip")
   at <- function(j) {
     l <- if (!is.null(level)) level[[j]]
     kk <- if (!is.null(k) && !is.na(l)) k[[j]] else NA
-    list(x = x[[j]], k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
-         lv = if (!is.null(l) && !is.na(l)) l)
+    out <- list(x = x[[j]], k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
+                lv = if (!is.null(l) && !is.na(l)) l)
+    if (!is.null(tg) && nzchar(tg[[j]])) out$tg <- tg[[j]]
+    if (!is.null(tp) && nzchar(tp[[j]])) out$tp <- tp[[j]]
+    out
   }
   list(x = x, at = at)
 }
@@ -201,10 +225,10 @@ groups_spans_worst <- function(g, idx) {
 
 # Segment styles by the value of the style column; anything else is solid.
 GROUPS_SPANS_STYLES <- c(solid = 1L, dashed = 2L, hollow = 3L, dot = 4L,
-                         step = 5L, outline = 6L)
+                         step = 5L, outline = 6L, thinner = 7L, hairline = 8L)
 
 #' One style code per record: 1 solid, 2 dashed, 3 hollow, 4 dot, 5 step,
-#' 6 outline.
+#' 6 outline, 7 thinner, 8 hairline.
 #' @noRd
 groups_spans_styles <- function(slice, col) {
   if (is.null(col)) return(rep(1L, nrow(slice)))

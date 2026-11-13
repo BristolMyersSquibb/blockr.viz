@@ -266,8 +266,39 @@ table_summary_specs <- function() {
           "period), \"hollow\" an outlined box (a delay), \"dot\" a ring at its",
           "start (one administration), \"step\" a small down step at its",
           "start (a dose cut), \"outline\" filled with a dark edge (a",
-          "serious event). Anything else draws solid. A dot or a step needs",
-          "no end."
+          "serious event), \"thinner\" a lower bar (a reduced dose),",
+          "\"hairline\" a 1px line (a dose of zero). Anything else draws",
+          "solid. A dot or a step needs no end."
+        )
+      ),
+      event_tag = viz_arg(
+        type = "column", null = "shapes only",
+        gear = gear("Columns", "column", "Event tag", when = "event_x"),
+        describe = paste(
+          "Short text, per event. An event with a value draws as that text",
+          "in a small box just after its position (\"AE\") instead of its",
+          "shape. A shape level whose events all carry a tag shows a box in",
+          "the legend."
+        )
+      ),
+      tip = viz_arg(
+        type = "column", null = "the computed tooltip",
+        gear = gear("Columns", "column", "Tooltip text"),
+        describe = paste(
+          "The tooltip of a record, segment or event, as is: its text up to",
+          "the first \" \u00b7 \" heads the card, each further part is a line.",
+          "An empty value keeps the computed tooltip (label, level, span,",
+          "fields)."
+        )
+      ),
+      lane_size = viz_arg(
+        type = "enum", default = "sm", values = c("sm", "md"),
+        gear = gear("Columns", "segmented", "Lane height",
+                    labels = c("Thin", "Regular")),
+        describe = paste(
+          "Height of the lanes above the main lane: \"sm\" 5px with a 3px",
+          "line, \"md\" 9px with a 5px bar whose free ends round, for rows",
+          "where the lanes carry the story (a drug per lane)."
         )
       ),
       bar_label = viz_arg(

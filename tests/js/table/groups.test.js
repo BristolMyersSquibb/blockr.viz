@@ -693,6 +693,27 @@ test('bar labels never set visibility: a visible child shows through a hidden do
   assert.match(rules.join('}'), /overflow:\s*hidden/);
 });
 
+test('a swimlane: tagged events, lower doses and regular lanes', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, {
+    segs: [[[0, 20, 1, '', 7], [20, 10, 2, '', 8]], [], []],
+    tips: [['Drug · Day 1 to 5', 'Drug · Day 5 to 8'], [], []],
+    events: [[[30, 1, 'AE']], [], []], eventTips: [['Off treatment, day 8 · Adverse event'], [], []],
+    calmLanes: true,
+    subLanes: [[{ n: 'Drug', s: [[0, 50, 1]], t: ['Drug'], e: [[50, 1, 'PD']], et: ['Off'] }], [], []]
+  });
+  const t = mount(payload({ data, config: G }));
+  const c = t.cell(0, 7);
+  assert.ok(c.querySelector('.vz-table-lane-seg.is-thinner'));
+  assert.ok(c.querySelector('.vz-table-lane-seg.is-hairline'));
+  const tags = c.querySelectorAll('.vz-table-lane-ev.is-tag');
+  assert.equal(tags.length, 2);
+  assert.equal(tags[1].textContent, 'AE');
+  assert.equal(tags[1].getAttribute('data-tip'), 'Off treatment, day 8 · Adverse event');
+  assert.ok(c.querySelector('.vz-table-groups-ivcell.is-thin.is-md'));
+});
+
 test('a widest spans column takes the room the other columns leave', () => {
   const data = groups();
   const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');

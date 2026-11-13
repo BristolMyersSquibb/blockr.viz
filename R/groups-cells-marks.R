@@ -16,6 +16,7 @@ cells_interval <- function(ctx, p) {
        fills = as.character(p$fills %||% prep$fills),
        d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
        dd = dd, lg = identical(p$size, "lg"), xl = identical(p$size, "xl"),
+       lm = identical(p$lane_size, "md"),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
   if (!is.null(out_bl)) out$bl <- out_bl
   if (!is.null(p$ovl)) {
@@ -52,11 +53,9 @@ cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
     bl <- cells_interval_bar_labels(list(l$segs))
     if (!is.null(bl)) out$l <- bl[[1L]]
     if (length(l$ev)) {
-      out$e <- lapply(l$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
-      out$et <- as.list(vapply(l$ev, function(e) {
-        paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
-               cells_fmt_x(e$x, dd))
-      }, ""))
+      out$e <- lapply(l$ev, cells_event_tuple, bb = bb)
+      out$et <- as.list(vapply(l$ev, cells_event_tip, "", ename = ename,
+                               dd = dd))
     }
     if (isTRUE(l$op) && length(l$segs)) {
       out$o <- bb$pos(min(max(vapply(l$segs, function(sg) sg$e, 0)),
@@ -99,13 +98,10 @@ cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
   if (has("ev")) {
     ename <- p$ename %||% "x"
     out$ev <- lapply(ovl, function(o) {
-      lapply(o$ev, function(e) list(bb$pos(e$x)[[1L]], e$k))
+      lapply(o$ev, cells_event_tuple, bb = bb)
     })
     out$et <- lapply(ovl, function(o) {
-      vapply(o$ev, function(e) {
-        paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
-               cells_fmt_x(e$x, dd))
-      }, character(1L))
+      vapply(o$ev, cells_event_tip, character(1L), ename = ename, dd = dd)
     })
   }
   if (has("op")) {
@@ -117,6 +113,19 @@ cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
     }, numeric(1L))
   }
   out
+}
+
+# An event as the cells send it: [x, shape], with its tag when it has one.
+cells_event_tuple <- function(e, bb) {
+  out <- list(bb$pos(e$x)[[1L]], e$k)
+  if (!is.null(e$tg)) out[[3L]] <- e$tg
+  out
+}
+
+# An event's tooltip: its own text, else its level and position.
+cells_event_tip <- function(e, ename, dd) {
+  e$tp %||% paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
+                   cells_fmt_x(e$x, dd))
 }
 
 # Per row, each segment's bar label ("" for none), or NULL when no segment
@@ -183,7 +192,11 @@ cells_interval_tips <- function(segs, lv, tf, cvar, dd) {
     tip, cells_fmt_x(start, dd), "\u2013",
     ifelse(is.finite(end), cells_fmt_x(end, dd), "ongoing")
   )
-  cells_regroup(paste0(tip, cells_interval_fields(all, tf)), n)
+  tip <- paste0(tip, cells_interval_fields(all, tf))
+  # A record with its own tooltip text says that instead.
+  own <- vapply(all, function(sg) sg$tp %||% NA_character_, character(1L))
+  tip[!is.na(own)] <- own[!is.na(own)]
+  cells_regroup(tip, n)
 }
 
 # The extra field pairs of each segment's tooltip, " \u00b7 name: value" per

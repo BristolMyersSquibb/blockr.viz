@@ -146,22 +146,23 @@ interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
  *  the domain is in days; `large`: the column takes about half the table; `full`: all the room the
  *  other columns leave.
  *  Overlays, each only when the row asks for it: `ticks` positions, `band`
- *  line pieces [left, width], `events` [x, shape 1-4] with `eventTips`, and
- *  `openAt` where an open lane's arrow sits (null: closed). */
+ *  line pieces [left, width], `events` [x, shape 1-5, tag?] with `eventTips`, and
+ *  `openAt` where an open lane's arrow sits (null: closed). `calmLanes`: the
+ *  lanes above the main one are 9px with a 5px bar. */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
   domainStart: number; domainEnd: number; dates?: boolean; large?: boolean; full?: boolean;
-  ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
+  ticks?: number[][]; band?: number[][][]; events?: (number | string)[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
-  evenLanes?: boolean; barLabels?: string[][];
+  evenLanes?: boolean; barLabels?: string[][]; calmLanes?: boolean;
 }
 
 /** A thin lane above a swimlane's main one: its name `n`, segments `s` with
  *  tips `t`, strip boxes `b` [text, style], `o` where its open end sits, and
- *  events `e` [x, shape] with tips `et`. */
+ *  events `e` [x, shape, tag?] with tips `et`. */
 interface TableSubLane {
   n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
-  e?: number[][]; et?: string[]; l?: string[];
+  e?: (number | string)[][]; et?: string[]; l?: string[];
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last

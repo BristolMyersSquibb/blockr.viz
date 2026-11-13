@@ -1169,3 +1169,31 @@ test_that("simple rows take median, min and max of their column", {
   expect_identical(num("min"), c(a = "1", b = "4"))
   expect_identical(num("max"), c(a = "9", b = "6"))
 })
+
+test_that("spans: a record's own tooltip, event tags, lower doses, regular lanes", {
+  d <- swim_fixture()
+  d$tip <- c("SD · Day 0 to 40", "", NA, NA, NA, NA, NA, "Death · Day 150")
+  d$tag <- c(NA, NA, NA, NA, NA, NA, NA, "DT")
+  d$st <- c("thinner", "hairline", NA, NA, NA, NA, NA, NA)
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag", tip = "tip",
+    seg_style = "st", lane_size = "md"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  i <- match(c("a", "b"), m$cells$label)
+  # The own text replaces the computed tip; an empty one keeps it.
+  expect_identical(c1$tips[[i[[1]]]][[1]], "SD · Day 0 to 40")
+  expect_match(c1$tips[[i[[1]]]][[2]], "PR · 40")
+  # Styles 7 and 8 ride in the segment tuple's fifth slot.
+  expect_identical(c1$segs[[i[[1]]]][[1]][[5]], 7L)
+  expect_identical(c1$segs[[i[[1]]]][[2]][[5]], 8L)
+  # The tagged event carries its tag and its own tip.
+  expect_identical(c1$ev[[i[[2]]]][[1]][[3]], "DT")
+  expect_identical(c1$et[[i[[2]]]][[1]], "Death · Day 150")
+  expect_true(isTRUE(c1$lm))
+  # The legend shows the tagged level as a box (shape 6).
+  g <- Filter(function(x) identical(x$column, "kind"),
+              m$prep$color_groups %||% list())
+  if (length(g)) expect_identical(g[[1]]$shapes, 6L)
+})

@@ -1,4 +1,4 @@
-/* blockr.viz bundle 783c3bd5b830f117d964338294fcea88, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 26c614af8ed2e46ec75824b99a34dd17, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1681,6 +1681,67 @@ input.vz-table-search:focus {
 .vz-table-groups-ivcell.is-thin .vz-table-lane-seg.is-hollow {
   top: -0.5px;
   bottom: -0.5px;
+}
+/* Lower doses: a thinner bar, and a 1px line for a dose of zero. */
+.vz-table-groups-ivcell .vz-table-lane-seg.is-thinner {
+  top: 30%;
+  bottom: 30%;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-hairline {
+  top: calc(50% - 0.5px);
+  bottom: calc(50% - 0.5px);
+  border-radius: 0;
+}
+/* Regular lanes (lane_size = md): 9px with a 5px bar whose free ends round,
+   so a drug reads as one quiet line with room between lanes. */
+.vz-table-groups-ivcell.is-thin.is-md {
+  height: 9px;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg {
+  top: 2px;
+  bottom: 2px;
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-jl {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-jr {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-thinner {
+  top: 3px;
+  bottom: 3px;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-hairline {
+  top: 4px;
+  bottom: 4px;
+  border-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-open {
+  border-left-width: 6px;
+  border-top-width: 4.5px;
+  border-bottom-width: 4.5px;
+}
+/* A tagged event: its text in a small box just after its position, in the
+   event ink over a surface ring. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag {
+  width: auto;
+  height: auto;
+  transform: translate(3px, -50%);
+  padding: 0 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0.02em;
+  color: var(--vz-ev-ink, #4b5563);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid var(--vz-ev-ink, #4b5563);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1.5px var(--blockr-color-bg-surface, #ffffff);
+  white-space: nowrap;
+  cursor: default;
 }
 .vz-table-groups-ivcell .vz-table-lane-adm {
   top: 50%;

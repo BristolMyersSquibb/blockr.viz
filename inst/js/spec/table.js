@@ -636,6 +636,49 @@
               "slot": false,
               "ctrl": true
             },
+            "event_tag": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Event tag",
+                "when": "event_x"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "tip": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tooltip text"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "lane_size": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "sm",
+              "values": ["sm", "md"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Lane height",
+                "labels": ["Thin", "Regular"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "bar_label": {
               "type": {
                 "name": "column"

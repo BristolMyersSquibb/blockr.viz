@@ -308,6 +308,7 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
     tlabels = vapply(tfields, function(f) groups_col_name(data, f),
                      character(1L), USE.NAMES = FALSE),
     size = chr_state(s$size) %||% "md",
+    lane_size = chr_state(s$lane_size) %||% "sm",
     ovl = if (groups_spans_has_overlay(s)) groups_col(sid, "ovl"),
     lanes = if (groups_spans_has_lanes(s)) groups_col(sid, "lanes"),
     shapes = s$.shape_levels,

@@ -327,7 +327,7 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
     paint_iv_arrow(paint_lane_x(op, x, w), mid, 7, 5, PAINT_EV_INK, px)
   }
   ev <- lapply(paint_at(c$ev, i), function(e) {
-    paint_shape(e[[2L]], paint_lane_x(e[[1L]], x, w), mid, px)
+    paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
   lab <- paint_iv_labels(c$segs[[i]], paint_at(c$bl, i), paint_at(c$op, i),
                          x, w, y + gl$lane / 2, gl)
@@ -394,7 +394,7 @@ paint_iv_thin <- function(c, l, x, w, ytop, gl, even = FALSE) {
                    fills[[length(fills)]], px)
   }
   ev <- lapply(l$e, function(e) {
-    paint_shape(e[[2L]], paint_lane_x(e[[1L]], x, w), mid, px)
+    paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
   # A thin lane is too low for text; an even lane has room.
   lab <- if (even) {
@@ -432,6 +432,8 @@ paint_iv_seg <- function(sg, fill, x, w, y, h, gl) {
       y = paint_in(mid + c(3.5, 3.5, -0.5) * px),
       gp = grid::gpar(fill = PAINT_MUTED, col = NA)
     ),
+    "7" = paint_rect(x0, wd, y + h * 0.3, h * 0.4, fill, gl),
+    "8" = paint_rect(x0, wd, y + h / 2 - px / 2, px, fill, gl),
     paint_rect(x0, wd, y, h, fill, gl)
   )
 }
@@ -447,9 +449,32 @@ paint_iv_arrow <- function(x0, mid, len, half, fill, px) {
 # Row `i` of an optional per-row field, NULL when the column has none.
 paint_at <- function(v, i) if (!is.null(v) && length(v) >= i) v[[i]]
 
+# An event [x, shape (, tag)] at (x, y): its tag's text in a small box just
+# after x (marks.js events()), else its shape.
+paint_event <- function(e, x, y, gl) {
+  px <- gl$px
+  if (length(e) < 3L || is.null(e[[3L]]) || !nzchar(e[[3L]])) {
+    return(paint_shape(e[[2L]], x, y, px))
+  }
+  size <- 7.5 * 0.75
+  tw <- ft_text_widths(e[[3L]], gl$family, size)
+  x0 <- x + 3 * px
+  grid::gList(
+    grid::rectGrob(x = paint_in(x0), y = paint_in(y), width = paint_in(tw + 4 * px),
+                   height = paint_in(11 * px), just = c("left", "centre"),
+                   gp = grid::gpar(fill = "#ffffff", col = PAINT_EV_INK,
+                                   lwd = 0.75)),
+    grid::textGrob(e[[3L]], x = paint_in(x0 + 2 * px), y = paint_in(y),
+                   just = c("left", "centre"),
+                   gp = grid::gpar(fontsize = size, col = PAINT_EV_INK,
+                                   fontfamily = gl$family, fontface = "bold"))
+  )
+}
+
 # An event shape centred on (x, y), y measured up from the bottom, in CSS px
 # units of `px` inches, about 9px across over a 1.5px white ring: 1 filled
-# triangle, 2 open triangle, 3 cross, 4 square, 5 vertical bar. Filled shapes
+# triangle, 2 open triangle, 3 cross, 4 square, 5 vertical bar, 6 a tag's
+# empty box (the legend's sign for tagged events). Filled shapes
 # carry a round-joined stroke in their ink, which rounds their corners.
 # marks.js shape() draws the same.
 paint_shape <- function(k, x, y, px) {
@@ -488,6 +513,13 @@ paint_shape <- function(k, x, y, px) {
     },
     "5" = grid::gList(line(0, -4.5, 0, 4.5, ring(4.8, NA)),
                       line(0, -4.5, 0, 4.5, ink(1.8, NA))),
+    "6" = {
+      box <- function(gp) {
+        grid::rectGrob(paint_in(x), paint_in(y), paint_in(11 * px),
+                       paint_in(7 * px), gp = gp)
+      }
+      grid::gList(box(ring(4.4)), box(ink(1.4, "#ffffff")))
+    },
     grid::gList(tri(3.6, 2.8, 3.4, ring(4.8)), tri(3.6, 2.8, 3.4, ink(1.8)))
   )
 }
