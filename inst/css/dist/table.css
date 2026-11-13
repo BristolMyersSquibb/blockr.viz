@@ -1,4 +1,4 @@
-/* blockr.viz bundle 26c614af8ed2e46ec75824b99a34dd17, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle de3fcababe1596137947a3dcc214abbc, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1794,6 +1794,21 @@ input.vz-table-search:focus {
   overflow: visible;
 }
 .vz-table-groups-legend-shape .vz-ev-ring { display: none; }
+/* A tagged event's legend key: its text in the box the lanes draw. */
+.vz-table-groups-legend-tag {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0.02em;
+  color: var(--vz-ev-ink, #4b5563);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid var(--vz-ev-ink, #4b5563);
+  border-radius: 2px;
+  vertical-align: 1px;
+}
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
    the spans, not more height. Its floor is two lane floors: with 320px a

@@ -14,19 +14,30 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
          palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
   # A swimlane's event shapes: one group per shape column, drawn in ink.
+  # Levels drawn as tags make a group of their own, titled by the tag
+  # column, each item with its tag's text.
   for (s in summaries) {
     lv <- s$.shape_used
     if (!identical(s$type, "spans") || !length(lv)) next
     if (s$event_shape %in% vapply(color_groups, function(g) {
       g$column
     }, "")) next
-    color_groups[[length(color_groups) + 1L]] <- list(
-      column = s$event_shape, title = groups_col_name(data, s$event_shape),
-      levels = lv,
-      # 6: a level drawn as tags shows a box.
-      shapes = ifelse(lv %in% s$.shape_tags, 6L,
-                      (match(lv, s$.shape_levels) - 1L) %% 5L + 1L)
-    )
+    tags <- lv[lv %in% s$.shape_tags]
+    shp <- setdiff(lv, tags)
+    if (length(shp)) {
+      color_groups[[length(color_groups) + 1L]] <- list(
+        column = s$event_shape, title = groups_col_name(data, s$event_shape),
+        levels = shp,
+        shapes = (match(shp, s$.shape_levels) - 1L) %% 5L + 1L
+      )
+    }
+    if (length(tags)) {
+      color_groups[[length(color_groups) + 1L]] <- list(
+        column = s$event_tag, title = groups_col_name(data, s$event_tag),
+        levels = tags, shapes = rep(6L, length(tags)),
+        tags = unname(s$.tag_text[tags])
+      )
+    }
   }
   # A tile painted by a worst level gets its own legend group.
   for (s in summaries) {
@@ -71,7 +82,8 @@ groups_legend_spec <- function(prep) {
         list(
           label = if (nzchar(trimws(l))) l else "(Missing)",
           color = if (i <= length(pal)) unname(pal[[i]]),
-          shape = if (!is.null(g$shapes)) g$shapes[[i]]
+          shape = if (!is.null(g$shapes)) g$shapes[[i]],
+          tag = if (!is.null(g$tags)) g$tags[[i]]
         )
       })
     )

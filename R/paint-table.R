@@ -195,14 +195,18 @@ paint_legend <- function(prep, y, hh, gl) {
       at <- at + paint_w(grp$title, fs * 0.8, gl$family) + px * 6
     }
     for (it in grp$items) {
-      key <- if (!is.null(it$shape)) {
+      kw <- sw
+      key <- if (!is.null(it$tag)) {
+        kw <- ft_text_widths(it$tag, gl$family, 7.5 * 0.75) + px * 4
+        paint_event(list(0, 6L, it$tag), at - px * 3, gl$H - ly, gl)
+      } else if (!is.null(it$shape)) {
         paint_shape(it$shape, at + sw / 2, gl$H - ly, px * 0.9)
       } else {
         paint_sq(at, gl$H - ly, sw, it$color, c("left", "centre"))
       }
-      g <- c(g, list(key, paint_txt(gl, it$label, at + sw + px * 3, ly,
+      g <- c(g, list(key, paint_txt(gl, it$label, at + kw + px * 3, ly,
                                     size = fs * 0.8)))
-      at <- at + sw + px * 3 + paint_w(it$label, fs * 0.8, gl$family) + px * 10
+      at <- at + kw + px * 3 + paint_w(it$label, fs * 0.8, gl$family) + px * 10
     }
     at <- at + px * 8
   }

@@ -1,4 +1,4 @@
-// blockr.viz bundle b1916743cb30106d37cbebe0994f12cc, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 4b4295e935d48d724b7db2b04b848dad, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -3477,9 +3477,11 @@
     el.hidden = !groups.length;
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
-      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.shape != null
-        ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
-        : '<i style="background:' + esc(it.color) + '"></i>') +
+      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.tag
+        ? '<span class="vz-table-groups-legend-tag">' + esc(it.tag) + '</span>'
+        : it.shape != null
+          ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
+          : '<i style="background:' + esc(it.color) + '"></i>') +
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 

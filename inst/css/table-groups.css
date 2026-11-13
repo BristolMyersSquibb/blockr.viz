@@ -770,6 +770,21 @@
   overflow: visible;
 }
 .vz-table-groups-legend-shape .vz-ev-ring { display: none; }
+/* A tagged event's legend key: its text in the box the lanes draw. */
+.vz-table-groups-legend-tag {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0.02em;
+  color: var(--vz-ev-ink, #4b5563);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid var(--vz-ev-ink, #4b5563);
+  border-radius: 2px;
+  vertical-align: 1px;
+}
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
    the spans, not more height. Its floor is two lane floors: with 320px a

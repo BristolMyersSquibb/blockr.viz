@@ -16,7 +16,8 @@ groups_spans_levels <- function(s, data) {
     s$.shape_levels <- groups_levels(v)
     used <- unique(as.character(v[ok]))
     s$.shape_used <- s$.shape_levels[s$.shape_levels %in% used]
-    # Levels whose events all draw as tags show a box in the legend.
+    # Levels whose events all draw as tags get a legend group of their own,
+    # each with its tag's text.
     tg <- groups_present(s$event_tag, data)
     if (!is.null(tg)) {
       tv <- as.character(data[[tg]])
@@ -25,6 +26,9 @@ groups_spans_levels <- function(s, data) {
       s$.shape_tags <- s$.shape_used[vapply(s$.shape_used, function(l) {
         all(has[ok][lv_ok %in% l])
       }, NA)]
+      s$.tag_text <- vapply(s$.shape_tags, function(l) {
+        tv[ok][lv_ok %in% l][[1L]]
+      }, "")
     }
   }
   # Lane order from the full data too, so every row stacks its lanes alike.

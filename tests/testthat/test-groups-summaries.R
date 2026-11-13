@@ -1192,8 +1192,12 @@ test_that("spans: a record's own tooltip, event tags, lower doses, regular lanes
   expect_identical(c1$ev[[i[[2]]]][[1]][[3]], "DT")
   expect_identical(c1$et[[i[[2]]]][[1]], "Death · Day 150")
   expect_true(isTRUE(c1$lm))
-  # The legend shows the tagged level as a box (shape 6).
-  g <- Filter(function(x) identical(x$column, "kind"),
-              m$prep$color_groups %||% list())
-  if (length(g)) expect_identical(g[[1]]$shapes, 6L)
+  # A level drawn only as tags makes a legend group of its own, titled by
+  # the tag column, its item with the tag's text; no event group is left.
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_true("tag" %in% titles)
+  expect_false("kind" %in% titles)
+  it <- lg$groups[[match("tag", titles)]]$items[[1]]
+  expect_identical(c(it$label, it$tag), c("Death", "DT"))
 })

@@ -693,6 +693,14 @@ test('bar labels never set visibility: a visible child shows through a hidden do
   assert.match(rules.join('}'), /overflow:\s*hidden/);
 });
 
+test('the legend draws a tagged level with its text', () => {
+  const legend = { groups: [{ title: 'Reason', items: [{ label: 'Adverse event', shape: 6, tag: 'AE' }] }] };
+  const t = mount(payload({ data: groups(), config: G, derived: { legend }, dataRev: 9 }));
+  const k = t.$('.vz-table-groups-legend-tag');
+  assert.ok(k);
+  assert.equal(k.textContent, 'AE');
+});
+
 test('a swimlane: tagged events, lower doses and regular lanes', () => {
   const data = groups();
   const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
