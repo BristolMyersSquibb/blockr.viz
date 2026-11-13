@@ -60,7 +60,8 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL) {
   # The legend's "Numbers:" note goes with the numbers.
   prep$value_labels <- !isFALSE(state$value_labels)
   cfg <- list(value_labels = state$value_labels,
-              compact = identical(state$look, "compact"))
+              compact = identical(state$look, "compact"),
+              open = identical(state$open, "all"))
   list(prep = prep,
        cells = groups_cells(prep, drill = if (length(state$by)) state$drill,
                             cfg = cfg))

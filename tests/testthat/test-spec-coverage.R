@@ -53,7 +53,7 @@ DROPPED_ARGS <- list(chart = character(), table = "max_height")
 ADDED_ARGS <- list(chart = c("category", "value", "open", "facet_row", "x_limits", "y_limits",
                                "x_ticks", "y_ticks", "shape", "ref_lines",
                                "ref_line_colors"),
-                   table = "group_rows")
+                   table = c("group_rows", "open"))
 REFERENCE_RENAMES <- list(chart = c(y_lines = "value_lines"),
                           table = character())
 

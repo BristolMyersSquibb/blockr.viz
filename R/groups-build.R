@@ -280,16 +280,18 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
   }, numeric(1L))
   target[[groups_col(sid, "nseg")]] <- lengths(segs)
   # The overlays are one row's facts (its check-ins, its milestones); a parent row
-  # pools its rows' segments but draws none of them.
+  # pools its rows' segments but draws none of them, unless it draws its
+  # lanes (`parent_lanes`): then it is drawn as any row.
+  pool <- isTRUE(parent_row) && !isTRUE(s$parent_lanes)
   if (groups_spans_has_overlay(s)) {
-    target[[groups_col(sid, "ovl")]] <- I(if (isTRUE(parent_row)) {
+    target[[groups_col(sid, "ovl")]] <- I(if (pool) {
       rep(list(list()), nrow(target))
     } else {
       groups_spans_overlays(g, by, s)
     })
   }
   if (groups_spans_has_lanes(s)) {
-    target[[groups_col(sid, "lanes")]] <- I(if (isTRUE(parent_row)) {
+    target[[groups_col(sid, "lanes")]] <- I(if (pool) {
       rep(list(list(sub = list(), ms = list())), nrow(target))
     } else {
       groups_spans_lanes(g, by, s)

@@ -118,7 +118,9 @@ groups_spans_reader <- function(slice, s) {
   }
   list(xs = xs, ok = ok, main = main, ln = ln, st = st, seg = seg,
        strip = present("strip"), slice = slice,
-       event = groups_spans_events(slice, s))
+       event = groups_spans_events(slice, s),
+       worst = identical(chr_state(s$overlap), "worst"),
+       end = end, fill = fill)
 }
 
 #' The events of a spans row, read off the slice once: `x` their positions
@@ -149,8 +151,52 @@ groups_spans_events <- function(slice, s) {
 #' order, so a delay or a skip draws over the period it interrupts.
 #' @noRd
 groups_spans_segs <- function(g, idx) {
+  if (isTRUE(g$worst) && length(idx) > 1L) return(groups_spans_worst(g, idx))
   idx <- idx[order(g$st[idx] > 1L, g$xs[idx])]
   Filter(Negate(is.null), lapply(idx, g$seg))
+}
+
+#' The segments of records `idx` with overlaps cut away: between any two
+#' consecutive starts or ends, the record active there with the highest fill
+#' index draws (on a tie, the one that started last). Neighbouring pieces of
+#' one record join. A piece carries its record's label, tooltip and style; bar
+#' labels are left off, a piece is not the whole record.
+#' @noRd
+groups_spans_worst <- function(g, idx) {
+  idx <- idx[!is.na(g$fill[idx])]
+  if (length(idx) < 2L) return(Filter(Negate(is.null), lapply(idx, g$seg)))
+  s <- g$xs[idx]
+  e <- g$end[idx]
+  f <- g$fill[idx]
+  b <- sort(unique(c(s, e)))
+  if (length(b) < 2L) return(Filter(Negate(is.null), lapply(idx, g$seg)))
+  lo <- b[-length(b)]
+  hi <- b[-1L]
+  # Rank records worst first, then latest start, and give each piece the
+  # first record in that order active over it.
+  rank <- order(-f, -s)
+  win <- rep(NA_integer_, length(lo))
+  for (k in rank) {
+    on <- is.na(win) & s[[k]] <= lo & e[[k]] >= hi
+    win[on] <- k
+    if (!anyNA(win)) break
+  }
+  keep <- !is.na(win)
+  lo <- lo[keep]
+  hi <- hi[keep]
+  win <- win[keep]
+  if (!length(win)) return(list())
+  # A new piece starts where the record changes or a gap opens.
+  new <- c(TRUE, win[-1L] != win[-length(win)] | lo[-1L] > hi[-length(hi)])
+  first <- which(new)
+  last <- c(first[-1L] - 1L, length(win))
+  lapply(seq_along(first), function(j) {
+    sg <- g$seg(idx[[win[[first[[j]]]]]])
+    sg$s <- lo[[first[[j]]]]
+    sg$e <- hi[[last[[j]]]]
+    sg$bl <- NULL
+    sg
+  })
 }
 
 # Segment styles by the value of the style column; anything else is solid.

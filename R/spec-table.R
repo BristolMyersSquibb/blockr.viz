@@ -173,6 +173,19 @@ table_spec_look <- function() {
       )
     ),
 
+    open = table_arg(
+      type = "enum", default = "none", values = c("none", "all"),
+      applies = "groups",
+      gear = gear("Look", "segmented", "Groups at start",
+                  labels = c("Closed", "Open")),
+      example = "all",
+      describe = paste(
+        "With `group_rows = \"summary\"`, whether the outer rows start",
+        "closed (\"none\") or open (\"all\"). The header's button opens and",
+        "closes them all either way."
+      )
+    ),
+
     collapsible = table_arg(
       type = "bool", default = TRUE,
       applies = c("records", "variables"),

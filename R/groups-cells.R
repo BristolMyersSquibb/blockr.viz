@@ -32,7 +32,8 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
     # Groups headed by their name and a compact matrix open their groups.
-    expanded = isTRUE(prep$parent_heads) || isTRUE(cfg$compact),
+    expanded = isTRUE(prep$parent_heads) || isTRUE(cfg$compact) ||
+      isTRUE(cfg$open),
     compact = isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = cells_parent_labels(rows),

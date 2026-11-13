@@ -278,6 +278,26 @@ table_summary_specs <- function() {
           "the main lane and on even lanes, not on thin ones."
         )
       ),
+      overlap = viz_arg(
+        type = "enum", default = "draw", values = c("draw", "worst"),
+        gear = gear("Columns", "segmented", "Overlaps",
+                    labels = c("Drawn over each other", "Worst level")),
+        describe = paste(
+          "How records that overlap on one lane draw. \"draw\": each its own",
+          "bar, the later over the earlier. \"worst\": cut into pieces, each",
+          "coloured by the highest colour level active there (legend order),",
+          "so one stripe shows the worst stretch."
+        )
+      ),
+      parent_lanes = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Lanes on group rows"),
+        describe = paste(
+          "With `group_rows = \"summary\"`, an outer row draws its rows'",
+          "lanes, events and open ends as an inner row does. Off: the outer",
+          "row draws the main lane's bars only."
+        )
+      ),
       strip = viz_arg(
         type = "column", null = "no strip",
         gear = gear("Columns", "column", "Hover strip"),

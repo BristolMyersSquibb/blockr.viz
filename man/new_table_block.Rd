@@ -21,6 +21,7 @@ new_table_block(
   look = "table",
   facet_layout = "by_summary",
   group_rows = "name",
+  open = "none",
   sort_by = "value",
   sort_dir = NULL,
   top_n = NULL,
@@ -79,6 +80,8 @@ new_table_block(
 \item{facet_layout}{Column order of faceted summaries. "by_level" needs exactly one facet column in the table. One of \code{"by_summary"}, \code{"by_level"}. Default: \code{"by_summary"}.}
 
 \item{group_rows}{What the outer rows of a nested table (two \code{by} columns) show. "name": the group's name and its number of rows, across the row, with the groups open. "summary": every summary over the group's rows, on the group's line. A summary with \code{func = "identity"} stays empty on an outer row either way. One of \code{"name"}, \code{"summary"}. Default: \code{"name"}.}
+
+\item{open}{With \code{group_rows = "summary"}, whether the outer rows start closed ("none") or open ("all"). The header's button opens and closes them all either way. One of \code{"none"}, \code{"all"}. Default: \code{"none"}.}
 
 \item{sort_by}{Row order: "value", "data", "alpha", a summary's name, a facet level, or a numeric column (its per-row minimum). Default: \code{"value"}.}
 
@@ -237,6 +240,8 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{lane}: Splits a row into lanes. Records where it is empty draw on the main lane at full height, with the ticks, the line and the events; each other level draws a thin lane above it, in level order, so a row grows with its lanes (a drug per lane above the response). Without any main-lane record the lanes are even and the overlays run across the row; an event with a lane draws on its lane. Default \code{NULL}: one lane.
 \item \code{seg_style}: How a record draws, by value: "dashed" a dashed line (a skipped period), "hollow" an outlined box (a delay), "dot" a ring at its start (one administration), "step" a small down step at its start (a dose cut), "outline" filled with a dark edge (a serious event). Anything else draws solid. A dot or a step needs no end. Default \code{NULL}: all solid.
 \item \code{bar_label}: Text written on each record's bar when it fits, else just after it when the lane has room before its next bar, else nowhere (the tooltip keeps the label). An empty value labels nothing. Drawn on the main lane and on even lanes, not on thin ones. Default \code{NULL}: no bar labels.
+\item \code{overlap}: How records that overlap on one lane draw. "draw": each its own bar, the later over the earlier. "worst": cut into pieces, each coloured by the highest colour level active there (legend order), so one stripe shows the worst stretch. One of \code{"draw"}, \code{"worst"}. Default: \code{"draw"}.
+\item \code{parent_lanes}: With \code{group_rows = "summary"}, an outer row draws its rows' lanes, events and open ends as an inner row does. Off: the outer row draws the main lane's bars only. Default: \code{FALSE}.
 \item \code{strip}: Text of one box in its lane's hover strip; lines split at a newline. Pointing at a lane shows its boxes in time order, a hollow record's box marked late and a dashed one's as skipped. A strip record needs only a start. Default \code{NULL}: no strip.
 }
 

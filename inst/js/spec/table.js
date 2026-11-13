@@ -649,6 +649,36 @@
               "slot": false,
               "ctrl": true
             },
+            "overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "draw",
+              "values": ["draw", "worst"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps",
+                "labels": ["Drawn over each other", "Worst level"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "parent_lanes": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Lanes on group rows"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "strip": {
               "type": {
                 "name": "column"
@@ -1156,6 +1186,25 @@
         "control": "segmented",
         "label": "Group rows",
         "labels": ["Name only", "With summary"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "open": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "none",
+      "values": ["none", "all"],
+      "nullable": false,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "segmented",
+        "label": "Groups at start",
+        "labels": ["Closed", "Open"]
       },
       "slot": true,
       "ctrl": true
