@@ -37,6 +37,8 @@ viz_script_sources <- function(raw, state) {
     !is.null(s) && nzchar(trimws(paste(s, collapse = "\n")))
   }
   parsed <- shiny::reactive(cb_parse(state$script()))
+  # The frame is kept for the block's expression (R/prepare-once.R).
+  once <- prep_once()
   last <- new.env(parent = emptyenv())
   last$specs <- list()
   specs <- shiny::reactive({
@@ -55,7 +57,7 @@ viz_script_sources <- function(raw, state) {
     if (!has_script()) {
       return(list(data = NULL, error = NULL))
     }
-    dd_prepare_run(raw(), parsed(), specs(), state$script_values())
+    dd_prepare_run(raw(), parsed(), specs(), state$script_values(), once$run)
   })
   prepared <- shiny::reactive({
     if (!has_script()) {
@@ -75,6 +77,10 @@ viz_script_sources <- function(raw, state) {
     compiled = function() {
       if (!has_script()) {
         return(NULL)
+      }
+      if (!is.null(once)) {
+        once$expect(cb_expr(parsed(), specs(), state$script_values(),
+                            slot = FALSE))
       }
       cb_expr(parsed(), specs(), state$script_values(), slot = TRUE)
     },

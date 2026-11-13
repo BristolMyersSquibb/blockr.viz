@@ -25,10 +25,13 @@ NULL
 #' @param parsed The result of [cb_parse()].
 #' @param specs Input specs from [cb_specs()].
 #' @param values Named list of current control values.
+#' @param once The block's prep_once() (R/prepare-once.R), which keeps the
+#'   frame for the block's expression, or NULL to just run the script.
 #' @return A list with `data` (the prepared frame, or `NULL` on failure) and
 #'   `error` (`NULL`, or the message).
 #' @noRd
-dd_prepare_run <- function(data, parsed, specs, values = list()) {
+dd_prepare_run <- function(data, parsed, specs, values = list(),
+                           once = NULL) {
 
   if (is.null(data)) {
     return(list(data = NULL, error = NULL))
@@ -52,8 +55,9 @@ dd_prepare_run <- function(data, parsed, specs, values = list()) {
     return(list(data = data, error = NULL))
   }
 
+  run <- function() eval(body, blockr.core::eval_env(list(data = data)))
   out <- tryCatch(
-    eval(body, blockr.core::eval_env(list(data = data))),
+    if (is.null(once)) run() else once(body, data, run),
     error = function(e) e
   )
 
