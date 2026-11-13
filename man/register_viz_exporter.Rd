@@ -25,7 +25,10 @@ exhibit with the \link{exhibit-accessors} only.}
 \item{ext}{The file extension.}
 
 \item{accepts}{A function of an exhibit: whether this format can write
-it (Image needs a picture).}
+it (Image needs a picture). A block's menu asks it about a probe of the
+exhibit: the kind and the picture are the exhibit's, and so is whether
+it has a render object, but the data and the render object themselves
+are stand-ins, since building them is the download's work.}
 
 \item{needs}{Packages the format needs; it is left out of the menu when
 one is not installed.}
