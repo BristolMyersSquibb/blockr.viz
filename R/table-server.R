@@ -116,6 +116,13 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
   rows <- viz_rows()
   written <- last_value_cache()
   function() {
+    # An input that is withheld (blockr.core holds a block's input back while
+    # a view switch settles, or while the block is out of the eval set) draws
+    # nothing: the render cancels and the browser keeps its table. Drawn as
+    # "No data", it moved the rows' revision twice per visit, so coming back
+    # sent all rows again and the browser built the table anew. An input that
+    # fails for real still draws its message.
+    src_withheld(src)
     v <- kit$values()
     built <- part()$drawn()
     derived <- c(
@@ -142,6 +149,17 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }
+}
+
+# Stops silently when the input is withheld; any other error is left to the
+# layout, which draws it.
+src_withheld <- function(src) {
+  held <- tryCatch({
+    src$rows()
+    FALSE
+  }, shiny.silent.error = function(e) TRUE, error = function(e) FALSE)
+  shiny::req(!held)
+  invisible(NULL)
 }
 
 # The emitted filter. The same object comes back while the code is
