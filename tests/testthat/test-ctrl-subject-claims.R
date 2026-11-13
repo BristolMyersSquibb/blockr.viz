@@ -31,6 +31,29 @@ test_that("no subject column: the column claim, as before", {
   expect_identical(out[[1L]]$name, "AEBODSYS")
 })
 
+test_that("a click on a short subject id claims the subject column", {
+  # `short` is one-to-one with the subject column `subj`; a chart grouped by
+  # it sends the clicked bar's short id. The target joins on `subj`.
+  d <- data.frame(
+    subj = c("01-1015", "01-1015", "01-1023", "02-1023"),
+    short = c("1015", "1015", "1023-a", "1023-b"),
+    arm = c("A", "A", "B", "B")
+  )
+  out <- ctrl_claims(d, "", list(short = "1015"), subject = "subj")
+  expect_identical(out, list(list(
+    name = "subj", mode = "multi", values = "01-1015", label = "short = 1015"
+  )))
+
+  # a many-to-one column claims every subject under the click
+  out <- ctrl_claims(d, "", list(arm = "B"), subject = "subj")
+  expect_identical(out[[1L]]$values, c("01-1023", "02-1023"))
+  expect_identical(out[[1L]]$label, "arm = B")
+
+  # no declared subject: the clicked column, as before
+  out <- ctrl_claims(d, "", list(short = "1015"))
+  expect_identical(out[[1L]]$name, "short")
+})
+
 test_that("a structured table resolves through its stamped source_data", {
   ard <- data.frame(.variable = "AEBODSYS", .variable_level = c("GI", "Skin"),
                     n = c(2, 2))
@@ -57,8 +80,8 @@ test_that("the subject column comes from the study_roles board option", {
 
         opt <- shiny::reactiveVal(list(arm = "TRT", subject = ""))
         session$userData$board_options <- list(study_roles = opt)
-        # declared nothing: the convention
-        expect_identical(shiny::isolate(ctrl_subject(session)), "USUBJID")
+        # declared nothing: no subjects, this package knows no convention
+        expect_null(shiny::isolate(ctrl_subject(session)))
 
         opt(list(subject = "SUBJID"))
         expect_identical(shiny::isolate(ctrl_subject(session)), "SUBJID")
