@@ -83,3 +83,18 @@ test_that("the table's registry entry gives the assistant its arguments and guid
   expect_identical(attr(b, "guidance"), table_guidance())
   expect_match(attr(b, "guidance"), "layout", fixed = TRUE)
 })
+
+test_that("a choice slot prints its gear label, as its menu does", {
+  spec <- chart_spec()
+  a <- viz_slot_values(spec, list(func = "mean", summary = "mean_se", sort_dir = "desc"))
+  expect_identical(a$func, "Mean")
+  expect_identical(a$summary, "Mean ± SE")
+  expect_identical(a$sort_dir, "Descending")
+  # A value the choice does not hold, or none, prints as it is.
+  expect_identical(slot_enum_text(spec$args$func, "nonesuch"), "nonesuch")
+  expect_null(viz_slot_values(spec, list())$func)
+  expect_identical(
+    resolve_title_template("{@func in min, mean} of x", data.frame(), a),
+    "Mean of x"
+  )
+})

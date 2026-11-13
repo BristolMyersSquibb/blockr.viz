@@ -76,8 +76,10 @@ registry_object <- function(type, required) {
 #' What the title slots print
 #'
 #' The arguments with `slot = TRUE`, keyed by name, for the title resolver
-#' and the gear's `@` menu. A single value prints as it is; a vector prints
-#' as its values joined by ", ".
+#' and the gear's `@` menu. A single value prints as it is, or as its gear
+#' label when the argument is a choice with labels ("Mean", not "mean"), so
+#' the word reads like the menu it opens; a vector prints as its values
+#' joined by ", ".
 #'
 #' @param spec A `viz_spec`.
 #' @param values A named list of the block's values.
@@ -96,10 +98,23 @@ viz_slot_values <- function(spec, values) {
       v <- slot_ticks_text(v)
     } else if (length(v) > 1L || spec$args[[nm]]$type$name %in% VIZ_ARRAY_TYPES) {
       v <- slot_list_text(v)
+    } else if (identical(spec$args[[nm]]$type$name, "enum")) {
+      v <- slot_enum_text(spec$args[[nm]], v)
     }
     out[nm] <- list(v)
   }
   out
+}
+
+# A choice as its menu shows it: the gear label of the value, or the value
+# when the argument has no labels or the value is not one of its choices.
+slot_enum_text <- function(arg, v) {
+  labels <- arg$gear$labels
+  if (length(v) != 1L || is.na(v) || length(labels) != length(arg$values)) {
+    return(v)
+  }
+  hit <- match(as.character(v), as.character(arg$values))
+  if (is.na(hit)) v else labels[[hit]]
 }
 
 # Axis limits as the sentence prints them: "20 to auto"; NULL when unset, so
