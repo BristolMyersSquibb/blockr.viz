@@ -29,6 +29,11 @@ cells_interval <- function(ctx, p) {
     # Without a record on the main lane anywhere, every lane is a full lane
     # and the overlays span the row.
     if (!any(lengths(segs) > 0L)) out$eq <- TRUE
+    # More than one full bar: each named at its left, the main one first.
+    if (length(p$full) > 1L) {
+      out$mn <- p$full[[1L]]
+      out$lw <- max(nchar(p$full))
+    }
   }
   out
 }
@@ -50,6 +55,7 @@ cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
   one <- lapply(seq_along(all), function(k) {
     l <- all[[k]]
     out <- list(n = l$nm, s = s[[k]], t = as.list(t[[k]]), b = box(l$bx))
+    if (isTRUE(l$fl)) out$f <- TRUE
     bl <- cells_interval_bar_labels(list(l$segs))
     if (!is.null(bl)) out$l <- bl[[1L]]
     if (length(l$ev)) {

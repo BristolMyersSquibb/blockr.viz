@@ -53,7 +53,8 @@ TABLE_GROUPS_KEYS <- list(
                 xs = "xValues", ys = "yValues", rc = "refY",
                 rby = "refBandY", rbh = "refBandHeight"),
   interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
-               lg = "large", xl = "full", lm = "calmLanes", tk = "ticks", bd = "band", ev = "events",
+               lg = "large", xl = "full", lm = "calmLanes", mn = "mainName",
+               lw = "laneNameWidth", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
                ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
 )
@@ -84,7 +85,7 @@ table_groups_fence <- function(g) {
 # Column-level fields stay scalars (a bar's `fill` is its colour, a pair's is
 # one per row); everything else is per row, an array also at one row.
 TABLE_GROUPS_SCALARS <- c("kind", "mode", "rf", "d0", "d1", "dw", "rc", "rby",
-                          "rbh", "tt")
+                          "rbh", "tt", "mn", "lw")
 TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "xl", "lm", "eq")
 
 table_groups_pack <- function(g, kind, top) {

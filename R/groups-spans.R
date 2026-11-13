@@ -35,8 +35,22 @@ groups_spans_levels <- function(s, data) {
   if (!is.null(groups_present(s$lane, data))) {
     lv <- groups_levels(data[[s$lane]])
     s$.lane_levels <- lv[!is.na(lv) & nzchar(lv)]
+    # Full lanes, in lane order; the first is the main lane.
+    if (!is.null(groups_present(s$lane_full, data))) {
+      ln <- as.character(data[[s$lane]])
+      full <- unique(ln[as.logical(data[[s$lane_full]]) %in% TRUE])
+      s$.full_levels <- s$.lane_levels[s$.lane_levels %in% full]
+    }
   }
   s
+}
+
+#' Which records draw on the main lane: an empty lane, or the first full lane.
+#' @noRd
+groups_spans_on_main <- function(ln, s) {
+  empty <- is.na(ln) | !nzchar(ln)
+  if (!length(s$.full_levels)) return(empty)
+  empty | ln %in% s$.full_levels[[1L]]
 }
 
 #' The rows of `slice` under each row of `target`, in slice order: one list
@@ -85,7 +99,7 @@ groups_spans_reader <- function(slice, s) {
   n <- nrow(slice)
   st <- groups_spans_styles(slice, present("seg_style"))
   ln <- if (!is.null(present("lane"))) as.character(slice[[present("lane")]])
-  main <- if (is.null(ln)) rep(TRUE, n) else is.na(ln) | !nzchar(ln)
+  main <- if (is.null(ln)) rep(TRUE, n) else groups_spans_on_main(ln, s)
   if (is.null(xs)) xs <- rep(NA_real_, n)
   if (is.null(xe)) xe <- rep(NA_real_, n)
   # A dot or a step marks one moment: it needs no end.
@@ -288,7 +302,7 @@ groups_spans_lanes <- function(g, by, s) {
         evs <- events(lr)
         if (!length(segs) && !length(bx) && !length(evs)) next
         sub[[length(sub) + 1L]] <- list(
-          nm = l, segs = segs, bx = bx, ev = evs,
+          nm = l, segs = segs, bx = bx, ev = evs, fl = l %in% s$.full_levels,
           op = !is.null(op) && isTRUE(any(op[lr], na.rm = TRUE))
         )
       }

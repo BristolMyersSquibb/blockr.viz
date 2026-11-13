@@ -321,3 +321,55 @@ test_that("the static picture writes bar labels where they fit", {
   # before the next bar; the third bar has no text.
   expect_identical(vapply(txt, function(g) g$label, ""), "Headache")
 })
+test_that("full lanes draw as bars below the main one, each named", {
+  d <- data.frame(
+    id = c("a", "a", "a", "a", "a", "b", "b"),
+    s = c(0, 40, 0, 30, 0, 0, 0),
+    e = c(40, 90, 30, 90, 80, 50, 50),
+    resp = c("SD", "PR", "SD", "PD", "Drug A", "PR", "SD"),
+    lane = factor(c("INV", "INV", "BICR", "BICR", "Drug A", "INV", "BICR"),
+                  levels = c("Drug A", "INV", "BICR")),
+    full = c(TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE),
+    ev = c(NA, NA, NA, 30, NA, NA, NA), evk = c(NA, NA, NA, "PD", NA, NA, NA),
+    stringsAsFactors = FALSE
+  )
+  m <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "resp",
+    lane = "lane", lane_full = "full", event_x = "ev", event_shape = "evk"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  i <- match("a", m$cells$label)
+  # The first full lane (INV) is the main lane; BICR is a full bar below it,
+  # with its own event; the drug stays a thin lane.
+  expect_length(c1$segs[[i]], 2L)
+  a <- c1$sl[[i]]
+  expect_identical(vapply(a, function(l) l$n, ""), c("Drug A", "BICR"))
+  expect_null(a[[1]]$f)
+  expect_true(a[[2]]$f)
+  expect_length(a[[2]]$e, 1L)
+  expect_identical(c1$mn, "INV")
+  expect_identical(c1$lw, 4L)
+  # One full lane alone is just the main lane, unnamed.
+  m1 <- sum_model(d[d$lane != "BICR", ], by = "id", summaries = list(list(
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "resp",
+    lane = "lane", lane_full = "full"
+  )))
+  c2 <- m1$cells$cols[[1]]
+  expect_null(c2$mn)
+  expect_identical(vapply(c2$sl[[match("a", m1$cells$label)]], function(l) l$n, ""),
+                   "Drug A")
+  # The static picture draws the full bar, its event and the names, and the
+  # row grows by it.
+  gl <- list(px = 1 / 96, H = 3, lane = 12 / 96, row_h = 0.4, fs = 9,
+             family = "sans")
+  g <- paint_interval(c1, i, 0, 3, 0.2, gl)
+  txt <- unlist(lapply(g, function(x) if (inherits(x, "text")) x$label))
+  expect_true(all(c("INV", "BICR") %in% txt))
+  expect_gt(paint_iv_stack(1, 1, FALSE, 1), paint_iv_stack(1, 1, FALSE, 0))
+  png <- tempfile(fileext = ".png")
+  on.exit(unlink(png))
+  p <- summarize_paint_grob(m$cells, m$prep, width_in = 6)
+  paint_write_png(p, png, res = 72)
+  expect_true(file.exists(png))
+})

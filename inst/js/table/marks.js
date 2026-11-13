@@ -304,14 +304,21 @@
       (strip && strip.length ? ' data-strip="' + esc(JSON.stringify(strip)) + '"' : '') + '>';
   }
 
+  /** A full bar's name at its left, in the cell's gutter; the main one bold.
+   * @param {TableMarkInterval} c @param {string | undefined} name @param {boolean} main */
+  const laneName = (c, name, main) => (c.mainName == null || name == null ? ''
+    : '<span class="vz-table-lane-name' + (main ? ' is-main' : '') + '">' + esc(name) + '</span>');
+
   /**
-   * A thin lane above the main one: its segments, and its arrow in its own
-   * colour when it is still open.
+   * A thin lane above the main one, or a full bar below it (`f`, a second
+   * response assessment): its segments, and its arrow in its own colour when
+   * it is still open.
    * @param {TableMarkInterval} c
    * @param {TableSubLane} l
    */
   function thin(c, l) {
-    let s = laneOpen(c, c.calmLanes ? ' is-thin is-md' : ' is-thin', l.b, l.n);
+    const cls = l.f ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin';
+    let s = laneOpen(c, cls, l.b, l.n) + (l.f ? laneName(c, l.n, false) : '');
     let last = '';
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
@@ -321,8 +328,8 @@
     if (l.o != null) {
       s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
     }
-    // A thin lane is too low for text; an even lane has room.
-    if (c.evenLanes) s += barLabels(l.s || [], l.l, l.o);
+    // A thin lane is too low for text; an even lane and a full bar have room.
+    if (c.evenLanes || l.f) s += barLabels(l.s || [], l.l, l.o);
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -350,7 +357,7 @@
    * @param {number} i
    */
   function interval(c, i) {
-    let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null);
+    let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null) + laneName(c, c.mainName, true);
     const jn = joins(c.segs[i] || []);
     (c.segs[i] || []).forEach((g, j) => {
       s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j), jn[j]);
@@ -368,10 +375,16 @@
     s += barLabels(c.segs[i] || [], c.barLabels ? c.barLabels[i] : null, op);
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     const sub = c.subLanes ? c.subLanes[i] || [] : [];
-    if (!sub.length) return s;
-    // Even lanes: no main lane, every lane full, the overlays across the row.
-    return '<div class="vz-table-groups-ivstack' + (c.evenLanes ? ' is-even' : '') + '">' +
-      sub.map((l) => thin(c, l)).join('') + s + '</div>';
+    // Named bars keep a gutter on every row, so the bars line up with the axis.
+    const named = (/** @type {string} */ h) => (c.mainName == null ? h
+      : '<div class="vz-table-groups-ivnamed" style="--vz-lane-lw:' + n(c.laneNameWidth) + 'ch">' +
+        h + '</div>');
+    if (!sub.length) return named(s);
+    // Thin lanes above the main lane, full bars below it. Even lanes: no main
+    // lane, every lane full, the overlays across the row.
+    return named('<div class="vz-table-groups-ivstack' + (c.evenLanes ? ' is-even' : '') + '">' +
+      sub.filter((l) => !l.f).map((l) => thin(c, l)).join('') + s +
+      sub.filter((l) => l.f).map((l) => thin(c, l)).join('') + '</div>');
   }
 
   /**
@@ -553,7 +566,10 @@
     const dw = labels && c.mark && 'valueWidth' in c.mark ? /** @type {any} */ (c.mark).valueWidth : null;
     const ticks = a.at.map((p, k) => '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
       ' style="left:' + n(p) + '%">' + esc(a.labels[k]) + '</span>').join('');
+    // A swimlane with named bars leaves their gutter blank.
+    const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
+      (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
       '<span class="vz-table-groups-axis-in">' + ticks + '</span>' +
       (dw != null ? '<span class="vz-table-groups-axis-pad" style="width:' + n(dw) + 'ch"></span>' : '') +
       '</div>';
