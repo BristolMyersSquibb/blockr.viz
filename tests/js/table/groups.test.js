@@ -770,3 +770,15 @@ test('a click on the (Missing) row claims the missing level as null', () => {
   assert.ok(t.$$('tbody tr')[2].classList.contains('vz-table-row-active'));
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: [null] } }]);
 });
+
+test('interval: without its text the column joins its tooltips, which the search reads', () => {
+  const m = groups();
+  const c = m.cols[7];
+  delete c.disp;
+  c.mark.tips[0] = ['day 1 to 5', 'day 8 to 10', 'day 1 to 5'];
+  c.mark.eventTips = [['Death'], [], []];
+  mount(payload({ data: m, config: G }));
+  // Through JSON: the array is the window's, not node's.
+  assert.deepEqual(JSON.parse(JSON.stringify(c.disp)),
+                   ['day 1 to 5 | day 8 to 10 | Death', null, 'day 15 to 30']);
+});

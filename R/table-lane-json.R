@@ -14,10 +14,17 @@
 
 # The TableModel with the swimlane columns' segments, overlays and lanes as
 # `json` strings. A model without a swimlane column comes back as it is.
+#
+# A swimlane column's text per row (`disp`, what the table's search reads) is
+# its segments' and events' tooltips joined (cells_text()), which the mark
+# already carries. It is left out here and the browser joins it again
+# (inst/js/table/groups.js, dense()); at 1000 patients it was 0.7 MB of a
+# 1.7 MB AE timeline.
 table_lane_json <- function(model) {
   model$cols <- lapply(model$cols, function(cc) {
     if (is.list(cc) && is.list(cc$mark) &&
           identical(cc$mark$kind, "interval")) {
+      cc$disp <- NULL
       cc$mark <- lane_json_mark(cc$mark)
     }
     cc

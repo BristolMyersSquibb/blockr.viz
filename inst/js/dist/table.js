@@ -1,4 +1,4 @@
-// blockr.viz bundle b636993760f56edff79a1b20ba9ee951, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 36357d3e8861dfeaed782af37ca2d811, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -3495,7 +3495,32 @@
         c.fg = c.bg.map((b) => (b != null && of[b]) || null);
         c.ink = null;
       }
+      const mk = /** @type {TableMarkInterval | null | undefined} */ (c.mark);
+      if (mk && mk.kind === 'interval' && !Array.isArray(c.disp)) {
+        c.disp = laneTexts(mk, m.n);
+      }
     }
+  }
+
+  /**
+   * A swimlane column's text per row, which the search reads: its segments'
+   * and events' tooltips, each once, joined by " | ", as R's cells_text()
+   * writes it. R leaves it out of the payload, since the tooltips are there
+   * (R/table-lane-json.R).
+   * @param {TableMarkInterval} mk
+   * @param {number} n
+   * @returns {(string | null)[]}
+   */
+  function laneTexts(mk, n) {
+    /** @type {(string | null)[]} */
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const tips = (mk.tips && mk.tips[i]) || [];
+      const ev = (mk.eventTips && mk.eventTips[i]) || [];
+      const t = Array.from(new Set(tips.concat(ev))).join(' | ');
+      out[i] = t === '' ? null : t;
+    }
+    return out;
   }
 
   class Groups extends /** @type {any} */ (T.Records) {

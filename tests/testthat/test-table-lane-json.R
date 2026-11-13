@@ -1,6 +1,7 @@
 # A swimlane column's segments, overlays and lanes as JSON written by
 # R/table-lane-json.R: the text has to be what Shiny writes for the same
-# model.
+# model, less the column's text per row, which the browser joins from the
+# tooltips (inst/js/table/groups.js).
 
 lj_data <- function() {
   na <- NA_real_
@@ -39,11 +40,17 @@ lj_model <- function(d, ..., by = "id") {
   table_groups_to_model(table_model_groups(st, d))
 }
 
+# The model as Shiny would write it without the swimlane column's text.
+lj_no_text <- function(model) {
+  model$cols[[2L]]$disp <- NULL
+  model
+}
+
 expect_lane_json <- function(model, info = NULL) {
   out <- table_lane_json(model)
   expect_s3_class(out$cols[[2L]]$mark$segs, "json")
   expect_identical(as.character(shiny_json(out)),
-                   as.character(shiny_json(model)), info = info)
+                   as.character(shiny_json(lj_no_text(model))), info = info)
 }
 
 test_that("swimlane columns are written as Shiny writes them", {
@@ -87,5 +94,19 @@ test_that("a lane with a field the writer does not know stays a list", {
   m$cols[[2L]]$mark$subLanes[[at]][[1L]]$extra <- TRUE
   out <- table_lane_json(m)
   expect_type(out$cols[[2L]]$mark$subLanes, "list")
-  expect_identical(as.character(shiny_json(out)), as.character(shiny_json(m)))
+  expect_identical(as.character(shiny_json(out)),
+                   as.character(shiny_json(lj_no_text(m))))
+})
+
+test_that("a swimlane column's text is its tooltips, which the mark carries", {
+  m <- lj_model(lj_data(), tooltip = c("resp", "term"), event_x = "day",
+                event_shape = "what")
+  col <- m$cols[[2L]]
+  joined <- vapply(seq_along(col$disp), function(i) {
+    t <- unique(c(col$mark$tips[[i]], col$mark$eventTips[[i]]))
+    if (length(t)) paste(t, collapse = " | ") else NA_character_
+  }, character(1L))
+  expect_identical(as.vector(col$disp), joined)
+  expect_null(table_lane_json(m)$cols[[2L]]$disp)
+  expect_false(is.null(table_lane_json(m)$cols[[1L]]$disp))
 })
