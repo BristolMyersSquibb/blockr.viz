@@ -57,17 +57,16 @@ test_that("swimlane columns are written as Shiny writes them", {
   d <- lj_data()
   models <- list(
     plain = lj_model(d),
-    labelled = lj_model(d, label = "term", tooltip = c("resp", "term"),
-                        bar_label = "term"),
+    labelled = lj_model(d, label = "term", tooltip = c("resp", "term")),
     overlays = lj_model(d, ticks = "visit", band_x = "from", band_xend = "to",
                         event_x = "day", event_shape = "what",
                         open = "ongoing"),
     lanes = lj_model(d, lane = "drug", open = "ongoing", seg_style = "style",
-                     strip = "strip", label = "term", bar_label = "term",
+                     strip = "strip", label = "term",
                      event_x = "day", event_shape = "what"),
     # No record on the main lane: even lanes, the main lane's arrays empty.
     even = lj_model(d[!is.na(d$drug), ], lane = "drug", label = "term",
-                    bar_label = "term", open = "ongoing"),
+                    open = "ongoing"),
     nested = lj_model(transform(d, arm = ifelse(id == "b", "B", "A")),
                       by = c("arm", "id"), lane = "drug", strip = "strip"),
     one_row = lj_model(d[1L, ], label = "term")

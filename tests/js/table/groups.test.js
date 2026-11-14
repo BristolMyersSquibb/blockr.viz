@@ -696,43 +696,6 @@ test('lanes: the track sits behind the main lane and full bars, never a thin lan
   assert.equal(t2.cell(0, 7).querySelectorAll('.has-track').length, 0);
 });
 
-test('bar labels: on the bar when they fit, after it when the gap holds them, else hidden', () => {
-  const m = lanes();
-  Object.assign(m.cols[7].mark, { evenLanes: true });
-  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 50, 3], [52, 10, 3], [70, 5, 3]], t: ['a', 'b', 'c'],
-                                    l: ['Wide bar', 'Squeezed', 'Tail'] };
-  const t = mount(payload({ data: m, config: G }));
-  const lane = t.cell(0, 7).querySelectorAll('.is-thin')[1];
-  const labs = Array.from(lane.querySelectorAll('.vz-table-lane-lab'));
-  assert.equal(labs.length, 3);
-  assert.equal(labs[1].getAttribute('data-nx'), '70');
-  // happy-dom has no layout: give the lane and the labels a width, then place them.
-  Object.defineProperty(lane, 'clientWidth', { value: 200 });
-  labs.forEach((l) => Object.defineProperty(l, 'offsetWidth', { value: 40 }));
-  labs.forEach((l) => l.classList.remove('is-fit'));
-  t.V.table.marks.fitLabels(lane);
-  assert.ok(labs[0].classList.contains('is-on'));
-  assert.ok(labs[1].hidden);
-  assert.ok(labs[2].classList.contains('is-after'));
-  assert.match(labs[2].style.left, /calc\(75% \+ 3px\)/);
-  // A placed label stays in its room: its bar, or the gap to the next bar.
-  assert.equal(labs[0].style.maxWidth, '100px');
-  assert.equal(labs[2].style.maxWidth, '47px');
-  // A thin lane (not even) draws no labels.
-  m.cols[7].mark.evenLanes = false;
-  const t2 = mount(payload({ data: m, config: G }));
-  assert.equal(t2.cell(0, 7).querySelectorAll('.is-thin .vz-table-lane-lab').length, 0);
-});
-
-test('bar labels never set visibility: a visible child shows through a hidden dock panel', () => {
-  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
-    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const rules = css.split('}').filter((r) => r.includes('vz-table-lane-lab'));
-  assert.ok(rules.length >= 3);
-  for (const r of rules) assert.doesNotMatch(r, /visibility\s*:/);
-  assert.match(rules.join('}'), /overflow:\s*hidden/);
-});
-
 test('the legend draws a tagged level with its text', () => {
   const legend = { groups: [{ title: 'Reason', items: [{ label: 'Adverse event', shape: 6, tag: 'AE' }] }] };
   const t = mount(payload({ data: groups(), config: G, derived: { legend }, dataRev: 9 }));
@@ -925,4 +888,20 @@ test('the axis of a numeric swimlane: ticks spaced by the drawn width, its unit 
   Object.defineProperty(ax, 'clientWidth', { value: 230 });
   A.fit(host);
   assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['Day 0', '200', '400']);
+});
+
+test('a closed outer row splits its padding evenly, so its label sits on the middle', () => {
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => r.includes('tr.is-parent.collapsed > td'));
+  assert.ok(rule);
+  assert.match(rule, /padding-top:\s*7px/);
+  assert.match(rule, /padding-bottom:\s*7px/);
+  // A closed parent row carries both classes.
+  const m = nested();
+  const t = mount(payload({ data: m, config: G }));
+  t.click(t.$$('tbody tr.vz-table-row')[0].querySelector('.vz-table-indent-btn'));
+  const tr = t.$$('tbody tr.vz-table-row')[0];
+  assert.ok(tr.classList.contains('collapsed'));
+  assert.ok(tr.classList.contains('is-parent'));
 });

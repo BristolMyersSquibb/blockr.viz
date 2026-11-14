@@ -11,14 +11,12 @@ cells_interval <- function(ctx, p) {
   cvar <- chr_state(p$cvar)
   out_segs <- cells_interval_segs(segs, bb, dom[[2L]])
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
-  out_bl <- cells_interval_bar_labels(segs)
   out <- list(kind = "interval", segs = out_segs, tips = out_tips,
        fills = as.character(p$fills %||% prep$fills),
        d0 = round(dom[[1L]], 4L), d1 = round(dom[[2L]], 4L),
        dd = dd, lg = identical(p$size, "lg"), xl = identical(p$size, "xl"),
        lm = identical(p$lane_size, "md"), tr = isTRUE(p$track),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
-  if (!is.null(out_bl)) out$bl <- out_bl
   if (!is.null(p$ovl)) {
     out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb,
                                           c(p, list(d1_ = dom[[2L]])), dd))
@@ -56,8 +54,6 @@ cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
     l <- all[[k]]
     out <- list(n = l$nm, s = s[[k]], t = as.list(t[[k]]), b = box(l$bx))
     if (isTRUE(l$fl)) out$f <- TRUE
-    bl <- cells_interval_bar_labels(list(l$segs))
-    if (!is.null(bl)) out$l <- bl[[1L]]
     if (length(l$ev)) {
       out$e <- lapply(l$ev, cells_event_tuple, bb = bb)
       out$et <- as.list(vapply(l$ev, cells_event_tip, "", ename = ename,
@@ -132,18 +128,6 @@ cells_event_tuple <- function(e, bb) {
 cells_event_tip <- function(e, ename, dd) {
   e$tp %||% paste0(e$lv %||% "Event", " \u00b7 ", ename, ": ",
                    cells_fmt_x(e$x, dd))
-}
-
-# Per row, each segment's bar label ("" for none), or NULL when no segment
-# has one.
-cells_interval_bar_labels <- function(segs) {
-  has <- any(vapply(segs, function(ss) {
-    any(vapply(ss, function(sg) !is.null(sg$bl), NA))
-  }, NA))
-  if (!has) return(NULL)
-  lapply(segs, function(ss) {
-    as.list(vapply(ss, function(sg) sg$bl %||% "", ""))
-  })
 }
 
 # An x value as the card prints it: a date for a date domain.

@@ -159,7 +159,7 @@ interface TableMarkInterval extends TableMarkBase {
   domainStart: number; domainEnd: number; dates?: boolean; large?: boolean; full?: boolean;
   ticks?: number[][]; band?: number[][][]; events?: (number | string)[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
-  evenLanes?: boolean; barLabels?: string[][]; calmLanes?: boolean;
+  evenLanes?: boolean; calmLanes?: boolean;
   /** A grey track behind the main lane and the full bars. */
   track?: boolean;
   /** Named full bars: the main bar's name and the longest name in characters. */
@@ -171,7 +171,7 @@ interface TableMarkInterval extends TableMarkBase {
  *  events `e` [x, shape, tag?] with tips `et`. */
 interface TableSubLane {
   n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
-  e?: (number | string)[][]; et?: string[]; l?: string[];
+  e?: (number | string)[][]; et?: string[];
   /** A full bar below the main lane (`lane_full`). */
   f?: boolean;
 }
@@ -542,7 +542,6 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
-    fitLabels(host: ParentNode, again?: boolean): void;
   };
   axis: {
     ticks(d0: number, d1: number, w: number, gap?: number): number[];

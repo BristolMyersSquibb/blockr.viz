@@ -106,7 +106,6 @@ groups_spans_reader <- function(slice, s) {
   # hover highlight; fields add columns.
   lbcol <- present("label")
   fcols <- intersect(as.character(s$tooltip %||% character()), names(slice))
-  blcol <- present("bar_label")
   tpcol <- present("tip")
   n <- nrow(slice)
   st <- groups_spans_styles(slice, present("seg_style"))
@@ -141,7 +140,6 @@ groups_spans_reader <- function(slice, s) {
     v
   }
   lb <- text(lbcol)
-  bl <- text(blcol)
   tp <- text(tpcol)
   # One column per tooltip field, named by it; a missing value is "".
   fv <- if (length(fcols) && n) {
@@ -155,7 +153,6 @@ groups_spans_reader <- function(slice, s) {
     if (!is.null(lb) && nzchar(lb[[r]])) sg$lb <- lb[[r]]
     if (!is.null(fv)) sg$fv <- fv[r, ]
     if (st[[r]] > 1L) sg$st <- st[[r]]
-    if (!is.null(bl) && nzchar(bl[[r]])) sg$bl <- bl[[r]]
     if (!is.null(tp) && nzchar(tp[[r]])) sg$tp <- tp[[r]]
     sg
   }
@@ -248,7 +245,6 @@ groups_spans_worst <- function(g, idx) {
     sg <- g$seg(idx[[win[[first[[j]]]]]])
     sg$s <- lo[[first[[j]]]]
     sg$e <- hi[[last[[j]]]]
-    sg$bl <- NULL
     sg
   })
 }

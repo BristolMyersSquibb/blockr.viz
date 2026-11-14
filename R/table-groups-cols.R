@@ -56,7 +56,7 @@ TABLE_GROUPS_KEYS <- list(
                lg = "large", xl = "full", lm = "calmLanes", tr = "track", mn = "mainName",
                lw = "laneNameWidth", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
-               ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
+               ms = "mainStrip", eq = "evenLanes")
 )
 # The raw statistics a hover card prints (`r`).
 TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",

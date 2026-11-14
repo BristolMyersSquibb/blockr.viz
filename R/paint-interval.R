@@ -67,9 +67,7 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
   ev <- lapply(paint_at(c$ev, i), function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
-  lab <- paint_iv_labels(c$segs[[i]], paint_at(c$bl, i), paint_at(c$op, i),
-                         x, w, y + gl$lane / 2, gl)
-  c(thin, segs, tk, bd, list(op), ev, lab, names)
+  c(thin, segs, tk, bd, list(op), ev, names)
 }
 
 # The gutter of named bars: `lw` characters of the names' type, and a gap.
@@ -79,7 +77,7 @@ paint_iv_gutter <- function(lw, gl) {
 }
 
 # A full bar below the main lane from `y`: its segments at the main lane's
-# height, its open end, its events and its bar labels.
+# height, its open end and its events.
 paint_iv_full <- function(c, l, x, w, y, gl) {
   px <- gl$px
   mid <- gl$H - (y + gl$lane / 2)
@@ -93,42 +91,7 @@ paint_iv_full <- function(c, l, x, w, y, gl) {
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
-  lab <- paint_iv_labels(l$s, l$l, l$o, x, w, y + gl$lane / 2, gl)
-  c(segs, list(op), ev, lab)
-}
-
-# Bar labels as marks.js fitLabels() places them: on the bar when the text
-# fits, after it when the gap to the lane's next bar holds it, else none.
-# `ymid` is the lane's middle, measured from the top.
-paint_iv_labels <- function(segs, labels, open, x, w, ymid, gl) {
-  if (!length(labels)) return(list())
-  px <- gl$px
-  size <- 10.5 * 0.75 * gl$fs / 9
-  x0 <- vapply(segs, function(g) g[[1L]], 0)
-  x1 <- x0 + vapply(segs, function(g) g[[2L]], 0)
-  out <- list()
-  for (j in seq_along(segs)) {
-    t <- as.character(labels[[j]] %||% "")
-    if (!nzchar(t)) next
-    nx <- min(c(100, x0[x0 >= x1[[j]] - 0.01]))
-    tw <- ft_text_widths(t, gl$family, size)
-    a <- paint_lane_x(x0[[j]], x, w)
-    b <- paint_lane_x(x1[[j]], x, w)
-    gap <- if (length(open) && !is.na(open) && abs(open - x1[[j]]) < 0.5) {
-      10 * px
-    } else {
-      3 * px
-    }
-    at <- if (tw + 6 * px <= b - a) {
-      a + 3 * px
-    } else if (b + gap + tw + 3 * px <= paint_lane_x(nx, x, w)) {
-      b + gap
-    }
-    if (!is.null(at)) {
-      out[[length(out) + 1L]] <- paint_txt(gl, t, at, ymid, size = size)
-    }
-  }
-  out
+  c(segs, list(op), ev)
 }
 
 # A thin lane is 5px with a 3px line; the main lane sits 2px under the last.
@@ -166,11 +129,7 @@ paint_iv_thin <- function(c, l, x, w, ytop, gl, even = FALSE) {
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
-  # A thin lane is too low for text; an even lane has room.
-  lab <- if (even) {
-    paint_iv_labels(l$s, l$l, l$o, x, w, ytop + (bar / 2 + 1) * px, gl)
-  }
-  c(segs, list(op), ev, lab)
+  c(segs, list(op), ev)
 }
 
 # A segment `sg` in its style (marks.js seg()): solid, dashed, hollow, a ring

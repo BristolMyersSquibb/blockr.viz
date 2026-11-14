@@ -283,44 +283,16 @@ test_that("the static picture draws even lanes, their events and outlines", {
   expect_true(file.exists(png))
 })
 
-test_that("bar labels ride per segment, empty where a record has none", {
-  d <- ae_fixture()
-  d$term <- c("Pain", "", "Rash", NA, "Cough")
-  m <- sum_model(d, by = "id", summaries = list(ae_spans(bar_label = "term")))
-  c1 <- m$cells$cols[[1]]
-  a <- c1$sl[[match("a", m$cells$label)]]
-  expect_identical(unlist(a[[1]]$l), c("Pain", "Rash"))
-  # A lane whose records have no label sends none.
-  expect_null(a[[2]]$l)
-  # Without the field nothing is sent.
-  c2 <- sum_model(d, by = "id", summaries = list(ae_spans()))$cells$cols[[1]]
-  expect_null(c2$bl)
-  expect_null(c2$sl[[1]][[1]]$l)
-  # On the main lane too.
-  d2 <- data.frame(id = "a", s = c(0, 50), e = c(40, 60), t = c("Long", "B"))
-  c3 <- sum_model(d2, by = "id", summaries = list(list(
+test_that("a saved bar_label is read and dropped", {
+  d <- data.frame(id = "a", s = c(0, 50), e = c(40, 60), t = c("Long", "B"))
+  m <- suppressWarnings(sum_model(d, by = "id", summaries = list(list(
     type = "spans", x = "s", xend = "e", bar_label = "t"
-  )))$cells$cols[[1]]
-  expect_identical(unlist(c3$bl[[1]]), c("Long", "B"))
+  ))))
+  c1 <- m$cells$cols[[1]]
+  expect_length(c1$segs[[1]], 2L)
+  expect_null(c1$bl)
 })
 
-test_that("the static picture writes bar labels where they fit", {
-  skip_if_not_installed("systemfonts")
-  d <- data.frame(id = "a", s = c(0, 41, 43), e = c(40, 42, 100),
-                  t = c("Headache", "Rash", ""))
-  m <- sum_model(d, by = "id", summaries = list(list(
-    type = "spans", x = "s", xend = "e", bar_label = "t"
-  )))
-  c1 <- m$cells$cols[[1]]
-  px <- 1 / 96
-  gl <- list(H = 2, W = 6, px = px, lane = 12 * px, hair = px, row_h = 0.3,
-             fs = 9, family = "sans")
-  txt <- Filter(function(g) inherits(g, "text"),
-                paint_interval(c1, 1L, 0, 5, 0.2, gl))
-  # Headache fits on its bar; Rash fits neither on its bar nor in the gap
-  # before the next bar; the third bar has no text.
-  expect_identical(vapply(txt, function(g) g$label, ""), "Headache")
-})
 test_that("full lanes draw as bars below the main one, each named", {
   d <- data.frame(
     id = c("a", "a", "a", "a", "a", "b", "b"),

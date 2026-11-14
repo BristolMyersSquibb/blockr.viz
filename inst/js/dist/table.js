@@ -1,4 +1,4 @@
-// blockr.viz bundle 2f8afb23786e1f65f36869ba7ab4ad27, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 61ec918a403faaf172916d999a36b61b, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -478,76 +478,6 @@
   }
 
   /**
-   * Bar labels of one lane, placed by fitLabels() once the lane has a width:
-   * on the bar, after it, or hidden. Each knows its bar's ends and where the
-   * lane's next bar starts (percent), and whether an arrow follows it.
-   * @param {(number | string)[][]} segs
-   * @param {(string | null)[] | null | undefined} labels
-   * @param {number | null | undefined} open Where the lane's arrow sits.
-   */
-  function barLabels(segs, labels, open) {
-    if (!labels) return '';
-    let s = '';
-    segs.forEach((g, j) => {
-      const t = labels[j];
-      if (!t) return;
-      const x0 = Number(g[0]), x1 = x0 + Number(g[1]);
-      const next = segs.reduce((m, h) => (Number(h[0]) >= x1 - 0.01 && Number(h[0]) < m ? Number(h[0]) : m), 100);
-      const arrow = open != null && Math.abs(Number(open) - x1) < 0.5;
-      s += '<span class="vz-table-lane-lab" style="left:' + n(x0) + '%" data-x0="' + n(x0) + '" data-x1="' +
-        n(x1) + '" data-nx="' + n(next) + '"' + (arrow ? ' data-arrow="1"' : '') + '>' + esc(t) + '</span>';
-    });
-    return s;
-  }
-
-  /**
-   * Place the bar labels under `host` that are not placed yet: on the bar when
-   * it fits, else after it when the gap to the lane's next bar holds it, else
-   * hidden (the tooltip still names the bar).
-   * @param {ParentNode} host
-   * @param {boolean} [again] Place every label anew (the width changed).
-   */
-  function fitLabels(host, again) {
-    const labs = /** @type {HTMLElement[]} */ (Array.from(
-      host.querySelectorAll(again ? '.vz-table-lane-lab' : '.vz-table-lane-lab:not(.is-fit)')));
-    if (!labs.length) return;
-    // Every read in one pass and every write in another: a write between two
-    // reads makes the browser lay the table out again, once per label.
-    if (again) {
-      labs.forEach((lab) => {
-        lab.classList.remove('is-fit', 'is-on', 'is-after');
-        lab.hidden = false;
-        lab.style.left = n(lab.getAttribute('data-x0')) + '%';
-        lab.style.maxWidth = '';
-      });
-    }
-    const room = labs.map((lab) => (lab.parentElement ? lab.parentElement.clientWidth : 0));
-    labs.forEach((lab, j) => {
-      if (room[j]) lab.classList.add('is-fit');
-    });
-    const text = labs.map((lab, j) => (room[j] ? lab.offsetWidth : 0));
-    labs.forEach((lab, j) => {
-      const w = room[j];
-      if (!w) return;
-      const px = (/** @type {string} */ k) => Number(lab.getAttribute(k)) / 100 * w;
-      const tw = text[j];
-      if (tw + 6 <= px('data-x1') - px('data-x0')) {
-        lab.classList.add('is-on');
-        lab.style.maxWidth = n(Math.floor(px('data-x1') - px('data-x0'))) + 'px';
-        return;
-      }
-      const gap = lab.hasAttribute('data-arrow') ? 10 : 3;
-      if (px('data-x1') + gap + tw + 3 <= px('data-nx')) {
-        lab.classList.add('is-after');
-        lab.style.left = 'calc(' + n(lab.getAttribute('data-x1')) + '% + ' + gap + 'px)';
-        lab.style.maxWidth = n(Math.floor(px('data-nx') - px('data-x1') - gap)) + 'px';
-        return;
-      }
-      lab.hidden = true;
-    });
-  }
-
-  /**
    * A lane's opening tag: its domain for the hover's time, and its strip.
    * @param {TableMarkInterval} c
    * @param {string} cls
@@ -589,8 +519,6 @@
     if (l.o != null) {
       s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
     }
-    // A thin lane is too low for text; an even lane and a full bar have room.
-    if (even || l.f) s += barLabels(l.s || [], l.l, l.o);
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -640,7 +568,6 @@
     });
     const op = c.openAt ? c.openAt[i] : null;
     if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
-    s += barLabels(c.segs[i] || [], c.barLabels ? c.barLabels[i] : null, op);
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h
@@ -844,7 +771,7 @@
       '</div>';
   }
 
-  V.table.marks = { glyph, cell, axis, shape, fitLabels };
+  V.table.marks = { glyph, cell, axis, shape };
 })();
 // --- table/axis.js
 // @ts-check
@@ -3711,22 +3638,18 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      // Bar labels need the drawn lane's width to pick their place.
+      // The axis ticks need the drawn column's width.
       grid.hooks.rows = (body) => {
-        T.marks.fitLabels(body);
         const table = body.closest('table');
         if (table) T.axis.fit(table);
       };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
-      // resize places the labels again.
+      // resize fits the axis again.
       if (typeof ResizeObserver !== 'undefined') {
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) {
-            T.marks.fitLabels(frame.box, w !== 0);
-            T.axis.fit(frame.box);
-          }
+          if (now && now !== w) T.axis.fit(frame.box);
           w = now;
         });
       }

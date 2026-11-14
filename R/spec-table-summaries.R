@@ -330,16 +330,6 @@ table_summary_specs <- function() {
           "never have one."
         )
       ),
-      bar_label = viz_arg(
-        type = "column", null = "no bar labels",
-        gear = gear("Columns", "column", "Bar label"),
-        describe = paste(
-          "Text written on each record's bar when it fits, else just after",
-          "it when the lane has room before its next bar, else nowhere (the",
-          "tooltip keeps the label). An empty value labels nothing. Drawn on",
-          "the main lane and on even lanes, not on thin ones."
-        )
-      ),
       overlap = viz_arg(
         type = "enum", default = "draw", values = c("draw", "worst"),
         gear = gear("Columns", "segmented", "Overlaps",

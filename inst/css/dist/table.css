@@ -1,4 +1,4 @@
-/* blockr.viz bundle e22b33ec25ec650cab0edd2a1ae6f4fe, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle ff83495fa18c0dc9af795e35e2dd9d04, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1649,30 +1649,6 @@ input.vz-table-search:focus {
 .vz-table-groups-ivcell .vz-table-lane-seg.is-outline {
   box-shadow: inset 0 0 0 1px var(--blockr-color-text-default, #111827);
 }
-/* Bar labels (a spans row's bar_label): dark text on the bar when it fits,
-   after it when the lane has room, hidden otherwise (marks.js fitLabels()).
-   Until placed they show nothing. Shown by opacity, never by visibility:
-   a visible child shows through a hidden parent, and the dock hides its
-   inactive panels with visibility. The label never runs past its room. */
-.vz-table-groups-ivcell .vz-table-lane-lab {
-  position: absolute;
-  top: 50%;
-  transform: translateY(calc(-50% - 1px));
-  font-size: 10.5px;
-  line-height: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  color: var(--blockr-color-text-default, #111827);
-  pointer-events: none;
-  opacity: 0;
-}
-.vz-table-groups-ivcell .vz-table-lane-lab.is-on {
-  opacity: 1;
-  padding-left: 3px;
-}
-.vz-table-groups-ivcell .vz-table-lane-lab.is-after {
-  opacity: 1;
-}
 /* Segment styles. Dashed (a skipped stretch) and hollow (a delay) paint the
    surface first, so they cut through a period drawn under them. A dot is one
    administration, a step a dose cut, both at the record's start. */
@@ -2114,6 +2090,12 @@ input.vz-table-search:focus {
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent > td {
   padding-top: 11px;
   padding-bottom: 3px;
+}
+/* Closed, nothing hangs under it: the same 14px split evenly, so the label,
+   the chevron and the marks sit on the row's middle. */
+.vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent.collapsed > td {
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 7px;
