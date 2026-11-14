@@ -1,4 +1,4 @@
-/* blockr.viz bundle 602366686da360220c9b4583a937445a, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle e22b33ec25ec650cab0edd2a1ae6f4fe, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -2304,6 +2304,18 @@ input.vz-table-search:focus {
 .vz-table-groups-ivcell .vz-table-lane-name.is-main {
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-default, #111827);
+}
+
+/* A section title over inner rows (`row_sections`): small bold type on the
+   rows' label edge, no rule and no count, a little air above. */
+.vz-table-groups-table tbody tr.vz-table-row-title > td {
+  padding-top: 8px;
+  padding-bottom: 0;
+  font-size: 12px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+  line-height: 16px;
+  border: 0;
 }
 /* --- table-view.css */
 /* The table block's view (inst/js/table/): what its frame and markup add to

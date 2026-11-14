@@ -1,6 +1,6 @@
 Package: blockr.viz
 Title: Chart and Table Blocks for 'blockr'
-Version: 0.3.0.9074
+Version: 0.3.0.9075
 Authors@R: c(
     person(given = "Christoph",
            family = "Sax",

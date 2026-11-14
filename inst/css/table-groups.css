@@ -1281,3 +1281,15 @@
   font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-default, #111827);
 }
+
+/* A section title over inner rows (`row_sections`): small bold type on the
+   rows' label edge, no rule and no count, a little air above. */
+.vz-table-groups-table tbody tr.vz-table-row-title > td {
+  padding-top: 8px;
+  padding-bottom: 0;
+  font-size: 12px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+  line-height: 16px;
+  border: 0;
+}

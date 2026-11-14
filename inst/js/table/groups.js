@@ -108,14 +108,21 @@
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
       // Bar labels need the drawn lane's width to pick their place.
-      grid.hooks.rows = (body) => T.marks.fitLabels(body);
+      grid.hooks.rows = (body) => {
+        T.marks.fitLabels(body);
+        const table = body.closest('table');
+        if (table) T.axis.fit(table);
+      };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
       // resize places the labels again.
       if (typeof ResizeObserver !== 'undefined') {
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) T.marks.fitLabels(frame.box, w !== 0);
+          if (now && now !== w) {
+            T.marks.fitLabels(frame.box, w !== 0);
+            T.axis.fit(frame.box);
+          }
           w = now;
         });
       }

@@ -186,6 +186,19 @@ table_spec_look <- function() {
       )
     ),
 
+    row_sections = table_arg(
+      type = "column", default = NULL, null = "no titles",
+      applies = "groups",
+      gear = gear("Look", "column", "Sections of the inner rows"),
+      example = "Layer",
+      describe = paste(
+        "Column naming the section each inner row of a nested table belongs",
+        "to. An outer row whose inner rows fall in more than one section",
+        "shows each section's name, in small bold type, above its first",
+        "row. One section: no title. Sorting by a column drops the titles."
+      )
+    ),
+
     collapsible = table_arg(
       type = "bool", default = TRUE,
       applies = c("records", "variables"),

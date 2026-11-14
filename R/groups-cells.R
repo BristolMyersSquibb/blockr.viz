@@ -42,6 +42,9 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     ),
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
+    title = if (!is.null(rows$.title) && any(!is.na(rows$.title))) {
+      as.character(rows$.title)
+    },
     head_count = cells_head_count(rows, prep, cfg),
     pick = !is.null(drill),
     # Columns a row click claims, outer to inner (R/table-drill.R).

@@ -309,6 +309,7 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
                      character(1L), USE.NAMES = FALSE),
     size = chr_state(s$size) %||% "md",
     lane_size = chr_state(s$lane_size) %||% "sm",
+    x_unit = chr_state(s$x_unit),
     track = isTRUE(as.logical(s$track)),
     full = s$.full_levels,
     ovl = if (groups_spans_has_overlay(s)) groups_col(sid, "ovl"),

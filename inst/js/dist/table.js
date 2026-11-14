@@ -1,5 +1,5 @@
-// blockr.viz bundle 937648f7775aaf76dc2788e44468d76a, built by tools/bundle.js. Do not edit.
-// sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
+// blockr.viz bundle 2f8afb23786e1f65f36869ba7ab4ad27, built by tools/bundle.js. Do not edit.
+// sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
 /**
@@ -235,8 +235,24 @@
     return out + '</tr>';
   }
 
+  /**
+   * A section title over inner row `i` (`rows.title`): one cell across the
+   * row, on the row's label edge, in small bold type.
+   * @param {TableModel} m
+   * @param {TableStructure} st
+   * @param {number} i
+   * @param {boolean} [flush] See indentSteps().
+   */
+  function title(m, st, i, flush) {
+    const t = m.rows && m.rows.title ? m.rows.title[i] : null;
+    const steps = indentSteps(st, i, flush);
+    return '<tr class="vz-table-row-title" aria-hidden="true"><td class="vz-table-stub vz-table-groups-label-col"' +
+      ' colspan="' + (m.cols.length || 1) + '"' + (steps > 0 ? ' style="--vz-indent:' + steps + '"' : '') + '>' +
+      esc(t == null ? '' : t) + '</td></tr>';
+  }
+
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, indentSteps, headKind };
+  V.table.html = { th, td, section, row, title, indentSteps, headKind };
 })();
 // --- table/marks.js
 // @ts-check
@@ -818,14 +834,88 @@
       ' style="left:' + n(p) + '%">' + esc(a.labels[k]) + '</span>').join('');
     // A swimlane with named bars leaves their gutter blank.
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
+    const fit = a.d1 != null && a.d0 != null
+      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '')
+      : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
-      '<span class="vz-table-groups-axis-in">' + ticks + '</span>' +
+      '<span class="vz-table-groups-axis-in"' + fit + '>' + ticks + '</span>' +
       (dw != null ? '<span class="vz-table-groups-axis-pad" style="width:' + n(dw) + 'ch"></span>' : '') +
       '</div>';
   }
 
   V.table.marks = { glyph, cell, axis, shape, fitLabels };
+})();
+// --- table/axis.js
+// @ts-check
+/**
+ * The ticks of a numeric swimlane axis, spaced by the column's drawn width.
+ * R sends the axis with ticks for no particular width and, for a numeric
+ * swimlane, its domain and unit (R/table-groups-cols.R table_groups_axis());
+ * once the table is laid out, fit() replaces the ticks with the finest step
+ * of the 1 / 2 / 2.5 / 5 ladder that keeps labels 60px apart, the first
+ * after the unit ("Day 0"). A date axis keeps R's ticks.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const esc = V.util.esc;
+
+  /** The steps, times a power of ten. */
+  const STEPS = [1, 2, 2.5, 5];
+
+  /**
+   * The ticks across `d0` to `d1` drawn `w` px wide, labels `gap` px apart.
+   * @param {number} d0 @param {number} d1 @param {number} w @param {number} [gap]
+   * @returns {number[]}
+   */
+  function ticks(d0, d1, w, gap = 60) {
+    const range = d1 - d0;
+    if (!(range > 0) || !(w > 0)) return [];
+    const min = range * gap / w;
+    let mag = Math.pow(10, Math.floor(Math.log10(min)));
+    let step = 0;
+    while (!step) {
+      for (const s of STEPS) if (!step && s * mag >= min) step = s * mag;
+      mag *= 10;
+    }
+    /** @type {number[]} */
+    const out = [];
+    for (let x = Math.ceil(d0 / step - 1e-9) * step; x <= d1 + 1e-9; x += step) {
+      out.push(Math.round(x * 1e6) / 1e6 || 0);
+    }
+    return out;
+  }
+
+  /**
+   * Fit every numeric swimlane axis in `host` to its width; an axis is
+   * redrawn only when its width changed.
+   * @param {ParentNode} host
+   */
+  function fit(host) {
+    const axes = /** @type {HTMLElement[]} */ (Array.from(host.querySelectorAll('.vz-table-groups-axis-in[data-d1]')));
+    // Every width read before any write, so the table is laid out once.
+    const ws = axes.map((el) => el.clientWidth);
+    axes.forEach((el, k) => {
+      const w = ws[k];
+      if (!w || el.getAttribute('data-w') === String(w)) return;
+      const d0 = Number(el.getAttribute('data-d0'));
+      const d1 = Number(el.getAttribute('data-d1'));
+      const unit = el.getAttribute('data-unit');
+      const at = ticks(d0, d1, w);
+      if (at.length < 2) return;
+      el.setAttribute('data-w', String(w));
+      el.innerHTML = at.map((x, j) => {
+        const p = Math.round((x - d0) / (d1 - d0) * 1e4) / 100;
+        const text = (j === 0 && unit ? unit + ' ' : '') + String(x);
+        return '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
+          ' style="left:' + p + '%">' + esc(text) + '</span>';
+      }).join('');
+    });
+  }
+
+  V.table.axis = { ticks, fit };
 })();
 // --- table/tooltip.js
 // @ts-check
@@ -1384,6 +1474,9 @@
     return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
+  /** @param {TableModel | null} m @returns {TableModel} */
+  const m0 = (m) => /** @type {TableModel} */ (m);
+
   class Grid {
     /**
      * @param {HTMLElement} box The scroll box the table goes in.
@@ -1626,6 +1719,9 @@
       let prevBlk = NaN;
       /** @type {number | null} */
       let hideBelow = null;
+      // Section titles over inner rows, while the rows keep their order.
+      const titles = m0(this.model).rows && m0(this.model).rows.title;
+      const sorted = this.sortCol != null && this.sortDir !== 0;
       for (const i of view) {
         const b = st.blk[i];
         const p = /** @type {number[]} */ (st.path.get(b));
@@ -1644,6 +1740,7 @@
         const ind = st.indent ? st.indent[i] : 0;
         if (hideBelow != null && ind > hideBelow) continue;
         hideBelow = null;
+        if (titles && titles[i] && !sorted) out.push({ t: i });
         out.push({ i });
         if (this.shutRows.has(i)) hideBelow = ind;
       }
@@ -1749,6 +1846,7 @@
         return H.section(m, it.s, { shut: this.shut.has(it.s), fold: this.flags.collapsible,
                                     extra: h.secClass ? h.secClass(it.s) : '' });
       }
+      if (it.t != null) return H.title(m, /** @type {TableStructure} */ (this._st), it.t, this.flags.flush);
       const i = /** @type {number} */ (it.i);
       const next = this._items[k + 1];
       const last = !next || (next.s != null && m.sections != null &&
@@ -3614,14 +3712,21 @@
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
       // Bar labels need the drawn lane's width to pick their place.
-      grid.hooks.rows = (body) => T.marks.fitLabels(body);
+      grid.hooks.rows = (body) => {
+        T.marks.fitLabels(body);
+        const table = body.closest('table');
+        if (table) T.axis.fit(table);
+      };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
       // resize places the labels again.
       if (typeof ResizeObserver !== 'undefined') {
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) T.marks.fitLabels(frame.box, w !== 0);
+          if (now && now !== w) {
+            T.marks.fitLabels(frame.box, w !== 0);
+            T.axis.fit(frame.box);
+          }
           w = now;
         });
       }

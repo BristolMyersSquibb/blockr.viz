@@ -302,6 +302,15 @@ table_summary_specs <- function() {
           "fields)."
         )
       ),
+      x_unit = viz_arg(
+        type = "string", default = NULL, null = "numbers only",
+        gear = gear("Columns", "text", "Axis unit"),
+        describe = paste(
+          "Word written before the first label of the column's axis",
+          "(\"Day\" reads \"Day 0\"). Only on a numeric axis; a date axis",
+          "names its own dates."
+        )
+      ),
       lane_size = viz_arg(
         type = "enum", default = "sm", values = c("sm", "md"),
         gear = gear("Columns", "segmented", "Lane height",

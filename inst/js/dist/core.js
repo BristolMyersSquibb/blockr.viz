@@ -1,4 +1,4 @@
-// blockr.viz bundle dd0e3685310d22a88769398be5f2e384, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle d0b6e879728364a81c5930018829a934, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -6875,6 +6875,19 @@
               "slot": false,
               "ctrl": true
             },
+            "x_unit": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis unit"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "lane_size": {
               "type": {
                 "name": "enum"
@@ -7474,6 +7487,22 @@
         "control": "segmented",
         "label": "Groups at start",
         "labels": ["Closed", "Open"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_sections": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Sections of the inner rows"
       },
       "slot": true,
       "ctrl": true

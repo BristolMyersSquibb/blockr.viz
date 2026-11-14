@@ -577,9 +577,12 @@
       ' style="left:' + n(p) + '%">' + esc(a.labels[k]) + '</span>').join('');
     // A swimlane with named bars leaves their gutter blank.
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
+    const fit = a.d1 != null && a.d0 != null
+      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '')
+      : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
-      '<span class="vz-table-groups-axis-in">' + ticks + '</span>' +
+      '<span class="vz-table-groups-axis-in"' + fit + '>' + ticks + '</span>' +
       (dw != null ? '<span class="vz-table-groups-axis-pad" style="width:' + n(dw) + 'ch"></span>' : '') +
       '</div>';
   }

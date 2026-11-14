@@ -248,8 +248,9 @@ groups_prep_groups <- function(data, by) {
   parent <- if (length(by) == 2L) by[[1L]]
   keys <- c(parent, group)
   # A missing group draws no row, so a colour level only such rows carry gets
-  # no slot or legend key.
-  drawn <- stats::complete.cases(data[keys])
+  # no slot or legend key. Nested, a record with its outer group and no inner
+  # one still draws on its outer row (a patient's own records).
+  drawn <- stats::complete.cases(data[if (is.null(parent)) keys else parent])
   list(data = data, all = all, group = group, parent = parent, keys = keys,
        drawn = drawn)
 }

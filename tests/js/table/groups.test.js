@@ -891,3 +891,38 @@ test('lanes: full bars draw below the main lane, each named in a gutter the axis
   assert.equal(t2.cell(0, 7).querySelector('.vz-table-groups-ivnamed'), null);
   assert.equal(t2.$('.vz-table-groups-axis-lpad'), null);
 });
+
+test('row titles: a small title above the first row of each section, folded with its rows', () => {
+  const m = nested();
+  m.n = 6;
+  m.cols[0].disp = ['Cardiac', 'Angina', 'Arrhythmia', 'Rash', 'Skin', 'Itch'];
+  m.cols[1].disp = ['5', '2', '3', '4', '4', '1'];
+  m.cols[1].key = [5, 2, 3, 4, 4, 1];
+  m.cols[1].mark.width = [100, 40, 60, 80, 80, 20];
+  m.rows = { indent: [0, 1, 1, 1, 0, 1], title: [null, 'Adverse events', null, 'Con meds', null, null] };
+  const t = mount(payload({ data: m, config: G }));
+  const titles = () => t.$$('tbody tr.vz-table-row-title').map((r) => r.textContent);
+  assert.deepEqual(titles(), ['Adverse events', 'Con meds']);
+  // Each sits right above its section's first row.
+  const first = t.$('tbody tr.vz-table-row-title');
+  assert.equal(first.nextElementSibling.getAttribute('data-i'), '1');
+  // Folding the parent hides its titles with its rows.
+  t.click(t.$$('tbody tr.vz-table-row')[0].querySelector('.vz-table-indent-btn'));
+  assert.deepEqual(titles(), []);
+});
+
+test('the axis of a numeric swimlane: ticks spaced by the drawn width, its unit first', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const A = t.win.Blockr.viz.table.axis;
+  // 450 days in 230px: 50 is under 60px, 200 the first step that is not.
+  assert.deepEqual(Array.from(A.ticks(0, 450, 230)), [0, 200, 400]);
+  assert.deepEqual(Array.from(A.ticks(0, 450, 900)), [0, 50, 100, 150, 200, 250, 300, 350, 400, 450]);
+  assert.deepEqual(Array.from(A.ticks(0, 100, 960)), [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  assert.equal(A.ticks(0, 450, 0).length, 0);
+  const host = t.win.document.createElement('div');
+  host.innerHTML = '<span class="vz-table-groups-axis-in" data-d0="0" data-d1="450" data-unit="Day"></span>';
+  const ax = host.firstChild;
+  Object.defineProperty(ax, 'clientWidth', { value: 230 });
+  A.fit(host);
+  assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['Day 0', '200', '400']);
+});

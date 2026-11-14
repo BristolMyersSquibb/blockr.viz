@@ -81,6 +81,11 @@ interface TableCol {
 interface TableAxis {
   at: number[];
   labels: string[];
+  /** A numeric swimlane's domain and unit: the browser spaces its ticks by
+   *  the drawn width (axis.js fit()). */
+  d0?: number;
+  d1?: number;
+  unit?: string;
 }
 
 type TableNums = (number | null)[];
@@ -211,6 +216,9 @@ interface TableRows {
   /** Groups: how many rows a heading holds, shown while it is folded;
    *  `null` on other rows. */
   count?: (number | null)[] | null;
+  /** Groups: the section title drawn above an inner row, the first of its
+   *  section (`row_sections`); `null` on other rows. */
+  title?: (string | null)[] | null;
 }
 
 /** One column of cards: a card per row. */
@@ -304,7 +312,9 @@ interface TableStructure {
 }
 
 /** An item of the drawn body: a section header or a row. */
-type TableItem = { s: number; i?: undefined } | { i: number; s?: undefined };
+type TableItem = { s: number; i?: undefined; t?: undefined } |
+  { i: number; s?: undefined; t?: undefined } |
+  { t: number; s?: undefined; i?: undefined };
 
 /** What the Grid draws a row or section with, besides the model. */
 interface TableGridHooks {
@@ -512,6 +522,7 @@ interface VizTableNamespace {
         o: { last: boolean; shut: boolean; extra: string; stubCls?: string; flush?: boolean;
              head?: string; cell?(c: TableCol, i: number): string | null }): string;
     headKind(m: TableModel, i: number, head: string | undefined): string;
+    title(m: TableModel, st: TableStructure, i: number, flush?: boolean): string;
   };
   drill: {
     same(a: TableSelection | null, b: TableSelection | null): boolean;
@@ -532,6 +543,10 @@ interface VizTableNamespace {
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
     fitLabels(host: ParentNode, again?: boolean): void;
+  };
+  axis: {
+    ticks(d0: number, d1: number, w: number, gap?: number): number[];
+    fit(host: ParentNode): void;
   };
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;

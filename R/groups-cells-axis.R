@@ -153,3 +153,18 @@ cells_axis_date_start <- function(d, st) {
   jan <- as.Date(sprintf("%04d-01-01", yr))
   if (jan >= d) jan else as.Date(sprintf("%04d-01-01", yr + 1L))
 }
+
+#' The axis unit (`x_unit`) of a numeric swimlane before its first tick
+#' label, "Day 0"; `t` as cells_axis_ticks() and friends return it. The unit
+#' is `NULL` on any other axis.
+#' @noRd
+cells_axis_unit <- function(t, p, dom) {
+  unit <- if (!isTRUE(dom$date) && identical(p$kind, "interval")) {
+    chr_state(p$x_unit)
+  }
+  if (length(unit) && nzchar(unit) && length(t$labels)) {
+    t$labels[[1L]] <- paste(unit, t$labels[[1L]])
+    t$unit <- unit
+  }
+  t
+}

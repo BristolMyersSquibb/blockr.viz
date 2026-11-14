@@ -676,6 +676,19 @@
               "slot": false,
               "ctrl": true
             },
+            "x_unit": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis unit"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "lane_size": {
               "type": {
                 "name": "enum"
@@ -1275,6 +1288,22 @@
         "control": "segmented",
         "label": "Groups at start",
         "labels": ["Closed", "Open"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_sections": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Sections of the inner rows"
       },
       "slot": true,
       "ctrl": true

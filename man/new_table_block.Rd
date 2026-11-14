@@ -22,6 +22,7 @@ new_table_block(
   facet_layout = "by_summary",
   group_rows = "name",
   open = "none",
+  row_sections = NULL,
   sort_by = "value",
   sort_dir = NULL,
   top_n = NULL,
@@ -82,6 +83,8 @@ new_table_block(
 \item{group_rows}{What the outer rows of a nested table (two \code{by} columns) show. "name": the group's name and its number of rows, across the row, with the groups open. "summary": every summary over the group's rows, on the group's line. A summary with \code{func = "identity"} stays empty on an outer row either way. One of \code{"name"}, \code{"summary"}. Default: \code{"name"}.}
 
 \item{open}{With \code{group_rows = "summary"}, whether the outer rows start closed ("none") or open ("all"). The header's button opens and closes them all either way. One of \code{"none"}, \code{"all"}. Default: \code{"none"}.}
+
+\item{row_sections}{Column naming the section each inner row of a nested table belongs to. An outer row whose inner rows fall in more than one section shows each section's name, in small bold type, above its first row. One section: no title. Sorting by a column drops the titles. Default \code{NULL}: no titles.}
 
 \item{sort_by}{Row order: "value", "data", "alpha", a summary's name, a facet level, or a numeric column (its per-row minimum). Default: \code{"value"}.}
 
@@ -242,7 +245,9 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{seg_style}: How a record draws, by value: "dashed" a dashed line (a skipped period), "hollow" an outlined box (a delay), "dot" a ring at its start (one administration), "step" a small down step at its start (a dose cut), "outline" filled with a dark edge (a serious event), "thinner" a lower bar (a reduced dose), "hairline" a 1px line (a dose of zero). Anything else draws solid. A dot or a step needs no end. Default \code{NULL}: all solid.
 \item \code{event_tag}: Short text, per event. An event with a value draws as that text in a small box just after its position ("AE") instead of its shape. A shape level whose events all carry a tag shows a box in the legend. Default \code{NULL}: shapes only.
 \item \code{tip}: The tooltip of a record, segment or event, as is: its text up to the first " · " heads the card, each further part is a line. An empty value keeps the computed tooltip (label, level, span, fields). Default \code{NULL}: the computed tooltip.
+\item \code{x_unit}: Word written before the first label of the column's axis ("Day" reads "Day 0"). Only on a numeric axis; a date axis names its own dates. Default \code{NULL}: numbers only.
 \item \code{lane_size}: Height of the lanes above the main lane: "sm" 5px with a 3px line, "md" 9px with a 5px bar whose free ends round, for rows where the lanes carry the story (a drug per lane). One of \code{"sm"}, \code{"md"}. Default: \code{"sm"}.
+\item \code{track}: A grey track behind the main lane and the full bars, as a bar column draws it. Off: the bars stand on the surface. Thin lanes never have one. Default: \code{FALSE}.
 \item \code{bar_label}: Text written on each record's bar when it fits, else just after it when the lane has room before its next bar, else nowhere (the tooltip keeps the label). An empty value labels nothing. Drawn on the main lane and on even lanes, not on thin ones. Default \code{NULL}: no bar labels.
 \item \code{overlap}: How records that overlap on one lane draw. "draw": each its own bar, the later over the earlier. "worst": cut into pieces, each coloured by the highest colour level active there (legend order), so one stripe shows the worst stretch. One of \code{"draw"}, \code{"worst"}. Default: \code{"draw"}.
 \item \code{parent_lanes}: With \code{group_rows = "summary"}, an outer row draws its rows' lanes, events and open ends as an inner row does. Off: the outer row draws the main lane's bars only. Default: \code{FALSE}.

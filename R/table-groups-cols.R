@@ -133,8 +133,15 @@ table_groups_axis <- function(p, prep) {
     last <- length(t$labels)
     t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
+  t <- cells_axis_unit(t, p, dom)
   pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
-  table_groups_compact(list(at = groups_arr(pos), labels = groups_arr(t$labels)))
+  # A numeric swimlane's domain goes along: the browser spaces its ticks by
+  # the column's drawn width (axis.js fit()).
+  fit <- identical(p$kind, "interval") && !isTRUE(dom$date)
+  table_groups_compact(list(
+    at = groups_arr(pos), labels = groups_arr(t$labels),
+    d0 = if (fit) dom$d0, d1 = if (fit) dom$d1, unit = if (fit) t$unit
+  ))
 }
 
 # A vector as a JSON array, also at length one.

@@ -160,6 +160,7 @@ table_groups_rows <- function(cells, pick) {
     indent = if (nested) as.integer(cells$level),
     strong = if (nested) parent,
     count = cells$head_count,
+    title = cells$title,
     keys = if (pick) table_groups_row_keys(cells, parent)
   ))
   if (length(out)) out

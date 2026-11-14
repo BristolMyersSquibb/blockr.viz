@@ -284,7 +284,8 @@ test_that("a large swimlane has the same header axis as a small one", {
     ))
     table_groups_axis(p$plan[[1L]], p)
   }
-  expect_named(axis(list(size = "lg")), c("at", "labels"))
+  # A numeric swimlane sends its domain for the browser's refit (axis.js).
+  expect_named(axis(list(size = "lg")), c("at", "labels", "d0", "d1"))
   expect_identical(axis(list(size = "lg")), axis(list()))
 })
 

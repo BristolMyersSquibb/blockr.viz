@@ -121,11 +121,9 @@ paint_axis <- function(p, prep, x, w, ytop, gl) {
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- cells_axis_ticks(
-      dom$d0, dom$d1,
-      k = if (identical(p$kind, "interval")) 7L else 4L
-    )
-    list(at = at, labels = groups_fmt(at))
+    at <- cells_axis_ticks(dom$d0, dom$d1,
+                           k = if (identical(p$kind, "interval")) 7L else 4L)
+    cells_axis_unit(list(at = at, labels = groups_fmt(at)), p, dom)
   }
   if (length(t$at) < 2L) return(list())
   last <- length(t$at)

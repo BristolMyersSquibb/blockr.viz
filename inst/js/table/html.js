@@ -232,6 +232,22 @@
     return out + '</tr>';
   }
 
+  /**
+   * A section title over inner row `i` (`rows.title`): one cell across the
+   * row, on the row's label edge, in small bold type.
+   * @param {TableModel} m
+   * @param {TableStructure} st
+   * @param {number} i
+   * @param {boolean} [flush] See indentSteps().
+   */
+  function title(m, st, i, flush) {
+    const t = m.rows && m.rows.title ? m.rows.title[i] : null;
+    const steps = indentSteps(st, i, flush);
+    return '<tr class="vz-table-row-title" aria-hidden="true"><td class="vz-table-stub vz-table-groups-label-col"' +
+      ' colspan="' + (m.cols.length || 1) + '"' + (steps > 0 ? ' style="--vz-indent:' + steps + '"' : '') + '>' +
+      esc(t == null ? '' : t) + '</td></tr>';
+  }
+
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, indentSteps, headKind };
+  V.table.html = { th, td, section, row, title, indentSteps, headKind };
 })();

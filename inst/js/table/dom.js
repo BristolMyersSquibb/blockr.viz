@@ -92,6 +92,9 @@
     return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
+  /** @param {TableModel | null} m @returns {TableModel} */
+  const m0 = (m) => /** @type {TableModel} */ (m);
+
   class Grid {
     /**
      * @param {HTMLElement} box The scroll box the table goes in.
@@ -334,6 +337,9 @@
       let prevBlk = NaN;
       /** @type {number | null} */
       let hideBelow = null;
+      // Section titles over inner rows, while the rows keep their order.
+      const titles = m0(this.model).rows && m0(this.model).rows.title;
+      const sorted = this.sortCol != null && this.sortDir !== 0;
       for (const i of view) {
         const b = st.blk[i];
         const p = /** @type {number[]} */ (st.path.get(b));
@@ -352,6 +358,7 @@
         const ind = st.indent ? st.indent[i] : 0;
         if (hideBelow != null && ind > hideBelow) continue;
         hideBelow = null;
+        if (titles && titles[i] && !sorted) out.push({ t: i });
         out.push({ i });
         if (this.shutRows.has(i)) hideBelow = ind;
       }
@@ -457,6 +464,7 @@
         return H.section(m, it.s, { shut: this.shut.has(it.s), fold: this.flags.collapsible,
                                     extra: h.secClass ? h.secClass(it.s) : '' });
       }
+      if (it.t != null) return H.title(m, /** @type {TableStructure} */ (this._st), it.t, this.flags.flush);
       const i = /** @type {number} */ (it.i);
       const next = this._items[k + 1];
       const last = !next || (next.s != null && m.sections != null &&
