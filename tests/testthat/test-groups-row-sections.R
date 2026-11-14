@@ -140,3 +140,19 @@ test_that("repeats of one record do not stack", {
   expect_length(sl$Dizziness, 1L)
   expect_length(sl$Diarrhoea, 2L)
 })
+
+test_that("records that only touch share a track", {
+  # A run of response reads: each ends on the day the next one starts.
+  d <- data.frame(
+    P = "a", R = "Response", L = "Response",
+    C = c("SD", "PR", "CR"), x = c(1, 50, 120), xe = c(50, 120, 200)
+  )
+  m <- rs_model(d, row_sections = NULL, summaries = list(list(
+    type = "spans", x = "x", xend = "xe", color = "C", lane = "L",
+    inner_overlap = "stack"
+  )))
+  sl <- stats::setNames(m$cells$cols[[length(m$cells$cols)]]$sl,
+                        m$cells$label)
+  expect_length(sl$Response, 1L)
+  expect_length(sl$Response[[1L]]$s, 3L)
+})

@@ -350,8 +350,9 @@ groups_spans_has_lanes <- function(s) {
 }
 
 #' Records `rows` of one lane in tracks that do not overlap: each record in
-#' start order goes on the first track whose last record ends before it
-#' starts, so touching records sit on two tracks. A record the same as one
+#' start order goes on the first track whose last record ends at or before
+#' its start: records that only touch (a run of response reads) share a
+#' track. A record the same as one
 #' already placed (start, end and colour: a repeat, not a second episode)
 #' joins it. At least one track (empty when there is no record).
 #' @noRd
@@ -369,7 +370,7 @@ groups_spans_tracks <- function(g, rows) {
       out[[k]] <- c(out[[k]], r)
       next
     }
-    k <- which(ends < g$xs[[r]])[1L]
+    k <- which(ends <= g$xs[[r]])[1L]
     if (is.na(k)) {
       k <- length(ends) + 1L
       out[[k]] <- integer()
