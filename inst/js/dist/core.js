@@ -1,4 +1,4 @@
-// blockr.viz bundle d0b6e879728364a81c5930018829a934, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle d680cfca3a983a71d2147c82f4c5fa61, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -6943,6 +6943,22 @@
                 "control": "segmented",
                 "label": "Overlaps",
                 "labels": ["Drawn over each other", "Worst level"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "inner_overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "same",
+              "values": ["same", "stack"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps on inner rows",
+                "labels": ["As above", "Stacked"]
               },
               "slot": false,
               "ctrl": true

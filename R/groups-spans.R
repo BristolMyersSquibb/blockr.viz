@@ -75,6 +75,18 @@ groups_spans_split <- function(g, by) {
   lapply(by, function(rows) groups_spans_segs(g, rows[draws[rows]]))
 }
 
+#' groups_spans_split() for stacked overlaps: each row's main lane keeps the
+#' first track of its records, each record whole (groups_spans_tracks());
+#' groups_spans_lanes() draws the other tracks.
+#' @noRd
+groups_spans_split_stacked <- function(g, by) {
+  g1 <- utils::modifyList(g, list(worst = FALSE))
+  draws <- g$ok & g$main
+  lapply(by, function(rows) {
+    groups_spans_segs(g1, groups_spans_tracks(g, rows[draws[rows]])[[1L]])
+  })
+}
+
 #' What every part of a spans row reads off the slice: numeric start and end,
 #' style codes, lane values, which records draw (`ok`) and which sit on the
 #' main lane (`main`), and `seg(r)`, record `r` as a segment or NULL.
@@ -263,7 +275,7 @@ groups_spans_styles <- function(slice, col) {
 #' nothing: its lanes are one subject's facts. `g` is the slice's reader, `by`
 #' its rows per target row (groups_rows_by_key()).
 #' @noRd
-groups_spans_lanes <- function(g, by, s) {
+groups_spans_lanes <- function(g, by, s, stack = FALSE) {
   slice <- g$slice
   opc <- chr_state(s$open)
   op <- if (!is.null(opc) && opc %in% names(slice)) {
@@ -297,15 +309,39 @@ groups_spans_lanes <- function(g, by, s) {
       per <- split(on, g$ln[on])
       for (l in lv[lv %in% names(per)]) {
         lr <- per[[l]]
-        segs <- groups_spans_segs(g, lr[g$ok[lr]])
-        bx <- boxes(lr)
-        evs <- events(lr)
-        if (!length(segs) && !length(bx) && !length(evs)) next
-        sub[[length(sub) + 1L]] <- list(
-          nm = l, segs = segs, bx = bx, ev = evs, fl = l %in% s$.full_levels,
-          op = !is.null(op) && isTRUE(any(op[lr], na.rm = TRUE))
-        )
+        # Stacked (`inner_overlap`): one copy of the lane per track of
+        # records that do not overlap, each record drawn whole; the strip
+        # and the events stay on the first.
+        tracks <- if (stack) groups_spans_tracks(g, lr[g$ok[lr]]) else list(NULL)
+        for (k in seq_along(tracks)) {
+          tr <- tracks[[k]]
+          segs <- if (is.null(tr)) {
+            groups_spans_segs(g, lr[g$ok[lr]])
+          } else {
+            groups_spans_segs(utils::modifyList(g, list(worst = FALSE)), tr)
+          }
+          bx <- if (k == 1L) boxes(lr) else list()
+          evs <- if (k == 1L) events(lr) else list()
+          if (!length(segs) && !length(bx) && !length(evs)) next
+          own <- if (is.null(tr)) lr else tr
+          sub[[length(sub) + 1L]] <- list(
+            nm = l, segs = segs, bx = bx, ev = evs,
+            fl = l %in% s$.full_levels,
+            op = !is.null(op) && isTRUE(any(op[own], na.rm = TRUE))
+          )
+        }
       }
+    }
+    # Stacked, the main lane's further tracks draw first among the full bars.
+    if (stack) {
+      main <- rows[(g$ok & g$main)[rows]]
+      more <- groups_spans_tracks(g, main)[-1L]
+      g1 <- utils::modifyList(g, list(worst = FALSE))
+      sub <- c(lapply(more, function(tr) {
+        list(nm = s$.full_levels[1L] %||% "", segs = groups_spans_segs(g1, tr),
+             bx = list(), ev = list(), fl = TRUE,
+             op = !is.null(op) && isTRUE(any(op[tr], na.rm = TRUE)))
+      }), sub)
     }
     list(sub = sub, ms = boxes(rows[g$main[rows]]))
   })
@@ -315,4 +351,37 @@ groups_spans_lanes <- function(g, by, s) {
 #' @noRd
 groups_spans_has_lanes <- function(s) {
   !is.null(chr_state(s$lane)) || !is.null(chr_state(s$strip))
+}
+
+#' Records `rows` of one lane in tracks that do not overlap: each record in
+#' start order goes on the first track whose last record ends before it
+#' starts, so touching records sit on two tracks. A record the same as one
+#' already placed (start, end and colour: a repeat, not a second episode)
+#' joins it. At least one track (empty when there is no record).
+#' @noRd
+groups_spans_tracks <- function(g, rows) {
+  if (!length(rows)) return(list(integer()))
+  rows <- rows[order(g$xs[rows], g$end[rows])]
+  ends <- numeric()
+  out <- list()
+  seen <- character()
+  at <- integer()
+  for (r in rows) {
+    key <- paste(g$xs[[r]], g$end[[r]], g$fill[[r]])
+    k <- at[match(key, seen)]
+    if (!is.na(k)) {
+      out[[k]] <- c(out[[k]], r)
+      next
+    }
+    k <- which(ends < g$xs[[r]])[1L]
+    if (is.na(k)) {
+      k <- length(ends) + 1L
+      out[[k]] <- integer()
+    }
+    out[[k]] <- c(out[[k]], r)
+    ends[[k]] <- g$end[[r]]
+    seen <- c(seen, key)
+    at <- c(at, k)
+  }
+  out
 }

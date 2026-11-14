@@ -351,6 +351,18 @@ table_summary_specs <- function() {
           "so one stripe shows the worst stretch."
         )
       ),
+      inner_overlap = viz_arg(
+        type = "enum", default = "same", values = c("same", "stack"),
+        gear = gear("Columns", "segmented", "Overlaps on inner rows",
+                    labels = c("As above", "Stacked")),
+        describe = paste(
+          "How a lane's records that overlap draw on the inner rows of a",
+          "nested table. \"same\": as `overlap` says. \"stack\": each record",
+          "whole, a record that overlaps an earlier one on a copy of the lane",
+          "under it, so two episodes of one event read as two bars. Outer",
+          "rows keep `overlap`."
+        )
+      ),
       parent_lanes = viz_arg(
         type = "bool", default = FALSE,
         gear = gear("Columns", "toggle", "Lanes on group rows"),

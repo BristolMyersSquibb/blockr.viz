@@ -273,7 +273,12 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
   # overlays and the lanes.
   g <- groups_spans_reader(slice, s)
   by <- groups_rows_by_key(slice, target, tkeys)
-  segs <- groups_spans_split(g, by)
+  # Stacked overlaps (`inner_overlap`) on an inner row of a swimlane with
+  # lanes: the main lane keeps its first track, the others draw under it.
+  stack <- !isTRUE(parent_row) && groups_spans_has_lanes(s) &&
+    identical(chr_state(s$inner_overlap), "stack")
+  segs <- if (stack) groups_spans_split_stacked(g, by) else
+    groups_spans_split(g, by)
   target[[groups_col(sid, "segs")]] <- I(segs)
   target[[groups_col(sid, "start")]] <- vapply(segs, function(ss) {
     if (length(ss)) ss[[1L]]$s else NA_real_
@@ -294,7 +299,7 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
     target[[groups_col(sid, "lanes")]] <- I(if (pool) {
       rep(list(list(sub = list(), ms = list())), nrow(target))
     } else {
-      groups_spans_lanes(g, by, s)
+      groups_spans_lanes(g, by, s, stack = stack)
     })
   }
   target

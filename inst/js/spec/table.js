@@ -748,6 +748,22 @@
               "slot": false,
               "ctrl": true
             },
+            "inner_overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "same",
+              "values": ["same", "stack"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps on inner rows",
+                "labels": ["As above", "Stacked"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "parent_lanes": {
               "type": {
                 "name": "bool"
