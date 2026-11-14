@@ -181,3 +181,25 @@ test('showTab opens the gear at a tab of its own', noUi, () => {
   t.gear.showTab('Nope');
   assert.equal(t.el.querySelector('.blockr-tray-nav__tab.is-current').textContent, 'Lanes');
 });
+
+test('a labelled script select shows its labels and writes its values', noUi, () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'blk-lab', typeKey: 'layout' });
+  const script = {
+    inputs: [{ name: 'ae_colour', key: 'sv_ae_colour', label: 'Colour by', kind: 'select',
+               options: ['AETOXGR', 'AESEV'], labels: ['Toxicity grade', 'Severity'] }],
+    values: { sv_ae_colour: ['AESEV'] }, error: null
+  };
+  const gear = { tabs: [{ title: 'Lanes', sections: [{ title: 'AEs', keys: ['ae_colour'] }] }] };
+  m.gear.update(payload(Object.assign({}, CONFIG, { script_values: { ae_colour: 'AESEV' } }),
+                        { derived: { script, gear } }));
+  const t = Object.assign(env, m);
+  const shown = Array.from(row(t.el, 'sv.ae_colour').querySelectorAll('option')).map((o) => o.textContent);
+  assert.deepEqual(shown.filter(Boolean), ['Toxicity grade', 'Severity']);
+  // The subtitle word's menu: the labels, standing for the column names.
+  const s = t.gear.slot('ae_colour');
+  assert.deepEqual(plain(s.options), [{ value: 'AETOXGR', label: 'Toxicity grade' },
+                                      { value: 'AESEV', label: 'Severity' }]);
+  t.gear.set({ 'sv.ae_colour': 'AETOXGR' });
+  assert.deepEqual(plain(lastSet(t).values), { script_values: { ae_colour: 'AETOXGR' } });
+});

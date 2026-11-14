@@ -30,9 +30,9 @@
     const bounds = { min: sp.min ?? null, max: sp.max ?? null, minOpen: false };
     switch (sp.kind) {
       case 'select': return /** @type {VizArg} */ ({ type: { name: 'enum' }, values: sp.options || [],
-                                                     gear: { ...gear, control: 'select' } });
+                                                     gear: { ...gear, control: 'select', labels: sp.labels } });
       case 'multi': return /** @type {VizArg} */ ({ type: { name: 'enums' }, values: sp.options || [],
-                                                    gear: { ...gear, control: 'select' } });
+                                                    gear: { ...gear, control: 'select', labels: sp.labels } });
       case 'segmented': return /** @type {VizArg} */ ({ type: { name: 'bool' },
                                                         gear: { ...gear, control: 'toggle' } });
       case 'number': return /** @type {VizArg} */ ({ type: { name: 'number' }, bounds,

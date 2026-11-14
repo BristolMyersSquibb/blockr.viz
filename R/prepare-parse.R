@@ -36,7 +36,7 @@ CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
 # of a flag declared above; while that flag is off the control is off (not
 # drawn, an empty word, not offered).
 CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "on", "when",
-                 "multiple")
+                 "multiple", "labels")
 
 #' Call names accepted as an annotation wrapper (`#| number(min = 1)`)
 #' @noRd
@@ -195,7 +195,14 @@ cb_annotation <- function(line_text) {
   if (!length(args)) {
     return(list())
   }
-  lapply(args, function(a) tryCatch(eval(a, baseenv()), error = function(e) NULL))
+  # `labels` may read the script's own values (`labels = names(fields)`):
+  # kept as an expression, evaluated where the declaration is (cb_specs()).
+  lab <- args["labels"]
+  out <- lapply(args[names(args) != "labels"], function(a) {
+    tryCatch(eval(a, baseenv()), error = function(e) NULL)
+  })
+  if (!is.null(lab[[1L]])) out$labels <- lab[[1L]]
+  out
 }
 
 #' Derive the widget from a declaration's value
@@ -318,6 +325,7 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
     if (identical(w$kind, "select") && isTRUE(as.logical(ann$multiple))) {
       w$multiple <- TRUE
     }
+    w <- cb_select_labels(w, ann, env)
     # From here on, declarations below read the control's current value.
     assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
 
@@ -332,8 +340,8 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
         error = NULL
       ),
       ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
-                                "default", "error", "off"))],
-      list(off = cb_switched_off(ann$when, env))
+                                "default", "error", "off", "labels"))],
+      list(off = cb_switched_off(ann$when, env), labels = w$labels)
     )
   }
 
@@ -466,4 +474,14 @@ cb_coerce <- function(value, spec) {
     },
     value
   )
+}
+
+# A select's `#| select(labels = ...)`: what each choice shows, one per
+# choice, evaluated where the declaration is (it may read the script's own
+# values). Labels that fail or miscount are left out.
+cb_select_labels <- function(w, ann, env) {
+  if (!identical(w$kind, "select") || is.null(ann$labels)) return(w)
+  lab <- tryCatch(as.character(eval(ann$labels, env)), error = function(e) NULL)
+  if (length(lab) == length(w$choices)) w$labels <- unname(lab)
+  w
 }

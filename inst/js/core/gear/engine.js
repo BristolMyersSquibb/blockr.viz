@@ -545,7 +545,7 @@
         case 'select':
         case 'multi': {
           const options = /** @type {string[]} */ (sp.options || [])
-            .map((o) => ({ value: String(o), label: String(o) }));
+            .map((o, i) => ({ value: String(o), label: String((sp.labels || [])[i] ?? o) }));
           if (!options.length) return null;
           return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
                    set, label };

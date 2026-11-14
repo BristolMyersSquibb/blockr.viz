@@ -38,6 +38,8 @@ script_control_records <- function(specs) {
       # Bare strings, not {value, label} pairs: the select would show a
       # labelled option as "setosa (setosa)".
       rec$options <- as.list(as.character(s$choices))
+      # What each option shows, when the declaration names its levels.
+      if (length(s$labels)) rec$labels <- as.list(as.character(s$labels))
     }
     if (identical(s$kind, "flag")) {
       rec$options <- list(list(value = "on", label = label),
@@ -164,7 +166,9 @@ script_title_args <- function(roles, specs, values = list()) {
       picks <- as.character(v)
       pool <- as.character(s$choices)
       if (length(pool)) picks <- picks[picks %in% pool]
-      v <- script_picks_word(picks, pool)
+      v <- script_picks_word(script_labelled(picks, s), pool)
+    } else if (identical(s$kind, "select")) {
+      v <- script_labelled(as.character(v), s)
     }
     v
   })
@@ -183,4 +187,12 @@ script_picks_word <- function(v, choices) {
     v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
   paste(v, collapse = ", ")
+}
+
+# A select's values as its options show them: their labels when the
+# declaration names its levels, else as they are.
+script_labelled <- function(v, s) {
+  if (!length(s$labels) || !length(v)) return(v)
+  at <- match(v, as.character(s$choices))
+  ifelse(is.na(at), v, as.character(s$labels)[at])
 }
