@@ -78,8 +78,13 @@ records_narrow <- function(records, filters) {
 table_records_view <- function(kit, src) {
   recs <- shiny::reactive(records_of(tryCatch(src$rows(),
                                               error = function(e) NULL)))
-  # A click sent to a drill target is not held, so it narrows nothing.
-  filters <- function() table_selection_groups(kit$state$selection())
+  # As the chart's view (chart_view_selection()): the held selection, or
+  # with a drill target the last click sent to it.
+  filters <- function() {
+    held <- !kit$transient()
+    sel <- if (held) kit$state$selection() else kit$claim()$selection
+    table_selection_groups(sel)
+  }
   rows <- shiny::reactive({
     r <- recs()
     if (!is.null(r)) records_narrow(r$data, filters())

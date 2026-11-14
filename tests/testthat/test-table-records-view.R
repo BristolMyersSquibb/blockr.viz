@@ -152,11 +152,11 @@ test_that("the menu writes the records as CSV and Excel under their name", {
   })
 })
 
-test_that("a click sent to a drill target narrows nothing", {
+test_that("a click sent to a drill target narrows the view, as a chart's", {
   rv_run(rv_block(drill_target = "other"), function(session, expr) {
     rv_open(expr, session)
     # No board, so no channel to send the click down.
     expect_warning(rv_click(expr, session, "02"), "no control channel")
-    expect_identical(rv_derived(expr)[["data_view"]]$rows, 6L)
+    expect_identical(rv_derived(expr)[["data_view"]]$rows, 2L)
   })
 })
