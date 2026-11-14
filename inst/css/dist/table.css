@@ -1,4 +1,4 @@
-/* blockr.viz bundle 1dea79d3dc1c25cf6460ffaef7154a57, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 602366686da360220c9b4583a937445a, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1595,6 +1595,17 @@ input.vz-table-search:focus {
 }
 .vz-table-groups-ivstack > .vz-table-groups-ivcell:not(.is-thin) {
   margin-top: 2px;
+}
+/* The swimlane's optional track (`track`): the bar column's grey behind the
+   main lane and the full bars, never behind a thin lane. */
+.vz-table-groups-ivcell.has-track {
+  background: var(--vz-table-groups-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+/* Full bars below the main lane: 4px apart, the white between the levels of
+   a split bar (.vz-table-groups-track.is-tall). */
+.vz-table-groups-ivstack > .vz-table-groups-ivcell.is-full {
+  margin-top: 4px;
 }
 .vz-table-groups-ivcell.is-thin {
   height: 5px;

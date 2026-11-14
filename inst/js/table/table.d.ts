@@ -155,6 +155,8 @@ interface TableMarkInterval extends TableMarkBase {
   ticks?: number[][]; band?: number[][][]; events?: (number | string)[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
   evenLanes?: boolean; barLabels?: string[][]; calmLanes?: boolean;
+  /** A grey track behind the main lane and the full bars. */
+  track?: boolean;
   /** Named full bars: the main bar's name and the longest name in characters. */
   mainName?: string; laneNameWidth?: number;
 }

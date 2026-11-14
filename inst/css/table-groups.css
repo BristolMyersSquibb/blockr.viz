@@ -572,6 +572,17 @@
 .vz-table-groups-ivstack > .vz-table-groups-ivcell:not(.is-thin) {
   margin-top: 2px;
 }
+/* The swimlane's optional track (`track`): the bar column's grey behind the
+   main lane and the full bars, never behind a thin lane. */
+.vz-table-groups-ivcell.has-track {
+  background: var(--vz-table-groups-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+/* Full bars below the main lane: 4px apart, the white between the levels of
+   a split bar (.vz-table-groups-track.is-tall). */
+.vz-table-groups-ivstack > .vz-table-groups-ivcell.is-full {
+  margin-top: 4px;
+}
 .vz-table-groups-ivcell.is-thin {
   height: 5px;
 }

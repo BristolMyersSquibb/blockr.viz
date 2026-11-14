@@ -85,10 +85,14 @@ paint_row_heights <- function(m, row_h, px, fs) {
         px * 10 + px * 8
     } else if (identical(c$kind, "interval") && !is.null(c$sl)) {
       k <- vapply(rows, function(r) length(c$sl[[r]]), numeric(1L))
+      ev <- vapply(rows, function(r) paint_iv_even(c, r), NA)
       f <- vapply(rows, function(r) {
         sum(vapply(c$sl[[r]], function(l) isTRUE(l$f), NA))
       }, numeric(1L))
-      need <- paint_iv_stack(k - f, px, isTRUE(c$eq), f) + px * 8
+      f[ev] <- 0
+      need <- vapply(seq_along(rows), function(j) {
+        paint_iv_stack(k[[j]] - f[[j]], px, ev[[j]], f[[j]])
+      }, numeric(1L)) + px * 8
       out <- ifelse(k >= 1L, pmax(out, need), out)
       next
     } else if (isTRUE(c$multi)) {

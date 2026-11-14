@@ -692,6 +692,20 @@
               "slot": false,
               "ctrl": true
             },
+            "track": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Track behind the bars"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "bar_label": {
               "type": {
                 "name": "column"

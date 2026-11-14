@@ -110,3 +110,12 @@ test_that("a swimlane column's text is its tooltips, which the mark carries", {
   expect_null(table_lane_json(m)$cols[[2L]]$disp)
   expect_false(is.null(table_lane_json(m)$cols[[1L]]$disp))
 })
+
+test_that("the swimlane's track travels only when on", {
+  on <- table_groups_pack(list(kind = "interval", tr = TRUE), "interval",
+                          top = TRUE)
+  expect_true(on$tr)
+  off <- table_groups_pack(list(kind = "interval", tr = FALSE), "interval",
+                           top = TRUE)
+  expect_null(off$tr)
+})

@@ -315,10 +315,14 @@
    * it is still open.
    * @param {TableMarkInterval} c
    * @param {TableSubLane} l
+   * @param {boolean} even Whether the row's lanes are even.
    */
-  function thin(c, l) {
-    const cls = l.f ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin';
-    let s = laneOpen(c, cls, l.b, l.n) + (l.f ? laneName(c, l.n, false) : '');
+  function thin(c, l, even) {
+    // In an even row a full bar is one more even lane.
+    const full = l.f && !even;
+    const cls = (full ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin') +
+      (l.f && c.track ? ' has-track' : '');
+    let s = laneOpen(c, cls, l.b, l.n) + (full ? laneName(c, l.n, false) : '');
     let last = '';
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
@@ -329,7 +333,7 @@
       s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
     }
     // A thin lane is too low for text; an even lane and a full bar have room.
-    if (c.evenLanes || l.f) s += barLabels(l.s || [], l.l, l.o);
+    if (even || l.f) s += barLabels(l.s || [], l.l, l.o);
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -357,7 +361,14 @@
    * @param {number} i
    */
   function interval(c, i) {
-    let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null) + laneName(c, c.mainName, true);
+    const sub = c.subLanes ? c.subLanes[i] || [] : [];
+    // Even lanes: no main lane, every lane full, the overlays across the row.
+    // So it is for the whole column without a main-lane record anywhere, and
+    // for a row without one of its own (an opened row holding one lane).
+    const even = !!c.evenLanes || (sub.length > 0 && !(c.segs[i] || []).length);
+    // An even row has no main bar to name.
+    let s = laneOpen(c, c.track && !even ? ' has-track' : '', c.mainStrip ? c.mainStrip[i] : null) +
+      (even ? '' : laneName(c, c.mainName, true));
     const jn = joins(c.segs[i] || []);
     (c.segs[i] || []).forEach((g, j) => {
       s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j), jn[j]);
@@ -374,17 +385,15 @@
     if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
     s += barLabels(c.segs[i] || [], c.barLabels ? c.barLabels[i] : null, op);
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
-    const sub = c.subLanes ? c.subLanes[i] || [] : [];
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h
       : '<div class="vz-table-groups-ivnamed" style="--vz-lane-lw:' + n(c.laneNameWidth) + 'ch">' +
         h + '</div>');
     if (!sub.length) return named(s);
-    // Thin lanes above the main lane, full bars below it. Even lanes: no main
-    // lane, every lane full, the overlays across the row.
-    return named('<div class="vz-table-groups-ivstack' + (c.evenLanes ? ' is-even' : '') + '">' +
-      sub.filter((l) => !l.f).map((l) => thin(c, l)).join('') + s +
-      sub.filter((l) => l.f).map((l) => thin(c, l)).join('') + '</div>');
+    // Thin lanes above the main lane, full bars below it.
+    return named('<div class="vz-table-groups-ivstack' + (even ? ' is-even' : '') + '">' +
+      sub.filter((l) => !l.f).map((l) => thin(c, l, even)).join('') + s +
+      sub.filter((l) => l.f).map((l) => thin(c, l, even)).join('') + '</div>');
   }
 
   /**

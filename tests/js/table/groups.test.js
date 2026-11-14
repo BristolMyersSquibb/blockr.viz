@@ -656,6 +656,36 @@ test('lanes: even lanes drop the main lane height; outline and lane events draw'
   assert.equal(hover(t, ev).tip.querySelector('.vz-tt-head').textContent, 'Death');
 });
 
+test('lanes: a row without a main-lane record draws its lanes even, a full bar too', () => {
+  const m = lanes();
+  // Row 1 holds one full bar and nothing on the main lane: an opened row.
+  Object.assign(m.cols[7].mark, { mainName: 'INV', laneNameWidth: 4 });
+  m.cols[7].mark.segs[1] = [];
+  m.cols[7].mark.subLanes[1] = [{ n: 'AE', f: true, s: [[0, 40, 3]], t: ['AE'] }];
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(1, 7).querySelector('.vz-table-groups-ivstack');
+  assert.ok(stack.classList.contains('is-even'));
+  const bar = stack.querySelector('[data-n="AE"]');
+  assert.ok(bar.classList.contains('is-thin'));
+  assert.equal(bar.classList.contains('is-full'), false);
+  // No main bar, so no main name, even with named bars.
+  assert.equal(stack.querySelector('.vz-table-lane-name'), null);
+  // Row 0 has main-lane records: not even.
+  assert.equal(t.cell(0, 7).querySelector('.vz-table-groups-ivstack').classList.contains('is-even'), false);
+});
+
+test('lanes: the track sits behind the main lane and full bars, never a thin lane', () => {
+  const m = lanes();
+  m.cols[7].mark.track = true;
+  m.cols[7].mark.subLanes[0].push({ n: 'AE', f: true, s: [[0, 40, 3]], t: ['AE'] });
+  const t = mount(payload({ data: m, config: G }));
+  const kids = Array.from(t.cell(0, 7).querySelector('.vz-table-groups-ivstack').children);
+  assert.deepEqual(kids.map((k) => k.classList.contains('has-track')), [false, false, true, true]);
+  // Off by default.
+  const t2 = mount(payload({ data: lanes(), config: G }));
+  assert.equal(t2.cell(0, 7).querySelectorAll('.has-track').length, 0);
+});
+
 test('bar labels: on the bar when they fit, after it when the gap holds them, else hidden', () => {
   const m = lanes();
   Object.assign(m.cols[7].mark, { evenLanes: true });

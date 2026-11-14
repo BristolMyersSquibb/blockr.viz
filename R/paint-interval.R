@@ -7,12 +7,13 @@
 paint_interval <- function(c, i, x, w, ytop, gl) {
   px <- gl$px
   all <- paint_at(c$sl, i) %||% list()
-  full <- Filter(function(l) isTRUE(l$f), all)
-  sub <- Filter(function(l) !isTRUE(l$f), all)
+  even <- paint_iv_even(c, i)
+  # In an even row a full bar is one more even lane.
+  full <- if (even) list() else Filter(function(l) isTRUE(l$f), all)
+  sub <- if (even) all else Filter(function(l) !isTRUE(l$f), all)
   y <- paint_lane_y(ytop, gl)
   thin <- list()
   names <- list()
-  even <- isTRUE(c$eq)
   # Named bars: the names in a gutter at the left, the lanes after it.
   if (!is.null(c$mn)) {
     g <- paint_iv_gutter(c$lw, gl)
@@ -37,14 +38,14 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
     } else {
       y0 + length(sub) * pitch * px + 2 * px
     }
-    # Full bars below the main lane, at its height.
+    # Full bars below the main lane, at its height, 4px apart.
     thin <- c(thin, unlist(lapply(seq_along(full), function(j) {
-      yj <- y + j * (gl$lane + 2 * px)
+      yj <- y + j * (gl$lane + 4 * px)
       c(paint_iv_full(c, full[[j]], x, w, yj, gl),
         if (!is.null(c$mn)) list(name(full[[j]]$n, yj + gl$lane / 2, FALSE)))
     }), recursive = FALSE))
   }
-  if (!is.null(c$mn)) names <- list(name(c$mn, y + gl$lane / 2, TRUE))
+  if (!is.null(c$mn) && !even) names <- list(name(c$mn, y + gl$lane / 2, TRUE))
   mid <- gl$H - (y + gl$lane / 2)
   segs <- lapply(c$segs[[i]], function(sg) {
     paint_iv_seg(sg, c$fills[[sg[[3L]]]], x, w, y, gl$lane, gl)
@@ -134,10 +135,17 @@ paint_iv_labels <- function(segs, labels, open, x, w, ymid, gl) {
 # Even lanes (no main lane) are 10px with an 8px bar.
 paint_iv_pitch <- function(even = FALSE) if (even) 10 else 5
 
+# Whether row i's lanes are even: the column has no main-lane record, or the
+# row has lanes and no main-lane record of its own (marks.js interval()).
+paint_iv_even <- function(c, i) {
+  isTRUE(c$eq) ||
+    (length(paint_at(c$sl, i)) > 0L && !length(c$segs[[i]]))
+}
+
 # The height of a stack of `k` thin lanes over the main lane and `full` full
 # bars under it, or of `k` even lanes.
 paint_iv_stack <- function(k, px, even = FALSE, full = 0) {
-  if (even) k * 10 * px else (k * paint_iv_pitch() + 2 + 12 + full * 14) * px
+  if (even) k * 10 * px else (k * paint_iv_pitch() + 2 + 12 + full * 16) * px
 }
 
 # One lane from `ytop`: its segments on its bar, its open end's arrow in the

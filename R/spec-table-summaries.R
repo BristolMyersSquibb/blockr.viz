@@ -312,6 +312,15 @@ table_summary_specs <- function() {
           "where the lanes carry the story (a drug per lane)."
         )
       ),
+      track = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Track behind the bars"),
+        describe = paste(
+          "A grey track behind the main lane and the full bars, as a bar",
+          "column draws it. Off: the bars stand on the surface. Thin lanes",
+          "never have one."
+        )
+      ),
       bar_label = viz_arg(
         type = "column", null = "no bar labels",
         gear = gear("Columns", "column", "Bar label"),
