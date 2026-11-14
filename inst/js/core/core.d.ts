@@ -252,8 +252,11 @@ interface VizBusy {
  * `derived.data_view` while the reader has it open (R/chart-data-view.R).
  */
 interface VizDataViewState {
-  /** The tab R built the table for; "rows" when there is no Summary. */
-  tab: 'summary' | 'rows';
+  /** The tab R built the table for; "rows" when there is no Summary;
+   * "records" for a table block's records. */
+  tab: 'summary' | 'rows' | 'records';
+  /** The records' name, on a table block ("Adverse events"). */
+  label?: string | null;
   /** Rows of Summary, one per mark; null when the view has none. */
   summary: number | null;
   /** Rows behind the selection, and the input's rows. */
@@ -265,7 +268,7 @@ interface VizDataViewState {
 
 interface VizDataView {
   readonly on: boolean;
-  readonly tab: 'summary' | 'rows';
+  readonly tab: 'summary' | 'rows' | 'records';
   readonly tool: HTMLButtonElement;
   readonly panel: HTMLElement;
   readonly host: HTMLElement;

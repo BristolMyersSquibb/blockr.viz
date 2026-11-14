@@ -36,6 +36,7 @@ table_server <- function(id, data, init, gear = NULL) {
       )
       part <- function() parts[[kit$state$layout()]]
       titles <- table_titles(kit, src, part)
+      dv <- table_records_view(kit, src)
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
         payload = table_payload(kit, src, part, titles, table_gear_info(gear, data)),
@@ -48,6 +49,10 @@ table_server <- function(id, data, init, gear = NULL) {
         },
         probe = function() part()$probe(),
         claims = table_claims(kit, part),
+        tables = dv$tables,
+        tables_shape = dv$shape,
+        data_view = dv$derived,
+        data_view_tool = dv$tool,
         cond = table_cond(kit, parts),
         script = src$prep
       )

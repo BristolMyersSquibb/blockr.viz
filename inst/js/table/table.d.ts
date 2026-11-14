@@ -291,6 +291,10 @@ interface TableDerived {
   gear?: VizGearWire | null;
   /** The pixel ratio of the Image and PowerPoint picture. */
   capture_ratio?: number | null;
+  /** Whether the block hands records to a data view (R's viz_records()). */
+  data_view_tool?: boolean | null;
+  /** The data view's table while the reader has it open. */
+  data_view?: VizDataViewState | null;
 }
 
 /** What the Grid works out once per model (dom.js `structure()`). */

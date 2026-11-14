@@ -416,16 +416,17 @@ chart_data_rows_output <- function(kit, rows, showing) {
 #' lacks them (a re-mounted view) sends a new request count `req`, and the
 #' next payload carries them again.
 #'
+#' @param search Whether the table has a search box.
 #' @return A function `(x, drill, selection, req)`.
 #' @noRd
-viz_data_view_table <- function() {
+viz_data_view_table <- function(search = FALSE) {
   last <- new.env(parent = emptyenv())
   last$state <- 0L
   last$data <- 0L
   function(x, drill, selection, req = 0) {
     p <- interactive_table_payload(
       x, drill = drill, drill_target = NULL, sortable = TRUE,
-      collapsible = TRUE, search = FALSE, selection = selection
+      collapsible = TRUE, search = search, selection = selection
     )
     if (!identical(p$data, last$model)) {
       last$data <- last$data + 1L

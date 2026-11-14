@@ -154,7 +154,8 @@ is_size <- function(x) {
 #'
 #' Whether the reader has the view's data table open, on which tab, and the
 #' browser's request count: a new count asks for the table's rows again.
-#' @return `list(on, tab, n)`, `tab` `"summary"` or `"rows"`, or `NULL`
+#' @return `list(on, tab, n)`, `tab` `"summary"`, `"rows"` or `"records"`
+#'   (a table block's, table_records_view()), or `NULL`
 #'   when malformed.
 #' @noRd
 viz_read_data_view <- function(x) {
@@ -164,7 +165,7 @@ viz_read_data_view <- function(x) {
   }
   tab <- x$tab
   ok <- is.character(tab) && length(tab) == 1L &&
-    tab %in% c("summary", "rows")
+    tab %in% c("summary", "rows", "records")
   n <- if (is_whole_count(x$n)) as.numeric(x$n) else 0
   list(on = x$on, tab = if (ok) tab else "summary", n = n)
 }

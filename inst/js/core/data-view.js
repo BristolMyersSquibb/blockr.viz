@@ -22,6 +22,10 @@
  * Rows is blockr.ui's table preview, the one behind a block's eye icon: the
  * Shiny output `<id>-data_rows`, bound when the tab first shows. Shiny
  * leaves it alone while the tab is hidden.
+ *
+ * A table block's view has one tab, Records (R/table-records-view.R): the
+ * records its prepare script hands along, drawn by the table view so they
+ * sort and search, under their own name ("Adverse events 10 of 23").
  */
 (function () {
   'use strict';
@@ -67,7 +71,7 @@
       this.scope = scope;
       this.onToggle = opts.onToggle || (() => {});
       this.on = false;
-      /** @type {'summary' | 'rows'} */
+      /** @type {'summary' | 'rows' | 'records'} */
       this.tab = 'summary';
       /** What the reader asked R for and R has not answered.
        * @type {{ on: boolean, tab: string } | null} */
@@ -207,6 +211,12 @@
       const dv = this.state;
       this.bar.textContent = '';
       if (!dv) return;
+      if (dv.label) {
+        const meta = el('span', 'vz-data__meta', this.bar);
+        meta.textContent = dv.label;
+        el('span', 'vz-data__n', meta).textContent = rowsCount(dv);
+        return;
+      }
       if (dv.summary == null) {
         el('span', 'vz-data__meta', this.bar).textContent = rowsCount(dv) + ' rows';
         return;

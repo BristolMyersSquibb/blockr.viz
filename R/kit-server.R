@@ -198,7 +198,10 @@ viz_capture_observer <- function(input, id, capture) {
 #' - `data_view`: a function of the reader's `<view>_data` message
 #'   (viz_read_data_view()) returning the payload's `derived$data_view`
 #'   (chart_data_view()); optional. The entry goes out only while the
-#'   reader has the view open.
+#'   reader has the view open;
+#' - `data_view_tool`: a function of no arguments, whether the view offers
+#'   its data view at all (table_records_view()); optional, the chart always
+#'   does. It goes out as `derived$data_view_tool`.
 #'
 #' `setup()` wires anything else itself, with what `kit` holds.
 #'
@@ -294,6 +297,9 @@ viz_with_shared <- function(kit, parts, view) {
     drawn$rev <- p$data_rev
     if (!is.null(menu)) p$derived$downloads <- menu()
     if (!is.null(parts$script)) p$derived$script <- parts$script$derived()
+    if (is.function(parts$data_view_tool)) {
+      p$derived$data_view_tool <- isTRUE(parts$data_view_tool())
+    }
     if (is.function(parts$data_view)) {
       dv <- kit$input[[paste0(view, "_data")]]
       if (isTRUE(dv$on)) p$derived$data_view <- parts$data_view(dv)

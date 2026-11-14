@@ -70,8 +70,9 @@ viz_export_formats <- function(x, exporters = viz_exporters()) {
 #' @param before A function of no arguments run when a format is clicked,
 #'   before the exhibit is read (the kit's capture sync).
 #' @param tables A function returning the block's data tables, or NULL
-#'   (viz_data_downloads()). With it the menu has two sections: Chart, the
-#'   registered formats, and Data, the tables.
+#'   (viz_data_downloads()). With it the menu has two sections: Chart (Table
+#'   for a table), the registered formats, and Data, the tables. A table
+#'   without data tables keeps one plain list.
 #' @param shape With `tables`: a function returning which of them there
 #'   are, without building them (viz_data_downloads()).
 #' @param probe A function of no arguments returning the exhibit the
@@ -100,13 +101,19 @@ viz_downloads <- function(exhibit, enabled = function() TRUE,
     if (!inherits(x, "viz_exhibit")) {
       return(list())
     }
+    rows <- if (!is.null(data)) data()
+    # A chart always has its Data section; a table only with records
+    # (table_records_view()).
+    chart <- identical(exhibit_kind(x), "chart")
+    section <- if (!is.null(data) && (chart || length(rows))) {
+      list(section = if (chart) "Chart" else "Table")
+    }
     out <- unname(lapply(viz_export_formats(x, formats), function(f) {
       c(list(id = session$ns(paste0("dl_", f$format)), label = f$label,
              ext = f$ext),
-        if (!is.null(data)) list(section = "Chart"))
+        section)
     }))
-    if (!is.null(data)) out <- c(out, data())
-    out
+    c(out, rows)
   })
 }
 
