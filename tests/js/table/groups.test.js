@@ -674,6 +674,16 @@ test('lanes: a row without a main-lane record draws its lanes even, a full bar t
   assert.equal(t.cell(0, 7).querySelector('.vz-table-groups-ivstack').classList.contains('is-even'), false);
 });
 
+test('hover: the open arrow says its lane\'s last segment, not the time', () => {
+  const m = lanes();
+  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 10, 3], [12, 18, 3]], t: ['first', 'last'],
+                                    o: 30 };
+  const t = mount(payload({ data: m, config: G }));
+  const lane = t.cell(0, 7).querySelector('[data-n="Drug A"]');
+  const c = hover(t, lane.querySelector('.vz-table-lane-open'));
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'last');
+});
+
 test('lanes: the track sits behind the main lane and full bars, never a thin lane', () => {
   const m = lanes();
   m.cols[7].mark.track = true;

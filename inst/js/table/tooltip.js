@@ -201,8 +201,12 @@
       if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
         return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
       }
-      // A thin lane is a few pixels high: the segment at the pointer's time.
-      const hit = seg || (lane.classList.contains('is-thin') ? segAt(lane, x) : null);
+      // The open end's arrow belongs to the lane's last segment. Off a
+      // segment, the one at the pointer's time, or within a few pixels of it
+      // (a thin lane is a few pixels high, a short bar a few pixels wide).
+      const open = t.closest('.vz-table-lane-open');
+      const w = lane.getBoundingClientRect().width;
+      const hit = seg || (open ? lastSeg(lane) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
       if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
@@ -229,17 +233,45 @@
   }
 
   /**
-   * The segment of a lane under time `x` (0 to 1), or null.
+   * The segment of a lane nearest time `x` (0 to 1) within `tol` percent of
+   * the lane, or null.
    * @param {Element} lane
    * @param {number} x
+   * @param {number} tol
    */
-  function segAt(lane, x) {
+  function segAt(lane, x, tol) {
     const p = x * 100;
-    return Array.from(lane.querySelectorAll('.vz-table-lane-seg')).find((el) => {
+    let best = null;
+    let gap = Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
       const st = /** @type {HTMLElement} */ (el).style;
       const l = parseFloat(st.left);
-      return p >= l - 0.5 && p <= l + parseFloat(st.width) + 0.5;
-    }) || null;
+      const r = l + parseFloat(st.width);
+      const d = p < l ? l - p : p > r ? p - r : 0;
+      if (d <= tol && d < gap) {
+        best = el;
+        gap = d;
+      }
+    });
+    return best;
+  }
+
+  /**
+   * The segment of a lane that ends last, or null.
+   * @param {Element} lane
+   */
+  function lastSeg(lane) {
+    let best = null;
+    let end = -Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
+      const st = /** @type {HTMLElement} */ (el).style;
+      const r = parseFloat(st.left) + parseFloat(st.width);
+      if (r >= end) {
+        best = el;
+        end = r;
+      }
+    });
+    return best;
   }
 
   /**
