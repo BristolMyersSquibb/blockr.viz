@@ -255,7 +255,9 @@
     _shutAll(shut) {
       const m = this.model;
       const st = this._st;
-      this.shut = new Set(shut && m && m.sections ? m.sections.map((s, k) => k) : []);
+      // A section that keeps open (a group heading over closed rows) is not shut.
+      this.shut = new Set(shut && m && m.sections
+        ? m.sections.map((s, k) => (s.open ? -1 : k)).filter((k) => k >= 0) : []);
       this.shutRows = new Set();
       if (shut && st) st.toggle.forEach((t, i) => { if (t) this.shutRows.add(i); });
     }

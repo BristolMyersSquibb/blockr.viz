@@ -156,3 +156,32 @@ test_that("records that only touch share a track", {
   expect_length(sl$Response, 1L)
   expect_length(sl$Response[[1L]]$s, 3L)
 })
+
+test_that("row_groups heads the outer rows by a column, in its level order", {
+  d <- rs_data()
+  d$G <- factor(ifelse(d$P == "a", "Z", "Y"), levels = c("Z", "Y"))
+  d$G[is.na(d$R) & d$P == "a"][1L] <- NA
+  m <- rs_model(d, row_groups = "G")
+  # a's first value is Z: a under Z, then b under Y, each with its rows.
+  expect_identical(m$cells$label, c("a", "Head", "Naus", "Para", "b", "Head"))
+  s <- m$prep$sections
+  expect_identical(vapply(s, `[[`, "", "value"), c("Z", "Y"))
+  expect_identical(vapply(s, `[[`, 1L, "at"), c(0L, 4L))
+  expect_true(all(vapply(s, `[[`, TRUE, "open")))
+  mod <- table_groups_to_model(m)
+  expect_identical(mod$sections[[2L]]$at, 4L)
+  # A character column sorts alphabetically: Y first.
+  d$G <- as.character(d$G)
+  m <- rs_model(d, row_groups = "G")
+  expect_identical(m$cells$label[[1L]], "b")
+  expect_null(rs_model(row_groups = NULL)$prep$sections)
+  expect_null(rs_model(row_groups = "NOPE")$prep$sections)
+})
+
+test_that("row_groups works on a flat table and leaves rows without a value last", {
+  d <- data.frame(P = c("a", "b", "c"), R = NA_character_,
+                  G = c("y", NA, "x"), x = 1, xe = 2)
+  m <- rs_model(d, row_groups = "G", row_sections = NULL)
+  expect_identical(m$cells$label, c("c", "a", "b"))
+  expect_identical(vapply(m$prep$sections, `[[`, 1L, "at"), c(0L, 1L))
+})

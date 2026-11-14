@@ -199,6 +199,20 @@ table_spec_look <- function() {
       )
     ),
 
+    row_groups = table_arg(
+      type = "column", default = NULL, null = "no grouping",
+      applies = "groups",
+      gear = gear("Look", "column", "Group the outer rows by"),
+      example = "ARM",
+      describe = paste(
+        "Column whose value groups the outer rows: each value heads its",
+        "rows, which a click on it folds, in the column's level order (a",
+        "factor) or alphabetical. An outer row takes the first value its",
+        "records have; rows without one come last, under no heading. A",
+        "column the data lacks: no grouping."
+      )
+    ),
+
     collapsible = table_arg(
       type = "bool", default = TRUE,
       applies = c("records", "variables"),

@@ -23,6 +23,7 @@ new_table_block(
   group_rows = "name",
   open = "none",
   row_sections = NULL,
+  row_groups = NULL,
   sort_by = "value",
   sort_dir = NULL,
   top_n = NULL,
@@ -85,6 +86,8 @@ new_table_block(
 \item{open}{With \code{group_rows = "summary"}, whether the outer rows start closed ("none") or open ("all"). The header's button opens and closes them all either way. One of \code{"none"}, \code{"all"}. Default: \code{"none"}.}
 
 \item{row_sections}{Column naming the section each inner row of a nested table belongs to. An outer row whose inner rows fall in more than one section shows each section's name, in small bold type, above its first row. One section: no title. Sorting by a column drops the titles. Default \code{NULL}: no titles.}
+
+\item{row_groups}{Column whose value groups the outer rows: each value heads its rows, which a click on it folds, in the column's level order (a factor) or alphabetical. An outer row takes the first value its records have; rows without one come last, under no heading. A column the data lacks: no grouping. Default \code{NULL}: no grouping.}
 
 \item{sort_by}{Row order: "value", "data", "alpha", a summary's name, a facet level, or a numeric column (its per-row minimum). Default: \code{"value"}.}
 
@@ -211,6 +214,7 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \itemize{
 \item \code{name}: Column header. Default \code{NULL}: auto ("Rows", "Mean AGE").
 \item \code{col}: Distinct values joined: up to 3, then "+n more"; over 8, "n values". Required.
+\item \code{optional}: TRUE: a column the data lacks leaves the summary out of the table, with no error (a column a picker offered that the data no longer has). Default: \code{FALSE}.
 }
 
 \strong{\code{type = "sparkline"}}

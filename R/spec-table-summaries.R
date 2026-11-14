@@ -127,6 +127,14 @@ table_summary_specs <- function() {
           "Distinct values joined: up to 3, then \"+n more\"; over 8,",
           "\"n values\"."
         )
+      ),
+      optional = viz_arg(
+        type = "bool", default = FALSE,
+        describe = paste(
+          "TRUE: a column the data lacks leaves the summary out of the",
+          "table, with no error (a column a picker offered that the data",
+          "no longer has)."
+        )
       )
     ),
 

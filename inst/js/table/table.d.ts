@@ -200,6 +200,8 @@ interface TableSection {
   label?: string | null;
   /** What a click on its value claims; without keys it only folds. */
   keys?: TableClaim | null;
+  /** Stays open when the rows start closed or all close (a group heading). */
+  open?: boolean;
 }
 
 /** Per-row extras of a structured table. */

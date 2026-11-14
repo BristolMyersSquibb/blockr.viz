@@ -129,6 +129,10 @@
           if (sp) {
             rows[SV + k] = { kind: 'script', name: k, sp };
             put(SV + k, scriptArg(sp), title);
+          } else if (k === 'columns' && wire.pick) {
+            rows[k] = { kind: 'picks' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
+              gear: { label: 'Listing columns', control: 'profile' } }), title);
           } else if (k === 'columns' && columns.length) {
             rows[k] = { kind: 'columns' };
             put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
@@ -172,6 +176,9 @@
       else if (r.kind === 'columns') {
         out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
           .map((s) => s && s.name).filter((n) => names.has(n));
+      } else if (r.kind === 'picks') {
+        out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
+          .map((s) => pickId(s, names)).filter((x) => x != null);
       } else if (r.kind === 'group') {
         const by = Array.isArray(cfg.by) ? cfg.by : [];
         out[key] = by.length > 1 ? by[0] : '';
@@ -206,6 +213,30 @@
         const other = (Array.isArray(now.summaries) ? now.summaries : [])
           .filter((s) => !s || !names.has(s.name));
         out.summaries = cols.filter((c) => pick.has(c.name)).map((c) => c.summary).concat(other);
+      } else if (r.kind === 'picks') {
+        const ids = /** @type {string[]} */ (v || []);
+        const cols = prof.wire.columns || [];
+        const names = new Set(cols.map((c) => c.name));
+        const more = (prof.wire.pick && prof.wire.pick.more) || [];
+        const held = Array.isArray(now.summaries) ? now.summaries : [];
+        const other = held.filter((s) => pickId(s, names) == null);
+        out.summaries = ids.map((id) => {
+          if (id.startsWith('c:')) {
+            const c = cols.find((x) => x.name === id.slice(2));
+            return c ? c.summary : null;
+          }
+          const col = id.slice(2);
+          const was = held.find((s) => pickId(s, names) === id);
+          if (was) return was;
+          const m = more.find((x) => x.name === col);
+          return { type: 'field', col, name: m ? m.label : col, optional: true };
+        }).filter(Boolean).concat(other);
+        const sv = prof.wire.pick && prof.wire.pick.sort;
+        if (sv) {
+          const vals = /** @type {Record<string, unknown>} */ (
+            out.script_values || now.script_values || {});
+          out.script_values = Object.assign({}, vals, { [sv]: ids.length ? ids[0].slice(2) : '' });
+        }
       } else if (r.kind === 'group') {
         // The outer column of a nested `by`: picked, replaced or dropped.
         const by = /** @type {string[]} */ (Array.isArray(now.by) ? now.by : []);
@@ -217,6 +248,60 @@
       }
     }
     return out;
+  }
+
+  /** A summary as a pick of the several-picks columns row: `c:<name>` for a
+   * gear column, `d:<column>` for a field over a data column, null for the
+   * rest (the swimlane). @param {any} s @param {Set<string>} names
+   * @returns {string | null} */
+  const pickId = (s, names) => {
+    if (!s) return null;
+    if (names.has(s.name)) return 'c:' + s.name;
+    if (s.type === 'field' && typeof s.col === 'string' && s.col) return 'd:' + s.col;
+    return null;
+  };
+
+  /** The several-picks columns row: one select, its tags in pick order (a
+   * drag reorders them), the gear's columns first, then the data's; a pick
+   * the data no longer has says so. @param {HTMLElement} el @param {VizRowCtx} ctx
+   * @param {VizProfile} prof */
+  function picks(el, ctx, prof) {
+    const cols = prof.wire.columns || [];
+    const pk = /** @type {NonNullable<VizGearWire['pick']>} */ (prof.wire.pick);
+    const more = pk.more || [];
+    /** @type {[string, string, string][]} id, label, note */
+    const items = cols.map((c) => /** @type {[string, string, string]} */ (['c:' + c.name, c.label || c.name, '']))
+      .concat(more.map((m) => /** @type {[string, string, string]} */ (['d:' + m.name, m.label, m.label === m.name ? '' : m.name])));
+    const cur = /** @type {string[]} */ (Array.isArray(ctx.value) ? ctx.value : []);
+    const held = Array.isArray(ctx.values.summaries) ? ctx.values.summaries : [];
+    for (const id of cur) {
+      if (items.some(([x]) => x === id)) continue;
+      const s = held.find((x) => pickId(x, new Set(cols.map((c) => c.name))) === id);
+      items.push([id, ((s && s.name) || id.slice(2)) + ' (missing)', '']);
+    }
+    // The select keys an option by its text: the label, made unique.
+    /** @type {string[]} */
+    const keys = [];
+    const options = items.map(([, label, note]) => {
+      let k = label;
+      while (keys.includes(k)) k += ' ';
+      keys.push(k);
+      return note ? { value: k, label: note } : k;
+    });
+    const at = (/** @type {string} */ id) => items.findIndex(([x]) => x === id);
+    const inst = root.Blockr.Select.multi(el, {
+      options, selected: cur.map(at).filter((i) => i >= 0).map((i) => keys[i]),
+      bordered: true, label: ctx.label, placeholder: 'Patient and timeline only',
+      onChange: (/** @type {string[]} */ v) =>
+        ctx.set(v.map((k) => keys.indexOf(k)).filter((i) => i >= 0).map((i) => items[i][0]))
+    });
+    ctx.scope.own({ dispose: () => inst.destroy() });
+    if (pk.note) {
+      const n = document.createElement('div');
+      n.className = 'vz-row-note';
+      n.textContent = pk.note;
+      el.appendChild(n);
+    }
   }
 
   /** @param {HTMLElement} el @param {string} label @param {boolean} on
@@ -249,7 +334,9 @@
     const prof = ctx.profile;
     const r = prof && prof.rows[ctx.key];
     if (!prof || !r) return;
-    if (r.kind === 'columns') {
+    if (r.kind === 'picks') {
+      picks(el, ctx, prof);
+    } else if (r.kind === 'columns') {
       checklist(el, ctx, (prof.wire.columns || []).map((c) => [c.name, c.label || c.name]));
     } else if (r.kind === 'words') {
       // A setting by its label; its clause in the template says where it goes.

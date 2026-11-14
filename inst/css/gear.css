@@ -824,3 +824,16 @@
   flex-wrap: wrap;
   gap: 6px 18px;
 }
+
+/* The line under a gear row (the several-picks columns row's note). */
+.vz-row-controls:has(> .vz-row-note) {
+  flex-wrap: wrap;
+}
+
+.vz-row-note {
+  flex-basis: 100%;
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--blockr-color-text-muted, #6b7280);
+}

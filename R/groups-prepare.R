@@ -266,6 +266,12 @@ groups_present <- function(col, data) {
 #' @return the summaries or `list(err =)`.
 #' @noRd
 groups_prep_norm <- function(summaries, data) {
+  # An optional field over a column the data lacks is left out.
+  gone <- vapply(summaries, function(s) {
+    is.list(s) && identical(s$type, "field") && isTRUE(s$optional) &&
+      !is.null(chr_state(s$col)) && !chr_state(s$col) %in% names(data)
+  }, logical(1L))
+  summaries <- summaries[!gone]
   summaries <- groups_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(list(err = summaries$err))
   if (!length(summaries)) return(list(err = "Add at least one summary column"))

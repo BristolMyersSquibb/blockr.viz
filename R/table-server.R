@@ -39,7 +39,8 @@ table_server <- function(id, data, init, gear = NULL) {
       dv <- table_records_view(kit, src)
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
-        payload = table_payload(kit, src, part, titles, table_gear_info(gear, data)),
+        payload = table_payload(kit, src, part, titles,
+                                table_gear_info(gear, data, src$rows)),
         frame = src$rows,
         expr = table_expr(kit, part),
         exhibit = function() {
@@ -102,16 +103,27 @@ table_titles <- function(kit, src, part) {
 
 # A block's own gear as the browser gets it, with what its `info` finds in
 # the input, read again when the input changes.
-table_gear_info <- function(gear, data) {
+table_gear_info <- function(gear, data, rows = function() NULL) {
   if (is.null(gear)) {
     return(function() NULL)
   }
+  # With `pick_by`, the columns row offers the prepared data's columns.
+  more <- if (!is.null(gear$pick_by)) {
+    shiny::reactive(table_gear_more(
+      gear, tryCatch(rows(), error = function(e) NULL)
+    ))
+  } else {
+    function() list()
+  }
   if (is.null(gear$info)) {
-    wire <- table_gear_wire(gear)
-    return(function() wire)
+    if (is.null(gear$pick_by)) {
+      wire <- table_gear_wire(gear)
+      return(function() wire)
+    }
+    return(function() table_gear_wire(gear, more = more()))
   }
   info <- shiny::reactive(tryCatch(gear$info(data()), error = function(e) NULL))
-  function() table_gear_wire(gear, info())
+  function() table_gear_wire(gear, info(), more())
 }
 
 # The payload: the state, the current layout's table model as the rows

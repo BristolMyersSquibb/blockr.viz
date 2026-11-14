@@ -321,6 +321,15 @@
               },
               "slot": false,
               "ctrl": true
+            },
+            "optional": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "slot": false,
+              "ctrl": true
             }
           },
           "sparkline": {
@@ -1307,6 +1316,22 @@
         "group": "Look",
         "control": "column",
         "label": "Sections of the inner rows"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_groups": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Group the outer rows by"
       },
       "slot": true,
       "ctrl": true

@@ -1,4 +1,4 @@
-// blockr.viz bundle 873c429a54f142cc4c25768525de92fa, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle f3a1f6986b35a5a8ec0fa261433eb2b5, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -1564,7 +1564,9 @@
     _shutAll(shut) {
       const m = this.model;
       const st = this._st;
-      this.shut = new Set(shut && m && m.sections ? m.sections.map((s, k) => k) : []);
+      // A section that keeps open (a group heading over closed rows) is not shut.
+      this.shut = new Set(shut && m && m.sections
+        ? m.sections.map((s, k) => (s.open ? -1 : k)).filter((k) => k >= 0) : []);
       this.shutRows = new Set();
       if (shut && st) st.toggle.forEach((t, i) => { if (t) this.shutRows.add(i); });
     }
