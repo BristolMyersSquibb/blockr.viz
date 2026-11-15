@@ -1,4 +1,4 @@
-/* blockr.viz bundle 36692eafcd105a9d6aa0c583f1b288f9, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle d749f96935bb41039dd3c1b03a458d0d, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1537,7 +1537,8 @@ input.vz-table-search:focus {
   pointer-events: none;
 }
 /* The open end: a thin caret 2px past the bar, in the bar's colour (set
-   inline), its stroke 1.6px whatever its size. */
+   inline), its stroke 1.6px whatever its size. It takes the pointer, so its
+   hover says its bar's tooltip (tooltip.js, laneText()). */
 .vz-table-groups-ivcell .vz-table-lane-open {
   top: 50%;
   width: 4px;
@@ -1546,7 +1547,7 @@ input.vz-table-search:focus {
   overflow: visible;
   color: var(--vz-ev-ink, #4b5563);
   transform: translateY(-50%);
-  pointer-events: none;
+  pointer-events: auto;
 }
 .vz-table-groups-ivcell .vz-table-lane-open polyline {
   fill: none;

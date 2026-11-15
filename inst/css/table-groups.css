@@ -513,7 +513,8 @@
   pointer-events: none;
 }
 /* The open end: a thin caret 2px past the bar, in the bar's colour (set
-   inline), its stroke 1.6px whatever its size. */
+   inline), its stroke 1.6px whatever its size. It takes the pointer, so its
+   hover says its bar's tooltip (tooltip.js, laneText()). */
 .vz-table-groups-ivcell .vz-table-lane-open {
   top: 50%;
   width: 4px;
@@ -522,7 +523,7 @@
   overflow: visible;
   color: var(--vz-ev-ink, #4b5563);
   transform: translateY(-50%);
-  pointer-events: none;
+  pointer-events: auto;
 }
 .vz-table-groups-ivcell .vz-table-lane-open polyline {
   fill: none;

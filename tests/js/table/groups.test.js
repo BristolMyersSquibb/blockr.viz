@@ -685,6 +685,28 @@ test('hover: the open arrow says its lane\'s last segment, not the time', () => 
   assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'last');
 });
 
+test('hover: a caret says its own bar on the main lane and a full bar, and takes the pointer', () => {
+  const m = lanes();
+  const mk = m.cols[7].mark;
+  // Main lane: a bar from 0 to 20, its caret far off at 60; a full bar below
+  // ends later, at 70, open.
+  mk.segs[0] = [[0, 20, 2]];
+  mk.tips[0] = ['main bar'];
+  mk.openAt = [60, null, null];
+  mk.subLanes[0].push({ n: 'AE', f: true, s: [[10, 60, 3]], t: ['AE bar'], o: 70 });
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(0, 7).querySelector('.vz-table-groups-ivstack');
+  const main = Array.from(stack.children).find((k) => !k.hasAttribute('data-n'));
+  const head = (node) => hover(t, node).tip.querySelector('.vz-tt-head').textContent;
+  assert.equal(head(main.querySelector('.vz-table-lane-open')), 'main bar');
+  assert.equal(head(stack.querySelector('[data-n="AE"] .vz-table-lane-open polyline')), 'AE bar');
+  // The browser sends the pointer to the caret only when its CSS lets it.
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => /\.vz-table-groups-ivcell \.vz-table-lane-open\s*\{/.test(r));
+  assert.match(rule, /pointer-events:\s*auto/);
+});
+
 test('lanes: the track sits behind the main lane and full bars, never a thin lane', () => {
   const m = lanes();
   m.cols[7].mark.track = true;
