@@ -1,4 +1,4 @@
-/* blockr.viz bundle ff83495fa18c0dc9af795e35e2dd9d04, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 36692eafcd105a9d6aa0c583f1b288f9, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1350,7 +1350,8 @@ input.vz-table-search:focus {
   margin-top: -0.5px;
   background: var(--blockr-color-border-default, #e5e7eb);
 }
-.vz-table-groups-lane i { position: absolute; }
+.vz-table-groups-lane i,
+.vz-table-groups-lane .vz-table-lane-open { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
    column stays one column. Every level keeps the full 12px lane and its
    marks; a row with more levels grows to hold them. (Thinning the third
@@ -1535,16 +1536,24 @@ input.vz-table-search:focus {
   background: var(--blockr-color-text-default, #111827);
   pointer-events: none;
 }
+/* The open end: a thin caret 2px past the bar, in the bar's colour (set
+   inline), its stroke 1.6px whatever its size. */
 .vz-table-groups-ivcell .vz-table-lane-open {
   top: 50%;
-  width: 0;
-  height: 0;
-  margin-left: 1px;
-  border-left: 7px solid var(--vz-ev-ink, #4b5563);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  width: 4px;
+  height: 8px;
+  margin-left: 3px;
+  overflow: visible;
+  color: var(--vz-ev-ink, #4b5563);
   transform: translateY(-50%);
   pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-open polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .vz-table-groups-ivcell .vz-table-lane-ev {
   position: absolute;
@@ -1616,9 +1625,8 @@ input.vz-table-search:focus {
   border-radius: 0;
 }
 .vz-table-groups-ivcell.is-thin .vz-table-lane-open {
-  border-left-width: 5px;
-  border-top-width: 3.5px;
-  border-bottom-width: 3.5px;
+  width: 3px;
+  height: 6px;
 }
 /* Even lanes (no record on the main lane): every lane is a 10px lane with
    an 8px bar, and the main lane turns into a layer over the whole stack that
@@ -1707,9 +1715,8 @@ input.vz-table-search:focus {
   border-radius: 0;
 }
 .vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-open {
-  border-left-width: 6px;
-  border-top-width: 4.5px;
-  border-bottom-width: 4.5px;
+  width: 3.5px;
+  height: 7px;
 }
 /* A tagged event: its text in a small box just after its position, in the
    event ink over a surface ring. */

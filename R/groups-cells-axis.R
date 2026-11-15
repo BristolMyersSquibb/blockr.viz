@@ -154,6 +154,31 @@ cells_axis_date_start <- function(d, st) {
   if (jan >= d) jan else as.Date(sprintf("%04d-01-01", yr + 1L))
 }
 
+#' Study-day ticks (`x_days`): the round sequence of cells_axis_ticks() in
+#' whole days, day 1 always among them and a round tick within three fifths
+#' of a step of it dropped. A tick at x <= 0 reads as the day before, as ADaM
+#' has no day 0: x = 0 is "D-1". `inst/js/table/axis.js` dayTicks() refits
+#' the same rule to the drawn width.
+#' @noRd
+cells_axis_day_ticks <- function(d0, d1, k = 7L) {
+  at <- cells_axis_ticks(d0, d1, k = k)
+  if (length(at) < 2L) {
+    return(list(at = numeric(), labels = character()))
+  }
+  step <- max(1, round(at[[2L]] - at[[1L]]))
+  at <- seq(ceiling(d0 / step) * step, d1, by = step)
+  if (d0 <= 1 && d1 >= 1) {
+    at <- sort(c(1, at[abs(at - 1) >= 0.6 * step]))
+  }
+  list(at = at, labels = cells_day_label(at))
+}
+
+#' A study-day label: "D1" for x = 1, "D-1" for x = 0.
+#' @noRd
+cells_day_label <- function(x) {
+  paste0("D", ifelse(x >= 1, x, x - 1))
+}
+
 #' The axis unit (`x_unit`) of a numeric swimlane before its first tick
 #' label, "Day 0"; `t` as cells_axis_ticks() and friends return it. The unit
 #' is `NULL` on any other axis.

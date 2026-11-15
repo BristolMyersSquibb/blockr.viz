@@ -62,7 +62,9 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
   })
   op <- paint_at(c$op, i)
   op <- if (length(op) && !is.na(op)) {
-    paint_iv_arrow(paint_lane_x(op, x, w), mid, 7, 5, PAINT_EV_INK, px)
+    sg <- c$segs[[i]]
+    ink <- if (length(sg)) c$fills[[sg[[length(sg)]][[3L]]]] else PAINT_EV_INK
+    paint_iv_arrow(paint_lane_x(op, x, w), mid, 4, ink, px)
   }
   ev <- lapply(paint_at(c$ev, i), function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
@@ -86,7 +88,8 @@ paint_iv_full <- function(c, l, x, w, y, gl) {
     paint_iv_seg(l$s[[j]], fills[[j]], x, w, y, gl$lane, gl)
   })
   op <- if (!is.null(l$o) && !is.na(l$o) && length(fills)) {
-    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, 7, 5, PAINT_EV_INK, px)
+    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, 4, fills[[length(fills)]],
+                   px)
   }
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
@@ -122,9 +125,9 @@ paint_iv_thin <- function(c, l, x, w, ytop, gl, even = FALSE) {
     paint_iv_seg(l$s[[j]], fills[[j]], x, w, ytop + px, bar * px, gl)
   })
   op <- if (!is.null(l$o) && !is.na(l$o) && length(fills)) {
-    half <- if (even) 5 else 3.5
-    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, half * 10 / 7, half,
-                   fills[[length(fills)]], px)
+    half <- if (even) 4 else 3
+    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, half, fills[[length(fills)]],
+                   px)
   }
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
@@ -167,10 +170,12 @@ paint_iv_seg <- function(sg, fill, x, w, y, h, gl) {
   )
 }
 
-# The open end's arrowhead at `x0`, `len` long and `half` high either side.
-paint_iv_arrow <- function(x0, mid, len, half, fill, px) {
-  x0 <- x0 + px
-  grid::polygonGrob(x = paint_in(x0 + c(0, len, 0) * px),
-                    y = paint_in(mid + c(half, 0, -half) * px),
-                    gp = grid::gpar(fill = fill, col = NA))
+# The open end: a caret 2px past the bar's end, `half` high either side and
+# as long, its stroke 1.6px in the bar's colour, as marks.js draws it.
+paint_iv_arrow <- function(x0, mid, half, col, px) {
+  x0 <- x0 + 2 * px
+  grid::linesGrob(x = paint_in(x0 + c(0, half, 0) * px),
+                  y = paint_in(mid + c(half, 0, -half) * px),
+                  gp = grid::gpar(col = col, lwd = 1.6,
+                                  lineend = "round", linejoin = "round"))
 }

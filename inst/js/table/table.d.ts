@@ -86,6 +86,8 @@ interface TableAxis {
   d0?: number;
   d1?: number;
   unit?: string;
+  /** Study days (`x_days`): ticks "D1", "D20", no day 0 (axis.js dayTicks()). */
+  days?: boolean;
 }
 
 type TableNums = (number | null)[];
@@ -156,7 +158,7 @@ interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
  *  lanes above the main one are 9px with a 5px bar. */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
-  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean; full?: boolean;
+  domainStart: number; domainEnd: number; dates?: boolean; days?: boolean; large?: boolean; full?: boolean;
   ticks?: number[][]; band?: number[][][]; events?: (number | string)[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
   evenLanes?: boolean; calmLanes?: boolean;

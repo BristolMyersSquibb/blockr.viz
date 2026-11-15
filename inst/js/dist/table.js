@@ -1,4 +1,4 @@
-// blockr.viz bundle f3a1f6986b35a5a8ec0fa261433eb2b5, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle b33b2e6c554131e4d0ce8f5222bd71a6, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -486,7 +486,7 @@
    */
   function laneOpen(c, cls, strip, name) {
     return '<div class="vz-table-groups-lane vz-table-groups-ivcell' + cls + '" data-d0="' +
-      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') +
+      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') + (c.days ? ' data-sd="1"' : '') +
       (name != null ? ' data-n="' + esc(name) + '"' : '') +
       (strip && strip.length ? ' data-strip="' + esc(JSON.stringify(strip)) + '"' : '') + '>';
   }
@@ -495,6 +495,16 @@
    * @param {TableMarkInterval} c @param {string | undefined} name @param {boolean} main */
   const laneName = (c, name, main) => (c.mainName == null || name == null ? ''
     : '<span class="vz-table-lane-name' + (main ? ' is-main' : '') + '">' + esc(name) + '</span>');
+
+  /**
+   * The open end: a thin caret 2px past the bar's end in the bar's colour,
+   * its stroke 1.6px at any size (the CSS sizes it to the lane), as the
+   * patient profile draws it.
+   * @param {number} x Percent of the lane. @param {string} color
+   */
+  const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
+    ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
+    '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
 
   /**
    * A thin lane above the main one, or a full bar below it (`f`, a second
@@ -516,9 +526,7 @@
       last = c.fills[Number(g[2]) - 1];
       s += seg(g, last, at(l.t, j), jn[j]);
     });
-    if (l.o != null) {
-      s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
-    }
+    if (l.o != null) s += caret(l.o, col(last));
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -567,7 +575,10 @@
       s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
     });
     const op = c.openAt ? c.openAt[i] : null;
-    if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
+    if (op != null) {
+      const sg = c.segs[i] || [];
+      s += caret(op, sg.length ? col(c.fills[Number(sg[sg.length - 1][2]) - 1]) : '');
+    }
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h
@@ -762,7 +773,8 @@
     // A swimlane with named bars leaves their gutter blank.
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
     const fit = a.d1 != null && a.d0 != null
-      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '')
+      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '') +
+        (a.days ? ' data-days="1"' : '')
       : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
@@ -781,7 +793,9 @@
  * swimlane, its domain and unit (R/table-groups-cols.R table_groups_axis());
  * once the table is laid out, fit() replaces the ticks with the finest step
  * of the 1 / 2 / 2.5 / 5 ladder that keeps labels 60px apart, the first
- * after the unit ("Day 0"). A date axis keeps R's ticks.
+ * after the unit ("Day 0"). A study-day axis (`x_days`) labels its ticks
+ * "D1", "D20", with day 1 always a tick and no day 0 (dayTicks()). A date
+ * axis keeps R's ticks.
  */
 (function () {
   'use strict';
@@ -816,6 +830,37 @@
   }
 
   /**
+   * Study-day ticks across `d0` to `d1` drawn `w` px wide: whole-day steps of
+   * the 1 / 2 / 5 ladder, day 1 always among them and a round tick within
+   * three fifths of a step of it dropped, as the patient profile's axis
+   * (R's cells_axis_day_ticks()).
+   * @param {number} d0 @param {number} d1 @param {number} w @param {number} [gap]
+   * @returns {number[]}
+   */
+  function dayTicks(d0, d1, w, gap = 60) {
+    const range = d1 - d0;
+    if (!(range > 0) || !(w > 0)) return [];
+    const min = Math.max(1, range * gap / w);
+    let mag = Math.pow(10, Math.floor(Math.log10(min)));
+    let step = 0;
+    while (!step) {
+      for (const s of [1, 2, 5]) if (!step && s * mag >= min) step = s * mag;
+      mag *= 10;
+    }
+    /** @type {number[]} */
+    let out = [];
+    for (let x = Math.ceil(d0 / step - 1e-9) * step; x <= d1 + 1e-9; x += step) out.push(Math.round(x));
+    if (d0 <= 1 && d1 >= 1) {
+      out = out.filter((x) => Math.abs(x - 1) >= 0.6 * step).concat(1).sort((a, b) => a - b);
+    }
+    return out;
+  }
+
+  /** A study day's label: x = 1 is "D1", x = 0 the day before, "D-1".
+   * @param {number} x */
+  const dayLabel = (x) => 'D' + String(x >= 1 ? x : x - 1);
+
+  /**
    * Fit every numeric swimlane axis in `host` to its width; an axis is
    * redrawn only when its width changed.
    * @param {ParentNode} host
@@ -830,19 +875,20 @@
       const d0 = Number(el.getAttribute('data-d0'));
       const d1 = Number(el.getAttribute('data-d1'));
       const unit = el.getAttribute('data-unit');
-      const at = ticks(d0, d1, w);
+      const days = el.getAttribute('data-days') === '1';
+      const at = days ? dayTicks(d0, d1, w) : ticks(d0, d1, w);
       if (at.length < 2) return;
       el.setAttribute('data-w', String(w));
       el.innerHTML = at.map((x, j) => {
         const p = Math.round((x - d0) / (d1 - d0) * 1e4) / 100;
-        const text = (j === 0 && unit ? unit + ' ' : '') + String(x);
+        const text = days ? dayLabel(x) : (j === 0 && unit ? unit + ' ' : '') + String(x);
         return '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
           ' style="left:' + p + '%">' + esc(text) + '</span>';
       }).join('');
     });
   }
 
-  V.table.axis = { ticks, fit };
+  V.table.axis = { ticks, dayTicks, dayLabel, fit };
 })();
 // --- table/tooltip.js
 // @ts-check
@@ -1059,6 +1105,7 @@
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
       const v = d0 + x * (d1 - d0);
+      if (lane.getAttribute('data-sd') === '1') return { text: '~' + V.table.axis.dayLabel(Math.round(v)) };
       return { text: '~' + (lane.getAttribute('data-dd') === '1'
         ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10)) };
     }

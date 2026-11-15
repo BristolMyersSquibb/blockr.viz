@@ -319,6 +319,16 @@ table_summary_specs <- function() {
           "names its own dates."
         )
       ),
+      x_days = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Study days"),
+        describe = paste(
+          "The axis reads in study days: \"D1\", \"D20\", ..., day 1",
+          "always a tick, and no day 0, so an x at or below 0 reads as the",
+          "day before (x = 0 is \"D-1\"), as ADaM counts. Only on a numeric",
+          "axis; the hover reads the same way."
+        )
+      ),
       lane_size = viz_arg(
         type = "enum", default = "sm", values = c("sm", "md"),
         gear = gear("Columns", "segmented", "Lane height",

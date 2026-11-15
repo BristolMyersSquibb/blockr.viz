@@ -17,6 +17,8 @@ cells_interval <- function(ctx, p) {
        dd = dd, lg = identical(p$size, "lg"), xl = identical(p$size, "xl"),
        lm = identical(p$lane_size, "md"), tr = isTRUE(p$track),
        v = cells_sortv(ctx$rows[[p$key]] %||% ctx$rows$.v))
+  # A study-day axis (`x_days`): the hover reads its time as "D12".
+  if (!dd && isTRUE(p$x_days)) out$sd <- TRUE
   if (!is.null(p$ovl)) {
     out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb,
                                           c(p, list(d1_ = dom[[2L]])), dd))

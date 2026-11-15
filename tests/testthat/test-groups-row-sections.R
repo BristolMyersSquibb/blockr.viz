@@ -62,6 +62,26 @@ test_that("a numeric swimlane axis sends its domain and puts its unit first", {
   expect_null(ax$unit)
 })
 
+test_that("a study-day axis has day 1 and no day 0", {
+  m <- rs_model(summaries = list(list(type = "spans", x = "x", xend = "xe",
+                                      x_unit = "Day", x_days = TRUE)))
+  ax <- table_groups_axis(m$prep$plan[[1L]], m$prep)
+  expect_true(isTRUE(ax$days))
+  expect_null(ax$unit)
+  expect_true("D1" %in% ax$labels)
+  expect_false("D0" %in% ax$labels)
+  expect_true(all(grepl("^D-?[0-9]+$", ax$labels)))
+  # The marks carry the flag for the hover's day.
+  col <- m$cells$cols[[1L]]
+  expect_true(isTRUE(col$sd %||% col$days))
+  t <- cells_axis_day_ticks(-10, 210)
+  expect_identical(t$at[[1L]], 1)
+  expect_identical(cells_day_label(c(1, 0, -19, 20)),
+                   c("D1", "D-1", "D-20", "D20"))
+  # A round tick next to day 1 gives way to it.
+  expect_false(0 %in% cells_axis_day_ticks(0, 60)$at)
+})
+
 # Two episodes of one term: Diarrhoea on days 10-20 and 18-30 (overlapping),
 # again 32-40 (two days after), Dizziness 10-15 the same day as the first.
 ep_data <- function() {

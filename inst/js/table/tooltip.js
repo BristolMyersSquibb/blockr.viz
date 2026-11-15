@@ -212,6 +212,7 @@
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
       const v = d0 + x * (d1 - d0);
+      if (lane.getAttribute('data-sd') === '1') return { text: '~' + V.table.axis.dayLabel(Math.round(v)) };
       return { text: '~' + (lane.getAttribute('data-dd') === '1'
         ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10)) };
     }

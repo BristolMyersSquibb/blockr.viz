@@ -52,7 +52,7 @@ TABLE_GROUPS_KEYS <- list(
   sparkline = c(pl = "line", bd = "band", dx = "dotX", dy = "dotY",
                 xs = "xValues", ys = "yValues", rc = "refY",
                 rby = "refBandY", rbh = "refBandHeight"),
-  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
+  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates", sd = "days",
                lg = "large", xl = "full", lm = "calmLanes", tr = "track", mn = "mainName",
                lw = "laneNameWidth", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
@@ -118,8 +118,12 @@ table_groups_axis <- function(p, prep) {
   if (is.null(dom)) {
     return(NULL)
   }
+  days <- !isTRUE(dom$date) && identical(p$kind, "interval") &&
+    isTRUE(p$x_days)
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
+  } else if (days) {
+    cells_axis_day_ticks(dom$d0, dom$d1)
   } else {
     at <- cells_axis_ticks(
       dom$d0, dom$d1, k = if (identical(p$kind, "interval")) 7L else 4L
@@ -133,14 +137,15 @@ table_groups_axis <- function(p, prep) {
     last <- length(t$labels)
     t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
-  t <- cells_axis_unit(t, p, dom)
+  if (!days) t <- cells_axis_unit(t, p, dom)
   pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
   # A numeric swimlane's domain goes along: the browser spaces its ticks by
   # the column's drawn width (axis.js fit()).
   fit <- identical(p$kind, "interval") && !isTRUE(dom$date)
   table_groups_compact(list(
     at = groups_arr(pos), labels = groups_arr(t$labels),
-    d0 = if (fit) dom$d0, d1 = if (fit) dom$d1, unit = if (fit) t$unit
+    d0 = if (fit) dom$d0, d1 = if (fit) dom$d1, unit = if (fit) t$unit,
+    days = if (days) TRUE
   ))
 }
 

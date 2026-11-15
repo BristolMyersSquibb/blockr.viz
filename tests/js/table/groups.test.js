@@ -601,9 +601,10 @@ test('lanes: thin lanes stack above the main lane, each segment in its style', (
                /--vz-seg:#2a9686/);
   assert.ok(kids[0].querySelector('.vz-table-lane-adm'));
   assert.ok(kids[0].querySelector('.vz-table-lane-step'));
-  // The open end in the lane's colour; the closed lane has none.
-  assert.match(kids[0].querySelector('.vz-table-lane-open').getAttribute('style'),
-               /left:80%;border-left-color:#2a9686/);
+  // The open end a thin caret in the lane's colour; the closed lane has none.
+  const caret = kids[0].querySelector('svg.vz-table-lane-open');
+  assert.match(caret.getAttribute('style'), /left:80%;color:#2a9686/);
+  assert.ok(caret.querySelector('polyline'));
   assert.equal(kids[1].querySelector('.vz-table-lane-open'), null);
   // The main lane keeps its segments; a row without lanes has no stack.
   assert.equal(kids[2].querySelectorAll('.vz-table-lane-seg').length, 2);
@@ -888,6 +889,25 @@ test('the axis of a numeric swimlane: ticks spaced by the drawn width, its unit 
   Object.defineProperty(ax, 'clientWidth', { value: 230 });
   A.fit(host);
   assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['Day 0', '200', '400']);
+});
+
+test('a study-day axis: D1 always a tick, no day 0, x <= 0 the day before', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const A = t.win.Blockr.viz.table.axis;
+  // 210 days in 300px: steps of 50, day 1 in place of day 0.
+  assert.deepEqual(Array.from(A.dayTicks(-10, 210, 300)), [1, 50, 100, 150, 200]);
+  // A round tick within three fifths of a step of day 1 gives way to it.
+  assert.deepEqual(Array.from(A.dayTicks(0, 60, 300)), [1, 20, 40, 60]);
+  assert.deepEqual(Array.from(A.dayTicks(-3, 4, 900)), [-3, -2, -1, 0, 1, 2, 3, 4]);
+  assert.equal(A.dayLabel(1), 'D1');
+  assert.equal(A.dayLabel(0), 'D-1');
+  assert.equal(A.dayLabel(-19), 'D-20');
+  const host = t.win.document.createElement('div');
+  host.innerHTML = '<span class="vz-table-groups-axis-in" data-d0="-10" data-d1="210" data-unit="Day" data-days="1"></span>';
+  const ax = host.firstChild;
+  Object.defineProperty(ax, 'clientWidth', { value: 300 });
+  A.fit(host);
+  assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['D1', 'D50', 'D100', 'D150', 'D200']);
 });
 
 test('a closed outer row splits its padding evenly, so its label sits on the middle', () => {

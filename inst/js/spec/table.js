@@ -698,6 +698,20 @@
               "slot": false,
               "ctrl": true
             },
+            "x_days": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Study days"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "lane_size": {
               "type": {
                 "name": "enum"

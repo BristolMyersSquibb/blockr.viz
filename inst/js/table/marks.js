@@ -229,7 +229,7 @@
    */
   function laneOpen(c, cls, strip, name) {
     return '<div class="vz-table-groups-lane vz-table-groups-ivcell' + cls + '" data-d0="' +
-      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') +
+      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') + (c.days ? ' data-sd="1"' : '') +
       (name != null ? ' data-n="' + esc(name) + '"' : '') +
       (strip && strip.length ? ' data-strip="' + esc(JSON.stringify(strip)) + '"' : '') + '>';
   }
@@ -238,6 +238,16 @@
    * @param {TableMarkInterval} c @param {string | undefined} name @param {boolean} main */
   const laneName = (c, name, main) => (c.mainName == null || name == null ? ''
     : '<span class="vz-table-lane-name' + (main ? ' is-main' : '') + '">' + esc(name) + '</span>');
+
+  /**
+   * The open end: a thin caret 2px past the bar's end in the bar's colour,
+   * its stroke 1.6px at any size (the CSS sizes it to the lane), as the
+   * patient profile draws it.
+   * @param {number} x Percent of the lane. @param {string} color
+   */
+  const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
+    ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
+    '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
 
   /**
    * A thin lane above the main one, or a full bar below it (`f`, a second
@@ -259,9 +269,7 @@
       last = c.fills[Number(g[2]) - 1];
       s += seg(g, last, at(l.t, j), jn[j]);
     });
-    if (l.o != null) {
-      s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
-    }
+    if (l.o != null) s += caret(l.o, col(last));
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -310,7 +318,10 @@
       s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
     });
     const op = c.openAt ? c.openAt[i] : null;
-    if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
+    if (op != null) {
+      const sg = c.segs[i] || [];
+      s += caret(op, sg.length ? col(c.fills[Number(sg[sg.length - 1][2]) - 1]) : '');
+    }
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h
@@ -505,7 +516,8 @@
     // A swimlane with named bars leaves their gutter blank.
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
     const fit = a.d1 != null && a.d0 != null
-      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '')
+      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '') +
+        (a.days ? ' data-days="1"' : '')
       : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
