@@ -1,4 +1,4 @@
-// blockr.viz bundle 417668e7cb1ad1f784366fee96ad2b50, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle cff7a7e74e3d6ac52c525d1d12bbaaab, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -505,6 +505,33 @@
    * patient profile draws it.
    * @param {number} x Percent of the lane. @param {string} color
    */
+  /**
+   * The bar a lane's open end belongs to: the one whose end is nearest the
+   * caret at `x`, the later one on a tie. Dots and steps are no bars.
+   * @param {(number | string)[][]} segs @param {number} x
+   */
+  function endSeg(segs, x) {
+    let best = null;
+    let d = Infinity;
+    segs.forEach((g) => {
+      const k = Number(g[4]) || 1;
+      if (k === 4 || k === 5) return;
+      const e = Math.abs(Number(g[0]) + Number(g[1]) - x);
+      if (e <= d) {
+        best = g;
+        d = e;
+      }
+    });
+    return best;
+  }
+
+  /** The open end's colour: its bar's. @param {TableMarkInterval} c
+   * @param {(number | string)[][]} segs @param {number} x */
+  const endFill = (c, segs, x) => {
+    const g = endSeg(segs, x);
+    return g ? col(c.fills[Number(g[2]) - 1]) : '';
+  };
+
   const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
     ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
     '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
@@ -523,13 +550,11 @@
     const cls = (full ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin') +
       (l.f && c.track ? ' has-track' : '');
     let s = laneOpen(c, cls, l.b, l.n) + (full ? laneName(c, l.n, false) : '');
-    let last = '';
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
-      last = c.fills[Number(g[2]) - 1];
-      s += seg(g, last, at(l.t, j), jn[j]);
+      s += seg(g, c.fills[Number(g[2]) - 1], at(l.t, j), jn[j]);
     });
-    if (l.o != null) s += caret(l.o, col(last));
+    if (l.o != null) s += caret(l.o, endFill(c, l.s || [], l.o));
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -578,10 +603,7 @@
       s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
     });
     const op = c.openAt ? c.openAt[i] : null;
-    if (op != null) {
-      const sg = c.segs[i] || [];
-      s += caret(op, sg.length ? col(c.fills[Number(sg[sg.length - 1][2]) - 1]) : '');
-    }
+    if (op != null) s += caret(op, endFill(c, c.segs[i] || [], op));
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h
@@ -1097,12 +1119,12 @@
       if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
         return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
       }
-      // The open end's arrow belongs to the lane's last segment. Off a
+      // The open end's caret belongs to the bar ending at it. Off a
       // segment, the one at the pointer's time, or within a few pixels of it
       // (a thin lane is a few pixels high, a short bar a few pixels wide).
       const open = t.closest('.vz-table-lane-open');
       const w = lane.getBoundingClientRect().width;
-      const hit = seg || (open ? lastSeg(lane) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
+      const hit = seg || (open ? endSeg(lane, /** @type {HTMLElement} */ (open)) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
       if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
@@ -1154,18 +1176,21 @@
   }
 
   /**
-   * The segment of a lane that ends last, or null.
+   * The segment an open end belongs to: the one whose end is nearest the
+   * caret, the later one on a tie (marks.js draws the caret at its bar's end).
    * @param {Element} lane
+   * @param {HTMLElement} open
    */
-  function lastSeg(lane) {
+  function endSeg(lane, open) {
+    const x = parseFloat(open.style.left);
     let best = null;
-    let end = -Infinity;
+    let d = Infinity;
     Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
       const st = /** @type {HTMLElement} */ (el).style;
-      const r = parseFloat(st.left) + parseFloat(st.width);
-      if (r >= end) {
+      const e = Math.abs(parseFloat(st.left) + parseFloat(st.width) - (isNaN(x) ? 1e9 : x));
+      if (e <= d) {
         best = el;
-        end = r;
+        d = e;
       }
     });
     return best;

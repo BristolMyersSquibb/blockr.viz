@@ -245,6 +245,33 @@
    * patient profile draws it.
    * @param {number} x Percent of the lane. @param {string} color
    */
+  /**
+   * The bar a lane's open end belongs to: the one whose end is nearest the
+   * caret at `x`, the later one on a tie. Dots and steps are no bars.
+   * @param {(number | string)[][]} segs @param {number} x
+   */
+  function endSeg(segs, x) {
+    let best = null;
+    let d = Infinity;
+    segs.forEach((g) => {
+      const k = Number(g[4]) || 1;
+      if (k === 4 || k === 5) return;
+      const e = Math.abs(Number(g[0]) + Number(g[1]) - x);
+      if (e <= d) {
+        best = g;
+        d = e;
+      }
+    });
+    return best;
+  }
+
+  /** The open end's colour: its bar's. @param {TableMarkInterval} c
+   * @param {(number | string)[][]} segs @param {number} x */
+  const endFill = (c, segs, x) => {
+    const g = endSeg(segs, x);
+    return g ? col(c.fills[Number(g[2]) - 1]) : '';
+  };
+
   const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
     ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
     '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
@@ -263,13 +290,11 @@
     const cls = (full ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin') +
       (l.f && c.track ? ' has-track' : '');
     let s = laneOpen(c, cls, l.b, l.n) + (full ? laneName(c, l.n, false) : '');
-    let last = '';
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
-      last = c.fills[Number(g[2]) - 1];
-      s += seg(g, last, at(l.t, j), jn[j]);
+      s += seg(g, c.fills[Number(g[2]) - 1], at(l.t, j), jn[j]);
     });
-    if (l.o != null) s += caret(l.o, col(last));
+    if (l.o != null) s += caret(l.o, endFill(c, l.s || [], l.o));
     return s + events(l.e, l.et) + '</div>';
   }
 
@@ -318,10 +343,7 @@
       s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
     });
     const op = c.openAt ? c.openAt[i] : null;
-    if (op != null) {
-      const sg = c.segs[i] || [];
-      s += caret(op, sg.length ? col(c.fills[Number(sg[sg.length - 1][2]) - 1]) : '');
-    }
+    if (op != null) s += caret(op, endFill(c, c.segs[i] || [], op));
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
     // Named bars keep a gutter on every row, so the bars line up with the axis.
     const named = (/** @type {string} */ h) => (c.mainName == null ? h

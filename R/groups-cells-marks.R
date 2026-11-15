@@ -61,10 +61,8 @@ cells_interval_lanes <- function(lanes, bb, lv, tf, cvar, dd, d1, ename) {
       out$et <- as.list(vapply(l$ev, cells_event_tip, "", ename = ename,
                                dd = dd))
     }
-    if (isTRUE(l$op) && length(l$segs)) {
-      out$o <- bb$pos(min(max(vapply(l$segs, function(sg) sg$e, 0)),
-                             d1))[[1L]]
-    }
+    o <- cells_open_at(l$op, l$segs, bb, d1)
+    if (!is.na(o)) out$o <- o
     out
   })
   sl <- cells_regroup(one, lengths(subs))
@@ -85,7 +83,8 @@ cells_regroup <- function(x, n) {
 
 # The overlays in lane percent, only the parts the row asked for: `tk` tick
 # positions, `bd` line pieces [left, width], `ev` events [x, shape] with
-# their tooltip in `et`, and `op` the open end's position (NA: closed).
+# their tooltip in `et`, and `op` the open end's position (NA: closed,
+# cells_open_at()).
 cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
   has <- function(nm) any(vapply(ovl, function(o) !is.null(o[[nm]]), NA))
   out <- list()
@@ -110,13 +109,32 @@ cells_interval_overlays <- function(ovl, segs, bb, p, dd) {
   }
   if (has("op")) {
     out$op <- vapply(seq_along(ovl), function(i) {
-      ss <- segs[[i]]
-      if (!isTRUE(ovl[[i]]$op) || !length(ss)) return(NA_real_)
-      bb$pos(min(max(vapply(ss, function(sg) sg$e, numeric(1L))),
-                 p$d1_ %||% Inf))[[1L]]
+      cells_open_at(ovl[[i]]$op, segs[[i]], bb, p$d1_ %||% Inf)
     }, numeric(1L))
   }
   out
+}
+
+# Where a lane's caret sits, in lane percent: at its open record's end `e`
+# (groups_spans_open_end(); NULL: closed), within the axis. An end inside a
+# bar of the lane (a worse level drawn over it) or where the next bar starts
+# moves to the end of that run of bars, so the caret always follows a bar
+# end; an end no bar of the lane reaches goes to the nearest bar end before
+# it (or after, without one). NA without a caret.
+cells_open_at <- function(e, segs, bb, d1) {
+  if (is.null(e) || !length(segs)) return(NA_real_)
+  s <- vapply(segs, function(sg) sg$s, numeric(1L))
+  se <- pmin(vapply(segs, function(sg) sg$e, numeric(1L)), d1)
+  x <- min(e, d1)
+  if (!any(abs(se - x) < 1e-9 | (s <= x & se > x))) {
+    x <- if (any(se < x)) max(se[se < x]) else min(se)
+  }
+  repeat {
+    inside <- s <= x & se > x
+    if (!any(inside)) break
+    x <- max(se[inside])
+  }
+  bb$pos(x)[[1L]]
 }
 
 # An event as the cells send it: [x, shape], with its tag when it has one.

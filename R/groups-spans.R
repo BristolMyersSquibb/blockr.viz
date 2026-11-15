@@ -75,15 +75,36 @@ groups_spans_split <- function(g, by) {
   lapply(by, function(rows) groups_spans_segs(g, rows[draws[rows]]))
 }
 
+#' The open end of a lane's records `rows`: the end of the latest-ending one
+#' that is open (`op`) and draws, Inf for one without an end; NULL when none
+#' is. The caret sits there, at the end of its own record's bar, so a record
+#' that draws on another lane or track never moves it.
+#' @noRd
+groups_spans_open_end <- function(g, op, rows) {
+  if (is.null(op)) return(NULL)
+  rows <- rows[op[rows] %in% TRUE & g$ok[rows] & !is.na(g$fill[rows])]
+  if (length(rows)) max(g$end[rows])
+}
+
 #' groups_spans_split() for stacked overlaps: each row's main lane keeps the
 #' first track of its records, each record whole (groups_spans_tracks());
 #' groups_spans_lanes() draws the other tracks.
 #' @noRd
 groups_spans_split_stacked <- function(g, by) {
   g1 <- utils::modifyList(g, list(worst = FALSE))
+  lapply(groups_spans_main_rows(g, by, TRUE), function(rows) {
+    groups_spans_segs(g1, rows)
+  })
+}
+
+#' The records each row draws on its main lane: those that draw there, and
+#' stacked only the first track of them.
+#' @noRd
+groups_spans_main_rows <- function(g, by, stack) {
   draws <- g$ok & g$main
   lapply(by, function(rows) {
-    groups_spans_segs(g1, groups_spans_tracks(g, rows[draws[rows]])[[1L]])
+    rows <- rows[draws[rows]]
+    if (stack) groups_spans_tracks(g, rows)[[1L]] else rows
   })
 }
 
@@ -236,17 +257,24 @@ groups_spans_worst <- function(g, idx) {
   lo <- lo[keep]
   hi <- hi[keep]
   win <- win[keep]
-  if (!length(win)) return(list())
+  # A one-moment record (start = end) spans no piece: it draws as itself
+  # where no piece covers it.
+  pt <- which(s == e)
+  pt <- pt[!vapply(pt, function(k) any(lo <= s[[k]] & hi >= s[[k]]), NA)]
+  pts <- lapply(idx[pt], g$seg)
+  if (!length(win)) return(Filter(Negate(is.null), pts))
   # A new piece starts where the record changes or a gap opens.
   new <- c(TRUE, win[-1L] != win[-length(win)] | lo[-1L] > hi[-length(hi)])
   first <- which(new)
   last <- c(first[-1L] - 1L, length(win))
-  lapply(seq_along(first), function(j) {
+  out <- c(lapply(seq_along(first), function(j) {
     sg <- g$seg(idx[[win[[first[[j]]]]]])
     sg$s <- lo[[first[[j]]]]
     sg$e <- hi[[last[[j]]]]
     sg
-  })
+  }), pts)
+  out <- Filter(Negate(is.null), out)
+  out[order(vapply(out, function(sg) sg$s, numeric(1L)))]
 }
 
 # Segment styles by the value of the style column; anything else is solid.
@@ -265,8 +293,8 @@ groups_spans_styles <- function(slice, col) {
 }
 
 #' The thin lanes and the strips of a spans row, one list per target row:
-#' `sub`, a list of lanes in level order (`nm`, `segs`, `op` whether the lane
-#' ends open, `bx` its strip boxes), and `ms`, the main lane's strip boxes. A
+#' `sub`, a list of lanes in level order (`nm`, `segs`, `op` its open end
+#' (groups_spans_open_end()), `bx` its strip boxes), and `ms`, the main lane's strip boxes. A
 #' box is `x`, its text `t` and its record's style `st`. A parent row pools
 #' nothing: its lanes are one subject's facts. `g` is the slice's reader, `by`
 #' its rows per target row (groups_rows_by_key()).
@@ -323,7 +351,7 @@ groups_spans_lanes <- function(g, by, s, stack = FALSE) {
           sub[[length(sub) + 1L]] <- list(
             nm = l, segs = segs, bx = bx, ev = evs,
             fl = l %in% s$.full_levels,
-            op = !is.null(op) && isTRUE(any(op[own], na.rm = TRUE))
+            op = groups_spans_open_end(g, op, own)
           )
         }
       }
@@ -336,7 +364,7 @@ groups_spans_lanes <- function(g, by, s, stack = FALSE) {
       sub <- c(lapply(more, function(tr) {
         list(nm = s$.full_levels[1L] %||% "", segs = groups_spans_segs(g1, tr),
              bx = list(), ev = list(), fl = TRUE,
-             op = !is.null(op) && isTRUE(any(op[tr], na.rm = TRUE)))
+             op = groups_spans_open_end(g, op, tr))
       }), sub)
     }
     list(sub = sub, ms = boxes(rows[g$main[rows]]))

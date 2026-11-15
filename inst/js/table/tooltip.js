@@ -201,12 +201,12 @@
       if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
         return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
       }
-      // The open end's arrow belongs to the lane's last segment. Off a
+      // The open end's caret belongs to the bar ending at it. Off a
       // segment, the one at the pointer's time, or within a few pixels of it
       // (a thin lane is a few pixels high, a short bar a few pixels wide).
       const open = t.closest('.vz-table-lane-open');
       const w = lane.getBoundingClientRect().width;
-      const hit = seg || (open ? lastSeg(lane) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
+      const hit = seg || (open ? endSeg(lane, /** @type {HTMLElement} */ (open)) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
       if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
@@ -258,18 +258,21 @@
   }
 
   /**
-   * The segment of a lane that ends last, or null.
+   * The segment an open end belongs to: the one whose end is nearest the
+   * caret, the later one on a tie (marks.js draws the caret at its bar's end).
    * @param {Element} lane
+   * @param {HTMLElement} open
    */
-  function lastSeg(lane) {
+  function endSeg(lane, open) {
+    const x = parseFloat(open.style.left);
     let best = null;
-    let end = -Infinity;
+    let d = Infinity;
     Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
       const st = /** @type {HTMLElement} */ (el).style;
-      const r = parseFloat(st.left) + parseFloat(st.width);
-      if (r >= end) {
+      const e = Math.abs(parseFloat(st.left) + parseFloat(st.width) - (isNaN(x) ? 1e9 : x));
+      if (e <= d) {
         best = el;
-        end = r;
+        d = e;
       }
     });
     return best;

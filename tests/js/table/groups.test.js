@@ -707,6 +707,25 @@ test('hover: the open arrow says its lane\'s last segment, not the time', () => 
   assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'last');
 });
 
+test('a caret takes the colour and the tooltip of the bar ending at it', () => {
+  const m = lanes();
+  const mk = m.cols[7].mark;
+  // The open bar (fill 3) ends at 20, a closed one (fill 4) after it.
+  mk.segs[0] = [[0, 20, 3], [50, 40, 4]];
+  mk.tips[0] = ['open bar', 'closed bar'];
+  mk.openAt = [20, null, null];
+  mk.subLanes[0].push({ n: 'AE', f: true, s: [[0, 30, 4], [40, 20, 3]], t: ['AE open', 'AE later'], o: 30 });
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(0, 7).querySelector('.vz-table-groups-ivstack');
+  const main = Array.from(stack.children).find((k) => !k.hasAttribute('data-n'));
+  const mc = main.querySelector('.vz-table-lane-open');
+  assert.match(mc.getAttribute('style'), /color:#2a9686/);
+  assert.equal(hover(t, mc).tip.querySelector('.vz-tt-head').textContent, 'open bar');
+  const ac = stack.querySelector('[data-n="AE"] .vz-table-lane-open');
+  assert.match(ac.getAttribute('style'), /color:#d98a1e/);
+  assert.equal(hover(t, ac).tip.querySelector('.vz-tt-head').textContent, 'AE open');
+});
+
 test('hover: a caret says its own bar on the main lane and a full bar, and takes the pointer', () => {
   const m = lanes();
   const mk = m.cols[7].mark;

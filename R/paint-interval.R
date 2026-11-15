@@ -62,14 +62,27 @@ paint_interval <- function(c, i, x, w, ytop, gl) {
   })
   op <- paint_at(c$op, i)
   op <- if (length(op) && !is.na(op)) {
-    sg <- c$segs[[i]]
-    ink <- if (length(sg)) c$fills[[sg[[length(sg)]][[3L]]]] else PAINT_EV_INK
-    paint_iv_arrow(paint_lane_x(op, x, w), mid, 4, ink, px)
+    paint_iv_arrow(paint_lane_x(op, x, w), mid, 4,
+                   paint_iv_end_fill(c, c$segs[[i]], op), px)
   }
   ev <- lapply(paint_at(c$ev, i), function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
   })
   c(thin, segs, tk, bd, list(op), ev, names)
+}
+
+# The open end's colour: its bar's, the one whose end is nearest the caret
+# at `x`, the later one on a tie, as marks.js endSeg() picks it. Dots and
+# steps are no bars.
+paint_iv_end_fill <- function(c, segs, x) {
+  bar <- vapply(segs, function(sg) {
+    !(length(sg) >= 5L && sg[[5L]] %in% c(4L, 5L))
+  }, logical(1L))
+  if (!any(bar)) return(PAINT_EV_INK)
+  d <- vapply(segs, function(sg) abs(sg[[1L]] + sg[[2L]] - x), numeric(1L))
+  d[!bar] <- Inf
+  k <- max(which(d == min(d)))
+  c$fills[[segs[[k]][[3L]]]]
 }
 
 # The gutter of named bars: `lw` characters of the names' type, and a gap.
@@ -88,8 +101,8 @@ paint_iv_full <- function(c, l, x, w, y, gl) {
     paint_iv_seg(l$s[[j]], fills[[j]], x, w, y, gl$lane, gl)
   })
   op <- if (!is.null(l$o) && !is.na(l$o) && length(fills)) {
-    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, 4, fills[[length(fills)]],
-                   px)
+    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, 4,
+                   paint_iv_end_fill(c, l$s, l$o), px)
   }
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)
@@ -126,8 +139,8 @@ paint_iv_thin <- function(c, l, x, w, ytop, gl, even = FALSE) {
   })
   op <- if (!is.null(l$o) && !is.na(l$o) && length(fills)) {
     half <- if (even) 4 else 3
-    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, half, fills[[length(fills)]],
-                   px)
+    paint_iv_arrow(paint_lane_x(l$o, x, w), mid, half,
+                   paint_iv_end_fill(c, l$s, l$o), px)
   }
   ev <- lapply(l$e, function(e) {
     paint_event(e, paint_lane_x(e[[1L]], x, w), mid, gl)

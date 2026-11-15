@@ -292,7 +292,7 @@ groups_fill_spans <- function(target, tkeys, slice, s, sid,
     target[[groups_col(sid, "ovl")]] <- I(if (pool) {
       rep(list(list()), nrow(target))
     } else {
-      groups_spans_overlays(g, by, s)
+      groups_spans_overlays(g, by, s, stack = stack)
     })
   }
   if (groups_spans_has_lanes(s)) {
@@ -315,11 +315,12 @@ groups_spans_has_overlay <- function(s) {
 
 #' The overlays of a spans row, one list per target row: `tk` tick positions,
 #' `bd` line pieces (`s`, `e`), `ev` events (`x`, shape index `k`, level
-#' `lv`) and `op`, whether the lane ends open. Each reads only the rows where
-#' its own columns are set. `g` is the slice's reader, `by` its rows per
-#' target row (groups_rows_by_key()).
+#' `lv`) and `op`, the main lane's open end (groups_spans_open_end(), only
+#' the records it draws, stacked its first track). Each reads only the rows
+#' where its own columns are set. `g` is the slice's reader, `by` its rows
+#' per target row (groups_rows_by_key()).
 #' @noRd
-groups_spans_overlays <- function(g, by, s) {
+groups_spans_overlays <- function(g, by, s, stack = FALSE) {
   slice <- g$slice
   col <- function(nm) {
     v <- chr_state(s[[nm]])
@@ -337,9 +338,10 @@ groups_spans_overlays <- function(g, by, s) {
   if (!is.null(ex) && !is.null(g$ln)) ex[!g$main] <- NA_real_
   opc <- col("open")
   op <- if (!is.null(opc)) as.logical(slice[[opc]])
-  # With lanes the main lane's arrow reads only its own records.
-  if (!is.null(op) && !is.null(g$ln)) op[!g$main] <- FALSE
-  lapply(by, function(rows) {
+  # The main lane's caret reads only the records it draws.
+  main <- if (!is.null(op)) groups_spans_main_rows(g, by, stack)
+  lapply(seq_along(by), function(k) {
+    rows <- by[[k]]
     out <- list()
     if (!is.null(tk)) {
       v <- tk[rows]
@@ -357,7 +359,7 @@ groups_spans_overlays <- function(g, by, s) {
       r <- r[order(ex[r])]
       out$ev <- lapply(r, g$event$at)
     }
-    if (!is.null(op)) out$op <- isTRUE(any(op[rows], na.rm = TRUE))
+    if (!is.null(op)) out$op <- groups_spans_open_end(g, op, main[[k]])
     out
   })
 }

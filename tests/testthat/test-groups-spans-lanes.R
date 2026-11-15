@@ -372,3 +372,82 @@ test_that("a scale-map colour for a level's key beats the column's own", {
                    c("Grade 3" = "#b8322a", Mild = "#f0c35a",
                      "Drug B" = "#2a9686"))
 })
+
+test_that("a caret sits at the end of its own open record's bar", {
+  pos <- function(c1, v) round((v - c1$d0) / (c1$d1 - c1$d0) * 100, 2L)
+  # The open record ends before a closed one: the caret follows the open one.
+  d <- data.frame(id = "a", s = c(0, 50), e = c(20, 90), sev = c("A", "B"),
+                  ongoing = c(TRUE, FALSE))
+  c1 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing"
+  )))$cells$cols[[1]]
+  expect_equal(c1$op[[1]], pos(c1, 20))
+  # An open end inside a worse bar drawn over it goes to that bar's end.
+  d <- data.frame(id = "a", s = c(0, 0), e = c(50, 90), sev = c("A", "B"),
+                  ongoing = c(TRUE, FALSE))
+  c2 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    overlap = "worst"
+  )))$cells$cols[[1]]
+  expect_equal(c2$op[[1]], pos(c2, 90))
+  # A record that does not draw (its colour dropped) leaves no caret.
+  d <- data.frame(id = "a", s = c(0, 50), e = c(40, 90), sev = c("A", NA),
+                  ongoing = c(FALSE, TRUE))
+  c3 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing"
+  )))$cells$cols[[1]]
+  expect_null(c3$op)
+})
+
+test_that("stacked, a caret sits on the track of its open record", {
+  # A closed bar on the first track, an open one overlapping it below.
+  d <- data.frame(id = "a", s = c(0, 10), e = c(40, 90), sev = c("A", "B"),
+                  ongoing = c(FALSE, TRUE), lane = NA_character_)
+  d <- rbind(d, data.frame(id = "a", s = 0, e = 20, sev = "A",
+                           ongoing = FALSE, lane = "Drug"))
+  c1 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    lane = "lane", inner_overlap = "stack"
+  )))$cells$cols[[1]]
+  expect_null(c1$op)
+  tr <- Filter(function(l) isTRUE(l$f), c1$sl[[1]])
+  expect_length(tr, 1L)
+  sg <- tr[[1]]$s[[1]]
+  expect_equal(tr[[1]]$o, sg[[1]] + sg[[2]], tolerance = 0.02)
+})
+
+test_that("the static caret takes the colour of the bar ending at it", {
+  c1 <- list(fills = c("#111111", "#222222"))
+  segs <- list(list(0, 20, 1L), list(30, 70, 2L), list(10, 5, 1L))
+  expect_identical(paint_iv_end_fill(c1, segs, 20), "#111111")
+  expect_identical(paint_iv_end_fill(c1, segs, 100), "#222222")
+  # Dots and steps are no bars.
+  expect_identical(paint_iv_end_fill(c1, list(list(5, 0, 1L, "", 4L)), 5),
+                   PAINT_EV_INK)
+})
+
+test_that("cut to the worst level, a one-moment record keeps its mark and caret", {
+  # Subject a: a closed bar, then a one-day record that is still open.
+  d <- data.frame(id = "a", term = c("T", "V"), s = c(0, 60), e = c(40, 60),
+                  sev = c("B", "A"), ongoing = c(FALSE, TRUE))
+  m <- sum_model(d, by = c("id", "term"), group_rows = "summary",
+                 open = "all", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    overlap = "worst", parent_lanes = TRUE
+  )))
+  c1 <- m$cells$cols[[1]]
+  i <- match("a", m$cells$label)
+  ends <- vapply(c1$segs[[i]], function(g) g[[1]] + g[[2]], 0)
+  expect_length(c1$segs[[i]], 2L)
+  expect_equal(c1$op[[i]], 100)
+  expect_true(any(abs(ends - c1$op[[i]]) < 0.02))
+})
+
+test_that("an open end no bar of its lane reaches goes to the bar before it", {
+  bb <- cells_bounds(0, 100)
+  segs <- list(list(s = 0, e = 40), list(s = 70, e = 80))
+  expect_equal(cells_open_at(60, segs, bb, 100), 40)
+  expect_equal(cells_open_at(75, segs, bb, 100), 80)
+  expect_equal(cells_open_at(Inf, segs, bb, 100), 80)
+  expect_true(is.na(cells_open_at(NULL, segs, bb, 100)))
+})
