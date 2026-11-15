@@ -308,8 +308,9 @@ table_summary_specs <- function() {
           "of study\"). Each group is a legend group of its own, titled by",
           "the value, in the column's level order. The first group's tags",
           "draw as outlined boxes, the others' inverted: an ink box with",
-          "light text. An item named \"<group>: <name>\" shows as <name>",
-          "under its group."
+          "light text. For a factor the first group is its first level, even",
+          "when no event has it. An item named \"<group>: <name>\" shows as",
+          "<name> under its group."
         )
       ),
       tip = viz_arg(

@@ -1218,6 +1218,32 @@ test_that("spans: a later tag group draws inverted with a legend of its own", {
   expect_true(all(c("tag", "Treatment", "End of study") %in% titles))
 })
 
+test_that("spans: a tag group's rank comes from the factor's levels", {
+  d <- swim_fixture()
+  # Only the second level is present: its tags still draw inverted.
+  d$ev[5] <- 120
+  d$kind <- factor(as.character(d$kind),
+                   levels = c(levels(d$kind), "End of study: Withdrawal"))
+  d$kind[5] <- "End of study: Withdrawal"
+  d$tag <- c(NA, NA, NA, NA, "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, NA, "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  expect_null(m$prep$err)
+  ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_true(inv[[match("WD", tg)]])
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_false("Treatment" %in% titles)
+  eos <- lg$groups[[match("End of study", titles)]]$items[[1]]
+  expect_true(eos$inv)
+})
+
 test_that("spans: a record's own tooltip, event tags, lower doses, regular lanes", {
   d <- swim_fixture()
   d$tip <- c("SD · Day 0 to 40", "", NA, NA, NA, NA, NA, "Death · Day 150")

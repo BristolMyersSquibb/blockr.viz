@@ -51,7 +51,7 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
         title = if (nzchar(g)) g else groups_col_name(data, s$event_tag),
         levels = lab, shapes = rep(6L, length(lv_g)),
         tags = unname(s$.tag_text[lv_g]),
-        inv = isTRUE(match(g, s$.tag_groups) > 1L)
+        inv = isTRUE(match(g, s$.tag_rank) > 1L)
       )
     }
   }

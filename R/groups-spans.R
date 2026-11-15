@@ -40,8 +40,12 @@ groups_spans_levels <- function(s, data) {
           if (length(g)) g[[1L]] else ""
         }, "")
         lv_g <- groups_levels(data[[gc]])
-        s$.tag_groups <- lv_g[!is.na(lv_g) & nzchar(lv_g) &
-                                lv_g %in% s$.tag_group]
+        lv_g <- lv_g[!is.na(lv_g) & nzchar(lv_g)]
+        s$.tag_groups <- lv_g[lv_g %in% s$.tag_group]
+        # A group's rank, which decides its look: a factor's own levels, so
+        # a second level stays second when the first is absent; else the
+        # groups present.
+        s$.tag_rank <- if (is.factor(data[[gc]])) lv_g else s$.tag_groups
       }
     }
   }
@@ -428,10 +432,10 @@ groups_spans_tracks <- function(g, rows) {
   out
 }
 
-#' Whether a tagged level draws inverted: its tag group comes after the
+#' Whether a tagged level draws inverted: its tag group ranks after the
 #' first. A tag with no group draws as the first group's.
 #' @noRd
 groups_tag_inverted <- function(s, level) {
-  k <- match(s$.tag_group[level], s$.tag_groups)
+  k <- match(s$.tag_group[level], s$.tag_rank)
   length(k) == 1L && !is.na(k) && k > 1L
 }
