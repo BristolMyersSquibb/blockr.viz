@@ -137,10 +137,12 @@ cells_open_at <- function(e, segs, bb, d1) {
   bb$pos(x)[[1L]]
 }
 
-# An event as the cells send it: [x, shape], with its tag when it has one.
+# An event as the cells send it: [x, shape], with its tag when it has one,
+# and 1 after the tag when it draws inverted.
 cells_event_tuple <- function(e, bb) {
   out <- list(bb$pos(e$x)[[1L]], e$k)
   if (!is.null(e$tg)) out[[3L]] <- e$tg
+  if (isTRUE(e$inv)) out[[4L]] <- 1L
   out
 }
 

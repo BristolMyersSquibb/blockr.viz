@@ -29,7 +29,7 @@
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
       (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.tag
-        ? '<span class="vz-table-groups-legend-tag">' + esc(it.tag) + '</span>'
+        ? '<span class="vz-table-groups-legend-tag' + (it.inv ? ' is-inv' : '') + '">' + esc(it.tag) + '</span>'
         : it.shape != null
           ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
           : '<i style="background:' + esc(it.color) + '"></i>') +

@@ -29,6 +29,20 @@ groups_spans_levels <- function(s, data) {
       s$.tag_text <- vapply(s$.shape_tags, function(l) {
         tv[ok][lv_ok %in% l][[1L]]
       }, "")
+      # A tagged level's group, from its first event, and the groups in
+      # order: the column's levels, else as they come.
+      gc <- groups_present(s$event_tag_group, data)
+      if (!is.null(gc) && length(s$.shape_tags)) {
+        gv <- as.character(data[[gc]])
+        s$.tag_group <- vapply(s$.shape_tags, function(l) {
+          g <- gv[ok][lv_ok %in% l]
+          g <- g[!is.na(g) & nzchar(g)]
+          if (length(g)) g[[1L]] else ""
+        }, "")
+        lv_g <- groups_levels(data[[gc]])
+        s$.tag_groups <- lv_g[!is.na(lv_g) & nzchar(lv_g) &
+                                lv_g %in% s$.tag_group]
+      }
     }
   }
   # Lane order from the full data too, so every row stacks its lanes alike.
@@ -212,7 +226,10 @@ groups_spans_events <- function(slice, s) {
     kk <- if (!is.null(k) && !is.na(l)) k[[j]] else NA
     out <- list(x = x[[j]], k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
                 lv = if (!is.null(l) && !is.na(l)) l)
-    if (!is.null(tg) && nzchar(tg[[j]])) out$tg <- tg[[j]]
+    if (!is.null(tg) && nzchar(tg[[j]])) {
+      out$tg <- tg[[j]]
+      if (!is.null(l) && !is.na(l) && groups_tag_inverted(s, l)) out$inv <- TRUE
+    }
     if (!is.null(tp) && nzchar(tp[[j]])) out$tp <- tp[[j]]
     out
   }
@@ -409,4 +426,12 @@ groups_spans_tracks <- function(g, rows) {
     at <- c(at, k)
   }
   out
+}
+
+#' Whether a tagged level draws inverted: its tag group comes after the
+#' first. A tag with no group draws as the first group's.
+#' @noRd
+groups_tag_inverted <- function(s, level) {
+  k <- match(s$.tag_group[level], s$.tag_groups)
+  length(k) == 1L && !is.na(k) && k > 1L
 }

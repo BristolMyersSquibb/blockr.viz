@@ -300,6 +300,18 @@ table_summary_specs <- function() {
           "the legend."
         )
       ),
+      event_tag_group = viz_arg(
+        type = "column", null = "one group",
+        gear = gear("Columns", "column", "Tag group", when = "event_tag"),
+        describe = paste(
+          "The group of a tagged event (\"Treatment discontinuation\", \"End",
+          "of study\"). Each group is a legend group of its own, titled by",
+          "the value, in the column's level order. The first group's tags",
+          "draw as outlined boxes, the others' inverted: an ink box with",
+          "light text. An item named \"<group>: <name>\" shows as <name>",
+          "under its group."
+        )
+      ),
       tip = viz_arg(
         type = "column", null = "the computed tooltip",
         gear = gear("Columns", "column", "Tooltip text"),

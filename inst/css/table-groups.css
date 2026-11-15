@@ -17,8 +17,9 @@
                                  var(--blockr-color-border-strong, #d1d5db));
   --vz-table-groups-bar: var(--blockr-color-bg-accent, #2563eb);
   --vz-table-groups-tick: var(--blockr-color-border-default, #e5e7eb);
-  /* The event layer's ink: swimlane events, their legend and the open arrow. */
-  --vz-ev-ink: #4b5563;
+  /* The event layer's ink: swimlane events, their legend and the open arrow.
+     A palette step, so the dark scheme lightens it. */
+  --vz-ev-ink: var(--blockr-grey-600, #4b5563);
   /* The floor under a GLYPH -- see .vz-table-groups-barwrap below. A board
      that wants shorter marks and less scrolling overrides it on the
      container. */
@@ -713,6 +714,13 @@
   box-shadow: 0 0 0 1.5px var(--blockr-color-bg-surface, #ffffff);
   white-space: nowrap;
   cursor: default;
+}
+/* A tag of a later tag group (event_tag_group): inverted, light text in an
+   ink box. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-inv,
+.vz-table-groups-legend-tag.is-inv {
+  color: var(--blockr-color-bg-surface, #ffffff);
+  background: var(--vz-ev-ink, #4b5563);
 }
 .vz-table-groups-ivcell .vz-table-lane-adm {
   top: 50%;

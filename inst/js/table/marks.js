@@ -308,7 +308,8 @@
     return (ev || []).map((e, j) => {
       const tip = '" data-tip="' + esc(tips ? tips[j] : '') + '">';
       if (e.length > 2 && e[2] != null && e[2] !== '') {
-        return '<span class="vz-table-lane-ev is-tag" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
+        const inv = e.length > 3 && e[3] === 1 ? ' is-inv' : '';
+        return '<span class="vz-table-lane-ev is-tag' + inv + '" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
       }
       return '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%' + tip +
         shape(Number(e[1])) + '</svg>';

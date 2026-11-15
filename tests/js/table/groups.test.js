@@ -768,6 +768,23 @@ test('the legend draws a tagged level with its text', () => {
   assert.equal(k.textContent, 'AE');
 });
 
+test('a later tag group draws inverted, in the lanes and the legend', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, {
+    events: [[[30, 1, 'AE'], [60, 1, 'WD', 1]], [], []], eventTips: [['AE', 'WD'], [], []]
+  });
+  const legend = { groups: [
+    { title: 'Treatment discontinuation', items: [{ label: 'Adverse event', shape: 6, tag: 'AE' }] },
+    { title: 'End of study', items: [{ label: 'Withdrawal by subject', shape: 6, tag: 'WD', inv: true }] }
+  ] };
+  const t = mount(payload({ data, config: G, derived: { legend }, dataRev: 9 }));
+  const tags = t.cell(0, 7).querySelectorAll('.vz-table-lane-ev.is-tag');
+  assert.deepEqual(Array.from(tags).map((k) => k.classList.contains('is-inv')), [false, true]);
+  const keys = t.el.querySelectorAll('.vz-table-groups-legend-tag');
+  assert.deepEqual(Array.from(keys).map((k) => k.classList.contains('is-inv')), [false, true]);
+});
+
 test('a swimlane: tagged events, lower doses and regular lanes', () => {
   const data = groups();
   const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');

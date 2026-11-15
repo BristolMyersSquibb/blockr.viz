@@ -1,4 +1,4 @@
-// blockr.viz bundle cff7a7e74e3d6ac52c525d1d12bbaaab, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle e241886c45a9860019cbd0c85b02d373, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -568,7 +568,8 @@
     return (ev || []).map((e, j) => {
       const tip = '" data-tip="' + esc(tips ? tips[j] : '') + '">';
       if (e.length > 2 && e[2] != null && e[2] !== '') {
-        return '<span class="vz-table-lane-ev is-tag" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
+        const inv = e.length > 3 && e[3] === 1 ? ' is-inv' : '';
+        return '<span class="vz-table-lane-ev is-tag' + inv + '" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
       }
       return '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%' + tip +
         shape(Number(e[1])) + '</svg>';
@@ -3637,7 +3638,7 @@
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
       (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.tag
-        ? '<span class="vz-table-groups-legend-tag">' + esc(it.tag) + '</span>'
+        ? '<span class="vz-table-groups-legend-tag' + (it.inv ? ' is-inv' : '') + '">' + esc(it.tag) + '</span>'
         : it.shape != null
           ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
           : '<i style="background:' + esc(it.color) + '"></i>') +

@@ -273,7 +273,7 @@ interface TableModel {
 }
 
 interface TableLegend {
-  groups: { title: string; items: { color?: string; label: string; shape?: number; tag?: string }[] }[];
+  groups: { title: string; items: { color?: string; label: string; shape?: number; tag?: string; inv?: boolean }[] }[];
 }
 
 /** The table block's `derived`, as R builds it. The table itself is

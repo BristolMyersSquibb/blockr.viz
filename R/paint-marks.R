@@ -288,8 +288,9 @@ paint_pair <- function(c, i, x, w, ytop, gl) {
 # Row `i` of an optional per-row field, NULL when the column has none.
 paint_at <- function(v, i) if (!is.null(v) && length(v) >= i) v[[i]]
 
-# An event [x, shape (, tag)] at (x, y): its tag's text in a small box just
-# after x (marks.js events()), else its shape.
+# An event [x, shape (, tag, inverted)] at (x, y): its tag's text in a small
+# box just after x (marks.js events()), white on ink when inverted, else its
+# shape.
 paint_event <- function(e, x, y, gl) {
   px <- gl$px
   if (length(e) < 3L || is.null(e[[3L]]) || !nzchar(e[[3L]])) {
@@ -298,14 +299,16 @@ paint_event <- function(e, x, y, gl) {
   size <- 7.5 * 0.75
   tw <- ft_text_widths(e[[3L]], gl$family, size)
   x0 <- x + 3 * px
+  inv <- length(e) > 3L && identical(e[[4L]], 1L)
   grid::gList(
     grid::rectGrob(x = paint_in(x0), y = paint_in(y), width = paint_in(tw + 4 * px),
                    height = paint_in(11 * px), just = c("left", "centre"),
-                   gp = grid::gpar(fill = "#ffffff", col = PAINT_EV_INK,
-                                   lwd = 0.75)),
+                   gp = grid::gpar(fill = if (inv) PAINT_EV_INK else "#ffffff",
+                                   col = PAINT_EV_INK, lwd = 0.75)),
     grid::textGrob(e[[3L]], x = paint_in(x0 + 2 * px), y = paint_in(y),
                    just = c("left", "centre"),
-                   gp = grid::gpar(fontsize = size, col = PAINT_EV_INK,
+                   gp = grid::gpar(fontsize = size,
+                                   col = if (inv) "#ffffff" else PAINT_EV_INK,
                                    fontfamily = gl$family, fontface = "bold"))
   )
 }

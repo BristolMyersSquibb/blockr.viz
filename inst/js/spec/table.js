@@ -672,6 +672,20 @@
               "slot": false,
               "ctrl": true
             },
+            "event_tag_group": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tag group",
+                "when": "event_tag"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "tip": {
               "type": {
                 "name": "column"

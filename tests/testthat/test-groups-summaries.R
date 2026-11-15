@@ -1171,6 +1171,53 @@ test_that("simple rows take median, min and max of their column", {
   expect_identical(num("max"), c(a = "9", b = "6"))
 })
 
+test_that("spans: a later tag group draws inverted with a legend of its own", {
+  d <- swim_fixture()
+  # Patient a gets two tagged events: a treatment reason and an end of study.
+  d$ev[4:5] <- c(90, 120)
+  d$kind <- factor(as.character(d$kind),
+                   levels = c("Adverse event", "End of study: Withdrawal",
+                              "Death"))
+  d$kind[4:5] <- c("Adverse event", "End of study: Withdrawal")
+  d$tag <- c(NA, NA, NA, "AE", "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, "Treatment", "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  ev <- c1$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_identical(inv[match(c("AE", "WD"), tg)], c(FALSE, TRUE))
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_true(all(c("Treatment", "End of study") %in% titles))
+  eos <- lg$groups[[match("End of study", titles)]]$items[[1]]
+  # The group's name is not repeated in its item.
+  expect_identical(c(eos$label, eos$tag), c("Withdrawal", "WD"))
+  expect_true(eos$inv)
+  trt <- lg$groups[[match("Treatment", titles)]]$items[[1]]
+  expect_null(trt$inv)
+  # A tag without a group draws as the first group's, under the tag column.
+  d$ev[3] <- 60
+  d$kind <- factor(as.character(d$kind), levels = c(levels(d$kind), "Dose"))
+  d$kind[3] <- "Dose"
+  d$tag[3] <- "81"
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_identical(inv[match(c("81", "AE", "WD"), tg)], c(FALSE, FALSE, TRUE))
+  titles <- vapply(groups_legend_spec(m$prep)$groups, `[[`, "", "title")
+  expect_true(all(c("tag", "Treatment", "End of study") %in% titles))
+})
+
 test_that("spans: a record's own tooltip, event tags, lower doses, regular lanes", {
   d <- swim_fixture()
   d$tip <- c("SD · Day 0 to 40", "", NA, NA, NA, NA, NA, "Death · Day 150")

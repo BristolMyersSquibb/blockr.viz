@@ -209,7 +209,8 @@ paint_legend <- function(prep, y, hh, gl) {
       kw <- sw
       key <- if (!is.null(it$tag)) {
         kw <- ft_text_widths(it$tag, gl$family, 7.5 * 0.75) + px * 4
-        paint_event(list(0, 6L, it$tag), at - px * 3, gl$H - ly, gl)
+        paint_event(list(0, 6L, it$tag, if (isTRUE(it$inv)) 1L else 0L),
+                    at - px * 3, gl$H - ly, gl)
       } else if (!is.null(it$shape)) {
         paint_shape(it$shape, at + sw / 2, gl$H - ly, px * 0.9)
       } else {

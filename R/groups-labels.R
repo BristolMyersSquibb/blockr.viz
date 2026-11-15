@@ -31,11 +31,27 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
         shapes = (match(shp, s$.shape_levels) - 1L) %% 5L + 1L
       )
     }
-    if (length(tags)) {
+    if (length(tags) && is.null(s$.tag_groups)) {
       color_groups[[length(color_groups) + 1L]] <- list(
         column = s$event_tag, title = groups_col_name(data, s$event_tag),
         levels = tags, shapes = rep(6L, length(tags)),
         tags = unname(s$.tag_text[tags])
+      )
+    }
+    # With tag groups, a legend group per group, its title the group's
+    # value (the tag column's name for tags without one).
+    for (g in c(if (any(!nzchar(s$.tag_group))) "", s$.tag_groups)) {
+      lv_g <- tags[s$.tag_group[tags] %in% g]
+      if (!length(lv_g)) next
+      pre <- paste0(g, ": ")
+      lab <- ifelse(nzchar(g) & startsWith(lv_g, pre),
+                    substring(lv_g, nchar(pre) + 1L), lv_g)
+      color_groups[[length(color_groups) + 1L]] <- list(
+        column = s$event_tag,
+        title = if (nzchar(g)) g else groups_col_name(data, s$event_tag),
+        levels = lab, shapes = rep(6L, length(lv_g)),
+        tags = unname(s$.tag_text[lv_g]),
+        inv = isTRUE(match(g, s$.tag_groups) > 1L)
       )
     }
   }
@@ -83,7 +99,8 @@ groups_legend_spec <- function(prep) {
           label = if (nzchar(trimws(l))) l else "(Missing)",
           color = if (i <= length(pal)) unname(pal[[i]]),
           shape = if (!is.null(g$shapes)) g$shapes[[i]],
-          tag = if (!is.null(g$tags)) g$tags[[i]]
+          tag = if (!is.null(g$tags)) g$tags[[i]],
+          inv = if (isTRUE(g$inv)) TRUE
         )
       })
     )
