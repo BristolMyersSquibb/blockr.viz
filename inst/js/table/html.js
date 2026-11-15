@@ -127,12 +127,15 @@
    * groups layout, as 0.2 drew it) a row under a folding parent takes one
    * fewer, so it starts on its parent's label edge, right after the
    * parent's chevron; a structured table keeps its child one step in.
+   * There, a row under section headings (`row_groups`) is one step in per
+   * level, so its chevron sits under its heading's label; a structured
+   * table's rows start on their heading's label edge.
    * @param {TableStructure} st @param {number} i @param {boolean} [flush]
    */
   function indentSteps(st, i, flush) {
     const depth = st.indent ? st.indent[i] - st.base : 0;
     const under = flush && st.folds && depth > 0 && !st.toggle[i] ? 1 : 0;
-    return depth - under + Math.max(0, st.levels - 1);
+    return depth - under + Math.max(0, flush ? st.levels : st.levels - 1);
   }
 
   /**

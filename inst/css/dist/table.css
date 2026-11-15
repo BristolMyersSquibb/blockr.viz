@@ -1,4 +1,4 @@
-/* blockr.viz bundle d749f96935bb41039dd3c1b03a458d0d, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle dd528a68b9a0ace56576fb1c3cce5491, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -2098,6 +2098,16 @@ input.vz-table-search:focus {
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent > td {
   padding-top: 11px;
   padding-bottom: 3px;
+}
+/* A group heading (`row_groups`) hangs its chevron where the outer rows
+   would (14px in, as the header's fold-all chevron), its label on their
+   35px edge. The rows under it are one step in (indentSteps()), their
+   chevrons under its label. */
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'] tbody tr.vz-table-section-header td.vz-table-section-cell {
+  padding-left: 0;
+}
+.vz-table-groups-table[data-summarize-nested='1'] .vz-table-section-cell.level-1 .vz-table-section-btn {
+  padding-left: 14px;
 }
 /* Closed, nothing hangs under it: the same 14px split evenly, so the label,
    the chevron and the marks sit on the row's middle. */

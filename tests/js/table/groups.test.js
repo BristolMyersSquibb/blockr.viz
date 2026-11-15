@@ -419,6 +419,28 @@ test('nested groups: a child label starts on its parent\'s label edge', () => {
                    [null, null, null, null, null]);
 });
 
+test('group headings: the rows under them are one step in, the heading on the rows\' edge', () => {
+  const m = nested();
+  m.sections = [{ at: 0, level: 1, value: 'Group A', open: true },
+                { at: 3, level: 1, value: 'Group B', open: true }];
+  const env = loadTable();
+  // The shipped sheets, in bundle order: the heading's padding is theirs.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const style = env.win.document.createElement('style');
+  style.textContent = ['table-structured.css', 'table-groups.css'].map((f) => fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', 'inst', 'css', f), 'utf8')).join('\n');
+  env.win.document.head.appendChild(style);
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }), env);
+  assert.deepEqual(t.$$('tr.vz-table-section-header').map((r) => r.textContent), ['Group A', 'Group B']);
+  // Parents and children alike: a child starts on its parent's label edge.
+  assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].getAttribute('style')),
+                   Array(5).fill('--vz-indent:1'));
+  const cs = (sel) => env.win.getComputedStyle(t.$(sel));
+  assert.equal(cs('tr.vz-table-section-header td').paddingLeft, '0px');
+  assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft, '14px');
+});
+
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   t.click(t.$('th[data-col-index="1"]'));

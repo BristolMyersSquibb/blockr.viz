@@ -1075,6 +1075,16 @@
   padding-top: 11px;
   padding-bottom: 3px;
 }
+/* A group heading (`row_groups`) hangs its chevron where the outer rows
+   would (14px in, as the header's fold-all chevron), its label on their
+   35px edge. The rows under it are one step in (indentSteps()), their
+   chevrons under its label. */
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'] tbody tr.vz-table-section-header td.vz-table-section-cell {
+  padding-left: 0;
+}
+.vz-table-groups-table[data-summarize-nested='1'] .vz-table-section-cell.level-1 .vz-table-section-btn {
+  padding-left: 14px;
+}
 /* Closed, nothing hangs under it: the same 14px split evenly, so the label,
    the chevron and the marks sit on the row's middle. */
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent.collapsed > td {
