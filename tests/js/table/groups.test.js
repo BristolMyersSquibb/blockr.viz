@@ -664,6 +664,33 @@ test('lanes: a lane with a strip opens it, a thin lane without one names its seg
   assert.equal(m.tip.querySelectorAll('.vz-table-strip-box').length, 1);
 });
 
+test('hover: empty lane space shows the time as a small label, no card', () => {
+  const t = mount(payload({ data: lanes(), config: G }));
+  const lane = t.cell(0, 7).querySelectorAll('.is-thin')[1];
+  lane.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 4, right: 100, bottom: 4 });
+  const at = (attrs, x) => {
+    lane.removeAttribute('data-sd');
+    lane.removeAttribute('data-dd');
+    Object.entries(attrs).forEach(([k, v]) => lane.setAttribute(k, v));
+    lane.dispatchEvent(new t.win.MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: 2 }));
+    return t.win.document.querySelector('.vz-table-lane-tip');
+  };
+  // Drug A runs 0 to 30: past it the lane is empty.
+  let tip = at({ 'data-d0': '1', 'data-d1': '501', 'data-sd': '1' }, 90);
+  assert.equal(tip.textContent, 'Day 451');
+  assert.ok(tip.classList.contains('is-at'));
+  assert.ok(!tip.classList.contains('is-card'));
+  assert.equal(tip.querySelector('.vz-tt-head'), null);
+  assert.equal(at({ 'data-d0': '-9', 'data-d1': '91', 'data-sd': '1' }, 90).textContent, 'Day 81');
+  assert.equal(at({ 'data-d0': '-99', 'data-d1': '1', 'data-sd': '1' }, 60).textContent, 'Day -40');
+  assert.equal(at({ 'data-d0': '19000', 'data-d1': '19100', 'data-dd': '1' }, 90).textContent, '2022-04-08');
+  assert.equal(at({ 'data-d0': '0', 'data-d1': '10' }, 90).textContent, '9');
+  // Back on a segment: the full card again.
+  tip = hover(t, lane.querySelector('.vz-table-lane-seg'));
+  assert.ok(tip.tip.classList.contains('is-card'));
+  assert.ok(!tip.tip.classList.contains('is-at'));
+});
+
 test('lanes: even lanes drop the main lane height; outline and lane events draw', () => {
   const m = lanes();
   Object.assign(m.cols[7].mark, { evenLanes: true });

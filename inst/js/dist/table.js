@@ -1,4 +1,4 @@
-// blockr.viz bundle b63f6c0157ae84f40ed45a391d2a7173, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle b31b9c40f3b32e19c7b5876236c998f1, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -1189,10 +1189,13 @@
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
+      // Off every mark: only the time under the pointer, as a small label.
       const v = d0 + x * (d1 - d0);
-      if (lane.getAttribute('data-sd') === '1') return { text: '~' + V.table.axis.dayLabel(Math.round(v)) };
-      return { text: '~' + (lane.getAttribute('data-dd') === '1'
-        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10)) };
+      if (lane.getAttribute('data-sd') === '1') {
+        return { text: 'Day ' + V.table.axis.dayLabel(Math.round(v)).slice(1), at: true };
+      }
+      return { text: lane.getAttribute('data-dd') === '1'
+        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10), at: true };
     }
     const xs = (lane.getAttribute('data-xs') || '').split(',');
     const ys = (lane.getAttribute('data-ys') || '').split(',');
@@ -1274,9 +1277,13 @@
       }).join('') + '</div>';
   }
 
-  /** @param {{ text: string, color?: string, strip?: (string | number)[][] }} l */
+  /** The opening of a time label, shown without the card. */
+  const AT = '<span class="vz-table-lane-at">';
+
+  /** @param {{ text: string, color?: string, strip?: (string | number)[][], at?: boolean }} l */
   function laneCard(l) {
     if (l.strip) return stripCard(/** @type {any} */ (l));
+    if (l.at) return AT + esc(l.text) + '</span>';
     const parts = l.text.split(' · ');
     return head(parts[0], l.color) + parts.slice(1).map((p) => {
       const k = p.indexOf(': ');
@@ -1341,6 +1348,9 @@
         tip.hidden = true;
         return;
       }
+      const at = html.startsWith(AT);
+      tip.classList.toggle('is-card', !at);
+      tip.classList.toggle('is-at', at);
       tip.innerHTML = html;
       tip.hidden = false;
       const w = root.innerWidth || 1000;

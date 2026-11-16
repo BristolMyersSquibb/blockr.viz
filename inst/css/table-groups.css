@@ -973,6 +973,14 @@
   min-width: 160px;
 }
 
+/* The time under the pointer off every mark: a small label, no card. */
+.vz-table-lane-tip.is-at {
+  padding: 1px 6px;
+  border-radius: var(--blockr-radius-sm, 4px);
+  box-shadow: none;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
    the rail is an axis and both round; the fill rounds on whichever end points
    away from the zero tick. */

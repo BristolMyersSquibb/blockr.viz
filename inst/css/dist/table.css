@@ -1,4 +1,4 @@
-/* blockr.viz bundle cc9849be881a9b6b737f6e749c96d357, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 393db542f612e9ac406918e0bae873a1, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1995,6 +1995,14 @@ input.vz-table-search:focus {
 .vz-table-lane-tip.is-card {
   padding: 6px 10px;
   min-width: 160px;
+}
+
+/* The time under the pointer off every mark: a small label, no card. */
+.vz-table-lane-tip.is-at {
+  padding: 1px 6px;
+  border-radius: var(--blockr-radius-sm, 4px);
+  box-shadow: none;
+  color: var(--blockr-color-text-muted, #6b7280);
 }
 
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
