@@ -355,9 +355,7 @@ groups_spans_overlays <- function(g, by, s, stack = FALSE) {
       })
     }
     if (!is.null(ex)) {
-      r <- rows[is.finite(ex[rows])]
-      r <- r[order(ex[r])]
-      out$ev <- lapply(r, g$event$at)
+      out$ev <- lapply(groups_spans_event_order(g, rows, ex), g$event$at)
     }
     if (!is.null(op)) out$op <- groups_spans_open_end(g, op, main[[k]])
     out

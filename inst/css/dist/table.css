@@ -1,4 +1,4 @@
-/* blockr.viz bundle 6894c3beb4d968cc81f9b476440c28ff, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle cc9849be881a9b6b737f6e749c96d357, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -1738,6 +1738,15 @@ input.vz-table-search:focus {
   box-shadow: 0 0 0 1.5px var(--blockr-color-bg-surface, #ffffff);
   white-space: nowrap;
   cursor: default;
+}
+/* Two tags that would overlap split around the centre line, the earlier one
+   below, the later one above (marks.js, stackTags()). The row keeps its
+   height. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-lo {
+  transform: translate(3px, calc(-50% + 6px));
+}
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-hi {
+  transform: translate(3px, calc(-50% - 6px));
 }
 /* A tag of a later tag group (event_tag_group): inverted, light text in an
    ink box. */

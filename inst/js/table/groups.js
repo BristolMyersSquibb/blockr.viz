@@ -107,10 +107,12 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      // The axis ticks need the drawn column's width.
+      // The axis ticks and the tags that would overlap need the drawn
+      // column's width.
       grid.hooks.rows = (body) => {
         const table = body.closest('table');
         if (table) T.axis.fit(table);
+        T.marks.stackTags(body);
       };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
       // resize fits the axis again.
@@ -118,7 +120,10 @@
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) T.axis.fit(frame.box);
+          if (now && now !== w) {
+            T.axis.fit(frame.box);
+            T.marks.stackTags(frame.box);
+          }
           w = now;
         });
       }

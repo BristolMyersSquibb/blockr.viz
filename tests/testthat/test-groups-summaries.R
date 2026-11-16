@@ -1218,6 +1218,34 @@ test_that("spans: a later tag group draws inverted with a legend of its own", {
   expect_true(all(c("tag", "Treatment", "End of study") %in% titles))
 })
 
+test_that("spans: on the same position a later tag group's tag draws last", {
+  # The view splits two tags that would overlap, the later one above
+  # (inst/js/table/marks.js, stackTags()): it must come last whatever the
+  # row order.
+  d <- swim_fixture()
+  d$ev[4:5] <- c(120, 120)
+  d$kind <- factor(as.character(d$kind),
+                   levels = c("Adverse event", "End of study: Withdrawal",
+                              "Death"))
+  d$kind[4:5] <- c("Adverse event", "End of study: Withdrawal")
+  d$tag <- c(NA, NA, NA, "AE", "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, "Treatment", "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  tags <- function(d) {
+    m <- sum_model(d, by = "id", summaries = list(swim_spans(
+      event_x = "ev", event_shape = "kind", event_tag = "tag",
+      event_tag_group = "grp"
+    )))
+    ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+    vapply(ev, function(e) e[[3L]], "")
+  }
+  expect_identical(tags(d), c("AE", "WD"))
+  expect_identical(tags(d[c(1:3, 5, 4, 6:8), ]), c("AE", "WD"))
+  # A day apart, position decides.
+  d$ev[4:5] <- c(121, 120)
+  expect_identical(tags(d), c("WD", "AE"))
+})
+
 test_that("spans: a tag group's rank comes from the factor's levels", {
   d <- swim_fixture()
   # Only the second level is present: its tags still draw inverted.

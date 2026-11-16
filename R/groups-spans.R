@@ -203,7 +203,8 @@ groups_spans_reader <- function(slice, s) {
 }
 
 #' The events of a spans row, read off the slice once: `x` their positions
-#' (NULL without an event column) and `at(j)`, record `j` as an event: its
+#' (NULL without an event column), `rank` their tag group's rank (0 for none)
+#' and `at(j)`, record `j` as an event: its
 #' position, its shape index `k` by the level of the shape column, that
 #' level `lv`, and when set its tag `tg` and its own tooltip `tp`.
 #' @noRd
@@ -237,7 +238,23 @@ groups_spans_events <- function(slice, s) {
     if (!is.null(tp) && nzchar(tp[[j]])) out$tp <- tp[[j]]
     out
   }
-  list(x = x, at = at)
+  rank <- if (!is.null(level) && length(s$.tag_rank) && length(s$.tag_group)) {
+    r <- match(s$.tag_group[level], s$.tag_rank)
+    r[is.na(r)] <- 0L
+    r
+  }
+  list(x = x, rank = rank, at = at)
+}
+
+#' Event rows `rows` with a position in `ex`, in drawing order: by position,
+#' then by tag group, so on the same position a later group's tag draws
+#' later. It is the one on top, and above when the view splits two tags that
+#' would overlap (inst/js/table/marks.js, stackTags()).
+#' @noRd
+groups_spans_event_order <- function(g, rows, ex) {
+  rows <- rows[is.finite(ex[rows])]
+  rk <- g$event$rank
+  rows[if (is.null(rk)) order(ex[rows]) else order(ex[rows], rk[rows])]
 }
 
 #' The segments of records `idx`, solid ones first and each kind in start
@@ -340,9 +357,7 @@ groups_spans_lanes <- function(g, by, s, stack = FALSE) {
   ex <- g$event$x
   events <- function(rows) {
     if (is.null(ex)) return(list())
-    rows <- rows[is.finite(ex[rows])]
-    rows <- rows[order(ex[rows])]
-    lapply(rows, g$event$at)
+    lapply(groups_spans_event_order(g, rows, ex), g$event$at)
   }
   lv <- s$.lane_levels %||% character()
   lapply(by, function(rows) {

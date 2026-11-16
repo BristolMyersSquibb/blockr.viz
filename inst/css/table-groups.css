@@ -715,6 +715,15 @@
   white-space: nowrap;
   cursor: default;
 }
+/* Two tags that would overlap split around the centre line, the earlier one
+   below, the later one above (marks.js, stackTags()). The row keeps its
+   height. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-lo {
+  transform: translate(3px, calc(-50% + 6px));
+}
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-hi {
+  transform: translate(3px, calc(-50% - 6px));
+}
 /* A tag of a later tag group (event_tag_group): inverted, light text in an
    ink box. */
 .vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-inv,

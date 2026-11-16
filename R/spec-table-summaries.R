@@ -297,7 +297,9 @@ table_summary_specs <- function() {
           "Short text, per event. An event with a value draws as that text",
           "in a small box just after its position (\"AE\") instead of its",
           "shape. A shape level whose events all carry a tag shows a box in",
-          "the legend."
+          "the legend. Two tags on one lane that would overlap split around",
+          "the lane's centre line, the later one above (on the same day, the",
+          "later tag group's)."
         )
       ),
       event_tag_group = viz_arg(
