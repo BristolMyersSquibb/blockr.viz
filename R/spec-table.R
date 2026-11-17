@@ -184,8 +184,13 @@ table_spec_look <- function() {
         "closed (\"none\") or open (\"all\"). The header's button opens and",
         "closes them all either way."
       )
-    ),
+    )
+  )
+}
 
+# The look of a nested table's rows: sections, groups, folding.
+table_spec_rows <- function() {
+  list(
     row_sections = table_arg(
       type = "column", default = NULL, null = "no titles",
       applies = "groups",
@@ -378,7 +383,7 @@ table_spec_variables <- function() {
 table_spec <- function() {
   shared <- viz_shared_args()
   args <- c(table_spec_data(), table_spec_numbers(), table_spec_color(),
-            table_spec_look(), table_spec_sorting(), table_spec_bars(),
+            table_spec_look(), table_spec_rows(), table_spec_sorting(), table_spec_bars(),
             table_spec_interact(), table_spec_variables(), shared)
   order <- setdiff(names(formals(new_table_block)), "...")
   viz_spec("table", args[order])

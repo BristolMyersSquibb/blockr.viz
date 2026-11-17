@@ -54,6 +54,7 @@ table_guidance <- function() {
 
 #' @rdname new_table_block
 #' @export
+# viz: long the formals mirror the spec, one argument per line
 new_table_block <- function(layout = "records",
                             # `...` early: later arguments match exactly, so
                             # an old `value` cannot match `value_labels`.
