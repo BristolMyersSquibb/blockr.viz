@@ -585,7 +585,7 @@ tg_rw_known <- list(
     list(arg = "bar_width", from = 5L)
   )),
   rec_titles_slots = list(why = "row 15", titles = list(step = 1L, value = list(
-    caption = "table look", subtitle = "Category", title = "By cat"
+    caption = "Table look", subtitle = "Category", title = "By cat"
   ))),
   var_titles_slots = list(why = "row 15", titles = list(step = 1L, value = list(
     caption = "1 rows", title = "By grp"

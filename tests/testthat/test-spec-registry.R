@@ -83,3 +83,36 @@ test_that("the table's registry entry gives the assistant its arguments and guid
   expect_identical(attr(b, "guidance"), table_guidance())
   expect_match(attr(b, "guidance"), "layout", fixed = TRUE)
 })
+
+test_that("a choice slot prints its gear label, as its menu does", {
+  spec <- chart_spec()
+  a <- viz_slot_values(spec, list(func = "mean", summary = "mean_se", sort_dir = "desc"))
+  expect_identical(as.character(a$func), "Mean")
+  expect_identical(as.character(a$summary), "Mean ± SE")
+  expect_identical(as.character(a$sort_dir), "Descending")
+  # A value the choice does not hold, or none, prints as it is.
+  expect_identical(slot_enum_text(spec$args$func, "nonesuch"), "nonesuch")
+  expect_null(viz_slot_values(spec, list())$func)
+  expect_identical(
+    resolve_title_template("{@func in min, mean} of x", data.frame(), a),
+    "Mean of x"
+  )
+})
+
+test_that("a choice word has a capital only where it opens a sentence", {
+  spec <- chart_spec()
+  a <- viz_slot_values(spec, list(func = "count_distinct", sort_dir = "desc"))
+  res <- function(x) resolve_title_template(x, data.frame(), a)
+  expect_identical(res("{@func} of x"), "Count distinct of x")
+  expect_identical(res("Total {@func} of x"), "Total count distinct of x")
+  expect_identical(res("Bars sorted {@sort_dir}. {@sort_dir} again"),
+                   "Bars sorted descending. Descending again")
+  expect_identical(res("By x\\n{@func}"), "By x\nCount distinct")
+  # A dropped clause does not count as the start.
+  expect_identical(res("[{@facet}: ]{@func}"), "Count distinct")
+  # A column name keeps its case wherever it sits.
+  expect_identical(resolve_title_template("{@color} by x", data.frame(),
+                                          list(color = "pH")), "pH by x")
+  # An acronym keeps its capitals.
+  expect_identical(tt_first_case("SE of the mean", FALSE), "SE of the mean")
+})

@@ -115,7 +115,8 @@ resolve_template_chunk <- function(text, data, args) {
     }
     tok <- trimws(substr(p$text, 2L, nchar(p$text) - 1L))
     res <- resolve_title_token(tok, data, args)
-    list(text = res$text, arg = res$arg, by = res$by, empty = !nzchar(res$text))
+    list(text = res$text, arg = res$arg, by = res$by, choice = res$choice,
+         empty = !nzchar(res$text))
   })
 }
 
@@ -142,6 +143,7 @@ title_template_parts <- function(template, data, args = list()) {
     }
     out <- c(out, parts)
   }
+  out <- tt_choice_case(out)
   # Adjacent plain pieces merge into one text node.
   merged <- list()
   for (p in out) {
@@ -156,6 +158,38 @@ title_template_parts <- function(template, data, args = list()) {
   kept <- tt_piece_args(merged)
   attr(merged, "offers") <- setdiff(unique(offers), kept[!is.na(kept)])
   merged
+}
+
+# A choice word prints its menu label, which starts with a capital ("Mean").
+# It keeps the capital where it opens a sentence and drops it elsewhere:
+# "{@func} of x" reads "Mean of x", "Total {@func} of x" reads "Total mean
+# of x". Runs on the pieces that stay, so a dropped clause does not count.
+tt_choice_case <- function(parts) {
+  before <- ""
+  for (i in seq_along(parts)) {
+    p <- parts[[i]]
+    if (isTRUE(p$choice) && nzchar(p$text)) {
+      parts[[i]]$text <- tt_first_case(p$text, tt_sentence_start(before))
+    }
+    before <- paste0(before, parts[[i]]$text)
+  }
+  parts
+}
+
+# Whether text following `before` opens a sentence: nothing but blanks so
+# far, or a full stop, question mark, exclamation mark or line break last.
+tt_sentence_start <- function(before) {
+  grepl("(^|[.!?\n])[[:space:]]*$", before)
+}
+
+# `x` with its first letter upper or lower case. A label opening with an
+# acronym ("SE of the mean") keeps its capitals.
+tt_first_case <- function(x, upper) {
+  if (!upper && grepl("^[[:upper:]]{2}", x)) {
+    return(x)
+  }
+  first <- substr(x, 1L, 1L)
+  paste0(if (upper) toupper(first) else tolower(first), substring(x, 2L))
 }
 
 resolve_title_template <- function(template, data, args = list()) {
@@ -174,7 +208,9 @@ resolve_arg_token <- function(token, data, args) {
   m <- regmatches(token, regexec("^@\\s*([^()@]+?)\\s*$", token))[[1L]]
   if (length(m) == 2L) {
     nm <- slot_arg_name(m[[2L]])
-    return(list(text = arg_token_value(nm, args), arg = nm, by = "name"))
+    choice <- isTRUE(attr(args[[nm]], "choice", exact = TRUE))
+    return(list(text = arg_token_value(nm, args), arg = nm, by = "name",
+                choice = choice))
   }
   m <- regmatches(
     token,
