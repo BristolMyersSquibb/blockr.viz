@@ -45,7 +45,16 @@ viz_script_sources <- function(raw, state) {
     v <- state$script_values() %||% list()
     for (nm in cb_setting_names(parsed())) {
       rv <- state[[nm]]
-      if (is.function(rv)) v[nm] <- list(rv())
+      if (is.function(rv)) {
+        v[nm] <- list(rv())
+      } else if (is.function(state$summaries)) {
+        # A field of the first summary (`facet`, `fill`, `col`), as the
+        # groups table's words of those names read it.
+        s1 <- state$summaries()
+        s1 <- if (is.list(s1) && length(s1) && is.list(s1[[1L]])) s1[[1L]]
+        f <- if (identical(nm, "value")) "col" else nm
+        if (!is.null(s1[[f]])) v[nm] <- list(s1[[f]])
+      }
     }
     v
   })

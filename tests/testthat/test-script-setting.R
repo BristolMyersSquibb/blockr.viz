@@ -76,3 +76,28 @@ test_that("the table's script follows the table's grouping", {
     args = list(x = blk, data = list(data = function() ss_data))
   )
 })
+
+test_that("a setting line reads a field of the table's first summary", {
+  withr::local_options(blockr.viz.browser_script = NULL)
+  script <- paste(
+    "facet <- \"PT\"  #| setting",
+    ".n <- table(data[[facet]])",
+    "data[data[[facet]] %in% names(.n)[.n >= 2], , drop = FALSE]",
+    sep = "\n"
+  )
+  blk <- new_table_block(
+    layout = "groups", by = "USUBJID",
+    summaries = list(list(type = "simple", func = "count", show = "tile",
+                          facet = "SOC", name = "Events")),
+    script = script
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      code <- paste(deparse(session$returned$expr()), collapse = " ")
+      expect_match(code, "[[\"SOC\"]]", fixed = TRUE)
+    },
+    args = list(x = blk, data = list(data = function() ss_data))
+  )
+})

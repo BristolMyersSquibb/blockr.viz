@@ -75,7 +75,10 @@ viz_shared_args <- function() {
       slot = FALSE, ai = FALSE,
       describe = paste(
         "Experimental. R code run on the input before the block sees it. Its",
-        "top-level plain-value assignments become controls on the block."
+        "top-level plain-value assignments become controls on the block. A",
+        "line annotated `#| setting` (`by <- \"AEDECOD\"  #| setting`) is no",
+        "control: it takes the block's own setting of that name, or the first",
+        "summary's field (`facet`)."
       )
     ),
 
