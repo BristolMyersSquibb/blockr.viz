@@ -1,5 +1,6 @@
 # A colour, facet or series column that is NA in every row is unset, as an
 # absent one is: upstream switches a split off by filling the column with NA.
+# A category NA in every row is unset too; an absent one is not.
 # The browser side is in tests/js/chart/model-*.test.js.
 
 es_df <- function() {
@@ -87,4 +88,57 @@ test_that("the assistant's guidance and mapping cover facet_row", {
   expect_match(paste(chart_guidance(), collapse = " "), "facet_row", fixed = TRUE)
   expect_true("facet_row" %in% chart_mapping_args("line"))
   expect_true("facet_row" %in% dd_chart_roles)
+})
+
+test_that("a category NA in every row is one mark over all rows", {
+  d <- es_df()
+  for (type in c("boxplot", "pointrange", "bar")) {
+    for (missing in c("level", "drop")) {
+      v <- list(type = type, category = "sub", value = "val", func = "count",
+                missing = missing)
+      a <- chart_cells_args(v, d)
+      expect_true(a$category_unset)
+      cells <- chart_cells(d, a)
+      expect_identical(nrow(cells), 1L)
+      expect_identical(cells$.n, 20L)
+      expect_null(cells$.drop)
+    }
+  }
+  # A category with a value in some row still drops its missing cell.
+  d$sub[1:5] <- "x"
+  a <- chart_cells_args(list(type = "bar", category = "sub", missing = "drop"),
+                        d)
+  expect_false(a$category_unset)
+  expect_identical(chart_cells(d, a)$.drop, c(FALSE, TRUE))
+  # A category the data lacks sends no cells: the browser's empty state.
+  expect_null(chart_cells_args(list(type = "boxplot", category = "Group",
+                                    value = "val"), d))
+})
+
+test_that("the Summary of an all-NA category is one row without it", {
+  d <- es_df()
+  for (missing in c("level", "drop")) {
+    s <- chart_summary(d, list(type = "boxplot", category = "sub",
+                               value = "val", missing = missing))
+    expect_identical(nrow(s), 1L)
+    expect_false("sub" %in% names(s))
+    expect_identical(s[["N"]], 20L)
+    b <- chart_summary(d, list(type = "bar", category = "sub",
+                               func = "count", missing = missing))
+    expect_identical(nrow(b), 1L)
+    expect_identical(b[["Count of rows"]], 20L)
+    x <- chart_xlsx_frame(d, "bar", group = "sub", na_group = missing)
+    expect_identical(nrow(x), 1L)
+  }
+})
+
+test_that("a category NA in every row leaves the chart text", {
+  d <- es_df()
+  v <- list(type = "boxplot", category = "sub", value = "val",
+            subtitle = "Val[ by {label(@category)}]")
+  tt <- chart_titles(viz_block_spec("chart"), v, d, list(), list())
+  expect_identical(tt$subtitle$text, "Val")
+  v$category <- "arm"
+  tt <- chart_titles(viz_block_spec("chart"), v, d, list(), list())
+  expect_identical(tt$subtitle$text, "Val by arm")
 })

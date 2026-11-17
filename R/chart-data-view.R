@@ -113,7 +113,8 @@ chart_summary_hist <- function(data, v) {
 
 # One row per box or point range: N and the numbers it draws.
 chart_summary_dist <- function(data, v) {
-  cat <- chart_category(v)
+  # A category NA in every row is unset: one row for the one box.
+  cat <- chart_split_in(data, chart_category(v))
   val <- chart_value_col(v)
   if (!length(val) || !val %in% names(data)) {
     return(NULL)

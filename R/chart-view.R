@@ -154,8 +154,9 @@ chart_needed_cols <- function(v, d) {
 chart_titles <- function(spec, v, d, auto, specs) {
   a <- script_title_args(viz_slot_values(spec, v), specs, v$script_values)
   # A split the chart does not draw (its column absent or NA in every row)
-  # leaves the text too: "[, split by {label(@facet)}]" drops.
-  for (k in intersect(c("color", "facet", "facet_row", "series"),
+  # leaves the text too: "[, split by {label(@facet)}]" drops. So does a
+  # category NA in every row: "[ by {label(@category)}]".
+  for (k in intersect(c("color", "facet", "facet_row", "series", "category"),
                      names(a))) {
     a[k] <- list(chart_split_in(d, a[[k]]))
   }
@@ -225,7 +226,10 @@ chart_xlsx_frame <- function(data, chart_type, group = NULL, color = NULL,
         !length(intersect(group, names(data)))) {
     return(data)
   }
-  keys <- intersect(c(chart_facets(list(facet = facet), data), group,
+  # A category NA in every row is unset, as colour and facet are: one row
+  # over all of them, under missing = "drop" too.
+  keys <- intersect(c(chart_facets(list(facet = facet), data),
+                      chart_split_in(data, group),
                       chart_split_in(data, color)), names(data))
   table_aggregate(data, unique(keys), chart_summaries(func, value, data),
                   na_group = na_group %||% "level")$data

@@ -1,4 +1,4 @@
-// blockr.viz bundle e2bd7f12f9352d3afde426ed11e8f5bf, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 448edee397fa7ecc55e613519cb1209c, built by tools/bundle.js. Do not edit.
 // sources: drilldown-theme-register.js chart/common.js chart/memo.js chart/chart-types.js chart/colors.js chart/drill.js chart/tooltip.js chart/legend.js chart/format.js chart/agg.js chart/chart-index.js chart/chart-keys.js chart/axes-time.js chart/axes-labels.js chart/model-common.js chart/model-timeline.js chart/model-aggregated.js chart/model-individual.js chart/option-timeline.js chart/option-bar-marks.js chart/option-bar.js chart/option-radial.js chart/option-distribution.js chart/option-aggregated.js chart/option-points.js chart/option-band.js chart/option-domains.js chart/option-individual.js chart/ticks.js chart/zoom-option.js chart/gear.js chart/selection.js chart/family-aggregated.js chart/family-timeline.js chart/family-individual.js chart/zoom.js chart/export.js chart/panels.js chart/view.js
 // --- drilldown-theme-register.js
 // @ts-check
@@ -2528,9 +2528,10 @@
     const slots = [];
     for (const g of groups) {
       for (const lv of (split ? levels : ['__all__'])) {
+        // Keyed 'nz': the group of a missing category is '' (cellsFromRows()).
         const c = (lv === '__all__'
-          ? ix.get(facetRows, groupBy, 'raw', g)
-          : ix.get2(facetRows, groupBy, 'raw', colorCol, 'nz', g, lv))[0];
+          ? ix.get(facetRows, groupBy, 'nz', g)
+          : ix.get2(facetRows, groupBy, 'nz', colorCol, 'nz', g, lv))[0];
         const n = (c && c['.vn']) || 0;
         if (split && !keepEmpty && n === 0) continue;
         const body = n ? { center: c['.center'], lo: c['.lo'], hi: c['.hi'] } : null;

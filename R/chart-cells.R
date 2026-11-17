@@ -68,6 +68,9 @@ chart_cells_args <- function(v, data) {
   hl_col <- if (is.list(hl) && length(hl)) col(names(hl)[[1L]])
   list(
     facets = chart_facets(v, data), category = cat,
+    # A category NA in every row is unset: its one cell holds every row and
+    # missing = "drop" keeps it.
+    category_unset = !hist && !length(chart_split_in(data, cat)),
     color = chart_split_in(data, v$color),
     func = func, value = value,
     drop = identical(v$missing, "drop"),
@@ -129,7 +132,12 @@ chart_cells <- function(data, a) {
     out <- cbind(out, cell_dist(data, g, cells, a))
   }
   if (a$drop) {
-    missing <- Reduce(`|`, lapply(codes, function(k) attr(k, "missing")[k]))
+    dropping <- if (isTRUE(a$category_unset)) {
+      codes[setdiff(keys, a$category)]
+    } else {
+      codes
+    }
+    missing <- Reduce(`|`, lapply(dropping, function(k) attr(k, "missing")[k]))
     if (any(missing[first])) out$.drop <- missing[first]
   }
   if (length(a$sort)) {

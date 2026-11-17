@@ -222,9 +222,10 @@
     const slots = [];
     for (const g of groups) {
       for (const lv of (split ? levels : ['__all__'])) {
+        // Keyed 'nz': the group of a missing category is '' (cellsFromRows()).
         const c = (lv === '__all__'
-          ? ix.get(facetRows, groupBy, 'raw', g)
-          : ix.get2(facetRows, groupBy, 'raw', colorCol, 'nz', g, lv))[0];
+          ? ix.get(facetRows, groupBy, 'nz', g)
+          : ix.get2(facetRows, groupBy, 'nz', colorCol, 'nz', g, lv))[0];
         const n = (c && c['.vn']) || 0;
         if (split && !keepEmpty && n === 0) continue;
         const body = n ? { center: c['.center'], lo: c['.lo'], hi: c['.hi'] } : null;

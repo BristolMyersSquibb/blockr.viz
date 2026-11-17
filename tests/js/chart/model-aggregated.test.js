@@ -219,6 +219,25 @@ test('a bar chart coloured and faceted by an all-NA column draws one unsplit pan
   }
 });
 
+test('a distribution over an all-NA category draws one box over every row', () => {
+  // Upstream switches the category off by filling it with NA: one slot,
+  // keyed '' as the cells key a missing group, holding all the rows.
+  const rows = [1, 2, 3, 4, 5].map((V) => ({ G: null, V }));
+  const cols = [cat('G', { all_na: true }), num('V')];
+  for (const type of ['boxplot', 'pointrange']) {
+    const m = build({ type, category: 'G', value: 'V' }, rows, cols);
+    assert.strictEqual(m.empty, null);
+    assert.deepStrictEqual(groupsOf(m), [['']], type);
+    const s = m.panels[0].slots;
+    assert.deepStrictEqual(plain(s.map((x) => [x.cat, x.n])), [['', 5]], type);
+    assert.notStrictEqual(s[0].body, null, type);
+  }
+  // A missing group beside others is its own box, not an empty one.
+  const some = build({ type: 'boxplot', category: 'G', value: 'V', sort_by: 'data', sort_dir: 'asc' },
+                     rows.map((r, i) => ({ ...r, G: i < 2 ? 'a' : null })), [cat('G'), num('V')]);
+  assert.deepStrictEqual(plain(some.panels[0].slots.map((x) => [x.cat, x.n])), [['a', 2], ['', 3]]);
+});
+
 test('a facet with one panel keeps no empty distribution slot', () => {
   // Every row in one facet value (or a facet column with nothing in it, or
   // one the column list has not caught up with): one panel, no grid to

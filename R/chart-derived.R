@@ -18,7 +18,9 @@ chart_col_in <- function(data, col) {
 
 # A colour, facet or series column counts only when the data has it with a
 # value in some row: upstream switches a split off by leaving the column out
-# or by filling it with NA (cols_with_values()).
+# or by filling it with NA (cols_with_values()). A category NA in every row
+# is unset in the same way; one left out of the data is not, and draws the
+# "Mapped column not in data" state.
 chart_split_in <- function(data, col) {
   col <- chart_col_in(data, col)
   if (length(col) && length(cols_with_values(data, col))) col
