@@ -334,6 +334,20 @@ table_summary_specs <- function() {
           "names its own dates."
         )
       ),
+      x_limits = viz_arg(
+        type = "limits", null = "the data's range",
+        gear = gear("Columns", "text", "Axis from and to"),
+        example = c(1, 180),
+        describe = paste(
+          "The axis from and to, as `c(1, 180)`; `NA` at either end is the",
+          "data's. Dates as \"2024-01-01\". A bar across a limit is cut at",
+          "it, with the open caret at the right; bars, ticks and events",
+          "wholly outside are not drawn. Tooltips keep the records' own",
+          "values. A prepare script can set the same as the attribute",
+          "`blockr_domain` of the start column, which this overrides end by",
+          "end."
+        )
+      ),
       x_days = viz_arg(
         type = "bool", default = FALSE,
         gear = gear("Columns", "toggle", "Study days"),

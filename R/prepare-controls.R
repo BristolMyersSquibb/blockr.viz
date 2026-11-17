@@ -162,9 +162,9 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) as.character(s$on %||% script_label(s)) else ""
     }
-    # A date without a value prints its placeholder ("automatic"), or
-    # nothing, so a `[ ... ]` clause can carry it.
-    if (identical(s$kind, "date") && (!length(v) || is.na(v[[1L]]))) {
+    # A date or number without a value prints its placeholder
+    # ("automatic"), or nothing, so a `[ ... ]` clause can carry it.
+    if (s$kind %in% c("date", "number") && (!length(v) || is.na(v[[1L]]))) {
       v <- as.character(s$placeholder %||% "")
     }
     # A multi-select prints its picks: "all" when every choice is picked,

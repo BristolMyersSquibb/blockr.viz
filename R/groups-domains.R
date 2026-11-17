@@ -232,29 +232,48 @@ groups_dom_interval <- function(plan, idx, rows) {
   is_date <- any(vapply(plan[idx], function(p) {
     isTRUE(p$dom_date)
   }, logical(1L)))
-  preset <- unlist(lapply(plan[idx], function(p) p$dom), use.names = FALSE)
-  preset <- preset[is.finite(preset)]
-  has_preset <- length(preset) > 0L
-  xd <- if (length(preset)) {
-    range(preset)
-  } else if (length(ext)) {
-    range(ext)
-  } else {
-    c(0, 1)
+  # The limits set (x_limits, or the start column's `blockr_domain`): the
+  # first set end across the columns sharing the axis, each end on its own.
+  lim <- groups_dom_limits(plan[idx])
+  pin <- !is.na(lim)
+  xd <- if (length(ext)) range(ext) else c(0, 1)
+  xd[pin] <- lim[pin]
+  if (xd[[2L]] <= xd[[1L]]) {
+    if (pin[[2L]] && !pin[[1L]]) {
+      xd[[1L]] <- xd[[2L]] - 1
+    } else {
+      xd[[2L]] <- xd[[1L]] + 1
+    }
   }
-  if (xd[[2L]] <= xd[[1L]]) xd[[2L]] <- xd[[1L]] + 1
-  if (!has_preset && !is_date && xd[[1L]] >= 0) {
+  # An end left to the data starts at zero and ends on a round tick.
+  if (!pin[[1L]] && !is_date && xd[[1L]] >= 0) {
     xd[[1L]] <- 0
     at <- cells_axis_ticks(xd[[1L]], xd[[2L]], k = 7L)
-    if (length(at) >= 2L) {
+    if (!pin[[2L]] && length(at) >= 2L) {
       step <- at[[2L]] - at[[1L]]
       if (is.finite(step) && step > 0) {
         xd[[2L]] <- ceiling(xd[[2L]] / step) * step
       }
     }
   }
-  for (i in idx) plan[[i]]$dom <- xd
+  for (i in idx) {
+    plan[[i]]$dom <- xd
+    plan[[i]]$pin <- if (any(pin)) pin
+  }
   plan
+}
+
+# The set ends of the swimlane columns sharing an axis, c(from, to) with NA
+# for the data's end: per end the first column that sets it.
+groups_dom_limits <- function(entries) {
+  lim <- c(NA_real_, NA_real_)
+  for (p in entries) {
+    l <- p[["lim"]]
+    if (length(l) != 2L) next
+    take <- is.na(lim) & !is.na(l)
+    lim[take] <- l[take]
+  }
+  lim
 }
 
 # One row's overlay extents: ticks, line pieces and events.

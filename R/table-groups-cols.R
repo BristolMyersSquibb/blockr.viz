@@ -123,11 +123,14 @@ table_groups_axis <- function(p, prep) {
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
   } else if (days) {
-    cells_axis_day_ticks(dom$d0, dom$d1)
+    at <- cells_axis_day_ticks(dom$d0, dom$d1)$at
+    at <- cells_axis_pin(at, dom$d0, dom$d1, dom$pin)
+    list(at = at, labels = cells_day_label(at))
   } else {
     at <- cells_axis_ticks(
       dom$d0, dom$d1, k = if (identical(p$kind, "interval")) 7L else 4L
     )
+    at <- cells_axis_pin(at, dom$d0, dom$d1, dom$pin)
     list(at = at, labels = groups_fmt(at))
   }
   if (length(t$at) < 2L) {
@@ -145,7 +148,8 @@ table_groups_axis <- function(p, prep) {
   table_groups_compact(list(
     at = groups_arr(pos), labels = groups_arr(t$labels),
     d0 = if (fit) dom$d0, d1 = if (fit) dom$d1, unit = if (fit) t$unit,
-    days = if (days) TRUE
+    days = if (days) TRUE,
+    pin = if (fit && any(dom$pin)) groups_arr(as.integer(dom$pin))
   ))
 }
 

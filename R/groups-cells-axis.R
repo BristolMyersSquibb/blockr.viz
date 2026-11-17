@@ -30,7 +30,8 @@ cells_axis_domain <- function(p, prep = NULL) {
     d <- p$dom %||% prep$dom
     if (length(d) < 2L || !ok(d[[1L]], d[[2L]])) return(NULL)
     list(d0 = d[[1L]], d1 = d[[2L]],
-         date = isTRUE(p$dom_date %||% prep$dom_date))
+         date = isTRUE(p$dom_date %||% prep$dom_date),
+         pin = if (identical(kind, "interval")) p[["pin"]])
   } else {
     NULL
   }
@@ -171,6 +172,19 @@ cells_axis_day_ticks <- function(d0, d1, k = 7L) {
     at <- sort(c(1, at[abs(at - 1) >= 0.6 * step]))
   }
   list(at = at, labels = cells_day_label(at))
+}
+
+#' Ticks with the set ends of a swimlane axis (`pin`, from and to): a set end
+#' is a tick, and a tick within 8% of the range of it goes, so the labels do
+#' not collide. `inst/js/table/axis.js` pinTicks() does the same in the
+#' browser.
+#' @noRd
+cells_axis_pin <- function(at, d0, d1, pin) {
+  if (!length(pin) || !any(pin) || !(d1 > d0)) return(at)
+  near <- 0.08 * (d1 - d0)
+  ends <- c(d0, d1)[as.logical(pin)]
+  for (e in ends) at <- at[abs(at - e) >= near]
+  sort(unique(c(at, ends)))
 }
 
 #' A study-day label: "D1" for x = 1, "D-1" for x = 0.

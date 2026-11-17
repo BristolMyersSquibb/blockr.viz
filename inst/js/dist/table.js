@@ -1,4 +1,4 @@
-// blockr.viz bundle 5ff5dc1df43eca69245759d7763db675, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 0452f84fe118f1b6254d49598eb66d8c, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -859,7 +859,7 @@
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
     const fit = a.d1 != null && a.d0 != null
       ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '') +
-        (a.days ? ' data-days="1"' : '')
+        (a.days ? ' data-days="1"' : '') + (a.pin ? ' data-pin="' + a.pin.join(',') + '"' : '')
       : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
@@ -941,6 +941,22 @@
     return out;
   }
 
+  /**
+   * Ticks with the set ends of the axis (`pin`, from and to as 1 or 0): a set
+   * end is a tick, and a tick within 8% of the range of it goes, so the
+   * labels do not collide (R's cells_axis_pin()).
+   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[]} pin
+   * @returns {number[]}
+   */
+  function pinTicks(at, d0, d1, pin) {
+    if (!pin || !(d1 > d0)) return at;
+    const ends = [d0, d1].filter((_, k) => Number(pin[k]) === 1);
+    if (!ends.length) return at;
+    const near = 0.08 * (d1 - d0);
+    const kept = at.filter((x) => ends.every((e) => Math.abs(x - e) >= near));
+    return Array.from(new Set(kept.concat(ends))).sort((a, b) => a - b);
+  }
+
   /** A study day's label: x = 1 is "D1", x = 0 the day before, "D-1".
    * @param {number} x */
   const dayLabel = (x) => 'D' + String(x >= 1 ? x : x - 1);
@@ -961,7 +977,9 @@
       const d1 = Number(el.getAttribute('data-d1'));
       const unit = el.getAttribute('data-unit');
       const days = el.getAttribute('data-days') === '1';
-      const at = days ? dayTicks(d0, d1, w) : ticks(d0, d1, w);
+      const pinAttr = el.getAttribute('data-pin');
+      const pin = pinAttr ? pinAttr.split(',').map(Number) : null;
+      const at = pinTicks(days ? dayTicks(d0, d1, w) : ticks(d0, d1, w), d0, d1, pin);
       if (at.length < 2) return;
       el.setAttribute('data-w', String(w));
       el.innerHTML = at.map((x, j) => {
@@ -973,7 +991,7 @@
     });
   }
 
-  V.table.axis = { ticks, dayTicks, dayLabel, fit };
+  V.table.axis = { ticks, dayTicks, pinTicks, dayLabel, fit };
 })();
 // --- table/tooltip.js
 // @ts-check

@@ -192,6 +192,7 @@ cells_bounds <- function(e_mn, e_mx) {
     NA_real_
   }
   list(
+    lo = e_mn, hi = e_mx,
     pos = function(v) {
       w <- if (is.finite(rng)) (v - e_mn) / rng * 100 else rep(0, length(v))
       w[!is.finite(w) & !is.na(v)] <- 0

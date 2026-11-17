@@ -22,6 +22,27 @@ test_that("an empty date control prints its placeholder and clears to NA", {
   expect_true(is.na(script_control_values(specs)$sv_cutoff))
 })
 
+test_that("an empty number control prints its placeholder", {
+  script <- paste(
+    "to <- NA_real_  #| number(label = \"To\", placeholder = \"last\")",
+    "data",
+    sep = "\n"
+  )
+  specs <- cb_specs(cb_parse(script), data.frame(x = 1))
+  expect_identical(specs[[1]]$kind, "number")
+  expect_identical(script_title_args(list(), specs)$to, "last")
+  set <- viz_script_values(list(to = 180), specs)
+  expect_identical(script_title_args(list(), specs, set)$to, 180)
+  # Emptied (the word sends null): no number again.
+  back <- viz_script_values(list(to = NULL), specs, set)
+  expect_true(is.na(back$to))
+  expect_identical(script_title_args(list(), specs, back)$to, "last")
+  expect_true(is.na(viz_script_values(list(to = ""), specs, set)$to))
+  # A number that starts with one keeps it when emptied.
+  specs2 <- cb_specs(cb_parse("n <- 5  #| number()\ndata"), data.frame(x = 1))
+  expect_identical(viz_script_values(list(n = NULL), specs2, list(n = 7))$n, 7)
+})
+
 test_that("a select can take its choices from the data through a helper line", {
   script <- paste(
     "lv <- sort(unique(data$drug))",

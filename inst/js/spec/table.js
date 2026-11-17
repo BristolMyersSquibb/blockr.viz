@@ -712,6 +712,19 @@
               "slot": false,
               "ctrl": true
             },
+            "x_limits": {
+              "type": {
+                "name": "limits"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis from and to"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "x_days": {
               "type": {
                 "name": "bool"

@@ -88,6 +88,9 @@ interface TableAxis {
   unit?: string;
   /** Study days (`x_days`): ticks "D1", "D20", no day 0 (axis.js dayTicks()). */
   days?: boolean;
+  /** The set ends, from and to as 1 or 0 (`x_limits`): each a tick
+   *  (axis.js pinTicks()). */
+  pin?: number[];
 }
 
 type TableNums = (number | null)[];

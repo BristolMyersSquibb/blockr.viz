@@ -208,7 +208,7 @@ interface VizSlotBase { label: string; set(value: unknown): void }
 type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
   | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
-  | { kind: 'number'; min: number; max: number; step: number; value: unknown }
+  | { kind: 'number'; min: number; max: number; step: number; value: unknown; clear?: boolean }
   | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean }
   /** Axis limits: two words, from and to, each typed over on its own. */
   | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] }

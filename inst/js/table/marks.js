@@ -599,7 +599,7 @@
     const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
     const fit = a.d1 != null && a.d0 != null
       ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '') +
-        (a.days ? ' data-days="1"' : '')
+        (a.days ? ' data-days="1"' : '') + (a.pin ? ' data-pin="' + a.pin.join(',') + '"' : '')
       : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
       (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +

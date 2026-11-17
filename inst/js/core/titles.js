@@ -415,7 +415,8 @@
 
   /** Type a value over its word: Enter or leaving commits, Escape puts the
    * word back. A number is held in its range and steps on the arrow keys
-   * (by ten with Shift); an emptied number keeps its value.
+   * (by ten with Shift); an emptied number keeps its value, unless it can be
+   * empty (`clear`).
    * @param {VizScope} scope @param {HTMLElement} anchor
    * @param {VizSlotOpener & { kind: 'number' | 'entry' }} how */
   function edit(scope, anchor, how) {
@@ -442,6 +443,7 @@
       if (num) {
         const v = parseFloat(text);
         if (Number.isFinite(v)) how.set(fix(v));
+        else if (text === '' && num.clear) how.set(null);
       } else if (how.kind === 'entry') {
         how.set(how.fromText(text));
       }

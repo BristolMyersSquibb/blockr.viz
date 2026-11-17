@@ -131,7 +131,7 @@ new_table_block(
 
 \item{drill_table}{Beta. The table in the target's dm the click applies to. Default: \code{""}.}
 
-\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. Default \code{NULL}: no script.}
+\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. A line annotated \verb{#| setting} (\code{by <- "AEDECOD"  #| setting}) is no control: it takes the block's own setting of that name, or the first summary's field (\code{facet}). Default \code{NULL}: no script.}
 
 \item{script_values}{Settings of the script's controls, by variable name. The script code, not the spec, makes each one a title slot. Default: \code{list()}.}
 
@@ -251,6 +251,7 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{event_tag_group}: The group of a tagged event ("Treatment discontinuation", "End of study"). Each group is a legend group of its own, titled by the value, in the column's level order. The first group's tags draw as outlined boxes, the others' inverted: an ink box with light text. For a factor the first group is its first level, even when no event has it. An item named "\if{html}{\out{<group>}}: \if{html}{\out{<name>}}" shows as \if{html}{\out{<name>}} under its group. Default \code{NULL}: one group.
 \item \code{tip}: The tooltip of a record, segment or event, as is: its text up to the first " · " heads the card, each further part is a line. An empty value keeps the computed tooltip (label, level, span, fields). Default \code{NULL}: the computed tooltip.
 \item \code{x_unit}: Word written before the first label of the column's axis ("Day" reads "Day 0"). Only on a numeric axis; a date axis names its own dates. Default \code{NULL}: numbers only.
+\item \code{x_limits}: The axis from and to, as \code{c(1, 180)}; \code{NA} at either end is the data's. Dates as "2024-01-01". A bar across a limit is cut at it, with the open caret at the right; bars, ticks and events wholly outside are not drawn. Tooltips keep the records' own values. A prepare script can set the same as the attribute \code{blockr_domain} of the start column, which this overrides end by end. Default \code{NULL}: the data's range.
 \item \code{x_days}: The axis reads in study days: "D1", "D20", ..., day 1 always a tick, and no day 0, so an x at or below 0 reads as the day before (x = 0 is "D-1"), as ADaM counts. Only on a numeric axis; the hover reads the same way. Default: \code{FALSE}.
 \item \code{lane_size}: Height of the lanes above the main lane: "sm" 5px with a 3px line, "md" 9px with a 5px bar whose free ends round, for rows where the lanes carry the story (a drug per lane). One of \code{"sm"}, \code{"md"}. Default: \code{"sm"}.
 \item \code{track}: A grey track behind the main lane and the full bars, as a bar column draws it. Off: the bars stand on the surface. Thin lanes never have one. Default: \code{FALSE}.

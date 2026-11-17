@@ -546,8 +546,11 @@
         case 'number': {
           const num = (/** @type {unknown} */ x) => (typeof x === 'number' ? x : null);
           const lo = num(sp.min), hi = num(sp.max);
+          // A control that starts without a number (its placeholder says what that
+          // means) can be emptied again.
           return { kind: 'number', min: lo == null ? -Infinity : lo,
-                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label };
+                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label,
+                   ...(sp.placeholder ? { clear: true } : {}) };
         }
         case 'select':
         case 'multi': {

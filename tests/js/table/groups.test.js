@@ -1017,6 +1017,37 @@ test('a study-day axis: D1 always a tick, no day 0, x <= 0 the day before', () =
   assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['D1', 'D50', 'D100', 'D150', 'D200']);
 });
 
+test('a set axis (x_limits): its ends are ticks, a bar cut at the right end gets the caret there', () => {
+  const m = groups();
+  // R cuts the bars at the set ends and sends the caret at 100 (the right
+  // end) and the set ends as `pin`.
+  m.cols[7].mark.segs[2] = [[0, 30, 1], [60, 40, 2]];
+  m.cols[7].mark.tips[2] = ['from before the axis', 'past the axis'];
+  m.cols[7].mark.openAt = [null, null, 100];
+  m.cols[7].axis = { at: [0, 50, 100], labels: ['D1', 'D90', 'D180'], d0: 1, d1: 180, days: true, pin: [1, 1] };
+  const t = mount(payload({ data: m, config: G }));
+  const c = t.cell(2, 7);
+  const segs = Array.from(c.querySelectorAll('.vz-table-lane-seg'));
+  assert.equal(segs.length, 2);
+  assert.match(segs[1].getAttribute('style'), /left:60%;width:40%/);
+  const caret = c.querySelector('svg.vz-table-lane-open');
+  assert.match(caret.getAttribute('style'), /left:100%;color:#555/);
+  assert.equal(t.cell(0, 7).querySelector('.vz-table-lane-open'), null);
+  // The header carries the set ends; fit() keeps them as ticks at any width.
+  const ax = t.$(".vz-table-groups-axis-in[data-pin]");
+  assert.equal(ax.getAttribute('data-pin'), '1,1');
+  const A = t.win.Blockr.viz.table.axis;
+  assert.deepEqual(Array.from(A.pinTicks([1, 50, 100, 150], 1, 180, [1, 1])), [1, 50, 100, 150, 180]);
+  assert.deepEqual(Array.from(A.pinTicks([1, 50, 100, 170], 1, 180, [1, 1])), [1, 50, 100, 180]);
+  assert.deepEqual(Array.from(A.pinTicks([0, 100, 200], 0, 210, [0, 1])), [0, 100, 210]);
+  assert.deepEqual(Array.from(A.pinTicks([0, 100], 0, 100, null)), [0, 100]);
+  Object.defineProperty(ax, 'clientWidth', { value: 300 });
+  A.fit(t.el);
+  const labels = Array.from(ax.children).map((s) => s.textContent);
+  assert.equal(labels[0], 'D1');
+  assert.equal(labels[labels.length - 1], 'D180');
+});
+
 test('a closed outer row splits its padding evenly, so its label sits on the middle', () => {
   const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
     'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

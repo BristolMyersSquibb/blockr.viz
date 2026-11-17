@@ -149,6 +149,11 @@ script_value_read <- function(x, s) {
   switch(
     s$kind,
     number = {
+      # Cleared: no number, for a control that starts without one ("last").
+      empty <- !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))
+      if (empty && length(s$default) == 1L && is.na(s$default)) {
+        return(NA_real_)
+      }
       if (!is.numeric(x) || length(x) != 1L || !is.finite(x)) {
         return(NULL)
       }

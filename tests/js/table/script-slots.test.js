@@ -93,3 +93,28 @@ test("a script's top_n is the word, not the table's unset top_n", () => {
   input.dispatchEvent(new t.win.KeyboardEvent('keydown', { key: 'Enter' }));
   assert.deepEqual(t.sets(), [{ script_values: { top_n: 10 } }], 'the script value, not the setting');
 });
+
+// A number that starts empty (`day_to <- NA_real_  #| number(placeholder = "last")`): R
+// prints its placeholder; typed over it sets a number, emptied it sends null, which R
+// reads as no number again. A number without a placeholder keeps its value when emptied.
+test('a number word with a placeholder can be emptied again', () => {
+  const script = {
+    inputs: [{ name: 'day_to', key: 'sv_day_to', label: 'To study day', kind: 'number',
+               placeholder: 'last' },
+             { name: 'n', key: 'sv_n', label: 'Top', kind: 'number', min: 1 }],
+    values: { sv_day_to: 180, sv_n: 5 }, error: null
+  };
+  const titles = { subtitle: { parts: [{ text: 'to ' }, { text: '180', arg: 'day_to' },
+                                       { text: ', top ' }, { text: '5', arg: 'n' }] } };
+  const t = mount(payload({ data: flatModel(3), derived: { titles, script } }));
+  const empty = (k) => {
+    t.$$('.vz-subtitle .blockr-slot')[k].click();
+    const input = t.$('.vz-subtitle input.blockr-slot-input');
+    input.value = '';
+    input.dispatchEvent(new t.win.KeyboardEvent('keydown', { key: 'Enter' }));
+  };
+  empty(0);
+  assert.deepEqual(t.sets(), [{ script_values: { day_to: null } }]);
+  empty(1);
+  assert.equal(t.sets().length, 1, 'a number without a placeholder keeps its value');
+});

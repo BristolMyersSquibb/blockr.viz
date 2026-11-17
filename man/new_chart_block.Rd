@@ -215,7 +215,7 @@ new_chart_block(
 
 \item{drill_table}{Beta. The table in the target's dm the click applies to. Default: \code{""}.}
 
-\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. Default \code{NULL}: no script.}
+\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. A line annotated \verb{#| setting} (\code{by <- "AEDECOD"  #| setting}) is no control: it takes the block's own setting of that name, or the first summary's field (\code{facet}). Default \code{NULL}: no script.}
 
 \item{script_values}{Settings of the script's controls, by variable name. The script code, not the spec, makes each one a title slot. Default: \code{list()}.}
 

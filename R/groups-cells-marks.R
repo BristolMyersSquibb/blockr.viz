@@ -9,6 +9,29 @@ cells_interval <- function(ctx, p) {
   lv <- p$levels %||% prep$series
   tf <- as.character(p$tlabels %||% p$tfields %||% character())
   cvar <- chr_state(p$cvar)
+  # A set end (x_limits): what lies outside goes, a bar past the right end
+  # gets the caret there.
+  ovl_rows <- if (!is.null(p$ovl)) ctx$rows[[p$ovl]]
+  lane_rows <- if (!is.null(p$lanes)) ctx$rows[[p$lanes]]
+  cut <- NULL
+  if (!is.null(p[["pin"]])) {
+    cl <- cells_clip_rows(segs, dom[[1L]], dom[[2L]])
+    segs <- cl$segs
+    cut <- cl$cut
+    if (!is.null(ovl_rows)) {
+      ovl_rows <- lapply(seq_along(ovl_rows), function(i) {
+        o <- cells_clip_overlay(ovl_rows[[i]], dom[[1L]], dom[[2L]])
+        if (!is.null(o$op)) {
+          o$op <- cells_clip_open(o$op, segs[[i]], dom[[2L]])
+        }
+        o
+      })
+    }
+    if (!is.null(lane_rows)) {
+      lane_rows <- lapply(lane_rows, cells_clip_lanes, d0 = dom[[1L]],
+                          d1 = dom[[2L]])
+    }
+  }
   out_segs <- cells_interval_segs(segs, bb, dom[[2L]])
   out_tips <- cells_interval_tips(segs, lv, tf, cvar, dd)
   out <- list(kind = "interval", segs = out_segs, tips = out_tips,
@@ -20,11 +43,16 @@ cells_interval <- function(ctx, p) {
   # A study-day axis (`x_days`): the hover reads its time as "D12".
   if (!dd && isTRUE(p$x_days)) out$sd <- TRUE
   if (!is.null(p$ovl)) {
-    out <- c(out, cells_interval_overlays(ctx$rows[[p$ovl]], segs, bb,
+    out <- c(out, cells_interval_overlays(ovl_rows, segs, bb,
                                           c(p, list(d1_ = dom[[2L]])), dd))
   }
+  if (any(cut)) {
+    op <- out$op %||% rep(NA_real_, length(segs))
+    op[cut] <- 100
+    out$op <- op
+  }
   if (!is.null(p$lanes)) {
-    out <- c(out, cells_interval_lanes(ctx$rows[[p$lanes]], bb, lv, tf, cvar,
+    out <- c(out, cells_interval_lanes(lane_rows, bb, lv, tf, cvar,
                                        dd, dom[[2L]], p$ename %||% "x"))
     # Without a record on the main lane anywhere, every lane is a full lane
     # and the overlays span the row.
@@ -36,6 +64,72 @@ cells_interval <- function(ctx, p) {
     }
   }
   out
+}
+
+# Segments inside a set axis, one list per row: a segment wholly before
+# `d0` or after `d1` goes; an ongoing one (no end) stays when it starts by
+# `d1`. `cut` marks the rows with a segment that runs past `d1`.
+cells_clip_rows <- function(segs, d0, d1) {
+  n <- lengths(segs)
+  all <- unlist(segs, recursive = FALSE, use.names = FALSE)
+  if (!length(all)) return(list(segs = segs, cut = logical(length(segs))))
+  s <- vapply(all, function(sg) as.numeric(sg$s), numeric(1L))
+  e <- vapply(all, function(sg) as.numeric(sg$e %||% NA_real_), numeric(1L))
+  fin <- is.finite(e)
+  keep <- !(is.finite(s) & s > d1) & !(fin & e < d0)
+  past <- keep & fin & e > d1 + 1e-9
+  row <- rep.int(seq_along(segs), n)
+  cut <- logical(length(segs))
+  cut[unique(row[past])] <- TRUE
+  kept <- cells_regroup(as.list(keep), n)
+  out <- lapply(seq_along(segs), function(i) {
+    k <- unlist(kept[[i]], use.names = FALSE)
+    if (all(k)) segs[[i]] else segs[[i]][k]
+  })
+  list(segs = out, cut = cut)
+}
+
+# A row's overlays inside a set axis: ticks and events outside go, and line
+# pieces wholly outside.
+cells_clip_overlay <- function(o, d0, d1) {
+  if (is.null(o)) return(o)
+  inside <- function(x) is.finite(x) & x >= d0 - 1e-9 & x <= d1 + 1e-9
+  if (!is.null(o$tk)) o$tk <- o$tk[inside(as.numeric(o$tk))]
+  if (length(o$bd)) {
+    o$bd <- Filter(function(b) !(b$e < d0 || b$s > d1), o$bd)
+  }
+  if (length(o$ev)) o$ev <- Filter(function(ev) inside(ev$x), o$ev)
+  o
+}
+
+# An open end inside a set axis: NULL when no segment left reaches it (its
+# record lies outside), so no caret lands on another bar.
+cells_clip_open <- function(op, segs, d1) {
+  x <- min(op, d1)
+  e <- vapply(segs, function(sg) {
+    v <- as.numeric(sg$e %||% NA_real_)
+    if (is.finite(v)) min(v, d1) else d1
+  }, numeric(1L))
+  if (any(e >= x - 1e-9)) op
+}
+
+# A row's thin lanes inside a set axis: each lane's segments and events as
+# above, and a lane with a bar past `d1` open there.
+cells_clip_lanes <- function(r, d0, d1) {
+  if (!length(r$sub)) return(r)
+  r$sub <- lapply(r$sub, function(l) {
+    cl <- cells_clip_rows(list(l$segs), d0, d1)
+    l$segs <- cl$segs[[1L]]
+    if (!is.null(l$op)) l$op <- cells_clip_open(l$op, l$segs, d1)
+    if (cl$cut) l$op <- d1
+    if (length(l$ev)) {
+      l$ev <- Filter(function(ev) {
+        is.finite(ev$x) && ev$x >= d0 - 1e-9 && ev$x <= d1 + 1e-9
+      }, l$ev)
+    }
+    l
+  })
+  r
 }
 
 # The thin lanes and strips in lane percent: `sl` per row a list of lanes,
@@ -168,6 +262,9 @@ cells_interval_segs <- function(segs, bb, d1) {
   end <- vapply(all, function(sg) sg$e, numeric(1L))
   # An ongoing record (no end, open) runs to the axis end.
   end[!is.finite(end)] <- d1
+  # A bar across an end of the axis (x_limits) is cut at it.
+  if (length(bb$lo) && is.finite(bb$lo)) start <- pmax(start, bb$lo)
+  end <- pmin(end, d1)
   left <- bb$pos(start)
   width <- bb$span(start, end)
   tuples <- lapply(seq_along(all), function(j) {
