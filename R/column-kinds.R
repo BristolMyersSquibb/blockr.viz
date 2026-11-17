@@ -7,7 +7,7 @@
 #' `"group"` once and is then offered for colour, facet, chart group and a
 #' table's column split.
 #'
-#' The five kinds:
+#' The four kinds:
 #'
 #' * `group` -- low-cardinality stratifiers (TRT, SEX, RACE, AETOXGR). Colour,
 #'   facet and chart group all take them.
@@ -15,10 +15,6 @@
 #' * `value` -- numeric measures (AVAL, CHG, PCHG, AGE).
 #' * `id` -- identifiers and item dimensions (USUBJID, PARAMCD).
 #'   Groupable, countable and drillable, never offered as a colour.
-#' * `level` -- columns that code the same thing at different detail, marked
-#'   from specific to broad (a reported term, a preferred term, a body
-#'   system). A subtitle word offers them with `{label(@by in level)}`, in
-#'   the order they were marked.
 #'
 #' **No mark, no restriction.** A frame where nothing is marked offers every
 #' column to every role. As soon as ANY column carries a kind, roles that
@@ -126,7 +122,7 @@ kind_columns <- function(x, kind) {
 }
 
 # The vocabulary; see mark_column_kinds() for what each kind covers.
-COLUMN_KINDS <- c("group", "time", "value", "id", "level")
+COLUMN_KINDS <- c("group", "time", "value", "id")
 
 # `cols` less those that are NA in every row of `data`. Such a column counts
 # as unset, as if it were absent: upstream switches a grouping, colour or

@@ -138,9 +138,7 @@ chart_needed_cols <- function(v, d) {
     needed <- c(needed, names(column_kinds(d)))
   }
   needed <- c(needed, unlist(
-    slot_choices_columns(
-      template_slot_choices(list(v$title, v$subtitle, v$caption)), d
-    ),
+    template_slot_choices(list(v$title, v$subtitle, v$caption)),
     use.names = FALSE
   ))
   # Sorted, so swapping roles keeps the rows the browser holds.

@@ -15,7 +15,7 @@
 #' @return A list: `title`, `subtitle` and `caption`, each `NULL` (no
 #'   line: no text and nothing to offer) or `list(text, parts, offers)`; `args`, what each `{@name}`
 #'   prints now; `choices`, the lists a template writes as
-#'   `{@name in a, b}`, a kind name (`{@by in level}`) read as its columns.
+#'   `{@name in a, b}`.
 #' @noRd
 viz_titles <- function(v, d, auto, args) {
   tier <- c(title = "label", subtitle = "subtitle", caption = "caption")
@@ -39,10 +39,7 @@ viz_titles <- function(v, d, auto, args) {
     args = lapply(stats::setNames(nm = names(args)), arg_token_value,
                   args = args),
     choices = lapply(
-      slot_choices_columns(
-        template_slot_choices(list(v$title, v$subtitle, v$caption)), d
-      ),
-      as.list
+      template_slot_choices(list(v$title, v$subtitle, v$caption)), as.list
     )
   ))
 }

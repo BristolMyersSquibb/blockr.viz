@@ -324,20 +324,6 @@ template_slot_choices <- function(templates) {
   out
 }
 
-# A slot list may name a column kind instead of columns: `{@by in level}`
-# offers the columns mark_column_kinds() marked `level`, in the order marked.
-# A name that is a column of `d` stays a column, so a column called "level"
-# is not taken for the kind.
-slot_choices_columns <- function(choices, d) {
-  if (!length(choices) || !is.data.frame(d)) return(choices)
-  lapply(choices, function(ch) {
-    out <- lapply(ch, function(x) {
-      if (x %in% COLUMN_KINDS && !x %in% names(d)) kind_columns(d, x) else x
-    })
-    unique(unlist(out, use.names = FALSE)) %||% character()
-  })
-}
-
 arg_token_value <- function(name, args) {
   v <- args[[name]]
   if (is.null(v) || !length(v)) return("")

@@ -42,7 +42,7 @@ A kind is a fact about the column, not about a chart. \code{TRT} is marked
 \code{"group"} once and is then offered for colour, facet, chart group and a
 table's column split.
 
-The five kinds:
+The four kinds:
 \itemize{
 \item \code{group} -- low-cardinality stratifiers (TRT, SEX, RACE, AETOXGR). Colour,
 facet and chart group all take them.
@@ -50,10 +50,6 @@ facet and chart group all take them.
 \item \code{value} -- numeric measures (AVAL, CHG, PCHG, AGE).
 \item \code{id} -- identifiers and item dimensions (USUBJID, PARAMCD).
 Groupable, countable and drillable, never offered as a colour.
-\item \code{level} -- columns that code the same thing at different detail, marked
-from specific to broad (a reported term, a preferred term, a body
-system). A subtitle word offers them with \verb{\{label(@by in level)\}}, in
-the order they were marked.
 }
 
 \strong{No mark, no restriction.} A frame where nothing is marked offers every

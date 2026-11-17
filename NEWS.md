@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9095
+# blockr.viz 0.3.0.9096
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -138,6 +138,9 @@ read.
 * The line under a groups table cut by `top_n` reads "18 more groups not
   shown, the largest with 73 events" (was "Other — 18 groups below the
   cut, each with a value ≤ 73").
+* In the groups layout, the subtitle word for the outer `by` level
+  (`{@parent}`) and the chip a dropped clause leaves read "Grouped by". A
+  word's menu lists exactly the columns of its `in` list.
 * In the groups layout, the outer rows of a nested table (two `by`
   columns) show the group's name across the row, with the groups open,
   and no summaries. A folded group adds the number of rows it hides in

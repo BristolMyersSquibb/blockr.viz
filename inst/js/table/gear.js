@@ -205,8 +205,8 @@
     }
     if (outer) {
       const last = by[by.length - 1];
-      return { arg: column('Outer rows', true), value: by.length === 2 ? by[0] : null,
-               label: 'Outer rows',
+      return { arg: column('Grouped by', true), value: by.length === 2 ? by[0] : null,
+               label: 'Grouped by',
                write: (x) => ({ by: x == null ? [last] : [String(x), last] }) };
     }
     const FIELD = /** @type {Record<string, string>} */ (

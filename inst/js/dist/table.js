@@ -1,4 +1,4 @@
-// blockr.viz bundle bc5ec767bcf4a828d4dd8906d968420b, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle ceb25689bd7dd9f3b21442cafcba838f, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tags.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -3007,8 +3007,8 @@
     }
     if (outer) {
       const last = by[by.length - 1];
-      return { arg: column('Outer rows', true), value: by.length === 2 ? by[0] : null,
-               label: 'Outer rows',
+      return { arg: column('Grouped by', true), value: by.length === 2 ? by[0] : null,
+               label: 'Grouped by',
                write: (x) => ({ by: x == null ? [last] : [String(x), last] }) };
     }
     const FIELD = /** @type {Record<string, string>} */ (
