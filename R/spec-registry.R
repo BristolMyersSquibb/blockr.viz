@@ -78,8 +78,9 @@ registry_object <- function(type, required) {
 #' The arguments with `slot = TRUE`, keyed by name, for the title resolver
 #' and the gear's `@` menu. A single value prints as it is, or as its gear
 #' label when the argument is a choice with labels ("Mean", not "mean"), so
-#' the word reads like the menu it opens; a vector prints as its values
-#' joined by ", ".
+#' the word reads like the menu it opens; the resolver then sets the case of
+#' its first letter by where it sits in the sentence. A vector prints as its
+#' values joined by ", ".
 #'
 #' @param spec A `viz_spec`.
 #' @param values A named list of the block's values.
@@ -108,13 +109,18 @@ viz_slot_values <- function(spec, values) {
 
 # A choice as its menu shows it: the gear label of the value, or the value
 # when the argument has no labels or the value is not one of its choices.
+# A label is marked `choice`, so the resolver may change the case of its
+# first letter (tt_choice_case()). A raw value or a column name never is.
 slot_enum_text <- function(arg, v) {
   labels <- arg$gear$labels
   if (length(v) != 1L || is.na(v) || length(labels) != length(arg$values)) {
     return(v)
   }
   hit <- match(as.character(v), as.character(arg$values))
-  if (is.na(hit)) v else labels[[hit]]
+  if (is.na(hit)) {
+    return(v)
+  }
+  structure(labels[[hit]], choice = TRUE)
 }
 
 # Axis limits as the sentence prints them: "20 to auto"; NULL when unset, so
