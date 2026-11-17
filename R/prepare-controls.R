@@ -16,8 +16,9 @@
 #' @return A list of records, JSON-ready.
 #' @noRd
 script_control_records <- function(specs) {
-  # A control its `when` flag switched off is not drawn.
-  specs <- Filter(function(s) !isTRUE(s$off), specs)
+  # A control its `when` flag switched off is not drawn, and a `#| setting`
+  # line is the block's own setting, drawn by the gear.
+  specs <- Filter(function(s) !isTRUE(s$off) && !script_is_setting(s), specs)
   lapply(specs, function(s) {
     label <- script_label(s)
     if (!script_spec_ok(s)) {
@@ -58,6 +59,11 @@ script_spec_ok <- function(s) {
   is.null(s$error) && !is.na(s$kind)
 }
 
+# A `#| setting` line: the block's own setting, not a control of the script.
+script_is_setting <- function(s) {
+  identical(s$kind, "setting")
+}
+
 # A control's label: the `#| label =` annotation, else the variable name in
 # words ("min_age" -> "Min age").
 script_label <- function(s) {
@@ -92,7 +98,7 @@ script_key <- function(name) {
 script_control_values <- function(specs, values = list()) {
   out <- list()
   for (s in specs) {
-    if (!script_spec_ok(s) || isTRUE(s$off)) {
+    if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s)) {
       next
     }
     v <- values[[s$name]]
@@ -139,7 +145,9 @@ script_control_values <- function(specs, values = list()) {
 #' @return A named list.
 #' @noRd
 script_title_args <- function(roles, specs, values = list()) {
-  specs <- Filter(script_spec_ok, specs)
+  # A `#| setting` line names the block's setting, whose word opens it.
+  specs <- Filter(function(s) script_spec_ok(s) && !script_is_setting(s),
+                  specs)
   if (!length(specs)) {
     return(roles)
   }

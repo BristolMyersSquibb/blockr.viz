@@ -177,6 +177,10 @@ cb_annotation <- function(line_text) {
   }
 
   e <- tryCatch(parse(text = body)[[1L]], error = function(e) NULL)
+  # `#| setting`: the line takes the block's own setting of that name.
+  if (identical(e, quote(setting)) || identical(e, quote(setting()))) {
+    return(list(setting = TRUE))
+  }
   args <- NULL
   if (!is.null(e) && is.call(e) && is.name(e[[1L]]) &&
       as.character(e[[1L]]) %in% CB_ANN_CALLS) {
@@ -302,6 +306,24 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
     # Make it visible to later declarations too.
     assign(st$name, value, envir = env)
 
+    line_ann <- cb_annotation(
+      if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
+      else parsed$lines[[st$line]]
+    )
+    # A setting is no control: the block's own setting of that name, its
+    # current value written into the script as the line's value
+    # (cb_setting_names(), viz_script_sources()).
+    if (isTRUE(line_ann$setting)) {
+      cur <- values[[st$name]]
+      if (is.list(cur)) cur <- unlist(cur, use.names = FALSE)
+      if (!is.null(cur)) assign(st$name, cur, envir = env)
+      specs[[length(specs) + 1L]] <- list(
+        name = st$name, line = st$line, kind = "setting",
+        default = value, error = NULL
+      )
+      next
+    }
+
     w <- cb_widget_for(value)
     if (!is.null(w) && identical(w$kind, "select") && !length(w$choices)) {
       # An empty factor is usually a mistyped column name.
@@ -317,10 +339,7 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
       next
     }
 
-    ann <- cb_annotation(
-      if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
-      else parsed$lines[[st$line]]
-    )
+    ann <- line_ann
     # `#| select(multiple = TRUE)`: several picks, though one by default.
     if (identical(w$kind, "select") && isTRUE(as.logical(ann$multiple))) {
       w$multiple <- TRUE
@@ -346,6 +365,21 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
   }
 
   specs
+}
+
+# The names a script declares with `#| setting`: lines whose value is the
+# block's own setting of that name, not a control of the script.
+cb_setting_names <- function(parsed) {
+  if (is.null(parsed) || !isTRUE(parsed$ok)) return(character())
+  out <- character()
+  for (st in parsed$stmts) {
+    if (!isTRUE(st$input) || is.na(st$line) ||
+          st$line > length(parsed$lines)) next
+    if (isTRUE(cb_annotation(parsed$lines[[st$line]])$setting)) {
+      out <- c(out, st$name)
+    }
+  }
+  out
 }
 
 # Is a control switched off by its `when` flag? Only a flag declared above,
