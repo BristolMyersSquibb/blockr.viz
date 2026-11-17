@@ -151,7 +151,7 @@ test('the line under a field is marked when it would only repeat the field', () 
 test('slots: words open their setting; plain words stay text', () => {
   const t = setup();
   const opened = [];
-  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope, openGear: () => opened.push(1) });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope, openGear: () => opened.push(1) });
   const head = t.doc.body.appendChild(t.doc.createElement('div'));
   slots.paint(head, { parts: [{ text: 'Count' }, { text: ' of ' }, { text: 'ARM', arg: 'x' },
                               { text: ' in CHF', arg: 'unit' }, { text: ' values', arg: 'value_labels' },
@@ -186,7 +186,7 @@ test('limits on the face: one word per end, each typed over on its own', () => {
   const t = Object.assign(env, mountGear(env));
   t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', func: 'count',
                           y_limits: [20, null] }, { derived: { titles: TITLES } }));
-  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope });
   const head = t.doc.body.appendChild(t.doc.createElement('div'));
   slots.paint(head, { parts: [{ text: 'Count, from ' }, { text: '20 to auto', arg: 'y_limits' }],
                       offers: [] });
@@ -225,7 +225,7 @@ test('limits on the face: one word per end, each typed over on its own', () => {
 test('slots without blockr.ui open the gear for a list', () => {
   const t = setup();
   const opened = [];
-  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope, openGear: () => opened.push(1) });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope, openGear: () => opened.push(1) });
   const head = t.doc.body.appendChild(t.doc.createElement('div'));
   slots.paint(head, { parts: [{ text: 'ARM', arg: 'x' }] });
   head.querySelector('.blockr-slot').click();
@@ -234,7 +234,7 @@ test('slots without blockr.ui open the gear for a list', () => {
 
 test('slots with blockr.ui: a word opens Blockr.Select.menu and a pick sends', { skip: !hasUi() }, async () => {
   const t = setup({ ui: true });
-  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope });
   const head = t.doc.body.appendChild(t.doc.createElement('div'));
   slots.paint(head, { parts: [{ text: 'ARM', arg: 'x', by: 'name' }] });
   const word = head.querySelector('.blockr-slot');

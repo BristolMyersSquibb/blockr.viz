@@ -1,5 +1,5 @@
-// blockr.viz bundle abb6b04415ba849a1081ad2607e46495, built by tools/bundle.js. Do not edit.
-// sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
+// blockr.viz bundle d2423645ab79d6572553ea4b0a413bc3, built by tools/bundle.js. Do not edit.
+// sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/title-words.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
 /**
@@ -1077,8 +1077,8 @@
 // @ts-check
 /**
  * Titles: the gear's template rows (title, subtitle, caption) with their
- * `@` menu, and the sentence on the block's face, whose words open their
- * setting's control.
+ * `@` menu. The sentence on the block's face, whose words open their
+ * setting's control, is in title-words.js.
  *
  * Both read `derived.titles` from the payload (VizTitles in gear.d.ts):
  * per band the parts R resolved (`{text, arg?, by?}`) and the settings it
@@ -1476,6 +1476,22 @@
     sync();
   }
 
+  V.titles = { row, menuGroups, unknownTokens, paintPreview, namedArgs };
+})();
+// --- core/title-words.js
+// @ts-check
+/**
+ * The sentence on the block's face: its words open their setting's control,
+ * a menu or a field typed over the word, and the settings a dropped clause
+ * would name are offered after it. Reads the parts R resolved, as the gear's
+ * template rows do (titles.js).
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const ui = () => /** @type {VizUi} */ (root.Blockr);
+
   /** @param {VizScope} scope @param {HTMLElement} el @param {() => void} fn */
   const wire = (scope, el, fn) => {
     el.setAttribute('role', 'button');
@@ -1674,7 +1690,7 @@
     return { paint, close, dispose: () => own.dispose() };
   }
 
-  V.titles = { row, menuGroups, unknownTokens, paintPreview, slots, namedArgs, edit, wire };
+  V.titleWords = { slots, edit, wire };
 })();
 // --- core/ticks.js
 // @ts-check
@@ -1878,7 +1894,7 @@
     const w = el.appendChild(document.createElement('span'));
     w.className = 'blockr-slot';
     w.textContent = end.value == null ? 'auto' : String(end.value);
-    V.titles.wire(ps, w, () => V.titles.edit(ps, w, end));
+    V.titleWords.wire(ps, w, () => V.titleWords.edit(ps, w, end));
   });
 
   /** @param {HTMLElement} el @param {VizScope} ps @param {VizWordPart[]} words
@@ -1888,7 +1904,7 @@
     const w = el.appendChild(document.createElement('span'));
     w.className = 'blockr-slot';
     w.textContent = wd.text;
-    V.titles.wire(ps, w, () => open(i, w));
+    V.titleWords.wire(ps, w, () => open(i, w));
   });
 })();
 // --- core/gear/tray-nav.js
@@ -3162,7 +3178,8 @@
  * is blank for auto; either commits the pair, both blank is null. A log axis
  * starts above 0, so an end at or below 0 is not sent while the axis is log
  * (`<role>_transform` is "log10"); the note under the fields says why. The
- * sentence's words for the same setting ask limitsNote() too (engine.js).
+ * sentence's words for the same setting come from limitsSlot(), which asks
+ * limitsNote() too.
  */
 (function () {
   'use strict';
@@ -3206,8 +3223,34 @@
     });
   }
 
+  /** Axis limits on the face: one word per end. An end typed over keeps the
+   * other as the gear holds it now (`values()`); a pair whose from is not
+   * below its to is not sent (R refuses it).
+   * @param {VizArg} arg @param {string} key @param {unknown} value @param {string} label
+   * @param {(v: unknown) => void} set @param {() => VizValues} values
+   * @returns {VizSlotOpener} */
+  function limitsSlot(arg, key, value, label, set, values) {
+    const now = (/** @type {unknown} */ v) => (Array.isArray(v) ? v : [null, null]);
+    const pair = now(value);
+    const num = (/** @type {unknown} */ v) => (typeof v === 'number' ? v : Date.parse(String(v)));
+    const end = (/** @type {number} */ i) => /** @type {VizEndOpener} */ ({
+      kind: 'entry', value: pair[i], label: label + (i ? ' to' : ' from'),
+      toText: (v) => (v == null ? '' : String(v)),
+      fromText: (t) => { const p = /** @type {unknown[] | null} */ (C.fromText(arg, t)); return p ? p[0] : null; },
+      set: (v) => {
+        const next = now(values()[key]).slice();
+        next[i] = v;
+        if (next[0] != null && next[1] != null && !(num(next[0]) < num(next[1]))) return;
+        if (limitsNote(values(), key, next)) return;
+        set(next.every((x) => x == null) ? null : next);
+      }
+    });
+    return { kind: 'pair', value, ends: [end(0), end(1)], set, label };
+  }
+
   V.gear.more = { ...(V.gear.more || {}), range };
   V.gear.limitsNote = limitsNote;
+  V.gear.limitsSlot = limitsSlot;
 })();
 // --- core/gear/ticks.js
 // @ts-check
@@ -4300,7 +4343,7 @@
                  max: b.max == null ? Infinity : b.max, step: name === 'integer' ? 1 : 0.1,
                  value, set, label };
       }
-      if (name === 'limits') return this._pairSlot(key, arg, value, label, set);
+      if (name === 'limits') return V.gear.limitsSlot(arg, key, value, label, set, () => this.values());
       if (name === 'ticks') return V.gear.ticksSlot(this.host, key, value, label, set, values);
       if ((name === 'numbers' || name === 'values') && !listed) {
         return { kind: 'entry', value, set, label,
@@ -4326,30 +4369,6 @@
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,
                multi: name === 'columns' || name === 'enums', set, label };
-    }
-
-    /** Axis limits on the face: one word per end. An end typed over keeps the
-     * other as the gear holds it now; a pair whose from is not below its to is
-     * not sent (R refuses it).
-     * @param {string} key @param {VizArg} arg @param {unknown} value @param {string} label
-     * @param {(v: unknown) => void} set @returns {VizSlotOpener} */
-    _pairSlot(key, arg, value, label, set) {
-      const now = (/** @type {unknown} */ v) => (Array.isArray(v) ? v : [null, null]);
-      const pair = now(value);
-      const num = (/** @type {unknown} */ v) => (typeof v === 'number' ? v : Date.parse(String(v)));
-      const end = (/** @type {number} */ i) => /** @type {VizEndOpener} */ ({
-        kind: 'entry', value: pair[i], label: label + (i ? ' to' : ' from'),
-        toText: (v) => (v == null ? '' : String(v)),
-        fromText: (t) => { const p = /** @type {unknown[] | null} */ (C.fromText(arg, t)); return p ? p[0] : null; },
-        set: (v) => {
-          const next = now(this.values()[key]).slice();
-          next[i] = v;
-          if (next[0] != null && next[1] != null && !(num(next[0]) < num(next[1]))) return;
-          if (V.gear.limitsNote(this.values(), key, next)) return;
-          set(next.every((x) => x == null) ? null : next);
-        }
-      });
-      return { kind: 'pair', value, ends: [end(0), end(1)], set, label };
     }
 
     /** The prepare script's working declaration of `name`, if the block has a script.
@@ -4599,7 +4618,7 @@
       this.scope.mutate(t.button, () => {
         if (this.gear) this.gear.setOpen(t.button.getAttribute('aria-expanded') === 'true');
       }, { attributes: true, attributeFilter: ['aria-expanded'] });
-      this.slots = this.scope.own(V.titles.slots({
+      this.slots = this.scope.own(V.titleWords.slots({
         gear: this.gear, scope: this.scope, openGear: this.openGear
       }));
       return this.gear;

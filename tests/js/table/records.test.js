@@ -230,7 +230,7 @@ test('titles paint through the title slots when they are loaded', () => {
   const painted = [];
   const env = loadTable({ before: (win) => {
     win.Blockr.viz.gear = { ...win.Blockr.viz.gear, mount: () => ({ update() {}, dispose() {} }) };
-    win.Blockr.viz.titles = { slots: (o) => ({
+    win.Blockr.viz.titleWords = { slots: (o) => ({
       paint: (el, band) => { painted.push([el.className, band && band.text]); el.textContent = band ? band.text : ''; },
       dispose() {}
     }) };

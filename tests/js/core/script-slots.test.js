@@ -1,6 +1,6 @@
 /* A prepare script's values named in a title (`{@min_share}`): the word is the value's
  * control on the face, and it writes `script_values` by the variable's name, as the
- * script band's own control does (core/gear/engine.js scriptSlot(), core/titles.js).
+ * script band's own control does (core/gear/engine.js scriptSlot(), core/title-words.js).
  * Production 0.2.x drew them so; the rewrite lost it while R still resolved the text,
  * which is why these tests drive the browser side. Tables and charts share the engine;
  * the views are tested in table/script-slots.test.js and chart/script-band.test.js. */
@@ -48,7 +48,7 @@ const setup = (opts = {}) => {
 
 /** The subtitle painted with the face's slots, in a fresh element. */
 const face = (t, band = SUBTITLE, openGear) => {
-  const slots = t.V.titles.slots({ gear: t.gear, scope: t.scope, openGear });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope, openGear });
   const head = t.doc.body.appendChild(t.doc.createElement('div'));
   slots.paint(head, band);
   return { head, slots, words: () => Array.from(head.querySelectorAll('.blockr-slot')) };

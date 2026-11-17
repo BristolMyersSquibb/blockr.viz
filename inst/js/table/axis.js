@@ -72,7 +72,7 @@
    * Ticks with the set ends of the axis (`pin`, from and to as 1 or 0): a set
    * end is a tick, and a tick within 8% of the range of it goes, so the
    * labels do not collide (R's cells_axis_pin()).
-   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[]} pin
+   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[] | null} pin
    * @returns {number[]}
    */
   function pinTicks(at, d0, d1, pin) {

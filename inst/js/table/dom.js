@@ -343,7 +343,8 @@
       /** @type {number | null} */
       let hideBelow = null;
       // Section titles over inner rows, while the rows keep their order.
-      const titles = m0(this.model).rows && m0(this.model).rows.title;
+      const rows = m0(this.model).rows;
+      const titles = rows && rows.title;
       const sorted = this.sortCol != null && this.sortDir !== 0;
       for (const i of view) {
         const b = st.blk[i];

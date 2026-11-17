@@ -78,7 +78,7 @@ async function cycles(env, n) {
     inp.dispatchEvent(new env.win.InputEvent('input', { data: '@' }));
     assert.ok(env.doc.querySelector('.vz-at-menu'));
     const head = env.doc.body.appendChild(env.doc.createElement('div'));
-    const slots = env.V.titles.slots({ gear: m.gear, scope: m.scope });
+    const slots = env.V.titleWords.slots({ gear: m.gear, scope: m.scope });
     slots.paint(head, TITLES.title);
     head.querySelector('.blockr-slot').click();
     const sel = row(m.el, 'color').querySelector('.blockr-select__control');

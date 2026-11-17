@@ -553,11 +553,16 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
+  };
+  tags: {
     tagStack(xs: number[], ws: number[], gap?: number): number[];
     stackTags(host: ParentNode): void;
   };
   axis: {
     ticks(d0: number, d1: number, w: number, gap?: number): number[];
+    dayTicks(d0: number, d1: number, w: number, gap?: number): number[];
+    pinTicks(at: number[], d0: number, d1: number, pin: number[] | null): number[];
+    dayLabel(x: number): string;
     fit(host: ParentNode): void;
   };
   summaries: {
