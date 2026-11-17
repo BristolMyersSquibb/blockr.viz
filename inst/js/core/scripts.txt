@@ -10,6 +10,7 @@ binding.js
 download.js
 capture.js
 titles.js
+title-words.js
 ticks.js
 slot-pair.js
 gear/tray-nav.js

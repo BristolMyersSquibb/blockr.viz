@@ -138,7 +138,7 @@
       this.scope.mutate(t.button, () => {
         if (this.gear) this.gear.setOpen(t.button.getAttribute('aria-expanded') === 'true');
       }, { attributes: true, attributeFilter: ['aria-expanded'] });
-      this.slots = this.scope.own(V.titles.slots({
+      this.slots = this.scope.own(V.titleWords.slots({
         gear: this.gear, scope: this.scope, openGear: this.openGear
       }));
       return this.gear;

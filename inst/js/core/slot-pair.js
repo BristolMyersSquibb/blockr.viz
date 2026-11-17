@@ -17,7 +17,7 @@
     const w = el.appendChild(document.createElement('span'));
     w.className = 'blockr-slot';
     w.textContent = end.value == null ? 'auto' : String(end.value);
-    V.titles.wire(ps, w, () => V.titles.edit(ps, w, end));
+    V.titleWords.wire(ps, w, () => V.titleWords.edit(ps, w, end));
   });
 
   /** @param {HTMLElement} el @param {VizScope} ps @param {VizWordPart[]} words
@@ -27,6 +27,6 @@
     const w = el.appendChild(document.createElement('span'));
     w.className = 'blockr-slot';
     w.textContent = wd.text;
-    V.titles.wire(ps, w, () => open(i, w));
+    V.titleWords.wire(ps, w, () => open(i, w));
   });
 })();

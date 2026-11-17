@@ -321,6 +321,8 @@ interface VizGearNamespace {
             set: (v: unknown) => void, values: VizValues): VizSlotOpener;
   /** Why a limits pair cannot be set on its axis, or null (range.js). */
   limitsNote(values: VizValues, key: string, pair: unknown): string | null;
+  limitsSlot(arg: VizArg, key: string, value: unknown, label: string,
+    set: (v: unknown) => void, values: () => VizValues): VizSlotOpener;
   tray(head: HTMLElement, scope: VizScope, label: string): { band: HTMLElement;
     button: HTMLButtonElement; set(on: boolean): void; isOpen(): boolean };
   sections: VizSectionKit;
@@ -339,9 +341,13 @@ interface VizTitlesNamespace {
   menuGroups(titles: VizTitles, columns: VizColumn[], label: (k: string) => string,
              wordOf?: (k: string) => VizWordOf):
     { head: string; note?: string; items: { label: string; tok: string; val: string; indent?: boolean }[] }[];
-  slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
   /** Every argument the titles name: their words and their offers. */
   namedArgs(titles: VizTitles | null | undefined): string[];
+}
+
+/** The sentence on the face (title-words.js). */
+interface VizTitleWordsNamespace {
+  slots(opts: { gear: VizGear; scope: VizScope; openGear?: () => void }): VizSlots;
   /** Type a value over its word. */
   edit(scope: VizScope, anchor: HTMLElement, how: VizSlotOpener & { kind: 'number' | 'entry' }): void;
   /** A word that acts on click and on Enter or Space. */
@@ -357,6 +363,7 @@ interface VizSlots {
 interface VizNamespace {
   gear: VizGearNamespace;
   titles: VizTitlesNamespace;
+  titleWords: VizTitleWordsNamespace;
   /** A pair setting's two words on the face (slot-pair.js). */
   slotPair(el: HTMLElement, scope: VizScope, ends: VizEndOpener[]): void;
   /** A setting's words, one per part, each opened by `open` (slot-pair.js). */

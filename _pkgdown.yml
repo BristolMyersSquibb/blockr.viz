@@ -24,13 +24,14 @@ reference:
       - register_viz_blocks
   - title: Data for the table
     desc: >
-      A finished table from R code, and the summary statistics the
-      variables layout draws.
+      A finished table from R code, the records it hands along, and the
+      summary statistics the variables layout draws.
     contents:
       - as_annotated_df
       - as_plain_df
       - summary_table
       - drill_source
+      - viz_records
   - title: Downloads
     desc: >
       What a block's downloads write, and how another package adds a

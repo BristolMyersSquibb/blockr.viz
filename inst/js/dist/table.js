@@ -1,5 +1,5 @@
-// blockr.viz bundle a207081b10b0c2187c782839a8a0dffe, built by tools/bundle.js. Do not edit.
-// sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
+// blockr.viz bundle bc5ec767bcf4a828d4dd8906d968420b, built by tools/bundle.js. Do not edit.
+// sources: table/html.js table/marks.js table/tags.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
 /**
@@ -532,6 +532,7 @@
     return g ? col(c.fills[Number(g[2]) - 1]) : '';
   };
 
+  /** The caret at an open end. @param {number} x @param {string} color */
   const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
     ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
     '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
@@ -574,65 +575,6 @@
       return '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%' + tip +
         shape(Number(e[1])) + '</svg>';
     }).join('');
-  }
-
-  /**
-   * Where each tag on a lane sits: 0 on the centre line, 1 below it, -1
-   * above it. A tag whose box would run into the one before it starts a
-   * pair: the earlier one moves down, the later one up, each at its own x.
-   * A third tag in the same run goes down again, and so on.
-   * @param {number[]} xs Left edges in px, in drawing order.
-   * @param {number[]} ws Widths in px.
-   * @param {number} [gap] Space a tag needs before the next one.
-   * @returns {number[]}
-   */
-  function tagStack(xs, ws, gap = 2) {
-    const ord = xs.map((_, k) => k).sort((a, b) => xs[a] - xs[b] || a - b);
-    const out = xs.map(() => 0);
-    let prev = -1;
-    let run = 0;
-    ord.forEach((k) => {
-      if (prev >= 0 && xs[k] < xs[prev] + ws[prev] + gap) {
-        if (run === 0) out[prev] = 1;
-        run += 1;
-        out[k] = run % 2 ? -1 : 1;
-      } else {
-        run = 0;
-      }
-      prev = k;
-    });
-    return out;
-  }
-
-  /**
-   * Split overlapping tags on every swimlane in `host` above and below the
-   * centre line (tagStack()). Needs the drawn widths, so it runs after the
-   * rows are in the page and again on a resize. All widths are read before
-   * any class is set, so the table is laid out once.
-   * @param {ParentNode} host
-   */
-  function stackTags(host) {
-    /** @type {{ tags: HTMLElement[], xs: number[], ws: number[] }[]} */
-    const lanes = [];
-    host.querySelectorAll('.vz-table-groups-ivcell').forEach((el) => {
-      const tags = /** @type {HTMLElement[]} */ (Array.from(el.children)
-        .filter((t) => t.classList.contains('is-tag')));
-      if (tags.length < 2) return;
-      const w = /** @type {HTMLElement} */ (el).clientWidth;
-      if (!w) return;
-      // A tag's box starts 3px after its position (the stylesheet's offset).
-      lanes.push({
-        tags,
-        xs: tags.map((t) => parseFloat(t.style.left) / 100 * w + 3),
-        ws: tags.map((t) => t.offsetWidth)
-      });
-    });
-    lanes.forEach((l) => {
-      tagStack(l.xs, l.ws).forEach((p, k) => {
-        l.tags[k].classList.toggle('is-lo', p === 1);
-        l.tags[k].classList.toggle('is-hi', p === -1);
-      });
-    });
   }
 
   /**
@@ -868,7 +810,79 @@
       '</div>';
   }
 
-  V.table.marks = { glyph, cell, axis, shape, tagStack, stackTags };
+  V.table.marks = { glyph, cell, axis, shape };
+})();
+// --- table/tags.js
+// @ts-check
+/**
+ * Tags on one swimlane that would overlap split above and below the centre
+ * line. The tags are drawn by marks.js; this runs on the drawn rows.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+
+  /**
+   * Where each tag on a lane sits: 0 on the centre line, 1 below it, -1
+   * above it. A tag whose box would run into the one before it starts a
+   * pair: the earlier one moves down, the later one up, each at its own x.
+   * A third tag in the same run goes down again, and so on.
+   * @param {number[]} xs Left edges in px, in drawing order.
+   * @param {number[]} ws Widths in px.
+   * @param {number} [gap] Space a tag needs before the next one.
+   * @returns {number[]}
+   */
+  function tagStack(xs, ws, gap = 2) {
+    const ord = xs.map((_, k) => k).sort((a, b) => xs[a] - xs[b] || a - b);
+    const out = xs.map(() => 0);
+    let prev = -1;
+    let run = 0;
+    ord.forEach((k) => {
+      if (prev >= 0 && xs[k] < xs[prev] + ws[prev] + gap) {
+        if (run === 0) out[prev] = 1;
+        run += 1;
+        out[k] = run % 2 ? -1 : 1;
+      } else {
+        run = 0;
+      }
+      prev = k;
+    });
+    return out;
+  }
+
+  /**
+   * Split overlapping tags on every swimlane in `host` above and below the
+   * centre line (tagStack()). Needs the drawn widths, so it runs after the
+   * rows are in the page and again on a resize. All widths are read before
+   * any class is set, so the table is laid out once.
+   * @param {ParentNode} host
+   */
+  function stackTags(host) {
+    /** @type {{ tags: HTMLElement[], xs: number[], ws: number[] }[]} */
+    const lanes = [];
+    host.querySelectorAll('.vz-table-groups-ivcell').forEach((el) => {
+      const tags = /** @type {HTMLElement[]} */ (Array.from(el.children)
+        .filter((t) => t.classList.contains('is-tag')));
+      if (tags.length < 2) return;
+      const w = /** @type {HTMLElement} */ (el).clientWidth;
+      if (!w) return;
+      // A tag's box starts 3px after its position (the stylesheet's offset).
+      lanes.push({
+        tags,
+        xs: tags.map((t) => parseFloat(t.style.left) / 100 * w + 3),
+        ws: tags.map((t) => t.offsetWidth)
+      });
+    });
+    lanes.forEach((l) => {
+      tagStack(l.xs, l.ws).forEach((p, k) => {
+        l.tags[k].classList.toggle('is-lo', p === 1);
+        l.tags[k].classList.toggle('is-hi', p === -1);
+      });
+    });
+  }
+
+  V.table.tags = { tagStack, stackTags };
 })();
 // --- table/axis.js
 // @ts-check
@@ -945,7 +959,7 @@
    * Ticks with the set ends of the axis (`pin`, from and to as 1 or 0): a set
    * end is a tick, and a tick within 8% of the range of it goes, so the
    * labels do not collide (R's cells_axis_pin()).
-   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[]} pin
+   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[] | null} pin
    * @returns {number[]}
    */
   function pinTicks(at, d0, d1, pin) {
@@ -1815,7 +1829,8 @@
       /** @type {number | null} */
       let hideBelow = null;
       // Section titles over inner rows, while the rows keep their order.
-      const titles = m0(this.model).rows && m0(this.model).rows.title;
+      const rows = m0(this.model).rows;
+      const titles = rows && rows.title;
       const sorted = this.sortCol != null && this.sortDir !== 0;
       for (const i of view) {
         const b = st.blk[i];
@@ -3816,7 +3831,7 @@
       grid.hooks.rows = (body) => {
         const table = body.closest('table');
         if (table) T.axis.fit(table);
-        T.marks.stackTags(body);
+        T.tags.stackTags(body);
       };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
       // resize fits the axis again.
@@ -3826,7 +3841,7 @@
           const now = frame.box.clientWidth;
           if (now && now !== w) {
             T.axis.fit(frame.box);
-            T.marks.stackTags(frame.box);
+            T.tags.stackTags(frame.box);
           }
           w = now;
         });

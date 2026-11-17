@@ -112,7 +112,7 @@
       grid.hooks.rows = (body) => {
         const table = body.closest('table');
         if (table) T.axis.fit(table);
-        T.marks.stackTags(body);
+        T.tags.stackTags(body);
       };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
       // resize fits the axis again.
@@ -122,7 +122,7 @@
           const now = frame.box.clientWidth;
           if (now && now !== w) {
             T.axis.fit(frame.box);
-            T.marks.stackTags(frame.box);
+            T.tags.stackTags(frame.box);
           }
           w = now;
         });
