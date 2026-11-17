@@ -1,4 +1,4 @@
-// blockr.viz bundle b31b9c40f3b32e19c7b5876236c998f1, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 5ff5dc1df43eca69245759d7763db675, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -2960,15 +2960,20 @@
     const column = (/** @type {string} */ label, /** @type {boolean} */ nullable) =>
       /** @type {VizArg} */ ({ type: { name: 'column' }, nullable, gear: { control: 'column', label } });
     const inner = key === 'by' || (key === 'group' && by.length === 1);
-    const outer = (key === 'parent' || key === 'group') && by.length === 2;
+    // `{@parent}` on a flat table is the word a dropped "[{@parent} and ]" clause offers:
+    // a pick adds the outer level back.
+    const outer = (key === 'parent' && by.length === 1) ||
+      ((key === 'parent' || key === 'group') && by.length === 2);
     if (inner && by.length) {
       const keep = by.slice(0, -1);
       return { arg: column(BY_LABEL.groups, false), value: by[by.length - 1], label: BY_LABEL.groups,
                write: (x) => ({ by: x == null ? keep : keep.concat([String(x)]) }) };
     }
     if (outer) {
-      return { arg: column('Outer rows', true), value: by[0], label: 'Outer rows',
-               write: (x) => ({ by: x == null ? [by[1]] : [String(x), by[1]] }) };
+      const last = by[by.length - 1];
+      return { arg: column('Outer rows', true), value: by.length === 2 ? by[0] : null,
+               label: 'Outer rows',
+               write: (x) => ({ by: x == null ? [last] : [String(x), last] }) };
     }
     const FIELD = /** @type {Record<string, string>} */ (
       { value: 'col', func: 'func', facet: 'facet', fill: 'fill', color: 'color' });

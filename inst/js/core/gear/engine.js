@@ -465,6 +465,13 @@
       if (listed) {
         options = options.filter((o) => o.value == null || listed.includes(String(o.value)) ||
           C.same(o.value, value));
+        // The listed choices in the list's order (a kind's columns in the order they
+        // were marked, specific to broad); the empty choice and a current pick from
+        // outside the list keep their places.
+        const at = (/** @type {VizChoice} */ o) => (o.value == null ? -1 : listed.indexOf(String(o.value)));
+        const inList = options.filter((o) => at(o) >= 0).sort((a, b) => at(a) - at(b));
+        let k = 0;
+        options = options.map((o) => (at(o) >= 0 ? inList[k++] : o));
       }
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,

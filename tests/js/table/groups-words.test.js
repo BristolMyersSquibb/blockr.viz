@@ -67,8 +67,13 @@ test('the parent word replaces or drops the outer column', () => {
   parent.set('SEX');
   t.gear.slot('parent').set(null);
   assert.deepEqual(t.sets(), [{ by: ['SEX', 'ARM'] }, { by: ['ARM'] }]);
+  // One level: the word a dropped "[{@parent} and ]" clause offers. Unset, and a
+  // pick adds the outer column back.
   const single = mount({ by: ['ARM'] }, []);
-  assert.equal(single.gear.slot('parent'), null, 'one level: no outer column');
+  const add = single.gear.slot('parent');
+  assert.equal(add.selected, null);
+  add.set('SEX');
+  assert.deepEqual(single.sets(), [{ by: ['SEX', 'ARM'] }]);
 });
 
 test('the summary words write the first summary, keeping the others', () => {

@@ -8,9 +8,10 @@ test_that("marking sets kinds and reading returns only marked columns", {
     value = c("Sepal.Length", "Sepal.Width")
   )
 
+  # In the order marked, not sorted.
   expect_equal(
     column_kinds(d),
-    c(Sepal.Length = "value", Sepal.Width = "value", Species = "group")
+    c(Species = "group", Sepal.Length = "value", Sepal.Width = "value")
   )
   # Unmarked columns stay unmarked rather than picking up a default: an
   # unmarked column is the "no opinion" state, not a fifth kind.
@@ -26,7 +27,7 @@ test_that("nothing marked reads as an empty vector, never NULL", {
 test_that("marks accumulate across calls and .clear starts over", {
   d <- mark_column_kinds(datasets::iris, group = "Species")
   d <- mark_column_kinds(d, value = "Sepal.Length")
-  expect_named(column_kinds(d), c("Sepal.Length", "Species"))
+  expect_named(column_kinds(d), c("Species", "Sepal.Length"))
 
   d <- mark_column_kinds(d, value = "Petal.Width", .clear = TRUE)
   expect_equal(column_kinds(d), c(Petal.Width = "value"))
@@ -119,4 +120,34 @@ test_that("column metadata still carries labels, types and factor order", {
   expect_equal(as.character(meta$g$levels), c("b", "a"))
   expect_equal(meta$n$class, "number")
   expect_equal(meta$n$label, "Analysis Value")
+})
+
+test_that("kind_columns() returns a kind's columns in the order marked", {
+  d <- data.frame(AETERM = "a", AEDECOD = "b", AEBODSYS = "c", TRT = "x")
+  d <- mark_column_kinds(d, level = c("AETERM", "AEDECOD", "AEBODSYS"),
+                         group = "TRT")
+  expect_equal(kind_columns(d, "level"), c("AETERM", "AEDECOD", "AEBODSYS"))
+  expect_equal(kind_columns(d, "group"), "TRT")
+  expect_equal(kind_columns(d, "time"), character())
+  expect_equal(kind_columns(datasets::iris, "level"), character())
+  # A dropped column drops out; the rest keep their order.
+  expect_equal(kind_columns(dplyr::select(d, -AEDECOD), "level"),
+               c("AETERM", "AEBODSYS"))
+})
+
+test_that("a slot list naming a kind reads as that kind's columns", {
+  d <- data.frame(AETERM = "a", AEDECOD = "b", AEBODSYS = "c", TRT = "x")
+  attr(d, "blockr_kinds") <- c(AEBODSYS = "level", AEDECOD = "level",
+                               AETERM = "level", TRT = "group")
+  ch <- template_slot_choices(list("By: {label(@parent in level)}",
+                                   "{@by in level, TRT}", "{@func in mean}"))
+  out <- slot_choices_columns(ch, d)
+  expect_equal(out$parent, c("AEBODSYS", "AEDECOD", "AETERM"))
+  expect_equal(out$by, c("AEBODSYS", "AEDECOD", "AETERM", "TRT"))
+  expect_equal(out$func, "mean")
+  # No marks: the kind offers nothing, so the word lists no columns.
+  expect_equal(slot_choices_columns(ch, datasets::iris)$parent, character())
+  # A column named like a kind stays a column.
+  d2 <- data.frame(level = 1)
+  expect_equal(slot_choices_columns(list(x = "level"), d2)$x, "level")
 })

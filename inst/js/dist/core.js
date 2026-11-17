@@ -1,4 +1,4 @@
-// blockr.viz bundle 91acf0466699acefd9726566dabf22a0, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 2f4797d251002273358e4b43ee94944b, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -4313,6 +4313,13 @@
       if (listed) {
         options = options.filter((o) => o.value == null || listed.includes(String(o.value)) ||
           C.same(o.value, value));
+        // The listed choices in the list's order (a kind's columns in the order they
+        // were marked, specific to broad); the empty choice and a current pick from
+        // outside the list keep their places.
+        const at = (/** @type {VizChoice} */ o) => (o.value == null ? -1 : listed.indexOf(String(o.value)));
+        const inList = options.filter((o) => at(o) >= 0).sort((a, b) => at(a) - at(b));
+        let k = 0;
+        options = options.map((o) => (at(o) >= 0 ? inList[k++] : o));
       }
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,
