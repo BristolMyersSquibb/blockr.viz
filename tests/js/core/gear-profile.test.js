@@ -181,3 +181,65 @@ test('showTab opens the gear at a tab of its own', noUi, () => {
   t.gear.showTab('Nope');
   assert.equal(t.el.querySelector('.blockr-tray-nav__tab.is-current').textContent, 'Lanes');
 });
+
+test('a labelled script select shows its labels and writes its values', noUi, () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'blk-lab', typeKey: 'layout' });
+  const script = {
+    inputs: [{ name: 'ae_colour', key: 'sv_ae_colour', label: 'Colour by', kind: 'select',
+               options: ['AETOXGR', 'AESEV'], labels: ['Toxicity grade', 'Severity'] }],
+    values: { sv_ae_colour: ['AESEV'] }, error: null
+  };
+  const gear = { tabs: [{ title: 'Lanes', sections: [{ title: 'AEs', keys: ['ae_colour'] }] }] };
+  m.gear.update(payload(Object.assign({}, CONFIG, { script_values: { ae_colour: 'AESEV' } }),
+                        { derived: { script, gear } }));
+  const t = Object.assign(env, m);
+  const shown = Array.from(row(t.el, 'sv.ae_colour').querySelectorAll('option')).map((o) => o.textContent);
+  assert.deepEqual(shown.filter(Boolean), ['Toxicity grade', 'Severity']);
+  // The subtitle word's menu: the labels, standing for the column names.
+  const s = t.gear.slot('ae_colour');
+  assert.deepEqual(plain(s.options), [{ value: 'AETOXGR', label: 'Toxicity grade' },
+                                      { value: 'AESEV', label: 'Severity' }]);
+  t.gear.set({ 'sv.ae_colour': 'AETOXGR' });
+  assert.deepEqual(plain(lastSet(t).values), { script_values: { ae_colour: 'AETOXGR' } });
+});
+
+test('with pick_by the columns row is one select of picks, in order, the data\'s too', () => {
+  const env = loadGear();
+  const m = mountGear(env, { block: 'table', id: 'blk-table', typeKey: 'layout' });
+  const pick = { by: 'USUBJID', sort: 'sort_col', note: 'Per patient only.',
+                 more: [{ name: 'AGE', label: 'Age' }, { name: 'bmi', label: 'bmi' }] };
+  const gear = Object.assign({}, GEAR, { pick, columns: [GEAR.columns[0]] });
+  const AGE = { type: 'field', name: 'Age', col: 'AGE', optional: true };
+  const GONE = { type: 'field', name: 'Gone', col: 'GONE', optional: true };
+  m.gear.update(payload(Object.assign({}, CONFIG, { summaries: [AGE, WEEKS, GONE, SPANS] }),
+                        { derived: { script: SCRIPT, gear } }));
+  // Held summaries as picks: a gear column by name, a field by its column.
+  assert.deepEqual(plain(m.gear.values().columns), ['d:AGE', 'c:Weeks', 'd:GONE']);
+  // A new pick is an optional field named by the label; the first sets the sort.
+  m.gear.set({ columns: ['d:bmi', 'c:Weeks', 'd:AGE'] });
+  const v = lastSet(env).values;
+  assert.deepEqual(plain(v.summaries), [
+    { type: 'field', col: 'bmi', name: 'bmi', optional: true }, WEEKS, AGE, SPANS]);
+  assert.equal(v.script_values.sort_col, 'bmi');
+  m.gear.set({ columns: ['c:Weeks'] });
+  assert.equal(lastSet(env).values.script_values.sort_col, 'Weeks');
+  m.gear.set({ columns: [] });
+  assert.deepEqual(plain(lastSet(env).values.summaries), [SPANS]);
+  assert.equal(lastSet(env).values.script_values.sort_col, '');
+});
+
+test('the picks row draws a select with the missing pick named, and the note', noUi, () => {
+  const env = loadGear({ ui: true });
+  const m = mountGear(env, { block: 'table', id: 'blk-table', typeKey: 'layout' });
+  const pick = { by: 'USUBJID', sort: 'sort_col', note: 'Per patient only.',
+                 more: [{ name: 'AGE', label: 'Age' }] };
+  const gear = Object.assign({}, GEAR, { pick, columns: [GEAR.columns[0]] });
+  const GONE = { type: 'field', name: 'Gone', col: 'GONE', optional: true };
+  m.gear.update(payload(Object.assign({}, CONFIG, { summaries: [WEEKS, GONE, SPANS] }),
+                        { derived: { script: SCRIPT, gear } }));
+  const r = row(m.el, 'columns');
+  assert.ok(r.querySelector('.blockr-select--multi'));
+  assert.equal(r.querySelector('.vz-row-note').textContent, 'Per patient only.');
+  assert.match(r.textContent, /Gone \(missing\)/);
+});

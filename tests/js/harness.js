@@ -30,6 +30,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+require('./dom-assert-guard.js');
 const { Window } = require('happy-dom');
 const { chartCells } = require('./cells');
 

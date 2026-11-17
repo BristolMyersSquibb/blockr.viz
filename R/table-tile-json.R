@@ -147,6 +147,10 @@ tile_json_arrays <- function(vals, is) {
 # Tokens joined per group of `n` consecutive ones, between `open` and
 # `close`; an empty group is `open` and `close` alone.
 tile_json_collapse <- function(tokens, n, open, close) {
+  # No group: paste0() would give one `open close` for none.
+  if (!length(n)) {
+    return(character())
+  }
   g <- factor(rep.int(seq_along(n), n), levels = seq_along(n))
   body <- vapply(split(tokens, g), paste, character(1L), collapse = ",",
                  USE.NAMES = FALSE)

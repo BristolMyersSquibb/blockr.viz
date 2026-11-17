@@ -28,9 +28,11 @@
     el.hidden = !groups.length;
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
-      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.shape != null
-        ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
-        : '<i style="background:' + esc(it.color) + '"></i>') +
+      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.tag
+        ? '<span class="vz-table-groups-legend-tag' + (it.inv ? ' is-inv' : '') + '">' + esc(it.tag) + '</span>'
+        : it.shape != null
+          ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
+          : '<i style="background:' + esc(it.color) + '"></i>') +
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
@@ -60,7 +62,32 @@
         c.fg = c.bg.map((b) => (b != null && of[b]) || null);
         c.ink = null;
       }
+      const mk = /** @type {TableMarkInterval | null | undefined} */ (c.mark);
+      if (mk && mk.kind === 'interval' && !Array.isArray(c.disp)) {
+        c.disp = laneTexts(mk, m.n);
+      }
     }
+  }
+
+  /**
+   * A swimlane column's text per row, which the search reads: its segments'
+   * and events' tooltips, each once, joined by " | ", as R's cells_text()
+   * writes it. R leaves it out of the payload, since the tooltips are there
+   * (R/table-lane-json.R).
+   * @param {TableMarkInterval} mk
+   * @param {number} n
+   * @returns {(string | null)[]}
+   */
+  function laneTexts(mk, n) {
+    /** @type {(string | null)[]} */
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const tips = (mk.tips && mk.tips[i]) || [];
+      const ev = (mk.eventTips && mk.eventTips[i]) || [];
+      const t = Array.from(new Set(tips.concat(ev))).join(' | ');
+      out[i] = t === '' ? null : t;
+    }
+    return out;
   }
 
   class Groups extends /** @type {any} */ (T.Records) {
@@ -80,15 +107,23 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      // Bar labels need the drawn lane's width to pick their place.
-      grid.hooks.rows = (body) => T.marks.fitLabels(body);
+      // The axis ticks and the tags that would overlap need the drawn
+      // column's width.
+      grid.hooks.rows = (body) => {
+        const table = body.closest('table');
+        if (table) T.axis.fit(table);
+        T.marks.stackTags(body);
+      };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
-      // resize places the labels again.
+      // resize fits the axis again.
       if (typeof ResizeObserver !== 'undefined') {
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) T.marks.fitLabels(frame.box, w !== 0);
+          if (now && now !== w) {
+            T.axis.fit(frame.box);
+            T.marks.stackTags(frame.box);
+          }
           w = now;
         });
       }
@@ -182,6 +217,7 @@
       if (cfg.bar_width && cfg.bar_width !== 'fit') attrs['data-summarize-width'] = cfg.bar_width;
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
+      if (m.sections && m.sections.length) attrs['data-summarize-headings'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
                cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', flush: true, attrs };
     }

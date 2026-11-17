@@ -21,6 +21,9 @@ new_table_block(
   look = "table",
   facet_layout = "by_summary",
   group_rows = "name",
+  open = "none",
+  row_sections = NULL,
+  row_groups = NULL,
   sort_by = "value",
   sort_dir = NULL,
   top_n = NULL,
@@ -80,6 +83,12 @@ new_table_block(
 
 \item{group_rows}{What the outer rows of a nested table (two \code{by} columns) show. "name": the group's name and its number of rows, across the row, with the groups open. "summary": every summary over the group's rows, on the group's line. A summary with \code{func = "identity"} stays empty on an outer row either way. One of \code{"name"}, \code{"summary"}. Default: \code{"name"}.}
 
+\item{open}{With \code{group_rows = "summary"}, whether the outer rows start closed ("none") or open ("all"). The header's button opens and closes them all either way. One of \code{"none"}, \code{"all"}. Default: \code{"none"}.}
+
+\item{row_sections}{Column naming the section each inner row of a nested table belongs to. An outer row whose inner rows fall in more than one section shows each section's name, in small bold type, above its first row. One section: no title. Sorting by a column drops the titles. Default \code{NULL}: no titles.}
+
+\item{row_groups}{Column whose value groups the outer rows: each value heads its rows, which a click on it folds, in the column's level order (a factor) or alphabetical. An outer row takes the first value its records have; rows without one come last, under no heading. A column the data lacks: no grouping. Default \code{NULL}: no grouping.}
+
 \item{sort_by}{Row order: "value", "data", "alpha", a summary's name, a facet level, or a numeric column (its per-row minimum). Default: \code{"value"}.}
 
 \item{sort_dir}{Sort direction. One of \code{"asc"}, \code{"desc"}. Default \code{NULL}: desc for sort_by = "value", else asc.}
@@ -122,7 +131,7 @@ new_table_block(
 
 \item{drill_table}{Beta. The table in the target's dm the click applies to. Default: \code{""}.}
 
-\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. Default \code{NULL}: no script.}
+\item{script}{Experimental. R code run on the input before the block sees it. Its top-level plain-value assignments become controls on the block. A line annotated \verb{#| setting} (\code{by <- "AEDECOD"  #| setting}) is no control: it takes the block's own setting of that name, or the first summary's field (\code{facet}). Default \code{NULL}: no script.}
 
 \item{script_values}{Settings of the script's controls, by variable name. The script code, not the spec, makes each one a title slot. Default: \code{list()}.}
 
@@ -205,6 +214,7 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \itemize{
 \item \code{name}: Column header. Default \code{NULL}: auto ("Rows", "Mean AGE").
 \item \code{col}: Distinct values joined: up to 3, then "+n more"; over 8, "n values". Required.
+\item \code{optional}: TRUE: a column the data lacks leaves the summary out of the table, with no error (a column a picker offered that the data no longer has). Default: \code{FALSE}.
 }
 
 \strong{\code{type = "sparkline"}}
@@ -226,7 +236,7 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{xend}: Interval end. Required.
 \item \code{label}: Headlines the tooltip and keys the same-event highlight. Default \code{NULL}: no label.
 \item \code{tooltip}: Extra columns in the tooltip. Default \code{NULL}: no extra columns.
-\item \code{size}: Segment thickness. One of \code{"md"}, \code{"lg"}. Default: \code{"md"}.
+\item \code{size}: The swimlane's share of the table: regular, wide (about half) or widest (all the room the other columns leave). One of \code{"md"}, \code{"lg"}, \code{"xl"}. Default: \code{"md"}.
 \item \code{color}: Color split, at most 15 levels. Default \code{NULL}: no color split.
 \item \code{ticks}: Positions drawn as thin ticks across the lane (visits). Read from the rows where it is set, so tick rows can sit in the same frame. Default \code{NULL}: no ticks.
 \item \code{band_x}: Start of a dark line through the middle of the lane (a phase such as a trial period). Both or neither. Default \code{NULL}: no band.
@@ -235,8 +245,19 @@ Each entry of \code{summaries} is a list with a \code{type} and the keys of that
 \item \code{event_shape}: Event kind. Its levels take, in order, a filled triangle, an open triangle, a cross, a square and a vertical bar; further levels repeat them. Names the event in the tooltip and the legend. Default \code{NULL}: one shape.
 \item \code{open}: Logical, per record. A record with a start, no end and TRUE is ongoing: it runs to the axis end with an arrowhead. TRUE on a record with an end draws the arrowhead at the end of its lane's last segment (still ongoing). Default \code{NULL}: no arrow.
 \item \code{lane}: Splits a row into lanes. Records where it is empty draw on the main lane at full height, with the ticks, the line and the events; each other level draws a thin lane above it, in level order, so a row grows with its lanes (a drug per lane above the response). Without any main-lane record the lanes are even and the overlays run across the row; an event with a lane draws on its lane. Default \code{NULL}: one lane.
-\item \code{seg_style}: How a record draws, by value: "dashed" a dashed line (a skipped period), "hollow" an outlined box (a delay), "dot" a ring at its start (one administration), "step" a small down step at its start (a dose cut), "outline" filled with a dark edge (a serious event). Anything else draws solid. A dot or a step needs no end. Default \code{NULL}: all solid.
-\item \code{bar_label}: Text written on each record's bar when it fits, else just after it when the lane has room before its next bar, else nowhere (the tooltip keeps the label). An empty value labels nothing. Drawn on the main lane and on even lanes, not on thin ones. Default \code{NULL}: no bar labels.
+\item \code{lane_full}: Logical. A lane whose records have it TRUE is a full bar: the first such lane is the main lane, the others draw below it at full height, with their own events and open end (a second response assessment). With more than one bar each is named at its left, the main one in bold. Default \code{NULL}: thin lanes only.
+\item \code{seg_style}: How a record draws, by value: "dashed" a dashed line (a skipped period), "hollow" an outlined box (a delay), "dot" a ring at its start (one administration), "step" a small down step at its start (a dose cut), "outline" filled with a dark edge (a serious event), "thinner" a lower bar (a reduced dose), "hairline" a 1px line (a dose of zero). Anything else draws solid. A dot or a step needs no end. Default \code{NULL}: all solid.
+\item \code{event_tag}: Short text, per event. An event with a value draws as that text in a small box just after its position ("AE") instead of its shape. A shape level whose events all carry a tag shows a box in the legend. Two tags on one lane that would overlap split around the lane's centre line, the later one above (on the same day, the later tag group's). Default \code{NULL}: shapes only.
+\item \code{event_tag_group}: The group of a tagged event ("Treatment discontinuation", "End of study"). Each group is a legend group of its own, titled by the value, in the column's level order. The first group's tags draw as outlined boxes, the others' inverted: an ink box with light text. For a factor the first group is its first level, even when no event has it. An item named "\if{html}{\out{<group>}}: \if{html}{\out{<name>}}" shows as \if{html}{\out{<name>}} under its group. Default \code{NULL}: one group.
+\item \code{tip}: The tooltip of a record, segment or event, as is: its text up to the first " · " heads the card, each further part is a line. An empty value keeps the computed tooltip (label, level, span, fields). Default \code{NULL}: the computed tooltip.
+\item \code{x_unit}: Word written before the first label of the column's axis ("Day" reads "Day 0"). Only on a numeric axis; a date axis names its own dates. Default \code{NULL}: numbers only.
+\item \code{x_limits}: The axis from and to, as \code{c(1, 180)}; \code{NA} at either end is the data's. Dates as "2024-01-01". A bar across a limit is cut at it, with the open caret at the right; bars, ticks and events wholly outside are not drawn. Tooltips keep the records' own values. A prepare script can set the same as the attribute \code{blockr_domain} of the start column, which this overrides end by end. Default \code{NULL}: the data's range.
+\item \code{x_days}: The axis reads in study days: "D1", "D20", ..., day 1 always a tick, and no day 0, so an x at or below 0 reads as the day before (x = 0 is "D-1"), as ADaM counts. Only on a numeric axis; the hover reads the same way. Default: \code{FALSE}.
+\item \code{lane_size}: Height of the lanes above the main lane: "sm" 5px with a 3px line, "md" 9px with a 5px bar whose free ends round, for rows where the lanes carry the story (a drug per lane). One of \code{"sm"}, \code{"md"}. Default: \code{"sm"}.
+\item \code{track}: A grey track behind the main lane and the full bars, as a bar column draws it. Off: the bars stand on the surface. Thin lanes never have one. Default: \code{FALSE}.
+\item \code{overlap}: How records that overlap on one lane draw. "draw": each its own bar, the later over the earlier. "worst": cut into pieces, each coloured by the highest colour level active there (legend order), so one stripe shows the worst stretch. One of \code{"draw"}, \code{"worst"}. Default: \code{"draw"}.
+\item \code{inner_overlap}: How a lane's records that overlap draw on the inner rows of a nested table. "same": as \code{overlap} says. "stack": each record whole, a record that overlaps an earlier one on a copy of the lane under it, so two episodes of one event read as two bars. Outer rows keep \code{overlap}. One of \code{"same"}, \code{"stack"}. Default: \code{"same"}.
+\item \code{parent_lanes}: With \code{group_rows = "summary"}, an outer row draws its rows' lanes, events and open ends as an inner row does. Off: the outer row draws the main lane's bars only. Default: \code{FALSE}.
 \item \code{strip}: Text of one box in its lane's hover strip; lines split at a newline. Pointing at a lane shows its boxes in time order, a hollow record's box marked late and a dashed one's as skipped. A strip record needs only a start. Default \code{NULL}: no strip.
 }
 

@@ -155,11 +155,16 @@ interface VizGearWire {
   /** What the block's `info` found in its input (R's table_gear()). */
   info?: unknown;
   clauses?: Record<string, string>;
+  /** With R's `pick_by`: the columns row is a select of several picks,
+   *  offering the prepared data's `more` columns after `columns`; `sort` is
+   *  the script value it sets to the first pick, `note` a line under it. */
+  pick?: { by: string; sort?: string | null; note?: string | null;
+           more?: { name: string; label: string }[] };
 }
 
 /** A row of a block's own gear that the spec does not have. */
 interface VizProfileRow {
-  kind: 'script' | 'columns' | 'group' | 'words' | 'editor';
+  kind: 'script' | 'columns' | 'picks' | 'group' | 'words' | 'editor';
   name?: string;
   sp?: VizScriptControl;
 }
@@ -203,7 +208,7 @@ interface VizSlotBase { label: string; set(value: unknown): void }
 type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
   | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
-  | { kind: 'number'; min: number; max: number; step: number; value: unknown }
+  | { kind: 'number'; min: number; max: number; step: number; value: unknown; clear?: boolean }
   | { kind: 'menu'; options: VizChoice[]; selected: unknown; multi: boolean }
   /** Axis limits: two words, from and to, each typed over on its own. */
   | { kind: 'pair'; value: unknown; ends: [VizEndOpener, VizEndOpener] }

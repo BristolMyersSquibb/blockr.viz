@@ -7,14 +7,18 @@
 #' `"group"` once and is then offered for colour, facet, chart group and a
 #' table's column split.
 #'
-#' The four kinds:
+#' The five kinds:
 #'
 #' * `group` -- low-cardinality stratifiers (TRT, SEX, RACE, AETOXGR). Colour,
 #'   facet and chart group all take them.
 #' * `time` -- ordered axis columns (AVISIT, ADY, ASTDY).
 #' * `value` -- numeric measures (AVAL, CHG, PCHG, AGE).
-#' * `id` -- identifiers and item dimensions (USUBJID, AEDECOD, CMDECOD).
+#' * `id` -- identifiers and item dimensions (USUBJID, PARAMCD).
 #'   Groupable, countable and drillable, never offered as a colour.
+#' * `level` -- columns that code the same thing at different detail, marked
+#'   from specific to broad (a reported term, a preferred term, a body
+#'   system). A subtitle word offers them with `{label(@by in level)}`, in
+#'   the order they were marked.
 #'
 #' **No mark, no restriction.** A frame where nothing is marked offers every
 #' column to every role. As soon as ANY column carries a kind, roles that
@@ -85,7 +89,9 @@ mark_column_kinds <- function(data, ..., .clear = FALSE) {
     seen <- c(seen, cols)
   }
 
-  attr(data, "blockr_kinds") <- cur[order(names(cur))]
+  # Kept in the order marked: a kind's columns are offered in that order
+  # (kind_columns()).
+  attr(data, "blockr_kinds") <- cur
 
   data
 }
@@ -108,8 +114,19 @@ column_kinds <- function(x) {
   kinds[intersect(names(kinds), names(x))]
 }
 
+#' @param kind One kind.
+#' @return `kind_columns()` returns the columns of `x` marked `kind`, in the
+#'   order they were marked; empty when none are.
+#' @rdname mark_column_kinds
+#' @export
+kind_columns <- function(x, kind) {
+  stopifnot(is.character(kind), length(kind) == 1L)
+  k <- column_kinds(x)
+  names(k)[k == kind]
+}
+
 # The vocabulary; see mark_column_kinds() for what each kind covers.
-COLUMN_KINDS <- c("group", "time", "value", "id")
+COLUMN_KINDS <- c("group", "time", "value", "id", "level")
 
 # `cols` less those that are NA in every row of `data`. Such a column counts
 # as unset, as if it were absent: upstream switches a grouping, colour or

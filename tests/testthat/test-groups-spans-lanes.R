@@ -283,41 +283,171 @@ test_that("the static picture draws even lanes, their events and outlines", {
   expect_true(file.exists(png))
 })
 
-test_that("bar labels ride per segment, empty where a record has none", {
-  d <- ae_fixture()
-  d$term <- c("Pain", "", "Rash", NA, "Cough")
-  m <- sum_model(d, by = "id", summaries = list(ae_spans(bar_label = "term")))
-  c1 <- m$cells$cols[[1]]
-  a <- c1$sl[[match("a", m$cells$label)]]
-  expect_identical(unlist(a[[1]]$l), c("Pain", "Rash"))
-  # A lane whose records have no label sends none.
-  expect_null(a[[2]]$l)
-  # Without the field nothing is sent.
-  c2 <- sum_model(d, by = "id", summaries = list(ae_spans()))$cells$cols[[1]]
-  expect_null(c2$bl)
-  expect_null(c2$sl[[1]][[1]]$l)
-  # On the main lane too.
-  d2 <- data.frame(id = "a", s = c(0, 50), e = c(40, 60), t = c("Long", "B"))
-  c3 <- sum_model(d2, by = "id", summaries = list(list(
+test_that("a saved bar_label is read and dropped", {
+  d <- data.frame(id = "a", s = c(0, 50), e = c(40, 60), t = c("Long", "B"))
+  m <- suppressWarnings(sum_model(d, by = "id", summaries = list(list(
     type = "spans", x = "s", xend = "e", bar_label = "t"
-  )))$cells$cols[[1]]
-  expect_identical(unlist(c3$bl[[1]]), c("Long", "B"))
+  ))))
+  c1 <- m$cells$cols[[1]]
+  expect_length(c1$segs[[1]], 2L)
+  expect_null(c1$bl)
 })
 
-test_that("the static picture writes bar labels where they fit", {
-  skip_if_not_installed("systemfonts")
-  d <- data.frame(id = "a", s = c(0, 41, 43), e = c(40, 42, 100),
-                  t = c("Headache", "Rash", ""))
+test_that("full lanes draw as bars below the main one, each named", {
+  d <- data.frame(
+    id = c("a", "a", "a", "a", "a", "b", "b"),
+    s = c(0, 40, 0, 30, 0, 0, 0),
+    e = c(40, 90, 30, 90, 80, 50, 50),
+    resp = c("SD", "PR", "SD", "PD", "Drug A", "PR", "SD"),
+    lane = factor(c("INV", "INV", "BICR", "BICR", "Drug A", "INV", "BICR"),
+                  levels = c("Drug A", "INV", "BICR")),
+    full = c(TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE),
+    ev = c(NA, NA, NA, 30, NA, NA, NA), evk = c(NA, NA, NA, "PD", NA, NA, NA),
+    stringsAsFactors = FALSE
+  )
   m <- sum_model(d, by = "id", summaries = list(list(
-    type = "spans", x = "s", xend = "e", bar_label = "t"
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "resp",
+    lane = "lane", lane_full = "full", event_x = "ev", event_shape = "evk"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  i <- match("a", m$cells$label)
+  # The first full lane (INV) is the main lane; BICR is a full bar below it,
+  # with its own event; the drug stays a thin lane.
+  expect_length(c1$segs[[i]], 2L)
+  a <- c1$sl[[i]]
+  expect_identical(vapply(a, function(l) l$n, ""), c("Drug A", "BICR"))
+  expect_null(a[[1]]$f)
+  expect_true(a[[2]]$f)
+  expect_length(a[[2]]$e, 1L)
+  expect_identical(c1$mn, "INV")
+  expect_identical(c1$lw, 4L)
+  # One full lane alone is just the main lane, unnamed.
+  m1 <- sum_model(d[d$lane != "BICR", ], by = "id", summaries = list(list(
+    type = "spans", name = "Lane", x = "s", xend = "e", color = "resp",
+    lane = "lane", lane_full = "full"
+  )))
+  c2 <- m1$cells$cols[[1]]
+  expect_null(c2$mn)
+  expect_identical(vapply(c2$sl[[match("a", m1$cells$label)]], function(l) l$n, ""),
+                   "Drug A")
+  # The static picture draws the full bar, its event and the names, and the
+  # row grows by it.
+  gl <- list(px = 1 / 96, H = 3, lane = 12 / 96, row_h = 0.4, fs = 9,
+             family = "sans")
+  g <- paint_interval(c1, i, 0, 3, 0.2, gl)
+  txt <- unlist(lapply(g, function(x) if (inherits(x, "text")) x$label))
+  expect_true(all(c("INV", "BICR") %in% txt))
+  expect_gt(paint_iv_stack(1, 1, FALSE, 1), paint_iv_stack(1, 1, FALSE, 0))
+  png <- tempfile(fileext = ".png")
+  on.exit(unlink(png))
+  p <- summarize_paint_grob(m$cells, m$prep, width_in = 6)
+  paint_write_png(p, png, res = 72)
+  expect_true(file.exists(png))
+})
+
+test_that("a scale-map colour for a level's key beats the column's own", {
+  skip_if_not(has_blockr_theme())
+  col <- structure(c("Grade 3", "Mild", "Drug B"),
+                   blockr_colors = c("Grade 3" = "#b8322a", Mild = "#f0c35a",
+                                     "Drug B" = "#2a9686"),
+                   blockr_scale_keys = data.frame(
+                     level = c("Grade 3", "Mild", "Mild", "Drug B"),
+                     var = c("ATOXGR", "ASEV", "AESEV", "EXTRT"),
+                     key = c("3", "MILD", "MILD", "DRUG B")
+                   ))
+  map <- blockr.theme::new_scale_map(
+    blockr.theme::scale_binding("ATOXGR", color = c("3" = "#000000")),
+    blockr.theme::scale_binding("AESEV", color = c(SEVERE = "#111111")),
+    blockr.theme::scale_binding("EXTRT", color = c("#222222")),
+    palette = c("#333333")
+  )
+  lv <- c("Grade 3", "Mild", "Drug B")
+  got <- groups_level_colors(map, "Colour", lv, col)
+  # Pinned value; a binding without this value keeps the column's colour;
+  # a binding's own pool colours any value.
+  expect_identical(got, c("Grade 3" = "#000000", Mild = "#f0c35a",
+                          "Drug B" = "#222222"))
+  expect_identical(groups_level_colors(NULL, "Colour", lv, col),
+                   c("Grade 3" = "#b8322a", Mild = "#f0c35a",
+                     "Drug B" = "#2a9686"))
+})
+
+test_that("a caret sits at the end of its own open record's bar", {
+  pos <- function(c1, v) round((v - c1$d0) / (c1$d1 - c1$d0) * 100, 2L)
+  # The open record ends before a closed one: the caret follows the open one.
+  d <- data.frame(id = "a", s = c(0, 50), e = c(20, 90), sev = c("A", "B"),
+                  ongoing = c(TRUE, FALSE))
+  c1 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing"
+  )))$cells$cols[[1]]
+  expect_equal(c1$op[[1]], pos(c1, 20))
+  # An open end inside a worse bar drawn over it goes to that bar's end.
+  d <- data.frame(id = "a", s = c(0, 0), e = c(50, 90), sev = c("A", "B"),
+                  ongoing = c(TRUE, FALSE))
+  c2 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    overlap = "worst"
+  )))$cells$cols[[1]]
+  expect_equal(c2$op[[1]], pos(c2, 90))
+  # A record that does not draw (its colour dropped) leaves no caret.
+  d <- data.frame(id = "a", s = c(0, 50), e = c(40, 90), sev = c("A", NA),
+                  ongoing = c(FALSE, TRUE))
+  c3 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing"
+  )))$cells$cols[[1]]
+  expect_null(c3$op)
+})
+
+test_that("stacked, a caret sits on the track of its open record", {
+  # A closed bar on the first track, an open one overlapping it below.
+  d <- data.frame(id = "a", s = c(0, 10), e = c(40, 90), sev = c("A", "B"),
+                  ongoing = c(FALSE, TRUE), lane = NA_character_)
+  d <- rbind(d, data.frame(id = "a", s = 0, e = 20, sev = "A",
+                           ongoing = FALSE, lane = "Drug"))
+  c1 <- sum_model(d, by = "id", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    lane = "lane", inner_overlap = "stack"
+  )))$cells$cols[[1]]
+  expect_null(c1$op)
+  tr <- Filter(function(l) isTRUE(l$f), c1$sl[[1]])
+  expect_length(tr, 1L)
+  sg <- tr[[1]]$s[[1]]
+  expect_equal(tr[[1]]$o, sg[[1]] + sg[[2]], tolerance = 0.02)
+})
+
+test_that("the static caret takes the colour of the bar ending at it", {
+  c1 <- list(fills = c("#111111", "#222222"))
+  segs <- list(list(0, 20, 1L), list(30, 70, 2L), list(10, 5, 1L))
+  expect_identical(paint_iv_end_fill(c1, segs, 20), "#111111")
+  expect_identical(paint_iv_end_fill(c1, segs, 100), "#222222")
+  # Dots and steps are no bars.
+  expect_identical(paint_iv_end_fill(c1, list(list(5, 0, 1L, "", 4L)), 5),
+                   PAINT_EV_INK)
+})
+
+test_that("cut to the worst level, a one-moment record keeps its mark and caret", {
+  # Subject a: a closed bar, then a one-day record that is still open.
+  d <- data.frame(id = "a", term = c("T", "V"), s = c(0, 60), e = c(40, 60),
+                  sev = c("B", "A"), ongoing = c(FALSE, TRUE))
+  m <- sum_model(d, by = c("id", "term"), group_rows = "summary",
+                 open = "all", summaries = list(list(
+    type = "spans", x = "s", xend = "e", color = "sev", open = "ongoing",
+    overlap = "worst", parent_lanes = TRUE
   )))
   c1 <- m$cells$cols[[1]]
-  px <- 1 / 96
-  gl <- list(H = 2, W = 6, px = px, lane = 12 * px, hair = px, row_h = 0.3,
-             fs = 9, family = "sans")
-  txt <- Filter(function(g) inherits(g, "text"),
-                paint_interval(c1, 1L, 0, 5, 0.2, gl))
-  # Headache fits on its bar; Rash fits neither on its bar nor in the gap
-  # before the next bar; the third bar has no text.
-  expect_identical(vapply(txt, function(g) g$label, ""), "Headache")
+  i <- match("a", m$cells$label)
+  ends <- vapply(c1$segs[[i]], function(g) g[[1]] + g[[2]], 0)
+  expect_length(c1$segs[[i]], 2L)
+  expect_equal(c1$op[[i]], 100)
+  expect_true(any(abs(ends - c1$op[[i]]) < 0.02))
+})
+
+test_that("an open end no bar of its lane reaches goes to the bar before it", {
+  bb <- cells_bounds(0, 100)
+  segs <- list(list(s = 0, e = 40), list(s = 70, e = 80))
+  expect_equal(cells_open_at(60, segs, bb, 100), 40)
+  expect_equal(cells_open_at(75, segs, bb, 100), 80)
+  expect_equal(cells_open_at(Inf, segs, bb, 100), 80)
+  expect_true(is.na(cells_open_at(NULL, segs, bb, 100)))
 })

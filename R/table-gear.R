@@ -13,7 +13,9 @@
 #'   `"drill"` (drill, drill_target, drill_table);
 #' * a value the prepare script declares (`doses <- factor(...)  #| select()`),
 #'   drawn as an ordinary row that writes `script_values`;
-#' * `"columns"`: a checklist of `columns`;
+#' * `"columns"`: a checklist of `columns`; with `pick_by`, a select of
+#'   several picks instead, in the order picked (a drag reorders them), that
+#'   also offers the prepared data's columns with one value per row;
 #' * `"group"`: a pick among `groups` (or none) for the outer column of a
 #'   nested `by`, which groups the rows;
 #' * a key with an editor registered in the browser
@@ -29,6 +31,19 @@
 #'   (the list name) and with an optional `on` (default `TRUE`), whether a new
 #'   block shows it. The block shows the ticked ones, first, then its other
 #'   summaries.
+#' @param pick_by The column naming the table's outer rows (a patient id).
+#'   Set, the `"columns"` row is a select of several picks: `columns` first,
+#'   then every column of the prepared data with at most one value per value
+#'   of `pick_by`, named by its label, each a `field` summary. A picked column
+#'   the data no longer has is left out of the table. Columns whose name
+#'   starts with a dot, and those of `by`, are not offered.
+#' @param pick_skip Columns of the prepared data the `"columns"` row does
+#'   not offer (the block's own: a swimlane's start and end).
+#' @param sort_value The name of a value the prepare script declares, which
+#'   the `"columns"` row sets to its first pick (the name in `columns`, else
+#'   the data column's name; `""` with none), so the script can order the
+#'   rows by the first column.
+#' @param columns_note A line under the `"columns"` row.
 #' @param groups The columns the rows may be grouped by, for the `"group"`
 #'   row: a character vector, named by the labels the pick shows.
 #' @param info A function of the block's input (a data frame or a dm),
@@ -57,14 +72,21 @@
 #' @export
 table_gear <- function(tabs, columns = list(), groups = character(),
                        clauses = character(), info = NULL, open = NULL,
-                       deps = list()) {
+                       deps = list(), pick_by = NULL, pick_skip = character(),
+                       sort_value = NULL, columns_note = NULL) {
   stopifnot(
     is.list(tabs), length(tabs) > 0L, is_named(tabs),
     is.null(info) || is.function(info),
     is.null(open) || (is.character(open) && length(open) == 1L),
     is.list(columns), !length(columns) || is_named(columns),
     is.character(groups),
-    is.character(clauses), !length(clauses) || is_named(clauses)
+    is.character(clauses), !length(clauses) || is_named(clauses),
+    is.null(pick_by) || (is.character(pick_by) && length(pick_by) == 1L),
+    is.character(pick_skip),
+    is.null(sort_value) ||
+      (is.character(sort_value) && length(sort_value) == 1L),
+    is.null(columns_note) ||
+      (is.character(columns_note) && length(columns_note) == 1L)
   )
   tabs <- lapply(names(tabs), function(tab) {
     secs <- tabs[[tab]]
@@ -88,7 +110,9 @@ table_gear <- function(tabs, columns = list(), groups = character(),
   structure(list(tabs = tabs, columns = columns,
                  groups = list(values = unname(groups), labels = unname(labels)),
                  clauses = as.list(clauses), info = info, open = open,
-                 deps = deps),
+                 deps = deps, pick_by = pick_by, pick_skip = pick_skip,
+                 sort_value = sort_value,
+                 columns_note = columns_note),
             class = "viz_table_gear")
 }
 
@@ -140,7 +164,7 @@ table_gear_summaries <- function(gear, other = list()) {
 
 # What the browser gets: the gear as built, under derived$gear, with what
 # its `info` found in the input.
-table_gear_wire <- function(gear, info = NULL) {
+table_gear_wire <- function(gear, info = NULL, more = list()) {
   if (is.null(gear)) {
     return(NULL)
   }
@@ -161,7 +185,12 @@ table_gear_wire <- function(gear, info = NULL) {
            summary = cl$summary)
     }),
     groups = lapply(gear$groups, as.list),
-    clauses = gear$clauses
+    clauses = gear$clauses,
+    pick = if (!is.null(gear$pick_by)) {
+      list(by = gear$pick_by, sort = gear$sort_value,
+           note = gear$columns_note,
+           more = more)
+    }
   )
   # A NULL would go out as `{}`.
   out[!vapply(out, is.null, logical(1L))]
@@ -169,4 +198,40 @@ table_gear_wire <- function(gear, info = NULL) {
 
 is_named <- function(x) {
   !is.null(names(x)) && all(nzchar(names(x)))
+}
+
+# The prepared data's columns with at most one value per value of
+# `gear$pick_by`, as `{name, label}`: what the "columns" row offers after the
+# gear's own columns. Not offered: dot columns, `pick_by` itself,
+# `pick_skip`, list columns, and a column a gear column already shows as a
+# field.
+table_gear_more <- function(gear, data) {
+  by <- gear$pick_by
+  if (!is.data.frame(data) || !by %in% names(data)) {
+    return(list())
+  }
+  own <- unlist(lapply(gear$columns, function(cl) {
+    if (identical(cl$summary$type, "field")) cl$summary$col
+  }))
+  id <- as.character(data[[by]])
+  nms <- setdiff(names(data), c(by, own, gear$pick_skip))
+  nms <- nms[!startsWith(nms, ".")]
+  keep <- vapply(nms, function(nm) {
+    x <- data[[nm]]
+    if (is.list(x)) return(FALSE)
+    has <- !is.na(x) & !is.na(id)
+    if (!any(has)) return(FALSE)
+    u <- unique(data.frame(id = id[has], x = as.character(x[has]),
+                           stringsAsFactors = FALSE))
+    !anyDuplicated(u$id)
+  }, logical(1L))
+  lapply(nms[keep], function(nm) {
+    lbl <- attr(data[[nm]], "label", exact = TRUE)
+    label <- if (is.character(lbl) && length(lbl) == 1L && nzchar(lbl)) {
+      lbl
+    } else {
+      nm
+    }
+    list(name = nm, label = label)
+  })
 }

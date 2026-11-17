@@ -1,5 +1,5 @@
-// blockr.viz bundle 96ea3ead00f1ed5051ab31446fb39949, built by tools/bundle.js. Do not edit.
-// sources: table/html.js table/marks.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
+// blockr.viz bundle a207081b10b0c2187c782839a8a0dffe, built by tools/bundle.js. Do not edit.
+// sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
 /**
@@ -130,12 +130,15 @@
    * groups layout, as 0.2 drew it) a row under a folding parent takes one
    * fewer, so it starts on its parent's label edge, right after the
    * parent's chevron; a structured table keeps its child one step in.
+   * There, a row under section headings (`row_groups`) is one step in per
+   * level, so its chevron sits under its heading's label; a structured
+   * table's rows start on their heading's label edge.
    * @param {TableStructure} st @param {number} i @param {boolean} [flush]
    */
   function indentSteps(st, i, flush) {
     const depth = st.indent ? st.indent[i] - st.base : 0;
     const under = flush && st.folds && depth > 0 && !st.toggle[i] ? 1 : 0;
-    return depth - under + Math.max(0, st.levels - 1);
+    return depth - under + Math.max(0, flush ? st.levels : st.levels - 1);
   }
 
   /**
@@ -235,8 +238,24 @@
     return out + '</tr>';
   }
 
+  /**
+   * A section title over inner row `i` (`rows.title`): one cell across the
+   * row, on the row's label edge, in small bold type.
+   * @param {TableModel} m
+   * @param {TableStructure} st
+   * @param {number} i
+   * @param {boolean} [flush] See indentSteps().
+   */
+  function title(m, st, i, flush) {
+    const t = m.rows && m.rows.title ? m.rows.title[i] : null;
+    const steps = indentSteps(st, i, flush);
+    return '<tr class="vz-table-row-title" aria-hidden="true"><td class="vz-table-stub vz-table-groups-label-col"' +
+      ' colspan="' + (m.cols.length || 1) + '"' + (steps > 0 ? ' style="--vz-indent:' + steps + '"' : '') + '>' +
+      esc(t == null ? '' : t) + '</td></tr>';
+  }
+
   V.table = V.table || /** @type {VizTableNamespace} */ ({ layouts: {} });
-  V.table.html = { th, td, section, row, indentSteps, headKind };
+  V.table.html = { th, td, section, row, title, indentSteps, headKind };
 })();
 // --- table/marks.js
 // @ts-check
@@ -276,7 +295,6 @@
   /** `left:x%;width:y%` */
   const span = (/** @type {unknown} */ l, /** @type {unknown} */ w) =>
     'left:' + n(l) + '%;width:' + n(w) + '%';
-  const tipAttr = (/** @type {unknown} */ t) => t ? ' data-summarize-tip="' + esc(t) + '"' : '';
   /** @param {(string | number | null)[] | null | undefined} a @param {number} i */
   const at = (a, i) => (a ? a[i] : null);
 
@@ -305,8 +323,7 @@
   function segment(c, j, i) {
     const lab = c.mode !== 'grouped' && c.segLabels ? at(c.segLabels[j], i) : null;
     return '<div class="vz-table-groups-fill' + (lab ? ' has-lab' : '') + '" data-seg="' + j +
-      '" style="width:' + n(c.segWidths[j][i]) + '%;background:' + col(c.fills[j]) + '"' +
-      tipAttr(c.names[j] + ': ' + (c.segValues[j][i] == null ? '' : c.segValues[j][i])) + '>' +
+      '" style="width:' + n(c.segWidths[j][i]) + '%;background:' + col(c.fills[j]) + '">' +
       (lab ? '<span class="vz-table-groups-seglab vz-table-lw-' + String(lab).length + '" style="color:' +
         col(c.segInk ? c.segInk[j] : '') + '">' + esc(lab) + '</span>' : '') + '</div>';
   }
@@ -343,9 +360,9 @@
       (pos ? 'is-pos' : 'is-neg') + '" style="width:' + n(w) + '%"></div></div>';
   }
 
-  /** @param {string} name @param {TableLaneGeom} g @param {number} i @param {boolean} has */
-  const lane = (name, g, i, has) => '<div class="vz-table-groups-lane vz-table-groups-' + name +
-    (g.bare ? ' is-bare' : '') + '"' + (has ? tipAttr(at(g.tip, i)) : '') + '>';
+  /** @param {string} name @param {TableLaneGeom} g */
+  const lane = (name, g) => '<div class="vz-table-groups-lane vz-table-groups-' + name +
+    (g.bare ? ' is-bare' : '') + '">';
 
   /**
    * Box: whiskers, the box and the median cut out of it.
@@ -355,8 +372,8 @@
   function box(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('median') == null) return lane('boxcell', g, i, false) + '</div>';
-    let s = lane('boxcell', g, i, true);
+    if (v('median') == null) return lane('boxcell', g) + '</div>';
+    let s = lane('boxcell', g);
     if (v('whiskerLowWidth') != null) {
       s += '<i class="vz-table-lane-wh" style="' + span(v('whiskerLow'), v('whiskerLowWidth')) + '"></i>';
     }
@@ -375,8 +392,8 @@
   function pointrange(g, i) {
     const v = (/** @type {keyof TableLaneGeom} */ k) =>
       /** @type {(number | null)[] | undefined} */ (g[k]) ? /** @type {(number | null)[]} */ (g[k])[i] : null;
-    if (v('center') == null) return lane('prcell', g, i, false) + '</div>';
-    let s = lane('prcell', g, i, true);
+    if (v('center') == null) return lane('prcell', g) + '</div>';
+    let s = lane('prcell', g);
     if (v('fenceWidth') != null) s += '<i class="vz-table-lane-fence" style="' + span(v('fenceLeft'), v('fenceWidth')) + '"></i>';
     if (v('rangeWidth') != null) s += '<i class="vz-table-lane-rng" style="' + span(v('rangeLeft'), v('rangeWidth')) + '"></i>';
     return s + '<i class="vz-table-lane-ctr" style="left:' + n(v('center')) + '%"></i></div>';
@@ -392,8 +409,7 @@
     const fill = at(g.fill, i);
     let s = '<div class="vz-table-groups-lane vz-table-groups-pacell' +
       (g.dash && g.dash[i] ? ' is-dash' : '') + '"' +
-      (fill != null ? ' style="--vz-table-groups-fill:' + col(fill) + '"' : '') +
-      tipAttr(at(g.tip, i)) + '>';
+      (fill != null ? ' style="--vz-table-groups-fill:' + col(fill) + '"' : '') + '>';
     if (g.bandWidth[i] != null) s += '<i class="vz-table-lane-band" style="' + span(g.bandLeft[i], g.bandWidth[i]) + '"></i>';
     if (ref != null) s += '<i class="vz-table-lane-ref" style="left:' + n(ref) + '%"></i>';
     if (g.linkWidth[i] != null) s += '<i class="vz-table-lane-link" style="' + span(g.linkLeft[i], g.linkWidth[i]) + '"></i>';
@@ -429,6 +445,10 @@
       case 5: return '<i class="vz-table-lane-step" style="left:' + n(g[0]) + '%"' + t + '></i>';
       case 6: return '<i class="vz-table-lane-seg is-outline' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
+      case 7: return '<i class="vz-table-lane-seg is-thinner' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
+      case 8: return '<i class="vz-table-lane-seg is-hairline' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
+        col(fill) + '"' + lab + t + '></i>';
       default: return '<i class="vz-table-lane-seg' + jn + '" style="' + span(g[0], g[1]) + ';background:' +
         col(fill) + '"' + lab + t + '></i>';
     }
@@ -461,67 +481,6 @@
   }
 
   /**
-   * Bar labels of one lane, placed by fitLabels() once the lane has a width:
-   * on the bar, after it, or hidden. Each knows its bar's ends and where the
-   * lane's next bar starts (percent), and whether an arrow follows it.
-   * @param {(number | string)[][]} segs
-   * @param {(string | null)[] | null | undefined} labels
-   * @param {number | null | undefined} open Where the lane's arrow sits.
-   */
-  function barLabels(segs, labels, open) {
-    if (!labels) return '';
-    let s = '';
-    segs.forEach((g, j) => {
-      const t = labels[j];
-      if (!t) return;
-      const x0 = Number(g[0]), x1 = x0 + Number(g[1]);
-      const next = segs.reduce((m, h) => (Number(h[0]) >= x1 - 0.01 && Number(h[0]) < m ? Number(h[0]) : m), 100);
-      const arrow = open != null && Math.abs(Number(open) - x1) < 0.5;
-      s += '<span class="vz-table-lane-lab" style="left:' + n(x0) + '%" data-x0="' + n(x0) + '" data-x1="' +
-        n(x1) + '" data-nx="' + n(next) + '"' + (arrow ? ' data-arrow="1"' : '') + '>' + esc(t) + '</span>';
-    });
-    return s;
-  }
-
-  /**
-   * Place the bar labels under `host` that are not placed yet: on the bar when
-   * it fits, else after it when the gap to the lane's next bar holds it, else
-   * hidden (the tooltip still names the bar).
-   * @param {ParentNode} host
-   * @param {boolean} [again] Place every label anew (the width changed).
-   */
-  function fitLabels(host, again) {
-    host.querySelectorAll(again ? '.vz-table-lane-lab' : '.vz-table-lane-lab:not(.is-fit)').forEach((node) => {
-      const lab = /** @type {HTMLElement} */ (node);
-      if (again) {
-        lab.classList.remove('is-fit', 'is-on', 'is-after');
-        lab.hidden = false;
-        lab.style.left = n(lab.getAttribute('data-x0')) + '%';
-        lab.style.maxWidth = '';
-      }
-      const own = /** @type {HTMLElement | null} */ (lab.parentElement);
-      const w = own ? own.clientWidth : 0;
-      if (!w) return;
-      lab.classList.add('is-fit');
-      const px = (/** @type {string} */ k) => Number(lab.getAttribute(k)) / 100 * w;
-      const tw = lab.offsetWidth;
-      if (tw + 6 <= px('data-x1') - px('data-x0')) {
-        lab.classList.add('is-on');
-        lab.style.maxWidth = n(Math.floor(px('data-x1') - px('data-x0'))) + 'px';
-        return;
-      }
-      const gap = lab.hasAttribute('data-arrow') ? 10 : 3;
-      if (px('data-x1') + gap + tw + 3 <= px('data-nx')) {
-        lab.classList.add('is-after');
-        lab.style.left = 'calc(' + n(lab.getAttribute('data-x1')) + '% + ' + gap + 'px)';
-        lab.style.maxWidth = n(Math.floor(px('data-nx') - px('data-x1') - gap)) + 'px';
-        return;
-      }
-      lab.hidden = true;
-    });
-  }
-
-  /**
    * A lane's opening tag: its domain for the hover's time, and its strip.
    * @param {TableMarkInterval} c
    * @param {string} cls
@@ -530,41 +489,150 @@
    */
   function laneOpen(c, cls, strip, name) {
     return '<div class="vz-table-groups-lane vz-table-groups-ivcell' + cls + '" data-d0="' +
-      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') +
+      n(c.domainStart) + '" data-d1="' + n(c.domainEnd) + '"' + (c.dates ? ' data-dd="1"' : '') + (c.days ? ' data-sd="1"' : '') +
       (name != null ? ' data-n="' + esc(name) + '"' : '') +
       (strip && strip.length ? ' data-strip="' + esc(JSON.stringify(strip)) + '"' : '') + '>';
   }
 
+  /** A full bar's name at its left, in the cell's gutter; the main one bold.
+   * @param {TableMarkInterval} c @param {string | undefined} name @param {boolean} main */
+  const laneName = (c, name, main) => (c.mainName == null || name == null ? ''
+    : '<span class="vz-table-lane-name' + (main ? ' is-main' : '') + '">' + esc(name) + '</span>');
+
   /**
-   * A thin lane above the main one: its segments, and its arrow in its own
-   * colour when it is still open.
+   * The open end: a thin caret 2px past the bar's end in the bar's colour,
+   * its stroke 1.6px at any size (the CSS sizes it to the lane), as the
+   * patient profile draws it.
+   * @param {number} x Percent of the lane. @param {string} color
+   */
+  /**
+   * The bar a lane's open end belongs to: the one whose end is nearest the
+   * caret at `x`, the later one on a tie. Dots and steps are no bars.
+   * @param {(number | string)[][]} segs @param {number} x
+   */
+  function endSeg(segs, x) {
+    let best = null;
+    let d = Infinity;
+    segs.forEach((g) => {
+      const k = Number(g[4]) || 1;
+      if (k === 4 || k === 5) return;
+      const e = Math.abs(Number(g[0]) + Number(g[1]) - x);
+      if (e <= d) {
+        best = g;
+        d = e;
+      }
+    });
+    return best;
+  }
+
+  /** The open end's colour: its bar's. @param {TableMarkInterval} c
+   * @param {(number | string)[][]} segs @param {number} x */
+  const endFill = (c, segs, x) => {
+    const g = endSeg(segs, x);
+    return g ? col(c.fills[Number(g[2]) - 1]) : '';
+  };
+
+  const caret = (x, color) => '<svg class="vz-table-lane-open" viewBox="0 0 1 2" preserveAspectRatio="none"' +
+    ' style="left:' + n(x) + '%' + (color ? ';color:' + color : '') + '">' +
+    '<polyline points="0,0 1,1 0,2" vector-effect="non-scaling-stroke"/></svg>';
+
+  /**
+   * A thin lane above the main one, or a full bar below it (`f`, a second
+   * response assessment): its segments, and its arrow in its own colour when
+   * it is still open.
    * @param {TableMarkInterval} c
    * @param {TableSubLane} l
+   * @param {boolean} even Whether the row's lanes are even.
    */
-  function thin(c, l) {
-    let s = laneOpen(c, ' is-thin', l.b, l.n);
-    let last = '';
+  function thin(c, l, even) {
+    // In an even row a full bar is one more even lane.
+    const full = l.f && !even;
+    const cls = (full ? ' is-full' : c.calmLanes ? ' is-thin is-md' : ' is-thin') +
+      (l.f && c.track ? ' has-track' : '');
+    let s = laneOpen(c, cls, l.b, l.n) + (full ? laneName(c, l.n, false) : '');
     const jn = joins(l.s || []);
     (l.s || []).forEach((g, j) => {
-      last = c.fills[Number(g[2]) - 1];
-      s += seg(g, last, at(l.t, j), jn[j]);
+      s += seg(g, c.fills[Number(g[2]) - 1], at(l.t, j), jn[j]);
     });
-    if (l.o != null) {
-      s += '<i class="vz-table-lane-open" style="left:' + n(l.o) + '%;border-left-color:' + col(last) + '"></i>';
-    }
-    // A thin lane is too low for text; an even lane has room.
-    if (c.evenLanes) s += barLabels(l.s || [], l.l, l.o);
+    if (l.o != null) s += caret(l.o, endFill(c, l.s || [], l.o));
     return s + events(l.e, l.et) + '</div>';
   }
 
   /**
-   * Point events [x, shape] with their tips.
-   * @param {number[][] | undefined} ev
+   * Point events [x, shape (, tag)] with their tips. An event with a tag
+   * draws its text in a small box just after its position.
+   * @param {(number | string)[][] | undefined} ev
    * @param {string[] | undefined} tips
    */
   function events(ev, tips) {
-    return (ev || []).map((e, j) => '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) +
-      '%" data-tip="' + esc(tips ? tips[j] : '') + '">' + shape(Number(e[1])) + '</svg>').join('');
+    return (ev || []).map((e, j) => {
+      const tip = '" data-tip="' + esc(tips ? tips[j] : '') + '">';
+      if (e.length > 2 && e[2] != null && e[2] !== '') {
+        const inv = e.length > 3 && e[3] === 1 ? ' is-inv' : '';
+        return '<span class="vz-table-lane-ev is-tag' + inv + '" style="left:' + n(e[0]) + '%' + tip + esc(e[2]) + '</span>';
+      }
+      return '<svg class="vz-table-lane-ev" viewBox="-7 -7 14 14" style="left:' + n(e[0]) + '%' + tip +
+        shape(Number(e[1])) + '</svg>';
+    }).join('');
+  }
+
+  /**
+   * Where each tag on a lane sits: 0 on the centre line, 1 below it, -1
+   * above it. A tag whose box would run into the one before it starts a
+   * pair: the earlier one moves down, the later one up, each at its own x.
+   * A third tag in the same run goes down again, and so on.
+   * @param {number[]} xs Left edges in px, in drawing order.
+   * @param {number[]} ws Widths in px.
+   * @param {number} [gap] Space a tag needs before the next one.
+   * @returns {number[]}
+   */
+  function tagStack(xs, ws, gap = 2) {
+    const ord = xs.map((_, k) => k).sort((a, b) => xs[a] - xs[b] || a - b);
+    const out = xs.map(() => 0);
+    let prev = -1;
+    let run = 0;
+    ord.forEach((k) => {
+      if (prev >= 0 && xs[k] < xs[prev] + ws[prev] + gap) {
+        if (run === 0) out[prev] = 1;
+        run += 1;
+        out[k] = run % 2 ? -1 : 1;
+      } else {
+        run = 0;
+      }
+      prev = k;
+    });
+    return out;
+  }
+
+  /**
+   * Split overlapping tags on every swimlane in `host` above and below the
+   * centre line (tagStack()). Needs the drawn widths, so it runs after the
+   * rows are in the page and again on a resize. All widths are read before
+   * any class is set, so the table is laid out once.
+   * @param {ParentNode} host
+   */
+  function stackTags(host) {
+    /** @type {{ tags: HTMLElement[], xs: number[], ws: number[] }[]} */
+    const lanes = [];
+    host.querySelectorAll('.vz-table-groups-ivcell').forEach((el) => {
+      const tags = /** @type {HTMLElement[]} */ (Array.from(el.children)
+        .filter((t) => t.classList.contains('is-tag')));
+      if (tags.length < 2) return;
+      const w = /** @type {HTMLElement} */ (el).clientWidth;
+      if (!w) return;
+      // A tag's box starts 3px after its position (the stylesheet's offset).
+      lanes.push({
+        tags,
+        xs: tags.map((t) => parseFloat(t.style.left) / 100 * w + 3),
+        ws: tags.map((t) => t.offsetWidth)
+      });
+    });
+    lanes.forEach((l) => {
+      tagStack(l.xs, l.ws).forEach((p, k) => {
+        l.tags[k].classList.toggle('is-lo', p === 1);
+        l.tags[k].classList.toggle('is-hi', p === -1);
+      });
+    });
   }
 
   /**
@@ -574,7 +642,14 @@
    * @param {number} i
    */
   function interval(c, i) {
-    let s = laneOpen(c, '', c.mainStrip ? c.mainStrip[i] : null);
+    const sub = c.subLanes ? c.subLanes[i] || [] : [];
+    // Even lanes: no main lane, every lane full, the overlays across the row.
+    // So it is for the whole column without a main-lane record anywhere, and
+    // for a row without one of its own (an opened row holding one lane).
+    const even = !!c.evenLanes || (sub.length > 0 && !(c.segs[i] || []).length);
+    // An even row has no main bar to name.
+    let s = laneOpen(c, c.track && !even ? ' has-track' : '', c.mainStrip ? c.mainStrip[i] : null) +
+      (even ? '' : laneName(c, c.mainName, true));
     const jn = joins(c.segs[i] || []);
     (c.segs[i] || []).forEach((g, j) => {
       s += seg(g, c.fills[Number(g[2]) - 1], at(c.tips[i], j), jn[j]);
@@ -588,22 +663,26 @@
       s += '<i class="vz-table-lane-dor" style="' + span(b[0], b[1]) + '"></i>';
     });
     const op = c.openAt ? c.openAt[i] : null;
-    if (op != null) s += '<i class="vz-table-lane-open" style="left:' + n(op) + '%"></i>';
-    s += barLabels(c.segs[i] || [], c.barLabels ? c.barLabels[i] : null, op);
+    if (op != null) s += caret(op, endFill(c, c.segs[i] || [], op));
     s += events(c.events ? c.events[i] : undefined, c.eventTips ? c.eventTips[i] : undefined) + '</div>';
-    const sub = c.subLanes ? c.subLanes[i] || [] : [];
-    if (!sub.length) return s;
-    // Even lanes: no main lane, every lane full, the overlays across the row.
-    return '<div class="vz-table-groups-ivstack' + (c.evenLanes ? ' is-even' : '') + '">' +
-      sub.map((l) => thin(c, l)).join('') + s + '</div>';
+    // Named bars keep a gutter on every row, so the bars line up with the axis.
+    const named = (/** @type {string} */ h) => (c.mainName == null ? h
+      : '<div class="vz-table-groups-ivnamed" style="--vz-lane-lw:' + n(c.laneNameWidth) + 'ch">' +
+        h + '</div>');
+    if (!sub.length) return named(s);
+    // Thin lanes above the main lane, full bars below it.
+    return named('<div class="vz-table-groups-ivstack' + (even ? ' is-even' : '') + '">' +
+      sub.filter((l) => !l.f).map((l) => thin(c, l, even)).join('') + s +
+      sub.filter((l) => l.f).map((l) => thin(c, l, even)).join('') + '</div>');
   }
 
   /**
    * An event shape, centred on 0 in a 14-unit box, about 9px across, over a
    * 1.5px ring in the surface colour: 1 filled triangle, 2 open triangle,
-   * 3 cross, 4 square, 5 vertical bar. Filled shapes carry a round-joined
+   * 3 cross, 4 square, 5 vertical bar, 6 the empty box a tag sits in (the
+   * legend's sign for tagged events). Filled shapes carry a round-joined
    * stroke in their ink, which rounds their corners. The static painter
-   * (R/paint-marks.R, paint_shape) draws the same five.
+   * (R/paint-marks.R, paint_shape) draws the same.
    * @param {number} k
    */
   function shape(k) {
@@ -616,6 +695,7 @@
       '<path class="vz-ev-ring' + (cls === 'vz-ev-fill' ? '' : ' is-' + cls.slice(6)) + '" d="' + d +
       '"></path><path class="' + cls + '" d="' + d + '"></path>';
     switch (k) {
+      case 6: return two('M-5.5,-3.5H5.5V3.5H-5.5Z', 'vz-ev-open');
       case 2: return two(open, 'vz-ev-open');
       case 3: return two(x, 'vz-ev-line');
       case 4: return two(sq, 'vz-ev-fill');
@@ -744,7 +824,8 @@
           esc(c.disp[i]) + '</td>';
     }
     if (m.kind === 'interval') {
-      return '<td class="vz-table-groups-bar-col' + (m.large ? ' vz-table-groups-wide' : '') + '">' +
+      const wide = m.full ? ' vz-table-groups-full' : m.large ? ' vz-table-groups-wide' : '';
+      return '<td class="vz-table-groups-bar-col' + wide + '">' +
         glyph(m, i, o.labels) + '</td>';
     }
     const g = glyph(m, i, o.labels, !!c.zero);
@@ -774,13 +855,143 @@
     const dw = labels && c.mark && 'valueWidth' in c.mark ? /** @type {any} */ (c.mark).valueWidth : null;
     const ticks = a.at.map((p, k) => '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
       ' style="left:' + n(p) + '%">' + esc(a.labels[k]) + '</span>').join('');
+    // A swimlane with named bars leaves their gutter blank.
+    const lw = /** @type {TableMarkInterval} */ (/** @type {unknown} */ (c.mark || {})).laneNameWidth;
+    const fit = a.d1 != null && a.d0 != null
+      ? ' data-d0="' + n(a.d0) + '" data-d1="' + n(a.d1) + '"' + (a.unit ? ' data-unit="' + esc(a.unit) + '"' : '') +
+        (a.days ? ' data-days="1"' : '') + (a.pin ? ' data-pin="' + a.pin.join(',') + '"' : '')
+      : '';
     return '<div class="vz-table-groups-axis' + (dw != null ? ' has-val' : '') + '">' +
-      '<span class="vz-table-groups-axis-in">' + ticks + '</span>' +
+      (lw != null ? '<span class="vz-table-groups-axis-lpad" style="--vz-lane-lw:' + n(lw) + 'ch"></span>' : '') +
+      '<span class="vz-table-groups-axis-in"' + fit + '>' + ticks + '</span>' +
       (dw != null ? '<span class="vz-table-groups-axis-pad" style="width:' + n(dw) + 'ch"></span>' : '') +
       '</div>';
   }
 
-  V.table.marks = { glyph, cell, axis, shape, fitLabels };
+  V.table.marks = { glyph, cell, axis, shape, tagStack, stackTags };
+})();
+// --- table/axis.js
+// @ts-check
+/**
+ * The ticks of a numeric swimlane axis, spaced by the column's drawn width.
+ * R sends the axis with ticks for no particular width and, for a numeric
+ * swimlane, its domain and unit (R/table-groups-cols.R table_groups_axis());
+ * once the table is laid out, fit() replaces the ticks with the finest step
+ * of the 1 / 2 / 2.5 / 5 ladder that keeps labels 60px apart, the first
+ * after the unit ("Day 0"). A study-day axis (`x_days`) labels its ticks
+ * "D1", "D20", with day 1 always a tick and no day 0 (dayTicks()). A date
+ * axis keeps R's ticks.
+ */
+(function () {
+  'use strict';
+  const root = /** @type {any} */ (typeof window !== 'undefined' ? window : globalThis);
+  const V = /** @type {VizNamespace} */ (root.Blockr.viz);
+  const esc = V.util.esc;
+
+  /** The steps, times a power of ten. */
+  const STEPS = [1, 2, 2.5, 5];
+
+  /**
+   * The ticks across `d0` to `d1` drawn `w` px wide, labels `gap` px apart.
+   * @param {number} d0 @param {number} d1 @param {number} w @param {number} [gap]
+   * @returns {number[]}
+   */
+  function ticks(d0, d1, w, gap = 60) {
+    const range = d1 - d0;
+    if (!(range > 0) || !(w > 0)) return [];
+    const min = range * gap / w;
+    let mag = Math.pow(10, Math.floor(Math.log10(min)));
+    let step = 0;
+    while (!step) {
+      for (const s of STEPS) if (!step && s * mag >= min) step = s * mag;
+      mag *= 10;
+    }
+    /** @type {number[]} */
+    const out = [];
+    for (let x = Math.ceil(d0 / step - 1e-9) * step; x <= d1 + 1e-9; x += step) {
+      out.push(Math.round(x * 1e6) / 1e6 || 0);
+    }
+    return out;
+  }
+
+  /**
+   * Study-day ticks across `d0` to `d1` drawn `w` px wide: whole-day steps of
+   * the 1 / 2 / 5 ladder, day 1 always among them and a round tick within
+   * three fifths of a step of it dropped, as the patient profile's axis
+   * (R's cells_axis_day_ticks()).
+   * @param {number} d0 @param {number} d1 @param {number} w @param {number} [gap]
+   * @returns {number[]}
+   */
+  function dayTicks(d0, d1, w, gap = 60) {
+    const range = d1 - d0;
+    if (!(range > 0) || !(w > 0)) return [];
+    const min = Math.max(1, range * gap / w);
+    let mag = Math.pow(10, Math.floor(Math.log10(min)));
+    let step = 0;
+    while (!step) {
+      for (const s of [1, 2, 5]) if (!step && s * mag >= min) step = s * mag;
+      mag *= 10;
+    }
+    /** @type {number[]} */
+    let out = [];
+    for (let x = Math.ceil(d0 / step - 1e-9) * step; x <= d1 + 1e-9; x += step) out.push(Math.round(x));
+    if (d0 <= 1 && d1 >= 1) {
+      out = out.filter((x) => Math.abs(x - 1) >= 0.6 * step).concat(1).sort((a, b) => a - b);
+    }
+    return out;
+  }
+
+  /**
+   * Ticks with the set ends of the axis (`pin`, from and to as 1 or 0): a set
+   * end is a tick, and a tick within 8% of the range of it goes, so the
+   * labels do not collide (R's cells_axis_pin()).
+   * @param {number[]} at @param {number} d0 @param {number} d1 @param {number[]} pin
+   * @returns {number[]}
+   */
+  function pinTicks(at, d0, d1, pin) {
+    if (!pin || !(d1 > d0)) return at;
+    const ends = [d0, d1].filter((_, k) => Number(pin[k]) === 1);
+    if (!ends.length) return at;
+    const near = 0.08 * (d1 - d0);
+    const kept = at.filter((x) => ends.every((e) => Math.abs(x - e) >= near));
+    return Array.from(new Set(kept.concat(ends))).sort((a, b) => a - b);
+  }
+
+  /** A study day's label: x = 1 is "D1", x = 0 the day before, "D-1".
+   * @param {number} x */
+  const dayLabel = (x) => 'D' + String(x >= 1 ? x : x - 1);
+
+  /**
+   * Fit every numeric swimlane axis in `host` to its width; an axis is
+   * redrawn only when its width changed.
+   * @param {ParentNode} host
+   */
+  function fit(host) {
+    const axes = /** @type {HTMLElement[]} */ (Array.from(host.querySelectorAll('.vz-table-groups-axis-in[data-d1]')));
+    // Every width read before any write, so the table is laid out once.
+    const ws = axes.map((el) => el.clientWidth);
+    axes.forEach((el, k) => {
+      const w = ws[k];
+      if (!w || el.getAttribute('data-w') === String(w)) return;
+      const d0 = Number(el.getAttribute('data-d0'));
+      const d1 = Number(el.getAttribute('data-d1'));
+      const unit = el.getAttribute('data-unit');
+      const days = el.getAttribute('data-days') === '1';
+      const pinAttr = el.getAttribute('data-pin');
+      const pin = pinAttr ? pinAttr.split(',').map(Number) : null;
+      const at = pinTicks(days ? dayTicks(d0, d1, w) : ticks(d0, d1, w), d0, d1, pin);
+      if (at.length < 2) return;
+      el.setAttribute('data-w', String(w));
+      el.innerHTML = at.map((x, j) => {
+        const p = Math.round((x - d0) / (d1 - d0) * 1e4) / 100;
+        const text = days ? dayLabel(x) : (j === 0 && unit ? unit + ' ' : '') + String(x);
+        return '<span' + (p <= 8 ? ' class="is-first"' : p >= 92 ? ' class="is-last"' : '') +
+          ' style="left:' + p + '%">' + esc(text) + '</span>';
+      }).join('');
+    });
+  }
+
+  V.table.axis = { ticks, dayTicks, pinTicks, dayLabel, fit };
 })();
 // --- table/tooltip.js
 // @ts-check
@@ -986,15 +1197,23 @@
       if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
         return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
       }
-      // A thin lane is a few pixels high: the segment at the pointer's time.
-      const hit = seg || (lane.classList.contains('is-thin') ? segAt(lane, x) : null);
+      // The open end's caret belongs to the bar ending at it. Off a
+      // segment, the one at the pointer's time, or within a few pixels of it
+      // (a thin lane is a few pixels high, a short bar a few pixels wide).
+      const open = t.closest('.vz-table-lane-open');
+      const w = lane.getBoundingClientRect().width;
+      const hit = seg || (open ? endSeg(lane, /** @type {HTMLElement} */ (open)) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
       if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
+      // Off every mark: only the time under the pointer, as a small label.
       const v = d0 + x * (d1 - d0);
-      return { text: '~' + (lane.getAttribute('data-dd') === '1'
-        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10)) };
+      if (lane.getAttribute('data-sd') === '1') {
+        return { text: 'Day ' + V.table.axis.dayLabel(Math.round(v)).slice(1), at: true };
+      }
+      return { text: lane.getAttribute('data-dd') === '1'
+        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10), at: true };
     }
     const xs = (lane.getAttribute('data-xs') || '').split(',');
     const ys = (lane.getAttribute('data-ys') || '').split(',');
@@ -1014,17 +1233,48 @@
   }
 
   /**
-   * The segment of a lane under time `x` (0 to 1), or null.
+   * The segment of a lane nearest time `x` (0 to 1) within `tol` percent of
+   * the lane, or null.
    * @param {Element} lane
    * @param {number} x
+   * @param {number} tol
    */
-  function segAt(lane, x) {
+  function segAt(lane, x, tol) {
     const p = x * 100;
-    return Array.from(lane.querySelectorAll('.vz-table-lane-seg')).find((el) => {
+    let best = null;
+    let gap = Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
       const st = /** @type {HTMLElement} */ (el).style;
       const l = parseFloat(st.left);
-      return p >= l - 0.5 && p <= l + parseFloat(st.width) + 0.5;
-    }) || null;
+      const r = l + parseFloat(st.width);
+      const d = p < l ? l - p : p > r ? p - r : 0;
+      if (d <= tol && d < gap) {
+        best = el;
+        gap = d;
+      }
+    });
+    return best;
+  }
+
+  /**
+   * The segment an open end belongs to: the one whose end is nearest the
+   * caret, the later one on a tie (marks.js draws the caret at its bar's end).
+   * @param {Element} lane
+   * @param {HTMLElement} open
+   */
+  function endSeg(lane, open) {
+    const x = parseFloat(open.style.left);
+    let best = null;
+    let d = Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
+      const st = /** @type {HTMLElement} */ (el).style;
+      const e = Math.abs(parseFloat(st.left) + parseFloat(st.width) - (isNaN(x) ? 1e9 : x));
+      if (e <= d) {
+        best = el;
+        d = e;
+      }
+    });
+    return best;
   }
 
   /**
@@ -1045,9 +1295,13 @@
       }).join('') + '</div>';
   }
 
-  /** @param {{ text: string, color?: string, strip?: (string | number)[][] }} l */
+  /** The opening of a time label, shown without the card. */
+  const AT = '<span class="vz-table-lane-at">';
+
+  /** @param {{ text: string, color?: string, strip?: (string | number)[][], at?: boolean }} l */
   function laneCard(l) {
     if (l.strip) return stripCard(/** @type {any} */ (l));
+    if (l.at) return AT + esc(l.text) + '</span>';
     const parts = l.text.split(' · ');
     return head(parts[0], l.color) + parts.slice(1).map((p) => {
       const k = p.indexOf(': ');
@@ -1112,6 +1366,9 @@
         tip.hidden = true;
         return;
       }
+      const at = html.startsWith(AT);
+      tip.classList.toggle('is-card', !at);
+      tip.classList.toggle('is-at', at);
       tip.innerHTML = html;
       tip.hidden = false;
       const w = root.innerWidth || 1000;
@@ -1307,6 +1564,9 @@
     return { blk, path, indent, toggle, base, levels, folds: toggle.some(Boolean) };
   }
 
+  /** @param {TableModel | null} m @returns {TableModel} */
+  const m0 = (m) => /** @type {TableModel} */ (m);
+
   class Grid {
     /**
      * @param {HTMLElement} box The scroll box the table goes in.
@@ -1382,7 +1642,7 @@
       this._measured = false;
       this.shut = new Set();
       this.shutRows = new Set();
-      if (model.collapsed && this.flags.collapsible) this._shutAll(true);
+      if (model.collapsed && this.flags.collapsible) this._shutAll(true, true);
       if (this.hooks.lit) {
         const lit = this.hooks.lit();
         this.reveal(lit.rows, lit.sections);
@@ -1455,11 +1715,6 @@
       return { shown: this._shown, total: this.model ? this.model.n : 0 };
     }
 
-    /** The drawn item list. */
-    items() {
-      return this._items;
-    }
-
     /** Whether the model has anything to fold. */
     folds() {
       const st = this._st;
@@ -1468,11 +1723,16 @@
          (!!st && st.toggle.some(Boolean)));
     }
 
-    /** @param {boolean} shut */
-    _shutAll(shut) {
+    /**
+     * @param {boolean} shut
+     * @param {boolean} [start] The table's first state: a section that keeps
+     *   open (a group heading over closed rows) stays open. Fold all shuts it.
+     */
+    _shutAll(shut, start = false) {
       const m = this.model;
       const st = this._st;
-      this.shut = new Set(shut && m && m.sections ? m.sections.map((s, k) => k) : []);
+      this.shut = new Set(shut && m && m.sections
+        ? m.sections.map((s, k) => (start && s.open ? -1 : k)).filter((k) => k >= 0) : []);
       this.shutRows = new Set();
       if (shut && st) st.toggle.forEach((t, i) => { if (t) this.shutRows.add(i); });
     }
@@ -1554,6 +1814,9 @@
       let prevBlk = NaN;
       /** @type {number | null} */
       let hideBelow = null;
+      // Section titles over inner rows, while the rows keep their order.
+      const titles = m0(this.model).rows && m0(this.model).rows.title;
+      const sorted = this.sortCol != null && this.sortDir !== 0;
       for (const i of view) {
         const b = st.blk[i];
         const p = /** @type {number[]} */ (st.path.get(b));
@@ -1572,6 +1835,7 @@
         const ind = st.indent ? st.indent[i] : 0;
         if (hideBelow != null && ind > hideBelow) continue;
         hideBelow = null;
+        if (titles && titles[i] && !sorted) out.push({ t: i });
         out.push({ i });
         if (this.shutRows.has(i)) hideBelow = ind;
       }
@@ -1677,6 +1941,7 @@
         return H.section(m, it.s, { shut: this.shut.has(it.s), fold: this.flags.collapsible,
                                     extra: h.secClass ? h.secClass(it.s) : '' });
       }
+      if (it.t != null) return H.title(m, /** @type {TableStructure} */ (this._st), it.t, this.flags.flush);
       const i = /** @type {number} */ (it.i);
       const next = this._items[k + 1];
       const last = !next || (next.s != null && m.sections != null &&
@@ -2716,15 +2981,20 @@
     const column = (/** @type {string} */ label, /** @type {boolean} */ nullable) =>
       /** @type {VizArg} */ ({ type: { name: 'column' }, nullable, gear: { control: 'column', label } });
     const inner = key === 'by' || (key === 'group' && by.length === 1);
-    const outer = (key === 'parent' || key === 'group') && by.length === 2;
+    // `{@parent}` on a flat table is the word a dropped "[{@parent} and ]" clause offers:
+    // a pick adds the outer level back.
+    const outer = (key === 'parent' && by.length === 1) ||
+      ((key === 'parent' || key === 'group') && by.length === 2);
     if (inner && by.length) {
       const keep = by.slice(0, -1);
       return { arg: column(BY_LABEL.groups, false), value: by[by.length - 1], label: BY_LABEL.groups,
                write: (x) => ({ by: x == null ? keep : keep.concat([String(x)]) }) };
     }
     if (outer) {
-      return { arg: column('Outer rows', true), value: by[0], label: 'Outer rows',
-               write: (x) => ({ by: x == null ? [by[1]] : [String(x), by[1]] }) };
+      const last = by[by.length - 1];
+      return { arg: column('Outer rows', true), value: by.length === 2 ? by[0] : null,
+               label: 'Outer rows',
+               write: (x) => ({ by: x == null ? [last] : [String(x), last] }) };
     }
     const FIELD = /** @type {Record<string, string>} */ (
       { value: 'col', func: 'func', facet: 'facet', fill: 'fill', color: 'color' });
@@ -3462,9 +3732,11 @@
     el.hidden = !groups.length;
     el.innerHTML = groups.map((g) => '<span class="vz-table-groups-legend-group">' +
       '<span class="vz-table-groups-legend-title">' + esc(g.title) + '</span>' +
-      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.shape != null
-        ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
-        : '<i style="background:' + esc(it.color) + '"></i>') +
+      (g.items || []).map((it) => '<span class="vz-table-groups-legend-item">' + (it.tag
+        ? '<span class="vz-table-groups-legend-tag' + (it.inv ? ' is-inv' : '') + '">' + esc(it.tag) + '</span>'
+        : it.shape != null
+          ? '<svg class="vz-table-groups-legend-shape" viewBox="-7 -7 14 14">' + V.table.marks.shape(Number(it.shape)) + '</svg>'
+          : '<i style="background:' + esc(it.color) + '"></i>') +
         esc(it.label) + '</span>').join('') + '</span>').join('');
   }
 
@@ -3494,7 +3766,32 @@
         c.fg = c.bg.map((b) => (b != null && of[b]) || null);
         c.ink = null;
       }
+      const mk = /** @type {TableMarkInterval | null | undefined} */ (c.mark);
+      if (mk && mk.kind === 'interval' && !Array.isArray(c.disp)) {
+        c.disp = laneTexts(mk, m.n);
+      }
     }
+  }
+
+  /**
+   * A swimlane column's text per row, which the search reads: its segments'
+   * and events' tooltips, each once, joined by " | ", as R's cells_text()
+   * writes it. R leaves it out of the payload, since the tooltips are there
+   * (R/table-lane-json.R).
+   * @param {TableMarkInterval} mk
+   * @param {number} n
+   * @returns {(string | null)[]}
+   */
+  function laneTexts(mk, n) {
+    /** @type {(string | null)[]} */
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const tips = (mk.tips && mk.tips[i]) || [];
+      const ev = (mk.eventTips && mk.eventTips[i]) || [];
+      const t = Array.from(new Set(tips.concat(ev))).join(' | ');
+      out[i] = t === '' ? null : t;
+    }
+    return out;
   }
 
   class Groups extends /** @type {any} */ (T.Records) {
@@ -3514,15 +3811,23 @@
       const drillClass = /** @type {(i: number) => string} */ (grid.hooks.rowClass);
       grid.hooks.rowClass = (i) => [drillClass(i), this.rowKind(i)].filter(Boolean).join(' ');
       grid.hooks.cell = (c, i) => T.marks.cell(c, i, { labels: this.labelsOn() });
-      // Bar labels need the drawn lane's width to pick their place.
-      grid.hooks.rows = (body) => T.marks.fitLabels(body);
+      // The axis ticks and the tags that would overlap need the drawn
+      // column's width.
+      grid.hooks.rows = (body) => {
+        const table = body.closest('table');
+        if (table) T.axis.fit(table);
+        T.marks.stackTags(body);
+      };
       // A table drawn while hidden (a closed dock panel) has no width yet; a
-      // resize places the labels again.
+      // resize fits the axis again.
       if (typeof ResizeObserver !== 'undefined') {
         let w = 0;
         scope.resize(frame.box, () => {
           const now = frame.box.clientWidth;
-          if (now && now !== w) T.marks.fitLabels(frame.box, w !== 0);
+          if (now && now !== w) {
+            T.axis.fit(frame.box);
+            T.marks.stackTags(frame.box);
+          }
           w = now;
         });
       }
@@ -3616,6 +3921,7 @@
       if (cfg.bar_width && cfg.bar_width !== 'fit') attrs['data-summarize-width'] = cfg.bar_width;
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
+      if (m.sections && m.sections.length) attrs['data-summarize-headings'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
                cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', flush: true, attrs };
     }
@@ -3858,6 +4164,10 @@
  * The gear (gear.js) is the core gear engine; with it the titles carry
  * core/titles.js's slots. A view built with `gear: false` (a printed page)
  * has neither.
+ *
+ * A block whose prepare script hands records along (R's viz_records()) gets
+ * the chart's data view (core/data-view.js): a tool left of the download
+ * that opens them under the table.
  */
 (function () {
   'use strict';
@@ -3897,6 +4207,9 @@
       // The prepare script's controls, under the header.
       this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
       if (this.script) this.frame.body.before(this.script.el);
+      /** The records under the table, mounted when R first offers them.
+       * @type {VizDataView | null} */
+      this.dataView = null;
     }
 
     /** @param {VizPayload} p */
@@ -3928,8 +4241,23 @@
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
       if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
+      this.records(/** @type {TableDerived} */ (p.derived || {}));
       this.openOnError(/** @type {TableDerived} */ (p.derived || {}));
       this.frame.busyDone();
+    }
+
+    /**
+     * The data view: its tool while R offers records, and their table while
+     * the reader has it open.
+     * @param {TableDerived} d
+     */
+    records(d) {
+      if (d.data_view_tool && !this.dataView) {
+        this.dataView = new V.DataView(this.frame, this.scope);
+      }
+      if (!this.dataView) return;
+      this.dataView.tool.hidden = !d.data_view_tool;
+      this.dataView.update(d.data_view_tool ? d.data_view : null);
     }
 
     /**

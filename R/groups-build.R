@@ -269,26 +269,37 @@ groups_fill_series <- function(target, tkeys, slice, s, sid) {
 
 groups_fill_spans <- function(target, tkeys, slice, s, sid,
                               parent_row = FALSE) {
-  segs <- groups_spans_split(slice, target, tkeys, s)
+  # The slice is read once and its rows grouped once, for the segments, the
+  # overlays and the lanes.
+  g <- groups_spans_reader(slice, s)
+  by <- groups_rows_by_key(slice, target, tkeys)
+  # Stacked overlaps (`inner_overlap`) on an inner row of a swimlane with
+  # lanes: the main lane keeps its first track, the others draw under it.
+  stack <- !isTRUE(parent_row) && groups_spans_has_lanes(s) &&
+    identical(chr_state(s$inner_overlap), "stack")
+  segs <- if (stack) groups_spans_split_stacked(g, by) else
+    groups_spans_split(g, by)
   target[[groups_col(sid, "segs")]] <- I(segs)
   target[[groups_col(sid, "start")]] <- vapply(segs, function(ss) {
     if (length(ss)) ss[[1L]]$s else NA_real_
   }, numeric(1L))
   target[[groups_col(sid, "nseg")]] <- lengths(segs)
   # The overlays are one row's facts (its check-ins, its milestones); a parent row
-  # pools its rows' segments but draws none of them.
+  # pools its rows' segments but draws none of them, unless it draws its
+  # lanes (`parent_lanes`): then it is drawn as any row.
+  pool <- isTRUE(parent_row) && !isTRUE(s$parent_lanes)
   if (groups_spans_has_overlay(s)) {
-    target[[groups_col(sid, "ovl")]] <- I(if (isTRUE(parent_row)) {
+    target[[groups_col(sid, "ovl")]] <- I(if (pool) {
       rep(list(list()), nrow(target))
     } else {
-      groups_spans_overlays(slice, target, tkeys, s)
+      groups_spans_overlays(g, by, s, stack = stack)
     })
   }
   if (groups_spans_has_lanes(s)) {
-    target[[groups_col(sid, "lanes")]] <- I(if (isTRUE(parent_row)) {
+    target[[groups_col(sid, "lanes")]] <- I(if (pool) {
       rep(list(list(sub = list(), ms = list())), nrow(target))
     } else {
-      groups_spans_lanes(slice, target, tkeys, s)
+      groups_spans_lanes(g, by, s, stack = stack)
     })
   }
   target
@@ -304,10 +315,13 @@ groups_spans_has_overlay <- function(s) {
 
 #' The overlays of a spans row, one list per target row: `tk` tick positions,
 #' `bd` line pieces (`s`, `e`), `ev` events (`x`, shape index `k`, level
-#' `lv`) and `op`, whether the lane ends open. Each reads only the rows where
-#' its own columns are set.
+#' `lv`) and `op`, the main lane's open end (groups_spans_open_end(), only
+#' the records it draws, stacked its first track). Each reads only the rows
+#' where its own columns are set. `g` is the slice's reader, `by` its rows
+#' per target row (groups_rows_by_key()).
 #' @noRd
-groups_spans_overlays <- function(slice, target, tkeys, s) {
+groups_spans_overlays <- function(g, by, s, stack = FALSE) {
+  slice <- g$slice
   col <- function(nm) {
     v <- chr_state(s[[nm]])
     if (!is.null(v) && v %in% names(slice)) v
@@ -319,26 +333,15 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
   tk <- num("ticks")
   b0 <- num("band_x")
   b1 <- num("band_xend")
-  ex <- num("event_x")
+  ex <- g$event$x
   # An event on a lane draws on that lane (groups_spans_lanes()).
-  if (!is.null(ex) && !is.null(col("lane"))) {
-    el <- as.character(slice[[col("lane")]])
-    ex[!is.na(el) & nzchar(el)] <- NA_real_
-  }
-  shp <- col("event_shape")
+  if (!is.null(ex) && !is.null(g$ln)) ex[!g$main] <- NA_real_
   opc <- col("open")
   op <- if (!is.null(opc)) as.logical(slice[[opc]])
-  # With lanes the main lane's arrow reads only its own records.
-  lnc <- col("lane")
-  if (!is.null(op) && !is.null(lnc)) {
-    ln <- as.character(slice[[lnc]])
-    op[!is.na(ln) & nzchar(ln)] <- FALSE
-  }
-  lv <- s$.shape_levels
-  sk <- groups_key_string(slice, tkeys)
-  tkk <- groups_key_string(target, tkeys)
-  lapply(tkk, function(k) {
-    rows <- which(sk == k)
+  # The main lane's caret reads only the records it draws.
+  main <- if (!is.null(op)) groups_spans_main_rows(g, by, stack)
+  lapply(seq_along(by), function(k) {
+    rows <- by[[k]]
     out <- list()
     if (!is.null(tk)) {
       v <- tk[rows]
@@ -352,26 +355,11 @@ groups_spans_overlays <- function(slice, target, tkeys, s) {
       })
     }
     if (!is.null(ex)) {
-      r <- rows[is.finite(ex[rows])]
-      r <- r[order(ex[r])]
-      out$ev <- lapply(r, function(j) {
-        groups_spans_event(ex[[j]], slice, shp, j, s)
-      })
+      out$ev <- lapply(groups_spans_event_order(g, rows, ex), g$event$at)
     }
-    if (!is.null(op)) out$op <- isTRUE(any(op[rows], na.rm = TRUE))
+    if (!is.null(op)) out$op <- groups_spans_open_end(g, op, main[[k]])
     out
   })
-}
-
-#' One event at `x` from record `j`: its shape index `k` by the level of
-#' the shape column, and that level `lv`.
-#' @noRd
-groups_spans_event <- function(x, slice, shp, j, s) {
-  lv <- s$.shape_levels
-  l <- if (!is.null(shp)) as.character(slice[[shp]][[j]])
-  kk <- if (!is.null(l) && !is.na(l) && length(lv)) match(l, lv) else NA
-  list(x = x, k = if (is.na(kk)) 1L else (kk - 1L) %% 5L + 1L,
-       lv = if (!is.null(l) && !is.na(l)) l)
 }
 
 #' @noRd
@@ -396,16 +384,13 @@ groups_series_split <- function(slice, target, tkeys, s) {
   has_band <- length(band) == 2L && all(band %in% names(slice)) &&
     is.numeric(slice[[band[[1L]]]]) && is.numeric(slice[[band[[2L]]]])
   ok <- if (is.null(xs)) rep(FALSE, nrow(slice)) else is.finite(xs) & is.finite(ys)
-  sk <- groups_key_string(slice, tkeys)
-  tk <- groups_key_string(target, tkeys)
-  lapply(tk, function(k) {
-    idx <- which(sk == k & ok)
+  lo <- if (has_band) as.numeric(slice[[band[[1L]]]])
+  hi <- if (has_band) as.numeric(slice[[band[[2L]]]])
+  lapply(groups_rows_by_key(slice, target, tkeys), function(rows) {
+    idx <- rows[ok[rows]]
     idx <- idx[order(xs[idx])]
-    list(
-      x = xs[idx], y = ys[idx],
-      lo = if (has_band) as.numeric(slice[[band[[1L]]]])[idx],
-      hi = if (has_band) as.numeric(slice[[band[[2L]]]])[idx]
-    )
+    list(x = xs[idx], y = ys[idx], lo = if (has_band) lo[idx],
+         hi = if (has_band) hi[idx])
   })
 }
 

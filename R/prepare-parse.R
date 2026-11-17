@@ -35,7 +35,8 @@ CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
 # `on`: the word a flag prints while on (its label otherwise). `when`: the name
 # of a flag declared above; while that flag is off the control is off (not
 # drawn, an empty word, not offered).
-CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "on", "when")
+CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "on", "when",
+                 "multiple", "labels")
 
 #' Call names accepted as an annotation wrapper (`#| number(min = 1)`)
 #' @noRd
@@ -176,6 +177,10 @@ cb_annotation <- function(line_text) {
   }
 
   e <- tryCatch(parse(text = body)[[1L]], error = function(e) NULL)
+  # `#| setting`: the line takes the block's own setting of that name.
+  if (identical(e, quote(setting)) || identical(e, quote(setting()))) {
+    return(list(setting = TRUE))
+  }
   args <- NULL
   if (!is.null(e) && is.call(e) && is.name(e[[1L]]) &&
       as.character(e[[1L]]) %in% CB_ANN_CALLS) {
@@ -194,7 +199,14 @@ cb_annotation <- function(line_text) {
   if (!length(args)) {
     return(list())
   }
-  lapply(args, function(a) tryCatch(eval(a, baseenv()), error = function(e) NULL))
+  # `labels` may read the script's own values (`labels = names(fields)`):
+  # kept as an expression, evaluated where the declaration is (cb_specs()).
+  lab <- args["labels"]
+  out <- lapply(args[names(args) != "labels"], function(a) {
+    tryCatch(eval(a, baseenv()), error = function(e) NULL)
+  })
+  if (!is.null(lab[[1L]])) out$labels <- lab[[1L]]
+  out
 }
 
 #' Derive the widget from a declaration's value
@@ -294,6 +306,24 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
     # Make it visible to later declarations too.
     assign(st$name, value, envir = env)
 
+    line_ann <- cb_annotation(
+      if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
+      else parsed$lines[[st$line]]
+    )
+    # A setting is no control: the block's own setting of that name, its
+    # current value written into the script as the line's value
+    # (cb_setting_names(), viz_script_sources()).
+    if (isTRUE(line_ann$setting)) {
+      cur <- values[[st$name]]
+      if (is.list(cur)) cur <- unlist(cur, use.names = FALSE)
+      if (!is.null(cur)) assign(st$name, cur, envir = env)
+      specs[[length(specs) + 1L]] <- list(
+        name = st$name, line = st$line, kind = "setting",
+        default = value, error = NULL
+      )
+      next
+    }
+
     w <- cb_widget_for(value)
     if (!is.null(w) && identical(w$kind, "select") && !length(w$choices)) {
       # An empty factor is usually a mistyped column name.
@@ -309,13 +339,14 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
       next
     }
 
+    ann <- line_ann
+    # `#| select(multiple = TRUE)`: several picks, though one by default.
+    if (identical(w$kind, "select") && isTRUE(as.logical(ann$multiple))) {
+      w$multiple <- TRUE
+    }
+    w <- cb_select_labels(w, ann, env)
     # From here on, declarations below read the control's current value.
     assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
-
-    ann <- cb_annotation(
-      if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
-      else parsed$lines[[st$line]]
-    )
 
     specs[[length(specs) + 1L]] <- c(
       list(
@@ -328,12 +359,27 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
         error = NULL
       ),
       ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
-                                "default", "error", "off"))],
-      list(off = cb_switched_off(ann$when, env))
+                                "default", "error", "off", "labels"))],
+      list(off = cb_switched_off(ann$when, env), labels = w$labels)
     )
   }
 
   specs
+}
+
+# The names a script declares with `#| setting`: lines whose value is the
+# block's own setting of that name, not a control of the script.
+cb_setting_names <- function(parsed) {
+  if (is.null(parsed) || !isTRUE(parsed$ok)) return(character())
+  out <- character()
+  for (st in parsed$stmts) {
+    if (!isTRUE(st$input) || is.na(st$line) ||
+          st$line > length(parsed$lines)) next
+    if (isTRUE(cb_annotation(parsed$lines[[st$line]])$setting)) {
+      out <- c(out, st$name)
+    }
+  }
+  out
 }
 
 # Is a control switched off by its `when` flag? Only a flag declared above,
@@ -462,4 +508,14 @@ cb_coerce <- function(value, spec) {
     },
     value
   )
+}
+
+# A select's `#| select(labels = ...)`: what each choice shows, one per
+# choice, evaluated where the declaration is (it may read the script's own
+# values). Labels that fail or miscount are left out.
+cb_select_labels <- function(w, ann, env) {
+  if (!identical(w$kind, "select") || is.null(ann$labels)) return(w)
+  lab <- tryCatch(as.character(eval(ann$labels, env)), error = function(e) NULL)
+  if (length(lab) == length(w$choices)) w$labels <- unname(lab)
+  w
 }

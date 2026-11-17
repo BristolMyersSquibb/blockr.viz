@@ -465,6 +465,13 @@
       if (listed) {
         options = options.filter((o) => o.value == null || listed.includes(String(o.value)) ||
           C.same(o.value, value));
+        // The listed choices in the list's order (a kind's columns in the order they
+        // were marked, specific to broad); the empty choice and a current pick from
+        // outside the list keep their places.
+        const at = (/** @type {VizChoice} */ o) => (o.value == null ? -1 : listed.indexOf(String(o.value)));
+        const inList = options.filter((o) => at(o) >= 0).sort((a, b) => at(a) - at(b));
+        let k = 0;
+        options = options.map((o) => (at(o) >= 0 ? inList[k++] : o));
       }
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,
@@ -539,13 +546,16 @@
         case 'number': {
           const num = (/** @type {unknown} */ x) => (typeof x === 'number' ? x : null);
           const lo = num(sp.min), hi = num(sp.max);
+          // A control that starts without a number (its placeholder says what that
+          // means) can be emptied again.
           return { kind: 'number', min: lo == null ? -Infinity : lo,
-                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label };
+                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label,
+                   ...(sp.placeholder ? { clear: true } : {}) };
         }
         case 'select':
         case 'multi': {
           const options = /** @type {string[]} */ (sp.options || [])
-            .map((o) => ({ value: String(o), label: String(o) }));
+            .map((o, i) => ({ value: String(o), label: String((sp.labels || [])[i] ?? o) }));
           if (!options.length) return null;
           return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
                    set, label };

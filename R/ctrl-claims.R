@@ -13,10 +13,10 @@
 #' The board's subject column
 #'
 #' The column a drill claims when the board says what a subject is: the
-#' `subject` field of the "study_roles" board option, or `USUBJID` when the
-#' option exists and the field is empty. Read by option id, so this package
-#' does not depend on blockr.pharma. A board without the option has no
-#' subjects and its senders claim columns.
+#' `subject` field of the "study_roles" board option. Read by option id, so
+#' this package does not depend on blockr.pharma, which also supplies the
+#' field's default. A board without the option, or with the field empty, has
+#' no subjects and its senders claim columns.
 #'
 #' @param session Shiny session (defaults to the current reactive domain).
 #' @return The column name, or `NULL` when the board declares no subjects.
@@ -40,7 +40,7 @@ ctrl_subject <- function(session = shiny::getDefaultReactiveDomain()) {
   col <- trimws(as.character(unlist(val$subject, use.names = FALSE)))
   col <- col[!is.na(col) & nzchar(col)]
 
-  if (length(col) == 1L) col else "USUBJID"
+  if (length(col) == 1L) col
 }
 
 #' Read filter conditions off a drilled annotated data frame

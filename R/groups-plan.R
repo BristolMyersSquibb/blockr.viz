@@ -300,7 +300,8 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
   groups_plan_entry(base, list(
     kind = "interval", key = groups_col(sid, "start"),
     segs = groups_col(sid, "segs"), x = x, xend = xend, levels = lv,
-    dom = groups_axis_domain_attr(data, c(x, xend)),
+    dom = NULL,
+    lim = groups_spans_limits(s$x_limits, data, c(x, xend), isTRUE(s$.date)),
     dom_date = isTRUE(s$.date),
     tfields = tfields,
     # Tooltip names for the colour and extra fields: labels, else names.
@@ -308,6 +309,11 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
     tlabels = vapply(tfields, function(f) groups_col_name(data, f),
                      character(1L), USE.NAMES = FALSE),
     size = chr_state(s$size) %||% "md",
+    lane_size = chr_state(s$lane_size) %||% "sm",
+    x_unit = chr_state(s$x_unit),
+    x_days = isTRUE(as.logical(s$x_days)),
+    track = isTRUE(as.logical(s$track)),
+    full = s$.full_levels,
     ovl = if (groups_spans_has_overlay(s)) groups_col(sid, "ovl"),
     lanes = if (groups_spans_has_lanes(s)) groups_col(sid, "lanes"),
     shapes = s$.shape_levels,
@@ -320,18 +326,34 @@ groups_plan_spans <- function(s, sid, base, data, scale_map) {
   ))
 }
 
-#' @noRd
-groups_axis_domain_attr <- function(data, cols) {
-  vals <- unlist(lapply(cols, function(col) {
-    if (!col %in% names(data)) return(NULL)
-    attr(data[[col]], "blockr_domain", exact = TRUE)
-  }), use.names = FALSE)
-  vals <- suppressWarnings(as.numeric(vals))
-  vals <- vals[is.finite(vals)]
-  if (length(vals) < 2L) return(NULL)
-  rng <- range(vals)
-  if (rng[[2L]] <= rng[[1L]]) return(NULL)
-  rng
+# The axis ends a swimlane column sets, c(from, to) with NA for the data's
+# end: `x_limits`, else per end the `blockr_domain` attribute of its start
+# (or end) column, which a prepare script sets. Dates as day numbers. NULL
+# when neither sets an end.
+groups_spans_limits <- function(x_limits, data, cols, date = FALSE) {
+  num <- function(v) {
+    if (is.null(v) || length(v) != 2L) return(c(NA_real_, NA_real_))
+    if (inherits(v, "Date")) return(as.numeric(v))
+    if (is.character(v)) {
+      d <- suppressWarnings(as.numeric(v))
+      if (date || anyNA(d[!is.na(v)])) {
+        d <- as.numeric(as.Date(v, optional = TRUE))
+      }
+      return(d)
+    }
+    suppressWarnings(as.numeric(v))
+  }
+  lim <- num(x_limits)
+  for (col in cols) {
+    if (!col %in% names(data)) next
+    a <- num(attr(data[[col]], "blockr_domain", exact = TRUE))
+    take <- is.na(lim) & is.finite(a)
+    lim[take] <- a[take]
+  }
+  lim[!is.finite(lim)] <- NA_real_
+  if (all(is.na(lim))) return(NULL)
+  if (!anyNA(lim) && lim[[2L]] <= lim[[1L]]) return(NULL)
+  lim
 }
 
 #' The facet layout. `by_summary` (default): each summary's level copies sit

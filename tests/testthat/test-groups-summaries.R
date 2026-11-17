@@ -284,7 +284,8 @@ test_that("a large swimlane has the same header axis as a small one", {
     ))
     table_groups_axis(p$plan[[1L]], p)
   }
-  expect_named(axis(list(size = "lg")), c("at", "labels"))
+  # A numeric swimlane sends its domain for the browser's refit (axis.js).
+  expect_named(axis(list(size = "lg")), c("at", "labels", "d0", "d1"))
   expect_identical(axis(list(size = "lg")), axis(list()))
 })
 
@@ -667,6 +668,12 @@ test_that("spans label/fields enrich tips and key the highlight", {
   ))$cells$cols[[1]]
   expect_length(c2$segs[[1]][[1]], 3L)
   expect_false(isTRUE(c2$lg))
+  c3 <- sum_model(ae, by = "USUBJID", summaries = list(
+    list(type = "spans", x = "ASTDY", xend = "AENDY", color = "SEV",
+         size = "xl")
+  ))$cells$cols[[1]]
+  expect_true(isTRUE(c3$xl))
+  expect_false(isTRUE(c3$lg))
 })
 
 # A swimmer frame: segment rows, tick rows, a band row and an event row
@@ -1162,4 +1169,137 @@ test_that("simple rows take median, min and max of their column", {
   expect_identical(num("median"), c(a = "2", b = "5"))
   expect_identical(num("min"), c(a = "1", b = "4"))
   expect_identical(num("max"), c(a = "9", b = "6"))
+})
+
+test_that("spans: a later tag group draws inverted with a legend of its own", {
+  d <- swim_fixture()
+  # Patient a gets two tagged events: a treatment reason and an end of study.
+  d$ev[4:5] <- c(90, 120)
+  d$kind <- factor(as.character(d$kind),
+                   levels = c("Adverse event", "End of study: Withdrawal",
+                              "Death"))
+  d$kind[4:5] <- c("Adverse event", "End of study: Withdrawal")
+  d$tag <- c(NA, NA, NA, "AE", "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, "Treatment", "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  ev <- c1$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_identical(inv[match(c("AE", "WD"), tg)], c(FALSE, TRUE))
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_true(all(c("Treatment", "End of study") %in% titles))
+  eos <- lg$groups[[match("End of study", titles)]]$items[[1]]
+  # The group's name is not repeated in its item.
+  expect_identical(c(eos$label, eos$tag), c("Withdrawal", "WD"))
+  expect_true(eos$inv)
+  trt <- lg$groups[[match("Treatment", titles)]]$items[[1]]
+  expect_null(trt$inv)
+  # A tag without a group draws as the first group's, under the tag column.
+  d$ev[3] <- 60
+  d$kind <- factor(as.character(d$kind), levels = c(levels(d$kind), "Dose"))
+  d$kind[3] <- "Dose"
+  d$tag[3] <- "81"
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_identical(inv[match(c("81", "AE", "WD"), tg)], c(FALSE, FALSE, TRUE))
+  titles <- vapply(groups_legend_spec(m$prep)$groups, `[[`, "", "title")
+  expect_true(all(c("tag", "Treatment", "End of study") %in% titles))
+})
+
+test_that("spans: on the same position a later tag group's tag draws last", {
+  # The view splits two tags that would overlap, the later one above
+  # (inst/js/table/marks.js, stackTags()): it must come last whatever the
+  # row order.
+  d <- swim_fixture()
+  d$ev[4:5] <- c(120, 120)
+  d$kind <- factor(as.character(d$kind),
+                   levels = c("Adverse event", "End of study: Withdrawal",
+                              "Death"))
+  d$kind[4:5] <- c("Adverse event", "End of study: Withdrawal")
+  d$tag <- c(NA, NA, NA, "AE", "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, "Treatment", "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  tags <- function(d) {
+    m <- sum_model(d, by = "id", summaries = list(swim_spans(
+      event_x = "ev", event_shape = "kind", event_tag = "tag",
+      event_tag_group = "grp"
+    )))
+    ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+    vapply(ev, function(e) e[[3L]], "")
+  }
+  expect_identical(tags(d), c("AE", "WD"))
+  expect_identical(tags(d[c(1:3, 5, 4, 6:8), ]), c("AE", "WD"))
+  # A day apart, position decides.
+  d$ev[4:5] <- c(121, 120)
+  expect_identical(tags(d), c("WD", "AE"))
+})
+
+test_that("spans: a tag group's rank comes from the factor's levels", {
+  d <- swim_fixture()
+  # Only the second level is present: its tags still draw inverted.
+  d$ev[5] <- 120
+  d$kind <- factor(as.character(d$kind),
+                   levels = c(levels(d$kind), "End of study: Withdrawal"))
+  d$kind[5] <- "End of study: Withdrawal"
+  d$tag <- c(NA, NA, NA, NA, "WD", NA, NA, NA)
+  d$grp <- factor(c(NA, NA, NA, NA, "End of study", NA, NA, NA),
+                  levels = c("Treatment", "End of study"))
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag",
+    event_tag_group = "grp"
+  )))
+  expect_null(m$prep$err)
+  ev <- m$cells$cols[[1]]$ev[[match("a", m$cells$label)]]
+  tg <- vapply(ev, function(e) e[[3L]], "")
+  inv <- vapply(ev, function(e) length(e) > 3L && identical(e[[4L]], 1L), NA)
+  expect_true(inv[[match("WD", tg)]])
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_false("Treatment" %in% titles)
+  eos <- lg$groups[[match("End of study", titles)]]$items[[1]]
+  expect_true(eos$inv)
+})
+
+test_that("spans: a record's own tooltip, event tags, lower doses, regular lanes", {
+  d <- swim_fixture()
+  d$tip <- c("SD · Day 0 to 40", "", NA, NA, NA, NA, NA, "Death · Day 150")
+  d$tag <- c(NA, NA, NA, NA, NA, NA, NA, "DT")
+  d$st <- c("thinner", "hairline", NA, NA, NA, NA, NA, NA)
+  m <- sum_model(d, by = "id", summaries = list(swim_spans(
+    event_x = "ev", event_shape = "kind", event_tag = "tag", tip = "tip",
+    seg_style = "st", lane_size = "md"
+  )))
+  expect_null(m$prep$err)
+  c1 <- m$cells$cols[[1]]
+  i <- match(c("a", "b"), m$cells$label)
+  # The own text replaces the computed tip; an empty one keeps it.
+  expect_identical(c1$tips[[i[[1]]]][[1]], "SD · Day 0 to 40")
+  expect_match(c1$tips[[i[[1]]]][[2]], "PR · 40")
+  # Styles 7 and 8 ride in the segment tuple's fifth slot.
+  expect_identical(c1$segs[[i[[1]]]][[1]][[5]], 7L)
+  expect_identical(c1$segs[[i[[1]]]][[2]][[5]], 8L)
+  # The tagged event carries its tag and its own tip.
+  expect_identical(c1$ev[[i[[2]]]][[1]][[3]], "DT")
+  expect_identical(c1$et[[i[[2]]]][[1]], "Death · Day 150")
+  expect_true(isTRUE(c1$lm))
+  # A level drawn only as tags makes a legend group of its own, titled by
+  # the tag column, its item with the tag's text; no event group is left.
+  lg <- groups_legend_spec(m$prep)
+  titles <- vapply(lg$groups, `[[`, "", "title")
+  expect_true("tag" %in% titles)
+  expect_false("kind" %in% titles)
+  it <- lg$groups[[match("tag", titles)]]$items[[1]]
+  expect_identical(c(it$label, it$tag), c("Death", "DT"))
 })

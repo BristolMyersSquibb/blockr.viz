@@ -20,12 +20,16 @@ table_groups_plain <- function(x) {
   gsub("&amp;", "&", x, fixed = TRUE)
 }
 
-# The recorded mark with its text plain.
+# The recorded mark with its text plain. The reference sent a tooltip text
+# per row for a box and a dot range; the view's hover card reads the raw
+# statistics instead, so the mark has none.
 tg_unescape <- function(w) {
   plain <- function(x) lapply(x, function(e) table_groups_plain(e))
+  lane <- w$kind %in% c("box", "pointrange")
+  if (lane) w$tip <- NULL
   if (!is.null(w[["tip"]])) w$tip <- plain(w[["tip"]])
   w$lv <- lapply(w$lv, function(g) {
-    g$tip <- plain(g[["tip"]])
+    g$tip <- if (!lane) plain(g[["tip"]])
     g
   })
   if (!is.null(w$tips)) w$tips <- lapply(w$tips, plain)

@@ -16,8 +16,9 @@
 #' @return A list of records, JSON-ready.
 #' @noRd
 script_control_records <- function(specs) {
-  # A control its `when` flag switched off is not drawn.
-  specs <- Filter(function(s) !isTRUE(s$off), specs)
+  # A control its `when` flag switched off is not drawn, and a `#| setting`
+  # line is the block's own setting, drawn by the gear.
+  specs <- Filter(function(s) !isTRUE(s$off) && !script_is_setting(s), specs)
   lapply(specs, function(s) {
     label <- script_label(s)
     if (!script_spec_ok(s)) {
@@ -38,6 +39,8 @@ script_control_records <- function(specs) {
       # Bare strings, not {value, label} pairs: the select would show a
       # labelled option as "setosa (setosa)".
       rec$options <- as.list(as.character(s$choices))
+      # What each option shows, when the declaration names its levels.
+      if (length(s$labels)) rec$labels <- as.list(as.character(s$labels))
     }
     if (identical(s$kind, "flag")) {
       rec$options <- list(list(value = "on", label = label),
@@ -54,6 +57,11 @@ script_control_records <- function(specs) {
 # and no kind.
 script_spec_ok <- function(s) {
   is.null(s$error) && !is.na(s$kind)
+}
+
+# A `#| setting` line: the block's own setting, not a control of the script.
+script_is_setting <- function(s) {
+  identical(s$kind, "setting")
 }
 
 # A control's label: the `#| label =` annotation, else the variable name in
@@ -90,7 +98,7 @@ script_key <- function(name) {
 script_control_values <- function(specs, values = list()) {
   out <- list()
   for (s in specs) {
-    if (!script_spec_ok(s) || isTRUE(s$off)) {
+    if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s)) {
       next
     }
     v <- values[[s$name]]
@@ -137,7 +145,9 @@ script_control_values <- function(specs, values = list()) {
 #' @return A named list.
 #' @noRd
 script_title_args <- function(roles, specs, values = list()) {
-  specs <- Filter(script_spec_ok, specs)
+  # A `#| setting` line names the block's setting, whose word opens it.
+  specs <- Filter(function(s) script_spec_ok(s) && !script_is_setting(s),
+                  specs)
   if (!length(specs)) {
     return(roles)
   }
@@ -152,9 +162,9 @@ script_title_args <- function(roles, specs, values = list()) {
     if (is.logical(v) && length(v) == 1L) {
       v <- if (isTRUE(v)) as.character(s$on %||% script_label(s)) else ""
     }
-    # A date without a value prints its placeholder ("automatic"), or
-    # nothing, so a `[ ... ]` clause can carry it.
-    if (identical(s$kind, "date") && (!length(v) || is.na(v[[1L]]))) {
+    # A date or number without a value prints its placeholder
+    # ("automatic"), or nothing, so a `[ ... ]` clause can carry it.
+    if (s$kind %in% c("date", "number") && (!length(v) || is.na(v[[1L]]))) {
       v <- as.character(s$placeholder %||% "")
     }
     # A multi-select prints its picks: "all" when every choice is picked,
@@ -164,7 +174,9 @@ script_title_args <- function(roles, specs, values = list()) {
       picks <- as.character(v)
       pool <- as.character(s$choices)
       if (length(pool)) picks <- picks[picks %in% pool]
-      v <- script_picks_word(picks, pool)
+      v <- script_picks_word(script_labelled(picks, s), pool)
+    } else if (identical(s$kind, "select")) {
+      v <- script_labelled(as.character(v), s)
     }
     v
   })
@@ -183,4 +195,12 @@ script_picks_word <- function(v, choices) {
     v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
   }
   paste(v, collapse = ", ")
+}
+
+# A select's values as its options show them: their labels when the
+# declaration names its levels, else as they are.
+script_labelled <- function(v, s) {
+  if (!length(s$labels) || !length(v)) return(v)
+  at <- match(v, as.character(s$choices))
+  ifelse(is.na(at), v, as.character(s$labels)[at])
 }

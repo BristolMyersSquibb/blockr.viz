@@ -81,6 +81,16 @@ interface TableCol {
 interface TableAxis {
   at: number[];
   labels: string[];
+  /** A numeric swimlane's domain and unit: the browser spaces its ticks by
+   *  the drawn width (axis.js fit()). */
+  d0?: number;
+  d1?: number;
+  unit?: string;
+  /** Study days (`x_days`): ticks "D1", "D20", no day 0 (axis.js dayTicks()). */
+  days?: boolean;
+  /** The set ends, from and to as 1 or 0 (`x_limits`): each a tick
+   *  (axis.js pinTicks()). */
+  pin?: number[];
 }
 
 type TableNums = (number | null)[];
@@ -121,7 +131,7 @@ interface TableLaneGeom {
   whiskerHighWidth?: TableNums; whiskerHigh?: TableNums;
   center?: TableNums; rangeLeft?: TableNums; rangeWidth?: TableNums;
   fenceLeft?: TableNums; fenceWidth?: TableNums; count?: TableNums;
-  tip?: TableTexts; raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
+  raw?: TableLaneRaw; bare?: boolean; disp?: TableTexts;
 }
 
 interface TableMarkLane extends TableMarkBase, TableLaneGeom {
@@ -143,24 +153,32 @@ interface TableMarkPair extends TableMarkBase, Partial<TablePairGeom> {
 }
 
 /** Swimlane: per row, segments [left, width, level from 1, label?]. `dates`:
- *  the domain is in days; `large`: the column takes the width it needs.
+ *  the domain is in days; `large`: the column takes about half the table; `full`: all the room the
+ *  other columns leave.
  *  Overlays, each only when the row asks for it: `ticks` positions, `band`
- *  line pieces [left, width], `events` [x, shape 1-4] with `eventTips`, and
- *  `openAt` where an open lane's arrow sits (null: closed). */
+ *  line pieces [left, width], `events` [x, shape 1-5, tag?] with `eventTips`, and
+ *  `openAt` where an open lane's arrow sits (null: closed). `calmLanes`: the
+ *  lanes above the main one are 9px with a 5px bar. */
 interface TableMarkInterval extends TableMarkBase {
   kind: 'interval'; segs: (number | string)[][][]; tips: string[][]; fills: string[];
-  domainStart: number; domainEnd: number; dates?: boolean; large?: boolean;
-  ticks?: number[][]; band?: number[][][]; events?: number[][][]; eventTips?: string[][];
+  domainStart: number; domainEnd: number; dates?: boolean; days?: boolean; large?: boolean; full?: boolean;
+  ticks?: number[][]; band?: number[][][]; events?: (number | string)[][][]; eventTips?: string[][];
   openAt?: TableNums; subLanes?: TableSubLane[][]; mainStrip?: (string | number)[][][];
-  evenLanes?: boolean; barLabels?: string[][];
+  evenLanes?: boolean; calmLanes?: boolean;
+  /** A grey track behind the main lane and the full bars. */
+  track?: boolean;
+  /** Named full bars: the main bar's name and the longest name in characters. */
+  mainName?: string; laneNameWidth?: number;
 }
 
 /** A thin lane above a swimlane's main one: its name `n`, segments `s` with
  *  tips `t`, strip boxes `b` [text, style], `o` where its open end sits, and
- *  events `e` [x, shape] with tips `et`. */
+ *  events `e` [x, shape, tag?] with tips `et`. */
 interface TableSubLane {
   n: string; s: (number | string)[][]; t: string[]; b?: (string | number)[][]; o?: number;
-  e?: number[][]; et?: string[]; l?: string[];
+  e?: (number | string)[][]; et?: string[];
+  /** A full bar below the main lane (`lane_full`). */
+  f?: boolean;
 }
 
 /** Sparkline in a 100 x 36 box: the line's points, the value band, the last
@@ -187,6 +205,8 @@ interface TableSection {
   label?: string | null;
   /** What a click on its value claims; without keys it only folds. */
   keys?: TableClaim | null;
+  /** Stays open when the rows start closed or all close (a group heading). */
+  open?: boolean;
 }
 
 /** Per-row extras of a structured table. */
@@ -203,6 +223,9 @@ interface TableRows {
   /** Groups: how many rows a heading holds, shown while it is folded;
    *  `null` on other rows. */
   count?: (number | null)[] | null;
+  /** Groups: the section title drawn above an inner row, the first of its
+   *  section (`row_sections`); `null` on other rows. */
+  title?: (string | null)[] | null;
 }
 
 /** One column of cards: a card per row. */
@@ -253,7 +276,7 @@ interface TableModel {
 }
 
 interface TableLegend {
-  groups: { title: string; items: { color?: string; label: string; shape?: number }[] }[];
+  groups: { title: string; items: { color?: string; label: string; shape?: number; tag?: string; inv?: boolean }[] }[];
 }
 
 /** The table block's `derived`, as R builds it. The table itself is
@@ -275,6 +298,10 @@ interface TableDerived {
   gear?: VizGearWire | null;
   /** The pixel ratio of the Image and PowerPoint picture. */
   capture_ratio?: number | null;
+  /** Whether the block hands records to a data view (R's viz_records()). */
+  data_view_tool?: boolean | null;
+  /** The data view's table while the reader has it open. */
+  data_view?: VizDataViewState | null;
 }
 
 /** What the Grid works out once per model (dom.js `structure()`). */
@@ -296,7 +323,9 @@ interface TableStructure {
 }
 
 /** An item of the drawn body: a section header or a row. */
-type TableItem = { s: number; i?: undefined } | { i: number; s?: undefined };
+type TableItem = { s: number; i?: undefined; t?: undefined } |
+  { i: number; s?: undefined; t?: undefined } |
+  { t: number; s?: undefined; i?: undefined };
 
 /** What the Grid draws a row or section with, besides the model. */
 interface TableGridHooks {
@@ -368,7 +397,6 @@ interface TableGrid {
   draw(): void;
   relight(): void;
   counts(): { shown: number; total: number };
-  items(): TableItem[];
   headAt(el: Element | null): { th: Element; h: TableHeadCell } | null;
 }
 
@@ -505,6 +533,7 @@ interface VizTableNamespace {
         o: { last: boolean; shut: boolean; extra: string; stubCls?: string; flush?: boolean;
              head?: string; cell?(c: TableCol, i: number): string | null }): string;
     headKind(m: TableModel, i: number, head: string | undefined): string;
+    title(m: TableModel, st: TableStructure, i: number, flush?: boolean): string;
   };
   drill: {
     same(a: TableSelection | null, b: TableSelection | null): boolean;
@@ -524,7 +553,12 @@ interface VizTableNamespace {
     cell(c: TableCol, i: number, o: { labels: boolean }): string;
     axis(c: TableCol, labels: boolean): string;
     shape(k: number): string;
-    fitLabels(host: ParentNode, again?: boolean): void;
+    tagStack(xs: number[], ws: number[], gap?: number): number[];
+    stackTags(host: ParentNode): void;
+  };
+  axis: {
+    ticks(d0: number, d1: number, w: number, gap?: number): number[];
+    fit(host: ParentNode): void;
   };
   summaries: {
     shows(s: Record<string, unknown>, f: string): boolean;

@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { after } = require('node:test');
+require('../dom-assert-guard.js');
 const { Window } = require('happy-dom');
 const { installUiFake } = require('../ui-fake');
 const { CORE_FILES } = require('./load');

@@ -50,9 +50,11 @@ paint_layout <- function(m, prep, width_in, fs = 9, family = "sans",
     c$dw * paint_ch(fs * PAINT_VAL_SIZE, family) + pad
   }, numeric(1L))
 
-  # A swimlane with `size = "lg"` takes 2.2 shares (CSS: 55% against 26%).
+  # A swimlane with `size = "lg"` takes 2.2 shares (CSS: 55% against 26%),
+  # with `size = "xl"` four.
   wt <- ifelse(is_glyph, 1, 0)
   wt[vapply(m$cols, function(c) isTRUE(c$lg), logical(1L))] <- 2.2
+  wt[vapply(m$cols, function(c) isTRUE(c$xl), logical(1L))] <- 4
 
   rest <- width_in - stub_w - sum(fixed, na.rm = TRUE)
   share <- if (sum(wt)) rest * wt / sum(wt) else rep(0, length(wt))
@@ -83,7 +85,14 @@ paint_row_heights <- function(m, row_h, px, fs) {
         px * 10 + px * 8
     } else if (identical(c$kind, "interval") && !is.null(c$sl)) {
       k <- vapply(rows, function(r) length(c$sl[[r]]), numeric(1L))
-      need <- paint_iv_stack(k, px, isTRUE(c$eq)) + px * 8
+      ev <- vapply(rows, function(r) paint_iv_even(c, r), NA)
+      f <- vapply(rows, function(r) {
+        sum(vapply(c$sl[[r]], function(l) isTRUE(l$f), NA))
+      }, numeric(1L))
+      f[ev] <- 0
+      need <- vapply(seq_along(rows), function(j) {
+        paint_iv_stack(k[[j]] - f[[j]], px, ev[[j]], f[[j]])
+      }, numeric(1L)) + px * 8
       out <- ifelse(k >= 1L, pmax(out, need), out)
       next
     } else if (isTRUE(c$multi)) {
@@ -103,14 +112,18 @@ paint_row_heights <- function(m, row_h, px, fs) {
 paint_axis <- function(p, prep, x, w, ytop, gl) {
   dom <- cells_axis_domain(p, prep)
   if (is.null(dom)) return(list())
+  # A swimlane with named bars leaves their gutter blank.
+  if (identical(p$kind, "interval") && length(p$full) > 1L) {
+    g <- paint_iv_gutter(max(nchar(p$full)), gl)
+    x <- x + g
+    w <- w - g
+  }
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
   } else {
-    at <- cells_axis_ticks(
-      dom$d0, dom$d1,
-      k = if (identical(p$kind, "interval")) 7L else 4L
-    )
-    list(at = at, labels = groups_fmt(at))
+    at <- cells_axis_ticks(dom$d0, dom$d1,
+                           k = if (identical(p$kind, "interval")) 7L else 4L)
+    cells_axis_unit(list(at = at, labels = groups_fmt(at)), p, dom)
   }
   if (length(t$at) < 2L) return(list())
   last <- length(t$at)
@@ -193,14 +206,19 @@ paint_legend <- function(prep, y, hh, gl) {
       at <- at + paint_w(grp$title, fs * 0.8, gl$family) + px * 6
     }
     for (it in grp$items) {
-      key <- if (!is.null(it$shape)) {
+      kw <- sw
+      key <- if (!is.null(it$tag)) {
+        kw <- ft_text_widths(it$tag, gl$family, 7.5 * 0.75) + px * 4
+        paint_event(list(0, 6L, it$tag, if (isTRUE(it$inv)) 1L else 0L),
+                    at - px * 3, gl$H - ly, gl)
+      } else if (!is.null(it$shape)) {
         paint_shape(it$shape, at + sw / 2, gl$H - ly, px * 0.9)
       } else {
         paint_sq(at, gl$H - ly, sw, it$color, c("left", "centre"))
       }
-      g <- c(g, list(key, paint_txt(gl, it$label, at + sw + px * 3, ly,
+      g <- c(g, list(key, paint_txt(gl, it$label, at + kw + px * 3, ly,
                                     size = fs * 0.8)))
-      at <- at + sw + px * 3 + paint_w(it$label, fs * 0.8, gl$family) + px * 10
+      at <- at + kw + px * 3 + paint_w(it$label, fs * 0.8, gl$family) + px * 10
     }
     at <- at + px * 8
   }

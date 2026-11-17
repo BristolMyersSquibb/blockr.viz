@@ -32,7 +32,8 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     ncol = length(plan) + 1L,
     nested = !is.null(prep$parent),
     # Groups headed by their name and a compact matrix open their groups.
-    expanded = isTRUE(prep$parent_heads) || isTRUE(cfg$compact),
+    expanded = isTRUE(prep$parent_heads) || isTRUE(cfg$compact) ||
+      isTRUE(cfg$open),
     compact = isTRUE(cfg$compact),
     label = as.character(rows$.label),      # PLAIN: each consumer escapes
     parent = cells_parent_labels(rows),
@@ -41,6 +42,9 @@ groups_cells <- function(prep, drill = NULL, cfg = NULL) {
     ),
     level = as.integer(rows$.level),
     parent_row = rows$.is_parent,
+    title = if (!is.null(rows$.title) && any(!is.na(rows$.title))) {
+      as.character(rows$.title)
+    },
     head_count = cells_head_count(rows, prep, cfg),
     pick = !is.null(drill),
     # Columns a row click claims, outer to inner (R/table-drill.R).
@@ -188,6 +192,7 @@ cells_bounds <- function(e_mn, e_mx) {
     NA_real_
   }
   list(
+    lo = e_mn, hi = e_mx,
     pos = function(v) {
       w <- if (is.finite(rng)) (v - e_mn) / rng * 100 else rep(0, length(v))
       w[!is.finite(w) & !is.na(v)] <- 0

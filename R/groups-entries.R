@@ -180,7 +180,8 @@ groups_norm_spans <- function(s) {
 # segment rows.
 GROUPS_SPANS_OVERLAYS <- c("ticks", "band_x", "band_xend", "event_x",
                            "event_shape", "open", "lane", "seg_style", "strip",
-                           "bar_label")
+                           "event_tag", "event_tag_group", "tip",
+                           "lane_full")
 
 # The pair row: two summaries of one group drawn as a segment, a hollow
 # diamond at `x` and a dot at `xend`, each read by its function (`x_func`,

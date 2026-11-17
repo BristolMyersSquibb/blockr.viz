@@ -321,6 +321,15 @@
               },
               "slot": false,
               "ctrl": true
+            },
+            "optional": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "slot": false,
+              "ctrl": true
             }
           },
           "sparkline": {
@@ -507,13 +516,13 @@
                 "name": "enum"
               },
               "default": "md",
-              "values": ["md", "lg"],
+              "values": ["md", "lg", "xl"],
               "nullable": false,
               "gear": {
                 "group": "Columns",
                 "control": "segmented",
                 "label": "Width",
-                "labels": ["Regular", "Wide"]
+                "labels": ["Regular", "Wide", "Widest"]
               },
               "slot": false,
               "ctrl": true
@@ -623,6 +632,19 @@
               "slot": false,
               "ctrl": true
             },
+            "lane_full": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Full lanes"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "seg_style": {
               "type": {
                 "name": "column"
@@ -636,7 +658,7 @@
               "slot": false,
               "ctrl": true
             },
-            "bar_label": {
+            "event_tag": {
               "type": {
                 "name": "column"
               },
@@ -644,7 +666,151 @@
               "gear": {
                 "group": "Columns",
                 "control": "column",
-                "label": "Bar label"
+                "label": "Event tag",
+                "when": "event_x"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "event_tag_group": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tag group",
+                "when": "event_tag"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "tip": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tooltip text"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_unit": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis unit"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_limits": {
+              "type": {
+                "name": "limits"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis from and to"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_days": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Study days"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "lane_size": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "sm",
+              "values": ["sm", "md"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Lane height",
+                "labels": ["Thin", "Regular"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "track": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Track behind the bars"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "draw",
+              "values": ["draw", "worst"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps",
+                "labels": ["Drawn over each other", "Worst level"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "inner_overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "same",
+              "values": ["same", "stack"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps on inner rows",
+                "labels": ["As above", "Stacked"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "parent_lanes": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Lanes on group rows"
               },
               "slot": false,
               "ctrl": true
@@ -1156,6 +1322,57 @@
         "control": "segmented",
         "label": "Group rows",
         "labels": ["Name only", "With summary"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "open": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "none",
+      "values": ["none", "all"],
+      "nullable": false,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "segmented",
+        "label": "Groups at start",
+        "labels": ["Closed", "Open"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_sections": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Sections of the inner rows"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_groups": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Group the outer rows by"
       },
       "slot": true,
       "ctrl": true

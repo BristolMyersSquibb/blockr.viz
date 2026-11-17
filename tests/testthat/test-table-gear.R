@@ -153,3 +153,44 @@ test_that("a gear's info reads the input, and its deps and open tab reach the pa
     expect_identical(p$derived$gear$tabs[[1L]]$title, "Data")
   })
 })
+
+test_that("with pick_by the columns row offers the prepared data's per-row columns", {
+  g <- table_gear(list(Rows = "columns"), pick_by = "P", sort_value = "first",
+                  pick_skip = "Start", columns_note = "One per patient.",
+                  columns = list(Age = list(type = "field", col = "AGE")))
+  d <- data.frame(P = c("a", "a", "b"), R = c(NA, "x", NA),
+                  AGE = c(30, NA, 40), ARM = c("A", "A", "B"),
+                  TERM = c("h", "n", "h"), Start = c(1, 1, 2), .hid = 1)
+  attr(d$ARM, "label") <- "Arm"
+  more <- table_gear_more(g, d)
+  # AGE is a gear column's field, TERM varies within a, Start is skipped,
+  # .hid is the block's own.
+  expect_identical(more, list(list(name = "R", label = "R"),
+                              list(name = "ARM", label = "Arm")))
+  w <- table_gear_wire(g, more = more)
+  expect_identical(w$pick$by, "P")
+  expect_identical(w$pick$sort, "first")
+  expect_identical(w$pick$note, "One per patient.")
+  expect_null(table_gear_wire(tgear())$pick)
+  expect_identical(table_gear_more(g, NULL), list())
+  blk <- tgear_block(layout = "groups", by = "P", gear = g,
+                     summaries = list(list(type = "simple", func = "count")))
+  tgear_run(blk, d, function(p) {
+    nm <- vapply(p$derived$gear$pick$more, `[[`, "", "name")
+    expect_identical(nm, c("R", "ARM"))
+  })
+})
+
+test_that("an optional field over a column the data lacks is left out", {
+  d <- data.frame(G = c("x", "y"), n = 1:2)
+  st <- list(layout = "groups", by = "G", summaries = list(
+    list(type = "field", col = "GONE", name = "Gone", optional = TRUE),
+    list(type = "simple", func = "sum", col = "n", name = "N")
+  ))
+  st <- table_normalize(viz_check(viz_block_spec("table"), st))
+  m <- table_model_groups(st, d)
+  expect_null(m$prep$err)
+  expect_identical(vapply(m$prep$plan, function(p) p$label, ""), "N")
+  st$summaries[[1L]]$optional <- FALSE
+  expect_match(table_model_groups(st, d)$prep$err, "not in data")
+})

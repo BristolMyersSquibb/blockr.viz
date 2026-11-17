@@ -130,7 +130,7 @@ test_that("a box column has pre-rounded positions AND widths", {
     list(type = "dist", col = "DUR", show = "box")
   ))$cells$cols[[1]]
   expect_identical(c1$kind, "box")
-  for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn", "tip")) {
+  for (nm in c("wl", "w1", "bl", "bw", "bc", "b2", "w2", "wh", "nn")) {
     expect_length(c1[[nm]], 4L)
   }
   # The domain runs to the widest WHISKER (never to `n`, which the column
@@ -146,8 +146,9 @@ test_that("a box column has pre-rounded positions AND widths", {
   # starts (within the 2dp rounding the model carries).
   expect_true(all(abs(as.numeric(c1$wl) + as.numeric(c1$w1) -
                         as.numeric(c1$bl)) <= 0.02))
-  # The tooltip carries the statistic's own words.
-  expect_match(c1$tip[[1]], "Median .* Q1–Q3 .* 1\\.5×IQR")
+  # The hover card gets the statistic's own words.
+  expect_match(paste(unlist(c1$tt$words), collapse = " "),
+               "Median.*Q1–Q3.*1\\.5×IQR")
 })
 
 test_that("an interval column has per-row segments on the observed domain", {

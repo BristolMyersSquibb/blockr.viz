@@ -3,11 +3,14 @@
 \name{mark_column_kinds}
 \alias{mark_column_kinds}
 \alias{column_kinds}
+\alias{kind_columns}
 \title{Mark what a column is FOR}
 \usage{
 mark_column_kinds(data, ..., .clear = FALSE)
 
 column_kinds(x)
+
+kind_columns(x, kind)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -20,10 +23,15 @@ named under two kinds takes the last one, with a warning.}
 so repeated calls accumulate).}
 
 \item{x}{A data frame.}
+
+\item{kind}{One kind.}
 }
 \value{
 \code{column_kinds()} returns a named character vector, one entry per
 marked column that is still in the frame. Empty when nothing is marked.
+
+\code{kind_columns()} returns the columns of \code{x} marked \code{kind}, in the
+order they were marked; empty when none are.
 }
 \description{
 Attaches a kind to columns so a block's mapping controls offer the few
@@ -34,14 +42,18 @@ A kind is a fact about the column, not about a chart. \code{TRT} is marked
 \code{"group"} once and is then offered for colour, facet, chart group and a
 table's column split.
 
-The four kinds:
+The five kinds:
 \itemize{
 \item \code{group} -- low-cardinality stratifiers (TRT, SEX, RACE, AETOXGR). Colour,
 facet and chart group all take them.
 \item \code{time} -- ordered axis columns (AVISIT, ADY, ASTDY).
 \item \code{value} -- numeric measures (AVAL, CHG, PCHG, AGE).
-\item \code{id} -- identifiers and item dimensions (USUBJID, AEDECOD, CMDECOD).
+\item \code{id} -- identifiers and item dimensions (USUBJID, PARAMCD).
 Groupable, countable and drillable, never offered as a colour.
+\item \code{level} -- columns that code the same thing at different detail, marked
+from specific to broad (a reported term, a preferred term, a body
+system). A subtitle word offers them with \verb{\{label(@by in level)\}}, in
+the order they were marked.
 }
 
 \strong{No mark, no restriction.} A frame where nothing is marked offers every

@@ -88,3 +88,46 @@ test_that("a saved 0.2 heatmap's {@top_n} prints the script's value", {
   saved$payload$top_n <- 10L
   expect_identical(sub(saved)$text, "Top 10 Adverse Event AEDECOD, by TRT01A")
 })
+
+# blockr.core withholds a block's input while a view switch settles. The
+# table draws nothing then, and coming back the payload is the one the
+# browser holds, so nothing goes out: no rows, no new table.
+test_that("a withheld input and its return send nothing", {
+  d <- data.frame(ARM = c("A", "B", "A"), AGE = c(30, 40, 50))
+  # The payload, or NULL for a render that cancelled.
+  sent <- function(expr) {
+    tryCatch(tsrv_payload(expr), shiny.output.cancel = function(e) NULL)
+  }
+  for (layout in c("records", "groups")) {
+    held <- shiny::reactiveVal(FALSE)
+    frame <- shiny::reactiveVal(d)
+    dat <- shiny::reactive({
+      shiny::req(!held())
+      frame()
+    })
+    blk <- if (layout == "groups") {
+      new_table_block(layout = layout, by = "ARM")
+    } else {
+      new_table_block(layout = layout)
+    }
+    shiny::testServer(
+      blockr.core:::get_s3_method("block_server", blk),
+      {
+        expr <- session$makeScope("expr")
+        session$flushReact()
+        expect_identical(sent(expr)$data_rev, 1L, info = layout)
+        held(TRUE)
+        session$flushReact()
+        expect_null(sent(expr), info = layout)
+        held(FALSE)
+        session$flushReact()
+        expect_null(sent(expr), info = layout)
+        # A new frame is a new revision.
+        frame(data.frame(ARM = c("A", "B", "C"), AGE = c(30, 40, 50)))
+        session$flushReact()
+        expect_identical(sent(expr)$data_rev, 2L, info = layout)
+      },
+      args = list(x = blk, data = list(data = dat))
+    )
+  }
+})

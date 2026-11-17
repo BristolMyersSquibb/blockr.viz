@@ -234,7 +234,7 @@ test('an indented row folds the rows under it', () => {
   assert.equal(t.stubs().length, 4);
 });
 
-test('indent steps: in groups a child takes its folding parent\'s label edge; one step per real level', () => {
+test('indent steps: in groups a child takes its folding parent\'s label edge; one step per real level and heading level', () => {
   const { V } = loadTable();
   const steps = (st, flush) => st.indent.map((_, i) => V.table.html.indentSteps(st, i, flush));
   // SOC > term > subject, every parent folding.
@@ -250,6 +250,9 @@ test('indent steps: in groups a child takes its folding parent\'s label edge; on
   // Rows of a second section level are a step in.
   assert.deepEqual(steps({ indent: [0, 1], base: 0, levels: 2, folds: false, toggle: [false, false] }),
                    [1, 2]);
+  // Groups under one level of headings (row_groups): every row one step in.
+  assert.deepEqual(steps({ ...folds, levels: 1 }, true), [1, 2, 2, 2, 1, 1]);
+  assert.deepEqual(steps({ ...folds, levels: 1 }, false), [0, 1, 2, 2, 1, 0]);
 });
 
 test('a bold stub header keeps its class; leaves without sorting are not sortable', () => {

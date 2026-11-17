@@ -206,6 +206,7 @@ LEGACY_NAMES <- legacy_table(list(
   legacy_row("summary", "position", "position",
              c(stacked = "stack", grouped = "dodge", percent = "fill")),
   legacy_row("summary", "scope", NA, rule = "read and dropped"),
+  legacy_row("summary", "bar_label", NA, rule = "read and dropped (spans)"),
   legacy_row("summary", "parent", NA, rule = "read and dropped (spans)"),
   legacy_row("summary", "facet_order", NA, rule = "read and dropped"),
 

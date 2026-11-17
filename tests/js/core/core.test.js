@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+require('../dom-assert-guard.js');
 const { Window } = require('happy-dom');
 const { loadCore } = require('./load');
 

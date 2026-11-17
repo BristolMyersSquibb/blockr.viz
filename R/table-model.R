@@ -57,10 +57,17 @@ table_model_groups <- function(state, data, scale_map = NULL, subject = NULL) {
   if (!is.null(prep$err)) {
     return(list(prep = prep, cells = NULL))
   }
+  prep$rows <- groups_row_titles(prep$rows, data, state$by,
+                                 chr_state(state$row_sections))
+  rg <- groups_row_groups(prep$rows, data, state$by,
+                          chr_state(state$row_groups))
+  prep$rows <- rg$rows
+  prep$sections <- rg$sections
   # The legend's "Numbers:" note goes with the numbers.
   prep$value_labels <- !isFALSE(state$value_labels)
   cfg <- list(value_labels = state$value_labels,
-              compact = identical(state$look, "compact"))
+              compact = identical(state$look, "compact"),
+              open = identical(state$open, "all"))
   list(prep = prep,
        cells = groups_cells(prep, drill = if (length(state$by)) state$drill,
                             cfg = cfg))

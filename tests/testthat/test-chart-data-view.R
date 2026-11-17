@@ -131,6 +131,15 @@ test_that("a selection lights its Summary row, and a row click selects it", {
                         .variable_level = "B")), s, v
   )
   expect_identical(sel$filters, list(visit = "V2"))
+  # A drill column that is not a key (bars by a short id, drill on the long
+  # one) keeps the keys: they select the same rows.
+  v$drill <- "id"
+  sel <- chart_claim_to_selection(
+    list(filters = list(.group1_level = "V2", .variable = "arm",
+                        .variable_level = "B")), s, v
+  )
+  expect_identical(sel$filters, list(visit = "V2", arm = "B"))
+  v$drill <- "visit"
   # The outer key alone lights its section header; the inner key alone
   # lights nothing.
   part <- list(type = "categorical", filters = list(visit = "V2"))

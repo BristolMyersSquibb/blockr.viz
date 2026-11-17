@@ -127,6 +127,14 @@ table_summary_specs <- function() {
           "Distinct values joined: up to 3, then \"+n more\"; over 8,",
           "\"n values\"."
         )
+      ),
+      optional = viz_arg(
+        type = "bool", default = FALSE,
+        describe = paste(
+          "TRUE: a column the data lacks leaves the summary out of the",
+          "table, with no error (a column a picker offered that the data",
+          "no longer has)."
+        )
       )
     ),
 
@@ -189,10 +197,12 @@ table_summary_specs <- function() {
         describe = "Extra columns in the tooltip."
       ),
       size = viz_arg(
-        type = "enum", default = "md", values = c("md", "lg"),
+        type = "enum", default = "md", values = c("md", "lg", "xl"),
         gear = gear("Columns", "segmented", "Width",
-                    labels = c("Regular", "Wide")),
-        describe = "Segment thickness."
+                    labels = c("Regular", "Wide", "Widest")),
+        describe = paste("The swimlane's share of the table: regular, wide",
+                         "(about half) or widest (all the room the other",
+                         "columns leave).")
       ),
       color = summary_color_arg(),
       ticks = viz_arg(
@@ -256,6 +266,17 @@ table_summary_specs <- function() {
           "run across the row; an event with a lane draws on its lane."
         )
       ),
+      lane_full = viz_arg(
+        type = "column", null = "thin lanes only",
+        gear = gear("Columns", "column", "Full lanes"),
+        describe = paste(
+          "Logical. A lane whose records have it TRUE is a full bar: the",
+          "first such lane is the main lane, the others draw below it at full",
+          "height, with their own events and open end (a second response",
+          "assessment). With more than one bar each is named at its left, the",
+          "main one in bold."
+        )
+      ),
       seg_style = viz_arg(
         type = "column", null = "all solid",
         gear = gear("Columns", "column", "Segment style"),
@@ -264,18 +285,128 @@ table_summary_specs <- function() {
           "period), \"hollow\" an outlined box (a delay), \"dot\" a ring at its",
           "start (one administration), \"step\" a small down step at its",
           "start (a dose cut), \"outline\" filled with a dark edge (a",
-          "serious event). Anything else draws solid. A dot or a step needs",
-          "no end."
+          "serious event), \"thinner\" a lower bar (a reduced dose),",
+          "\"hairline\" a 1px line (a dose of zero). Anything else draws",
+          "solid. A dot or a step needs no end."
         )
       ),
-      bar_label = viz_arg(
-        type = "column", null = "no bar labels",
-        gear = gear("Columns", "column", "Bar label"),
+      event_tag = viz_arg(
+        type = "column", null = "shapes only",
+        gear = gear("Columns", "column", "Event tag", when = "event_x"),
         describe = paste(
-          "Text written on each record's bar when it fits, else just after",
-          "it when the lane has room before its next bar, else nowhere (the",
-          "tooltip keeps the label). An empty value labels nothing. Drawn on",
-          "the main lane and on even lanes, not on thin ones."
+          "Short text, per event. An event with a value draws as that text",
+          "in a small box just after its position (\"AE\") instead of its",
+          "shape. A shape level whose events all carry a tag shows a box in",
+          "the legend. Two tags on one lane that would overlap split around",
+          "the lane's centre line, the later one above (on the same day, the",
+          "later tag group's)."
+        )
+      ),
+      event_tag_group = viz_arg(
+        type = "column", null = "one group",
+        gear = gear("Columns", "column", "Tag group", when = "event_tag"),
+        describe = paste(
+          "The group of a tagged event (\"Treatment discontinuation\", \"End",
+          "of study\"). Each group is a legend group of its own, titled by",
+          "the value, in the column's level order. The first group's tags",
+          "draw as outlined boxes, the others' inverted: an ink box with",
+          "light text. For a factor the first group is its first level, even",
+          "when no event has it. An item named \"<group>: <name>\" shows as",
+          "<name> under its group."
+        )
+      ),
+      tip = viz_arg(
+        type = "column", null = "the computed tooltip",
+        gear = gear("Columns", "column", "Tooltip text"),
+        describe = paste(
+          "The tooltip of a record, segment or event, as is: its text up to",
+          "the first \" \u00b7 \" heads the card, each further part is a line.",
+          "An empty value keeps the computed tooltip (label, level, span,",
+          "fields)."
+        )
+      ),
+      x_unit = viz_arg(
+        type = "string", default = NULL, null = "numbers only",
+        gear = gear("Columns", "text", "Axis unit"),
+        describe = paste(
+          "Word written before the first label of the column's axis",
+          "(\"Day\" reads \"Day 0\"). Only on a numeric axis; a date axis",
+          "names its own dates."
+        )
+      ),
+      x_limits = viz_arg(
+        type = "limits", null = "the data's range",
+        gear = gear("Columns", "text", "Axis from and to"),
+        example = c(1, 180),
+        describe = paste(
+          "The axis from and to, as `c(1, 180)`; `NA` at either end is the",
+          "data's. Dates as \"2024-01-01\". A bar across a limit is cut at",
+          "it, with the open caret at the right; bars, ticks and events",
+          "wholly outside are not drawn. Tooltips keep the records' own",
+          "values. A prepare script can set the same as the attribute",
+          "`blockr_domain` of the start column, which this overrides end by",
+          "end."
+        )
+      ),
+      x_days = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Study days"),
+        describe = paste(
+          "The axis reads in study days: \"D1\", \"D20\", ..., day 1",
+          "always a tick, and no day 0, so an x at or below 0 reads as the",
+          "day before (x = 0 is \"D-1\"), as ADaM counts. Only on a numeric",
+          "axis; the hover reads the same way."
+        )
+      ),
+      lane_size = viz_arg(
+        type = "enum", default = "sm", values = c("sm", "md"),
+        gear = gear("Columns", "segmented", "Lane height",
+                    labels = c("Thin", "Regular")),
+        describe = paste(
+          "Height of the lanes above the main lane: \"sm\" 5px with a 3px",
+          "line, \"md\" 9px with a 5px bar whose free ends round, for rows",
+          "where the lanes carry the story (a drug per lane)."
+        )
+      ),
+      track = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Track behind the bars"),
+        describe = paste(
+          "A grey track behind the main lane and the full bars, as a bar",
+          "column draws it. Off: the bars stand on the surface. Thin lanes",
+          "never have one."
+        )
+      ),
+      overlap = viz_arg(
+        type = "enum", default = "draw", values = c("draw", "worst"),
+        gear = gear("Columns", "segmented", "Overlaps",
+                    labels = c("Drawn over each other", "Worst level")),
+        describe = paste(
+          "How records that overlap on one lane draw. \"draw\": each its own",
+          "bar, the later over the earlier. \"worst\": cut into pieces, each",
+          "coloured by the highest colour level active there (legend order),",
+          "so one stripe shows the worst stretch."
+        )
+      ),
+      inner_overlap = viz_arg(
+        type = "enum", default = "same", values = c("same", "stack"),
+        gear = gear("Columns", "segmented", "Overlaps on inner rows",
+                    labels = c("As above", "Stacked")),
+        describe = paste(
+          "How a lane's records that overlap draw on the inner rows of a",
+          "nested table. \"same\": as `overlap` says. \"stack\": each record",
+          "whole, a record that overlaps an earlier one on a copy of the lane",
+          "under it, so two episodes of one event read as two bars. Outer",
+          "rows keep `overlap`."
+        )
+      ),
+      parent_lanes = viz_arg(
+        type = "bool", default = FALSE,
+        gear = gear("Columns", "toggle", "Lanes on group rows"),
+        describe = paste(
+          "With `group_rows = \"summary\"`, an outer row draws its rows'",
+          "lanes, events and open ends as an inner row does. Off: the outer",
+          "row draws the main lane's bars only."
         )
       ),
       strip = viz_arg(

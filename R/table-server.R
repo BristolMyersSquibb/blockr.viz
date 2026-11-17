@@ -36,9 +36,11 @@ table_server <- function(id, data, init, gear = NULL) {
       )
       part <- function() parts[[kit$state$layout()]]
       titles <- table_titles(kit, src, part)
+      dv <- table_records_view(kit, src)
       list(
         normalize = function(v) table_normalize(v, viz_values(kit$state)),
-        payload = table_payload(kit, src, part, titles, table_gear_info(gear, data)),
+        payload = table_payload(kit, src, part, titles,
+                                table_gear_info(gear, data, src$rows)),
         frame = src$rows,
         expr = table_expr(kit, part),
         exhibit = function() {
@@ -48,6 +50,10 @@ table_server <- function(id, data, init, gear = NULL) {
         },
         probe = function() part()$probe(),
         claims = table_claims(kit, part),
+        tables = dv$tables,
+        tables_shape = dv$shape,
+        data_view = dv$derived,
+        data_view_tool = dv$tool,
         cond = table_cond(kit, parts),
         script = src$prep
       )
@@ -97,16 +103,27 @@ table_titles <- function(kit, src, part) {
 
 # A block's own gear as the browser gets it, with what its `info` finds in
 # the input, read again when the input changes.
-table_gear_info <- function(gear, data) {
+table_gear_info <- function(gear, data, rows = function() NULL) {
   if (is.null(gear)) {
     return(function() NULL)
   }
+  # With `pick_by`, the columns row offers the prepared data's columns.
+  more <- if (!is.null(gear$pick_by)) {
+    shiny::reactive(table_gear_more(
+      gear, tryCatch(rows(), error = function(e) NULL)
+    ))
+  } else {
+    function() list()
+  }
   if (is.null(gear$info)) {
-    wire <- table_gear_wire(gear)
-    return(function() wire)
+    if (is.null(gear$pick_by)) {
+      wire <- table_gear_wire(gear)
+      return(function() wire)
+    }
+    return(function() table_gear_wire(gear, more = more()))
   }
   info <- shiny::reactive(tryCatch(gear$info(data()), error = function(e) NULL))
-  function() table_gear_wire(gear, info())
+  function() table_gear_wire(gear, info(), more())
 }
 
 # The payload: the state, the current layout's table model as the rows
@@ -116,6 +133,13 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
   rows <- viz_rows()
   written <- last_value_cache()
   function() {
+    # An input that is withheld (blockr.core holds a block's input back while
+    # a view switch settles, or while the block is out of the eval set) draws
+    # nothing: the render cancels and the browser keeps its table. Drawn as
+    # "No data", it moved the rows' revision twice per visit, so coming back
+    # sent all rows again and the browser built the table anew. An input that
+    # fails for real still draws its message.
+    src_withheld(src)
     v <- kit$values()
     built <- part()$drawn()
     derived <- c(
@@ -128,17 +152,31 @@ table_payload <- function(kit, src, part, titles, gear = function() NULL) {
       built$derived
     )
     # No table is `{}`; `columns` are the input's, for the gear.
-    # A matrix's tile columns go out as JSON written here
-    # (R/table-tile-json.R), once per model: a click or a title builds
-    # the payload again over the same one.
+    # A matrix's tile columns and a swimlane column's segments and lanes go
+    # out as JSON written here (R/table-tile-json.R, R/table-lane-json.R),
+    # once per model: a click or a title builds the payload again over the
+    # same one.
     data <- if (is.null(built$model)) {
       structure(list(), names = character())
     } else {
-      written(built$model, function() table_tile_json(built$model))
+      written(built$model, function() {
+        table_lane_json(table_tile_json(built$model))
+      })
     }
     viz_payload(kit$spec, v, rows(data, src$columns()), kit$revs,
                 derived = derived[!vapply(derived, is.null, logical(1L))])
   }
+}
+
+# Stops silently when the input is withheld; any other error is left to the
+# layout, which draws it.
+src_withheld <- function(src) {
+  held <- tryCatch({
+    src$rows()
+    FALSE
+  }, shiny.silent.error = function(e) TRUE, error = function(e) FALSE)
+  shiny::req(!held)
+  invisible(NULL)
 }
 
 # The emitted filter. The same object comes back while the code is

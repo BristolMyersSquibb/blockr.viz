@@ -17,8 +17,9 @@
                                  var(--blockr-color-border-strong, #d1d5db));
   --vz-table-groups-bar: var(--blockr-color-bg-accent, #2563eb);
   --vz-table-groups-tick: var(--blockr-color-border-default, #e5e7eb);
-  /* The event layer's ink: swimlane events, their legend and the open arrow. */
-  --vz-ev-ink: #4b5563;
+  /* The event layer's ink: swimlane events, their legend and the open arrow.
+     A palette step, so the dark scheme lightens it. */
+  --vz-ev-ink: var(--blockr-grey-600, #4b5563);
   /* The floor under a GLYPH -- see .vz-table-groups-barwrap below. A board
      that wants shorter marks and less scrolling overrides it on the
      container. */
@@ -326,7 +327,8 @@
   margin-top: -0.5px;
   background: var(--blockr-color-border-default, #e5e7eb);
 }
-.vz-table-groups-lane i { position: absolute; }
+.vz-table-groups-lane i,
+.vz-table-groups-lane .vz-table-lane-open { position: absolute; }
 /* Colour-split distribution cell: the levels stack INSIDE the cell, so the
    column stays one column. Every level keeps the full 12px lane and its
    marks; a row with more levels grows to hold them. (Thinning the third
@@ -511,16 +513,25 @@
   background: var(--blockr-color-text-default, #111827);
   pointer-events: none;
 }
+/* The open end: a thin caret 2px past the bar, in the bar's colour (set
+   inline), its stroke 1.6px whatever its size. It takes the pointer, so its
+   hover says its bar's tooltip (tooltip.js, laneText()). */
 .vz-table-groups-ivcell .vz-table-lane-open {
   top: 50%;
-  width: 0;
-  height: 0;
-  margin-left: 1px;
-  border-left: 7px solid var(--vz-ev-ink, #4b5563);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  width: 4px;
+  height: 8px;
+  margin-left: 3px;
+  overflow: visible;
+  color: var(--vz-ev-ink, #4b5563);
   transform: translateY(-50%);
-  pointer-events: none;
+  pointer-events: auto;
+}
+.vz-table-groups-ivcell .vz-table-lane-open polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .vz-table-groups-ivcell .vz-table-lane-ev {
   position: absolute;
@@ -572,6 +583,17 @@
 .vz-table-groups-ivstack > .vz-table-groups-ivcell:not(.is-thin) {
   margin-top: 2px;
 }
+/* The swimlane's optional track (`track`): the bar column's grey behind the
+   main lane and the full bars, never behind a thin lane. */
+.vz-table-groups-ivcell.has-track {
+  background: var(--vz-table-groups-track);
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+/* Full bars below the main lane: 4px apart, the white between the levels of
+   a split bar (.vz-table-groups-track.is-tall). */
+.vz-table-groups-ivstack > .vz-table-groups-ivcell.is-full {
+  margin-top: 4px;
+}
 .vz-table-groups-ivcell.is-thin {
   height: 5px;
 }
@@ -581,9 +603,8 @@
   border-radius: 0;
 }
 .vz-table-groups-ivcell.is-thin .vz-table-lane-open {
-  border-left-width: 5px;
-  border-top-width: 3.5px;
-  border-bottom-width: 3.5px;
+  width: 3px;
+  height: 6px;
 }
 /* Even lanes (no record on the main lane): every lane is a 10px lane with
    an 8px bar, and the main lane turns into a layer over the whole stack that
@@ -614,30 +635,6 @@
 .vz-table-groups-ivcell .vz-table-lane-seg.is-outline {
   box-shadow: inset 0 0 0 1px var(--blockr-color-text-default, #111827);
 }
-/* Bar labels (a spans row's bar_label): dark text on the bar when it fits,
-   after it when the lane has room, hidden otherwise (marks.js fitLabels()).
-   Until placed they show nothing. Shown by opacity, never by visibility:
-   a visible child shows through a hidden parent, and the dock hides its
-   inactive panels with visibility. The label never runs past its room. */
-.vz-table-groups-ivcell .vz-table-lane-lab {
-  position: absolute;
-  top: 50%;
-  transform: translateY(calc(-50% - 1px));
-  font-size: 10.5px;
-  line-height: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  color: var(--blockr-color-text-default, #111827);
-  pointer-events: none;
-  opacity: 0;
-}
-.vz-table-groups-ivcell .vz-table-lane-lab.is-on {
-  opacity: 1;
-  padding-left: 3px;
-}
-.vz-table-groups-ivcell .vz-table-lane-lab.is-after {
-  opacity: 1;
-}
 /* Segment styles. Dashed (a skipped stretch) and hollow (a delay) paint the
    surface first, so they cut through a period drawn under them. A dot is one
    administration, a step a dose cut, both at the record's start. */
@@ -657,6 +654,82 @@
 .vz-table-groups-ivcell.is-thin .vz-table-lane-seg.is-hollow {
   top: -0.5px;
   bottom: -0.5px;
+}
+/* Lower doses: a thinner bar, and a 1px line for a dose of zero. */
+.vz-table-groups-ivcell .vz-table-lane-seg.is-thinner {
+  top: 30%;
+  bottom: 30%;
+}
+.vz-table-groups-ivcell .vz-table-lane-seg.is-hairline {
+  top: calc(50% - 0.5px);
+  bottom: calc(50% - 0.5px);
+  border-radius: 0;
+}
+/* Regular lanes (lane_size = md): 9px with a 5px bar whose free ends round,
+   so a drug reads as one quiet line with room between lanes. */
+.vz-table-groups-ivcell.is-thin.is-md {
+  height: 9px;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg {
+  top: 2px;
+  bottom: 2px;
+  border-radius: var(--blockr-mark-radius, 2px);
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-jl {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-jr {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-thinner {
+  top: 3px;
+  bottom: 3px;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-seg.is-hairline {
+  top: 4px;
+  bottom: 4px;
+  border-radius: 0;
+}
+.vz-table-groups-ivcell.is-thin.is-md .vz-table-lane-open {
+  width: 3.5px;
+  height: 7px;
+}
+/* A tagged event: its text in a small box just after its position, in the
+   event ink over a surface ring. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag {
+  width: auto;
+  height: auto;
+  transform: translate(3px, -50%);
+  padding: 0 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0.02em;
+  color: var(--vz-ev-ink, #4b5563);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid var(--vz-ev-ink, #4b5563);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1.5px var(--blockr-color-bg-surface, #ffffff);
+  white-space: nowrap;
+  cursor: default;
+}
+/* Two tags that would overlap split around the centre line, the earlier one
+   below, the later one above (marks.js, stackTags()). The row keeps its
+   height. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-lo {
+  transform: translate(3px, calc(-50% + 6px));
+}
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-hi {
+  transform: translate(3px, calc(-50% - 6px));
+}
+/* A tag of a later tag group (event_tag_group): inverted, light text in an
+   ink box. */
+.vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-inv,
+.vz-table-groups-legend-tag.is-inv {
+  color: var(--blockr-color-bg-surface, #ffffff);
+  background: var(--vz-ev-ink, #4b5563);
 }
 .vz-table-groups-ivcell .vz-table-lane-adm {
   top: 50%;
@@ -709,6 +782,21 @@
   overflow: visible;
 }
 .vz-table-groups-legend-shape .vz-ev-ring { display: none; }
+/* A tagged event's legend key: its text in the box the lanes draw. */
+.vz-table-groups-legend-tag {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0.02em;
+  color: var(--vz-ev-ink, #4b5563);
+  background: var(--blockr-color-bg-surface, #ffffff);
+  border: 1px solid var(--vz-ev-ink, #4b5563);
+  border-radius: 2px;
+  vertical-align: 1px;
+}
 /* The exhibit form (a spans row's size = lg): a WIDER column for boards
    where the swimlane is the centerpiece -- more horizontal resolution for
    the spans, not more height. Its floor is two lane floors: with 320px a
@@ -716,6 +804,12 @@
    panel. Below the floor the table scrolls sideways in its wrapper. */
 .vz-table-groups-table td.vz-table-groups-wide {
   width: 55%;
+  min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
+}
+/* Widest (size = xl): the swimlane takes all the room the other columns
+   leave them at their content width; same floor as the wide form. */
+.vz-table-groups-table td.vz-table-groups-full {
+  width: 100%;
   min-width: calc(2 * var(--vz-table-groups-lane-min, 80px));
 }
 /* Same-event emphasis, from hover (seg-hover + is-same). NOT opacity: translucency stacks
@@ -879,6 +973,14 @@
   min-width: 160px;
 }
 
+/* The time under the pointer off every mark: a small label, no card. */
+.vz-table-lane-tip.is-at {
+  padding: 1px 6px;
+  border-radius: var(--blockr-radius-sm, 4px);
+  box-shadow: none;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+
 /* Zero-centred difference bar. Zero sits in the MIDDLE here, so neither end of
    the rail is an axis and both round; the fill rounds on whichever end points
    away from the zero tick. */
@@ -997,6 +1099,32 @@
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent > td {
   padding-top: 11px;
   padding-bottom: 3px;
+}
+/* A group heading (`row_groups`) is a full-width cell; its button carries
+   the indent, set with the other heading edges below. The rows under it
+   are one step in (indentSteps()). */
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'] tbody tr.vz-table-section-header td.vz-table-section-cell {
+  padding-left: 0;
+}
+.vz-table-groups-table[data-summarize-nested='1'] .vz-table-section-cell.level-1 .vz-table-section-btn {
+  padding-left: calc(3px + var(--blockr-card-inset, 0px));
+}
+/* Under group headings the header, the headings and the rows take the
+   records and variables layouts' edges (table-structured.css): the
+   chevrons of the header and the headings (above) 3px in from the card's
+   inset, their labels 21px further, each row level one 16px step in. The rows
+   under a heading then sit where a records table's inner headings do. */
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'][data-summarize-headings='1'] thead th.vz-table-stub-header {
+  padding-left: calc(24px + var(--blockr-card-inset, 0px));
+}
+.vz-table-groups-table[data-summarize-nested='1'][data-summarize-headings='1'] td.vz-table-groups-label-col {
+  padding-left: calc(24px + var(--blockr-card-inset, 0px) + var(--vz-indent, 0) * 16px);
+}
+/* Closed, nothing hangs under it: the same 14px split evenly, so the label,
+   the chevron and the marks sit on the row's middle. */
+.vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-parent.collapsed > td {
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 .vz-table-groups-table[data-summarize-nested='1'] tbody tr.is-group-end > td {
   padding-bottom: 7px;
@@ -1154,3 +1282,49 @@
   margin: 0 auto;
 }
 
+
+/* Full bars (`lane_full`): a second response assessment draws below the main
+   lane at its height. With more than one bar each is named in a gutter at the
+   left of the cell, the main one bold; the axis leaves the same gutter blank,
+   so the bars line up with its ticks. The gutter is in ch of the names' 10px
+   type. */
+.vz-table-groups-ivnamed,
+.vz-table-groups-axis-lpad {
+  --vz-lane-gutter: calc(var(--vz-lane-lw, 4ch) + 8px);
+  font-size: 10px;
+}
+.vz-table-groups-ivnamed {
+  padding-left: var(--vz-lane-gutter);
+}
+.vz-table-groups-axis-lpad {
+  flex: 0 0 var(--vz-lane-gutter);
+  margin-right: -8px;
+}
+.vz-table-groups-ivcell .vz-table-lane-name {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  margin-right: 6px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--blockr-color-text-muted, #6b7280);
+  pointer-events: none;
+}
+.vz-table-groups-ivcell .vz-table-lane-name.is-main {
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+}
+
+/* A section title over inner rows (`row_sections`): small bold type on the
+   rows' label edge, no rule and no count, a little air above. */
+.vz-table-groups-table tbody tr.vz-table-row-title > td {
+  padding-top: 8px;
+  padding-bottom: 0;
+  font-size: 12px;
+  font-weight: var(--blockr-font-weight-semibold, 600);
+  color: var(--blockr-color-text-default, #111827);
+  line-height: 16px;
+  border: 0;
+}

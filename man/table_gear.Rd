@@ -11,7 +11,11 @@ table_gear(
   clauses = character(),
   info = NULL,
   open = NULL,
-  deps = list()
+  deps = list(),
+  pick_by = NULL,
+  pick_skip = character(),
+  sort_value = NULL,
+  columns_note = NULL
 )
 }
 \arguments{
@@ -41,6 +45,23 @@ table or column missing), or \code{NULL}.}
 
 \item{deps}{HTML dependencies the block's page needs, the script of a
 package's own rows among them.}
+
+\item{pick_by}{The column naming the table's outer rows (a patient id).
+Set, the \code{"columns"} row is a select of several picks: \code{columns} first,
+then every column of the prepared data with at most one value per value
+of \code{pick_by}, named by its label, each a \code{field} summary. A picked column
+the data no longer has is left out of the table. Columns whose name
+starts with a dot, and those of \code{by}, are not offered.}
+
+\item{pick_skip}{Columns of the prepared data the \code{"columns"} row does
+not offer (the block's own: a swimlane's start and end).}
+
+\item{sort_value}{The name of a value the prepare script declares, which
+the \code{"columns"} row sets to its first pick (the name in \code{columns}, else
+the data column's name; \code{""} with none), so the script can order the
+rows by the first column.}
+
+\item{columns_note}{A line under the \code{"columns"} row.}
 }
 \value{
 A \code{viz_table_gear} object.
@@ -61,7 +82,9 @@ caption, and the "In the subtitle" ticks when \code{clauses} is given) or
 \code{"drill"} (drill, drill_target, drill_table);
 \item a value the prepare script declares (\code{doses <- factor(...)  #| select()}),
 drawn as an ordinary row that writes \code{script_values};
-\item \code{"columns"}: a checklist of \code{columns};
+\item \code{"columns"}: a checklist of \code{columns}; with \code{pick_by}, a select of
+several picks instead, in the order picked (a drag reorders them), that
+also offers the prepared data's columns with one value per row;
 \item \code{"group"}: a pick among \code{groups} (or none) for the outer column of a
 nested \code{by}, which groups the rows;
 \item a key with an editor registered in the browser

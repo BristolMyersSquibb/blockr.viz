@@ -248,8 +248,9 @@ groups_prep_groups <- function(data, by) {
   parent <- if (length(by) == 2L) by[[1L]]
   keys <- c(parent, group)
   # A missing group draws no row, so a colour level only such rows carry gets
-  # no slot or legend key.
-  drawn <- stats::complete.cases(data[keys])
+  # no slot or legend key. Nested, a record with its outer group and no inner
+  # one still draws on its outer row (a patient's own records).
+  drawn <- stats::complete.cases(data[if (is.null(parent)) keys else parent])
   list(data = data, all = all, group = group, parent = parent, keys = keys,
        drawn = drawn)
 }
@@ -265,6 +266,12 @@ groups_present <- function(col, data) {
 #' @return the summaries or `list(err =)`.
 #' @noRd
 groups_prep_norm <- function(summaries, data) {
+  # An optional field over a column the data lacks is left out.
+  gone <- vapply(summaries, function(s) {
+    is.list(s) && identical(s$type, "field") && isTRUE(s$optional) &&
+      !is.null(chr_state(s$col)) && !chr_state(s$col) %in% names(data)
+  }, logical(1L))
+  summaries <- summaries[!gone]
   summaries <- groups_norm_summaries(summaries, data)
   if (!is.null(summaries$err)) return(list(err = summaries$err))
   if (!length(summaries)) return(list(err = "Add at least one summary column"))
@@ -437,8 +444,15 @@ groups_prep_skeleton <- function(data, keys, group, parent) {
                      stringsAsFactors = FALSE)
   for (k in keys) leaf[[k]] <- skel[[k]]
   # The data's own order (factor levels, else first appearance), read only by
-  # `sort_by = "data"`.
-  leaf$.ord <- groups_data_ord(data[[group]], leaf$.label)
+  # `sort_by = "data"`. Nested, an inner row's first appearance is its own
+  # under its outer row: a name first seen under another outer row does not
+  # move it.
+  leaf$.ord <- if (!is.null(parent) && !is.factor(data[[group]])) {
+    seen <- unique(paste(data[[parent]], data[[group]], sep = "\r"))
+    as.numeric(match(paste(leaf$.parent, leaf$.label, sep = "\r"), seen))
+  } else {
+    groups_data_ord(data[[group]], leaf$.label)
+  }
   par_rows <- NULL
   if (!is.null(parent)) {
     par_rows <- groups_parent_skeleton(data, skel, parent)

@@ -34,8 +34,9 @@ VIZ_DATA_TABLES <- c(summary = "Summary", rows = "Rows", all = "All rows")
 #'   selected, and under a selection the rows with nothing selected, else
 #'   NULL (chart_data_view()).
 #' @param shape A function of no arguments returning `list(tables,
-#'   selected)`: the names of the tables `tables()` would hold, and whether a
-#'   selection narrows the rows. It builds none of them.
+#'   selected, label)`: the names of the tables `tables()` would hold,
+#'   whether a selection narrows the rows, and optionally the rows' own name
+#'   (data_download_label()). It builds none of them.
 #' @param exhibit The block's exhibit function, for the titles, the footer and
 #'   the file name.
 #' @param session,filename As viz_downloads().
@@ -70,11 +71,7 @@ viz_data_downloads <- function(tables, shape, exhibit, session, filename) {
     sh <- tryCatch(shape(), error = function(e) NULL)
     out <- list()
     for (tbl in intersect(names(VIZ_DATA_TABLES), sh$tables)) {
-      label <- if (isTRUE(sh$selected) && tbl == "rows") {
-        "Selected rows"
-      } else {
-        VIZ_DATA_TABLES[[tbl]]
-      }
+      label <- data_download_label(tbl, sh)
       for (ext in names(formats)) {
         out[[length(out) + 1L]] <- list(
           id = entry_id(tbl, ext), label = label, ext = ext,
@@ -84,6 +81,20 @@ viz_data_downloads <- function(tables, shape, exhibit, session, filename) {
     }
     out
   }
+}
+
+# A table's name in the menu. Records under a name of their own (a table
+# block's data view) take it: "Adverse events", "All adverse events".
+data_download_label <- function(tbl, sh) {
+  lab <- sh$label
+  if (is.character(lab) && length(lab) == 1L && nzchar(lab) &&
+        tbl %in% c("rows", "all")) {
+    return(if (tbl == "rows") lab else paste("All", tolower(lab)))
+  }
+  if (isTRUE(sh$selected) && tbl == "rows") {
+    return("Selected rows")
+  }
+  VIZ_DATA_TABLES[[tbl]]
 }
 
 # "6 rows", "40 of 254": the count the data view's tab shows.

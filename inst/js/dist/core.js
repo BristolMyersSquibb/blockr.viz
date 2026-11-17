@@ -1,4 +1,4 @@
-// blockr.viz bundle d82ad37ba6a3cb4f93286372e43566e4, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle abb6b04415ba849a1081ad2607e46495, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -1491,7 +1491,8 @@
 
   /** Type a value over its word: Enter or leaving commits, Escape puts the
    * word back. A number is held in its range and steps on the arrow keys
-   * (by ten with Shift); an emptied number keeps its value.
+   * (by ten with Shift); an emptied number keeps its value, unless it can be
+   * empty (`clear`).
    * @param {VizScope} scope @param {HTMLElement} anchor
    * @param {VizSlotOpener & { kind: 'number' | 'entry' }} how */
   function edit(scope, anchor, how) {
@@ -1518,6 +1519,7 @@
       if (num) {
         const v = parseFloat(text);
         if (Number.isFinite(v)) how.set(fix(v));
+        else if (text === '' && num.clear) how.set(null);
       } else if (how.kind === 'entry') {
         how.set(how.fromText(text));
       }
@@ -3386,9 +3388,9 @@
     const bounds = { min: sp.min ?? null, max: sp.max ?? null, minOpen: false };
     switch (sp.kind) {
       case 'select': return /** @type {VizArg} */ ({ type: { name: 'enum' }, values: sp.options || [],
-                                                     gear: { ...gear, control: 'select' } });
+                                                     gear: { ...gear, control: 'select', labels: sp.labels } });
       case 'multi': return /** @type {VizArg} */ ({ type: { name: 'enums' }, values: sp.options || [],
-                                                    gear: { ...gear, control: 'select' } });
+                                                    gear: { ...gear, control: 'select', labels: sp.labels } });
       case 'segmented': return /** @type {VizArg} */ ({ type: { name: 'bool' },
                                                         gear: { ...gear, control: 'toggle' } });
       case 'number': return /** @type {VizArg} */ ({ type: { name: 'number' }, bounds,
@@ -3485,6 +3487,10 @@
           if (sp) {
             rows[SV + k] = { kind: 'script', name: k, sp };
             put(SV + k, scriptArg(sp), title);
+          } else if (k === 'columns' && wire.pick) {
+            rows[k] = { kind: 'picks' };
+            put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
+              gear: { label: 'Listing columns', control: 'profile' } }), title);
           } else if (k === 'columns' && columns.length) {
             rows[k] = { kind: 'columns' };
             put(k, /** @type {VizArg} */ ({ type: { name: 'values' },
@@ -3528,6 +3534,9 @@
       else if (r.kind === 'columns') {
         out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
           .map((s) => s && s.name).filter((n) => names.has(n));
+      } else if (r.kind === 'picks') {
+        out[key] = (Array.isArray(cfg.summaries) ? cfg.summaries : [])
+          .map((s) => pickId(s, names)).filter((x) => x != null);
       } else if (r.kind === 'group') {
         const by = Array.isArray(cfg.by) ? cfg.by : [];
         out[key] = by.length > 1 ? by[0] : '';
@@ -3562,6 +3571,30 @@
         const other = (Array.isArray(now.summaries) ? now.summaries : [])
           .filter((s) => !s || !names.has(s.name));
         out.summaries = cols.filter((c) => pick.has(c.name)).map((c) => c.summary).concat(other);
+      } else if (r.kind === 'picks') {
+        const ids = /** @type {string[]} */ (v || []);
+        const cols = prof.wire.columns || [];
+        const names = new Set(cols.map((c) => c.name));
+        const more = (prof.wire.pick && prof.wire.pick.more) || [];
+        const held = Array.isArray(now.summaries) ? now.summaries : [];
+        const other = held.filter((s) => pickId(s, names) == null);
+        out.summaries = ids.map((id) => {
+          if (id.startsWith('c:')) {
+            const c = cols.find((x) => x.name === id.slice(2));
+            return c ? c.summary : null;
+          }
+          const col = id.slice(2);
+          const was = held.find((s) => pickId(s, names) === id);
+          if (was) return was;
+          const m = more.find((x) => x.name === col);
+          return { type: 'field', col, name: m ? m.label : col, optional: true };
+        }).filter(Boolean).concat(other);
+        const sv = prof.wire.pick && prof.wire.pick.sort;
+        if (sv) {
+          const vals = /** @type {Record<string, unknown>} */ (
+            out.script_values || now.script_values || {});
+          out.script_values = Object.assign({}, vals, { [sv]: ids.length ? ids[0].slice(2) : '' });
+        }
       } else if (r.kind === 'group') {
         // The outer column of a nested `by`: picked, replaced or dropped.
         const by = /** @type {string[]} */ (Array.isArray(now.by) ? now.by : []);
@@ -3573,6 +3606,60 @@
       }
     }
     return out;
+  }
+
+  /** A summary as a pick of the several-picks columns row: `c:<name>` for a
+   * gear column, `d:<column>` for a field over a data column, null for the
+   * rest (the swimlane). @param {any} s @param {Set<string>} names
+   * @returns {string | null} */
+  const pickId = (s, names) => {
+    if (!s) return null;
+    if (names.has(s.name)) return 'c:' + s.name;
+    if (s.type === 'field' && typeof s.col === 'string' && s.col) return 'd:' + s.col;
+    return null;
+  };
+
+  /** The several-picks columns row: one select, its tags in pick order (a
+   * drag reorders them), the gear's columns first, then the data's; a pick
+   * the data no longer has says so. @param {HTMLElement} el @param {VizRowCtx} ctx
+   * @param {VizProfile} prof */
+  function picks(el, ctx, prof) {
+    const cols = prof.wire.columns || [];
+    const pk = /** @type {NonNullable<VizGearWire['pick']>} */ (prof.wire.pick);
+    const more = pk.more || [];
+    /** @type {[string, string, string][]} id, label, note */
+    const items = cols.map((c) => /** @type {[string, string, string]} */ (['c:' + c.name, c.label || c.name, '']))
+      .concat(more.map((m) => /** @type {[string, string, string]} */ (['d:' + m.name, m.label, m.label === m.name ? '' : m.name])));
+    const cur = /** @type {string[]} */ (Array.isArray(ctx.value) ? ctx.value : []);
+    const held = Array.isArray(ctx.values.summaries) ? ctx.values.summaries : [];
+    for (const id of cur) {
+      if (items.some(([x]) => x === id)) continue;
+      const s = held.find((x) => pickId(x, new Set(cols.map((c) => c.name))) === id);
+      items.push([id, ((s && s.name) || id.slice(2)) + ' (missing)', '']);
+    }
+    // The select keys an option by its text: the label, made unique.
+    /** @type {string[]} */
+    const keys = [];
+    const options = items.map(([, label, note]) => {
+      let k = label;
+      while (keys.includes(k)) k += ' ';
+      keys.push(k);
+      return note ? { value: k, label: note } : k;
+    });
+    const at = (/** @type {string} */ id) => items.findIndex(([x]) => x === id);
+    const inst = root.Blockr.Select.multi(el, {
+      options, selected: cur.map(at).filter((i) => i >= 0).map((i) => keys[i]),
+      bordered: true, label: ctx.label, placeholder: 'Patient and timeline only',
+      onChange: (/** @type {string[]} */ v) =>
+        ctx.set(v.map((k) => keys.indexOf(k)).filter((i) => i >= 0).map((i) => items[i][0]))
+    });
+    ctx.scope.own({ dispose: () => inst.destroy() });
+    if (pk.note) {
+      const n = document.createElement('div');
+      n.className = 'vz-row-note';
+      n.textContent = pk.note;
+      el.appendChild(n);
+    }
   }
 
   /** @param {HTMLElement} el @param {string} label @param {boolean} on
@@ -3605,7 +3692,9 @@
     const prof = ctx.profile;
     const r = prof && prof.rows[ctx.key];
     if (!prof || !r) return;
-    if (r.kind === 'columns') {
+    if (r.kind === 'picks') {
+      picks(el, ctx, prof);
+    } else if (r.kind === 'columns') {
       checklist(el, ctx, (prof.wire.columns || []).map((c) => [c.name, c.label || c.name]));
     } else if (r.kind === 'words') {
       // A setting by its label; its clause in the template says where it goes.
@@ -4226,6 +4315,13 @@
       if (listed) {
         options = options.filter((o) => o.value == null || listed.includes(String(o.value)) ||
           C.same(o.value, value));
+        // The listed choices in the list's order (a kind's columns in the order they
+        // were marked, specific to broad); the empty choice and a current pick from
+        // outside the list keep their places.
+        const at = (/** @type {VizChoice} */ o) => (o.value == null ? -1 : listed.indexOf(String(o.value)));
+        const inList = options.filter((o) => at(o) >= 0).sort((a, b) => at(a) - at(b));
+        let k = 0;
+        options = options.map((o) => (at(o) >= 0 ? inList[k++] : o));
       }
       if (!options.length) return null;
       return { kind: 'menu', options, selected: value ?? null,
@@ -4300,13 +4396,16 @@
         case 'number': {
           const num = (/** @type {unknown} */ x) => (typeof x === 'number' ? x : null);
           const lo = num(sp.min), hi = num(sp.max);
+          // A control that starts without a number (its placeholder says what that
+          // means) can be emptied again.
           return { kind: 'number', min: lo == null ? -Infinity : lo,
-                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label };
+                   max: hi == null ? Infinity : hi, step: sp.step || 1, value, set, label,
+                   ...(sp.placeholder ? { clear: true } : {}) };
         }
         case 'select':
         case 'multi': {
           const options = /** @type {string[]} */ (sp.options || [])
-            .map((o) => ({ value: String(o), label: String(o) }));
+            .map((o, i) => ({ value: String(o), label: String((sp.labels || [])[i] ?? o) }));
           if (!options.length) return null;
           return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
                    set, label };
@@ -4659,6 +4758,10 @@
  * Rows is blockr.ui's table preview, the one behind a block's eye icon: the
  * Shiny output `<id>-data_rows`, bound when the tab first shows. Shiny
  * leaves it alone while the tab is hidden.
+ *
+ * A table block's view has one tab, Records (R/table-records-view.R): the
+ * records its prepare script hands along, drawn by the table view so they
+ * sort and search, under their own name ("Adverse events 10 of 23").
  */
 (function () {
   'use strict';
@@ -4704,7 +4807,7 @@
       this.scope = scope;
       this.onToggle = opts.onToggle || (() => {});
       this.on = false;
-      /** @type {'summary' | 'rows'} */
+      /** @type {'summary' | 'rows' | 'records'} */
       this.tab = 'summary';
       /** What the reader asked R for and R has not answered.
        * @type {{ on: boolean, tab: string } | null} */
@@ -4844,6 +4947,12 @@
       const dv = this.state;
       this.bar.textContent = '';
       if (!dv) return;
+      if (dv.label) {
+        const meta = el('span', 'vz-data__meta', this.bar);
+        meta.textContent = dv.label;
+        el('span', 'vz-data__n', meta).textContent = rowsCount(dv);
+        return;
+      }
       if (dv.summary == null) {
         el('span', 'vz-data__meta', this.bar).textContent = rowsCount(dv) + ' rows';
         return;
@@ -6520,6 +6629,15 @@
               },
               "slot": false,
               "ctrl": true
+            },
+            "optional": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "slot": false,
+              "ctrl": true
             }
           },
           "sparkline": {
@@ -6706,13 +6824,13 @@
                 "name": "enum"
               },
               "default": "md",
-              "values": ["md", "lg"],
+              "values": ["md", "lg", "xl"],
               "nullable": false,
               "gear": {
                 "group": "Columns",
                 "control": "segmented",
                 "label": "Width",
-                "labels": ["Regular", "Wide"]
+                "labels": ["Regular", "Wide", "Widest"]
               },
               "slot": false,
               "ctrl": true
@@ -6822,6 +6940,19 @@
               "slot": false,
               "ctrl": true
             },
+            "lane_full": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Full lanes"
+              },
+              "slot": false,
+              "ctrl": true
+            },
             "seg_style": {
               "type": {
                 "name": "column"
@@ -6835,7 +6966,7 @@
               "slot": false,
               "ctrl": true
             },
-            "bar_label": {
+            "event_tag": {
               "type": {
                 "name": "column"
               },
@@ -6843,7 +6974,151 @@
               "gear": {
                 "group": "Columns",
                 "control": "column",
-                "label": "Bar label"
+                "label": "Event tag",
+                "when": "event_x"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "event_tag_group": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tag group",
+                "when": "event_tag"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "tip": {
+              "type": {
+                "name": "column"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "column",
+                "label": "Tooltip text"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_unit": {
+              "type": {
+                "name": "string"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis unit"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_limits": {
+              "type": {
+                "name": "limits"
+              },
+              "nullable": true,
+              "gear": {
+                "group": "Columns",
+                "control": "text",
+                "label": "Axis from and to"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "x_days": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Study days"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "lane_size": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "sm",
+              "values": ["sm", "md"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Lane height",
+                "labels": ["Thin", "Regular"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "track": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Track behind the bars"
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "draw",
+              "values": ["draw", "worst"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps",
+                "labels": ["Drawn over each other", "Worst level"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "inner_overlap": {
+              "type": {
+                "name": "enum"
+              },
+              "default": "same",
+              "values": ["same", "stack"],
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "segmented",
+                "label": "Overlaps on inner rows",
+                "labels": ["As above", "Stacked"]
+              },
+              "slot": false,
+              "ctrl": true
+            },
+            "parent_lanes": {
+              "type": {
+                "name": "bool"
+              },
+              "default": false,
+              "nullable": false,
+              "gear": {
+                "group": "Columns",
+                "control": "toggle",
+                "label": "Lanes on group rows"
               },
               "slot": false,
               "ctrl": true
@@ -7355,6 +7630,57 @@
         "control": "segmented",
         "label": "Group rows",
         "labels": ["Name only", "With summary"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "open": {
+      "type": {
+        "name": "enum"
+      },
+      "default": "none",
+      "values": ["none", "all"],
+      "nullable": false,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "segmented",
+        "label": "Groups at start",
+        "labels": ["Closed", "Open"]
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_sections": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Sections of the inner rows"
+      },
+      "slot": true,
+      "ctrl": true
+    },
+    "row_groups": {
+      "type": {
+        "name": "column"
+      },
+      "nullable": true,
+      "applies": {
+        "only": ["groups"]
+      },
+      "gear": {
+        "group": "Look",
+        "control": "column",
+        "label": "Group the outer rows by"
       },
       "slot": true,
       "ctrl": true

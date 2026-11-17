@@ -575,3 +575,19 @@ test_that("a flag's `on` word, and a `when` control off with its flag", {
     list(thr = FALSE)
   )
 })
+
+test_that("#| select(multiple = TRUE) makes a one-value factor a multi-select", {
+  d <- data.frame(x = 1)
+  script <- paste(
+    'a <- factor("OVR", levels = c("OVR", "OVRBICR"))  #| select(multiple = TRUE)',
+    'b <- factor("OVR", levels = c("OVR", "OVRBICR"))',
+    "data", sep = "\n"
+  )
+  p <- cb_parse(script)
+  sp <- cb_specs(p, d)
+  pick <- function(nm) Filter(function(x) x$name == nm, sp)[[1L]]
+  expect_true(pick("a")$multiple)
+  expect_false(pick("b")$multiple)
+  expect_identical(pick("a")$default, "OVR")
+  expect_identical(script_control_records(sp)[[1L]]$kind, "multi")
+})

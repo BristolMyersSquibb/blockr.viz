@@ -169,7 +169,6 @@ test('a colour split: one segment per level with a value, its label inside', () 
   assert.equal(segs.length, 2);
   assert.match(segs[0].getAttribute('style'), /width:30%;background:#f00/);
   assert.equal(segs[1].querySelector('.vz-table-groups-seglab').textContent, '4');
-  assert.equal(segs[0].getAttribute('data-summarize-tip'), 'F: 3');
   assert.equal(t.cell(2, 2).querySelectorAll('.vz-table-groups-fill').length, 1);
 });
 
@@ -205,7 +204,6 @@ test('a box: whiskers, box, median; nothing without a median', () => {
   const box = t.cell(0, 4).querySelector('.vz-table-groups-boxcell');
   assert.deepEqual(Array.from(box.children).map((i) => i.className),
                    ['vz-table-lane-wh', 'vz-table-lane-wh', 'vz-table-lane-box', 'vz-table-lane-med']);
-  assert.equal(box.getAttribute('data-summarize-tip'), 'n = 4');
   assert.equal(t.cell(1, 4).querySelector('.vz-table-groups-boxcell').children.length, 0);
 });
 
@@ -317,6 +315,7 @@ test('without by there is no search or header sorting', () => {
 test('nested groups: parents fold their terms; search keeps the parent', async () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   assert.equal(t.$('table').getAttribute('data-summarize-nested'), '1');
+  assert.equal(t.$('table').getAttribute('data-summarize-headings'), null);
   const rows = () => t.$$(NAMED);
   assert.deepEqual(rows().map((r) => r.className.split(' ').filter((c) => c.startsWith('is-')).join(' ')),
                    ['is-parent', 'is-child', 'is-child is-group-end', 'is-parent', 'is-child is-group-end']);
@@ -419,6 +418,34 @@ test('nested groups: a child label starts on its parent\'s label edge', () => {
   // No indent step anywhere: the parents' chevrons hang left of the shared edge.
   assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].getAttribute('style')),
                    [null, null, null, null, null]);
+});
+
+test('group headings: the rows under them are one step in, on the records layout\'s edges', () => {
+  const m = nested();
+  m.sections = [{ at: 0, level: 1, value: 'Group A', open: true },
+                { at: 3, level: 1, value: 'Group B', open: true }];
+  const env = loadTable();
+  // The shipped sheets, in bundle order: the heading's padding is theirs.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const style = env.win.document.createElement('style');
+  style.textContent = ['table-structured.css', 'table-groups.css'].map((f) => fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', 'inst', 'css', f), 'utf8')).join('\n');
+  env.win.document.head.appendChild(style);
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }), env);
+  assert.deepEqual(t.$$('tr.vz-table-section-header').map((r) => r.textContent), ['Group A', 'Group B']);
+  // Parents and children alike: a child starts on its parent's label edge.
+  assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].getAttribute('style')),
+                   Array(5).fill('--vz-indent:1'));
+  const cs = (sel) => env.win.getComputedStyle(t.$(sel));
+  assert.equal(cs('tr.vz-table-section-header td').paddingLeft, '0px');
+  // The header's and the headings' chevrons 3px in from the card's inset,
+  // as table-structured.css hangs them; the rows one 16px step in. jsdom
+  // keeps calc() as written.
+  assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft,
+               'calc(3px + 0px)');
+  assert.equal(cs('thead th.vz-table-stub-header').paddingLeft, 'calc(24px + 0px)');
+  assert.equal(cs('td.vz-table-groups-label-col').paddingLeft, 'calc(24px + 0px + 1 * 16px)');
 });
 
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
@@ -603,9 +630,10 @@ test('lanes: thin lanes stack above the main lane, each segment in its style', (
                /--vz-seg:#2a9686/);
   assert.ok(kids[0].querySelector('.vz-table-lane-adm'));
   assert.ok(kids[0].querySelector('.vz-table-lane-step'));
-  // The open end in the lane's colour; the closed lane has none.
-  assert.match(kids[0].querySelector('.vz-table-lane-open').getAttribute('style'),
-               /left:80%;border-left-color:#2a9686/);
+  // The open end a thin caret in the lane's colour; the closed lane has none.
+  const caret = kids[0].querySelector('svg.vz-table-lane-open');
+  assert.match(caret.getAttribute('style'), /left:80%;color:#2a9686/);
+  assert.ok(caret.querySelector('polyline'));
   assert.equal(kids[1].querySelector('.vz-table-lane-open'), null);
   // The main lane keeps its segments; a row without lanes has no stack.
   assert.equal(kids[2].querySelectorAll('.vz-table-lane-seg').length, 2);
@@ -643,6 +671,33 @@ test('lanes: a lane with a strip opens it, a thin lane without one names its seg
   assert.equal(m.tip.querySelectorAll('.vz-table-strip-box').length, 1);
 });
 
+test('hover: empty lane space shows the time as a small label, no card', () => {
+  const t = mount(payload({ data: lanes(), config: G }));
+  const lane = t.cell(0, 7).querySelectorAll('.is-thin')[1];
+  lane.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 4, right: 100, bottom: 4 });
+  const at = (attrs, x) => {
+    lane.removeAttribute('data-sd');
+    lane.removeAttribute('data-dd');
+    Object.entries(attrs).forEach(([k, v]) => lane.setAttribute(k, v));
+    lane.dispatchEvent(new t.win.MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: 2 }));
+    return t.win.document.querySelector('.vz-table-lane-tip');
+  };
+  // Drug A runs 0 to 30: past it the lane is empty.
+  let tip = at({ 'data-d0': '1', 'data-d1': '501', 'data-sd': '1' }, 90);
+  assert.equal(tip.textContent, 'Day 451');
+  assert.ok(tip.classList.contains('is-at'));
+  assert.ok(!tip.classList.contains('is-card'));
+  assert.equal(tip.querySelector('.vz-tt-head'), null);
+  assert.equal(at({ 'data-d0': '-9', 'data-d1': '91', 'data-sd': '1' }, 90).textContent, 'Day 81');
+  assert.equal(at({ 'data-d0': '-99', 'data-d1': '1', 'data-sd': '1' }, 60).textContent, 'Day -40');
+  assert.equal(at({ 'data-d0': '19000', 'data-d1': '19100', 'data-dd': '1' }, 90).textContent, '2022-04-08');
+  assert.equal(at({ 'data-d0': '0', 'data-d1': '10' }, 90).textContent, '9');
+  // Back on a segment: the full card again.
+  tip = hover(t, lane.querySelector('.vz-table-lane-seg'));
+  assert.ok(tip.tip.classList.contains('is-card'));
+  assert.ok(!tip.tip.classList.contains('is-at'));
+});
+
 test('lanes: even lanes drop the main lane height; outline and lane events draw', () => {
   const m = lanes();
   Object.assign(m.cols[7].mark, { evenLanes: true });
@@ -658,41 +713,145 @@ test('lanes: even lanes drop the main lane height; outline and lane events draw'
   assert.equal(hover(t, ev).tip.querySelector('.vz-tt-head').textContent, 'Death');
 });
 
-test('bar labels: on the bar when they fit, after it when the gap holds them, else hidden', () => {
+test('lanes: a row without a main-lane record draws its lanes even, a full bar too', () => {
   const m = lanes();
-  Object.assign(m.cols[7].mark, { evenLanes: true });
-  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 50, 3], [52, 10, 3], [70, 5, 3]], t: ['a', 'b', 'c'],
-                                    l: ['Wide bar', 'Squeezed', 'Tail'] };
+  // Row 1 holds one full bar and nothing on the main lane: an opened row.
+  Object.assign(m.cols[7].mark, { mainName: 'INV', laneNameWidth: 4 });
+  m.cols[7].mark.segs[1] = [];
+  m.cols[7].mark.subLanes[1] = [{ n: 'AE', f: true, s: [[0, 40, 3]], t: ['AE'] }];
   const t = mount(payload({ data: m, config: G }));
-  const lane = t.cell(0, 7).querySelectorAll('.is-thin')[1];
-  const labs = Array.from(lane.querySelectorAll('.vz-table-lane-lab'));
-  assert.equal(labs.length, 3);
-  assert.equal(labs[1].getAttribute('data-nx'), '70');
-  // happy-dom has no layout: give the lane and the labels a width, then place them.
-  Object.defineProperty(lane, 'clientWidth', { value: 200 });
-  labs.forEach((l) => Object.defineProperty(l, 'offsetWidth', { value: 40 }));
-  labs.forEach((l) => l.classList.remove('is-fit'));
-  t.V.table.marks.fitLabels(lane);
-  assert.ok(labs[0].classList.contains('is-on'));
-  assert.ok(labs[1].hidden);
-  assert.ok(labs[2].classList.contains('is-after'));
-  assert.match(labs[2].style.left, /calc\(75% \+ 3px\)/);
-  // A placed label stays in its room: its bar, or the gap to the next bar.
-  assert.equal(labs[0].style.maxWidth, '100px');
-  assert.equal(labs[2].style.maxWidth, '47px');
-  // A thin lane (not even) draws no labels.
-  m.cols[7].mark.evenLanes = false;
-  const t2 = mount(payload({ data: m, config: G }));
-  assert.equal(t2.cell(0, 7).querySelectorAll('.is-thin .vz-table-lane-lab').length, 0);
+  const stack = t.cell(1, 7).querySelector('.vz-table-groups-ivstack');
+  assert.ok(stack.classList.contains('is-even'));
+  const bar = stack.querySelector('[data-n="AE"]');
+  assert.ok(bar.classList.contains('is-thin'));
+  assert.equal(bar.classList.contains('is-full'), false);
+  // No main bar, so no main name, even with named bars.
+  assert.equal(stack.querySelector('.vz-table-lane-name'), null);
+  // Row 0 has main-lane records: not even.
+  assert.equal(t.cell(0, 7).querySelector('.vz-table-groups-ivstack').classList.contains('is-even'), false);
 });
 
-test('bar labels never set visibility: a visible child shows through a hidden dock panel', () => {
+test('hover: the open arrow says its lane\'s last segment, not the time', () => {
+  const m = lanes();
+  m.cols[7].mark.subLanes[0][1] = { n: 'Drug A', s: [[0, 10, 3], [12, 18, 3]], t: ['first', 'last'],
+                                    o: 30 };
+  const t = mount(payload({ data: m, config: G }));
+  const lane = t.cell(0, 7).querySelector('[data-n="Drug A"]');
+  const c = hover(t, lane.querySelector('.vz-table-lane-open'));
+  assert.equal(c.tip.querySelector('.vz-tt-head').textContent, 'last');
+});
+
+test('a caret takes the colour and the tooltip of the bar ending at it', () => {
+  const m = lanes();
+  const mk = m.cols[7].mark;
+  // The open bar (fill 3) ends at 20, a closed one (fill 4) after it.
+  mk.segs[0] = [[0, 20, 3], [50, 40, 4]];
+  mk.tips[0] = ['open bar', 'closed bar'];
+  mk.openAt = [20, null, null];
+  mk.subLanes[0].push({ n: 'AE', f: true, s: [[0, 30, 4], [40, 20, 3]], t: ['AE open', 'AE later'], o: 30 });
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(0, 7).querySelector('.vz-table-groups-ivstack');
+  const main = Array.from(stack.children).find((k) => !k.hasAttribute('data-n'));
+  const mc = main.querySelector('.vz-table-lane-open');
+  assert.match(mc.getAttribute('style'), /color:#2a9686/);
+  assert.equal(hover(t, mc).tip.querySelector('.vz-tt-head').textContent, 'open bar');
+  const ac = stack.querySelector('[data-n="AE"] .vz-table-lane-open');
+  assert.match(ac.getAttribute('style'), /color:#d98a1e/);
+  assert.equal(hover(t, ac).tip.querySelector('.vz-tt-head').textContent, 'AE open');
+});
+
+test('hover: a caret says its own bar on the main lane and a full bar, and takes the pointer', () => {
+  const m = lanes();
+  const mk = m.cols[7].mark;
+  // Main lane: a bar from 0 to 20, its caret far off at 60; a full bar below
+  // ends later, at 70, open.
+  mk.segs[0] = [[0, 20, 2]];
+  mk.tips[0] = ['main bar'];
+  mk.openAt = [60, null, null];
+  mk.subLanes[0].push({ n: 'AE', f: true, s: [[10, 60, 3]], t: ['AE bar'], o: 70 });
+  const t = mount(payload({ data: m, config: G }));
+  const stack = t.cell(0, 7).querySelector('.vz-table-groups-ivstack');
+  const main = Array.from(stack.children).find((k) => !k.hasAttribute('data-n'));
+  const head = (node) => hover(t, node).tip.querySelector('.vz-tt-head').textContent;
+  assert.equal(head(main.querySelector('.vz-table-lane-open')), 'main bar');
+  assert.equal(head(stack.querySelector('[data-n="AE"] .vz-table-lane-open polyline')), 'AE bar');
+  // The browser sends the pointer to the caret only when its CSS lets it.
   const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
     'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const rules = css.split('}').filter((r) => r.includes('vz-table-lane-lab'));
-  assert.ok(rules.length >= 3);
-  for (const r of rules) assert.doesNotMatch(r, /visibility\s*:/);
-  assert.match(rules.join('}'), /overflow:\s*hidden/);
+  const rule = css.split('}').find((r) => /\.vz-table-groups-ivcell \.vz-table-lane-open\s*\{/.test(r));
+  assert.match(rule, /pointer-events:\s*auto/);
+});
+
+test('lanes: the track sits behind the main lane and full bars, never a thin lane', () => {
+  const m = lanes();
+  m.cols[7].mark.track = true;
+  m.cols[7].mark.subLanes[0].push({ n: 'AE', f: true, s: [[0, 40, 3]], t: ['AE'] });
+  const t = mount(payload({ data: m, config: G }));
+  const kids = Array.from(t.cell(0, 7).querySelector('.vz-table-groups-ivstack').children);
+  assert.deepEqual(kids.map((k) => k.classList.contains('has-track')), [false, false, true, true]);
+  // Off by default.
+  const t2 = mount(payload({ data: lanes(), config: G }));
+  assert.equal(t2.cell(0, 7).querySelectorAll('.has-track').length, 0);
+});
+
+test('the legend draws a tagged level with its text', () => {
+  const legend = { groups: [{ title: 'Reason', items: [{ label: 'Adverse event', shape: 6, tag: 'AE' }] }] };
+  const t = mount(payload({ data: groups(), config: G, derived: { legend }, dataRev: 9 }));
+  const k = t.$('.vz-table-groups-legend-tag');
+  assert.ok(k);
+  assert.equal(k.textContent, 'AE');
+});
+
+test('a later tag group draws inverted, in the lanes and the legend', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, {
+    events: [[[30, 1, 'AE'], [60, 1, 'WD', 1]], [], []], eventTips: [['AE', 'WD'], [], []]
+  });
+  const legend = { groups: [
+    { title: 'Treatment discontinuation', items: [{ label: 'Adverse event', shape: 6, tag: 'AE' }] },
+    { title: 'End of study', items: [{ label: 'Withdrawal by subject', shape: 6, tag: 'WD', inv: true }] }
+  ] };
+  const t = mount(payload({ data, config: G, derived: { legend }, dataRev: 9 }));
+  const tags = t.cell(0, 7).querySelectorAll('.vz-table-lane-ev.is-tag');
+  assert.deepEqual(Array.from(tags).map((k) => k.classList.contains('is-inv')), [false, true]);
+  const keys = t.el.querySelectorAll('.vz-table-groups-legend-tag');
+  assert.deepEqual(Array.from(keys).map((k) => k.classList.contains('is-inv')), [false, true]);
+});
+
+test('a swimlane: tagged events, lower doses and regular lanes', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, {
+    segs: [[[0, 20, 1, '', 7], [20, 10, 2, '', 8]], [], []],
+    tips: [['Drug · Day 1 to 5', 'Drug · Day 5 to 8'], [], []],
+    events: [[[30, 1, 'AE']], [], []], eventTips: [['Off treatment, day 8 · Adverse event'], [], []],
+    calmLanes: true,
+    subLanes: [[{ n: 'Drug', s: [[0, 50, 1]], t: ['Drug'], e: [[50, 1, 'PD']], et: ['Off'] }], [], []]
+  });
+  const t = mount(payload({ data, config: G }));
+  const c = t.cell(0, 7);
+  assert.ok(c.querySelector('.vz-table-lane-seg.is-thinner'));
+  assert.ok(c.querySelector('.vz-table-lane-seg.is-hairline'));
+  const tags = c.querySelectorAll('.vz-table-lane-ev.is-tag');
+  assert.equal(tags.length, 2);
+  assert.equal(tags[1].textContent, 'AE');
+  assert.equal(tags[1].getAttribute('data-tip'), 'Off treatment, day 8 · Adverse event');
+  assert.ok(c.querySelector('.vz-table-groups-ivcell.is-thin.is-md'));
+});
+
+test('a widest spans column takes the room the other columns leave', () => {
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, { large: false, full: true });
+  const t = mount(payload({ data, config: G }));
+  const c = t.cell(0, 7);
+  assert.ok(c.classList.contains('vz-table-groups-full'));
+  assert.ok(!c.classList.contains('vz-table-groups-wide'));
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => r.includes('td.vz-table-groups-full'));
+  assert.match(rule, /width:\s*100%/);
 });
 
 test('a wide spans column fits a half-width panel: its floor is two lane floors', () => {
@@ -771,4 +930,172 @@ test('a click on the (Missing) row claims the missing level as null', () => {
   t.click(t.cell(2, 1));
   assert.ok(t.$$('tbody tr')[2].classList.contains('vz-table-row-active'));
   assert.deepEqual(t.selects(), [{ type: 'categorical', filters: { ARM: [null] } }]);
+});
+
+test('interval: without its text the column joins its tooltips, which the search reads', () => {
+  const m = groups();
+  const c = m.cols[7];
+  delete c.disp;
+  c.mark.tips[0] = ['day 1 to 5', 'day 8 to 10', 'day 1 to 5'];
+  c.mark.eventTips = [['Death'], [], []];
+  mount(payload({ data: m, config: G }));
+  // Through JSON: the array is the window's, not node's.
+  assert.deepEqual(JSON.parse(JSON.stringify(c.disp)),
+                   ['day 1 to 5 | day 8 to 10 | Death', null, 'day 15 to 30']);
+});
+
+test('lanes: full bars draw below the main lane, each named in a gutter the axis keeps', () => {
+  const m = lanes();
+  Object.assign(m.cols[7].mark, { mainName: 'INV', laneNameWidth: 4 });
+  m.cols[7].mark.subLanes[0].push({ n: 'BICR', f: true, s: [[0, 60, 3]], t: ['PR'],
+                                    e: [[40, 1]], et: ['Progression'] });
+  const t = mount(payload({ data: m, config: G }));
+  const c = t.cell(0, 7);
+  const named = c.querySelector('.vz-table-groups-ivnamed');
+  assert.match(named.getAttribute('style'), /--vz-lane-lw:4ch/);
+  const kids = Array.from(c.querySelector('.vz-table-groups-ivstack').children);
+  // Thin lanes, then the main lane, then the full bar.
+  assert.deepEqual(kids.map((k) => k.classList.contains('is-thin') ? 'thin'
+    : k.classList.contains('is-full') ? 'full' : 'main'), ['thin', 'thin', 'main', 'full']);
+  assert.equal(kids[2].querySelector('.vz-table-lane-name.is-main').textContent, 'INV');
+  assert.equal(kids[3].querySelector('.vz-table-lane-name').textContent, 'BICR');
+  assert.ok(kids[3].querySelector('.vz-table-lane-ev'));
+  // A row without lanes keeps the gutter, so its bar lines up too.
+  assert.ok(t.cell(2, 7).querySelector('.vz-table-groups-ivnamed .vz-table-lane-name.is-main'));
+  // The axis leaves the gutter blank.
+  assert.ok(t.$('.vz-table-groups-axis-lpad'));
+  // Without names there is no gutter.
+  const t2 = mount(payload({ data: lanes(), config: G }));
+  assert.equal(t2.cell(0, 7).querySelector('.vz-table-groups-ivnamed'), null);
+  assert.equal(t2.$('.vz-table-groups-axis-lpad'), null);
+});
+
+test('row titles: a small title above the first row of each section, folded with its rows', () => {
+  const m = nested();
+  m.n = 6;
+  m.cols[0].disp = ['Cardiac', 'Angina', 'Arrhythmia', 'Rash', 'Skin', 'Itch'];
+  m.cols[1].disp = ['5', '2', '3', '4', '4', '1'];
+  m.cols[1].key = [5, 2, 3, 4, 4, 1];
+  m.cols[1].mark.width = [100, 40, 60, 80, 80, 20];
+  m.rows = { indent: [0, 1, 1, 1, 0, 1], title: [null, 'Adverse events', null, 'Con meds', null, null] };
+  const t = mount(payload({ data: m, config: G }));
+  const titles = () => t.$$('tbody tr.vz-table-row-title').map((r) => r.textContent);
+  assert.deepEqual(titles(), ['Adverse events', 'Con meds']);
+  // Each sits right above its section's first row.
+  const first = t.$('tbody tr.vz-table-row-title');
+  assert.equal(first.nextElementSibling.getAttribute('data-i'), '1');
+  // Folding the parent hides its titles with its rows.
+  t.click(t.$$('tbody tr.vz-table-row')[0].querySelector('.vz-table-indent-btn'));
+  assert.deepEqual(titles(), []);
+});
+
+test('the axis of a numeric swimlane: ticks spaced by the drawn width, its unit first', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const A = t.win.Blockr.viz.table.axis;
+  // 450 days in 230px: 50 is under 60px, 200 the first step that is not.
+  assert.deepEqual(Array.from(A.ticks(0, 450, 230)), [0, 200, 400]);
+  assert.deepEqual(Array.from(A.ticks(0, 450, 900)), [0, 50, 100, 150, 200, 250, 300, 350, 400, 450]);
+  assert.deepEqual(Array.from(A.ticks(0, 100, 960)), [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  assert.equal(A.ticks(0, 450, 0).length, 0);
+  const host = t.win.document.createElement('div');
+  host.innerHTML = '<span class="vz-table-groups-axis-in" data-d0="0" data-d1="450" data-unit="Day"></span>';
+  const ax = host.firstChild;
+  Object.defineProperty(ax, 'clientWidth', { value: 230 });
+  A.fit(host);
+  assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['Day 0', '200', '400']);
+});
+
+test('a study-day axis: D1 always a tick, no day 0, x <= 0 the day before', () => {
+  const t = mount(payload({ data: groups(), config: G }));
+  const A = t.win.Blockr.viz.table.axis;
+  // 210 days in 300px: steps of 50, day 1 in place of day 0.
+  assert.deepEqual(Array.from(A.dayTicks(-10, 210, 300)), [1, 50, 100, 150, 200]);
+  // A round tick within three fifths of a step of day 1 gives way to it.
+  assert.deepEqual(Array.from(A.dayTicks(0, 60, 300)), [1, 20, 40, 60]);
+  assert.deepEqual(Array.from(A.dayTicks(-3, 4, 900)), [-3, -2, -1, 0, 1, 2, 3, 4]);
+  assert.equal(A.dayLabel(1), 'D1');
+  assert.equal(A.dayLabel(0), 'D-1');
+  assert.equal(A.dayLabel(-19), 'D-20');
+  const host = t.win.document.createElement('div');
+  host.innerHTML = '<span class="vz-table-groups-axis-in" data-d0="-10" data-d1="210" data-unit="Day" data-days="1"></span>';
+  const ax = host.firstChild;
+  Object.defineProperty(ax, 'clientWidth', { value: 300 });
+  A.fit(host);
+  assert.deepEqual(Array.from(ax.children).map((s) => s.textContent), ['D1', 'D50', 'D100', 'D150', 'D200']);
+});
+
+test('a set axis (x_limits): its ends are ticks, a bar cut at the right end gets the caret there', () => {
+  const m = groups();
+  // R cuts the bars at the set ends and sends the caret at 100 (the right
+  // end) and the set ends as `pin`.
+  m.cols[7].mark.segs[2] = [[0, 30, 1], [60, 40, 2]];
+  m.cols[7].mark.tips[2] = ['from before the axis', 'past the axis'];
+  m.cols[7].mark.openAt = [null, null, 100];
+  m.cols[7].axis = { at: [0, 50, 100], labels: ['D1', 'D90', 'D180'], d0: 1, d1: 180, days: true, pin: [1, 1] };
+  const t = mount(payload({ data: m, config: G }));
+  const c = t.cell(2, 7);
+  const segs = Array.from(c.querySelectorAll('.vz-table-lane-seg'));
+  assert.equal(segs.length, 2);
+  assert.match(segs[1].getAttribute('style'), /left:60%;width:40%/);
+  const caret = c.querySelector('svg.vz-table-lane-open');
+  assert.match(caret.getAttribute('style'), /left:100%;color:#555/);
+  assert.equal(t.cell(0, 7).querySelector('.vz-table-lane-open'), null);
+  // The header carries the set ends; fit() keeps them as ticks at any width.
+  const ax = t.$(".vz-table-groups-axis-in[data-pin]");
+  assert.equal(ax.getAttribute('data-pin'), '1,1');
+  const A = t.win.Blockr.viz.table.axis;
+  assert.deepEqual(Array.from(A.pinTicks([1, 50, 100, 150], 1, 180, [1, 1])), [1, 50, 100, 150, 180]);
+  assert.deepEqual(Array.from(A.pinTicks([1, 50, 100, 170], 1, 180, [1, 1])), [1, 50, 100, 180]);
+  assert.deepEqual(Array.from(A.pinTicks([0, 100, 200], 0, 210, [0, 1])), [0, 100, 210]);
+  assert.deepEqual(Array.from(A.pinTicks([0, 100], 0, 100, null)), [0, 100]);
+  Object.defineProperty(ax, 'clientWidth', { value: 300 });
+  A.fit(t.el);
+  const labels = Array.from(ax.children).map((s) => s.textContent);
+  assert.equal(labels[0], 'D1');
+  assert.equal(labels[labels.length - 1], 'D180');
+});
+
+test('a closed outer row splits its padding evenly, so its label sits on the middle', () => {
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', '..', '..',
+    'inst', 'css', 'table-groups.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((r) => r.includes('tr.is-parent.collapsed > td'));
+  assert.ok(rule);
+  assert.match(rule, /padding-top:\s*7px/);
+  assert.match(rule, /padding-bottom:\s*7px/);
+  // A closed parent row carries both classes.
+  const m = nested();
+  const t = mount(payload({ data: m, config: G }));
+  t.click(t.$$('tbody tr.vz-table-row')[0].querySelector('.vz-table-indent-btn'));
+  const tr = t.$$('tbody tr.vz-table-row')[0];
+  assert.ok(tr.classList.contains('collapsed'));
+  assert.ok(tr.classList.contains('is-parent'));
+});
+
+test('fold all: the corner button folds the group headings too, which start open', () => {
+  // Two arms (row_groups) over the SOC parents: the headings start open, the
+  // parents closed.
+  const m = nested();
+  m.collapsed = true;
+  m.sections = [{ at: 0, level: 1, value: 'Placebo', open: true },
+                { at: 3, level: 1, value: 'Active', open: true }];
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const shut = () => t.$$('tr.vz-table-section-header').map((r) => r.classList.contains('collapsed'));
+  const labels = () => t.$$(NAMED).map((r) => r.children[0].textContent);
+  const btn = () => t.$('.vz-table-foldall');
+  // The headings put the table on the records layout's edges (CSS).
+  assert.equal(t.$('table').getAttribute('data-summarize-headings'), '1');
+  assert.deepEqual(shut(), [false, false]);
+  assert.deepEqual(labels(), ['Cardiac', 'Skin']);
+  assert.equal(btn().getAttribute('aria-expanded'), 'false');
+  t.click(btn());
+  assert.deepEqual(shut(), [false, false]);
+  assert.deepEqual(labels(), ['Cardiac', 'Angina', 'Arrhythmia', 'Skin', 'Rash']);
+  assert.equal(btn().getAttribute('aria-expanded'), 'true');
+  t.click(btn());
+  assert.deepEqual(shut(), [true, true]);
+  assert.deepEqual(labels(), []);
+  assert.equal(btn().getAttribute('aria-label'), 'Expand all groups');
+  // A heading opened by hand shows its parents folded.
+  t.click(t.$('tr.vz-table-section-header .vz-table-chev'));
+  assert.deepEqual(labels(), ['Cardiac']);
 });

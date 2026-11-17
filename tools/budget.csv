@@ -94,6 +94,7 @@ R: exports,R/summarize-download.R,1500
 R: exports,R/summarize-exhibit.R,1500
 R: PowerPoint and the table painter,R/export-pptx-*.R,1800
 R: PowerPoint and the table painter,R/paint-marks.R,1800
+R: PowerPoint and the table painter,R/paint-interval.R,1800
 R: PowerPoint and the table painter,R/paint-table.R,1800
 R: PowerPoint and the table painter,R/paint-slides.R,1800
 R: legacy,R/legacy.R,400

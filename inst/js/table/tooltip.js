@@ -201,15 +201,23 @@
       if (strip && !(seg && seg.matches('.vz-table-lane-ev'))) {
         return { text: lane.getAttribute('data-n') || '', strip: JSON.parse(strip), color: laneColor(lane) };
       }
-      // A thin lane is a few pixels high: the segment at the pointer's time.
-      const hit = seg || (lane.classList.contains('is-thin') ? segAt(lane, x) : null);
+      // The open end's caret belongs to the bar ending at it. Off a
+      // segment, the one at the pointer's time, or within a few pixels of it
+      // (a thin lane is a few pixels high, a short bar a few pixels wide).
+      const open = t.closest('.vz-table-lane-open');
+      const w = lane.getBoundingClientRect().width;
+      const hit = seg || (open ? endSeg(lane, /** @type {HTMLElement} */ (open)) : segAt(lane, x, w > 0 ? 800 / w : 0.5));
       if (hit) return { text: hit.getAttribute('data-tip') || '', color: segColor(/** @type {HTMLElement} */ (hit)) };
       const d0 = parseFloat(lane.getAttribute('data-d0') || '');
       const d1 = parseFloat(lane.getAttribute('data-d1') || '');
       if (isNaN(d0) || isNaN(d1)) return null;
+      // Off every mark: only the time under the pointer, as a small label.
       const v = d0 + x * (d1 - d0);
-      return { text: '~' + (lane.getAttribute('data-dd') === '1'
-        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10)) };
+      if (lane.getAttribute('data-sd') === '1') {
+        return { text: 'Day ' + V.table.axis.dayLabel(Math.round(v)).slice(1), at: true };
+      }
+      return { text: lane.getAttribute('data-dd') === '1'
+        ? new Date(Math.round(v) * 86400000).toISOString().slice(0, 10) : String(Math.round(v * 10) / 10), at: true };
     }
     const xs = (lane.getAttribute('data-xs') || '').split(',');
     const ys = (lane.getAttribute('data-ys') || '').split(',');
@@ -229,17 +237,48 @@
   }
 
   /**
-   * The segment of a lane under time `x` (0 to 1), or null.
+   * The segment of a lane nearest time `x` (0 to 1) within `tol` percent of
+   * the lane, or null.
    * @param {Element} lane
    * @param {number} x
+   * @param {number} tol
    */
-  function segAt(lane, x) {
+  function segAt(lane, x, tol) {
     const p = x * 100;
-    return Array.from(lane.querySelectorAll('.vz-table-lane-seg')).find((el) => {
+    let best = null;
+    let gap = Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
       const st = /** @type {HTMLElement} */ (el).style;
       const l = parseFloat(st.left);
-      return p >= l - 0.5 && p <= l + parseFloat(st.width) + 0.5;
-    }) || null;
+      const r = l + parseFloat(st.width);
+      const d = p < l ? l - p : p > r ? p - r : 0;
+      if (d <= tol && d < gap) {
+        best = el;
+        gap = d;
+      }
+    });
+    return best;
+  }
+
+  /**
+   * The segment an open end belongs to: the one whose end is nearest the
+   * caret, the later one on a tie (marks.js draws the caret at its bar's end).
+   * @param {Element} lane
+   * @param {HTMLElement} open
+   */
+  function endSeg(lane, open) {
+    const x = parseFloat(open.style.left);
+    let best = null;
+    let d = Infinity;
+    Array.from(lane.querySelectorAll('.vz-table-lane-seg')).forEach((el) => {
+      const st = /** @type {HTMLElement} */ (el).style;
+      const e = Math.abs(parseFloat(st.left) + parseFloat(st.width) - (isNaN(x) ? 1e9 : x));
+      if (e <= d) {
+        best = el;
+        d = e;
+      }
+    });
+    return best;
   }
 
   /**
@@ -260,9 +299,13 @@
       }).join('') + '</div>';
   }
 
-  /** @param {{ text: string, color?: string, strip?: (string | number)[][] }} l */
+  /** The opening of a time label, shown without the card. */
+  const AT = '<span class="vz-table-lane-at">';
+
+  /** @param {{ text: string, color?: string, strip?: (string | number)[][], at?: boolean }} l */
   function laneCard(l) {
     if (l.strip) return stripCard(/** @type {any} */ (l));
+    if (l.at) return AT + esc(l.text) + '</span>';
     const parts = l.text.split(' · ');
     return head(parts[0], l.color) + parts.slice(1).map((p) => {
       const k = p.indexOf(': ');
@@ -327,6 +370,9 @@
         tip.hidden = true;
         return;
       }
+      const at = html.startsWith(AT);
+      tip.classList.toggle('is-card', !at);
+      tip.classList.toggle('is-at', at);
       tip.innerHTML = html;
       tip.hidden = false;
       const w = root.innerWidth || 1000;

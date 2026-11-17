@@ -20,6 +20,7 @@ table_groups_to_model <- function(m, axis = TRUE) {
     n = cells$n, stub = 0L, cols = c(list(stub), cols),
     head = table_groups_head(m, pick),
     rows = table_groups_rows(cells, pick),
+    sections = prep$sections,
     collapsed = if (nested && !isTRUE(cells$expanded)) TRUE,
     note = cells$fold
   )
@@ -160,6 +161,7 @@ table_groups_rows <- function(cells, pick) {
     indent = if (nested) as.integer(cells$level),
     strong = if (nested) parent,
     count = cells$head_count,
+    title = cells$title,
     keys = if (pick) table_groups_row_keys(cells, parent)
   ))
   if (length(out)) out

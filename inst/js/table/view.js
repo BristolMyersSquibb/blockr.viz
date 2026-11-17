@@ -8,6 +8,10 @@
  * The gear (gear.js) is the core gear engine; with it the titles carry
  * core/titles.js's slots. A view built with `gear: false` (a printed page)
  * has neither.
+ *
+ * A block whose prepare script hands records along (R's viz_records()) gets
+ * the chart's data view (core/data-view.js): a tool left of the download
+ * that opens them under the table.
  */
 (function () {
   'use strict';
@@ -47,6 +51,9 @@
       // The prepare script's controls, under the header.
       this.script = this.gear ? V.scriptBand(this.frame.el, scope, this.gear.engine) : null;
       if (this.script) this.frame.body.before(this.script.el);
+      /** The records under the table, mounted when R first offers them.
+       * @type {VizDataView | null} */
+      this.dataView = null;
     }
 
     /** @param {VizPayload} p */
@@ -78,8 +85,23 @@
       // After the layout: the gear's rules read what it now draws.
       if (this.gear) this.gear.update(p);
       if (this.script) this.script.update(/** @type {TableDerived} */ (p.derived || {}).script);
+      this.records(/** @type {TableDerived} */ (p.derived || {}));
       this.openOnError(/** @type {TableDerived} */ (p.derived || {}));
       this.frame.busyDone();
+    }
+
+    /**
+     * The data view: its tool while R offers records, and their table while
+     * the reader has it open.
+     * @param {TableDerived} d
+     */
+    records(d) {
+      if (d.data_view_tool && !this.dataView) {
+        this.dataView = new V.DataView(this.frame, this.scope);
+      }
+      if (!this.dataView) return;
+      this.dataView.tool.hidden = !d.data_view_tool;
+      this.dataView.update(d.data_view_tool ? d.data_view : null);
     }
 
     /**

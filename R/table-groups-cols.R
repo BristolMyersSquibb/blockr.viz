@@ -52,10 +52,11 @@ TABLE_GROUPS_KEYS <- list(
   sparkline = c(pl = "line", bd = "band", dx = "dotX", dy = "dotY",
                 xs = "xValues", ys = "yValues", rc = "refY",
                 rby = "refBandY", rbh = "refBandHeight"),
-  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates",
-               lg = "large", tk = "ticks", bd = "band", ev = "events",
+  interval = c(d0 = "domainStart", d1 = "domainEnd", dd = "dates", sd = "days",
+               lg = "large", xl = "full", lm = "calmLanes", tr = "track", mn = "mainName",
+               lw = "laneNameWidth", tk = "ticks", bd = "band", ev = "events",
                et = "eventTips", op = "openAt", sl = "subLanes",
-               ms = "mainStrip", eq = "evenLanes", bl = "barLabels")
+               ms = "mainStrip", eq = "evenLanes")
 )
 # The raw statistics a hover card prints (`r`).
 TABLE_GROUPS_RAW <- c(bc = "center", bl = "low", bh = "high",
@@ -84,8 +85,8 @@ table_groups_fence <- function(g) {
 # Column-level fields stay scalars (a bar's `fill` is its colour, a pair's is
 # one per row); everything else is per row, an array also at one row.
 TABLE_GROUPS_SCALARS <- c("kind", "mode", "rf", "d0", "d1", "dw", "rc", "rby",
-                          "rbh", "tt")
-TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "eq")
+                          "rbh", "tt", "mn", "lw")
+TABLE_GROUPS_FLAGS <- c("multi", "bare", "dd", "lg", "xl", "lm", "tr", "eq")
 
 table_groups_pack <- function(g, kind, top) {
   out <- list()
@@ -117,12 +118,19 @@ table_groups_axis <- function(p, prep) {
   if (is.null(dom)) {
     return(NULL)
   }
+  days <- !isTRUE(dom$date) && identical(p$kind, "interval") &&
+    isTRUE(p$x_days)
   t <- if (isTRUE(dom$date)) {
     cells_axis_date_ticks(dom$d0, dom$d1)
+  } else if (days) {
+    at <- cells_axis_day_ticks(dom$d0, dom$d1)$at
+    at <- cells_axis_pin(at, dom$d0, dom$d1, dom$pin)
+    list(at = at, labels = cells_day_label(at))
   } else {
     at <- cells_axis_ticks(
       dom$d0, dom$d1, k = if (identical(p$kind, "interval")) 7L else 4L
     )
+    at <- cells_axis_pin(at, dom$d0, dom$d1, dom$pin)
     list(at = at, labels = groups_fmt(at))
   }
   if (length(t$at) < 2L) {
@@ -132,8 +140,17 @@ table_groups_axis <- function(p, prep) {
     last <- length(t$labels)
     t$labels[[last]] <- paste0(t$labels[[last]], "%")
   }
+  if (!days) t <- cells_axis_unit(t, p, dom)
   pos <- round((t$at - dom$d0) / (dom$d1 - dom$d0) * 100, 2L)
-  table_groups_compact(list(at = groups_arr(pos), labels = groups_arr(t$labels)))
+  # A numeric swimlane's domain goes along: the browser spaces its ticks by
+  # the column's drawn width (axis.js fit()).
+  fit <- identical(p$kind, "interval") && !isTRUE(dom$date)
+  table_groups_compact(list(
+    at = groups_arr(pos), labels = groups_arr(t$labels),
+    d0 = if (fit) dom$d0, d1 = if (fit) dom$d1, unit = if (fit) t$unit,
+    days = if (days) TRUE,
+    pin = if (fit && any(dom$pin)) groups_arr(as.integer(dom$pin))
+  ))
 }
 
 # A vector as a JSON array, also at length one.

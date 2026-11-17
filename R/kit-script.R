@@ -37,6 +37,29 @@ viz_script_sources <- function(raw, state) {
     !is.null(s) && nzchar(trimws(paste(s, collapse = "\n")))
   }
   parsed <- shiny::reactive(cb_parse(state$script()))
+  # The script's control values, and for each `#| setting` line the block's
+  # own setting of that name: the script reads the block's current grouping
+  # (`by <- c("AEBODSYS", "AEDECOD")  #| setting`), and the block's code
+  # carries it as a literal.
+  values <- shiny::reactive({
+    v <- state$script_values() %||% list()
+    for (nm in cb_setting_names(parsed())) {
+      rv <- state[[nm]]
+      if (is.function(rv)) {
+        v[nm] <- list(rv())
+      } else if (is.function(state$summaries)) {
+        # A field of the first summary (`facet`, `fill`, `col`), as the
+        # groups table's words of those names read it.
+        s1 <- state$summaries()
+        s1 <- if (is.list(s1) && length(s1) && is.list(s1[[1L]])) s1[[1L]]
+        f <- if (identical(nm, "value")) "col" else nm
+        if (!is.null(s1[[f]])) v[nm] <- list(s1[[f]])
+      }
+    }
+    v
+  })
+  # The frame is kept for the block's expression (R/prepare-once.R).
+  once <- prep_once()
   last <- new.env(parent = emptyenv())
   last$specs <- list()
   specs <- shiny::reactive({
@@ -47,7 +70,7 @@ viz_script_sources <- function(raw, state) {
     }
     # The current values feed the declarations, so a choice list can depend
     # on another control.
-    out <- cb_specs(p, d, state$script_values() %||% list())
+    out <- cb_specs(p, d, values())
     if (!identical(out, last$specs)) last$specs <- out
     last$specs
   })
@@ -55,7 +78,7 @@ viz_script_sources <- function(raw, state) {
     if (!has_script()) {
       return(list(data = NULL, error = NULL))
     }
-    dd_prepare_run(raw(), parsed(), specs(), state$script_values())
+    dd_prepare_run(raw(), parsed(), specs(), values(), once$run)
   })
   prepared <- shiny::reactive({
     if (!has_script()) {
@@ -76,7 +99,10 @@ viz_script_sources <- function(raw, state) {
       if (!has_script()) {
         return(NULL)
       }
-      cb_expr(parsed(), specs(), state$script_values(), slot = TRUE)
+      if (!is.null(once)) {
+        once$expect(cb_expr(parsed(), specs(), values(), slot = FALSE))
+      }
+      cb_expr(parsed(), specs(), values(), slot = TRUE)
     },
     derived = function() {
       list(inputs = script_control_records(specs()),
@@ -106,7 +132,8 @@ viz_script_values <- function(incoming, specs, current = list()) {
     return(out)
   }
   for (s in specs) {
-    if (!script_spec_ok(s) || isTRUE(s$off) || !s$name %in% names(incoming)) {
+    if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s) ||
+          !s$name %in% names(incoming)) {
       next
     }
     v <- script_value_read(incoming[[s$name]], s)
@@ -122,6 +149,11 @@ script_value_read <- function(x, s) {
   switch(
     s$kind,
     number = {
+      # Cleared: no number, for a control that starts without one ("last").
+      empty <- !length(x) || (length(x) == 1L && (is.na(x) || identical(x, "")))
+      if (empty && length(s$default) == 1L && is.na(s$default)) {
+        return(NA_real_)
+      }
       if (!is.numeric(x) || length(x) != 1L || !is.finite(x)) {
         return(NULL)
       }

@@ -194,15 +194,20 @@
     const column = (/** @type {string} */ label, /** @type {boolean} */ nullable) =>
       /** @type {VizArg} */ ({ type: { name: 'column' }, nullable, gear: { control: 'column', label } });
     const inner = key === 'by' || (key === 'group' && by.length === 1);
-    const outer = (key === 'parent' || key === 'group') && by.length === 2;
+    // `{@parent}` on a flat table is the word a dropped "[{@parent} and ]" clause offers:
+    // a pick adds the outer level back.
+    const outer = (key === 'parent' && by.length === 1) ||
+      ((key === 'parent' || key === 'group') && by.length === 2);
     if (inner && by.length) {
       const keep = by.slice(0, -1);
       return { arg: column(BY_LABEL.groups, false), value: by[by.length - 1], label: BY_LABEL.groups,
                write: (x) => ({ by: x == null ? keep : keep.concat([String(x)]) }) };
     }
     if (outer) {
-      return { arg: column('Outer rows', true), value: by[0], label: 'Outer rows',
-               write: (x) => ({ by: x == null ? [by[1]] : [String(x), by[1]] }) };
+      const last = by[by.length - 1];
+      return { arg: column('Outer rows', true), value: by.length === 2 ? by[0] : null,
+               label: 'Outer rows',
+               write: (x) => ({ by: x == null ? [last] : [String(x), last] }) };
     }
     const FIELD = /** @type {Record<string, string>} */ (
       { value: 'col', func: 'func', facet: 'facet', fill: 'fill', color: 'color' });
