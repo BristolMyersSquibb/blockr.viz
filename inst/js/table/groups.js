@@ -217,6 +217,7 @@
       if (cfg.bar_width && cfg.bar_width !== 'fit') attrs['data-summarize-width'] = cfg.bar_width;
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
+      if (m.sections && m.sections.length) attrs['data-summarize-headings'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
                cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', flush: true, attrs };
     }

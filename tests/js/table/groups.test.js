@@ -315,6 +315,7 @@ test('without by there is no search or header sorting', () => {
 test('nested groups: parents fold their terms; search keeps the parent', async () => {
   const t = mount(payload({ data: nested(), config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
   assert.equal(t.$('table').getAttribute('data-summarize-nested'), '1');
+  assert.equal(t.$('table').getAttribute('data-summarize-headings'), null);
   const rows = () => t.$$(NAMED);
   assert.deepEqual(rows().map((r) => r.className.split(' ').filter((c) => c.startsWith('is-')).join(' ')),
                    ['is-parent', 'is-child', 'is-child is-group-end', 'is-parent', 'is-child is-group-end']);
@@ -419,7 +420,7 @@ test('nested groups: a child label starts on its parent\'s label edge', () => {
                    [null, null, null, null, null]);
 });
 
-test('group headings: the rows under them are one step in, the heading on the rows\' edge', () => {
+test('group headings: the rows under them are one step in, on the records layout\'s edges', () => {
   const m = nested();
   m.sections = [{ at: 0, level: 1, value: 'Group A', open: true },
                 { at: 3, level: 1, value: 'Group B', open: true }];
@@ -438,7 +439,13 @@ test('group headings: the rows under them are one step in, the heading on the ro
                    Array(5).fill('--vz-indent:1'));
   const cs = (sel) => env.win.getComputedStyle(t.$(sel));
   assert.equal(cs('tr.vz-table-section-header td').paddingLeft, '0px');
-  assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft, '14px');
+  // The header's and the headings' chevrons 3px in from the card's inset,
+  // as table-structured.css hangs them; the rows one 16px step in. jsdom
+  // keeps calc() as written.
+  assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft,
+               'calc(3px + 0px)');
+  assert.equal(cs('thead th.vz-table-stub-header').paddingLeft, 'calc(24px + 0px)');
+  assert.equal(cs('td.vz-table-groups-label-col').paddingLeft, 'calc(24px + 0px + 1 * 16px)');
 });
 
 test('nested groups sort as a tree: parents, then each parent\'s terms', () => {
@@ -1075,6 +1082,8 @@ test('fold all: the corner button folds the group headings too, which start open
   const shut = () => t.$$('tr.vz-table-section-header').map((r) => r.classList.contains('collapsed'));
   const labels = () => t.$$(NAMED).map((r) => r.children[0].textContent);
   const btn = () => t.$('.vz-table-foldall');
+  // The headings put the table on the records layout's edges (CSS).
+  assert.equal(t.$('table').getAttribute('data-summarize-headings'), '1');
   assert.deepEqual(shut(), [false, false]);
   assert.deepEqual(labels(), ['Cardiac', 'Skin']);
   assert.equal(btn().getAttribute('aria-expanded'), 'false');

@@ -1,4 +1,4 @@
-/* blockr.viz bundle 393db542f612e9ac406918e0bae873a1, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle d054b1b13f9995706e3c9ac11fd895f6, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -2124,15 +2124,25 @@ input.vz-table-search:focus {
   padding-top: 11px;
   padding-bottom: 3px;
 }
-/* A group heading (`row_groups`) hangs its chevron where the outer rows
-   would (14px in, as the header's fold-all chevron), its label on their
-   35px edge. The rows under it are one step in (indentSteps()), their
-   chevrons under its label. */
+/* A group heading (`row_groups`) is a full-width cell; its button carries
+   the indent, set with the other heading edges below. The rows under it
+   are one step in (indentSteps()). */
 .vz-table-groups-table.blockr-table[data-summarize-nested='1'] tbody tr.vz-table-section-header td.vz-table-section-cell {
   padding-left: 0;
 }
 .vz-table-groups-table[data-summarize-nested='1'] .vz-table-section-cell.level-1 .vz-table-section-btn {
-  padding-left: 14px;
+  padding-left: calc(3px + var(--blockr-card-inset, 0px));
+}
+/* Under group headings the header, the headings and the rows take the
+   records and variables layouts' edges (table-structured.css): the
+   chevrons of the header and the headings (above) 3px in from the card's
+   inset, their labels 21px further, each row level one 16px step in. The rows
+   under a heading then sit where a records table's inner headings do. */
+.vz-table-groups-table.blockr-table[data-summarize-nested='1'][data-summarize-headings='1'] thead th.vz-table-stub-header {
+  padding-left: calc(24px + var(--blockr-card-inset, 0px));
+}
+.vz-table-groups-table[data-summarize-nested='1'][data-summarize-headings='1'] td.vz-table-groups-label-col {
+  padding-left: calc(24px + var(--blockr-card-inset, 0px) + var(--vz-indent, 0) * 16px);
 }
 /* Closed, nothing hangs under it: the same 14px split evenly, so the label,
    the chevron and the marks sit on the row's middle. */

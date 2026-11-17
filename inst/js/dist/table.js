@@ -1,4 +1,4 @@
-// blockr.viz bundle 159993a3939afe3dbea7699d4b5c2808, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle a207081b10b0c2187c782839a8a0dffe, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -3921,6 +3921,7 @@
       if (cfg.bar_width && cfg.bar_width !== 'fit') attrs['data-summarize-width'] = cfg.bar_width;
       if (cfg.look === 'compact') attrs['data-summarize-compact'] = '1';
       if (m.rows && m.rows.indent && m.rows.indent.some((x) => x > 0)) attrs['data-summarize-nested'] = '1';
+      if (m.sections && m.sections.length) attrs['data-summarize-headings'] = '1';
       return { sortable: cfg.sortable !== false && this.grouped(), collapsible: true, all: this.still,
                cls: 'vz-table-groups-table', stubCls: 'vz-table-groups-label-col', flush: true, attrs };
     }
