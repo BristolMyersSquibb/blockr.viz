@@ -170,7 +170,7 @@
       this._measured = false;
       this.shut = new Set();
       this.shutRows = new Set();
-      if (model.collapsed && this.flags.collapsible) this._shutAll(true);
+      if (model.collapsed && this.flags.collapsible) this._shutAll(true, true);
       if (this.hooks.lit) {
         const lit = this.hooks.lit();
         this.reveal(lit.rows, lit.sections);
@@ -251,13 +251,16 @@
          (!!st && st.toggle.some(Boolean)));
     }
 
-    /** @param {boolean} shut */
-    _shutAll(shut) {
+    /**
+     * @param {boolean} shut
+     * @param {boolean} [start] The table's first state: a section that keeps
+     *   open (a group heading over closed rows) stays open. Fold all shuts it.
+     */
+    _shutAll(shut, start = false) {
       const m = this.model;
       const st = this._st;
-      // A section that keeps open (a group heading over closed rows) is not shut.
       this.shut = new Set(shut && m && m.sections
-        ? m.sections.map((s, k) => (s.open ? -1 : k)).filter((k) => k >= 0) : []);
+        ? m.sections.map((s, k) => (start && s.open ? -1 : k)).filter((k) => k >= 0) : []);
       this.shutRows = new Set();
       if (shut && st) st.toggle.forEach((t, i) => { if (t) this.shutRows.add(i); });
     }

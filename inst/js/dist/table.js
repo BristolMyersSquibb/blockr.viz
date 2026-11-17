@@ -1,4 +1,4 @@
-// blockr.viz bundle 0452f84fe118f1b6254d49598eb66d8c, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 159993a3939afe3dbea7699d4b5c2808, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -1642,7 +1642,7 @@
       this._measured = false;
       this.shut = new Set();
       this.shutRows = new Set();
-      if (model.collapsed && this.flags.collapsible) this._shutAll(true);
+      if (model.collapsed && this.flags.collapsible) this._shutAll(true, true);
       if (this.hooks.lit) {
         const lit = this.hooks.lit();
         this.reveal(lit.rows, lit.sections);
@@ -1723,13 +1723,16 @@
          (!!st && st.toggle.some(Boolean)));
     }
 
-    /** @param {boolean} shut */
-    _shutAll(shut) {
+    /**
+     * @param {boolean} shut
+     * @param {boolean} [start] The table's first state: a section that keeps
+     *   open (a group heading over closed rows) stays open. Fold all shuts it.
+     */
+    _shutAll(shut, start = false) {
       const m = this.model;
       const st = this._st;
-      // A section that keeps open (a group heading over closed rows) is not shut.
       this.shut = new Set(shut && m && m.sections
-        ? m.sections.map((s, k) => (s.open ? -1 : k)).filter((k) => k >= 0) : []);
+        ? m.sections.map((s, k) => (start && s.open ? -1 : k)).filter((k) => k >= 0) : []);
       this.shutRows = new Set();
       if (shut && st) st.toggle.forEach((t, i) => { if (t) this.shutRows.add(i); });
     }

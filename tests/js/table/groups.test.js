@@ -1063,3 +1063,30 @@ test('a closed outer row splits its padding evenly, so its label sits on the mid
   assert.ok(tr.classList.contains('collapsed'));
   assert.ok(tr.classList.contains('is-parent'));
 });
+
+test('fold all: the corner button folds the group headings too, which start open', () => {
+  // Two arms (row_groups) over the SOC parents: the headings start open, the
+  // parents closed.
+  const m = nested();
+  m.collapsed = true;
+  m.sections = [{ at: 0, level: 1, value: 'Placebo', open: true },
+                { at: 3, level: 1, value: 'Active', open: true }];
+  const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }));
+  const shut = () => t.$$('tr.vz-table-section-header').map((r) => r.classList.contains('collapsed'));
+  const labels = () => t.$$(NAMED).map((r) => r.children[0].textContent);
+  const btn = () => t.$('.vz-table-foldall');
+  assert.deepEqual(shut(), [false, false]);
+  assert.deepEqual(labels(), ['Cardiac', 'Skin']);
+  assert.equal(btn().getAttribute('aria-expanded'), 'false');
+  t.click(btn());
+  assert.deepEqual(shut(), [false, false]);
+  assert.deepEqual(labels(), ['Cardiac', 'Angina', 'Arrhythmia', 'Skin', 'Rash']);
+  assert.equal(btn().getAttribute('aria-expanded'), 'true');
+  t.click(btn());
+  assert.deepEqual(shut(), [true, true]);
+  assert.deepEqual(labels(), []);
+  assert.equal(btn().getAttribute('aria-label'), 'Expand all groups');
+  // A heading opened by hand shows its parents folded.
+  t.click(t.$('tr.vz-table-section-header .vz-table-chev'));
+  assert.deepEqual(labels(), ['Cardiac']);
+});
