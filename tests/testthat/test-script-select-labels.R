@@ -68,6 +68,9 @@ test_that("a multi-select's notes, placeholder and long picks", {
   )
   expect_identical(script_title_args(list(), specs, set)$ae_terms,
                    "Rash, Nausea, Fatigue +1 more")
+  # Every choice picked reads "all", though the word shows labels.
+  every <- viz_script_values(list(ae_terms = specs[[1]]$choices), specs)
+  expect_identical(script_title_args(list(), specs, every)$ae_terms, "all")
   # Notes of the wrong length are left out.
   bad <- sub("5:1", "1:2", script, fixed = TRUE)
   expect_null(cb_specs(cb_parse(bad), data.frame(x = 1))[[1]]$notes)

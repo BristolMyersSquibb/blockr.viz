@@ -177,8 +177,13 @@ script_title_args <- function(roles, specs, values = list()) {
       picks <- as.character(v)
       pool <- as.character(s$choices)
       if (length(pool)) picks <- picks[picks %in% pool]
-      v <- script_picks_word(script_labelled(picks, s), pool,
-                             s$placeholder)
+      # Every choice picked is "all", told by the values: the labels are
+      # not the choices.
+      v <- if (length(pool) > 1L && setequal(picks, pool)) {
+        "all"
+      } else {
+        script_picks_word(script_labelled(picks, s), pool, s$placeholder)
+      }
     } else if (identical(s$kind, "select")) {
       v <- script_labelled(as.character(v), s)
     }
