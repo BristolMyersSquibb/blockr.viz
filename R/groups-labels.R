@@ -13,6 +13,19 @@ groups_color_groups <- function(summaries, data, drawn, scale_map) {
     list(column = cc, title = groups_col_name(data, cc), levels = lv,
          palette = groups_level_colors(scale_map, cc, lv, data[[cc]]))
   }))
+  # A custom column's split colours its marks as a colour mapping does, but
+  # groups_custom_setup() sets only `.color`, so it is read here, with the
+  # levels and colours the marks use (groups_plan_barsplit()).
+  for (s in summaries) {
+    cc <- s$.custom$split
+    lv <- s$.levels
+    if (is.null(s$.color) || is.null(cc) || length(lv) < 2L) next
+    if (cc %in% vapply(color_groups, function(g) g$column, "")) next
+    color_groups[[length(color_groups) + 1L]] <- list(
+      column = cc, title = groups_col_name(data, cc), levels = lv,
+      palette = groups_level_colors(scale_map, cc, lv, data[[cc]])
+    )
+  }
   # A swimlane's event shapes: one group per shape column, drawn in ink.
   # Levels drawn as tags make a group of their own, titled by the tag
   # column, each item with its tag's text.

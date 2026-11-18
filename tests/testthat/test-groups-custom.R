@@ -194,3 +194,27 @@ test_that("a custom summary that fails only on the parent rows is one failed col
     expect_length(prep$plan, 2L)
   }
 })
+
+test_that("a split custom column keys its colours in the legend", {
+  prep <- groups_prepare(custom_fixture(), by = c("SOC", "TERM"),
+                         summaries = list(list(type = "custom",
+                                               name = "Patients",
+                                               facet = "ARM",
+                                               fn = worst_fn)))
+  expect_null(prep$err)
+  leg <- groups_legend_spec(prep)$groups
+  expect_length(leg, 1L)
+  expect_identical(leg[[1]]$title, "GR")
+  items <- leg[[1]]$items
+  expect_identical(vapply(items, `[[`, "", "label"), c("1", "2", "3"))
+  # The colours the bars use, level for level.
+  expect_identical(vapply(items, `[[`, "", "color"),
+                   prep$plan[[1]]$fills)
+})
+
+test_that("an unsplit custom column has no legend", {
+  prep <- groups_prepare(custom_fixture(), by = "TERM",
+                         summaries = list(list(type = "custom", name = "N",
+                                               fn = n_fn)))
+  expect_null(groups_legend_spec(prep))
+})
