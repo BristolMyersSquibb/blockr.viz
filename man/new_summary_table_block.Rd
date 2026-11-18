@@ -2,7 +2,7 @@
 % Please edit documentation in R/summary-table-block.R
 \name{new_summary_table_block}
 \alias{new_summary_table_block}
-\title{Summary table block (superseded)}
+\title{Summary table block (deprecated)}
 \usage{
 new_summary_table_block(...)
 }
@@ -14,10 +14,12 @@ new_summary_table_block(...)
 A blockr transform block of class \code{table_block}.
 }
 \description{
-Superseded by \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "variables"}, which draws
-the same table and takes the same settings. This constructor translates
-its arguments (\code{vars}, \code{by}, \code{stats}, \code{add_overall}, ...) and returns a
-table block, so code and boards that use it keep working.
+Deprecated: use \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "variables"}, which
+draws the same table and takes the same settings. This constructor
+translates its arguments (\code{vars}, \code{by}, \code{stats}, \code{add_overall}, ...) and
+returns a table block, with a deprecation warning. Boards saved with it
+restore as table blocks, show a toast that asks the user to save the
+board, and save as table blocks from then on.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

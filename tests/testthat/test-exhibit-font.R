@@ -161,7 +161,7 @@ test_that("a board with a table on it offers the setting", {
 
   expect_true("exhibit_min_font_size" %in% names(opts))
 
-  opts <- blockr.core::board_options(new_summarize_table_block())
+  opts <- blockr.core::board_options(quiet_deprecated(new_summarize_table_block()))
 
   expect_true("exhibit_min_font_size" %in% names(opts))
 })

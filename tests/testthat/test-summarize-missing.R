@@ -38,15 +38,15 @@ test_that("a restored 0.2 summarize table draws no missing group", {
 test_that("new_summarize_table_block() drops missing groups by default", {
   s <- list(list(type = "simple", func = "count_distinct", col = "USUBJID",
                  show = "number"))
-  b <- new_summarize_table_block(by = c("AEBODSYS", "AEDECOD"),
-                                 summaries = s)
+  b <- quiet_deprecated(new_summarize_table_block(by = c("AEBODSYS", "AEDECOD"),
+                                 summaries = s))
   expect_identical(blockr.core::blockr_ser(b)$payload$missing, "drop")
   expect_true(grepl("missing = \"drop\"",
                     paste(deparse(report_call(b, "x")), collapse = " "),
                     fixed = TRUE))
   # An explicit choice is kept; the table block's default is unchanged.
-  b <- new_summarize_table_block(by = "AEDECOD", summaries = s,
-                                 missing = "level")
+  b <- quiet_deprecated(new_summarize_table_block(by = "AEDECOD", summaries = s,
+                                 missing = "level"))
   expect_identical(blockr.core::blockr_ser(b)$payload$missing, "level")
   b <- new_table_block(layout = "groups", by = "AEDECOD", summaries = s)
   expect_identical(blockr.core::blockr_ser(b)$payload$missing, "level")

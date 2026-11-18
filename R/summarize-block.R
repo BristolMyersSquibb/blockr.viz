@@ -1,8 +1,10 @@
-#' Summarize table block (superseded)
+#' Summarize table block (deprecated)
 #'
-#' Superseded by [new_table_block()] with `layout = "groups"`, which takes the
-#' same summaries. This constructor translates its arguments and returns a
-#' table block, so code and boards that use it keep working.
+#' Deprecated: use [new_table_block()] with `layout = "groups"`, which takes
+#' the same summaries. This constructor translates its arguments and returns
+#' a table block, with a deprecation warning. Boards saved with it restore
+#' as table blocks, show a toast that asks the user to save the board, and
+#' save as table blocks from then on.
 #'
 #' @param ... Arguments of the former summarize table block (`by`,
 #'   `summaries`, `id_var`, `group`, `value`, `func`, ...), translated to
@@ -17,7 +19,14 @@
 #' )
 #' @export
 new_summarize_table_block <- function(...) {
-  args <- legacy_table_args(list(...), from = "summarize")
+  args <- list(...)
+  if (is.null(args$ctor)) {
+    viz_deprecated_warning("new_summarize_table_block",
+                           "new_table_block(layout = \"groups\")")
+  } else {
+    viz_deprecated_toast()
+  }
+  args <- legacy_table_args(args, from = "summarize")
   args$layout <- "groups"
   # The old summarize table drew no row for a missing group (0.2.200).
   args$missing <- args$missing %||% "drop"

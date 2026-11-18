@@ -7,10 +7,9 @@
 \title{blockr.viz: Visualization and render blocks for blockr}
 \description{
 The render layer for blockr dashboards. It provides the interactive
-renderers (\code{\link[=new_chart_block]{new_chart_block()}} and \code{\link[=new_table_block]{new_table_block()}}, which also draws
-KPI cards),
-and the \code{\link[=new_summary_table_block]{new_summary_table_block()}} shaper. See \code{vignette("blockr-viz")}
-for the shaper / renderer architecture.
+renderers \code{\link[=new_chart_block]{new_chart_block()}} and \code{\link[=new_table_block]{new_table_block()}}, which also draws
+KPI cards. See \code{vignette("blockr-viz")} for the shaper / renderer
+architecture.
 }
 \seealso{
 Useful links:

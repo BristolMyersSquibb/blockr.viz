@@ -132,6 +132,6 @@ test_that("the table's pct_of reads as percent_of, in code and in a saved board"
 })
 
 test_that("the old summary table constructor is the variables layout", {
-  b <- new_summary_table_block(by = "ARM")
+  b <- quiet_deprecated(new_summary_table_block(by = "ARM"))
   expect_identical(blockr.core::blockr_ser(b)$payload$layout, "variables")
 })

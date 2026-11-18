@@ -101,9 +101,9 @@ test_that("a function that drops the grouping says so, without an error", {
 })
 
 test_that("the block raises a failed custom summary as a blockr error", {
-  blk <- new_summarize_table_block(by = "TERM", summaries = list(
+  blk <- quiet_deprecated(new_summarize_table_block(by = "TERM", summaries = list(
     list(type = "simple", name = "Rows", func = "count"),
-    list(type = "custom", name = "Y", fn = "stop(\"nope\")")))
+    list(type = "custom", name = "Y", fn = "stop(\"nope\")"))))
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

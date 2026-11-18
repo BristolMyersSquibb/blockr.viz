@@ -1,4 +1,4 @@
-# blockr.viz 0.3.0.9096
+# blockr.viz 0.3.0.9097
 
 The first release for CRAN. The package is down to two blocks, the chart
 and the table, rewritten on one specification of their arguments that the
@@ -14,6 +14,10 @@ read.
   `"variables"` (a Table 1), each drawn as a `"table"`, a `"compact"`
   matrix or `"cards"`. It replaces the tile, summarize, summary and gt
   table blocks.
+* `new_summarize_table_block()` and `new_summary_table_block()` are
+  deprecated. Called from code they return the table block with a
+  `deprecatedWarning`. A saved board that has one restores it as a table
+  block and shows a toast that asks the user to save the board.
 * `vignette("chart")` and `vignette("table")` go through the arguments.
 * A block built on the table can have its own gear: `table_gear()` names
   its tabs, sections and rows, and `new_table_block(gear = , class = )`

@@ -21,6 +21,7 @@ blockr_deser.chart_block <- function(x, data, ...) {
 #' @export
 blockr_deser.summary_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
+  viz_deprecated_toast()
   legacy_new_table(legacy_deser("summary_table_block", data))
 }
 
@@ -81,6 +82,7 @@ blockr_deser.table_block <- function(x, data, ...) {
 #' @export
 blockr_deser.summarize_table_block <- function(x, data, ...) {
   stopifnot("payload" %in% names(data))
+  viz_deprecated_toast()
   saved <- data[["payload"]]
   is_attr <- !names(saved) %in% legacy_arg_names("summarize_table")
   payload <- legacy_table_args(saved[!is_attr], from = "summarize")

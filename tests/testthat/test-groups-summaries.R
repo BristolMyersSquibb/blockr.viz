@@ -577,12 +577,12 @@ test_that("the retired table-level pair fans down onto the rows it applied to", 
 })
 
 test_that("the ctor migrates the retired pair into the block's STATE", {
-  b <- new_summarize_table_block(
+  b <- quiet_deprecated(new_summarize_table_block(
     by = "TERM", color = "SEV", facet = "ARM",
     summaries = list(list(type = "dist", col = "DUR"),
                      list(type = "simple", func = "count", show = "bar",
                           scope = "pooled"))
-  )
+  ))
   st <- blockr.core::blockr_ser(b)$payload
   expect_identical(st$summaries[[1L]]$color, "SEV")
   expect_identical(st$summaries[[1L]]$facet, "ARM")
@@ -600,8 +600,8 @@ test_that("the ctor moves a ranked-bar grouping into `by`", {
   # groups_prepare() falls back to group/parent when `by` is unset, so such a
   # board DRAWS -- while the summarize gear's required "Group by" row shows
   # empty. The state has to say what the table is doing.
-  b <- new_summarize_table_block(group = "TERM", parent = "SOC",
-                                 summaries = list(list(type = "dist", col = "DUR")))
+  b <- quiet_deprecated(new_summarize_table_block(group = "TERM", parent = "SOC",
+                                 summaries = list(list(type = "dist", col = "DUR"))))
   st <- blockr.core::blockr_ser(b)$payload
   expect_identical(st$by, c("SOC", "TERM"))
   # Cleared, so clearing "Group by" in the gear cannot resurrect them.
@@ -610,7 +610,7 @@ test_that("the ctor moves a ranked-bar grouping into `by`", {
 
   # The ranked-bar surface (no column list) is one bar summary now.
   st <- blockr.core::blockr_ser(
-    new_summarize_table_block(group = "TERM")
+    quiet_deprecated(new_summarize_table_block(group = "TERM"))
   )$payload
   expect_identical(st$layout, "groups")
   expect_identical(st$by, "TERM")
@@ -877,7 +877,7 @@ test_that("sort_by a summary's name orders by that column", {
 
 test_that("the constructor round-trips the summaries list", {
   S <- list(list(type = "dist", name = "D", col = "DUR", show = "box"))
-  blk <- new_summarize_table_block(by = "TERM", summaries = S)
+  blk <- quiet_deprecated(new_summarize_table_block(by = "TERM", summaries = S))
   expect_s3_class(blk, "table_block")
   # The constructor checks each entry, so the saved list carries every key
   # of its type; the ones given come back as they were.

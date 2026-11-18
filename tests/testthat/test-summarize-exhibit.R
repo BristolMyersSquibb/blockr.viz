@@ -83,12 +83,12 @@ test_that("a nested export opens every row", {
 })
 
 test_that("the block's report call rebuilds its own table", {
-  blk <- new_summarize_table_block(
+  blk <- quiet_deprecated(new_summarize_table_block(
     by = "grp",
     summaries = list(list(type = "simple", func = "count", show = "bar",
                           name = "n")),
     title = "AEs"
-  )
+  ))
   cl <- report_call(blk, "block1")
 
   expect_true(is.call(cl))
@@ -108,10 +108,10 @@ test_that("the block's report call rebuilds its own table", {
 })
 
 test_that("the report call counts the board's subjects for the Big N", {
-  blk <- new_summarize_table_block(
+  blk <- quiet_deprecated(new_summarize_table_block(
     by = "grp",
     summaries = list(list(type = "simple", func = "count", show = "bar"))
-  )
+  ))
   # No session: no subject, as before.
   expect_false("subject" %in% names(as.list(report_call(blk, "block1"))))
   shiny::testServer(

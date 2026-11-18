@@ -1,10 +1,9 @@
 #' blockr.viz: Visualization and render blocks for blockr
 #'
 #' The render layer for blockr dashboards. It provides the interactive
-#' renderers ([new_chart_block()] and [new_table_block()], which also draws
-#' KPI cards),
-#' and the [new_summary_table_block()] shaper. See `vignette("blockr-viz")`
-#' for the shaper / renderer architecture.
+#' renderers [new_chart_block()] and [new_table_block()], which also draws
+#' KPI cards. See `vignette("blockr-viz")` for the shaper / renderer
+#' architecture.
 #'
 #' @importFrom rlang %||%
 #' @importFrom echarts4r e_charts

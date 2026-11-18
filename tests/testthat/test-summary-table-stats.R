@@ -158,12 +158,12 @@ test_that("saved legacy stats restore into the catalog keys", {
     "mean_sd"
   )
   # In code a key the catalog lacks is an error, not healed.
-  expect_error(new_summary_table_block(vars = "mpg", stats = "expanded"),
+  expect_error(quiet_deprecated(new_summary_table_block(vars = "mpg", stats = "expanded")),
                "stats")
 })
 
 test_that("a stats edit lands in the order it was picked", {
-  blk <- new_summary_table_block(vars = "mpg", stats = c("n", "mean"))
+  blk <- quiet_deprecated(new_summary_table_block(vars = "mpg", stats = c("n", "mean")))
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {

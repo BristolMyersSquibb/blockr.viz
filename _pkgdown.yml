@@ -67,9 +67,9 @@ reference:
     contents:
       - new_exhibit_font_option
       - new_download_footer_option
-  - title: Superseded
+  - title: Deprecated
     desc: >
-      Kept so older code runs.
+      Kept so older code and saved boards run.
     contents:
       - new_summary_table_block
       - new_summarize_table_block

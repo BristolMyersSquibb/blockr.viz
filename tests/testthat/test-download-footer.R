@@ -94,7 +94,7 @@ test_that("blocks with downloads put the option on the board", {
            character(1L))
   }
   expect_true("download_footer" %in% ids(new_chart_block()))
-  expect_true("download_footer" %in% ids(new_summarize_table_block()))
+  expect_true("download_footer" %in% ids(quiet_deprecated(new_summarize_table_block())))
   expect_true("download_footer" %in% ids(new_table_block()))
 })
 

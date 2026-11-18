@@ -2,7 +2,7 @@
 % Please edit documentation in R/summarize-block.R
 \name{new_summarize_table_block}
 \alias{new_summarize_table_block}
-\title{Summarize table block (superseded)}
+\title{Summarize table block (deprecated)}
 \usage{
 new_summarize_table_block(...)
 }
@@ -16,9 +16,11 @@ drew no row for a missing group.}
 A blockr transform block of class \code{table_block}.
 }
 \description{
-Superseded by \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "groups"}, which takes the
-same summaries. This constructor translates its arguments and returns a
-table block, so code and boards that use it keep working.
+Deprecated: use \code{\link[=new_table_block]{new_table_block()}} with \code{layout = "groups"}, which takes
+the same summaries. This constructor translates its arguments and returns
+a table block, with a deprecation warning. Boards saved with it restore
+as table blocks, show a toast that asks the user to save the board, and
+save as table blocks from then on.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}

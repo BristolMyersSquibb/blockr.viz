@@ -923,7 +923,7 @@ table_golden_translate <- function(x, vocab = table_golden_vocab()) {
 table_golden_ctor <- function(args) {
   fn <- args$.fn %||% "new_table_block"
   args$.fn <- NULL
-  eval(as.call(c(list(as.name(fn)), args)))
+  quiet_deprecated(eval(as.call(c(list(as.name(fn)), args))))
 }
 
 # The mock session's id counts sessions per process ("proxy3-expr-..."), so
