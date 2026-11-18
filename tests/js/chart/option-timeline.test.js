@@ -184,3 +184,12 @@ test('an open bar reads "ongoing" in the tooltip', () => {
   assert.match(tip, /Start<\/span><span class="vz-tt-value">2</);
   assert.match(tip, /E<\/span><span class="vz-tt-value">ongoing</);
 });
+
+test('display: lanes print the display text, marks keep the value', () => {
+  const { opt } = build({ y: 'ID', derived: { display: { ID: { S01: '1', S02: '2' } } } });
+  assert.deepStrictEqual(plain(opt.yAxis.data).sort(), ['S01', 'S02']);
+  assert.strictEqual(opt.yAxis.axisLabel.formatter('S02'), '2');
+  const mark = opt.series[0].data.find((d) => d.value[3] === 'S01');
+  assert.ok(mark);
+  assert.match(opt.tooltip.formatter({ value: mark.value }), />1</);
+});

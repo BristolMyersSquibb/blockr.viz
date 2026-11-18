@@ -112,15 +112,11 @@
     return series;
   };
 
-  /** The groups with their "(n)" count, and the formatter that adds it.
-   * @param {any} panel */
-  const countLabels = (panel) => {
-    const counts = panel.axisCounts;
-    return {
-      catLabels: counts ? panel.groups.map((/** @type {string} */ g) => NS.withCount(g, counts))
-        : panel.groups,
-      catFmt: counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null
-    };
+  /** The groups as the axis prints them, and the formatter that prints them: the category's
+   * display text (NS.displayOf()) with its "(n)" count. @param {any} panel @param {any} look */
+  const countLabels = (panel, look) => {
+    const catFmt = NS.categoryLabel(look.derived, look.cfg.category, panel.axisCounts);
+    return { catLabels: catFmt ? panel.groups.map(catFmt) : panel.groups, catFmt };
   };
 
   /** The category axis. "(n)" comes from a formatter, so the axis data stays the bare group clicks
@@ -128,7 +124,7 @@
    * resize. @param {any} k */
   const barCategoryAxis = (k) => {
     const { panel, groups, colors, vertical, hlLit, ink, look } = k;
-    const { catLabels, catFmt } = countLabels(panel);
+    const { catLabels, catFmt } = countLabels(panel, look);
     const gut = NS.axes.yGutter(catLabels, look.measure);
     /** @type {((axisLabel: any) => any) | null} */
     let decorate = null;
@@ -222,6 +218,9 @@
     const showN = cfg.func !== 'count' && cfg.func !== 'identity';
     const additive = cfg.func === 'count' || cfg.func === 'sum';
     const colorName = split ? esc(title(cfg.color) || cfg.color) + ' ' : '';
+    // The head names the category as the axis does; nOf and ttRep stay keyed by the value.
+    const shown = m.histogram ? null : NS.displayOf(k.look.derived, cfg.category);
+    const colorShown = NS.displayOf(k.look.derived, cfg.color);
     /** The rows of the hovered category: one per level, else the hovered bar. */
     const levelsAt = (/** @type {any} */ arg) => {
       const p = Array.isArray(arg) ? arg[0] : arg;
@@ -258,14 +257,15 @@
       const head = /** @type {any} */ (ps[0]).axisValueLabel || ps[0].name || '';
       const vals = ps.filter((/** @type {any} */ p) => p && p.value != null);
       const rows = vals.map((/** @type {any} */ p) => V.tooltip.row(
-        split ? colorName + esc(p.seriesName) : esc(aggLabel), valueText(p, head),
+        split ? colorName + esc(colorShown ? colorShown(p.seriesName) : p.seriesName)
+          : esc(aggLabel), valueText(p, head),
         split ? p.color : null, hit == null ? null : p.seriesName === hit)).join('');
       const total = split && !showPercent && additive && vals.length > 1
         ? V.tooltip.SEP + V.tooltip.row(esc(aggLabel), fmtRaw(vals.reduce(
           (/** @type {number} */ a, /** @type {any} */ p) => a + Number(p.value || 0), 0)))
         : '';
       const note = split && !showPercent && !additive ? V.tooltip.note(esc(aggLabel)) : '';
-      return V.tooltip.head(esc(head)) + note + rows + total + extraRows(head);
+      return V.tooltip.head(esc(shown ? shown(head) : head)) + note + rows + total + extraRows(head);
     };
     // An unsplit bar answers anywhere over its category; the pointer stays
     // invisible, as hover marks nothing.
@@ -383,8 +383,9 @@
     const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const { base, delta, lo, hi } = waterfallSteps(m, panel, cfg, labelsOn, wvf);
 
-    const { catLabels, catFmt } = countLabels(panel);
+    const { catLabels, catFmt } = countLabels(panel, look);
     const { xlab, xFit } = fitXLabels(catLabels, plotW, look, catFmt);
+    const shown = NS.displayOf(look.derived, cfg.category);
     const catAxis = { ...NS.axes.categoryAxis(panel.groups, ink, { xlab, display: catFmt }),
                       splitLine: { show: false } };
     const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg, look.derived), 45, {
@@ -420,7 +421,7 @@
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
-            return V.tooltip.head(V.util.esc(p.name)) + V.tooltip.row(V.util.esc(P.aggLabel),
+            return V.tooltip.head(V.util.esc(shown ? shown(p.name) : p.name)) + V.tooltip.row(V.util.esc(P.aggLabel),
               p.value == null ? '–' : (wvf ? wvf(p.value) : V.util.num(p.value)));
           }
         },

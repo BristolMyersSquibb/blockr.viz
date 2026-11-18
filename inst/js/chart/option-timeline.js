@@ -42,8 +42,10 @@
     const colorLevels = m.color ? m.color.levels : [];
     const showLegend = colorLevels.length > 0;
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
+    // A lane's printed text (NS.displayOf()); marks and clicks stay on the value.
+    const laneShown = NS.displayOf(look.derived, m.y.col);
     return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y: m.y.col, palette,
-             colorLevels, showLegend, colors, onBarLabel: !!cfg.label };
+             colorLevels, showLegend, colors, onBarLabel: !!cfg.label, laneShown };
   };
 
   /** A bar from start to end on its lane, at least 4px wide, clipped to the plot,
@@ -96,13 +98,13 @@
   /** The hovered bar: label, else series, else lane as headline, then the lane,
    * the interval and its length, the colour and the tooltip fields. @param {any} k */
   const timelineTooltip = (k) => {
-    const { m, title, xAxisType, xCats, x, y } = k;
+    const { m, title, xAxisType, xCats, x, y, laneShown } = k;
     // An interval starts and ends on a day: a date-time prints its hour, a
     // date its day, whatever the gap between starts.
     const period = m.x.period === 'time' ? 'time' : null;
     return (/** @type {any} */ p) => {
       const v = p.value;
-      const term = String(v[3] ?? '');
+      const term = laneShown ? laneShown(v[3]) : String(v[3] ?? '');
       const colorVal = String(v[4] ?? '');
       const labelVal = m.label != null ? String(v[5] ?? '') : '';
       const detail = String(v[6] ?? '');
@@ -136,7 +138,7 @@
    * @param {any} k @param {any} panel @param {any} renderItem @param {any} formatter
    * @param {any} xAxis */
   const timelinePanel = (k, panel, renderItem, formatter, xAxis) => {
-    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors } = k;
+    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors, laneShown } = k;
     const layout = seriesMarks(m, panel);
     const data = (/** @type {number[]} */ idx) =>
       idx.map((i) => ({ value: panel.marks[i] }));
@@ -148,10 +150,9 @@
       : [{ type: 'custom', data: data(layout[0]), encode: { x: [0, 1], y: 2 }, renderItem }];
 
     const counts = panel.laneCounts;
-    const gut = NS.axes.yGutter(counts
-      ? panel.lanes.map((/** @type {string} */ t) => NS.withCount(t, counts)) : panel.lanes,
-      look.measure);
-    const display = counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null;
+    const display = (counts || laneShown)
+      ? (/** @type {any} */ v) => NS.withCount(v, counts, laneShown) : null;
+    const gut = NS.axes.yGutter(display ? panel.lanes.map(display) : panel.lanes, look.measure);
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
       color: (m.color && m.color.scale && m.color.scale.color && colors) ? colors : palette,
