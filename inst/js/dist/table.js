@@ -1,4 +1,4 @@
-// blockr.viz bundle ceb25689bd7dd9f3b21442cafcba838f, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 101f4c304cb8b127f879041baa50b561, built by tools/bundle.js. Do not edit.
 // sources: table/html.js table/marks.js table/tags.js table/axis.js table/tooltip.js table/sort.js table/dom.js table/drill.js table/chrome.js table/cards.js table/gear.js table/summaries.js table/records.js table/groups.js table/variables.js table/view.js table/static.js
 // --- table/html.js
 // @ts-check
@@ -767,7 +767,7 @@
     }
     if (m.kind === 'interval') {
       const wide = m.full ? ' vz-table-groups-full' : m.large ? ' vz-table-groups-wide' : '';
-      return '<td class="vz-table-groups-bar-col' + wide + '">' +
+      return '<td class="vz-table-groups-bar-col vz-table-groups-ivcol' + wide + '">' +
         glyph(m, i, o.labels) + '</td>';
     }
     const g = glyph(m, i, o.labels, !!c.zero);

@@ -724,6 +724,13 @@
 .vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-hi {
   transform: translate(3px, calc(-50% - 6px));
 }
+/* A split pair reaches 11.5px above and below the lane's centre line, more
+   than a tight row has (a child row's lane is 13px from the cell's top, less
+   with a smaller font). The swimlane cell does not clip, so the pair runs
+   into the row's padding and past it rather than losing its top and bottom. */
+.vz-table-groups-table td.vz-table-groups-ivcol {
+  overflow: visible;
+}
 /* A tag of a later tag group (event_tag_group): inverted, light text in an
    ink box. */
 .vz-table-groups-ivcell .vz-table-lane-ev.is-tag.is-inv,

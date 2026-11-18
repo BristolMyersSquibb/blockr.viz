@@ -865,6 +865,25 @@ test('a swimlane: tagged events, lower doses and regular lanes', () => {
   assert.ok(c.querySelector('.vz-table-groups-ivcell.is-thin.is-md'));
 });
 
+test('a swimlane cell does not clip a split pair of tags', () => {
+  // Split, a pair reaches 11.5px above and below the centre line, past a
+  // tight row's padding: a WD over a PD lost its top under group headings.
+  const data = groups();
+  const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
+  lane.mark = Object.assign({}, lane.mark, {
+    events: [[[90, 1, 'PD'], [90, 1, 'WD', 1]], [], []], eventTips: [['Off', 'End'], [], []]
+  });
+  data.sections = [{ at: 0, level: 1, value: 'ASIAN', open: true }];
+  const env = withSheets(loadTable());
+  const t = mount(payload({ data, config: G }), env);
+  const c = t.cell(0, 7);
+  assert.ok(c.classList.contains('vz-table-groups-ivcol'));
+  assert.equal(c.querySelectorAll('.vz-table-lane-ev.is-tag').length, 2);
+  assert.equal(env.win.getComputedStyle(c).overflow, 'visible');
+  // Every other cell still cuts its text.
+  assert.equal(env.win.getComputedStyle(t.cell(0, 1)).overflow, 'hidden');
+});
+
 test('a widest spans column takes the room the other columns leave', () => {
   const data = groups();
   const lane = data.cols.find((c) => c.mark && c.mark.kind === 'interval');
