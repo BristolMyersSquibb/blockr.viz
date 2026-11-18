@@ -1113,11 +1113,14 @@
    records and variables layouts' edges (table-structured.css): the
    chevrons of the header and the headings (above) 3px in from the card's
    inset, their labels 21px further, each row level one 16px step in. The rows
-   under a heading then sit where a records table's inner headings do. */
-.vz-table-groups-table.blockr-table[data-summarize-nested='1'][data-summarize-headings='1'] thead th.vz-table-stub-header {
+   under a heading then sit where a records table's inner headings do.
+   Flat rows too (a timeline, one subject per row): its headings come from
+   table-structured.css on the same edge, and without these rules the
+   header's chevron hung 21px left of theirs and the rows sat at 12px. */
+.vz-table-groups-table.blockr-table[data-summarize-headings='1'] thead th.vz-table-stub-header {
   padding-left: calc(24px + var(--blockr-card-inset, 0px));
 }
-.vz-table-groups-table[data-summarize-nested='1'][data-summarize-headings='1'] td.vz-table-groups-label-col {
+.vz-table-groups-table.blockr-table[data-summarize-headings='1'] td.vz-table-groups-label-col {
   padding-left: calc(24px + var(--blockr-card-inset, 0px) + var(--vz-indent, 0) * 16px);
 }
 /* Closed, nothing hangs under it: the same 14px split evenly, so the label,

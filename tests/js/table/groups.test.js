@@ -420,18 +420,22 @@ test('nested groups: a child label starts on its parent\'s label edge', () => {
                    [null, null, null, null, null]);
 });
 
+// The shipped sheets, in bundle order: the headings' padding is theirs.
+function withSheets(env) {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const style = env.win.document.createElement('style');
+  style.textContent = ['table.css', 'table-structured.css', 'table-groups.css'].map((f) => fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', 'inst', 'css', f), 'utf8')).join('\n');
+  env.win.document.head.appendChild(style);
+  return env;
+}
+
 test('group headings: the rows under them are one step in, on the records layout\'s edges', () => {
   const m = nested();
   m.sections = [{ at: 0, level: 1, value: 'Group A', open: true },
                 { at: 3, level: 1, value: 'Group B', open: true }];
-  const env = loadTable();
-  // The shipped sheets, in bundle order: the heading's padding is theirs.
-  const fs = require('node:fs');
-  const path = require('node:path');
-  const style = env.win.document.createElement('style');
-  style.textContent = ['table-structured.css', 'table-groups.css'].map((f) => fs.readFileSync(
-    path.join(__dirname, '..', '..', '..', 'inst', 'css', f), 'utf8')).join('\n');
-  env.win.document.head.appendChild(style);
+  const env = withSheets(loadTable());
   const t = mount(payload({ data: m, config: Object.assign({}, G, { by: ['AESOC', 'AEDECOD'] }) }), env);
   assert.deepEqual(t.$$('tr.vz-table-section-header').map((r) => r.textContent), ['Group A', 'Group B']);
   // Parents and children alike: a child starts on its parent's label edge.
@@ -445,6 +449,27 @@ test('group headings: the rows under them are one step in, on the records layout
   assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft,
                'calc(3px + 0px)');
   assert.equal(cs('thead th.vz-table-stub-header').paddingLeft, 'calc(24px + 0px)');
+  assert.equal(cs('td.vz-table-groups-label-col').paddingLeft, 'calc(24px + 0px + 1 * 16px)');
+});
+
+test('group headings over flat rows (a timeline): the same edges', () => {
+  // One subject per row, no nesting: the header's chevron and the headings'
+  // line up, the rows one step in, as in a nested groups table.
+  const m = groups();
+  m.sections = [{ at: 0, level: 1, value: 'ASIAN', open: true },
+                { at: 2, level: 1, value: 'WHITE', open: true }];
+  const env = withSheets(loadTable());
+  const t = mount(payload({ data: m, config: G }), env);
+  assert.equal(t.$('table').getAttribute('data-summarize-nested'), null);
+  assert.equal(t.$('table').getAttribute('data-summarize-headings'), '1');
+  assert.ok(t.$('thead th.vz-table-stub-header .vz-table-foldall'));
+  const cs = (sel) => env.win.getComputedStyle(t.$(sel));
+  // The fold-all chevron hangs 21px left of the header's padding: 3px in,
+  // where the headings' chevrons are.
+  assert.equal(cs('thead th.vz-table-stub-header').paddingLeft, 'calc(24px + 0px)');
+  assert.equal(cs('tr.vz-table-section-header .vz-table-section-btn').paddingLeft, '3px');
+  assert.deepEqual(t.$$(NAMED).map((r) => r.children[0].getAttribute('style')),
+                   Array(3).fill('--vz-indent:1'));
   assert.equal(cs('td.vz-table-groups-label-col').paddingLeft, 'calc(24px + 0px + 1 * 16px)');
 });
 
