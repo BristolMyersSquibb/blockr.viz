@@ -7,7 +7,8 @@
 # and does not fail. The JS side is checked by eslint (eslint.config.mjs:
 # max-lines-per-function, max-lines). Exits 1 if anything is over.
 
-pkg_dir <- commandArgs(TRUE)[1L] %||% "."
+args <- commandArgs(TRUE)
+pkg_dir <- if (length(args)) args[[1L]] else "."
 fn_max <- 80L
 file_max <- 600L
 

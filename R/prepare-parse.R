@@ -294,77 +294,77 @@ cb_specs <- function(parsed, data = NULL, values = list()) {
       next
     }
 
-    fail <- function(msg) {
-      list(name = st$name, line = st$line, kind = NA_character_, error = msg)
-    }
-
-    value <- tryCatch(eval(st$expr[[3L]], env), error = function(e) e)
-    if (inherits(value, "error")) {
-      specs[[length(specs) + 1L]] <- fail(conditionMessage(value))
-      next
-    }
-    # Make it visible to later declarations too.
-    assign(st$name, value, envir = env)
-
-    line_ann <- cb_annotation(
-      if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
-      else parsed$lines[[st$line]]
-    )
-    # A setting is no control: the block's own setting of that name, its
-    # current value written into the script as the line's value
-    # (cb_setting_names(), viz_script_sources()).
-    if (isTRUE(line_ann$setting)) {
-      cur <- values[[st$name]]
-      if (is.list(cur)) cur <- unlist(cur, use.names = FALSE)
-      if (!is.null(cur)) assign(st$name, cur, envir = env)
-      specs[[length(specs) + 1L]] <- list(
-        name = st$name, line = st$line, kind = "setting",
-        default = value, error = NULL
-      )
-      next
-    }
-
-    w <- cb_widget_for(value)
-    if (!is.null(w) && identical(w$kind, "select") && !length(w$choices)) {
-      # An empty factor is usually a mistyped column name.
-      specs[[length(specs) + 1L]] <- fail(
-        "no choices - is the column name right?"
-      )
-      next
-    }
-    if (is.null(w)) {
-      specs[[length(specs) + 1L]] <- fail(paste0(
-        "no control for a value of class ", paste(class(value), collapse = "/")
-      ))
-      next
-    }
-
-    ann <- line_ann
-    # `#| select(multiple = TRUE)`: several picks, though one by default.
-    if (identical(w$kind, "select") && isTRUE(as.logical(ann$multiple))) {
-      w$multiple <- TRUE
-    }
-    w <- cb_select_labels(w, ann, env)
-    # From here on, declarations below read the control's current value.
-    assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
-
-    specs[[length(specs) + 1L]] <- c(
-      list(
-        name = st$name,
-        line = st$line,
-        kind = w$kind,
-        choices = w$choices,
-        multiple = isTRUE(w$multiple),
-        default = if (is.factor(value)) as.character(value) else value,
-        error = NULL
-      ),
-      ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
-                                "default", "error", "off", "labels"))],
-      list(off = cb_switched_off(ann$when, env), labels = w$labels)
-    )
+    specs[[length(specs) + 1L]] <- cb_decl_spec(st, parsed, env, values)
   }
 
   specs
+}
+
+# The spec record of one declaration `st`, evaluated in `env`. Binds the
+# declared name in `env` so that declarations below can read it.
+cb_decl_spec <- function(st, parsed, env, values) {
+  fail <- function(msg) {
+    list(name = st$name, line = st$line, kind = NA_character_, error = msg)
+  }
+
+  value <- tryCatch(eval(st$expr[[3L]], env), error = function(e) e)
+  if (inherits(value, "error")) {
+    return(fail(conditionMessage(value)))
+  }
+  # Make it visible to later declarations too.
+  assign(st$name, value, envir = env)
+
+  line_ann <- cb_annotation(
+    if (is.na(st$line) || st$line > length(parsed$lines)) NA_character_
+    else parsed$lines[[st$line]]
+  )
+  # A setting is no control: the block's own setting of that name, its
+  # current value written into the script as the line's value
+  # (cb_setting_names(), viz_script_sources()).
+  if (isTRUE(line_ann$setting)) {
+    cur <- values[[st$name]]
+    if (is.list(cur)) cur <- unlist(cur, use.names = FALSE)
+    if (!is.null(cur)) assign(st$name, cur, envir = env)
+    return(list(
+      name = st$name, line = st$line, kind = "setting",
+      default = value, error = NULL
+    ))
+  }
+
+  w <- cb_widget_for(value)
+  if (!is.null(w) && identical(w$kind, "select") && !length(w$choices)) {
+    # An empty factor is usually a mistyped column name.
+    return(fail("no choices - is the column name right?"))
+  }
+  if (is.null(w)) {
+    return(fail(paste0(
+      "no control for a value of class ", paste(class(value), collapse = "/")
+    )))
+  }
+
+  ann <- line_ann
+  # `#| select(multiple = TRUE)`: several picks, though one by default.
+  if (identical(w$kind, "select") && isTRUE(as.logical(ann$multiple))) {
+    w$multiple <- TRUE
+  }
+  w <- cb_select_labels(w, ann, env)
+  # From here on, declarations below read the control's current value.
+  assign(st$name, cb_current_value(values[[st$name]], value, w), envir = env)
+
+  c(
+    list(
+      name = st$name,
+      line = st$line,
+      kind = w$kind,
+      choices = w$choices,
+      multiple = isTRUE(w$multiple),
+      default = if (is.factor(value)) as.character(value) else value,
+      error = NULL
+    ),
+    ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
+                              "default", "error", "off", "labels"))],
+    list(off = cb_switched_off(ann$when, env), labels = w$labels)
+  )
 }
 
 # The names a script declares with `#| setting`: lines whose value is the
