@@ -31,7 +31,8 @@ viz_rev_tracker <- function(state, revs, values = viz_values_but(state)) {
 #'
 #' Reads `<id>_set` (checked by its input handler, see kit-input.R), passes it
 #' through the lock, script and stale-message gates, checks the script
-#' controls' values against the script, runs the block's `normalize()` over
+#' controls' values against the script (dropping the multi-select picks a
+#' pool no longer offers once they are set), runs the block's `normalize()` over
 #' the result and writes what changed.
 #'
 #' @param input The block's Shiny input.
@@ -59,6 +60,13 @@ viz_settings_observer <- function(input, id, spec, state, revs,
           values$script_values,
           tryCatch(script$specs(), error = function(e) list()),
           state$script_values()
+        )
+      }
+      if (is.function(script$settle) &&
+            !identical(values$script_values, state$script_values())) {
+        values$script_values <- tryCatch(
+          script$settle(values$script_values),
+          error = function(e) values$script_values
         )
       }
     }

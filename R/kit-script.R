@@ -41,8 +41,9 @@ viz_script_sources <- function(raw, state) {
   # own setting of that name: the script reads the block's current grouping
   # (`by <- c("AEBODSYS", "AEDECOD")  #| setting`), and the block's code
   # carries it as a literal.
-  values <- shiny::reactive({
-    v <- state$script_values() %||% list()
+  # The script's values with the block's settings for its `#| setting`
+  # lines; `v`, script values, defaults to the block's.
+  with_settings <- function(v = state$script_values() %||% list()) {
     for (nm in cb_setting_names(parsed())) {
       rv <- state[[nm]]
       if (is.function(rv)) {
@@ -57,11 +58,23 @@ viz_script_sources <- function(raw, state) {
       }
     }
     v
-  })
+  }
+  values <- shiny::reactive(with_settings())
   # The frame is kept for the block's expression (R/prepare-once.R).
   once <- prep_once()
   last <- new.env(parent = emptyenv())
   last$specs <- list()
+  # The declarations evaluated with the values `v`, kept for the next call
+  # with the same script, data and values: settle() evaluates them for the
+  # values it sets, which specs() then reads back.
+  eval_specs <- function(p, d, v) {
+    key <- list(p, d, v)
+    if (!identical(key, last$key)) {
+      last$out <- cb_specs(p, d, v)
+      last$key <- key
+    }
+    last$out
+  }
   specs <- shiny::reactive({
     p <- parsed()
     d <- if (has_script()) tryCatch(raw(), error = function(e) NULL)
@@ -70,10 +83,30 @@ viz_script_sources <- function(raw, state) {
     }
     # The current values feed the declarations, so a choice list can depend
     # on another control.
-    out <- cb_specs(p, d, values())
+    out <- eval_specs(p, d, values())
     if (!identical(out, last$specs)) last$specs <- out
     last$specs
   })
+  # Script values about to be set, without the multi-select picks their
+  # pool no longer offers once they are: a pool that follows another
+  # control (the terms of the level picked) drops the picks of the old one.
+  settle <- function(v) {
+    shiny::isolate({
+      d <- if (has_script()) tryCatch(raw(), error = function(e) NULL)
+      if (is.null(d) || !is.list(v)) return(v)
+      sp <- eval_specs(parsed(), d, with_settings(v))
+      for (s in sp) {
+        if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s) ||
+              is.null(v[[s$name]])) {
+          next
+        }
+        x <- v[[s$name]]
+        if (is.list(x)) x <- unlist(x, use.names = FALSE)
+        v[s$name] <- list(cb_offered(x, s))
+      }
+      v
+    })
+  }
   run <- shiny::reactive({
     if (!has_script()) {
       return(list(data = NULL, error = NULL))
@@ -93,6 +126,7 @@ viz_script_sources <- function(raw, state) {
   })
   list(
     specs = specs,
+    settle = settle,
     run = run,
     prepared = prepared,
     compiled = function() {

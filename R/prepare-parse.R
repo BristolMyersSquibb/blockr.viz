@@ -516,6 +516,15 @@ cb_coerce <- function(value, spec) {
   )
 }
 
+# A multi-select's picks that its pool offers; any other value as it is.
+cb_offered <- function(value, spec) {
+  if (is.null(value) || !identical(spec$kind, "select") ||
+        !isTRUE(spec$multiple) || !length(spec$choices)) {
+    return(value)
+  }
+  value[as.character(value) %in% as.character(spec$choices)]
+}
+
 # A select's `#| select(labels = ..., notes = ...)`: what each choice shows,
 # and the note beside it in the menu, one per choice, evaluated where the
 # declaration is (they may read the script's own values). Ones that fail or

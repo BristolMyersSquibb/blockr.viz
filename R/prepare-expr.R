@@ -332,6 +332,10 @@ cb_expr <- function(parsed, specs, values = list(), slot = TRUE) {
     # A restored board returns what survived JSON, so the declaration drives
     # the coercion before the value is inlined.
     v <- cb_coerce(values[[s$name]], s)
+    # A multi-select runs with the picks its pool still offers, as its
+    # control and its title word show them (script_control_values()): a pool
+    # that follows another control leaves the other picks behind.
+    v <- cb_offered(v, s)
     if (is.null(v) || !length(v)) {
       v <- s$default
     }
